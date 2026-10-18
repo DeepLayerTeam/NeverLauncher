@@ -1,3 +1,11 @@
+## 0.21.10 — Everyday Lifecycle
+
+- Added project-authorized persisted-job listing with bounded pagination, status filtering, attempt history and audit deep links.
+- Connected Admin backup/restore to real archive creation, inspection, verified dry-run and explicitly confirmed component restore with existing server step-up.
+- Introduced dedicated self-service sessions/trusted devices workflow with revocation results and audit links.
+- Added confirmation, error recovery and actual operation results for NeverExtensions registry, lifecycle and host management.
+- Clarified synchronous restore vs durable jobs, including indeterminate HTTP disconnect handling.
+
 # История изменений
 
 Используется структура [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/). Источником текущей версии является `VERSION`; историю релизов следует сверять с Git-тегами и [GitHub Releases](https://github.com/DeepLayerTeam/NeverLauncher/releases), а не реконструировать задним числом.

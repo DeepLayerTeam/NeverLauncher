@@ -73,6 +73,7 @@ func readOperationRequest0217(r *http.Request) (operationRequest0217, error) {
 }
 func (s Server) registerOperationRoutes0217(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/operations", s.requireAuthenticated(s.operationRegistryGet0217))
+	mux.Handle("GET /api/v1/operations/jobs", s.requireAuthenticated(s.operationList02110))
 	mux.Handle("POST /api/v1/operations/validate", s.requireAuthenticated(s.operationValidate0217))
 	mux.Handle("POST /api/v1/operations/execute", s.requireAuthenticated(s.operationExecute0217))
 	mux.Handle("GET /api/v1/operations/{operationId}", s.requireAuthenticated(s.operationStatus0217))

@@ -20,14 +20,14 @@ export function can(identity: AdminIdentity | null, permission: string, projectI
 }
 
 export const globalPermissionForSection: Record<string, string> = {
-  users: 'users:manage', roles: 'users:manage', devices: 'users:manage',
+  users: 'users:manage', roles: 'users:manage',
   audit: 'audit:read', storage: 'project:read', 'extension-registry': 'extension:manage',
   'extensions-manager': 'extension:manage',
   diagnostics: 'diagnostics:read', 'backup-restore': 'storage:manage',
 };
 
 export function canSeeSection(identity: AdminIdentity | null, section: string, projectId: string): boolean {
-  if (section === 'dashboard') return !!identity;
+  if (section === 'dashboard' || section === 'devices') return !!identity;
   if (section === 'server-bridge') return can(identity, 'project:read', projectId);
   if (section === 'release-workspace') return can(identity, 'release:prepare', projectId);
   if (section === 'job-monitor') return can(identity, 'project:read', projectId);

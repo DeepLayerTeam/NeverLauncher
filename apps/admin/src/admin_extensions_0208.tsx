@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { auditHref, recoveryAdvice } from './admin/lifecycle';
 
 const ADMIN_PROTOCOL = 'neverextensions.admin-rpc.v1';
 const EXTENSION_API_VERSION = '1.0';
@@ -89,6 +90,8 @@ export function AdminExtensions({ backendUrl, token, mode = 'workspace', onError
   const [selected, setSelected] = useState<{key: string; pageId: string; actionId?: string} | null>(null);
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState('');
+  const [operationBusy, setOperationBusy] = useState(false);
+  const [operationResult, setOperationResult] = useState<{ target: string; action: string; output: unknown } | null>(null);
 
   const refresh = async () => {
     if (!token) return;
@@ -115,16 +118,26 @@ export function AdminExtensions({ backendUrl, token, mode = 'workspace', onError
 
   const openPage = (ext: AdminExtension, pageId: string, actionId?: string) => setSelected({ key: extensionKey(ext), pageId, actionId });
 
-  async function hostAction(item: ManagerItem, action: 'start'|'stop'|'restart') {
-    const install = item.install ?? {}; const id = install.extensionId; if (!id) return;
-    const params = new URLSearchParams({ scope: install.scope ?? 'global' }); if (install.scopeId) params.set('scopeId', install.scopeId);
-    await api(backendUrl, `/api/v1/admin/extension-hosts/${encodeURIComponent(id)}/${action}?${params}`, token, { method: 'POST' });
-    await refresh();
-  }
-  async function lifecycleAction(item: ManagerItem, action: 'enable'|'disable') {
-    const install = item.install ?? {}; const id = install.extensionId; if (!id) return;
-    await api(backendUrl, `/api/v1/admin/extension-installs/${encodeURIComponent(id)}/${action}`, token, { method: 'POST', body: JSON.stringify({ scope: install.scope ?? 'global', scopeId: install.scopeId ?? '' }) });
-    await refresh();
+  async function lifecycleOperation(item: ManagerItem, action: 'start'|'stop'|'restart'|'enable'|'disable') {
+    const install = item.install ?? {}; const id = String(install.extensionId ?? '');
+    if (!id || operationBusy) return;
+    const scope = String(install.scope ?? 'global'); const scopeId = String(install.scopeId ?? '');
+    if (!window.confirm(`Подтвердить ${action} расширения ${id}\nScope: ${scope}:${scopeId || 'global'}\nСостояние будет перепроверено через Backend.`)) return;
+    setOperationBusy(true); setLocalError('');
+    try {
+      let output: unknown;
+      if (action === 'start' || action === 'stop' || action === 'restart') {
+        const params = new URLSearchParams({ scope }); if (scopeId) params.set('scopeId', scopeId);
+        output = await api(backendUrl, `/api/v1/admin/extension-hosts/${encodeURIComponent(id)}/${action}?${params}`, token, { method: 'POST' });
+      } else {
+        output = await api(backendUrl, `/api/v1/admin/extension-installs/${encodeURIComponent(id)}/${action}`, token, { method: 'POST', body: JSON.stringify({ scope, scopeId }) });
+      }
+      setOperationResult({ target: id, action, output });
+      await refresh();
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      setLocalError(`${reason}. ${recoveryAdvice(reason)}`);
+    } finally { setOperationBusy(false); }
   }
 
   if (mode === 'dashboard') return <section className="extensionWidgets">
@@ -135,6 +148,7 @@ export function AdminExtensions({ backendUrl, token, mode = 'workspace', onError
   return <section className="adminExtensionsWorkspace">
     <div className="registryHeading"><div><h2>Admin Extensions</h2><p className="muted">UI extensions работают только в sandboxed iframe. Скрипт extension не загружается в основной React bundle; данные доступны только через typed permission-aware RPC.</p></div><button onClick={refresh} disabled={loading}>{loading ? 'Обновление…' : 'Обновить'}</button></div>
     {localError && <p className="error">{localError}</p>}
+    {operationResult && <article className="subcard" role="status"><strong>{operationResult.action}: {operationResult.target}</strong><p>Backend вернул ответ. Актуальное состояние показано в списке установок после обновления.</p><details><summary>Результат</summary><pre>{JSON.stringify(operationResult.output, null, 2)}</pre></details><a href={auditHref(operationResult.target)}>Открыть аудит</a></article>}
     <div className="extensionToolbar">{actions.filter(({action}) => (action.placement ?? 'toolbar') === 'toolbar').map(({ext,action}) => <button key={`${extensionKey(ext)}:${action.id}`} onClick={() => openPage(ext, action.pageId, action.id)}>{action.label}</button>)}</div>
     <div className="extensionWorkspaceGrid">
       <nav className="extensionNav" aria-label="Extension navigation">{nav.length === 0 && <span className="muted">Нет navigation contributions</span>}{nav.map(({ext,nav: n}) => <button key={`${extensionKey(ext)}:${n.id}`} className={selected?.key===extensionKey(ext)&&selected?.pageId===n.pageId?'active':''} onClick={() => openPage(ext,n.pageId)}>{n.label}<small>{ext.name}</small></button>)}</nav>
@@ -145,8 +159,9 @@ export function AdminExtensions({ backendUrl, token, mode = 'workspace', onError
       <div className="registryHeading"><div><strong>{install.extensionId ?? 'extension'} · {install.currentVersion ?? install.desiredVersion ?? '—'}</strong><p className="muted">{install.scope ?? 'global'} {install.scopeId ? `· ${install.scopeId}` : ''} · generation {install.generation ?? 0}</p></div><span className={`badge ${runtime.healthy ? 'ok' : 'warn'}`}>{runtime.state ?? install.currentState ?? 'unknown'}</span></div>
       <p className="muted">PID {runtime.pid ?? '—'} · restarts {runtime.restarts ?? 0} · RSS {runtime.memoryBytes ? `${Math.round(runtime.memoryBytes/1024/1024)} MiB` : '—'} · processes {runtime.processCount ?? '—'}</p>
       {runtime.lastError && <p className="error">{runtime.lastError}</p>}{install.lastError && <p className="error">{install.lastError}</p>}
+      <p><a href={auditHref(String(install.extensionId ?? ''))}>Аудит расширения</a></p>
       <p className="muted">Effective capabilities: {(permissions.effective ?? []).join(', ') || 'none'}{(permissions.missing ?? []).length ? ` · missing: ${(permissions.missing ?? []).join(', ')}` : ''}</p>
-      <div className="buttonRow"><button onClick={() => hostAction(item,'start')}>Host Start</button><button onClick={() => hostAction(item,'stop')}>Host Stop</button><button onClick={() => hostAction(item,'restart')}>Host Restart</button><button onClick={() => lifecycleAction(item,'enable')}>Enable</button><button onClick={() => lifecycleAction(item,'disable')}>Disable</button></div>
+      <div className="buttonRow"><button disabled={operationBusy} onClick={() => void lifecycleOperation(item,'start')}>Host Start</button><button disabled={operationBusy} onClick={() => void lifecycleOperation(item,'stop')}>Host Stop</button><button disabled={operationBusy} onClick={() => void lifecycleOperation(item,'restart')}>Host Restart</button><button disabled={operationBusy} onClick={() => void lifecycleOperation(item,'enable')}>Enable</button><button disabled={operationBusy} onClick={() => void lifecycleOperation(item,'disable')}>Disable</button></div>
       <details><summary>Последние логи ({logs.length})</summary><pre className="extensionLogs">{logs.map((l:any) => `${l.timestamp ?? ''} ${l.stream ?? ''} ${l.level ?? ''} ${l.message ?? ''}`).join('\n') || 'Нет runtime logs'}</pre></details>
     </article>; })}</div>
   </section>;

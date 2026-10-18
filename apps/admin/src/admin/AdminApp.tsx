@@ -4,6 +4,9 @@ import { RegistryWorkspace } from './RegistryWorkspace';
 import { OperationsWorkspace } from './OperationsWorkspace';
 import { ReleaseWorkspace } from './ReleaseWorkspace';
 import { JobMonitor } from './JobMonitor';
+import { BackupWorkspace } from './BackupWorkspace';
+import { SessionsDevicesWorkspace } from './SessionsDevicesWorkspace';
+import { AuditWorkspace } from './AuditWorkspace';
 import { requestJSON, ApiError } from '../api/client';
 import { AdminApi, type AdminOverview } from '../api/admin';
 import { MetricCard, TextInput } from '../components/primitives';
@@ -244,7 +247,7 @@ export function AdminApp() {
   }
 
   async function loadActive() {
-    if (!token || !mayRead || ['release-workspace','job-monitor'].includes(active) || (['profiles','channels','packages','releases'].includes(active) && !selectedProjectId)) { setPayload(null); return; }
+    if (!token || !mayRead || ['release-workspace','job-monitor','backup-restore','devices','audit'].includes(active) || (['profiles','channels','packages','releases'].includes(active) && !selectedProjectId)) { setPayload(null); return; }
     const result = await requestJSON<Record<string, unknown>>(backendUrl, activeEndpoint, token);
     setPayload(result);
   }
@@ -279,21 +282,12 @@ export function AdminApp() {
   useEffect(() => {
     let live = true;
     setPayload(null); setSelectedRecordId('');
-    if (!token || !mayRead || ['release-workspace','job-monitor'].includes(active) || (['profiles', 'channels', 'packages', 'releases'].includes(active) && !selectedProjectId)) return;
+    if (!token || !mayRead || ['release-workspace','job-monitor','backup-restore','devices','audit'].includes(active) || (['profiles', 'channels', 'packages', 'releases'].includes(active) && !selectedProjectId)) return;
     requestJSON<Record<string, unknown>>(backendUrl, activeEndpoint, token)
       .then(result => { if (live) { setPayload(result); setError(null); } })
       .catch((err: Error) => { if (live) setError(err.message); });
     return () => { live = false; };
   }, [backendUrl, active, activeEndpoint, token, mayRead, selectedProjectId]);
-
-  useEffect(() => {
-    if (active !== 'devices' || !token || !mayManageUsers) { setDevices([]); return; }
-    let live = true;
-    requestJSON<{ items?: TrustedDeviceView[] }>(backendUrl, '/api/v1/admin/auth/devices', token)
-      .then(data => { if (live) setDevices(data.items ?? []); })
-      .catch((err: Error) => { if (live) setError(err.message); });
-    return () => { live = false; };
-  }, [active, token, backendUrl, mayManageUsers]);
 
   async function runAction(label: string, fn: () => Promise<unknown>) {
     setError(null); setMessage(null);
@@ -414,10 +408,7 @@ export function AdminApp() {
         {!token && <div className="loginRow"><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="почта администратора" /><input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="пароль" type="password" /><input value={totp} onChange={(event) => setTotp(event.target.value)} placeholder="TOTP (необязательно)" /><input value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} placeholder="код восстановления (необязательно)" /><button onClick={() => login().catch((err: Error) => setError(err.message))}>{token ? 'Войти заново' : 'Войти'}</button><button onClick={() => passwordlessPasskeyLogin().catch((err: Error) => setError(err.message))}>Войти по passkey</button></div>}
         {token && <details className="advanced"><summary>Безопасность сессии и passkeys</summary><div className="passkeyRow"><button onClick={() => refreshSession().catch((err: Error) => setError(err.message))}>Обновить сессию</button><button onClick={() => logout().catch((err: Error) => setError(err.message))}>Выйти</button><button onClick={() => registerPasskey().catch((err: Error) => setError(err.message))}>Добавить passkey</button><button onClick={() => stepUpPasskey().catch((err: Error) => setError(err.message))}>Подтвердить passkey</button><select aria-label="MFA policy" value={mfaPolicy} onChange={(event) => setMfaPolicy(event.target.value as typeof mfaPolicy)}><option value="optional">MFA optional</option><option value="required">MFA required</option><option value="phishing-resistant">Phishing-resistant</option></select><button onClick={() => saveMfaPolicy().catch((err: Error) => setError(err.message))}>Сохранить MFA policy</button></div></details>}
         {sessionId && <p className="muted">Активная серверная сессия: <code>{sessionId}</code></p>}
-        {token && <details className="advanced"><summary>Мои устройства и сессии</summary><div className="passkeyRow"><button onClick={() => loadSessions().catch((err: Error) => setError(err.message))}>Сессии</button><button onClick={() => revokeOtherSessions().catch((err: Error) => setError(err.message))}>Выйти на других устройствах</button></div></details>}
-        {token && sessions.length > 0 && <div className="sessionList">{sessions.map((item) => <article className="subcard" key={item.id}><strong>{item.device || item.deviceId || 'Устройство'}{item.current ? ' · текущая' : ''}</strong><p className="muted">{item.provider ?? 'local'} · risk: {item.riskState ?? 'normal'} · {item.lastIp ?? 'IP неизвестен'}</p><div className="buttonRow"><button onClick={() => renameSession(item).catch((err: Error) => setError(err.message))}>Переименовать</button><button onClick={() => revokeSession(item).catch((err: Error) => setError(err.message))}>{item.current ? 'Завершить' : 'Отозвать'}</button></div></article>)}</div>}
-        {token && mayManageUsers && active === 'devices' && <div className="passkeyRow"><button onClick={() => loadTrustedDevices().catch((err: Error) => setError(err.message))}>Trusted devices</button><span className="muted">Admin revoke необратим и требует fresh phishing-resistant step-up.</span></div>}
-        {token && mayManageUsers && active === 'devices' && devices.length > 0 && <div className="sessionList">{devices.map((item) => <article className="subcard" key={item.id}><strong>{item.name || item.id}</strong><p className="muted">{item.status} · {item.keyAlgorithm ?? 'key n/a'}/{item.keyBinding ?? 'binding n/a'}{item.hardwareProvider ? ` · ${item.hardwareProvider}` : ''} · trust: {item.trustState ?? 'n/a'} · attestation: {item.attestationState ?? 'unattested'}</p><p className="muted"><code>{item.id}</code> · user <code>{item.userId}</code>{item.revokedAt ? ` · revoked ${new Date(item.revokedAt).toLocaleString()}` : ''}{item.revokedReason ? ` · ${item.revokedReason}` : ''}</p>{item.status === 'active' && <div className="buttonRow"><button onClick={() => revokeTrustedDevice(item).catch((err: Error) => setError(err.message))}>Необратимо отозвать</button></div>}</article>)}</div>}
+        {token && <p className="muted"><a href="#/devices">Управление моими сессиями и доверенными устройствами</a></p>}
         {message && <p className="success">{message}</p>}
         {error && <p className="error">{error}</p>}
       </section>
@@ -429,10 +420,13 @@ export function AdminApp() {
       {mayRead && packagePanel}
       {token && mayRead && active === 'operations' && <OperationsWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
       {token && mayRead && active === 'release-workspace' && <ReleaseWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPrepare={canPrepare} canFileWrite={canFileWrite} canPublish={canPublish} />}
-      {token && mayRead && active === 'job-monitor' && <section className='card wide'><JobMonitor backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} /></section>}
+      {token && mayRead && active === 'job-monitor' && <JobMonitor backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
+      {token && mayRead && active === 'backup-restore' && <BackupWorkspace backendUrl={backendUrl} token={token} canRestore={can(identity, 'settings:manage') && can(identity, 'storage:manage')} />}
+      {token && mayRead && active === 'devices' && <SessionsDevicesWorkspace backendUrl={backendUrl} token={token} adminAccess={mayManageUsers} onCurrentRevoked={() => {setToken('');setRefreshToken('');setSessionId('');setDashboard(null);setIdentity(null);}} />}
+      {token && mayRead && active === 'audit' && <AuditWorkspace backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canControl={can(identity, 'serverbridge:control', selectedProjectId)} canConsole={can(identity, 'serverbridge:console', selectedProjectId)} />}
       {token && !mayRead && <section className="card wide emptyState"><h2>Нет доступа</h2><p>Эта операция недоступна для вашей роли либо проект не выбран. Запросите необходимые полномочия у владельца.</p></section>}
-      {token && mayRead && !['extensions-manager','operations','release-workspace','job-monitor','server-bridge'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
+      {token && mayRead && !['extensions-manager','operations','release-workspace','job-monitor','server-bridge','backup-restore','devices','audit'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
 
     </section>
   </main>;

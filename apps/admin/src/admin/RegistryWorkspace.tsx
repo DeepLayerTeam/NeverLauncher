@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
 import { TextInput } from '../components/primitives';
+import { auditHref, recoveryAdvice } from './lifecycle';
 
 type RegistryArtifactView = { packageIdentity: string; sha256: string; size: number; signatureKeyFingerprint: string };
 type RegistryVersionView = { extensionId: string; version: string; publisherId: string; manifest?: { name?: string; description?: string }; compatibility?: { minNeverLauncher?: string; maxNeverLauncher?: string; supportedOs?: string[]; supportedArchitectures?: string[] }; artifact: RegistryArtifactView; channels?: string[]; publishedAt?: string; yankedAt?: string; yankReason?: string };
@@ -12,6 +13,7 @@ type ExtensionHostListData = { protocolVersion?: string; executionTrust?: string
 
 
 const TOOL_VERSION = __NEVERLAUNCHER_VERSION__;
+const cancelledOperation = Symbol('cancelled-operation');
 export function RegistryWorkspace({ backendUrl, token, onError: setError, onMessage: setMessage, onResult, onChanged }: {
   backendUrl: string; token: string; onError: (message: string | null) => void;
   onMessage: (message: string | null) => void; onResult: (payload: Record<string, unknown>) => void; onChanged: () => Promise<unknown>;
@@ -35,6 +37,8 @@ export function RegistryWorkspace({ backendUrl, token, onError: setError, onMess
   const [extensionScopeId, setExtensionScopeId] = useState('');
   const [extensionInstalls, setExtensionInstalls] = useState<ExtensionInstallView[]>([]);
   const [extensionHosts, setExtensionHosts] = useState<ExtensionHostView[]>([]);
+  const [operationBusy, setOperationBusy] = useState(false);
+  const [lastOperation, setLastOperation] = useState<{ label: string; output: unknown; target: string } | null>(null);
 
 
   useEffect(() => {
@@ -79,28 +83,44 @@ export function RegistryWorkspace({ backendUrl, token, onError: setError, onMess
   async function hostAction(item: ExtensionInstallView, action: 'start' | 'stop' | 'restart') {
     const params = new URLSearchParams({ scope: item.scope });
     if (item.scopeId) params.set('scopeId', item.scopeId);
+    if (!confirmAction(`Host ${action}: ${item.extensionId}`, `${item.scope}:${item.scopeId || 'global'} · изменение runtime процесса`)) return cancelledOperation;
     return requestJSON(backendUrl, `/api/v1/admin/extension-hosts/${encodeURIComponent(item.extensionId)}/${action}?${params.toString()}`, token, { method: 'POST' });
   }
 
-  async function runRegistryAction(label: string, fn: () => Promise<unknown>) {
-    setError(null); setMessage(null);
-    await fn();
-    setMessage(`${label}: выполнено`);
-    await Promise.all([loadRegistry(), loadExtensionInstalls().catch(() => undefined), loadExtensionHosts().catch(() => undefined), onChanged()]);
+  async function runRegistryAction(label: string, fn: () => Promise<unknown>, target = '') {
+    if (operationBusy) return;
+    setOperationBusy(true); setError(null); setMessage(null);
+    try {
+      const result = await fn();
+      if (result === cancelledOperation) return; // user declined; no request sent
+      setLastOperation({ label, output: result, target });
+      setMessage(`${label}: Backend вернул результат. Уточните текущее состояние в карточке.`);
+      await Promise.all([loadRegistry(), loadExtensionInstalls(), loadExtensionHosts(), onChanged()]);
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      setError(`${reason}. ${recoveryAdvice(reason)}`);
+    } finally { setOperationBusy(false); }
+  }
+
+  function confirmAction(title: string, effect: string): boolean {
+    return window.confirm(`${title}\n${effect}\nСостояние необходимо проверить после ответа Backend.`);
   }
 
   async function createRegistryPublisher() {
     if (!registryPublisherId.trim() || !registryPublisherName.trim()) throw new Error('Укажите ID и название publisher.');
+    if (!confirmAction(`Сохранить publisher ${registryPublisherId}`, `Название: ${registryPublisherName}; изменение доверенного реестра`)) return cancelledOperation;
     return requestJSON(backendUrl, '/api/v1/admin/extension-registry/publishers', token, { method: 'POST', body: JSON.stringify({ id: registryPublisherId.trim(), name: registryPublisherName.trim(), active: true }) });
   }
 
   async function addRegistryPublisherKey() {
     if (!registryPublisherId.trim() || !registryPublicKey.trim()) throw new Error('Укажите publisher ID и raw Ed25519 public key в Base64.');
+    if (!confirmAction(`Добавить доверенный Ed25519 key для ${registryPublisherId}`, 'Ключ будет разрешать публикацию подписанных расширений. Проверьте fingerprint до добавления.')) return cancelledOperation;
     return requestJSON(backendUrl, `/api/v1/admin/extension-registry/publishers/${encodeURIComponent(registryPublisherId.trim())}/keys`, token, { method: 'POST', body: JSON.stringify({ publicKeyBase64: registryPublicKey.trim(), active: true }) });
   }
 
   async function publishRegistryArtifact() {
     if (!registryPackageFile) throw new Error('Выберите подписанный .nlext artifact.');
+    if (!confirmAction(`Опубликовать ${registryPackageFile.name}`, 'Изменится приватный Registry; подпись проверит Backend')) return cancelledOperation;
     const body = new FormData();
     body.append('artifact', registryPackageFile);
     if (registryPublisherId.trim()) body.append('publisher', registryPublisherId.trim());
@@ -121,29 +141,32 @@ export function RegistryWorkspace({ backendUrl, token, onError: setError, onMess
   }
 
   async function installRegistryVersion(item: RegistryVersionView) {
+    if (!confirmAction(`Установить ${item.extensionId}@${item.version}`, `Scope: ${extensionScope}:${extensionScopeId || 'global'}; проверка signature и stage выполняются Backend`)) return cancelledOperation;
     return requestJSON(backendUrl, `/api/v1/admin/extension-installs/${encodeURIComponent(item.extensionId)}/install`, token, { method: 'POST', body: JSON.stringify({ ...lifecycleScopePayload(), version: item.version }) });
   }
 
   async function lifecycleAction(item: ExtensionInstallView, action: 'enable' | 'disable' | 'uninstall' | 'rollback') {
+    if (!confirmAction(`${action}: ${item.extensionId}`, `Scope: ${item.scope}:${item.scopeId || 'global'}; версия: ${item.currentVersion || '—'}; необратимые эффекты проверяйте в аудите`)) return cancelledOperation;
     return requestJSON(backendUrl, `/api/v1/admin/extension-installs/${encodeURIComponent(item.extensionId)}/${action}`, token, { method: 'POST', body: JSON.stringify({ scope: item.scope, scopeId: item.scopeId ?? '' }) });
   }
 
   async function updateInstalledExtension(item: ExtensionInstallView) {
     const version = window.prompt(`Новая версия ${item.extensionId} (оставьте пустым для stable channel)`, '');
+    if (version === null || !confirmAction(`Обновить ${item.extensionId}`, `Target: ${version.trim() || 'stable'}; scope: ${item.scope}:${item.scopeId || 'global'}`)) return cancelledOperation;
     const body = version?.trim() ? { scope: item.scope, scopeId: item.scopeId ?? '', version: version.trim() } : { scope: item.scope, scopeId: item.scopeId ?? '', channel: 'stable' };
     return requestJSON(backendUrl, `/api/v1/admin/extension-installs/${encodeURIComponent(item.extensionId)}/update`, token, { method: 'POST', body: JSON.stringify(body) });
   }
 
   async function yankRegistryVersion(item: RegistryVersionView) {
     const reason = window.prompt(`Причина yank ${item.extensionId}@${item.version}`, 'withdrawn by administrator');
-    if (!reason) return null;
+    if (!reason || !confirmAction(`Yank ${item.extensionId}@${item.version}`, `Исключить версию из новых установок. Причина: ${reason}`)) return cancelledOperation;
     const result = await requestJSON(backendUrl, `/api/v1/admin/extension-registry/extensions/${encodeURIComponent(item.extensionId)}/versions/${encodeURIComponent(item.version)}/yank`, token, { method: 'POST', body: JSON.stringify({ reason }) });
     return result;
   }
 
   async function setRegistryVersionChannel(item: RegistryVersionView) {
     const channel = window.prompt(`Канал для ${item.extensionId}@${item.version}`, item.channels?.[0] ?? 'stable');
-    if (!channel) return null;
+    if (!channel || !confirmAction(`Назначить ${item.extensionId}@${item.version}`, `Канал: ${channel}`)) return cancelledOperation;
     const result = await requestJSON(backendUrl, `/api/v1/admin/extension-registry/extensions/${encodeURIComponent(item.extensionId)}/channels/${encodeURIComponent(channel)}`, token, { method: 'PUT', body: JSON.stringify({ version: item.version }) });
     return result;
   }
@@ -169,6 +192,8 @@ export function RegistryWorkspace({ backendUrl, token, onError: setError, onMess
   const registryItems = registryData?.items ?? [];
   return <section className="card wide registryPanel">
     <div className="registryHeading"><div><h2>NeverExtensions Registry {TOOL_VERSION}</h2><p className="muted">Private/local registry подписанных immutable .nlext. Publish принимает только artifact с доверенным Ed25519 publisher key; install повторно проверяет bytes и signature из storage.</p></div><span className="badge ok">verified-only install</span></div>
+    {lastOperation && <article className="subcard" role="status"><strong>{lastOperation.label}</strong><p>Последний ответ Backend:</p><details><summary>Технические детали ответа</summary><pre>{JSON.stringify(lastOperation.output, null, 2) ?? 'Пустой ответ'}</pre></details><a href={auditHref(lastOperation.target || 'extension:')}>Открыть аудит операции</a></article>}
+    {operationBusy && <p className="muted" role="status">Выполнение операции на Backend…</p>}
     <div className="registryToolbar">
       <select aria-label="Extension scope" value={extensionScope} onChange={(event) => setExtensionScope(event.target.value as 'global' | 'project')}><option value="global">global</option><option value="project">project</option></select>
       {extensionScope === 'project' && <input aria-label="Extension project scope" value={extensionScopeId} onChange={(event) => setExtensionScopeId(event.target.value)} placeholder="Project ID" />}
@@ -209,7 +234,7 @@ export function RegistryWorkspace({ backendUrl, token, onError: setError, onMess
         <p className="muted">NeverLauncher {item.compatibility?.minNeverLauncher || 'any'} → {item.compatibility?.maxNeverLauncher || 'any'} · OS {(item.compatibility?.supportedOs ?? []).join(', ') || 'any'} · arch {(item.compatibility?.supportedArchitectures ?? []).join(', ') || 'any'}</p>
         <p className="registryIdentity"><code>{item.artifact.packageIdentity}</code></p>
         {item.yankReason && <p className="error">Yank: {item.yankReason}</p>}
-        <div className="buttonRow"><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry install', () => installRegistryVersion(item)).catch((err) => setError(err.message))}>Установить verified artifact (staged)</button><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry channel', () => setRegistryVersionChannel(item)).catch((err) => setError(err.message))}>Назначить канал</button><button onClick={() => runRegistryAction('Registry download', () => downloadRegistryArtifact(item)).catch((err) => setError(err.message))}>Скачать .nlext</button><button disabled={Boolean(item.yankedAt)} className="danger" onClick={() => runRegistryAction('Registry yank', () => yankRegistryVersion(item)).catch((err) => setError(err.message))}>Yank</button></div>
+        <div className="buttonRow"><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry install', () => installRegistryVersion(item), item.extensionId).catch((err) => setError(err.message))}>Установить verified artifact (staged)</button><button disabled={Boolean(item.yankedAt)} onClick={() => runRegistryAction('Registry channel', () => setRegistryVersionChannel(item), item.extensionId).catch((err) => setError(err.message))}>Назначить канал</button><button onClick={() => runRegistryAction('Registry download', () => downloadRegistryArtifact(item)).catch((err) => setError(err.message))}>Скачать .nlext</button><button disabled={Boolean(item.yankedAt)} className="danger" onClick={() => runRegistryAction('Registry yank', () => yankRegistryVersion(item), item.extensionId).catch((err) => setError(err.message))}>Yank</button></div>
       </article>)}
     </section>
     <section className="registryResults">
@@ -218,8 +243,8 @@ export function RegistryWorkspace({ backendUrl, token, onError: setError, onMess
         <div className="registryHeading"><div><strong>{item.extensionId}</strong><p className="muted"><code>{item.currentVersion || 'absent'}</code> · desired <code>{item.desiredVersion}</code> · generation {item.generation}</p></div><div className="registryBadges"><span className={`badge ${item.currentState === 'enabled' ? 'ok' : item.currentState === 'absent' ? 'warn' : ''}`}>{item.currentState}</span><span className="badge">{item.scope}{item.scopeId ? `:${item.scopeId}` : ''}</span></div></div>
         <p className="registryIdentity"><code>{item.currentPackageIdentity || item.packageIdentity || 'no package identity'}</code></p>
         {item.lastError && <p className="error">{item.lastError}</p>}
-        {(() => { const host = hostForInstall(item); return host ? <><p className="muted">Host: <strong>{host.state}</strong> · trust <strong>{host.executionTrust ?? 'trusted-process'}</strong> · OS sandbox {host.osSandbox ?? 'none'} · healthy {host.healthy ? 'yes' : 'no'} · PID {host.pid ?? '—'} · restarts {host.restarts} · RSS {host.memoryBytes ? `${Math.round(host.memoryBytes / 1024 / 1024)} MiB` : '—'} · processes {host.processCount ?? '—'}</p>{host.lastError && <p className="error">Host: {host.lastError}</p>}<div className="buttonRow"><button disabled={item.currentState !== 'enabled' || host.state === 'running'} onClick={() => runRegistryAction('Host start', () => hostAction(item, 'start')).catch((err) => setError(err.message))}>Host Start</button><button disabled={!['running','starting','stopping'].includes(host.state)} onClick={() => runRegistryAction('Host stop', () => hostAction(item, 'stop')).catch((err) => setError(err.message))}>Host Stop</button><button disabled={item.currentState !== 'enabled'} onClick={() => runRegistryAction('Host restart', () => hostAction(item, 'restart')).catch((err) => setError(err.message))}>Host Restart</button></div></> : item.currentState === 'enabled' ? <p className="muted">Host: backend target не запущен или отсутствует; обновите hosts для актуального состояния.</p> : null; })()}
-        <div className="buttonRow"><button disabled={item.currentState === 'enabled' || item.currentState === 'absent'} onClick={() => runRegistryAction('Extension enable', () => lifecycleAction(item, 'enable')).catch((err) => setError(err.message))}>Enable</button><button disabled={item.currentState !== 'enabled'} onClick={() => runRegistryAction('Extension disable', () => lifecycleAction(item, 'disable')).catch((err) => setError(err.message))}>Disable</button><button disabled={item.currentState === 'absent'} onClick={() => runRegistryAction('Extension update', () => updateInstalledExtension(item)).catch((err) => setError(err.message))}>Update</button><button onClick={() => runRegistryAction('Extension rollback', () => lifecycleAction(item, 'rollback')).catch((err) => setError(err.message))}>Rollback</button><button disabled={item.currentState === 'absent'} className="danger" onClick={() => runRegistryAction('Extension uninstall', () => lifecycleAction(item, 'uninstall')).catch((err) => setError(err.message))}>Uninstall</button></div>
+        {(() => { const host = hostForInstall(item); return host ? <><p className="muted">Host: <strong>{host.state}</strong> · trust <strong>{host.executionTrust ?? 'trusted-process'}</strong> · OS sandbox {host.osSandbox ?? 'none'} · healthy {host.healthy ? 'yes' : 'no'} · PID {host.pid ?? '—'} · restarts {host.restarts} · RSS {host.memoryBytes ? `${Math.round(host.memoryBytes / 1024 / 1024)} MiB` : '—'} · processes {host.processCount ?? '—'}</p>{host.lastError && <p className="error">Host: {host.lastError}</p>}<div className="buttonRow"><button disabled={item.currentState !== 'enabled' || host.state === 'running'} onClick={() => runRegistryAction('Host start', () => hostAction(item, 'start'), item.extensionId).catch((err) => setError(err.message))}>Host Start</button><button disabled={!['running','starting','stopping'].includes(host.state)} onClick={() => runRegistryAction('Host stop', () => hostAction(item, 'stop'), item.extensionId).catch((err) => setError(err.message))}>Host Stop</button><button disabled={item.currentState !== 'enabled'} onClick={() => runRegistryAction('Host restart', () => hostAction(item, 'restart'), item.extensionId).catch((err) => setError(err.message))}>Host Restart</button></div></> : item.currentState === 'enabled' ? <p className="muted">Host: backend target не запущен или отсутствует; обновите hosts для актуального состояния.</p> : null; })()}
+        <div className="buttonRow"><button disabled={item.currentState === 'enabled' || item.currentState === 'absent'} onClick={() => runRegistryAction('Extension enable', () => lifecycleAction(item, 'enable'), item.extensionId).catch((err) => setError(err.message))}>Enable</button><button disabled={item.currentState !== 'enabled'} onClick={() => runRegistryAction('Extension disable', () => lifecycleAction(item, 'disable'), item.extensionId).catch((err) => setError(err.message))}>Disable</button><button disabled={item.currentState === 'absent'} onClick={() => runRegistryAction('Extension update', () => updateInstalledExtension(item), item.extensionId).catch((err) => setError(err.message))}>Update</button><button onClick={() => runRegistryAction('Extension rollback', () => lifecycleAction(item, 'rollback'), item.extensionId).catch((err) => setError(err.message))}>Rollback</button><button disabled={item.currentState === 'absent'} className="danger" onClick={() => runRegistryAction('Extension uninstall', () => lifecycleAction(item, 'uninstall'), item.extensionId).catch((err) => setError(err.message))}>Uninstall</button></div>
       </article>)}
     </section>
   </section>;

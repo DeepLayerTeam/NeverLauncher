@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.21.9. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.21.10. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -9173,6 +9173,36 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/operations/jobs": {
+      "get": {
+        "operationId": "get_operations_jobs",
+        "tags": [
+          "operations"
+        ],
+        "summary": "GET /api/v1/operations/jobs",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/operations/migrations/apply": {
