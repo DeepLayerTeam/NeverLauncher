@@ -389,6 +389,20 @@ func (s Server) operationStatus0217(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": publicOperation0217(job)})
 }
+
+// Public journal deliberately omits internal worker/fencing/lease data.
+func publicOperationAttempts02112(attempts []model.DurableJobAttempt) []map[string]any {
+	out := make([]map[string]any, 0, len(attempts))
+	for _, a := range attempts {
+		out = append(out, map[string]any{
+			"attempt": a.Attempt, "status": a.Status,
+			"startedAt": a.StartedAt, "finishedAt": a.FinishedAt,
+			"error": a.Error,
+		})
+	}
+	return out
+}
+
 func (s Server) operationAttempts0217(w http.ResponseWriter, r *http.Request) {
 	job, ok := s.readVisibleOperation0217(w, r)
 	if !ok {
@@ -404,7 +418,10 @@ func (s Server) operationAttempts0217(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, err.Error())
 		return
 	}
-	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"correlationId": job.ID, "attempts": attempts}})
+	// Never expose worker identities, fencing tokens, or internal attempt IDs to
+	// browser/API consumers. They are part of the durable execution boundary.
+	publicAttempts := publicOperationAttempts02112(attempts)
+	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"correlationId": job.ID, "attempts": publicAttempts}})
 }
 func (s Server) authorizeOperationMutation0217(w http.ResponseWriter, r *http.Request, job model.DurableJob) bool {
 	claims, err := s.adminClaims(r)

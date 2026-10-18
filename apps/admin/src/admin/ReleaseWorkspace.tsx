@@ -130,7 +130,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,canPrepare,canFileW
   }
   const rollbackTargets=releases.filter(v=>v.status==='published' && v.profileId===form.profileId && v.channel===form.channel);
   return <section className="card wide releaseWorkspace">
-    <h2>Release Workspace · 0.21.8</h2>
+    <h2>Release Workspace · {__NEVERLAUNCHER_VERSION__}</h2>
     <p className="muted">Мастер: проект → профиль и загрузчик → сборка → проверка → канал. Черновики хранятся на Backend с проверкой версии при сохранении.</p>
     <div className="formGrid"><article className="subcard">
       <h3>Черновики проекта {projectId || '—'}</h3>

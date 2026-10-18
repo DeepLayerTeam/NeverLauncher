@@ -186,6 +186,11 @@ export function AdminApp() {
 
   async function logout() {
     if (token) await requestJSON<any>(backendUrl, '/api/v1/admin/logout', token, { method: 'POST' }).catch(() => undefined);
+    // A logout must not leave pending player/server mutations for another
+    // principal using the same browser profile.
+    for (const key of Object.keys(sessionStorage)) {
+      if (key.startsWith('neverlauncher.bridge.pending.') || key.startsWith('neverlauncher.bridge.monitor.')) sessionStorage.removeItem(key);
+    }
     setToken(''); setRefreshToken(''); setSessionId(''); setDashboard(null); setIdentity(null); setPayload(null); setSessions([]); setDevices([]); setMessage('Сессия завершена.');
   }
 
@@ -406,12 +411,12 @@ export function AdminApp() {
         <label className="field"><span>URL Backend</span><input value={backendUrl} onChange={(event) => { setToken(''); setRefreshToken(''); setSessionId(''); setIdentity(null); setBackendUrl(event.target.value); }} /></label>
         {token && identity && <div className="projectContext"><label>Текущий проект<select aria-label="Текущий проект" disabled={availableProjects.length === 0} value={selectedProjectId} onChange={event => chooseProject(event.target.value)}>{availableProjects.map(p => <option key={String(p.id)} value={String(p.id)}>{String(p.name ?? p.id)}</option>)}</select></label><span className="muted">{identity.user.displayName || identity.user.email} · {identity.user.roleId} · {selectedProjectId || 'Нет доступных проектов'}</span></div>}
         <details className="advanced"><summary>API и технические сведения</summary><code>{activeEndpoint}</code></details>
-        {!token && <div className="loginRow"><input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="почта администратора" /><input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="пароль" type="password" /><input value={totp} onChange={(event) => setTotp(event.target.value)} placeholder="TOTP (необязательно)" /><input value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} placeholder="код восстановления (необязательно)" /><button onClick={() => login().catch((err: Error) => setError(err.message))}>{token ? 'Войти заново' : 'Войти'}</button><button onClick={() => passwordlessPasskeyLogin().catch((err: Error) => setError(err.message))}>Войти по passkey</button></div>}
+        {!token && <div className="loginRow"><label className="field">Email администратора<input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="почта администратора" type="email" autoComplete="username" /></label><label className="field">Пароль<input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="пароль" type="password" autoComplete="current-password" /></label><label className="field">TOTP (необязательно)<input value={totp} onChange={(event) => setTotp(event.target.value)} placeholder="TOTP (необязательно)" inputMode="numeric" autoComplete="one-time-code" /></label><label className="field">Код восстановления (необязательно)<input value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} placeholder="код восстановления (необязательно)" /></label><button onClick={() => login().catch((err: Error) => setError(err.message))}>{token ? 'Войти заново' : 'Войти'}</button><button onClick={() => passwordlessPasskeyLogin().catch((err: Error) => setError(err.message))}>Войти по passkey</button></div>}
         {token && <details className="advanced"><summary>Безопасность сессии и passkeys</summary><div className="passkeyRow"><button onClick={() => refreshSession().catch((err: Error) => setError(err.message))}>Обновить сессию</button><button onClick={() => logout().catch((err: Error) => setError(err.message))}>Выйти</button><button onClick={() => registerPasskey().catch((err: Error) => setError(err.message))}>Добавить passkey</button><button onClick={() => stepUpPasskey().catch((err: Error) => setError(err.message))}>Подтвердить passkey</button><select aria-label="MFA policy" value={mfaPolicy} onChange={(event) => setMfaPolicy(event.target.value as typeof mfaPolicy)}><option value="optional">MFA optional</option><option value="required">MFA required</option><option value="phishing-resistant">Phishing-resistant</option></select><button onClick={() => saveMfaPolicy().catch((err: Error) => setError(err.message))}>Сохранить MFA policy</button></div></details>}
         {sessionId && <p className="muted">Активная серверная сессия: <code>{sessionId}</code></p>}
         {token && <p className="muted"><a href="#/devices">Управление моими сессиями и доверенными устройствами</a></p>}
-        {message && <p className="success">{message}</p>}
-        {error && <p className="error">{error}</p>}
+        {message && <p className="success" role="status">{message}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
       </section>
       {token && <section className="grid"><MetricCard label="Проекты" value={metrics.projects ?? '—'} /><MetricCard label="Профили" value={metrics.profiles ?? '—'} /><MetricCard label="Каналы" value={metrics.channels ?? '—'} /><MetricCard label="Аудит" value={metrics.auditEvents ?? '—'} /><MetricCard label="Состояние" value={dashboard?.status ?? status} /></section>}
       {active === 'dashboard' && token && identity && <AdminExtensions backendUrl={backendUrl} token={token} mode="dashboard" onError={setError} />}

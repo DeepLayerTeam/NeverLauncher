@@ -1,0 +1,67 @@
+name: Admin Hardening 0.21.12
+on:
+  pull_request:
+    paths:
+      - 'apps/admin/**'
+      - 'services/api/**'
+      - 'e2e/scripts/*02112*'
+      - '.github/workflows/admin-hardening-02112.yml'
+  workflow_dispatch:
+
+jobs:
+  postgres-serverbridge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: services/api/go.sum
+      - name: Go race tests and regression checks
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/httpapi ./internal/repository
+      - name: Real PostgreSQL and ServerBridge durable integration
+        run: bash e2e/scripts/run-admin-hardening-02112-e2e.sh
+  admin-build-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: Install, test and production build
+        working-directory: apps/admin
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: OpenAPI and version
+        run: |
+          python3 scripts/contracts/validate-openapi.py
+          python3 scripts/version/manage.py check
+  browser-live:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      E2E_ADMIN_URL: ${{ vars.NL_E2E_ADMIN_URL }}
+      E2E_API_URL: ${{ vars.NL_E2E_API_URL }}
+      E2E_PROJECT_ID: ${{ vars.NL_E2E_PROJECT_ID }}
+      E2E_FOREIGN_PROJECT_ID: ${{ vars.NL_E2E_FOREIGN_PROJECT_ID }}
+      E2E_ADMIN_TOKEN: ${{ secrets.NL_E2E_ADMIN_TOKEN }}
+      E2E_OPERATOR_TOKEN: ${{ secrets.NL_E2E_OPERATOR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser driver
+        run: |
+          python3 -m pip install playwright==1.58.0
+          python3 -m playwright install --with-deps chromium
+      - name: Browser against real staging Backend (no mocks)
+        run: python3 e2e/scripts/admin-hardening-02112-browser.py

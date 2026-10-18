@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '../api/client';
 import { ResourceGrid } from '../components/ResourceGrid';
 import { MetricCard } from '../components/primitives';
@@ -17,7 +17,11 @@ const actions: Array<{ type: BridgeCommandType; label: string; confirm?: boolean
   { type: 'server.shutdown', label: 'Остановить сервер', confirm: true }, { type: 'server.console', label: 'Разрешённая консольная команда', confirm: true },
 ];
 const initialFields = { username: '', message: '', reason: '', enabled: true, command: '' };
-const pendingStorageKey = (projectId: string) => `neverlauncher.bridge.pending.${projectId}`;
+const pendingStorageKey = (projectId: string, backendUrl: string, sessionId: string) =>
+  `neverlauncher.bridge.pending.${encodeURIComponent(backendUrl)}.${encodeURIComponent(sessionId)}.${encodeURIComponent(projectId)}`;
+const monitorStorageKey = (projectId: string, backendUrl: string, sessionId: string) =>
+  `neverlauncher.bridge.monitor.${encodeURIComponent(backendUrl)}.${encodeURIComponent(sessionId)}.${encodeURIComponent(projectId)}`;
+const currentSession = () => sessionStorage.getItem('neverlauncher.admin.sessionId') || 'unknown-session';
 const timeLabel = (iso?: string) => {
   const time = Date.parse(iso ?? '');
   return Number.isFinite(time) ? new Date(time).toLocaleString() : 'неизвестно';
@@ -33,9 +37,9 @@ const showProblem = (error: unknown) => {
   }
   return error instanceof Error ? error.message : 'Неизвестная ошибка';
 };
-const readPending = (projectId: string): BridgeCommandRequest | null => {
+const readPending = (projectId: string, backendUrl: string): BridgeCommandRequest | null => {
   try {
-    const data = JSON.parse(sessionStorage.getItem(pendingStorageKey(projectId)) ?? 'null');
+    const data = JSON.parse(sessionStorage.getItem(pendingStorageKey(projectId, backendUrl, currentSession())) ?? 'null');
     if (typeof data?.serverId === 'string' && typeof data?.idempotencyKey === 'string' && typeof data?.type === 'string' && data.payload && typeof data.payload === 'object') return data as BridgeCommandRequest;
   } catch { /* stale browser state */ }
   return null;
@@ -53,13 +57,24 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, canControl
   const [busy, setBusy] = useState(false);
   const [kind, setKind] = useState<BridgeCommandType>('server.save');
   const [fields, setFields] = useState(initialFields);
-  const [pending, setPending] = useState<BridgeCommandRequest | null>(() => readPending(projectId));
+  const [pending, setPending] = useState<BridgeCommandRequest | null>(() => readPending(projectId, backendUrl));
+  // A ref closes the double-click window before React commits busy=true.
+  const submitInFlight = useRef(false);
   const [clock, setClock] = useState(Date.now());
   const nodes = overview?.nodes ?? [];
   const node = nodes.find(item => item.id === selectedServer) ?? null;
   const controls = (overview?.control ?? []).filter(item => !selectedServer || item.serverId === selectedServer);
 
-  useEffect(() => { setOverview(null); setSelectedServer(''); setSelectedCommand(null); setError(''); setPending(readPending(projectId)); }, [backendUrl, token, projectId]);
+  useEffect(() => { setOverview(null); setSelectedServer(''); setSelectedCommand(null); setError(''); setPending(readPending(projectId, backendUrl));
+    const persisted = sessionStorage.getItem(monitorStorageKey(projectId, backendUrl, currentSession()));
+    if (persisted) {
+      try {
+        const { serverId, commandId } = JSON.parse(persisted);
+        if (typeof serverId === 'string' && typeof commandId === 'string' && serverId && commandId)
+          void api.command(serverId, commandId).then(c => {setSelectedServer(serverId);setSelectedCommand(c);setLastCommandReadAt(Date.now());}).catch(() => undefined);
+      } catch { /* outdated monitor entry */ }
+    }
+  }, [api, backendUrl, token, projectId]);
   useEffect(() => {
     if (!projectId || !token) return;
     let alive = true;
@@ -95,33 +110,43 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, canControl
 
   function persistPending(next: BridgeCommandRequest | null) {
     setPending(next);
-    if (next) sessionStorage.setItem(pendingStorageKey(projectId), JSON.stringify(next));
-    else sessionStorage.removeItem(pendingStorageKey(projectId));
+    if (next) sessionStorage.setItem(pendingStorageKey(projectId, backendUrl, currentSession()), JSON.stringify(next));
+    else sessionStorage.removeItem(pendingStorageKey(projectId, backendUrl, currentSession()));
   }
   async function submit(existing?: BridgeCommandRequest) {
-    if (!node || !canControl || !canControlNode(node, clock)) return;
+    if (submitInFlight.current || busy) return;
+    // Refuse to submit on stale overview or when a previous request has an
+    // indeterminate outcome. The saved payload is the only safe retry.
+    if (!node || !canControl || !canControlNode(node, clock) ||
+        lastReadAt === null || clock - lastReadAt >= 45_000 ||
+        (existing?.type === 'server.console' || (!existing && kind === 'server.console')) && !canConsole) return;
+    const unresolved = readPending(projectId, backendUrl);
+    if (!existing && unresolved) { setPending(unresolved); setError('Сначала восстановите ранее отправленную команду.'); return; }
     setError(''); setMessage('');
     let request: BridgeCommandRequest;
     try {
       request = existing ?? { serverId: node.id, type: kind, payload: buildControlPayload(kind, fields), idempotencyKey: crypto.randomUUID() };
     } catch (e) { setError(showProblem(e)); return; }
     if (request.serverId !== node.id) { setError('Перейдите к серверу незавершённой операции.'); return; }
+    if (existing && (!unresolved || JSON.stringify(existing) !== JSON.stringify(unresolved))) { setError('Повтор допустим только с неизменённой сохранённой командой.'); return; }
     if (!existing) {
       const effect = `${actions.find(a => a.type === kind)?.label} на сервере ${node.name || node.id} (${node.id})\n${Object.entries(request.payload).map(([k,v]) => `${k}: ${v}`).join('\n') || 'Без аргументов'}\n\nКоманда будет выполнена игровым сервером. Отмена после dispatch не гарантируется.`;
       if (!window.confirm(effect)) return;
       persistPending(request); // Save BEFORE network IO; retry uses exactly the same payload + key.
     }
+    submitInFlight.current = true;
     setBusy(true);
     try {
       const response = await api.send(request);
       if (!response.command?.id) throw new Error('Backend не вернул ID управляющей команды');
+      sessionStorage.setItem(monitorStorageKey(projectId, backendUrl, currentSession()), JSON.stringify({serverId: response.command.serverId, commandId: response.command.id}));
       setSelectedCommand(response.command); setLastCommandReadAt(Date.now());
       setMessage(response.idempotentReplay ? 'Повтор запроса: возвращена ранее сохранённая команда.' : 'Команда поставлена в очередь. Ожидаем подтверждение от Bridge.');
       persistPending(null);
       const latest = await api.overview(projectId).catch(() => null);
       if (latest) { setOverview(latest); setLastReadAt(Date.now()); }
     } catch (e) { setError(`${showProblem(e)}. Повторите отправку с тем же ключом; новая команда не создаётся автоматически.`); }
-    finally { setBusy(false); }
+    finally { submitInFlight.current = false; setBusy(false); }
   }
   if (!projectId) return <section className="card wide"><h2>ServerBridge</h2><p>Выберите доступный проект.</p></section>;
   const monitor = selectedCommand ? commandLifecycle(selectedCommand.status) : null;

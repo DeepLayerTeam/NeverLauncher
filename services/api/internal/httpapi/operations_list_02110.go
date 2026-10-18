@@ -62,7 +62,7 @@ func (s Server) operationList02110(w http.ResponseWriter, r *http.Request) {
 	}
 	jobs, err := lister.ListProjectOperations(r.Context(), projectID, status, limit+1, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusServiceUnavailable, "список заданий временно недоступен")
 		return
 	}
 	more := len(jobs) > limit
