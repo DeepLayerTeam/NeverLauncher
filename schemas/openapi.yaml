@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.21.5. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.21.6. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -9607,7 +9607,6 @@
           "api"
         ],
         "summary": "POST /api/v1/packages/{packageId}/smoke-test",
-        "description": "Legacy smoke-test performs integrity validation only; it never launches Minecraft and never constitutes runtime validation or evidence of successful game launch. Use runtime-validations/evidence for verified runtime results.",
         "responses": {
           "200": {
             "description": "Success",

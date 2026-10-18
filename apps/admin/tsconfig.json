@@ -19,7 +19,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "allowArbitraryExtensions": true
+    "allowArbitraryExtensions": true,
+    "allowImportingTsExtensions": true
   },
   "include": [
     "src"

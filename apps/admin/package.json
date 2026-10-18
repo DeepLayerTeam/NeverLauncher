@@ -1,11 +1,12 @@
 {
   "name": "neverlauncher-admin",
-  "version": "0.21.5",
+  "version": "0.21.6",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build"
+    "build": "tsc && vite build",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "6.0.2",
