@@ -6,6 +6,7 @@ import (
 )
 
 func (s Server) registerPackageRoutesV1(mux *http.ServeMux) {
+	s.registerOperationRoutes0217(mux)
 	mux.HandleFunc("POST /api/v1/admin/login", s.adminLogin)
 	mux.Handle("GET /api/v1/admin/me", s.requireAuthenticated(s.adminMe))
 	mux.Handle("POST /api/v1/admin/logout", s.requireAuthenticated(s.adminLogout))

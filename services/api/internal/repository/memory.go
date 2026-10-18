@@ -143,6 +143,7 @@ type MemoryRepository struct {
 	auditSink                      func(model.AuditEvent)
 	durableMu                      sync.Mutex
 	durableJobs                    map[string]model.DurableJob
+	durableOpAttempts              map[string][]model.DurableJobAttempt
 	durableJobKeys                 map[string]string
 	durableScopeLeases             map[string]model.DurableScopeLease
 	durableOutbox                  map[string]model.DurableOutboxEvent
@@ -235,6 +236,7 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 		nextExtensionInstallRevisionID: 1,
 		extensionUpdateLeases:          map[string]extensionUpdateLease02011{},
 		durableJobs:                    map[string]model.DurableJob{},
+		durableOpAttempts:              map[string][]model.DurableJobAttempt{},
 		durableJobKeys:                 map[string]string{},
 		durableScopeLeases:             map[string]model.DurableScopeLease{},
 		durableOutbox:                  map[string]model.DurableOutboxEvent{},

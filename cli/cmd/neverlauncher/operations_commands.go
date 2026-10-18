@@ -48,6 +48,8 @@ func handleAdminOps9100(args []string) error {
 		payload, _, err = adminBackendGet(args, "/api/v1/operations/diagnostics")
 	case "backup":
 		payload, _, err = adminBackendGet(args, "/api/v1/operations/backup")
+	case "operation", "job":
+		return handleDurableOperation0217(args[1:])
 	default:
 		return fmt.Errorf("неизвестная adminops-подкоманда: %s", args[0])
 	}

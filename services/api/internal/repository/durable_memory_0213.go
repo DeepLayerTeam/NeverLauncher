@@ -69,6 +69,9 @@ func (r *MemoryRepository) leaseJobLocked0213(id, worker string, ttl time.Durati
 	if err != nil {
 		return model.DurableJob{}, err
 	}
+	if j.Status == model.DurableJobStatusRunning && j.AttemptCount > 0 {
+		r.finishMemoryOperationAttempt0217(id, "failed", "lease expired; recovered by another worker")
+	}
 	j.Status = model.DurableJobStatusRunning
 	j.LeaseOwner = worker
 	j.LeaseToken = token
@@ -78,6 +81,7 @@ func (r *MemoryRepository) leaseJobLocked0213(id, worker string, ttl time.Durati
 	j.UpdatedAt = now
 	j.LastError = ""
 	r.durableJobs[id] = j
+	r.durableOpAttempts[id] = append(r.durableOpAttempts[id], model.DurableJobAttempt{JobID: id, Attempt: j.AttemptCount, WorkerID: worker, LeaseFence: j.LeaseFence, StartedAt: now, Status: "running"})
 	return j, nil
 }
 
@@ -127,6 +131,7 @@ func (r *MemoryRepository) FailDurableJob(_ context.Context, id, leaseToken, wor
 	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != leaseToken {
 		return model.DurableJob{}, ErrLeaseLost
 	}
+	r.finishMemoryOperationAttempt0217(id, "failed", workerErr)
 	j.Status = model.DurableJobStatusPending
 	if j.AttemptCount >= j.MaxAttempts {
 		j.Status = model.DurableJobStatusDead
@@ -154,6 +159,7 @@ func (r *MemoryRepository) TerminateDurableJob(_ context.Context, id, leaseToken
 	if j.Status != model.DurableJobStatusRunning || j.LeaseToken != leaseToken {
 		return model.DurableJob{}, ErrLeaseLost
 	}
+	r.finishMemoryOperationAttempt0217(id, terminalStatus, reason)
 	j.Status = terminalStatus
 	j.LeaseOwner, j.LeaseToken = "", ""
 	j.LeaseExpiresAt = time.Time{}
@@ -268,6 +274,7 @@ func (r *MemoryRepository) CommitDurablePublish(_ context.Context, commit model.
 	rel.PublishedAt = now
 	r.releases[idx] = rel
 	result, _ := json.Marshal(map[string]any{"releaseId": rel.ID, "status": "published", "publishedAt": now})
+	r.finishMemoryOperationAttempt0217(job.ID, "succeeded", "")
 	job.Status = model.DurableJobStatusSucceeded
 	job.Result = result
 	job.CompletedAt, job.UpdatedAt = now, now

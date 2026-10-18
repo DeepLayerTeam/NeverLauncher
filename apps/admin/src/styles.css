@@ -120,3 +120,8 @@ code { color: #bfdbfe; }
 .structuredFields dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .structuredList { list-style-position: outside; padding-left: 20px; margin: 0; }
 @media (max-width: 850px) { .structuredFields > div { grid-template-columns: 1fr; } }
+
+/* Unified operations: accessible typed forms and inspectable attempt journal. */
+.field select { width:100%; border:1px solid #334155; background:#020617; color:#e5e7eb; padding:10px 12px; border-radius:12px; }
+.subcard .table th { width:auto; }
+.subcard code { overflow-wrap:anywhere; }

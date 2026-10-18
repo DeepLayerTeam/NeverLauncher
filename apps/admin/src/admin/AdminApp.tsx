@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AdminExtensions } from '../admin_extensions_0208';
 import { RegistryWorkspace } from './RegistryWorkspace';
+import { OperationsWorkspace } from './OperationsWorkspace';
 import { requestJSON, ApiError } from '../api/client';
 import { AdminApi, type AdminOverview } from '../api/admin';
 import { MetricCard, TextInput } from '../components/primitives';
@@ -424,8 +425,9 @@ export function AdminApp() {
       {mayRead && token && active === 'extension-registry' && <RegistryWorkspace backendUrl={backendUrl} token={token} onError={setError} onMessage={setMessage} onResult={setPayload} onChanged={() => loadDashboard().catch(() => undefined)} />}
       {mayRead && crudPanel}
       {mayRead && packagePanel}
+      {token && mayRead && active === 'operations' && <OperationsWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
       {token && !mayRead && <section className="card wide emptyState"><h2>Нет доступа</h2><p>Эта операция недоступна для вашей роли либо проект не выбран. Запросите необходимые полномочия у владельца.</p></section>}
-      {token && mayRead && active !== 'extensions-manager' && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'server-bridge' ? <ServerBridgeOverview payload={payload} /> : active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
+      {token && mayRead && active !== 'extensions-manager' && active !== 'operations' && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'server-bridge' ? <ServerBridgeOverview payload={payload} /> : active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
 
     </section>
   </main>;

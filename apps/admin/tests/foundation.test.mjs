@@ -76,3 +76,14 @@ test('collection tables search, facet, numeric sort, pagination and empty pages'
   assert.deepEqual(paginateRows([], 1, 10).rows, []);
   assert.deepEqual(rows.map(r => r.name), ['Beta', 'Alpha', 'Gamma'], 'do not mutate backend response');
 });
+
+
+test('Unified Operations is a project-scoped functional Admin route', () => {
+  assert.equal(endpointForSection('operations', 'demo-project'), '/api/v1/operations');
+  assert.equal(canSeeSection(scoped, 'operations', 'alpha'), true);
+  assert.equal(canSeeSection(scoped, 'operations', 'unknown'), false);
+  assert.equal(can(scoped, 'release:publish', 'alpha'), false);
+  const publisher = { ...scoped, projectPermissions: { alpha: ['project:read', 'release:publish'] } };
+  assert.equal(can(publisher, 'release:publish', 'alpha'), true);
+  assert.equal(can(publisher, 'release:publish', 'beta'), false);
+});

@@ -76,6 +76,15 @@ func (s Server) runDurableTick0213(ctx context.Context, cp repository.DurableCon
 			log.Printf("durable publish job %s: %v", job.ID, err)
 		}
 	}
+	rollbacks, err := cp.LeaseDurableJobs(ctx, durableRollbackKind0217, worker, 4, 60*time.Minute)
+	if err != nil {
+		return err
+	}
+	for _, job := range rollbacks {
+		if _, runErr := s.executeRollbackJob0217(ctx, cp, job, worker); runErr != nil {
+			log.Printf("durable rollback job %s: %v", job.ID, runErr)
+		}
+	}
 	return s.drainOutbox0213(ctx, cp, worker, 32)
 }
 
@@ -292,6 +301,7 @@ func (s Server) durableJobGet0213(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	w.Header().Set("X-Correlation-ID", job.ID)
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": job})
 }
 
