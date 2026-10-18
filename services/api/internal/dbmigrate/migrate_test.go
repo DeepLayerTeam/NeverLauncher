@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0056_profile_manifest_schema_evolution_0221" {
+	if st.Current != "0057_schema_evolution_integrity_0222" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }

@@ -218,6 +218,9 @@ func (r *SQLRepository) SaveProfile(p model.Profile) (model.Profile, error) {
 	n, _ := res.RowsAffected()
 	var actual model.Profile
 	if n == 1 {
+		if p.Revision > 1 {
+			return model.Profile{}, ErrConflict
+		}
 		p.Revision = 1
 		p.CreatedAt = now
 		p.UpdatedAt = now
@@ -254,6 +257,35 @@ func (r *SQLRepository) SaveProfile(p model.Profile) (model.Profile, error) {
 		return model.Profile{}, err
 	}
 	return actual, nil
+}
+
+// CurrentProfileSnapshot reads the mutable head and the matching immutable
+// history revision in one PostgreSQL statement. If history is corrupt/missing,
+// release creation fails closed instead of snapshotting untracked metadata.
+func (r *SQLRepository) CurrentProfileSnapshot(projectID, profileID string) (model.ProfileSnapshot, error) {
+	if err := r.check(); err != nil {
+		return model.ProfileSnapshot{}, err
+	}
+	var snapshot model.ProfileSnapshot
+	var raw []byte
+	err := r.db.QueryRow(`SELECT h.schema_version,h.revision,h.digest,h.spec
+		FROM profiles p JOIN profile_revisions_0221 h
+		ON h.project_id=p.project_id AND h.profile_id=p.id AND h.revision=p.revision
+		WHERE p.project_id=$1 AND p.id=$2 AND h.digest=p.digest`, projectID, profileID).
+		Scan(&snapshot.SchemaVersion, &snapshot.Revision, &snapshot.Digest, &raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.ProfileSnapshot{}, ErrNotFound
+	}
+	if err != nil {
+		return model.ProfileSnapshot{}, err
+	}
+	if err := json.Unmarshal(raw, &snapshot.Spec); err != nil {
+		return model.ProfileSnapshot{}, err
+	}
+	if err := model.ValidateProfileSnapshot(snapshot, projectID, profileID); err != nil {
+		return model.ProfileSnapshot{}, err
+	}
+	return snapshot, nil
 }
 
 func (r *SQLRepository) ListProfileRevisions(projectID, profileID string) ([]model.ProfileSnapshot, error) {
@@ -944,117 +976,32 @@ func (r *SQLRepository) CreateVersion(projectID, profileID, channel, version str
 	return r.saveRelease(model.ReleaseVersion{ID: fmt.Sprintf("%s-%s-%s", projectID, profileID, version), ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, Status: "draft", Manifest: manifest, PublishedAt: now})
 }
 
+// PublishVersion commits only an existing signed draft. The signing payload is
+// never silently rebuilt from the current profile or release file list.
 func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version string) (model.ReleaseVersion, error) {
 	if err := r.check(); err != nil {
 		return model.ReleaseVersion{}, err
 	}
-	if profileID == "" {
-		profileID = "vanilla"
+	var raw []byte
+	var status string
+	err := r.db.QueryRow(`SELECT manifest,status FROM release_versions WHERE project_id=$1 AND profile_id=$2 AND channel=$3 AND version=$4`, projectID, profileID, channel, version).Scan(&raw, &status)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.ReleaseVersion{}, ErrNotFound
 	}
-	if channel == "" {
-		channel = "stable"
-	}
-	if version == "" {
-		version = time.Now().UTC().Format("20060102150405")
-	}
-	now := time.Now().UTC()
-	releaseID := fmt.Sprintf("%s-%s-%s", projectID, profileID, version)
-	snapshot, snapErr := ReadProfileSnapshot(r, projectID, profileID)
-	if snapErr != nil {
-		return model.ReleaseVersion{}, snapErr
-	}
-	manifest := model.Manifest{SchemaVersion: model.ManifestSchemaV2, ProfileSnapshot: &snapshot, ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, CreatedAt: now.Format(time.RFC3339), Files: []model.ManifestFile{}}
-
-	tx, err := r.db.Begin()
 	if err != nil {
 		return model.ReleaseVersion{}, err
 	}
-	defer tx.Rollback()
-
-	var existingRaw []byte
-	var existingStatus string
-	err = tx.QueryRow(`SELECT manifest, status FROM release_versions
-		WHERE project_id=$1 AND profile_id=$2 AND channel=$3 AND version=$4
-		FOR UPDATE`, projectID, profileID, channel, version).Scan(&existingRaw, &existingStatus)
-	switch {
-	case err == nil:
-		if existingStatus == "published" {
-			return model.ReleaseVersion{}, ErrImmutable
-		}
-		if len(existingRaw) > 0 {
-			_ = json.Unmarshal(existingRaw, &manifest)
-		}
-	case errors.Is(err, sql.ErrNoRows):
-		// Новый релиз: строки для блокировки пока не существует. Условный UPSERT
-		// ниже дополнительно защищает от одновременной публикации той же версии.
-	default:
-		return model.ReleaseVersion{}, err
-	}
-
-	manifest.ProjectID = projectID
-	manifest.ProfileID = profileID
-	manifest.Channel = channel
-	manifest.Version = version
-	manifest.CreatedAt = now.Format(time.RFC3339)
-
-	rows, err := tx.Query(`SELECT id, project_id, version_id, path, size, sha256, url, required, executable, target_os::text
-		FROM files WHERE project_id=$1 AND version_id=$2 ORDER BY path`, projectID, releaseID)
-	if err != nil {
-		return model.ReleaseVersion{}, err
-	}
-	var files []model.FileObject
-	for rows.Next() {
-		var file model.FileObject
-		var targetOSRaw string
-		if err := rows.Scan(&file.ID, &file.ProjectID, &file.VersionID, &file.Path, &file.Size, &file.SHA256, &file.URL, &file.Required, &file.Executable, &targetOSRaw); err != nil {
-			rows.Close()
-			return model.ReleaseVersion{}, err
-		}
-		if err := json.Unmarshal([]byte(targetOSRaw), &file.TargetOS); err != nil {
-			rows.Close()
-			return model.ReleaseVersion{}, fmt.Errorf("files.target_os повреждён для %s: %w", file.Path, err)
-		}
-		files = append(files, file)
-	}
-	if err := rows.Close(); err != nil {
-		return model.ReleaseVersion{}, err
-	}
-	if len(files) > 0 {
-		manifest.Files = manifest.Files[:0]
-		for _, file := range files {
-			manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...)})
-		}
-	}
-	if err := model.ValidateManifestSchema(manifest); err != nil {
-		return model.ReleaseVersion{}, err
-	}
-	manifestRaw, err := json.Marshal(manifest)
-	if err != nil {
-		return model.ReleaseVersion{}, err
-	}
-	res, err := tx.Exec(`INSERT INTO release_versions (id, project_id, profile_id, channel, version, status, manifest, published_at)
-VALUES ($1,$2,$3,$4,$5,'published',$6,$7)
-ON CONFLICT (project_id, profile_id, channel, version) DO UPDATE
-SET status='published', manifest=EXCLUDED.manifest, published_at=EXCLUDED.published_at
-WHERE release_versions.status <> 'published'`, releaseID, projectID, profileID, channel, version, string(manifestRaw), now)
-	if err != nil {
-		return model.ReleaseVersion{}, err
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
+	if status == "published" {
 		return model.ReleaseVersion{}, ErrImmutable
 	}
-	if _, err := tx.Exec(`INSERT INTO release_channels (id, project_id, name, description, protected)
-VALUES ($1,$2,$3,$4,$5)
-ON CONFLICT (project_id, id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, protected=EXCLUDED.protected`, channel, projectID, channel, "Канал релиза", channel == "stable"); err != nil {
+	var manifest model.Manifest
+	if err := json.Unmarshal(raw, &manifest); err != nil {
 		return model.ReleaseVersion{}, err
 	}
-	if _, err := tx.Exec(`INSERT INTO audit_events (id, actor, action, target, created_at) VALUES ($1,$2,$3,$4,$5)`, fmt.Sprintf("audit-%d", now.UnixNano()), "system", "version:publish", releaseID, now); err != nil {
-		return model.ReleaseVersion{}, err
+	if manifest.Signature == nil {
+		return model.ReleaseVersion{}, ErrConflict
 	}
-	if err := tx.Commit(); err != nil {
-		return model.ReleaseVersion{}, err
-	}
-	return model.ReleaseVersion{ID: releaseID, ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, Status: "published", Manifest: manifest, PublishedAt: now}, nil
+	return r.PublishVersionWithManifest(projectID, profileID, channel, version, manifest)
 }
 
 func (r *SQLRepository) PublishVersionWithManifest(projectID, profileID, channel, version string, manifest model.Manifest) (model.ReleaseVersion, error) {
@@ -1086,7 +1033,8 @@ func (r *SQLRepository) PublishVersionWithManifest(projectID, profileID, channel
 	}
 	defer tx.Rollback()
 	var currentStatus string
-	if err := tx.QueryRow(`SELECT status FROM release_versions WHERE id = $1 AND project_id = $2 AND profile_id = $3 AND channel = $4 AND version = $5 FOR UPDATE`, releaseID, projectID, profileID, channel, version).Scan(&currentStatus); err != nil {
+	var existingRaw []byte
+	if err := tx.QueryRow(`SELECT status,manifest FROM release_versions WHERE id = $1 AND project_id = $2 AND profile_id = $3 AND channel = $4 AND version = $5 FOR UPDATE`, releaseID, projectID, profileID, channel, version).Scan(&currentStatus, &existingRaw); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.ReleaseVersion{}, ErrNotFound
 		}
@@ -1094,6 +1042,13 @@ func (r *SQLRepository) PublishVersionWithManifest(projectID, profileID, channel
 	}
 	if currentStatus == "published" {
 		return model.ReleaseVersion{}, ErrImmutable
+	}
+	var existing model.Manifest
+	if err := json.Unmarshal(existingRaw, &existing); err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	if err := model.ValidateReleaseManifestTransition(existing, manifest); err != nil {
+		return model.ReleaseVersion{}, err
 	}
 	if _, err := tx.Exec(`UPDATE release_versions
 		SET status = 'published', manifest = $2, published_at = $3
@@ -1167,13 +1122,18 @@ func (r *SQLRepository) UpdateVersionManifest(projectID, versionID string, manif
 	if found.Status == "published" {
 		return model.ReleaseVersion{}, ErrImmutable
 	}
-	_ = json.Unmarshal(raw, &found.Manifest)
+	if err := json.Unmarshal(raw, &found.Manifest); err != nil {
+		return model.ReleaseVersion{}, err
+	}
 	manifest.ProjectID, manifest.ProfileID, manifest.Channel, manifest.Version = projectID, found.ProfileID, found.Channel, found.Version
 	if manifest.SchemaVersion == "" {
 		manifest.SchemaVersion = "1.0"
 	}
 	if manifest.Files == nil {
 		manifest.Files = []model.ManifestFile{}
+	}
+	if err := model.ValidateReleaseManifestTransition(found.Manifest, manifest); err != nil {
+		return model.ReleaseVersion{}, err
 	}
 	next, err := json.Marshal(manifest)
 	if err != nil {
@@ -1383,7 +1343,12 @@ func scanReleaseVersion(scanner interface{ Scan(dest ...any) error }) (model.Rel
 	if item.Status == "" {
 		item.Status = "published"
 	}
-	_ = json.Unmarshal(raw, &item.Manifest)
+	if err := json.Unmarshal(raw, &item.Manifest); err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	if err := model.ValidateManifestSchema(item.Manifest); err != nil {
+		return model.ReleaseVersion{}, err
+	}
 	return item, nil
 }
 

@@ -1,5 +1,13 @@
 ## 0.21.10 — Everyday Lifecycle
 
+## 0.22.2 — Schema Evolution Integrity
+
+- Закреплён неизменяемый ProfileSnapshot на протяжении изменения и публикации релиза; отклоняются подмена snapshot, смена схемы и identity.
+- Миграция 0057 с отложенным контролем исторических ревизий и DB-level защитой подписанных опубликованных манифестов.
+- Безопасные копии данных в in-memory repository, точное чтение snapshot из PostgreSQL history, отказ от небезопасной перепубликации без подписи.
+- Сохранена совместимость ранее подписанных v1 manifests без изменений или повторного подписания.
+
+
 - Added project-authorized persisted-job listing with bounded pagination, status filtering, attempt history and audit deep links.
 - Connected Admin backup/restore to real archive creation, inspection, verified dry-run and explicitly confirmed component restore with existing server step-up.
 - Introduced dedicated self-service sessions/trusted devices workflow with revocation results and audit links.

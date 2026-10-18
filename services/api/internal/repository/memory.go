@@ -494,7 +494,7 @@ func (r *MemoryRepository) ListVersions(projectID string) ([]model.ReleaseVersio
 	var result []model.ReleaseVersion
 	for _, item := range r.releases {
 		if item.ProjectID == projectID {
-			result = append(result, item)
+			result = append(result, cloneRelease0222(item))
 		}
 	}
 	sort.Slice(result, func(i, j int) bool { return result[i].PublishedAt.After(result[j].PublishedAt) })
@@ -845,40 +845,26 @@ func (r *MemoryRepository) GetManifest(projectID, profileID, channel string) (mo
 		}
 	}
 	if latest != nil {
-		return latest.Manifest, nil
+		return cloneManifest0222(latest.Manifest), nil
 	}
 	return model.Manifest{}, ErrNotFound
 }
 
+// PublishVersion only commits a previously signed draft. It does not regenerate
+// timestamps or an unsigned manifest (which would invalidate Ed25519 signatures).
 func (r *MemoryRepository) PublishVersion(projectID, profileID, channel, version string) (model.ReleaseVersion, error) {
-	if _, err := r.GetProject(projectID); err != nil {
-		return model.ReleaseVersion{}, err
-	}
-	if version == "" {
-		version = time.Now().UTC().Format("20060102150405")
-	}
-	for i := range r.releases {
-		if r.releases[i].ProjectID == projectID && r.releases[i].ProfileID == profileID && r.releases[i].Channel == channel && r.releases[i].Version == version {
-			if r.releases[i].Status == "published" {
+	for _, release := range r.releases {
+		if release.ProjectID == projectID && release.ProfileID == profileID && release.Channel == channel && release.Version == version {
+			if release.Status == "published" {
 				return model.ReleaseVersion{}, ErrImmutable
 			}
-			r.releases[i].Status = "published"
-			r.releases[i].PublishedAt = time.Now().UTC()
-			r.releases[i].Manifest.Version = version
-			r.releases[i].Manifest.Channel = channel
-			return r.releases[i], nil
+			if release.Manifest.Signature == nil {
+				return model.ReleaseVersion{}, ErrConflict
+			}
+			return r.PublishVersionWithManifest(projectID, profileID, channel, version, release.Manifest)
 		}
 	}
-	manifest, err := r.GetManifest(projectID, profileID, channel)
-	if err != nil {
-		manifest = model.Manifest{SchemaVersion: "1.0", ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, CreatedAt: time.Now().UTC().Format(time.RFC3339), Files: []model.ManifestFile{}}
-	}
-	manifest.Version = version
-	manifest.Channel = channel
-	manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339)
-	release := model.ReleaseVersion{ID: fmt.Sprintf("%s-%s-%s", projectID, profileID, version), ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, Status: "published", Manifest: manifest, PublishedAt: time.Now().UTC()}
-	r.releases = append(r.releases, release)
-	return release, nil
+	return model.ReleaseVersion{}, ErrNotFound
 }
 
 func (r *MemoryRepository) PublishVersionWithManifest(projectID, profileID, channel, version string, manifest model.Manifest) (model.ReleaseVersion, error) {
@@ -904,10 +890,13 @@ func (r *MemoryRepository) PublishVersionWithManifest(projectID, profileID, chan
 		if manifest.Files == nil {
 			manifest.Files = []model.ManifestFile{}
 		}
-		item.Manifest = manifest
+		if err := model.ValidateReleaseManifestTransition(item.Manifest, manifest); err != nil {
+			return model.ReleaseVersion{}, err
+		}
+		item.Manifest = cloneManifest0222(manifest)
 		item.Status = "published"
 		item.PublishedAt = now
-		return *item, nil
+		return cloneRelease0222(*item), nil
 	}
 	return model.ReleaseVersion{}, ErrNotFound
 }
@@ -955,8 +944,8 @@ func (r *MemoryRepository) CreateVersion(projectID, profileID, channel, version 
 		Manifest:    manifest,
 		PublishedAt: now,
 	}
-	r.releases = append(r.releases, release)
-	return release, nil
+	r.releases = append(r.releases, cloneRelease0222(release))
+	return cloneRelease0222(release), nil
 }
 
 func (r *MemoryRepository) UpdateVersionStatus(projectID, versionID, status string) (model.ReleaseVersion, error) {
@@ -970,7 +959,7 @@ func (r *MemoryRepository) UpdateVersionStatus(projectID, versionID, status stri
 				return model.ReleaseVersion{}, ErrImmutable
 			}
 			r.releases[i].Status = status
-			return r.releases[i], nil
+			return cloneRelease0222(r.releases[i]), nil
 		}
 	}
 	return model.ReleaseVersion{}, ErrNotFound
@@ -992,8 +981,11 @@ func (r *MemoryRepository) UpdateVersionManifest(projectID, versionID string, ma
 			if manifest.Files == nil {
 				manifest.Files = []model.ManifestFile{}
 			}
-			r.releases[i].Manifest = manifest
-			return r.releases[i], nil
+			if err := model.ValidateReleaseManifestTransition(r.releases[i].Manifest, manifest); err != nil {
+				return model.ReleaseVersion{}, err
+			}
+			r.releases[i].Manifest = cloneManifest0222(manifest)
+			return cloneRelease0222(r.releases[i]), nil
 		}
 	}
 	return model.ReleaseVersion{}, ErrNotFound

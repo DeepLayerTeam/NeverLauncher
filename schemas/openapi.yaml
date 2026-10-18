@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.22.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.22.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -10544,6 +10544,49 @@
         "security": []
       }
     },
+    "/api/v1/projects/{projectId}/profiles/{profileId}/revisions": {
+      "get": {
+        "operationId": "get_projects_by_projectId_profiles_by_profileId_revisions",
+        "tags": [
+          "projects"
+        ],
+        "summary": "GET /api/v1/projects/{projectId}/profiles/{profileId}/revisions",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": []
+      }
+    },
     "/api/v1/projects/{projectId}/validation-policy": {
       "get": {
         "operationId": "get_projects_by_projectId_validation_policy",
@@ -12686,54 +12729,6 @@
         ],
         "security": []
       }
-    },
-    "/api/v1/projects/{projectId}/profiles/{profileId}/revisions": {
-      "get": {
-        "operationId": "get_profile_revisions_0221",
-        "tags": [
-          "projects"
-        ],
-        "summary": "Retrieve immutable profile revision history (or one revision)",
-        "parameters": [
-          {
-            "name": "projectId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "profileId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "revision",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int64",
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Profile revision snapshots or one requested revision"
-          },
-          "400": {
-            "description": "Invalid revision"
-          },
-          "404": {
-            "description": "Profile/revision not found"
-          }
-        }
-      }
     }
   },
   "components": {
@@ -13286,21 +13281,6 @@
           },
           "isDefault": {
             "type": "boolean"
-          },
-          "schemaVersion": {
-            "type": "string",
-            "enum": [
-              "2.0"
-            ]
-          },
-          "revision": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 1
-          },
-          "digest": {
-            "type": "string",
-            "pattern": "^[a-f0-9]{64}$"
           }
         }
       },
@@ -13411,11 +13391,7 @@
         ],
         "properties": {
           "schemaVersion": {
-            "type": "string",
-            "enum": [
-              "1.0",
-              "2.0"
-            ]
+            "type": "string"
           },
           "projectId": {
             "type": "string"
@@ -13452,9 +13428,6 @@
           },
           "signature": {
             "$ref": "#/components/schemas/Signature"
-          },
-          "profileSnapshot": {
-            "$ref": "#/components/schemas/ProfileSnapshot"
           }
         }
       },
@@ -15544,68 +15517,6 @@
             "$ref": "#/components/schemas/ValidateJoinRequestV3"
           }
         ]
-      },
-      "ProfileSpec": {
-        "type": "object",
-        "required": [
-          "projectId",
-          "id",
-          "name",
-          "description",
-          "loader",
-          "preset",
-          "isDefault"
-        ],
-        "properties": {
-          "projectId": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "loader": {
-            "type": "string"
-          },
-          "preset": {
-            "type": "string"
-          },
-          "isDefault": {
-            "type": "boolean"
-          }
-        }
-      },
-      "ProfileSnapshot": {
-        "type": "object",
-        "required": [
-          "schemaVersion",
-          "revision",
-          "digest",
-          "spec"
-        ],
-        "properties": {
-          "schemaVersion": {
-            "type": "string",
-            "const": "2.0"
-          },
-          "revision": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 1
-          },
-          "digest": {
-            "type": "string",
-            "pattern": "^[0-9a-f]{64}$"
-          },
-          "spec": {
-            "$ref": "#/components/schemas/ProfileSpec"
-          }
-        }
       }
     },
     "responses": {

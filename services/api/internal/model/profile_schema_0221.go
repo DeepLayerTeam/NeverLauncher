@@ -97,3 +97,25 @@ func NormalizeProfileV2(p Profile) (Profile, error) {
 	p.Digest = ProfileDigest(ProfileSpecOf(p))
 	return p, nil
 }
+
+// ValidateReleaseManifestTransition enforces the snapshot pinned when the draft
+// was created. Never derive it from the current mutable profile on update/publish.
+// A v1 draft can only remain v1; upgrading requires a new release identity.
+func ValidateReleaseManifestTransition(existing, candidate Manifest) error {
+	if err := ValidateManifestSchema(existing); err != nil {
+		return fmt.Errorf("stored release manifest is invalid: %w", err)
+	}
+	if err := ValidateManifestSchema(candidate); err != nil {
+		return err
+	}
+	if existing.SchemaVersion != candidate.SchemaVersion {
+		return errors.New("release manifest schema is immutable; create a new release")
+	}
+	if existing.SchemaVersion == ManifestSchemaV2 && *existing.ProfileSnapshot != *candidate.ProfileSnapshot {
+		return errors.New("release profile snapshot is immutable; create a new release")
+	}
+	if existing.ProjectID != candidate.ProjectID || existing.ProfileID != candidate.ProfileID || existing.Channel != candidate.Channel || existing.Version != candidate.Version {
+		return errors.New("release manifest identity is immutable")
+	}
+	return nil
+}
