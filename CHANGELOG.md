@@ -9,6 +9,14 @@
 - Заполнены корневые руководства, каталог `docs/`, шаблоны GitHub, `.editorconfig` и `.gitattributes`.
 - Добавлены указатели на актуальные исходники контрактов, проверки и production-конфигурации.
 
+## [0.21.9] — ServerBridge Operations
+
+- Проектно изолированный live-обзор ServerBridge: backend-фильтрация серверов, control history, topology и audit с проверкой `project:read` на проекте. Глобальный overview не изменён.
+- Admin-карточки runtime, health, heartbeat/telemetry freshness, TPS/MSPT, игроков, heap, Java/Minecraft/loader, протокола и feature digest. Устаревшие показания явно показываются как неизвестные.
+- Формы player.kick, message.broadcast, whitelist/ban, save, maintenance/drain, shutdown и server.console по отдельному праву, с подтверждением эффекта и повторной серверной проверкой RBAC/MFA.
+- Контрольные команды посылаются в существующий долговечный ServerBridge v3 control API; браузер сохраняет idempotency key при потере HTTP-ответа и отслеживает настоящий ACK. Queued/dispatched/delivered/executed/failed/indeterminate не смешиваются.
+- Оператор получил проектное `serverbridge:control` без `serverbridge:console` (миграция PostgreSQL, in-memory и fallback role). Добавлены тесты фронтенда и проектной изоляции Backend, документация. Замороженный протокол v3 не менялся.
+
 ## [0.21.8] — Release Workspace
 
 - Полноценный пошаговый мастер релиза в Admin с созданием, редактированием, удалением и возобновлением серверных черновиков (PostgreSQL + CAS `revision`), с привязкой к владельцу/проекту.
@@ -39,6 +47,7 @@
 Исходный архив фиксирует версию `0.21.5`. Подробные исторические заметки об изменениях этого релиза в исходном файле CHANGELOG отсутствовали. Перечень фактически поставленных функций и список успешно сертифицированных платформ необходимо проверять по Git-тегу, исходникам и сертификатам CI.
 
 [Unreleased]: https://github.com/DeepLayerTeam/NeverLauncher/commits/main
+[0.21.9]: https://github.com/DeepLayerTeam/NeverLauncher/releases
 [0.21.8]: https://github.com/DeepLayerTeam/NeverLauncher/releases
 [0.21.7]: https://github.com/DeepLayerTeam/NeverLauncher/releases
 [0.21.6]: https://github.com/DeepLayerTeam/NeverLauncher/releases

@@ -281,7 +281,7 @@ def response_schema(path, method):
     if path.endswith("/publish") and method=="post":return ref("ReleaseVersion")
     if path == "/api/v1/admin/login":return ref("AdminSession")
     if path == "/api/v1/server-bridge/capabilities":return ref("ServerBridgeCapabilitiesResponse")
-    if path == "/api/v1/server-bridge/overview":return ref("ServerBridgeOverviewResponseGA")
+    if path in ("/api/v1/server-bridge/overview", "/api/v1/server-bridge/projects/{projectId}/overview"):return ref("ServerBridgeOverviewResponseGA")
     if path == "/api/v1/server-bridge/servers/{serverId}/events" and method == "post":return ref("ServerBridgeEventAckV3")
     if path == "/api/v1/server-bridge/servers/{serverId}/control" and method == "post":return ref("ServerBridgeControlCommandResponseV3")
     if path == "/api/v1/server-bridge/servers/{serverId}/control/{commandId}" and method == "get":return ref("ServerBridgeControlCommandResponseV3")

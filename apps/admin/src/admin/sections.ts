@@ -28,7 +28,7 @@ export function endpointForSection(active: SectionId, projectId: string): string
     case 'storage': return '/api/v1/admin/storage/health';
     case 'extension-registry': return '/api/v1/admin/extension-registry/extensions';
     case 'extensions-manager': return '/api/v1/admin/extensions/manager';
-    case 'server-bridge': return '/api/v1/server-bridge/overview';
+    case 'server-bridge': return `/api/v1/server-bridge/projects/${encodeURIComponent(projectId)}/overview`;
     case 'diagnostics': return '/api/v1/operations/diagnostics';
     case 'backup-restore': return '/api/v1/operations/backup';
   }

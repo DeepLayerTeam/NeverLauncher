@@ -12,7 +12,8 @@ test('project actions are not silently granted outside project scope', () => {
   assert.equal(can(scoped, 'users:manage', 'alpha'), false);
   assert.equal(canSeeSection(scoped, 'profiles', 'beta'), true);
   assert.equal(canSeeSection(scoped, 'users', 'alpha'), false);
-  assert.equal(canSeeSection(scoped, 'server-bridge', 'alpha'), false);
+  assert.equal(canSeeSection(scoped, 'server-bridge', 'alpha'), true);
+  assert.equal(canSeeSection(scoped, 'server-bridge', 'unknown'), false);
   assert.equal(canSeeSection(null, 'dashboard', 'alpha'), false);
 });
 test('global wildcard remains an owner-only permission projection', () => {

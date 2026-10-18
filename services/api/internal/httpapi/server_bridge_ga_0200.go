@@ -112,13 +112,19 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 	}
 	now := time.Now().UTC()
 	freshAfter := now.Add(-2 * time.Minute)
+	projectFilter := strings.TrimSpace(r.PathValue("projectId"))
 	servers := s.State.ServerBridge.listServers()
 	nodes := make([]serverBridgeOverviewNode0200, 0, len(servers))
 	protocolCounts := map[string]int{"v3Ga": 0, "v2Compatibility": 0, "unsupported": 0}
 	freshCount := 0
 	migrationCount := 0
 	upgradeCount := 0
+	visibleServers := make(map[string]bool, len(servers))
 	for _, server := range servers {
+		if projectFilter != "" && server.ProjectID != projectFilter {
+			continue
+		}
+		visibleServers[server.ID] = true
 		mode := serverBridgeProtocolMode0200(server.ProtocolVersion)
 		switch mode {
 		case serverBridgeV3GAMode0200:
@@ -160,13 +166,30 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 			writeError(w, http.StatusServiceUnavailable, "ServerBridge topology unavailable")
 			return
 		}
-		topology = items
+		if projectFilter == "" {
+			topology = items
+		} else {
+			for _, edge := range items {
+				if edge.ProjectID == projectFilter && visibleServers[edge.SourceNodeID] && visibleServers[edge.TargetNodeID] {
+					topology = append(topology, edge)
+				}
+			}
+		}
 	}
 
 	controls, err := s.State.ServerBridge.recentControls0200(r.Context(), 100)
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "ServerBridge control history unavailable")
 		return
+	}
+	if projectFilter != "" {
+		filtered := controls[:0]
+		for _, item := range controls {
+			if visibleServers[item.ServerID] {
+				filtered = append(filtered, item)
+			}
+		}
+		controls = filtered
 	}
 	controlCounts := map[string]int{}
 	for _, item := range controls {
@@ -175,8 +198,18 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 
 	audit := make([]model.AuditEvent, 0, 100)
 	for _, item := range s.Repo.ListAuditEvents() {
-		if strings.HasPrefix(strings.ToLower(item.Action), "serverbridge:") {
+		if !strings.HasPrefix(strings.ToLower(item.Action), "serverbridge:") {
+			continue
+		}
+		if projectFilter == "" {
 			audit = append(audit, item)
+			continue
+		}
+		for serverID := range visibleServers {
+			if item.Target == serverID || strings.HasPrefix(item.Target, serverID+":") {
+				audit = append(audit, item)
+				break
+			}
 		}
 	}
 	sort.Slice(audit, func(i, j int) bool { return audit[i].CreatedAt.After(audit[j].CreatedAt) })

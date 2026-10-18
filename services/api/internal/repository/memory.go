@@ -272,7 +272,7 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 			{ID: "owner", Name: "Владелец", Description: "Полный доступ к проекту", Permissions: []string{"*"}},
 			{ID: "admin", Name: "Администратор", Description: "Управление проектами, версиями, файлами, пользователями и аудитом", Permissions: []string{"project:read", "project:write", "release:prepare", "release:publish", "file:write", "users:manage", "roles:manage", "audit:read", "diagnostics:read", "storage:manage", "settings:manage", "security:read", "extension:manage", "serverbridge:control", "serverbridge:console"}},
 			{ID: "release-manager", Name: "Release Manager", Description: "Подготовка, публикация и откат релизов", Permissions: []string{"project:read", "release:prepare", "release:publish", "audit:read"}},
-			{ID: "operator", Name: "Оператор", Description: "Работа с профилями, пакетами и файлами без финальной публикации", Permissions: []string{"project:read", "project:write", "release:prepare", "file:write", "diagnostics:read"}},
+			{ID: "operator", Name: "Оператор", Description: "Работа с профилями, пакетами и файлами без финальной публикации", Permissions: []string{"project:read", "project:write", "release:prepare", "file:write", "diagnostics:read", "serverbridge:control"}},
 			{ID: "support", Name: "Поддержка", Description: "Чтение проекта, диагностика и аудит без права изменения", Permissions: []string{"project:read", "diagnostics:read", "audit:read"}},
 			{ID: "developer", Name: "Разработчик (legacy)", Description: "Совместимая ограниченная роль подготовки версий", Permissions: []string{"project:read", "release:prepare", "file:write"}},
 			{ID: "viewer", Name: "Наблюдатель", Description: "Только чтение", Permissions: []string{"project:read"}},
