@@ -196,7 +196,7 @@ function normalizedSettings(settings: DesktopSettings): DesktopSettings {
 
 function App() {
   const [settings, setSettings] = useState<DesktopSettings>(() => loadSettings());
-  const [screen, setScreen] = useState<Screen>(settings.backendUrl ? 'overview' : 'firstRun');
+  const [screen, setScreen] = useState<Screen>(settings.backendUrl || settings.manifestUrl ? 'overview' : 'firstRun');
   const [stage, setStage] = useState<Stage>('idle');
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [javaInfo, setJavaInfo] = useState<JavaInfoResult | null>(null);
@@ -265,7 +265,8 @@ function App() {
   useEffect(() => {
     callTauri<DesktopSettings>('load_desktop_config')
       .then((config) => {
-        const next = normalizedSettings({ ...config, manifestUrl: '' });
+        const next = normalizedSettings(config);
+        if (next.backendUrl || next.manifestUrl) setScreen('overview');
         setSettings(next);
         setSelectedProject(next.projectId || '');
         setSelectedProfile(next.profileId || '');

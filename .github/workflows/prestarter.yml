@@ -1,0 +1,51 @@
+name: Prestarter native bootstrap (0.23.8)
+on:
+  push:
+    paths:
+      - 'prestarter/**'
+      - 'runtime/neverruntime/src/bin/neverruntime.rs'
+      - 'apps/desktop/src-tauri/src/main.rs'
+      - 'apps/desktop/src/main.tsx'
+      - 'scripts/release/build-prestarter.sh'
+      - '.github/workflows/prestarter.yml'
+  pull_request:
+    paths:
+      - 'prestarter/**'
+      - 'runtime/neverruntime/src/bin/neverruntime.rs'
+      - 'apps/desktop/src-tauri/src/main.rs'
+      - 'apps/desktop/src/main.tsx'
+      - 'scripts/release/build-prestarter.sh'
+      - '.github/workflows/prestarter.yml'
+  workflow_dispatch:
+jobs:
+  prestarter:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: prestarter/go.mod
+      - name: Native tests
+        working-directory: prestarter
+        run: go test -count=1 ./...
+      - name: Native bootstrap binary
+        working-directory: prestarter
+        run: go build -o neverprestarter-test${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/neverprestarter
+  cross-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: prestarter/go.mod
+      - name: Verify all six OS and architecture builds
+        env:
+          # Test-only public key. Never publish these as trusted production release binaries.
+          NEVERLAUNCHER_PRESTARTER_ROOT_PUBLIC_KEY: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+        run: bash scripts/release/build-prestarter.sh

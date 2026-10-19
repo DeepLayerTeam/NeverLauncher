@@ -281,6 +281,7 @@ struct DiagnosticsExportResult { path: String, message: String }
 struct DesktopConfig {
     schema_version: String,
     backend_url: String,
+    #[serde(default)] manifest_url: String,
     project_id: String,
     profile_id: String,
     channel: String,
@@ -324,7 +325,7 @@ fn default_screen_width_0229() -> u32 { 1280 }
 fn default_screen_height_0229() -> u32 { 720 }
 fn default_server_port_0229() -> u16 { 25565 }
 fn default_desktop_config() -> DesktopConfig {
-    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), server_id: String::new(), screen_width: 1280, screen_height: 720, fullscreen: false, auto_enter: false, server_host: String::new(), server_port: 25565, offline_enabled: false, config_path: String::new() }
+    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), manifest_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), server_id: String::new(), screen_width: 1280, screen_height: 720, fullscreen: false, auto_enter: false, server_host: String::new(), server_port: 25565, offline_enabled: false, config_path: String::new() }
 }
 fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
     if cfg.schema_version.trim().is_empty() { cfg.schema_version = "1.0".into(); }

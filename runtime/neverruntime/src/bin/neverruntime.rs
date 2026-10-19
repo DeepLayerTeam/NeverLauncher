@@ -32,6 +32,7 @@ async fn run() -> Result<serde_json::Value, String> {
     match command {
         "verify" => command_verify(rest).await,
         "sync" => command_sync(rest).await,
+        "sync-local" => command_sync_local(rest).await,
         "rollback-release" => command_rollback_release(rest).await,
         "recover-release" => command_recover_release(rest).await,
         "launch" => command_launch(rest).await,
@@ -42,7 +43,7 @@ async fn run() -> Result<serde_json::Value, String> {
         "help" | "--help" | "-h" => Ok(json!({
             "status": "ready",
             "version": env!("CARGO_PKG_VERSION"),
-            "commands": ["verify", "sync", "rollback-release", "recover-release", "launch", "plan", "compatibility", "certify-vanilla", "java ensure"]
+            "commands": ["verify", "sync", "sync-local", "rollback-release", "recover-release", "launch", "plan", "compatibility", "certify-vanilla", "java ensure"]
         })),
         other => Err(format!("неизвестная команда: {other}")),
     }
@@ -78,6 +79,26 @@ async fn command_sync(args: &[String]) -> Result<serde_json::Value, String> {
         ));
     }
     Ok(json!({"status":"ready","download":download,"files":files,"manifest":{"projectId":manifest.project_id,"profileId":manifest.profile_id,"version":manifest.version}}))
+}
+
+/// Bootstrap offline/verified-manifest path: never fetch an unauthenticated
+/// second manifest after Prestarter verified and cached this signed release.
+/// The same transactional download scheduler, cache, recovery and SHA-256
+/// checks used by Desktop/Repair run here; only manifest transport differs.
+async fn command_sync_local(args: &[String]) -> Result<serde_json::Value, String> {
+    let manifest = read_manifest_required(args)?;
+    let key = required_flag(args, "--pinned-public-key")?;
+    let root = PathBuf::from(required_flag(args, "--root")?);
+    verify_manifest_signature(&manifest, &key)?;
+    let downloaded = download_missing_files(&manifest, &root, &key).await?;
+    let files = check_files(&manifest, &root).await?;
+    let ready = downloaded.failed == 0 && files.iter().all(|file| file.status == "ok" || file.status == "optional-missing");
+    if !ready {
+        return Err(format!("sync-local: download failed={}, invalid={}", downloaded.failed,
+            files.iter().filter(|f| f.status != "ok" && f.status != "optional-missing").count()));
+    }
+    Ok(json!({"status":"ready", "download":downloaded, "manifest":{
+        "projectId": manifest.project_id, "profileId": manifest.profile_id, "version": manifest.version}}))
 }
 
 async fn command_rollback_release(args: &[String]) -> Result<serde_json::Value, String> {
