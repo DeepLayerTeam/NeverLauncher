@@ -164,6 +164,12 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	unlockCreate, lockErr := s.lockPackageMutation(r.Context(), "package:"+req.ProjectID+"-"+req.ProfileID+"-"+req.Version)
+	if lockErr != nil {
+		writeError(w, http.StatusConflict, lockErr.Error())
+		return
+	}
+	defer unlockCreate()
 	release, err := s.Repo.CreateVersion(req.ProjectID, req.ProfileID, req.Channel, req.Version)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())

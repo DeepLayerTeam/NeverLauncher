@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ReleaseApi, type Draft, type DraftFields, type PackageInfo, type Preview, type ValidationReport } from '../api/release';
 import { JobMonitor } from './JobMonitor';
+import { BuildWorkspacePanel } from './BuildWorkspacePanel';
 
 type Step = 'project'|'profile'|'build'|'verify'|'channel';
 const steps: Array<{id: Step; title:string}> = [
@@ -151,6 +152,15 @@ export function ReleaseWorkspace({backendUrl,token,projectId,canPrepare,canFileW
     </article>}
     {step==='build' && <article className="subcard"><h3>3. Сборка и файлы</h3>
       <p>Пакет: <code>{form.packageId||'ещё не создан'}</code></p>
+      {draft && !dirty && !form.packageId && <BuildWorkspacePanel
+        base={backendUrl} token={token} projectId={projectId} profileId={form.profileId}
+        channel={form.channel} version={form.version} minecraftVersion={form.minecraftVersion}
+        loader={form.loader} canFileWrite={canFileWrite} releases={releases}
+        onBuilt={async id=>{
+          const next=await api.save({...draft,...form,packageId:id,step:'build'});
+          setDraft(next);setForm(v=>({...v,packageId:id}));setDirty(false);
+          await refreshDrafts();await loadChecks(id);
+        }}/>}
       <button disabled={busy||!draft||dirty||!canPrepare||!!form.packageId||!form.profileId||!form.version||!form.minecraftVersion} onClick={()=>void createPackage()}>Создать пакет на Backend</button>
       {form.packageId && <><p>Статус: <strong>{packageInfo?.status||'загрузка...'}</strong></p>
         <label className="field">Файл<input type="file" onChange={(e: React.ChangeEvent<HTMLInputElement>)=>{setUploadFile(e.target.files?.[0]||null);setUploadPath(e.target.files?.[0]?.name||'');}} /></label>

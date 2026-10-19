@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.22.5. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.22.6. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -38,6 +38,9 @@
     },
     {
       "name": "operations"
+    },
+    {
+      "name": "workspaces"
     }
   ],
   "paths": {
@@ -13069,6 +13072,360 @@
           }
         ],
         "security": []
+      }
+    },
+    "/api/v1/build-workspaces": {
+      "post": {
+        "operationId": "post__api_v1_build-workspaces",
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "POST /api/v1/build-workspaces",
+        "description": "Owner-scoped durable build workspace; release preparation permission required. Upload additionally requires file:write. Build produces an unsigned draft release and does not bypass signed publish.",
+        "responses": {
+          "200": {
+            "description": "Workspace or operation result"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Workspace not found or not authorized"
+          },
+          "409": {
+            "description": "Revision conflict or failed validation"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "get__api_v1_build-workspaces",
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "GET /api/v1/build-workspaces",
+        "description": "Owner-scoped durable build workspace; release preparation permission required. Upload additionally requires file:write. Build produces an unsigned draft release and does not bypass signed publish.",
+        "responses": {
+          "200": {
+            "description": "Workspace or operation result"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Workspace not found or not authorized"
+          },
+          "409": {
+            "description": "Revision conflict or failed validation"
+          }
+        }
+      }
+    },
+    "/api/v1/build-workspaces/{workspaceId}": {
+      "get": {
+        "operationId": "get__api_v1_build-workspaces_workspaceId",
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "GET /api/v1/build-workspaces/{workspaceId}",
+        "description": "Owner-scoped durable build workspace; release preparation permission required. Upload additionally requires file:write. Build produces an unsigned draft release and does not bypass signed publish.",
+        "responses": {
+          "200": {
+            "description": "Workspace or operation result"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Workspace not found or not authorized"
+          },
+          "409": {
+            "description": "Revision conflict or failed validation"
+          }
+        },
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/build-workspaces/{workspaceId}/files": {
+      "post": {
+        "operationId": "post__api_v1_build-workspaces_workspaceId_files",
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "POST /api/v1/build-workspaces/{workspaceId}/files",
+        "description": "Owner-scoped durable build workspace; release preparation permission required. Upload additionally requires file:write. Build produces an unsigned draft release and does not bypass signed publish.",
+        "responses": {
+          "200": {
+            "description": "Workspace or operation result"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Workspace not found or not authorized"
+          },
+          "409": {
+            "description": "Revision conflict or failed validation"
+          }
+        },
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "path",
+                  "revision"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "revision": {
+                    "type": "integer"
+                  },
+                  "ownership": {
+                    "enum": [
+                      "required",
+                      "managed",
+                      "optional"
+                    ]
+                  },
+                  "sha256": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/build-workspaces/{workspaceId}/scan": {
+      "get": {
+        "operationId": "get__api_v1_build-workspaces_workspaceId_scan",
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "GET /api/v1/build-workspaces/{workspaceId}/scan",
+        "description": "Owner-scoped durable build workspace; release preparation permission required. Upload additionally requires file:write. Build produces an unsigned draft release and does not bypass signed publish.",
+        "responses": {
+          "200": {
+            "description": "Workspace or operation result"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Workspace not found or not authorized"
+          },
+          "409": {
+            "description": "Revision conflict or failed validation"
+          }
+        },
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/build-workspaces/{workspaceId}/diff": {
+      "get": {
+        "operationId": "get__api_v1_build-workspaces_workspaceId_diff",
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "GET /api/v1/build-workspaces/{workspaceId}/diff",
+        "description": "Owner-scoped durable build workspace; release preparation permission required. Upload additionally requires file:write. Build produces an unsigned draft release and does not bypass signed publish.",
+        "responses": {
+          "200": {
+            "description": "Workspace or operation result"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Workspace not found or not authorized"
+          },
+          "409": {
+            "description": "Revision conflict or failed validation"
+          }
+        },
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/build-workspaces/{workspaceId}/stage": {
+      "post": {
+        "operationId": "post__api_v1_build-workspaces_workspaceId_stage",
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "POST /api/v1/build-workspaces/{workspaceId}/stage",
+        "description": "Owner-scoped durable build workspace; release preparation permission required. Upload additionally requires file:write. Build produces an unsigned draft release and does not bypass signed publish.",
+        "responses": {
+          "200": {
+            "description": "Workspace or operation result"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Workspace not found or not authorized"
+          },
+          "409": {
+            "description": "Revision conflict or failed validation"
+          }
+        },
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/build-workspaces/{workspaceId}/validate": {
+      "get": {
+        "operationId": "get__api_v1_build-workspaces_workspaceId_validate",
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "GET /api/v1/build-workspaces/{workspaceId}/validate",
+        "description": "Owner-scoped durable build workspace; release preparation permission required. Upload additionally requires file:write. Build produces an unsigned draft release and does not bypass signed publish.",
+        "responses": {
+          "200": {
+            "description": "Workspace or operation result"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Workspace not found or not authorized"
+          },
+          "409": {
+            "description": "Revision conflict or failed validation"
+          }
+        },
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/build-workspaces/{workspaceId}/build": {
+      "post": {
+        "operationId": "post__api_v1_build-workspaces_workspaceId_build",
+        "tags": [
+          "workspaces"
+        ],
+        "summary": "POST /api/v1/build-workspaces/{workspaceId}/build",
+        "description": "Owner-scoped durable build workspace; release preparation permission required. Upload additionally requires file:write. Build produces an unsigned draft release and does not bypass signed publish.",
+        "responses": {
+          "200": {
+            "description": "Workspace or operation result"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Workspace not found or not authorized"
+          },
+          "409": {
+            "description": "Revision conflict or failed validation"
+          }
+        },
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
       }
     }
   },

@@ -1,3 +1,13 @@
+## 0.22.6 — Build Workspaces
+
+- Implemented durable owner-scoped build workspaces with PostgreSQL revision CAS and memory parity.
+- Browser directory import now stores content-addressed source blobs in private storage and verifies full SHA-256/size on scan and build.
+- Added base-version file diff, exact staged selection, deterministic build digests covering profile revision, inputs and tool versions.
+- Materializes validated files into real v2 release packages using existing storage, repository and manifest workflows; partial builds can resume safely.
+- Connected Admin Release Workspace to directory import, stage, validate and build operations while retaining existing Ed25519 signing, integrity, runtime evidence and durable publication gates.
+- Added migration 0059 to both API and CLI catalogs; existing signed public releases remain unchanged.
+- Qualification remains conditional on full API/Admin build, live PostgreSQL and end-to-end publication tests.
+
 ## 0.22.5 — Profile Management
 
 - Implemented revision-aware profile clone, portable v2 JSON export/import with digest verification, immutable revision diffs and built-in loader/profile presets.

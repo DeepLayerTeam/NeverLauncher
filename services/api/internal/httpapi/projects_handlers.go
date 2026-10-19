@@ -81,6 +81,12 @@ func (s Server) manifest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) file(w http.ResponseWriter, r *http.Request) {
+	// Workspace source blobs must never be served through public package file
+	// delivery, even on local-storage development installations.
+	if strings.HasPrefix(r.PathValue("version"), "ws-") {
+		writeError(w, http.StatusNotFound, "file not found")
+		return
+	}
 	reader, size, err := s.Storage.Open(r.PathValue("projectId"), r.PathValue("version"), r.PathValue("path"))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) || strings.Contains(strings.ToLower(err.Error()), "не найден") {
