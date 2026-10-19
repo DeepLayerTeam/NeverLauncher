@@ -2,6 +2,7 @@ pub mod attestation;
 pub mod compatibility;
 mod deterministic_launch;
 pub mod file_ownership;
+mod platform_fs;
 pub mod download_scheduler;
 mod http_resume;
 mod content_cache;

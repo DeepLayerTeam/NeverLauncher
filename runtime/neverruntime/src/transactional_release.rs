@@ -1,7 +1,7 @@
 //! Crash-recoverable, whole-release client installation. Network workers only write
 //! into staging. A durable write-ahead journal is published before touching any
 //! live file, and old file bytes are preserved until the next release is safe.
-use crate::{download_scheduler::{self, DownloadLimits, ProgressSink}, file_ownership,
+use crate::{download_scheduler::{self, DownloadLimits, ProgressSink}, file_ownership, platform_fs,
     manifest_file_applies, network_resilience::Directive, safe_join, sha256_file,
     verify_manifest_signature, DownloadResult, Manifest};
 use fs2::FileExt;
@@ -67,17 +67,24 @@ fn write_slot<T: Serialize>(root: &Path, kind: &str, generation: u64, value: &T)
     if data.len() as u64 > MAX_STATE { return Err("release state exceeds maximum size".into()); }
     let temp = dest.with_extension(format!("{:016x}.tmp", rand::random::<u64>()));
     file_ownership::ensure_no_symlinks(root, &dest)?;
-    let mut f = fs::OpenOptions::new().write(true).create_new(true).open(&temp).map_err(|e| e.to_string())?;
-    f.write_all(&data).and_then(|_| f.sync_all()).map_err(|e| e.to_string())?;
-    drop(f);
-    // On Windows the old slot is removed only after the other slot is durable.
-    #[cfg(windows)] if dest.exists() { fs::remove_file(&dest).map_err(|e| e.to_string())?; }
-    fs::rename(&temp, &dest).map_err(|e| e.to_string())?;
-    sync_dir(&base(root))?;
-    Ok(())
+    let mut created = false;
+    let result = (|| -> Result<(), String> {
+        let mut f = fs::OpenOptions::new().write(true).create_new(true).open(&temp)
+            .map_err(|e| e.to_string())?;
+        created = true;
+        f.write_all(&data).and_then(|_| f.sync_all()).map_err(|e| e.to_string())?;
+        drop(f);
+        // Never unlink a pointer slot before replacing it. A sharing violation
+        // or power failure must leave the last durable pointer intact.
+        platform_fs::replace_file(root, &temp, &dest)?;
+        sync_dir(&base(root))
+    })();
+    if result.is_err() && created { let _ = fs::remove_file(&temp); }
+    result
 }
 fn read_slot<T: for<'de> Deserialize<'de>>(root: &Path, kind: &str, slot: usize) -> Option<T> {
     let path = state_path(root, kind, slot);
+    file_ownership::ensure_no_symlinks(root, &path).ok()?;
     let meta = fs::symlink_metadata(&path).ok()?;
     if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > MAX_STATE { return None; }
     serde_json::from_slice(&fs::read(path).ok()?).ok()
@@ -191,36 +198,36 @@ fn verify_journal(root: &Path, j: &Journal, key: &str) -> Result<(), String> {
 fn backup_dir(root: &Path, id: &str) -> PathBuf { base(root).join("backups").join(id) }
 fn copy_durable(src: &Path, dest: &Path) -> Result<(), String> {
     if let Some(parent) = dest.parent() { fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
-    fs::copy(src, dest).map_err(|e| format!("copy {}: {e}", src.display()))?;
-    fs::File::open(dest).and_then(|f| f.sync_all()).map_err(|e| e.to_string())?;
-    if let Some(parent) = dest.parent() { sync_dir(parent)?; }
-    Ok(())
+    let mut created = false;
+    let result = (|| {
+        let mut input = fs::File::open(src).map_err(|e| format!("read backup source {}: {e}", src.display()))?;
+        // create_new refuses a substituted symlink/existing backup path.
+        let mut output = fs::OpenOptions::new().write(true).create_new(true).open(dest)
+            .map_err(|e| format!("create durable copy {}: {e}", dest.display()))?;
+        created = true;
+        std::io::copy(&mut input, &mut output).map_err(|e| format!("stream durable copy: {e}"))?;
+        output.set_permissions(input.metadata().map_err(|e| e.to_string())?.permissions())
+            .map_err(|e| format!("preserve managed file permissions: {e}"))?;
+        output.sync_all().map_err(|e| format!("flush durable copy: {e}"))?;
+        drop(output);
+        if let Some(parent) = dest.parent() { sync_dir(parent)?; }
+        Ok(())
+    })();
+    if result.is_err() && created { let _ = fs::remove_file(dest); }
+    result
 }
 fn switch_file(root: &Path, source: &Path, destination: &Path) -> Result<(), String> {
-    file_ownership::ensure_no_symlinks(root, destination)?;
     let parent = destination.parent().ok_or("target has no parent")?;
+    file_ownership::ensure_no_symlinks(root, destination)?;
     safe_dir(root, parent)?;
-    // Both paths share the installation volume. On Windows rename cannot
-    // overwrite open/existing files; move the previous file out first. Recovery
-    // uses the independent synced backup, not this transient displaced copy.
-    #[cfg(windows)]
-    if destination.exists() {
-        let displaced = destination.with_extension(format!("nl-displaced-{:016x}", rand::random::<u64>()));
-        fs::rename(destination, &displaced).map_err(|e| format!("file locked: {e}"))?;
-        if let Err(err) = fs::rename(source, destination) {
-            let _ = fs::rename(&displaced, destination);
-            return Err(format!("install managed file: {err}"));
-        }
-        let _ = fs::remove_file(displaced);
-        sync_dir(parent)?;
-        return Ok(());
-    }
-    fs::rename(source, destination).map_err(|e| format!("switch managed file {}: {e}", destination.display()))?;
-    sync_dir(parent)?;
-    Ok(())
+    platform_fs::replace_file(root, source, destination)
 }
 fn restore(root: &Path, j: &Journal) -> Result<(), String> {
     let back = backup_dir(root, &j.backup_id);
+    // Fail on case aliases, hostile reparse points or denied destinations
+    // BEFORE any restoration makes a change to the live tree.
+    let destinations: Vec<_> = j.entries.iter().map(|e| safe_join(root, &e.path)).collect::<Result<_, _>>()?;
+    platform_fs::preflight_targets(root, &destinations)?;
     // Validate ALL backup bytes before modifying even the first destination.
     for e in &j.entries {
         if let Some(ref digest) = e.old_sha256 {
@@ -233,7 +240,7 @@ fn restore(root: &Path, j: &Journal) -> Result<(), String> {
     }
     for e in &j.entries {
         let target = safe_join(root, &e.path)?;
-        file_ownership::ensure_no_symlinks(root, &target)?;
+        platform_fs::check_target(root, &target)?;
         match &e.old_sha256 {
             Some(_) => {
                 let source = safe_join(&back, &e.path)?;
@@ -354,10 +361,33 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
     let backup_id = format!("{:032x}", rand::random::<u128>());
     let back = backup_dir(root, &backup_id);
     safe_dir(root, &back)?;
+    // Reserve the current bytes plus one potential restore temp per file.
+    // If disk capacity is already insufficient, NO live file has changed.
+    let mut rollback_bytes = 0u64;
+    let all_paths: Vec<_> = all.iter().map(|p| safe_join(root, p)).collect::<Result<_, _>>()?;
+    platform_fs::preflight_targets(root, &all_paths)?;
+    for p in &all {
+        let live = safe_join(root, p)?;
+        match fs::symlink_metadata(&live) {
+            Ok(meta) => {
+                rollback_bytes = platform_fs::checked_add(rollback_bytes, meta.len())?;
+            },
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
+            Err(e) => return Err(format!("preflight managed file {p}: {e}")),
+        }
+    }
+    platform_fs::require_free_space(root, rollback_bytes.saturating_mul(2))?;
     let mut entries = Vec::new();
     for p in all {
         let live = safe_join(root, &p)?;
-        file_ownership::ensure_no_symlinks(root, &live)?;
+        platform_fs::check_target(root, &live)?;
+        // A newly referenced path was not previously managed. A player-owned
+        // file at that path must not be silently replaced by the new release.
+        let was_managed = previous.as_ref().is_some_and(|old| old.installed.contains(&p));
+        if !was_managed && live.exists() {
+            let same_as_new = expected(&next, &p).is_some_and(|(sha,len)| matches_digest(&live, sha, len));
+            if !same_as_new { return Err(format!("untracked user file conflicts with new managed path: {p}")); }
+        }
         let digest = match fs::symlink_metadata(&live) {
             Ok(meta) if meta.is_file() && !meta.file_type().is_symlink() => {
                 let destination = safe_join(&back, &p)?;
@@ -392,7 +422,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
                 let staged = safe_join(stage, &e.path)?;
                 switch_file(root, &staged, &target)?;
             } else if target.exists() {
-                file_ownership::ensure_no_symlinks(root, &target)?;
+                platform_fs::check_target(root, &target)?;
                 fs::remove_file(&target).map_err(|e| format!("remove registered retired file: {e}"))?;
                 if let Some(parent) = target.parent() { sync_dir(parent)?; }
             }
@@ -431,6 +461,32 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     let work = base(&root).join("work").join(&stage_id);
     let stage = work.join("files");
     safe_dir(&root, &stage)?;
+    // Verify available capacity BEFORE starting a multi-GB staging operation.
+    // Existing verified stage bytes do not need to be reserved twice; the
+    // up to six active .part/cache copies may coexist during parallel delivery.
+    let mut required_stage = 0u64;
+    let mut largest_pending = Vec::new();
+    for f in &manifest.files {
+        if !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) { continue; }
+        let path = safe_join(&stage, &f.path)?;
+        file_ownership::ensure_no_symlinks(&root, &path)?;
+        let live = safe_join(&root, &f.path)?;
+        file_ownership::ensure_no_symlinks(&root, &live)?;
+        if file_ownership::effective_ownership(f) == "optional" &&
+            !file_ownership::must_verify(manifest, &f.path) && !path.exists() && !live.exists() {
+            continue;
+        }
+        if !matches_digest_async(&path, &f.sha256, f.size).await {
+            required_stage = platform_fs::checked_add(required_stage, f.size)?;
+            largest_pending.push(f.size);
+        }
+    }
+    largest_pending.sort_unstable_by(|a,b| b.cmp(a));
+    let mut inflight_space = 0u64;
+    for size in largest_pending.into_iter().take(DownloadLimits::default().global) {
+        inflight_space = platform_fs::checked_add(inflight_space, size)?;
+    }
+    platform_fs::require_free_space(&root, platform_fs::checked_add(required_stage, inflight_space)?)?;
     // Existing intact files are valid inputs for staging and need no HTTP.
     // Optional files already installed are copied too so the scheduler repairs
     // them; absent optional files remain optional, as in 0.23.4.
@@ -642,6 +698,109 @@ mod tests {
         drop(lease);
         commit(&root,new,&key,&target).unwrap();
         assert_eq!(fs::read(root.join("libraries/a.jar")).unwrap(),b"NEW");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn untracked_custom_mod_is_not_overwritten_by_new_managed_path() {
+        let root = std::env::temp_dir().join(format!("nl-user-conflict-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (manifest,key) = fixture(&root,"new",&[("mods/custom.jar",b"PUBLISHED")]);
+        fs::create_dir_all(root.join("mods")).unwrap();
+        fs::write(root.join("mods/custom.jar"),b"CUSTOM_PLAYER_DATA").unwrap();
+        let next = Release { manifest: manifest.clone(), installed:vec!["mods/custom.jar".into()], id:format!("{:032x}",60) };
+        let work = staged(&root,&manifest,&[("mods/custom.jar",b"PUBLISHED")]);
+        let error = commit(&root,next,&key,&work).unwrap_err();
+        assert!(error.contains("untracked user file"), "{error}");
+        assert_eq!(fs::read(root.join("mods/custom.jar")).unwrap(),b"CUSTOM_PLAYER_DATA");
+        assert!(pointer(&root).unwrap().active.is_none());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn readonly_existing_file_rejects_switch_without_journal_mutation() {
+        let root = std::env::temp_dir().join(format!("nl-readonly-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (manifest,key) = fixture(&root,"base",&[("libraries/core.jar",b"OLD")]);
+        let old = Release { manifest:manifest.clone(), installed:vec!["libraries/core.jar".into()], id:format!("{:032x}",61) };
+        commit(&root,old,&key,&staged(&root,&manifest,&[("libraries/core.jar",b"OLD")])).unwrap();
+        let (new_manifest,_) = fixture(&root,"new",&[("libraries/core.jar",b"NEXT")]);
+        let next = Release { manifest:new_manifest.clone(), installed:vec!["libraries/core.jar".into()], id:format!("{:032x}",62) };
+        let dest = root.join("libraries/core.jar");
+        let mut permissions = fs::metadata(&dest).unwrap().permissions();
+        permissions.set_readonly(true);
+        fs::set_permissions(&dest, permissions).unwrap();
+        let before = journal(&root).unwrap().unwrap().generation;
+        assert!(commit(&root,next,&key,&staged(&root,&new_manifest,&[("libraries/core.jar",b"NEXT")])).is_err());
+        assert_eq!(journal(&root).unwrap().unwrap().generation, before);
+        assert_eq!(fs::read(&dest).unwrap(),b"OLD");
+        assert_eq!(pointer(&root).unwrap().active.unwrap().manifest.version,"base");
+        let mut permissions = fs::metadata(&dest).unwrap().permissions();
+        permissions.set_readonly(false);
+        fs::set_permissions(&dest, permissions).unwrap();
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn insufficient_disk_budget_fails_before_live_mutation() {
+        let root = std::env::temp_dir().join(format!("nl-capacity-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (old_manifest,key) = fixture(&root,"base",&[("libraries/a.jar",b"OLD")]);
+        let old = Release { manifest:old_manifest.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",65) };
+        commit(&root,old,&key,&staged(&root,&old_manifest,&[("libraries/a.jar",b"OLD")])).unwrap();
+        let old_generation = pointer(&root).unwrap().generation;
+        let mut oversized = old_manifest.clone();
+        oversized.version = "oversized".into();
+        oversized.files[0].size = u64::MAX / 8;
+        sign_manifest(&mut oversized, &"1a".repeat(32), "2026-10-19T00:00:00Z").unwrap();
+        let (_tx,control) = watch::channel(Directive::Running);
+        let err = install(&oversized,&root,&key,None,format!("budget-{:x}",rand::random::<u64>()),control).await.unwrap_err();
+        assert!(err.contains("disk") || err.contains("overflow"), "{err}");
+        assert_eq!(pointer(&root).unwrap().generation,old_generation);
+        assert_eq!(fs::read(root.join("libraries/a.jar")).unwrap(),b"OLD");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlink_target_prevents_install_without_modifying_external_file() {
+        use std::os::unix::fs::symlink;
+        let root = std::env::temp_dir().join(format!("nl-symlink-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let external = std::env::temp_dir().join(format!("nl-symlink-external-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        fs::create_dir_all(root.join("mods")).unwrap();
+        fs::write(&external,b"USER_SECRET").unwrap();
+        symlink(&external,root.join("mods/core.jar")).unwrap();
+        let (manifest,key) = fixture(&root,"new",&[("mods/core.jar",b"SIGNED")]);
+        let next = Release { manifest:manifest.clone(), installed:vec!["mods/core.jar".into()], id:format!("{:032x}",63) };
+        assert!(commit(&root,next,&key,&staged(&root,&manifest,&[("mods/core.jar",b"SIGNED")])).is_err());
+        assert_eq!(fs::read(&external).unwrap(),b"USER_SECRET");
+        assert!(fs::symlink_metadata(root.join("mods/core.jar")).unwrap().file_type().is_symlink());
+        let _ = fs::remove_dir_all(root); let _ = fs::remove_file(external);
+    }
+
+    #[test]
+    fn crash_after_first_file_of_two_recovers_complete_old_release() {
+        let root = std::env::temp_dir().join(format!("nl-multi-crash-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (old_m,key) = fixture(&root,"old",&[("mods/a.jar",b"OLD_A"),("mods/b.jar",b"OLD_B")]);
+        let old = Release { manifest:old_m.clone(), installed:vec!["mods/a.jar".into(),"mods/b.jar".into()], id:format!("{:032x}",71) };
+        commit(&root,old,&key,&staged(&root,&old_m,&[("mods/a.jar",b"OLD_A"),("mods/b.jar",b"OLD_B")])).unwrap();
+        let (new_m,_) = fixture(&root,"new",&[("mods/a.jar",b"NEW_A"),("mods/b.jar",b"NEW_B")]);
+        let next = Release { manifest:new_m.clone(), installed:vec!["mods/a.jar".into(),"mods/b.jar".into()], id:format!("{:032x}",72) };
+        let backup_id = format!("{:032x}",73);
+        let back = backup_dir(&root,&backup_id);
+        fs::create_dir_all(back.join("mods")).unwrap();
+        let entries = ["mods/a.jar", "mods/b.jar"].iter().map(|p| {
+            copy_durable(&root.join(p), &back.join(p)).unwrap();
+            Backup { path: (*p).into(), old_sha256:Some(hash(&root.join(p)).unwrap()),
+                new_sha256:Some(new_m.files.iter().find(|f|f.path == *p).unwrap().sha256.clone()) }
+        }).collect();
+        let generation = journal(&root).unwrap().unwrap().generation + 1;
+        let j = Journal { schema:SCHEMA, generation, state:"switching".into(), previous:pointer(&root).unwrap().active,
+            next, backup_id, entries };
+        write_slot(&root,"switch",generation,&j).unwrap();
+        fs::write(root.join("mods/a.jar"),b"NEW_A").unwrap();
+        // A restart must block launching a mixed set and replay the journal.
+        recover_locked(&root,&key).unwrap();
+        assert_eq!(fs::read(root.join("mods/a.jar")).unwrap(),b"OLD_A");
+        assert_eq!(fs::read(root.join("mods/b.jar")).unwrap(),b"OLD_B");
+        assert_eq!(pointer(&root).unwrap().active.unwrap().manifest.version,"old");
         let _ = fs::remove_dir_all(root);
     }
 

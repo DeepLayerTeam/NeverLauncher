@@ -1,3 +1,10 @@
+## 0.23.6 — Filesystem & Platform Hardening (D06)
+
+- Replaced vulnerable Windows unlink-old/rename-new live-file switches with atomic `ReplaceFileW` for managed files, recovery and release state slots; locked files fail without a missing-live-file window.
+- Refused Windows device/ADS names, invalid trailing names, case and file/directory collisions, symlinks/junctions/reparse points, readonly files and unwritable parents before switching or restoring a release.
+- Added stage/rollback disk-space preflight with overflow-safe calculations, durable copy cleanup, transaction-preserving ENOSPC handling, protection against overwriting previously untracked player files and negative Rust tests for mixed-file recovery and Windows sharing violations.
+- See `docs/releases/0.23.6-filesystem-platform-hardening.md`. No claim of compiled/binary production certification without multi-OS Rust/FS E2E.
+
 ## 0.23.5 — Transactional Client Release (D05)
 
 - Desktop, Repair, durable jobs and CLI sync now stage complete signed file sets under an isolated release work directory, use the existing network scheduler and shared SHA-256 cache, and verify the staged set before switching.
