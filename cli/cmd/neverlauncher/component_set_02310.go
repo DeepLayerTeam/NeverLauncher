@@ -17,6 +17,23 @@ import (
 // Never obtain this value from the downloaded component package.
 var componentSetTrustedKey02310 string
 
+// A separate offline root is provisioned at release build; it never comes from the package.
+var componentSetRootKey02312 string
+
+const componentPolicyFile02312 = "COMPONENT_TRUST_POLICY.json"
+const componentSignatureFile02312 = "COMPONENT_SET_SIGNATURE_V2.json"
+
+type componentSignature02312 struct {
+	SchemaVersion  string `json:"schemaVersion"`
+	Algorithm      string `json:"algorithm"`
+	KeyID          string `json:"keyId"`
+	TrustEpoch     uint64 `json:"trustEpoch"`
+	PolicySHA256   string `json:"policySha256"`
+	ManifestSHA256 string `json:"manifestSha256"`
+	SignedAt       string `json:"signedAt"`
+	Signature      string `json:"signature"`
+}
+
 const componentSetSignatureFile02310 = "COMPONENT_SET_SIGNATURE.json"
 
 type componentSetSignature02310 struct {
@@ -56,6 +73,9 @@ func verifySignedComponentSet02310(manifestPath string, manifest componentUpdate
 	}
 	if allowDevelopment && (manifest.TrustMode == "development-self-test" || manifest.TrustMode == "unsigned-development" || manifest.TrustMode == "adhoc-development") {
 		return nil
+	}
+	if componentTrustRequired02312(manifest.ProductVersion) {
+		return verifyComponentTrust02312(manifestPath)
 	}
 	key, err := hex.DecodeString(strings.TrimSpace(componentSetTrustedKey02310))
 	if err != nil || len(key) != ed25519.PublicKeySize {

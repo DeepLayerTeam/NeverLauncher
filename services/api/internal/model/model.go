@@ -126,6 +126,7 @@ type Manifest struct {
 	Channel               string                   `json:"channel"`
 	Version               string                   `json:"version"`
 	GameReleaseGeneration uint64                   `json:"gameReleaseGeneration,omitempty"`
+	TrustEpoch            uint64                   `json:"trustEpoch,omitempty"`
 	RollbackSource        *GameRollbackSource02311 `json:"rollbackSource,omitempty"`
 	CreatedAt             string                   `json:"createdAt"`
 	Minecraft             MinecraftInfo            `json:"minecraft"`

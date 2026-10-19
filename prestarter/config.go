@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 const maxConfigBytes = 1024 * 1024
@@ -22,6 +23,9 @@ const maxConfigBytes = 1024 * 1024
 // Signature covers the *exact* payload bytes. Unknown fields are rejected;
 // there is no JSON canonicalization ambiguity between signer and verifier.
 type Envelope struct {
+	KeyID         string `json:"keyId,omitempty"`
+	TrustEpoch    uint64 `json:"trustEpoch,omitempty"`
+	SignedAt      string `json:"signedAt,omitempty"`
 	SchemaVersion string `json:"schemaVersion"`
 	Payload       string `json:"payload"`
 	Signature     string `json:"signature"`
@@ -95,6 +99,10 @@ func SignedEnvelope(payload []byte, private ed25519.PrivateKey) ([]byte, error) 
 	return json.MarshalIndent(Envelope{SchemaVersion: "1.0", Payload: base64.StdEncoding.EncodeToString(payload), Signature: hex.EncodeToString(ed25519.Sign(private, payload))}, "", "  ")
 }
 func VerifyEnvelope(data []byte, pinnedKeyHex string) (Config, string, error) {
+	return VerifyEnvelopeWithPolicy(data, pinnedKeyHex, nil)
+}
+
+func VerifyEnvelopeWithPolicy(data []byte, pinnedKeyHex string, policy *TrustPolicy) (Config, string, error) {
 	var cfg Config
 	if len(data) > maxConfigBytes {
 		return cfg, "", errors.New("signed config too large")
@@ -108,15 +116,44 @@ func VerifyEnvelope(data []byte, pinnedKeyHex string) (Config, string, error) {
 	if err := decodeStrict(data, &envelope); err != nil {
 		return cfg, "", err
 	}
-	if envelope.SchemaVersion != "1.0" {
+	if envelope.SchemaVersion != "1.0" && envelope.SchemaVersion != "2.0" {
 		return cfg, "", errors.New("unsupported envelope schema")
+	}
+	if envelope.SchemaVersion == "2.0" {
+		if policy == nil || envelope.TrustEpoch != policy.Epoch {
+			return cfg, "", errors.New("root-signed delegated bootstrap policy/epoch required")
+		}
+		if envelope.KeyID == "" {
+			return cfg, "", errors.New("bootstrap signer keyId missing")
+		}
 	}
 	raw, err := base64.StdEncoding.DecodeString(envelope.Payload)
 	if err != nil || len(raw) > maxConfigBytes {
 		return cfg, "", errors.New("invalid signed payload")
 	}
 	sig, err := hex.DecodeString(envelope.Signature)
-	if err != nil || len(sig) != ed25519.SignatureSize || !ed25519.Verify(ed25519.PublicKey(key), raw, sig) {
+	if envelope.SchemaVersion == "2.0" {
+		delegated := false
+		for _, k := range policy.Keys {
+			if k.ID != envelope.KeyID || k.Role != "bootstrap" {
+				continue
+			}
+			t, e := strictTime02312(envelope.SignedAt)
+			if e != nil {
+				return cfg, "", e
+			}
+			if e = policy.Authorize("bootstrap", k.ID, k.PublicKey, t, time.Now().UTC(), true); e != nil {
+				return cfg, "", e
+			}
+			key, _ = hex.DecodeString(k.PublicKey)
+			delegated = true
+			break
+		}
+		if !delegated {
+			return cfg, "", errors.New("bootstrap signer not delegated by signed policy")
+		}
+	}
+	if err != nil || len(sig) != ed25519.SignatureSize || !ed25519.Verify(ed25519.PublicKey(key), bootstrapSignaturePayload02312(raw, envelope), sig) {
 		return cfg, "", errors.New("signed bootstrap config failed Ed25519 verification")
 	}
 	if err := decodeStrict(raw, &cfg); err != nil {

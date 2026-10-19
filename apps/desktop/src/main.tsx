@@ -21,6 +21,7 @@ type DesktopSettings = {
   memoryMb: number;
   channel: string;
   pinnedPublicKey: string;
+  trustPolicyPath?: string;
   serverId?: string;
   screenWidth: number;
   screenHeight: number;

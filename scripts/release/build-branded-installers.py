@@ -46,17 +46,37 @@ def file_matches(path, art):
         raise ValueError(f'object SHA-256/size mismatch: {path}')
 
 
-def verify_config(path, key):
-    # The signed payload is decoded byte-for-byte, not re-serialized.
+def verify_config(path, key, policy_path=None):
+    # Verify the exact signed payload. A delegated signer is admitted only by
+    # root-signed trust policy, never by arbitrary bundle-provided public keys.
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    import datetime
     env = json.loads(path.read_text('utf-8'))
-    if env['schemaVersion'] != '1.0' or set(env) != {'schemaVersion', 'payload', 'signature'}:
-        raise ValueError('invalid signed configuration envelope')
     payload = base64.b64decode(env['payload'], validate=True)
-    Ed25519PublicKey.from_public_bytes(bytes.fromhex(key)).verify(bytes.fromhex(env['signature']), payload)
+    if env.get('schemaVersion') == '2.0':
+        policy_path = policy_path or path.with_name('trust-policy.signed.json')
+        if not policy_path.is_file() or policy_path.is_symlink():
+            raise ValueError('delegated config requires local signed trust policy')
+        penv = json.loads(policy_path.read_text('utf-8'))
+        if penv.get('schemaVersion') != '1.0':raise ValueError('unsupported trust policy envelope')
+        pp = base64.b64decode(penv['payload'],validate=True)
+        Ed25519PublicKey.from_public_bytes(bytes.fromhex(key)).verify(bytes.fromhex(penv['rootSignature']),b'NeverLauncher-Trust-Policy-v1\n'+pp)
+        policy = json.loads(pp)
+        if policy.get('schemaVersion') != '1.0' or policy.get('domain') != 'neverlauncher.trust.v1' or policy.get('epoch') != env.get('trustEpoch'):
+            raise ValueError('trust policy domain/epoch mismatch')
+        now=datetime.datetime.now(datetime.timezone.utc)
+        def utc(t):return datetime.datetime.strptime(t,'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=datetime.timezone.utc)
+        if not utc(policy['issuedAt'])<=now<utc(policy['expiresAt']):raise ValueError('stale trust policy')
+        signer=next((k for k in policy['keys'] if k['id']==env.get('keyId') and k['role']=='bootstrap' and k['status']=='active'),None)
+        if not signer or utc(signer['notBefore'])>utc(env['signedAt']):raise ValueError('bootstrap signer not delegated')
+        Ed25519PublicKey.from_public_bytes(bytes.fromhex(signer['publicKey'])).verify(bytes.fromhex(env['signature']),('NeverLauncher-Bootstrap-v2\n'+env['keyId']+'\n'+str(env['trustEpoch'])+'\n'+env['signedAt']+'\n').encode()+payload)
+    elif env.get('schemaVersion') == '1.0' and set(env) == {'schemaVersion','payload','signature'}:
+        Ed25519PublicKey.from_public_bytes(bytes.fromhex(key)).verify(bytes.fromhex(env['signature']),payload)
+    else:
+        raise ValueError('invalid signed configuration envelope')
     config = json.loads(payload)
-    if config['schemaVersion'] != '1.0':
-        raise ValueError('unsupported config')
+    if config['schemaVersion'] != '1.0':raise ValueError('unsupported config')
+    if env.get('schemaVersion')=='2.0' and config['profilePublicKey'].lower()!=key.lower():raise ValueError('game trust root mismatches embedded root')
     return config
 
 
@@ -89,7 +109,7 @@ def collect_bundle(args, stage):
     key = pathlib.Path(args.root_key_file).read_text().strip().lower()
     if not re.fullmatch('[0-9a-f]{64}', key):
         raise ValueError('required provisioned 32-byte Ed25519 key')
-    cfg = verify_config(args.config, key)
+    cfg = verify_config(args.config, key, args.trust_policy)
     if args.platform not in TARGETS or args.arch not in ARCH:
         raise ValueError('unsupported target')
     if not any(t['os'] == args.platform and t['arch'] == args.arch for t in cfg['targets']):
@@ -101,6 +121,7 @@ def collect_bundle(args, stage):
     file_matches(args.prestarter, match[0]['prestarter'])
     stage.mkdir(parents=True, exist_ok=True)
     shutil.copy2(args.config, stage/'bootstrap.signed.json')
+    if args.trust_policy:shutil.copy2(args.trust_policy,stage/'trust-policy.signed.json')
     suffix = '.exe' if args.platform == 'windows' else ''
     shutil.copy2(args.prestarter, stage/('neverprestarter'+suffix))
     if args.offline_source:
@@ -219,6 +240,7 @@ def main():
     p.add_argument('--project',required=True,help='signed project name in package IDs')
     p.add_argument('--version',required=True)
     p.add_argument('--config',type=pathlib.Path,required=True)
+    p.add_argument('--trust-policy',type=pathlib.Path,help='locally provisioned root-signed delegated trust policy for v2 config')
     p.add_argument('--prestarter',type=pathlib.Path,required=True)
     p.add_argument('--root-key-file',type=pathlib.Path,required=True)
     p.add_argument('--output',type=pathlib.Path,required=True)

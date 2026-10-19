@@ -15,7 +15,7 @@ import (
 // Replaced at compile time using -ldflags -X. An empty embedded trust key
 // deliberately prevents production bootstrap until a trust root is provisioned.
 var embeddedRootPublicKey string
-var version = "0.23.9"
+var version = "0.23.12"
 
 func main() {
 	var opts prestarter.Options
@@ -30,6 +30,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, e)
 		os.Exit(2)
 	}
+	flag.StringVar(&opts.TrustPolicyPath, "trust-policy", "", "local root-signed delegated trust policy (never a remote URL)")
 	flag.StringVar(&opts.ConfigPath, "config", defaultConfig, "path to local signed bootstrap configuration")
 	flag.StringVar(&opts.Root, "root", defaultRoot, "absolute application data directory")
 	flag.StringVar(&opts.OfflineDir, "offline-dir", "", "optional local verified archive bundle")

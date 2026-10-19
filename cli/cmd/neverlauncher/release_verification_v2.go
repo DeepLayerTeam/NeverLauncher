@@ -31,6 +31,7 @@ type releaseTrustKey0158 struct {
 	Status      string `json:"status"`
 	NotBefore   string `json:"notBefore"`
 	RetiredAt   string `json:"retiredAt,omitempty"`
+	VerifyUntil string `json:"verifyUntil,omitempty"`
 	RevokedAt   string `json:"revokedAt,omitempty"`
 	ReplacedBy  string `json:"replacedBy,omitempty"`
 }
@@ -270,10 +271,23 @@ func findTrustedReleaseKey0158(policy releaseTrustPolicy0158, id, fp string, sig
 				return nil, fmt.Errorf("release signature predates key activation: %s", id)
 			}
 		}
-		if k.Status == "verify-only" && strings.TrimSpace(k.RetiredAt) != "" {
-			t, err := time.Parse(time.RFC3339Nano, k.RetiredAt)
-			if err != nil || signedAt.After(t.Add(5*time.Minute)) {
-				return nil, fmt.Errorf("release signature создана после retirement ключа: %s", id)
+		if k.Status == "verify-only" {
+			// A verify-only key cannot authorize new artifacts through
+			// backdating SignedAt. The overlap expires in real wall-clock time.
+			retired, err := time.Parse(time.RFC3339Nano, k.RetiredAt)
+			if err != nil || signedAt.After(retired.Add(5*time.Minute)) {
+				return nil, fmt.Errorf("release signature after retirement: %s", id)
+			}
+			limit := retired.Add(48 * time.Hour)
+			if k.VerifyUntil != "" {
+				end, e := time.Parse(time.RFC3339Nano, k.VerifyUntil)
+				if e != nil || !end.After(retired) || end.After(limit) {
+					return nil, fmt.Errorf("invalid finite release key overlap: %s", id)
+				}
+				limit = end
+			}
+			if !time.Now().UTC().Before(limit) {
+				return nil, fmt.Errorf("release key overlap expired: %s", id)
 			}
 		}
 		raw, _ := hex.DecodeString(k.PublicKey)

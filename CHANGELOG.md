@@ -1,3 +1,10 @@
+## 0.23.12 — Trust Rotation & Revocation
+
+- Root-signed, epoch-versioned trust policy with active/verify-only/revoked delegated signing roles across Prestarter, component updates and game manifests; no mutable URL can supply a new root of trust.
+- Two independently signed component-set envelopes for upgrading legacy clients and enforcing new policy v2; metadata/signatures bind epoch, signer ID, policy digest and exact manifest bytes.
+- Durable anti-rollback trust watermark and expiration checks; game API signing and Desktop launch paths accept only independently root-authorized signers; release v2 `verify-only` is time-bounded.
+- See `docs/releases/0.23.12-trust-rotation-revocation.md` for signing process, migration limitations and release gates. This implementation is not TUF-compatible and Rust/OS E2E certification remains outstanding.
+
 ## 0.23.11 — Release Generations & Anti-rollback
 
 - Component-set Ed25519-signed `securityGeneration` with replay/equivocation rejection and persistent verified high-watermark; updater recovery reconciles installed components before accepting a higher generation.

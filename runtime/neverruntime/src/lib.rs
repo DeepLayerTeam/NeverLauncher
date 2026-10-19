@@ -10,6 +10,7 @@ mod network_resilience;
 pub mod durable_downloads;
 pub mod transactional_release;
 mod release_generations;
+mod trust_policy;
 pub use download_scheduler::{DownloadLimits, DownloadProgress, ProgressSink, DOWNLOAD_PROGRESS_EVENT};
 pub mod managed_java;
 pub mod guard_ipc;
@@ -122,6 +123,8 @@ pub struct Manifest {
     pub version: String,
     #[serde(default, skip_serializing_if = "is_zero_u64_02311")]
     pub game_release_generation: u64,
+    #[serde(default, skip_serializing_if = "is_zero_u64_02311")]
+    pub trust_epoch: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rollback_source: Option<GameRollbackSource02311>,
     pub created_at: String,
@@ -594,7 +597,7 @@ pub fn verify_manifest_signature(manifest: &Manifest, pinned_public_key: &str) -
         return Err(format!("неподдерживаемый алгоритм подписи: {}", signature_info.algorithm));
     }
     let public_key_hex = signature_info.public_key.trim().to_string();
-    if !pinned.eq_ignore_ascii_case(&public_key_hex) {
+    if manifest.trust_epoch == 0 && !pinned.eq_ignore_ascii_case(&public_key_hex) {
         return Err("публичный ключ манифеста не совпадает с закреплённым ключом проекта".to_string());
     }
     let public_key_bytes = hex::decode(&public_key_hex)
@@ -615,6 +618,7 @@ pub fn verify_manifest_signature(manifest: &Manifest, pinned_public_key: &str) -
     verifying_key
         .verify(&payload, &signature)
         .map_err(|_| "подпись манифеста не прошла проверку".to_string())?;
+    trust_policy::verify_manifest(manifest, pinned, &public_key_hex, &signature_info.signed_at)?;
     Ok(SignatureCheckResult {
         valid: true,
         public_key: public_key_hex,
@@ -1916,6 +1920,7 @@ mod tests {
             profile_id: "vanilla".to_string(),
             channel: "stable".to_string(),
             version: format!("{}-test", env!("CARGO_PKG_VERSION")),
+            trust_epoch: 0,
             game_release_generation: 0,
             rollback_source: None,
             created_at: "2026-09-13T00:00:00Z".to_string(),

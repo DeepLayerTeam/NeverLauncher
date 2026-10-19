@@ -112,7 +112,8 @@ mod tests {
     fn inputs() -> (Manifest, LaunchPlan) {
         let manifest = Manifest {
             schema_version: "2.0".into(), project_id: "p".into(), profile_id: "a".into(),
-            channel: "stable".into(), version: "1".into(), game_release_generation: 0, rollback_source: None, created_at: "fixed".into(),
+            channel: "stable".into(), version: "1".into(), game_release_generation: 0,
+            trust_epoch: 0, rollback_source: None, created_at: "fixed".into(),
             minecraft: MinecraftInfo { version: "1.21.1".into(), loader: "vanilla".into(), loader_version: "".into(), main_class: "demo.Main".into(), game_args: vec![] },
             runtime: RuntimeInfo {
                 java: JavaInfo { major_version: 21, minimum_major_version: 0, recommended_major_version: 0, maximum_major_version: 0, distribution: "temurin".into(), allow_custom_path: false },

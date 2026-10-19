@@ -19,14 +19,15 @@ import (
 )
 
 type Options struct {
-	ConfigPath    string
-	TrustedKey    string
-	Root          string
-	OfflineDir    string
-	Offline       bool
-	LaunchProfile bool
-	Username      string
-	NoDesktop     bool // unattended installer checks / provisioning
+	ConfigPath      string
+	TrustPolicyPath string
+	TrustedKey      string
+	Root            string
+	OfflineDir      string
+	Offline         bool
+	LaunchProfile   bool
+	Username        string
+	NoDesktop       bool // unattended installer checks / provisioning
 }
 type manifestIdentity struct {
 	ProjectID string `json:"projectId"`
@@ -81,19 +82,61 @@ func Run(ctx context.Context, opts Options) error {
 	if e != nil {
 		return e
 	}
-	cfg, digest, e := VerifyEnvelope(raw, opts.TrustedKey)
-	if e != nil {
-		return e
-	}
-	target, e := cfg.SelectTarget()
-	if e != nil {
-		return e
-	}
 	root, e := safeRoot(opts.Root)
 	if e != nil {
 		return e
 	}
 	if e = validateInputRoot(opts.OfflineDir, root); e != nil {
+		return e
+	}
+	// Lock precedes trust-state acceptance; concurrent processes must not race
+	// policy epochs or downgrade a revocation during first-run.
+	store, e := newStorage(filepath.Join(root, ".neverlauncher-prestarter"), opts.OfflineDir, opts.Offline)
+	if e != nil {
+		return e
+	}
+	if e = safeMkdir(store.root); e != nil {
+		return e
+	}
+	lock, e := acquireProcessLock(filepath.Join(store.root, "bootstrap.lock"))
+	if e != nil {
+		return e
+	}
+	defer lock.Close()
+	var cfg Config
+	var digest string
+	var env Envelope
+	if e = decodeStrict(raw, &env); e != nil {
+		return e
+	}
+	if env.SchemaVersion == "2.0" {
+		policyFile := opts.TrustPolicyPath
+		if policyFile == "" {
+			policyFile = filepath.Join(store.root, "trust", "active-policy.json")
+		}
+		policyBytes, err := os.ReadFile(policyFile)
+		if err != nil {
+			return fmt.Errorf("delegated bootstrap needs locally provisioned root-signed policy: %w", err)
+		}
+		policy, err := AcceptTrustPolicy(filepath.Join(store.root, "trust"), opts.TrustedKey, policyBytes, time.Now().UTC())
+		if err != nil {
+			return err
+		}
+		cfg, digest, e = VerifyEnvelopeWithPolicy(raw, opts.TrustedKey, &policy)
+	} else {
+		if st, err := readPolicyState02312(filepath.Join(store.root, "trust", "trust-state.json")); err != nil || st.Epoch > 0 {
+			return errors.New("legacy bootstrap refused after delegated trust activation")
+		}
+		cfg, digest, e = VerifyEnvelope(raw, opts.TrustedKey)
+	}
+	if e != nil {
+		return e
+	}
+	if env.SchemaVersion == "2.0" && !strings.EqualFold(cfg.ProfilePublicKey, opts.TrustedKey) {
+		return errors.New("delegated game trust root must match pinned bootstrap root")
+	}
+	target, e := cfg.SelectTarget()
+	if e != nil {
 		return e
 	}
 	// On Windows the production Desktop enforces NeverGuard's authenticated
@@ -105,10 +148,6 @@ func Run(ctx context.Context, opts Options) error {
 	if opts.Username != "" && !validUsername(opts.Username) {
 		return errors.New("invalid offline Minecraft username")
 	}
-	store, e := newStorage(filepath.Join(root, ".neverlauncher-prestarter"), opts.OfflineDir, opts.Offline)
-	if e != nil {
-		return e
-	}
 	p := &installer{root: root, key: opts.TrustedKey, store: store, config: cfg, digest: digest, rawConfig: raw, target: target, launcherRoot: filepath.Join(root, "launcher"), gameRoot: filepath.Join(root, "profiles", cfg.ProjectID, cfg.ProfileID)}
 	if e = safeMkdir(p.launcherRoot); e != nil {
 		return e
@@ -119,11 +158,6 @@ func Run(ctx context.Context, opts Options) error {
 	if e = safeMkdir(store.root); e != nil {
 		return e
 	}
-	lock, e := acquireProcessLock(filepath.Join(store.root, "bootstrap.lock"))
-	if e != nil {
-		return e
-	}
-	defer lock.Close()
 	// The dual-slot pointer is the recoverable commit journal. Never execute
 	// binaries from an unverified or partially installed release.
 	if e = p.cleanupInterruptedStages(); e != nil {
@@ -256,6 +290,35 @@ func (p *installer) installComponents(ctx context.Context, previous *activeRecor
 	return record, nil
 }
 func hexDigest(data []byte) string { sum := sha256.Sum256(data); return hex.EncodeToString(sum[:]) }
+func (p *installer) configTrustEpoch() uint64 {
+	var e Envelope
+	_ = decodeStrict(p.rawConfig, &e)
+	if e.SchemaVersion == "2.0" {
+		return e.TrustEpoch
+	}
+	return 0
+}
+func (p *installer) verifyConfig(raw []byte) (Config, string, error) {
+	var e Envelope
+	if err := decodeStrict(raw, &e); err != nil {
+		return Config{}, "", err
+	}
+	if e.SchemaVersion == "2.0" {
+		policyRaw, err := os.ReadFile(filepath.Join(p.store.root, "trust", "active-policy.json"))
+		if err != nil {
+			return Config{}, "", err
+		}
+		policy, _, err := VerifyTrustPolicy(policyRaw, p.key, time.Now().UTC())
+		if err != nil {
+			return Config{}, "", err
+		}
+		return VerifyEnvelopeWithPolicy(raw, p.key, &policy)
+	}
+	if state, err := readPolicyState02312(filepath.Join(p.store.root, "trust", "trust-state.json")); err != nil || state.Epoch > 0 {
+		return Config{}, "", errors.New("legacy bootstrap blocked after delegated trust activation")
+	}
+	return VerifyEnvelope(raw, p.key)
+}
 func (p *installer) releaseValid(record activeRecord) bool {
 	if !validDigest(record.Digest) || record.Release != record.Digest+"-"+record.Platform || record.Platform != p.target.OS+"-"+p.target.Arch {
 		return false
@@ -270,7 +333,7 @@ func (p *installer) releaseValid(record activeRecord) bool {
 	if e != nil || hexDigest(data) != record.ConfigSHA256 {
 		return false
 	}
-	cfg, digest, e := VerifyEnvelope(data, p.key)
+	cfg, digest, e := p.verifyConfig(data)
 	if e != nil || digest != record.Digest {
 		return false
 	}
@@ -344,7 +407,11 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	}
 	// Verify with the *existing* NeverRuntime signature verifier BEFORE reading
 	// any profile-supplied Java setting or installing game contents.
-	output, e := runChild(ctx, runtimeBin, nil, "verify", "--manifest", manifestPath, "--pinned-public-key", p.config.ProfilePublicKey)
+	var gameTrustEnv []string
+	if p.configTrustEpoch() > 0 {
+		gameTrustEnv = []string{"NEVERLAUNCHER_GAME_TRUST_POLICY_FILE=" + filepath.Join(p.store.root, "trust", "active-policy.json")}
+	}
+	output, e := runChild(ctx, runtimeBin, gameTrustEnv, "verify", "--manifest", manifestPath, "--pinned-public-key", p.config.ProfilePublicKey)
 	if e != nil {
 		return fmt.Errorf("profile signature verification: %w (%s)", e, output)
 	}
@@ -369,7 +436,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	if e != nil {
 		return e
 	}
-	env := []string{"NEVERLAUNCHER_MANAGED_JRE_MANIFEST=" + javaManifest, "NEVERLAUNCHER_MANAGED_JRE_MANIFEST_SHA256=" + p.config.JavaManifest.SHA256}
+	env := append(gameTrustEnv, "NEVERLAUNCHER_MANAGED_JRE_MANIFEST="+javaManifest, "NEVERLAUNCHER_MANAGED_JRE_MANIFEST_SHA256="+p.config.JavaManifest.SHA256)
 	if opts.Offline {
 		env = append(env, "NEVERLAUNCHER_OFFLINE=1")
 	}
@@ -451,7 +518,13 @@ func (p *installer) ensureDesktopConfig(username string, offline bool) (string, 
 		"channel": p.config.Channel, "gameDirectory": p.gameRoot,
 		"javaPath": "", "username": username, "memoryMb": 4096,
 		"pinnedPublicKey": p.config.ProfilePublicKey,
-		"serverId":        "", "screenWidth": 1280, "screenHeight": 720,
+		"trustPolicyPath": func() string {
+			if p.configTrustEpoch() > 0 {
+				return filepath.Join(p.store.root, "trust", "active-policy.json")
+			}
+			return ""
+		}(),
+		"serverId": "", "screenWidth": 1280, "screenHeight": 720,
 		"fullscreen": false, "autoEnter": false, "serverHost": "", "serverPort": 25565,
 		"offlineEnabled": offline, "configPath": "",
 	}

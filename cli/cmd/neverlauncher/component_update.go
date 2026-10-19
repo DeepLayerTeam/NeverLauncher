@@ -1105,6 +1105,9 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 	if err != nil {
 		return nil, err
 	}
+	if err := checkComponentTrustSet02312(root, probeManifestPath, manifest); err != nil {
+		return nil, err
+	}
 	if err := checkComponentGeneration02311(root, manifest); err != nil {
 		return nil, err
 	}
@@ -1136,6 +1139,9 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 		return nil, err
 	}
 	if err := verifySignedComponentSet02310(manifestPath, manifest, allowDevelopment); err != nil {
+		return nil, err
+	}
+	if err := checkComponentTrustSet02312(root, manifestPath, manifest); err != nil {
 		return nil, err
 	}
 	if err := checkComponentGeneration02311(root, manifest); err != nil {

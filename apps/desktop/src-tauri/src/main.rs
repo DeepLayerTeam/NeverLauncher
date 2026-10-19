@@ -290,6 +290,7 @@ struct DesktopConfig {
     username: String,
     memory_mb: u32,
     pinned_public_key: String,
+    #[serde(default)] trust_policy_path: String,
     #[serde(default)] server_id: String,
     #[serde(default = "default_screen_width_0229")] screen_width: u32,
     #[serde(default = "default_screen_height_0229")] screen_height: u32,
@@ -315,6 +316,22 @@ fn desktop_config_dir() -> Result<PathBuf, String> {
     Ok(PathBuf::from(".neverlauncher").join("config"))
 }
 fn desktop_config_path() -> Result<PathBuf, String> { Ok(desktop_config_dir()?.join("config.json")) }
+// The file location may be configured by a previously verified Prestarter;
+// the Rust verifier still authenticates its content against pinnedPublicKey.
+fn initialize_desktop_game_trust_02312() -> Result<(),String> {
+    if std::env::var_os("NEVERLAUNCHER_GAME_TRUST_POLICY_FILE").is_some() {return Ok(())}
+    let path=desktop_config_path()?;
+    let bytes=match std::fs::read(&path) {Ok(b)=>b,Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Ok(()),Err(e)=>return Err(e.to_string())};
+    let cfg:DesktopConfig=serde_json::from_slice(&bytes).map_err(|e|e.to_string())?;
+    if cfg.trust_policy_path.is_empty() {return Ok(())}
+    let target=PathBuf::from(&cfg.trust_policy_path);
+    if !target.is_absolute(){return Err("trust policy location must be absolute".into())}
+    let meta=std::fs::symlink_metadata(&target).map_err(|e|e.to_string())?;
+    if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>128*1024 {return Err("unsafe trust policy source".into())}
+    std::env::set_var("NEVERLAUNCHER_GAME_TRUST_POLICY_FILE",&target);
+    Ok(())
+}
+
 fn default_game_directory() -> String {
     let base = if cfg!(windows) { std::env::var("APPDATA").map(PathBuf::from).unwrap_or_else(|_| PathBuf::from(".")) }
     else if let Ok(home) = std::env::var("HOME") { PathBuf::from(home).join(".local").join("share") }
@@ -325,7 +342,7 @@ fn default_screen_width_0229() -> u32 { 1280 }
 fn default_screen_height_0229() -> u32 { 720 }
 fn default_server_port_0229() -> u16 { 25565 }
 fn default_desktop_config() -> DesktopConfig {
-    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), manifest_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), server_id: String::new(), screen_width: 1280, screen_height: 720, fullscreen: false, auto_enter: false, server_host: String::new(), server_port: 25565, offline_enabled: false, config_path: String::new() }
+    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), manifest_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), trust_policy_path: String::new(), server_id: String::new(), screen_width: 1280, screen_height: 720, fullscreen: false, auto_enter: false, server_host: String::new(), server_port: 25565, offline_enabled: false, config_path: String::new() }
 }
 fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
     if cfg.schema_version.trim().is_empty() { cfg.schema_version = "1.0".into(); }
@@ -1002,6 +1019,10 @@ fn main() {
         std::process::exit(70);
     }
 
+    if let Err(err)=initialize_desktop_game_trust_02312(){
+        eprintln!("NeverLauncher Desktop trust configuration refused: {err}");
+        std::process::exit(71);
+    }
     tauri::Builder::default()
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())

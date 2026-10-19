@@ -251,7 +251,7 @@ try {
         $OldGOOS = $env:GOOS; $OldGOARCH = $env:GOARCH; $OldCGO = $env:CGO_ENABLED
         try {
             $env:GOOS = "windows"; $env:GOARCH = $Target.GoArch; $env:CGO_ENABLED = "0"
-            Invoke-Checked { go build -trimpath -ldflags "-s -w -X main.version=$Version -X main.componentSetTrustedKey02310=$env:NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY" -o $CliRootPath .\cmd\neverlauncher } "CLI $Arch release build"
+            Invoke-Checked { go build -trimpath -ldflags "-s -w -X main.version=$Version -X main.componentSetTrustedKey02310=$env:NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY -X main.componentSetRootKey02312=$env:NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY" -o $CliRootPath .\cmd\neverlauncher } "CLI $Arch release build"
         } finally {
             $env:GOOS = $OldGOOS; $env:GOARCH = $OldGOARCH; $env:CGO_ENABLED = $OldCGO
             Pop-Location

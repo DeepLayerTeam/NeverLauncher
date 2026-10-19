@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"os"
 	"strings"
 	"time"
 
@@ -33,6 +34,9 @@ func (s Server) signManifest(manifest model.Manifest) (model.Manifest, error) {
 	if err != nil {
 		return model.Manifest{}, err
 	}
+	if err := s.enforceGameTrustSigning02312(&manifest, privateKey); err != nil {
+		return model.Manifest{}, err
+	}
 	if err := model.ValidateManifestSchema(manifest); err != nil {
 		return model.Manifest{}, err
 	}
@@ -50,17 +54,20 @@ func (s Server) verifyManifestSignature(manifest model.Manifest) error {
 	if manifest.Signature == nil || !strings.EqualFold(manifest.Signature.Algorithm, "Ed25519") {
 		return errors.New("manifest не имеет Ed25519-подписи")
 	}
-	privateKey, err := s.manifestSigningPrivateKey()
-	if err != nil {
-		return err
-	}
-	trustedPublicKey := privateKey.Public().(ed25519.PublicKey)
 	declaredPublicKey, err := hex.DecodeString(strings.TrimSpace(manifest.Signature.PublicKey))
 	if err != nil || len(declaredPublicKey) != ed25519.PublicKeySize {
-		return errors.New("manifest содержит некорректный Ed25519 public key")
+		return errors.New("invalid manifest public key")
 	}
-	if !ed25519.PublicKey(declaredPublicKey).Equal(trustedPublicKey) {
-		return errors.New("manifest подписан недоверенным Ed25519 key")
+	configured := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_GAME_TRUST_POLICY_FILE")) != "" || strings.TrimSpace(os.Getenv("NEVERLAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY")) != ""
+	production := strings.EqualFold(s.Config.Environment, "production") || strings.EqualFold(s.Config.Environment, "prod")
+	if !configured && !production {
+		privateKey, e := s.manifestSigningPrivateKey()
+		if e != nil {
+			return e
+		}
+		if !ed25519.PublicKey(declaredPublicKey).Equal(privateKey.Public().(ed25519.PublicKey)) {
+			return errors.New("manifest signer is not the configured key")
+		}
 	}
 	signature, err := hex.DecodeString(strings.TrimSpace(manifest.Signature.Signature))
 	if err != nil || len(signature) != ed25519.SignatureSize {
@@ -75,10 +82,10 @@ func (s Server) verifyManifestSignature(manifest model.Manifest) error {
 	if err != nil {
 		return err
 	}
-	if !ed25519.Verify(trustedPublicKey, payload, signature) {
+	if !ed25519.Verify(ed25519.PublicKey(declaredPublicKey), payload, signature) {
 		return errors.New("Ed25519 signature manifest не прошла криптографическую проверку")
 	}
-	return nil
+	return s.enforceGameTrustVerify02312(manifest)
 }
 
 func ValidateManifestSigningConfig(seedHex string) error {

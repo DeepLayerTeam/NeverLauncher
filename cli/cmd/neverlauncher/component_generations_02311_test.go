@@ -64,12 +64,13 @@ func TestComponentGenerationRealUpdater02311(t *testing.T) {
 		t.Fatalf("old signed set was accepted: %v", err)
 	}
 	m.SecurityGeneration = 7
-	m.ProductVersion = "0.23.12"
+	m.ProductVersion = "0.23.10" // v1 fixture; v2 delegated trust tested separately
 	signComponentGenerationFixture02311(t, bundle, m, private)
 	if _, err := applyComponentPackage0157(bundle, "", "", root, "", 0, false, true); err == nil {
 		t.Fatal("same generation/different content accepted")
 	}
 	m.SecurityGeneration = 8
+	m.ProductVersion = "0.23.11"
 	signComponentGenerationFixture02311(t, bundle, m, private)
 	if _, err := applyComponentPackage0157(bundle, "", "", root, "", 0, false, true); err != nil {
 		t.Fatalf("next generation rejected: %v", err)

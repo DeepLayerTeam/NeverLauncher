@@ -13,6 +13,9 @@ func main() {
 	payload := flag.String("payload", "", "unsigned JSON payload")
 	keyPath := flag.String("private-key-file", "", "restricted-permission Ed25519 seed hex file")
 	out := flag.String("out", "", "signed JSON output")
+	policyPath := flag.String("trust-policy", "", "root-signed delegated trust policy file")
+	rootKey := flag.String("root-public-key", "", "pre-provisioned root Ed25519 public key (64 hex)")
+	keyID := flag.String("key-id", "", "delegated bootstrap signing key ID")
 	flag.Parse()
 	if *payload == "" || *keyPath == "" || *out == "" {
 		fmt.Fprintln(os.Stderr, "--payload --private-key-file --out required")
@@ -37,7 +40,22 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	signed, err := prestarter.SignedEnvelope(data, ed25519.NewKeyFromSeed(seed))
+	var signed []byte
+	if *policyPath != "" {
+		if *rootKey == "" || *keyID == "" {
+			panic("delegated signing requires --root-public-key and --key-id")
+		}
+		policy, e := os.ReadFile(*policyPath)
+		if e != nil {
+			panic(e)
+		}
+		signed, err = prestarter.SignedEnvelopeDelegated(data, ed25519.NewKeyFromSeed(seed), policy, *rootKey, *keyID)
+	} else {
+		if *rootKey != "" || *keyID != "" {
+			panic("delegate fields require --trust-policy")
+		}
+		signed, err = prestarter.SignedEnvelope(data, ed25519.NewKeyFromSeed(seed))
+	}
 	if err != nil {
 		panic(err)
 	}

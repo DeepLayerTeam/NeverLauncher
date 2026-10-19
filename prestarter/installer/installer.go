@@ -137,6 +137,42 @@ func atomicWrite(path string, data []byte) error {
 	// On POSIX persist the rename itself, not only the temporary file.
 	return syncParent(path)
 }
+func verifyBundleConfig02312(dir string, raw []byte, rootKey string) (prestarter.Config, string, error) {
+	var env prestarter.Envelope
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return prestarter.Config{}, "", err
+	}
+	if env.SchemaVersion != "2.0" {
+		return prestarter.VerifyEnvelope(raw, rootKey)
+	}
+	policyBytes, err := regular(filepath.Join(dir, "trust-policy.signed.json"), 128*1024)
+	if err != nil {
+		return prestarter.Config{}, "", err
+	}
+	policy, _, err := prestarter.VerifyTrustPolicy(policyBytes, rootKey, time.Now().UTC())
+	if err != nil {
+		return prestarter.Config{}, "", err
+	}
+	return prestarter.VerifyEnvelopeWithPolicy(raw, rootKey, &policy)
+}
+func verifyInstalledPolicy02312(dir string, raw []byte, key string) error {
+	_, _, err := verifyBundleConfig02312(dir, raw, key)
+	return err
+}
+func copyPolicy02312(src, dst string, raw []byte) error {
+	var env prestarter.Envelope
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return err
+	}
+	if env.SchemaVersion != "2.0" {
+		return nil
+	}
+	bytes, err := regular(filepath.Join(src, "trust-policy.signed.json"), 128*1024)
+	if err != nil {
+		return err
+	}
+	return atomicWrite(filepath.Join(dst, "trust-policy.signed.json"), bytes)
+}
 func VerifyBundle(bundle, key string, offline bool) (prestarter.Config, string, error) {
 	var empty prestarter.Config
 	if !filepath.IsAbs(bundle) {
@@ -151,7 +187,7 @@ func VerifyBundle(bundle, key string, offline bool) (prestarter.Config, string, 
 	if e != nil {
 		return empty, "", e
 	}
-	cfg, id, e := prestarter.VerifyEnvelope(raw, key)
+	cfg, id, e := verifyBundleConfig02312(path, raw, key)
 	if e != nil {
 		return empty, "", e
 	}
@@ -216,7 +252,7 @@ func (i *installation) current() (*record, error) {
 		if e != nil || digest(raw) != r.ConfigHash {
 			continue
 		}
-		cfg, id, e := prestarter.VerifyEnvelope(raw, i.key)
+		cfg, id, e := verifyBundleConfig02312(releaseDir, raw, i.key)
 		if e != nil || id+"-"+runtime.GOOS+"-"+runtime.GOARCH != r.Release {
 			continue
 		}
@@ -292,6 +328,9 @@ func (i *installation) store(bundle string, cfg prestarter.Config, id string, of
 		if err = atomicWrite(filepath.Join(stage, "bootstrap.signed.json"), raw); err != nil {
 			return rec, err
 		}
+		if e = copyPolicy02312(bundle, stage, raw); e != nil {
+			return rec, e
+		}
 		if err = verifyFile(filepath.Join(stage, binaryName()), art); err != nil {
 			return rec, err
 		}
@@ -302,7 +341,7 @@ func (i *installation) store(bundle string, cfg prestarter.Config, id string, of
 		return rec, e
 	}
 	installedRaw, installedErr := regular(filepath.Join(release, "bootstrap.signed.json"), 1024*1024)
-	if verifyFile(filepath.Join(release, binaryName()), art) != nil || installedErr != nil || digest(installedRaw) != rec.ConfigHash {
+	if verifyFile(filepath.Join(release, binaryName()), art) != nil || installedErr != nil || digest(installedRaw) != rec.ConfigHash || verifyInstalledPolicy02312(release, installedRaw, i.key) != nil {
 		// A matching signed bundle can repair a damaged release without
 		// ever executing the damaged binary. Never delete the old directory.
 		quarantine := release + ".broken-" + strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -319,6 +358,9 @@ func (i *installation) store(bundle string, cfg prestarter.Config, id string, of
 		}
 		if err = atomicWrite(filepath.Join(stage, "bootstrap.signed.json"), raw); err != nil {
 			return rec, err
+		}
+		if e = copyPolicy02312(bundle, stage, raw); e != nil {
+			return rec, e
 		}
 		if err = verifyFile(filepath.Join(stage, binaryName()), art); err != nil {
 			return rec, err
@@ -368,7 +410,7 @@ func (i *installation) provision(ctx context.Context, r record, noStart bool) er
 	if e != nil || digest(raw) != r.ConfigHash {
 		return errors.New("signed config damaged")
 	}
-	cfg, _, e := prestarter.VerifyEnvelope(raw, i.key)
+	cfg, _, e := verifyBundleConfig02312(dir, raw, i.key)
 	if e != nil {
 		return e
 	}
@@ -381,6 +423,9 @@ func (i *installation) provision(ctx context.Context, r record, noStart bool) er
 		return e
 	}
 	args := []string{"--config", config, "--root", i.root}
+	if _, err := os.Stat(filepath.Join(dir, "trust-policy.signed.json")); err == nil {
+		args = append(args, "--trust-policy", filepath.Join(dir, "trust-policy.signed.json"))
+	}
 	if r.Offline {
 		args = append(args, "--offline", "--offline-dir", filepath.Join(i.base, "offline", r.Release))
 	}
