@@ -570,6 +570,28 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 		return model.ReleaseVersion{}, ErrConflict
 	}
 
+	// Lock the channel's head row. The project lock serializes first publish
+	// when the head row has not been created yet (READ COMMITTED insert race).
+	var projectLock string
+	if err := tx.QueryRowContext(ctx, `SELECT id FROM projects WHERE id=$1 FOR UPDATE`, rel.ProjectID).Scan(&projectLock); err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest)
+ SELECT $1,$2,$3,1,id,version,'' FROM release_versions WHERE project_id=$1 AND profile_id=$2 AND channel=$3 AND status='published' ORDER BY published_at DESC,id DESC LIMIT 1
+ ON CONFLICT(project_id,profile_id,channel) DO NOTHING`, rel.ProjectID, rel.ProfileID, rel.Channel); err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	var currentHead int64
+	err = tx.QueryRowContext(ctx, `SELECT revision FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3 FOR UPDATE`, rel.ProjectID, rel.ProfileID, rel.Channel).Scan(&currentHead)
+	if errors.Is(err, sql.ErrNoRows) {
+		currentHead = 0
+	} else if err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	if commit.ExpectedHeadRevision == nil || currentHead != *commit.ExpectedHeadRevision {
+		return model.ReleaseVersion{}, ErrConflict
+	}
+
 	now := time.Now().UTC()
 	res, err := tx.ExecContext(ctx, `UPDATE release_versions SET status='published',published_at=$2,updated_at=$2 WHERE id=$1 AND status=$4 AND manifest=$3::jsonb`, rel.ID, now, string(canonical), commit.ExpectedStatus)
 	if err != nil {
@@ -581,11 +603,27 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 	if _, err := tx.ExecContext(ctx, `INSERT INTO release_channels(id,project_id,name,description,protected) VALUES($1,$2,$1,'Канал релиза',$3) ON CONFLICT(project_id,id) DO UPDATE SET name=EXCLUDED.name,description=EXCLUDED.description,protected=EXCLUDED.protected`, rel.Channel, rel.ProjectID, rel.Channel == "stable"); err != nil {
 		return model.ReleaseVersion{}, err
 	}
+	// Advancing the pointer and publishing the immutable release are a single commit.
+	if currentHead == 0 {
+		_, err = tx.ExecContext(ctx, `INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest,updated_at) VALUES($1,$2,$3,1,$4,$5,$6,$7)`, rel.ProjectID, rel.ProfileID, rel.Channel, rel.ID, rel.Version, commit.ExpectedManifestDigest, now)
+	} else {
+		var cas sql.Result
+		cas, err = tx.ExecContext(ctx, `UPDATE channel_heads SET revision=revision+1,release_id=$4,version=$5,manifest_digest=$6,updated_at=$7 WHERE project_id=$1 AND profile_id=$2 AND channel=$3 AND revision=$8`, rel.ProjectID, rel.ProfileID, rel.Channel, rel.ID, rel.Version, commit.ExpectedManifestDigest, now, currentHead)
+		if err == nil {
+			n, _ := cas.RowsAffected()
+			if n != 1 {
+				return model.ReleaseVersion{}, ErrConflict
+			}
+		}
+	}
+	if err != nil {
+		return model.ReleaseVersion{}, err
+	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,created_at) VALUES($1,$2,'package:publish',$3,$4)`, fmt.Sprintf("audit-%d", now.UnixNano()), commit.ActorID, rel.ID, now); err != nil {
 		return model.ReleaseVersion{}, err
 	}
 
-	payload := map[string]any{"packageId": rel.ID, "projectId": rel.ProjectID, "profileId": rel.ProfileID, "channel": rel.Channel, "version": rel.Version, "status": "published", "actorId": commit.ActorID}
+	payload := map[string]any{"packageId": rel.ID, "projectId": rel.ProjectID, "profileId": rel.ProfileID, "channel": rel.Channel, "version": rel.Version, "status": "published", "actorId": commit.ActorID, "headRevision": currentHead + 1}
 	payloadRaw, _ := json.Marshal(payload)
 	for _, eventType := range []string{"package.published", "release.published"} {
 		idSuffix, err := randomHex0213(10)

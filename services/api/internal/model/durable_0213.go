@@ -104,6 +104,7 @@ type DurablePublishPayload struct {
 	ExpectedManifestDigest string `json:"expectedManifestDigest"`
 	ExpectedArtifactDigest string `json:"expectedArtifactDigest"`
 	ExpectedStatus         string `json:"expectedStatus"`
+	ExpectedHeadRevision   *int64 `json:"expectedHeadRevision,omitempty"`
 }
 
 type DurablePublishCommit struct {
@@ -115,5 +116,6 @@ type DurablePublishCommit struct {
 	ExpectedManifestDigest string
 	ExpectedArtifactDigest string
 	ExpectedStatus         string
+	ExpectedHeadRevision   *int64
 	ActorID                string
 }

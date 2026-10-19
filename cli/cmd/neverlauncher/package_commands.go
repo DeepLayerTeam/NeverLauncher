@@ -856,6 +856,10 @@ func clientPackageConsume(packagePath, storageDir, clientDir string) (map[string
 }
 
 func clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, snapshotID string) (map[string]any, error) {
+	oldStateDigest, err := clientStateSHA2560228(clientDir)
+	if err != nil {
+		return nil, err
+	}
 	manifest, err := readClientPackageManifest(packagePath)
 	if err != nil {
 		return nil, err
@@ -887,7 +891,14 @@ func clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, s
 		remove = append(remove, rel)
 	}
 	sort.Strings(remove)
+	// The signed package identity and the file-state pointer change in one journalled transaction.
+	signedBytes, err := os.ReadFile(packagePath)
+	if err != nil {
+		return nil, err
+	}
+	digest := sha256.Sum256(signedBytes)
 	state := map[string]any{
+		"packageSha256":    hex.EncodeToString(digest[:]),
 		"schemaVersion":    cliSchemaVersion,
 		"toolVersion":      version,
 		"packageId":        manifest.PackageID,
@@ -923,13 +934,14 @@ func clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, s
 		return nil
 	}
 	tx, err := updater.apply(updaterRequest0156{
-		Root:        clientDir,
-		Namespace:   "client-package",
-		FromVersion: clientInstalledVersion0156(clientDir),
-		ToVersion:   manifest.Version,
-		Files:       files,
-		Remove:      remove,
-		Verify:      verifyFn,
+		Root:                clientDir,
+		Namespace:           "client-package",
+		ExpectedStateSHA256: oldStateDigest,
+		FromVersion:         clientInstalledVersion0156(clientDir),
+		ToVersion:           manifest.Version,
+		Files:               files,
+		Remove:              remove,
+		Verify:              verifyFn,
 	})
 	if err != nil {
 		return nil, err

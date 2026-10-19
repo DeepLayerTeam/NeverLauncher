@@ -72,6 +72,7 @@ func readOperationRequest0217(r *http.Request) (operationRequest0217, error) {
 	return req, nil
 }
 func (s Server) registerOperationRoutes0217(mux *http.ServeMux) {
+	mux.Handle("GET /api/v1/projects/{projectId}/profiles/{profileId}/channels/{channel}/head", s.requireAuthenticated(s.channelHeadGet0228))
 	mux.Handle("GET /api/v1/operations", s.requireAuthenticated(s.operationRegistryGet0217))
 	mux.Handle("GET /api/v1/operations/jobs", s.requireAuthenticated(s.operationList02110))
 	mux.Handle("POST /api/v1/operations/validate", s.requireAuthenticated(s.operationValidate0217))
@@ -137,7 +138,12 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 		if err != nil {
 			return spec, nil, nil, err
 		}
-		b, _ := json.Marshal(model.DurablePublishPayload{PackageID: resourceID, ExpectedManifestDigest: digest, ExpectedArtifactDigest: files, ExpectedStatus: lookup.Release.Status})
+		head, err := s.channelHead0228(ctx, lookup.Release.ProjectID, lookup.Release.ProfileID, lookup.Release.Channel)
+		if err != nil {
+			return spec, nil, nil, err
+		}
+		expected := head.Revision
+		b, _ := json.Marshal(model.DurablePublishPayload{PackageID: resourceID, ExpectedManifestDigest: digest, ExpectedArtifactDigest: files, ExpectedStatus: lookup.Release.Status, ExpectedHeadRevision: &expected})
 		return spec, b, map[string]any{"packageId": resourceID, "version": lookup.Release.Version, "channel": lookup.Release.Channel, "effect": "publish immutable package and advance channel"}, nil
 	}
 	if req.Channel == "" || req.ToVersion == "" {

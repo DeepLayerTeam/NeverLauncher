@@ -2,6 +2,9 @@ package repository
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -148,6 +151,7 @@ type MemoryRepository struct {
 	auditSinkMu                    sync.RWMutex
 	auditSink                      func(model.AuditEvent)
 	durableMu                      sync.Mutex
+	channelHeads                   map[string]model.ChannelHead
 	durableJobs                    map[string]model.DurableJob
 	durableOpAttempts              map[string][]model.DurableJobAttempt
 	durableJobKeys                 map[string]string
@@ -253,6 +257,7 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 		nextExtensionInstallRevisionID: 1,
 		extensionUpdateLeases:          map[string]extensionUpdateLease02011{},
 		durableJobs:                    map[string]model.DurableJob{},
+		channelHeads:                   map[string]model.ChannelHead{headKey0228("demo-project", "vanilla", "stable"): {ProjectID: "demo-project", ProfileID: "vanilla", Channel: "stable", Revision: 1, ReleaseID: "demo-project-vanilla-3.4.0", Version: "3.4.0", UpdatedAt: now}},
 		durableOpAttempts:              map[string][]model.DurableJobAttempt{},
 		durableJobKeys:                 map[string]string{},
 		durableScopeLeases:             map[string]model.DurableScopeLease{},
@@ -836,17 +841,16 @@ func (r *MemoryRepository) SetAuditEventSink(sink func(model.AuditEvent)) {
 }
 
 func (r *MemoryRepository) GetManifest(projectID, profileID, channel string) (model.Manifest, error) {
-	var latest *model.ReleaseVersion
-	for i := range r.releases {
-		item := &r.releases[i]
-		if item.ProjectID == projectID && item.ProfileID == profileID && item.Channel == channel && item.Status == "published" {
-			if latest == nil || item.PublishedAt.After(latest.PublishedAt) {
-				latest = item
-			}
-		}
+	r.durableMu.Lock()
+	defer r.durableMu.Unlock()
+	h, ok := r.channelHeads[headKey0228(projectID, profileID, channel)]
+	if !ok || h.Revision == 0 {
+		return model.Manifest{}, ErrNotFound
 	}
-	if latest != nil {
-		return cloneManifest0222(latest.Manifest), nil
+	for _, rel := range r.releases {
+		if rel.ID == h.ReleaseID && rel.ProjectID == projectID && rel.ProfileID == profileID && rel.Channel == channel && rel.Status == "published" {
+			return cloneManifest0222(rel.Manifest), nil
+		}
 	}
 	return model.Manifest{}, ErrNotFound
 }
@@ -869,6 +873,20 @@ func (r *MemoryRepository) PublishVersion(projectID, profileID, channel, version
 }
 
 func (r *MemoryRepository) PublishVersionWithManifest(projectID, profileID, channel, version string, manifest model.Manifest) (model.ReleaseVersion, error) {
+	head, err := r.GetChannelHead(context.Background(), projectID, profileID, channel)
+	if err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	return r.PublishVersionWithManifestCAS(projectID, profileID, channel, version, manifest, head.Revision)
+}
+
+func (r *MemoryRepository) PublishVersionWithManifestCAS(projectID, profileID, channel, version string, manifest model.Manifest, expected int64) (model.ReleaseVersion, error) {
+	r.durableMu.Lock()
+	defer r.durableMu.Unlock()
+	if r.channelHeads[headKey0228(projectID, profileID, channel)].Revision != expected {
+		return model.ReleaseVersion{}, ErrConflict
+	}
+
 	if _, err := r.GetProject(projectID); err != nil {
 		return model.ReleaseVersion{}, err
 	}
@@ -897,6 +915,10 @@ func (r *MemoryRepository) PublishVersionWithManifest(projectID, profileID, chan
 		item.Manifest = cloneManifest0222(manifest)
 		item.Status = "published"
 		item.PublishedAt = now
+		raw, _ := json.Marshal(manifest)
+		sum := sha256.Sum256(raw)
+		key := headKey0228(projectID, profileID, channel)
+		r.channelHeads[key] = model.ChannelHead{ProjectID: projectID, ProfileID: profileID, Channel: channel, Revision: expected + 1, ReleaseID: item.ID, Version: version, ManifestDigest: hex.EncodeToString(sum[:]), UpdatedAt: now}
 		return cloneRelease0222(*item), nil
 	}
 	return model.ReleaseVersion{}, ErrNotFound

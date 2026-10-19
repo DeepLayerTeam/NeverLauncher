@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -114,7 +115,18 @@ func (s Server) enqueuePublishJob0213(r *http.Request, lookup packageLookup) (mo
 	if err != nil {
 		return model.DurableJob{}, false, err
 	}
-	payload := model.DurablePublishPayload{PackageID: lookup.Release.ID, ExpectedManifestDigest: manifestDigest, ExpectedArtifactDigest: artifactDigest, ExpectedStatus: lookup.Release.Status}
+	head, err := s.channelHead0228(r.Context(), lookup.Release.ProjectID, lookup.Release.ProfileID, lookup.Release.Channel)
+	if err != nil {
+		return model.DurableJob{}, false, err
+	}
+	expected := head.Revision
+	if rawMatch := strings.TrimSpace(r.Header.Get("If-Match")); rawMatch != "" {
+		supplied, parseErr := strconv.ParseInt(strings.Trim(rawMatch, `"`), 10, 64)
+		if parseErr != nil || supplied != expected {
+			return model.DurableJob{}, false, repository.ErrConflict
+		}
+	}
+	payload := model.DurablePublishPayload{PackageID: lookup.Release.ID, ExpectedManifestDigest: manifestDigest, ExpectedArtifactDigest: artifactDigest, ExpectedStatus: lookup.Release.Status, ExpectedHeadRevision: &expected}
 	raw, _, err := publishPayloadDigest0213(payload)
 	if err != nil {
 		return model.DurableJob{}, false, err
@@ -193,6 +205,12 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "invalid publish job payload")
 		return model.ReleaseVersion{}, err
 	}
+	// Fail closed for legacy queued jobs with no frozen head; detect stale work
+	// early, while the repository CAS remains the final concurrency boundary.
+	if payload.ExpectedHeadRevision == nil {
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish job missing channel head revision")
+		return model.ReleaseVersion{}, repository.ErrConflict
+	}
 	if payload.PackageID != job.ResourceID || payload.ExpectedManifestDigest == "" || payload.ExpectedArtifactDigest == "" {
 		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish job payload identity mismatch")
 		return model.ReleaseVersion{}, errors.New("publish job payload identity mismatch")
@@ -241,6 +259,14 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		}
 		return model.ReleaseVersion{}, err
 	}
+	head, err := s.channelHead0228(ctx, lookup.Release.ProjectID, lookup.Release.ProfileID, lookup.Release.Channel)
+	if err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	if head.Revision != *payload.ExpectedHeadRevision {
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "channel head revision changed after publication was queued")
+		return model.ReleaseVersion{}, repository.ErrConflict
+	}
 	if err := s.validatePublishEvidenceContext0213(ctx, lookup); err != nil {
 		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish evidence no longer valid: "+err.Error())
 		return model.ReleaseVersion{}, err
@@ -265,7 +291,7 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		return model.ReleaseVersion{}, fmt.Errorf("%w: %s", errDurableAuthorizationRevoked0213, decision.ReasonCode)
 	}
 
-	return cp.CommitDurablePublish(ctx, model.DurablePublishCommit{
+	release, err := cp.CommitDurablePublish(ctx, model.DurablePublishCommit{
 		JobID:                  job.ID,
 		JobLeaseToken:          job.LeaseToken,
 		ScopeKey:               scopeKey,
@@ -274,8 +300,13 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		ExpectedManifestDigest: payload.ExpectedManifestDigest,
 		ExpectedArtifactDigest: payload.ExpectedArtifactDigest,
 		ExpectedStatus:         payload.ExpectedStatus,
+		ExpectedHeadRevision:   payload.ExpectedHeadRevision,
 		ActorID:                job.ActorID,
 	})
+	if errors.Is(err, repository.ErrConflict) {
+		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish CAS conflict: channel head or package changed")
+	}
+	return release, err
 }
 
 func (s Server) durableJobGet0213(w http.ResponseWriter, r *http.Request) {

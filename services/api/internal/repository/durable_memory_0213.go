@@ -270,9 +270,18 @@ func (r *MemoryRepository) CommitDurablePublish(_ context.Context, commit model.
 	if latest.Result != "passed" || latest.ManifestDigest != commit.ExpectedManifestDigest || latest.ArtifactDigest != commit.ExpectedArtifactDigest {
 		return model.ReleaseVersion{}, ErrConflict
 	}
+	key := headKey0228(rel.ProjectID, rel.ProfileID, rel.Channel)
+	head := r.channelHeads[key]
+	if commit.ExpectedHeadRevision == nil || head.Revision != *commit.ExpectedHeadRevision {
+		return model.ReleaseVersion{}, ErrConflict
+	}
+	head.ProjectID, head.ProfileID, head.Channel = rel.ProjectID, rel.ProfileID, rel.Channel
+	head.Revision++
+	head.ReleaseID, head.Version, head.ManifestDigest, head.UpdatedAt = rel.ID, rel.Version, commit.ExpectedManifestDigest, now
 	rel.Status = "published"
 	rel.PublishedAt = now
 	r.releases[idx] = rel
+	r.channelHeads[key] = head
 	result, _ := json.Marshal(map[string]any{"releaseId": rel.ID, "status": "published", "publishedAt": now})
 	r.finishMemoryOperationAttempt0217(job.ID, "succeeded", "")
 	job.Status = model.DurableJobStatusSucceeded
@@ -281,7 +290,7 @@ func (r *MemoryRepository) CommitDurablePublish(_ context.Context, commit model.
 	job.LeaseOwner, job.LeaseToken = "", ""
 	job.LeaseExpiresAt = time.Time{}
 	r.durableJobs[job.ID] = job
-	payload, _ := json.Marshal(map[string]any{"packageId": rel.ID, "projectId": rel.ProjectID, "profileId": rel.ProfileID, "channel": rel.Channel, "version": rel.Version, "status": "published", "actorId": commit.ActorID})
+	payload, _ := json.Marshal(map[string]any{"packageId": rel.ID, "projectId": rel.ProjectID, "profileId": rel.ProfileID, "channel": rel.Channel, "version": rel.Version, "status": "published", "actorId": commit.ActorID, "headRevision": head.Revision})
 	for _, typ := range []string{"package.published", "release.published"} {
 		idSum := sha256.Sum256([]byte(job.ID + "\x00" + typ))
 		id := "out_" + hex.EncodeToString(idSum[:10])

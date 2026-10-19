@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -939,7 +941,7 @@ func (r *SQLRepository) GetManifest(projectID, profileID, channel string) (model
 	if err := r.check(); err != nil {
 		return model.Manifest{}, err
 	}
-	row := r.db.QueryRow(`SELECT manifest FROM release_versions WHERE project_id = $1 AND profile_id = $2 AND channel = $3 AND status = 'published' ORDER BY published_at DESC, id DESC LIMIT 1`, projectID, profileID, channel)
+	row := r.db.QueryRow(`SELECT rv.manifest FROM channel_heads h JOIN release_versions rv ON rv.id=h.release_id AND rv.project_id=h.project_id AND rv.profile_id=h.profile_id AND rv.channel=h.channel WHERE h.project_id=$1 AND h.profile_id=$2 AND h.channel=$3 AND rv.status='published'`, projectID, profileID, channel)
 	var raw []byte
 	if err := row.Scan(&raw); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -1005,6 +1007,15 @@ func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version st
 }
 
 func (r *SQLRepository) PublishVersionWithManifest(projectID, profileID, channel, version string, manifest model.Manifest) (model.ReleaseVersion, error) {
+	head, err := r.GetChannelHead(context.Background(), projectID, profileID, channel)
+	if err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	return r.PublishVersionWithManifestCAS(projectID, profileID, channel, version, manifest, head.Revision)
+}
+
+func (r *SQLRepository) PublishVersionWithManifestCAS(projectID, profileID, channel, version string, manifest model.Manifest, expected int64) (model.ReleaseVersion, error) {
+
 	if err := r.check(); err != nil {
 		return model.ReleaseVersion{}, err
 	}
@@ -1043,6 +1054,19 @@ func (r *SQLRepository) PublishVersionWithManifest(projectID, profileID, channel
 	if currentStatus == "published" {
 		return model.ReleaseVersion{}, ErrImmutable
 	}
+	// Serialize even the first insert into a previously empty channel.
+	var projectLock string
+	if err := tx.QueryRow(`SELECT id FROM projects WHERE id=$1 FOR UPDATE`, projectID).Scan(&projectLock); err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	var currentRevision int64
+	scanErr := tx.QueryRow(`SELECT revision FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3 FOR UPDATE`, projectID, profileID, channel).Scan(&currentRevision)
+	if scanErr != nil && !errors.Is(scanErr, sql.ErrNoRows) {
+		return model.ReleaseVersion{}, scanErr
+	}
+	if currentRevision != expected {
+		return model.ReleaseVersion{}, ErrConflict
+	}
 	var existing model.Manifest
 	if err := json.Unmarshal(existingRaw, &existing); err != nil {
 		return model.ReleaseVersion{}, err
@@ -1058,6 +1082,23 @@ func (r *SQLRepository) PublishVersionWithManifest(projectID, profileID, channel
 	if _, err := tx.Exec(`INSERT INTO release_channels (id, project_id, name, description, protected)
 		VALUES ($1,$2,$3,$4,$5)
 		ON CONFLICT (project_id, id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, protected = EXCLUDED.protected`, channel, projectID, channel, "Канал релиза", channel == "stable"); err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	// Release and channel pointer advance together, not in separate commits.
+	digest := sha256.Sum256(manifestRaw)
+	if currentRevision == 0 {
+		_, err = tx.Exec(`INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest,updated_at) VALUES($1,$2,$3,1,$4,$5,$6,$7)`, projectID, profileID, channel, releaseID, version, hex.EncodeToString(digest[:]), now)
+	} else {
+		var res sql.Result
+		res, err = tx.Exec(`UPDATE channel_heads SET revision=revision+1,release_id=$4,version=$5,manifest_digest=$6,updated_at=$7 WHERE project_id=$1 AND profile_id=$2 AND channel=$3 AND revision=$8`, projectID, profileID, channel, releaseID, version, hex.EncodeToString(digest[:]), now, currentRevision)
+		if err == nil {
+			n, _ := res.RowsAffected()
+			if n != 1 {
+				return model.ReleaseVersion{}, ErrConflict
+			}
+		}
+	}
+	if err != nil {
 		return model.ReleaseVersion{}, err
 	}
 	if _, err := tx.Exec(`INSERT INTO audit_events (id, actor, action, target, created_at) VALUES ($1,$2,$3,$4,$5)`, fmt.Sprintf("audit-%d", now.UnixNano()), "system", "version:publish", releaseID, now); err != nil {

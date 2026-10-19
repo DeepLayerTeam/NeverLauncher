@@ -30,13 +30,14 @@ type updaterFileSpec0156 struct {
 }
 
 type updaterRequest0156 struct {
-	Root        string
-	Namespace   string
-	FromVersion string
-	ToVersion   string
-	Files       []updaterFileSpec0156
-	Remove      []string
-	Verify      func() error
+	Root                string
+	Namespace           string
+	FromVersion         string
+	ToVersion           string
+	Files               []updaterFileSpec0156
+	Remove              []string
+	Verify              func() error
+	ExpectedStateSHA256 string // only client-package: optimistic client-state precondition, checked under updater lock
 }
 
 type updaterTouchedPath0156 struct {
@@ -139,6 +140,15 @@ func (u *transactionalUpdater0156) apply(req updaterRequest0156) (map[string]any
 	}
 	if _, err := u.stabilizeTerminalPayloads01510(); err != nil {
 		return nil, fmt.Errorf("automatic updater terminal cleanup: %w", err)
+	}
+	if req.ExpectedStateSHA256 != "" {
+		actual, err := clientStateSHA2560228(u.root)
+		if err != nil {
+			return nil, err
+		}
+		if actual != req.ExpectedStateSHA256 {
+			return nil, errors.New("client update conflict: installed version changed before transaction lock")
+		}
 	}
 	journal, err := u.prepareLocked(req)
 	if err != nil {
@@ -344,7 +354,13 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 	}
 	stageDir := filepath.Join(u.transactionDir(journal.ID), "stage")
 
-	for _, file := range journal.Files {
+	// For versioned client packages, the active version pointer is switched
+	// only after every managed file was replaced, obsolete files removed,
+	// and package post-verification passed. A crash before activation leaves
+	// the previously committed client-state pointer readable; journal recovery
+	// rolls the partial tree back before the next launch/update.
+	var activation *updaterJournalFile0156
+	applyFile := func(file updaterJournalFile0156) error {
 		dst, err := u.safeLivePath(file.Path)
 		if err != nil {
 			return err
@@ -376,6 +392,20 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 		syncDirBestEffort0156(filepath.Dir(dst))
 		journal.Applied = append(journal.Applied, file.Path)
 		if err := u.writeJournal(journal); err != nil {
+			return err
+		}
+		return nil
+	}
+	for i := range journal.Files {
+		file := journal.Files[i]
+		if journal.Namespace == "client-package" && file.Path == ".neverlauncher/client-state.json" {
+			if activation != nil {
+				return errors.New("multiple client-state activation files")
+			}
+			activation = &journal.Files[i]
+			continue
+		}
+		if err := applyFile(file); err != nil {
 			return err
 		}
 	}
@@ -412,6 +442,15 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 	if verify != nil {
 		if err := verify(); err != nil {
 			return fmt.Errorf("post-apply verification: %w", err)
+		}
+	}
+	if activation != nil {
+		journal.Phase = "activating"
+		if err := u.writeJournal(journal); err != nil {
+			return err
+		}
+		if err := applyFile(*activation); err != nil {
+			return err
 		}
 	}
 	for _, file := range journal.Files {

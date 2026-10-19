@@ -117,7 +117,8 @@ func TestDurablePublishCommitAndOutbox0213(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	published, err := r.CommitDurablePublish(ctx, model.DurablePublishCommit{JobID: job.ID, JobLeaseToken: job.LeaseToken, ScopeKey: lease.ScopeKey, ScopeLeaseToken: lease.LeaseToken, ScopeFencingToken: lease.FencingToken, ExpectedManifestDigest: manifestDigest, ExpectedArtifactDigest: artifactDigest, ExpectedStatus: updated.Status, ActorID: "admin"})
+	expectedHead := int64(0)
+	published, err := r.CommitDurablePublish(ctx, model.DurablePublishCommit{ExpectedHeadRevision: &expectedHead, JobID: job.ID, JobLeaseToken: job.LeaseToken, ScopeKey: lease.ScopeKey, ScopeLeaseToken: lease.LeaseToken, ScopeFencingToken: lease.FencingToken, ExpectedManifestDigest: manifestDigest, ExpectedArtifactDigest: artifactDigest, ExpectedStatus: updated.Status, ActorID: "admin"})
 	if err != nil {
 		t.Fatal(err)
 	}
