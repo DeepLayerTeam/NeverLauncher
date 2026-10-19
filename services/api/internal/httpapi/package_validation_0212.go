@@ -469,6 +469,9 @@ func (s Server) prepareAdminPublish0212(r *http.Request, release model.ReleaseVe
 	if err := s.verifyManifestSignature(release.Manifest); err != nil {
 		return packageLookup{}, fmt.Errorf("publish требует доверенный Ed25519 manifest: %w", err)
 	}
+	if err := s.checkGameReleasePublishGeneration02311(release); err != nil {
+		return packageLookup{}, err
+	}
 	if !manifestFilesMatch0212(release.Manifest, files) {
 		return packageLookup{}, errors.New("publish требует manifest, соответствующий текущим package files")
 	}

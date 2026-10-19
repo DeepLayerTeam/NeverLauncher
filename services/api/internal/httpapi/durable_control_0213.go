@@ -271,6 +271,9 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "publish evidence no longer valid: "+err.Error())
 		return model.ReleaseVersion{}, err
 	}
+	if err := s.checkGameReleasePublishGeneration02311(lookup.Release); err != nil {
+		return model.ReleaseVersion{}, err
+	}
 	if err := s.verifyManifestSignature(lookup.Release.Manifest); err != nil {
 		_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, "manifest signature no longer valid")
 		return model.ReleaseVersion{}, err

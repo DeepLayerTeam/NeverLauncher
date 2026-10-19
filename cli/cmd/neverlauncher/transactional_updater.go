@@ -602,6 +602,9 @@ func (u *transactionalUpdater0156) recover(force bool) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := reconcileInstalledComponentGeneration02311(u.root); err != nil {
+		return nil, err
+	}
 	cleaned, err := u.stabilizeTerminalPayloads01510()
 	if err != nil {
 		return nil, err

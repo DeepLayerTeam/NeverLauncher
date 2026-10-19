@@ -1,3 +1,10 @@
+## 0.23.11 — Release Generations & Anti-rollback
+
+- Component-set Ed25519-signed `securityGeneration` with replay/equivocation rejection and persistent verified high-watermark; updater recovery reconciles installed components before accepting a higher generation.
+- Game `gameReleaseGeneration` tracked independently in signed manifests, installation, and launch. Historical content can be re-authorized only as a newly signed release with `rollbackSource` proof.
+- Durable server-side package signing/publication and administrative rollback updated; ordinary client transaction journal recovery remains available after interrupted installs.
+- Windows component-state migration and updater-helper validation hardened. See `docs/releases/0.23.11-release-generations-anti-rollback.md`.
+
 ## 0.23.6 — Filesystem & Platform Hardening (D06)
 
 ## [0.23.9] — Native Installers & Branded Bundles

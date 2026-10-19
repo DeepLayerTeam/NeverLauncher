@@ -343,6 +343,14 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer unlock()
+	// Serialize generation assignment for ALL packages in the same channel,
+	// not merely updates to this package ID.
+	generationUnlock, generationLockErr := s.lockPackageMutation(r.Context(), "game-generation:"+lookup.Release.ProjectID+":"+lookup.Release.ProfileID+":"+lookup.Release.Channel)
+	if generationLockErr != nil {
+		writeError(w, http.StatusConflict, generationLockErr.Error())
+		return
+	}
+	defer generationUnlock()
 	if lookup.Release.Status == "published" {
 		writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
 		return
@@ -363,6 +371,13 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
+	generation, generationErr := s.nextGameReleaseGeneration02311(manifest.ProjectID, manifest.ProfileID, manifest.Channel, lookup.Release.ID)
+	if generationErr != nil {
+		writeError(w, http.StatusConflict, "game release generation: "+generationErr.Error())
+		return
+	}
+	manifest.GameReleaseGeneration = generation
+	manifest.RollbackSource = nil // arbitrary historic content is never a rollback without a privileged rollback job
 	signed, err := s.signManifest(manifest)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось подписать manifest: "+err.Error())

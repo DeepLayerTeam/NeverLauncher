@@ -60,6 +60,15 @@ func ValidateProfileSnapshot(s ProfileSnapshot, projectID, profileID string) err
 }
 
 func ValidateManifestSchema(m Manifest) error {
+	if source := m.RollbackSource; source != nil {
+		if m.GameReleaseGeneration == 0 || source.GameReleaseGeneration >= m.GameReleaseGeneration ||
+			source.Version == "" || len(source.ManifestSHA256) != 64 {
+			return errors.New("invalid signed rollbackSource or gameReleaseGeneration")
+		}
+		if decoded, err := hex.DecodeString(source.ManifestSHA256); err != nil || len(decoded) != sha256.Size {
+			return errors.New("rollbackSource manifestSha256 must be SHA-256 hex")
+		}
+	}
 	switch m.SchemaVersion {
 	case "1.0":
 		if m.ProfileSnapshot != nil {

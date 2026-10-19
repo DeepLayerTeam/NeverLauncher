@@ -21,6 +21,16 @@ def required(version: str) -> bool:
 def signed_set(manifest: dict, *, development: bool = False) -> tuple[bytes, bytes | None]:
     if not required(manifest["productVersion"]):
         return (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode(), None
+    if required("0.23.11") and tuple(int(v) for v in manifest["productVersion"].split(".")[:3]) >= (0, 23, 11):
+        generation = manifest.get("securityGeneration")
+        if generation is None and os.environ.get("NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION",""):
+            value=os.environ["NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION"].strip()
+            if not value.isascii() or not value.isdigit():
+                raise ValueError("component security generation must be decimal")
+            generation=int(value)
+            manifest["securityGeneration"]=generation
+        if type(generation) is not int or generation <= 0 or generation > 2**64 - 1:
+            raise ValueError("securityGeneration must be an explicitly provisioned positive uint64")
     platform = manifest["platform"]
     components = {x["component"] for x in manifest["components"]}
     if components != ({"desktop", "guard", "runtime", "sensor"} if platform == "windows" else {"desktop", "guard", "runtime"}):

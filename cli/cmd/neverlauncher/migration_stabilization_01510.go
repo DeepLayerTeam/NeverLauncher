@@ -115,12 +115,28 @@ func validateComponentUpdateState01510(state componentUpdateState0157) error {
 	if strings.TrimSpace(state.Platform) == "" || strings.TrimSpace(state.Architecture) == "" {
 		return errors.New("component state target is incomplete")
 	}
-	if len(state.Components) != 3 {
-		return fmt.Errorf("component state requires exactly three components, got %d", len(state.Components))
+	expected := 3
+	if state.Platform == "windows" && componentCoordinationRequired02310(state.Version) {
+		expected = 4
 	}
+	if len(state.Components) != expected {
+		return fmt.Errorf("component state expected %d components, got %d", expected, len(state.Components))
+	}
+	if componentSecurityRequired02311(state.Version) && state.SecurityGeneration == 0 {
+		return errors.New("installed 0.23.11+ component set has no securityGeneration")
+	}
+	if state.SecurityGeneration > 0 {
+		if !validSHA256Hex0157(state.ManifestDigest) {
+			return errors.New("installed component security manifest digest malformed")
+		}
+		if state.Platform == "macos" && (state.BundleName == "" || filepath.Base(state.BundleName) != state.BundleName || !strings.HasSuffix(strings.ToLower(state.BundleName), ".app")) {
+			return errors.New("installed macOS component security bundle identity missing/unsafe")
+		}
+	}
+
 	seen := map[string]bool{}
 	for _, item := range state.Components {
-		if item.Component != "desktop" && item.Component != "guard" && item.Component != "runtime" {
+		if item.Component != "desktop" && item.Component != "guard" && item.Component != "runtime" && !(expected == 4 && item.Component == "sensor") {
 			return fmt.Errorf("component state contains unknown component %q", item.Component)
 		}
 		if seen[item.Component] || !validSHA256Hex0157(item.SHA256) || item.Size <= 0 {
@@ -130,6 +146,14 @@ func validateComponentUpdateState01510(state componentUpdateState0157) error {
 			return err
 		}
 		seen[item.Component] = true
+	}
+	if componentSecurityRequired02311(state.Version) {
+		if len(state.SupportFiles) != 1 || state.SupportFiles[0].Component != "updater" || !validSHA256Hex0157(state.SupportFiles[0].SHA256) {
+			return errors.New("installed component security state lacks updater helper")
+		}
+		if err := validateComponentRelativePath0157(state.SupportFiles[0].TargetPath); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -153,6 +177,9 @@ func readComponentUpdateStateOptional01510(path string) (componentUpdateState015
 }
 
 func componentStateEquivalent01510(a, b componentUpdateState0157) bool {
+	if a.SecurityGeneration != b.SecurityGeneration || a.ManifestDigest != b.ManifestDigest || a.BundleName != b.BundleName || len(a.SupportFiles) != len(b.SupportFiles) {
+		return false
+	}
 	if a.Version != b.Version || a.Platform != b.Platform || a.Architecture != b.Architecture || len(a.Components) != len(b.Components) {
 		return false
 	}
@@ -163,6 +190,12 @@ func componentStateEquivalent01510(a, b componentUpdateState0157) bool {
 	for _, item := range b.Components {
 		previous, ok := byComponent[item.Component]
 		if !ok || previous.TargetPath != item.TargetPath || previous.Size != item.Size || !strings.EqualFold(previous.SHA256, item.SHA256) {
+			return false
+		}
+	}
+	for i := range a.SupportFiles {
+		x, y := a.SupportFiles[i], b.SupportFiles[i]
+		if x.Component != y.Component || x.TargetPath != y.TargetPath || x.Size != y.Size || !strings.EqualFold(x.SHA256, y.SHA256) {
 			return false
 		}
 	}
@@ -206,17 +239,25 @@ func migrateComponentUpdateState01510(root string) (componentStateMigrationRepor
 	selected := old
 	report.Source = legacy
 	if hasCurrent {
-		cmp, err := compareComponentStateVersion01510(current.Version, old.Version)
-		if err != nil {
-			return report, err
-		}
-		switch {
-		case cmp > 0:
+		// Local compatibility migrations must not erase the security floor
+		// merely because a legacy metadata file has a higher SemVer label.
+		if current.SecurityGeneration > old.SecurityGeneration {
 			selected = current
-		case cmp == 0 && !componentStateEquivalent01510(current, old):
-			return report, errors.New("canonical and legacy component states disagree for the same version")
-		case cmp == 0:
-			selected = current
+		} else if old.SecurityGeneration > current.SecurityGeneration {
+			selected = old
+		} else {
+			cmp, err := compareComponentStateVersion01510(current.Version, old.Version)
+			if err != nil {
+				return report, err
+			}
+			switch {
+			case cmp > 0:
+				selected = current
+			case cmp == 0 && !componentStateEquivalent01510(current, old):
+				return report, errors.New("canonical and legacy component states disagree for the same version")
+			case cmp == 0:
+				selected = current
+			}
 		}
 	}
 	if err := writeJSONFileAtomicMode(canonical, selected, 0o600); err != nil {

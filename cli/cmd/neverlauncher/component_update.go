@@ -36,28 +36,32 @@ type componentUpdateArtifact0157 struct {
 }
 
 type componentUpdateManifest0157 struct {
-	SchemaVersion  string                        `json:"schemaVersion"`
-	Product        string                        `json:"product"`
-	ProductVersion string                        `json:"productVersion"`
-	Platform       string                        `json:"platform"`
-	Architecture   string                        `json:"architecture"`
-	Layout         string                        `json:"layout"`
-	TrustMode      string                        `json:"trustMode"`
-	BundleName     string                        `json:"bundleName,omitempty"`
-	Components     []componentUpdateArtifact0157 `json:"components"`
-	SupportFiles   []componentUpdateArtifact0157 `json:"supportFiles,omitempty"`
-	ComponentSet   *componentSet02310            `json:"componentSet,omitempty"`
+	SchemaVersion      string                        `json:"schemaVersion"`
+	Product            string                        `json:"product"`
+	ProductVersion     string                        `json:"productVersion"`
+	Platform           string                        `json:"platform"`
+	Architecture       string                        `json:"architecture"`
+	Layout             string                        `json:"layout"`
+	TrustMode          string                        `json:"trustMode"`
+	BundleName         string                        `json:"bundleName,omitempty"`
+	Components         []componentUpdateArtifact0157 `json:"components"`
+	SupportFiles       []componentUpdateArtifact0157 `json:"supportFiles,omitempty"`
+	ComponentSet       *componentSet02310            `json:"componentSet,omitempty"`
+	SecurityGeneration uint64                        `json:"securityGeneration,omitempty"`
 }
 
 type componentUpdateState0157 struct {
-	SchemaVersion string                        `json:"schemaVersion"`
-	ToolVersion   string                        `json:"toolVersion"`
-	Version       string                        `json:"version"`
-	Platform      string                        `json:"platform"`
-	Architecture  string                        `json:"architecture"`
-	UpdatedAt     string                        `json:"updatedAt"`
-	Components    []componentUpdateArtifact0157 `json:"components"`
-	SupportFiles  []componentUpdateArtifact0157 `json:"supportFiles,omitempty"`
+	SchemaVersion      string                        `json:"schemaVersion"`
+	ToolVersion        string                        `json:"toolVersion"`
+	Version            string                        `json:"version"`
+	Platform           string                        `json:"platform"`
+	Architecture       string                        `json:"architecture"`
+	UpdatedAt          string                        `json:"updatedAt"`
+	Components         []componentUpdateArtifact0157 `json:"components"`
+	SupportFiles       []componentUpdateArtifact0157 `json:"supportFiles,omitempty"`
+	SecurityGeneration uint64                        `json:"securityGeneration,omitempty"`
+	BundleName         string                        `json:"bundleName,omitempty"`
+	ManifestDigest     string                        `json:"manifestDigest,omitempty"`
 }
 
 type componentTreeJournal0157 struct {
@@ -127,6 +131,9 @@ func validateComponentUpdateManifest0157(manifest componentUpdateManifest0157, m
 		if err := validateComponentProtocols02310(manifest); err != nil {
 			return err
 		}
+	}
+	if componentSecurityRequired02311(manifest.ProductVersion) && manifest.SecurityGeneration == 0 {
+		return errors.New("signed component securityGeneration must be positive for 0.23.11+")
 	}
 	target, err := componentUpdateCurrentTarget0157()
 	if err != nil {
@@ -603,6 +610,7 @@ func componentStateBytes0157(manifest componentUpdateManifest0157) ([]byte, erro
 		SchemaVersion: "1.0", ToolVersion: version, Version: manifest.ProductVersion,
 		Platform: manifest.Platform, Architecture: manifest.Architecture,
 		UpdatedAt: time.Now().UTC().Format(time.RFC3339Nano), Components: manifest.Components, SupportFiles: manifest.SupportFiles,
+		SecurityGeneration: manifest.SecurityGeneration, BundleName: manifest.BundleName, ManifestDigest: componentDigest02311(manifest),
 	}
 	raw, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
@@ -1097,6 +1105,9 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 	if err != nil {
 		return nil, err
 	}
+	if err := checkComponentGeneration02311(root, manifest); err != nil {
+		return nil, err
+	}
 	updater, err := newTransactionalUpdater0156(root)
 	if err != nil {
 		return nil, err
@@ -1127,6 +1138,9 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 	if err := verifySignedComponentSet02310(manifestPath, manifest, allowDevelopment); err != nil {
 		return nil, err
 	}
+	if err := checkComponentGeneration02311(root, manifest); err != nil {
+		return nil, err
+	}
 	if err := verifyComponentBinaries0157(manifest, filepath.Dir(manifestPath), false, allowDevelopment); err != nil && manifest.Layout == "adjacent-files" {
 		return nil, fmt.Errorf("component package binary verification: %w", err)
 	}
@@ -1138,6 +1152,9 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 	}
 	if err != nil {
 		return nil, err
+	}
+	if err := commitComponentGeneration02311(root, manifest); err != nil {
+		return nil, fmt.Errorf("component set committed; security generation persistence requires recovery: %w", err)
 	}
 	report["package"] = packagePath
 	if expectedSHA != "" {
@@ -1217,6 +1234,9 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 		}
 	}
 	manifest := componentUpdateManifest0157{SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: version, Platform: target.Platform, Architecture: target.Architecture, Layout: "adjacent-files", TrustMode: "development-self-test", Components: components, SupportFiles: helpers}
+	if componentSecurityRequired02311(version) {
+		manifest.SecurityGeneration = 1
+	}
 	if componentCoordinationRequired02310(version) {
 		manifest.ComponentSet = builtInComponentProtocolSet02310(target.Platform)
 	}

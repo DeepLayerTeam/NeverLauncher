@@ -9,6 +9,7 @@ mod content_cache;
 mod network_resilience;
 pub mod durable_downloads;
 pub mod transactional_release;
+mod release_generations;
 pub use download_scheduler::{DownloadLimits, DownloadProgress, ProgressSink, DOWNLOAD_PROGRESS_EVENT};
 pub mod managed_java;
 pub mod guard_ipc;
@@ -119,6 +120,10 @@ pub struct Manifest {
     pub profile_id: String,
     pub channel: String,
     pub version: String,
+    #[serde(default, skip_serializing_if = "is_zero_u64_02311")]
+    pub game_release_generation: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rollback_source: Option<GameRollbackSource02311>,
     pub created_at: String,
     pub minecraft: MinecraftInfo,
     pub runtime: RuntimeInfo,
@@ -154,7 +159,25 @@ pub struct ProfileSnapshot {
     pub spec: ProfileSpec,
 }
 
+fn is_zero_u64_02311(value: &u64) -> bool { *value == 0 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GameRollbackSource02311 {
+    pub version: String,
+    pub manifest_sha256: String,
+    pub game_release_generation: u64,
+}
+
 fn validate_manifest_schema(manifest: &Manifest) -> Result<(), String> {
+    if let Some(ref source) = manifest.rollback_source {
+        if manifest.game_release_generation == 0 || source.version.is_empty() ||
+           source.game_release_generation >= manifest.game_release_generation ||
+           source.manifest_sha256.len() != 64 ||
+           !source.manifest_sha256.bytes().all(|c| c.is_ascii_hexdigit()) {
+            return Err("invalid signed game rollback source/generation".into());
+        }
+    }
     match (manifest.schema_version.as_str(), manifest.profile_snapshot.as_ref()) {
         ("1.0", None) => Ok(()),
         ("2.0", Some(snapshot)) => {
@@ -1893,6 +1916,8 @@ mod tests {
             profile_id: "vanilla".to_string(),
             channel: "stable".to_string(),
             version: format!("{}-test", env!("CARGO_PKG_VERSION")),
+            game_release_generation: 0,
+            rollback_source: None,
             created_at: "2026-09-13T00:00:00Z".to_string(),
             minecraft: MinecraftInfo {
                 version: "1.21.1".to_string(),

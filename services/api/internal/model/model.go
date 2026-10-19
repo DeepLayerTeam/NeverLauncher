@@ -120,19 +120,29 @@ type AdminSession struct {
 
 // Manifest — минимальная структура манифеста, которую backend отдаёт desktop client.
 type Manifest struct {
-	SchemaVersion   string           `json:"schemaVersion"`
-	ProjectID       string           `json:"projectId"`
-	ProfileID       string           `json:"profileId"`
-	Channel         string           `json:"channel"`
-	Version         string           `json:"version"`
-	CreatedAt       string           `json:"createdAt"`
-	Minecraft       MinecraftInfo    `json:"minecraft"`
-	Runtime         RuntimeInfo      `json:"runtime"`
-	Directories     Directories      `json:"directories,omitempty"`
-	Files           []ManifestFile   `json:"files"`
-	FileRules       []FileRule       `json:"fileRules,omitempty"`
-	ProfileSnapshot *ProfileSnapshot `json:"profileSnapshot,omitempty"`
-	Signature       *SignatureInfo   `json:"signature,omitempty"`
+	SchemaVersion         string                   `json:"schemaVersion"`
+	ProjectID             string                   `json:"projectId"`
+	ProfileID             string                   `json:"profileId"`
+	Channel               string                   `json:"channel"`
+	Version               string                   `json:"version"`
+	GameReleaseGeneration uint64                   `json:"gameReleaseGeneration,omitempty"`
+	RollbackSource        *GameRollbackSource02311 `json:"rollbackSource,omitempty"`
+	CreatedAt             string                   `json:"createdAt"`
+	Minecraft             MinecraftInfo            `json:"minecraft"`
+	Runtime               RuntimeInfo              `json:"runtime"`
+	Directories           Directories              `json:"directories,omitempty"`
+	Files                 []ManifestFile           `json:"files"`
+	FileRules             []FileRule               `json:"fileRules,omitempty"`
+	ProfileSnapshot       *ProfileSnapshot         `json:"profileSnapshot,omitempty"`
+	Signature             *SignatureInfo           `json:"signature,omitempty"`
+}
+
+// GameRollbackSource02311 binds a newly authorized release generation to the
+// historical *signed* manifest whose content is intentionally being restored.
+type GameRollbackSource02311 struct {
+	Version               string `json:"version"`
+	ManifestSHA256        string `json:"manifestSha256"`
+	GameReleaseGeneration uint64 `json:"gameReleaseGeneration"`
 }
 
 // SignatureInfo описывает подпись манифеста Ed25519.

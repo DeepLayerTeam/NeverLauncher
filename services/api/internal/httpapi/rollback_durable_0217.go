@@ -139,12 +139,31 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 	// publish job would legitimately reject a changed payload digest.
 	if created.Status == "draft" || s.verifyManifestSignature(created.Manifest) != nil {
 		manifest := target.Manifest
+		// Keep the NEW release's immutable profile snapshot even if the
+		// historical profile was subsequently edited by an administrator.
+		manifest.ProfileSnapshot = created.Manifest.ProfileSnapshot
 		manifest.Version = version
 		manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339Nano)
+		// Re-publish the old object bytes under a *new* signed generation.
+		generationUnlock, lockErr := s.lockPackageMutation(ctx, "game-generation:"+p.ProjectID+":"+p.ProfileID+":"+p.Channel)
+		if lockErr != nil {
+			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, lockErr
+		}
+		defer generationUnlock()
+		generation, genErr := s.nextGameReleaseGeneration02311(p.ProjectID, p.ProfileID, p.Channel, created.ID)
+		if genErr != nil {
+			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, genErr
+		}
+		manifest.GameReleaseGeneration = generation
+		sourceSHA, hashErr := manifestDigest0212(target.Manifest)
+		if hashErr != nil {
+			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, hashErr
+		}
+		manifest.RollbackSource = &model.GameRollbackSource02311{Version: target.Version, ManifestSHA256: sourceSHA, GameReleaseGeneration: target.Manifest.GameReleaseGeneration}
 		manifest.Signature = nil
 		manifest.Files = make([]model.ManifestFile, 0, len(files))
 		for _, f := range files {
-			manifest.Files = append(manifest.Files, model.ManifestFile{Path: f.Path, Size: f.Size, SHA256: f.SHA256, URL: f.URL, Required: f.Required, Executable: f.Executable, TargetOS: append([]string(nil), f.TargetOS...), Mirrors: append([]string(nil), f.Mirrors...)})
+			manifest.Files = append(manifest.Files, model.ManifestFile{Path: f.Path, Size: f.Size, SHA256: f.SHA256, URL: f.URL, Required: f.Required, Executable: f.Executable, TargetOS: append([]string(nil), f.TargetOS...), Mirrors: append([]string(nil), f.Mirrors...), Ownership: f.Ownership})
 		}
 		if err = validateCompatibilityManifest(manifest); err != nil {
 			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, err

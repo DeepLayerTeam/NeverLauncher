@@ -227,6 +227,9 @@ func verifyRestartedComponentSet02310(root, desktopPath string) error {
 	if !present {
 		return errors.New("recovery cannot prove installed component state; refusing automatic restart")
 	}
+	if err := reconcileInstalledComponentGeneration02311(root); err != nil {
+		return err
+	}
 	appRoot := ""
 	if strings.EqualFold(state.Platform, "macos") {
 		appRoot = filepath.Dir(filepath.Dir(filepath.Dir(desktopPath)))

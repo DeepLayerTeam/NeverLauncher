@@ -63,6 +63,21 @@ class ComponentSetSigningTest(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             signed_set(self.fixture())
 
+    def test_security_generation_bound_to_02311_signature(self):
+        value = self.fixture()
+        value["productVersion"] = "0.23.11"
+        with self.assertRaises(ValueError):
+            signed_set(value)
+        os.environ["NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION"] = "14"
+        self.addCleanup(os.environ.pop,"NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION",None)
+        raw, signature = signed_set(value)
+        import json
+        self.assertEqual(json.loads(raw)["securityGeneration"], 14)
+        self.public.verify(bytes.fromhex(json.loads(signature)["signature"]), raw)
+        value["securityGeneration"] = 0
+        with self.assertRaises(ValueError):
+            signed_set(value)
+
     def test_missing_updater_rejected(self):
         value = self.fixture()
         value["supportFiles"] = []

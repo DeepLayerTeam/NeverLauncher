@@ -10,6 +10,10 @@ func cloneManifest0222(m model.Manifest) model.Manifest {
 		v := *m.ProfileSnapshot
 		m.ProfileSnapshot = &v
 	}
+	if m.RollbackSource != nil {
+		v := *m.RollbackSource
+		m.RollbackSource = &v
+	}
 	if m.Signature != nil {
 		v := *m.Signature
 		m.Signature = &v
