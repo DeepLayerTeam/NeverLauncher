@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.22.4. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.22.5. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -4084,6 +4084,43 @@
         ]
       }
     },
+    "/api/v1/admin/profile-presets": {
+      "get": {
+        "operationId": "get_admin_profile_presets",
+        "tags": [
+          "admin"
+        ],
+        "summary": "GET /api/v1/admin/profile-presets",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ProfilePreset0225"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/projects": {
       "post": {
         "operationId": "post_admin_projects",
@@ -4436,6 +4473,114 @@
         }
       }
     },
+    "/api/v1/admin/projects/{projectId}/profiles/from-preset": {
+      "post": {
+        "operationId": "post_admin_projects_by_projectId_profiles_from_preset",
+        "tags": [
+          "projects"
+        ],
+        "summary": "POST /api/v1/admin/projects/{projectId}/profiles/from-preset",
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilePresetCreateRequest0225"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{projectId}/profiles/import": {
+      "post": {
+        "operationId": "post_admin_projects_by_projectId_profiles_import",
+        "tags": [
+          "projects"
+        ],
+        "summary": "POST /api/v1/admin/projects/{projectId}/profiles/import",
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileImportRequest0225"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/projects/{projectId}/profiles/{profileId}": {
       "patch": {
         "operationId": "patch_admin_projects_by_projectId_profiles_by_profileId",
@@ -4497,6 +4642,202 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/admin/projects/{projectId}/profiles/{profileId}/clone": {
+      "post": {
+        "operationId": "post_admin_projects_by_projectId_profiles_by_profileId_clone",
+        "tags": [
+          "projects"
+        ],
+        "summary": "POST /api/v1/admin/projects/{projectId}/profiles/{profileId}/clone",
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileCloneRequest0225"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{projectId}/profiles/{profileId}/diff": {
+      "get": {
+        "operationId": "get_admin_projects_by_projectId_profiles_by_profileId_diff",
+        "tags": [
+          "projects"
+        ],
+        "summary": "GET /api/v1/admin/projects/{projectId}/profiles/{profileId}/diff",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileDifference0225"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "fromRevision",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "toRevision",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "againstProfileId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/projects/{projectId}/profiles/{profileId}/export": {
+      "get": {
+        "operationId": "get_admin_projects_by_projectId_profiles_by_profileId_export",
+        "tags": [
+          "projects"
+        ],
+        "summary": "GET /api/v1/admin/projects/{projectId}/profiles/{profileId}/export",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortableProfile0225"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "revision",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/admin/projects/{projectId}/publish": {
@@ -13335,15 +13676,6 @@
           }
         }
       },
-      "FileRule": {
-        "type": "object",
-        "required": ["pattern", "action", "ownership"],
-        "properties": {
-          "pattern": { "type": "string", "description": "Exact path or anchored directory/**" },
-          "action": { "type": "string", "enum": ["include", "exclude", "verify"] },
-          "ownership": { "type": "string", "enum": ["managed", "required", "optional", "user-owned", "generated"] }
-        }
-      },
       "ManifestFile": {
         "type": "object",
         "required": [
@@ -13381,11 +13713,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "ownership": {
-            "type": "string",
-            "enum": ["managed", "required", "optional", "user-owned", "generated"],
-            "description": "Manifest v2 only. Defaults to required or optional according to required."
           }
         }
       },
@@ -13438,13 +13765,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ManifestFile"
-            }
-          },
-          "fileRules": {
-            "type": "array",
-            "description": "Signed policy in Manifest v2; overlapping or unsafe rules fail validation.",
-            "items": {
-              "$ref": "#/components/schemas/FileRule"
             }
           },
           "signature": {
@@ -13890,6 +14210,214 @@
           },
           "defaultChannel": {
             "type": "string"
+          }
+        }
+      },
+      "ProfileSnapshot0225": {
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "revision",
+          "digest",
+          "spec"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "const": "2.0"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "spec": {
+            "type": "object",
+            "required": [
+              "projectId",
+              "id",
+              "name",
+              "description",
+              "loader",
+              "preset",
+              "isDefault"
+            ],
+            "properties": {
+              "projectId": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "loader": {
+                "type": "string"
+              },
+              "preset": {
+                "type": "string"
+              },
+              "isDefault": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortableProfile0225": {
+        "type": "object",
+        "required": [
+          "format",
+          "snapshot"
+        ],
+        "properties": {
+          "format": {
+            "const": "neverlauncher.profile.v1"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/ProfileSnapshot0225"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProfileCloneRequest0225": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "sourceRevision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProfileImportRequest0225": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "bundle"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "bundle": {
+            "$ref": "#/components/schemas/PortableProfile0225"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProfilePresetCreateRequest0225": {
+        "type": "object",
+        "required": [
+          "id",
+          "presetId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "presetId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProfilePreset0225": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "loader",
+          "preset"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "loader": {
+            "type": "string"
+          },
+          "preset": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProfileDifference0225": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "changes",
+          "equal"
+        ],
+        "properties": {
+          "from": {
+            "$ref": "#/components/schemas/ProfileSnapshot0225"
+          },
+          "to": {
+            "$ref": "#/components/schemas/ProfileSnapshot0225"
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "field",
+                "from",
+                "to"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "from": {},
+                "to": {}
+              },
+              "additionalProperties": false
+            }
+          },
+          "equal": {
+            "type": "boolean"
           }
         }
       },

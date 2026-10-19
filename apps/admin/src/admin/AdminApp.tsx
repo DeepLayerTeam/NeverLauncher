@@ -3,6 +3,7 @@ import { AdminExtensions } from '../admin_extensions_0208';
 import { RegistryWorkspace } from './RegistryWorkspace';
 import { OperationsWorkspace } from './OperationsWorkspace';
 import { ReleaseWorkspace } from './ReleaseWorkspace';
+import { ProfileManagementWorkspace } from './ProfileManagementWorkspace';
 import { JobMonitor } from './JobMonitor';
 import { BackupWorkspace } from './BackupWorkspace';
 import { SessionsDevicesWorkspace } from './SessionsDevicesWorkspace';
@@ -372,6 +373,7 @@ export function AdminApp() {
         <label className="check"><input type="checkbox" checked={profileForm.isDefault} onChange={(event) => setProfileForm({ ...profileForm, isDefault: event.target.checked })} /> Профиль по умолчанию</label>
         <div className="buttonRow"><button disabled={!profileForm.id.trim() || !profileForm.name.trim() || !selectedProjectId} onClick={() => runAction('Создание профиля', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(selectedProjectId)}/profiles`, token, { method: 'POST', body: JSON.stringify(profileForm) })).catch((err) => setError(err.message))}>Создать</button><button disabled={!profileForm.id || !selectedProjectId} onClick={() => runAction('Обновление профиля', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(selectedProjectId)}/profiles/${encodeURIComponent(profileForm.id)}`, token, { method: 'PATCH', body: JSON.stringify(profileForm) })).catch((err) => setError(err.message))}>Обновить</button></div>
       </article>}
+      {active === 'profiles' && canProjectWrite && <ProfileManagementWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} sourceProfileId={selectedRecordId} onChanged={async () => { await loadDashboard(); await loadActive(); }} />}
       {active === 'channels' && canProjectWrite && <article className="subcard">
         <h3>Канал</h3>
         <TextInput label="ID проекта" value={selectedProjectId} readOnly onChange={() => undefined} />

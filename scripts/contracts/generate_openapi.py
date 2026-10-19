@@ -57,6 +57,12 @@ def path_parameters(path):
         out.append({"name":name,"in":"path","required":True,"schema":schema})
     if path.endswith("/manifest"):
         out.append({"name":"channel","in":"query","required":False,"schema":{"type":"string","default":"stable"}})
+    if path.endswith("/export") and "/profiles/" in path:
+        out.append({"name":"revision","in":"query","required":False,"schema":{"type":"integer","minimum":1}})
+    if path.endswith("/diff") and "/profiles/" in path:
+        for k in ("fromRevision","toRevision"):
+            out.append({"name":k,"in":"query","required":False,"schema":{"type":"integer","minimum":1}})
+        out.append({"name":"againstProfileId","in":"query","required":False,"schema":{"type":"string"}})
     if path.endswith("/files") and path.startswith("/api/v1/projects/"):
         out.append({"name":"versionId","in":"query","required":False,"schema":{"type":"string"}})
     if path == "/api/v1/session/has-joined":
@@ -163,6 +169,9 @@ ref=lambda name:{"$ref":f"#/components/schemas/{name}"}
 
 def body_schema(path):
     exact={
+      "/api/v1/admin/projects/{projectId}/profiles/{profileId}/clone":"ProfileCloneRequest0225",
+      "/api/v1/admin/projects/{projectId}/profiles/import":"ProfileImportRequest0225",
+      "/api/v1/admin/projects/{projectId}/profiles/from-preset":"ProfilePresetCreateRequest0225",
       "/api/v1/diagnostics/validate":"DiagnosticsReportRequest",
       "/api/v1/install/bootstrap-admin":"BootstrapAdminRequest", "/api/v1/install/first-project":"FirstProjectRequest",
       "/api/v1/admin/login":"LoginRequest", "/api/v1/auth/login":"LoginRequest", "/api/v1/auth/refresh":"RefreshRequest",
@@ -265,6 +274,7 @@ def success_status(method,path):
       "/api/v1/server-bridge/servers/register","/api/v1/server-bridge/handoff","/api/v1/server-bridge/servers/{serverId}/control",
       "/api/v1/admin/extension-registry/publishers","/api/v1/admin/extension-registry/publishers/{publisherId}/keys","/api/v1/admin/extension-registry/publish","/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install","/api/v1/admin/extension-installs/{extensionId}/install",
     }
+    if method=="post" and path in {"/api/v1/admin/projects/{projectId}/profiles/import","/api/v1/admin/projects/{projectId}/profiles/from-preset","/api/v1/admin/projects/{projectId}/profiles/{profileId}/clone"}: return "201"
     if method=="post" and (path in created or path.endswith("/versions") or path.endswith("/files") or path.endswith("/profiles") or path.endswith("/channels") or path.endswith("/admin/projects/{projectId}/publish")):
         return "201"
     return "200"
@@ -279,6 +289,9 @@ def response_schema(path, method):
     if path.endswith("/versions") and method=="post":return ref("ReleaseVersion")
     if path == "/api/v1/admin/extension-registry/publish" and method=="post": return {"type":"object","additionalProperties":True}
     if path.endswith("/publish") and method=="post":return ref("ReleaseVersion")
+    if path == "/api/v1/admin/profile-presets":return {"type":"object","properties":{"items":{"type":"array","items":ref("ProfilePreset0225")}}}
+    if path.endswith("/export") and "/profiles/" in path:return ref("PortableProfile0225")
+    if path.endswith("/diff") and "/profiles/" in path:return ref("ProfileDifference0225")
     if path == "/api/v1/admin/login":return ref("AdminSession")
     if path == "/api/v1/server-bridge/capabilities":return ref("ServerBridgeCapabilitiesResponse")
     if path in ("/api/v1/server-bridge/overview", "/api/v1/server-bridge/projects/{projectId}/overview"):return ref("ServerBridgeOverviewResponseGA")
@@ -377,6 +390,13 @@ schemas={
 "TrustedDeviceRevokeRequest":{"type":"object","properties":{"reason":{"type":"string","minLength":1,"maxLength":160}},"additionalProperties":False},
 "PasswordResetRequest":{"type":"object","required":["password"],"properties":{"password":{"type":"string","minLength":12}}},
 "ProjectWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"homepage":{"type":"string"},"repository":{"type":"string"},"defaultChannel":{"type":"string"}}},
+"ProfileSnapshot0225":{"type":"object","required":["schemaVersion","revision","digest","spec"],"properties":{"schemaVersion":{"const":"2.0"},"revision":{"type":"integer","minimum":1},"digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"spec":{"type":"object","required":["projectId","id","name","description","loader","preset","isDefault"],"properties":{"projectId":{"type":"string"},"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"loader":{"type":"string"},"preset":{"type":"string"},"isDefault":{"type":"boolean"}},"additionalProperties":False}},"additionalProperties":False},
+"PortableProfile0225":{"type":"object","required":["format","snapshot"],"properties":{"format":{"const":"neverlauncher.profile.v1"},"snapshot":ref("ProfileSnapshot0225")},"additionalProperties":False},
+"ProfileCloneRequest0225":{"type":"object","required":["id"],"properties":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9_.-]{0,63}$"},"name":{"type":"string","minLength":1,"maxLength":120},"sourceRevision":{"type":"integer","minimum":1}},"additionalProperties":False},
+"ProfileImportRequest0225":{"type":"object","required":["id","name","bundle"],"properties":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9_.-]{0,63}$"},"name":{"type":"string","minLength":1,"maxLength":120},"bundle":ref("PortableProfile0225")},"additionalProperties":False},
+"ProfilePresetCreateRequest0225":{"type":"object","required":["id","presetId"],"properties":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9_.-]{0,63}$"},"name":{"type":"string","maxLength":120},"presetId":{"type":"string"}},"additionalProperties":False},
+"ProfilePreset0225":{"type":"object","required":["id","name","description","loader","preset"],"properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"loader":{"type":"string"},"preset":{"type":"string"}},"additionalProperties":False},
+"ProfileDifference0225":{"type":"object","required":["from","to","changes","equal"],"properties":{"from":ref("ProfileSnapshot0225"),"to":ref("ProfileSnapshot0225"),"changes":{"type":"array","items":{"type":"object","required":["field","from","to"],"properties":{"field":{"type":"string"},"from":{},"to":{}},"additionalProperties":False}},"equal":{"type":"boolean"}}},
 "ProfileWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"loader":{"type":"string"},"preset":{"type":"string"},"isDefault":{"type":"boolean"}}},
 "ChannelWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"protected":{"type":"boolean"}}},
 "UserWriteRequest":{"type":"object","properties":{"email":{"type":"string","format":"email"},"displayName":{"type":"string"},"roleId":{"type":"string"},"password":{"type":"string"},"projectRoles":{"type":"object","additionalProperties":{"type":"string"}}}},

@@ -1,3 +1,11 @@
+## 0.22.5 — Profile Management
+
+- Implemented revision-aware profile clone, portable v2 JSON export/import with digest verification, immutable revision diffs and built-in loader/profile presets.
+- Added atomic create-only profile persistence in PostgreSQL and MemoryRepository to reject conflicting IDs without overwriting existing profiles or revision history.
+- Added Admin profile management interface, audited and RBAC-protected operations, OpenAPI schema updates and regression tests.
+- Fixed a corrupted demo MemoryRepository constructor in the supplied 0.22.4 source; the seeded published manifest now pins the initialized vanilla snapshot.
+- Preserved existing signed v1/v2 releases; no database migration or silent re-signing.
+
 ## 0.22.4 — File Ownership and Safe Repair
 
 - Enforced signed v2 `files[].ownership` and `fileRules[]` in API publication, NeverRuntime file operations, Desktop cleanup and CLI updater.

@@ -202,16 +202,15 @@ type MemoryRepository struct {
 }
 
 func NewMemoryRepository(publicURL string) *MemoryRepository {
-	for _, existing := range r.releases {
-		if existing.ProjectID == projectID && existing.ProfileID == profileID && existing.Channel == channel && existing.Version == version {
-			return model.ReleaseVersion{}, ErrConflict
-		}
-	}
 	now := time.Now().UTC()
-	snapshot, err := ReadProfileSnapshot(r, projectID, profileID)
-	if err != nil {
-		return model.ReleaseVersion{}, err
-	}
+	// The demo's published v2 manifest must pin the same immutable revision
+	// as the initial vanilla profile. Do not try to read a repository before
+	// its constructor has finished.
+	snapshot := model.SnapshotProfile(model.Profile{
+		SchemaVersion: model.ProfileSchemaV2, Revision: 1,
+		ID: "vanilla", ProjectID: "demo-project", Name: "Vanilla",
+		Description: "Минимальный vanilla-профиль", Loader: "vanilla", IsDefault: true,
+	})
 	manifest := model.Manifest{
 		SchemaVersion:   model.ManifestSchemaV2,
 		ProfileSnapshot: &snapshot,

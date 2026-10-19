@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"errors"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
@@ -22,5 +21,5 @@ func ReadProfileSnapshot(repo Repository, projectID, profileID string) (model.Pr
 			return model.SnapshotProfile(p), nil
 		}
 	}
-	return model.ProfileSnapshot{}, errors.New("profile not found")
+	return model.ProfileSnapshot{}, ErrNotFound
 }
