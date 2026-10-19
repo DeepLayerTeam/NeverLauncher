@@ -1,5 +1,13 @@
 ## 0.23.6 — Filesystem & Platform Hardening (D06)
 
+## [0.23.9] — Native Installers & Branded Bundles
+
+- Implement a Java-free native install/verify/repair/uninstall lifecycle connected to the real Prestarter.
+- Bind branding and per-OS/arch Prestarter hashes inside the signed Ed25519 bootstrap payload.
+- Add Windows single-file installers, Linux .deb, macOS signed .pkg build paths and protected release signing.
+- Preserve profile data on uninstall, retain offline sources for repair and add negative trust/integrity tests.
+
+
 - Replaced vulnerable Windows unlink-old/rename-new live-file switches with atomic `ReplaceFileW` for managed files, recovery and release state slots; locked files fail without a missing-live-file window.
 - Refused Windows device/ADS names, invalid trailing names, case and file/directory collisions, symlinks/junctions/reparse points, readonly files and unwritable parents before switching or restoring a release.
 - Added stage/rollback disk-space preflight with overflow-safe calculations, durable copy cleanup, transaction-preserving ENOSPC handling, protection against overwriting previously untracked player files and negative Rust tests for mixed-file recovery and Windows sharing violations.

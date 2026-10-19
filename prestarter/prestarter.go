@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -554,3 +555,6 @@ func mergeEnv(overrides []string) []string {
 	}
 	return append(result, overrides...)
 }
+
+// AcquireInstallerLock exposes the native process lock already used by bootstrap.
+func AcquireInstallerLock(path string) (io.Closer, error) { return acquireProcessLock(path) }

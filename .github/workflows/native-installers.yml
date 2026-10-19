@@ -1,0 +1,142 @@
+name: Native branded installers 0.23.9
+on:
+  pull_request:
+    paths:
+      - 'prestarter/**'
+      - 'scripts/release/build-branded-installers.py'
+      - 'scripts/release/test_build_branded_installers.py'
+      - '.github/workflows/native-installers.yml'
+  push:
+    paths:
+      - 'prestarter/**'
+      - 'scripts/release/build-branded-installers.py'
+      - 'scripts/release/test_build_branded_installers.py'
+      - '.github/workflows/native-installers.yml'
+  workflow_dispatch:
+    inputs:
+      production_release:
+        description: 'Build and sign release artifacts from approved signed bootstrap run'
+        type: boolean
+        required: true
+        default: false
+      source_run_id:
+        description: 'Run with signed neverlauncher-bootstrap-{platform}-{arch} artifacts'
+        required: false
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: prestarter/go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=43,<47'
+      - name: Test native lifecycle and signature checks
+        working-directory: prestarter
+        run: go test -count=1 ./...
+      - name: Smoke-test signed .deb packaging
+        if: runner.os == 'Linux'
+        run: python scripts/release/test_build_branded_installers.py
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.production_release
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: ubuntu-latest, platform: linux, arch: amd64}
+          - {runner: ubuntu-latest, platform: linux, arch: arm64}
+          - {runner: windows-latest, platform: windows, arch: amd64}
+          - {runner: windows-latest, platform: windows, arch: arm64}
+          - {runner: macos-latest, platform: darwin, arch: amd64}
+          - {runner: macos-latest, platform: darwin, arch: arm64}
+    runs-on: ${{ matrix.runner }}
+    environment: production-release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: prestarter/go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=43,<47'
+      - name: Fetch approved signed bootstrap inputs
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-bootstrap-${{ matrix.platform }}-${{ matrix.arch }}
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: branded-input
+      - name: Pin root key from protected release environment
+        shell: bash
+        env:
+          PINNED_ROOT_KEY: ${{ vars.NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY }}
+        run: |
+          test "${#PINNED_ROOT_KEY}" -eq 64
+          printf '%s' "$PINNED_ROOT_KEY" > root-public-key.hex
+      - name: Prepare Windows code-signing certificate
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
+        run: |
+          if (!$env:PFX_BASE64 -or !$env:PFX_PASSWORD) { throw 'Windows signing secrets required' }
+          [IO.File]::WriteAllBytes('signing.pfx', [Convert]::FromBase64String($env:PFX_BASE64))
+          $pass = ConvertTo-SecureString $env:PFX_PASSWORD -AsPlainText -Force
+          $cert = Import-PfxCertificate -FilePath signing.pfx -CertStoreLocation Cert:\CurrentUser\My -Password $pass
+          if (!$cert.Thumbprint) { throw 'No signing certificate imported' }
+          Add-Content $env:GITHUB_ENV "NEVERLAUNCHER_WINDOWS_CERT_THUMBPRINT=$($cert.Thumbprint)"
+          Remove-Item signing.pfx
+      - name: Import macOS Apple certificates
+        if: runner.os == 'macOS'
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_P12_BASE64 }}
+          p12-password: ${{ secrets.APPLE_P12_PASSWORD }}
+      - name: Import Linux signing key
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          GPG_KEY_DATA: ${{ secrets.LINUX_GPG_PRIVATE_KEY }}
+        run: |
+          test -n "$GPG_KEY_DATA"
+          printf '%s' "$GPG_KEY_DATA" | gpg --batch --import
+      - name: Build production-signed native artifact
+        shell: bash
+        env:
+          NEVERLAUNCHER_GPG_SIGNING_KEY: ${{ secrets.LINUX_GPG_KEY_ID }}
+          NEVERLAUNCHER_MACOS_CODESIGN_ID: ${{ vars.APPLE_DEVELOPER_ID_APPLICATION }}
+          NEVERLAUNCHER_MACOS_INSTALLER_ID: ${{ vars.APPLE_DEVELOPER_ID_INSTALLER }}
+        run: |
+          set -euo pipefail
+          VERSION="$(cat VERSION)"
+          PRESTARTER="branded-input/neverprestarter"
+          if [ '${{ matrix.platform }}' = windows ]; then PRESTARTER="${PRESTARTER}.exe"; fi
+          EXTRA=()
+          if [ -d branded-input/offline-source ]; then EXTRA=(--offline-source branded-input/offline-source); fi
+          python scripts/release/build-branded-installers.py \
+            --platform '${{ matrix.platform }}' --arch '${{ matrix.arch }}' \
+            --project '${{ vars.NEVERLAUNCHER_BRANDED_PROJECT_ID }}' --version "$VERSION" \
+            --config branded-input/bootstrap.signed.json --prestarter "$PRESTARTER" \
+            --root-key-file root-public-key.hex --output dist/native "${EXTRA[@]}"
+      - name: Upload signed installers and signatures
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-installer-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/native/
+          if-no-files-found: error

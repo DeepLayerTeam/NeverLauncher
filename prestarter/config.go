@@ -40,16 +40,31 @@ type Target struct {
 	Arch       string      `json:"arch"`
 	Components []Component `json:"components"`
 }
+
+// Branding and InstallerTargets are part of the *signed* payload. Never use a
+// mutable bundle header to choose display identity or installer executables.
+type Branding struct {
+	DisplayName string `json:"displayName"`
+	Publisher   string `json:"publisher"`
+	WebsiteURL  string `json:"websiteUrl,omitempty"`
+}
+type InstallerTarget struct {
+	OS         string   `json:"os"`
+	Arch       string   `json:"arch"`
+	Prestarter Artifact `json:"prestarter"`
+}
 type Config struct {
-	SchemaVersion    string   `json:"schemaVersion"`
-	ProjectID        string   `json:"projectId"`
-	ProfileID        string   `json:"profileId"`
-	Channel          string   `json:"channel"`
-	BackendURL       string   `json:"backendUrl,omitempty"`
-	ProfilePublicKey string   `json:"profilePublicKey"`
-	Manifest         Artifact `json:"manifest"`
-	JavaManifest     Artifact `json:"javaManifest"`
-	Targets          []Target `json:"targets"`
+	SchemaVersion    string            `json:"schemaVersion"`
+	ProjectID        string            `json:"projectId"`
+	ProfileID        string            `json:"profileId"`
+	Channel          string            `json:"channel"`
+	BackendURL       string            `json:"backendUrl,omitempty"`
+	ProfilePublicKey string            `json:"profilePublicKey"`
+	Manifest         Artifact          `json:"manifest"`
+	JavaManifest     Artifact          `json:"javaManifest"`
+	Targets          []Target          `json:"targets"`
+	Branding         *Branding         `json:"branding,omitempty"`
+	InstallerTargets []InstallerTarget `json:"installerTargets,omitempty"`
 }
 
 func decodeStrict(data []byte, dest any) error {
@@ -198,7 +213,39 @@ func (c Config) Validate() error {
 			}
 		}
 	}
+	if c.Branding != nil {
+		b := c.Branding
+		if len(b.DisplayName) < 1 || len(b.DisplayName) > 80 || len(b.Publisher) < 1 || len(b.Publisher) > 96 ||
+			strings.ContainsAny(b.DisplayName+b.Publisher, "\r\n\x00") {
+			return errors.New("invalid signed branding")
+		}
+		if b.WebsiteURL != "" {
+			u, err := url.Parse(b.WebsiteURL)
+			if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" {
+				return errors.New("branding website must be HTTPS")
+			}
+		}
+	}
+	installerTargets := make(map[string]bool)
+	for _, target := range c.InstallerTargets {
+		id := target.OS + "/" + target.Arch
+		if installerTargets[id] || !seen[id] {
+			return fmt.Errorf("duplicate/unknown installer target %s", id)
+		}
+		installerTargets[id] = true
+		if err := validateArtifact(target.Prestarter); err != nil {
+			return fmt.Errorf("invalid prestarter for %s: %w", id, err)
+		}
+	}
 	return nil
+}
+func (c Config) InstallerFor(osName, arch string) (Artifact, error) {
+	for _, target := range c.InstallerTargets {
+		if target.OS == osName && target.Arch == arch {
+			return target.Prestarter, nil
+		}
+	}
+	return Artifact{}, fmt.Errorf("no signed prestarter for %s/%s", osName, arch)
 }
 func (c Config) SelectTarget() (Target, error) {
 	for _, t := range c.Targets {
