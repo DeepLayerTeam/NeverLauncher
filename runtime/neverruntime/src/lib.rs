@@ -1,5 +1,6 @@
 pub mod attestation;
 pub mod compatibility;
+mod deterministic_launch;
 pub mod file_ownership;
 pub mod managed_java;
 pub mod guard_ipc;
@@ -89,7 +90,7 @@ use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     path::{Component, Path, PathBuf},
     process::Stdio,
     io::SeekFrom,
@@ -249,10 +250,18 @@ pub struct RuntimeLaunch {
     pub main_module: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub environment_allowlist: Vec<String>,
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty", serialize_with = "serialize_sorted_features_0227")]
     pub features: HashMap<String, bool>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub offline_mode: bool,
+}
+
+// Preserve the existing Go-compatible Manifest v2 signing payload field order.
+// Go json.Marshal sorts map keys; Rust HashMap iteration must not introduce
+// random signing payloads or intermittent Ed25519 verification failures.
+fn serialize_sorted_features_0227<S: serde::Serializer>(value: &HashMap<String, bool>, serializer: S) -> Result<S::Ok, S::Error> {
+    let sorted: BTreeMap<&str, &bool> = value.iter().map(|(name, enabled)| (name.as_str(), enabled)).collect();
+    sorted.serialize(serializer)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -391,6 +400,8 @@ pub struct LaunchPlan {
     pub jvm_args: Vec<String>,
     pub game_args: Vec<String>,
     pub command_preview: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub deterministic_sha256: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -853,6 +864,7 @@ pub async fn certify_vanilla_compatibility(
         jvm_args,
         game_args,
         command_preview: format!("{} ... {}", java_path, resolution.main_class),
+        deterministic_sha256: String::new(),
     };
 
     let logs_dir = root.join("logs");
@@ -1090,6 +1102,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
     if manifest.schema_version == "2.0" && manifest.runtime.java.recommended_major_version > 0 {
         required_java = manifest.runtime.java.recommended_major_version;
     }
+    let mut verified_metadata_paths = Vec::new();
     let mut plan = if strategy == "compatibility" || strategy == "mojang" {
         let game_dir = manifest_directory(root, &manifest.directories.game, ".")?;
         let assets_dir = manifest_directory(root, &manifest.directories.assets, "assets")?;
@@ -1101,7 +1114,11 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
             "natives"
         };
         let natives_base = manifest_directory(root, natives_name, "natives")?;
-        let natives_dir = platform_natives_directory(&natives_base).await;
+        let natives_dir = if manifest.schema_version == "2.0" {
+            signed_platform_natives_directory_0227(manifest, root, &natives_base)?
+        } else {
+            platform_natives_directory(&natives_base).await
+        };
         let player_name = credentials.map(|c| c.username.clone()).or(username).unwrap_or_else(|| "Player".to_string());
         let metadata_path = if manifest.runtime.launch.version_metadata_path.trim().is_empty() {
             None
@@ -1130,6 +1147,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
             required_java = major;
         }
         validate_compatibility_resolution_trust(manifest, &resolution)?;
+        verified_metadata_paths = resolution.metadata_paths.clone();
         if !manifest.runtime.launch.main_class.trim().is_empty() && manifest.runtime.launch.main_class != resolution.main_class {
             return Err(format!("manifest mainClass {} расходится с Compatibility Engine mainClass {}", manifest.runtime.launch.main_class, resolution.main_class));
         }
@@ -1153,6 +1171,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
             jvm_args,
             game_args,
             command_preview: String::new(),
+            deterministic_sha256: String::new(),
         }
     } else {
         create_manifest_launch_plan(manifest, root, "", credentials.map(|c| c.username.clone()).or(username), credentials).await?
@@ -1185,6 +1204,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
 
     if manifest.schema_version == "2.0" {
         apply_explicit_paths_0223(manifest, root, &mut plan)?;
+        verify_launch_inputs_0227(manifest, root, &plan, &verified_metadata_paths).await?;
         plan.environment_allowlist = manifest.runtime.launch.environment_allowlist.clone();
         plan.restrict_java_environment = true;
         validate_memory_arguments_0223(&manifest.runtime.memory, &plan.jvm_args)?;
@@ -1210,8 +1230,29 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
             std::env::consts::ARCH,
         );
     }
+    if manifest.schema_version == "2.0" {
+        // A reproducible plan identity covers resolved metadata/order/options,
+        // but deliberately excludes local installation roots and auth secrets.
+        plan.deterministic_sha256 = deterministic_launch::plan_digest(manifest, root, required_java, &plan, credentials)?;
+    }
     plan.command_preview = redacted_command_preview119(&plan, credentials.map(|c| c.access_token.as_str()));
     Ok(plan)
+}
+
+// For v2, platform native directory selection depends only on signed
+// release paths, never on which directories happened to be created locally.
+fn signed_platform_natives_directory_0227(manifest: &Manifest, root: &Path, base: &Path) -> Result<PathBuf, String> {
+    let prefix = base.strip_prefix(root).map_err(|_| "native directory outside client root")?
+        .to_string_lossy().replace('\\', "/");
+    let os = match std::env::consts::OS { "macos" => "osx", "windows" => "windows", "linux" => "linux", _ => return Ok(base.to_path_buf()) };
+    let arch = match std::env::consts::ARCH { "x86_64" => "x86_64", "aarch64" => "aarch64", "x86" => "x86", "arm" => "arm", _ => "" };
+    let contains = |relative_dir: &str| {
+        let file_prefix = if prefix.is_empty() { format!("{relative_dir}/") } else { format!("{prefix}/{relative_dir}/") };
+        manifest.files.iter().any(|file| file.required && manifest_file_applies(file) && file.path.starts_with(&file_prefix))
+    };
+    if !arch.is_empty() && contains(&format!("{os}/{arch}")) { return Ok(base.join(os).join(arch)); }
+    if contains(os) { return Ok(base.join(os)); }
+    Ok(base.to_path_buf())
 }
 
 async fn platform_natives_directory(base: &Path) -> PathBuf {
@@ -1250,11 +1291,19 @@ async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_exec
     for file in &manifest.files {
         if !manifest_file_applies(file) { continue; }
         if file.path.ends_with(".jar") && !file.path.contains("/mods/") && !file.path.starts_with("mods/") {
+            if manifest.schema_version == "2.0" && (!file.required || matches!(file.ownership.as_str(), "user-owned" | "generated")) {
+                continue;
+            }
             let normalized = file.path.replace('\\', "/");
             let filename = normalized.rsplit('/').next().unwrap_or("").to_ascii_lowercase();
             if filename.starts_with("authlib-injector") { continue; }
             let local_path = safe_join(root, &file.path)?;
-            if fs::metadata(&local_path).await.is_ok() { classpath_entries.push(local_path.to_string_lossy().to_string()); }
+            // v2 uses signed file order, never the mutable set of currently
+            // installed JARs. Missing/corrupt inputs fail instead of changing
+            // the LaunchPlan between identical releases.
+            if manifest.schema_version == "2.0" || fs::metadata(&local_path).await.is_ok() {
+                classpath_entries.push(local_path.to_string_lossy().to_string());
+            }
         }
     }
     if classpath_entries.is_empty() && manifest.runtime.launch.modulepath_entries.is_empty() { return Err("classpath/modulepath пуст: JAR-файлы для запуска не найдены".to_string()); }
@@ -1273,7 +1322,7 @@ async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_exec
     replace_or_append_arg_pair(&mut game_args, "--version", manifest.minecraft.version.clone());
     replace_or_append_arg_pair(&mut game_args, "--gameDir", root.to_string_lossy().to_string());
     replace_or_append_arg_pair(&mut game_args, "--assetsDir", root.join("assets").to_string_lossy().to_string());
-    Ok(LaunchPlan { java_executable: java_executable.to_string(), working_directory: root.to_string_lossy().to_string(), main_class, classpath_entries, modulepath_entries: Vec::new(), main_module: String::new(), environment_allowlist: Vec::new(), restrict_java_environment: false, jvm_args, game_args, command_preview: String::new() })
+    Ok(LaunchPlan { java_executable: java_executable.to_string(), working_directory: root.to_string_lossy().to_string(), main_class, classpath_entries, modulepath_entries: Vec::new(), main_module: String::new(), environment_allowlist: Vec::new(), restrict_java_environment: false, jvm_args, game_args, command_preview: String::new(), deterministic_sha256: String::new() })
 }
 
 fn apply_minecraft_auth119(manifest: &Manifest, root: &Path, credentials: &MinecraftLaunchCredentials, plan: &mut LaunchPlan) -> Result<(), String> {
@@ -1450,8 +1499,38 @@ fn apply_explicit_paths_0223(m: &Manifest, root: &Path, plan: &mut LaunchPlan) -
     Ok(())
 }
 
+// Recheck all selected executable inputs against the signed Manifest bytes;
+// otherwise edited Mojang metadata or disappearing JARs can silently change
+// an otherwise identical plan even though the manifest signature is valid.
+async fn verify_launch_inputs_0227(manifest: &Manifest, root: &Path, plan: &LaunchPlan, metadata_paths: &[String]) -> Result<(), String> {
+    let canonical_root = root.canonicalize().map_err(|e| format!("client root is unavailable: {e}"))?;
+    let mut paths = HashSet::<String>::new();
+    for absolute in plan.classpath_entries.iter().chain(plan.modulepath_entries.iter()) {
+        let absolute = Path::new(absolute);
+        let rel = absolute.strip_prefix(root).or_else(|_| absolute.strip_prefix(&canonical_root))
+            .map_err(|_| format!("launch JAR outside client root: {}", absolute.display()))?;
+        let rel = rel.to_str().ok_or("non-UTF8 JAR path")?.replace('\\', "/");
+        paths.insert(rel);
+    }
+    // Metadata read by Compatibility Engine must also be exactly the signed
+    // bytes. Otherwise local JSON edits could change launch args while keeping
+    // the same signed release and profile snapshot.
+    paths.extend(metadata_paths.iter().cloned());
+    for rel in paths {
+        let declared = manifest.files.iter().find(|file| file.path == rel && file.required && manifest_file_applies(file))
+            .ok_or_else(|| format!("launch input is not a signed required artifact: {rel}"))?;
+        let location = safe_join(&canonical_root, &rel)?;
+        file_ownership::ensure_no_symlinks(&canonical_root, &location)?;
+        let metadata = fs::metadata(&location).await.map_err(|e| format!("launch input missing {rel}: {e}"))?;
+        if !metadata.is_file() || metadata.len() != declared.size || !sha256_file(&location).await?.eq_ignore_ascii_case(&declared.sha256) {
+            return Err(format!("launch input does not match signed size/SHA-256: {rel}"));
+        }
+    }
+    Ok(())
+}
+
 fn apply_launch_command_0223(command: &mut Command, plan: &LaunchPlan) {
-    if plan.restrict_java_environment && !plan.environment_allowlist.is_empty() {
+    if plan.restrict_java_environment {
         let inherited: Vec<(String, String)> = plan.environment_allowlist.iter().filter_map(|key| std::env::var(key).ok().map(|value| (key.clone(), value))).collect();
         command.env_clear();
         for (key, value) in inherited { command.env(key, value); }
@@ -1662,6 +1741,52 @@ mod tests {
         assert!(validate_runtime_constraints_0223(&m).is_err(), "Java constraint mismatch");
     }
 
+    #[tokio::test]
+    async fn deterministic_0227_rejects_mutated_and_missing_signed_inputs() {
+        use sha2::{Digest, Sha256};
+        let root = std::env::temp_dir().join(format!("nl-plan-integrity-{}-{}", std::process::id(), now_unix().unwrap()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("libraries")).unwrap();
+        std::fs::create_dir_all(root.join("versions/v")).unwrap();
+        std::fs::write(root.join("libraries/a.jar"), b"signed-jar").unwrap();
+        std::fs::write(root.join("versions/v/v.json"), b"signed-metadata").unwrap();
+        let mut manifest = sample_manifest();
+        for (path, body) in [("libraries/a.jar", &b"signed-jar"[..]), ("versions/v/v.json", &b"signed-metadata"[..])] {
+            manifest.files.push(ManifestFile { path: path.into(), size: body.len() as u64, sha256: hex::encode(Sha256::digest(body)), url: "https://example.test/file".into(), required: true, executable: false, target_os: vec![], ownership: "managed".into() });
+        }
+        let plan = LaunchPlan {
+            java_executable: "java".into(), working_directory: root.to_string_lossy().to_string(),
+            main_class: "demo.Main".into(), main_module: "".into(), classpath_entries: vec![root.join("libraries/a.jar").to_string_lossy().to_string()],
+            modulepath_entries: vec![], environment_allowlist: vec![], restrict_java_environment: true,
+            jvm_args: vec![], game_args: vec![], command_preview: "".into(), deterministic_sha256: "".into(),
+        };
+        let metadata = vec!["versions/v/v.json".to_string()];
+        assert!(verify_launch_inputs_0227(&manifest, &root, &plan, &metadata).await.is_ok());
+        std::fs::write(root.join("versions/v/v.json"), b"forged-metadata").unwrap();
+        assert!(verify_launch_inputs_0227(&manifest, &root, &plan, &metadata).await.is_err());
+        std::fs::write(root.join("versions/v/v.json"), b"signed-metadata").unwrap();
+        std::fs::remove_file(root.join("libraries/a.jar")).unwrap();
+        assert!(verify_launch_inputs_0227(&manifest, &root, &plan, &metadata).await.is_err());
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn deterministic_0227_empty_environment_allowlist_drops_inherited_keys() {
+        let mut plan = LaunchPlan {
+            java_executable: "java".into(), working_directory: ".".into(), main_class: "Main".into(),
+            main_module: "".into(), classpath_entries: vec![], modulepath_entries: vec![],
+            environment_allowlist: vec![], restrict_java_environment: true,
+            jvm_args: vec![], game_args: vec![], command_preview: "".into(), deterministic_sha256: "".into(),
+        };
+        let mut process = Command::new("java");
+        apply_launch_command_0223(&mut process, &plan);
+        assert!(process.as_std().get_envs().any(|(name, value)| name.to_string_lossy() == "JAVA_TOOL_OPTIONS" && value.is_none()));
+        plan.environment_allowlist.push("LANG".into());
+        let mut another = Command::new("java");
+        apply_launch_command_0223(&mut another, &plan);
+        assert!(another.as_std().get_args().any(|arg| arg == "Main"));
+    }
+
     #[test]
     fn runtime_0223_launch_command_uses_argument_arrays_for_java_modules() {
         let mut plan = LaunchPlan {
@@ -1669,7 +1794,7 @@ mod tests {
             main_class: "ignored.Main".into(),
             classpath_entries: vec!["lib one.jar".into()], modulepath_entries: vec!["mod one.jar".into()],
             main_module: "example.mod/example.Main".into(), environment_allowlist: vec!["LANG".into()], restrict_java_environment: true,
-            jvm_args: vec!["-Xmx1G".into()], game_args: vec!["value with spaces".into()], command_preview: String::new(),
+            jvm_args: vec!["-Xmx1G".into()], game_args: vec!["value with spaces".into()], command_preview: String::new(), deterministic_sha256: String::new(),
         };
         let mut cmd = Command::new("java");
         cmd.args(&plan.jvm_args);
