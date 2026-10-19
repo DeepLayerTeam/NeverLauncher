@@ -3,6 +3,7 @@ pub mod compatibility;
 mod deterministic_launch;
 pub mod file_ownership;
 pub mod download_scheduler;
+mod http_resume;
 pub use download_scheduler::{DownloadLimits, DownloadProgress, ProgressSink, DOWNLOAD_PROGRESS_EVENT};
 pub mod managed_java;
 pub mod guard_ipc;
@@ -662,10 +663,16 @@ fn rate_limit_retry_delay_seconds(response: &reqwest::Response) -> u64 {
 async fn get_release_file_with_rate_limit_retry(
     client: &reqwest::Client,
     url: &str,
+    range: Option<(u64, &str)>,
 ) -> Result<reqwest::Response, reqwest::Error> {
     let mut retries = 0usize;
     loop {
-        let response = client.get(url).send().await?;
+        let mut request = client.get(url).header(reqwest::header::ACCEPT_ENCODING, "identity");
+        if let Some((start, etag)) = range {
+            request = request.header(reqwest::header::RANGE, format!("bytes={start}-"))
+                .header(reqwest::header::IF_RANGE, etag);
+        }
+        let response = request.send().await?;
         if response.status() != reqwest::StatusCode::TOO_MANY_REQUESTS || retries >= FILE_DOWNLOAD_RATE_LIMIT_RETRIES {
             return Ok(response);
         }

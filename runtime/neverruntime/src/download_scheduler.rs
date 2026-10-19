@@ -1,14 +1,14 @@
 //! Bounded, host-aware streaming downloads for signed client manifests.
 //! Each queued file owns one worker slot; a host permit is acquired before spawning.
 //! HTTP bodies are never collected in memory and disk writes exert natural backpressure.
-use crate::{file_ownership, get_release_file_with_rate_limit_retry, manifest_file_applies,
-    replace_verified_managed_file_0224, safe_join, set_executable_if_needed, sha256_file,
+use crate::{file_ownership, manifest_file_applies, safe_join, sha256_file,
     DownloadResult, Manifest, ManifestFile};
 use serde::Serialize;
+#[cfg(test)]
 use sha2::{Digest, Sha256};
 use std::{collections::{HashMap, VecDeque}, path::{Path, PathBuf}, sync::{Arc, Mutex, OnceLock, Weak},
     sync::atomic::{AtomicU64, AtomicUsize, Ordering}, time::{Duration, Instant}};
-use tokio::{fs, io::AsyncWriteExt, sync::{OwnedSemaphorePermit, Semaphore}, task::JoinSet};
+use tokio::{fs, sync::{OwnedSemaphorePermit, Semaphore}, task::JoinSet};
 
 pub const DOWNLOAD_PROGRESS_EVENT: &str = "neverlauncher-download-progress";
 // Cap aggregate transfers across concurrent Desktop/Repair invocations in this process.
@@ -138,61 +138,10 @@ fn file_host(url: &str) -> Result<String, String> {
 }
 
 async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Statistics) -> Result<(), String> {
-    let file = &job.file;
-    let target = &job.target;
-    file_ownership::ensure_no_symlinks(root, target)?;
-    if let Some(parent) = target.parent() {
-        fs::create_dir_all(parent).await.map_err(|e| format!("{}: create directory: {e}", file.path))?;
-    }
-    file_ownership::ensure_no_symlinks(root, target)?;
-
-    let mut response = get_release_file_with_rate_limit_retry(client, &file.url).await
-        .map_err(|e| format!("{}: request failed: {e}", file.path))?;
-    if !response.status().is_success() {
-        return Err(format!("{}: HTTP {}", file.path, response.status()));
-    }
-    if response.content_length().is_some_and(|len| len != file.size) {
-        return Err(format!("{}: response length differs from signed manifest", file.path));
-    }
-
-    // Per-attempt random file names prevent collisions with parallel launches.
-    let filename = target.file_name().ok_or("invalid managed filename")?.to_string_lossy();
-    let part = target.with_file_name(format!("{filename}.nlpart-{}-{:016x}",
-        std::process::id(), rand::random::<u64>()));
-    let transfer = async {
-        let mut output = fs::OpenOptions::new().write(true).create_new(true).open(&part).await
-            .map_err(|e| format!("{}: create temporary file: {e}", file.path))?;
-        let mut digest = Sha256::new();
-        let mut written = 0u64;
-        while let Some(chunk) = response.chunk().await
-            .map_err(|e| format!("{}: read response: {e}", file.path))? {
-            // Reject oversized responses before writing them to the installation.
-            stats.transferred.fetch_add(chunk.len() as u64, Ordering::Relaxed);
-            if chunk.len() as u64 > file.size.saturating_sub(written) {
-                return Err(format!("{}: response exceeds signed size", file.path));
-            }
-            // One outstanding HTTP chunk per active worker. Await each disk write
-            // before asking reqwest for the next chunk (network/disk backpressure).
-            for piece in chunk.chunks(64 * 1024) {
-                output.write_all(piece).await.map_err(|e| format!("{}: write: {e}", file.path))?;
-                digest.update(piece);
-                written += piece.len() as u64;
-                stats.emit("downloading", Some(&file.path), false);
-            }
-        }
-        output.flush().await.map_err(|e| format!("{}: flush: {e}", file.path))?;
-        output.sync_all().await.map_err(|e| format!("{}: fsync: {e}", file.path))?;
-        drop(output);
-        if written != file.size || !hex::encode(digest.finalize()).eq_ignore_ascii_case(&file.sha256) {
-            return Err(format!("{}: size/SHA-256 verification failed", file.path));
-        }
-        file_ownership::ensure_no_symlinks(root, target)?;
-        replace_verified_managed_file_0224(&part, target).await?;
-        set_executable_if_needed(target, file.executable).await?;
-        Ok(())
-    }.await;
-    if transfer.is_err() { let _ = fs::remove_file(&part).await; }
-    transfer
+    crate::http_resume::download_verified(client, root, &job.file, &job.target, |bytes| {
+        stats.transferred.fetch_add(bytes, Ordering::Relaxed);
+        stats.emit("downloading", Some(&job.file.path), false);
+    }).await
 }
 
 /// Stream only the missing/mismatched files using bounded workers. Errors are
