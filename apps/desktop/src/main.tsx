@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import './styles.css';
 import { DesktopExtensions0209 } from './extensions_0209';
 import { launchPreferences, scopedServers, type ScopedServer } from './desktop_experience_0229';
@@ -68,6 +69,11 @@ type JavaInfoResult = {
 
 type FileCheckResult = { path: string; status: 'ok' | 'missing' | 'invalid' | string; message: string };
 type DownloadResult = { downloaded: number; skipped: number; failed: number; repaired?: number; bytesDownloaded?: number; failedFiles?: string[]; messages: string[] };
+type DownloadProgress = {
+  operationId: string; phase: string; totalFiles: number; queued: number; active: number;
+  completed: number; failed: number; skipped: number;
+  bytesExpected: number; bytesTransferred: number; currentFile?: string | null;
+};
 type LaunchPlan = { javaExecutable: string; workingDirectory: string; mainClass: string; mainModule?: string; classpathEntries: string[]; modulepathEntries?: string[]; environmentAllowlist?: string[]; jvmArgs: string[]; gameArgs: string[]; commandPreview: string; deterministicSha256?: string };
 type ProcessStatus = { id: string; pid?: number; state: 'running' | 'stopping' | 'exited' | string; startedAt: string; finishedAt?: string; exitCode?: number; success?: boolean; logPath: string; message: string; windowsSensor?: any };
 type RepairResult = { status: string; before: FileCheckResult[]; download: DownloadResult; after: FileCheckResult[]; repaired: number; message: string };
@@ -196,6 +202,16 @@ function App() {
   const [files, setFiles] = useState<FileCheckResult[]>([]);
   const [download, setDownload] = useState<DownloadResult | null>(null);
   const [repairResult, setRepairResult] = useState<RepairResult | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
+  const [transferBusy, setTransferBusy] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    let unlisten: (() => void) | undefined;
+    void listen<DownloadProgress>('neverlauncher-download-progress', (event) => {
+      if (mounted) setDownloadProgress(event.payload);
+    }).then((stop) => { if (mounted) unlisten = stop; else stop(); }).catch(() => { /* Desktop web preview has no Tauri event bus. */ });
+    return () => { mounted = false; unlisten?.(); };
+  }, []);
   const [cleanResult, setCleanResult] = useState<CleanUnusedResult | null>(null);
   const [launchHistory, setLaunchHistory] = useState<LaunchHistoryEntry[]>([]);
   const [launchPlan, setLaunchPlan] = useState<LaunchPlan | null>(null);
@@ -1004,12 +1020,32 @@ function App() {
     }
   }
 
+  async function downloadFiles() {
+    if (!manifest || transferBusy) return;
+    setStage('files');
+    setTransferBusy(true);
+    setDownloadProgress(null);
+    try {
+      const result = await callTauri<DownloadResult>('download_missing_files', {
+        manifest, root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey,
+      });
+      setDownload(result);
+      setFiles(await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory }));
+      log(`Загрузка: ${result.downloaded} файлов, ошибок ${result.failed}, передано ${result.bytesDownloaded || 0} байт.`);
+    } catch (error) {
+      setStage('failed');
+      log(`Загрузка не выполнена: ${String(error)}`);
+    } finally { setTransferBusy(false); }
+  }
+
   async function repairClient() {
-    if (!manifest) {
-      log('Восстановление невозможно без манифеста профиля.');
+    if (!manifest || transferBusy) {
+      if (!manifest) log('Восстановление невозможно без манифеста профиля.');
       return;
     }
     setStage('repair');
+    setTransferBusy(true);
+    setDownloadProgress(null);
     try {
       const result = await callTauri<RepairResult>('repair_client', { manifest, root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey });
       setRepairResult(result);
@@ -1019,7 +1055,7 @@ function App() {
     } catch (error) {
       setStage('failed');
       log(`Восстановление завершилось ошибкой: ${String(error)}`);
-    }
+    } finally { setTransferBusy(false); }
   }
 
   async function cleanUnusedFiles() {
@@ -1357,7 +1393,7 @@ function App() {
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} />}
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} />}
-        {screen === 'download' && <DownloadPanel files={files} download={download} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} repairClient={repairClient} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
+        {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
         {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
         {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}
@@ -1409,8 +1445,31 @@ function ProfilePanel({ profiles, selectedProfile, setSelectedProfile, loadManif
   return <section className="panel"><h3>Профиль</h3><p>Выберите профиль и загрузите манифест.</p><div className="toolbar inline"><button onClick={loadManifest}>Загрузить манифест</button></div><div className="list">{profiles.map((profile: BackendProfile) => <button key={profile.id} className={selectedProfile === profile.id ? 'row activeRow' : 'row'} onClick={() => setSelectedProfile(profile.id)}><strong>{profile.title ?? profile.name ?? profile.id}</strong><span>{profile.loader ?? 'загрузчик не указан'} · {profile.defaultChannel ?? 'stable'}</span></button>)}</div><pre>{manifest ? JSON.stringify({ projectId: manifest.projectId, profileId: manifest.profileId, version: manifest.version, files: manifest.files.length }, null, 2) : 'Манифест не загружен.'}</pre></section>;
 }
 
-function DownloadPanel({ files, download, repairResult, cleanResult, verifyFiles, repairClient, cleanUnusedFiles, fileSummary }: any) {
-  return <section className="panel"><h3>Загрузка, восстановление и очистка</h3><p>Проверка SHA-256, восстановление отсутствующих/повреждённых файлов и безопасная очистка через карантин.</p><div className="toolbar inline"><button onClick={verifyFiles}>Проверить файлы</button><button onClick={repairClient}>Восстановить повреждённое</button><button onClick={cleanUnusedFiles}>Переместить лишнее в карантин</button></div><p>Исправно: {fileSummary.ok}; проблем: {fileSummary.broken}; всего: {fileSummary.total}.</p><pre>{JSON.stringify({ download, repair: repairResult ? { status: repairResult.status, repaired: repairResult.repaired, message: repairResult.message } : null, cleanup: cleanResult, files: files.slice(0, 20) }, null, 2)}</pre></section>;
+function DownloadPanel({ files, download, downloadProgress, transferBusy, repairResult, cleanResult,
+  verifyFiles, downloadFiles, repairClient, cleanUnusedFiles, fileSummary }: any) {
+  const progress = downloadProgress as DownloadProgress | null;
+  const handled = progress ? progress.completed + progress.failed + progress.skipped : 0;
+  const total = progress?.totalFiles || 0;
+  const byteRatio = progress?.bytesExpected ? Math.min(100, Math.round(100 * progress.bytesTransferred / progress.bytesExpected)) : 0;
+  return <section className="panel">
+    <h3>Загрузка, восстановление и очистка</h3>
+    <p>Параллельная загрузка с проверкой SHA-256, восстановлением повреждённых файлов и безопасной очисткой через карантин.</p>
+    <div className="toolbar inline">
+      <button disabled={transferBusy} onClick={verifyFiles}>Проверить файлы</button>
+      <button disabled={transferBusy} onClick={downloadFiles}>Скачать недостающие</button>
+      <button disabled={transferBusy} onClick={repairClient}>Восстановить повреждённое</button>
+      <button disabled={transferBusy} onClick={cleanUnusedFiles}>Переместить лишнее в карантин</button>
+    </div>
+    {progress && <div role="status" aria-live="polite">
+      <p>Состояние: {progress.phase}; обработано {handled} из {total}; активных {progress.active}, в очереди {progress.queued}, ошибок {progress.failed}.</p>
+      <progress style={{width: '100%'}} max={Math.max(1, total)} value={handled} aria-label="Прогресс по файлам" />
+      <p>Передано: {(progress.bytesTransferred / 1048576).toFixed(2)} МиБ; ожидается {(progress.bytesExpected / 1048576).toFixed(2)} МиБ ({byteRatio}% по плановому размеру).</p>
+      {progress.currentFile && <p>Файл: {progress.currentFile}</p>}
+    </div>}
+    <p>Исправно: {fileSummary.ok}; проблем: {fileSummary.broken}; всего: {fileSummary.total}.</p>
+    <pre>{JSON.stringify({ download, repair: repairResult ? { status: repairResult.status, repaired: repairResult.repaired, message: repairResult.message } : null,
+      cleanup: cleanResult, files: files.slice(0, 20) }, null, 2)}</pre>
+  </section>;
 }
 
 function SettingsPanel({ settings, patchSettings, validateSettings, settingsCheck, checkJavaRuntime, javaInfo, openGameDirectory, manifest, profileServers, loadProfileServers, loadCachedOfflineManifest, cacheSignedManifest }: any) {

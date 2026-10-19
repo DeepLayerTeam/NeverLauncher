@@ -2,6 +2,8 @@ pub mod attestation;
 pub mod compatibility;
 mod deterministic_launch;
 pub mod file_ownership;
+pub mod download_scheduler;
+pub use download_scheduler::{DownloadLimits, DownloadProgress, ProgressSink, DOWNLOAD_PROGRESS_EVENT};
 pub mod managed_java;
 pub mod guard_ipc;
 mod integrity;
@@ -674,74 +676,14 @@ async fn get_release_file_with_rate_limit_retry(
 }
 
 pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_public_key: &str) -> Result<DownloadResult, String> {
+    download_missing_files_with_progress(manifest, root, pinned_public_key, None).await
+}
+
+pub async fn download_missing_files_with_progress(manifest: &Manifest, root: &Path, pinned_public_key: &str,
+    progress: Option<ProgressSink>) -> Result<DownloadResult, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
     file_ownership::validate_download_targets(manifest)?;
-    let client = reqwest::Client::new();
-    let mut result = DownloadResult { downloaded: 0, skipped: 0, failed: 0, repaired: 0, bytes_downloaded: 0, failed_files: Vec::new(), messages: Vec::new() };
-
-    for file in &manifest.files {
-        if !manifest_file_applies(file) || file_ownership::skip_download(manifest, file) { result.skipped += 1; continue; }
-        let local_path = safe_join(root, &file.path)?;
-        file_ownership::ensure_no_symlinks(root, &local_path)?;
-        if manifest.schema_version == "2.0" && file_ownership::effective_ownership(file) == "optional" && !file_ownership::must_verify(manifest, &file.path) && !local_path.exists() { result.skipped += 1; continue; }
-        let is_actual = match fs::metadata(&local_path).await {
-            Ok(metadata) if metadata.len() == file.size => sha256_file(&local_path).await.map(|hash| hash.eq_ignore_ascii_case(&file.sha256)).unwrap_or(false),
-            _ => false,
-        };
-        if is_actual {
-            result.skipped += 1;
-            continue;
-        }
-        if let Some(parent) = local_path.parent() {
-            fs::create_dir_all(parent).await.map_err(|err| format!("не удалось создать каталог {}: {err}", parent.display()))?;
-        }
-        file_ownership::ensure_no_symlinks(root, &local_path)?;
-
-        let mut response = match get_release_file_with_rate_limit_retry(&client, &file.url).await {
-            Ok(response) => response,
-            Err(err) => {
-                result.failed += 1;
-                result.failed_files.push(file.path.clone());
-                result.messages.push(format!("{}: ошибка запроса: {err}", file.path));
-                continue;
-            }
-        };
-        if !response.status().is_success() {
-            result.failed += 1;
-            result.failed_files.push(file.path.clone());
-            result.messages.push(format!("{}: HTTP {}", file.path, response.status()));
-            continue;
-        }
-
-        let part_name = format!("{}.nlpart-{}-{}", file.path.rsplit('/').next().unwrap_or("blob"), std::process::id(), now_unix()?);
-        let part_path = local_path.with_file_name(part_name);
-        let mut output = fs::OpenOptions::new().write(true).create_new(true).open(&part_path).await.map_err(|err| format!("не удалось безопасно создать временный файл {}: {err}", part_path.display()))?;
-        let mut hasher = Sha256::new();
-        let mut written: u64 = 0;
-        while let Some(chunk) = response.chunk().await.map_err(|err| format!("{}: ошибка чтения response stream: {err}", file.path))? {
-            hasher.update(&chunk);
-            output.write_all(&chunk).await.map_err(|err| format!("не удалось записать {}: {err}", part_path.display()))?;
-            written += chunk.len() as u64;
-        }
-        output.flush().await.map_err(|err| format!("не удалось flush {}: {err}", part_path.display()))?;
-        output.sync_all().await.map_err(|err| format!("не удалось sync {}: {err}", part_path.display()))?;
-        drop(output);
-        let hash = hex::encode(hasher.finalize());
-        if written != file.size || !hash.eq_ignore_ascii_case(&file.sha256) {
-            let _ = fs::remove_file(&part_path).await;
-            result.failed += 1;
-            result.failed_files.push(file.path.clone());
-            result.messages.push(format!("{}: скачанный файл не прошёл size/SHA-256 verification", file.path));
-            continue;
-        }
-        file_ownership::ensure_no_symlinks(root, &local_path)?;
-        replace_verified_managed_file_0224(&part_path, &local_path).await?;
-        set_executable_if_needed(&local_path, file.executable).await?;
-        result.downloaded += 1;
-        result.repaired += 1;
-        result.bytes_downloaded += written;
-    }
-    Ok(result)
+    download_scheduler::run(manifest, root, DownloadLimits::default(), progress).await
 }
 
 // On Unix rename replaces the destination atomically. Windows rename does not
@@ -766,9 +708,14 @@ async fn replace_verified_managed_file_0224(part: &Path, target: &Path) -> Resul
 }
 
 pub async fn repair_client(manifest: &Manifest, root: &Path, pinned_public_key: &str) -> Result<RepairResult, String> {
+    repair_client_with_progress(manifest, root, pinned_public_key, None).await
+}
+
+pub async fn repair_client_with_progress(manifest: &Manifest, root: &Path, pinned_public_key: &str,
+    progress: Option<ProgressSink>) -> Result<RepairResult, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
     let before = check_files(manifest, root).await?;
-    let download = download_missing_files(manifest, root, pinned_public_key).await?;
+    let download = download_missing_files_with_progress(manifest, root, pinned_public_key, progress).await?;
     let after = check_files(manifest, root).await?;
     let broken_after = after.iter().filter(|item| item.status != "ok" && item.status != "optional-missing").count();
     Ok(RepairResult {

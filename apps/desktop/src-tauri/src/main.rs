@@ -18,6 +18,8 @@ use std::{path::PathBuf, process::Stdio, time::{Duration, SystemTime, UNIX_EPOCH
 use device_keys::{DeviceKeyInfo, DeviceSignatureResult};
 use tokio::{fs, process::Command};
 use zeroize::Zeroize;
+use std::sync::Arc;
+use tauri::Emitter;
 
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -363,9 +365,19 @@ async fn verify_manifest_signature(manifest: Manifest, pinned_public_key: String
 #[tauri::command]
 async fn check_files(manifest: Manifest, root: String) -> Result<Vec<FileCheckResult>, String> { neverruntime::check_files(&manifest, &PathBuf::from(root)).await }
 #[tauri::command]
-async fn download_missing_files(manifest: Manifest, root: String, pinned_public_key: String) -> Result<DownloadResult, String> { neverruntime::download_missing_files(&manifest, &PathBuf::from(root), &pinned_public_key).await }
+async fn download_missing_files(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String) -> Result<DownloadResult, String> {
+    let sink: neverruntime::ProgressSink = Arc::new(move |progress| {
+        let _ = app.emit(neverruntime::DOWNLOAD_PROGRESS_EVENT, progress);
+    });
+    neverruntime::download_missing_files_with_progress(&manifest, &PathBuf::from(root), &pinned_public_key, Some(sink)).await
+}
 #[tauri::command]
-async fn repair_client(manifest: Manifest, root: String, pinned_public_key: String) -> Result<RepairResult, String> { neverruntime::repair_client(&manifest, &PathBuf::from(root), &pinned_public_key).await }
+async fn repair_client(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String) -> Result<RepairResult, String> {
+    let sink: neverruntime::ProgressSink = Arc::new(move |progress| {
+        let _ = app.emit(neverruntime::DOWNLOAD_PROGRESS_EVENT, progress);
+    });
+    neverruntime::repair_client_with_progress(&manifest, &PathBuf::from(root), &pinned_public_key, Some(sink)).await
+}
 #[tauri::command]
 async fn clean_unused_files(manifest: Manifest, root: String, pinned_public_key: String) -> Result<CleanUnusedResult, String> { neverruntime::clean_unused_files(&manifest, &PathBuf::from(root), &pinned_public_key).await }
 #[tauri::command]
