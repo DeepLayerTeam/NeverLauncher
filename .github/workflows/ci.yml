@@ -265,6 +265,20 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - name: Generate ephemeral component signing trust for CI only
+        run: |
+          python3 -m pip install 'cryptography>=43,<47'
+          python3 - <<'PY_SIGN'
+          import os
+          from cryptography.hazmat.primitives import serialization
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+          key = Ed25519PrivateKey.generate()
+          seed = key.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption()).hex()
+          pub = key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write('NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED='+seed+'\n')
+              env.write('NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY='+pub+'\n')
+          PY_SIGN
       - name: Build native Linux production package
         run: bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-$(tr -d '[:space:]' < VERSION)" --expected-arch "${{ matrix.arch }}"
       - name: Verify package locally

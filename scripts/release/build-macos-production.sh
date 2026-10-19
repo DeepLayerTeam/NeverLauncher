@@ -74,7 +74,7 @@ for arch in x64 arm64; do
   GO_CLI="${WORK_ROOT}/neverlauncher-cli-${arch}"
   (
     cd "${ROOT_DIR}/cli"
-    GOOS=darwin GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${GO_CLI}" ./cmd/neverlauncher
+    GOOS=darwin GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.componentSetTrustedKey02310=${NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-}" -o "${GO_CLI}" ./cmd/neverlauncher
   )
 
   APP_ROOT="${WORK_ROOT}/${arch}/NeverLauncher.app"

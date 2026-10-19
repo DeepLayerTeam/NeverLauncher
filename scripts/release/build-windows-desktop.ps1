@@ -251,7 +251,7 @@ try {
         $OldGOOS = $env:GOOS; $OldGOARCH = $env:GOARCH; $OldCGO = $env:CGO_ENABLED
         try {
             $env:GOOS = "windows"; $env:GOARCH = $Target.GoArch; $env:CGO_ENABLED = "0"
-            Invoke-Checked { go build -trimpath -ldflags "-s -w -X main.version=$Version" -o $CliRootPath .\cmd\neverlauncher } "CLI $Arch release build"
+            Invoke-Checked { go build -trimpath -ldflags "-s -w -X main.version=$Version -X main.componentSetTrustedKey02310=$env:NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY" -o $CliRootPath .\cmd\neverlauncher } "CLI $Arch release build"
         } finally {
             $env:GOOS = $OldGOOS; $env:GOARCH = $OldGOARCH; $env:CGO_ENABLED = $OldCGO
             Pop-Location
@@ -330,10 +330,18 @@ try {
                 [ordered]@{ component = "sensor"; sourcePath = "neverguard-sensor.dll"; targetPath = "neverguard-sensor.dll"; sha256 = $SensorRecord.sha256; size = $SensorRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $SensorRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $SensorRecord.timestampSignerThumbprint } else { "" }) }
             )
             supportFiles = @(
+                [ordered]@{ component = "updater"; sourcePath = "neverlauncher-cli.exe"; targetPath = "neverlauncher-cli.exe"; sha256 = $CliPackageRecord.sha256; size = $CliPackageRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $CliPackageRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $CliPackageRecord.timestampSignerThumbprint } else { "" }) },
                 [ordered]@{ component = "package-manifest"; sourcePath = "WINDOWS_PACKAGE_MANIFEST.json"; targetPath = "WINDOWS_PACKAGE_MANIFEST.json"; sha256 = $PackageManifestHash; size = $PackageManifestItem.Length; executable = $false }
             )
         }
-        Write-JsonNoBom (Join-Path $PackageDir "COMPONENT_UPDATE_MANIFEST.json") $ComponentUpdateManifest
+        $ComponentUpdatePath = Join-Path $PackageDir "COMPONENT_UPDATE_MANIFEST.json"
+        Write-JsonNoBom $ComponentUpdatePath $ComponentUpdateManifest
+        $ComponentSigner = Join-Path $Root "scripts\release\component_set_sign.py"
+        if ($SignedProduction) {
+            Invoke-Checked { python $ComponentSigner --manifest $ComponentUpdatePath } "sign Windows component set"
+        } else {
+            Invoke-Checked { python $ComponentSigner --manifest $ComponentUpdatePath --development } "prepare development component set"
+        }
 
         $ZipName = "neverlauncher-desktop-$Version-windows-$Arch.zip"
         $ZipPath = Join-Path $OutDir $ZipName

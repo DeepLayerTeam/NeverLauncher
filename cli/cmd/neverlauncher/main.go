@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -510,6 +511,13 @@ func handleUpdate(args []string) error {
 		printJSON(report)
 		return nil
 	case "recover":
+		waitPID, err := parseWaitPID0157(flagValue(args, "--wait-pid", ""))
+		if err != nil {
+			return err
+		}
+		if err := waitForComponentParent0157(waitPID, 2*time.Minute); err != nil {
+			return err
+		}
 		root := flagValue(args, "--root", ".")
 		updater, err := newTransactionalUpdater0156(root)
 		if err != nil {
@@ -518,6 +526,29 @@ func handleUpdate(args []string) error {
 		report, err := updater.recover(flagValue(args, "--force", "false") == "true")
 		if err != nil {
 			return err
+		}
+		restartPath := flagValue(args, "--restart-desktop", "")
+		if restartPath != "" {
+			target, e := filepath.Abs(restartPath)
+			if e != nil {
+				return e
+			}
+			// The caller passed the currently installed Desktop executable, not
+			// an arbitrary remote URL or an executable from the package.
+			if _, e := os.Stat(target); e != nil {
+				return fmt.Errorf("recovered Desktop is missing: %w", e)
+			}
+			if e := verifyRestartedComponentSet02310(root, target); e != nil {
+				return e
+			}
+			cmd := exec.Command(target)
+			cmd.Dir = filepath.Dir(target)
+			cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, nil, nil
+			if e := cmd.Start(); e != nil {
+				return fmt.Errorf("restart recovered Desktop: %w", e)
+			}
+			report["restartedPid"] = cmd.Process.Pid
+			_ = cmd.Process.Release()
 		}
 		printJSON(report)
 		return nil

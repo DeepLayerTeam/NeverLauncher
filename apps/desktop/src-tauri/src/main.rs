@@ -731,6 +731,70 @@ async fn neverguard_guard_attestation_v2(
 }
 
 
+fn create_staged_updater_helper02310(helper: &std::path::Path, bin_dir: &std::path::Path) -> Result<PathBuf, String> {
+    let helper_meta = std::fs::symlink_metadata(helper).map_err(|e| e.to_string())?;
+    if !helper_meta.file_type().is_file() || helper_meta.file_type().is_symlink() {
+        return Err("unsafe native updater helper".into());
+    }
+    // Self-update must not overwrite the executable image of the running updater.
+    // Execute a private staged copy instead of the adjacent live CLI binary.
+    // A subsequent update cleans stale copies after their processes have exited.
+    let helper_stage_root = if cfg!(target_os = "windows") {
+        std::env::var_os("LOCALAPPDATA").map(PathBuf::from)
+            .ok_or("LOCALAPPDATA unavailable for updater staging")?
+            .join("NeverLauncher").join("updater-helpers")
+    } else if cfg!(target_os = "macos") {
+        std::env::var_os("HOME").map(PathBuf::from)
+            .ok_or("HOME unavailable for updater staging")?
+            .join("Library").join("Caches").join("NeverLauncher").join("updater-helpers")
+    } else {
+        std::env::var_os("XDG_RUNTIME_DIR").or_else(|| std::env::var_os("HOME"))
+            .map(PathBuf::from).ok_or("no private user directory for updater staging")?
+            .join(".neverlauncher").join("updater-helpers")
+    };
+    std::fs::create_dir_all(&helper_stage_root)
+        .map_err(|e| format!("не удалось подготовить updater helper staging: {e}"))?;
+    let stage_meta = std::fs::symlink_metadata(&helper_stage_root).map_err(|e| e.to_string())?;
+    if !stage_meta.file_type().is_dir() || stage_meta.file_type().is_symlink() {
+        return Err("updater staging directory is not a safe directory".into());
+    }
+    for entry in std::fs::read_dir(&helper_stage_root).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let ty = entry.file_type().map_err(|e| e.to_string())?;
+        if ty.is_dir() {
+            // Failed cleanup must not stop the current update (Windows file locks).
+            let _ = std::fs::remove_dir_all(entry.path());
+        }
+    }
+    use rand::RngCore;
+    let mut nonce = [0u8; 16];
+    rand::rngs::OsRng.fill_bytes(&mut nonce);
+    let helper_stage_dir = helper_stage_root.join(hex::encode(nonce));
+    std::fs::create_dir(&helper_stage_dir).map_err(|e| format!("updater staging: {e}"))?;
+    let staged_helper = helper_stage_dir.join(launcher_update_helper_name());
+    std::fs::copy(&helper, &staged_helper).map_err(|e| format!("updater helper copy: {e}"))?;
+    let copied = std::fs::metadata(&staged_helper).map_err(|e| e.to_string())?;
+    if !copied.is_file() || copied.len() != helper_meta.len() {
+        return Err("updater helper staging verification failed".into());
+    }
+    fn digest_file(path: &std::path::Path) -> Result<Vec<u8>, String> {
+        use std::io::Read;
+        let mut file = std::fs::File::open(path).map_err(|e| e.to_string())?;
+        let mut hash = Sha256::new();
+        let mut buf = [0u8; 65536];
+        loop {
+            let n = file.read(&mut buf).map_err(|e| e.to_string())?;
+            if n == 0 { break; }
+            hash.update(&buf[..n]);
+        }
+        Ok(hash.finalize().to_vec())
+    }
+    if digest_file(helper)? != digest_file(&staged_helper)? {
+        return Err("staged updater helper SHA-256 mismatch".into());
+    }
+    Ok(staged_helper)
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct LauncherUpdateScheduleResult {
@@ -783,12 +847,13 @@ async fn install_launcher_update(
         return Err(format!("transactional updater helper небезопасен: {}", helper.display()));
     }
 
+    let staged_helper = create_staged_updater_helper02310(&helper, bin_dir)?;
     // Guard удерживает дескрипторы и IPC, из-за которых Windows может считать исполняемый файл занятым.
     // Остановите его до того, как внешний помощник начнёт ожидание Desktop и выполнение транзакции.
     neverguard.shutdown().await.map_err(|e| format!("не удалось остановить NeverGuard перед обновлением: {e}"))?;
 
     let parent_pid = std::process::id().to_string();
-    let mut command = Command::new(&helper);
+    let mut command = Command::new(&staged_helper);
     command
         .arg("update")
         .arg("components")
@@ -874,7 +939,51 @@ async fn open_game_directory(root: String) -> Result<String, String> {
     command.spawn().map_err(|e| format!("не удалось открыть каталог клиента: {e}"))?; Ok(root.to_string_lossy().to_string())
 }
 
+// Startup is fail-closed: do not initialize Guard or the launcher UI with a
+// partially switched component set. Recovery runs in a separate executable
+// image, after this Desktop process has exited (Windows sharing violations).
+fn recover_components_before_desktop02310() -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let exe = std::fs::canonicalize(exe).map_err(|e| e.to_string())?;
+    let bin_dir = exe.parent().ok_or("Desktop executable has no parent directory")?;
+    let root = if cfg!(target_os = "macos") {
+        bin_dir.parent().and_then(std::path::Path::parent).and_then(std::path::Path::parent)
+            .ok_or("invalid macOS .app path")?
+    } else { bin_dir };
+    let helper = if cfg!(target_os = "macos") {
+        bin_dir.parent().ok_or("invalid macOS Contents path")?.join("Helpers").join(launcher_update_helper_name())
+    } else { bin_dir.join(launcher_update_helper_name()) };
+    if !helper.is_file() { return Ok(()); } // Prestarter-only layout has no CLI updater.
+    let hm = std::fs::symlink_metadata(&helper).map_err(|e| e.to_string())?;
+    if !hm.file_type().is_file() || hm.file_type().is_symlink() {
+        return Err("unsafe installed updater helper".into());
+    }
+    let status = std::process::Command::new(&helper)
+        .args(["update", "status", "--root"])
+        .arg(root)
+        .output().map_err(|e| format!("component recovery status failed: {e}"))?;
+    if !status.status.success() {
+        return Err(format!("component journal check failed: {}", String::from_utf8_lossy(&status.stderr)));
+    }
+    let report: serde_json::Value = serde_json::from_slice(&status.stdout)
+        .map_err(|e| format!("invalid component update status: {e}"))?;
+    if report.get("status").and_then(serde_json::Value::as_str) != Some("recovery-required") { return Ok(()); }
+    let staged = create_staged_updater_helper02310(&helper, bin_dir)?;
+    std::process::Command::new(staged)
+        .args(["update", "recover", "--root"])
+        .arg(root)
+        .args(["--wait-pid", &std::process::id().to_string(), "--restart-desktop"])
+        .arg(&exe)
+        .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
+        .spawn().map_err(|e| format!("could not start component recovery: {e}"))?;
+    std::process::exit(0);
+}
+
 fn main() {
+    if let Err(err) = recover_components_before_desktop02310() {
+        eprintln!("NeverLauncher component-set recovery gate failed: {err}");
+        std::process::exit(71);
+    }
     #[cfg(windows)]
     if let Err(err) = neverruntime::ensure_windows_production_hardening() {
         eprintln!("NeverLauncher Desktop Windows production hardening failed: {err}");

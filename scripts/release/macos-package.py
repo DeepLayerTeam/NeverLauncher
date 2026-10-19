@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from component_set_sign import signed_set
+
 ARCHES = {
     "x64": {"cpu": 0x01000007, "cpuText": "CPU_TYPE_X86_64", "rustTarget": "x86_64-apple-darwin"},
     "arm64": {"cpu": 0x0100000C, "cpuText": "CPU_TYPE_ARM64", "rustTarget": "aarch64-apple-darwin"},
@@ -150,8 +152,17 @@ def manifest_cmd(args: argparse.Namespace) -> int:
                 "executable": True,
             }
         )
+    cli = by_component["cli"]
+    component_update["supportFiles"].append({
+        "component": "updater", "sourcePath": "Contents/Helpers/neverlauncher-cli",
+        "targetPath": "Contents/Helpers/neverlauncher-cli", "sha256": cli["sha256"],
+        "size": cli["size"], "executable": True,
+    })
     update_manifest = resources / "COMPONENT_UPDATE_MANIFEST.json"
-    write_json(update_manifest, component_update)
+    raw, signature = signed_set(component_update, development=args.trust_mode != "developer-id-notarized")
+    update_manifest.write_bytes(raw)
+    if signature is not None:
+        (resources / "COMPONENT_SET_SIGNATURE.json").write_bytes(signature)
     return 0
 
 

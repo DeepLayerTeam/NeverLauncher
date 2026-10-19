@@ -46,7 +46,7 @@ echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build frontend"
 echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build CLI/API"
 (
   cd "${ROOT_DIR}/cli"
-  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-cli-linux-${ARCH}" ./cmd/neverlauncher
+  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.componentSetTrustedKey02310=${NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-}" -o "${OUT_DIR}/neverlauncher-cli-linux-${ARCH}" ./cmd/neverlauncher
 )
 (
   cd "${ROOT_DIR}/services/api"

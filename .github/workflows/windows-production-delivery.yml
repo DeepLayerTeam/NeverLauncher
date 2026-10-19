@@ -7,6 +7,10 @@ on:
         required: true
       WINDOWS_CODESIGN_PFX_PASSWORD:
         required: true
+      COMPONENT_SET_ED25519_SEED:
+        required: true
+      COMPONENT_SET_ED25519_PUBLIC_KEY:
+        required: true
   workflow_dispatch:
 
 permissions:
@@ -39,10 +43,15 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) { throw "WINDOWS_CODESIGN_PFX_BASE64 secret is required" }
           $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\neverlauncher-codesign.pfx", $bytes)
+      - name: Install component-set signing dependency
+        shell: pwsh
+        run: python -m pip install 'cryptography>=43,<47'
       - name: Build and Authenticode-sign both architectures
         shell: pwsh
         env:
           NEVERLAUNCHER_WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
+          NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED: ${{ secrets.COMPONENT_SET_ED25519_SEED }}
+          NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ secrets.COMPONENT_SET_ED25519_PUBLIC_KEY }}
           NEVERLAUNCHER_WINDOWS_TIMESTAMP_URL: http://timestamp.digicert.com
         run: |
           ./scripts/release/build-windows-desktop.ps1 `

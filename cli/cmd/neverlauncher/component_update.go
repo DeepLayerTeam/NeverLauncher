@@ -46,6 +46,7 @@ type componentUpdateManifest0157 struct {
 	BundleName     string                        `json:"bundleName,omitempty"`
 	Components     []componentUpdateArtifact0157 `json:"components"`
 	SupportFiles   []componentUpdateArtifact0157 `json:"supportFiles,omitempty"`
+	ComponentSet   *componentSet02310            `json:"componentSet,omitempty"`
 }
 
 type componentUpdateState0157 struct {
@@ -56,6 +57,7 @@ type componentUpdateState0157 struct {
 	Architecture  string                        `json:"architecture"`
 	UpdatedAt     string                        `json:"updatedAt"`
 	Components    []componentUpdateArtifact0157 `json:"components"`
+	SupportFiles  []componentUpdateArtifact0157 `json:"supportFiles,omitempty"`
 }
 
 type componentTreeJournal0157 struct {
@@ -118,8 +120,13 @@ func readComponentUpdateManifest0157(path string) (componentUpdateManifest0157, 
 }
 
 func validateComponentUpdateManifest0157(manifest componentUpdateManifest0157, manifestDir string, allowDevelopment bool) error {
-	if manifest.SchemaVersion != "1.0" || manifest.Product != "NeverLauncher" || strings.TrimSpace(manifest.ProductVersion) == "" {
+	if (manifest.SchemaVersion != "1.0" && manifest.SchemaVersion != "2.0") || manifest.Product != "NeverLauncher" || strings.TrimSpace(manifest.ProductVersion) == "" {
 		return errors.New("component update manifest identity/schema mismatch")
+	}
+	if componentCoordinationRequired02310(manifest.ProductVersion) {
+		if err := validateComponentProtocols02310(manifest); err != nil {
+			return err
+		}
 	}
 	target, err := componentUpdateCurrentTarget0157()
 	if err != nil {
@@ -206,7 +213,10 @@ func validateComponentUpdateManifest0157(manifest componentUpdateManifest0157, m
 		if manifest.TrustMode != "authenticode-rfc3161" {
 			return errors.New("production Windows component update requires authenticode-rfc3161 trustMode")
 		}
-		for _, item := range manifest.Components {
+		for _, item := range append(append([]componentUpdateArtifact0157{}, manifest.Components...), manifest.SupportFiles...) {
+			if item.Component != "updater" && !containsCoreComponent02310(item.Component) {
+				continue
+			}
 			if !windowsCertThumbprintRE0152.MatchString(item.SignerThumbprint) || !windowsCertThumbprintRE0152.MatchString(item.TimestampSignerThumbprint) {
 				return fmt.Errorf("Windows component %s is missing signer/timestamp identity", item.Component)
 			}
@@ -236,7 +246,10 @@ func verifyComponentBinaries0157(manifest componentUpdateManifest0157, base stri
 		}
 		return nil
 	}
-	for _, item := range manifest.Components {
+	for _, item := range append(append([]componentUpdateArtifact0157{}, manifest.Components...), manifest.SupportFiles...) {
+		if item.Component != "updater" && !containsCoreComponent02310(item.Component) {
+			continue
+		}
 		rel := item.TargetPath
 		if !installed {
 			rel = item.SourcePath
@@ -589,7 +602,7 @@ func componentStateBytes0157(manifest componentUpdateManifest0157) ([]byte, erro
 	state := componentUpdateState0157{
 		SchemaVersion: "1.0", ToolVersion: version, Version: manifest.ProductVersion,
 		Platform: manifest.Platform, Architecture: manifest.Architecture,
-		UpdatedAt: time.Now().UTC().Format(time.RFC3339Nano), Components: manifest.Components,
+		UpdatedAt: time.Now().UTC().Format(time.RFC3339Nano), Components: manifest.Components, SupportFiles: manifest.SupportFiles,
 	}
 	raw, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
@@ -1077,6 +1090,9 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 	if err := validateComponentUpdateManifest0157(manifest, filepath.Dir(probeManifestPath), allowDevelopment); err != nil {
 		return nil, err
 	}
+	if err := verifySignedComponentSet02310(probeManifestPath, manifest, allowDevelopment); err != nil {
+		return nil, err
+	}
 	root, liveBundle, err := componentUpdateInstallRoot0157(currentDesktop, explicitRoot, manifest)
 	if err != nil {
 		return nil, err
@@ -1106,6 +1122,9 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 		return nil, err
 	}
 	if err := validateComponentUpdateManifest0157(manifest, filepath.Dir(manifestPath), allowDevelopment); err != nil {
+		return nil, err
+	}
+	if err := verifySignedComponentSet02310(manifestPath, manifest, allowDevelopment); err != nil {
 		return nil, err
 	}
 	if err := verifyComponentBinaries0157(manifest, filepath.Dir(manifestPath), false, allowDevelopment); err != nil && manifest.Layout == "adjacent-files" {
@@ -1174,7 +1193,33 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 		components = append(components, componentUpdateArtifact0157{Component: row.component, SourcePath: row.name, TargetPath: row.name, SHA256: sum, Size: size, Executable: true})
 	}
 	target, _ := currentDeliveryTarget()
-	manifest := componentUpdateManifest0157{SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: version, Platform: target.Platform, Architecture: target.Architecture, Layout: "adjacent-files", TrustMode: "development-self-test", Components: components}
+	var helpers []componentUpdateArtifact0157
+	if componentCoordinationRequired02310(version) {
+		helperPath := filepath.Join(bundle, "neverlauncher-cli")
+		if err := os.WriteFile(helperPath, []byte("new-updater"), 0o755); err != nil {
+			return nil, err
+		}
+		h, sz, err := hashFile(helperPath)
+		if err != nil {
+			return nil, err
+		}
+		helpers = append(helpers, componentUpdateArtifact0157{Component: "updater", SourcePath: "neverlauncher-cli", TargetPath: "neverlauncher-cli", SHA256: h, Size: sz, Executable: true})
+		if target.Platform == "windows" {
+			sensorPath := filepath.Join(bundle, "neverguard-sensor.dll")
+			if err := os.WriteFile(sensorPath, []byte("new-sensor"), 0o755); err != nil {
+				return nil, err
+			}
+			h, sz, err := hashFile(sensorPath)
+			if err != nil {
+				return nil, err
+			}
+			components = append(components, componentUpdateArtifact0157{Component: "sensor", SourcePath: "neverguard-sensor.dll", TargetPath: "neverguard-sensor.dll", SHA256: h, Size: sz, Executable: true})
+		}
+	}
+	manifest := componentUpdateManifest0157{SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: version, Platform: target.Platform, Architecture: target.Architecture, Layout: "adjacent-files", TrustMode: "development-self-test", Components: components, SupportFiles: helpers}
+	if componentCoordinationRequired02310(version) {
+		manifest.ComponentSet = builtInComponentProtocolSet02310(target.Platform)
+	}
 	if err := writeJSONFile(filepath.Join(bundle, componentUpdateManifestFile0157), manifest); err != nil {
 		return nil, err
 	}
