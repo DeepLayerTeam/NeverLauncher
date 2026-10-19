@@ -1,14 +1,14 @@
 //! Bounded, host-aware streaming downloads for signed client manifests.
 //! Each queued file owns one worker slot; a host permit is acquired before spawning.
 //! HTTP bodies are never collected in memory and disk writes exert natural backpressure.
-use crate::{file_ownership, manifest_file_applies, safe_join, sha256_file,
+use crate::{file_ownership, manifest_file_applies, safe_join, sha256_file, network_resilience::{self, Directive},
     DownloadResult, Manifest, ManifestFile};
 use serde::Serialize;
 #[cfg(test)]
 use sha2::{Digest, Sha256};
 use std::{collections::{HashMap, VecDeque}, path::{Path, PathBuf}, sync::{Arc, Mutex, OnceLock, Weak},
     sync::atomic::{AtomicU64, AtomicUsize, Ordering}, time::{Duration, Instant}};
-use tokio::{fs, sync::{OwnedSemaphorePermit, Semaphore}, task::JoinSet};
+use tokio::{fs, sync::{OwnedSemaphorePermit, Semaphore, watch}, task::JoinSet};
 
 pub const DOWNLOAD_PROGRESS_EVENT: &str = "neverlauncher-download-progress";
 // Cap aggregate transfers across concurrent Desktop/Repair invocations in this process.
@@ -137,21 +137,37 @@ fn file_host(url: &str) -> Result<String, String> {
         parsed.port_or_known_default().unwrap_or(0)))
 }
 
-async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Statistics) -> Result<(), String> {
-    crate::http_resume::download_verified(client, root, &job.file, &job.target, |bytes| {
-        stats.transferred.fetch_add(bytes, Ordering::Relaxed);
-        stats.emit("downloading", Some(&job.file.path), false);
-    }).await
+async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Statistics,
+                   mut control: watch::Receiver<Directive>) -> Result<(), String> {
+    for attempt in 0..network_resilience::MAX_ATTEMPTS {
+        network_resilience::check(&control)?;
+        let outcome = crate::http_resume::download_verified_controlled(client, root, &job.file,
+            &job.target, |bytes| {
+                stats.transferred.fetch_add(bytes, Ordering::Relaxed);
+                stats.emit("downloading", Some(&job.file.path), false);
+            }, control.clone()).await;
+        match outcome {
+            Ok(()) => return Ok(()),
+            Err(error) => {
+                network_resilience::check(&control)?;
+                if attempt + 1 == network_resilience::MAX_ATTEMPTS { return Err(error); }
+                let Some(delay) = network_resilience::retry_delay(&error, attempt) else { return Err(error); };
+                stats.emit("retrying", Some(&job.file.path), true);
+                network_resilience::wait(delay, &mut control).await?;
+            }
+        }
+    }
+    Err(format!("{}: retry budget exhausted", job.file.path))
 }
 
 /// Stream only the missing/mismatched files using bounded workers. Errors are
 /// collected per file; an unhealthy mirror/file never cancels unrelated jobs.
 /// This is also the engine used by repair_client, not a separate downloader.
 pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits,
-                 sink: Option<ProgressSink>) -> Result<DownloadResult, String> {
+                 sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>) -> Result<DownloadResult, String> {
     let limits = limits.validate()?;
     let client = reqwest::Client::builder()
-        .connect_timeout(Duration::from_secs(15))
+        .connect_timeout(network_resilience::CONNECT_TIMEOUT)
         // Redirects could move a request to a different host after admitting a
         // per-host slot. Never follow redirects implicitly.
         .redirect(reqwest::redirect::Policy::none())
@@ -196,7 +212,7 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
         active: AtomicUsize::new(0), queued: AtomicUsize::new(jobs.len()),
         transferred: AtomicU64::new(0), expected,
         last_emit: Mutex::new(Instant::now() - Duration::from_secs(1)),
-        operation_id: format!("{}-{:016x}", std::process::id(), rand::random::<u64>()), sink,
+        operation_id, sink,
     });
     stats.emit("starting", None, true);
     let mut pending: VecDeque<Job> = jobs.into();
@@ -211,7 +227,8 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
     let root = root.to_path_buf();
     let mut workers: JoinSet<(String, Result<(), String>)> = JoinSet::new();
     while !pending.is_empty() || !workers.is_empty() {
-        while workers.len() < limits.global && !pending.is_empty() {
+        if *control.borrow() != Directive::Running && workers.is_empty() { break; }
+        while *control.borrow() == Directive::Running && workers.len() < limits.global && !pending.is_empty() {
             // Do not block on the first saturated host while another host can run.
             let mut chosen: Option<(usize, OwnedSemaphorePermit, OwnedSemaphorePermit, OwnedSemaphorePermit)> = None;
             for (idx, job) in pending.iter().enumerate() {
@@ -231,11 +248,12 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
             let client = client.clone();
             let root = root.clone();
             let stats = Arc::clone(&stats);
+            let control = control.clone();
             stats.queued.fetch_sub(1, Ordering::Relaxed);
             stats.active.fetch_add(1, Ordering::Relaxed);
             workers.spawn(async move {
                 let _permits = (local_permit, host_permit, global_permit);
-                let outcome = fetch_one(&client, &root, &job, &stats).await;
+                let outcome = fetch_one(&client, &root, &job, &stats, control).await;
                 (job.file.path, outcome)
             });
         }
@@ -254,6 +272,9 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
                     stats.completed.fetch_add(1, Ordering::Relaxed);
                     stats.emit("verified", Some(&path), true);
                 },
+                Ok((_path, Err(e))) if e == "download paused" || e == "download cancelled" => {
+                    // The durable journal and all verified partials remain available.
+                },
                 Ok((path, Err(e))) => {
                     result.failed += 1;
                     result.failed_files.push(path.clone());
@@ -271,7 +292,7 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
         }
     }
     result.bytes_downloaded = stats.transferred.load(Ordering::Relaxed);
-    stats.emit("finished", None, true);
+    stats.emit(match *control.borrow() { Directive::Running => "finished", Directive::Paused => "paused", Directive::Cancelled => "cancelled" }, None, true);
     Ok(result)
 }
 
@@ -373,7 +394,7 @@ mod tests {
         let events = Arc::new(Mutex::new(Vec::<DownloadProgress>::new()));
         let observed = Arc::clone(&events);
         let sink: ProgressSink = Arc::new(move |p| observed.lock().unwrap().push(p));
-        let result = run(&manifest, &root, DownloadLimits { global: 3, per_host: 2 }, Some(sink)).await.unwrap();
+        let result = run(&manifest, &root, DownloadLimits { global: 3, per_host: 2 }, Some(sink), "test-scheduler".into(), watch::channel(Directive::Running).1).await.unwrap();
         assert_eq!(result.downloaded, 7, "{:?}", result.messages);
         assert_eq!(result.failed, 1, "{:?}", result.messages);
         assert_eq!(result.failed_files, vec!["libraries/7.jar"]);
@@ -451,8 +472,8 @@ mod concurrent_operations_tests {
         fs::create_dir_all(&first).await.unwrap();
         fs::create_dir_all(&second).await.unwrap();
         let (left, right) = tokio::join!(
-            run(&manifest, &first, DownloadLimits::default(), None),
-            run(&manifest, &second, DownloadLimits::default(), None)
+            run(&manifest, &first, DownloadLimits::default(), None, "test-one".into(), watch::channel(Directive::Running).1),
+            run(&manifest, &second, DownloadLimits::default(), None, "test-two".into(), watch::channel(Directive::Running).1)
         );
         assert_eq!(left.unwrap().downloaded, 8);
         assert_eq!(right.unwrap().downloaded, 8);
@@ -463,4 +484,56 @@ mod concurrent_operations_tests {
         fs::remove_dir_all(first).await.unwrap();
         fs::remove_dir_all(second).await.unwrap();
     }
+    #[tokio::test]
+    async fn retries_503_then_truncated_body_by_range_without_repeating_prefix() {
+        let bytes = b"0123456789ABCDEFGHIJ";
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/file", listener.local_addr().unwrap());
+        let requests = Arc::new(Mutex::new(Vec::<String>::new()));
+        let observed = Arc::clone(&requests);
+        let server = tokio::spawn(async move {
+            for step in 0..3 {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut request = Vec::new();
+                let mut buffer = [0u8; 2048];
+                while !request.windows(4).any(|w| w == b"\r\n\r\n") {
+                    let n = stream.read(&mut buffer).await.unwrap();
+                    assert!(n > 0);
+                    request.extend_from_slice(&buffer[..n]);
+                }
+                observed.lock().unwrap().push(String::from_utf8(request).unwrap());
+                let response = match step {
+                    0 => b"HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\nRetry-After: 0\r\nConnection: close\r\n\r\n".to_vec(),
+                    1 => [b"HTTP/1.1 200 OK\r\nContent-Length: 20\r\nETag: \"stable\"\r\nConnection: close\r\n\r\n".as_slice(), &bytes[..8]].concat(),
+                    _ => [b"HTTP/1.1 206 Partial Content\r\nContent-Length: 12\r\nContent-Range: bytes 8-19/20\r\nETag: \"stable\"\r\nConnection: close\r\n\r\n".as_slice(), &bytes[8..]].concat(),
+                };
+                stream.write_all(&response).await.unwrap();
+                let _ = stream.shutdown().await;
+            }
+        });
+        let manifest: Manifest = serde_json::from_value(json!({
+            "schemaVersion": "1.0", "projectId": "test", "profileId": "test", "channel": "stable",
+            "version": "test", "createdAt": "test", "minecraft": { "version": "1.21.1", "loader": "vanilla" },
+            "runtime": { "java": { "majorVersion": 21, "distribution": "temurin" } },
+            "files": [{"path": "libraries/retry.jar", "url": url, "size": bytes.len(),
+                "sha256": hex::encode(Sha256::digest(bytes)), "required": true, "executable": false }]
+        })).unwrap();
+        let root = std::env::temp_dir().join(format!("nl-retry-{:016x}", rand::random::<u64>()));
+        fs::create_dir_all(&root).await.unwrap();
+        let result = tokio::time::timeout(Duration::from_secs(12), run(&manifest, &root,
+            DownloadLimits::default(), None, "retry-test".into(), watch::channel(Directive::Running).1))
+            .await.unwrap().unwrap();
+        assert_eq!(result.downloaded, 1, "{:?}", result.messages);
+        assert_eq!(result.failed, 0);
+        assert_eq!(result.bytes_downloaded, 20, "only the missing suffix crossed the wire after failure");
+        assert_eq!(fs::read(root.join("libraries/retry.jar")).await.unwrap(), bytes);
+        server.await.unwrap();
+        let requests = requests.lock().unwrap();
+        assert_eq!(requests.len(), 3);
+        assert!(requests[2].to_ascii_lowercase().contains("range: bytes=8-"));
+        assert!(requests[2].to_ascii_lowercase().contains("if-range: \"stable\""));
+        drop(requests);
+        fs::remove_dir_all(root).await.unwrap();
+    }
+
 }

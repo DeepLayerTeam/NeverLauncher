@@ -3,13 +3,13 @@
 //! Partial bytes are never trusted by themselves: a strong HTTP validator gates
 //! Range reuse and the signed SHA-256 authenticates the complete staged file
 //! before it is switched into the client installation.
-use crate::{file_ownership, get_release_file_with_rate_limit_retry,
+use crate::{file_ownership, network_resilience::{self, Directive},
     replace_verified_managed_file_0224, set_executable_if_needed, ManifestFile};
-use reqwest::{header::{CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_RANGE, ETAG}, StatusCode};
+use reqwest::{header::{CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_RANGE, ETAG, RANGE, IF_RANGE, ACCEPT_ENCODING}, StatusCode};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{collections::HashMap, path::{Path, PathBuf}, sync::{Arc, Mutex, OnceLock, Weak}};
-use tokio::{fs, io::{AsyncReadExt, AsyncWriteExt}, sync::Mutex as AsyncMutex};
+use tokio::{fs, io::{AsyncReadExt, AsyncWriteExt}, sync::{Mutex as AsyncMutex, watch}};
 
 const PARTIAL_SCHEMA: u32 = 1;
 const META_MAX_SIZE: u64 = 8192;
@@ -173,6 +173,36 @@ async fn install_verified(root: &Path, file: &ManifestFile, target: &Path, part:
     remove_if_present(meta).await
 }
 
+fn request_error(path: &str, error: String) -> String {
+    if error.starts_with("[retry:") || error == "download paused" || error == "download cancelled" {
+        error
+    } else { format!("{path}: HTTP request: {error}") }
+}
+
+async fn request_with_control(client: &reqwest::Client, url: &str,
+    range: Option<(u64, &str)>, control: &mut watch::Receiver<Directive>) -> Result<reqwest::Response, String> {
+    network_resilience::check(control)?;
+    let mut request = client.get(url).header(ACCEPT_ENCODING, "identity");
+    if let Some((start, validator)) = range {
+        request = request.header(RANGE, format!("bytes={start}-")).header(IF_RANGE, validator);
+    }
+    let response = tokio::select! {
+        result = tokio::time::timeout(network_resilience::REQUEST_TIMEOUT, request.send()) => {
+            match result {
+                Ok(Ok(response)) => response,
+                Ok(Err(error)) => return Err(network_resilience::transient(format!("HTTP connect/request: {error}"), None)),
+                Err(_) => return Err(network_resilience::transient("HTTP request timed out", None)),
+            }
+        },
+        state = network_resilience::interrupted(control) => return Err(state.error().into()),
+    };
+    if network_resilience::retryable_status(response.status()) {
+        let wait = network_resilience::retry_after(&response);
+        return Err(network_resilience::transient(format!("transient HTTP {}", response.status()), wait));
+    }
+    Ok(response)
+}
+
 /// Resume a verified-manifest file, optionally using a persistent partial from
 /// an interrupted prior invocation. `transferred` accounts for *wire* body bytes.
 /// Both Desktop downloads and Repair call this via download_scheduler::run.
@@ -180,6 +210,15 @@ pub(crate) async fn download_verified(
     client: &reqwest::Client, root: &Path, file: &ManifestFile, target: &Path,
     transferred: impl Fn(u64),
 ) -> Result<(), String> {
+    let (_sender, receiver) = watch::channel(Directive::Running);
+    download_verified_controlled(client, root, file, target, transferred, receiver).await
+}
+
+pub(crate) async fn download_verified_controlled(
+    client: &reqwest::Client, root: &Path, file: &ManifestFile, target: &Path,
+    transferred: impl Fn(u64), mut control: watch::Receiver<Directive>,
+) -> Result<(), String> {
+    network_resilience::check(&control)?;
     let lock = file_mutex(target);
     let _guard = lock.lock().await;
     file_ownership::ensure_no_symlinks(root, target)?;
@@ -203,6 +242,7 @@ pub(crate) async fn download_verified(
         if len == file.size {
             let (actual_len, hash) = digest_existing(&part).await?;
             if actual_len == file.size && hex::encode(hash.finalize()).eq_ignore_ascii_case(&file.sha256) {
+                network_resilience::check(&control)?;
                 return install_verified(root, file, target, &part, &meta).await;
             }
         }
@@ -212,9 +252,9 @@ pub(crate) async fn download_verified(
     }
     if resume.is_none() { discard(&part, &meta).await?; }
 
-    let mut response = get_release_file_with_rate_limit_retry(client, &file.url,
-        resume.as_ref().map(|(start, etag)| (*start, etag.as_str()))).await
-        .map_err(|e| format!("{}: HTTP request: {e}", file.path))?;
+    let mut response = request_with_control(client, &file.url,
+        resume.as_ref().map(|(start, etag)| (*start, etag.as_str())), &mut control).await
+        .map_err(|e| request_error(&file.path, e))?;
     let mut append = false;
     let mut prefix_len = 0u64;
     let mut allowed_body_len = file.size;
@@ -240,8 +280,8 @@ pub(crate) async fn download_verified(
                         // this response and fetch a clean 200 (not a second Range).
                         drop(response);
                         discard(&part, &meta).await?;
-                        response = get_release_file_with_rate_limit_retry(client, &file.url, None).await
-                            .map_err(|e| format!("{}: fresh GET after invalid Range: {e}", file.path))?;
+                        response = request_with_control(client, &file.url, None, &mut control).await
+                            .map_err(|e| request_error(&file.path, e))?;
                     }
                 }
             }
@@ -255,8 +295,8 @@ pub(crate) async fn download_verified(
                 // rejected. The local prefix has no authority over the server.
                 drop(response);
                 discard(&part, &meta).await?;
-                response = get_release_file_with_rate_limit_retry(client, &file.url, None).await
-                    .map_err(|e| format!("{}: fresh GET after HTTP 416: {e}", file.path))?;
+                response = request_with_control(client, &file.url, None, &mut control).await
+                    .map_err(|e| request_error(&file.path, e))?;
             }
             status => return Err(format!("{}: resume HTTP {status}", file.path)),
         }
@@ -287,14 +327,26 @@ pub(crate) async fn download_verified(
         .map_err(|e| format!("{}: open partial: {e}", file.path))?;
     let mut body_len = 0u64;
     loop {
-        let chunk = match response.chunk().await {
-            Ok(Some(chunk)) => chunk,
-            Ok(None) => break,
-            Err(e) => {
-                // Keep the partial and its validator for the next call/restart.
+        let packet = tokio::select! {
+            result = tokio::time::timeout(network_resilience::READ_TIMEOUT, response.chunk()) => result,
+            state = network_resilience::interrupted(&mut control) => {
+                output.flush().await.map_err(|e| format!("flush partial on pause/cancel: {e}"))?;
+                output.sync_all().await.map_err(|e| format!("fsync partial on pause/cancel: {e}"))?;
+                return Err(state.error().into());
+            }
+        };
+        let chunk = match packet {
+            Ok(Ok(Some(chunk))) => chunk,
+            Ok(Ok(None)) => break,
+            Ok(Err(error)) => {
                 output.flush().await.map_err(|io| format!("{}: flush partial: {io}", file.path))?;
                 output.sync_all().await.map_err(|io| format!("{}: fsync partial: {io}", file.path))?;
-                return Err(format!("{}: interrupted HTTP body: {e}", file.path));
+                return Err(network_resilience::transient(format!("{}: interrupted HTTP body: {error}", file.path), None));
+            },
+            Err(_) => {
+                output.flush().await.map_err(|io| format!("{}: flush partial: {io}", file.path))?;
+                output.sync_all().await.map_err(|io| format!("{}: fsync partial: {io}", file.path))?;
+                return Err(network_resilience::transient(format!("{}: read timeout", file.path), None));
             }
         };
         transferred(chunk.len() as u64);
@@ -315,7 +367,7 @@ pub(crate) async fn download_verified(
     if body_len != allowed_body_len {
         // A short, well-formed HTTP body is still a resumable interruption
         // when the strong ETag remains pinned; never activate it.
-        return Err(format!("{}: truncated HTTP body ({body_len}/{allowed_body_len})", file.path));
+        return Err(network_resilience::transient(format!("{}: truncated HTTP body ({body_len}/{allowed_body_len})", file.path), None));
     }
     if prefix_len + body_len != file.size {
         return Err(format!("{}: server returned an incomplete Content-Range", file.path));
@@ -324,6 +376,7 @@ pub(crate) async fn download_verified(
         discard(&part, &meta).await?;
         return Err(format!("{}: complete SHA-256 verification failed", file.path));
     }
+    network_resilience::check(&control)?;
     install_verified(root, file, target, &part, &meta).await
 }
 

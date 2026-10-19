@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -69,6 +69,7 @@ type JavaInfoResult = {
 
 type FileCheckResult = { path: string; status: 'ok' | 'missing' | 'invalid' | string; message: string };
 type DownloadResult = { downloaded: number; skipped: number; failed: number; repaired?: number; bytesDownloaded?: number; failedFiles?: string[]; messages: string[] };
+type PendingDownload = { operationId: string; mode: string; status: string; projectId: string; profileId: string; version: string; totalFiles: number };
 type DownloadProgress = {
   operationId: string; phase: string; totalFiles: number; queued: number; active: number;
   completed: number; failed: number; skipped: number;
@@ -204,6 +205,33 @@ function App() {
   const [repairResult, setRepairResult] = useState<RepairResult | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
   const [transferBusy, setTransferBusy] = useState(false);
+  const [pendingJob, setPendingJob] = useState<PendingDownload | null>(null);
+  const recoveryAttempted = useRef(new Set<string>());
+  // Recover a durable signed operation after Desktop restart. Explicitly paused
+  // jobs stay paused; interrupted/running jobs resume without user intervention.
+  useEffect(() => {
+    const root = settings.gameDirectory;
+    const recoveryId = `${root}|${settings.pinnedPublicKey}`;
+    if (!root || !settings.pinnedPublicKey || recoveryAttempted.current.has(recoveryId)) return;
+    recoveryAttempted.current.add(recoveryId);
+    let disposed = false;
+    void callTauri<PendingDownload | null>('pending_download_job', { root, pinnedPublicKey: settings.pinnedPublicKey }).then((job) => {
+      if (disposed || !job) return;
+      setPendingJob(job);
+      if (job.status === 'paused') return;
+      setTransferBusy(true);
+      void callTauri<DownloadResult>('resume_download_job', { root, pinnedPublicKey: settings.pinnedPublicKey }).then((result) => {
+        if (disposed) return;
+        setDownload(result);
+        setPendingJob(null);
+        log(`После перезапуска: скачано ${result.downloaded}, ошибок ${result.failed}.`);
+        void callTauri<PendingDownload | null>('pending_download_job', { root, pinnedPublicKey: settings.pinnedPublicKey }).then(setPendingJob);
+      }).catch((error) => { if (!disposed) log(`Автовосстановление загрузки: ${String(error)}`); })
+        .finally(() => { if (!disposed) setTransferBusy(false); });
+    }).catch((error) => { if (!disposed) log(`Проверка сохранённой загрузки: ${String(error)}`); });
+    return () => { disposed = true; recoveryAttempted.current.delete(recoveryId); };
+  }, [settings.gameDirectory, settings.pinnedPublicKey]);
+
   useEffect(() => {
     let mounted = true;
     let unlisten: (() => void) | undefined;
@@ -1020,6 +1048,27 @@ function App() {
     }
   }
 
+  async function controlTransfer(action: 'pause' | 'cancel') {
+    try {
+      await callTauri('control_download_job', { root: settings.gameDirectory, action });
+      log(action === 'pause' ? 'Запрошена пауза загрузки.' : 'Загрузка отменена.');
+      if (action === 'cancel') setPendingJob(null);
+    } catch (error) { log(`Управление загрузкой: ${String(error)}`); }
+  }
+
+  async function resumeTransfer() {
+    if (transferBusy || !pendingJob) return;
+    setTransferBusy(true);
+    try {
+      const result = await callTauri<DownloadResult>('resume_download_job', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey });
+      setDownload(result);
+      if (manifest) setFiles(await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory }).catch(() => files));
+      log(`Возобновление: скачано ${result.downloaded}, ошибок ${result.failed}.`);
+      setPendingJob(await callTauri<PendingDownload | null>('pending_download_job', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey }));
+    } catch (error) { log(`Не удалось возобновить: ${String(error)}`); }
+    finally { setTransferBusy(false); }
+  }
+
   async function downloadFiles() {
     if (!manifest || transferBusy) return;
     setStage('files');
@@ -1035,7 +1084,10 @@ function App() {
     } catch (error) {
       setStage('failed');
       log(`Загрузка не выполнена: ${String(error)}`);
-    } finally { setTransferBusy(false); }
+    } finally {
+      setTransferBusy(false);
+      void callTauri<PendingDownload | null>('pending_download_job', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey }).then(setPendingJob).catch(() => {});
+    }
   }
 
   async function repairClient() {
@@ -1055,7 +1107,10 @@ function App() {
     } catch (error) {
       setStage('failed');
       log(`Восстановление завершилось ошибкой: ${String(error)}`);
-    } finally { setTransferBusy(false); }
+    } finally {
+      setTransferBusy(false);
+      void callTauri<PendingDownload | null>('pending_download_job', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey }).then(setPendingJob).catch(() => {});
+    }
   }
 
   async function cleanUnusedFiles() {
@@ -1393,7 +1448,7 @@ function App() {
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} />}
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} />}
-        {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
+        {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
         {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
         {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}
@@ -1446,7 +1501,7 @@ function ProfilePanel({ profiles, selectedProfile, setSelectedProfile, loadManif
 }
 
 function DownloadPanel({ files, download, downloadProgress, transferBusy, repairResult, cleanResult,
-  verifyFiles, downloadFiles, repairClient, cleanUnusedFiles, fileSummary }: any) {
+  verifyFiles, downloadFiles, repairClient, cleanUnusedFiles, fileSummary, pendingJob, controlTransfer, resumeTransfer }: any) {
   const progress = downloadProgress as DownloadProgress | null;
   const handled = progress ? progress.completed + progress.failed + progress.skipped : 0;
   const total = progress?.totalFiles || 0;
@@ -1459,7 +1514,11 @@ function DownloadPanel({ files, download, downloadProgress, transferBusy, repair
       <button disabled={transferBusy} onClick={downloadFiles}>Скачать недостающие</button>
       <button disabled={transferBusy} onClick={repairClient}>Восстановить повреждённое</button>
       <button disabled={transferBusy} onClick={cleanUnusedFiles}>Переместить лишнее в карантин</button>
+      {transferBusy && <button onClick={() => controlTransfer('pause')}>Пауза</button>}
+      {(transferBusy || pendingJob) && <button onClick={() => controlTransfer('cancel')}>Отменить</button>}
+      {!transferBusy && pendingJob && <button onClick={resumeTransfer}>Продолжить сохранённую загрузку</button>}
     </div>
+    {pendingJob && <p>Сохранённое задание: {pendingJob.projectId}/{pendingJob.profileId} · {pendingJob.status} · {pendingJob.totalFiles} файлов.</p>}
     {progress && <div role="status" aria-live="polite">
       <p>Состояние: {progress.phase}; обработано {handled} из {total}; активных {progress.active}, в очереди {progress.queued}, ошибок {progress.failed}.</p>
       <progress style={{width: '100%'}} max={Math.max(1, total)} value={handled} aria-label="Прогресс по файлам" />

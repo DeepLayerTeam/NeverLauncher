@@ -4,6 +4,8 @@ mod deterministic_launch;
 pub mod file_ownership;
 pub mod download_scheduler;
 mod http_resume;
+mod network_resilience;
+pub mod durable_downloads;
 pub use download_scheduler::{DownloadLimits, DownloadProgress, ProgressSink, DOWNLOAD_PROGRESS_EVENT};
 pub mod managed_java;
 pub mod guard_ipc;
@@ -643,45 +645,6 @@ pub async fn check_files(manifest: &Manifest, root: &Path) -> Result<Vec<FileChe
     Ok(results)
 }
 
-const FILE_DOWNLOAD_RATE_LIMIT_RETRIES: usize = 8;
-const FILE_DOWNLOAD_RATE_LIMIT_MAX_DELAY_SECS: u64 = 65;
-
-fn bounded_rate_limit_delay_seconds(values: impl IntoIterator<Item = Option<u64>>) -> u64 {
-    let longest = values.into_iter().flatten().filter(|value| *value > 0).max().unwrap_or(1);
-    // API использует фиксированное минутное окно. Дополнительная секунда ожидания исключает
-    // гонку с истечением Redis, сохраняя жёсткий предел на случай неисправного прокси.
-    longest.saturating_add(1).min(FILE_DOWNLOAD_RATE_LIMIT_MAX_DELAY_SECS)
-}
-
-fn rate_limit_retry_delay_seconds(response: &reqwest::Response) -> u64 {
-    let headers = response.headers();
-    bounded_rate_limit_delay_seconds(["Retry-After", "X-RateLimit-Reset"].map(|name| {
-        headers.get(name).and_then(|value| value.to_str().ok()).and_then(|text| text.trim().parse::<u64>().ok())
-    }))
-}
-
-async fn get_release_file_with_rate_limit_retry(
-    client: &reqwest::Client,
-    url: &str,
-    range: Option<(u64, &str)>,
-) -> Result<reqwest::Response, reqwest::Error> {
-    let mut retries = 0usize;
-    loop {
-        let mut request = client.get(url).header(reqwest::header::ACCEPT_ENCODING, "identity");
-        if let Some((start, etag)) = range {
-            request = request.header(reqwest::header::RANGE, format!("bytes={start}-"))
-                .header(reqwest::header::IF_RANGE, etag);
-        }
-        let response = request.send().await?;
-        if response.status() != reqwest::StatusCode::TOO_MANY_REQUESTS || retries >= FILE_DOWNLOAD_RATE_LIMIT_RETRIES {
-            return Ok(response);
-        }
-        let delay = rate_limit_retry_delay_seconds(&response);
-        retries += 1;
-        tokio::time::sleep(Duration::from_secs(delay)).await;
-    }
-}
-
 pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_public_key: &str) -> Result<DownloadResult, String> {
     download_missing_files_with_progress(manifest, root, pinned_public_key, None).await
 }
@@ -690,7 +653,7 @@ pub async fn download_missing_files_with_progress(manifest: &Manifest, root: &Pa
     progress: Option<ProgressSink>) -> Result<DownloadResult, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
     file_ownership::validate_download_targets(manifest)?;
-    download_scheduler::run(manifest, root, DownloadLimits::default(), progress).await
+    durable_downloads::start(manifest, root, pinned_public_key, "download", progress).await
 }
 
 // On Unix rename replaces the destination atomically. Windows rename does not
@@ -722,7 +685,7 @@ pub async fn repair_client_with_progress(manifest: &Manifest, root: &Path, pinne
     progress: Option<ProgressSink>) -> Result<RepairResult, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
     let before = check_files(manifest, root).await?;
-    let download = download_missing_files_with_progress(manifest, root, pinned_public_key, progress).await?;
+    let download = durable_downloads::start(manifest, root, pinned_public_key, "repair", progress).await?;
     let after = check_files(manifest, root).await?;
     let broken_after = after.iter().filter(|item| item.status != "ok" && item.status != "optional-missing").count();
     Ok(RepairResult {
@@ -2016,13 +1979,6 @@ mod tests {
             json.contains("\"executable\":false"),
             "Go ManifestFile signs executable=false explicitly: {json}"
         );
-    }
-
-    #[test]
-    fn file_download_rate_limit_delay_prefers_server_reset_and_is_bounded() {
-        assert_eq!(bounded_rate_limit_delay_seconds([Some(7), Some(11)]), 12);
-        assert_eq!(bounded_rate_limit_delay_seconds([Some(600), None]), 65);
-        assert_eq!(bounded_rate_limit_delay_seconds([None, None]), 2);
     }
 
     #[test]
