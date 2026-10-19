@@ -144,7 +144,7 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 		manifest.Signature = nil
 		manifest.Files = make([]model.ManifestFile, 0, len(files))
 		for _, f := range files {
-			manifest.Files = append(manifest.Files, model.ManifestFile{Path: f.Path, Size: f.Size, SHA256: f.SHA256, URL: f.URL, Required: f.Required, Executable: f.Executable, TargetOS: append([]string(nil), f.TargetOS...)})
+			manifest.Files = append(manifest.Files, model.ManifestFile{Path: f.Path, Size: f.Size, SHA256: f.SHA256, URL: f.URL, Required: f.Required, Executable: f.Executable, TargetOS: append([]string(nil), f.TargetOS...), Mirrors: append([]string(nil), f.Mirrors...)})
 		}
 		if err = validateCompatibilityManifest(manifest); err != nil {
 			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, err

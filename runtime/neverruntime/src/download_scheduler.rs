@@ -1,7 +1,7 @@
 //! Bounded, host-aware streaming downloads for signed client manifests.
 //! Each queued file owns one worker slot; a host permit is acquired before spawning.
 //! HTTP bodies are never collected in memory and disk writes exert natural backpressure.
-use crate::{file_ownership, manifest_file_applies, safe_join, sha256_file, network_resilience::{self, Directive},
+use crate::{content_cache::{self, CacheStore}, file_ownership, manifest_file_applies, safe_join, sha256_file, network_resilience::{self, Directive},
     DownloadResult, Manifest, ManifestFile};
 use serde::Serialize;
 #[cfg(test)]
@@ -49,6 +49,8 @@ pub struct DownloadProgress {
     pub bytes_expected: u64,
     /// Wire bytes consumed, including invalid responses (not verified bytes).
     pub bytes_transferred: u64,
+    pub cache_hits: usize,
+    pub bytes_reused: u64,
     pub current_file: Option<String>,
 }
 
@@ -71,10 +73,16 @@ impl DownloadLimits {
     }
 }
 
+struct Source {
+    url: String,
+    host: String,
+}
+
 struct Job {
     file: ManifestFile,
     target: PathBuf,
     host: String,
+    sources: Vec<Source>,
     priority: u8,
     order: usize,
 }
@@ -96,6 +104,8 @@ struct Statistics {
     active: AtomicUsize,
     queued: AtomicUsize,
     transferred: AtomicU64,
+    cache_hits: AtomicUsize,
+    bytes_reused: AtomicU64,
     expected: u64,
     last_emit: Mutex<Instant>,
     operation_id: String,
@@ -119,6 +129,8 @@ impl Statistics {
             skipped: self.skipped.load(Ordering::Relaxed),
             bytes_expected: self.expected,
             bytes_transferred: self.transferred.load(Ordering::Relaxed),
+            cache_hits: self.cache_hits.load(Ordering::Relaxed),
+            bytes_reused: self.bytes_reused.load(Ordering::Relaxed),
             current_file: path.map(ToOwned::to_owned),
         };
         // Do not hold the mutex while notifying clients.
@@ -137,27 +149,85 @@ fn file_host(url: &str) -> Result<String, String> {
         parsed.port_or_known_default().unwrap_or(0)))
 }
 
+// The content lock is held through the entire operation, including mirrors and
+// publication, so two profiles cannot download the same SHA-256 concurrently.
 async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Statistics,
-                   mut control: watch::Receiver<Directive>) -> Result<(), String> {
-    for attempt in 0..network_resilience::MAX_ATTEMPTS {
+    mut control: watch::Receiver<Directive>, initial_permits: (OwnedSemaphorePermit, OwnedSemaphorePermit),
+    local_hosts: &HashMap<String, Arc<Semaphore>>,
+    process_hosts: &HashMap<String, Arc<Semaphore>>,
+    cache: &CacheStore) -> Result<bool, String> {
+    network_resilience::check(&control)?;
+    let lease = tokio::select! {
+        result = cache.lock(&job.file) => result?,
+        state = network_resilience::interrupted(&mut control) => return Err(state.error().into()),
+    };
+    network_resilience::check(&control)?;
+    if lease.restore(root, &job.file, &job.target).await? {
+        stats.cache_hits.fetch_add(1, Ordering::Relaxed);
+        stats.bytes_reused.fetch_add(job.file.size, Ordering::Relaxed);
+        stats.emit("cache-hit", Some(&job.file.path), true);
+        return Ok(true);
+    }
+    let mut permits = Some(initial_permits);
+    let mut failures = Vec::new();
+    for (source_index, source) in job.sources.iter().enumerate() {
         network_resilience::check(&control)?;
-        let outcome = crate::http_resume::download_verified_controlled(client, root, &job.file,
-            &job.target, |bytes| {
-                stats.transferred.fetch_add(bytes, Ordering::Relaxed);
-                stats.emit("downloading", Some(&job.file.path), false);
-            }, control.clone()).await;
-        match outcome {
-            Ok(()) => return Ok(()),
-            Err(error) => {
-                network_resilience::check(&control)?;
-                if attempt + 1 == network_resilience::MAX_ATTEMPTS { return Err(error); }
-                let Some(delay) = network_resilience::retry_delay(&error, attempt) else { return Err(error); };
-                stats.emit("retrying", Some(&job.file.path), true);
-                network_resilience::wait(delay, &mut control).await?;
+        if source_index != 0 {
+            // Release the old host's slots BEFORE waiting for a mirror's slots,
+            // to prevent deadlocks between two jobs failing over A->B and B->A.
+            drop(permits.take());
+            let local = Arc::clone(local_hosts.get(&source.host).ok_or("missing mirror host semaphore")?);
+            let global_host = Arc::clone(process_hosts.get(&source.host).ok_or("missing process mirror host semaphore")?);
+            let local_slot = tokio::select! {
+                result = local.acquire_owned() => result.map_err(|e| e.to_string())?,
+                state = network_resilience::interrupted(&mut control) => return Err(state.error().into()),
+            };
+            let process_slot = tokio::select! {
+                result = global_host.acquire_owned() => result.map_err(|e| e.to_string())?,
+                state = network_resilience::interrupted(&mut control) => return Err(state.error().into()),
+            };
+            permits = Some((local_slot, process_slot));
+        }
+        // Resume metadata is bound to the exact URL. Switching mirrors safely
+        // discards a partial with a validator from another server (HTTP Resume v0.23.2).
+        let mut requested = job.file.clone();
+        requested.url = source.url.clone();
+        for attempt in 0..network_resilience::MAX_ATTEMPTS {
+            network_resilience::check(&control)?;
+            let outcome = crate::http_resume::download_verified_controlled(client, root, &requested,
+                &job.target, |bytes| {
+                    stats.transferred.fetch_add(bytes, Ordering::Relaxed);
+                    stats.emit("downloading", Some(&job.file.path), false);
+                }, control.clone()).await;
+            match outcome {
+                Ok(()) => {
+                    // Cache storage exhaustion should not turn a successfully
+                    // verified and installed client file into a failed download.
+                    if lease.publish(&job.file, &job.target).await.is_err() {
+                        stats.emit("cache-write-failed", Some(&job.file.path), true);
+                    }
+                    return Ok(false);
+                },
+                Err(error) => {
+                    network_resilience::check(&control)?;
+                    let retry = if attempt + 1 < network_resilience::MAX_ATTEMPTS {
+                        network_resilience::retry_delay(&error, attempt)
+                    } else { None };
+                    if let Some(delay) = retry {
+                        stats.emit("retrying", Some(&job.file.path), true);
+                        network_resilience::wait(delay, &mut control).await?;
+                    } else {
+                        failures.push(format!("{}: {error}", source.host));
+                        break;
+                    }
+                }
             }
         }
+        if source_index + 1 < job.sources.len() {
+            stats.emit("mirror-fallback", Some(&job.file.path), true);
+        }
     }
-    Err(format!("{}: retry budget exhausted", job.file.path))
+    Err(format!("{}: all signed sources failed: {}", job.file.path, failures.join("; ")))
 }
 
 /// Stream only the missing/mismatched files using bounded workers. Errors are
@@ -165,6 +235,12 @@ async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Sta
 /// This is also the engine used by repair_client, not a separate downloader.
 pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits,
                  sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>) -> Result<DownloadResult, String> {
+    run_with_store(manifest, root, limits, sink, operation_id, control, CacheStore::standard()?).await
+}
+
+async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits,
+    sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>,
+    cache: CacheStore) -> Result<DownloadResult, String> {
     let limits = limits.validate()?;
     let client = reqwest::Client::builder()
         .connect_timeout(network_resilience::CONNECT_TIMEOUT)
@@ -174,7 +250,7 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
         .pool_max_idle_per_host(limits.per_host)
         .build().map_err(|e| format!("download HTTP client: {e}"))?;
     let mut result = DownloadResult { downloaded: 0, skipped: 0, failed: 0, repaired: 0,
-        bytes_downloaded: 0, failed_files: Vec::new(), messages: Vec::new() };
+        bytes_downloaded: 0, cache_hits: 0, bytes_reused: 0, failed_files: Vec::new(), messages: Vec::new() };
     let mut jobs = Vec::new();
     for (order, file) in manifest.files.iter().enumerate() {
         if !manifest_file_applies(file) || file_ownership::skip_download(manifest, file) {
@@ -194,10 +270,26 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
             _ => false,
         };
         if actual { result.skipped += 1; continue; }
-        match file_host(&file.url) {
-            Ok(host) => jobs.push(Job { file: file.clone(), target, host,
-                priority: priority(file), order }),
-            Err(e) => {
+        let urls = std::iter::once(&file.url).chain(file.mirrors.iter());
+        // Validate every source *before* starting any network work. Distinct
+        // URLs are kept in the signed priority order; duplicate URLs are ignored.
+        let mut sources = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        let mut invalid = None;
+        for url in urls {
+            if !seen.insert(url.as_str()) { continue; }
+            match file_host(url) {
+                Ok(host) => sources.push(Source { url: url.clone(), host }),
+                Err(err) => { invalid = Some(err); break; },
+            }
+        }
+        match invalid {
+            None => {
+                let host = sources.first().expect("manifest always has a primary source").host.clone();
+                jobs.push(Job { file: file.clone(), target, host, sources,
+                    priority: priority(file), order });
+            },
+            Some(e) => {
                 result.failed += 1;
                 result.failed_files.push(file.path.clone());
                 result.messages.push(format!("{}: {e}", file.path));
@@ -210,7 +302,8 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
         total: manifest.files.len(), skipped: AtomicUsize::new(result.skipped),
         completed: AtomicUsize::new(0), failed: AtomicUsize::new(result.failed),
         active: AtomicUsize::new(0), queued: AtomicUsize::new(jobs.len()),
-        transferred: AtomicU64::new(0), expected,
+        transferred: AtomicU64::new(0), cache_hits: AtomicUsize::new(0),
+        bytes_reused: AtomicU64::new(0), expected,
         last_emit: Mutex::new(Instant::now() - Duration::from_secs(1)),
         operation_id, sink,
     });
@@ -218,14 +311,18 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
     let mut pending: VecDeque<Job> = jobs.into();
     let mut host_limits: HashMap<String, Arc<Semaphore>> = HashMap::new();
     for job in &pending {
-        host_limits.entry(job.host.clone())
-            .or_insert_with(|| Arc::new(Semaphore::new(limits.per_host)));
+        for source in &job.sources {
+            host_limits.entry(source.host.clone())
+                .or_insert_with(|| Arc::new(Semaphore::new(limits.per_host)));
+        }
     }
     let process_slots = Arc::clone(PROCESS_SLOTS.get_or_init(||
         Arc::new(Semaphore::new(PROCESS_GLOBAL_LIMIT))));
-    let process_hosts = process_host_permit_map(pending.iter().map(|j| j.host.clone()));
+    let process_hosts = process_host_permit_map(pending.iter()
+        .flat_map(|job| job.sources.iter().map(|source| source.host.clone())));
+    let cache = Arc::new(cache);
     let root = root.to_path_buf();
-    let mut workers: JoinSet<(String, Result<(), String>)> = JoinSet::new();
+    let mut workers: JoinSet<(String, Result<bool, String>)> = JoinSet::new();
     while !pending.is_empty() || !workers.is_empty() {
         if *control.borrow() != Directive::Running && workers.is_empty() { break; }
         while *control.borrow() == Directive::Running && workers.len() < limits.global && !pending.is_empty() {
@@ -249,11 +346,15 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
             let root = root.clone();
             let stats = Arc::clone(&stats);
             let control = control.clone();
+            let local_hosts = host_limits.clone();
+            let process_hosts = process_hosts.clone();
+            let cache = Arc::clone(&cache);
             stats.queued.fetch_sub(1, Ordering::Relaxed);
             stats.active.fetch_add(1, Ordering::Relaxed);
             workers.spawn(async move {
-                let _permits = (local_permit, host_permit, global_permit);
-                let outcome = fetch_one(&client, &root, &job, &stats, control).await;
+                let _global_permit = global_permit;
+                let outcome = fetch_one(&client, &root, &job, &stats, control,
+                    (local_permit, host_permit), &local_hosts, &process_hosts, &cache).await;
                 (job.file.path, outcome)
             });
         }
@@ -266,7 +367,7 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
         if let Some(outcome) = workers.join_next().await {
             stats.active.fetch_sub(1, Ordering::Relaxed);
             match outcome {
-                Ok((path, Ok(()))) => {
+                Ok((path, Ok(_cache_hit))) => {
                     result.downloaded += 1;
                     result.repaired += 1;
                     stats.completed.fetch_add(1, Ordering::Relaxed);
@@ -292,6 +393,8 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
         }
     }
     result.bytes_downloaded = stats.transferred.load(Ordering::Relaxed);
+    result.cache_hits = stats.cache_hits.load(Ordering::Relaxed);
+    result.bytes_reused = stats.bytes_reused.load(Ordering::Relaxed);
     stats.emit(match *control.borrow() { Directive::Running => "finished", Directive::Paused => "paused", Directive::Cancelled => "cancelled" }, None, true);
     Ok(result)
 }
@@ -353,7 +456,7 @@ mod tests {
         let mut f = ManifestFile {
             path: "assets/objects/a".into(), size: 1, sha256: "00".repeat(32),
             url: "https://example.com/a".into(), required: true, executable: false,
-            target_os: Vec::new(), ownership: "required".into(),
+            target_os: Vec::new(), ownership: "required".into(), mirrors: vec![],
         };
         assert_eq!(priority(&f), 3);
         f.path = "libraries/a.jar".into();
@@ -394,7 +497,7 @@ mod tests {
         let events = Arc::new(Mutex::new(Vec::<DownloadProgress>::new()));
         let observed = Arc::clone(&events);
         let sink: ProgressSink = Arc::new(move |p| observed.lock().unwrap().push(p));
-        let result = run(&manifest, &root, DownloadLimits { global: 3, per_host: 2 }, Some(sink), "test-scheduler".into(), watch::channel(Directive::Running).1).await.unwrap();
+        let result = run_with_store(&manifest, &root, DownloadLimits { global: 3, per_host: 2 }, Some(sink), "test-scheduler".into(), watch::channel(Directive::Running).1, CacheStore::at(root.join("cache"))).await.unwrap();
         assert_eq!(result.downloaded, 7, "{:?}", result.messages);
         assert_eq!(result.failed, 1, "{:?}", result.messages);
         assert_eq!(result.failed_files, vec!["libraries/7.jar"]);
@@ -445,19 +548,23 @@ mod concurrent_operations_tests {
                 let peak = Arc::clone(&peak_server);
                 tokio::spawn(async move {
                     let mut incoming = [0u8; 1024];
-                    if conn.read(&mut incoming).await.is_err() { return }
+                    let n = match conn.read(&mut incoming).await { Ok(n) if n > 0 => n, _ => return };
+                    let request = String::from_utf8_lossy(&incoming[..n]);
+                    let path = request.split_whitespace().nth(1).unwrap_or("/bad");
+                    let body = format!("x-{path}");
                     let current = active.fetch_add(1, Ordering::SeqCst) + 1;
                     peak.fetch_max(current, Ordering::SeqCst);
                     tokio::time::sleep(Duration::from_millis(70)).await;
-                    let _ = conn.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 1\r\nConnection: close\r\n\r\nx").await;
+                    let response = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len());
+                    let _ = conn.write_all(response.as_bytes()).await;
                     let _ = conn.shutdown().await;
                     active.fetch_sub(1, Ordering::SeqCst);
                 });
             }
         });
         let entries: Vec<_> = (0..8).map(|i| json!({
-            "path": format!("libraries/{i}.jar"), "size": 1,
-            "sha256": hex::encode(Sha256::digest(b"x")),
+            "path": format!("libraries/{i}.jar"), "size": format!("x-/{i}").len(),
+            "sha256": hex::encode(Sha256::digest(format!("x-/{i}").as_bytes())),
             "url": format!("{base}/{i}"), "required": true
         })).collect();
         let manifest: Manifest = serde_json::from_value(json!({
@@ -471,9 +578,10 @@ mod concurrent_operations_tests {
         let second = std::env::temp_dir().join(format!("nl-b-{:016x}", rand::random::<u64>()));
         fs::create_dir_all(&first).await.unwrap();
         fs::create_dir_all(&second).await.unwrap();
+        let shared_cache = std::env::temp_dir().join(format!("nl-host-shared-{:016x}", rand::random::<u64>()));
         let (left, right) = tokio::join!(
-            run(&manifest, &first, DownloadLimits::default(), None, "test-one".into(), watch::channel(Directive::Running).1),
-            run(&manifest, &second, DownloadLimits::default(), None, "test-two".into(), watch::channel(Directive::Running).1)
+            run_with_store(&manifest, &first, DownloadLimits::default(), None, "test-one".into(), watch::channel(Directive::Running).1, CacheStore::at(shared_cache.clone())),
+            run_with_store(&manifest, &second, DownloadLimits::default(), None, "test-two".into(), watch::channel(Directive::Running).1, CacheStore::at(shared_cache.clone()))
         );
         assert_eq!(left.unwrap().downloaded, 8);
         assert_eq!(right.unwrap().downloaded, 8);
@@ -483,6 +591,7 @@ mod concurrent_operations_tests {
         server.abort();
         fs::remove_dir_all(first).await.unwrap();
         fs::remove_dir_all(second).await.unwrap();
+        fs::remove_dir_all(shared_cache).await.unwrap();
     }
     #[tokio::test]
     async fn retries_503_then_truncated_body_by_range_without_repeating_prefix() {
@@ -520,8 +629,8 @@ mod concurrent_operations_tests {
         })).unwrap();
         let root = std::env::temp_dir().join(format!("nl-retry-{:016x}", rand::random::<u64>()));
         fs::create_dir_all(&root).await.unwrap();
-        let result = tokio::time::timeout(Duration::from_secs(12), run(&manifest, &root,
-            DownloadLimits::default(), None, "retry-test".into(), watch::channel(Directive::Running).1))
+        let result = tokio::time::timeout(Duration::from_secs(12), run_with_store(&manifest, &root,
+            DownloadLimits::default(), None, "retry-test".into(), watch::channel(Directive::Running).1, CacheStore::at(root.join("cache"))))
             .await.unwrap().unwrap();
         assert_eq!(result.downloaded, 1, "{:?}", result.messages);
         assert_eq!(result.failed, 0);
@@ -536,4 +645,81 @@ mod concurrent_operations_tests {
         fs::remove_dir_all(root).await.unwrap();
     }
 
+}
+
+#[cfg(test)]
+mod content_cache_mirror_integration_tests {
+    use super::*;
+    use serde_json::json;
+    use sha2::{Digest, Sha256};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpListener};
+
+    async fn serve(body: &'static [u8]) -> (String, Arc<AtomicUsize>, tokio::task::JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/download", listener.local_addr().unwrap());
+        let count = Arc::new(AtomicUsize::new(0));
+        let observed = Arc::clone(&count);
+        let task = tokio::spawn(async move {
+            while let Ok((mut stream, _)) = listener.accept().await {
+                let observed = Arc::clone(&observed);
+                tokio::spawn(async move {
+                    let mut input = [0u8; 2048];
+                    let _ = stream.read(&mut input).await;
+                    observed.fetch_add(1, Ordering::SeqCst);
+                    let header = format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len());
+                    let _ = stream.write_all(header.as_bytes()).await;
+                    let _ = stream.write_all(body).await;
+                    let _ = stream.shutdown().await;
+                });
+            }
+        });
+        (url, count, task)
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn detects_tampered_primary_falls_back_to_mirror_and_second_profile_is_offline() {
+        let trusted = b"real-verified-jar";
+        let poisoned = b"fake-verified-jar"; // same length; only SHA-256 rejects this
+        assert_eq!(trusted.len(), poisoned.len());
+        let (primary, primary_count, primary_server) = serve(poisoned).await;
+        let (mirror, mirror_count, mirror_server) = serve(trusted).await;
+        let manifest: Manifest = serde_json::from_value(json!({
+            "schemaVersion": "1.0", "projectId": "test", "profileId": "one",
+            "channel": "stable", "version": "1", "createdAt": "test",
+            "minecraft": { "version": "1.21.1", "loader": "vanilla" },
+            "runtime": { "java": { "majorVersion": 21, "distribution": "temurin" } },
+            "files": [{"path": "libraries/common.jar", "size": trusted.len(),
+                "sha256": hex::encode(Sha256::digest(trusted)), "url": primary,
+                "mirrors": [mirror], "required": true}]
+        })).unwrap();
+        let sandbox = std::env::temp_dir().join(format!("nl-mirror-cache-e2e-{:016x}", rand::random::<u64>()));
+        let first = sandbox.join("profile-a");
+        let second = sandbox.join("profile-b");
+        fs::create_dir_all(&first).await.unwrap();
+        fs::create_dir_all(&second).await.unwrap();
+        let result = run_with_store(&manifest, &first, DownloadLimits::default(), None,
+            "mirror-primary-poisoned".into(), watch::channel(Directive::Running).1,
+            CacheStore::at(sandbox.join("shared-content-cache"))).await.unwrap();
+        assert_eq!(result.downloaded, 1, "{:?}", result.messages);
+        assert_eq!(result.failed, 0, "{:?}", result.messages);
+        assert!(primary_count.load(Ordering::SeqCst) >= 1);
+        assert_eq!(mirror_count.load(Ordering::SeqCst), 1);
+        assert_eq!(fs::read(first.join("libraries/common.jar")).await.unwrap(), trusted);
+        assert_eq!(result.bytes_downloaded as usize, poisoned.len() + trusted.len());
+
+        // Simulate total network outage during a fresh profile installation.
+        primary_server.abort();
+        mirror_server.abort();
+        let offline = run_with_store(&manifest, &second, DownloadLimits::default(), None,
+            "cache-offline-reinstall".into(), watch::channel(Directive::Running).1,
+            CacheStore::at(sandbox.join("shared-content-cache"))).await.unwrap();
+        assert_eq!(offline.downloaded, 1, "{:?}", offline.messages);
+        assert_eq!(offline.failed, 0);
+        assert_eq!(offline.cache_hits, 1);
+        assert_eq!(offline.bytes_reused, trusted.len() as u64);
+        assert_eq!(offline.bytes_downloaded, 0, "cache hit must transfer zero wire bytes");
+        assert_eq!(fs::read(second.join("libraries/common.jar")).await.unwrap(), trusted);
+        fs::remove_dir_all(sandbox).await.unwrap();
+    }
 }

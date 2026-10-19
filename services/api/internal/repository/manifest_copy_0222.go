@@ -34,6 +34,7 @@ func cloneManifest0222(m model.Manifest) model.Manifest {
 		copy(files, m.Files)
 		for i := range files {
 			files[i].TargetOS = append([]string(nil), files[i].TargetOS...)
+			files[i].Mirrors = append([]string(nil), files[i].Mirrors...)
 		}
 		m.Files = files
 	}

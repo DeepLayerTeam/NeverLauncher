@@ -427,7 +427,7 @@ mod tests {
 
     fn file(url: String, data: &[u8]) -> ManifestFile {
         ManifestFile { path: "libraries/data.jar".into(), url, size: data.len() as u64,
-            sha256: hex::encode(Sha256::digest(data)), required: true, executable: false,
+            sha256: hex::encode(Sha256::digest(data)), mirrors: vec![], required: true, executable: false,
             target_os: vec![], ownership: "required".into() }
     }
 

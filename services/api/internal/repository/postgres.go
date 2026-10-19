@@ -1236,13 +1236,13 @@ ON CONFLICT (version_id, path) DO UPDATE SET size=EXCLUDED.size, sha256=EXCLUDED
 	updated := false
 	for i := range manifest.Files {
 		if manifest.Files[i].Path == file.Path {
-			manifest.Files[i] = model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...), Ownership: file.Ownership}
+			manifest.Files[i] = model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...), Mirrors: append([]string(nil), file.Mirrors...), Ownership: file.Ownership}
 			updated = true
 			break
 		}
 	}
 	if !updated {
-		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...), Ownership: file.Ownership})
+		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...), Mirrors: append([]string(nil), file.Mirrors...), Ownership: file.Ownership})
 	}
 	manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339)
 	next, err := json.Marshal(manifest)

@@ -4,6 +4,7 @@ mod deterministic_launch;
 pub mod file_ownership;
 pub mod download_scheduler;
 mod http_resume;
+mod content_cache;
 mod network_resilience;
 pub mod durable_downloads;
 pub use download_scheduler::{DownloadLimits, DownloadProgress, ProgressSink, DOWNLOAD_PROGRESS_EVENT};
@@ -303,6 +304,9 @@ pub struct ManifestFile {
     pub size: u64,
     pub sha256: String,
     pub url: String,
+    /// Ordered, independently SHA-256 verified fallback sources. Included in the signed manifest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mirrors: Vec<String>,
     pub required: bool,
     #[serde(default)]
     pub executable: bool,
@@ -336,6 +340,10 @@ pub struct DownloadResult {
     pub failed: usize,
     pub repaired: usize,
     pub bytes_downloaded: u64,
+    #[serde(default)]
+    pub cache_hits: usize,
+    #[serde(default)]
+    pub bytes_reused: u64,
     pub failed_files: Vec<String>,
     pub messages: Vec<String>,
 }
@@ -1755,7 +1763,7 @@ mod tests {
         std::fs::write(root.join("versions/v/v.json"), b"signed-metadata").unwrap();
         let mut manifest = sample_manifest();
         for (path, body) in [("libraries/a.jar", &b"signed-jar"[..]), ("versions/v/v.json", &b"signed-metadata"[..])] {
-            manifest.files.push(ManifestFile { path: path.into(), size: body.len() as u64, sha256: hex::encode(Sha256::digest(body)), url: "https://example.test/file".into(), required: true, executable: false, target_os: vec![], ownership: "managed".into() });
+            manifest.files.push(ManifestFile { path: path.into(), size: body.len() as u64, sha256: hex::encode(Sha256::digest(body)), url: "https://example.test/file".into(), mirrors: vec![], required: true, executable: false, target_os: vec![], ownership: "managed".into() });
         }
         let plan = LaunchPlan {
             java_executable: "java".into(), working_directory: root.to_string_lossy().to_string(),
@@ -1922,6 +1930,7 @@ mod tests {
                 size: 123,
                 sha256: "00".repeat(32),
                 url: "https://example.invalid/fixture.jar".to_string(),
+                mirrors: vec![],
                 required: true,
                 executable: false,
                 target_os: Vec::new(),

@@ -32,7 +32,7 @@ type DesktopSettings = {
   configPath?: string;
 };
 
-type ManifestFile = { path: string; size: number; sha256: string; url: string; required: boolean; executable?: boolean; ownership?: 'managed' | 'required' | 'optional' | 'user-owned' | 'generated' };
+type ManifestFile = { path: string; size: number; sha256: string; url: string; mirrors?: string[]; required: boolean; executable?: boolean; ownership?: 'managed' | 'required' | 'optional' | 'user-owned' | 'generated' };
 type Manifest = {
   schemaVersion: string;
   projectId: string;
@@ -68,12 +68,12 @@ type JavaInfoResult = {
 };
 
 type FileCheckResult = { path: string; status: 'ok' | 'missing' | 'invalid' | string; message: string };
-type DownloadResult = { downloaded: number; skipped: number; failed: number; repaired?: number; bytesDownloaded?: number; failedFiles?: string[]; messages: string[] };
+type DownloadResult = { downloaded: number; skipped: number; failed: number; repaired?: number; bytesDownloaded?: number; cacheHits?: number; bytesReused?: number; failedFiles?: string[]; messages: string[] };
 type PendingDownload = { operationId: string; mode: string; status: string; projectId: string; profileId: string; version: string; totalFiles: number };
 type DownloadProgress = {
   operationId: string; phase: string; totalFiles: number; queued: number; active: number;
   completed: number; failed: number; skipped: number;
-  bytesExpected: number; bytesTransferred: number; currentFile?: string | null;
+  bytesExpected: number; bytesTransferred: number; cacheHits: number; bytesReused: number; currentFile?: string | null;
 };
 type LaunchPlan = { javaExecutable: string; workingDirectory: string; mainClass: string; mainModule?: string; classpathEntries: string[]; modulepathEntries?: string[]; environmentAllowlist?: string[]; jvmArgs: string[]; gameArgs: string[]; commandPreview: string; deterministicSha256?: string };
 type ProcessStatus = { id: string; pid?: number; state: 'running' | 'stopping' | 'exited' | string; startedAt: string; finishedAt?: string; exitCode?: number; success?: boolean; logPath: string; message: string; windowsSensor?: any };
@@ -1505,10 +1505,9 @@ function DownloadPanel({ files, download, downloadProgress, transferBusy, repair
   const progress = downloadProgress as DownloadProgress | null;
   const handled = progress ? progress.completed + progress.failed + progress.skipped : 0;
   const total = progress?.totalFiles || 0;
-  const byteRatio = progress?.bytesExpected ? Math.min(100, Math.round(100 * progress.bytesTransferred / progress.bytesExpected)) : 0;
   return <section className="panel">
     <h3>Загрузка, восстановление и очистка</h3>
-    <p>Параллельная загрузка с проверкой SHA-256, восстановлением повреждённых файлов и безопасной очисткой через карантин.</p>
+    <p>Параллельная загрузка с зеркалами, общим SHA-256 кешем, восстановлением повреждённых файлов и безопасной очисткой через карантин.</p>
     <div className="toolbar inline">
       <button disabled={transferBusy} onClick={verifyFiles}>Проверить файлы</button>
       <button disabled={transferBusy} onClick={downloadFiles}>Скачать недостающие</button>
@@ -1522,7 +1521,7 @@ function DownloadPanel({ files, download, downloadProgress, transferBusy, repair
     {progress && <div role="status" aria-live="polite">
       <p>Состояние: {progress.phase}; обработано {handled} из {total}; активных {progress.active}, в очереди {progress.queued}, ошибок {progress.failed}.</p>
       <progress style={{width: '100%'}} max={Math.max(1, total)} value={handled} aria-label="Прогресс по файлам" />
-      <p>Передано: {(progress.bytesTransferred / 1048576).toFixed(2)} МиБ; ожидается {(progress.bytesExpected / 1048576).toFixed(2)} МиБ ({byteRatio}% по плановому размеру).</p>
+      <p>Передано по сети: {(progress.bytesTransferred / 1048576).toFixed(2)} МиБ; кеш: {progress.cacheHits ?? 0} файлов ({((progress.bytesReused ?? 0) / 1048576).toFixed(2)} МиБ); плановый размер {(progress.bytesExpected / 1048576).toFixed(2)} МиБ.</p>
       {progress.currentFile && <p>Файл: {progress.currentFile}</p>}
     </div>}
     <p>Исправно: {fileSummary.ok}; проблем: {fileSummary.broken}; всего: {fileSummary.total}.</p>

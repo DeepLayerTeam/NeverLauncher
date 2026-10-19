@@ -77,6 +77,7 @@ type ManifestFile struct {
 	Size       int64    `json:"size"`
 	SHA256     string   `json:"sha256"`
 	URL        string   `json:"url"`
+	Mirrors    []string `json:"mirrors,omitempty"`
 	Required   bool     `json:"required"`
 	Executable bool     `json:"executable,omitempty"`
 	TargetOS   []string `json:"targetOs,omitempty"`

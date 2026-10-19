@@ -1041,6 +1041,7 @@ func (r *MemoryRepository) AddFile(file model.FileObject) (model.FileObject, err
 				Required:   file.Required,
 				Executable: file.Executable,
 				TargetOS:   append([]string(nil), file.TargetOS...),
+				Mirrors:    append([]string(nil), file.Mirrors...),
 				Ownership:  file.Ownership,
 			})
 			r.releases[i].Manifest.CreatedAt = time.Now().UTC().Format(time.RFC3339)

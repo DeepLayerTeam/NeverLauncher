@@ -28,3 +28,12 @@ func TestManifestCopiesDoNotAlias0222(t *testing.T) {
 		t.Fatal("manifest clone leaked mutable aliases")
 	}
 }
+
+func TestCloneManifestMirrors0234(t *testing.T) {
+	in := model.Manifest{Files: []model.ManifestFile{{Path: "a.jar", Mirrors: []string{"https://one.test/a.jar"}}}}
+	clone := cloneManifest0222(in)
+	clone.Files[0].Mirrors[0] = "https://different.test/a.jar"
+	if in.Files[0].Mirrors[0] != "https://one.test/a.jar" {
+		t.Fatal("clone mutates signed source mirror list")
+	}
+}
