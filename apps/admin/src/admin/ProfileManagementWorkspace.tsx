@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { requestJSON } from '../api/client';
+import { GravitImportPanel } from './GravitImportPanel';
 
 type Preset = { id: string; name: string; description: string; loader: string; preset: string };
 type Snapshot = { schemaVersion: string; revision: number; digest: string; spec: { id: string; projectId: string; name: string; description: string; loader: string; preset: string; isDefault: boolean } };
@@ -68,5 +69,6 @@ export function ProfileManagementWorkspace({ backendUrl, token, projectId, sourc
     {diff && <div role="status"><h4>Различия: {diff.from.revision} → {diff.to.revision}</h4>{diff.equal ? <p>Изменений нет.</p> : <ul>{diff.changes.map(c => <li key={c.field}>{c.field}: {String(c.from)} → {String(c.to)}</li>)}</ul>}</div>}
     {notice && <p role="status">{notice}</p>}
     {error && <p role="alert">{error}</p>}
+    <GravitImportPanel backendUrl={backendUrl} token={token} projectId={projectId} onChanged={onChanged} />
   </article>;
 }

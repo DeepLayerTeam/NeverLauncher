@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.22.7. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.22.10. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -4575,6 +4575,114 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ProfileImportRequest0225"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{projectId}/profiles/import-gravit": {
+      "post": {
+        "operationId": "post_admin_projects_by_projectId_profiles_import_gravit",
+        "tags": [
+          "projects"
+        ],
+        "summary": "POST /api/v1/admin/projects/{projectId}/profiles/import-gravit",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileWriteRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/projects/{projectId}/profiles/inspect-gravit": {
+      "post": {
+        "operationId": "post_admin_projects_by_projectId_profiles_inspect_gravit",
+        "tags": [
+          "projects"
+        ],
+        "summary": "POST /api/v1/admin/projects/{projectId}/profiles/inspect-gravit",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileWriteRequest"
               }
             }
           }
@@ -11243,6 +11351,58 @@
         "security": []
       }
     },
+    "/api/v1/projects/{projectId}/profiles/{profileId}/channels/{channel}/head": {
+      "get": {
+        "operationId": "get_projects_by_projectId_profiles_by_profileId_channels_by_channel_head",
+        "tags": [
+          "projects"
+        ],
+        "summary": "GET /api/v1/projects/{projectId}/profiles/{profileId}/channels/{channel}/head",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "channel",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": []
+      }
+    },
     "/api/v1/projects/{projectId}/profiles/{profileId}/manifest": {
       "get": {
         "operationId": "get_projects_by_projectId_profiles_by_profileId_manifest",
@@ -11301,6 +11461,49 @@
           "projects"
         ],
         "summary": "GET /api/v1/projects/{projectId}/profiles/{profileId}/revisions",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": []
+      }
+    },
+    "/api/v1/projects/{projectId}/profiles/{profileId}/servers": {
+      "get": {
+        "operationId": "get_projects_by_projectId_profiles_by_profileId_servers",
+        "tags": [
+          "projects"
+        ],
+        "summary": "GET /api/v1/projects/{projectId}/profiles/{profileId}/servers",
         "responses": {
           "200": {
             "description": "Success",

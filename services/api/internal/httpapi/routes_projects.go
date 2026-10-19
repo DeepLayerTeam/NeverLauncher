@@ -18,6 +18,8 @@ func (s Server) registerProjectRoutesV1(mux *http.ServeMux) {
 	mux.Handle("PATCH /api/v1/admin/projects/{projectId}", s.requireProjectPermission("project:write", "projectId", "project", s.adminProjectUpdate))
 	mux.Handle("GET /api/v1/admin/profile-presets", s.requirePermission("project:write", s.profilePresets0225))
 	mux.Handle("POST /api/v1/admin/projects/{projectId}/profiles/from-preset", s.requireProjectPermission("project:write", "projectId", "profile", s.profileFromPreset0225))
+	mux.Handle("POST /api/v1/admin/projects/{projectId}/profiles/inspect-gravit", s.requireProjectPermission("project:write", "projectId", "profile", s.gravitImport02210))
+	mux.Handle("POST /api/v1/admin/projects/{projectId}/profiles/import-gravit", s.requireProjectPermission("project:write", "projectId", "profile", s.gravitImport02210))
 	mux.Handle("POST /api/v1/admin/projects/{projectId}/profiles/import", s.requireProjectPermission("project:write", "projectId", "profile", s.profileImport0225))
 	mux.Handle("POST /api/v1/admin/projects/{projectId}/profiles/{profileId}/clone", s.requireProjectPermission("project:write", "projectId", "profile", s.profileClone0225))
 	mux.Handle("GET /api/v1/admin/projects/{projectId}/profiles/{profileId}/export", s.requireProjectPermission("project:write", "projectId", "profile", s.profileExport0225))
