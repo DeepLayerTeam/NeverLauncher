@@ -408,7 +408,20 @@ async fn prepare_profile_directory(base_dir: String, project_id: String, profile
 #[tauri::command]
 async fn check_java(java_path: Option<String>, required_major_version: Option<u32>) -> Result<JavaInfoResult, String> { neverruntime::check_java(java_path, required_major_version).await }
 #[tauri::command]
-async fn ensure_managed_java(required_major_version: u32, distribution: String) -> Result<ManagedJavaResult, String> { neverruntime::ensure_managed_java(required_major_version, &distribution, None).await }
+async fn ensure_managed_java(required_major_version: u32, distribution: String) -> Result<ManagedJavaResult, String> {
+    // Explicit administrative/CLI-style operation remains available.
+    neverruntime::ensure_managed_java(required_major_version, &distribution, None).await
+}
+#[tauri::command]
+async fn ensure_profile_managed_java(manifest: Manifest, pinned_public_key: String) -> Result<ManagedJavaResult, String> {
+    neverruntime::verify_manifest_signature(&manifest, &pinned_public_key)?;
+    let java = &manifest.runtime.java;
+    if java.major_version == 0 || (java.minimum_major_version > 0 && java.major_version < java.minimum_major_version)
+        || (java.maximum_major_version > 0 && java.major_version > java.maximum_major_version) {
+        return Err("Signed profile Java major is outside the supported range".into());
+    }
+    neverruntime::ensure_managed_java(java.major_version, &java.distribution, None).await
+}
 #[tauri::command]
 async fn build_launch_plan(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, pinned_public_key: String, preferences: Option<neverruntime::LaunchPreferences>) -> Result<LaunchPlan, String> {
     let root = PathBuf::from(root);
@@ -883,6 +896,6 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }

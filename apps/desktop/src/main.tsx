@@ -1004,16 +1004,17 @@ function App() {
     setStage('java');
     try {
       const activeManifest = manifest;
-      const required = activeManifest?.runtime.java.recommendedMajorVersion || activeManifest?.runtime.java.majorVersion || 17;
+      const required = activeManifest?.runtime.java.majorVersion || 17;
       const distribution = activeManifest?.runtime.java.distribution || 'temurin';
       let result = await callTauri<JavaInfoResult>('check_java', {
         javaPath: settings.javaPath || null,
         requiredMajorVersion: required,
       });
       if (!result.compatible && !settings.javaPath && distribution.toLowerCase() !== 'system') {
-        const managed = await callTauri<ManagedJavaResult>('ensure_managed_java', {
-          requiredMajorVersion: required,
-          distribution,
+        if (!activeManifest || !settings.pinnedPublicKey) throw new Error('Отсутствует проверенный подписанный профиль для установки Java');
+        const managed = await callTauri<ManagedJavaResult>('ensure_profile_managed_java', {
+          manifest: activeManifest,
+          pinnedPublicKey: settings.pinnedPublicKey,
         });
         log(managed.message);
         result = await callTauri<JavaInfoResult>('check_java', {

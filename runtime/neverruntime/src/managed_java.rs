@@ -1,14 +1,15 @@
 use reqwest::{Client, Url};
+use fs2::FileExt;
+use crate::{content_cache::CacheStore, network_resilience, ManifestFile};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    fs::OpenOptions,
-    io::Write,
     path::{Component, Path, PathBuf},
     process::Stdio,
     time::{Duration, SystemTime, UNIX_EPOCH},
+    collections::BTreeMap,
 };
-use tokio::{fs, io::AsyncWriteExt, process::Command, time::sleep};
+use tokio::{fs, process::Command, time::sleep, sync::watch};
 
 const ADOPTIUM_API: &str = "https://api.adoptium.net/v3";
 const MAX_RUNTIME_ARCHIVE_SIZE: u64 = 1_500_000_000;
@@ -119,6 +120,8 @@ struct ManagedJavaRecord {
     #[serde(default)]
     java_sha256: String,
     installed_at: u64,
+    #[serde(default)]
+    file_hashes: BTreeMap<String, String>,
 }
 
 pub async fn ensure_managed_java(
@@ -139,26 +142,28 @@ pub async fn ensure_managed_java(
         .await
         .map_err(|err| format!("не удалось создать runtime root {}: {err}", runtime_root.display()))?;
 
+    // When a trusted distribution bundle is configured, resolve its pinned
+    // SHA-256 first. A previously cached unpinned release is not equivalent.
+    // Bundled delivery archive is currently Java 21. An explicitly configured
+    // per-profile delivery manifest can contain any supported major; do not
+    // force the bundled Java 21 package onto a signed Java 8/16/17/25 profile.
+    let explicit_manifest = std::env::var("NEVERLAUNCHER_MANAGED_JRE_MANIFEST")
+        .is_ok_and(|v| !v.trim().is_empty());
+    if required_major == 21 || explicit_manifest {
+        if let Some((location, sha256)) = configured_distribution_manifest()? {
+            return ensure_managed_java_from_distribution(required_major, &distribution,
+                Some(&runtime_root), &location, sha256.as_deref()).await;
+        }
+    }
     if let Some(cached) = find_cached_runtime(&runtime_root, required_major, &distribution).await? {
         return Ok(cached);
     }
-
-    // Пакет выпуска по-прежнему содержит загрузочную Temurin 21 JRE для шести платформ.
-    // Managed Java II находит остальные сертифицированные основные версии по проверенным
-    // архивам Adoptium GA, а не ошибочно отклоняет их по манифесту только Java 21.
-    if required_major == 21 {
-        if let Some((manifest_location, manifest_sha256)) = configured_distribution_manifest()? {
-            return ensure_managed_java_from_distribution(
-                required_major,
-                &distribution,
-                Some(&runtime_root),
-                &manifest_location,
-                manifest_sha256.as_deref(),
-            )
-            .await;
-        }
+    if managed_java_offline() {
+        return Err("Offline Managed Java requires a locally pinned distribution manifest or an already verified installed runtime".into());
     }
 
+    // Other supported majors are discovered from Adoptium releases after an
+    // existing verified installation and offline policy have been considered.
     let platform = adoptium_platform()?;
     let asset = resolve_adoptium_asset(required_major, &platform.0, &platform.1).await?;
     if asset.version.major != required_major {
@@ -217,10 +222,7 @@ pub async fn ensure_managed_java_from_distribution(
     fs::create_dir_all(&runtime_root)
         .await
         .map_err(|err| format!("не удалось создать runtime root {}: {err}", runtime_root.display()))?;
-    if let Some(cached) = find_cached_runtime(&runtime_root, required_major, &distribution).await? {
-        return Ok(cached);
-    }
-
+    // No generic cached candidate may bypass a pinned release target.
     let (manifest_bytes, archive_base) = load_distribution_manifest(manifest_location).await?;
     if let Some(expected) = manifest_sha256.filter(|value| !value.trim().is_empty()) {
         let expected = normalize_sha256(expected)?;
@@ -320,6 +322,7 @@ async fn load_distribution_manifest(location: &str) -> Result<(Vec<u8>, Distribu
         return Err("Managed JRE manifest location is empty".to_string());
     }
     if location.to_ascii_lowercase().starts_with("https://") {
+        if managed_java_offline() { return Err("offline mode prohibits network manifest retrieval".into()); }
         let url = Url::parse(location).map_err(|err| format!("Managed JRE manifest URL: {err}"))?;
         validate_https_url(location)?;
         let client = managed_java_http_client()?;
@@ -496,40 +499,34 @@ async fn install_managed_java_archive(
         .await
         .map_err(|err| format!("не удалось создать platform runtime dir: {err}"))?;
 
-    let release_component = safe_release_component(release_name);
+    // Bind installed runtime identity to the exact verified package digest.
+    // Different signed releases sharing a human-readable name must coexist,
+    // preserving the prior valid JVM as last-known-good for rollback.
+    let release_component = format!("{}-{}", safe_release_component(release_name), &checksum[..16]);
     let final_dir = platform_dir.join(&release_component);
+    // Read-only fast path is safe; invalidation/rename is always performed
+    // under the inter-process install lock to avoid racing a second installer.
     if fs::metadata(&final_dir).await.is_ok() {
         if let Some(result) = validate_installed_runtime(&final_dir, required_major, distribution, true).await? {
-            return Ok(result);
+            if result.archive_sha256.eq_ignore_ascii_case(&checksum) { return Ok(result); }
         }
-        quarantine_broken_runtime(&final_dir).await?;
     }
 
     let _lock = acquire_install_lock(&platform_dir).await?;
     if fs::metadata(&final_dir).await.is_ok() {
         if let Some(result) = validate_installed_runtime(&final_dir, required_major, distribution, true).await? {
-            return Ok(result);
+            if result.archive_sha256.eq_ignore_ascii_case(&checksum) { return Ok(result); }
         }
         quarantine_broken_runtime(&final_dir).await?;
     }
 
-    let downloads = runtime_root.join(".downloads");
-    fs::create_dir_all(&downloads).await.map_err(|err| format!("runtime downloads: {err}"))?;
-    let extension = archive_extension(archive_name, platform_os)?;
-    let archive_path = downloads.join(format!("{checksum}{extension}"));
-    if let Some(source) = local_archive {
-        ensure_local_archive(source, &archive_path, &checksum, archive_size).await?;
-    } else {
-        validate_https_url(source_url)?;
-        ensure_archive(&managed_java_http_client()?, source_url, &archive_path, &checksum, archive_size).await?;
-    }
+    let archive_path = ensure_managed_archive(runtime_root, source_url, archive_name,
+        &checksum, archive_size, platform_os, local_archive).await?;
 
     let stamp = now_unix()?;
-    let staging = platform_dir.join(format!(".staging-{}-{stamp}", std::process::id()));
-    if fs::metadata(&staging).await.is_ok() {
-        fs::remove_dir_all(&staging).await.map_err(|err| format!("staging cleanup: {err}"))?;
-    }
-    fs::create_dir_all(&staging).await.map_err(|err| format!("staging create: {err}"))?;
+    let staging = platform_dir.join(format!(".staging-{}-{:016x}", std::process::id(), rand::random::<u64>()));
+    fs::create_dir(&staging).await.map_err(|err| format!("staging create: {err}"))?;
+    let _staging_cleanup = StagingCleanup(staging.clone());
     let extraction_result = if platform_os == "windows" {
         extract_windows_zip(&archive_path, &staging).await
     } else {
@@ -552,14 +549,10 @@ async fn install_managed_java_archive(
             return Err(format!("Managed JRE javaEntry mismatch: extracted={java_relative}, manifest={expected}"));
         }
     }
-    let java_info = super::check_java(Some(java.to_string_lossy().to_string()), Some(required_major)).await?;
-    if !java_info.found || java_info.detected_major_version != Some(required_major) {
-        let _ = fs::remove_dir_all(&staging).await;
-        return Err(format!("установленный runtime не прошёл java -version: {}", java_info.message));
-    }
+    self_test_java(&java, required_major, platform_os, platform_arch).await?;
     let (java_sha256, _) = sha256_file(&java).await?;
     let record = ManagedJavaRecord {
-        schema_version: "1.2".to_string(),
+        schema_version: "1.3".to_string(),
         distribution: distribution.to_string(),
         major_version: required_major,
         image_type: image_type.to_string(),
@@ -573,26 +566,44 @@ async fn install_managed_java_archive(
         java_relative_path: java_relative,
         java_sha256,
         installed_at: stamp,
+        file_hashes: inventory_runtime_files(&staging).await?,
     };
-    fs::write(
-        staging.join(".neverruntime.json"),
-        serde_json::to_vec_pretty(&record).map_err(|err| format!("runtime record serialize: {err}"))?,
-    )
-    .await
-    .map_err(|err| format!("runtime record write: {err}"))?;
+    let record_path = staging.join(".neverruntime.json");
+    let mut record_file = fs::File::create(&record_path).await.map_err(|err| format!("runtime record create: {err}"))?;
+    use tokio::io::AsyncWriteExt;
+    record_file.write_all(&serde_json::to_vec_pretty(&record).map_err(|err| format!("runtime record serialize: {err}"))?)
+        .await.map_err(|err| format!("runtime record write: {err}"))?;
+    record_file.sync_all().await.map_err(|err| format!("runtime record fsync: {err}"))?;
+    drop(record_file);
+    sync_directory(&staging)?;
     fs::rename(&staging, &final_dir)
         .await
         .map_err(|err| format!("atomic Java runtime install {}: {err}", final_dir.display()))?;
+    sync_directory(&platform_dir)?;
     validate_installed_runtime(&final_dir, required_major, distribution, false)
         .await?
         .ok_or_else(|| "Java runtime post-install verification failed".to_string())
 }
 
 fn managed_java_http_client() -> Result<Client, String> {
-    Client::builder()
-        .connect_timeout(Duration::from_secs(20))
+    let mut builder = Client::builder();
+    if let Ok(proxy) = std::env::var("NEVERLAUNCHER_MANAGED_JAVA_PROXY") {
+        if !proxy.trim().is_empty() {
+            let url = Url::parse(&proxy).map_err(|e| format!("invalid Managed Java proxy URL: {e}"))?;
+            if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none() {
+                return Err("Managed Java proxy must be an HTTP(S) proxy".into());
+            }
+            builder = builder.proxy(reqwest::Proxy::all(&proxy).map_err(|e| format!("Managed Java proxy: {e}"))?);
+        }
+    }
+    builder
+        .connect_timeout(Duration::from_secs(12))
         .timeout(Duration::from_secs(15 * 60))
-        .redirect(reqwest::redirect::Policy::limited(5))
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if attempt.previous().len() >= 5 { return attempt.error("too many Managed Java redirects"); }
+            if attempt.url().scheme() != "https" { return attempt.error("Managed Java HTTPS downgrade rejected"); }
+            attempt.follow()
+        }))
         .build()
         .map_err(|err| format!("не удалось создать Managed Java HTTP client: {err}"))
 }
@@ -627,25 +638,112 @@ async fn managed_java_send_with_retry(client: &Client, url: &str, user_agent: &s
     ))
 }
 
-async fn ensure_local_archive(source: &Path, destination: &Path, checksum: &str, size: u64) -> Result<(), String> {
-    if fs::metadata(destination).await.is_ok() {
-        if verify_file_sha256(destination, checksum, size).await? {
-            return Ok(());
+fn managed_java_offline() -> bool {
+    std::env::var("NEVERLAUNCHER_OFFLINE").is_ok_and(|v| matches!(v.trim(), "1" | "true" | "yes"))
+}
+
+struct StagingCleanup(PathBuf);
+impl Drop for StagingCleanup {
+    fn drop(&mut self) {
+        // If the rename has committed the directory no longer exists.
+        if self.0.exists() { let _ = std::fs::remove_dir_all(&self.0); }
+    }
+}
+
+#[cfg(unix)]
+fn sync_directory(path: &Path) -> Result<(), String> {
+    std::fs::File::open(path).and_then(|file| file.sync_all())
+        .map_err(|e| format!("runtime directory durability {}: {e}", path.display()))
+}
+#[cfg(not(unix))]
+fn sync_directory(_path: &Path) -> Result<(), String> { Ok(()) }
+
+fn safe_offline_archive(archive_name: &str, digest: &str, ext: &str) -> Result<Option<PathBuf>, String> {
+    let Some(root) = std::env::var_os("NEVERLAUNCHER_MANAGED_JAVA_OFFLINE_DIR") else { return Ok(None); };
+    validate_distribution_archive_name(archive_name)?;
+    let base = PathBuf::from(root);
+    let meta = std::fs::symlink_metadata(&base).map_err(|e| format!("offline Java directory: {e}"))?;
+    if !meta.is_dir() || meta.file_type().is_symlink() { return Err("offline Java directory must not be a symlink".into()); }
+    for name in [format!("{digest}{ext}"), archive_name.to_string()] {
+        let path = base.join(name);
+        if let Ok(meta) = std::fs::symlink_metadata(&path) {
+            if meta.file_type().is_symlink() || !meta.is_file() {
+                return Err(format!("invalid offline Java archive: {}", path.display()));
+            }
+            return Ok(Some(path));
         }
-        quarantine_broken_archive(destination).await?;
     }
-    if !verify_file_sha256(source, checksum, size).await? {
-        return Err("локальный Managed JRE archive не совпадает с manifest SHA-256/size".to_string());
+    Ok(None)
+}
+
+/// The very same SHA-256 object store and Range/If-Range downloader used by
+/// Desktop and Repair. A cache lease serializes fetch/publish across processes.
+/// A verified archive can be installed without touching the network.
+async fn ensure_managed_archive(runtime_root: &Path, source_url: &str,
+    archive_name: &str, checksum: &str, size: u64, os: &str,
+    local_archive: Option<&Path>) -> Result<PathBuf, String> {
+    let ext = archive_extension(archive_name, os)?;
+    let downloads = runtime_root.join(".downloads");
+    fs::create_dir_all(&downloads).await.map_err(|e| format!("runtime downloads: {e}"))?;
+    let archive = downloads.join(format!("{checksum}{ext}"));
+    let file = ManifestFile {
+        path: format!(".downloads/{checksum}{ext}"), size,
+        sha256: checksum.to_owned(), url: source_url.to_owned(),
+        mirrors: vec![], required: true, executable: false,
+        target_os: vec![], ownership: "required".to_owned(),
+    };
+    let store = CacheStore::standard()?;
+    let lease = store.lock(&file).await?;
+    if lease.restore(runtime_root, &file, &archive).await? { return Ok(archive); }
+    if verify_file_sha256(&archive, checksum, size).await? {
+        lease.publish(&file, &archive).await?;
+        return Ok(archive);
     }
-    let part = destination.with_extension(format!("{}nlpart", destination.extension().and_then(|v| v.to_str()).unwrap_or("")));
-    let _ = fs::remove_file(&part).await;
-    fs::copy(source, &part).await.map_err(|err| format!("Managed JRE local archive copy: {err}"))?;
-    if !verify_file_sha256(&part, checksum, size).await? {
-        let _ = fs::remove_file(&part).await;
-        return Err("Managed JRE copied archive verification failed".to_string());
+    if fs::symlink_metadata(&archive).await.is_ok() { quarantine_broken_archive(&archive).await?; }
+
+    let offline_source = if local_archive.is_some() { None } else {
+        safe_offline_archive(archive_name, checksum, ext)?
+    };
+    if let Some(source) = local_archive.or(offline_source.as_deref()) {
+        if !verify_file_sha256(source, checksum, size).await? {
+            return Err("local Managed Java archive SHA-256/size mismatch".into());
+        }
+        let tmp = downloads.join(format!(".{checksum}-{:016x}.partial", rand::random::<u64>()));
+        let result = async {
+            fs::copy(source, &tmp).await.map_err(|e| format!("offline Java copy: {e}"))?;
+            if !verify_file_sha256(&tmp, checksum, size).await? {
+                return Err("offline Java source changed during copy".into());
+            }
+            fs::rename(&tmp, &archive).await.map_err(|e| format!("offline Java archive commit: {e}"))?;
+            Ok::<(), String>(())
+        }.await;
+        if result.is_err() { let _ = fs::remove_file(&tmp).await; }
+        result?;
+    } else {
+        if managed_java_offline() { return Err(format!("Java archive {checksum} is not available in offline cache or source")); }
+        validate_https_url(source_url)?;
+        let client = managed_java_http_client()?;
+        let (_sender, receiver) = watch::channel(network_resilience::Directive::Running);
+        let mut last_error = String::new();
+        for attempt in 0..network_resilience::MAX_ATTEMPTS {
+            match crate::http_resume::download_verified_controlled(&client, runtime_root,
+                &file, &archive, |_| {}, receiver.clone()).await {
+                Ok(()) => { last_error.clear(); break; }
+                Err(error) => {
+                    let delay = network_resilience::retry_delay(&error, attempt);
+                    last_error = error;
+                    if attempt + 1 == network_resilience::MAX_ATTEMPTS || delay.is_none() { break; }
+                    sleep(delay.unwrap()).await;
+                }
+            }
+        }
+        if !last_error.is_empty() { return Err(format!("Managed Java verified downloader: {last_error}")); }
     }
-    fs::rename(&part, destination).await.map_err(|err| format!("Managed JRE local archive atomic rename: {err}"))?;
-    Ok(())
+    if !verify_file_sha256(&archive, checksum, size).await? {
+        return Err("Managed Java archive integrity changed before cache publication".into());
+    }
+    lease.publish(&file, &archive).await?;
+    Ok(archive)
 }
 
 pub async fn select_java_executable(
@@ -818,69 +916,6 @@ fn validate_managed_java_major(major: u32) -> Result<(), String> {
 
 fn default_managed_image_type() -> String {
     "jre".to_string()
-}
-
-async fn ensure_archive(client: &Client, url: &str, path: &Path, checksum: &str, size: u64) -> Result<(), String> {
-    if fs::metadata(path).await.is_ok() {
-        if verify_file_sha256(path, checksum, size).await? {
-            return Ok(());
-        }
-        quarantine_broken_archive(path).await?;
-    }
-    validate_https_url(url)?;
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).await.map_err(|err| format!("archive parent: {err}"))?;
-    }
-    let part = path.with_extension(format!("{}nlpart", path.extension().and_then(|v| v.to_str()).unwrap_or("")));
-    if std::fs::symlink_metadata(&part).map(|meta| meta.file_type().is_symlink()).unwrap_or(false) {
-        return Err("Managed Java partial archive must not be a symlink".to_string());
-    }
-    if fs::metadata(&part).await.is_ok() {
-        if verify_file_sha256(&part, checksum, size).await? {
-            fs::rename(&part, path)
-                .await
-                .map_err(|err| format!("recovered archive atomic rename: {err}"))?;
-            return Ok(());
-        }
-        let _ = fs::remove_file(&part).await;
-    }
-    let mut response = managed_java_send_with_retry(
-        client,
-        url,
-        &format!("NeverLauncher/{} ManagedJava", env!("CARGO_PKG_VERSION")),
-    )
-    .await
-    .map_err(|err| format!("Java runtime download: {err}"))?;
-    if !response.status().is_success() {
-        return Err(format!("Java runtime download HTTP {}", response.status()));
-    }
-    if let Some(content_length) = response.content_length() {
-        if content_length != size {
-            return Err(format!("Java runtime Content-Length {content_length}, ожидалось {size}"));
-        }
-    }
-    let mut file = fs::File::create(&part).await.map_err(|err| format!("archive temp create: {err}"))?;
-    let mut hasher = Sha256::new();
-    let mut written = 0u64;
-    while let Some(chunk) = response.chunk().await.map_err(|err| format!("Java runtime stream: {err}"))? {
-        written = written.saturating_add(chunk.len() as u64);
-        if written > MAX_RUNTIME_ARCHIVE_SIZE || written > size {
-            let _ = fs::remove_file(&part).await;
-            return Err("Java runtime archive превышает ожидаемый размер".to_string());
-        }
-        hasher.update(&chunk);
-        file.write_all(&chunk).await.map_err(|err| format!("archive temp write: {err}"))?;
-    }
-    file.flush().await.map_err(|err| format!("archive temp flush: {err}"))?;
-    file.sync_all().await.map_err(|err| format!("archive temp fsync: {err}"))?;
-    drop(file);
-    let got = hex::encode(hasher.finalize());
-    if written != size || !got.eq_ignore_ascii_case(checksum) {
-        let _ = fs::remove_file(&part).await;
-        return Err(format!("Java runtime SHA-256/size mismatch: got {got}/{written}"));
-    }
-    fs::rename(&part, path).await.map_err(|err| format!("archive atomic rename: {err}"))?;
-    Ok(())
 }
 
 async fn quarantine_broken_archive(path: &Path) -> Result<(), String> {
@@ -1093,7 +1128,7 @@ async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, 
         Err(_) => return Ok(None),
     };
     let (expected_os, expected_arch) = adoptium_platform()?;
-    if record.schema_version != "1.2"
+    if record.schema_version != "1.3"
         || record.major_version != major
         || record.distribution != distribution
         || record.os != expected_os
@@ -1105,6 +1140,7 @@ async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, 
     {
         return Ok(None);
     }
+    if !verify_runtime_inventory(dir, &record.file_hashes).await? { return Ok(None); }
     let java = safe_record_join(dir, &record.java_relative_path)?;
     let (java_sha256, _) = match sha256_file(&java).await {
         Ok(value) => value,
@@ -1113,8 +1149,7 @@ async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, 
     if !java_sha256.eq_ignore_ascii_case(&record.java_sha256) {
         return Ok(None);
     }
-    let info = super::check_java(Some(java.to_string_lossy().to_string()), Some(major)).await?;
-    if !info.found || info.detected_major_version != Some(major) {
+    if self_test_java(&java, major, &record.os, &record.arch).await.is_err() {
         return Ok(None);
     }
     Ok(Some(ManagedJavaResult {
@@ -1130,6 +1165,112 @@ async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, 
         cached,
         message: if cached { "Managed Java найдена в проверенном runtime cache" } else { "Managed Java установлена и проверена" }.to_string(),
     }))
+}
+
+/// Hash every installed runtime file, not only bin/java. Corruption of
+/// libjvm or the security store must invalidate the cached runtime too.
+async fn inventory_runtime_files(root: &Path) -> Result<BTreeMap<String, String>, String> {
+    let root = root.to_path_buf();
+    tokio::task::spawn_blocking(move || -> Result<BTreeMap<String, String>, String> {
+        use std::io::Read;
+        let mut files = BTreeMap::new();
+        let mut pending = vec![root.clone()];
+        while let Some(dir) = pending.pop() {
+            for entry in std::fs::read_dir(&dir).map_err(|e| format!("Java inventory scan: {e}"))? {
+                let entry = entry.map_err(|e| e.to_string())?;
+                let path = entry.path();
+                let meta = std::fs::symlink_metadata(&path).map_err(|e| e.to_string())?;
+                if meta.is_dir() { pending.push(path); continue; }
+                let relative = path.strip_prefix(&root).map_err(|e| e.to_string())?
+                    .to_string_lossy().replace('\\', "/");
+                if relative == ".neverruntime.json" { continue; }
+                if !(meta.is_file() || meta.file_type().is_symlink()) {
+                    return Err(format!("unsupported Java runtime entry: {relative}"));
+                }
+                if meta.file_type().is_symlink() {
+                    let resolved = std::fs::canonicalize(&path).map_err(|e| e.to_string())?;
+                    if !resolved.starts_with(std::fs::canonicalize(&root).map_err(|e| e.to_string())?) {
+                        return Err(format!("Java runtime symlink escapes installation: {relative}"));
+                    }
+                    // A symlink to a directory cannot be opened as a file.
+                    // Hash its target verbatim instead; target contents are
+                    // independently covered by their actual inventory paths.
+                    let link = std::fs::read_link(&path).map_err(|e| e.to_string())?;
+                    let identity = format!("symlink:{}", link.to_string_lossy());
+                    files.insert(relative, hex::encode(Sha256::digest(identity.as_bytes())));
+                    continue;
+                }
+                let mut file = std::fs::File::open(&path).map_err(|e| e.to_string())?;
+                let mut digest = Sha256::new();
+                let mut buffer = [0u8; 64 * 1024];
+                loop {
+                    let n = file.read(&mut buffer).map_err(|e| e.to_string())?;
+                    if n == 0 { break; }
+                    digest.update(&buffer[..n]);
+                }
+                files.insert(relative, hex::encode(digest.finalize()));
+            }
+        }
+        if files.is_empty() { return Err("Java runtime is empty".into()); }
+        Ok(files)
+    }).await.map_err(|e| format!("Java inventory worker: {e}"))?
+}
+
+async fn verify_runtime_inventory(root: &Path, expected: &BTreeMap<String, String>) -> Result<bool, String> {
+    if expected.is_empty() { return Ok(false); }
+    // Exact-set check also rejects unexpected files added to a managed runtime.
+    let actual = match inventory_runtime_files(root).await {
+        Ok(files) => files,
+        Err(_) => return Ok(false),
+    };
+    Ok(&actual == expected)
+}
+
+/// Execute the actual JVM with bounded lifetime, verifying the architecture
+/// and OS reported by the runtime, not just its java -version major.
+async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result<(), String> {
+    let meta = std::fs::symlink_metadata(java).map_err(|e| format!("Java executable metadata: {e}"))?;
+    if !meta.is_file() || meta.file_type().is_symlink() {
+        return Err("Managed Java executable is not a regular file".into());
+    }
+    #[cfg(unix)] {
+        use std::os::unix::fs::PermissionsExt;
+        if meta.permissions().mode() & 0o111 == 0 { return Err("Managed Java executable lacks execute permission".into()); }
+    }
+    let mut command = Command::new(java);
+    command.args(["-XshowSettings:properties", "-version"])
+        .stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true);
+    // Never inherit JAVA_TOOL_OPTIONS/JDK_JAVA_OPTIONS/_JAVA_OPTIONS when verifying a package.
+    for key in ["JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS", "CLASSPATH"] {
+        command.env_remove(key);
+    }
+    let output = tokio::time::timeout(Duration::from_secs(20), command.output())
+        .await.map_err(|_| "Managed Java self-test exceeded 20 seconds".to_string())?
+        .map_err(|e| format!("Managed Java self-test failed: {e}"))?;
+    if !output.status.success() { return Err("Managed Java JVM self-test failed".into()); }
+    let details = format!("{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+    let detected = crate::parse_java_major_version(&details);
+    if detected != Some(major) { return Err(format!("Managed Java major mismatch: expected {major}, got {detected:?}")); }
+    let reported_arch = java_property(&details, "os.arch").ok_or("Managed Java missing os.arch")?;
+    if normalize_adoptium_arch(reported_arch) != normalize_adoptium_arch(arch) {
+        return Err(format!("Managed Java architecture mismatch: {reported_arch}, expected {arch}"));
+    }
+    let reported_os = java_property(&details, "os.name").ok_or("Managed Java missing os.name")?.to_ascii_lowercase();
+    let expected_os = normalize_adoptium_os(os);
+    let os_ok = match expected_os.as_str() {
+        "windows" => reported_os.contains("windows"),
+        "linux" => reported_os.contains("linux"),
+        "osx" => reported_os.contains("mac"),
+        _ => false,
+    };
+    if !os_ok { return Err(format!("Managed Java OS mismatch: {reported_os}, expected {os}")); }
+    Ok(())
+}
+
+fn java_property<'a>(text: &'a str, key: &str) -> Option<&'a str> {
+    text.lines().filter_map(|line| line.trim().split_once('=')).find_map(|(name, value)| {
+        if name.trim() == key { Some(value.trim()) } else { None }
+    })
 }
 
 fn safe_record_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
@@ -1296,39 +1437,22 @@ async fn quarantine_broken_runtime(path: &Path) -> Result<(), String> {
     fs::rename(path, &target).await.map_err(|err| format!("не удалось quarantine повреждённую Java: {err}"))
 }
 
-struct InstallLock {
-    path: PathBuf,
-}
-
-impl Drop for InstallLock {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.path);
-    }
-}
+struct InstallLock { _file: std::fs::File }
 
 async fn acquire_install_lock(dir: &Path) -> Result<InstallLock, String> {
     let path = dir.join(".install.lock");
+    // Keep the file permanently: deleting an active flock/LockFileEx inode
+    // permits a second process to create a new file and enter concurrently.
+    let file = std::fs::OpenOptions::new().read(true).write(true).create(true)
+        .open(&path).map_err(|e| format!("Managed Java lock open: {e}"))?;
     for _ in 0..120 {
-        match OpenOptions::new().write(true).create_new(true).open(&path) {
-            Ok(mut file) => {
-                let _ = writeln!(file, "pid={} started={}", std::process::id(), now_unix().unwrap_or_default());
-                return Ok(InstallLock { path });
-            }
-            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
-                if let Ok(metadata) = std::fs::metadata(&path) {
-                    if let Ok(modified) = metadata.modified() {
-                        if SystemTime::now().duration_since(modified).unwrap_or_default() > Duration::from_secs(15 * 60) {
-                            let _ = std::fs::remove_file(&path);
-                            continue;
-                        }
-                    }
-                }
-                sleep(Duration::from_millis(500)).await;
-            }
-            Err(err) => return Err(format!("Managed Java install lock: {err}")),
+        match file.try_lock_exclusive() {
+            Ok(()) => return Ok(InstallLock { _file: file }),
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => sleep(Duration::from_millis(500)).await,
+            Err(e) => return Err(format!("Managed Java lock acquire: {e}")),
         }
     }
-    Err("Managed Java installation занята другим процессом".to_string())
+    Err("Managed Java installation occupied by another process".into())
 }
 
 fn now_unix() -> Result<u64, String> {
@@ -1389,4 +1513,87 @@ mod tests {
         assert!(validate_https_url("https://user:secret@example.com/runtime.tar.gz").is_err());
         assert!(validate_https_url("https://example.com/runtime.tar.gz#fragment").is_err());
     }
+
+    #[test]
+    fn java_property_and_arch_validation() {
+        let output = "Property settings:\n    os.arch = amd64\n    os.name = Linux\nopenjdk version \"21.0.5\"";
+        assert_eq!(java_property(output, "os.arch"), Some("amd64"));
+        assert_eq!(java_property(output, "os.name"), Some("Linux"));
+        assert_eq!(normalize_adoptium_arch("amd64"), normalize_adoptium_arch("x86_64"));
+        assert_eq!(crate::parse_java_major_version(output), Some(21));
+        assert_eq!(java_property(output, "java.home"), None);
+    }
+
+    #[tokio::test]
+    async fn inventory_detects_non_executable_corruption_and_added_files() {
+        let root = std::env::temp_dir().join(format!("never-java-files-{:016x}", rand::random::<u64>()));
+        fs::create_dir_all(root.join("bin")).await.unwrap();
+        fs::create_dir_all(root.join("lib")).await.unwrap();
+        fs::write(root.join("bin/java"), b"java executable").await.unwrap();
+        fs::write(root.join("lib/libjvm.so"), b"real runtime library").await.unwrap();
+        let inventory = inventory_runtime_files(&root).await.unwrap();
+        assert!(verify_runtime_inventory(&root, &inventory).await.unwrap());
+        fs::write(root.join("lib/libjvm.so"), b"damaged runtime library").await.unwrap();
+        assert!(!verify_runtime_inventory(&root, &inventory).await.unwrap());
+        fs::write(root.join("lib/libjvm.so"), b"real runtime library").await.unwrap();
+        fs::write(root.join("lib/unknown"), b"unexpected file").await.unwrap();
+        assert!(!verify_runtime_inventory(&root, &inventory).await.unwrap());
+        let _ = fs::remove_dir_all(root).await;
+    }
+
+    // Full local installation and automatic restoration through the *same*
+    // archive cache and staging path as Desktop/CLI. Requires tar on Unix.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn verified_local_distribution_restores_corrupted_runtime_without_network() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("never-java-release-{:016x}", rand::random::<u64>()));
+        let source = root.join("source/jdk/bin");
+        fs::create_dir_all(&source).await.unwrap();
+        let (os, arch) = adoptium_platform().unwrap();
+        let script = format!("#!/bin/sh\nprintf '    os.arch = {}\\n    os.name = {}\\nopenjdk version \\\"21.0.5\\\"\\n' 1>&2\n", arch,
+            if os == "osx" { "Mac OS X" } else { "Linux" });
+        let java = source.join("java");
+        fs::write(&java, script).await.unwrap();
+        std::fs::set_permissions(&java, std::fs::Permissions::from_mode(0o755)).unwrap();
+        fs::create_dir_all(root.join("pkg")).await.unwrap();
+        let archive = root.join("pkg/temurin.tar.gz");
+        let output = Command::new("tar").args(["-czf"]).arg(&archive).arg("-C")
+            .arg(root.join("source")).arg("jdk").output().await.unwrap();
+        assert!(output.status.success());
+        let (checksum, size) = sha256_file(&archive).await.unwrap();
+        let (platform, architecture) = distribution_platform().unwrap();
+        let manifest = serde_json::json!({
+            "schemaVersion": "1.0", "product": "NeverLauncher", "productVersion": env!("CARGO_PKG_VERSION"),
+            "distribution": "temurin", "vendor": "Eclipse Adoptium", "majorVersion": 21,
+            "targets": [{
+                "platform": platform, "architecture": architecture, "distribution": "temurin", "majorVersion": 21,
+                "releaseName": "test-runtime", "semver": "21.0.5", "archive": "temurin.tar.gz", "format": "tar.gz",
+                "sha256": checksum, "size": size, "javaEntry": "jdk/bin/java",
+                "sourceUrl": "https://not-reachable.invalid/temurin.tar.gz", "sourceSha256": checksum
+            }]
+        });
+        let manifest_path = root.join("pkg/MANAGED_JRE_MANIFEST.json");
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        fs::write(&manifest_path, &bytes).await.unwrap();
+        let manifest_sha256 = hex::encode(Sha256::digest(&bytes));
+        let runtimes = root.join("runtimes");
+        let first = ensure_managed_java_from_distribution(21, "temurin", Some(&runtimes),
+            manifest_path.to_str().unwrap(), Some(&manifest_sha256)).await.unwrap();
+        assert!(!first.cached);
+        let second = ensure_managed_java_from_distribution(21, "temurin", Some(&runtimes),
+            manifest_path.to_str().unwrap(), Some(&manifest_sha256)).await.unwrap();
+        assert!(second.cached);
+        // File other than java is included in integrity inventory.
+        let lib = PathBuf::from(&second.install_directory).join("lib");
+        fs::create_dir_all(&lib).await.unwrap();
+        fs::write(lib.join("hijacked"), "unexpected").await.unwrap();
+        // Recovery should quarantine and rebuild, sourcing the verified cache.
+        let repaired = ensure_managed_java_from_distribution(21, "temurin", Some(&runtimes),
+            manifest_path.to_str().unwrap(), Some(&manifest_sha256)).await.unwrap();
+        assert!(!PathBuf::from(&repaired.install_directory).join("lib/hijacked").exists());
+        assert_eq!(repaired.major_version, 21);
+        let _ = fs::remove_dir_all(root).await;
+    }
+
 }
