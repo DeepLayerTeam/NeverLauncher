@@ -40,6 +40,7 @@ pub struct ProcessStatus {
 struct ManagedProcess {
     status: ProcessStatus,
     child: Arc<Mutex<Option<Child>>>,
+    client_release_lease: Option<Arc<std::fs::File>>,
     #[cfg(windows)]
     runtime_policy: Option<crate::RuntimeProcessPolicyGuard>,
     #[cfg(windows)]
@@ -119,6 +120,7 @@ impl ProcessSupervisor {
             if !p.offline && credentials.is_none() { return Err("online launch requires a valid Minecraft session".into()); }
         }
         tokio::fs::create_dir_all(root).await.map_err(|err| format!("не удалось создать рабочий каталог: {err}"))?;
+        let client_release_lease = crate::transactional_release::acquire_launch_lease(manifest, root, pinned_public_key).await?;
         let checks = check_files(manifest, root).await?;
         if checks.iter().any(|item| item.status != "ok") {
             return Err("launch заблокирован: client files не прошли integrity check".to_string());
@@ -222,6 +224,7 @@ impl ProcessSupervisor {
         self.processes.lock().await.insert(id.clone(), ManagedProcess {
             status: status.clone(),
             child: child.clone(),
+            client_release_lease: Some(client_release_lease),
             #[cfg(windows)]
             runtime_policy: Some(runtime_policy),
             #[cfg(windows)]
@@ -270,6 +273,7 @@ impl ProcessSupervisor {
                         process.status.exit_code = exit_code;
                         process.status.success = Some(success);
                         process.status.message = message.clone();
+                        process.client_release_lease = None;
                         #[cfg(windows)]
                         {
                             if let Some(session) = process.sensor_session.as_ref() {

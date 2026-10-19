@@ -7,6 +7,7 @@ mod http_resume;
 mod content_cache;
 mod network_resilience;
 pub mod durable_downloads;
+pub mod transactional_release;
 pub use download_scheduler::{DownloadLimits, DownloadProgress, ProgressSink, DOWNLOAD_PROGRESS_EVENT};
 pub mod managed_java;
 pub mod guard_ipc;
@@ -767,11 +768,13 @@ pub async fn check_java(java_path: Option<String>, required_major_version: Optio
 
 pub async fn build_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>, pinned_public_key: &str) -> Result<LaunchPlan, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
+    transactional_release::ready_for_launch(manifest, root, pinned_public_key).await?;
     create_launch_plan(manifest, root, java_path, username).await
 }
 
 pub async fn build_authenticated_launch_plan(manifest: &Manifest, root: &Path, java_path: Option<String>, credentials: MinecraftLaunchCredentials, pinned_public_key: &str) -> Result<LaunchPlan, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
+    transactional_release::ready_for_launch(manifest, root, pinned_public_key).await?;
     create_launch_plan_with_credentials(manifest, root, java_path, Some(credentials.username.clone()), Some(&credentials)).await
 }
 
@@ -1009,6 +1012,7 @@ pub async fn launch_with_timeout(
 ) -> Result<LaunchResult, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
     fs::create_dir_all(root).await.map_err(|err| format!("не удалось создать рабочий каталог: {err}"))?;
+    let _client_release_lease = transactional_release::acquire_launch_lease(manifest, root, pinned_public_key).await?;
     let checks = check_files(manifest, root).await?;
     if checks.iter().any(|item| item.status != "ok") {
         return Err("launch заблокирован: client files не прошли integrity check".to_string());

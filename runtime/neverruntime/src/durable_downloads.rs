@@ -2,8 +2,8 @@
 //! (not trusted paths) and the pinned public key. Partials remain in http_resume.
 //! Two alternating generations survive an interrupted journal rewrite, including
 //! Windows, where rename-over-existing is not available.
-use crate::{download_scheduler, file_ownership, network_resilience::Directive,
-    verify_manifest_signature, DownloadLimits, DownloadResult, Manifest, ProgressSink};
+use crate::{file_ownership, network_resilience::Directive,
+    verify_manifest_signature, DownloadResult, Manifest, ProgressSink};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::{Path, PathBuf}, sync::{Mutex, OnceLock}};
 use tokio::{fs, io::AsyncWriteExt, sync::watch};
@@ -119,7 +119,7 @@ async fn perform(root: &Path, job: SavedJob, sink: Option<ProgressSink>,
     rx: watch::Receiver<Directive>) -> Result<DownloadResult, String> {
     verify_manifest_signature(&job.manifest, &job.pinned_public_key)?;
     file_ownership::validate_download_targets(&job.manifest)?;
-    let outcome = download_scheduler::run(&job.manifest, root, DownloadLimits::default(), sink,
+    let outcome = crate::transactional_release::install(&job.manifest, root, &job.pinned_public_key, sink,
         job.operation_id.clone(), rx.clone()).await;
     let stopped = *rx.borrow();
     if stopped == Directive::Cancelled { erase(root).await; }

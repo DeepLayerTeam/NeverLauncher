@@ -32,6 +32,8 @@ async fn run() -> Result<serde_json::Value, String> {
     match command {
         "verify" => command_verify(rest).await,
         "sync" => command_sync(rest).await,
+        "rollback-release" => command_rollback_release(rest).await,
+        "recover-release" => command_recover_release(rest).await,
         "launch" => command_launch(rest).await,
         "plan" => command_plan(rest).await,
         "compatibility" => command_compatibility(rest).await,
@@ -40,7 +42,7 @@ async fn run() -> Result<serde_json::Value, String> {
         "help" | "--help" | "-h" => Ok(json!({
             "status": "ready",
             "version": env!("CARGO_PKG_VERSION"),
-            "commands": ["verify", "sync", "launch", "plan", "compatibility", "certify-vanilla", "java ensure"]
+            "commands": ["verify", "sync", "rollback-release", "recover-release", "launch", "plan", "compatibility", "certify-vanilla", "java ensure"]
         })),
         other => Err(format!("неизвестная команда: {other}")),
     }
@@ -76,6 +78,19 @@ async fn command_sync(args: &[String]) -> Result<serde_json::Value, String> {
         ));
     }
     Ok(json!({"status":"ready","download":download,"files":files,"manifest":{"projectId":manifest.project_id,"profileId":manifest.profile_id,"version":manifest.version}}))
+}
+
+async fn command_rollback_release(args: &[String]) -> Result<serde_json::Value, String> {
+    let root = PathBuf::from(required_flag(args, "--root")?);
+    let key = required_flag(args, "--pinned-public-key")?;
+    neverruntime::transactional_release::rollback(&root, &key).await?;
+    Ok(json!({"status":"rolled-back"}))
+}
+async fn command_recover_release(args: &[String]) -> Result<serde_json::Value, String> {
+    let root = PathBuf::from(required_flag(args, "--root")?);
+    let key = required_flag(args, "--pinned-public-key")?;
+    neverruntime::transactional_release::recover(&root, &key).await?;
+    Ok(json!({"status":"recovered"}))
 }
 
 async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {

@@ -1,3 +1,10 @@
+## 0.23.5 — Transactional Client Release (D05)
+
+- Desktop, Repair, durable jobs and CLI sync now stage complete signed file sets under an isolated release work directory, use the existing network scheduler and shared SHA-256 cache, and verify the staged set before switching.
+- Durable write-ahead switch journal, OS-wide commit lock, alternating active-release pointer, immutable checked backups and a last-known-good record enable rollback/recovery prior to launch, including interrupted explicit rollbacks.
+- Retire only paths registered in the previous active release; never enumerate/delete unregistered files, saves, config, logs or other player data.
+- Running Minecraft processes hold a shared release lease: updates/rollback cannot replace active game files. Desktop and CLI expose explicit release rollback/recovery, with tests for signed full-set switching, unregistered file preservation, interrupted commit and rollback. Rust/OS E2E verification is required for GA.
+
 ## 0.23.4 — Content-addressed Cache & Mirrors (D04)
 
 - Desktop и Repair используют общий межпрофильный SHA-256 cache NeverRuntime: строгая проверка перед каждым чтением, атомарное сохранение и независимые копии вместо hardlinks.

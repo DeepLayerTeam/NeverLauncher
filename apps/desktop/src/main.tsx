@@ -1113,6 +1113,18 @@ function App() {
     }
   }
 
+  async function rollbackClientRelease() {
+    if (transferBusy) return;
+    setTransferBusy(true);
+    try {
+      await callTauri<void>('rollback_client_release', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey });
+      setFiles(manifest ? await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory }) : []);
+      setDownload(null);
+      log('Восстановлен последний исправный игровой релиз. Для запуска загрузите его подписанный manifest.');
+    } catch (error) { log(`Откат игрового релиза не выполнен: ${String(error)}`); }
+    finally { setTransferBusy(false); }
+  }
+
   async function cleanUnusedFiles() {
     if (!manifest) {
       log('Очистка невозможна без манифеста профиля.');
@@ -1428,9 +1440,10 @@ function App() {
           <button onClick={runFullCheck}>Полная проверка</button>
           <button onClick={persistDesktopConfig}>Сохранить привязку</button>
           <button onClick={repairClient}>Восстановить</button>
+          <button disabled={transferBusy} onClick={rollbackClientRelease}>Откатить игровой релиз</button>
           <button onClick={cleanUnusedFiles}>Очистить лишнее</button>
           <button onClick={buildPlan}>Собрать план запуска</button>
-          <button className="primary" onClick={launch}>Играть</button>
+          <button className="primary" disabled={transferBusy} onClick={launch}>Играть</button>
           <button onClick={exportDiagnostics}>Экспорт диагностики</button>
         </section>
 
@@ -1448,7 +1461,7 @@ function App() {
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} />}
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} />}
-        {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
+        {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
         {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
         {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}
@@ -1501,17 +1514,18 @@ function ProfilePanel({ profiles, selectedProfile, setSelectedProfile, loadManif
 }
 
 function DownloadPanel({ files, download, downloadProgress, transferBusy, repairResult, cleanResult,
-  verifyFiles, downloadFiles, repairClient, cleanUnusedFiles, fileSummary, pendingJob, controlTransfer, resumeTransfer }: any) {
+  verifyFiles, downloadFiles, repairClient, rollbackClientRelease, cleanUnusedFiles, fileSummary, pendingJob, controlTransfer, resumeTransfer }: any) {
   const progress = downloadProgress as DownloadProgress | null;
   const handled = progress ? progress.completed + progress.failed + progress.skipped : 0;
   const total = progress?.totalFiles || 0;
   return <section className="panel">
     <h3>Загрузка, восстановление и очистка</h3>
-    <p>Параллельная загрузка с зеркалами, общим SHA-256 кешем, восстановлением повреждённых файлов и безопасной очисткой через карантин.</p>
+    <p>Проверенная установка в staging с транзакционным переключением managed-файлов, журналом восстановления и откатом к last-known-good. Пользовательские данные не удаляются.</p>
     <div className="toolbar inline">
       <button disabled={transferBusy} onClick={verifyFiles}>Проверить файлы</button>
       <button disabled={transferBusy} onClick={downloadFiles}>Скачать недостающие</button>
       <button disabled={transferBusy} onClick={repairClient}>Восстановить повреждённое</button>
+      <button disabled={transferBusy} onClick={rollbackClientRelease}>Откатить к last-known-good</button>
       <button disabled={transferBusy} onClick={cleanUnusedFiles}>Переместить лишнее в карантин</button>
       {transferBusy && <button onClick={() => controlTransfer('pause')}>Пауза</button>}
       {(transferBusy || pendingJob) && <button onClick={() => controlTransfer('cancel')}>Отменить</button>}
