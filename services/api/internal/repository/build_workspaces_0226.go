@@ -3,9 +3,11 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -70,6 +72,48 @@ func validWorkspace0226(w BuildWorkspace) error {
 	}
 	return nil
 }
+
+// validateWorkspaceTransition0230 enforces the durable identities and immutable
+// input settings used to derive BuildDigest. Without this check a second caller
+// can change the toolchain/runtime inputs while retaining the pinned snapshot.
+func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
+	if old.Revision != next.Revision || old.ProjectID != next.ProjectID ||
+		old.OwnerID != next.OwnerID || old.ProfileID != next.ProfileID ||
+		old.Channel != next.Channel || old.Version != next.Version ||
+		old.ProfileDigest != next.ProfileDigest || old.ProfileRevision != next.ProfileRevision {
+		return ErrConflict
+	}
+	if !reflect.DeepEqual(old.Settings, next.Settings) {
+		return fmt.Errorf("%w: workspace build settings are immutable; create a new workspace", ErrConflict)
+	}
+	if old.State == "built" {
+		return ErrImmutable
+	}
+	switch next.State {
+	case "importing":
+		if next.BuildDigest != "" {
+			return errors.New("importing workspace must not retain build digest")
+		}
+	case "staged":
+		if next.BuildDigest != "" {
+			return errors.New("staged workspace must not retain build digest")
+		}
+	case "built":
+		if old.State != "staged" || len(next.BuildDigest) != 64 || next.PackageID == "" {
+			return errors.New("built workspace requires staged inputs, package and SHA-256 build digest")
+		}
+		if _, err := hex.DecodeString(next.BuildDigest); err != nil {
+			return errors.New("invalid build digest")
+		}
+	default:
+		return errors.New("invalid workspace state transition")
+	}
+	if old.PackageID != "" && old.PackageID != next.PackageID {
+		return fmt.Errorf("%w: workspace package reservation is immutable", ErrConflict)
+	}
+	return nil
+}
+
 func cloneWorkspace0226(w BuildWorkspace) BuildWorkspace {
 	// JSON roundtrip produces fully independent nested slices/maps; no caller can
 	// mutate a persisted record without passing through revision-checked save.
@@ -129,11 +173,8 @@ func (r *MemoryRepository) SaveBuildWorkspace(_ context.Context, w BuildWorkspac
 	if !ok {
 		return w, ErrNotFound
 	}
-	if old.Revision != w.Revision || old.ProjectID != w.ProjectID || old.OwnerID != w.OwnerID || old.ProfileID != w.ProfileID || old.Channel != w.Channel || old.Version != w.Version || old.ProfileDigest != w.ProfileDigest || old.ProfileRevision != w.ProfileRevision || old.Settings.Minecraft.Version != w.Settings.Minecraft.Version {
-		return w, ErrConflict
-	}
-	if old.State == "built" {
-		return w, ErrImmutable
+	if err := validateWorkspaceTransition0230(old, w); err != nil {
+		return w, err
 	}
 	w.Revision++
 	w.CreatedAt = old.CreatedAt
@@ -157,19 +198,18 @@ func (r *SQLRepository) CreateBuildWorkspace(ctx context.Context, w BuildWorkspa
 	if err != nil {
 		return w, err
 	}
-	_, err = r.db.ExecContext(ctx, `INSERT INTO build_workspaces_0226(id,project_id,owner_id,revision,data) VALUES($1,$2,$3,1,$4::jsonb) ON CONFLICT DO NOTHING`, w.ID, w.ProjectID, w.OwnerID, string(b))
+	res, err := r.db.ExecContext(ctx, `INSERT INTO build_workspaces_0226(id,project_id,owner_id,revision,data) VALUES($1,$2,$3,1,$4::jsonb) ON CONFLICT DO NOTHING`, w.ID, w.ProjectID, w.OwnerID, string(b))
 	if err != nil {
 		return w, err
 	}
-	// Ensures duplicate requests do not report success for existing IDs.
-	got, err := r.GetBuildWorkspace(ctx, w.ID)
+	affected, err := res.RowsAffected()
 	if err != nil {
 		return w, err
 	}
-	if got.CreatedAt != w.CreatedAt || got.OwnerID != w.OwnerID {
+	if affected != 1 {
 		return w, ErrConflict
 	}
-	return got, nil
+	return cloneWorkspace0226(w), nil
 }
 func decodeWorkspace0226(row interface{ Scan(...any) error }) (BuildWorkspace, error) {
 	var raw []byte
@@ -225,11 +265,8 @@ func (r *SQLRepository) SaveBuildWorkspace(ctx context.Context, w BuildWorkspace
 	if err != nil {
 		return w, err
 	}
-	if old.Revision != w.Revision || old.OwnerID != w.OwnerID || old.ProjectID != w.ProjectID || old.ProfileID != w.ProfileID || old.Channel != w.Channel || old.Version != w.Version || old.ProfileDigest != w.ProfileDigest || old.ProfileRevision != w.ProfileRevision || old.Settings.Minecraft.Version != w.Settings.Minecraft.Version {
-		return w, ErrConflict
-	}
-	if old.State == "built" {
-		return w, ErrImmutable
+	if err := validateWorkspaceTransition0230(old, w); err != nil {
+		return w, err
 	}
 	w.Revision++
 	w.CreatedAt = old.CreatedAt

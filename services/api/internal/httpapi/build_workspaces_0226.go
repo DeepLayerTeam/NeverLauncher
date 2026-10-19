@@ -292,8 +292,8 @@ func (s Server) workspaceUpload0226(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 409, err.Error())
 		return
 	}
-	if ws.State == "built" {
-		writeError(w, 409, "built workspace is immutable")
+	if ws.State == "built" || ws.PackageID != "" {
+		writeError(w, 409, "workspace is locked to a release package; source files and staging are immutable")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadBytes()+4096)
@@ -489,8 +489,8 @@ func (s Server) workspaceStage0226(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 409, err.Error())
 		return
 	}
-	if ws.State == "built" {
-		writeError(w, 409, "built workspace is immutable")
+	if ws.State == "built" || ws.PackageID != "" {
+		writeError(w, 409, "workspace is locked to a release package; source files and staging are immutable")
 		return
 	}
 	var req struct {

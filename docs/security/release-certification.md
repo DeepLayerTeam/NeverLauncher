@@ -26,3 +26,11 @@ python3 scripts/smoke/offline/repository-policy.py
 Отсутствующее, просроченное, подменённое, не относящееся к SHA или неуспешное evidence **запрещает** маркировку как certified. PASS нельзя получать путём исключения обязательного теста или отключения NeverGuard. Особенно внимательно проверяйте `.github/workflows/compatibility.yml`, `.github/workflows/device-trust.yml`, `.github/workflows/neverextensions-ga-0210.yml`, `.github/workflows/production-release-candidate.yml`.
 
 См. [troubleshooting/ci](../troubleshooting/ci.md) и [COMPATIBILITY.md](../../COMPATIBILITY.md).
+
+## Profile/Workspace 0.23.0 gate
+
+`python3 scripts/release/certify-profiles-ga-0230.py` runs actual unit,
+HTTP and PostgreSQL E2E tests with the Go race detector and rejects missing or
+skipped cases. It requires `NEVERLAUNCHER_TEST_POSTGRES_DSN` and the exact
+source SHA. Production release candidate requires its passed artifact, tied
+to the current commit. See [Profile/Workspace GA](../releases/profile-workspaces-0230.md).
