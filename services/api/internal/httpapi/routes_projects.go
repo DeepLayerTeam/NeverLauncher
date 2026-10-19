@@ -10,6 +10,7 @@ func (s Server) registerProjectRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/projects/{projectId}/versions", s.versions)
 	mux.HandleFunc("GET /api/v1/projects/{projectId}/files", s.files)
 	mux.HandleFunc("GET /api/v1/projects/{projectId}/profiles/{profileId}/manifest", s.manifest)
+	mux.HandleFunc("GET /api/v1/projects/{projectId}/profiles/{profileId}/servers", s.desktopProfileServers0229)
 	mux.HandleFunc("GET /api/v1/projects/{projectId}/profiles/{profileId}/revisions", s.profileRevisions0221)
 	mux.HandleFunc("GET /api/v1/files/{projectId}/{version}/{path...}", s.file)
 	mux.Handle("POST /api/v1/install/first-project", s.requirePermission("project:write", s.installFirstProject))

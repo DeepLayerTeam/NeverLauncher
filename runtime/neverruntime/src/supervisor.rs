@@ -1,6 +1,6 @@
 use crate::{
     append_launch_history, check_files, create_launch_plan, create_launch_plan_with_credentials, join_classpath, now_unix,
-    verify_manifest_signature, LaunchHistoryEntry, Manifest, MinecraftLaunchCredentials,
+    verify_manifest_signature, LaunchHistoryEntry, Manifest, MinecraftLaunchCredentials, LaunchPreferences, apply_launch_preferences,
     RuntimeProcessPolicyReport,
 };
 use serde::{Deserialize, Serialize};
@@ -76,7 +76,7 @@ impl ProcessSupervisor {
         username: Option<String>,
         pinned_public_key: &str,
     ) -> Result<ProcessStatus, String> {
-        self.start_inner(manifest, root, java_path, username, None, pinned_public_key).await
+        self.start_inner(manifest, root, java_path, username, None, None, pinned_public_key).await
     }
 
     pub async fn start_authenticated(
@@ -87,7 +87,21 @@ impl ProcessSupervisor {
         credentials: MinecraftLaunchCredentials,
         pinned_public_key: &str,
     ) -> Result<ProcessStatus, String> {
-        self.start_inner(manifest, root, java_path, Some(credentials.username.clone()), Some(credentials), pinned_public_key).await
+        self.start_inner(manifest, root, java_path, Some(credentials.username.clone()), Some(credentials), None, pinned_public_key).await
+    }
+
+    pub async fn start_with_preferences(
+        &self, manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>,
+        preferences: LaunchPreferences, pinned_public_key: &str,
+    ) -> Result<ProcessStatus, String> {
+        self.start_inner(manifest, root, java_path, username, None, Some(preferences), pinned_public_key).await
+    }
+
+    pub async fn start_authenticated_with_preferences(
+        &self, manifest: &Manifest, root: &Path, java_path: Option<String>, credentials: MinecraftLaunchCredentials,
+        preferences: LaunchPreferences, pinned_public_key: &str,
+    ) -> Result<ProcessStatus, String> {
+        self.start_inner(manifest, root, java_path, Some(credentials.username.clone()), Some(credentials), Some(preferences), pinned_public_key).await
     }
 
     async fn start_inner(
@@ -97,20 +111,27 @@ impl ProcessSupervisor {
         java_path: Option<String>,
         username: Option<String>,
         credentials: Option<MinecraftLaunchCredentials>,
+        preferences: Option<LaunchPreferences>,
         pinned_public_key: &str,
     ) -> Result<ProcessStatus, String> {
         verify_manifest_signature(manifest, pinned_public_key)?;
+        if let Some(p) = preferences.as_ref() {
+            if !p.offline && credentials.is_none() { return Err("online launch requires a valid Minecraft session".into()); }
+        }
         tokio::fs::create_dir_all(root).await.map_err(|err| format!("не удалось создать рабочий каталог: {err}"))?;
         let checks = check_files(manifest, root).await?;
         if checks.iter().any(|item| item.status != "ok") {
             return Err("launch заблокирован: client files не прошли integrity check".to_string());
         }
 
-        let plan = if let Some(credentials) = credentials.as_ref() {
+        let mut plan = if let Some(credentials) = credentials.as_ref() {
             create_launch_plan_with_credentials(manifest, root, java_path, username, Some(credentials)).await?
         } else {
             create_launch_plan(manifest, root, java_path, username).await?
         };
+        if let Some(preferences) = preferences.as_ref() {
+            apply_launch_preferences(manifest, root, &mut plan, preferences, credentials.as_ref())?;
+        }
         let logs_dir = root.join("logs");
         tokio::fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;
         let started_at = now_unix()?;
@@ -130,11 +151,8 @@ impl ProcessSupervisor {
         #[cfg(windows)]
         let mut sensor_bootstrap = crate::windows_sensor::prepare_sensor_command(&mut command)
             .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
+        crate::apply_launch_command_0223(&mut command, &plan);
         command
-            .arg("-cp")
-            .arg(join_classpath(&plan.classpath_entries))
-            .arg(&plan.main_class)
-            .args(&plan.game_args)
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout_file))
             .stderr(Stdio::from(log_file));

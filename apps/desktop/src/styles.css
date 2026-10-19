@@ -164,3 +164,26 @@ ul { padding-left: 18px; }
 .desktopExtensionSurface iframe { display:block; width:100%; height:620px; border:0; background:#fff; }
 .desktopExtensionEmpty { padding:28px; color:#94a3b8; }
 @media (max-width:980px){ .desktopExtensionsLayout { grid-template-columns:1fr; } .desktopExtensionSurface iframe { height:520px; } }
+
+/* 0.22.9: server browser and runtime preferences */
+.settings select {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  background: #1e293b;
+  color: #e5e7eb;
+  padding: 12px 14px;
+  font: inherit;
+}
+.settings label.checkSetting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+.settings input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  accent-color: #22c55e;
+}

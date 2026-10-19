@@ -404,6 +404,92 @@ pub struct LaunchPlan {
     pub deterministic_sha256: String,
 }
 
+// Local user choices do not change the signed Manifest. They are validated
+// against its limits, then applied to the actual Java invocation (not just UI).
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LaunchPreferences {
+    #[serde(default)] pub memory_mb: Option<u32>,
+    #[serde(default)] pub width: Option<u32>,
+    #[serde(default)] pub height: Option<u32>,
+    #[serde(default)] pub fullscreen: bool,
+    #[serde(default)] pub auto_enter: bool,
+    #[serde(default)] pub server_host: Option<String>,
+    #[serde(default)] pub server_port: Option<u16>,
+    #[serde(default)] pub offline: bool,
+}
+
+pub fn validate_launch_preferences(manifest: &Manifest, p: &LaunchPreferences, authenticated: bool) -> Result<(), String> {
+    if manifest.schema_version != "2.0" { return Err("Desktop launch preferences require a signed v2 Manifest".into()); }
+    if p.offline {
+        if authenticated || !manifest.runtime.launch.offline_mode {
+            return Err("offline launch is not authorized by the signed profile".into());
+        }
+        if p.auto_enter { return Err("offline mode cannot auto-enter a protected server".into()); }
+    }
+    if let Some(memory) = p.memory_mb {
+        let policy = &manifest.runtime.memory;
+        if memory < policy.minimum_mb.max(512) || memory > (if policy.maximum_mb > 0 { policy.maximum_mb.min(32768) } else { 32768 }) {
+            return Err(format!("RAM {memory} MB is outside signed profile limits"));
+        }
+        if policy.minimum_mb > memory { return Err("RAM lower than minimum memory".into()); }
+    }
+    if p.width.is_some() != p.height.is_some() { return Err("resolution width and height must be supplied together".into()); }
+    if let (Some(width), Some(height)) = (p.width, p.height) {
+        if !(640..=7680).contains(&width) || !(480..=4320).contains(&height) {
+            return Err("resolution outside supported bounds".into());
+        }
+    }
+    if p.auto_enter {
+        let host = p.server_host.as_deref().unwrap_or("");
+        if host.is_empty() || host.len() > 253 || host.split('.').any(|label| {
+            label.is_empty() || label.len() > 63 ||
+            !label.as_bytes().first().is_some_and(u8::is_ascii_alphanumeric) ||
+            !label.as_bytes().last().is_some_and(u8::is_ascii_alphanumeric) ||
+            !label.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
+        }) {
+            return Err("invalid server address for auto-enter".into());
+        }
+        if p.server_port.unwrap_or(0) == 0 { return Err("auto-enter requires a valid server port".into()); }
+    }
+    Ok(())
+}
+
+pub fn apply_launch_preferences(manifest: &Manifest, root: &Path, plan: &mut LaunchPlan, preferences: &LaunchPreferences, credentials: Option<&MinecraftLaunchCredentials>) -> Result<(), String> {
+    validate_launch_preferences(manifest, preferences, credentials.is_some())?;
+    if let Some(memory) = preferences.memory_mb {
+        // Never allow unsigned extra JVM flags to override the chosen -Xmx.
+        plan.jvm_args.retain(|arg| !arg.starts_with("-Xmx"));
+        plan.jvm_args.push(format!("-Xmx{memory}M"));
+        // The core planner has already verified and inserted its internal
+        // signed authlib agent. That agent is not a user JVM override and
+        // must not cause this post-auth heap-only policy check to fail.
+        let heap_check_args = plan.jvm_args.iter().filter(|arg| !arg.starts_with("-javaagent:")).cloned().collect::<Vec<_>>();
+        validate_memory_arguments_0223(&manifest.runtime.memory, &heap_check_args)?;
+    }
+    if let (Some(width), Some(height)) = (preferences.width, preferences.height) {
+        replace_or_append_arg_pair(&mut plan.game_args, "--width", width.to_string());
+        replace_or_append_arg_pair(&mut plan.game_args, "--height", height.to_string());
+    }
+    plan.game_args.retain(|arg| arg != "--fullscreen");
+    if preferences.fullscreen { plan.game_args.push("--fullscreen".into()); }
+    if preferences.auto_enter {
+        let host = preferences.server_host.as_ref().ok_or("server host missing")?;
+        let port = preferences.server_port.ok_or("server port missing")?;
+        if minecraft_supports_quick_play_multiplayer(&manifest.minecraft.version) {
+            replace_or_append_arg_pair(&mut plan.game_args, "--quickPlayMultiplayer", format!("{host}:{port}"));
+        } else {
+            replace_or_append_arg_pair(&mut plan.game_args, "--server", host.clone());
+            replace_or_append_arg_pair(&mut plan.game_args, "--port", port.to_string());
+        }
+    }
+    // User choices are part of the reproducible plan identity, unlike session
+    // tokens and machine-specific installation paths.
+    plan.deterministic_sha256 = deterministic_launch::plan_digest(manifest, root, manifest.runtime.java.major_version, plan, credentials)?;
+    plan.command_preview = redacted_command_preview119(plan, credentials.map(|c| c.access_token.as_str()));
+    Ok(())
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LaunchResult {
@@ -1529,7 +1615,7 @@ async fn verify_launch_inputs_0227(manifest: &Manifest, root: &Path, plan: &Laun
     Ok(())
 }
 
-fn apply_launch_command_0223(command: &mut Command, plan: &LaunchPlan) {
+pub(crate) fn apply_launch_command_0223(command: &mut Command, plan: &LaunchPlan) {
     if plan.restrict_java_environment {
         let inherited: Vec<(String, String)> = plan.environment_allowlist.iter().filter_map(|key| std::env::var(key).ok().map(|value| (key.clone(), value))).collect();
         command.env_clear();
@@ -1829,6 +1915,35 @@ mod tests {
         // При повреждённой или неполной цепочке наследования нельзя делать вывод
         // о поддержке по похожему на номер версии суффиксу профиля загрузчика.
         assert!(!minecraft_supports_quick_play_for_resolution("quilt-loader-0.30.1-1.21.1", &[]));
+    }
+
+    #[test]
+    fn desktop_launch_preferences_enforce_signed_profile_policy() {
+        let mut manifest = sample_manifest();
+        manifest.schema_version = "2.0".into();
+        manifest.runtime.launch.offline_mode = true;
+        manifest.runtime.memory = MemoryInfo { minimum_mb: 1024, recommended_mb: 2048, maximum_mb: 8192 };
+        let mut pref = LaunchPreferences { memory_mb: Some(4096), width: Some(1280), height: Some(720),
+            fullscreen: false, auto_enter: false, server_host: None, server_port: None, offline: true };
+        assert!(validate_launch_preferences(&manifest, &pref, false).is_ok());
+        pref.memory_mb = Some(16384);
+        assert!(validate_launch_preferences(&manifest, &pref, false).is_err());
+        pref.memory_mb = Some(4096);
+        pref.height = None;
+        assert!(validate_launch_preferences(&manifest, &pref, false).is_err());
+        pref.height = Some(720);
+        pref.auto_enter = true;
+        assert!(validate_launch_preferences(&manifest, &pref, false).is_err());
+        pref.auto_enter = false;
+        manifest.runtime.launch.offline_mode = false;
+        assert!(validate_launch_preferences(&manifest, &pref, false).is_err());
+        pref.offline = false;
+        pref.auto_enter = true;
+        pref.server_host = Some("mc.example.org".into());
+        pref.server_port = Some(25565);
+        assert!(validate_launch_preferences(&manifest, &pref, true).is_ok());
+        pref.server_host = Some("evil/path".into());
+        assert!(validate_launch_preferences(&manifest, &pref, true).is_err());
     }
 
     #[test]

@@ -104,6 +104,8 @@ struct LaunchMinecraftRequest {
     username: Option<String>,
     minecraft_credentials: Option<MinecraftLaunchCredentials>,
     pinned_public_key: String,
+    #[serde(default)]
+    preferences: Option<neverruntime::LaunchPreferences>,
 }
 
 #[derive(Deserialize)]
@@ -285,6 +287,14 @@ struct DesktopConfig {
     username: String,
     memory_mb: u32,
     pinned_public_key: String,
+    #[serde(default)] server_id: String,
+    #[serde(default = "default_screen_width_0229")] screen_width: u32,
+    #[serde(default = "default_screen_height_0229")] screen_height: u32,
+    #[serde(default)] fullscreen: bool,
+    #[serde(default)] auto_enter: bool,
+    #[serde(default)] server_host: String,
+    #[serde(default = "default_server_port_0229")] server_port: u16,
+    #[serde(default)] offline_enabled: bool,
     #[serde(default)]
     config_path: String,
 }
@@ -308,8 +318,11 @@ fn default_game_directory() -> String {
     else { PathBuf::from(".") };
     base.join("NeverLauncher").join("projects").to_string_lossy().to_string()
 }
+fn default_screen_width_0229() -> u32 { 1280 }
+fn default_screen_height_0229() -> u32 { 720 }
+fn default_server_port_0229() -> u16 { 25565 }
 fn default_desktop_config() -> DesktopConfig {
-    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), config_path: String::new() }
+    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), server_id: String::new(), screen_width: 1280, screen_height: 720, fullscreen: false, auto_enter: false, server_host: String::new(), server_port: 25565, offline_enabled: false, config_path: String::new() }
 }
 fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
     if cfg.schema_version.trim().is_empty() { cfg.schema_version = "1.0".into(); }
@@ -317,6 +330,9 @@ fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
     if cfg.game_directory.trim().is_empty() { cfg.game_directory = default_game_directory(); }
     if cfg.username.trim().is_empty() { cfg.username = "Player".into(); }
     if cfg.memory_mb == 0 { cfg.memory_mb = 4096; }
+    if cfg.screen_width == 0 { cfg.screen_width = 1280; }
+    if cfg.screen_height == 0 { cfg.screen_height = 720; }
+    if cfg.server_port == 0 { cfg.server_port = 25565; }
     cfg
 }
 
@@ -359,7 +375,71 @@ async fn check_java(java_path: Option<String>, required_major_version: Option<u3
 #[tauri::command]
 async fn ensure_managed_java(required_major_version: u32, distribution: String) -> Result<ManagedJavaResult, String> { neverruntime::ensure_managed_java(required_major_version, &distribution, None).await }
 #[tauri::command]
-async fn build_launch_plan(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, pinned_public_key: String) -> Result<LaunchPlan, String> { neverruntime::build_launch_plan(&manifest, &PathBuf::from(root), java_path, username, &pinned_public_key).await }
+async fn build_launch_plan(manifest: Manifest, root: String, java_path: Option<String>, username: Option<String>, pinned_public_key: String, preferences: Option<neverruntime::LaunchPreferences>) -> Result<LaunchPlan, String> {
+    let root = PathBuf::from(root);
+    let mut plan = neverruntime::build_launch_plan(&manifest, &root, java_path, username, &pinned_public_key).await?;
+    if let Some(p) = preferences { neverruntime::apply_launch_preferences(&manifest, &root, &mut plan, &p, None)?; }
+    Ok(plan)
+}
+// Cached manifests are never trusted solely because they are on disk.
+// All offline reads verify the pinned Ed25519 signature again.
+fn desktop_manifest_cache_path_0229(root: &str) -> Result<PathBuf, String> {
+    let root = PathBuf::from(root).canonicalize().map_err(|e| format!("client root unavailable: {e}"))?;
+    let dir = root.join(".neverlauncher");
+    if let Ok(meta) = std::fs::symlink_metadata(&dir) {
+        if meta.file_type().is_symlink() || !meta.is_dir() { return Err("unsafe manifest cache directory".into()); }
+    }
+    Ok(dir.join("signed-manifest.json"))
+}
+
+#[tauri::command]
+async fn cache_desktop_manifest(manifest: Manifest, root: String, pinned_public_key: String) -> Result<(), String> {
+    neverruntime::verify_manifest_signature(&manifest, &pinned_public_key)?;
+    // The client directory may not exist until first install.
+    fs::create_dir_all(&root).await.map_err(|e| format!("cannot create client root for cache: {e}"))?;
+    let path = desktop_manifest_cache_path_0229(&root)?;
+    let dir = path.parent().ok_or("missing cache directory")?;
+    fs::create_dir_all(dir).await.map_err(|e| e.to_string())?;
+    if let Ok(meta) = fs::symlink_metadata(&path).await {
+        if meta.file_type().is_symlink() { return Err("unsafe manifest cache file".into()); }
+    }
+    let value = serde_json::to_vec(&manifest).map_err(|e| e.to_string())?;
+    let tmp = dir.join(format!("signed-manifest.{}.{}.tmp", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(|e| e.to_string())?.as_nanos()));
+    let mut file = fs::OpenOptions::new().create_new(true).write(true).open(&tmp).await.map_err(|e| e.to_string())?;
+    use tokio::io::AsyncWriteExt;
+    file.write_all(&value).await.map_err(|e| e.to_string())?;
+    file.sync_all().await.map_err(|e| e.to_string())?;
+    drop(file);
+    // Windows rename does not overwrite an existing file. Keep a recoverable
+    // previous signed cache until the new one is installed. Readers fail closed
+    // during the replacement gap; neither variant can bypass signature checks.
+    #[cfg(windows)]
+    if fs::metadata(&path).await.is_ok() {
+        let backup = tmp.with_extension("previous");
+        fs::rename(&path, &backup).await.map_err(|e| format!("cannot preserve previous manifest cache: {e}"))?;
+        if let Err(err) = fs::rename(&tmp, &path).await {
+            let _ = fs::rename(&backup, &path).await;
+            return Err(format!("manifest cache replacement failed: {err}"));
+        }
+        let _ = fs::remove_file(&backup).await;
+        return Ok(());
+    }
+    fs::rename(&tmp, &path).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn load_cached_desktop_manifest(root: String, pinned_public_key: String, project_id: String, profile_id: String, channel: String) -> Result<Manifest, String> {
+    let path = desktop_manifest_cache_path_0229(&root)?;
+    let meta = fs::symlink_metadata(&path).await.map_err(|e| format!("no cached manifest: {e}"))?;
+    if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > 16 * 1024 * 1024 { return Err("unsafe manifest cache file".into()); }
+    let manifest: Manifest = serde_json::from_slice(&fs::read(&path).await.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    neverruntime::verify_manifest_signature(&manifest, &pinned_public_key)?;
+    if manifest.schema_version != "2.0" || manifest.project_id != project_id || manifest.profile_id != profile_id || manifest.channel != channel || !manifest.runtime.launch.offline_mode {
+        return Err("cached manifest is not authorized for this profile/channel in offline mode".into());
+    }
+    Ok(manifest)
+}
+
 #[tauri::command]
 async fn launch_minecraft(
     request: LaunchMinecraftRequest,
@@ -367,7 +447,7 @@ async fn launch_minecraft(
     neverguard: tauri::State<'_, NeverGuardSupervisor>,
 ) -> Result<ProcessStatus, String> {
     let LaunchMinecraftRequest {
-        manifest, root, java_path, username, minecraft_credentials, pinned_public_key,
+        manifest, root, java_path, username, minecraft_credentials, pinned_public_key, preferences,
     } = request;
     #[cfg(windows)]
     {
@@ -454,10 +534,28 @@ async fn launch_minecraft(
     #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
     let _ = &neverguard;
 
+    // Offline launch is strictly a replay of the verified on-disk release.
+    // A caller cannot turn any arbitrary signed online manifest into an
+    // offline entitlement just by setting preferences.offline = true.
+    if preferences.as_ref().map(|p| p.offline).unwrap_or(false) {
+        let cached = load_cached_desktop_manifest(
+            root.clone(), pinned_public_key.clone(), manifest.project_id.clone(),
+            manifest.profile_id.clone(), manifest.channel.clone(),
+        ).await?;
+        if cached.version != manifest.version ||
+            cached.signature.as_ref().map(|s| s.signature.as_str()) != manifest.signature.as_ref().map(|s| s.signature.as_str()) {
+            return Err("offline launch requires the exact cached signed release".into());
+        }
+    }
     if let Some(credentials) = minecraft_credentials {
-        supervisor.start_authenticated(&manifest, &PathBuf::from(root), java_path, credentials, &pinned_public_key).await
+        if let Some(p) = preferences {
+            supervisor.start_authenticated_with_preferences(&manifest, &PathBuf::from(root), java_path, credentials, p, &pinned_public_key).await
+        } else { supervisor.start_authenticated(&manifest, &PathBuf::from(root), java_path, credentials, &pinned_public_key).await }
     } else {
-        supervisor.start(&manifest, &PathBuf::from(root), java_path, username, &pinned_public_key).await
+        match preferences {
+            Some(p) if p.offline => supervisor.start_with_preferences(&manifest, &PathBuf::from(root), java_path, username, p, &pinned_public_key).await,
+            _ => Err("online launch requires authenticated credentials; offline must be explicitly authorized".into()),
+        }
     }
 }
 
@@ -750,6 +848,6 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }

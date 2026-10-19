@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { invoke } from '@tauri-apps/api/core';
 import './styles.css';
 import { DesktopExtensions0209 } from './extensions_0209';
+import { launchPreferences, scopedServers, type ScopedServer } from './desktop_experience_0229';
 
 type Stage = 'idle' | 'connecting' | 'session' | 'project' | 'profile' | 'manifest' | 'java' | 'files' | 'repair' | 'cleanup' | 'ready' | 'launching' | 'running' | 'failed';
 type Screen = 'firstRun' | 'overview' | 'auth' | 'projects' | 'profile' | 'download' | 'settings' | 'logs' | 'diagnostics' | 'extensions';
@@ -20,6 +21,13 @@ type DesktopSettings = {
   channel: string;
   pinnedPublicKey: string;
   serverId?: string;
+  screenWidth: number;
+  screenHeight: number;
+  fullscreen: boolean;
+  autoEnter: boolean;
+  serverHost: string;
+  serverPort: number;
+  offlineEnabled: boolean;
   configPath?: string;
 };
 
@@ -143,6 +151,13 @@ const defaultSettings: DesktopSettings = {
   channel: 'stable',
   pinnedPublicKey: '',
   serverId: '',
+  screenWidth: 1280,
+  screenHeight: 720,
+  fullscreen: false,
+  autoEnter: false,
+  serverHost: '',
+  serverPort: 25565,
+  offlineEnabled: false,
 };
 
 function loadSettings(): DesktopSettings {
@@ -165,7 +180,10 @@ function normalizedSettings(settings: DesktopSettings): DesktopSettings {
     schemaVersion: '1.0',
     channel: settings.channel || 'stable',
     username: settings.username || 'Player',
-    memoryMb: Number(settings.memoryMb || 4096),
+    memoryMb: Number(settings.memoryMb ?? 4096),
+    screenWidth: Number(settings.screenWidth ?? 1280),
+    screenHeight: Number(settings.screenHeight ?? 720),
+    serverPort: Number(settings.serverPort ?? 25565),
   };
 }
 
@@ -186,6 +204,7 @@ function App() {
   const [backendStatus, setBackendStatus] = useState<string>('не проверен');
   const [projects, setProjects] = useState<BackendProject[]>([]);
   const [profiles, setProfiles] = useState<BackendProfile[]>([]);
+  const [profileServers, setProfileServers] = useState<ScopedServer[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>(settings.projectId || '');
   const [selectedProfile, setSelectedProfile] = useState<string>(settings.profileId || '');
   const [readinessContract, setReadinessContract] = useState<DesktopReadiness | null>(null);
@@ -265,20 +284,24 @@ function App() {
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   }, [backendStatus, fileSummary.broken, javaInfo, launchPlan, manifest, profiles.length, projects.length, selectedProfile, selectedProject]);
 
-  function patchSettings(key: keyof DesktopSettings, value: string | number) {
+  function patchSettings(key: keyof DesktopSettings, value: string | number | boolean) {
     setSettings((current) => normalizedSettings({ ...current, [key]: value }));
   }
 
   function selectProject(projectId: string) {
     setSelectedProject(projectId);
     setSelectedProfile('');
-    setSettings((current) => normalizedSettings({ ...current, projectId, profileId: '' }));
+    setProfileServers([]);
+    setManifest(null);
+    setSettings((current) => normalizedSettings({ ...current, projectId, profileId: '', serverId: '', offlineEnabled: false }));
   }
 
   function selectProfile(profileId: string) {
     setSelectedProfile(profileId);
     const profile = profiles.find((item) => item.id === profileId);
-    setSettings((current) => normalizedSettings({ ...current, profileId, channel: profile?.defaultChannel || current.channel || 'stable' }));
+    setManifest(null);
+    setProfileServers([]);
+    setSettings((current) => normalizedSettings({ ...current, profileId, serverId: '', offlineEnabled: false, channel: profile?.defaultChannel || current.channel || 'stable' }));
   }
 
   async function persistDesktopConfig() {
@@ -301,6 +324,7 @@ function App() {
       setSelectedProfile('');
       setProjects([]);
       setProfiles([]);
+      setProfileServers([]);
       setManifest(null);
       setScreen('firstRun');
       log(result.message);
@@ -842,6 +866,43 @@ function App() {
     }
   }
 
+  async function loadProfileServers(projectId = selectedProject || settings.projectId, profileId = selectedProfile || settings.profileId) {
+    if (!projectId || !profileId) throw new Error('Select a project and profile first');
+    const payload = await fetchBackendJson(`/api/v1/projects/${encodeURIComponent(projectId)}/profiles/${encodeURIComponent(profileId)}/servers`);
+    const items = scopedServers(payload?.data ?? payload);
+    setProfileServers(items);
+    setSettings((current) => items.some((item) => item.id === current.serverId) ? current : { ...current, serverId: '' });
+    log(`Доступные серверы профиля: ${items.length}.`);
+  }
+
+  async function cacheSignedManifest(activeManifest = manifest, root = settings.gameDirectory) {
+    if (!activeManifest) throw new Error('Нет подписанного манифеста для кеширования');
+    await callTauri<void>('cache_desktop_manifest', {
+      manifest: activeManifest, root, pinnedPublicKey: settings.pinnedPublicKey,
+    });
+    log('Подписанный Manifest сохранён в локальный offline cache (повторная проверка подписи обязательна).');
+  }
+
+  async function loadCachedOfflineManifest() {
+    try {
+      const result = await callTauri<Manifest>('load_cached_desktop_manifest', {
+        root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey,
+        projectId: settings.projectId, profileId: settings.profileId, channel: settings.channel,
+      });
+      setManifest(result);
+      setProfileServers([]);
+      setLaunchPlan(null);
+      patchSettings('offlineEnabled', true);
+      log(`Offline Manifest ${result.version} проверен по pinned Ed25519 ключу.`);
+    } catch (error) { log(`Offline Manifest отклонён: ${String(error)}`); }
+  }
+
+  function currentLaunchPreferences() {
+    if (!manifest) throw new Error('Manifest не загружен');
+    if (manifest.schemaVersion !== '2.0') throw new Error('Desktop launch settings require Manifest v2');
+    return launchPreferences(settings, manifest.runtime.memory, Boolean(manifest.runtime.launch?.offlineMode), profileServers);
+  }
+
   async function loadManifest(projectId = selectedProject || settings.projectId, profileId = selectedProfile || settings.profileId) {
     setStage('manifest');
     try {
@@ -853,10 +914,28 @@ function App() {
       setSelectedProfile(result.profileId);
       setLaunchPlan(null);
       setLaunchResult(null);
-      log(`Манифест загружен: ${result.projectId}/${result.profileId}/${result.version}.`);
-      if (!settings.gameDirectory.includes(result.projectId)) {
-        setSettings((current) => normalizedSettings({ ...current, gameDirectory: `${current.gameDirectory || './.neverlauncher/projects'}/${result.projectId}/${result.profileId}`, projectId: result.projectId, profileId: result.profileId, channel: result.channel || current.channel }));
+      if (!settings.offlineEnabled) {
+        await loadProfileServers(result.projectId, result.profileId).catch((error) => log(`Server browser недоступен: ${String(error)}`));
       }
+      const effectiveRoot = settings.gameDirectory.includes(result.projectId)
+        ? settings.gameDirectory
+        : `${settings.gameDirectory || './.neverlauncher/projects'}/${result.projectId}/${result.profileId}`;
+      void cacheSignedManifest(result, effectiveRoot).catch((error) => log(`Offline cache не сохранён: ${String(error)}`));
+      log(`Манифест загружен: ${result.projectId}/${result.profileId}/${result.version}.`);
+      const policy = result.runtime.memory;
+      const minMemory = Math.max(512, policy?.minimumMb || 512);
+      const maxMemory = Math.min(32768, policy?.maximumMb || 32768);
+      setSettings((current) => normalizedSettings({
+        ...current,
+        gameDirectory: current.gameDirectory.includes(result.projectId)
+          ? current.gameDirectory
+          : `${current.gameDirectory || './.neverlauncher/projects'}/${result.projectId}/${result.profileId}`,
+        projectId: result.projectId, profileId: result.profileId, channel: result.channel || current.channel,
+        memoryMb: current.memoryMb >= minMemory && current.memoryMb <= maxMemory
+          ? current.memoryMb
+          : Math.min(maxMemory, Math.max(minMemory, policy?.recommendedMb || 4096)),
+        offlineEnabled: false,
+      }));
     } catch (error) {
       setStage('failed');
       log(`Манифест не загружен: ${String(error)}.`);
@@ -981,6 +1060,7 @@ function App() {
         javaPath: settings.javaPath || null,
         username: settings.username,
         pinnedPublicKey: settings.pinnedPublicKey,
+        preferences: currentLaunchPreferences(),
       });
       setLaunchPlan(result);
       setStage('ready');
@@ -1112,10 +1192,8 @@ function App() {
   }
 
   async function createServerJoinAfterLaunch(username: string, minecraftAccessToken: string, continuousGuardTicket?: string) {
-    if (!authSession?.accessToken || !settings.serverId) {
-      log('Создание сессии входа ServerBridge пропущено: нет активной сессии или serverId. Для защищённого сервера заполните serverId в настройках.');
-      return;
-    }
+    if (!authSession?.accessToken || !settings.serverId) return;
+    if (!profileServers.some((server) => server.id === settings.serverId)) throw new Error('serverId отсутствует в серверном списке профиля');
     const response = await fetch(endpoint('/api/v1/session/join'), {
       method: 'POST',
       headers: { Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json' },
@@ -1133,20 +1211,34 @@ function App() {
     }
     setStage('launching');
     try {
-      const guardAttestationTicket = await createGuardLaunchTicket();
-      const minecraftCredentials = await createMinecraftLaunchSession(guardAttestationTicket);
+      const preferences = currentLaunchPreferences();
+      // Only cached signed Manifest v2 may be used when the backend is offline.
+      // Never manufacture Minecraft access tokens for offline launches.
+      let minecraftCredentials: MinecraftLaunchCredentials | undefined;
+      if (!preferences.offline) {
+        const guardAttestationTicket = await createGuardLaunchTicket();
+        minecraftCredentials = await createMinecraftLaunchSession(guardAttestationTicket);
+      }
+      // Auto-enter needs its one-time ServerBridge ticket *before* Java receives
+      // --server/--quickPlayMultiplayer, otherwise Minecraft can connect before
+      // our post-launch join call. Policies requiring runtime attestation will
+      // reject pre-join, in which case we fail closed instead of racing a join.
+      if (preferences.autoEnter && minecraftCredentials) {
+        await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken);
+      }
       const result = await callTauri<ProcessStatus>('launch_minecraft', {
         request: {
           manifest,
           root: settings.gameDirectory,
           javaPath: settings.javaPath || null,
-          username: minecraftCredentials.username,
-          minecraftCredentials,
+          username: minecraftCredentials?.username || settings.username,
+          minecraftCredentials: minecraftCredentials || null,
           pinnedPublicKey: settings.pinnedPublicKey,
+          preferences,
         },
       });
       let continuousGuardTicket: string | undefined;
-      if (result.windowsSensor) {
+      if (!preferences.offline && result.windowsSensor) {
         try {
           continuousGuardTicket = await createContinuousGuardTicket(result.id);
         } catch (attestationError) {
@@ -1155,7 +1247,9 @@ function App() {
         }
       }
       try {
-        await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken, continuousGuardTicket);
+        if (!preferences.offline && !preferences.autoEnter && minecraftCredentials) {
+          await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken, continuousGuardTicket);
+        }
       } catch (joinError) {
         await callTauri<ProcessStatus>('stop_runtime_process', { processId: result.id }).catch(() => undefined);
         throw new Error(`Runtime остановлен: ServerBridge join после Attestation v2 не подтверждён: ${String(joinError)}`);
@@ -1264,7 +1358,7 @@ function App() {
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} repairClient={repairClient} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
-        {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} />}
+        {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
         {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}
         {screen === 'diagnostics' && <DiagnosticsPanel exportDiagnostics={exportDiagnostics} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} settingsCheck={settingsCheck} />}
@@ -1319,8 +1413,24 @@ function DownloadPanel({ files, download, repairResult, cleanResult, verifyFiles
   return <section className="panel"><h3>Загрузка, восстановление и очистка</h3><p>Проверка SHA-256, восстановление отсутствующих/повреждённых файлов и безопасная очистка через карантин.</p><div className="toolbar inline"><button onClick={verifyFiles}>Проверить файлы</button><button onClick={repairClient}>Восстановить повреждённое</button><button onClick={cleanUnusedFiles}>Переместить лишнее в карантин</button></div><p>Исправно: {fileSummary.ok}; проблем: {fileSummary.broken}; всего: {fileSummary.total}.</p><pre>{JSON.stringify({ download, repair: repairResult ? { status: repairResult.status, repaired: repairResult.repaired, message: repairResult.message } : null, cleanup: cleanResult, files: files.slice(0, 20) }, null, 2)}</pre></section>;
 }
 
-function SettingsPanel({ settings, patchSettings, validateSettings, settingsCheck, checkJavaRuntime, javaInfo, openGameDirectory }: any) {
-  return <section className="panel"><h3>Настройки запуска</h3><div className="settings"><label>Путь к Java<input value={settings.javaPath} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('javaPath', event.target.value)} placeholder="java" /></label><label>Закреплённый публичный ключ Ed25519<input value={settings.pinnedPublicKey} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('pinnedPublicKey', event.target.value)} /></label></div><div className="toolbar inline"><button onClick={validateSettings}>Проверить настройки</button><button onClick={checkJavaRuntime}>Проверить Java</button><button onClick={openGameDirectory}>Открыть каталог клиента</button></div><pre>{settingsCheck ? JSON.stringify(settingsCheck, null, 2) : javaInfo ? JSON.stringify(javaInfo, null, 2) : 'Настройки ещё не проверены.'}</pre></section>;
+function SettingsPanel({ settings, patchSettings, validateSettings, settingsCheck, checkJavaRuntime, javaInfo, openGameDirectory, manifest, profileServers, loadProfileServers, loadCachedOfflineManifest, cacheSignedManifest }: any) {
+  return <section className="panel"><h3>Настройки запуска</h3>
+    <div className="settings">
+      <label>Путь к Java<input value={settings.javaPath} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('javaPath', e.target.value)} placeholder="auto / managed Java" /></label>
+      <label>RAM, МБ<input type="number" min={Math.max(512, manifest?.runtime.memory?.minimumMb || 512)} max={Math.min(32768, manifest?.runtime.memory?.maximumMb || 32768)} value={settings.memoryMb} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('memoryMb', Number(e.target.value))} /></label>
+      <label>Ширина окна<input type="number" min={640} max={7680} value={settings.screenWidth} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('screenWidth', Number(e.target.value))} /></label>
+      <label>Высота окна<input type="number" min={480} max={4320} value={settings.screenHeight} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('screenHeight', Number(e.target.value))} /></label>
+      <label className="checkSetting"><input type="checkbox" checked={settings.fullscreen} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('fullscreen', e.target.checked)} /> Полный экран</label>
+      <label className="checkSetting"><input type="checkbox" checked={settings.autoEnter} disabled={settings.offlineEnabled} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('autoEnter', e.target.checked)} /> Автоматически подключаться к серверу</label>
+      <label>Сервер профиля<select value={settings.serverId || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => patchSettings('serverId', e.target.value)}><option value="">Без выбранного сервера</option>{profileServers.map((server: ScopedServer) => <option value={server.id} key={server.id}>{server.name} ({server.kind})</option>)}</select></label>
+      {settings.autoEnter && <><label>Публичный игровой адрес<input value={settings.serverHost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverHost', e.target.value)} placeholder="mc.example.org" /></label><label>Порт<input type="number" min={1} max={65535} value={settings.serverPort} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverPort', Number(e.target.value))} /></label></>}
+      <label className="checkSetting"><input type="checkbox" checked={settings.offlineEnabled} disabled={!manifest?.runtime.launch?.offlineMode} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('offlineEnabled', e.target.checked)} /> Offline (только разрешённый подписанным Manifest v2)</label>
+      <label>Закреплённый ключ Ed25519<input value={settings.pinnedPublicKey} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('pinnedPublicKey', e.target.value)} /></label>
+    </div>
+    <div className="toolbar inline"><button onClick={validateSettings}>Проверить настройки</button><button onClick={checkJavaRuntime}>Проверить Java</button><button onClick={openGameDirectory}>Открыть каталог клиента</button><button onClick={() => loadProfileServers().catch(console.error)}>Обновить серверы</button><button onClick={() => cacheSignedManifest().catch(console.error)}>Сохранить подписанный кеш</button><button onClick={loadCachedOfflineManifest}>Загрузить offline-кеш</button></div>
+    <p>Server browser показывает узлы ServerBridge, а не игровые DNS-адреса. Для auto-enter укажите публичный адрес выбранного сервера. Offline не выдаёт серверные сессии и требует локальный проверенный Manifest и файлы.</p>
+    <pre>{settingsCheck ? JSON.stringify(settingsCheck, null, 2) : javaInfo ? JSON.stringify(javaInfo, null, 2) : 'Настройки ещё не проверены.'}</pre>
+  </section>;
 }
 
 function LogsPanel({ logs, launchPlan, launchResult, launchHistory, refreshLaunchHistory, stopRuntimeProcess }: any) {
