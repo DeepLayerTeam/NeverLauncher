@@ -1,3 +1,12 @@
+## 0.24.5 — Signed Optional Actions
+
+- Catalog schema 5.0 signs and validates `File`, `ClassPath`, `JvmArgs` and `ClientArgs` actions; file targets must belong to their signed component. Go and Rust use a matching domain-separated v5 catalog digest.
+- The native transactional installer stages only selected `File`/`ClassPath` paths; real Java launch plans append verified selected classpath JARs and restricted signed JVM/client arguments. Active signed release identity and installed preset are required, and optional executable inputs receive SHA-256 checks before launching.
+- Optional arguments are constrained to explicit namespaces and safe single tokens: no JVM agents, classpath/entrypoint overrides, Java heap bypass or Minecraft authentication/session overrides.
+- Desktop supports v5 native preview, file counts and display of signed actions; backend draft mutations, memory snapshot cloning, schema, PostgreSQL migration 0065 and version metadata are updated.
+- Go model/migration tests and `go vet` pass. Rust fixture, positive launch-plan and rejection tests are added, but **Rust build/tests, full Backend/Desktop build and Minecraft E2E were not run** here and require CI certification before deployment.
+- Entitlement issuer/verification for `permissions` remains the known 0.24.4 limitation.
+
 ## 0.24.4 — Conditional Component Resolution
 
 - Catalog schema 4.0 with signed, versioned `conditions` schema 1.0 and Go/Rust matching domain-separated SHA-256 digest. The existing catalog 1.0/2.0/3.0 snapshots and manifest signatures remain compatible.

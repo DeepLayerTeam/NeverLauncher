@@ -12,7 +12,7 @@ import (
 // Component catalog schema 3 extends the signed v2 snapshot, never the local
 // selection. Every dependency, conflict, constraint and exclusion is signed.
 func ComponentCatalogDigest0243(c ComponentCatalog0241) string {
-	if c.SchemaVersion != ComponentCatalogSchema0243 && c.SchemaVersion != ComponentCatalogSchema0244 {
+	if c.SchemaVersion != ComponentCatalogSchema0243 && c.SchemaVersion != ComponentCatalogSchema0244 && c.SchemaVersion != ComponentCatalogSchema0245 {
 		return ComponentCatalogDigest0242(c)
 	}
 	h := sha256.New()
@@ -350,7 +350,7 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 			return err
 		}
 	}
-	if cat.SchemaVersion == ComponentCatalogSchema0244 {
+	if cat.SchemaVersion == ComponentCatalogSchema0244 || cat.SchemaVersion == ComponentCatalogSchema0245 {
 		return nil
 	}
 	if _, err := resolveCatalogGraph0243(cat, ""); err != nil {

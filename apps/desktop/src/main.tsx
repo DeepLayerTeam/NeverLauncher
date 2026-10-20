@@ -36,7 +36,8 @@ type DesktopSettings = {
 
 type CatalogRequirement = {id:string;versionRange?:string};
 type CatalogConditions0244 = {schemaVersion:string;os?:string[];arch?:string[];javaMajorMin?:number;javaMajorMax?:number;minecraftVersions?:string[];minecraftVersionRange?:string;loaders?:string[];loaderVersionRange?:string;permissions?:string[]};
-type CatalogComponent = {conditions?:CatalogConditions0244; id:string; name:string; files:string[]; version?:string; dependencies?:CatalogRequirement[]; conflicts?:CatalogRequirement[]; exclusiveGroup?:string; description?:string; categoryId?:string; groupId?:string; required?:boolean; default?:boolean; visible?:boolean; limited?:boolean; metadata?:Record<string,string> };
+type CatalogAction0245 = {type:'File'|'ClassPath'|'JvmArgs'|'ClientArgs';path?:string;args?:string[]};
+type CatalogComponent = {actions?:CatalogAction0245[]; conditions?:CatalogConditions0244; id:string; name:string; files:string[]; version?:string; dependencies?:CatalogRequirement[]; conflicts?:CatalogRequirement[]; exclusiveGroup?:string; description?:string; categoryId?:string; groupId?:string; required?:boolean; default?:boolean; visible?:boolean; limited?:boolean; metadata?:Record<string,string> };
 type ComponentCatalog = {schemaVersion:string; revision:number; digest:string; components:CatalogComponent[]; categories?:{id:string;name:string;description?:string;parentId?:string}[];groups?:{id:string;name:string;description?:string;parentId?:string;categoryId?:string}[];presets?:{id:string;name:string;description?:string;components:string[]}[];defaultPreset?:string};
 // UI explanation only. NeverRuntime's verified resolver is authoritative for IO and launch.
 function previewVersion0243(actual:string,range:string):boolean {
@@ -1615,7 +1616,7 @@ function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,
   const [nativePreview,setNativePreview]=useState<{selected:string[];unavailable:{id:string;reason:string}[];effectiveFiles:string[];error?:string}|null>(null);
   useEffect(()=>{
     let cancelled=false;
-    if(!cat||cat.schemaVersion!=='4.0'){setNativePreview(null);return;}
+    if(!cat||!['4.0','5.0'].includes(cat.schemaVersion)){setNativePreview(null);return;}
     setNativePreview(null);
     callTauri<{selected:string[];unavailable:{id:string;reason:string}[];effectiveFiles:string[]}>('preview_components_0244',{
       manifest,pinnedPublicKey,componentPreset:componentPreset||null
@@ -1624,18 +1625,19 @@ function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,
     });
     return ()=>{cancelled=true;};
   },[manifest,componentPreset,cat?.digest,pinnedPublicKey]);
-  const plan=cat&&cat.schemaVersion!=='4.0'?componentPresetPlan0243(cat,componentPreset):null;
-  const selected=cat?.schemaVersion==='4.0'?new Set(nativePreview?.selected||[]):plan?.selected||new Set<string>();
-  const files=cat?.components.filter(c=>selected.has(c.id)).flatMap(c=>c.files)||[];
+  const nativeConditional=cat&&['4.0','5.0'].includes(cat.schemaVersion);
+  const plan=cat&&!nativeConditional?componentPresetPlan0243(cat,componentPreset):null;
+  const selected=nativeConditional?new Set(nativePreview?.selected||[]):plan?.selected||new Set<string>();
+  const files=nativeConditional?nativePreview?.effectiveFiles||[]:cat?.components.filter(c=>selected.has(c.id)).flatMap(c=>c.files)||[];
   const bytes=manifest?.files.filter((f:ManifestFile)=>files.includes(f.path)).reduce((sum:number,f:ManifestFile)=>sum+f.size,0)||0;
   return <section className="panel"><h3>Профиль и компоненты</h3><div className="toolbar inline"><button onClick={loadManifest}>Загрузить манифест</button></div>
     <div className="list">{profiles.map((profile:BackendProfile)=><button key={profile.id} className={selectedProfile===profile.id?'row activeRow':'row'} onClick={()=>setSelectedProfile(profile.id)}><strong>{profile.title??profile.name??profile.id}</strong><span>{profile.loader??'vanilla'}</span></button>)}</div>
     {cat&&<article className="card"><h3>Подписанные компоненты (rev {cat.revision})</h3>
-      {(cat.schemaVersion==='2.0'||cat.schemaVersion==='3.0'||cat.schemaVersion==='4.0')&&<label>Пресет<select value={componentPreset} onChange={(e)=>setComponentPreset(e.target.value)}><option value="">По умолчанию{cat.defaultPreset?` (${cat.defaultPreset})`:''}</option>{cat.presets?.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+      {(cat.schemaVersion==='2.0'||cat.schemaVersion==='3.0'||cat.schemaVersion==='4.0'||cat.schemaVersion==='5.0')&&<label>Пресет<select value={componentPreset} onChange={(e)=>setComponentPreset(e.target.value)}><option value="">По умолчанию{cat.defaultPreset?` (${cat.defaultPreset})`:''}</option>{cat.presets?.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
       {(plan?.error||nativePreview?.error)&&<p role="alert" className="error">Недопустимая конфигурация: {plan?.error||nativePreview?.error}. Установка и запуск будут заблокированы native resolver.</p>}
       <p>Выбрано {selected.size} компонентов; объём данных каталога {Math.round(bytes/1024)} КиБ. При изменении пресета используйте «Скачать/Обновить» для транзакционной установки. Required включаются всегда.</p>
-      {cat.schemaVersion==='4.0'&&!nativePreview&&<p>Проверка платформы и подписанных условий в NeverRuntime…</p>}
-      {cat.components.filter(c=>c.visible!==false||selected.has(c.id)).map(c=><div key={c.id} className="row"><strong>{selected.has(c.id)?'✓ ':''}{c.name}</strong><span>{[c.required?'обязательный':null,c.default?'по умолчанию':null,c.limited?'ограниченный':null,c.description||null,plan?.reasons.get(c.id)||null,nativePreview?.unavailable.find(x=>x.id===c.id)?.reason||null,componentTopologyLabel(cat,c)||null].filter(Boolean).join(' · ')}</span></div>)}
+      {nativeConditional&&!nativePreview&&<p>Проверка платформы и подписанных условий в NeverRuntime…</p>}
+      {cat.components.filter(c=>c.visible!==false||selected.has(c.id)).map(c=><div key={c.id} className="row"><strong>{selected.has(c.id)?'✓ ':''}{c.name}</strong><span>{[c.required?'обязательный':null,c.default?'по умолчанию':null,c.limited?'ограниченный':null,c.description||null,plan?.reasons.get(c.id)||null,nativePreview?.unavailable.find(x=>x.id===c.id)?.reason||null,componentTopologyLabel(cat,c)||null,(c.actions?.length?`Действия: ${c.actions.map(a=>a.type+(a.path?` (${a.path})`:'')).join(', ')}`:null)].filter(Boolean).join(' · ')}</span></div>)}
     </article>}
     <pre>{manifest?JSON.stringify({projectId:manifest.projectId,profileId:manifest.profileId,version:manifest.version,files:manifest.files.length,catalogDigest:cat?.digest},null,2):'Манифест не загружен.'}</pre>
   </section>;

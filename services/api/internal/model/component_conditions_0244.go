@@ -38,7 +38,7 @@ type ComponentEnvironment0244 struct {
 }
 
 func ComponentCatalogDigest0244(c ComponentCatalog0241) string {
-	if c.SchemaVersion != ComponentCatalogSchema0244 {
+	if c.SchemaVersion != ComponentCatalogSchema0244 && c.SchemaVersion != ComponentCatalogSchema0245 {
 		return ComponentCatalogDigest0243(c)
 	}
 	h := sha256.New()
@@ -109,7 +109,7 @@ func validDistinct0244(values []string, limit int, valid func(string) bool) erro
 	return nil
 }
 func ValidateCatalogConditions0244(cat ComponentCatalog0241) error {
-	if cat.SchemaVersion != ComponentCatalogSchema0244 {
+	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
 		for _, c := range cat.Components {
 			if c.Conditions != nil {
 				return fmt.Errorf("component %s has unsigned v4 conditions", c.ID)
@@ -221,7 +221,7 @@ func unavailable0244(v *ComponentConditions0244, env ComponentEnvironment0244) s
 // required, explicitly selected and dependency components. An unavailable
 // default is excluded, whereas an unavailable hard selection is a clear error.
 func ResolveCatalogConditional0244(cat ComponentCatalog0241, preset string, env ComponentEnvironment0244) ([]string, error) {
-	if cat.SchemaVersion != ComponentCatalogSchema0244 {
+	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
 		return nil, fmt.Errorf("condition resolver requires catalog v4")
 	}
 	if err := ValidateCatalogConditions0244(cat); err != nil {

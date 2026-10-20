@@ -1,0 +1,233 @@
+{
+  "schemaVersion": "3.0",
+  "projectId": "demo",
+  "profileId": "vanilla",
+  "channel": "stable",
+  "version": "1.0",
+  "createdAt": "2026-10-20T00:00:00Z",
+  "minecraft": {
+    "version": "1.21.1",
+    "loader": "fabric",
+    "loaderVersion": "0.16.2"
+  },
+  "runtime": {
+    "java": {
+      "majorVersion": 21,
+      "distribution": ""
+    },
+    "memory": {},
+    "launch": {}
+  },
+  "directories": {},
+  "files": [
+    {
+      "path": "mods/sodium.jar",
+      "size": 3,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "url": "https://example.invalid/sodium",
+      "required": false,
+      "executable": false,
+      "ownership": "optional"
+    },
+    {
+      "path": "mods/indium.jar",
+      "size": 4,
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "url": "https://example.invalid/indium",
+      "required": false,
+      "executable": false,
+      "ownership": "optional"
+    },
+    {
+      "path": "mods/core.jar",
+      "size": 1,
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "url": "https://example.invalid/core",
+      "required": false,
+      "executable": false,
+      "ownership": "optional"
+    },
+    {
+      "path": "mods/shader.jar",
+      "size": 1,
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "url": "https://example.invalid/shader",
+      "required": false,
+      "executable": false,
+      "ownership": "optional"
+    }
+  ],
+  "profileSnapshot": {
+    "schemaVersion": "2.0",
+    "revision": 1,
+    "digest": "aafe7b05d3b35f6cd46fd846bf6794e2a0f176bf64c8f09464f10740d8c0c00e",
+    "spec": {
+      "projectId": "demo",
+      "id": "vanilla",
+      "name": "Vanilla",
+      "description": "",
+      "loader": "vanilla",
+      "preset": "",
+      "isDefault": false
+    }
+  },
+  "componentCatalog": {
+    "schemaVersion": "5.0",
+    "revision": 12,
+    "digest": "dbd001411a8b53041b7f8b9801f8a702f7ad129d84c00d685bbf6e2801a87523",
+    "components": [
+      {
+        "id": "core",
+        "name": "Core",
+        "files": [
+          "mods/core.jar"
+        ],
+        "version": "1.0.0",
+        "required": true,
+        "visible": false
+      },
+      {
+        "id": "performance.sodium",
+        "name": "Sodium \u0026 friends",
+        "files": [
+          "mods/sodium.jar",
+          "mods/indium.jar"
+        ],
+        "version": "0.5.2",
+        "dependencies": [
+          {
+            "id": "core",
+            "versionRange": "\u003e=1.0.0 \u003c2.0.0"
+          }
+        ],
+        "exclusiveGroup": "performance-engine",
+        "conditions": {
+          "schemaVersion": "1.0",
+          "os": [
+            "linux",
+            "windows"
+          ],
+          "arch": [
+            "x86_64"
+          ],
+          "javaMajorMin": 17,
+          "javaMajorMax": 21,
+          "minecraftVersions": [
+            "1.21.1"
+          ],
+          "loaders": [
+            "fabric"
+          ],
+          "loaderVersionRange": "^0.16.0"
+        },
+        "actions": [
+          {
+            "type": "File",
+            "path": "mods/sodium.jar"
+          },
+          {
+            "type": "ClassPath",
+            "path": "mods/sodium.jar"
+          },
+          {
+            "type": "JvmArgs",
+            "args": [
+              "-Dfabric.log.level=debug",
+              "-XX:MaxGCPauseMillis=150"
+            ]
+          },
+          {
+            "type": "ClientArgs",
+            "args": [
+              "--never-optional-feature=1"
+            ]
+          }
+        ],
+        "description": "Performance",
+        "categoryId": "performance",
+        "groupId": "performance.optimization",
+        "default": true,
+        "visible": true,
+        "metadata": {
+          "author": "A",
+          "url": "https://example.org"
+        }
+      },
+      {
+        "id": "shaders",
+        "name": "Shader",
+        "files": [
+          "mods/shader.jar"
+        ],
+        "version": "2.1.0",
+        "dependencies": [
+          {
+            "id": "performance.sodium",
+            "versionRange": "^0.5.0"
+          }
+        ],
+        "categoryId": "visual",
+        "groupId": "visual.shaders",
+        "visible": true,
+        "limited": true
+      }
+    ],
+    "categories": [
+      {
+        "id": "visual",
+        "name": "Visual"
+      },
+      {
+        "id": "performance",
+        "name": "Performance",
+        "parentId": "visual"
+      }
+    ],
+    "groups": [
+      {
+        "id": "visual.quality",
+        "name": "Quality",
+        "categoryId": "visual"
+      },
+      {
+        "id": "visual.shaders",
+        "name": "Shaders",
+        "parentId": "visual.quality",
+        "categoryId": "visual"
+      },
+      {
+        "id": "performance.optimization",
+        "name": "Performance",
+        "categoryId": "performance"
+      }
+    ],
+    "presets": [
+      {
+        "id": "minimal",
+        "name": "Minimal",
+        "components": []
+      },
+      {
+        "id": "optimized",
+        "name": "Optimized",
+        "components": [
+          "performance.sodium"
+        ]
+      },
+      {
+        "id": "quality",
+        "name": "Quality",
+        "components": [
+          "shaders"
+        ]
+      }
+    ],
+    "defaultPreset": "optimized"
+  },
+  "signature": {
+    "algorithm": "Ed25519",
+    "publicKey": "d4b771e9862923b23ba0fc5c4c30e536af7267541d49220ff6b0069257f5d180",
+    "signature": "8770e6494b3f158d78b76be6bee579932e40023f6bc5b348efedbc706cb67360f42028dd7776d625c4f289ac1894190bb1620f04e511bdd99d87d0af9859d709",
+    "signedAt": "2026-10-20T00:00:00Z"
+  }
+}

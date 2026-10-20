@@ -15,6 +15,7 @@ const ComponentCatalogSchema0241 = "1.0"
 const ComponentCatalogSchema0242 = "2.0"
 const ComponentCatalogSchema0243 = "3.0"
 const ComponentCatalogSchema0244 = "4.0"
+const ComponentCatalogSchema0245 = "5.0"
 
 type CatalogCategory0242 struct {
 	ID          string `json:"id"`
@@ -65,6 +66,7 @@ type CatalogComponent0241 struct {
 	Conflicts      []ComponentRequirement0243 `json:"conflicts,omitempty"`
 	ExclusiveGroup string                     `json:"exclusiveGroup,omitempty"`
 	Conditions     *ComponentConditions0244   `json:"conditions,omitempty"`
+	Actions        []ComponentAction0245      `json:"actions,omitempty"`
 	Description    string                     `json:"description,omitempty"`
 	CategoryID     string                     `json:"categoryId,omitempty"`
 	GroupID        string                     `json:"groupId,omitempty"`
@@ -124,9 +126,12 @@ func ValidateComponentCatalog0241(m Manifest) error {
 		return nil
 	}
 	cat := m.ComponentCatalog
-	if cat == nil || (cat.SchemaVersion != ComponentCatalogSchema0241 && cat.SchemaVersion != ComponentCatalogSchema0242 && cat.SchemaVersion != ComponentCatalogSchema0243 && cat.SchemaVersion != ComponentCatalogSchema0244) || cat.Revision == 0 ||
-		len(cat.Components) > 4096 || len(cat.Digest) != 64 || cat.Digest != ComponentCatalogDigest0244(*cat) {
+	if cat == nil || (cat.SchemaVersion != ComponentCatalogSchema0241 && cat.SchemaVersion != ComponentCatalogSchema0242 && cat.SchemaVersion != ComponentCatalogSchema0243 && cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245) || cat.Revision == 0 ||
+		len(cat.Components) > 4096 || len(cat.Digest) != 64 || cat.Digest != ComponentCatalogDigest0245(*cat) {
 		return errors.New("invalid v3 component catalog snapshot/digest")
+	}
+	if err := ValidateCatalogActions0245(*cat); err != nil {
+		return err
 	}
 	if err := ValidateCatalogConditions0244(*cat); err != nil {
 		return err
@@ -388,7 +393,7 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 	if cat.DefaultPreset != "" && !presets[cat.DefaultPreset] {
 		return fmt.Errorf("unknown default preset %q", cat.DefaultPreset)
 	}
-	if cat.SchemaVersion == ComponentCatalogSchema0243 || cat.SchemaVersion == ComponentCatalogSchema0244 {
+	if cat.SchemaVersion == ComponentCatalogSchema0243 || cat.SchemaVersion == ComponentCatalogSchema0244 || cat.SchemaVersion == ComponentCatalogSchema0245 {
 		if err := ValidateCatalogRules0243(cat); err != nil {
 			return err
 		}
@@ -406,7 +411,7 @@ func ResolveCatalogPreset0242(cat ComponentCatalog0241, preset string) ([]string
 	if cat.SchemaVersion == ComponentCatalogSchema0243 {
 		return resolveCatalogGraph0243(cat, preset)
 	}
-	if cat.SchemaVersion == ComponentCatalogSchema0244 {
+	if cat.SchemaVersion == ComponentCatalogSchema0244 || cat.SchemaVersion == ComponentCatalogSchema0245 {
 		return ResolveCatalogConditional0244(cat, preset, ComponentEnvironment0244{})
 	}
 	if cat.SchemaVersion == ComponentCatalogSchema0241 {

@@ -55,6 +55,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0062_component_topology_presets_0242",
 		"0063_dependency_conflict_resolver_0243",
 		"0064_conditional_components_0244",
+        "0065_signed_optional_actions_0245",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

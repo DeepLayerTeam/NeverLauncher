@@ -41,6 +41,8 @@ pub struct CatalogComponent {
     pub exclusive_group:String,
     #[serde(default,skip_serializing_if="Option::is_none")]
     pub conditions:Option<ComponentConditions0244>,
+    #[serde(default,skip_serializing_if="Vec::is_empty")]
+    pub actions:Vec<crate::component_actions_0245::ComponentAction0245>,
     #[serde(default,skip_serializing_if="empty")]
     pub description:String,
     #[serde(default,skip_serializing_if="empty")]
@@ -182,7 +184,7 @@ fn distinct_conditions_0244(values:&[String],limit:usize,valid:impl Fn(&str)->bo
 fn validate_conditions_0244(cat:&ComponentCatalog)->Result<(),String>{
     for c in &cat.components {
         let Some(v)=&c.conditions else {continue};
-        if cat.schema_version!="4.0" {return Err(format!("component {} has unsigned v4 conditions",c.id))}
+        if cat.schema_version!="4.0" && cat.schema_version!="5.0" {return Err(format!("component {} has unsigned v4 conditions",c.id))}
         if v.schema_version!="1.0"{return Err(format!("component {} unsupported condition schema {}",c.id,v.schema_version))}
         distinct_conditions_0244(&v.os,8,|s|matches!(s,"windows"|"linux"|"macos"))?;
         distinct_conditions_0244(&v.arch,8,|s|matches!(s,"x86_64"|"aarch64"))?;
@@ -282,7 +284,7 @@ fn validate_topology(cat:&ComponentCatalog)->Result<(),String>{
     }
     if !cat.default_preset.is_empty()&&!preset_ids.contains(cat.default_preset.as_str()){return Err("unknown defaultPreset".into())}
     validate_conditions_0244(cat)?;
-    if cat.schema_version=="3.0"||cat.schema_version=="4.0" {validate_rules_v3(cat)?;}
+    if matches!(cat.schema_version.as_str(),"3.0"|"4.0"|"5.0") {validate_rules_v3(cat)?;}
     Ok(())
 }
 #[derive(Clone,Debug,PartialEq,Eq)]
@@ -381,7 +383,7 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
     }
     let mut state=HashMap::new();let mut stack=Vec::new();
     for c in &cat.components{visit(c.id.as_str(),&items,&mut state,&mut stack)?}
-    if cat.schema_version!="4.0" {
+    if cat.schema_version!="4.0" && cat.schema_version!="5.0" {
       resolve_graph_v3(cat,"")?;
       for p in &cat.presets{resolve_graph_v3(cat,&p.id).map_err(|e|format!("preset {} invalid: {e}",p.id))?;}
     }
@@ -447,14 +449,14 @@ pub struct UnavailableComponent0244 { pub id:String,pub reason:String }
 pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<ComponentSelectionPreview0244,String>{
     validate(m)?;
     let cat=m.component_catalog.as_ref().ok_or("catalog is missing")?;
-    if cat.schema_version!="4.0"{return Err("conditional preview requires schema v4".into())}
+    if cat.schema_version!="4.0"&&cat.schema_version!="5.0"{return Err("conditional preview requires schema v4/v5".into())}
     let env=ComponentEnvironment0244::for_manifest(m);
     let selected=resolve_conditional_0244(cat,preset.unwrap_or_default(),&env)?;
     let unavailable=cat.components.iter().filter_map(|c|{
         condition_unavailable_0244(c,&env).ok().flatten().map(|reason|UnavailableComponent0244{id:c.id.clone(),reason})
     }).collect();
     let mut effective_files=Vec::new();
-    for c in &cat.components {if selected.contains(&c.id){effective_files.extend(c.files.iter().cloned())}}
+    for c in &cat.components {if selected.contains(&c.id){effective_files.extend(crate::component_actions_0245::effective_files(c))}}
     Ok(ComponentSelectionPreview0244{
         selected:cat.components.iter().filter(|c|selected.contains(&c.id)).map(|c|c.id.clone()).collect(),
         unavailable,effective_files,
@@ -464,8 +466,9 @@ pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<Componen
 pub fn validate(m:&Manifest)->Result<(),String>{
     if m.schema_version!="3.0"{if m.component_catalog.is_some(){return Err("componentCatalog requires manifest v3".into())}return Ok(())}
     let cat=m.component_catalog.as_ref().ok_or("v3 requires signed componentCatalog")?;
-    if !matches!(cat.schema_version.as_str(),"1.0"|"2.0"|"3.0"|"4.0")||cat.revision==0||cat.components.len()>4096||cat.digest.len()!=64||cat.digest!=(if cat.schema_version=="1.0"{digest(&cat.components)}else if cat.schema_version=="2.0"{digest_v2(cat)}else if cat.schema_version=="3.0"{digest_v3(cat)}else{digest_v4(cat)}){return Err("invalid v3 component snapshot/digest".into())}
+    if !matches!(cat.schema_version.as_str(),"1.0"|"2.0"|"3.0"|"4.0"|"5.0")||cat.revision==0||cat.components.len()>4096||cat.digest.len()!=64||cat.digest!=(if cat.schema_version=="1.0"{digest(&cat.components)}else if cat.schema_version=="2.0"{digest_v2(cat)}else if cat.schema_version=="3.0"{digest_v3(cat)}else if cat.schema_version=="4.0"{digest_v4(cat)}else{crate::component_actions_0245::digest_v5(cat)}){return Err("invalid v3 component snapshot/digest".into())}
     validate_topology(cat)?;
+    crate::component_actions_0245::validate_actions(cat)?;
     let files:HashMap<_,_>=m.files.iter().map(|f|(f.path.to_ascii_lowercase(),f)).collect();let mut ids=HashSet::new();let mut owners=HashSet::new();
     for c in &cat.components{
         if !valid_id(&c.id)||!ids.insert(c.id.as_str())||c.name.trim().is_empty()||c.name.len()>256||c.name.chars().any(|c|matches!(c,'\0'|'\r'|'\n'))||c.files.is_empty()||c.files.len()>8192{return Err(format!("invalid/duplicate component {}",c.id))}
@@ -483,11 +486,11 @@ pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,Str
     if m.schema_version!="3.0" {active.extend(m.files.iter().map(|f|f.path.clone()));return Ok(active)}
     let cat=m.component_catalog.as_ref().ok_or("missing component catalog")?;
     let mut selected=HashSet::new();
-    if cat.schema_version=="3.0"||cat.schema_version=="4.0" {
-        let resolved=if cat.schema_version=="4.0"{
+    if matches!(cat.schema_version.as_str(),"3.0"|"4.0"|"5.0") {
+        let resolved=if cat.schema_version=="4.0"||cat.schema_version=="5.0"{
             resolve_conditional_0244(cat,preset.unwrap_or_default(),&ComponentEnvironment0244::for_manifest(m))?
         }else{resolve_graph_v3(cat,preset.unwrap_or_default())?};
-        for c in &cat.components {if resolved.contains(c.id.as_str()) {active.extend(c.files.iter().cloned());}}
+        for c in &cat.components {if resolved.contains(c.id.as_str()) {active.extend(crate::component_actions_0245::effective_files(c).into_iter());}}
         return Ok(active)
     }
     if cat.schema_version=="1.0"{selected.extend(cat.components.iter().map(|c|c.id.as_str()));}

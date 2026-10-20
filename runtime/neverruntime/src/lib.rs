@@ -3,6 +3,7 @@ pub mod compatibility;
 mod deterministic_launch;
 pub mod file_ownership;
 pub mod component_catalog_0241;
+pub mod component_actions_0245;
 mod platform_fs;
 pub mod download_scheduler;
 mod http_resume;
@@ -1269,6 +1270,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
 
     if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
         apply_explicit_paths_0223(manifest, root, &mut plan)?;
+        component_actions_0245::apply_installed_actions(manifest, root, &mut plan)?;
         verify_launch_inputs_0227(manifest, root, &plan, &verified_metadata_paths).await?;
         plan.environment_allowlist = manifest.runtime.launch.environment_allowlist.clone();
         plan.restrict_java_environment = true;
@@ -1399,7 +1401,7 @@ fn apply_minecraft_auth119(manifest: &Manifest, root: &Path, credentials: &Minec
         for file in &manifest.files {
             let normalized = file.path.replace('\\', "/");
             let filename = normalized.rsplit('/').next().unwrap_or("").to_ascii_lowercase();
-            if filename.starts_with("authlib-injector") && filename.ends_with(".jar") && manifest_file_applies(file) {
+            if filename.starts_with("authlib-injector") && filename.ends_with(".jar") && file.required && manifest_file_applies(file) {
                 let path = safe_join(root, &file.path)?;
                 injector = Some(path);
                 break;
@@ -1580,11 +1582,15 @@ async fn verify_launch_inputs_0227(manifest: &Manifest, root: &Path, plan: &Laun
     // Metadata read by Compatibility Engine must also be exactly the signed
     // bytes. Otherwise local JSON edits could change launch args while keeping
     // the same signed release and profile snapshot.
-    paths.extend(metadata_paths.iter().cloned());
-    for rel in paths {
-        let declared = manifest.files.iter().find(|file| file.path == rel && file.required && manifest_file_applies(file))
-            .ok_or_else(|| format!("launch input is not a signed required artifact: {rel}"))?;
-        let location = safe_join(&canonical_root, &rel)?;
+    let active=component_catalog_0241::active_files(manifest,transactional_release::active_preset_for_manifest(manifest,root).as_deref())?;
+    for rel in paths.iter().chain(metadata_paths.iter()) {
+        let declared = manifest.files.iter().find(|file| file.path == *rel && manifest_file_applies(file) &&
+           (file.required || (manifest.schema_version=="3.0" && active.contains(rel.as_str()))))
+            .ok_or_else(|| format!("launch input is not a selected signed artifact: {rel}"))?;
+        if metadata_paths.contains(rel) && !declared.required {
+            return Err(format!("compatibility metadata cannot be optional: {rel}"));
+        }
+        let location = safe_join(&canonical_root, rel)?;
         file_ownership::ensure_no_symlinks(&canonical_root, &location)?;
         let metadata = fs::metadata(&location).await.map_err(|e| format!("launch input missing {rel}: {e}"))?;
         if !metadata.is_file() || metadata.len() != declared.size || !sha256_file(&location).await?.eq_ignore_ascii_case(&declared.sha256) {
@@ -2114,7 +2120,7 @@ mod tests {
                 url:"https://example.invalid/file".into(),mirrors:vec![],required:false,
                 executable:false,target_os:vec![],ownership:"optional".into()});
         }
-        let components=vec![CatalogComponent{id:"performance.sodium".into(),name:"Sodium & friends".into(),files:paths,version:String::new(),dependencies:vec![],conflicts:vec![],exclusive_group:String::new(),description:String::new(),category_id:String::new(),group_id:String::new(),required:false,default:false,visible:None,limited:false,metadata:Default::default()}];
+        let components=vec![CatalogComponent{id:"performance.sodium".into(),name:"Sodium & friends".into(),files:paths,version:String::new(),dependencies:vec![],conflicts:vec![],exclusive_group:String::new(),conditions:None,actions:vec![],description:String::new(),category_id:String::new(),group_id:String::new(),required:false,default:false,visible:None,limited:false,metadata:Default::default()}];
         assert_eq!(digest(&components),"85f4d294a8028281b667503339bc444bdf5c05ceef31e87fdee87f5cd0c84119");
         m.component_catalog=Some(ComponentCatalog{schema_version:"1.0".into(),revision:1,digest:digest(&components),components,categories:vec![],groups:vec![],presets:vec![],default_preset:String::new()});
         let seed="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";

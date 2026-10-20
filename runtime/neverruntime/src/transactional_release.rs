@@ -355,8 +355,27 @@ pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:
     if active.manifest.signature.as_ref().map(|s|&s.signature)!=manifest.signature.as_ref().map(|s|&s.signature){return Err("active client release does not match signed manifest".into())}
     let actual=crate::component_catalog_0241::active_files(manifest,active.preset.as_deref())?;
     if wanted!=actual {return Err("selected component preset is not installed: install selected preset first".into())}
+    // Two selections can contain the same files but different signed launch
+    // actions. Never accept a UI-only preset change as an installed selection.
+    if manifest.component_catalog.as_ref().is_some_and(|c|c.schema_version=="5.0") {
+        let requested=preset.filter(|s|!s.is_empty()).unwrap_or_default();
+        let installed=active.preset.as_deref().filter(|s|!s.is_empty()).unwrap_or_default();
+        if requested!=installed {
+            return Err("selected preset actions differ from installed release: install selected preset first".into())
+        }
+    }
     Ok(())
 }
+// v5 actions cannot be applied against a merely downloaded but uncommitted
+// manifest. An identical signed active release is required even for default presets.
+pub fn require_installed_preset_0245(manifest:&Manifest,root:&Path)->Result<Option<String>,String>{
+    let active=pointer(root)?.active.ok_or("signed component actions require installed active release")?;
+    let expected=manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
+    let actual=active.manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
+    if expected!=actual{return Err("signed component actions do not match installed release".into())}
+    Ok(active.preset)
+}
+
 // Used for the exact installed selection when verifying files before launch.
 pub fn active_preset_for_manifest(manifest:&Manifest,root:&Path)->Option<String>{
     let active=pointer(root).ok()?.active?;
