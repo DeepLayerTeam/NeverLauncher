@@ -1,3 +1,10 @@
+## 0.24.9 — CLI Components Tooling
+
+- Добавлены рабочие офлайн-команды `nl components validate|resolve|export|diff` с детерминированным JSON и структурированными ошибками.
+- Проверка Manifest v3 / Catalog v1–v5, Ed25519 по независимому доверенному ключу, SHA-256 каталога и принадлежности optional-файлов.
+- Расчёт выбранных компонентов, причин зависимостей, условий окружения, подписанных действий и сравнений между релизами без изменения манифеста.
+- Тесты реальной Go/Ed25519 фикстуры, защиты от подмены, межмодульного совпадения resolver и воспроизводимости вывода.
+
 ## 0.24.8 — Admin Component Graph Editor
 
 - Added a real Admin editor for signed-catalog topology, nested categories/groups, presets, component metadata, conditional rules and four signed optional actions.

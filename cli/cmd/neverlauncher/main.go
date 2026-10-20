@@ -24,6 +24,7 @@ const helpText = `NeverLauncher CLI
 Основные команды:
   version                         показать версию CLI
   manifest build|validate|diff    работа с client manifest
+  components validate|resolve|export|diff  подписанные компоненты, пресеты и JSON планы
   update plan|apply|components|status|recover|migrate-state|self-test|component-self-test|stabilization-self-test transactional updater core
   hashes check                    проверить SHA-256 файлов
   diagnostics collect|redact|validate|policy|bundle
@@ -300,6 +301,8 @@ func run(args []string) error {
 		return nil
 	case "manifest":
 		return handleManifest(args[1:])
+	case "components":
+		return handleComponents0249(args[1:])
 	case "update":
 		return handleUpdate(args[1:])
 	case "hashes":
