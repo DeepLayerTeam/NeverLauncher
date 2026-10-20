@@ -2,8 +2,8 @@
 //! into staging. A durable write-ahead journal is published before touching any
 //! live file, and old file bytes are preserved until the next release is safe.
 use crate::{download_scheduler::{self, DownloadLimits, ProgressSink}, file_ownership, platform_fs,
-    manifest_file_applies, network_resilience::Directive, safe_join, sha256_file, release_generations,
-    verify_manifest_signature, DownloadResult, Manifest};
+    network_resilience::Directive, safe_join, sha256_file, release_generations,
+    verify_manifest_signature, resolved_download_0246, DownloadResult, Manifest};
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -21,6 +21,8 @@ struct Release {
     id: String,
     #[serde(default,skip_serializing_if="Option::is_none")]
     preset: Option<String>,
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    plan_sha256: Option<String>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct Pointer { schema: u32, generation: u64, active: Option<Release> }
@@ -130,22 +132,26 @@ fn lock(root: &Path) -> Result<fs::File, String> {
     file.try_lock_exclusive().map_err(|e| format!("client release is busy (Minecraft may be running): {e}"))?;
     Ok(file)
 }
-fn eligible(manifest: &Manifest, path: &str) -> bool {
-    manifest.files.iter().any(|f| f.path == path && manifest_file_applies(f) && !file_ownership::skip_download(manifest, f))
-}
 fn validate_release(release: &Release, key: &str) -> Result<(), String> {
     validate_id(&release.id)?;
     verify_manifest_signature(&release.manifest, key)?;
     file_ownership::validate_download_targets(&release.manifest)?;
-    let selected=crate::component_catalog_0241::active_files(&release.manifest,release.preset.as_deref())?;
+    let plan=resolved_download_0246::resolve(&release.manifest,release.preset.as_deref())?;
+    if let Some(digest)=&release.plan_sha256 {
+        if digest!=&plan.sha256 { return Err("installed resolved plan identity mismatch".into()); }
+    }
     let mut seen = BTreeSet::new();
     for p in &release.installed {
-        if !selected.contains(p) || !eligible(&release.manifest, p) || !seen.insert(p) { return Err(format!("invalid release ownership record: {p}")); }
+        if !plan.selected_paths.contains(p) || !seen.insert(p) {
+            return Err(format!("invalid release ownership record: {p}"));
+        }
     }
+    // Manifest v3 requires the complete selected set, including optional
+    // components, rather than treating an absent selected JAR as disposable.
     if release.manifest.schema_version == "3.0" {
-        for file in &release.manifest.files {
-            if selected.contains(&file.path) && eligible(&release.manifest, &file.path) && !seen.contains(&file.path) {
-                return Err(format!("v3 signed component file not installed: {}",file.path));
+        for file in &plan.files {
+            if !seen.contains(&file.path) {
+                return Err(format!("selected signed component file not installed: {}",file.path));
             }
         }
     }
@@ -349,9 +355,15 @@ pub async fn acquire_launch_lease(manifest: &Manifest, root: &Path, key: &str) -
 // Changing the UI dropdown alone must never silently launch the older preset.
 pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:Option<&str>)->Result<(),String>{
     verify_manifest_signature(manifest,key)?;
+    let wanted_plan=resolved_download_0246::resolve(manifest,preset)?;
     let wanted=crate::component_catalog_0241::active_files(manifest,preset)?;
     let active=pointer(root)?.active.ok_or("client release is not installed")?;
     validate_release(&active,key)?;
+    if let Some(ref installed_digest)=active.plan_sha256 {
+        if wanted_plan.sha256!=*installed_digest {
+            return Err("selected resolved plan differs from installed plan; install selected preset first".into());
+        }
+    }
     if active.manifest.signature.as_ref().map(|s|&s.signature)!=manifest.signature.as_ref().map(|s|&s.signature){return Err("active client release does not match signed manifest".into())}
     let actual=crate::component_catalog_0241::active_files(manifest,active.preset.as_deref())?;
     if wanted!=actual {return Err("selected component preset is not installed: install selected preset first".into())}
@@ -373,6 +385,11 @@ pub fn require_installed_preset_0245(manifest:&Manifest,root:&Path)->Result<Opti
     let expected=manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
     let actual=active.manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
     if expected!=actual{return Err("signed component actions do not match installed release".into())}
+    if let Some(ref digest)=active.plan_sha256 {
+        if resolved_download_0246::resolve(manifest,active.preset.as_deref())?.sha256!=*digest {
+            return Err("installed signed action plan identity mismatch".into());
+        }
+    }
     Ok(active.preset)
 }
 
@@ -387,31 +404,65 @@ pub async fn ready_for_launch(manifest: &Manifest, root: &Path, key: &str) -> Re
     Ok(())
 }
 
+// Only a file in the previous VERIFIED managed ownership record, with the
+// identical signed size and digest, can be reused without staging. A matching
+// player-owned file is NEVER promoted into managed ownership implicitly.
+fn reusable_file(root:&Path, previous:Option<&Release>, next:&Release, path:&str)->Result<bool,String>{
+    let Some(old)=previous else {return Ok(false)};
+    if !old.installed.iter().any(|p|p==path) {return Ok(false)}
+    let (old_sha,old_size)=expected(old,path).ok_or("previous signed ownership lacks file")?;
+    let (new_sha,new_size)=expected(next,path).ok_or("new signed ownership lacks file")?;
+    if old_size!=new_size || !old_sha.eq_ignore_ascii_case(new_sha) {return Ok(false)}
+    let location=safe_join(root,path)?;
+    file_ownership::ensure_no_symlinks(root,&location)?;
+    Ok(matches_digest(&location,new_sha,new_size))
+}
+
+// A staged file or an unchanged, verified previously-owned file is required
+// for every output path, before publishing ANY switching journal.
+fn verify_prepared(root:&Path,stage:&Path, next:&Release, previous:Option<&Release>)->Result<(),String>{
+    for p in &next.installed {
+        if reusable_file(root,previous,next,p)? {continue}
+        let (sha,size)=expected(next,p).ok_or("missing signed planned file")?;
+        let staged=safe_join(stage,p)?;
+        file_ownership::ensure_no_symlinks(root,&staged)?;
+        if !matches_digest(&staged,sha,size){return Err(format!("staged client file failed SHA-256: {p}"))}
+    }
+    Ok(())
+}
+
 fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), String> {
     let _guard = lock(root)?;
     recover_locked(root, key)?;
     validate_release(&next, key)?;
     release_generations::check(root,&next.manifest)?;
     crate::trust_policy::check(root,&next.manifest,key)?;
-    if !verify_installed(stage, &next)? { return Err("staged client files failed pre-commit verification".into()); }
+    let current = pointer(root)?;
+    verify_prepared(root,stage,&next,current.active.as_ref())?;
     // Persistence barrier for all verified staged bytes and their directory
     // entries. The journal may be published only after these bytes are durable.
     let mut parents = BTreeSet::new();
     for path in &next.installed {
+        // The previously owned, SHA-256-verified live file is already
+        // durable. It has no staging counterpart in a delta transaction.
+        if reusable_file(root,current.active.as_ref(),&next,path)? {continue}
         let file_path = safe_join(stage, path)?;
         fs::File::open(&file_path).and_then(|f| f.sync_all())
             .map_err(|e| format!("persist staged file {path}: {e}"))?;
         if let Some(parent) = file_path.parent() { parents.insert(parent.to_path_buf()); }
     }
     for parent in parents { sync_dir(&parent)?; }
-    let current = pointer(root)?;
     if let Some(ref old) = current.active {
         validate_release(old, key)?;
         // Cross-check the active signed release in addition to the durable
         // watermark: losing one local journal file must never enable a replay.
-        if next.manifest.game_release_generation < old.manifest.game_release_generation ||
-           (next.manifest.game_release_generation == old.manifest.game_release_generation &&
-            next.manifest.signature.as_ref().map(|s| &s.signature) != old.manifest.signature.as_ref().map(|s| &s.signature)) {
+        // Generation 0 is the legacy, pre-watermark mode. Preserve its normal
+        // signed update path; once a positive generation is used, reject any
+        // downgrade or equivocation, including attempts to return to zero.
+        if (next.manifest.game_release_generation > 0 || old.manifest.game_release_generation > 0) &&
+           (next.manifest.game_release_generation < old.manifest.game_release_generation ||
+            (next.manifest.game_release_generation == old.manifest.game_release_generation &&
+             next.manifest.signature.as_ref().map(|s| &s.signature) != old.manifest.signature.as_ref().map(|s| &s.signature))) {
             return Err("signed gameReleaseGeneration cannot replace the active release with older/different content".into());
         }
         if !verify_installed(root, old)? && old.manifest.signature.as_ref().map(|s| &s.signature) != next.manifest.signature.as_ref().map(|s| &s.signature) {
@@ -453,8 +504,7 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         // file at that path must not be silently replaced by the new release.
         let was_managed = previous.as_ref().is_some_and(|old| old.installed.contains(&p));
         if !was_managed && live.exists() {
-            let same_as_new = expected(&next, &p).is_some_and(|(sha,len)| matches_digest(&live, sha, len));
-            if !same_as_new { return Err(format!("untracked user file conflicts with new managed path: {p}")); }
+            return Err(format!("untracked user file conflicts with new managed path: {p}"));
         }
         let digest = match fs::symlink_metadata(&live) {
             Ok(meta) if meta.is_file() && !meta.file_type().is_symlink() => {
@@ -474,8 +524,13 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
     }
     sync_dir(&back)?;
     if let Some(ref old) = previous {
-        let repairing_same_release = old.manifest.signature.as_ref().map(|s| &s.signature) == next.manifest.signature.as_ref().map(|s| &s.signature);
-        if !repairing_same_release && !verify_installed(root, old)? { return Err("previous active release changed during backup".into()); }
+        // Repair may replace corrupt *selected* files only if the selection is
+        // unchanged. Switching presets must not retire a locally modified JAR.
+        let repairing_same_selection = old.manifest.signature.as_ref().map(|s| &s.signature)
+            == next.manifest.signature.as_ref().map(|s| &s.signature) && old.preset == next.preset;
+        if !repairing_same_selection && !verify_installed(root, old)? {
+            return Err("previous active release changed during backup; refusing to retire modified managed files".into());
+        }
     }
     let prior_generation = journal(root)?.map_or(0, |j| j.generation);
     let mut j = Journal { schema: SCHEMA, generation: prior_generation + 1, state: "switching".into(),
@@ -487,6 +542,9 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         for e in &j.entries {
             let target = safe_join(root, &e.path)?;
             if e.new_sha256.is_some() {
+                // Reuse does not write to the live tree. Re-check immediately
+                // before switch in case the file changed since preflight.
+                if reusable_file(root,j.previous.as_ref(),&j.next,&e.path)? {continue}
                 let staged = safe_join(stage, &e.path)?;
                 switch_file(root, &staged, &target)?;
             } else if target.exists() {
@@ -523,11 +581,41 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>, preset:Option<String>) -> Result<DownloadResult, String> {
     verify_manifest_signature(manifest, key)?;
     file_ownership::validate_download_targets(manifest)?;
-    let selected=crate::component_catalog_0241::active_files(manifest,preset.as_deref())?;
+    let plan=resolved_download_0246::resolve(manifest,preset.as_deref())?;
+    let selected=plan.selected_paths.clone();
     recover(root, key).await?;
     let root = root.canonicalize().map_err(|e| e.to_string())?;
     release_generations::check(&root,manifest)?;
     crate::trust_policy::check(&root,manifest,key)?;
+    // Stage only delta bytes. The journal/rollback still tracks the complete
+    // final managed set, not just files transferred during this operation.
+    let previous=pointer(&root)?.active;
+    if let Some(ref old)=previous {
+        validate_release(old,key)?;
+        let same_selection = old.manifest.signature.as_ref().map(|s| &s.signature)
+            == manifest.signature.as_ref().map(|s| &s.signature) && old.preset == preset;
+        if !same_selection && !verify_installed(&root,old)? {
+            return Err("previous active release was modified: repair it before switching signed components".into());
+        }
+    }
+    // Fail before network traffic if a newly selected signed path would take
+    // over an existing player-owned file. Commit repeats this check under lock.
+    for f in &plan.files {
+        if previous.as_ref().is_some_and(|old|old.installed.contains(&f.path)){continue}
+        let target=safe_join(&root,&f.path)?;
+        file_ownership::ensure_no_symlinks(&root,&target)?;
+        match fs::symlink_metadata(&target) {
+            Ok(_) => return Err(format!("untracked user file conflicts with new managed path: {}",f.path)),
+            Err(e) if e.kind()==std::io::ErrorKind::NotFound => (),
+            Err(e) => return Err(format!("inspect resolved path {}: {e}",f.path)),
+        }
+    }
+    let desired=Release{manifest:manifest.clone(),installed:plan.files.iter().map(|f|f.path.clone()).collect(),
+        id:format!("{:032x}",rand::random::<u128>()),preset:preset.clone(),plan_sha256:Some(plan.sha256.clone())};
+    let mut reused=BTreeSet::new();
+    for file in &plan.files {
+        if reusable_file(&root,previous.as_ref(),&desired,&file.path)? { reused.insert(file.path.clone()); }
+    }
     // Operation ID is generated by durable_downloads, but never use its raw
     // input as a filesystem path (durable journals may be user modified).
     let stage_id = hex::encode(Sha256::digest(operation_id.as_bytes()));
@@ -540,7 +628,7 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     let mut required_stage = 0u64;
     let mut largest_pending = Vec::new();
     for f in &manifest.files {
-        if !selected.contains(&f.path) || !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) { continue; }
+        if !selected.contains(&f.path) || reused.contains(&f.path) { continue; }
         let path = safe_join(&stage, &f.path)?;
         file_ownership::ensure_no_symlinks(&root, &path)?;
         let live = safe_join(&root, &f.path)?;
@@ -560,37 +648,32 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
         inflight_space = platform_fs::checked_add(inflight_space, size)?;
     }
     platform_fs::require_free_space(&root, platform_fs::checked_add(required_stage, inflight_space)?)?;
-    // Existing intact files are valid inputs for staging and need no HTTP.
-    // Optional files already installed are copied too so the scheduler repairs
-    // them; absent optional files remain optional, as in 0.23.4.
-    for f in &manifest.files {
-        crate::network_resilience::check(&control)?;
-        if !selected.contains(&f.path) || !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) { continue; }
-        let target = safe_join(&root, &f.path)?;
-        let staged = safe_join(&stage, &f.path)?;
-        file_ownership::ensure_no_symlinks(&root, &target)?;
-        file_ownership::ensure_no_symlinks(&root, &staged)?;
-        if matches_digest_async(&target, &f.sha256, f.size).await && !matches_digest_async(&staged, &f.sha256, f.size).await {
-            if let Some(parent) = staged.parent() { safe_dir(&root, parent)?; }
-            tokio::fs::copy(&target, &staged).await.map_err(|e| format!("stage existing {}: {e}",f.path))?;
-        } else if file_ownership::effective_ownership(f) == "optional" && target.exists() && !staged.exists() {
-            if let Some(parent) = staged.parent() { safe_dir(&root, parent)?; }
-            tokio::fs::copy(&target, &staged).await.map_err(|e| format!("stage optional {}: {e}",f.path))?;
+    // The scheduler always verifies SHA-256 on its staged/cache/network bytes.
+    // Previously owned, unchanged files need no copy or network transfer.
+    // An untracked file is never used as an implicit cache hit.
+    let to_download:std::collections::HashSet<String>=selected.iter().filter(|p|!reused.contains(*p)).cloned().collect();
+    let mut result = download_scheduler::run_selected(manifest, &stage, DownloadLimits::default(), sink, operation_id, control.clone(), &to_download).await?;
+    // Distinguish byte-for-byte verified reuse from network/cache transfers.
+    result.skipped += reused.len();
+    for f in &plan.files {
+        if reused.contains(&f.path) {
+            result.bytes_reused = platform_fs::checked_add(result.bytes_reused,f.size)?;
         }
     }
-    let result = download_scheduler::run_selected(manifest, &stage, DownloadLimits::default(), sink, operation_id, control.clone(), &selected).await?;
     if *control.borrow() != Directive::Running || result.failed != 0 { return Ok(result); }
     let mut installed = Vec::new();
-    for f in &manifest.files {
-        if !selected.contains(&f.path) || !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) { continue; }
+    for f in &plan.files {
+        if reused.contains(&f.path) {installed.push(f.path.clone());continue;}
         let path = safe_join(&stage, &f.path)?;
-        let optional_absent = manifest.schema_version == "2.0" && file_ownership::effective_ownership(f) == "optional" && !path.exists() && !file_ownership::must_verify(manifest, &f.path);
-        if optional_absent { continue; }
-        if !matches_digest_async(&path, &f.sha256, f.size).await { return Err(format!("staged client file failed SHA-256: {}", f.path)); }
+        let optional_absent = manifest.schema_version == "2.0" && manifest.files.iter().find(|x|x.path==f.path)
+            .is_some_and(|x|file_ownership::effective_ownership(x)=="optional" && !file_ownership::must_verify(manifest,&f.path))
+            && !path.exists();
+        if optional_absent {continue}
+        if !matches_digest_async(&path, &f.sha256, f.size).await { return Err(format!("staged client file failed SHA-256: {}",f.path)); }
         installed.push(f.path.clone());
     }
     if *control.borrow() != Directive::Running { return Ok(result); }
-    let next = Release { manifest: manifest.clone(), installed, id: format!("{:032x}", rand::random::<u128>()), preset };
+    let next = Release {installed, ..desired};
     let key = key.to_owned();
     let restore_root = root.clone(); let restore_key = key.clone();
     tokio::task::spawn_blocking(move || commit(&root, next, &key, &stage))
@@ -614,6 +697,19 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
         recover_locked(&root, &key)?;
         let mut j = last_known_good(&root)?.ok_or("no last-known-good client release")?;
         verify_journal(&root, &j, &key)?;
+        // A repair may have backed up already corrupted managed bytes to make
+        // a failed repair crash-recoverable. Such bytes are *not* a usable
+        // last-known-good release and must never be offered for user rollback.
+        if let Some(ref old)=j.previous {
+            for p in &old.installed {
+                let backup=safe_join(&backup_dir(&root,&j.backup_id),p)?;
+                file_ownership::ensure_no_symlinks(&root,&backup)?;
+                let (sha,size)=expected(old,p).ok_or("previous signed file missing")?;
+                if !matches_digest(&backup,sha,size) {
+                    return Err(format!("rollback refused: previous signed file was already damaged: {p}"));
+                }
+            }
+        }
         let active = pointer(&root)?.active.ok_or("no active release")?;
         if active.manifest.game_release_generation > 0 { return Err("game rollback requires a NEW signed gameReleaseGeneration; publish the old content as a new release".into()); }
         if active.id != j.next.id { return Err("last-known-good is not the previous active release".into()); }
@@ -659,17 +755,183 @@ mod tests {
         assert_eq!(manifest.files.len(), bytes.len());
         dir
     }
+    fn signed_optional_fixture_0246(root:&Path)->(Manifest,String){
+        let mut m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
+        let catalog=m.component_catalog.as_mut().unwrap();
+        // The fixture test must run on all OSes even when it declares Linux
+        // specific optional conditions in the published reference manifest.
+        for component in &mut catalog.components {component.conditions=None;}
+        catalog.digest=crate::component_actions_0245::digest_v5(catalog);
+        for f in &mut m.files {
+            let bytes=match f.path.as_str(){
+                "mods/core.jar"=>b"CORE".as_slice(),
+                "mods/sodium.jar"=>b"SODIUM".as_slice(),
+                "mods/indium.jar"=>b"INDIUM".as_slice(),
+                "mods/shader.jar"=>b"SHADER".as_slice(),
+                _=>panic!("unexpected test path"),
+            };
+            f.sha256=hex::encode(Sha256::digest(bytes));
+            f.size=bytes.len() as u64;
+        }
+        let key=sign_manifest(&mut m,&"1a".repeat(32),"2026-10-20T00:00:00Z").unwrap();
+        fs::create_dir_all(root).unwrap();
+        (m,key)
+    }
+    fn release_from_plan_0246(m:&Manifest,preset:&str,id:u128)->Release{
+        let plan=resolved_download_0246::resolve(m,Some(preset)).unwrap();
+        Release{manifest:m.clone(),installed:plan.files.iter().map(|f|f.path.clone()).collect(),
+            id:format!("{id:032x}"),preset:Some(preset.into()),plan_sha256:Some(plan.sha256)}
+    }
+    #[tokio::test]
+    async fn v5_resolved_plan_reuses_unchanged_bytes_and_rolls_back_only_owned_paths_0246(){
+        let root=std::env::temp_dir().join(format!("nl-plan-0246-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (m,key)=signed_optional_fixture_0246(&root);
+        let first=release_from_plan_0246(&m,"minimal",123);
+        let stage_one=base(&root).join("test-minimal");
+        fs::create_dir_all(stage_one.join("mods")).unwrap();
+        fs::write(stage_one.join("mods/core.jar"),b"CORE").unwrap();
+        commit(&root,first,&key,&stage_one).unwrap();
+        fs::write(root.join("mods/player-custom.jar"),b"PLAYER").unwrap();
+        #[cfg(unix)]
+        let inode_before={use std::os::unix::fs::MetadataExt;fs::metadata(root.join("mods/core.jar")).unwrap().ino()};
+        // Only the changed subset is staged: the unchanged core is verified
+        // from the previous release record instead of copied or downloaded.
+        let stage_two=base(&root).join("test-quality");
+        fs::create_dir_all(stage_two.join("mods")).unwrap();
+        fs::write(stage_two.join("mods/sodium.jar"),b"SODIUM").unwrap();
+        fs::write(stage_two.join("mods/shader.jar"),b"SHADER").unwrap();
+        let next=release_from_plan_0246(&m,"quality",124);
+        commit(&root,next,&key,&stage_two).unwrap();
+        assert_eq!(fs::read(root.join("mods/core.jar")).unwrap(),b"CORE");
+        #[cfg(unix)]{
+            use std::os::unix::fs::MetadataExt;
+            assert_eq!(fs::metadata(root.join("mods/core.jar")).unwrap().ino(),inode_before,
+                "unchanged managed file must not be replaced");
+        }
+        assert_eq!(fs::read(root.join("mods/sodium.jar")).unwrap(),b"SODIUM");
+        assert_eq!(fs::read(root.join("mods/shader.jar")).unwrap(),b"SHADER");
+        assert!(!root.join("mods/indium.jar").exists(),"File action excluded this signed but unselected file");
+        let active=pointer(&root).unwrap().active.unwrap();
+        validate_release(&active,&key).unwrap();
+        let mut tampered=active.clone();tampered.plan_sha256=Some("f".repeat(64));
+        assert!(validate_release(&tampered,&key).unwrap_err().contains("plan identity"));
+        rollback(&root,&key).await.unwrap();
+        assert!(!root.join("mods/shader.jar").exists());
+        assert!(!root.join("mods/sodium.jar").exists());
+        assert_eq!(fs::read(root.join("mods/core.jar")).unwrap(),b"CORE");
+        assert_eq!(fs::read(root.join("mods/player-custom.jar")).unwrap(),b"PLAYER");
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[tokio::test]
+    async fn installer_uses_only_resolved_delta_and_checks_real_selected_files_0246(){
+        let root=std::env::temp_dir().join(format!("nl-install-0246-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (m,key)=signed_optional_fixture_0246(&root);
+        let stage_for=|op:&str|base(&root).join("work").join(hex::encode(Sha256::digest(op.as_bytes()))).join("files");
+        let first_stage=stage_for("minimal-0246");
+        fs::create_dir_all(first_stage.join("mods")).unwrap();
+        fs::write(first_stage.join("mods/core.jar"),b"CORE").unwrap();
+        let (_,running)=watch::channel(Directive::Running);
+        let first=install(&m,&root,&key,None,"minimal-0246".into(),running,Some("minimal".into())).await.unwrap();
+        assert_eq!(first.failed,0);
+        assert!(root.join("mods/core.jar").exists());
+        assert!(!root.join("mods/sodium.jar").exists());
+        let second_stage=stage_for("quality-0246");
+        fs::create_dir_all(second_stage.join("mods")).unwrap();
+        fs::write(second_stage.join("mods/sodium.jar"),b"SODIUM").unwrap();
+        fs::write(second_stage.join("mods/shader.jar"),b"SHADER").unwrap();
+        let (_,running)=watch::channel(Directive::Running);
+        let second=install(&m,&root,&key,None,"quality-0246".into(),running,Some("quality".into())).await.unwrap();
+        assert_eq!(second.failed,0);
+        assert!(second.skipped>=1,"previously verified core must be reused");
+        assert!(second.bytes_reused>=4,"verified core bytes count toward reuse");
+        let checks=crate::check_files_with_preset(&m,&root,Some("quality")).await.unwrap();
+        assert_eq!(checks.len(),3);
+        assert!(checks.iter().all(|x|x.status=="ok"));
+        assert!(!root.join("mods/indium.jar").exists());
+        rollback(&root,&key).await.unwrap();
+        assert_eq!(fs::read(root.join("mods/core.jar")).unwrap(),b"CORE");
+        assert!(!root.join("mods/sodium.jar").exists());
+        assert!(!root.join("mods/shader.jar").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn deselect_must_not_delete_locally_modified_previous_component_0246(){
+        let root=std::env::temp_dir().join(format!("nl-retire-0246-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (m,key)=signed_optional_fixture_0246(&root);
+        let quality=release_from_plan_0246(&m,"quality",801);
+        let stage=base(&root).join("staging-quality");
+        fs::create_dir_all(stage.join("mods")).unwrap();
+        for (p,body) in [("core.jar",b"CORE".as_slice()),("sodium.jar",b"SODIUM".as_slice()),("shader.jar",b"SHADER".as_slice())]{
+            fs::write(stage.join("mods").join(p),body).unwrap();
+        }
+        commit(&root,quality,&key,&stage).unwrap();
+        fs::write(root.join("mods/sodium.jar"),b"PLAYER_EDIT").unwrap();
+        let minimal=release_from_plan_0246(&m,"minimal",802);
+        let err=commit(&root,minimal,&key,&stage).unwrap_err();
+        assert!(err.contains("previous active release changed"),"{err}");
+        assert_eq!(fs::read(root.join("mods/sodium.jar")).unwrap(),b"PLAYER_EDIT");
+        assert_eq!(pointer(&root).unwrap().active.unwrap().preset.as_deref(),Some("quality"));
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[tokio::test]
+    async fn repair_same_signed_selection_restores_corrupted_owned_file_0246(){
+        let root=std::env::temp_dir().join(format!("nl-repair-0246-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (m,key)=fixture(&root,"one",&[("libraries/core.jar",b"GOOD")]);
+        let initial=Release{manifest:m.clone(),installed:vec!["libraries/core.jar".into()],id:format!("{:032x}",901),preset:None,plan_sha256:None};
+        commit(&root,initial,&key,&staged(&root,&m,&[("libraries/core.jar",b"GOOD")])).unwrap();
+        fs::write(root.join("libraries/core.jar"),b"BAD").unwrap();
+        let operation="repair-0246";
+        let repaired_stage=base(&root).join("work").join(hex::encode(Sha256::digest(operation.as_bytes()))).join("files");
+        fs::create_dir_all(repaired_stage.join("libraries")).unwrap();
+        fs::write(repaired_stage.join("libraries/core.jar"),b"GOOD").unwrap();
+        let (_,rx)=watch::channel(Directive::Running);
+        let result=install(&m,&root,&key,None,operation.into(),rx,None).await.unwrap();
+        assert_eq!(result.failed,0);
+        assert_eq!(fs::read(root.join("libraries/core.jar")).unwrap(),b"GOOD");
+        let active=pointer(&root).unwrap().active.unwrap();
+        assert_eq!(active.plan_sha256,Some(resolved_download_0246::resolve(&m,None).unwrap().sha256));
+        assert!(rollback(&root,&key).await.unwrap_err().contains("already damaged"),
+            "repair must not advertise corrupt previous bytes as last-known-good");
+        assert_eq!(fs::read(root.join("libraries/core.jar")).unwrap(),b"GOOD");
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[tokio::test]
+    async fn ownership_conflict_blocks_before_any_network_request_0246(){
+        let root=std::env::temp_dir().join(format!("nl-preflight-0246-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (m,key)=fixture(&root,"one",&[("mods/unowned.jar",b"SIGNED")]);
+        fs::create_dir_all(root.join("mods")).unwrap();
+        fs::write(root.join("mods/unowned.jar"),b"SIGNED").unwrap();
+        let (_,rx)=watch::channel(Directive::Running);
+        let error=install(&m,&root,&key,None,"fail-0246".into(),rx,None).await.unwrap_err();
+        assert!(error.contains("untracked user file"),"{error}");
+        assert_eq!(fs::read(root.join("mods/unowned.jar")).unwrap(),b"SIGNED");
+        assert!(pointer(&root).unwrap().active.is_none());
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn identical_untracked_file_must_not_be_claimed_as_managed_0246(){
+        let root=std::env::temp_dir().join(format!("nl-unowned-0246-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (m,key)=fixture(&root,"1",&[("mods/player.jar",b"MATCH")]);
+        fs::create_dir_all(root.join("mods")).unwrap();
+        fs::write(root.join("mods/player.jar"),b"MATCH").unwrap();
+        let next=Release{manifest:m.clone(),installed:vec!["mods/player.jar".into()],id:format!("{:032x}",94),preset:None,plan_sha256:None};
+        let stage=staged(&root,&m,&[("mods/player.jar",b"MATCH")]);
+        assert!(commit(&root,next,&key,&stage).unwrap_err().contains("untracked user file"));
+        assert_eq!(fs::read(root.join("mods/player.jar")).unwrap(),b"MATCH");
+        assert!(pointer(&root).unwrap().active.is_none());
+        fs::remove_dir_all(root).unwrap();
+    }
     #[tokio::test]
     async fn switch_only_registered_paths_and_explicit_rollback_preserve_user_data() {
         let root = std::env::temp_dir().join(format!("nl-txn-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (m1,key) = fixture(&root,"1",&[("mods/a.jar",b"OLD"),("mods/retired.jar",b"RETIRED")]);
-        let one = Release { manifest:m1.clone(), installed:m1.files.iter().map(|f|f.path.clone()).collect(), id:format!("{:032x}",1),preset:None };
+        let one = Release { manifest:m1.clone(), installed:m1.files.iter().map(|f|f.path.clone()).collect(), id:format!("{:032x}",1),preset:None,plan_sha256:None };
         commit(&root,one,&key,&staged(&root,&m1,&[("mods/a.jar",b"OLD"),("mods/retired.jar",b"RETIRED")])).unwrap();
         fs::create_dir_all(root.join("saves/world")).unwrap();
         fs::write(root.join("saves/world/level.dat"),b"WORLD").unwrap();
         fs::write(root.join("mods/custom.jar"),b"PLAYER").unwrap();
         let (m2,_) = fixture(&root,"2",&[("mods/a.jar",b"NEW"),("mods/b.jar",b"ADDED")]);
-        let next = Release { manifest:m2.clone(), installed:m2.files.iter().map(|f|f.path.clone()).collect(), id:format!("{:032x}",2),preset:None };
+        let next = Release { manifest:m2.clone(), installed:m2.files.iter().map(|f|f.path.clone()).collect(), id:format!("{:032x}",2),preset:None,plan_sha256:None };
         commit(&root,next,&key,&staged(&root,&m2,&[("mods/a.jar",b"NEW"),("mods/b.jar",b"ADDED")])).unwrap();
         assert_eq!(fs::read(root.join("mods/a.jar")).unwrap(),b"NEW");
         assert!(!root.join("mods/retired.jar").exists());
@@ -685,10 +947,10 @@ mod tests {
     fn interrupted_switch_restores_old_set_including_removed_paths() {
         let root = std::env::temp_dir().join(format!("nl-txn-crash-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (m,key) = fixture(&root,"1",&[("libraries/a.jar",b"OLD")]);
-        let first = Release { manifest:m.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",1),preset:None };
+        let first = Release { manifest:m.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",1),preset:None,plan_sha256:None };
         commit(&root,first,&key,&staged(&root,&m,&[("libraries/a.jar",b"OLD")])).unwrap();
         let (m2,_) = fixture(&root,"2",&[("libraries/a.jar",b"NEW")]);
-        let next = Release { manifest:m2, installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",2),preset:None };
+        let next = Release { manifest:m2, installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",2),preset:None,plan_sha256:None };
         let old = pointer(&root).unwrap().active;
         let back_id = format!("{:032x}",3);
         let back = backup_dir(&root,&back_id);
@@ -712,7 +974,7 @@ mod tests {
         fs::create_dir_all(root.join("libraries")).unwrap();
         fs::write(root.join("libraries/a.jar"),b"ORIGINAL").unwrap();
         fs::write(root.join("options.txt"),b"PLAYER").unwrap();
-        let next = Release { manifest:m.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",4),preset:None };
+        let next = Release { manifest:m.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",4),preset:None,plan_sha256:None };
         let broken = staged(&root,&m,&[("libraries/a.jar",b"INJECTED")]);
         assert!(commit(&root,next,&key,&broken).is_err());
         assert_eq!(fs::read(root.join("libraries/a.jar")).unwrap(),b"ORIGINAL");
@@ -724,10 +986,10 @@ mod tests {
     fn rollback_interrupted_after_partial_restore_resumes_reverting() {
         let root = std::env::temp_dir().join(format!("nl-txn-reverting-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (m,key) = fixture(&root,"1",&[("mods/a.jar",b"OLD")]);
-        let old = Release { manifest:m.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",5),preset:None };
+        let old = Release { manifest:m.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",5),preset:None,plan_sha256:None };
         commit(&root,old,&key,&staged(&root,&m,&[("mods/a.jar",b"OLD")])).unwrap();
         let (m2,_) = fixture(&root,"2",&[("mods/a.jar",b"NEW")]);
-        let new = Release { manifest:m2.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",6),preset:None };
+        let new = Release { manifest:m2.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",6),preset:None,plan_sha256:None };
         commit(&root,new,&key,&staged(&root,&m2,&[("mods/a.jar",b"NEW")])).unwrap();
         let mut entry = journal(&root).unwrap().unwrap();
         entry.state = "reverting".into(); entry.generation += 1;
@@ -742,10 +1004,10 @@ mod tests {
     fn backup_corruption_blocks_destructive_recovery() {
         let root = std::env::temp_dir().join(format!("nl-txn-corrupt-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (m,key) = fixture(&root,"1",&[("mods/a.jar",b"OLD")]);
-        let old = Release { manifest:m.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",7),preset:None };
+        let old = Release { manifest:m.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",7),preset:None,plan_sha256:None };
         commit(&root,old,&key,&staged(&root,&m,&[("mods/a.jar",b"OLD")])).unwrap();
         let (m2,_) = fixture(&root,"2",&[("mods/a.jar",b"NEW")]);
-        let new = Release { manifest:m2.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",8),preset:None };
+        let new = Release { manifest:m2.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",8),preset:None,plan_sha256:None };
         commit(&root,new,&key,&staged(&root,&m2,&[("mods/a.jar",b"NEW")])).unwrap();
         let mut entry = journal(&root).unwrap().unwrap();
         fs::write(backup_dir(&root,&entry.backup_id).join("mods/a.jar"),b"TAMPERED").unwrap();
@@ -761,11 +1023,11 @@ mod tests {
     async fn live_launch_lease_prevents_switching_files_while_game_is_running() {
         let root = std::env::temp_dir().join(format!("nl-txn-lease-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (m1,key) = fixture(&root,"1",&[("libraries/a.jar",b"OLD")]);
-        let old = Release { manifest:m1.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",9),preset:None };
+        let old = Release { manifest:m1.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",9),preset:None,plan_sha256:None };
         commit(&root,old,&key,&staged(&root,&m1,&[("libraries/a.jar",b"OLD")])).unwrap();
         let lease = acquire_launch_lease(&m1,&root,&key).await.unwrap();
         let (m2,_) = fixture(&root,"2",&[("libraries/a.jar",b"NEW")]);
-        let new = Release { manifest:m2.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",10),preset:None };
+        let new = Release { manifest:m2.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",10),preset:None,plan_sha256:None };
         let target = staged(&root,&m2,&[("libraries/a.jar",b"NEW")]);
         assert!(commit(&root,new.clone(),&key,&target).is_err());
         assert_eq!(fs::read(root.join("libraries/a.jar")).unwrap(),b"OLD");
@@ -781,7 +1043,7 @@ mod tests {
         let (manifest,key) = fixture(&root,"new",&[("mods/custom.jar",b"PUBLISHED")]);
         fs::create_dir_all(root.join("mods")).unwrap();
         fs::write(root.join("mods/custom.jar"),b"CUSTOM_PLAYER_DATA").unwrap();
-        let next = Release { manifest: manifest.clone(), installed:vec!["mods/custom.jar".into()], id:format!("{:032x}",60),preset:None };
+        let next = Release { manifest: manifest.clone(), installed:vec!["mods/custom.jar".into()], id:format!("{:032x}",60),preset:None,plan_sha256:None };
         let work = staged(&root,&manifest,&[("mods/custom.jar",b"PUBLISHED")]);
         let error = commit(&root,next,&key,&work).unwrap_err();
         assert!(error.contains("untracked user file"), "{error}");
@@ -794,10 +1056,10 @@ mod tests {
     fn readonly_existing_file_rejects_switch_without_journal_mutation() {
         let root = std::env::temp_dir().join(format!("nl-readonly-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (manifest,key) = fixture(&root,"base",&[("libraries/core.jar",b"OLD")]);
-        let old = Release { manifest:manifest.clone(), installed:vec!["libraries/core.jar".into()], id:format!("{:032x}",61),preset:None };
+        let old = Release { manifest:manifest.clone(), installed:vec!["libraries/core.jar".into()], id:format!("{:032x}",61),preset:None,plan_sha256:None };
         commit(&root,old,&key,&staged(&root,&manifest,&[("libraries/core.jar",b"OLD")])).unwrap();
         let (new_manifest,_) = fixture(&root,"new",&[("libraries/core.jar",b"NEXT")]);
-        let next = Release { manifest:new_manifest.clone(), installed:vec!["libraries/core.jar".into()], id:format!("{:032x}",62),preset:None };
+        let next = Release { manifest:new_manifest.clone(), installed:vec!["libraries/core.jar".into()], id:format!("{:032x}",62),preset:None,plan_sha256:None };
         let dest = root.join("libraries/core.jar");
         let mut permissions = fs::metadata(&dest).unwrap().permissions();
         permissions.set_readonly(true);
@@ -817,7 +1079,7 @@ mod tests {
     async fn insufficient_disk_budget_fails_before_live_mutation() {
         let root = std::env::temp_dir().join(format!("nl-capacity-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (old_manifest,key) = fixture(&root,"base",&[("libraries/a.jar",b"OLD")]);
-        let old = Release { manifest:old_manifest.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",65),preset:None };
+        let old = Release { manifest:old_manifest.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",65),preset:None,plan_sha256:None };
         commit(&root,old,&key,&staged(&root,&old_manifest,&[("libraries/a.jar",b"OLD")])).unwrap();
         let old_generation = pointer(&root).unwrap().generation;
         let mut oversized = old_manifest.clone();
@@ -842,7 +1104,7 @@ mod tests {
         fs::write(&external,b"USER_SECRET").unwrap();
         symlink(&external,root.join("mods/core.jar")).unwrap();
         let (manifest,key) = fixture(&root,"new",&[("mods/core.jar",b"SIGNED")]);
-        let next = Release { manifest:manifest.clone(), installed:vec!["mods/core.jar".into()], id:format!("{:032x}",63),preset:None };
+        let next = Release { manifest:manifest.clone(), installed:vec!["mods/core.jar".into()], id:format!("{:032x}",63),preset:None,plan_sha256:None };
         assert!(commit(&root,next,&key,&staged(&root,&manifest,&[("mods/core.jar",b"SIGNED")])).is_err());
         assert_eq!(fs::read(&external).unwrap(),b"USER_SECRET");
         assert!(fs::symlink_metadata(root.join("mods/core.jar")).unwrap().file_type().is_symlink());
@@ -853,10 +1115,10 @@ mod tests {
     fn crash_after_first_file_of_two_recovers_complete_old_release() {
         let root = std::env::temp_dir().join(format!("nl-multi-crash-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (old_m,key) = fixture(&root,"old",&[("mods/a.jar",b"OLD_A"),("mods/b.jar",b"OLD_B")]);
-        let old = Release { manifest:old_m.clone(), installed:vec!["mods/a.jar".into(),"mods/b.jar".into()], id:format!("{:032x}",71),preset:None };
+        let old = Release { manifest:old_m.clone(), installed:vec!["mods/a.jar".into(),"mods/b.jar".into()], id:format!("{:032x}",71),preset:None,plan_sha256:None };
         commit(&root,old,&key,&staged(&root,&old_m,&[("mods/a.jar",b"OLD_A"),("mods/b.jar",b"OLD_B")])).unwrap();
         let (new_m,_) = fixture(&root,"new",&[("mods/a.jar",b"NEW_A"),("mods/b.jar",b"NEW_B")]);
-        let next = Release { manifest:new_m.clone(), installed:vec!["mods/a.jar".into(),"mods/b.jar".into()], id:format!("{:032x}",72),preset:None };
+        let next = Release { manifest:new_m.clone(), installed:vec!["mods/a.jar".into(),"mods/b.jar".into()], id:format!("{:032x}",72),preset:None,plan_sha256:None };
         let backup_id = format!("{:032x}",73);
         let back = backup_dir(&root,&backup_id);
         fs::create_dir_all(back.join("mods")).unwrap();
@@ -914,16 +1176,16 @@ mod tests {
         one.game_release_generation=10;
         sign_manifest(&mut one,&"1a".repeat(32),"2026-10-19T00:00:00Z").unwrap();
         let original_digest=hex::encode(Sha256::digest(serde_json::to_vec(&one).unwrap()));
-        let first=Release{manifest:one.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",100),preset:None };
+        let first=Release{manifest:one.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",100),preset:None,plan_sha256:None };
         commit(&root,first,&key,&staged(&root,&one,&[("mods/main.jar",b"OLD")])).unwrap();
         let (mut two,_)=fixture(&root,"new",&[("mods/main.jar",b"NEW")]);
         two.game_release_generation=11;
         sign_manifest(&mut two,&"1a".repeat(32),"2026-10-19T00:00:00Z").unwrap();
-        let second=Release{manifest:two.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",101),preset:None };
+        let second=Release{manifest:two.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",101),preset:None,plan_sha256:None };
         commit(&root,second,&key,&staged(&root,&two,&[("mods/main.jar",b"NEW")])).unwrap();
         assert!(rollback(&root,&key).await.is_err(),"unsigned local rollback must not downgrade a protected release");
         assert_eq!(fs::read(root.join("mods/main.jar")).unwrap(),b"NEW");
-        let previous=Release{manifest:one.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",102),preset:None };
+        let previous=Release{manifest:one.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",102),preset:None,plan_sha256:None };
         assert!(commit(&root,previous,&key,&staged(&root,&one,&[("mods/main.jar",b"OLD")])).is_err());
         let (mut authorized,_)=fixture(&root,"old-content-authorized-again",&[("mods/main.jar",b"OLD")]);
         authorized.game_release_generation=12;
@@ -931,7 +1193,7 @@ mod tests {
             version:"old".into(),manifest_sha256:original_digest,game_release_generation:10,
         });
         sign_manifest(&mut authorized,&"1a".repeat(32),"2026-10-19T00:00:00Z").unwrap();
-        let approved=Release{manifest:authorized.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",103),preset:None };
+        let approved=Release{manifest:authorized.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",103),preset:None,plan_sha256:None };
         commit(&root,approved,&key,&staged(&root,&authorized,&[("mods/main.jar",b"OLD")])).unwrap();
         assert_eq!(fs::read(root.join("mods/main.jar")).unwrap(),b"OLD");
         assert!(crate::release_generations::check(&root,&two).is_err());

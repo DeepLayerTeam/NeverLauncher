@@ -1,3 +1,11 @@
+## 0.24.6 — Resolved Download & Ownership
+
+- Native release installer now uses a single deterministic, digest-bound resolved file plan for staging, download selection, verified live-file reuse, commit, launch identity and recovery. Durable download jobs pin this plan through pause/resume; old receipts remain readable.
+- Byte-identical **previously owned** files are reused without redundant network/cache transfer or live replacement. Other selected artifacts continue through the real content-addressed SHA-256 cache and transactional staging. All selected outputs are reverified before switching.
+- Retired files are restricted to the previous managed ownership record. Untracked player files cannot be claimed even when they match the published SHA-256. Locally modified managed files block destructive preset switches; repair of the same signed selection remains possible.
+- Added Rust integration/regression tests for signed catalog v5, real install and preset transition, repair-safety conditions, plan identity corruption, rollback, and untracked file protection. See `docs/resolved-download-ownership-0246.md`.
+- Go model and migration tests passed in the authoring environment. **Rust compilation/tests, complete Backend build and OS/Minecraft E2E are not certified** (Rust toolchain and several external Go dependencies unavailable). O04 permission entitlement limitation remains.
+
 ## 0.24.5 — Signed Optional Actions
 
 - Catalog schema 5.0 signs and validates `File`, `ClassPath`, `JvmArgs` and `ClientArgs` actions; file targets must belong to their signed component. Go and Rust use a matching domain-separated v5 catalog digest.

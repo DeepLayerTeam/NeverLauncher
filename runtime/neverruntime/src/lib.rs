@@ -4,6 +4,7 @@ mod deterministic_launch;
 pub mod file_ownership;
 pub mod component_catalog_0241;
 pub mod component_actions_0245;
+pub mod resolved_download_0246;
 mod platform_fs;
 pub mod download_scheduler;
 mod http_resume;

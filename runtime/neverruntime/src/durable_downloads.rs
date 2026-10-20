@@ -23,6 +23,8 @@ pub struct SavedJob {
     pub manifest: Manifest,
     #[serde(default,skip_serializing_if="Option::is_none")]
     pub preset: Option<String>,
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub resolved_plan_sha256: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -121,6 +123,10 @@ async fn perform(root: &Path, job: SavedJob, sink: Option<ProgressSink>,
     rx: watch::Receiver<Directive>) -> Result<DownloadResult, String> {
     verify_manifest_signature(&job.manifest, &job.pinned_public_key)?;
     file_ownership::validate_download_targets(&job.manifest)?;
+    let plan=crate::resolved_download_0246::resolve(&job.manifest,job.preset.as_deref())?;
+    if let Some(ref pinned)=job.resolved_plan_sha256 {
+        if *pinned!=plan.sha256 {return Err("saved download resolved plan has changed".into())}
+    }
     let outcome = crate::transactional_release::install(&job.manifest, root, &job.pinned_public_key, sink,
         job.operation_id.clone(), rx.clone(), job.preset.clone()).await;
     let stopped = *rx.borrow();
@@ -148,7 +154,7 @@ pub async fn start_with_preset(manifest: &Manifest, root: &Path, key: &str, mode
     if !matches!(mode, "download" | "repair") { return Err("invalid operation mode".into()); }
     verify_manifest_signature(manifest, key)?;
     file_ownership::validate_download_targets(manifest)?;
-    crate::component_catalog_0241::active_files(manifest,preset.as_deref())?;
+    let resolved=crate::resolved_download_0246::resolve(manifest,preset.as_deref())?;
     let root = normalized(root).await?;
     let (_guard, rx) = register(&root)?;
     let prev_generation = read(&root).await.map_or(0, |job| job.generation);
@@ -156,6 +162,7 @@ pub async fn start_with_preset(manifest: &Manifest, root: &Path, key: &str, mode
         schema_version: SCHEMA, generation: prev_generation + 1,
         operation_id: format!("{}-{:016x}", std::process::id(), rand::random::<u64>()),
         mode: mode.into(), status: "running".into(), pinned_public_key: key.into(), manifest: manifest.clone(), preset,
+        resolved_plan_sha256: Some(resolved.sha256),
     };
     write(&root, &job).await?;
     perform(&root, job, sink, rx).await
@@ -170,9 +177,11 @@ pub async fn pending(root: &Path, expected_pinned_key: &str) -> Result<Option<Pe
         return Err("saved download public key differs from Desktop pinned trust key".into());
     }
     verify_manifest_signature(&job.manifest, expected_pinned_key)?;
+    let plan=crate::resolved_download_0246::resolve(&job.manifest,job.preset.as_deref())?;
+    if job.resolved_plan_sha256.as_ref().is_some_and(|d|d!=&plan.sha256){return Err("saved download resolved plan has changed".into())}
     Ok(Some(PendingDownload { operation_id: job.operation_id, mode: job.mode, status: job.status,
         project_id: job.manifest.project_id, profile_id: job.manifest.profile_id,
-        version: job.manifest.version, total_files: job.manifest.files.len() }))
+        version: job.manifest.version, total_files: plan.files.len() }))
 }
 
 pub async fn resume(root: &Path, expected_pinned_key: &str, sink: Option<ProgressSink>) -> Result<DownloadResult, String> {
@@ -184,6 +193,10 @@ pub async fn resume(root: &Path, expected_pinned_key: &str, sink: Option<Progres
     }
     verify_manifest_signature(&job.manifest, expected_pinned_key)?;
     file_ownership::validate_download_targets(&job.manifest)?;
+    let plan=crate::resolved_download_0246::resolve(&job.manifest,job.preset.as_deref())?;
+    if job.resolved_plan_sha256.as_ref().is_some_and(|saved|saved!=&plan.sha256){
+        return Err("saved download resolved plan has changed".into());
+    }
     job.generation += 1;
     job.status = "running".into();
     write(&root, &job).await?;
