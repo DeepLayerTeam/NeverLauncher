@@ -1,3 +1,13 @@
+## 0.24.4 — Conditional Component Resolution
+
+- Catalog schema 4.0 with signed, versioned `conditions` schema 1.0 and Go/Rust matching domain-separated SHA-256 digest. The existing catalog 1.0/2.0/3.0 snapshots and manifest signatures remain compatible.
+- Conditional evaluation is integrated with NeverRuntime's authoritative preset resolver, transactional staging, downloads, repairs, integrity checks and launch gate. Required/selected/dependency violations fail before IO; unavailable implicit defaults are excluded.
+- OS, CPU architecture, signed Java target, Minecraft exact/SemVer versions, loader and loader SemVer conditions; explicit errors for unsupported combinations, version bounds and unsigned/unknown conditions.
+- The Desktop uses native, pinned-key-verified conditional preview (not an unauthenticated client-side permission list); Go model exposes an explicit server-trusted environment for authorization decisions.
+- Permissions default to deny on native runtime without a separately verified entitlement. **Full authenticated permission issuance/use is not part of this patch**, so components that require permissions cannot be enabled yet; this is a known release blocker for the complete O04 goal.
+- PostgreSQL migration 0064 (both API/CLI), immutable release protection, deep-copy safety for memory repository, published catalog validation, Go tests, Rust cross-language fixture test and documentation.
+- Full Rust/Desktop build, real Minecraft launches and PostgreSQL integration certification have not been executed in this environment.
+
 ## 0.24.3 — Dependency & Conflict Resolver
 
 - Signed component catalog schema 3.0: strict semantic versions, dependency references and version ranges, version-scoped conflicts and mutually exclusive groups. v1/v2 catalog digests remain backward compatible.

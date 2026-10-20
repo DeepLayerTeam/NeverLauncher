@@ -35,7 +35,8 @@ type DesktopSettings = {
 };
 
 type CatalogRequirement = {id:string;versionRange?:string};
-type CatalogComponent = { id:string; name:string; files:string[]; version?:string; dependencies?:CatalogRequirement[]; conflicts?:CatalogRequirement[]; exclusiveGroup?:string; description?:string; categoryId?:string; groupId?:string; required?:boolean; default?:boolean; visible?:boolean; limited?:boolean; metadata?:Record<string,string> };
+type CatalogConditions0244 = {schemaVersion:string;os?:string[];arch?:string[];javaMajorMin?:number;javaMajorMax?:number;minecraftVersions?:string[];minecraftVersionRange?:string;loaders?:string[];loaderVersionRange?:string;permissions?:string[]};
+type CatalogComponent = {conditions?:CatalogConditions0244; id:string; name:string; files:string[]; version?:string; dependencies?:CatalogRequirement[]; conflicts?:CatalogRequirement[]; exclusiveGroup?:string; description?:string; categoryId?:string; groupId?:string; required?:boolean; default?:boolean; visible?:boolean; limited?:boolean; metadata?:Record<string,string> };
 type ComponentCatalog = {schemaVersion:string; revision:number; digest:string; components:CatalogComponent[]; categories?:{id:string;name:string;description?:string;parentId?:string}[];groups?:{id:string;name:string;description?:string;parentId?:string;categoryId?:string}[];presets?:{id:string;name:string;description?:string;components:string[]}[];defaultPreset?:string};
 // UI explanation only. NeverRuntime's verified resolver is authoritative for IO and launch.
 function previewVersion0243(actual:string,range:string):boolean {
@@ -85,7 +86,7 @@ function componentPresetPlan0243(cat:ComponentCatalog,preset:string):{selected:S
   for(const c of cat.components)if(c.required){chosen.add(c.id);reasons.set(c.id,'Обязательный компонент релиза');}
   const roots=selectedPreset?selectedPreset.components:cat.components.filter(c=>c.default).map(c=>c.id);
   for(const id of roots){chosen.add(id);if(!reasons.has(id))reasons.set(id,presetID?`Пресет ${presetID}`:'Включён по умолчанию');}
-  if(cat.schemaVersion!=='3.0')return {selected:chosen,reasons,error:null};
+  if(cat.schemaVersion!=='3.0'&&cat.schemaVersion!=='4.0')return {selected:chosen,reasons,error:null};
   const expanded=new Set<string>();const stack:string[]=[];
   try {
     const visit=(id:string)=>{
@@ -1560,7 +1561,7 @@ function App() {
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} />}
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
-        {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} setComponentPreset={(x:string)=>patchSettings("componentPreset",x)} />}
+        {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} pinnedPublicKey={settings.pinnedPublicKey} setComponentPreset={(x:string)=>patchSettings("componentPreset",x)} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
         {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
@@ -1609,19 +1610,32 @@ function ProjectPanel({ projects, selectedProject, setSelectedProject, loadProje
   return <section className="panel"><h3>Проекты</h3><p>Список проектов загружается из Backend API.</p><div className="toolbar inline"><button onClick={loadProjects}>Загрузить проекты</button><button onClick={() => loadProfiles(selectedProject)}>Загрузить профили</button></div><div className="list">{projects.map((project: BackendProject) => <button key={project.id} className={selectedProject === project.id ? 'row activeRow' : 'row'} onClick={() => setSelectedProject(project.id)}><strong>{project.title ?? project.name ?? project.id}</strong><span>{project.id}</span></button>)}</div></section>;
 }
 
-function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,manifest,componentPreset,setComponentPreset}:any){
+function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,manifest,componentPreset,pinnedPublicKey,setComponentPreset}:any){
   const cat:ComponentCatalog|undefined=manifest?.componentCatalog;
-  const plan=cat?componentPresetPlan0243(cat,componentPreset):null;
-  const selected=plan?.selected||new Set<string>();
+  const [nativePreview,setNativePreview]=useState<{selected:string[];unavailable:{id:string;reason:string}[];effectiveFiles:string[];error?:string}|null>(null);
+  useEffect(()=>{
+    let cancelled=false;
+    if(!cat||cat.schemaVersion!=='4.0'){setNativePreview(null);return;}
+    setNativePreview(null);
+    callTauri<{selected:string[];unavailable:{id:string;reason:string}[];effectiveFiles:string[]}>('preview_components_0244',{
+      manifest,pinnedPublicKey,componentPreset:componentPreset||null
+    }).then(result=>{if(!cancelled)setNativePreview(result);}).catch(error=>{
+      if(!cancelled)setNativePreview({selected:[],unavailable:[],effectiveFiles:[],error:String(error)});
+    });
+    return ()=>{cancelled=true;};
+  },[manifest,componentPreset,cat?.digest,pinnedPublicKey]);
+  const plan=cat&&cat.schemaVersion!=='4.0'?componentPresetPlan0243(cat,componentPreset):null;
+  const selected=cat?.schemaVersion==='4.0'?new Set(nativePreview?.selected||[]):plan?.selected||new Set<string>();
   const files=cat?.components.filter(c=>selected.has(c.id)).flatMap(c=>c.files)||[];
   const bytes=manifest?.files.filter((f:ManifestFile)=>files.includes(f.path)).reduce((sum:number,f:ManifestFile)=>sum+f.size,0)||0;
   return <section className="panel"><h3>Профиль и компоненты</h3><div className="toolbar inline"><button onClick={loadManifest}>Загрузить манифест</button></div>
     <div className="list">{profiles.map((profile:BackendProfile)=><button key={profile.id} className={selectedProfile===profile.id?'row activeRow':'row'} onClick={()=>setSelectedProfile(profile.id)}><strong>{profile.title??profile.name??profile.id}</strong><span>{profile.loader??'vanilla'}</span></button>)}</div>
     {cat&&<article className="card"><h3>Подписанные компоненты (rev {cat.revision})</h3>
-      {(cat.schemaVersion==='2.0'||cat.schemaVersion==='3.0')&&<label>Пресет<select value={componentPreset} onChange={(e)=>setComponentPreset(e.target.value)}><option value="">По умолчанию{cat.defaultPreset?` (${cat.defaultPreset})`:''}</option>{cat.presets?.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
-      {plan?.error&&<p role="alert" className="error">Недопустимая конфигурация: {plan.error}. Установка и запуск будут заблокированы native resolver.</p>}
+      {(cat.schemaVersion==='2.0'||cat.schemaVersion==='3.0'||cat.schemaVersion==='4.0')&&<label>Пресет<select value={componentPreset} onChange={(e)=>setComponentPreset(e.target.value)}><option value="">По умолчанию{cat.defaultPreset?` (${cat.defaultPreset})`:''}</option>{cat.presets?.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+      {(plan?.error||nativePreview?.error)&&<p role="alert" className="error">Недопустимая конфигурация: {plan?.error||nativePreview?.error}. Установка и запуск будут заблокированы native resolver.</p>}
       <p>Выбрано {selected.size} компонентов; объём данных каталога {Math.round(bytes/1024)} КиБ. При изменении пресета используйте «Скачать/Обновить» для транзакционной установки. Required включаются всегда.</p>
-      {cat.components.filter(c=>c.visible!==false||selected.has(c.id)).map(c=><div key={c.id} className="row"><strong>{selected.has(c.id)?'✓ ':''}{c.name}</strong><span>{[c.required?'обязательный':null,c.default?'по умолчанию':null,c.limited?'ограниченный':null,c.description||null,plan?.reasons.get(c.id)||null,componentTopologyLabel(cat,c)||null].filter(Boolean).join(' · ')}</span></div>)}
+      {cat.schemaVersion==='4.0'&&!nativePreview&&<p>Проверка платформы и подписанных условий в NeverRuntime…</p>}
+      {cat.components.filter(c=>c.visible!==false||selected.has(c.id)).map(c=><div key={c.id} className="row"><strong>{selected.has(c.id)?'✓ ':''}{c.name}</strong><span>{[c.required?'обязательный':null,c.default?'по умолчанию':null,c.limited?'ограниченный':null,c.description||null,plan?.reasons.get(c.id)||null,nativePreview?.unavailable.find(x=>x.id===c.id)?.reason||null,componentTopologyLabel(cat,c)||null].filter(Boolean).join(' · ')}</span></div>)}
     </article>}
     <pre>{manifest?JSON.stringify({projectId:manifest.projectId,profileId:manifest.profileId,version:manifest.version,files:manifest.files.length,catalogDigest:cat?.digest},null,2):'Манифест не загружен.'}</pre>
   </section>;

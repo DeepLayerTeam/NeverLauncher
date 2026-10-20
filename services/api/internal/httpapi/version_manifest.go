@@ -49,7 +49,9 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var req versionManifestRequest
-	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err = decoder.Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
@@ -87,7 +89,9 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		revision := manifest.ComponentCatalog.Revision + 1
-		if req.ComponentCatalog.SchemaVersion == model.ComponentCatalogSchema0243 {
+		if req.ComponentCatalog.SchemaVersion == model.ComponentCatalogSchema0244 {
+			manifest.ComponentCatalog = ptrComponentCatalog0241(model.NewComponentCatalog0244(*req.ComponentCatalog, revision))
+		} else if req.ComponentCatalog.SchemaVersion == model.ComponentCatalogSchema0243 {
 			manifest.ComponentCatalog = ptrComponentCatalog0241(model.NewComponentCatalog0243(*req.ComponentCatalog, revision))
 		} else if req.ComponentCatalog.SchemaVersion == model.ComponentCatalogSchema0242 {
 			manifest.ComponentCatalog = ptrComponentCatalog0241(model.NewComponentCatalog0242(*req.ComponentCatalog, revision))

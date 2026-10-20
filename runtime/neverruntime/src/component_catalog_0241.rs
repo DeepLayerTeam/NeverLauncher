@@ -39,6 +39,8 @@ pub struct CatalogComponent {
     pub conflicts:Vec<ComponentRequirement>,
     #[serde(default,skip_serializing_if="empty")]
     pub exclusive_group:String,
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub conditions:Option<ComponentConditions0244>,
     #[serde(default,skip_serializing_if="empty")]
     pub description:String,
     #[serde(default,skip_serializing_if="empty")]
@@ -56,6 +58,31 @@ pub struct CatalogComponent {
     #[serde(default,skip_serializing_if="map_empty")]
     pub metadata:BTreeMap<String,String>,
 }
+#[derive(Debug,Clone,Serialize,Deserialize)]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
+pub struct ComponentConditions0244 {
+    pub schema_version:String,
+    #[serde(default,skip_serializing_if="Vec::is_empty")]
+    pub os:Vec<String>,
+    #[serde(default,skip_serializing_if="Vec::is_empty")]
+    pub arch:Vec<String>,
+    #[serde(default,skip_serializing_if="is_zero_u32_0244")]
+    pub java_major_min:u32,
+    #[serde(default,skip_serializing_if="is_zero_u32_0244")]
+    pub java_major_max:u32,
+    #[serde(default,skip_serializing_if="Vec::is_empty")]
+    pub minecraft_versions:Vec<String>,
+    #[serde(default,skip_serializing_if="empty")]
+    pub minecraft_version_range:String,
+    #[serde(default,skip_serializing_if="Vec::is_empty")]
+    pub loaders:Vec<String>,
+    #[serde(default,skip_serializing_if="empty")]
+    pub loader_version_range:String,
+    #[serde(default,skip_serializing_if="Vec::is_empty")]
+    pub permissions:Vec<String>,
+}
+fn is_zero_u32_0244(v:&u32)->bool{*v==0}
+
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
 pub struct ComponentRequirement {
@@ -125,11 +152,104 @@ pub fn digest_v3(cat:&ComponentCatalog)->String{
     }
     hex::encode(h.finalize())
 }
+pub fn digest_v4(cat:&ComponentCatalog)->String{
+    let mut h=Sha256::new();h.update(b"neverlauncher.component-catalog.v4\0");
+    str_f(&mut h,&digest_v3(cat));count(&mut h,cat.components.len());
+    for c in &cat.components {
+        if let Some(v)=&c.conditions {
+            h.update([1u8]);str_f(&mut h,&v.schema_version);
+            for items in [&v.os,&v.arch,&v.minecraft_versions,&v.loaders,&v.permissions]{
+                count(&mut h,items.len());for item in items{str_f(&mut h,item)}
+            }
+            count(&mut h,v.java_major_min as usize);count(&mut h,v.java_major_max as usize);
+            str_f(&mut h,&v.minecraft_version_range);str_f(&mut h,&v.loader_version_range);
+        }else{h.update([0u8]);}
+    }
+    hex::encode(h.finalize())
+}
+fn valid_permission_0244(s:&str)->bool {
+    !s.is_empty()&&s.len()<=128&&s.bytes().next().is_some_and(|b|b.is_ascii_lowercase())&&
+    s.bytes().all(|b|b.is_ascii_lowercase()||b.is_ascii_digit()||matches!(b,b'_'|b'-'|b'.'|b':'))&&
+    !s.contains("..")&&!s.contains("::")
+}
+
+fn distinct_conditions_0244(values:&[String],limit:usize,valid:impl Fn(&str)->bool)->Result<(),String>{
+    if values.len()>limit {return Err("condition array exceeds limit".into())}
+    let mut seen=HashSet::new();
+    for v in values{if !valid(v)||!seen.insert(v){return Err(format!("invalid/duplicate condition value {v:?}"))}}
+    Ok(())
+}
+fn validate_conditions_0244(cat:&ComponentCatalog)->Result<(),String>{
+    for c in &cat.components {
+        let Some(v)=&c.conditions else {continue};
+        if cat.schema_version!="4.0" {return Err(format!("component {} has unsigned v4 conditions",c.id))}
+        if v.schema_version!="1.0"{return Err(format!("component {} unsupported condition schema {}",c.id,v.schema_version))}
+        distinct_conditions_0244(&v.os,8,|s|matches!(s,"windows"|"linux"|"macos"))?;
+        distinct_conditions_0244(&v.arch,8,|s|matches!(s,"x86_64"|"aarch64"))?;
+        if v.java_major_min>99||v.java_major_max>99||(v.java_major_max!=0&&v.java_major_min>v.java_major_max){return Err(format!("invalid Java condition on {}",c.id))}
+        distinct_conditions_0244(&v.minecraft_versions,64,|s|!s.is_empty()&&s.len()<=80&&!s.bytes().any(|b|b.is_ascii_whitespace()||b==0))?;
+        distinct_conditions_0244(&v.loaders,12,|s|matches!(s,"vanilla"|"fabric"|"quilt"|"forge"|"neoforge"))?;
+        distinct_conditions_0244(&v.permissions,32,|s|valid_permission_0244(s))?;
+        for r in [&v.minecraft_version_range,&v.loader_version_range]{if !r.is_empty(){matches_range_0243("1.0.0",r)?;}}
+    }
+    Ok(())
+}
+#[derive(Default)]
+pub struct ComponentEnvironment0244 {
+    pub os:String,pub arch:String,pub java_major:u32,
+    pub minecraft_version:String,pub loader:String,pub loader_version:String,
+    /// Permissions are never read from process environment or desktop input.
+    /// This is empty unless a trusted signed server authorization is verified.
+    pub verified_permissions:HashSet<String>,
+}
+impl ComponentEnvironment0244 {
+    fn for_manifest(m:&Manifest)->Self {
+        Self{os:match std::env::consts::OS{"macos"=>"macos",other=>other}.into(),
+          arch:match std::env::consts::ARCH{"x86_64"=>"x86_64","aarch64"=>"aarch64",other=>other}.into(),
+          java_major:m.runtime.java.major_version,
+          minecraft_version:m.minecraft.version.clone(),loader:m.minecraft.loader.to_ascii_lowercase(),
+          loader_version:m.minecraft.loader_version.clone(),verified_permissions:HashSet::new()}
+    }
+}
+fn condition_unavailable_0244(c:&CatalogComponent,env:&ComponentEnvironment0244)->Result<Option<String>,String>{
+    let Some(v)=&c.conditions else{return Ok(None)};
+    if !v.os.is_empty()&&!v.os.contains(&env.os){return Ok(Some(format!("OS {} not in {:?}",env.os,v.os)))}
+    if !v.arch.is_empty()&&!v.arch.contains(&env.arch){return Ok(Some(format!("arch {} not in {:?}",env.arch,v.arch)))}
+    if v.java_major_min!=0&&(env.java_major==0||env.java_major<v.java_major_min){return Ok(Some(format!("Java {} below {}",env.java_major,v.java_major_min)))}
+    if v.java_major_max!=0&&(env.java_major==0||env.java_major>v.java_major_max){return Ok(Some(format!("Java {} above {}",env.java_major,v.java_major_max)))}
+    if !v.minecraft_versions.is_empty()&&!v.minecraft_versions.contains(&env.minecraft_version){return Ok(Some(format!("Minecraft {} not allowed",env.minecraft_version)))}
+    if !v.minecraft_version_range.is_empty() {
+        if !matches_range_0243(&env.minecraft_version,&v.minecraft_version_range).unwrap_or(false){return Ok(Some(format!("Minecraft {} outside {}",env.minecraft_version,v.minecraft_version_range)))}
+    }
+    if !v.loaders.is_empty()&&!v.loaders.contains(&env.loader){return Ok(Some(format!("loader {} not allowed",env.loader)))}
+    if !v.loader_version_range.is_empty(){if !matches_range_0243(&env.loader_version,&v.loader_version_range).unwrap_or(false){return Ok(Some(format!("loader version {} outside {}",env.loader_version,v.loader_version_range)))}}
+    for name in &v.permissions{if !env.verified_permissions.contains(name){return Ok(Some(format!("missing verified permission: {name}")))}}
+    Ok(None)
+}
+fn resolve_conditional_0244(cat:&ComponentCatalog,preset:&str,env:&ComponentEnvironment0244)->Result<HashSet<String>,String>{
+    let mut modified=cat.clone();
+    let explicit=!preset.is_empty()||!cat.default_preset.is_empty();
+    for c in &mut modified.components {
+        if let Some(reason)=condition_unavailable_0244(c,env)? {
+            if c.required{return Err(format!("condition_unsatisfied: required component {}: {reason}",c.id))}
+            if !explicit{c.default=false;}
+        }
+    }
+    let selected=resolve_graph_v3(&modified,preset)?;
+    for c in &cat.components{
+        if selected.contains(&c.id){if let Some(why)=condition_unavailable_0244(c,env)? {
+            return Err(format!("condition_unsatisfied: selected/dependent component {}: {why}",c.id))
+        }}
+    }
+    Ok(selected)
+}
+
 fn valid_id(s:&str)->bool{
     !s.is_empty()&&s.len()<=128&&!s.contains("..")&&s.bytes().next().is_some_and(|b|b.is_ascii_lowercase()||b.is_ascii_digit())&&s.bytes().all(|b|b.is_ascii_lowercase()||b.is_ascii_digit()||matches!(b,b'-'|b'_'|b'.'))
 }
 fn label(n:&str,d:&str)->bool{!n.trim().is_empty()&&n.len()<=256&&d.len()<=2048&&!format!("{n}{d}").chars().any(|c|matches!(c,'\0'|'\r'))}
 fn validate_topology(cat:&ComponentCatalog)->Result<(),String>{
+    validate_conditions_0244(cat)?;
     if cat.schema_version=="1.0"{
         if !cat.categories.is_empty()||!cat.groups.is_empty()||!cat.presets.is_empty()||!cat.default_preset.is_empty() {return Err("v1 catalog cannot contain topology".into())}
         for c in &cat.components{if !c.version.is_empty()||!c.dependencies.is_empty()||!c.conflicts.is_empty()||!c.exclusive_group.is_empty()||!c.description.is_empty()||!c.category_id.is_empty()||!c.group_id.is_empty()||c.required||c.default||c.visible.is_some()||c.limited||!c.metadata.is_empty(){return Err(format!("v1 component has topology: {}",c.id))}}
@@ -161,7 +281,8 @@ fn validate_topology(cat:&ComponentCatalog)->Result<(),String>{
         let mut included=HashSet::new();for id in &p.components{if !ids.contains(id.as_str())||!included.insert(id){return Err(format!("preset {} unknown/duplicate component {}",p.id,id))}}
     }
     if !cat.default_preset.is_empty()&&!preset_ids.contains(cat.default_preset.as_str()){return Err("unknown defaultPreset".into())}
-    if cat.schema_version=="3.0" {validate_rules_v3(cat)?;}
+    validate_conditions_0244(cat)?;
+    if cat.schema_version=="3.0"||cat.schema_version=="4.0" {validate_rules_v3(cat)?;}
     Ok(())
 }
 #[derive(Clone,Debug,PartialEq,Eq)]
@@ -260,8 +381,10 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
     }
     let mut state=HashMap::new();let mut stack=Vec::new();
     for c in &cat.components{visit(c.id.as_str(),&items,&mut state,&mut stack)?}
-    resolve_graph_v3(cat,"")?;
-    for p in &cat.presets{resolve_graph_v3(cat,&p.id).map_err(|e|format!("preset {} invalid: {e}",p.id))?;}
+    if cat.schema_version!="4.0" {
+      resolve_graph_v3(cat,"")?;
+      for p in &cat.presets{resolve_graph_v3(cat,&p.id).map_err(|e|format!("preset {} invalid: {e}",p.id))?;}
+    }
     Ok(())
 }
 fn resolve_graph_v3(cat:&ComponentCatalog,preset:&str)->Result<HashSet<String>,String>{
@@ -307,10 +430,41 @@ fn resolve_graph_v3(cat:&ComponentCatalog,preset:&str)->Result<HashSet<String>,S
     Ok(selected)
 }
 
+#[derive(Debug,Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct ComponentSelectionPreview0244 {
+    pub selected:Vec<String>,
+    pub unavailable:Vec<UnavailableComponent0244>,
+    pub effective_files:Vec<String>,
+}
+#[derive(Debug,Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct UnavailableComponent0244 { pub id:String,pub reason:String }
+
+// Desktop receives the same native result that staging and launch use.
+// Caller MUST verify the signed manifest first. This API never trusts local
+// permissions, operating-system or architecture input.
+pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<ComponentSelectionPreview0244,String>{
+    validate(m)?;
+    let cat=m.component_catalog.as_ref().ok_or("catalog is missing")?;
+    if cat.schema_version!="4.0"{return Err("conditional preview requires schema v4".into())}
+    let env=ComponentEnvironment0244::for_manifest(m);
+    let selected=resolve_conditional_0244(cat,preset.unwrap_or_default(),&env)?;
+    let unavailable=cat.components.iter().filter_map(|c|{
+        condition_unavailable_0244(c,&env).ok().flatten().map(|reason|UnavailableComponent0244{id:c.id.clone(),reason})
+    }).collect();
+    let mut effective_files=Vec::new();
+    for c in &cat.components {if selected.contains(&c.id){effective_files.extend(c.files.iter().cloned())}}
+    Ok(ComponentSelectionPreview0244{
+        selected:cat.components.iter().filter(|c|selected.contains(&c.id)).map(|c|c.id.clone()).collect(),
+        unavailable,effective_files,
+    })
+}
+
 pub fn validate(m:&Manifest)->Result<(),String>{
     if m.schema_version!="3.0"{if m.component_catalog.is_some(){return Err("componentCatalog requires manifest v3".into())}return Ok(())}
     let cat=m.component_catalog.as_ref().ok_or("v3 requires signed componentCatalog")?;
-    if !matches!(cat.schema_version.as_str(),"1.0"|"2.0"|"3.0")||cat.revision==0||cat.components.len()>4096||cat.digest.len()!=64||cat.digest!=(if cat.schema_version=="1.0"{digest(&cat.components)}else if cat.schema_version=="2.0"{digest_v2(cat)}else{digest_v3(cat)}){return Err("invalid v3 component snapshot/digest".into())}
+    if !matches!(cat.schema_version.as_str(),"1.0"|"2.0"|"3.0"|"4.0")||cat.revision==0||cat.components.len()>4096||cat.digest.len()!=64||cat.digest!=(if cat.schema_version=="1.0"{digest(&cat.components)}else if cat.schema_version=="2.0"{digest_v2(cat)}else if cat.schema_version=="3.0"{digest_v3(cat)}else{digest_v4(cat)}){return Err("invalid v3 component snapshot/digest".into())}
     validate_topology(cat)?;
     let files:HashMap<_,_>=m.files.iter().map(|f|(f.path.to_ascii_lowercase(),f)).collect();let mut ids=HashSet::new();let mut owners=HashSet::new();
     for c in &cat.components{
@@ -329,8 +483,10 @@ pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,Str
     if m.schema_version!="3.0" {active.extend(m.files.iter().map(|f|f.path.clone()));return Ok(active)}
     let cat=m.component_catalog.as_ref().ok_or("missing component catalog")?;
     let mut selected=HashSet::new();
-    if cat.schema_version=="3.0" {
-        let resolved=resolve_graph_v3(cat,preset.unwrap_or_default())?;
+    if cat.schema_version=="3.0"||cat.schema_version=="4.0" {
+        let resolved=if cat.schema_version=="4.0"{
+            resolve_conditional_0244(cat,preset.unwrap_or_default(),&ComponentEnvironment0244::for_manifest(m))?
+        }else{resolve_graph_v3(cat,preset.unwrap_or_default())?};
         for c in &cat.components {if resolved.contains(c.id.as_str()) {active.extend(c.files.iter().cloned());}}
         return Ok(active)
     }
@@ -360,4 +516,24 @@ mod tests{
   let mut tampered=cat.clone();tampered.components[1].metadata.insert("authors".into(),"B".into());assert_ne!(digest_v2(&cat),digest_v2(&tampered));
   let mut cycle=cat.clone();cycle.categories[0].parent_id="visual".into();assert!(validate_topology(&cycle).is_err());
  }
+ #[test] fn signed_go_conditions_fixture_0244(){
+  let manifest:crate::Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_0244_go_signed.json")).unwrap();
+  let cat=manifest.component_catalog.as_ref().unwrap();
+  assert_eq!(cat.schema_version,"4.0");
+  assert_eq!(cat.digest,digest_v4(cat));
+  validate(&manifest).unwrap();
+  let key=manifest.signature.as_ref().unwrap().public_key.clone();
+  crate::verify_manifest_signature(&manifest,&key).unwrap();
+  let env=ComponentEnvironment0244{os:"linux".into(),arch:"x86_64".into(),java_major:21,
+    minecraft_version:"1.21.1".into(),loader:"fabric".into(),loader_version:"0.16.2".into(),verified_permissions:HashSet::new()};
+  let allowed=resolve_conditional_0244(cat,"quality",&env).unwrap();
+  assert!(allowed.contains("performance.sodium")&&allowed.contains("shaders"));
+  let mut invalid=env;invalid.os="macos".into();
+  assert!(resolve_conditional_0244(cat,"quality",&invalid).unwrap_err().contains("condition_unsatisfied"));
+  let mut changed=manifest.clone();
+  changed.component_catalog.as_mut().unwrap().components[1].conditions.as_mut().unwrap().java_major_max=17;
+  assert!(validate(&changed).is_err());
+  assert_ne!(digest_v4(cat),digest_v4(changed.component_catalog.as_ref().unwrap()));
+ }
+
 }
