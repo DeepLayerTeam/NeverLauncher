@@ -1201,3 +1201,41 @@ mod tests {
     }
 
 }
+
+/// Read the VERIFIED installed ownership record for desktop component diffs.
+/// Never infer ownership by scanning disk and never read an unsigned client list.
+pub fn installed_component_state_0247(manifest:&Manifest,root:&Path,key:&str)->Result<(Option<String>,Vec<String>),String>{
+    verify_manifest_signature(manifest,key)?;
+    if journal(root)?.is_some_and(|j|j.state!="complete"){
+        return Err("incomplete release transaction; recover before changing components".into());
+    }
+    let Some(active)=pointer(root)?.active else {return Ok((None,Vec::new()))};
+    validate_release(&active,key)?;
+    if active.manifest.signature.as_ref().map(|v|(&v.public_key,&v.signature))!=
+       manifest.signature.as_ref().map(|v|(&v.public_key,&v.signature)) {
+        // Different release: paths still belong to the VERIFIED old release.
+        return Ok((active.preset,active.installed));
+    }
+    Ok((active.preset,active.installed))
+}
+
+/// Validate a proposed managed file path without acquiring ownership.
+/// Installed-file collisions are handled by transactional staging, but UI must
+/// not offer a misleading "zero download" preview over player-owned bytes.
+pub fn check_unowned_path_0247(root:&Path,relative:&str)->Result<(),String>{
+    let destination=safe_join(root,relative)?;
+    file_ownership::ensure_no_symlinks(root,&destination)?;
+    if destination.exists(){return Err(format!("user-owned file collision: {relative}"))}
+    Ok(())
+}
+
+/// An outer Option differentiates "no matching active release" from the
+/// default choice of an installed release (the inner None).
+pub fn matching_installed_preset_0247(manifest:&Manifest,root:&Path,key:&str)->Result<Option<Option<String>>,String>{
+    verify_manifest_signature(manifest,key)?;
+    let Some(active)=pointer(root)?.active else {return Ok(None)};
+    validate_release(&active,key)?;
+    let same=active.manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key))==
+        manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
+    Ok(if same{Some(active.preset)}else{None})
+}

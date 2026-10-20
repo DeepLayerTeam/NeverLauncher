@@ -1,3 +1,9 @@
+## 0.24.7 — Desktop Optional Components UI
+
+- Подписанный пользовательский выбор компонентов поверх пресетов; native resolver проверяет зависимости, исключения и условия.
+- Desktop preview: объяснения, SHA-256 diff, предварительный объём загрузки и явное подтверждение.
+- Применение выбора к staging, восстановлению и запуску через один resolved plan.
+
 ## 0.24.6 — Resolved Download & Ownership
 
 - Native release installer now uses a single deterministic, digest-bound resolved file plan for staging, download selection, verified live-file reuse, commit, launch identity and recovery. Durable download jobs pin this plan through pause/resume; old receipts remain readable.

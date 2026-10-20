@@ -4,6 +4,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import './styles.css';
 import { DesktopExtensions0209 } from './extensions_0209';
+import { ComponentChooser0247 } from './ComponentChooser0247';
+import { parseChoice0247 } from './component_selection_0247';
 import { launchPreferences, scopedServers, type ScopedServer } from './desktop_experience_0229';
 
 type Stage = 'idle' | 'connecting' | 'session' | 'project' | 'profile' | 'manifest' | 'java' | 'files' | 'repair' | 'cleanup' | 'ready' | 'launching' | 'running' | 'failed';
@@ -434,7 +436,7 @@ function App() {
     setSelectedProfile('');
     setProfileServers([]);
     setManifest(null);
-    setSettings((current) => normalizedSettings({ ...current, projectId, profileId: '', serverId: '', offlineEnabled: false }));
+    setSettings((current) => normalizedSettings({ ...current, projectId, profileId: '', serverId: '', offlineEnabled: false, componentPreset: '' }));
   }
 
   function selectProfile(profileId: string) {
@@ -442,7 +444,7 @@ function App() {
     const profile = profiles.find((item) => item.id === profileId);
     setManifest(null);
     setProfileServers([]);
-    setSettings((current) => normalizedSettings({ ...current, profileId, serverId: '', offlineEnabled: false, channel: profile?.defaultChannel || current.channel || 'stable' }));
+    setSettings((current) => normalizedSettings({ ...current, profileId, serverId: '', offlineEnabled: false, componentPreset: '', channel: profile?.defaultChannel || current.channel || 'stable' }));
   }
 
   async function persistDesktopConfig() {
@@ -1051,7 +1053,11 @@ function App() {
       if (!url) throw new Error('сначала выберите проект и профиль');
       const result = await callTauri<Manifest>('load_manifest', { url, pinnedPublicKey: settings.pinnedPublicKey });
       setManifest(result);
-      if (settings.componentPreset && !(result.componentCatalog?.presets||[]).some(p=>p.id===settings.componentPreset)) {
+      // Keep valid custom choices across refreshes; the verified native
+      // resolver rejects removed IDs or a no-longer-compatible preset.
+      let basePreset='';
+      try {basePreset=parseChoice0247(settings.componentPreset||'').base;}catch{basePreset='!invalid';}
+      if(basePreset && !(result.componentCatalog?.presets||[]).some(p=>p.id===basePreset)) {
         patchSettings('componentPreset','');
       }
       setSelectedProject(result.projectId);
@@ -1163,7 +1169,22 @@ function App() {
     try {
       const result = await callTauri<DownloadResult>('resume_download_job', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey });
       setDownload(result);
-      if (manifest) setFiles(await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory,preset: settings.componentPreset||null }).catch(() => files));
+      if (manifest) {
+        // The durable job stores the resolved choice; after resuming, reload
+        // the verified installed selection instead of using stale UI settings.
+        const installed=await callTauri<{installed:boolean;preset:string|null}>('installed_component_choice_0247',{
+          manifest,root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,
+        });
+        if(installed.installed){
+          const chosen=installed.preset||'';
+          await callTauri('save_installed_component_choice_0247',{
+            manifest,root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,componentPreset:chosen,
+            config:normalizedSettings({...settings,componentPreset:chosen}),
+          });
+          patchSettings('componentPreset',chosen);
+          setFiles(await callTauri<FileCheckResult[]>('check_files',{manifest,root:settings.gameDirectory,preset:chosen||null}));
+        }
+      }
       log(`Возобновление: скачано ${result.downloaded}, ошибок ${result.failed}.`);
       setPendingJob(await callTauri<PendingDownload | null>('pending_download_job', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey }));
     } catch (error) { log(`Не удалось возобновить: ${String(error)}`); }
@@ -1188,6 +1209,36 @@ function App() {
     } finally {
       setTransferBusy(false);
       void callTauri<PendingDownload | null>('pending_download_job', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey }).then(setPendingJob).catch(() => {});
+    }
+  }
+
+  // Commit exactly the previewed custom component plan, not a stale
+  // settings closure. Persist the choice only after transactional install.
+  async function installComponentSelection0247(choice: string): Promise<void> {
+    if (!manifest || transferBusy) throw new Error('Установка уже выполняется или манифест не загружен');
+    setStage('files');setTransferBusy(true);setDownloadProgress(null);
+    try {
+      const result = await callTauri<DownloadResult>('download_missing_files', {
+        manifest,root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,preset:choice||null,
+      });
+      if(result.failed>0)throw new Error(`Не удалось загрузить ${result.failed} файлов`);
+      const verified=await callTauri<FileCheckResult[]>('check_files',{
+        manifest,root:settings.gameDirectory,preset:choice||null,
+      });
+      const invalid=verified.filter(file=>file.status!=='ok');
+      if(invalid.length)throw new Error(`Установленный план содержит ${invalid.length} повреждённых/отсутствующих файлов`);
+      // Native persistence verifies that the requested choice actually became
+      // the active signed release before saving it in the desktop config.
+      await callTauri('save_installed_component_choice_0247',{
+        manifest,root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,componentPreset:choice,
+        config:normalizedSettings({...settings,componentPreset:choice}),
+      });
+      patchSettings('componentPreset',choice);
+      setFiles(verified);setDownload(result);setStage('ready');
+      log(`Компоненты установлены: ${result.downloaded} загружено, ${result.skipped} повторно использовано.`);
+    }catch(error){setStage('failed');log(`Не удалось применить компоненты: ${String(error)}`);throw error;}
+    finally{setTransferBusy(false);
+      void callTauri<PendingDownload|null>('pending_download_job',{root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey}).then(setPendingJob).catch(()=>{});
     }
   }
 
@@ -1562,7 +1613,7 @@ function App() {
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} />}
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
-        {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} pinnedPublicKey={settings.pinnedPublicKey} setComponentPreset={(x:string)=>patchSettings("componentPreset",x)} />}
+        {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} pinnedPublicKey={settings.pinnedPublicKey} root={settings.gameDirectory} transferBusy={transferBusy} installSelection={installComponentSelection0247} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
         {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
@@ -1611,34 +1662,11 @@ function ProjectPanel({ projects, selectedProject, setSelectedProject, loadProje
   return <section className="panel"><h3>Проекты</h3><p>Список проектов загружается из Backend API.</p><div className="toolbar inline"><button onClick={loadProjects}>Загрузить проекты</button><button onClick={() => loadProfiles(selectedProject)}>Загрузить профили</button></div><div className="list">{projects.map((project: BackendProject) => <button key={project.id} className={selectedProject === project.id ? 'row activeRow' : 'row'} onClick={() => setSelectedProject(project.id)}><strong>{project.title ?? project.name ?? project.id}</strong><span>{project.id}</span></button>)}</div></section>;
 }
 
-function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,manifest,componentPreset,pinnedPublicKey,setComponentPreset}:any){
+function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,manifest,componentPreset,pinnedPublicKey,root,transferBusy,installSelection}:any){
   const cat:ComponentCatalog|undefined=manifest?.componentCatalog;
-  const [nativePreview,setNativePreview]=useState<{selected:string[];unavailable:{id:string;reason:string}[];effectiveFiles:string[];error?:string}|null>(null);
-  useEffect(()=>{
-    let cancelled=false;
-    if(!cat||!['4.0','5.0'].includes(cat.schemaVersion)){setNativePreview(null);return;}
-    setNativePreview(null);
-    callTauri<{selected:string[];unavailable:{id:string;reason:string}[];effectiveFiles:string[]}>('preview_components_0244',{
-      manifest,pinnedPublicKey,componentPreset:componentPreset||null
-    }).then(result=>{if(!cancelled)setNativePreview(result);}).catch(error=>{
-      if(!cancelled)setNativePreview({selected:[],unavailable:[],effectiveFiles:[],error:String(error)});
-    });
-    return ()=>{cancelled=true;};
-  },[manifest,componentPreset,cat?.digest,pinnedPublicKey]);
-  const nativeConditional=cat&&['4.0','5.0'].includes(cat.schemaVersion);
-  const plan=cat&&!nativeConditional?componentPresetPlan0243(cat,componentPreset):null;
-  const selected=nativeConditional?new Set(nativePreview?.selected||[]):plan?.selected||new Set<string>();
-  const files=nativeConditional?nativePreview?.effectiveFiles||[]:cat?.components.filter(c=>selected.has(c.id)).flatMap(c=>c.files)||[];
-  const bytes=manifest?.files.filter((f:ManifestFile)=>files.includes(f.path)).reduce((sum:number,f:ManifestFile)=>sum+f.size,0)||0;
   return <section className="panel"><h3>Профиль и компоненты</h3><div className="toolbar inline"><button onClick={loadManifest}>Загрузить манифест</button></div>
     <div className="list">{profiles.map((profile:BackendProfile)=><button key={profile.id} className={selectedProfile===profile.id?'row activeRow':'row'} onClick={()=>setSelectedProfile(profile.id)}><strong>{profile.title??profile.name??profile.id}</strong><span>{profile.loader??'vanilla'}</span></button>)}</div>
-    {cat&&<article className="card"><h3>Подписанные компоненты (rev {cat.revision})</h3>
-      {(cat.schemaVersion==='2.0'||cat.schemaVersion==='3.0'||cat.schemaVersion==='4.0'||cat.schemaVersion==='5.0')&&<label>Пресет<select value={componentPreset} onChange={(e)=>setComponentPreset(e.target.value)}><option value="">По умолчанию{cat.defaultPreset?` (${cat.defaultPreset})`:''}</option>{cat.presets?.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
-      {(plan?.error||nativePreview?.error)&&<p role="alert" className="error">Недопустимая конфигурация: {plan?.error||nativePreview?.error}. Установка и запуск будут заблокированы native resolver.</p>}
-      <p>Выбрано {selected.size} компонентов; объём данных каталога {Math.round(bytes/1024)} КиБ. При изменении пресета используйте «Скачать/Обновить» для транзакционной установки. Required включаются всегда.</p>
-      {nativeConditional&&!nativePreview&&<p>Проверка платформы и подписанных условий в NeverRuntime…</p>}
-      {cat.components.filter(c=>c.visible!==false||selected.has(c.id)).map(c=><div key={c.id} className="row"><strong>{selected.has(c.id)?'✓ ':''}{c.name}</strong><span>{[c.required?'обязательный':null,c.default?'по умолчанию':null,c.limited?'ограниченный':null,c.description||null,plan?.reasons.get(c.id)||null,nativePreview?.unavailable.find(x=>x.id===c.id)?.reason||null,componentTopologyLabel(cat,c)||null,(c.actions?.length?`Действия: ${c.actions.map(a=>a.type+(a.path?` (${a.path})`:'')).join(', ')}`:null)].filter(Boolean).join(' · ')}</span></div>)}
-    </article>}
+    {manifest&&cat&&<ComponentChooser0247 manifest={manifest} componentPreset={componentPreset} pinnedPublicKey={pinnedPublicKey} root={root} transferBusy={transferBusy} installSelection={installSelection} topologyLabel={(c)=>componentTopologyLabel(cat,c as CatalogComponent)}/>}
     <pre>{manifest?JSON.stringify({projectId:manifest.projectId,profileId:manifest.profileId,version:manifest.version,files:manifest.files.length,catalogDigest:cat?.digest},null,2):'Манифест не загружен.'}</pre>
   </section>;
 }

@@ -1,12 +1,13 @@
 {
   "name": "neverlauncher-desktop",
-  "version": "0.24.6",
+  "version": "0.24.7",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "test:components": "tsc src/component_selection_0247.ts --module es2020 --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/component_selection_0247.test.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "2.5.0",

@@ -301,6 +301,8 @@ struct DesktopConfig {
     #[serde(default)] server_host: String,
     #[serde(default = "default_server_port_0229")] server_port: u16,
     #[serde(default)] offline_enabled: bool,
+    // Persist the installed signed component choice across application restarts.
+    #[serde(default)] component_preset: String,
     #[serde(default)]
     config_path: String,
 }
@@ -344,7 +346,7 @@ fn default_screen_width_0229() -> u32 { 1280 }
 fn default_screen_height_0229() -> u32 { 720 }
 fn default_server_port_0229() -> u16 { 25565 }
 fn default_desktop_config() -> DesktopConfig {
-    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), manifest_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), trust_policy_path: String::new(), server_id: String::new(), screen_width: 1280, screen_height: 720, fullscreen: false, auto_enter: false, server_host: String::new(), server_port: 25565, offline_enabled: false, config_path: String::new() }
+    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), manifest_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), trust_policy_path: String::new(), server_id: String::new(), screen_width: 1280, screen_height: 720, fullscreen: false, auto_enter: false, server_host: String::new(), server_port: 25565, offline_enabled: false, component_preset:String::new(), config_path: String::new() }
 }
 fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
     if cfg.schema_version.trim().is_empty() { cfg.schema_version = "1.0".into(); }
@@ -355,6 +357,10 @@ fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
     if cfg.screen_width == 0 { cfg.screen_width = 1280; }
     if cfg.screen_height == 0 { cfg.screen_height = 720; }
     if cfg.server_port == 0 { cfg.server_port = 25565; }
+    // Corrupt/unsupported preferences are not authoritative for any release.
+    if cfg.component_preset.len()>8192 || cfg.component_preset.bytes().any(|b|b<0x20||b==0x7f){
+        cfg.component_preset.clear();
+    }
     cfg
 }
 
@@ -516,6 +522,86 @@ async fn preview_components_0244(
 ) -> Result<neverruntime::component_catalog_0241::ComponentSelectionPreview0244, String> {
     neverruntime::verify_manifest_signature(&manifest, &pinned_public_key)?;
     neverruntime::component_catalog_0241::preview_components_0244(&manifest,component_preset.as_deref())
+}
+
+#[tauri::command]
+async fn save_installed_component_choice_0247(
+    manifest:neverruntime::Manifest,pinned_public_key:String,root:String,
+    component_preset:String,mut config:DesktopConfig,
+)->Result<(),String>{
+    let chosen=neverruntime::transactional_release::matching_installed_preset_0247(
+        &manifest,&PathBuf::from(root),&pinned_public_key)?
+        .ok_or("cannot save a component choice for a different/uninstalled release")?;
+    if chosen.unwrap_or_default()!=component_preset {
+        return Err("installed component choice differs from requested preference".into());
+    }
+    if component_preset.len()>8192 {return Err("component choice too large".into())}
+    if config.project_id!=manifest.project_id || config.profile_id!=manifest.profile_id
+        || config.game_directory!=root || config.pinned_public_key!=pinned_public_key {
+        return Err("desktop settings mismatch signed installed profile, directory or key".into());
+    }
+    config.component_preset=component_preset;
+    save_desktop_config(config).await?;
+    Ok(())
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all="camelCase")]
+struct InstalledChoice0247 {installed:bool,preset:Option<String>}
+
+#[tauri::command]
+async fn installed_component_choice_0247(
+    manifest:neverruntime::Manifest,pinned_public_key:String,root:String,
+)->Result<InstalledChoice0247,String>{
+    let selected=neverruntime::transactional_release::matching_installed_preset_0247(
+        &manifest,&PathBuf::from(root),&pinned_public_key)?;
+    Ok(match selected {
+        Some(preset)=>InstalledChoice0247{installed:true,preset},
+        None=>InstalledChoice0247{installed:false,preset:None},
+    })
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all="camelCase")]
+struct ComponentDiff0247 {
+    installed_preset:Option<String>,
+    added_files:Vec<String>,
+    removed_files:Vec<String>,
+    download_files:Vec<String>,
+    download_bytes_upper_bound:u64,
+    total_selected_bytes:u64,
+    plan_sha256:String,
+}
+
+#[tauri::command]
+async fn preview_component_changes_0247(
+    manifest:neverruntime::Manifest,
+    pinned_public_key:String,
+    root:String,
+    component_preset:Option<String>,
+) -> Result<ComponentDiff0247,String> {
+    use std::collections::HashSet;
+    neverruntime::verify_manifest_signature(&manifest,&pinned_public_key)?;
+    let root=PathBuf::from(root);
+    let plan=neverruntime::resolved_download_0246::resolve(&manifest,component_preset.as_deref())?;
+    let (installed_preset, installed)=neverruntime::transactional_release::installed_component_state_0247(&manifest,&root,&pinned_public_key)?;
+    let old:HashSet<_>=installed.into_iter().collect();
+    // Never preview a download as "safe" when it would take ownership of
+    // an existing user file, including a file with the expected SHA-256.
+    for f in &plan.files {
+        if old.contains(&f.path){continue}
+        neverruntime::transactional_release::check_unowned_path_0247(&root,&f.path)?;
+    }
+    let wanted:HashSet<_>=plan.files.iter().map(|f|f.path.clone()).collect();
+    let added_files=plan.files.iter().filter(|f|!old.contains(&f.path)).map(|f|f.path.clone()).collect();
+    let removed_files=old.iter().filter(|p|!wanted.contains(*p)).cloned().collect::<Vec<_>>();
+    let checks=neverruntime::check_files_with_preset(&manifest,&root,component_preset.as_deref()).await?;
+    let missing:HashSet<_>=checks.iter().filter(|f|f.status!="ok").map(|f|f.path.as_str()).collect();
+    let download_files=plan.files.iter().filter(|f|missing.contains(f.path.as_str())).map(|f|f.path.clone()).collect();
+    let download_bytes_upper_bound=plan.files.iter().filter(|f|missing.contains(f.path.as_str())).map(|f|f.size).sum();
+    let total_selected_bytes=plan.files.iter().map(|f|f.size).sum();
+    Ok(ComponentDiff0247{installed_preset,added_files,removed_files,download_files,
+        download_bytes_upper_bound,total_selected_bytes,plan_sha256:plan.sha256})
 }
 
 #[tauri::command]
@@ -1040,6 +1126,6 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }

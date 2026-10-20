@@ -230,7 +230,10 @@ fn condition_unavailable_0244(c:&CatalogComponent,env:&ComponentEnvironment0244)
 }
 fn resolve_conditional_0244(cat:&ComponentCatalog,preset:&str,env:&ComponentEnvironment0244)->Result<HashSet<String>,String>{
     let mut modified=cat.clone();
-    let explicit=!preset.is_empty()||!cat.default_preset.is_empty();
+    let base=preset.strip_prefix(CUSTOM_SELECTION_PREFIX_0247)
+        .and_then(|selection|selection.split_once(':').map(|(base,_)|base))
+        .unwrap_or(preset);
+    let explicit=!base.is_empty()||!cat.default_preset.is_empty();
     for c in &mut modified.components {
         if let Some(reason)=condition_unavailable_0244(c,env)? {
             if c.required{return Err(format!("condition_unsatisfied: required component {}: {reason}",c.id))}
@@ -389,14 +392,44 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
     }
     Ok(())
 }
-fn resolve_graph_v3(cat:&ComponentCatalog,preset:&str)->Result<HashSet<String>,String>{
-    let components:HashMap<&str,&CatalogComponent>=cat.components.iter().map(|c|(c.id.as_str(),c)).collect();
-    let chosen=if preset.is_empty(){cat.default_preset.as_str()}else{preset};
-    let mut selected:HashSet<String>=if !chosen.is_empty(){
+// v0.24.7: an installation choice is an untrusted list of signed component IDs,
+// NOT a modified manifest, a trusted preset, or a command line. Encode choices
+// in the pre-existing persisted preset field so staging, resume, rollback,
+// integrity checks and JVM launch all resolve the same immutable plan.
+const CUSTOM_SELECTION_PREFIX_0247:&str="@custom:v1:";
+fn selection_roots_0247(cat:&ComponentCatalog,preset:&str)->Result<(HashSet<String>,HashSet<String>),String>{
+    let (base,changes)=if let Some(encoded)=preset.strip_prefix(CUSTOM_SELECTION_PREFIX_0247){
+        if preset.len()>8192 {return Err("component selection exceeds 8192 bytes".into())}
+        let (base,encoded_changes)=encoded.split_once(':').ok_or("invalid custom component selection format")?;
+        (base,Some(encoded_changes))
+    }else{(preset,None)};
+    let chosen=if base.is_empty(){cat.default_preset.as_str()}else{base};
+    let mut roots:HashSet<String>=if !chosen.is_empty(){
         cat.presets.iter().find(|p|p.id==chosen).ok_or_else(||format!("unknown_preset: unknown signed component preset {chosen}"))?.components.iter().cloned().collect()
     }else{cat.components.iter().filter(|c|c.default).map(|c|c.id.clone()).collect()};
-    selected.extend(cat.components.iter().filter(|c|c.required).map(|c|c.id.clone()));
-    fn include(id:&str,chain:&[String],components:&HashMap<&str,&CatalogComponent>,selected:&mut HashSet<String>,done:&mut HashSet<String>)->Result<(),String>{
+    let mut disabled=HashSet::new();
+    if let Some(changes)=changes {
+        let mut seen=HashSet::new();
+        if !changes.is_empty() {
+            if changes.split(',').count()>cat.components.len(){return Err("too many component choices".into())}
+            for change in changes.split(','){
+                let (enable,id)=match change.as_bytes().first(){Some(b'+')=>(true,&change[1..]),Some(b'-')=>(false,&change[1..]),_=>return Err("invalid choice operator".into())};
+                if !valid_id(id)||!seen.insert(id){return Err(format!("invalid/duplicate component choice: {id}"))}
+                let c=cat.components.iter().find(|c|c.id==id).ok_or_else(||format!("unsigned component choice: {id}"))?;
+                if !enable&&c.required{return Err(format!("required component cannot be disabled: {id}"))}
+                if enable&&(c.visible==Some(false)||c.limited){return Err(format!("component cannot be manually enabled: {id}"))}
+                if enable {roots.insert(id.to_owned());}else{roots.remove(id);disabled.insert(id.to_owned());}
+            }
+        }
+    }
+    roots.extend(cat.components.iter().filter(|c|c.required).map(|c|c.id.clone()));
+    Ok((roots,disabled))
+}
+
+fn resolve_graph_v3(cat:&ComponentCatalog,preset:&str)->Result<HashSet<String>,String>{
+    let components:HashMap<&str,&CatalogComponent>=cat.components.iter().map(|c|(c.id.as_str(),c)).collect();
+    let (mut selected,disabled)=selection_roots_0247(cat,preset)?;
+    fn include(id:&str,chain:&[String],components:&HashMap<&str,&CatalogComponent>,selected:&mut HashSet<String>,disabled:&HashSet<String>,done:&mut HashSet<String>)->Result<(),String>{
         if done.contains(id){return Ok(())}
         let c=*components.get(id).ok_or_else(||format!("missing_dependency: {id}"))?;
         for dep in &c.dependencies {
@@ -405,13 +438,14 @@ fn resolve_graph_v3(cat:&ComponentCatalog,preset:&str)->Result<HashSet<String>,S
                 let mut path=chain.to_vec();path.push(id.to_string());
                 return Err(format!("version_mismatch: {id} requires {} {:?}, available {} (via {})",dep.id,dep.version_range,other.version,path.join(" -> ")))
             }
+            if disabled.contains(&dep.id){return Err(format!("required_dependency: {id} requires {}, which was explicitly disabled",dep.id))}
             selected.insert(dep.id.clone());
-            let mut next=chain.to_vec();next.push(id.to_string());include(&dep.id,&next,components,selected,done)?;
+            let mut next=chain.to_vec();next.push(id.to_string());include(&dep.id,&next,components,selected,disabled,done)?;
         }
         done.insert(id.to_string());Ok(())
     }
     let mut expanded=HashSet::new();
-    for c in &cat.components {if selected.contains(&c.id){include(&c.id,&[],&components,&mut selected,&mut expanded)?}}
+    for c in &cat.components {if selected.contains(&c.id){include(&c.id,&[],&components,&mut selected,&disabled,&mut expanded)?}}
     let mut groups=HashMap::new();
     for c in &cat.components {
         if !selected.contains(&c.id){continue}
@@ -438,7 +472,11 @@ pub struct ComponentSelectionPreview0244 {
     pub selected:Vec<String>,
     pub unavailable:Vec<UnavailableComponent0244>,
     pub effective_files:Vec<String>,
+    pub reasons:Vec<ComponentSelectionReason0247>,
 }
+#[derive(Debug,Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct ComponentSelectionReason0247 { pub id:String,pub reason:String }
 #[derive(Debug,Serialize)]
 #[serde(rename_all="camelCase")]
 pub struct UnavailableComponent0244 { pub id:String,pub reason:String }
@@ -449,18 +487,39 @@ pub struct UnavailableComponent0244 { pub id:String,pub reason:String }
 pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<ComponentSelectionPreview0244,String>{
     validate(m)?;
     let cat=m.component_catalog.as_ref().ok_or("catalog is missing")?;
-    if cat.schema_version!="4.0"&&cat.schema_version!="5.0"{return Err("conditional preview requires schema v4/v5".into())}
     let env=ComponentEnvironment0244::for_manifest(m);
-    let selected=resolve_conditional_0244(cat,preset.unwrap_or_default(),&env)?;
+    let wanted=preset.unwrap_or_default();
+    let selected=match cat.schema_version.as_str(){
+        "4.0"|"5.0"=>resolve_conditional_0244(cat,wanted,&env)?,
+        "3.0"=>resolve_graph_v3(cat,wanted)?,
+        "2.0"=>selection_roots_0247(cat,wanted)?.0,
+        "1.0"=>{
+            if !wanted.is_empty(){return Err("v1 catalog does not support custom selections".into())}
+            cat.components.iter().map(|c|c.id.clone()).collect()
+        },
+        _=>return Err("unsupported catalog schema".into()),
+    };
     let unavailable=cat.components.iter().filter_map(|c|{
         condition_unavailable_0244(c,&env).ok().flatten().map(|reason|UnavailableComponent0244{id:c.id.clone(),reason})
     }).collect();
+    let (roots,_)=if cat.schema_version=="1.0"{
+        (selected.clone(),HashSet::new())
+    } else {selection_roots_0247(cat,wanted)?};
+    let mut reasons=Vec::new();
+    let selected_ids:Vec<_>=cat.components.iter().filter(|c|selected.contains(&c.id)).map(|c|c.id.clone()).collect();
+    for c in &cat.components {
+        if !selected.contains(&c.id){continue}
+        let reason=if c.required {"Required: обязательный компонент".to_owned()}
+        else if roots.contains(&c.id){"Выбран пользователем или пресетом".to_owned()}
+        else {
+            let parents:Vec<_>=cat.components.iter().filter(|parent|selected.contains(&parent.id)&&parent.dependencies.iter().any(|d|d.id==c.id)).map(|p|p.name.as_str()).collect();
+            format!("Зависимость: {}",parents.join(", "))
+        };
+        reasons.push(ComponentSelectionReason0247{id:c.id.clone(),reason});
+    }
     let mut effective_files=Vec::new();
     for c in &cat.components {if selected.contains(&c.id){effective_files.extend(crate::component_actions_0245::effective_files(c))}}
-    Ok(ComponentSelectionPreview0244{
-        selected:cat.components.iter().filter(|c|selected.contains(&c.id)).map(|c|c.id.clone()).collect(),
-        unavailable,effective_files,
-    })
+    Ok(ComponentSelectionPreview0244{selected:selected_ids,unavailable,effective_files,reasons})
 }
 
 pub fn validate(m:&Manifest)->Result<(),String>{
@@ -493,12 +552,13 @@ pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,Str
         for c in &cat.components {if resolved.contains(c.id.as_str()) {active.extend(crate::component_actions_0245::effective_files(c).into_iter());}}
         return Ok(active)
     }
-    if cat.schema_version=="1.0"{selected.extend(cat.components.iter().map(|c|c.id.as_str()));}
+    if cat.schema_version=="1.0"{
+        if preset.is_some_and(|p|!p.is_empty()){return Err("v1 catalog does not support component choices".into())}
+        selected.extend(cat.components.iter().map(|c|c.id.as_str()));
+    }
     else {
-        let chosen=preset.filter(|p|!p.is_empty()).unwrap_or(cat.default_preset.as_str());
-        if chosen.is_empty(){selected.extend(cat.components.iter().filter(|c|c.default).map(|c|c.id.as_str()));}
-        else {let preset=cat.presets.iter().find(|p|p.id==chosen).ok_or_else(||format!("unknown signed component preset {chosen}"))?;selected.extend(preset.components.iter().map(String::as_str));}
-        selected.extend(cat.components.iter().filter(|c|c.required).map(|c|c.id.as_str()));
+        let (roots,_)=selection_roots_0247(cat,preset.unwrap_or_default())?;
+        selected.extend(roots.iter().map(String::as_str));
     }
     for c in &cat.components{if selected.contains(c.id.as_str()){active.extend(c.files.iter().cloned());}}
     Ok(active)
@@ -518,6 +578,19 @@ mod tests{
   let cat:ComponentCatalog=serde_json::from_str(json).unwrap();assert!(validate_topology(&cat).is_ok());assert_ne!(digest_v2(&cat),digest(&cat.components));
   let mut tampered=cat.clone();tampered.components[1].metadata.insert("authors".into(),"B".into());assert_ne!(digest_v2(&cat),digest_v2(&tampered));
   let mut cycle=cat.clone();cycle.categories[0].parent_id="visual".into();assert!(validate_topology(&cycle).is_err());
+ }
+ #[test] fn custom_selection_0247_is_resolved_from_signed_catalog(){
+  let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
+  let cat=m.component_catalog.as_ref().unwrap();
+  let ids=resolve_graph_v3(cat,"@custom:v1:minimal:+shaders").unwrap();
+  assert!(ids.contains("core")&&ids.contains("shaders")&&ids.contains("performance.sodium"));
+  assert!(resolve_graph_v3(cat,"@custom:v1:minimal:-core").unwrap_err().contains("required component"));
+  assert!(resolve_graph_v3(cat,"@custom:v1:minimal:+unsigned").unwrap_err().contains("unsigned component"));
+  assert!(resolve_graph_v3(cat,"@custom:v1:quality:-performance.sodium").unwrap_err().contains("required_dependency"));
+  assert!(resolve_graph_v3(cat,"@custom:v1:minimal:+shaders,+shaders").unwrap_err().contains("duplicate"));
+  let mut exclusive=cat.clone();
+  exclusive.components[2].exclusive_group="performance-engine".into();
+  assert!(resolve_graph_v3(&exclusive,"@custom:v1:quality:").unwrap_err().contains("exclusive_group"));
  }
  #[test] fn signed_go_conditions_fixture_0244(){
   let manifest:crate::Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_0244_go_signed.json")).unwrap();
