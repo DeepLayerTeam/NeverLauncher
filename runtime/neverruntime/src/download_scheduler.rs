@@ -237,6 +237,14 @@ pub(crate) async fn run(manifest: &Manifest, root: &Path, limits: DownloadLimits
                  sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>) -> Result<DownloadResult, String> {
     run_with_store(manifest, root, limits, sink, operation_id, control, CacheStore::standard()?).await
 }
+// Execute a signed preset: only allowlisted manifest paths reach the scheduler.
+pub(crate) async fn run_selected(manifest:&Manifest,root:&Path,limits:DownloadLimits,
+    sink:Option<ProgressSink>,operation_id:String,control:watch::Receiver<Directive>,
+    selected:&std::collections::HashSet<String>)->Result<DownloadResult,String>{
+    let mut filtered=manifest.clone();
+    filtered.files.retain(|f|selected.contains(&f.path));
+    run(&filtered,root,limits,sink,operation_id,control).await
+}
 
 async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits,
     sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>,

@@ -1,0 +1,178 @@
+{
+  "schemaVersion": "3.0",
+  "projectId": "demo",
+  "profileId": "vanilla",
+  "channel": "stable",
+  "version": "0.24.2-signed-test",
+  "createdAt": "2026-10-20T00:00:00Z",
+  "minecraft": {
+    "version": "1.21.1",
+    "loader": "fabric",
+    "mainClass": "demo.Main"
+  },
+  "runtime": {
+    "java": {
+      "majorVersion": 21,
+      "distribution": "temurin"
+    },
+    "memory": {},
+    "launch": {
+      "mainClass": "demo.Main",
+      "classpathStrategy": "manifest"
+    }
+  },
+  "directories": {},
+  "files": [
+    {
+      "path": "mods/core.jar",
+      "size": 13,
+      "sha256": "af6133ced0193e9bea18aed11e90887d5fee743f43b6019faffa09827c4f0f19",
+      "url": "https://example.invalid/mods/core.jar",
+      "required": false,
+      "executable": false,
+      "ownership": "optional"
+    },
+    {
+      "path": "mods/sodium.jar",
+      "size": 15,
+      "sha256": "1ec0dee904cd8a8fcf0221c476730dd972dd61a53b22e80827bcac81c0805bcc",
+      "url": "https://example.invalid/mods/sodium.jar",
+      "required": false,
+      "executable": false,
+      "ownership": "optional"
+    },
+    {
+      "path": "mods/indium.jar",
+      "size": 15,
+      "sha256": "e7602450837fd9649038fa619a35c3b767d76f57822f756b8ff70b729de74fd8",
+      "url": "https://example.invalid/mods/indium.jar",
+      "required": false,
+      "executable": false,
+      "ownership": "optional"
+    },
+    {
+      "path": "mods/shader.jar",
+      "size": 15,
+      "sha256": "3f1a150c7007590ffd24ba6d21753c6c84e67e61f12c00ed2b8f5f2272b8aaa2",
+      "url": "https://example.invalid/mods/shader.jar",
+      "required": false,
+      "executable": false,
+      "ownership": "optional"
+    }
+  ],
+  "profileSnapshot": {
+    "schemaVersion": "2.0",
+    "revision": 1,
+    "digest": "aafe7b05d3b35f6cd46fd846bf6794e2a0f176bf64c8f09464f10740d8c0c00e",
+    "spec": {
+      "projectId": "demo",
+      "id": "vanilla",
+      "name": "Vanilla",
+      "description": "",
+      "loader": "vanilla",
+      "preset": "",
+      "isDefault": false
+    }
+  },
+  "componentCatalog": {
+    "schemaVersion": "2.0",
+    "revision": 1,
+    "digest": "97b6cfd2584fbae25545d422cad08c28b30b1de5d8f399e81a0ed7af3535f909",
+    "components": [
+      {
+        "id": "core",
+        "name": "Core",
+        "files": [
+          "mods/core.jar"
+        ],
+        "required": true,
+        "visible": false
+      },
+      {
+        "id": "performance.sodium",
+        "name": "Sodium \u0026 friends",
+        "files": [
+          "mods/sodium.jar",
+          "mods/indium.jar"
+        ],
+        "description": "Performance",
+        "categoryId": "performance",
+        "groupId": "performance.optimization",
+        "default": true,
+        "visible": true,
+        "metadata": {
+          "author": "A",
+          "url": "https://example.org"
+        }
+      },
+      {
+        "id": "shaders",
+        "name": "Shader",
+        "files": [
+          "mods/shader.jar"
+        ],
+        "categoryId": "visual",
+        "groupId": "visual.shaders",
+        "visible": true,
+        "limited": true
+      }
+    ],
+    "categories": [
+      {
+        "id": "visual",
+        "name": "Visual"
+      },
+      {
+        "id": "performance",
+        "name": "Performance",
+        "parentId": "visual"
+      }
+    ],
+    "groups": [
+      {
+        "id": "visual.quality",
+        "name": "Quality",
+        "categoryId": "visual"
+      },
+      {
+        "id": "visual.shaders",
+        "name": "Shaders",
+        "parentId": "visual.quality",
+        "categoryId": "visual"
+      },
+      {
+        "id": "performance.optimization",
+        "name": "Performance",
+        "categoryId": "performance"
+      }
+    ],
+    "presets": [
+      {
+        "id": "minimal",
+        "name": "Minimal",
+        "components": []
+      },
+      {
+        "id": "optimized",
+        "name": "Optimized",
+        "components": [
+          "performance.sodium"
+        ]
+      },
+      {
+        "id": "quality",
+        "name": "Quality",
+        "components": [
+          "shaders"
+        ]
+      }
+    ],
+    "defaultPreset": "optimized"
+  },
+  "signature": {
+    "algorithm": "Ed25519",
+    "publicKey": "24a9dcf8fac87bd5cb27d51d09f98188bc1c00b1223f5ccaa26a5736d9a53d78",
+    "signature": "57cf016268b90bbbf978bb22ef18a80586edaf1b30adc19b4d338f870c5a5d3ac8aa7a8af5f1d0697b803e0a37895c4bcde095512363c88b7790ca9b44b65b04",
+    "signedAt": "2026-10-20T00:00:00Z"
+  }
+}

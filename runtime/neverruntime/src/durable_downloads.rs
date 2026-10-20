@@ -21,6 +21,8 @@ pub struct SavedJob {
     pub status: String,
     pub pinned_public_key: String,
     pub manifest: Manifest,
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub preset: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -120,7 +122,7 @@ async fn perform(root: &Path, job: SavedJob, sink: Option<ProgressSink>,
     verify_manifest_signature(&job.manifest, &job.pinned_public_key)?;
     file_ownership::validate_download_targets(&job.manifest)?;
     let outcome = crate::transactional_release::install(&job.manifest, root, &job.pinned_public_key, sink,
-        job.operation_id.clone(), rx.clone()).await;
+        job.operation_id.clone(), rx.clone(), job.preset.clone()).await;
     let stopped = *rx.borrow();
     if stopped == Directive::Cancelled { erase(root).await; }
     else if stopped == Directive::Paused {
@@ -138,18 +140,22 @@ async fn perform(root: &Path, job: SavedJob, sink: Option<ProgressSink>,
     outcome
 }
 
-pub async fn start(manifest: &Manifest, root: &Path, key: &str, mode: &str,
-    sink: Option<ProgressSink>) -> Result<DownloadResult, String> {
+pub async fn start(manifest:&Manifest,root:&Path,key:&str,mode:&str,sink:Option<ProgressSink>)->Result<DownloadResult,String>{
+    start_with_preset(manifest,root,key,mode,sink,None).await
+}
+pub async fn start_with_preset(manifest: &Manifest, root: &Path, key: &str, mode: &str,
+    sink: Option<ProgressSink>, preset:Option<String>) -> Result<DownloadResult, String> {
     if !matches!(mode, "download" | "repair") { return Err("invalid operation mode".into()); }
     verify_manifest_signature(manifest, key)?;
     file_ownership::validate_download_targets(manifest)?;
+    crate::component_catalog_0241::active_files(manifest,preset.as_deref())?;
     let root = normalized(root).await?;
     let (_guard, rx) = register(&root)?;
     let prev_generation = read(&root).await.map_or(0, |job| job.generation);
     let job = SavedJob {
         schema_version: SCHEMA, generation: prev_generation + 1,
         operation_id: format!("{}-{:016x}", std::process::id(), rand::random::<u64>()),
-        mode: mode.into(), status: "running".into(), pinned_public_key: key.into(), manifest: manifest.clone(),
+        mode: mode.into(), status: "running".into(), pinned_public_key: key.into(), manifest: manifest.clone(), preset,
     };
     write(&root, &job).await?;
     perform(&root, job, sink, rx).await

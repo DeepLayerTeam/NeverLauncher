@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "2.0",
+  "revision": 1,
+  "digest": "97b6cfd2584fbae25545d422cad08c28b30b1de5d8f399e81a0ed7af3535f909",
+  "components": [
+    {
+      "id": "core",
+      "name": "Core",
+      "files": [
+        "mods/core.jar"
+      ],
+      "required": true,
+      "visible": false
+    },
+    {
+      "id": "performance.sodium",
+      "name": "Sodium & friends",
+      "files": [
+        "mods/sodium.jar",
+        "mods/indium.jar"
+      ],
+      "description": "Performance",
+      "categoryId": "performance",
+      "groupId": "performance.optimization",
+      "default": true,
+      "visible": true,
+      "metadata": {
+        "author": "A",
+        "url": "https://example.org"
+      }
+    },
+    {
+      "id": "shaders",
+      "name": "Shader",
+      "files": [
+        "mods/shader.jar"
+      ],
+      "categoryId": "visual",
+      "groupId": "visual.shaders",
+      "visible": true,
+      "limited": true
+    }
+  ],
+  "categories": [
+    {
+      "id": "visual",
+      "name": "Visual"
+    },
+    {
+      "id": "performance",
+      "name": "Performance",
+      "parentId": "visual"
+    }
+  ],
+  "groups": [
+    {
+      "id": "visual.quality",
+      "name": "Quality",
+      "categoryId": "visual"
+    },
+    {
+      "id": "visual.shaders",
+      "name": "Shaders",
+      "parentId": "visual.quality",
+      "categoryId": "visual"
+    },
+    {
+      "id": "performance.optimization",
+      "name": "Performance",
+      "categoryId": "performance"
+    }
+  ],
+  "presets": [
+    {
+      "id": "minimal",
+      "name": "Minimal",
+      "components": []
+    },
+    {
+      "id": "optimized",
+      "name": "Optimized",
+      "components": [
+        "performance.sodium"
+      ]
+    },
+    {
+      "id": "quality",
+      "name": "Quality",
+      "components": [
+        "shaders"
+      ]
+    }
+  ],
+  "defaultPreset": "optimized"
+}

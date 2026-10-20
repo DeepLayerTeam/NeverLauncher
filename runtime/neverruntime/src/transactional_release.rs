@@ -19,6 +19,8 @@ struct Release {
     manifest: Manifest,
     installed: Vec<String>,
     id: String,
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    preset: Option<String>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct Pointer { schema: u32, generation: u64, active: Option<Release> }
@@ -135,13 +137,14 @@ fn validate_release(release: &Release, key: &str) -> Result<(), String> {
     validate_id(&release.id)?;
     verify_manifest_signature(&release.manifest, key)?;
     file_ownership::validate_download_targets(&release.manifest)?;
+    let selected=crate::component_catalog_0241::active_files(&release.manifest,release.preset.as_deref())?;
     let mut seen = BTreeSet::new();
     for p in &release.installed {
-        if !eligible(&release.manifest, p) || !seen.insert(p) { return Err(format!("invalid release ownership record: {p}")); }
+        if !selected.contains(p) || !eligible(&release.manifest, p) || !seen.insert(p) { return Err(format!("invalid release ownership record: {p}")); }
     }
     if release.manifest.schema_version == "3.0" {
         for file in &release.manifest.files {
-            if eligible(&release.manifest, &file.path) && !seen.contains(&file.path) {
+            if selected.contains(&file.path) && eligible(&release.manifest, &file.path) && !seen.contains(&file.path) {
                 return Err(format!("v3 signed component file not installed: {}",file.path));
             }
         }
@@ -342,6 +345,24 @@ pub async fn acquire_launch_lease(manifest: &Manifest, root: &Path, key: &str) -
     }).await.map_err(|e| e.to_string())?
 }
 
+// Compare the requested selection with the active verified release before launch.
+// Changing the UI dropdown alone must never silently launch the older preset.
+pub async fn ensure_active_preset(manifest:&Manifest,root:&Path,key:&str,preset:Option<&str>)->Result<(),String>{
+    verify_manifest_signature(manifest,key)?;
+    let wanted=crate::component_catalog_0241::active_files(manifest,preset)?;
+    let active=pointer(root)?.active.ok_or("client release is not installed")?;
+    validate_release(&active,key)?;
+    if active.manifest.signature.as_ref().map(|s|&s.signature)!=manifest.signature.as_ref().map(|s|&s.signature){return Err("active client release does not match signed manifest".into())}
+    let actual=crate::component_catalog_0241::active_files(manifest,active.preset.as_deref())?;
+    if wanted!=actual {return Err("selected component preset is not installed: install selected preset first".into())}
+    Ok(())
+}
+// Used for the exact installed selection when verifying files before launch.
+pub fn active_preset_for_manifest(manifest:&Manifest,root:&Path)->Option<String>{
+    let active=pointer(root).ok()?.active?;
+    if active.manifest.signature.as_ref().map(|s|&s.signature)==manifest.signature.as_ref().map(|s|&s.signature){active.preset}else{None}
+}
+
 pub async fn ready_for_launch(manifest: &Manifest, root: &Path, key: &str) -> Result<(), String> {
     let _lease = acquire_launch_lease(manifest, root, key).await?;
     Ok(())
@@ -480,9 +501,10 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
 /// Stage all selected files (including offline cache hits), verify the entire
 /// set, and commit only if every required staged file passed SHA-256.
 pub async fn install(manifest: &Manifest, root: &Path, key: &str,
-    sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>) -> Result<DownloadResult, String> {
+    sink: Option<ProgressSink>, operation_id: String, control: watch::Receiver<Directive>, preset:Option<String>) -> Result<DownloadResult, String> {
     verify_manifest_signature(manifest, key)?;
     file_ownership::validate_download_targets(manifest)?;
+    let selected=crate::component_catalog_0241::active_files(manifest,preset.as_deref())?;
     recover(root, key).await?;
     let root = root.canonicalize().map_err(|e| e.to_string())?;
     release_generations::check(&root,manifest)?;
@@ -499,7 +521,7 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     let mut required_stage = 0u64;
     let mut largest_pending = Vec::new();
     for f in &manifest.files {
-        if !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) { continue; }
+        if !selected.contains(&f.path) || !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) { continue; }
         let path = safe_join(&stage, &f.path)?;
         file_ownership::ensure_no_symlinks(&root, &path)?;
         let live = safe_join(&root, &f.path)?;
@@ -524,7 +546,7 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     // them; absent optional files remain optional, as in 0.23.4.
     for f in &manifest.files {
         crate::network_resilience::check(&control)?;
-        if !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) { continue; }
+        if !selected.contains(&f.path) || !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) { continue; }
         let target = safe_join(&root, &f.path)?;
         let staged = safe_join(&stage, &f.path)?;
         file_ownership::ensure_no_symlinks(&root, &target)?;
@@ -537,11 +559,11 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
             tokio::fs::copy(&target, &staged).await.map_err(|e| format!("stage optional {}: {e}",f.path))?;
         }
     }
-    let result = download_scheduler::run(manifest, &stage, DownloadLimits::default(), sink, operation_id, control.clone()).await?;
+    let result = download_scheduler::run_selected(manifest, &stage, DownloadLimits::default(), sink, operation_id, control.clone(), &selected).await?;
     if *control.borrow() != Directive::Running || result.failed != 0 { return Ok(result); }
     let mut installed = Vec::new();
     for f in &manifest.files {
-        if !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) { continue; }
+        if !selected.contains(&f.path) || !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) { continue; }
         let path = safe_join(&stage, &f.path)?;
         let optional_absent = manifest.schema_version == "2.0" && file_ownership::effective_ownership(f) == "optional" && !path.exists() && !file_ownership::must_verify(manifest, &f.path);
         if optional_absent { continue; }
@@ -549,7 +571,7 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
         installed.push(f.path.clone());
     }
     if *control.borrow() != Directive::Running { return Ok(result); }
-    let next = Release { manifest: manifest.clone(), installed, id: format!("{:032x}", rand::random::<u128>()) };
+    let next = Release { manifest: manifest.clone(), installed, id: format!("{:032x}", rand::random::<u128>()), preset };
     let key = key.to_owned();
     let restore_root = root.clone(); let restore_key = key.clone();
     tokio::task::spawn_blocking(move || commit(&root, next, &key, &stage))
@@ -622,13 +644,13 @@ mod tests {
     async fn switch_only_registered_paths_and_explicit_rollback_preserve_user_data() {
         let root = std::env::temp_dir().join(format!("nl-txn-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (m1,key) = fixture(&root,"1",&[("mods/a.jar",b"OLD"),("mods/retired.jar",b"RETIRED")]);
-        let one = Release { manifest:m1.clone(), installed:m1.files.iter().map(|f|f.path.clone()).collect(), id:format!("{:032x}",1) };
+        let one = Release { manifest:m1.clone(), installed:m1.files.iter().map(|f|f.path.clone()).collect(), id:format!("{:032x}",1),preset:None };
         commit(&root,one,&key,&staged(&root,&m1,&[("mods/a.jar",b"OLD"),("mods/retired.jar",b"RETIRED")])).unwrap();
         fs::create_dir_all(root.join("saves/world")).unwrap();
         fs::write(root.join("saves/world/level.dat"),b"WORLD").unwrap();
         fs::write(root.join("mods/custom.jar"),b"PLAYER").unwrap();
         let (m2,_) = fixture(&root,"2",&[("mods/a.jar",b"NEW"),("mods/b.jar",b"ADDED")]);
-        let next = Release { manifest:m2.clone(), installed:m2.files.iter().map(|f|f.path.clone()).collect(), id:format!("{:032x}",2) };
+        let next = Release { manifest:m2.clone(), installed:m2.files.iter().map(|f|f.path.clone()).collect(), id:format!("{:032x}",2),preset:None };
         commit(&root,next,&key,&staged(&root,&m2,&[("mods/a.jar",b"NEW"),("mods/b.jar",b"ADDED")])).unwrap();
         assert_eq!(fs::read(root.join("mods/a.jar")).unwrap(),b"NEW");
         assert!(!root.join("mods/retired.jar").exists());
@@ -644,10 +666,10 @@ mod tests {
     fn interrupted_switch_restores_old_set_including_removed_paths() {
         let root = std::env::temp_dir().join(format!("nl-txn-crash-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (m,key) = fixture(&root,"1",&[("libraries/a.jar",b"OLD")]);
-        let first = Release { manifest:m.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",1) };
+        let first = Release { manifest:m.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",1),preset:None };
         commit(&root,first,&key,&staged(&root,&m,&[("libraries/a.jar",b"OLD")])).unwrap();
         let (m2,_) = fixture(&root,"2",&[("libraries/a.jar",b"NEW")]);
-        let next = Release { manifest:m2, installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",2) };
+        let next = Release { manifest:m2, installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",2),preset:None };
         let old = pointer(&root).unwrap().active;
         let back_id = format!("{:032x}",3);
         let back = backup_dir(&root,&back_id);
@@ -671,7 +693,7 @@ mod tests {
         fs::create_dir_all(root.join("libraries")).unwrap();
         fs::write(root.join("libraries/a.jar"),b"ORIGINAL").unwrap();
         fs::write(root.join("options.txt"),b"PLAYER").unwrap();
-        let next = Release { manifest:m.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",4) };
+        let next = Release { manifest:m.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",4),preset:None };
         let broken = staged(&root,&m,&[("libraries/a.jar",b"INJECTED")]);
         assert!(commit(&root,next,&key,&broken).is_err());
         assert_eq!(fs::read(root.join("libraries/a.jar")).unwrap(),b"ORIGINAL");
@@ -683,10 +705,10 @@ mod tests {
     fn rollback_interrupted_after_partial_restore_resumes_reverting() {
         let root = std::env::temp_dir().join(format!("nl-txn-reverting-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (m,key) = fixture(&root,"1",&[("mods/a.jar",b"OLD")]);
-        let old = Release { manifest:m.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",5) };
+        let old = Release { manifest:m.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",5),preset:None };
         commit(&root,old,&key,&staged(&root,&m,&[("mods/a.jar",b"OLD")])).unwrap();
         let (m2,_) = fixture(&root,"2",&[("mods/a.jar",b"NEW")]);
-        let new = Release { manifest:m2.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",6) };
+        let new = Release { manifest:m2.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",6),preset:None };
         commit(&root,new,&key,&staged(&root,&m2,&[("mods/a.jar",b"NEW")])).unwrap();
         let mut entry = journal(&root).unwrap().unwrap();
         entry.state = "reverting".into(); entry.generation += 1;
@@ -701,10 +723,10 @@ mod tests {
     fn backup_corruption_blocks_destructive_recovery() {
         let root = std::env::temp_dir().join(format!("nl-txn-corrupt-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (m,key) = fixture(&root,"1",&[("mods/a.jar",b"OLD")]);
-        let old = Release { manifest:m.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",7) };
+        let old = Release { manifest:m.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",7),preset:None };
         commit(&root,old,&key,&staged(&root,&m,&[("mods/a.jar",b"OLD")])).unwrap();
         let (m2,_) = fixture(&root,"2",&[("mods/a.jar",b"NEW")]);
-        let new = Release { manifest:m2.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",8) };
+        let new = Release { manifest:m2.clone(), installed:vec!["mods/a.jar".into()], id:format!("{:032x}",8),preset:None };
         commit(&root,new,&key,&staged(&root,&m2,&[("mods/a.jar",b"NEW")])).unwrap();
         let mut entry = journal(&root).unwrap().unwrap();
         fs::write(backup_dir(&root,&entry.backup_id).join("mods/a.jar"),b"TAMPERED").unwrap();
@@ -720,11 +742,11 @@ mod tests {
     async fn live_launch_lease_prevents_switching_files_while_game_is_running() {
         let root = std::env::temp_dir().join(format!("nl-txn-lease-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (m1,key) = fixture(&root,"1",&[("libraries/a.jar",b"OLD")]);
-        let old = Release { manifest:m1.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",9) };
+        let old = Release { manifest:m1.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",9),preset:None };
         commit(&root,old,&key,&staged(&root,&m1,&[("libraries/a.jar",b"OLD")])).unwrap();
         let lease = acquire_launch_lease(&m1,&root,&key).await.unwrap();
         let (m2,_) = fixture(&root,"2",&[("libraries/a.jar",b"NEW")]);
-        let new = Release { manifest:m2.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",10) };
+        let new = Release { manifest:m2.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",10),preset:None };
         let target = staged(&root,&m2,&[("libraries/a.jar",b"NEW")]);
         assert!(commit(&root,new.clone(),&key,&target).is_err());
         assert_eq!(fs::read(root.join("libraries/a.jar")).unwrap(),b"OLD");
@@ -740,7 +762,7 @@ mod tests {
         let (manifest,key) = fixture(&root,"new",&[("mods/custom.jar",b"PUBLISHED")]);
         fs::create_dir_all(root.join("mods")).unwrap();
         fs::write(root.join("mods/custom.jar"),b"CUSTOM_PLAYER_DATA").unwrap();
-        let next = Release { manifest: manifest.clone(), installed:vec!["mods/custom.jar".into()], id:format!("{:032x}",60) };
+        let next = Release { manifest: manifest.clone(), installed:vec!["mods/custom.jar".into()], id:format!("{:032x}",60),preset:None };
         let work = staged(&root,&manifest,&[("mods/custom.jar",b"PUBLISHED")]);
         let error = commit(&root,next,&key,&work).unwrap_err();
         assert!(error.contains("untracked user file"), "{error}");
@@ -753,10 +775,10 @@ mod tests {
     fn readonly_existing_file_rejects_switch_without_journal_mutation() {
         let root = std::env::temp_dir().join(format!("nl-readonly-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (manifest,key) = fixture(&root,"base",&[("libraries/core.jar",b"OLD")]);
-        let old = Release { manifest:manifest.clone(), installed:vec!["libraries/core.jar".into()], id:format!("{:032x}",61) };
+        let old = Release { manifest:manifest.clone(), installed:vec!["libraries/core.jar".into()], id:format!("{:032x}",61),preset:None };
         commit(&root,old,&key,&staged(&root,&manifest,&[("libraries/core.jar",b"OLD")])).unwrap();
         let (new_manifest,_) = fixture(&root,"new",&[("libraries/core.jar",b"NEXT")]);
-        let next = Release { manifest:new_manifest.clone(), installed:vec!["libraries/core.jar".into()], id:format!("{:032x}",62) };
+        let next = Release { manifest:new_manifest.clone(), installed:vec!["libraries/core.jar".into()], id:format!("{:032x}",62),preset:None };
         let dest = root.join("libraries/core.jar");
         let mut permissions = fs::metadata(&dest).unwrap().permissions();
         permissions.set_readonly(true);
@@ -776,7 +798,7 @@ mod tests {
     async fn insufficient_disk_budget_fails_before_live_mutation() {
         let root = std::env::temp_dir().join(format!("nl-capacity-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (old_manifest,key) = fixture(&root,"base",&[("libraries/a.jar",b"OLD")]);
-        let old = Release { manifest:old_manifest.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",65) };
+        let old = Release { manifest:old_manifest.clone(), installed:vec!["libraries/a.jar".into()], id:format!("{:032x}",65),preset:None };
         commit(&root,old,&key,&staged(&root,&old_manifest,&[("libraries/a.jar",b"OLD")])).unwrap();
         let old_generation = pointer(&root).unwrap().generation;
         let mut oversized = old_manifest.clone();
@@ -784,7 +806,7 @@ mod tests {
         oversized.files[0].size = u64::MAX / 8;
         sign_manifest(&mut oversized, &"1a".repeat(32), "2026-10-19T00:00:00Z").unwrap();
         let (_tx,control) = watch::channel(Directive::Running);
-        let err = install(&oversized,&root,&key,None,format!("budget-{:x}",rand::random::<u64>()),control).await.unwrap_err();
+        let err = install(&oversized,&root,&key,None,format!("budget-{:x}",rand::random::<u64>()),control,None).await.unwrap_err();
         assert!(err.contains("disk") || err.contains("overflow"), "{err}");
         assert_eq!(pointer(&root).unwrap().generation,old_generation);
         assert_eq!(fs::read(root.join("libraries/a.jar")).unwrap(),b"OLD");
@@ -801,7 +823,7 @@ mod tests {
         fs::write(&external,b"USER_SECRET").unwrap();
         symlink(&external,root.join("mods/core.jar")).unwrap();
         let (manifest,key) = fixture(&root,"new",&[("mods/core.jar",b"SIGNED")]);
-        let next = Release { manifest:manifest.clone(), installed:vec!["mods/core.jar".into()], id:format!("{:032x}",63) };
+        let next = Release { manifest:manifest.clone(), installed:vec!["mods/core.jar".into()], id:format!("{:032x}",63),preset:None };
         assert!(commit(&root,next,&key,&staged(&root,&manifest,&[("mods/core.jar",b"SIGNED")])).is_err());
         assert_eq!(fs::read(&external).unwrap(),b"USER_SECRET");
         assert!(fs::symlink_metadata(root.join("mods/core.jar")).unwrap().file_type().is_symlink());
@@ -812,10 +834,10 @@ mod tests {
     fn crash_after_first_file_of_two_recovers_complete_old_release() {
         let root = std::env::temp_dir().join(format!("nl-multi-crash-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (old_m,key) = fixture(&root,"old",&[("mods/a.jar",b"OLD_A"),("mods/b.jar",b"OLD_B")]);
-        let old = Release { manifest:old_m.clone(), installed:vec!["mods/a.jar".into(),"mods/b.jar".into()], id:format!("{:032x}",71) };
+        let old = Release { manifest:old_m.clone(), installed:vec!["mods/a.jar".into(),"mods/b.jar".into()], id:format!("{:032x}",71),preset:None };
         commit(&root,old,&key,&staged(&root,&old_m,&[("mods/a.jar",b"OLD_A"),("mods/b.jar",b"OLD_B")])).unwrap();
         let (new_m,_) = fixture(&root,"new",&[("mods/a.jar",b"NEW_A"),("mods/b.jar",b"NEW_B")]);
-        let next = Release { manifest:new_m.clone(), installed:vec!["mods/a.jar".into(),"mods/b.jar".into()], id:format!("{:032x}",72) };
+        let next = Release { manifest:new_m.clone(), installed:vec!["mods/a.jar".into(),"mods/b.jar".into()], id:format!("{:032x}",72),preset:None };
         let backup_id = format!("{:032x}",73);
         let back = backup_dir(&root,&backup_id);
         fs::create_dir_all(back.join("mods")).unwrap();
@@ -858,7 +880,7 @@ mod tests {
         manifest.files[0].url = url;
         sign_manifest(&mut manifest, &"1a".repeat(32), "2026-10-19T00:00:00Z").unwrap();
         let (_tx,control) = watch::channel(Directive::Running);
-        let result = install(&manifest,&root,&key,None,format!("http-test-{:x}",rand::random::<u64>()),control).await.unwrap();
+        let result = install(&manifest,&root,&key,None,format!("http-test-{:x}",rand::random::<u64>()),control,None).await.unwrap();
         assert_eq!(result.failed,0);
         assert_eq!(fs::read(root.join("libraries/downloaded.jar")).unwrap(),payload);
         assert_eq!(pointer(&root).unwrap().active.unwrap().manifest.version,"http");
@@ -873,16 +895,16 @@ mod tests {
         one.game_release_generation=10;
         sign_manifest(&mut one,&"1a".repeat(32),"2026-10-19T00:00:00Z").unwrap();
         let original_digest=hex::encode(Sha256::digest(serde_json::to_vec(&one).unwrap()));
-        let first=Release{manifest:one.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",100)};
+        let first=Release{manifest:one.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",100),preset:None };
         commit(&root,first,&key,&staged(&root,&one,&[("mods/main.jar",b"OLD")])).unwrap();
         let (mut two,_)=fixture(&root,"new",&[("mods/main.jar",b"NEW")]);
         two.game_release_generation=11;
         sign_manifest(&mut two,&"1a".repeat(32),"2026-10-19T00:00:00Z").unwrap();
-        let second=Release{manifest:two.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",101)};
+        let second=Release{manifest:two.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",101),preset:None };
         commit(&root,second,&key,&staged(&root,&two,&[("mods/main.jar",b"NEW")])).unwrap();
         assert!(rollback(&root,&key).await.is_err(),"unsigned local rollback must not downgrade a protected release");
         assert_eq!(fs::read(root.join("mods/main.jar")).unwrap(),b"NEW");
-        let previous=Release{manifest:one.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",102)};
+        let previous=Release{manifest:one.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",102),preset:None };
         assert!(commit(&root,previous,&key,&staged(&root,&one,&[("mods/main.jar",b"OLD")])).is_err());
         let (mut authorized,_)=fixture(&root,"old-content-authorized-again",&[("mods/main.jar",b"OLD")]);
         authorized.game_release_generation=12;
@@ -890,7 +912,7 @@ mod tests {
             version:"old".into(),manifest_sha256:original_digest,game_release_generation:10,
         });
         sign_manifest(&mut authorized,&"1a".repeat(32),"2026-10-19T00:00:00Z").unwrap();
-        let approved=Release{manifest:authorized.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",103)};
+        let approved=Release{manifest:authorized.clone(),installed:vec!["mods/main.jar".into()],id:format!("{:032x}",103),preset:None };
         commit(&root,approved,&key,&staged(&root,&authorized,&[("mods/main.jar",b"OLD")])).unwrap();
         assert_eq!(fs::read(root.join("mods/main.jar")).unwrap(),b"OLD");
         assert!(crate::release_generations::check(&root,&two).is_err());

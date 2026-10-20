@@ -1,3 +1,13 @@
+## 0.24.2 — Component Topology & Presets
+
+- Signed catalog schema v2 with `required`, `default`, explicit `visible`, `limited`, descriptions and bounded metadata.
+- Nested categories and groups, depth/cycle/unknown-reference checks; named owner-signed presets and defaultPreset.
+- Canonical topology digest across Go and native Rust; legacy catalog schema v1 unchanged.
+- Native preset resolution now restricts actual transactional file staging, download, integrity check, repair and managed removal; selection persists in a crash-recoverable job and installed-release record.
+- Desktop signed preset picker, selected components display, native launch gate requiring selected installed preset.
+- PostgreSQL migration 0062 supports catalogs v1/v2 without relaxing published release immutability.
+- No dependency/conflict/version solver, conditional policies or arbitrary optional actions in this release (reserved for 0.24.3–0.24.5).
+
 ## 0.24.1 — Signed Component Catalog (Manifest v3)
 
 - Added an actual v3 release creation path in PostgreSQL and memory storage, a separate component catalog with stable IDs, file ownership references, monotonic draft revision and deterministic content digest.

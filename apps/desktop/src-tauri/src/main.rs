@@ -108,6 +108,8 @@ struct LaunchMinecraftRequest {
     pinned_public_key: String,
     #[serde(default)]
     preferences: Option<neverruntime::LaunchPreferences>,
+    #[serde(default)]
+    component_preset: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -381,20 +383,20 @@ async fn load_manifest(url: String, pinned_public_key: String) -> Result<Manifes
 #[tauri::command]
 async fn verify_manifest_signature(manifest: Manifest, pinned_public_key: String) -> Result<SignatureCheckResult, String> { neverruntime::verify_manifest_signature(&manifest, &pinned_public_key) }
 #[tauri::command]
-async fn check_files(manifest: Manifest, root: String) -> Result<Vec<FileCheckResult>, String> { neverruntime::check_files(&manifest, &PathBuf::from(root)).await }
+async fn check_files(manifest: Manifest, root: String, preset: Option<String>) -> Result<Vec<FileCheckResult>, String> { neverruntime::check_files_with_preset(&manifest, &PathBuf::from(root), preset.as_deref()).await }
 #[tauri::command]
-async fn download_missing_files(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String) -> Result<DownloadResult, String> {
+async fn download_missing_files(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<DownloadResult, String> {
     let sink: neverruntime::ProgressSink = Arc::new(move |progress| {
         let _ = app.emit(neverruntime::DOWNLOAD_PROGRESS_EVENT, progress);
     });
-    neverruntime::download_missing_files_with_progress(&manifest, &PathBuf::from(root), &pinned_public_key, Some(sink)).await
+    neverruntime::download_missing_files_with_preset(&manifest, &PathBuf::from(root), &pinned_public_key, Some(sink), preset).await
 }
 #[tauri::command]
-async fn repair_client(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String) -> Result<RepairResult, String> {
+async fn repair_client(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<RepairResult, String> {
     let sink: neverruntime::ProgressSink = Arc::new(move |progress| {
         let _ = app.emit(neverruntime::DOWNLOAD_PROGRESS_EVENT, progress);
     });
-    neverruntime::repair_client_with_progress(&manifest, &PathBuf::from(root), &pinned_public_key, Some(sink)).await
+    neverruntime::repair_client_with_preset(&manifest, &PathBuf::from(root), &pinned_public_key, Some(sink), preset).await
 }
 #[tauri::command]
 async fn pending_download_job(root: String, pinned_public_key: String) -> Result<Option<neverruntime::durable_downloads::PendingDownload>, String> {
@@ -513,7 +515,7 @@ async fn launch_minecraft(
     neverguard: tauri::State<'_, NeverGuardSupervisor>,
 ) -> Result<ProcessStatus, String> {
     let LaunchMinecraftRequest {
-        manifest, root, java_path, username, minecraft_credentials, pinned_public_key, preferences,
+        manifest, root, java_path, username, minecraft_credentials, pinned_public_key, preferences, component_preset,
     } = request;
     #[cfg(windows)]
     {
@@ -600,6 +602,7 @@ async fn launch_minecraft(
     #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
     let _ = &neverguard;
 
+    neverruntime::transactional_release::ensure_active_preset(&manifest, &PathBuf::from(&root), &pinned_public_key, component_preset.as_deref()).await?;
     // Offline launch is strictly a replay of the verified on-disk release.
     // A caller cannot turn any arbitrary signed online manifest into an
     // offline entitlement just by setting preferences.offline = true.

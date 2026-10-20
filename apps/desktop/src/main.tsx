@@ -30,9 +30,32 @@ type DesktopSettings = {
   serverHost: string;
   serverPort: number;
   offlineEnabled: boolean;
+  componentPreset?: string;
   configPath?: string;
 };
 
+type CatalogComponent = { id:string; name:string; files:string[]; description?:string; categoryId?:string; groupId?:string; required?:boolean; default?:boolean; visible?:boolean; limited?:boolean; metadata?:Record<string,string> };
+type ComponentCatalog = {schemaVersion:string; revision:number; digest:string; components:CatalogComponent[]; categories?:{id:string;name:string;description?:string;parentId?:string}[];groups?:{id:string;name:string;description?:string;parentId?:string;categoryId?:string}[];presets?:{id:string;name:string;description?:string;components:string[]}[];defaultPreset?:string};
+function componentPresetSelection(cat:ComponentCatalog,preset:string):Set<string>{
+  if(cat.schemaVersion==='1.0')return new Set(cat.components.map(x=>x.id));
+  const resolved=preset||cat.defaultPreset||'';
+  const requested=resolved?cat.presets?.find(x=>x.id===resolved)?.components:cat.components.filter(x=>x.default).map(x=>x.id);
+  return new Set([...cat.components.filter(x=>x.required).map(x=>x.id),...(requested||[])]);
+}
+// Breadcrumbs are calculated from the verified owner-defined hierarchy.
+function componentTopologyLabel(cat:ComponentCatalog,component:CatalogComponent):string {
+  const chain=(entries:{id:string;name:string;parentId?:string}[],id?:string):string=>{
+    const names:string[]=[];const seen=new Set<string>();
+    while(id&&names.length<9&&!seen.has(id)){
+      seen.add(id);const entry=entries.find(x=>x.id===id);if(!entry)break;
+      names.unshift(entry.name);id=entry.parentId;
+    }
+    return names.join(' / ');
+  };
+  const group=cat.groups?.find(x=>x.id===component.groupId);
+  const categoryID=component.categoryId||group?.categoryId;
+  return [chain(cat.categories||[],categoryID),chain(cat.groups||[],component.groupId)].filter(Boolean).join(' · ');
+}
 type ManifestFile = { path: string; size: number; sha256: string; url: string; mirrors?: string[]; required: boolean; executable?: boolean; ownership?: 'managed' | 'required' | 'optional' | 'user-owned' | 'generated' };
 type Manifest = {
   schemaVersion: string;
@@ -48,6 +71,7 @@ type Manifest = {
     launch?: { mainClass?: string; mainModule?: string; classpathStrategy?: string; classpathEntries?: string[]; modulepathEntries?: string[]; environmentAllowlist?: string[]; nativesDirectory?: string; offlineMode?: boolean };
   };
   files: ManifestFile[];
+  componentCatalog?: ComponentCatalog;
   fileRules?: { pattern: string; action: 'include' | 'exclude' | 'verify'; ownership: 'managed' | 'required' | 'optional' | 'user-owned' | 'generated' }[];
 };
 
@@ -945,7 +969,7 @@ function App() {
 
   function currentLaunchPreferences() {
     if (!manifest) throw new Error('Manifest не загружен');
-    if (manifest.schemaVersion !== '2.0') throw new Error('Desktop launch settings require Manifest v2');
+    if (!['2.0','3.0'].includes(manifest.schemaVersion)) throw new Error('Desktop launch settings require Manifest v2/v3');
     return launchPreferences(settings, manifest.runtime.memory, Boolean(manifest.runtime.launch?.offlineMode), profileServers);
   }
 
@@ -956,6 +980,9 @@ function App() {
       if (!url) throw new Error('сначала выберите проект и профиль');
       const result = await callTauri<Manifest>('load_manifest', { url, pinnedPublicKey: settings.pinnedPublicKey });
       setManifest(result);
+      if (settings.componentPreset && !(result.componentCatalog?.presets||[]).some(p=>p.id===settings.componentPreset)) {
+        patchSettings('componentPreset','');
+      }
       setSelectedProject(result.projectId);
       setSelectedProfile(result.profileId);
       setLaunchPlan(null);
@@ -1041,7 +1068,7 @@ function App() {
     }
     setStage('files');
     try {
-      const result = await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory });
+      const result = await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory,preset: settings.componentPreset||null });
       setFiles(result);
       const broken = result.filter((file) => file.status !== 'ok').length;
       log(broken === 0 ? 'Файлы клиента проверены.' : `Нужно исправить файлов: ${broken}.`);
@@ -1065,7 +1092,7 @@ function App() {
     try {
       const result = await callTauri<DownloadResult>('resume_download_job', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey });
       setDownload(result);
-      if (manifest) setFiles(await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory }).catch(() => files));
+      if (manifest) setFiles(await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory,preset: settings.componentPreset||null }).catch(() => files));
       log(`Возобновление: скачано ${result.downloaded}, ошибок ${result.failed}.`);
       setPendingJob(await callTauri<PendingDownload | null>('pending_download_job', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey }));
     } catch (error) { log(`Не удалось возобновить: ${String(error)}`); }
@@ -1079,10 +1106,10 @@ function App() {
     setDownloadProgress(null);
     try {
       const result = await callTauri<DownloadResult>('download_missing_files', {
-        manifest, root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey,
+        manifest, root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey, preset:settings.componentPreset||null,
       });
       setDownload(result);
-      setFiles(await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory }));
+      setFiles(await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory,preset: settings.componentPreset||null }));
       log(`Загрузка: ${result.downloaded} файлов, ошибок ${result.failed}, передано ${result.bytesDownloaded || 0} байт.`);
     } catch (error) {
       setStage('failed');
@@ -1102,7 +1129,7 @@ function App() {
     setTransferBusy(true);
     setDownloadProgress(null);
     try {
-      const result = await callTauri<RepairResult>('repair_client', { manifest, root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey });
+      const result = await callTauri<RepairResult>('repair_client', { manifest, root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey,preset:settings.componentPreset||null });
       setRepairResult(result);
       setDownload(result.download);
       setFiles(result.after);
@@ -1121,7 +1148,7 @@ function App() {
     setTransferBusy(true);
     try {
       await callTauri<void>('rollback_client_release', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey });
-      setFiles(manifest ? await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory }) : []);
+      setFiles(manifest ? await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory,preset: settings.componentPreset||null }) : []);
       setDownload(null);
       log('Восстановлен последний исправный игровой релиз. Для запуска загрузите его подписанный manifest.');
     } catch (error) { log(`Откат игрового релиза не выполнен: ${String(error)}`); }
@@ -1341,6 +1368,7 @@ function App() {
           minecraftCredentials: minecraftCredentials || null,
           pinnedPublicKey: settings.pinnedPublicKey,
           preferences,
+          componentPreset:settings.componentPreset||null,
         },
       });
       let continuousGuardTicket: string | undefined;
@@ -1463,7 +1491,7 @@ function App() {
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} />}
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
-        {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} />}
+        {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} setComponentPreset={(x:string)=>patchSettings("componentPreset",x)} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
         {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
@@ -1512,8 +1540,20 @@ function ProjectPanel({ projects, selectedProject, setSelectedProject, loadProje
   return <section className="panel"><h3>Проекты</h3><p>Список проектов загружается из Backend API.</p><div className="toolbar inline"><button onClick={loadProjects}>Загрузить проекты</button><button onClick={() => loadProfiles(selectedProject)}>Загрузить профили</button></div><div className="list">{projects.map((project: BackendProject) => <button key={project.id} className={selectedProject === project.id ? 'row activeRow' : 'row'} onClick={() => setSelectedProject(project.id)}><strong>{project.title ?? project.name ?? project.id}</strong><span>{project.id}</span></button>)}</div></section>;
 }
 
-function ProfilePanel({ profiles, selectedProfile, setSelectedProfile, loadManifest, manifest }: any) {
-  return <section className="panel"><h3>Профиль</h3><p>Выберите профиль и загрузите манифест.</p><div className="toolbar inline"><button onClick={loadManifest}>Загрузить манифест</button></div><div className="list">{profiles.map((profile: BackendProfile) => <button key={profile.id} className={selectedProfile === profile.id ? 'row activeRow' : 'row'} onClick={() => setSelectedProfile(profile.id)}><strong>{profile.title ?? profile.name ?? profile.id}</strong><span>{profile.loader ?? 'загрузчик не указан'} · {profile.defaultChannel ?? 'stable'}</span></button>)}</div><pre>{manifest ? JSON.stringify({ projectId: manifest.projectId, profileId: manifest.profileId, version: manifest.version, files: manifest.files.length }, null, 2) : 'Манифест не загружен.'}</pre></section>;
+function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,manifest,componentPreset,setComponentPreset}:any){
+  const cat:ComponentCatalog|undefined=manifest?.componentCatalog;
+  const selected=cat?componentPresetSelection(cat,componentPreset):new Set<string>();
+  const files=cat?.components.filter(c=>selected.has(c.id)).flatMap(c=>c.files)||[];
+  const bytes=manifest?.files.filter((f:ManifestFile)=>files.includes(f.path)).reduce((sum:number,f:ManifestFile)=>sum+f.size,0)||0;
+  return <section className="panel"><h3>Профиль и компоненты</h3><div className="toolbar inline"><button onClick={loadManifest}>Загрузить манифест</button></div>
+    <div className="list">{profiles.map((profile:BackendProfile)=><button key={profile.id} className={selectedProfile===profile.id?'row activeRow':'row'} onClick={()=>setSelectedProfile(profile.id)}><strong>{profile.title??profile.name??profile.id}</strong><span>{profile.loader??'vanilla'}</span></button>)}</div>
+    {cat&&<article className="card"><h3>Подписанные компоненты (rev {cat.revision})</h3>
+      {cat.schemaVersion==='2.0'&&<label>Пресет<select value={componentPreset} onChange={(e)=>setComponentPreset(e.target.value)}><option value="">По умолчанию{cat.defaultPreset?` (${cat.defaultPreset})`:''}</option>{cat.presets?.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+      <p>Выбрано {selected.size} компонентов; объём данных каталога {Math.round(bytes/1024)} КиБ. При изменении пресета используйте «Скачать/Обновить» для транзакционной установки. Required включаются всегда.</p>
+      {cat.components.filter(c=>c.visible!==false||selected.has(c.id)).map(c=><div key={c.id} className="row"><strong>{selected.has(c.id)?'✓ ':''}{c.name}</strong><span>{[c.required?'обязательный':null,c.default?'по умолчанию':null,c.limited?'ограниченный':null,c.description||null,componentTopologyLabel(cat,c)||null].filter(Boolean).join(' · ')}</span></div>)}
+    </article>}
+    <pre>{manifest?JSON.stringify({projectId:manifest.projectId,profileId:manifest.profileId,version:manifest.version,files:manifest.files.length,catalogDigest:cat?.digest},null,2):'Манифест не загружен.'}</pre>
+  </section>;
 }
 
 function DownloadPanel({ files, download, downloadProgress, transferBusy, repairResult, cleanResult,

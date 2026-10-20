@@ -661,8 +661,14 @@ fn manifest_signing_payload(manifest: &Manifest) -> Result<Vec<u8>, String> {
 
 pub async fn check_files(manifest: &Manifest, root: &Path) -> Result<Vec<FileCheckResult>, String> {
     validate_manifest_schema(manifest)?;
-    let mut results = Vec::with_capacity(manifest.files.len());
+    let preset=transactional_release::active_preset_for_manifest(manifest,root);
+    check_files_with_preset(manifest,root,preset.as_deref()).await
+}
+pub async fn check_files_with_preset(manifest:&Manifest,root:&Path,preset:Option<&str>)->Result<Vec<FileCheckResult>,String>{
+    let selected=component_catalog_0241::active_files(manifest,preset)?;
+    let mut results = Vec::with_capacity(selected.len());
     for file in &manifest.files {
+        if !selected.contains(&file.path){continue;}
         if !manifest_file_applies(file) { continue; }
         if file_ownership::skip_verification(manifest, file) { continue; }
         let local_path = safe_join(root, &file.path)?;
@@ -696,9 +702,13 @@ pub async fn download_missing_files(manifest: &Manifest, root: &Path, pinned_pub
 
 pub async fn download_missing_files_with_progress(manifest: &Manifest, root: &Path, pinned_public_key: &str,
     progress: Option<ProgressSink>) -> Result<DownloadResult, String> {
-    verify_manifest_signature(manifest, pinned_public_key)?;
+    download_missing_files_with_preset(manifest,root,pinned_public_key,progress,None).await
+}
+pub async fn download_missing_files_with_preset(manifest:&Manifest,root:&Path,pinned_public_key:&str,
+    progress:Option<ProgressSink>,preset:Option<String>)->Result<DownloadResult,String>{
+    verify_manifest_signature(manifest,pinned_public_key)?;
     file_ownership::validate_download_targets(manifest)?;
-    durable_downloads::start(manifest, root, pinned_public_key, "download", progress).await
+    durable_downloads::start_with_preset(manifest,root,pinned_public_key,"download",progress,preset).await
 }
 
 // On Unix rename replaces the destination atomically. Windows rename does not
@@ -728,10 +738,14 @@ pub async fn repair_client(manifest: &Manifest, root: &Path, pinned_public_key: 
 
 pub async fn repair_client_with_progress(manifest: &Manifest, root: &Path, pinned_public_key: &str,
     progress: Option<ProgressSink>) -> Result<RepairResult, String> {
-    verify_manifest_signature(manifest, pinned_public_key)?;
-    let before = check_files(manifest, root).await?;
-    let download = durable_downloads::start(manifest, root, pinned_public_key, "repair", progress).await?;
-    let after = check_files(manifest, root).await?;
+    repair_client_with_preset(manifest,root,pinned_public_key,progress,None).await
+}
+pub async fn repair_client_with_preset(manifest:&Manifest,root:&Path,pinned_public_key:&str,
+    progress:Option<ProgressSink>,preset:Option<String>)->Result<RepairResult,String>{
+    verify_manifest_signature(manifest,pinned_public_key)?;
+    let before=check_files_with_preset(manifest,root,preset.as_deref()).await?;
+    let download=durable_downloads::start_with_preset(manifest,root,pinned_public_key,"repair",progress,preset.clone()).await?;
+    let after=check_files_with_preset(manifest,root,preset.as_deref()).await?;
     let broken_after = after.iter().filter(|item| item.status != "ok" && item.status != "optional-missing").count();
     Ok(RepairResult {
         status: if broken_after == 0 { "ready" } else { "failed" }.to_string(),
@@ -2029,6 +2043,28 @@ mod tests {
     }
 
     #[test]
+    fn go_signed_v3_catalog_v2_interop_0242() {
+        let signed = include_str!("../tests/fixtures/catalog_manifest_v3_go_signed_0242.json");
+        let manifest: Manifest = serde_json::from_str(signed).expect("Go signed catalog fixture");
+        let key="24a9dcf8fac87bd5cb27d51d09f98188bc1c00b1223f5ccaa26a5736d9a53d78";
+        verify_manifest_signature(&manifest,key).expect("Go Ed25519 v3 / catalog v2 signature must verify in Rust");
+        let cat=manifest.component_catalog.as_ref().unwrap();
+        assert_eq!(crate::component_catalog_0241::digest_v2(cat),cat.digest);
+        let minimal=crate::component_catalog_0241::active_files(&manifest,Some("minimal")).unwrap();
+        assert!(minimal.contains("mods/core.jar"));
+        assert!(!minimal.contains("mods/sodium.jar"));
+        let quality=crate::component_catalog_0241::active_files(&manifest,Some("quality")).unwrap();
+        assert!(quality.contains("mods/shader.jar"));
+        assert!(!quality.contains("mods/indium.jar"));
+        let mut changed=manifest.clone();
+        changed.component_catalog.as_mut().unwrap().components[0].required=false;
+        assert!(verify_manifest_signature(&changed,key).is_err());
+        let mut changed=manifest.clone();
+        changed.component_catalog.as_mut().unwrap().default_preset="quality".into();
+        assert!(verify_manifest_signature(&changed,key).is_err());
+    }
+
+    #[test]
     fn v3_catalog_ed25519_sign_verify_and_tamper_0241() {
         use crate::component_catalog_0241::{CatalogComponent,ComponentCatalog,digest};
         use sha2::{Digest,Sha256};
@@ -2044,9 +2080,9 @@ mod tests {
                 url:"https://example.invalid/file".into(),mirrors:vec![],required:false,
                 executable:false,target_os:vec![],ownership:"optional".into()});
         }
-        let components=vec![CatalogComponent{id:"performance.sodium".into(),name:"Sodium & friends".into(),files:paths}];
+        let components=vec![CatalogComponent{id:"performance.sodium".into(),name:"Sodium & friends".into(),files:paths,description:String::new(),category_id:String::new(),group_id:String::new(),required:false,default:false,visible:None,limited:false,metadata:Default::default()}];
         assert_eq!(digest(&components),"85f4d294a8028281b667503339bc444bdf5c05ceef31e87fdee87f5cd0c84119");
-        m.component_catalog=Some(ComponentCatalog{schema_version:"1.0".into(),revision:1,digest:digest(&components),components});
+        m.component_catalog=Some(ComponentCatalog{schema_version:"1.0".into(),revision:1,digest:digest(&components),components,categories:vec![],groups:vec![],presets:vec![],default_preset:String::new()});
         let seed="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
         let key=sign_manifest(&mut m,seed,"2026-10-20T00:00:00Z").expect("v3 sign");
         verify_manifest_signature(&m,&key).expect("signed v3 catalog");

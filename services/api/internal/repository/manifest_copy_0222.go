@@ -13,6 +13,22 @@ func cloneManifest0222(m model.Manifest) model.Manifest {
 		copy(cloned.Components, original.Components)
 		for i := range cloned.Components {
 			cloned.Components[i].Files = append([]string(nil), original.Components[i].Files...)
+			if original.Components[i].Visible != nil {
+				b := *original.Components[i].Visible
+				cloned.Components[i].Visible = &b
+			}
+			if original.Components[i].Metadata != nil {
+				cloned.Components[i].Metadata = make(map[string]string, len(original.Components[i].Metadata))
+				for k, v := range original.Components[i].Metadata {
+					cloned.Components[i].Metadata[k] = v
+				}
+			}
+		}
+		cloned.Categories = append([]model.CatalogCategory0242(nil), original.Categories...)
+		cloned.Groups = append([]model.CatalogGroup0242(nil), original.Groups...)
+		cloned.Presets = append([]model.CatalogPreset0242(nil), original.Presets...)
+		for i := range cloned.Presets {
+			cloned.Presets[i].Components = append([]string(nil), original.Presets[i].Components...)
 		}
 		m.ComponentCatalog = &cloned
 	}

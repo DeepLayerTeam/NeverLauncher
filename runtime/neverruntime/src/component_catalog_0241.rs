@@ -1,72 +1,184 @@
-//! Signed, immutable component snapshot consumed by the native installer.
-//! Every component file belongs to the manifest signature and is installed in
-//! 0.24.1; player selection and dependency resolution are NOT accepted here.
-use crate::{Manifest, file_ownership};
+//! Signed v1/v2 catalogs. Topology v2 is validated before any selection or IO.
+//! Preset resolution returns actual allow-listed manifest file paths, never
+//! commands or client-supplied destinations.
+use crate::{Manifest,file_ownership};
 use serde::{Deserialize,Serialize};
 use sha2::{Digest,Sha256};
-use std::collections::{HashMap,HashSet};
+use std::collections::{BTreeMap,HashMap,HashSet};
 
+fn empty(s:&String)->bool{s.is_empty()}
+fn no(v:&bool)->bool{!*v}
+fn map_empty(v:&BTreeMap<String,String>)->bool{v.is_empty()}
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
 pub struct ComponentCatalog {
-    pub schema_version: String,
-    pub revision: u64,
-    pub digest: String,
-    pub components: Vec<CatalogComponent>,
+    pub schema_version:String,
+    pub revision:u64,
+    pub digest:String,
+    pub components:Vec<CatalogComponent>,
+    #[serde(default,skip_serializing_if="Vec::is_empty")]
+    pub categories:Vec<CatalogCategory>,
+    #[serde(default,skip_serializing_if="Vec::is_empty")]
+    pub groups:Vec<CatalogGroup>,
+    #[serde(default,skip_serializing_if="Vec::is_empty")]
+    pub presets:Vec<CatalogPreset>,
+    #[serde(default,skip_serializing_if="empty")]
+    pub default_preset:String,
 }
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
 pub struct CatalogComponent {
-    pub id: String,
-    pub name: String,
-    pub files: Vec<String>,
+    pub id:String,
+    pub name:String,
+    pub files:Vec<String>,
+    #[serde(default,skip_serializing_if="empty")]
+    pub description:String,
+    #[serde(default,skip_serializing_if="empty")]
+    pub category_id:String,
+    #[serde(default,skip_serializing_if="empty")]
+    pub group_id:String,
+    #[serde(default,skip_serializing_if="no")]
+    pub required:bool,
+    #[serde(default,skip_serializing_if="no")]
+    pub default:bool,
+    #[serde(default,skip_serializing_if="Option::is_none")]
+    pub visible:Option<bool>,
+    #[serde(default,skip_serializing_if="no")]
+    pub limited:bool,
+    #[serde(default,skip_serializing_if="map_empty")]
+    pub metadata:BTreeMap<String,String>,
 }
-
-pub fn digest(components: &[CatalogComponent]) -> String {
-    let mut h = Sha256::new();
-    h.update(b"neverlauncher.component-catalog.v1\0");
-    fn count(h: &mut Sha256,n:usize) {h.update((n as u32).to_be_bytes());}
-    fn text(h: &mut Sha256,s:&str) {count(h,s.len());h.update(s.as_bytes());}
+#[derive(Debug,Clone,Serialize,Deserialize)]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
+pub struct CatalogCategory {
+    pub id:String,pub name:String,
+    #[serde(default,skip_serializing_if="empty")]
+    pub description:String,
+    #[serde(default,skip_serializing_if="empty")]
+    pub parent_id:String,
+}
+#[derive(Debug,Clone,Serialize,Deserialize)]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
+pub struct CatalogGroup {
+    pub id:String,pub name:String,
+    #[serde(default,skip_serializing_if="empty")]
+    pub description:String,
+    #[serde(default,skip_serializing_if="empty")]
+    pub parent_id:String,
+    #[serde(default,skip_serializing_if="empty")]
+    pub category_id:String,
+}
+#[derive(Debug,Clone,Serialize,Deserialize)]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
+pub struct CatalogPreset {
+    pub id:String,pub name:String,
+    #[serde(default,skip_serializing_if="empty")]
+    pub description:String,
+    pub components:Vec<String>,
+}
+fn count(h:&mut Sha256,n:usize){h.update((n as u32).to_be_bytes());}
+fn str_f(h:&mut Sha256,s:&str){count(h,s.len());h.update(s.as_bytes());}
+fn bit(h:&mut Sha256,b:bool){h.update([u8::from(b)]);}
+pub fn digest(components:&[CatalogComponent])->String {
+    let mut h=Sha256::new();h.update(b"neverlauncher.component-catalog.v1\0");
     count(&mut h,components.len());
-    for c in components {text(&mut h,&c.id);text(&mut h,&c.name);count(&mut h,c.files.len());
-        for path in &c.files {text(&mut h,path);}
-    }
+    for c in components {str_f(&mut h,&c.id);str_f(&mut h,&c.name);count(&mut h,c.files.len());for p in &c.files{str_f(&mut h,p)}}
     hex::encode(h.finalize())
 }
-fn valid_id(s: &str) -> bool {
-    !s.is_empty() && s.len()<=128 && !s.contains("..") &&
-    s.bytes().next().is_some_and(|c|c.is_ascii_lowercase() || c.is_ascii_digit()) &&
-    s.bytes().all(|c|c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c,b'-'|b'_'|b'.'))
-}
-pub fn validate(m: &Manifest) -> Result<(),String> {
-    if m.schema_version!="3.0" {
-        if m.component_catalog.is_some() {return Err("componentCatalog requires manifest v3".into());}
-        return Ok(());
-    }
-    let cat=m.component_catalog.as_ref().ok_or("v3 requires signed componentCatalog")?;
-    if cat.schema_version!="1.0" || cat.revision==0 || cat.components.len()>4096 ||
-       cat.digest.len()!=64 || cat.digest!=digest(&cat.components) {
-        return Err("invalid v3 component snapshot/digest".into());
-    }
-    let files:HashMap<_,_>=m.files.iter().map(|f|(f.path.to_ascii_lowercase(),f)).collect();
-    let mut ids=HashSet::new();
-    let mut owners=HashSet::new();
+pub fn digest_v2(cat:&ComponentCatalog)->String{
+    let mut h=Sha256::new();h.update(b"neverlauncher.component-catalog.v2\0");
+    count(&mut h,cat.components.len());
     for c in &cat.components {
-        if !valid_id(&c.id) || !ids.insert(c.id.as_str()) || c.name.trim().is_empty() ||
-           c.name.len()>256 || c.name.chars().any(|ch| matches!(ch, '\0'|'\r'|'\n')) || c.files.is_empty() || c.files.len()>8192 {
-            return Err(format!("invalid/duplicate v3 component {}",c.id));
-        }
-        for path in &c.files {
-            let key=path.to_ascii_lowercase();
-            let f=files.get(&key).ok_or_else(||format!("undeclared component file: {path}"))?;
-            if f.path!=*path || f.required || file_ownership::effective_ownership(f)!="optional" ||
-               !owners.insert(key) {return Err(format!("invalid/duplicate component file: {path}"));}
-        }
+        str_f(&mut h,&c.id);str_f(&mut h,&c.name);count(&mut h,c.files.len());for p in &c.files{str_f(&mut h,p)}
+        str_f(&mut h,&c.description);str_f(&mut h,&c.category_id);str_f(&mut h,&c.group_id);
+        bit(&mut h,c.required);bit(&mut h,c.default);bit(&mut h,c.visible==Some(true));bit(&mut h,c.limited);
+        count(&mut h,c.metadata.len());for (k,v) in &c.metadata{str_f(&mut h,k);str_f(&mut h,v)}
     }
-    for f in &m.files {
-        if file_ownership::effective_ownership(f)=="optional" && !owners.contains(&f.path.to_ascii_lowercase()) {
-            return Err(format!("unowned v3 optional file: {}",f.path));
-        }
+    count(&mut h,cat.categories.len());for c in &cat.categories{str_f(&mut h,&c.id);str_f(&mut h,&c.name);str_f(&mut h,&c.description);str_f(&mut h,&c.parent_id)}
+    count(&mut h,cat.groups.len());for g in &cat.groups{str_f(&mut h,&g.id);str_f(&mut h,&g.name);str_f(&mut h,&g.description);str_f(&mut h,&g.parent_id);str_f(&mut h,&g.category_id)}
+    count(&mut h,cat.presets.len());for p in &cat.presets{str_f(&mut h,&p.id);str_f(&mut h,&p.name);str_f(&mut h,&p.description);count(&mut h,p.components.len());for id in &p.components{str_f(&mut h,id)}}
+    str_f(&mut h,&cat.default_preset);
+    hex::encode(h.finalize())
+}
+fn valid_id(s:&str)->bool{
+    !s.is_empty()&&s.len()<=128&&!s.contains("..")&&s.bytes().next().is_some_and(|b|b.is_ascii_lowercase()||b.is_ascii_digit())&&s.bytes().all(|b|b.is_ascii_lowercase()||b.is_ascii_digit()||matches!(b,b'-'|b'_'|b'.'))
+}
+fn label(n:&str,d:&str)->bool{!n.trim().is_empty()&&n.len()<=256&&d.len()<=2048&&!format!("{n}{d}").chars().any(|c|matches!(c,'\0'|'\r'))}
+fn validate_topology(cat:&ComponentCatalog)->Result<(),String>{
+    if cat.schema_version=="1.0"{
+        if !cat.categories.is_empty()||!cat.groups.is_empty()||!cat.presets.is_empty()||!cat.default_preset.is_empty() {return Err("v1 catalog cannot contain topology".into())}
+        for c in &cat.components{if !c.description.is_empty()||!c.category_id.is_empty()||!c.group_id.is_empty()||c.required||c.default||c.visible.is_some()||c.limited||!c.metadata.is_empty(){return Err(format!("v1 component has topology: {}",c.id))}}
+        return Ok(())
     }
+    if cat.categories.len()>256||cat.groups.len()>1024||cat.presets.len()>128{return Err("topology size exceeded".into())}
+    let mut categories=HashMap::new();
+    for c in &cat.categories{if !valid_id(&c.id)||!label(&c.name,&c.description)||categories.insert(c.id.as_str(),c).is_some(){return Err(format!("invalid/duplicate category {}",c.id))}}
+    let mut groups=HashMap::new();
+    for g in &cat.groups{if !valid_id(&g.id)||!label(&g.name,&g.description)||groups.insert(g.id.as_str(),g).is_some(){return Err(format!("invalid/duplicate group {}",g.id))}}
+    for id in categories.keys(){let mut seen=HashSet::new();let mut cur=*id;while !cur.is_empty(){if seen.len()>=9||!seen.insert(cur){return Err(format!("category cycle/depth {id}"))}cur=categories.get(cur).ok_or(format!("missing category {cur}"))?.parent_id.as_str()}}
+    for id in groups.keys(){let mut seen=HashSet::new();let mut cur=*id;let mut category="";while !cur.is_empty(){if seen.len()>=9||!seen.insert(cur){return Err(format!("group cycle/depth {id}"))}let g=groups.get(cur).ok_or(format!("missing group {cur}"))?;if !g.category_id.is_empty(){if !categories.contains_key(g.category_id.as_str())||(!category.is_empty()&&category!=g.category_id){return Err(format!("group category mismatch {id}"))}category=&g.category_id}cur=g.parent_id.as_str()}}
+    let mut ids=HashSet::new();
+    for c in &cat.components{
+        if c.visible.is_none()||!label(&c.name,&c.description)||c.metadata.len()>32{return Err(format!("bad metadata/visibility {}",c.id))}
+        if !c.category_id.is_empty()&&!categories.contains_key(c.category_id.as_str()){return Err(format!("unknown category {}",c.category_id))}
+        if !c.group_id.is_empty(){let g=groups.get(c.group_id.as_str()).ok_or(format!("unknown group {}",c.group_id))?;if !g.category_id.is_empty()&&!c.category_id.is_empty()&&g.category_id!=c.category_id{return Err(format!("component group category mismatch {}",c.id))}}
+        for (k,v) in &c.metadata{if !valid_id(k)||k.len()>64||v.len()>1024||v.chars().any(|ch|matches!(ch,'\0'|'\r')){return Err(format!("invalid component metadata {}",c.id))}}
+        ids.insert(c.id.as_str());
+    }
+    let mut preset_ids=HashSet::new();
+    for p in &cat.presets{
+        if !valid_id(&p.id)||!label(&p.name,&p.description)||!preset_ids.insert(p.id.as_str())||p.components.len()>4096{return Err(format!("bad preset {}",p.id))}
+        let mut included=HashSet::new();for id in &p.components{if !ids.contains(id.as_str())||!included.insert(id){return Err(format!("preset {} unknown/duplicate component {}",p.id,id))}}
+    }
+    if !cat.default_preset.is_empty()&&!preset_ids.contains(cat.default_preset.as_str()){return Err("unknown defaultPreset".into())}
     Ok(())
+}
+pub fn validate(m:&Manifest)->Result<(),String>{
+    if m.schema_version!="3.0"{if m.component_catalog.is_some(){return Err("componentCatalog requires manifest v3".into())}return Ok(())}
+    let cat=m.component_catalog.as_ref().ok_or("v3 requires signed componentCatalog")?;
+    if !matches!(cat.schema_version.as_str(),"1.0"|"2.0")||cat.revision==0||cat.components.len()>4096||cat.digest.len()!=64||cat.digest!=(if cat.schema_version=="1.0"{digest(&cat.components)}else{digest_v2(cat)}){return Err("invalid v3 component snapshot/digest".into())}
+    validate_topology(cat)?;
+    let files:HashMap<_,_>=m.files.iter().map(|f|(f.path.to_ascii_lowercase(),f)).collect();let mut ids=HashSet::new();let mut owners=HashSet::new();
+    for c in &cat.components{
+        if !valid_id(&c.id)||!ids.insert(c.id.as_str())||c.name.trim().is_empty()||c.name.len()>256||c.name.chars().any(|c|matches!(c,'\0'|'\r'|'\n'))||c.files.is_empty()||c.files.len()>8192{return Err(format!("invalid/duplicate component {}",c.id))}
+        for path in &c.files{let key=path.to_ascii_lowercase();let f=files.get(&key).ok_or_else(||format!("undeclared component file: {path}"))?;
+            if f.path!=*path||f.required||file_ownership::effective_ownership(f)!="optional"||!owners.insert(key){return Err(format!("invalid/duplicate component file: {path}"))}}
+    }
+    for f in &m.files{if file_ownership::effective_ownership(f)=="optional"&&!owners.contains(&f.path.to_ascii_lowercase()){return Err(format!("unowned v3 optional file: {}",f.path))}}
+    Ok(())
+}
+/// Signed preset => effective file paths (all non-component files remain active).
+/// v1 catalog selects all files, preserving 0.24.1 behavior.
+pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,String>{
+    validate(m)?;
+    let mut active:HashSet<String>=m.files.iter().filter(|f|file_ownership::effective_ownership(f)!="optional").map(|f|f.path.clone()).collect();
+    if m.schema_version!="3.0" {active.extend(m.files.iter().map(|f|f.path.clone()));return Ok(active)}
+    let cat=m.component_catalog.as_ref().ok_or("missing component catalog")?;
+    let mut selected=HashSet::new();
+    if cat.schema_version=="1.0"{selected.extend(cat.components.iter().map(|c|c.id.as_str()));}
+    else {
+        let chosen=preset.filter(|p|!p.is_empty()).unwrap_or(cat.default_preset.as_str());
+        if chosen.is_empty(){selected.extend(cat.components.iter().filter(|c|c.default).map(|c|c.id.as_str()));}
+        else {let preset=cat.presets.iter().find(|p|p.id==chosen).ok_or_else(||format!("unknown signed component preset {chosen}"))?;selected.extend(preset.components.iter().map(String::as_str));}
+        selected.extend(cat.components.iter().filter(|c|c.required).map(|c|c.id.as_str()));
+    }
+    for c in &cat.components{if selected.contains(c.id.as_str()){active.extend(c.files.iter().cloned());}}
+    Ok(active)
+}
+#[cfg(test)]
+mod tests{
+ use super::*;
+ #[test] fn go_v2_digest_and_presets(){
+  let cat:ComponentCatalog=serde_json::from_str(include_str!("../tests/fixtures/catalog_topology_0242_go.json")).unwrap();
+  assert_eq!(digest_v2(&cat),"97b6cfd2584fbae25545d422cad08c28b30b1de5d8f399e81a0ed7af3535f909");
+  validate_topology(&cat).unwrap();
+  let mut other=cat.clone();other.groups[0].name="forged".into();assert_ne!(digest_v2(&cat),digest_v2(&other));
+  let mut bad=cat.clone();bad.presets[0].components.push("missing".into());assert!(validate_topology(&bad).is_err());
+ }
+ #[test] fn v2_preset_and_tamper(){
+  let json=r#"{"schemaVersion":"2.0","revision":2,"digest":"","components":[{"id":"core","name":"Core","files":["mods/core.jar"],"required":true,"visible":false},{"id":"shaders","name":"Shaders","files":["mods/shaders.jar"],"default":true,"visible":true,"metadata":{"authors":"A"}}],"categories":[{"id":"visual","name":"Visual"}],"presets":[{"id":"minimal","name":"Minimal","components":[]},{"id":"full","name":"Full","components":["shaders"]}],"defaultPreset":"minimal"}"#;
+  let cat:ComponentCatalog=serde_json::from_str(json).unwrap();assert!(validate_topology(&cat).is_ok());assert_ne!(digest_v2(&cat),digest(&cat.components));
+  let mut tampered=cat.clone();tampered.components[1].metadata.insert("authors".into(),"B".into());assert_ne!(digest_v2(&cat),digest_v2(&tampered));
+  let mut cycle=cat.clone();cycle.categories[0].parent_id="visual".into();assert!(validate_topology(&cycle).is_err());
+ }
 }
