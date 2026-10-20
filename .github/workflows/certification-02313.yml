@@ -1,0 +1,73 @@
+name: NeverLauncher 0.23.13 executable certification
+on:
+  pull_request:
+    paths:
+      - 'runtime/**'
+      - 'prestarter/**'
+      - 'cli/**'
+      - 'scripts/certification/**'
+      - '.github/workflows/certification-02313.yml'
+  workflow_dispatch:
+  push:
+    tags: ['v0.23.13']
+permissions:
+  contents: read
+jobs:
+  executable-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: prestarter/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Certification tooling tests
+        shell: bash
+        run: python3 -m unittest discover -s scripts/certification -p 'test_*.py' -v
+      - name: Python and Go/Rust executable certification
+        shell: bash
+        run: |
+          python3 scripts/certification/certify.py --mode local --output dist/certification-02313/evidence.json
+      - name: Publish evidence regardless of outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: certification-02313-${{ runner.os }}-${{ runner.arch }}
+          path: dist/certification-02313/
+          if-no-files-found: warn
+          retention-days: 30
+  # Full GA certification is intentionally NOT auto-passed by this matrix:
+  # real clean-machine signed installer, JVM, power-loss and baseline 0.23.0
+  # evidence are separate mandatory gates in certify.py --mode full.
+  evidence-aggregation:
+    if: always()
+    needs: [executable-matrix]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: certification-02313-*
+          path: dist/platform-evidence
+          merge-multiple: false
+      - name: Verify platform evidence same commit and all mandatory gates
+        run: |
+          python3 scripts/certification/merge_evidence.py \
+            --output dist/certification-02313/aggregate.json \
+            dist/platform-evidence/*/evidence.json
+      - name: Upload final evidence even when incomplete
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: certification-02313-aggregate
+          path: dist/certification-02313/aggregate.json
+          if-no-files-found: warn
