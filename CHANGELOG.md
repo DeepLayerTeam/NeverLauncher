@@ -1,3 +1,11 @@
+## 0.24.1 — Signed Component Catalog (Manifest v3)
+
+- Added an actual v3 release creation path in PostgreSQL and memory storage, a separate component catalog with stable IDs, file ownership references, monotonic draft revision and deterministic content digest.
+- The existing Ed25519 package sign/stage/integrity/publish pipeline now signs the catalog with the release, and rejects missing, duplicated, orphan or unsafe optional file ownership. Published snapshots remain immutable through API and database triggers.
+- NeverRuntime verifies the same catalog digest, manifest signature and component file membership before download/repair/launch; transactional v3 installations cannot activate with missing optional-owned component artifacts.
+- Added Go validation tests, matching Rust integrity/signature tests and a fixture signed using the real Go Ed25519 serializer for cross-language verification. Legacy CLI updater refuses v3 rather than dropping its signed catalog.
+- Deployment instructions and unverified platform/integration gates: `docs/optional-components-0241.md`.
+
 ## 0.23.12 — Trust Rotation & Revocation
 
 - Root-signed, epoch-versioned trust policy with active/verify-only/revoked delegated signing roles across Prestarter, component updates and game manifests; no mutable URL can supply a new root of trust.

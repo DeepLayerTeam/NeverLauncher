@@ -78,15 +78,17 @@ type passwordResetRequest struct {
 	Password string `json:"password"`
 }
 type publishRequest struct {
-	ProfileID string `json:"profileId"`
-	Channel   string `json:"channel"`
-	Version   string `json:"version"`
+	ProfileID             string `json:"profileId"`
+	Channel               string `json:"channel"`
+	Version               string `json:"version"`
+	ManifestSchemaVersion string `json:"manifestSchemaVersion,omitempty"`
 }
 
 type createVersionRequest struct {
-	ProfileID string `json:"profileId"`
-	Channel   string `json:"channel"`
-	Version   string `json:"version"`
+	ProfileID             string `json:"profileId"`
+	Channel               string `json:"channel"`
+	Version               string `json:"version"`
+	ManifestSchemaVersion string `json:"manifestSchemaVersion,omitempty"`
 }
 
 type telemetryRequest struct {

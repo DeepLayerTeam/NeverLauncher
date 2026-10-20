@@ -2,6 +2,7 @@ pub mod attestation;
 pub mod compatibility;
 mod deterministic_launch;
 pub mod file_ownership;
+pub mod component_catalog_0241;
 mod platform_fs;
 pub mod download_scheduler;
 mod http_resume;
@@ -138,6 +139,8 @@ pub struct Manifest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub profile_snapshot: Option<ProfileSnapshot>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub component_catalog: Option<component_catalog_0241::ComponentCatalog>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub signature: Option<SignatureInfo>,
 }
 
@@ -182,8 +185,8 @@ fn validate_manifest_schema(manifest: &Manifest) -> Result<(), String> {
         }
     }
     match (manifest.schema_version.as_str(), manifest.profile_snapshot.as_ref()) {
-        ("1.0", None) => Ok(()),
-        ("2.0", Some(snapshot)) => {
+        ("1.0", None) => {component_catalog_0241::validate(manifest)?;Ok(())},
+        ("2.0" | "3.0", Some(snapshot)) => {
             if snapshot.schema_version != "2.0" || snapshot.revision == 0 ||
                snapshot.spec.project_id != manifest.project_id || snapshot.spec.id != manifest.profile_id ||
                snapshot.spec.name.is_empty() || snapshot.spec.loader.is_empty() {
@@ -199,6 +202,7 @@ fn validate_manifest_schema(manifest: &Manifest) -> Result<(), String> {
             if snapshot.digest != actual {return Err("v2 profile snapshot digest mismatch".into());}
             validate_runtime_constraints_0223(manifest)?;
             file_ownership::validate_policy(manifest)?;
+            component_catalog_0241::validate(manifest)?;
             Ok(())
         }
         _ => Err(format!("unsupported manifest schema or missing profileSnapshot: {}", manifest.schema_version)),
@@ -461,7 +465,7 @@ pub struct LaunchPreferences {
 }
 
 pub fn validate_launch_preferences(manifest: &Manifest, p: &LaunchPreferences, authenticated: bool) -> Result<(), String> {
-    if manifest.schema_version != "2.0" { return Err("Desktop launch preferences require a signed v2 Manifest".into()); }
+    if (manifest.schema_version != "2.0" && manifest.schema_version != "3.0") { return Err("Desktop launch preferences require a signed v2/v3 Manifest".into()); }
     if p.offline {
         if authenticated || !manifest.runtime.launch.offline_mode {
             return Err("offline launch is not authorized by the signed profile".into());
@@ -648,7 +652,11 @@ pub fn sign_manifest(manifest: &mut Manifest, private_key_hex: &str, signed_at: 
 fn manifest_signing_payload(manifest: &Manifest) -> Result<Vec<u8>, String> {
     let mut unsigned = manifest.clone();
     unsigned.signature = None;
-    serde_json::to_vec(&unsigned).map_err(|err| format!("не удалось сериализовать payload подписи: {err}"))
+    // Go encoding/json (the publishing signer) escapes HTML metacharacters
+    // and JavaScript line separators. Rust must verify those exact bytes.
+    let json = serde_json::to_string(&unsigned).map_err(|err| format!("не удалось сериализовать payload подписи: {err}"))?;
+    Ok(json.replace('&', "\\u0026").replace('<', "\\u003c").replace('>', "\\u003e")
+        .replace('\u{2028}', "\\u2028").replace('\u{2029}', "\\u2029").into_bytes())
 }
 
 pub async fn check_files(manifest: &Manifest, root: &Path) -> Result<Vec<FileCheckResult>, String> {
@@ -673,7 +681,7 @@ pub async fn check_files(manifest: &Manifest, root: &Path) -> Result<Vec<FileChe
                 }
             }
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                let optional = file_ownership::effective_ownership(file) == "optional" && !file_ownership::must_verify(manifest, &file.path);
+                let optional = manifest.schema_version == "2.0" && file_ownership::effective_ownership(file) == "optional" && !file_ownership::must_verify(manifest, &file.path);
                 results.push(FileCheckResult { path: file.path.clone(), status: if optional { "optional-missing" } else { "missing" }.into(), message: "файл отсутствует".into() });
             },
             Err(err) => return Err(format!("{}: {err}", local_path.display())),
@@ -1140,9 +1148,9 @@ pub(crate) async fn create_launch_plan(manifest: &Manifest, root: &Path, java_pa
 
 pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>, credentials: Option<&MinecraftLaunchCredentials>) -> Result<LaunchPlan, String> {
     let strategy = manifest.runtime.launch.classpath_strategy.trim().to_ascii_lowercase();
-    if manifest.schema_version == "2.0" { validate_runtime_constraints_0223(manifest)?; }
+    if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") { validate_runtime_constraints_0223(manifest)?; }
     let mut required_java = manifest.runtime.java.major_version;
-    if manifest.schema_version == "2.0" && manifest.runtime.java.recommended_major_version > 0 {
+    if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") && manifest.runtime.java.recommended_major_version > 0 {
         required_java = manifest.runtime.java.recommended_major_version;
     }
     let mut verified_metadata_paths = Vec::new();
@@ -1157,7 +1165,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
             "natives"
         };
         let natives_base = manifest_directory(root, natives_name, "natives")?;
-        let natives_dir = if manifest.schema_version == "2.0" {
+        let natives_dir = if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
             signed_platform_natives_directory_0227(manifest, root, &natives_base)?
         } else {
             platform_natives_directory(&natives_base).await
@@ -1220,7 +1228,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
         create_manifest_launch_plan(manifest, root, "", credentials.map(|c| c.username.clone()).or(username), credentials).await?
     };
 
-    if manifest.schema_version != "2.0" {
+    if (manifest.schema_version != "2.0" && manifest.schema_version != "3.0") {
         if let Some(credentials) = credentials {
             apply_minecraft_auth119(manifest, root, credentials, &mut plan)?;
         }
@@ -1237,7 +1245,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
     )
     .await?;
     plan.java_executable = java_executable;
-    if manifest.schema_version == "2.0" {
+    if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
         let java = &manifest.runtime.java;
         if (java.minimum_major_version > 0 && required_java < java.minimum_major_version) ||
            (java.maximum_major_version > 0 && required_java > java.maximum_major_version) {
@@ -1245,7 +1253,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
         }
     }
 
-    if manifest.schema_version == "2.0" {
+    if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
         apply_explicit_paths_0223(manifest, root, &mut plan)?;
         verify_launch_inputs_0227(manifest, root, &plan, &verified_metadata_paths).await?;
         plan.environment_allowlist = manifest.runtime.launch.environment_allowlist.clone();
@@ -1253,7 +1261,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
         validate_memory_arguments_0223(&manifest.runtime.memory, &plan.jvm_args)?;
     }
     apply_memory_policy(&manifest.runtime.memory, &mut plan.jvm_args);
-    if manifest.schema_version == "2.0" {
+    if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
         validate_memory_arguments_0223(&manifest.runtime.memory, &plan.jvm_args)?;
         // Authlib injector is an internal, trusted argument derived only from
         // the pinned, signed manifest artifact; do not treat it as custom args.
@@ -1273,7 +1281,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
             std::env::consts::ARCH,
         );
     }
-    if manifest.schema_version == "2.0" {
+    if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
         // A reproducible plan identity covers resolved metadata/order/options,
         // but deliberately excludes local installation roots and auth secrets.
         plan.deterministic_sha256 = deterministic_launch::plan_digest(manifest, root, required_java, &plan, credentials)?;
@@ -1334,7 +1342,7 @@ async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_exec
     for file in &manifest.files {
         if !manifest_file_applies(file) { continue; }
         if file.path.ends_with(".jar") && !file.path.contains("/mods/") && !file.path.starts_with("mods/") {
-            if manifest.schema_version == "2.0" && (!file.required || matches!(file.ownership.as_str(), "user-owned" | "generated")) {
+            if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") && (!file.required || matches!(file.ownership.as_str(), "user-owned" | "generated")) {
                 continue;
             }
             let normalized = file.path.replace('\\', "/");
@@ -1344,7 +1352,7 @@ async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_exec
             // v2 uses signed file order, never the mutable set of currently
             // installed JARs. Missing/corrupt inputs fail instead of changing
             // the LaunchPlan between identical releases.
-            if manifest.schema_version == "2.0" || fs::metadata(&local_path).await.is_ok() {
+            if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") || fs::metadata(&local_path).await.is_ok() {
                 classpath_entries.push(local_path.to_string_lossy().to_string());
             }
         }
@@ -1973,6 +1981,7 @@ mod tests {
             }],
             file_rules: Vec::new(),
             profile_snapshot: None,
+            component_catalog: None,
             signature: None,
         }
     }
@@ -2002,6 +2011,56 @@ mod tests {
         assert!(verify_manifest_signature(&manifest, &key).is_err());
         manifest.profile_snapshot = None;
         assert!(verify_manifest_signature(&manifest, &key).is_err());
+    }
+
+    #[test]
+    fn v3_go_publisher_fixture_verifies_in_native_runtime_0241() {
+        // Fixture signed with crypto/ed25519 + encoding/json by the Go publisher.
+        let json = include_str!("../tests/fixtures/component_catalog_v3_go_signed.json");
+        let m: Manifest = serde_json::from_str(json).expect("Go v3 fixture decode");
+        let pinned = "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8";
+        verify_manifest_signature(&m,pinned).expect("Go-signed v3 catalog must verify in Rust");
+        let mut tampered=m.clone();
+        tampered.component_catalog.as_mut().unwrap().components[0].files.pop();
+        assert!(verify_manifest_signature(&tampered,pinned).is_err());
+        let mut forged=m.clone();
+        forged.files[0].sha256="00".repeat(32);
+        assert!(verify_manifest_signature(&forged,pinned).is_err());
+    }
+
+    #[test]
+    fn v3_catalog_ed25519_sign_verify_and_tamper_0241() {
+        use crate::component_catalog_0241::{CatalogComponent,ComponentCatalog,digest};
+        use sha2::{Digest,Sha256};
+        let mut m=sample_manifest();
+        m.schema_version="3.0".into();
+        let spec=ProfileSpec{project_id:"demo".into(),id:"vanilla".into(),name:"Vanilla".into(),
+            description:String::new(),loader:"vanilla".into(),preset:String::new(),is_default:false};
+        let digest_profile=hex::encode(Sha256::digest(["demo","vanilla","Vanilla","","vanilla","","false"].join("\0").as_bytes()));
+        m.profile_snapshot=Some(ProfileSnapshot{schema_version:"2.0".into(),revision:1,digest:digest_profile,spec});
+        let paths=vec!["mods/sodium.jar".to_string(),"mods/indium.jar".to_string()];
+        for path in &paths {
+            m.files.push(ManifestFile{path:path.clone(),size:3,sha256:"aa".repeat(32),
+                url:"https://example.invalid/file".into(),mirrors:vec![],required:false,
+                executable:false,target_os:vec![],ownership:"optional".into()});
+        }
+        let components=vec![CatalogComponent{id:"performance.sodium".into(),name:"Sodium & friends".into(),files:paths}];
+        assert_eq!(digest(&components),"85f4d294a8028281b667503339bc444bdf5c05ceef31e87fdee87f5cd0c84119");
+        m.component_catalog=Some(ComponentCatalog{schema_version:"1.0".into(),revision:1,digest:digest(&components),components});
+        let seed="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
+        let key=sign_manifest(&mut m,seed,"2026-10-20T00:00:00Z").expect("v3 sign");
+        verify_manifest_signature(&m,&key).expect("signed v3 catalog");
+        assert!(String::from_utf8(manifest_signing_payload(&m).unwrap()).unwrap().contains("Sodium \\u0026 friends"));
+        let mut tampered=m.clone();
+        tampered.component_catalog.as_mut().unwrap().components[0].name="forged".into();
+        assert!(verify_manifest_signature(&tampered,&key).is_err());
+        let mut altered=m.clone();
+        altered.component_catalog.as_mut().unwrap().revision=2;
+        assert!(verify_manifest_signature(&altered,&key).is_err());
+        let mut rogue=m.clone();
+        rogue.files.push(ManifestFile{path:"mods/unsigned.jar".into(),size:3,sha256:"aa".repeat(32),
+            url:"https://example.invalid/file".into(),mirrors:vec![],required:false,executable:false,target_os:vec![],ownership:"optional".into()});
+        assert!(verify_manifest_signature(&rogue,&key).is_err());
     }
 
     #[test]

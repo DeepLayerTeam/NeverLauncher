@@ -500,7 +500,7 @@ async fn load_cached_desktop_manifest(root: String, pinned_public_key: String, p
     if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > 16 * 1024 * 1024 { return Err("unsafe manifest cache file".into()); }
     let manifest: Manifest = serde_json::from_slice(&fs::read(&path).await.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
     neverruntime::verify_manifest_signature(&manifest, &pinned_public_key)?;
-    if manifest.schema_version != "2.0" || manifest.project_id != project_id || manifest.profile_id != profile_id || manifest.channel != channel || !manifest.runtime.launch.offline_mode {
+    if (manifest.schema_version != "2.0" && manifest.schema_version != "3.0") || manifest.project_id != project_id || manifest.profile_id != profile_id || manifest.channel != channel || !manifest.runtime.launch.offline_mode {
         return Err("cached manifest is not authorized for this profile/channel in offline mode".into());
     }
     Ok(manifest)

@@ -118,7 +118,7 @@ mod tests {
             runtime: RuntimeInfo {
                 java: JavaInfo { major_version: 21, minimum_major_version: 0, recommended_major_version: 0, maximum_major_version: 0, distribution: "temurin".into(), allow_custom_path: false },
                 jvm_args: vec![], memory: MemoryInfo::default(), launch: RuntimeLaunch::default(),
-            }, directories: Directories::default(), files: vec![], file_rules: vec![], profile_snapshot: None,
+            }, directories: Directories::default(), files: vec![], file_rules: vec![], profile_snapshot: None, component_catalog: None,
             signature: Some(crate::SignatureInfo { algorithm: "Ed25519".into(), public_key: "0".repeat(64), signature: "a".repeat(128), signed_at: "fixed".into() }),
         };
         let plan = LaunchPlan {

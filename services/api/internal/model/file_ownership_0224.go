@@ -83,7 +83,7 @@ func patternsOverlap0224(a, b string) bool {
 // ValidateFileOwnership0224 is invoked before signing and publishing v2.
 // Legacy v1 signed manifests retain their wire format and interpretation.
 func ValidateFileOwnership0224(m Manifest) error {
-	if m.SchemaVersion != ManifestSchemaV2 {
+	if m.SchemaVersion != ManifestSchemaV2 && m.SchemaVersion != ManifestSchemaV3 {
 		return nil
 	}
 	seen := map[string]bool{}
@@ -155,7 +155,7 @@ func ValidatePublishFileOwnership0224(m Manifest) error {
 	if err := ValidateFileOwnership0224(m); err != nil {
 		return err
 	}
-	if m.SchemaVersion != ManifestSchemaV2 {
+	if m.SchemaVersion != ManifestSchemaV2 && m.SchemaVersion != ManifestSchemaV3 {
 		return nil
 	}
 	for _, f := range m.Files {

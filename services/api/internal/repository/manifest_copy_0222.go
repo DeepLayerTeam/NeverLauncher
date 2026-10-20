@@ -6,6 +6,16 @@ import "gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 // The production PostgreSQL repository materializes JSON on each read;
 // memory mode needs the same isolation to avoid test/dev-only bypasses.
 func cloneManifest0222(m model.Manifest) model.Manifest {
+	if m.ComponentCatalog != nil {
+		original := m.ComponentCatalog
+		cloned := *original
+		cloned.Components = make([]model.CatalogComponent0241, len(original.Components))
+		copy(cloned.Components, original.Components)
+		for i := range cloned.Components {
+			cloned.Components[i].Files = append([]string(nil), original.Components[i].Files...)
+		}
+		m.ComponentCatalog = &cloned
+	}
 	if m.ProfileSnapshot != nil {
 		v := *m.ProfileSnapshot
 		m.ProfileSnapshot = &v

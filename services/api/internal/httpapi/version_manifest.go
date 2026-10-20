@@ -13,10 +13,11 @@ import (
 )
 
 type versionManifestRequest struct {
-	Minecraft   model.MinecraftInfo `json:"minecraft"`
-	Runtime     model.RuntimeInfo   `json:"runtime"`
-	Directories model.Directories   `json:"directories"`
-	FileRules   *[]model.FileRule   `json:"fileRules,omitempty"`
+	Minecraft        *model.MinecraftInfo        `json:"minecraft"`
+	Runtime          *model.RuntimeInfo          `json:"runtime"`
+	Directories      *model.Directories          `json:"directories"`
+	FileRules        *[]model.FileRule           `json:"fileRules,omitempty"`
+	ComponentCatalog *model.ComponentCatalog0241 `json:"componentCatalog,omitempty"`
 }
 
 func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Request) {
@@ -52,19 +53,41 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
-	if _, enabled, validationErr := compatibilityMetadataPath(req.Minecraft, req.Runtime); validationErr != nil {
+	minecraft := release.Manifest.Minecraft
+	runtimeConfig := release.Manifest.Runtime
+	if req.Minecraft != nil {
+		minecraft = *req.Minecraft
+	}
+	if req.Runtime != nil {
+		runtimeConfig = *req.Runtime
+	}
+	if _, enabled, validationErr := compatibilityMetadataPath(minecraft, runtimeConfig); validationErr != nil {
 		writeError(w, http.StatusBadRequest, validationErr.Error())
 		return
-	} else if enabled && strings.TrimSpace(req.Minecraft.Version) == "" {
+	} else if enabled && strings.TrimSpace(minecraft.Version) == "" {
 		writeError(w, http.StatusBadRequest, "Compatibility Engine требует minecraft.version")
 		return
 	}
 	manifest := release.Manifest
-	manifest.Minecraft = req.Minecraft
-	manifest.Runtime = req.Runtime
-	manifest.Directories = req.Directories
+	manifest.Minecraft = minecraft
+	manifest.Runtime = runtimeConfig
+	if req.Directories != nil {
+		manifest.Directories = *req.Directories
+	}
 	if req.FileRules != nil {
 		manifest.FileRules = *req.FileRules
+	}
+	if req.ComponentCatalog != nil {
+		if manifest.SchemaVersion != model.ManifestSchemaV3 {
+			writeError(w, http.StatusBadRequest, "componentCatalog requires a v3 release; create with manifestSchemaVersion=3.0")
+			return
+		}
+		if manifest.ComponentCatalog == nil {
+			writeError(w, http.StatusConflict, "release v3 has no validated component catalog")
+			return
+		}
+		revision := manifest.ComponentCatalog.Revision + 1
+		manifest.ComponentCatalog = ptrComponentCatalog0241(model.NewComponentCatalog0241(req.ComponentCatalog.Components, revision))
 	}
 	if err := model.ValidateManifestSchema(manifest); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -105,8 +128,10 @@ func compatibilityMetadataPath(minecraft model.MinecraftInfo, runtime model.Runt
 	return clean, true, nil
 }
 
+func ptrComponentCatalog0241(c model.ComponentCatalog0241) *model.ComponentCatalog0241 { return &c }
+
 func validateCompatibilityManifest(manifest model.Manifest) error {
-	if manifest.SchemaVersion == model.ManifestSchemaV2 {
+	if manifest.SchemaVersion == model.ManifestSchemaV2 || manifest.SchemaVersion == model.ManifestSchemaV3 {
 		if err := model.ValidatePublishFileOwnership0224(manifest); err != nil {
 			return err
 		}

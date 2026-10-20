@@ -1447,6 +1447,9 @@ func readManifest(path string) (Manifest, error) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		return Manifest{}, err
 	}
+	if manifest.SchemaVersion == "3.0" {
+		return Manifest{}, errors.New("Manifest v3 component catalog requires native NeverRuntime 0.24.1; legacy CLI updater cannot safely apply this release")
+	}
 	if manifest.ProjectID == "" || manifest.ProfileID == "" || manifest.Version == "" {
 		return Manifest{}, errors.New("manifest не содержит обязательные поля projectId, profileId или version")
 	}

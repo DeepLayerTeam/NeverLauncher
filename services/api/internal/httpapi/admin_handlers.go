@@ -379,7 +379,24 @@ func (s Server) adminVersionCreate(w http.ResponseWriter, r *http.Request) {
 	if req.Channel == "" {
 		req.Channel = "dev"
 	}
-	release, err := s.Repo.CreateVersion(r.PathValue("projectId"), req.ProfileID, req.Channel, req.Version)
+	if req.ManifestSchemaVersion != "" && req.ManifestSchemaVersion != model.ManifestSchemaV2 && req.ManifestSchemaVersion != model.ManifestSchemaV3 {
+		writeError(w, http.StatusBadRequest, "unsupported manifestSchemaVersion")
+		return
+	}
+	var release model.ReleaseVersion
+	var err error
+	if req.ManifestSchemaVersion == model.ManifestSchemaV3 {
+		creator, ok := s.Repo.(interface {
+			CreateVersionV3(string, string, string, string) (model.ReleaseVersion, error)
+		})
+		if !ok {
+			writeError(w, http.StatusInternalServerError, "v3 release creation unavailable")
+			return
+		}
+		release, err = creator.CreateVersionV3(r.PathValue("projectId"), req.ProfileID, req.Channel, req.Version)
+	} else {
+		release, err = s.Repo.CreateVersion(r.PathValue("projectId"), req.ProfileID, req.Channel, req.Version)
+	}
 	if err != nil {
 		writeError(w, http.StatusNotFound, "проект или профиль не найден")
 		return

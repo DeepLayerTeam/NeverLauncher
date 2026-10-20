@@ -139,6 +139,13 @@ fn validate_release(release: &Release, key: &str) -> Result<(), String> {
     for p in &release.installed {
         if !eligible(&release.manifest, p) || !seen.insert(p) { return Err(format!("invalid release ownership record: {p}")); }
     }
+    if release.manifest.schema_version == "3.0" {
+        for file in &release.manifest.files {
+            if eligible(&release.manifest, &file.path) && !seen.contains(&file.path) {
+                return Err(format!("v3 signed component file not installed: {}",file.path));
+            }
+        }
+    }
     Ok(())
 }
 fn expected<'a>(release: &'a Release, path: &str) -> Option<(&'a str, u64)> {
@@ -497,7 +504,7 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
         file_ownership::ensure_no_symlinks(&root, &path)?;
         let live = safe_join(&root, &f.path)?;
         file_ownership::ensure_no_symlinks(&root, &live)?;
-        if file_ownership::effective_ownership(f) == "optional" &&
+        if manifest.schema_version == "2.0" && file_ownership::effective_ownership(f) == "optional" &&
             !file_ownership::must_verify(manifest, &f.path) && !path.exists() && !live.exists() {
             continue;
         }
@@ -536,7 +543,7 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     for f in &manifest.files {
         if !manifest_file_applies(f) || file_ownership::skip_download(manifest, f) { continue; }
         let path = safe_join(&stage, &f.path)?;
-        let optional_absent = file_ownership::effective_ownership(f) == "optional" && !path.exists() && !file_ownership::must_verify(manifest, &f.path);
+        let optional_absent = manifest.schema_version == "2.0" && file_ownership::effective_ownership(f) == "optional" && !path.exists() && !file_ownership::must_verify(manifest, &f.path);
         if optional_absent { continue; }
         if !matches_digest_async(&path, &f.sha256, f.size).await { return Err(format!("staged client file failed SHA-256: {}", f.path)); }
         installed.push(f.path.clone());

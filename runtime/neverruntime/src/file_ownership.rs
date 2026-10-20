@@ -94,7 +94,7 @@ pub fn protected(p: &str) -> bool {
 }
 
 pub fn validate_policy(m: &Manifest) -> Result<(), String> {
-    if m.schema_version != "2.0" { return Ok(()); }
+    if (m.schema_version != "2.0" && m.schema_version != "3.0") { return Ok(()); }
     validate_name_collisions(m.files.iter().map(|f| f.path.clone()))?;
     let mut seen = HashSet::new();
     for f in &m.files {
@@ -131,10 +131,10 @@ pub fn skip_download(m: &Manifest, f: &ManifestFile) -> bool {
     skip_verification(m,f)
 }
 pub fn must_verify(m: &Manifest, path: &str) -> bool {
-    m.schema_version == "2.0" && m.file_rules.iter().any(|r| r.action == "verify" && matches(&r.pattern,path))
+    (m.schema_version == "2.0" || m.schema_version == "3.0") && m.file_rules.iter().any(|r| r.action == "verify" && matches(&r.pattern,path))
 }
 pub fn can_quarantine(m: &Manifest, path: &str) -> bool {
-    if m.schema_version != "2.0" || protected(path) { return false }
+    if (m.schema_version != "2.0" && m.schema_version != "3.0") || protected(path) { return false }
     m.file_rules.iter().any(|r| r.action == "include" && matches!(r.ownership.as_str(), "managed" | "required") && matches(&r.pattern,path))
 }
 

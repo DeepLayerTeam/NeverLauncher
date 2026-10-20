@@ -71,7 +71,7 @@ func (s Server) manifest(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "манифест не найден")
 		return
 	}
-	if manifest.SchemaVersion == model.ManifestSchemaV2 {
+	if manifest.SchemaVersion == model.ManifestSchemaV2 || manifest.SchemaVersion == model.ManifestSchemaV3 {
 		if err := s.verifyManifestSignature(manifest); err != nil {
 			writeError(w, http.StatusServiceUnavailable, "published manifest failed signature verification")
 			return

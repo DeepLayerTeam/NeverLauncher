@@ -971,6 +971,24 @@ func (r *MemoryRepository) CreateVersion(projectID, profileID, channel, version 
 	return cloneRelease0222(release), nil
 }
 
+// CreateVersionV3 creates an unsigned v3 draft with a content-addressed
+// empty catalog. Existing v2 drafts/releases are never converted in place.
+func (r *MemoryRepository) CreateVersionV3(projectID, profileID, channel, version string) (model.ReleaseVersion, error) {
+	release, err := r.CreateVersion(projectID, profileID, channel, version)
+	if err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	for i := range r.releases {
+		if r.releases[i].ID == release.ID && r.releases[i].ProjectID == projectID {
+			r.releases[i].Manifest.SchemaVersion = model.ManifestSchemaV3
+			catalog := model.NewComponentCatalog0241(nil, 1)
+			r.releases[i].Manifest.ComponentCatalog = &catalog
+			return cloneRelease0222(r.releases[i]), nil
+		}
+	}
+	return model.ReleaseVersion{}, ErrNotFound
+}
+
 func (r *MemoryRepository) UpdateVersionStatus(projectID, versionID, status string) (model.ReleaseVersion, error) {
 	status = strings.TrimSpace(status)
 	if status == "" {

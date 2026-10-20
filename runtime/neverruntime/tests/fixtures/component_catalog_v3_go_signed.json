@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "3.0",
+  "projectId": "demo",
+  "profileId": "vanilla",
+  "channel": "stable",
+  "version": "0.24.1-test",
+  "createdAt": "2026-10-20T00:00:00Z",
+  "minecraft": {
+    "version": "1.21.1",
+    "loader": "fabric",
+    "mainClass": "demo.Main"
+  },
+  "runtime": {
+    "java": {
+      "majorVersion": 21,
+      "distribution": "temurin"
+    },
+    "memory": {},
+    "launch": {
+      "mainClass": "demo.Main",
+      "classpathStrategy": "manifest"
+    }
+  },
+  "directories": {},
+  "files": [
+    {
+      "path": "mods/sodium.jar",
+      "size": 3,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "url": "https://example.invalid/sodium",
+      "required": false,
+      "executable": false,
+      "ownership": "optional"
+    },
+    {
+      "path": "mods/indium.jar",
+      "size": 4,
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "url": "https://example.invalid/indium",
+      "required": false,
+      "executable": false,
+      "ownership": "optional"
+    }
+  ],
+  "profileSnapshot": {
+    "schemaVersion": "2.0",
+    "revision": 1,
+    "digest": "aafe7b05d3b35f6cd46fd846bf6794e2a0f176bf64c8f09464f10740d8c0c00e",
+    "spec": {
+      "projectId": "demo",
+      "id": "vanilla",
+      "name": "Vanilla",
+      "description": "",
+      "loader": "vanilla",
+      "preset": "",
+      "isDefault": false
+    }
+  },
+  "componentCatalog": {
+    "schemaVersion": "1.0",
+    "revision": 1,
+    "digest": "85f4d294a8028281b667503339bc444bdf5c05ceef31e87fdee87f5cd0c84119",
+    "components": [
+      {
+        "id": "performance.sodium",
+        "name": "Sodium \u0026 friends",
+        "files": [
+          "mods/sodium.jar",
+          "mods/indium.jar"
+        ]
+      }
+    ]
+  },
+  "signature": {
+    "algorithm": "Ed25519",
+    "publicKey": "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8",
+    "signature": "b6ff502e4d2ffd7bda0c7339a81e7ceef04be5d20e0caff4cec26ad7142cd32a6fd5a6b69667558bd1bdef67f8b1c595104d0c49b7a7fd8646c4f44bdbf97203",
+    "signedAt": "2026-10-20T00:00:00Z"
+  }
+}

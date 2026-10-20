@@ -135,6 +135,7 @@ type Manifest struct {
 	Files                 []ManifestFile           `json:"files"`
 	FileRules             []FileRule               `json:"fileRules,omitempty"`
 	ProfileSnapshot       *ProfileSnapshot         `json:"profileSnapshot,omitempty"`
+	ComponentCatalog      *ComponentCatalog0241    `json:"componentCatalog,omitempty"`
 	Signature             *SignatureInfo           `json:"signature,omitempty"`
 }
 

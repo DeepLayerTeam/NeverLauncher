@@ -978,6 +978,30 @@ func (r *SQLRepository) CreateVersion(projectID, profileID, channel, version str
 	return r.saveRelease(model.ReleaseVersion{ID: fmt.Sprintf("%s-%s-%s", projectID, profileID, version), ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, Status: "draft", Manifest: manifest, PublishedAt: now})
 }
 
+// CreateVersionV3 writes a v3 draft directly. No v2->v3 UPDATE is performed:
+// the database snapshot immutability trigger remains effective.
+func (r *SQLRepository) CreateVersionV3(projectID, profileID, channel, version string) (model.ReleaseVersion, error) {
+	if profileID == "" {
+		profileID = "vanilla"
+	}
+	if channel == "" {
+		channel = "dev"
+	}
+	if version == "" {
+		version = time.Now().UTC().Format("20060102150405")
+	}
+	now := time.Now().UTC()
+	snapshot, err := ReadProfileSnapshot(r, projectID, profileID)
+	if err != nil {
+		return model.ReleaseVersion{}, err
+	}
+	catalog := model.NewComponentCatalog0241(nil, 1)
+	manifest := model.Manifest{SchemaVersion: model.ManifestSchemaV3, ProfileSnapshot: &snapshot, ComponentCatalog: &catalog,
+		ProjectID: projectID, ProfileID: profileID, Channel: channel, Version: version, CreatedAt: now.Format(time.RFC3339), Files: []model.ManifestFile{}}
+	return r.saveRelease(model.ReleaseVersion{ID: fmt.Sprintf("%s-%s-%s", projectID, profileID, version), ProjectID: projectID,
+		ProfileID: profileID, Channel: channel, Version: version, Status: "draft", Manifest: manifest, PublishedAt: now})
+}
+
 // PublishVersion commits only an existing signed draft. The signing payload is
 // never silently rebuilt from the current profile or release file list.
 func (r *SQLRepository) PublishVersion(projectID, profileID, channel, version string) (model.ReleaseVersion, error) {

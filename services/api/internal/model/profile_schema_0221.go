@@ -74,7 +74,7 @@ func ValidateManifestSchema(m Manifest) error {
 		if m.ProfileSnapshot != nil {
 			return errors.New("v1 manifests cannot contain a v2 profile snapshot")
 		}
-	case ManifestSchemaV2:
+	case ManifestSchemaV2, ManifestSchemaV3:
 		if m.ProfileSnapshot == nil {
 			return errors.New("v2 manifest requires a profile snapshot")
 		}
@@ -84,7 +84,10 @@ func ValidateManifestSchema(m Manifest) error {
 	default:
 		return fmt.Errorf("unsupported manifest schema %q", m.SchemaVersion)
 	}
-	if m.SchemaVersion == ManifestSchemaV2 {
+	if err := ValidateComponentCatalog0241(m); err != nil {
+		return err
+	}
+	if m.SchemaVersion == ManifestSchemaV2 || m.SchemaVersion == ManifestSchemaV3 {
 		if err := ValidateRuntimeConstraints0223(m); err != nil {
 			return err
 		}
@@ -128,7 +131,7 @@ func ValidateReleaseManifestTransition(existing, candidate Manifest) error {
 	if existing.SchemaVersion != candidate.SchemaVersion {
 		return errors.New("release manifest schema is immutable; create a new release")
 	}
-	if existing.SchemaVersion == ManifestSchemaV2 && *existing.ProfileSnapshot != *candidate.ProfileSnapshot {
+	if (existing.SchemaVersion == ManifestSchemaV2 || existing.SchemaVersion == ManifestSchemaV3) && *existing.ProfileSnapshot != *candidate.ProfileSnapshot {
 		return errors.New("release profile snapshot is immutable; create a new release")
 	}
 	if existing.ProjectID != candidate.ProjectID || existing.ProfileID != candidate.ProfileID || existing.Channel != candidate.Channel || existing.Version != candidate.Version {
