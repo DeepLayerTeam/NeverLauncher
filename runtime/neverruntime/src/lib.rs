@@ -2065,6 +2065,40 @@ mod tests {
     }
 
     #[test]
+    fn signed_go_v3_dependencies_and_conflicts_0243() {
+        use crate::component_catalog_0241::{active_files,digest_v3,ComponentRequirement};
+        let signed=include_str!("../tests/fixtures/catalog_dependency_0243_go_signed.json");
+        let manifest:Manifest=serde_json::from_str(signed).expect("Go-signed v3 resolver fixture must decode");
+        let key="03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8";
+        verify_manifest_signature(&manifest,key).expect("Go Ed25519 with catalog 3.0 must verify in Rust");
+        let cat=manifest.component_catalog.as_ref().unwrap();
+        assert_eq!(digest_v3(cat),"53fe27537e66b25479003cdca208f3272091ef78b9278e16009e5097d4281988");
+        let minimum=active_files(&manifest,Some("minimal")).unwrap();
+        assert!(minimum.contains("mods/core.jar"));
+        assert!(!minimum.contains("mods/sodium.jar"));
+        let quality=active_files(&manifest,Some("quality")).unwrap();
+        assert!(quality.contains("mods/core.jar"));
+        assert!(quality.contains("mods/sodium.jar"));
+        assert!(quality.contains("mods/indium.jar"));
+        assert!(quality.contains("mods/shader.jar"));
+        let mut tampered=manifest.clone();
+        tampered.component_catalog.as_mut().unwrap().components[2].dependencies[0].version_range="^0.6.0".into();
+        assert!(verify_manifest_signature(&tampered,key).is_err());
+        let cat=tampered.component_catalog.as_mut().unwrap();cat.digest=digest_v3(cat);
+        assert!(active_files(&tampered,Some("quality")).is_err());
+        let mut cycle=manifest.clone();
+        let cat=cycle.component_catalog.as_mut().unwrap();
+        cat.components[0].dependencies.push(ComponentRequirement{id:"shaders".into(),version_range:String::new()});
+        cat.digest=digest_v3(cat);
+        assert!(active_files(&cycle,Some("minimal")).unwrap_err().contains("cycle"));
+        let mut exclusion=manifest.clone();
+        let cat=exclusion.component_catalog.as_mut().unwrap();
+        cat.components[2].exclusive_group="performance-engine".into();
+        cat.digest=digest_v3(cat);
+        assert!(active_files(&exclusion,Some("quality")).unwrap_err().contains("exclusive_group"));
+    }
+
+    #[test]
     fn v3_catalog_ed25519_sign_verify_and_tamper_0241() {
         use crate::component_catalog_0241::{CatalogComponent,ComponentCatalog,digest};
         use sha2::{Digest,Sha256};
@@ -2080,7 +2114,7 @@ mod tests {
                 url:"https://example.invalid/file".into(),mirrors:vec![],required:false,
                 executable:false,target_os:vec![],ownership:"optional".into()});
         }
-        let components=vec![CatalogComponent{id:"performance.sodium".into(),name:"Sodium & friends".into(),files:paths,description:String::new(),category_id:String::new(),group_id:String::new(),required:false,default:false,visible:None,limited:false,metadata:Default::default()}];
+        let components=vec![CatalogComponent{id:"performance.sodium".into(),name:"Sodium & friends".into(),files:paths,version:String::new(),dependencies:vec![],conflicts:vec![],exclusive_group:String::new(),description:String::new(),category_id:String::new(),group_id:String::new(),required:false,default:false,visible:None,limited:false,metadata:Default::default()}];
         assert_eq!(digest(&components),"85f4d294a8028281b667503339bc444bdf5c05ceef31e87fdee87f5cd0c84119");
         m.component_catalog=Some(ComponentCatalog{schema_version:"1.0".into(),revision:1,digest:digest(&components),components,categories:vec![],groups:vec![],presets:vec![],default_preset:String::new()});
         let seed="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";

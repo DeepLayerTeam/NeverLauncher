@@ -1,4 +1,4 @@
-//! Signed v1/v2 catalogs. Topology v2 is validated before any selection or IO.
+//! Signed catalogs v1-v3; v3 resolves dependency, version and exclusion constraints before IO.
 //! Preset resolution returns actual allow-listed manifest file paths, never
 //! commands or client-supplied destinations.
 use crate::{Manifest,file_ownership};
@@ -32,6 +32,14 @@ pub struct CatalogComponent {
     pub name:String,
     pub files:Vec<String>,
     #[serde(default,skip_serializing_if="empty")]
+    pub version:String,
+    #[serde(default,skip_serializing_if="Vec::is_empty")]
+    pub dependencies:Vec<ComponentRequirement>,
+    #[serde(default,skip_serializing_if="Vec::is_empty")]
+    pub conflicts:Vec<ComponentRequirement>,
+    #[serde(default,skip_serializing_if="empty")]
+    pub exclusive_group:String,
+    #[serde(default,skip_serializing_if="empty")]
     pub description:String,
     #[serde(default,skip_serializing_if="empty")]
     pub category_id:String,
@@ -47,6 +55,13 @@ pub struct CatalogComponent {
     pub limited:bool,
     #[serde(default,skip_serializing_if="map_empty")]
     pub metadata:BTreeMap<String,String>,
+}
+#[derive(Debug,Clone,Serialize,Deserialize)]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
+pub struct ComponentRequirement {
+    pub id:String,
+    #[serde(default,skip_serializing_if="empty")]
+    pub version_range:String,
 }
 #[derive(Debug,Clone,Serialize,Deserialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
@@ -100,6 +115,16 @@ pub fn digest_v2(cat:&ComponentCatalog)->String{
     str_f(&mut h,&cat.default_preset);
     hex::encode(h.finalize())
 }
+pub fn digest_v3(cat:&ComponentCatalog)->String{
+    let mut h=Sha256::new();h.update(b"neverlauncher.component-catalog.v3\0");
+    str_f(&mut h,&digest_v2(cat));count(&mut h,cat.components.len());
+    for c in &cat.components {
+        str_f(&mut h,&c.version);str_f(&mut h,&c.exclusive_group);
+        count(&mut h,c.dependencies.len());for r in &c.dependencies {str_f(&mut h,&r.id);str_f(&mut h,&r.version_range)}
+        count(&mut h,c.conflicts.len());for r in &c.conflicts {str_f(&mut h,&r.id);str_f(&mut h,&r.version_range)}
+    }
+    hex::encode(h.finalize())
+}
 fn valid_id(s:&str)->bool{
     !s.is_empty()&&s.len()<=128&&!s.contains("..")&&s.bytes().next().is_some_and(|b|b.is_ascii_lowercase()||b.is_ascii_digit())&&s.bytes().all(|b|b.is_ascii_lowercase()||b.is_ascii_digit()||matches!(b,b'-'|b'_'|b'.'))
 }
@@ -107,8 +132,13 @@ fn label(n:&str,d:&str)->bool{!n.trim().is_empty()&&n.len()<=256&&d.len()<=2048&
 fn validate_topology(cat:&ComponentCatalog)->Result<(),String>{
     if cat.schema_version=="1.0"{
         if !cat.categories.is_empty()||!cat.groups.is_empty()||!cat.presets.is_empty()||!cat.default_preset.is_empty() {return Err("v1 catalog cannot contain topology".into())}
-        for c in &cat.components{if !c.description.is_empty()||!c.category_id.is_empty()||!c.group_id.is_empty()||c.required||c.default||c.visible.is_some()||c.limited||!c.metadata.is_empty(){return Err(format!("v1 component has topology: {}",c.id))}}
+        for c in &cat.components{if !c.version.is_empty()||!c.dependencies.is_empty()||!c.conflicts.is_empty()||!c.exclusive_group.is_empty()||!c.description.is_empty()||!c.category_id.is_empty()||!c.group_id.is_empty()||c.required||c.default||c.visible.is_some()||c.limited||!c.metadata.is_empty(){return Err(format!("v1 component has topology: {}",c.id))}}
         return Ok(())
+    }
+    if cat.schema_version=="2.0" {
+        for c in &cat.components {
+            if !c.version.is_empty()||!c.dependencies.is_empty()||!c.conflicts.is_empty()||!c.exclusive_group.is_empty(){return Err(format!("v2 component {} contains unsigned v3 constraints",c.id))}
+        }
     }
     if cat.categories.len()>256||cat.groups.len()>1024||cat.presets.len()>128{return Err("topology size exceeded".into())}
     let mut categories=HashMap::new();
@@ -131,12 +161,156 @@ fn validate_topology(cat:&ComponentCatalog)->Result<(),String>{
         let mut included=HashSet::new();for id in &p.components{if !ids.contains(id.as_str())||!included.insert(id){return Err(format!("preset {} unknown/duplicate component {}",p.id,id))}}
     }
     if !cat.default_preset.is_empty()&&!preset_ids.contains(cat.default_preset.as_str()){return Err("unknown defaultPreset".into())}
+    if cat.schema_version=="3.0" {validate_rules_v3(cat)?;}
     Ok(())
 }
+#[derive(Clone,Debug,PartialEq,Eq)]
+struct Semver0243 {major:u64,minor:u64,patch:u64,pre:Vec<String>}
+fn parse_semver_0243(value:&str)->Result<Semver0243,String>{
+    if value.is_empty()||value.len()>128||value.bytes().any(|b|b.is_ascii_whitespace()){return Err(format!("invalid semantic version {value:?}"))}
+    let (before_build,build)=value.split_once('+').map_or((value,None),|(a,b)|(a,Some(b)));
+    if let Some(build)=build {if !valid_semver_ids_0243(build,false){return Err(format!("invalid build metadata in {value:?}"))}}
+    let (base,pre)=before_build.split_once('-').map_or((before_build,None),|(a,b)|(a,Some(b)));
+    let pre=if let Some(pre)=pre {if !valid_semver_ids_0243(pre,true){return Err(format!("invalid prerelease in {value:?}"))}pre.split('.').map(str::to_string).collect()} else {Vec::new()};
+    let parts:Vec<_>=base.split('.').collect();
+    if parts.len()!=3{return Err(format!("semantic version must be MAJOR.MINOR.PATCH: {value:?}"))}
+    let mut nums=[0u64;3];
+    for (i,v) in parts.iter().enumerate(){
+        if v.is_empty()||(v.len()>1&&v.starts_with('0'))||!v.bytes().all(|b|b.is_ascii_digit()){return Err(format!("invalid semantic version {value:?}"))}
+        nums[i]=v.parse::<u64>().map_err(|_|format!("invalid semantic version {value:?}"))?;
+    }
+    Ok(Semver0243{major:nums[0],minor:nums[1],patch:nums[2],pre})
+}
+fn valid_semver_ids_0243(value:&str,prerelease:bool)->bool{
+    if value.is_empty(){return false}
+    value.split('.').all(|part|{
+        !part.is_empty()&&part.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'-')&&
+        (!prerelease||!part.bytes().all(|b|b.is_ascii_digit())||
+           ((part.len()==1||!part.starts_with('0'))&&part.parse::<u64>().is_ok()))
+    })
+}
+fn compare_semver_0243(a:&Semver0243,b:&Semver0243)->std::cmp::Ordering{
+    use std::cmp::Ordering;
+    for (x,y) in [(a.major,b.major),(a.minor,b.minor),(a.patch,b.patch)]{let o=x.cmp(&y);if o!=Ordering::Equal{return o}}
+    if a.pre.is_empty(){return if b.pre.is_empty(){Ordering::Equal}else{Ordering::Greater}}
+    if b.pre.is_empty(){return Ordering::Less}
+    for (x,y) in a.pre.iter().zip(b.pre.iter()) {
+        let a_num=x.parse::<u64>().ok();let b_num=y.parse::<u64>().ok();
+        let o=match (a_num,b_num){(Some(x),Some(y))=>x.cmp(&y),(Some(_),None)=>Ordering::Less,(None,Some(_))=>Ordering::Greater,(None,None)=>x.cmp(y)};
+        if o!=Ordering::Equal{return o}
+    }
+    a.pre.len().cmp(&b.pre.len())
+}
+fn matches_range_0243(actual:&str,expression:&str)->Result<bool,String>{
+    use std::cmp::Ordering;
+    let a=parse_semver_0243(actual)?;
+    let trimmed=expression.trim();
+    if trimmed.is_empty()||trimmed=="*" {return Ok(true)}
+    if expression.len()>256{return Err("version range exceeds 256 bytes".into())}
+    let mut any_matched=false;
+    for branch in expression.split("||"){
+        let parts:Vec<&str>=branch.split_whitespace().collect();
+        if parts.is_empty()||parts.len()>16{return Err(format!("invalid version range {expression:?}"))}
+        let mut all=true;
+        for token in parts {
+            if token=="*"{continue}
+            let (op,raw)=[">=","<=",">","<","=","^","~"].iter().find_map(|op|token.strip_prefix(*op).map(|v|(*op,v))).unwrap_or(("=",token));
+            let b=parse_semver_0243(raw).map_err(|err|format!("invalid range {expression:?}: {err}"))?;
+            let cmp=compare_semver_0243(&a,&b);
+            let valid=match op {
+                "="=>cmp==Ordering::Equal,">"=>cmp==Ordering::Greater,">="=>cmp!=Ordering::Less,
+                "<"=>cmp==Ordering::Less,"<="=>cmp!=Ordering::Greater,
+                "^"|"~"=>{
+                    let mut upper=b.clone();upper.pre.clear();
+                    if op=="~"{upper.minor=upper.minor.checked_add(1).ok_or("version range overflow")?;upper.patch=0;}
+                    else if upper.major>0{upper.major=upper.major.checked_add(1).ok_or("version range overflow")?;upper.minor=0;upper.patch=0;}
+                    else if upper.minor>0{upper.minor=upper.minor.checked_add(1).ok_or("version range overflow")?;upper.patch=0;}
+                    else {upper.patch=upper.patch.checked_add(1).ok_or("version range overflow")?;}
+                    cmp!=Ordering::Less&&compare_semver_0243(&a,&upper)==Ordering::Less
+                },_=>false
+            };
+            if !valid{all=false}
+        }
+        if all{any_matched=true}
+    }
+    Ok(any_matched)
+}
+fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
+    let items:HashMap<&str,&CatalogComponent>=cat.components.iter().map(|c|(c.id.as_str(),c)).collect();
+    for c in &cat.components {
+        parse_semver_0243(&c.version).map_err(|e|format!("invalid_version component {}: {e}",c.id))?;
+        if !c.exclusive_group.is_empty()&&!valid_id(&c.exclusive_group){return Err(format!("invalid_group component {}: {}",c.id,c.exclusive_group))}
+        if c.dependencies.len()>64||c.conflicts.len()>64{return Err(format!("limit component {}: too many constraints",c.id))}
+        for (kind,refs) in [("dependency",&c.dependencies),("conflict",&c.conflicts)] {
+            let mut seen=HashSet::new();
+            for r in refs {
+                let other=items.get(r.id.as_str()).ok_or_else(||format!("invalid_reference {} {}: unknown {}",c.id,kind,r.id))?;
+                if r.id==c.id||!seen.insert(r.id.as_str()){return Err(format!("invalid_reference {} {}: duplicate/self {}",c.id,kind,r.id))}
+                matches_range_0243(&other.version,&r.version_range).map_err(|e|format!("invalid_range {} {} {}: {e}",c.id,kind,r.id))?;
+            }
+        }
+    }
+    fn visit<'a>(id:&'a str,items:&HashMap<&'a str,&'a CatalogComponent>,state:&mut HashMap<&'a str,u8>,stack:&mut Vec<&'a str>)->Result<(),String>{
+        if state.get(id)==Some(&2){return Ok(())}
+        if state.get(id)==Some(&1){let i=stack.iter().position(|s|*s==id).unwrap_or(0);let mut path=stack[i..].to_vec();path.push(id);return Err(format!("cycle: {}",path.join(" -> ")))}
+        state.insert(id,1);stack.push(id);
+        let current=*items.get(id).ok_or_else(||format!("missing dependency node {id}"))?;
+        for dep in &current.dependencies {visit(dep.id.as_str(),items,state,stack)?}
+        stack.pop();state.insert(id,2);Ok(())
+    }
+    let mut state=HashMap::new();let mut stack=Vec::new();
+    for c in &cat.components{visit(c.id.as_str(),&items,&mut state,&mut stack)?}
+    resolve_graph_v3(cat,"")?;
+    for p in &cat.presets{resolve_graph_v3(cat,&p.id).map_err(|e|format!("preset {} invalid: {e}",p.id))?;}
+    Ok(())
+}
+fn resolve_graph_v3(cat:&ComponentCatalog,preset:&str)->Result<HashSet<String>,String>{
+    let components:HashMap<&str,&CatalogComponent>=cat.components.iter().map(|c|(c.id.as_str(),c)).collect();
+    let chosen=if preset.is_empty(){cat.default_preset.as_str()}else{preset};
+    let mut selected:HashSet<String>=if !chosen.is_empty(){
+        cat.presets.iter().find(|p|p.id==chosen).ok_or_else(||format!("unknown_preset: unknown signed component preset {chosen}"))?.components.iter().cloned().collect()
+    }else{cat.components.iter().filter(|c|c.default).map(|c|c.id.clone()).collect()};
+    selected.extend(cat.components.iter().filter(|c|c.required).map(|c|c.id.clone()));
+    fn include(id:&str,chain:&[String],components:&HashMap<&str,&CatalogComponent>,selected:&mut HashSet<String>,done:&mut HashSet<String>)->Result<(),String>{
+        if done.contains(id){return Ok(())}
+        let c=*components.get(id).ok_or_else(||format!("missing_dependency: {id}"))?;
+        for dep in &c.dependencies {
+            let other=components.get(dep.id.as_str()).ok_or_else(||format!("missing_dependency: {} -> {}",id,dep.id))?;
+            if !matches_range_0243(&other.version,&dep.version_range)?{
+                let mut path=chain.to_vec();path.push(id.to_string());
+                return Err(format!("version_mismatch: {id} requires {} {:?}, available {} (via {})",dep.id,dep.version_range,other.version,path.join(" -> ")))
+            }
+            selected.insert(dep.id.clone());
+            let mut next=chain.to_vec();next.push(id.to_string());include(&dep.id,&next,components,selected,done)?;
+        }
+        done.insert(id.to_string());Ok(())
+    }
+    let mut expanded=HashSet::new();
+    for c in &cat.components {if selected.contains(&c.id){include(&c.id,&[],&components,&mut selected,&mut expanded)?}}
+    let mut groups=HashMap::new();
+    for c in &cat.components {
+        if !selected.contains(&c.id){continue}
+        if !c.exclusive_group.is_empty() {
+            if let Some(other)=groups.insert(c.exclusive_group.as_str(),c.id.as_str()){
+                return Err(format!("exclusive_group: {other} and {} are mutually exclusive (group {})",c.id,c.exclusive_group))
+            }
+        }
+        for conflict in &c.conflicts {
+            if selected.contains(&conflict.id) {
+                let other=components[conflict.id.as_str()];
+                if matches_range_0243(&other.version,&conflict.version_range)?{
+                    return Err(format!("conflict: {} and {} cannot be selected together; {} conflicts with {} version {} (range {:?})",c.id,other.id,c.id,other.id,other.version,conflict.version_range))
+                }
+            }
+        }
+    }
+    Ok(selected)
+}
+
 pub fn validate(m:&Manifest)->Result<(),String>{
     if m.schema_version!="3.0"{if m.component_catalog.is_some(){return Err("componentCatalog requires manifest v3".into())}return Ok(())}
     let cat=m.component_catalog.as_ref().ok_or("v3 requires signed componentCatalog")?;
-    if !matches!(cat.schema_version.as_str(),"1.0"|"2.0")||cat.revision==0||cat.components.len()>4096||cat.digest.len()!=64||cat.digest!=(if cat.schema_version=="1.0"{digest(&cat.components)}else{digest_v2(cat)}){return Err("invalid v3 component snapshot/digest".into())}
+    if !matches!(cat.schema_version.as_str(),"1.0"|"2.0"|"3.0")||cat.revision==0||cat.components.len()>4096||cat.digest.len()!=64||cat.digest!=(if cat.schema_version=="1.0"{digest(&cat.components)}else if cat.schema_version=="2.0"{digest_v2(cat)}else{digest_v3(cat)}){return Err("invalid v3 component snapshot/digest".into())}
     validate_topology(cat)?;
     let files:HashMap<_,_>=m.files.iter().map(|f|(f.path.to_ascii_lowercase(),f)).collect();let mut ids=HashSet::new();let mut owners=HashSet::new();
     for c in &cat.components{
@@ -155,6 +329,11 @@ pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,Str
     if m.schema_version!="3.0" {active.extend(m.files.iter().map(|f|f.path.clone()));return Ok(active)}
     let cat=m.component_catalog.as_ref().ok_or("missing component catalog")?;
     let mut selected=HashSet::new();
+    if cat.schema_version=="3.0" {
+        let resolved=resolve_graph_v3(cat,preset.unwrap_or_default())?;
+        for c in &cat.components {if resolved.contains(c.id.as_str()) {active.extend(c.files.iter().cloned());}}
+        return Ok(active)
+    }
     if cat.schema_version=="1.0"{selected.extend(cat.components.iter().map(|c|c.id.as_str()));}
     else {
         let chosen=preset.filter(|p|!p.is_empty()).unwrap_or(cat.default_preset.as_str());

@@ -1,3 +1,12 @@
+## 0.24.3 — Dependency & Conflict Resolver
+
+- Signed component catalog schema 3.0: strict semantic versions, dependency references and version ranges, version-scoped conflicts and mutually exclusive groups. v1/v2 catalog digests remain backward compatible.
+- Go publication validates all signed constraints and every named preset, including cycles, unreachable dependencies, contradictory required components and impossible preset combinations; errors identify the relevant IDs and constraint.
+- NeverRuntime resolves transitive dependencies into effective signed file sets and fails before download, repair, release switch and launch on invalid configurations. No unverified files, JVM flags or downloaded actions are synthesized from component choices.
+- Desktop previews dependency-driven selection and reasons, including conflict/exclusion explanations; native resolver remains the sole authority for installation and launch.
+- PostgreSQL migration 0063, in-memory deep-copy of rule slices, cross-language Go-signed fixture, Go resolver/migration tests and Rust fixture/tests.
+- Validation limitation: native Rust/Desktop binary builds and real Minecraft integration tests are not certified by the checks performed in this environment.
+
 ## 0.24.2 — Component Topology & Presets
 
 - Signed catalog schema v2 with `required`, `default`, explicit `visible`, `limited`, descriptions and bounded metadata.

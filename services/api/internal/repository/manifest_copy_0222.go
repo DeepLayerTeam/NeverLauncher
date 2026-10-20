@@ -13,6 +13,8 @@ func cloneManifest0222(m model.Manifest) model.Manifest {
 		copy(cloned.Components, original.Components)
 		for i := range cloned.Components {
 			cloned.Components[i].Files = append([]string(nil), original.Components[i].Files...)
+			cloned.Components[i].Dependencies = append([]model.ComponentRequirement0243(nil), original.Components[i].Dependencies...)
+			cloned.Components[i].Conflicts = append([]model.ComponentRequirement0243(nil), original.Components[i].Conflicts...)
 			if original.Components[i].Visible != nil {
 				b := *original.Components[i].Visible
 				cloned.Components[i].Visible = &b

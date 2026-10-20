@@ -13,6 +13,7 @@ import (
 const ManifestSchemaV3 = "3.0"
 const ComponentCatalogSchema0241 = "1.0"
 const ComponentCatalogSchema0242 = "2.0"
+const ComponentCatalogSchema0243 = "3.0"
 
 type CatalogCategory0242 struct {
 	ID          string `json:"id"`
@@ -36,8 +37,8 @@ type CatalogPreset0242 struct {
 
 // ComponentCatalog0241 is the immutable, content-addressed list of components
 // belonging to ONE signed release. Schema v1 installs all components.
-// Schema v2 supports signed topology and named preset file selection;
-// dependencies, conflicts and conditional rules are not part of v0.24.2.
+// Schema v2 supports signed topology; schema v3 binds executable dependency
+// and conflict constraints for the native and Go resolvers.
 // Never accept arbitrary file paths or executable actions from local selection.
 type ComponentCatalog0241 struct {
 	SchemaVersion string                 `json:"schemaVersion"`
@@ -49,18 +50,27 @@ type ComponentCatalog0241 struct {
 	Presets       []CatalogPreset0242    `json:"presets,omitempty"`
 	DefaultPreset string                 `json:"defaultPreset,omitempty"`
 }
+type ComponentRequirement0243 struct {
+	ID           string `json:"id"`
+	VersionRange string `json:"versionRange,omitempty"`
+}
+
 type CatalogComponent0241 struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	Files       []string          `json:"files"`
-	Description string            `json:"description,omitempty"`
-	CategoryID  string            `json:"categoryId,omitempty"`
-	GroupID     string            `json:"groupId,omitempty"`
-	Required    bool              `json:"required,omitempty"`
-	Default     bool              `json:"default,omitempty"`
-	Visible     *bool             `json:"visible,omitempty"`
-	Limited     bool              `json:"limited,omitempty"`
-	Metadata    map[string]string `json:"metadata,omitempty"`
+	ID             string                     `json:"id"`
+	Name           string                     `json:"name"`
+	Files          []string                   `json:"files"`
+	Version        string                     `json:"version,omitempty"`
+	Dependencies   []ComponentRequirement0243 `json:"dependencies,omitempty"`
+	Conflicts      []ComponentRequirement0243 `json:"conflicts,omitempty"`
+	ExclusiveGroup string                     `json:"exclusiveGroup,omitempty"`
+	Description    string                     `json:"description,omitempty"`
+	CategoryID     string                     `json:"categoryId,omitempty"`
+	GroupID        string                     `json:"groupId,omitempty"`
+	Required       bool                       `json:"required,omitempty"`
+	Default        bool                       `json:"default,omitempty"`
+	Visible        *bool                      `json:"visible,omitempty"`
+	Limited        bool                       `json:"limited,omitempty"`
+	Metadata       map[string]string          `json:"metadata,omitempty"`
 }
 
 // Canonical framing is language-independent (Go/Rust) and unambiguous:
@@ -112,8 +122,8 @@ func ValidateComponentCatalog0241(m Manifest) error {
 		return nil
 	}
 	cat := m.ComponentCatalog
-	if cat == nil || (cat.SchemaVersion != ComponentCatalogSchema0241 && cat.SchemaVersion != ComponentCatalogSchema0242) || cat.Revision == 0 ||
-		len(cat.Components) > 4096 || len(cat.Digest) != 64 || cat.Digest != ComponentCatalogDigest0242(*cat) {
+	if cat == nil || (cat.SchemaVersion != ComponentCatalogSchema0241 && cat.SchemaVersion != ComponentCatalogSchema0242 && cat.SchemaVersion != ComponentCatalogSchema0243) || cat.Revision == 0 ||
+		len(cat.Components) > 4096 || len(cat.Digest) != 64 || cat.Digest != ComponentCatalogDigest0243(*cat) {
 		return errors.New("invalid v3 component catalog snapshot/digest")
 	}
 	if err := ValidateCatalogTopology0242(*cat); err != nil {
@@ -250,11 +260,18 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 			return errors.New("v1 catalog cannot contain v2 topology")
 		}
 		for _, c := range cat.Components {
-			if c.Description != "" || c.CategoryID != "" || c.GroupID != "" || c.Required || c.Default || c.Visible != nil || c.Limited || len(c.Metadata) > 0 {
+			if c.Version != "" || len(c.Dependencies) > 0 || len(c.Conflicts) > 0 || c.ExclusiveGroup != "" || c.Description != "" || c.CategoryID != "" || c.GroupID != "" || c.Required || c.Default || c.Visible != nil || c.Limited || len(c.Metadata) > 0 {
 				return fmt.Errorf("v1 component %q has v2 fields", c.ID)
 			}
 		}
 		return nil
+	}
+	if cat.SchemaVersion == ComponentCatalogSchema0242 {
+		for _, c := range cat.Components {
+			if c.Version != "" || len(c.Dependencies) > 0 || len(c.Conflicts) > 0 || c.ExclusiveGroup != "" {
+				return fmt.Errorf("v2 component %q contains unsigned v3 constraints", c.ID)
+			}
+		}
 	}
 	if len(cat.Categories) > 256 || len(cat.Groups) > 1024 || len(cat.Presets) > 128 {
 		return errors.New("catalog topology exceeds limits")
@@ -366,15 +383,20 @@ func ValidateCatalogTopology0242(cat ComponentCatalog0241) error {
 	if cat.DefaultPreset != "" && !presets[cat.DefaultPreset] {
 		return fmt.Errorf("unknown default preset %q", cat.DefaultPreset)
 	}
+	if cat.SchemaVersion == ComponentCatalogSchema0243 {
+		return ValidateCatalogRules0243(cat)
+	}
 	return nil
 }
 
-// ResolveCatalogPreset0242 is the operational default/preset selector shared
-// with native clients. O03 dependency/conflict solving is intentionally NOT
-// represented as supported: this resolves only signed 0.24.2 topology.
+// ResolveCatalogPreset0242 preserves the legacy API while applying the
+// dependency/conflict resolver to signed catalog schema v3.
 func ResolveCatalogPreset0242(cat ComponentCatalog0241, preset string) ([]string, error) {
 	if err := ValidateCatalogTopology0242(cat); err != nil {
 		return nil, err
+	}
+	if cat.SchemaVersion == ComponentCatalogSchema0243 {
+		return resolveCatalogGraph0243(cat, preset)
 	}
 	if cat.SchemaVersion == ComponentCatalogSchema0241 {
 		out := make([]string, 0, len(cat.Components))

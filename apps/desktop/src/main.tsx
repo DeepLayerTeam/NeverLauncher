@@ -34,13 +34,82 @@ type DesktopSettings = {
   configPath?: string;
 };
 
-type CatalogComponent = { id:string; name:string; files:string[]; description?:string; categoryId?:string; groupId?:string; required?:boolean; default?:boolean; visible?:boolean; limited?:boolean; metadata?:Record<string,string> };
+type CatalogRequirement = {id:string;versionRange?:string};
+type CatalogComponent = { id:string; name:string; files:string[]; version?:string; dependencies?:CatalogRequirement[]; conflicts?:CatalogRequirement[]; exclusiveGroup?:string; description?:string; categoryId?:string; groupId?:string; required?:boolean; default?:boolean; visible?:boolean; limited?:boolean; metadata?:Record<string,string> };
 type ComponentCatalog = {schemaVersion:string; revision:number; digest:string; components:CatalogComponent[]; categories?:{id:string;name:string;description?:string;parentId?:string}[];groups?:{id:string;name:string;description?:string;parentId?:string;categoryId?:string}[];presets?:{id:string;name:string;description?:string;components:string[]}[];defaultPreset?:string};
-function componentPresetSelection(cat:ComponentCatalog,preset:string):Set<string>{
-  if(cat.schemaVersion==='1.0')return new Set(cat.components.map(x=>x.id));
-  const resolved=preset||cat.defaultPreset||'';
-  const requested=resolved?cat.presets?.find(x=>x.id===resolved)?.components:cat.components.filter(x=>x.default).map(x=>x.id);
-  return new Set([...cat.components.filter(x=>x.required).map(x=>x.id),...(requested||[])]);
+// UI explanation only. NeverRuntime's verified resolver is authoritative for IO and launch.
+function previewVersion0243(actual:string,range:string):boolean {
+  if(!range.trim()||range.trim()==='*')return true;
+  const parse=(value:string):{parts:number[];pre:string[]}|null=>{
+    const match=/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(value);
+    if(!match)return null;
+    const parts=match.slice(1,4).map(Number);
+    return parts.every(Number.isSafeInteger)?{parts,pre:match[4]?.split('.')||[]}:null;
+  };
+  const compare=(a:ReturnType<typeof parse>,b:ReturnType<typeof parse>):number=>{
+    if(!a||!b)throw new Error('Некорректная версия');
+    for(let i=0;i<3;i++)if(a.parts[i]!==b.parts[i])return a.parts[i]<b.parts[i]?-1:1;
+    if(!a.pre.length&&b.pre.length)return 1;if(a.pre.length&&!b.pre.length)return -1;
+    for(let i=0;i<Math.min(a.pre.length,b.pre.length);i++){
+      const x=a.pre[i],y=b.pre[i];const xn=/^\d+$/.test(x),yn=/^\d+$/.test(y);
+      if(xn&&yn){const xb=BigInt(x),yb=BigInt(y);if(xb!==yb)return xb<yb?-1:1;continue;}
+      if(xn!==yn)return xn?-1:1;
+      if(x!==y)return x<y?-1:1;
+    }
+    return Math.sign(a.pre.length-b.pre.length);
+  };
+  const installed=parse(actual);if(!installed)throw new Error(`Некорректная версия ${actual}`);
+  return range.split('||').some(branch=>{
+    const pieces=branch.trim().split(/\s+/);if(!branch.trim())throw new Error(`Некорректный диапазон ${range}`);
+    return pieces.every(token=>{
+      if(token==='*')return true;
+      const match=/^(>=|<=|>|<|=|\^|~)?(.+)$/.exec(token);if(!match)throw new Error(`Некорректное условие ${token}`);
+      const op=match[1]||'=';const required=parse(match[2]);if(!required)throw new Error(`Некорректная версия ${match[2]}`);
+      const result=compare(installed,required);
+      if(op==='=')return result===0;if(op==='>=')return result>=0;if(op==='>')return result>0;if(op==='<=')return result<=0;if(op==='<')return result<0;
+      const next=[...required.parts];
+      if(op==='~'){next[1]++;next[2]=0;}
+      else if(next[0]>0){next[0]++;next[1]=0;next[2]=0;}
+      else if(next[1]>0){next[1]++;next[2]=0;}else next[2]++;
+      return result>=0&&compare(installed,{parts:next,pre:[]})<0;
+    });
+  });
+}
+function componentPresetPlan0243(cat:ComponentCatalog,preset:string):{selected:Set<string>;reasons:Map<string,string>;error:string|null}{
+  const chosen=new Set<string>();const reasons=new Map<string,string>();
+  if(cat.schemaVersion==='1.0')return {selected:new Set(cat.components.map(c=>c.id)),reasons,error:null};
+  const byID=new Map(cat.components.map(c=>[c.id,c]));
+  const presetID=preset||cat.defaultPreset;
+  const selectedPreset=cat.presets?.find(p=>p.id===presetID);
+  if(presetID&&!selectedPreset)return {selected:chosen,reasons,error:`Неизвестный пресет: ${presetID}`};
+  for(const c of cat.components)if(c.required){chosen.add(c.id);reasons.set(c.id,'Обязательный компонент релиза');}
+  const roots=selectedPreset?selectedPreset.components:cat.components.filter(c=>c.default).map(c=>c.id);
+  for(const id of roots){chosen.add(id);if(!reasons.has(id))reasons.set(id,presetID?`Пресет ${presetID}`:'Включён по умолчанию');}
+  if(cat.schemaVersion!=='3.0')return {selected:chosen,reasons,error:null};
+  const expanded=new Set<string>();const stack:string[]=[];
+  try {
+    const visit=(id:string)=>{
+      if(stack.includes(id))throw new Error(`Циклическая зависимость: ${[...stack,id].join(' → ')}`);
+      if(expanded.has(id))return;
+      const c=byID.get(id);if(!c)throw new Error(`Неизвестный компонент: ${id}`);
+      stack.push(id);
+      for(const dep of c.dependencies||[]){
+        const required=byID.get(dep.id);if(!required)throw new Error(`Для ${id} отсутствует зависимость ${dep.id}`);
+        if(!previewVersion0243(required.version||'',dep.versionRange||''))throw new Error(`${id} требует ${dep.id} ${dep.versionRange||'*'}, доступна ${required.version||'неизвестна'}`);
+        chosen.add(dep.id);if(!reasons.has(dep.id))reasons.set(dep.id,`Требуется компоненту ${id}`);
+        visit(dep.id);
+      }
+      stack.pop();expanded.add(id);
+    };
+    for(const c of cat.components)if(chosen.has(c.id))visit(c.id);
+    const groups=new Map<string,string>();
+    for(const c of cat.components){
+      if(!chosen.has(c.id))continue;
+      if(c.exclusiveGroup){const other=groups.get(c.exclusiveGroup);if(other)throw new Error(`Взаимоисключающие компоненты: ${other} и ${c.id} (${c.exclusiveGroup})`);groups.set(c.exclusiveGroup,c.id);}
+      for(const conflict of c.conflicts||[]){const other=byID.get(conflict.id);if(other&&chosen.has(other.id)&&previewVersion0243(other.version||'',conflict.versionRange||''))throw new Error(`Конфликт: ${c.id} несовместим с ${other.id} ${other.version||''}`);}
+    }
+  }catch(error){return {selected:chosen,reasons,error:String(error instanceof Error?error.message:error)};}
+  return {selected:chosen,reasons,error:null};
 }
 // Breadcrumbs are calculated from the verified owner-defined hierarchy.
 function componentTopologyLabel(cat:ComponentCatalog,component:CatalogComponent):string {
@@ -1542,15 +1611,17 @@ function ProjectPanel({ projects, selectedProject, setSelectedProject, loadProje
 
 function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,manifest,componentPreset,setComponentPreset}:any){
   const cat:ComponentCatalog|undefined=manifest?.componentCatalog;
-  const selected=cat?componentPresetSelection(cat,componentPreset):new Set<string>();
+  const plan=cat?componentPresetPlan0243(cat,componentPreset):null;
+  const selected=plan?.selected||new Set<string>();
   const files=cat?.components.filter(c=>selected.has(c.id)).flatMap(c=>c.files)||[];
   const bytes=manifest?.files.filter((f:ManifestFile)=>files.includes(f.path)).reduce((sum:number,f:ManifestFile)=>sum+f.size,0)||0;
   return <section className="panel"><h3>Профиль и компоненты</h3><div className="toolbar inline"><button onClick={loadManifest}>Загрузить манифест</button></div>
     <div className="list">{profiles.map((profile:BackendProfile)=><button key={profile.id} className={selectedProfile===profile.id?'row activeRow':'row'} onClick={()=>setSelectedProfile(profile.id)}><strong>{profile.title??profile.name??profile.id}</strong><span>{profile.loader??'vanilla'}</span></button>)}</div>
     {cat&&<article className="card"><h3>Подписанные компоненты (rev {cat.revision})</h3>
-      {cat.schemaVersion==='2.0'&&<label>Пресет<select value={componentPreset} onChange={(e)=>setComponentPreset(e.target.value)}><option value="">По умолчанию{cat.defaultPreset?` (${cat.defaultPreset})`:''}</option>{cat.presets?.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+      {(cat.schemaVersion==='2.0'||cat.schemaVersion==='3.0')&&<label>Пресет<select value={componentPreset} onChange={(e)=>setComponentPreset(e.target.value)}><option value="">По умолчанию{cat.defaultPreset?` (${cat.defaultPreset})`:''}</option>{cat.presets?.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+      {plan?.error&&<p role="alert" className="error">Недопустимая конфигурация: {plan.error}. Установка и запуск будут заблокированы native resolver.</p>}
       <p>Выбрано {selected.size} компонентов; объём данных каталога {Math.round(bytes/1024)} КиБ. При изменении пресета используйте «Скачать/Обновить» для транзакционной установки. Required включаются всегда.</p>
-      {cat.components.filter(c=>c.visible!==false||selected.has(c.id)).map(c=><div key={c.id} className="row"><strong>{selected.has(c.id)?'✓ ':''}{c.name}</strong><span>{[c.required?'обязательный':null,c.default?'по умолчанию':null,c.limited?'ограниченный':null,c.description||null,componentTopologyLabel(cat,c)||null].filter(Boolean).join(' · ')}</span></div>)}
+      {cat.components.filter(c=>c.visible!==false||selected.has(c.id)).map(c=><div key={c.id} className="row"><strong>{selected.has(c.id)?'✓ ':''}{c.name}</strong><span>{[c.required?'обязательный':null,c.default?'по умолчанию':null,c.limited?'ограниченный':null,c.description||null,plan?.reasons.get(c.id)||null,componentTopologyLabel(cat,c)||null].filter(Boolean).join(' · ')}</span></div>)}
     </article>}
     <pre>{manifest?JSON.stringify({projectId:manifest.projectId,profileId:manifest.profileId,version:manifest.version,files:manifest.files.length,catalogDigest:cat?.digest},null,2):'Манифест не загружен.'}</pre>
   </section>;

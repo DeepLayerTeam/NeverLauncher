@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0062_component_topology_presets_0242" {
+	if st.Current != "0063_dependency_conflict_resolver_0243" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -738,6 +738,18 @@ func TestComponentTopologyDatabaseGuard0242(t *testing.T) {
 	for _, term := range []string{"('1.0','2.0')", "published release cannot be rewritten", "release profileSnapshot is pinned", "release snapshot not found in immutable history", "invalid v3 component catalog snapshot"} {
 		if !strings.Contains(string(b), term) {
 			t.Fatalf("missing DB guard %s", term)
+		}
+	}
+}
+
+func TestDependencyConflictMigrationGuard0243(t *testing.T) {
+	b, err := os.ReadFile("sql/0063_dependency_conflict_resolver_0243.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, phrase := range []string{"('1.0','2.0','3.0')", "published release cannot be rewritten", "release profileSnapshot is pinned", "release snapshot not found in immutable history"} {
+		if !strings.Contains(string(b), phrase) {
+			t.Fatalf("0063 guard missing %q", phrase)
 		}
 	}
 }

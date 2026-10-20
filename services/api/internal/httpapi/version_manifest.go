@@ -87,7 +87,9 @@ func (s Server) adminVersionManifestUpdate(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		revision := manifest.ComponentCatalog.Revision + 1
-		if req.ComponentCatalog.SchemaVersion == model.ComponentCatalogSchema0242 {
+		if req.ComponentCatalog.SchemaVersion == model.ComponentCatalogSchema0243 {
+			manifest.ComponentCatalog = ptrComponentCatalog0241(model.NewComponentCatalog0243(*req.ComponentCatalog, revision))
+		} else if req.ComponentCatalog.SchemaVersion == model.ComponentCatalogSchema0242 {
 			manifest.ComponentCatalog = ptrComponentCatalog0241(model.NewComponentCatalog0242(*req.ComponentCatalog, revision))
 		} else if req.ComponentCatalog.SchemaVersion == model.ComponentCatalogSchema0241 {
 			manifest.ComponentCatalog = ptrComponentCatalog0241(model.NewComponentCatalog0241(req.ComponentCatalog.Components, revision))
