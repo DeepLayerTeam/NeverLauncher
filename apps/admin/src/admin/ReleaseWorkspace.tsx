@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ReleaseApi, type Draft, type DraftFields, type PackageInfo, type Preview, type ValidationReport } from '../api/release';
 import { JobMonitor } from './JobMonitor';
 import { BuildWorkspacePanel } from './BuildWorkspacePanel';
+import { ComponentGraphEditor0248 } from './ComponentGraphEditor0248';
 
 type Step = 'project'|'profile'|'build'|'verify'|'channel';
 const steps: Array<{id: Step; title:string}> = [
@@ -28,6 +29,9 @@ export function ReleaseWorkspace({backendUrl,token,projectId,canPrepare,canFileW
   const [monitorId,setMonitorId] = useState('');
   const [uploadFile,setUploadFile] = useState<File|null>(null);
   const [uploadPath,setUploadPath] = useState('');
+  const [uploadOwnership,setUploadOwnership] = useState<'required'|'managed'|'optional'>('required');
+  const [catalogRefresh,setCatalogRefresh] = useState(0);
+  const [catalogBlocking,setCatalogBlocking] = useState(false);
   const [busy,setBusy] = useState(false);
   const [notice,setNotice] = useState('');
   const [error,setError] = useState('');
@@ -93,11 +97,12 @@ export function ReleaseWorkspace({backendUrl,token,projectId,canPrepare,canFileW
     if(info)await loadChecks(info.packageId).catch(e=>setError(printable(e)));
   }
   async function upload(){if(!uploadFile||!form.packageId)return;
-    const result=await perform(()=>api.upload(form.packageId,uploadFile,uploadPath||uploadFile.name),'Файл загружен и SHA-256 проверен Backend.');
-    if(result){setUploadFile(null);setUploadPath('');await loadChecks(form.packageId).catch(e=>setError(printable(e)));}
+    const result=await perform(()=>api.upload(form.packageId,uploadFile,uploadPath||uploadFile.name,uploadOwnership),'Файл загружен и SHA-256 проверен Backend.');
+    if(result){setUploadFile(null);setUploadPath('');setCatalogRefresh(v=>v+1);await loadChecks(form.packageId).catch(e=>setError(printable(e)));}
   }
   async function packageAction(action:'validate'|'sign'|'stage'|'integrity-check'){
     if(!form.packageId)return;
+    if(action==='sign' && catalogBlocking){setError('Необходимо сохранить изменения каталога и пройти проверку Backend до подписи.');return}
     await perform(async()=>{const result=await api.packageAction<Record<string,unknown>>(form.packageId,action);await loadChecks(form.packageId);return result;},`${action}: ответ Backend получен.`);
   }
   async function submitEvidence(file:File){
@@ -165,16 +170,20 @@ export function ReleaseWorkspace({backendUrl,token,projectId,canPrepare,canFileW
       {form.packageId && <><p>Статус: <strong>{packageInfo?.status||'загрузка...'}</strong></p>
         <label className="field">Файл<input type="file" onChange={(e: React.ChangeEvent<HTMLInputElement>)=>{setUploadFile(e.target.files?.[0]||null);setUploadPath(e.target.files?.[0]?.name||'');}} /></label>
         <label className="field">Путь внутри сборки<input value={uploadPath} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>setUploadPath(e.target.value)} placeholder="mods/example.jar" /></label>
+        <label className="field">Ownership файла<select value={uploadOwnership} onChange={e=>setUploadOwnership(e.target.value as typeof uploadOwnership)}><option value="required">required</option><option value="managed">managed</option><option value="optional">optional (для каталога компонентов)</option></select></label>
         <button disabled={busy||!canFileWrite||!uploadFile||packageInfo?.status==='published'} onClick={()=>void upload()}>Загрузить с проверкой SHA-256</button>
         <h4>Файлы пакета</h4><ul>{(packageInfo?.files||[]).map(f=><li key={f.path}><code>{f.path}</code> ({f.size} байт) — {f.sha256.slice(0,16)}…</li>)}</ul>
         {!packageInfo?.files?.length&&<p className="muted">Файлы не загружены.</p>}
+        {packageInfo?.manifestSchemaVersion==='3.0'&&<ComponentGraphEditor0248 key={`${form.packageId}-${catalogRefresh}`} api={api} packageId={form.packageId} canEdit={canPrepare} onChange={setCatalogBlocking}/>}
+        {packageInfo?.manifestSchemaVersion!=='3.0'&&<p className="muted">Этот пакет создан с Manifest v2 и не поддерживает каталог компонентов. Для редактора создайте новый v3-пакет.</p>}
         <button disabled={busy} onClick={()=>void save('verify')}>Сохранить и перейти к проверкам</button></>}
     </article>}
     {step==='verify' && <article className="subcard"><h3>4. Проверки, подпись, runtime evidence</h3>
+      {form.packageId&&packageInfo?.manifestSchemaVersion==='3.0'&&<ComponentGraphEditor0248 key={`${form.packageId}-verify-${catalogRefresh}`} api={api} packageId={form.packageId} canEdit={canPrepare} onChange={setCatalogBlocking}/>}
       <p>Реальная цепочка: validate → Ed25519 sign → stage → integrity-check → runtime evidence (при необходимости).</p>
       <div className="buttonRow">
         <button disabled={busy||!canPrepare||!form.packageId} onClick={()=>void packageAction('validate')}>Validate</button>
-        <button disabled={busy||!canPrepare||!form.packageId} onClick={()=>void packageAction('sign')}>Подписать Ed25519 (step-up)</button>
+        <button disabled={busy||!canPrepare||!form.packageId||catalogBlocking} onClick={()=>void packageAction('sign')}>Подписать Ed25519 (step-up)</button>
         <button disabled={busy||!canPrepare||!form.packageId} onClick={()=>void packageAction('stage')}>Stage</button>
         <button disabled={busy||!canPrepare||!form.packageId} onClick={()=>void packageAction('integrity-check')}>Integrity check</button>
         <button disabled={!form.packageId||busy} onClick={()=>void loadChecks(form.packageId).catch(e=>setError(printable(e)))}>Обновить результаты</button>

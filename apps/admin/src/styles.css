@@ -137,3 +137,17 @@ code { color: #bfdbfe; }
 .configFields .field,.auditFilters .field{min-width:0;}
 .configFields input[type=checkbox]{width:24px;height:24px;}
 .configRestore input{max-width:320px;}
+
+/* 0.24.8: component editor is part of the release lifecycle, not a JSON textarea */
+.componentEditor0248 { margin-top: 1.25rem; }
+.componentEditorLayout0248 { display:grid; grid-template-columns:minmax(170px, 260px) minmax(0,1fr); gap:1rem; margin:1rem 0; }
+.componentEditorList0248 { display:flex; flex-direction:column; gap:.5rem; min-width:0; }
+.componentEditorItem0248 { text-align:left; display:flex; justify-content:space-between; gap:.5rem; width:100%; overflow-wrap:anywhere; }
+.componentEditorItem0248[aria-pressed="true"] { outline:2px solid var(--accent, #488bff); }
+.componentEditorDetails0248 { min-width:0; display:grid; gap:.75rem; align-content:start; }
+.componentEditorFlags0248 { display:flex; gap:.8rem; flex-wrap:wrap; }
+.componentEditorFlags0248 label,.componentEditorFile0248 { display:flex; align-items:center; gap:.45rem; overflow-wrap:anywhere; }
+.componentEditorAction0248 { border:1px solid var(--border, #5c6473); border-radius:8px; padding:12px; display:grid; gap:.5rem; }
+.componentEditorGraph0248 { max-height:250px; overflow:auto; }
+.componentEditorGraph0248 li { overflow-wrap:anywhere; }
+@media(max-width:760px) { .componentEditorLayout0248 { grid-template-columns:1fr; } .componentEditorList0248 { max-height:300px; overflow:auto; } }

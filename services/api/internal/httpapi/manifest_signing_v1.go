@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -39,6 +40,16 @@ func (s Server) signManifest(manifest model.Manifest) (model.Manifest, error) {
 	}
 	if err := model.ValidateManifestSchema(manifest); err != nil {
 		return model.Manifest{}, err
+	}
+	// Publication must not bypass the Admin graph preflight through the legacy
+	// manifest update route. Reject statically impossible signed v5 presets.
+	if cat := manifest.ComponentCatalog; cat != nil && cat.SchemaVersion == model.ComponentCatalogSchema0245 {
+		names := append([]string{""}, presetIDs0248(*cat)...)
+		for _, name := range names {
+			if _, err := model.PreviewCatalogGraph0248(*cat, name); err != nil {
+				return model.Manifest{}, fmt.Errorf("component preset %q: %w", name, err)
+			}
+		}
 	}
 	manifest.Signature = nil
 	payload, err := json.Marshal(manifest)

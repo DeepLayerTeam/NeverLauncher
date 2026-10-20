@@ -1,3 +1,12 @@
+## 0.24.8 — Admin Component Graph Editor
+
+- Added a real Admin editor for signed-catalog topology, nested categories/groups, presets, component metadata, conditional rules and four signed optional actions.
+- Release Workspace creates Manifest v3 packages and supports `optional` ownership for uploaded files, with server-side hashing.
+- Added preview and CAS save of the complete catalog using the existing Backend validation and deterministic graph resolver; final digest and revision are recalculated server-side.
+- Added repository-atomic draft catalog updates that can repair temporarily unassigned optional files without rewriting pinned identity or published snapshots.
+- Added mandatory graph checks at Ed25519 signing, preventing bypass via legacy draft-manifest mutation.
+- Added regression tests and [authoring guide](docs/admin-component-graph-editor-0248.md).
+
 ## 0.24.7 — Desktop Optional Components UI
 
 - Подписанный пользовательский выбор компонентов поверх пресетов; native resolver проверяет зависимости, исключения и условия.

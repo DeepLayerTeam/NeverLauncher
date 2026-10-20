@@ -2,7 +2,7 @@ import { requestJSON } from './client.ts';
 
 export interface Draft { id: string; projectId: string; ownerId: string; profileId: string; channel: string; version: string; minecraftVersion: string; loader: string; packageId: string; jobId: string; step: string; revision: number; createdAt: string; updatedAt: string }
 export type DraftFields = Pick<Draft,'projectId'|'profileId'|'channel'|'version'|'minecraftVersion'|'loader'|'packageId'|'jobId'|'step'>;
-export interface PackageInfo { packageId: string; projectId: string; profileId: string; channel: string; version: string; status: string; minecraft?: {version:string;loader:string}; files: Array<{ path: string; size: number; sha256: string }> }
+export interface PackageInfo { packageId: string; projectId: string; profileId: string; channel: string; version: string; status: string; manifestSchemaVersion?:string; minecraft?: {version:string;loader:string}; files: Array<{ path: string; size: number; sha256: string }> }
 export interface ValidationReport { integrity: null | { result: string; manifestDigest: string; artifactDigest: string; checkedAt: string }; runtime: Array<{ result: string; targetId: string; actualClient: boolean; serverJoin: boolean; finishedAt: string }>; policy: { requiredLevel: string; requireServerJoin: boolean } }
 export interface Preview { valid: boolean; permission: string; effect: Record<string,string> }
 export interface Operation { id: string; projectId: string; resourceId: string; status: string; kind: string }
@@ -19,7 +19,10 @@ export class ReleaseApi {
   linkedJob(id: string) { return this.get<Operation>(`/api/v1/release-drafts/${encodeURIComponent(id)}/operation`); }
   remove(id: string) { return this.send<{deleted: boolean}>(`/api/v1/release-drafts/${encodeURIComponent(id)}`,'DELETE'); }
   package(id: string) { return this.get<PackageInfo>(`/api/v1/packages/${encodeURIComponent(id)}`); }
-  createPackage(fields: DraftFields) { return this.send<PackageInfo>('/api/v1/packages','POST',{projectId:fields.projectId,profileId:fields.profileId,channel:fields.channel,version:fields.version,minecraftVersion:fields.minecraftVersion,loader:fields.loader}); }
+  createPackage(fields: DraftFields) { return this.send<PackageInfo>('/api/v1/packages','POST',{projectId:fields.projectId,profileId:fields.profileId,channel:fields.channel,version:fields.version,minecraftVersion:fields.minecraftVersion,loader:fields.loader,manifestSchemaVersion:"3.0"}); }
+  componentEditorGet(id:string) {return this.get<import('../admin/component-editor-model-0248').CatalogSnapshot0248>(`/api/v1/packages/${encodeURIComponent(id)}/component-catalog`);}
+  componentEditorPreview(id:string, payload: import('../admin/component-editor-model-0248').CatalogMutation0248) {return this.send<import('../admin/component-editor-model-0248').CatalogPreview0248>(`/api/v1/packages/${encodeURIComponent(id)}/component-catalog/preview`,'POST',payload);}
+  componentEditorSave(id:string, payload: import('../admin/component-editor-model-0248').CatalogMutation0248) {return this.send<{catalog:import('../admin/component-editor-model-0248').Catalog0248; status:string;preview:import('../admin/component-editor-model-0248').CatalogPreview0248}>(`/api/v1/packages/${encodeURIComponent(id)}/component-catalog`,'PUT',payload);}
   packageAction<T>(id: string,action: 'validate'|'sign'|'stage'|'integrity-check') { return this.send<T>(`/api/v1/packages/${encodeURIComponent(id)}/${action}`,'POST'); }
   validations(id: string) { return this.get<ValidationReport>(`/api/v1/packages/${encodeURIComponent(id)}/validations`); }
   policy(id: string) { return this.get<ValidationReport['policy']>(`/api/v1/projects/${encodeURIComponent(id)}/validation-policy`); }
@@ -28,8 +31,8 @@ export class ReleaseApi {
   executeOperation(req: Record<string,unknown>) { return this.send<Operation>('/api/v1/operations/execute','POST',req); }
   profiles(id: string) { return this.get<{items: Array<{id:string;name:string;loader:string}>}>(`/api/v1/projects/${encodeURIComponent(id)}/profiles`); }
   releases(id: string) { return this.get<{items: Array<{id:string;version:string;profileId:string;channel:string;status:string}>}>(`/api/v1/projects/${encodeURIComponent(id)}/versions`); }
-  async upload(id: string, file: File, path: string) {
-    const data = new FormData();data.append('path',path);data.append('file',file);
+  async upload(id: string, file: File, path: string, ownership: "required"|"managed"|"optional" = "required") {
+    const data = new FormData();data.append('path',path);data.append('file',file);data.append('ownership',ownership);
     return this.sendForm(`/api/v1/packages/${encodeURIComponent(id)}/files`,data);
   }
   private async sendForm(path: string,body: FormData) {

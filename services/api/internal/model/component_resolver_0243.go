@@ -467,3 +467,13 @@ func resolveCatalogGraph0243(cat ComponentCatalog0241, preset string) ([]string,
 	}
 	return result, nil
 }
+
+// PreviewCatalogGraph0248 uses the same signed-graph resolver as the installer
+// without claiming simulated OS/Java/permissions are real authorization.
+// This checks static preset conflicts, cycles and dependency version ranges.
+func PreviewCatalogGraph0248(cat ComponentCatalog0241, preset string) ([]string, error) {
+	if err := ValidateCatalogTopology0242(cat); err != nil {
+		return nil, err
+	}
+	return resolveCatalogGraph0243(cat, preset)
+}

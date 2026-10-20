@@ -19,12 +19,13 @@ import (
 )
 
 type packageCreateRequest struct {
-	ProjectID        string `json:"projectId"`
-	ProfileID        string `json:"profileId"`
-	Channel          string `json:"channel"`
-	Version          string `json:"version"`
-	MinecraftVersion string `json:"minecraftVersion"`
-	Loader           string `json:"loader"`
+	ProjectID             string `json:"projectId"`
+	ProfileID             string `json:"profileId"`
+	Channel               string `json:"channel"`
+	Version               string `json:"version"`
+	MinecraftVersion      string `json:"minecraftVersion"`
+	Loader                string `json:"loader"`
+	ManifestSchemaVersion string `json:"manifestSchemaVersion,omitempty"`
 }
 
 type packageActionRequest struct {
@@ -170,7 +171,23 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer unlockCreate()
-	release, err := s.Repo.CreateVersion(req.ProjectID, req.ProfileID, req.Channel, req.Version)
+	if req.ManifestSchemaVersion != "" && req.ManifestSchemaVersion != model.ManifestSchemaV2 && req.ManifestSchemaVersion != model.ManifestSchemaV3 {
+		writeError(w, http.StatusBadRequest, "unsupported manifestSchemaVersion")
+		return
+	}
+	var release model.ReleaseVersion
+	if req.ManifestSchemaVersion == model.ManifestSchemaV3 {
+		creator, ok := s.Repo.(interface {
+			CreateVersionV3(string, string, string, string) (model.ReleaseVersion, error)
+		})
+		if !ok {
+			writeError(w, http.StatusInternalServerError, "v3 release creation unavailable")
+			return
+		}
+		release, err = creator.CreateVersionV3(req.ProjectID, req.ProfileID, req.Channel, req.Version)
+	} else {
+		release, err = s.Repo.CreateVersion(req.ProjectID, req.ProfileID, req.Channel, req.Version)
+	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -520,18 +537,19 @@ func (s Server) packagePayload(release model.ReleaseVersion, files []model.FileO
 		files, _ = s.Repo.ListFiles(release.ProjectID, release.ID)
 	}
 	return map[string]any{
-		"schemaVersion": apiContractVersion,
-		"toolVersion":   s.Version,
-		"packageId":     release.ID,
-		"projectId":     release.ProjectID,
-		"profileId":     release.ProfileID,
-		"channel":       release.Channel,
-		"version":       release.Version,
-		"minecraft":     release.Manifest.Minecraft,
-		"status":        status,
-		"storageDriver": s.Storage.Driver(),
-		"delivery":      s.deliveryPolicyPayload(),
-		"manifestUrl":   fmt.Sprintf("%s/api/v1/projects/%s/profiles/%s/manifest", strings.TrimRight(s.Config.PublicURL, "/"), release.ProjectID, release.ProfileID),
-		"files":         files,
+		"schemaVersion":         apiContractVersion,
+		"manifestSchemaVersion": release.Manifest.SchemaVersion,
+		"toolVersion":           s.Version,
+		"packageId":             release.ID,
+		"projectId":             release.ProjectID,
+		"profileId":             release.ProfileID,
+		"channel":               release.Channel,
+		"version":               release.Version,
+		"minecraft":             release.Manifest.Minecraft,
+		"status":                status,
+		"storageDriver":         s.Storage.Driver(),
+		"delivery":              s.deliveryPolicyPayload(),
+		"manifestUrl":           fmt.Sprintf("%s/api/v1/projects/%s/profiles/%s/manifest", strings.TrimRight(s.Config.PublicURL, "/"), release.ProjectID, release.ProfileID),
+		"files":                 files,
 	}
 }
