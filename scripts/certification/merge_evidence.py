@@ -55,7 +55,7 @@ def main():
         return 2
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, ensure_ascii=False)+"\n")
-    print(f"0.23.13 platform certification: {result['status']}")
+    print(f"0.24.0 platform certification: {result['status']}")
     return 0 if result["status"]=="passed" else 1
 
 if __name__ == "__main__": raise SystemExit(main())

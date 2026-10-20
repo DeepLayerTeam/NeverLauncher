@@ -34,7 +34,7 @@ def manifest(base: str, files: list[bytes], *, profile: str, poison: bool = True
             "mirrors":[good] if poison and i == 0 else [],
             "required":True, "executable":False, "ownership":"managed"})
     return {"schemaVersion":"1.0", "projectId":"certification", "profileId":profile,
-            "channel":"stable", "version":"0.23.13", "createdAt":"2026-10-20T00:00:00Z",
+            "channel":"stable", "version":"0.24.0", "createdAt":"2026-10-20T00:00:00Z",
             "minecraft":{"version":"1.21.1","loader":"vanilla"},
             "runtime":{"java":{"majorVersion":21,"distribution":"temurin"}},
             "files":entries}

@@ -1,0 +1,92 @@
+name: NeverLauncher 0.24.0 GA (fail-closed)
+on:
+  workflow_dispatch:
+    inputs:
+      evidence_run_id:
+        description: 'Approved run ID containing six SIGNED clean-machine attestations and installers'
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  source-checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: prestarter/go.mod
+      - run: python -m pip install 'cryptography>=43,<47'
+      - name: Check release version, OpenAPI and repository policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat VERSION)" = '0.24.0'
+          python3 scripts/version/manage.py check
+          python3 scripts/contracts/validate-openapi.py
+      - name: GA cryptographic release-gate security tests
+        run: python3 -m unittest discover -s scripts/ga -p 'test_*.py' -v
+      - name: Run real Go installer lifecycle tests
+        working-directory: prestarter
+        run: go test -count=1 -timeout=8m ./...
+      - name: Real HTTP fault injection tests
+        run: python3 -m unittest discover -s scripts/certification -p 'test_*.py' -v
+  verify-signed-release:
+    needs: source-checks
+    runs-on: ubuntu-24.04
+    environment: production-release
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'cryptography>=43,<47'
+      - name: Fetch six platform signed evidence packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ga-0240-*
+          run-id: ${{ inputs.evidence_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist/ga-raw
+          merge-multiple: false
+      - name: Normalize and require all six signed evidence folders
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/ga-attestations
+          for target in windows-amd64 windows-arm64 linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
+            test -d "dist/ga-raw/ga-0240-${target}"
+            mv "dist/ga-raw/ga-0240-${target}" "dist/ga-attestations/${target}"
+          done
+      - name: Reject unsigned, incomplete, mixed-commit or missing releases
+        shell: bash
+        env:
+          ATTESTATION_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_GA_ATTESTATION_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          test "${#ATTESTATION_PUBLIC_KEY}" -eq 64
+          python3 scripts/ga/release_gate.py \
+            --attestations dist/ga-attestations \
+            --trusted-attestation-public-key "$ATTESTATION_PUBLIC_KEY" \
+            --commit "$GITHUB_SHA" \
+            --output dist/ga-0240-verification.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ga-0240-verification-${{ github.sha }}
+          path: dist/ga-0240-verification.json
+          if-no-files-found: warn
+          retention-days: 90
+  # GA is approved only when verify-signed-release succeeds. This workflow
+  # intentionally cannot mint certificates, fake VM runs or publish a release.

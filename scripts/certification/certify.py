@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed 0.23.13 certification runner. Writes reproducible evidence, not promises.
+"""Fail-closed 0.24.0 certification runner. Writes reproducible evidence, not promises.
 
 local: run accessible tests and record missing gates as incomplete;
 full: require exact git SHA, clean source, Rust/Go integration, real JVM,
@@ -141,13 +141,13 @@ def rust_suite():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=["local", "full"], default="local")
-    parser.add_argument("--output", type=Path, default=Path("dist/certification-02313/evidence.json"))
+    parser.add_argument("--output", type=Path, default=Path("dist/certification-0240/evidence.json"))
     args = parser.parse_args()
-    if (ROOT/"VERSION").read_text().strip() != "0.23.13":
-        raise SystemExit("VERSION must equal 0.23.13")
+    if (ROOT/"VERSION").read_text().strip() != "0.24.0":
+        raise SystemExit("VERSION must equal 0.24.0")
     try: sha, clean = source_identity()
     except ValueError as e: raise SystemExit(str(e))
-    evidence = {"schemaVersion":"1", "productVersion":"0.23.13", "commit":sha,
+    evidence = {"schemaVersion":"1", "productVersion":"0.24.0", "commit":sha,
         "sourceTreeSha256":tree_digest(), "gitTreeClean":clean,
         "platform": {"system":platform.system(), "machine":platform.machine(), "python":platform.python_version()},
         "generatedAt":dt.datetime.now(dt.timezone.utc).isoformat(), "mode":args.mode,

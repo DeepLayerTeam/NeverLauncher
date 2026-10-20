@@ -1,4 +1,4 @@
-name: NeverLauncher 0.23.13 executable certification
+name: NeverLauncher 0.24.0 executable certification
 on:
   pull_request:
     paths:
@@ -6,10 +6,10 @@ on:
       - 'prestarter/**'
       - 'cli/**'
       - 'scripts/certification/**'
-      - '.github/workflows/certification-02313.yml'
+      - '.github/workflows/certification-0240.yml'
   workflow_dispatch:
   push:
-    tags: ['v0.23.13']
+    tags: ['v0.24.0']
 permissions:
   contents: read
 jobs:
@@ -36,13 +36,13 @@ jobs:
       - name: Python and Go/Rust executable certification
         shell: bash
         run: |
-          python3 scripts/certification/certify.py --mode local --output dist/certification-02313/evidence.json
+          python3 scripts/certification/certify.py --mode local --output dist/certification-0240/evidence.json
       - name: Publish evidence regardless of outcome
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: certification-02313-${{ runner.os }}-${{ runner.arch }}
-          path: dist/certification-02313/
+          name: certification-0240-${{ runner.os }}-${{ runner.arch }}
+          path: dist/certification-0240/
           if-no-files-found: warn
           retention-days: 30
   # Full GA certification is intentionally NOT auto-passed by this matrix:
@@ -56,18 +56,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: certification-02313-*
+          pattern: certification-0240-*
           path: dist/platform-evidence
           merge-multiple: false
       - name: Verify platform evidence same commit and all mandatory gates
         run: |
           python3 scripts/certification/merge_evidence.py \
-            --output dist/certification-02313/aggregate.json \
+            --output dist/certification-0240/aggregate.json \
             dist/platform-evidence/*/evidence.json
       - name: Upload final evidence even when incomplete
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: certification-02313-aggregate
-          path: dist/certification-02313/aggregate.json
+          name: certification-0240-aggregate
+          path: dist/certification-0240/aggregate.json
           if-no-files-found: warn

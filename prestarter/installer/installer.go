@@ -470,18 +470,18 @@ func Install(ctx context.Context, opts Options) error {
 	if rec.Generation == 0 {
 		return errors.New("generation overflow")
 	}
-	data, _ := json.Marshal(rec)
-	if e = atomicWrite(filepath.Join(i.base, "active-"+strconv.FormatUint(rec.Generation%2, 10)+".json"), data); e != nil {
+	// Provision first, commit second. The signed Prestarter may fail while
+	// installing Managed Java or restoring the game. If the pointer were
+	// advanced before that work, a power loss could leave an apparently
+	// active but unusable release. Keep the previous verified pointer intact.
+	if e = i.provision(ctx, rec, opts.NoStart); e != nil {
 		return e
 	}
-	if e = i.provision(ctx, rec, opts.NoStart); e != nil {
-		if prev != nil {
-			prev.Generation = rec.Generation + 1
-			raw, _ := json.Marshal(prev)
-			if save := atomicWrite(filepath.Join(i.base, "active-"+strconv.FormatUint(prev.Generation%2, 10)+".json"), raw); save != nil {
-				return fmt.Errorf("%w; rollback state failed: %v", e, save)
-			}
-		}
+	data, e := json.Marshal(rec)
+	if e != nil {
+		return e
+	}
+	if e = atomicWrite(filepath.Join(i.base, "active-"+strconv.FormatUint(rec.Generation%2, 10)+".json"), data); e != nil {
 		return e
 	}
 	return i.createShortcut(rec, cfg)

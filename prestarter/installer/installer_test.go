@@ -165,3 +165,39 @@ func TestRepairCorruptedInstalledPrestarterFromRetainedOffline(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A canceled bootstrap must never publish a fresh active slot. In particular,
+// an interrupted reinstall must leave the already verified generation intact.
+func TestCanceledBootstrapNeverAdvancesActiveRelease0240(t *testing.T) {
+	root := t.TempDir()
+	opts := signedBundle(t, root, true)
+	i, err := newInstall(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := Install(ctx, opts); err == nil {
+		t.Fatal("canceled Prestarter was reported successful")
+	}
+	if _, err := i.current(); err == nil {
+		t.Fatal("incomplete first installation was marked active")
+	}
+	if err := Install(context.Background(), opts); err != nil {
+		t.Fatal(err)
+	}
+	original, err := i.current()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Install(ctx, opts); err == nil {
+		t.Fatal("canceled update was reported successful")
+	}
+	active, err := i.current()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if active.Generation != original.Generation || active.Release != original.Release {
+		t.Fatalf("active release advanced on failed bootstrap: before=%+v after=%+v", original, active)
+	}
+}
