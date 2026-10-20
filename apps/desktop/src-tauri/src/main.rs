@@ -547,6 +547,57 @@ async fn save_installed_component_choice_0247(
 
 #[derive(serde::Serialize)]
 #[serde(rename_all="camelCase")]
+struct ActiveSelection02410 { manifest:neverruntime::Manifest, component_preset:String }
+
+#[tauri::command]
+async fn active_selection_02410(root:String,pinned_public_key:String)->Result<Option<ActiveSelection02410>,String>{
+    tokio::task::spawn_blocking(move || {
+        let state=neverruntime::transactional_release::verified_active_selection_02410(
+            &PathBuf::from(root),&pinned_public_key)?;
+        Ok(state.map(|(manifest,preset)|ActiveSelection02410{manifest,component_preset:preset.unwrap_or_default()}))
+    }).await.map_err(|e|format!("read active selection task failed: {e}"))?
+}
+
+#[tauri::command]
+async fn export_component_selection_02410(root:String,pinned_public_key:String)->Result<String,String>{
+    tokio::task::spawn_blocking(move || {
+        let (manifest,preset)=neverruntime::transactional_release::verified_active_selection_02410(
+            &PathBuf::from(root),&pinned_public_key)?.ok_or("no installed signed release to export")?;
+        neverruntime::component_selection_02410::export_from_installed_02410(&manifest,preset.as_deref())
+    }).await.map_err(|e|format!("export selection task failed: {e}"))?
+}
+
+#[tauri::command]
+async fn preview_component_migration_02410(
+    manifest:neverruntime::Manifest,root:String,pinned_public_key:String,
+)->Result<Option<neverruntime::component_selection_02410::SelectionMigration02410>,String>{
+    tokio::task::spawn_blocking(move || {
+        neverruntime::verify_manifest_signature(&manifest,&pinned_public_key)?;
+        let Some((source,preset))=neverruntime::transactional_release::verified_active_selection_02410(
+            &PathBuf::from(root),&pinned_public_key)? else{return Ok(None)};
+        // No migration is required when the exact signed release is active.
+        if source.signature.as_ref().map(|s|(&s.signature,&s.public_key))==
+            manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key)) {return Ok(None)}
+        if source.schema_version!="3.0" {return Ok(None)}
+        let text=neverruntime::component_selection_02410::export_from_installed_02410(&source,preset.as_deref())?;
+        let selection=neverruntime::component_selection_02410::parse_import_02410(&text)?;
+        Ok(Some(neverruntime::component_selection_02410::migrate_02410(&selection,&manifest)?))
+    }).await.map_err(|e|format!("component migration task failed: {e}"))?
+}
+
+#[tauri::command]
+async fn preview_import_component_selection_02410(
+    manifest:neverruntime::Manifest,pinned_public_key:String,selection_json:String,
+)->Result<neverruntime::component_selection_02410::SelectionMigration02410,String>{
+    tokio::task::spawn_blocking(move || {
+        neverruntime::verify_manifest_signature(&manifest,&pinned_public_key)?;
+        let selection=neverruntime::component_selection_02410::parse_import_02410(&selection_json)?;
+        neverruntime::component_selection_02410::migrate_02410(&selection,&manifest)
+    }).await.map_err(|e|format!("import selection task failed: {e}"))?
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all="camelCase")]
 struct InstalledChoice0247 {installed:bool,preset:Option<String>}
 
 #[tauri::command]
@@ -1126,6 +1177,6 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }

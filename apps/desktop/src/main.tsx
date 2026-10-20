@@ -5,6 +5,7 @@ import { listen } from '@tauri-apps/api/event';
 import './styles.css';
 import { DesktopExtensions0209 } from './extensions_0209';
 import { ComponentChooser0247 } from './ComponentChooser0247';
+import { ComponentPortability02410 } from './ComponentPortability02410';
 import { parseChoice0247 } from './component_selection_0247';
 import { launchPreferences, scopedServers, type ScopedServer } from './desktop_experience_0229';
 
@@ -1053,13 +1054,9 @@ function App() {
       if (!url) throw new Error('сначала выберите проект и профиль');
       const result = await callTauri<Manifest>('load_manifest', { url, pinnedPublicKey: settings.pinnedPublicKey });
       setManifest(result);
-      // Keep valid custom choices across refreshes; the verified native
-      // resolver rejects removed IDs or a no-longer-compatible preset.
-      let basePreset='';
-      try {basePreset=parseChoice0247(settings.componentPreset||'').base;}catch{basePreset='!invalid';}
-      if(basePreset && !(result.componentCatalog?.presets||[]).some(p=>p.id===basePreset)) {
-        patchSettings('componentPreset','');
-      }
+      // Do not erase the installed choice when a preset or component disappears.
+      // The native migration preview compares this release against the verified
+      // active release and requires explicit confirmation before installing.
       setSelectedProject(result.projectId);
       setSelectedProfile(result.profileId);
       setLaunchPlan(null);
@@ -1270,9 +1267,29 @@ function App() {
     setTransferBusy(true);
     try {
       await callTauri<void>('rollback_client_release', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey });
-      setFiles(manifest ? await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory,preset: settings.componentPreset||null }) : []);
+      // The native pointer is the authority after rollback. Restore BOTH the
+      // manifest and its installed selection, never only the old UI dropdown.
+      const restored=await callTauri<{manifest:Manifest;componentPreset:string}|null>('active_selection_02410',{
+        root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,
+      });
+      if(restored){
+        if(restored.manifest.projectId!==settings.projectId||restored.manifest.profileId!==settings.profileId||
+           restored.manifest.channel!==settings.channel){
+          throw new Error('Rollback restored another profile/channel; select that profile explicitly');
+        }
+        await callTauri('save_installed_component_choice_0247',{
+          manifest:restored.manifest,root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,
+          componentPreset:restored.componentPreset,
+          config:normalizedSettings({...settings,componentPreset:restored.componentPreset}),
+        });
+        setManifest(restored.manifest);
+        patchSettings('componentPreset',restored.componentPreset);
+        setFiles(await callTauri<FileCheckResult[]>('check_files',{
+          manifest:restored.manifest,root:settings.gameDirectory,preset:restored.componentPreset||null,
+        }));
+        log(`Rollback: восстановлен подписанный релиз ${restored.manifest.version} и его выбор компонентов.`);
+      }else{setManifest(null);setFiles([]);log('Rollback: активный релиз отсутствует.');}
       setDownload(null);
-      log('Восстановлен последний исправный игровой релиз. Для запуска загрузите его подписанный manifest.');
     } catch (error) { log(`Откат игрового релиза не выполнен: ${String(error)}`); }
     finally { setTransferBusy(false); }
   }
@@ -1666,7 +1683,10 @@ function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,
   const cat:ComponentCatalog|undefined=manifest?.componentCatalog;
   return <section className="panel"><h3>Профиль и компоненты</h3><div className="toolbar inline"><button onClick={loadManifest}>Загрузить манифест</button></div>
     <div className="list">{profiles.map((profile:BackendProfile)=><button key={profile.id} className={selectedProfile===profile.id?'row activeRow':'row'} onClick={()=>setSelectedProfile(profile.id)}><strong>{profile.title??profile.name??profile.id}</strong><span>{profile.loader??'vanilla'}</span></button>)}</div>
-    {manifest&&cat&&<ComponentChooser0247 manifest={manifest} componentPreset={componentPreset} pinnedPublicKey={pinnedPublicKey} root={root} transferBusy={transferBusy} installSelection={installSelection} topologyLabel={(c)=>componentTopologyLabel(cat,c as CatalogComponent)}/>}
+    {manifest&&cat&&<>
+      <ComponentChooser0247 manifest={manifest} componentPreset={componentPreset} pinnedPublicKey={pinnedPublicKey} root={root} transferBusy={transferBusy} installSelection={installSelection} topologyLabel={(c)=>componentTopologyLabel(cat,c as CatalogComponent)}/>
+      <ComponentPortability02410 manifest={manifest} root={root} pinnedPublicKey={pinnedPublicKey} transferBusy={transferBusy} installSelection={installSelection}/>
+    </>}
     <pre>{manifest?JSON.stringify({projectId:manifest.projectId,profileId:manifest.profileId,version:manifest.version,files:manifest.files.length,catalogDigest:cat?.digest},null,2):'Манифест не загружен.'}</pre>
   </section>;
 }

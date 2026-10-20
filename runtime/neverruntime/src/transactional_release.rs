@@ -782,6 +782,25 @@ mod tests {
         Release{manifest:m.clone(),installed:plan.files.iter().map(|f|f.path.clone()).collect(),
             id:format!("{id:032x}"),preset:Some(preset.into()),plan_sha256:Some(plan.sha256)}
     }
+    #[test]
+    fn active_selection_02410_is_loaded_from_verified_release_pointer_not_settings(){
+        let root=std::env::temp_dir().join(format!("nl-ported-selection-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (manifest,key)=signed_optional_fixture_0246(&root);
+        let initial=release_from_plan_0246(&manifest,"minimal",101);
+        let stage=base(&root).join("test-initial");
+        fs::create_dir_all(stage.join("mods")).unwrap();
+        fs::write(stage.join("mods/core.jar"),b"CORE").unwrap();
+        commit(&root,initial,&key,&stage).unwrap();
+        let (recorded,preset)=verified_active_selection_02410(&root,&key).unwrap().unwrap();
+        assert_eq!(recorded.signature.as_ref().unwrap().signature,manifest.signature.as_ref().unwrap().signature);
+        assert_eq!(preset.as_deref(),Some("minimal"));
+        // User-modified bytes must not be exported as if they were an installed
+        // signed choice, even when the pointer itself is valid.
+        fs::write(root.join("mods/core.jar"),b"TAMPERED").unwrap();
+        assert!(verified_active_selection_02410(&root,&key).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+
     #[tokio::test]
     async fn v5_resolved_plan_reuses_unchanged_bytes_and_rolls_back_only_owned_paths_0246(){
         let root=std::env::temp_dir().join(format!("nl-plan-0246-{}-{:x}",std::process::id(),rand::random::<u64>()));
@@ -1238,4 +1257,17 @@ pub fn matching_installed_preset_0247(manifest:&Manifest,root:&Path,key:&str)->R
     let same=active.manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key))==
         manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key));
     Ok(if same{Some(active.preset)}else{None})
+}
+
+/// Return only a verified, intact active release. Used by migration/export and
+/// rollback UI synchronization. Never treat a persisted Desktop preference as
+/// the installed selection or trust a release pointer without its signature.
+pub fn verified_active_selection_02410(root:&Path,key:&str)->Result<Option<(Manifest,Option<String>)>,String>{
+    let _guard=lock(root)?;
+    let root=root.canonicalize().map_err(|e|e.to_string())?;
+    recover_locked(&root,key)?;
+    let Some(active)=pointer(&root)?.active else{return Ok(None)};
+    validate_release(&active,key)?;
+    if !verify_installed(&root,&active)? {return Err("active release has damaged files; repair before exporting/migrating".into())}
+    Ok(Some((active.manifest,active.preset)))
 }
