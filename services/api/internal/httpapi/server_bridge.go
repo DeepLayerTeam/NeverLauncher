@@ -141,13 +141,14 @@ type rotateBridgeIdentityRequest struct {
 }
 
 type bridgeJoinRequest struct {
-	Username              string `json:"username,omitempty"`
-	ServerID              string `json:"serverId"`
-	ProjectID             string `json:"projectId"`
-	ProfileID             string `json:"profileId"`
-	Channel               string `json:"channel"`
-	MinecraftAccessToken  string `json:"minecraftAccessToken,omitempty"`
-	ContinuousGuardTicket string `json:"continuousGuardTicket,omitempty"`
+	Username              string                     `json:"username,omitempty"`
+	ServerID              string                     `json:"serverId"`
+	ProjectID             string                     `json:"projectId"`
+	ProfileID             string                     `json:"profileId"`
+	Channel               string                     `json:"channel"`
+	MinecraftAccessToken  string                     `json:"minecraftAccessToken,omitempty"`
+	ContinuousGuardTicket string                     `json:"continuousGuardTicket,omitempty"`
+	PlanEvidence          *verifiedPlanEvidence02412 `json:"planEvidence,omitempty"`
 }
 
 type bridgeHasJoinedRequest struct {
@@ -268,6 +269,11 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusPreconditionFailed, "Continuous Guard Attestation v2 policy unavailable: "+err.Error())
 		return
 	}
+	var verifiedGuardTicket model.DeviceChallenge
+	if planPolicyRequired02412() && !continuousRequired {
+		writeError(w, http.StatusPreconditionFailed, "verified plan policy requires continuous NeverGuard attestation")
+		return
+	}
 	if continuousRequired {
 		continuousTicket, err := s.consumeGuardContinuousJoinTicket01810(r, claims, req.ContinuousGuardTicket)
 		if err != nil {
@@ -276,6 +282,14 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := validateContinuousGuardTicketForMinecraftSession01810(continuousTicket, minecraftSession); err != nil {
 			writeError(w, http.StatusPreconditionFailed, err.Error())
+			return
+		}
+		verifiedGuardTicket = continuousTicket
+	}
+	if planPolicyRequired02412() {
+		if err := s.verifyPlanForJoin02412(r, claims, req, verifiedGuardTicket); err != nil {
+			s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("verified-plan-denied"), Actor: claims.Sub, Action: "serverbridge:plan:denied", Target: req.ServerID + ":" + err.Error(), CreatedAt: time.Now().UTC()})
+			writeError(w, http.StatusPreconditionFailed, "verified component plan denied: "+err.Error())
 			return
 		}
 	}
@@ -337,6 +351,10 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-miss"), Actor: server.ID, Action: "serverbridge:has-joined:miss", Target: username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		writeError(w, http.StatusNotFound, "активная join-сессия не найдена")
+		return
+	}
+	if err := planJoinEpochValid02412(join.CreatedAt); err != nil {
+		writeError(w, http.StatusPreconditionFailed, "verified plan policy changed or unavailable")
 		return
 	}
 	_, trust := s.evaluateGameplayTrust0127(r, join.UserID, join.SessionID, join.TrustedDeviceID, join.BindingEpoch, true)

@@ -1039,3 +1039,23 @@ mod tests {
     }
 
 }
+
+
+/// Only the native verified-installed-release path may call this signer.
+/// The generic JS device signing API deliberately rejects this domain.
+pub fn sign_verified_plan_payload_02412(backend_url: &str, user_id: &str, device_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
+    if payload.len() > 4096 || !payload.starts_with("NeverLauncher-Verified-Component-Plan-v1\n")
+        || payload.contains('\r') || payload.split('\n').count() != 16 {
+        return Err("invalid native verified plan payload".into());
+    }
+    let user = normalize_user_id(user_id)?;
+    let mut record = load_record(backend_url, &user)?.ok_or("trusted device key missing")?;
+    if record.key_binding != "hardware" || record.key_algorithm != "p256" || record.device_id.as_deref() != Some(device_id) {
+        return Err("verified plan requires bound hardware P-256 device key".into());
+    }
+    validate_record(&mut record)?;
+    let signature = sign_with_record(&mut record, payload)?;
+    Ok(DeviceSignatureResult { fingerprint:record.fingerprint.clone(), public_key:record.public_key.clone(), signature,
+        key_algorithm:record.key_algorithm.clone(),key_binding:record.key_binding.clone(),
+        hardware_provider:record.hardware_provider.clone(),hardware_bound:true })
+}

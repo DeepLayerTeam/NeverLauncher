@@ -545,6 +545,57 @@ async fn save_installed_component_choice_0247(
     Ok(())
 }
 
+
+// Evidence is measured from the installed active release, never from the
+// renderer-provided list of mods, manifest or chosen plan SHA-256.
+#[derive(Deserialize)]
+#[serde(rename_all="camelCase")]
+struct NativePlanChallenge02412 {
+    backend_url:String, user_id:String, device_id:String, session_id:String, binding_epoch:i64,
+    server_id:String, project_id:String,profile_id:String,channel:String,
+    root:String,pinned_public_key:String,challenge_id:String,challenge:String,
+    guard_attestation_sha256:String,
+}
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
+struct NativePlanEvidence02412 {
+    challenge_id:String,challenge:String,user_id:String,device_id:String,session_id:String,binding_epoch:i64,
+    server_id:String,project_id:String,profile_id:String,channel:String,
+    release_signature:String,catalog_digest:String,plan_sha256:String,guard_attestation_sha256:String,signature:String,
+}
+#[tauri::command]
+async fn attest_verified_component_plan_02412(request:NativePlanChallenge02412)->Result<NativePlanEvidence02412,String>{
+    tokio::task::spawn_blocking(move || {
+        let NativePlanChallenge02412 {backend_url,user_id,device_id,session_id,binding_epoch,
+            server_id,project_id,profile_id,channel,root,pinned_public_key,challenge_id,challenge,guard_attestation_sha256}=request;
+        if [ &user_id,&device_id,&session_id,&server_id,&project_id,&profile_id,&channel,&challenge_id,&challenge ].iter()
+            .any(|v|v.is_empty()||v.len()>160||v.contains('\n')||v.contains('\r')) {
+            return Err("invalid verified plan identity/challenge".to_string());
+        }
+        if guard_attestation_sha256.len()!=64|| !guard_attestation_sha256.bytes().all(|b|b.is_ascii_hexdigit() && !b.is_ascii_uppercase()){
+            return Err("invalid continuous Guard attestation digest".into());
+        }
+        let root_path=PathBuf::from(root);
+        let (manifest,preset)=neverruntime::transactional_release::verified_active_selection_02410(
+            &root_path,&pinned_public_key)?.ok_or("no verified installed release")?;
+        if manifest.schema_version!="3.0"||manifest.project_id!=project_id||manifest.profile_id!=profile_id||manifest.channel!=channel {
+            return Err("installed signed release does not match requested server scope".into());
+        }
+        // verified_active_selection checks SHA-256 of every installed managed file.
+        let plan=neverruntime::resolved_download_0246::resolve(&manifest,preset.as_deref())?;
+        let catalog_digest=manifest.component_catalog.as_ref().ok_or("v3 catalog required")?.digest.clone();
+        let release_signature=manifest.signature.as_ref().ok_or("unsigned installed release")?.signature.to_ascii_lowercase();
+        if catalog_digest.len()!=64||release_signature.len()!=128{return Err("malformed signed release measurements".into());}
+        let canonical=format!("NeverLauncher-Verified-Component-Plan-v1\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n",
+            challenge_id,challenge,user_id,device_id,session_id,binding_epoch,server_id,project_id,profile_id,channel,
+            release_signature,catalog_digest,plan.sha256,guard_attestation_sha256);
+        let signer=device_keys::sign_verified_plan_payload_02412(&backend_url,&user_id,&device_id,&canonical)?;
+        Ok(NativePlanEvidence02412{challenge_id,challenge,user_id,device_id,session_id,binding_epoch,
+            server_id,project_id,profile_id,channel,release_signature,catalog_digest,
+            plan_sha256:plan.sha256,guard_attestation_sha256,signature:signer.signature})
+    }).await.map_err(|e|format!("native verified plan task failed: {e}"))?
+}
+
 #[derive(serde::Serialize)]
 #[serde(rename_all="camelCase")]
 struct ActiveSelection02410 { manifest:neverruntime::Manifest, component_preset:String }
@@ -1177,6 +1228,6 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
+        .invoke_handler(tauri::generate_handler![load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }

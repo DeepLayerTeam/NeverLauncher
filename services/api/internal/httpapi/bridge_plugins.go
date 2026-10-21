@@ -45,6 +45,7 @@ func (s Server) serverBridgePluginCompatibility(w http.ResponseWriter, r *http.R
 		"trustEnforcement":          "required",
 		"integrityPolicy":           serverBridgeIntegrityPolicy0135,
 		"integrityEnforcement":      "release-allowlist-required-in-production",
+		"verifiedPlanPolicy":        planPolicyStatus02412(),
 	}})
 }
 
@@ -294,6 +295,10 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-miss"), Actor: server.ID, Action: "serverbridge:validate-join:denied", Target: req.Username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "launcher_session_or_handoff_missing_or_expired", req, bridgeJoinRecord{}))
+		return
+	}
+	if err := planJoinEpochValid02412(join.CreatedAt); err != nil {
+		writeJSON(w, http.StatusPreconditionFailed, bridgeValidateResponse940(s.Version, false, "verified_plan_policy_changed", req, join))
 		return
 	}
 	playerSessionV3 := req.ProtocolVersion >= serverBridgeProtocolV3 && bridgeFeatureContains0196(req.Features, serverBridgeFeaturePlayerSessionV3)

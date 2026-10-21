@@ -1446,7 +1446,7 @@ function App() {
       throw new Error('Backend не подтвердил Continuous Guard Attestation v2.');
     }
     log(`Continuous Guard Attestation v2 подтверждена: evidence=${String(data.continuousEvidenceSha256 || '').slice(0, 16)}…, cross-checks=${data.crossCheckCount ?? 0}.`);
-    return data.continuousGuardTicket;
+    return {ticket: String(data.continuousGuardTicket), attestationSha256: String(data.attestationSha256)};
   }
 
   async function createMinecraftLaunchSession(guardAttestationTicket: string): Promise<MinecraftLaunchCredentials> {
@@ -1463,13 +1463,47 @@ function App() {
     return { username: data.profile.name, uuid: data.profile.id, accessToken: data.accessToken, userType: 'mojang', authServerBaseUrl: settings.backendUrl.trim().replace(/\/$/, '') };
   }
 
-  async function createServerJoinAfterLaunch(username: string, minecraftAccessToken: string, continuousGuardTicket?: string) {
+  async function createVerifiedPlanEvidence02412(guardAttestationSha256?: string) {
+    if (!authSession?.accessToken || !settings.serverId) return undefined;
+    const response = await fetch(endpoint('/api/v1/server-bridge/plan-challenge'), {
+      method: 'POST',
+      headers: {Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json'},
+      body: JSON.stringify({serverId:settings.serverId,projectId:settings.projectId,profileId:settings.profileId,channel:settings.channel}),
+    });
+    // The backend explicitly returns 412 when signed-plan enforcement is disabled.
+    // All other failures, including missing/invalid policy, fail closed.
+    if (response.status === 412) {
+      const body = await response.text();
+      if (body.includes('verified plan policy is disabled')) return undefined;
+      throw new Error(`ServerBridge plan challenge denied: ${body}`);
+    }
+    const payload = await response.json().catch(()=>null);
+    if (!response.ok) throw new Error(`ServerBridge plan challenge failed: ${response.status} ${JSON.stringify(payload)}`);
+    const challenge=payload?.data;
+    if (!challenge?.challengeId || !challenge?.challenge || !guardAttestationSha256) {
+      throw new Error('NeverGuard v2 и одноразовый challenge обязательны для verified plan.');
+    }
+    const userId=authSession.userId || accessTokenSubject(authSession.accessToken);
+    const deviceId=accessTokenDeviceId(authSession.accessToken);
+    if (!userId || !deviceId) throw new Error('Device Trust session binding required for plan evidence');
+    return callTauri('attest_verified_component_plan_02412', {request:{
+      backendUrl:settings.backendUrl,userId,deviceId,sessionId:authSession.sessionId,
+      bindingEpoch:accessTokenBindingEpoch(authSession.accessToken),serverId:settings.serverId,
+      projectId:settings.projectId,profileId:settings.profileId,channel:settings.channel,
+      root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,
+      challengeId:challenge.challengeId,challenge:challenge.challenge,
+      guardAttestationSha256,
+    }});
+  }
+
+  async function createServerJoinAfterLaunch(username: string, minecraftAccessToken: string, continuousGuardTicket?: string, guardAttestationSha256?: string) {
     if (!authSession?.accessToken || !settings.serverId) return;
     if (!profileServers.some((server) => server.id === settings.serverId)) throw new Error('serverId отсутствует в серверном списке профиля');
+    const planEvidence = await createVerifiedPlanEvidence02412(guardAttestationSha256);
     const response = await fetch(endpoint('/api/v1/session/join'), {
       method: 'POST',
       headers: { Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, serverId: settings.serverId, projectId: settings.projectId, profileId: settings.profileId, channel: settings.channel, minecraftAccessToken, continuousGuardTicket }),
+      body: JSON.stringify({ username, serverId: settings.serverId, projectId: settings.projectId, profileId: settings.profileId, channel: settings.channel, minecraftAccessToken, continuousGuardTicket, planEvidence }),
     });
     if (!response.ok) throw new Error(`Не удалось создать сессию входа ServerBridge: ${response.status} ${response.statusText}`);
     const payload = await response.json();
@@ -1511,9 +1545,12 @@ function App() {
         },
       });
       let continuousGuardTicket: string | undefined;
+      let guardAttestationSha256: string | undefined;
       if (!preferences.offline && result.windowsSensor) {
         try {
-          continuousGuardTicket = await createContinuousGuardTicket(result.id);
+          const guard = await createContinuousGuardTicket(result.id);
+          continuousGuardTicket = guard.ticket;
+          guardAttestationSha256 = guard.attestationSha256;
         } catch (attestationError) {
           await callTauri<ProcessStatus>('stop_runtime_process', { processId: result.id }).catch(() => undefined);
           throw new Error(`Windows runtime остановлен: Continuous Guard Attestation v2 не подтверждена: ${String(attestationError)}`);
@@ -1521,7 +1558,7 @@ function App() {
       }
       try {
         if (!preferences.offline && !preferences.autoEnter && minecraftCredentials) {
-          await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken, continuousGuardTicket);
+          await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken, continuousGuardTicket, guardAttestationSha256);
         }
       } catch (joinError) {
         await callTauri<ProcessStatus>('stop_runtime_process', { processId: result.id }).catch(() => undefined);
