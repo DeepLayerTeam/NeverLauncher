@@ -1,3 +1,11 @@
+## 0.24.13 — Integration & Compatibility Certification
+
+- Native CLI `verify`, `sync`, `sync-local` now accept an explicit signed component preset through the same v3 native resolver and transactional installer as Desktop, supporting exact selection verification without modifying signed manifests.
+- Added an actual-binary Manifest v3/Catalog v5 E2E suite covering preset transitions, SHA-256/Ed25519, HTTP poison/503/truncation, safe file ownership, rollback/recovery, and fail-closed adversarial cases.
+- Added six-target GitHub Actions matrix with Rust/Go execution, manual real Mojang Minecraft JVM launch, provenance-bound evidence collection and a strict incomplete/failed 0.24.13 gate.
+- The signed clean-machine GA release gate remains independent. **No production certification is implied without runtime/Java, Guard/Bridge, and platform-specific evidence.**
+- See [0.24.13 integration and certification guide](docs/releases/0.24.13-integration-compatibility-certification.md).
+
 ## 0.24.11 — Gravit OptionalFile / OptionalView Migration
 
 - Added a real Go conversion path for recognized Gravit `updateOptional` declarations, exact-name dependency/conflict binding, supported required OS/arch/Java conditions, categories and safe File/ClassPath/JvmArgs/ClientArgs actions.

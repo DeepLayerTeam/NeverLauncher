@@ -1,5 +1,5 @@
 use neverruntime::{
-    build_launch_plan, certify_vanilla_compatibility, check_files, download_missing_files, ensure_managed_java, ensure_managed_java_from_distribution, launch_with_timeout, load_manifest,
+    build_launch_plan, certify_vanilla_compatibility, check_files, check_files_with_preset, download_missing_files_with_preset, ensure_managed_java, ensure_managed_java_from_distribution, launch_with_timeout, load_manifest,
     resolve_compatibility, verify_manifest_signature, CompatibilityContext, Manifest,
 };
 use serde_json::json;
@@ -54,9 +54,14 @@ async fn command_verify(args: &[String]) -> Result<serde_json::Value, String> {
     let pinned = required_flag(args, "--pinned-public-key")?;
     let signature = verify_manifest_signature(&manifest, &pinned)?;
     let root = optional_flag(args, "--root");
+    let selection = optional_flag(args, "--preset");
+    // Explicit selection is resolved by the same native graph used for installation;
+    // it must never be interpreted as a modified or unsigned manifest.
     let files = if let Some(root) = root {
-        check_files(&manifest, Path::new(&root)).await?
+        if selection.is_some() {check_files_with_preset(&manifest, Path::new(&root), selection.as_deref()).await?}
+        else {check_files(&manifest, Path::new(&root)).await?}
     } else {
+        if selection.is_some() {return Err("--preset requires --root for file verification".into());}
         Vec::new()
     };
     let ready = files.is_empty() || files.iter().all(|file| file.status == "ok");
@@ -68,8 +73,9 @@ async fn command_sync(args: &[String]) -> Result<serde_json::Value, String> {
     let pinned = required_flag(args, "--pinned-public-key")?;
     let root = PathBuf::from(required_flag(args, "--root")?);
     let manifest = load_manifest(&url, &pinned).await?;
-    let download = download_missing_files(&manifest, &root, &pinned).await?;
-    let files = check_files(&manifest, &root).await?;
+    let selection = optional_flag(args, "--preset");
+    let download = download_missing_files_with_preset(&manifest, &root, &pinned, None, selection.clone()).await?;
+    let files = check_files_with_preset(&manifest, &root, selection.as_deref()).await?;
     let ready = download.failed == 0 && files.iter().all(|file| file.status == "ok");
     if !ready {
         return Err(format!(
@@ -90,8 +96,9 @@ async fn command_sync_local(args: &[String]) -> Result<serde_json::Value, String
     let key = required_flag(args, "--pinned-public-key")?;
     let root = PathBuf::from(required_flag(args, "--root")?);
     verify_manifest_signature(&manifest, &key)?;
-    let downloaded = download_missing_files(&manifest, &root, &key).await?;
-    let files = check_files(&manifest, &root).await?;
+    let selection = optional_flag(args, "--preset");
+    let downloaded = download_missing_files_with_preset(&manifest, &root, &key, None, selection.clone()).await?;
+    let files = check_files_with_preset(&manifest, &root, selection.as_deref()).await?;
     let ready = downloaded.failed == 0 && files.iter().all(|file| file.status == "ok" || file.status == "optional-missing");
     if !ready {
         return Err(format!("sync-local: download failed={}, invalid={}", downloaded.failed,

@@ -1,0 +1,179 @@
+name: NeverLauncher 0.24.13 Component Integration Certification
+on:
+  pull_request:
+    paths:
+      - 'runtime/**'
+      - 'services/api/**'
+      - 'cli/**'
+      - 'scripts/certification/**'
+      - '.github/workflows/certification-02413.yml'
+  workflow_dispatch:
+    inputs:
+      actual_minecraft:
+        description: 'Run and capture real Mojang Minecraft JVM launches (downloads Mojang artifacts)'
+        type: boolean
+        required: true
+        default: false
+permissions:
+  contents: read
+jobs:
+  component-e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, os: linux, arch: x86_64 }
+          - { runner: ubuntu-24.04-arm, os: linux, arch: aarch64 }
+          - { runner: windows-2025, os: windows, arch: x86_64 }
+          - { runner: windows-11-arm, os: windows, arch: aarch64 }
+          - { runner: macos-15-intel, os: macos, arch: x86_64 }
+          - { runner: macos-15, os: macos, arch: aarch64 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: services/api/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Check canonical version and source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat VERSION)" = 0.24.13
+          python3 scripts/version/manage.py check
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain --untracked-files=normal)"
+      - name: Fixture and release-gate unit tests
+        shell: bash
+        run: python3 -m unittest discover -s scripts/certification -p 'test_*.py' -v
+      - name: Real Go resolver and signed plan policy tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd services/api && go test -count=1 ./internal/model ./internal/planpolicy02412)
+          (cd services/api && go test -count=1 ./internal/httpapi -run '^TestVerifiedPlanHardwareDeviceSignatureAndBinding02412$')
+          (cd cli && go test -count=1 ./cmd/neverlauncher -run 'Test.*Components.*0249|TestComponent.*02310')
+      - name: Real Rust runtime and transactional/adversarial tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib
+          cargo build --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime --example cert_sign_fixture
+      - name: Run signed v3 component lifecycle with loopback HTTP fault injection
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix=""; if [[ '${{ matrix.os }}' == windows ]]; then suffix=.exe; fi
+          python3 scripts/certification/components_02413.py \
+            --runtime "runtime/neverruntime/target/debug/neverruntime${suffix}" \
+            --signer "runtime/neverruntime/target/debug/examples/cert_sign_fixture${suffix}" \
+            --output "dist/02413/component-${{ matrix.os }}-${{ matrix.arch }}.json"
+      - name: Install graphical dependencies for real Linux Minecraft
+        if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft && matrix.os == 'linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 mesa-vulkan-drivers libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
+      - name: Install software GL for Windows real client run
+        if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft && matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          ./scripts/compatibility/install-windows-mesa.ps1 -Architecture '${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}' -JavaExecutable "$env:JAVA_HOME/bin/java.exe"
+      - name: Real Mojang Minecraft client launch (never a mock success)
+        if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft
+        shell: bash
+        env:
+          NEVERLAUNCHER_E2E_MINECRAFT_VERSION: '1.21.1'
+          NEVERLAUNCHER_E2E_JAVA_MAJOR: '21'
+          NEVERLAUNCHER_COMPAT_OS: ${{ matrix.os }}
+          NEVERLAUNCHER_COMPAT_ARCH: ${{ matrix.arch }}
+          NEVERLAUNCHER_COMPAT_TARGET_ID: certification-02413-vanilla
+          NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: '45'
+        run: |
+          set -euo pipefail
+          if [[ '${{ matrix.os }}' == windows ]]; then export NEVERLAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java.exe";
+          else export NEVERLAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"; fi
+          bash e2e/scripts/run-vanilla-certification-case.sh
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('e2e/runtime/result.json')
+          report=json.loads(p.read_text())
+          assert report['status']=='passed' and report['checks']['actualClient'] is True, 'Minecraft did not actually launch'
+          PY
+      - name: Build provenance-bound report (never marks missing Guard/Bridge as passed)
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/certification/record_02413.py \
+            --component "dist/02413/component-${{ matrix.os }}-${{ matrix.arch }}.json" \
+            --minecraft e2e/runtime/result.json \
+            --guard "dist/02413/guard-${{ matrix.os }}-${{ matrix.arch }}.json" \
+            --bridge "dist/02413/bridge-${{ matrix.os }}-${{ matrix.arch }}.json" \
+            --commit "$GITHUB_SHA" --target '${{ matrix.os }}-${{ matrix.arch }}' \
+            --output "dist/02413/report-${{ matrix.os }}-${{ matrix.arch }}.json"
+      - name: Upload actual execution evidence (including partial failures)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: components-02413-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            dist/02413/
+            e2e/runtime/result.json
+            e2e/runtime/vanilla-certification.json
+            e2e/runtime/vanilla-install.json
+          if-no-files-found: warn
+          retention-days: 45
+  # This workflow is an executable per-platform test matrix, not an authority to
+  # approve 0.25.0. Full certification requires six independently collected
+  # evidence records, actual Minecraft launch on each required target, live
+  # NeverGuard/ServerBridge integration and separate signed clean-machine GA gate.
+
+  aggregate-certification:
+    if: always() && github.event_name == 'workflow_dispatch'
+    needs: [component-e2e]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download all submitted platform evidence (no synthetic missing results)
+        uses: actions/download-artifact@v4
+        with:
+          pattern: components-02413-*
+          path: dist/platform-evidence-02413
+          merge-multiple: false
+      - name: Enforce all six targets, real Minecraft and NeverGuard/Bridge evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' reports < <(find dist/platform-evidence-02413 -type f -name 'report-*.json' -print0)
+          python3 scripts/certification/gate_02413.py --commit "$GITHUB_SHA" \
+            --output dist/certification-02413-aggregate.json "${reports[@]}"
+      - name: Retain failed/incomplete verdict for audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: certification-02413-aggregate
+          path: dist/certification-02413-aggregate.json
+          if-no-files-found: warn
+          retention-days: 90
