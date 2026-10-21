@@ -1,5 +1,6 @@
 import React,{useCallback,useEffect,useMemo,useState} from 'react';
 import type { ReleaseApi } from '../api/release';
+import {GravitOptionalImport02411} from './GravitOptionalImport02411';
 import {type Catalog0248,type CatalogSnapshot0248,type CatalogPreview0248,type Component0248,type Category0248,type Group0248,type Preset0248,type Conditions0248,
  freshComponent0248,listAvailableFiles0248,lintCatalog0248,splitLines0248,parseRelations0248,formatRelations0248,renameComponent0248,removeComponent0248,validComponentID0248} from './component-editor-model-0248';
 
@@ -159,6 +160,7 @@ export function ComponentGraphEditor0248({api,packageId,canEdit,onChange}:{api:R
     </div>
    </div>
   </fieldset>
+  <GravitOptionalImport02411 key={`${packageId}:${initialRevision}`} api={api} packageId={packageId} revision={initialRevision} enabled={usable} onCandidate={edit}/>
   {showGraph&&<div className="componentEditorGraph0248"><h5>Граф зависимостей и конфликтов</h5><ul>{components.map(c=><li key={c.id}><strong>{c.id}</strong>{c.dependencies?.length?' → '+c.dependencies.map(r=>r.id+(r.versionRange?' ('+r.versionRange+')':'')).join(', '):''}{c.conflicts?.length?' · конфликтует: '+c.conflicts.map(r=>r.id).join(', '):''}{c.exclusiveGroup?' · exclusive '+c.exclusiveGroup:''}</li>)}</ul></div>}
   <button onClick={()=>setShowGraph(v=>!v)}>{showGraph?'Скрыть граф':'Показать граф'}</button>
   {localErrors.length>0&&<div role="alert" className="error"><strong>Локальные замечания:</strong><ul>{localErrors.map((x,i)=><li key={i}>{x}</li>)}</ul></div>}

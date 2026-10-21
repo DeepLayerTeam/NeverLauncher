@@ -1,3 +1,10 @@
+## 0.24.11 — Gravit OptionalFile / OptionalView Migration
+
+- Added a real Go conversion path for recognized Gravit `updateOptional` declarations, exact-name dependency/conflict binding, supported required OS/arch/Java conditions, categories and safe File/ClassPath/JvmArgs/ClientArgs actions.
+- Added a project-scoped Admin import panel and a read-only, CAS-guarded Backend migration preview bound to the draft package's real hashed optional file inventory. Standard signed Catalog v5 validation/save/sign remains authoritative.
+- Unsupported move/rename, permissions, Gravit group/preset/trigger semantics, unsafe arguments and missing files produce per-field incompatibility reports and block automatic application.
+- Added migration/model and HTTP lifecycle regression tests and [operator guide](docs/administration/gravit-optional-migration-02411.md). Full Backend and UI production builds require external dependencies not available in this environment.
+
 ## 0.24.9 — CLI Components Tooling
 
 - Добавлены рабочие офлайн-команды `nl components validate|resolve|export|diff` с детерминированным JSON и структурированными ошибками.

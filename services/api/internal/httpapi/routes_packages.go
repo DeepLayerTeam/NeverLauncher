@@ -123,6 +123,7 @@ func (s Server) registerPackageRoutesV1(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/packages/{packageId}", s.requirePackagePermission("project:read", s.packageGet))
 	mux.Handle("GET /api/v1/packages/{packageId}/component-catalog", s.requirePackagePermission("project:read", s.componentCatalogGet0248))
 	mux.Handle("POST /api/v1/packages/{packageId}/component-catalog/preview", s.requirePackagePermission("release:prepare", s.componentCatalogPreview0248))
+	mux.Handle("POST /api/v1/packages/{packageId}/component-catalog/gravit-preview", s.requirePackagePermission("release:prepare", s.componentCatalogGravitPreview02411))
 	mux.Handle("PUT /api/v1/packages/{packageId}/component-catalog", s.requirePackagePermission("release:prepare", s.componentCatalogSave0248))
 	mux.Handle("POST /api/v1/packages/{packageId}/files", s.requirePackagePermission("file:write", s.packageUploadFile))
 	mux.Handle("POST /api/v1/packages/{packageId}/validate", s.requirePackagePermission("release:prepare", s.packageValidate))
