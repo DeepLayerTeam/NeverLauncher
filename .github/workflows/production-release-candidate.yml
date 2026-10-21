@@ -2,6 +2,11 @@ name: NeverLauncher Production Release Candidate
 
 on:
   workflow_dispatch:
+    inputs:
+      optional_components_ga_evidence_run_id:
+        type: string
+        required: true
+        description: 'Approved run with six signed independent 0.25.0 GA attestations and exact signed installers'
 
 permissions:
   contents: read
@@ -139,6 +144,7 @@ jobs:
       contents: read
       actions: read
     runs-on: ubuntu-24.04
+    environment: production-release
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -251,20 +257,42 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev openssl
-      - name: Generate ephemeral CI release trust hierarchy
+      - name: Load approved production release signing identity (never ephemeral)
+        shell: bash
+        env:
+          PRODUCTION_RELEASE_SIGNING_KEY: ${{ secrets.NL_PRODUCTION_RELEASE_PRIVATE_KEY_PEM }}
+          PRODUCTION_RELEASE_ROOT_PUBLIC_KEY: ${{ secrets.NL_PRODUCTION_RELEASE_ROOT_PUBLIC_KEY_PEM }}
+          PRODUCTION_RELEASE_TRUST_POLICY: ${{ secrets.NL_PRODUCTION_RELEASE_TRUST_POLICY_JSON }}
         run: |
+          set -euo pipefail
           umask 077
-          openssl genpkey -algorithm ED25519 -out /tmp/neverlauncher-release-root-private.pem
-          openssl pkey -in /tmp/neverlauncher-release-root-private.pem -pubout -out /tmp/neverlauncher-release-root-public.pem
-          (cd cli && go run ./cmd/neverlauncher security rotate-key \
-            --registry-dir /tmp/neverlauncher-release-trust \
-            --key release-signing \
-            --private-key-out /tmp/neverlauncher-release-private.pem \
-            --public-key-out /tmp/neverlauncher-release-public.pem)
-          (cd cli && go run ./cmd/neverlauncher security trust-policy \
-            --registry-dir /tmp/neverlauncher-release-trust \
-            --root-private-key /tmp/neverlauncher-release-root-private.pem \
-            --policy-out /tmp/neverlauncher-release-trust-policy.json)
+          test -n "$PRODUCTION_RELEASE_SIGNING_KEY"
+          test -n "$PRODUCTION_RELEASE_ROOT_PUBLIC_KEY"
+          test -n "$PRODUCTION_RELEASE_TRUST_POLICY"
+          printf '%s\n' "$PRODUCTION_RELEASE_SIGNING_KEY" > /tmp/neverlauncher-release-private.pem
+          printf '%s\n' "$PRODUCTION_RELEASE_ROOT_PUBLIC_KEY" > /tmp/neverlauncher-release-root-public.pem
+          printf '%s\n' "$PRODUCTION_RELEASE_TRUST_POLICY" > /tmp/neverlauncher-release-trust-policy.json
+          openssl pkey -in /tmp/neverlauncher-release-private.pem -noout >/dev/null
+          openssl pkey -pubin -in /tmp/neverlauncher-release-root-public.pem -noout >/dev/null
+          jq -e '.schemaVersion and .trustDomain' /tmp/neverlauncher-release-trust-policy.json >/dev/null
+      - name: Download approved six signed Optional Components GA evidence packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: optional-components-ga-0250-*
+          run-id: ${{ inputs.optional_components_ga_evidence_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: optional-components-ga-0250-raw
+          merge-multiple: false
+      - name: Require exactly six platform folders for the GA preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p optional-components-ga-0250
+          for target in windows-amd64 windows-arm64 linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
+            source="optional-components-ga-0250-raw/optional-components-ga-0250-${target}"
+            test -d "$source"
+            mv "$source" "optional-components-ga-0250/$target"
+          done
       - name: Build and cryptographically verify complete release bundle
         env:
           NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/neverlauncher-release-private.pem
@@ -284,6 +312,8 @@ jobs:
           NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts
           NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE: ${{ github.workspace }}/windows-adversarial-certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.json
           NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
+          NEVERLAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/optional-components-ga-0250
+          NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY }}
         run: bash scripts/release/build-release.sh
       - name: Assert required production artifacts
         run: |

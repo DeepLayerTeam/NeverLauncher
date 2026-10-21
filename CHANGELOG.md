@@ -1,3 +1,13 @@
+## 0.25.0 — Optional Components GA (certification-gated)
+
+- Strengthened the real production release entrypoint: 0.25.0 requires an independently Ed25519-signed, exact-commit six-platform Optional Components GA evidence cohort **before** build output cleanup or product signing.
+- Added signed-evidence checks for exact installer SHA-256, live Minecraft JVM launch, NeverGuard, ServerBridge anti-replay, owned component graph, signed actions, deterministic resolved plan, preset migration, adversarial and fault cases. Missing evidence is a hard failure.
+- Replaced ephemeral release signing identities in the production workflow with an approved protected release key and trust policy; introduced a separate manually approved GA verifier workflow.
+- Hardened the GA parser against duplicate JSON keys, symlinks, mismatched trust roots, oversized proofs and unbounded in-memory installer reads; added regression tests.
+- Tightened portable component-ID validation in NeverRuntime to reject IDs containing consecutive dots, matching Backend rules.
+- Synced product metadata to 0.25.0 and added [GA procedures and compatibility notes](docs/releases/0.25.0-optional-components-ga.md).
+- **Status:** production release must remain blocked until real signed target attestations, successful Rust builds and real Minecraft/Guard/Bridge E2E are available. Test fixtures are not release certificates.
+
 ## 0.24.13 — Integration & Compatibility Certification
 
 - Native CLI `verify`, `sync`, `sync-local` now accept an explicit signed component preset through the same v3 native resolver and transactional installer as Desktop, supporting exact selection verification without modifying signed manifests.

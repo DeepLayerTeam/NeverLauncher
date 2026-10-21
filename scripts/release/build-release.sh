@@ -30,6 +30,38 @@ SOURCE_COMMIT="${NEVERLAUNCHER_SOURCE_COMMIT:-}"
 PUBLIC_RELEASE_BASE_URL="${NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL:-https://github.com/DeepLayerTeam/NeverLauncher/releases/download/v${VERSION}}"
 export NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL="${PUBLIC_RELEASE_BASE_URL}"
 
+# 0.25.0 is GA only if a different, authorized CI attestation key has
+# cryptographically certified all six real platform installers and the actual
+# optional-components lifecycle. Perform this check before erasing any output.
+COMPONENTS_GA_RECEIPT=""
+if [[ "${VERSION}" == "0.25.0" ]]; then
+  for tool in python3 git; do
+    command -v "${tool}" >/dev/null 2>&1 || { echo "GA requires ${tool}" >&2; exit 2; }
+  done
+  GA_DIR="${NEVERLAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR:-}"
+  GA_PUB="${NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY:-}"
+  if [[ -z "${GA_DIR}" || -z "${GA_PUB}" || ! -d "${GA_DIR}" ]]; then
+    echo "0.25.0 GA requires signed evidence in NEVERLAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR and a pinned NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY" >&2
+    exit 2
+  fi
+  HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
+  if [[ -n "${SOURCE_COMMIT}" && "${SOURCE_COMMIT}" != "${HEAD_COMMIT}" ]]; then
+    echo "GA source commit does not equal git HEAD" >&2
+    exit 2
+  fi
+  SOURCE_COMMIT="${HEAD_COMMIT}"
+  if [[ -n "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal)" ]]; then
+    echo "0.25.0 GA signing requires a clean, committed source tree" >&2
+    exit 2
+  fi
+  COMPONENTS_GA_RECEIPT="$(mktemp)"
+  trap 'rm -f "${COMPONENTS_GA_RECEIPT}"' EXIT
+  python3 "${ROOT_DIR}/scripts/ga/release_gate.py" \
+    --version 0.25.0 --attestations "${GA_DIR}" \
+    --trusted-attestation-public-key "${GA_PUB}" \
+    --commit "${SOURCE_COMMIT}" --output "${COMPONENTS_GA_RECEIPT}"
+fi
+
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
 mkdir -p "${OUT_DIR}" "${WORK_DIR}"
 
@@ -606,6 +638,12 @@ if [[ "${PRODUCTION_DELIVERY_RELEASE_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/PRODUCTION_DELIVERY_RELEASE.json"
   log "Проверка stable Production Delivery Release boundary до подписи"
   "${RELEASE_CLI}" release production-verify "${OUT_DIR}"
+fi
+
+if [[ "${VERSION}" == "0.25.0" ]]; then
+  [[ -s "${COMPONENTS_GA_RECEIPT}" ]] || { echo "missing authenticated component GA receipt" >&2; exit 2; }
+  cp "${COMPONENTS_GA_RECEIPT}" "${OUT_DIR}/OPTIONAL_COMPONENTS_GA_CERTIFICATION.json"
+  log "Authenticated all six real-platform signed Optional Components GA attestations"
 fi
 
 log "Ed25519 release signing"

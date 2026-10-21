@@ -38,7 +38,7 @@ fn valid_id(value:&str)->bool {
     !value.is_empty() && value.len()<=128 && (value.as_bytes()[0].is_ascii_lowercase() || value.as_bytes()[0].is_ascii_digit())
 }
 fn checked_id(value:&str)->bool{
-    valid_id(value) && value.bytes().all(|b|b.is_ascii_lowercase()||b.is_ascii_digit()||matches!(b,b'.'|b'_'|b'-'))
+    valid_id(value) && !value.contains("..") && value.bytes().all(|b|b.is_ascii_lowercase()||b.is_ascii_digit()||matches!(b,b'.'|b'_'|b'-'))
 }
 fn sorted_ids(values:Vec<String>)->Result<Vec<String>,String>{
     if values.len()>4096 {return Err("too many component IDs in selection".into())}
@@ -157,6 +157,8 @@ mod tests{
         let mut p=PortableSelection02410{schema_version:"1.0".into(),project_id:"p".into(),profile_id:"c".into(),channel:"stable".into(),source_version:"1".into(),source_catalog_digest:"a".repeat(64),source_preset:"".into(),selected_ids:vec!["mod".into(),"mod".into()]};
         assert!(parse_import_02410(&serde_json::to_string(&p).unwrap()).is_err());
         p.selected_ids=vec!["../bad".into()];
+        assert!(parse_import_02410(&serde_json::to_string(&p).unwrap()).is_err());
+        p.selected_ids=vec!["a..b".into()];
         assert!(parse_import_02410(&serde_json::to_string(&p).unwrap()).is_err());
         p.selected_ids=vec!["ok".into()];
         assert!(parse_import_02410(&serde_json::to_string(&p).unwrap()).is_ok());

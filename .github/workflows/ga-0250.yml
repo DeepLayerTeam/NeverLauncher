@@ -1,0 +1,110 @@
+name: NeverLauncher 0.25.0 Optional Components GA (signed evidence)
+
+on:
+  workflow_dispatch:
+    inputs:
+      evidence_run_id:
+        type: string
+        required: true
+        description: 'Approved run containing six independently signed 0.25.0 platform attestations and exact installers'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: neverlauncher-0250-ga-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  source-certification:
+    name: Build- and source-level checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - run: python3 -m pip install 'cryptography>=43,<47'
+      - name: Check release source is exact, clean and coherent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat VERSION)" = '0.25.0'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain --untracked-files=normal)"
+          python3 scripts/version/manage.py check
+          python3 scripts/contracts/validate-openapi.py
+      - name: Exercise fail-closed Ed25519 GA verifier including attacks
+        run: python3 -m unittest discover -s scripts/ga -p 'test_*.py' -v
+      - name: Executable native certification/fault test suite
+        run: python3 -m unittest discover -s scripts/certification -p 'test_*.py' -v
+      - name: Go signed manifest and policy regressions
+        working-directory: services/api
+        run: go test -count=1 ./internal/model ./internal/planpolicy02412
+      - name: Go CLI components regressions
+        working-directory: cli
+        run: go test -count=1 ./cmd/neverlauncher -run 'Test.*Components.*0249|TestComponent.*02310'
+
+  verify-signed-six-platform-evidence:
+    name: Cryptographic six-platform final GA gate
+    needs: [source-certification]
+    runs-on: ubuntu-24.04
+    environment: production-release
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install 'cryptography>=43,<47'
+      - name: Download externally authorized signed platform attestations
+        uses: actions/download-artifact@v4
+        with:
+          pattern: optional-components-ga-0250-*
+          run-id: ${{ inputs.evidence_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dist/ga-0250-raw
+          merge-multiple: false
+      - name: Normalize exactly six platform attestations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/ga-0250-attestations
+          for target in windows-amd64 windows-arm64 linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
+            source="dist/ga-0250-raw/optional-components-ga-0250-${target}"
+            test -d "$source" || { echo "Missing signed ${target} evidence" >&2; exit 1; }
+            mv "$source" "dist/ga-0250-attestations/${target}"
+          done
+      - name: Verify independent trusted signing key, artifact hashes, exact commit and mandatory live runs
+        shell: bash
+        env:
+          TRUSTED_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          test "${#TRUSTED_GA_PUBLIC_KEY}" -eq 64
+          python3 scripts/ga/release_gate.py \
+            --version 0.25.0 \
+            --attestations dist/ga-0250-attestations \
+            --trusted-attestation-public-key "$TRUSTED_GA_PUBLIC_KEY" \
+            --commit "$GITHUB_SHA" \
+            --output dist/ga-0250-verification.json
+      - name: Retain accepted or rejected verdict for audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: optional-components-ga-0250-verification-${{ github.sha }}
+          path: dist/ga-0250-verification.json
+          if-no-files-found: warn
+          retention-days: 90
+
+# This is a VERIFIER, not a certificate issuer. Neither workflow_dispatch nor
+# passing unit tests creates platform attestations or signs product binaries.

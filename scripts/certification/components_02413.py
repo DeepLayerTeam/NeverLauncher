@@ -43,11 +43,13 @@ def profile_digest(spec: dict[str, Any]) -> str:
     return hashlib.sha256("\0".join(values).encode()).hexdigest()
 
 
-def build_fixture(url: str, objects: dict[str, Object], target: tuple[str, str]) -> dict:
+def build_fixture(url: str, objects: dict[str, Object], target: tuple[str, str], version: str = "0.24.13") -> dict:
     doc = json.loads(FIXTURE.read_text(encoding="utf-8"))
     doc.pop("signature", None)
     doc["projectId"] = "certification"
-    doc["version"] = "0.24.13"
+    if version not in ("0.24.13", "0.25.0"):
+        raise ValueError("unsupported component certification release")
+    doc["version"] = version
     spec = doc["profileSnapshot"]["spec"]
     spec["projectId"] = "certification"
     doc["profileSnapshot"]["digest"] = profile_digest(spec)
@@ -108,7 +110,7 @@ def assert_bytes(root: Path, doc: dict, expected: set[str]) -> None:
             raise AssertionError(f"selected file missing/corrupted: {record['path']}")
 
 
-def certified_case(runtime: Path, signer: Path) -> dict:
+def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> dict:
     started = time.monotonic_ns()
     os_name, arch = current_target()
     with tempfile.TemporaryDirectory(prefix="never-components-02413-") as tmp:
@@ -118,7 +120,7 @@ def certified_case(runtime: Path, signer: Path) -> dict:
         installation.mkdir()
         objects: dict[str, Object] = {"/unused": Object(b"reserved-certification-resource")}
         with FaultServer(objects) as server:
-            doc = build_fixture(server.url, objects, (os_name, arch))
+            doc = build_fixture(server.url, objects, (os_name, arch), version)
             unsigned, signed = home / "source.json", home / "signed.json"
             key = sign(signer, unsigned, signed, doc)
             core = {"mods/core.jar"}
@@ -213,7 +215,7 @@ def certified_case(runtime: Path, signer: Path) -> dict:
             if minimal_requests < 1:
                 raise AssertionError("no real HTTP payload was transferred")
             metrics = server.metrics()
-        return {"status": "passed", "target": f"{os_name}-{arch}", "componentMode": "full" if permitted else "condition-denial",
+        return {"status": "passed", "version": version, "target": f"{os_name}-{arch}", "componentMode": "full" if permitted else "condition-denial",
                 "elapsedNs": time.monotonic_ns()-started, "httpRequests": len(metrics["requests"]),
                 "httpBytes": metrics["transferredBytes"], "signedManifestVersion": "3.0",
                 "catalogSchema": "5.0", "tests": ["signed-install", "preset-isolation", "ownership", "wrong-key",
@@ -225,11 +227,12 @@ def main() -> int:
     parser.add_argument("--runtime", type=Path, required=True)
     parser.add_argument("--signer", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--product-version", choices=("0.24.13", "0.25.0"), default="0.24.13")
     args = parser.parse_args()
     try:
         if not args.runtime.is_file() or not args.signer.is_file():
             raise RuntimeError("compiled runtime and test signer executables are required")
-        result = certified_case(args.runtime.resolve(), args.signer.resolve())
+        result = certified_case(args.runtime.resolve(), args.signer.resolve(), version=args.product_version)
     except (RuntimeError, AssertionError, OSError, subprocess.TimeoutExpired, ValueError) as exc:
         result = {"status": "failed", "reason": str(exc), "target": platform.platform()}
     args.output.parent.mkdir(parents=True, exist_ok=True)
