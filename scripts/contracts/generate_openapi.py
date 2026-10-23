@@ -221,6 +221,7 @@ def body_schema(path):
       "/sessionserver/session/minecraft/join":"YggdrasilJoinRequest",
     }
     if path == "/api/v1/me/textures/{kind}":return ref("TextureSelectionPatch0251")
+    if path == "/api/v1/me/textures/{kind}/import":return ref("TextureURLImport0254")
     if path in exact:return ref(exact[path])
     if path.endswith("/heartbeat"):return ref("HeartbeatRequest")
     if path.endswith("/password"):return ref("PasswordResetRequest")
@@ -297,7 +298,7 @@ def response_schema(path, method):
     if path == "/api/v1/me/textures/{kind}" and method == "patch":return ref("TextureAssignmentResponse0251")
     if path == "/api/v1/me/textures" and method == "get":return ref("TextureMineResponse0251")
     if path == "/api/v1/me/textures/{kind}/history" and method == "get":return ref("TextureHistoryResponse0251")
-    if path == "/api/v1/me/textures/{kind}/upload" and method == "post":return ref("TextureUploadResponse0252")
+    if path in ("/api/v1/me/textures/{kind}/upload", "/api/v1/me/textures/{kind}/import") and method == "post":return ref("TextureUploadResponse0252")
     if path == "/api/v1/server-bridge/capabilities":return ref("ServerBridgeCapabilitiesResponse")
     if path in ("/api/v1/server-bridge/overview", "/api/v1/server-bridge/projects/{projectId}/overview"):return ref("ServerBridgeOverviewResponseGA")
     if path == "/api/v1/server-bridge/servers/{serverId}/events" and method == "post":return ref("ServerBridgeEventAckV3")
@@ -338,11 +339,14 @@ for method,path in routes:
         op["responses"][success]={"description":"Success"}
     else:
         op["responses"][success]={"description":"Success","content":{ctype:{"schema":({"type":"string","format":"binary"} if ctype=="image/png" else response_schema(path,method))}}}
-    if path == "/api/v1/me/textures/{kind}/upload":
+    if path in ("/api/v1/me/textures/{kind}/upload", "/api/v1/me/textures/{kind}/import"):
         op["responses"]["409"]={"$ref":"#/components/responses/Conflict"}
         op["responses"]["413"]={"description":"Image exceeds upload or project limit"}
         op["responses"]["422"]={"description":"PNG cannot be decoded or has invalid Minecraft dimensions"}
         op["responses"]["403"]={"description":"Texture upload denied by project policy"}
+    if path == "/api/v1/me/textures/{kind}/import":
+        op["responses"]["429"]={"description":"Import rate or concurrency limit exceeded"}
+        op["responses"]["502"]={"description":"Remote origin failed the bounded HTTPS fetch"}
     if path.startswith("/api/v1/me/textures"):
         op["responses"]["503"]={"$ref":"#/components/responses/ServiceUnavailable"}
         if method=="patch":
@@ -368,6 +372,7 @@ for method,path in routes:
     paths.setdefault(path,{})[method]=op
 
 schemas={
+"TextureURLImport0254":{"type":"object","additionalProperties":False,"required":["url","expectedRevision"],"properties":{"url":{"type":"string","format":"uri","maxLength":2048,"description":"Public HTTPS URL (DNS hostname, TCP 443 only), no redirects, max 4 MiB PNG."},"expectedRevision":{"type":"integer","minimum":0},"model":{"type":"string","enum":["classic","slim"],"default":"classic"},"visibility":{"type":"string","enum":["public","private","unlisted"],"default":"public"},"profileUuid":{"type":"string","description":"Optional ownership assertion; never an identity selector"}}},
 "TextureUploadMultipart0252":{"type":"object","required":["file","expectedRevision"],"properties":{"file":{"type":"string","format":"binary","description":"Fully decoded and normalized Minecraft PNG; at most 4 MiB compressed and 1024x1024 pixels."},"expectedRevision":{"type":"integer","minimum":0,"description":"0 for first assignment; otherwise latest revision"},"model":{"type":"string","enum":["classic","slim"],"default":"classic"},"visibility":{"type":"string","enum":["public","private","unlisted"],"default":"public"},"profileUuid":{"type":"string","description":"Optional owner assertion, never used to determine identity"}}},
 "TextureUploadResponse0252":{"type":"object","properties":{"apiVersion":{"type":"string"},"data":{"type":"object","properties":{"assignment":ref("TextureAssignment0251"),"digest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"width":{"type":"integer"},"height":{"type":"integer"},"bytes":{"type":"integer"},"previewUrl":{"type":"string"}}}}},
 "TextureSelectionPatch0251":{"type":"object","required":["expectedRevision","model","visibility","active"],"properties":{"profileUuid":{"type":"string","description":"Optional caller assertion; server derives the actual UUID from the authenticated account."},"expectedRevision":{"type":"integer","minimum":1},"model":{"type":"string","enum":["classic","slim"]},"visibility":{"type":"string","enum":["public","private","unlisted"]},"active":{"type":"boolean"}},"additionalProperties":False},

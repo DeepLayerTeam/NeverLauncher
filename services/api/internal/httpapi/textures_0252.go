@@ -27,8 +27,7 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "authenticated local Minecraft profile required")
 		return
 	}
-	repo, ok := s.Repo.(repository.TextureUploadRepository0252)
-	if !ok || s.Storage == nil {
+	if _, ok := s.Repo.(repository.TextureUploadRepository0252); !ok || s.Storage == nil {
 		writeError(w, http.StatusServiceUnavailable, "texture storage unavailable")
 		return
 	}
@@ -146,70 +145,7 @@ func (s Server) textureUpload0252(w http.ResponseWriter, r *http.Request) {
 		writeError(w, status, "invalid PNG: "+err.Error())
 		return
 	}
-	// Reserve digest and enforce ownership, revision and quota BEFORE any
-	// persistent object write. Failed saves remain GC-visible as staging rows.
-	staged := repository.VerifiedTexture0252{
-		Digest: normalized.Digest, Width: normalized.Width, Height: normalized.Height,
-		Size: int64(len(normalized.PNG)), Driver: s.Storage.Driver(),
-		ObjectKey: "texture-blobs/sha256/" + normalized.Digest[:2] + "/" + normalized.Digest + ".png",
-		Kind:      kind, Model: modelName, Visibility: visibility, ExpectedRevision: expected,
-	}
-	stagingRepo, ok := s.Repo.(interface {
-		StageTextureUpload0253(context.Context, model.MinecraftProfile, repository.VerifiedTexture0252) error
-	})
-	if !ok {
-		writeError(w, http.StatusServiceUnavailable, "texture staging unavailable")
-		return
-	}
-	stageCtx, stageCancel := context.WithTimeout(r.Context(), 10*time.Second)
-	stageErr := stagingRepo.StageTextureUpload0253(stageCtx, profile, staged)
-	stageCancel()
-	switch {
-	case errors.Is(stageErr, repository.ErrTextureRevisionConflict0251):
-		writeError(w, http.StatusConflict, "texture revision conflict; reload and retry")
-		return
-	case errors.Is(stageErr, repository.ErrTextureUploadDenied0252):
-		writeError(w, http.StatusForbidden, "texture upload denied by policy")
-		return
-	case errors.Is(stageErr, repository.ErrTextureUploadLimit0252):
-		writeError(w, http.StatusRequestEntityTooLarge, "texture quota exceeded")
-		return
-	case errors.Is(stageErr, repository.ErrNotFound):
-		writeError(w, http.StatusForbidden, "Minecraft profile ownership mismatch")
-		return
-	case stageErr != nil:
-		writeError(w, http.StatusServiceUnavailable, "texture staging transaction failed")
-		return
-	}
-	key, size, err := storage.PutTextureImmutable0253(r.Context(), s.Storage, normalized.Digest, normalized.PNG)
-	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "failed to persist PNG")
-		return
-	}
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-	defer cancel()
-	input := repository.VerifiedTexture0252{Digest: normalized.Digest, Width: normalized.Width, Height: normalized.Height, Size: size, Driver: s.Storage.Driver(), ObjectKey: key, Kind: kind, Model: modelName, Visibility: visibility, ExpectedRevision: expected}
-	updated, err := repo.UploadTexture0252(ctx, profile, input)
-	switch {
-	case errors.Is(err, repository.ErrTextureRevisionConflict0251):
-		writeError(w, http.StatusConflict, "texture revision conflict; reload and retry")
-		return
-	case errors.Is(err, repository.ErrTextureUploadDenied0252), errors.Is(err, repository.ErrTextureCapeDenied0251):
-		writeError(w, http.StatusForbidden, "texture upload is not permitted by policy")
-		return
-	case errors.Is(err, repository.ErrTextureUploadLimit0252):
-		writeError(w, http.StatusRequestEntityTooLarge, "texture exceeds project quota")
-		return
-	case errors.Is(err, repository.ErrNotFound):
-		writeError(w, http.StatusForbidden, "profile ownership verification failed")
-		return
-	case err != nil:
-		writeError(w, http.StatusServiceUnavailable, "texture upload transaction failed")
-		return
-	}
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("texture-upload-0252"), Actor: user.Email, Action: "texture:upload", Target: profile.UUID + ":" + kind, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	w.Header().Set("Cache-Control", "private, no-store")
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"assignment": updated, "digest": normalized.Digest, "width": normalized.Width, "height": normalized.Height, "bytes": size, "previewUrl": "/api/v1/me/textures/" + kind + "/image"}})
+	s.persistTexture0254(w, r, profile, user, normalized, kind, modelName, visibility, expected, "upload")
 }
 
 func textureMultipartError0252(w http.ResponseWriter, err error) {

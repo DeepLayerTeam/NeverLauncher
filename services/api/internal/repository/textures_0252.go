@@ -20,7 +20,8 @@ type VerifiedTexture0252 struct {
 	Size                    int64
 	Driver, ObjectKey       string
 	Kind, Model, Visibility string
-	ExpectedRevision        int64 // 0 means create-only; >0 means CAS replacement
+	Source                  string // managed-upload or managed-url-import
+	ExpectedRevision        int64  // 0 means create-only; >0 means CAS replacement
 }
 
 type TextureBlob0252 struct {
@@ -45,6 +46,13 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	}
 	if profile.Realm != "local" || profile.Issuer != "neverlauncher" || profile.UserID == "" {
 		return zero, ErrNotFound
+	}
+	source := input.Source
+	if source == "" {
+		source = "managed-upload"
+	}
+	if source != "managed-upload" && source != "managed-url-import" {
+		return zero, fmt.Errorf("invalid texture source")
 	}
 	if err := validateTextureSelection0251(input.Kind, input.Model, input.Visibility); err != nil {
 		return zero, err
@@ -149,7 +157,7 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 			return zero, ErrTextureRevisionConflict0251
 		}
 		assignment, err = scanTextureAssignment0251(tx.QueryRowContext(ctx, `INSERT INTO texture_assignments(realm,profile_uuid,user_id,kind,blob_digest,source,model,visibility,revision,active,updated_at)
-          VALUES('local-project',$1,$2,$3,$4,'managed-upload',$5,$6,1,true,$7) RETURNING id,realm,profile_uuid,user_id,project_id,launcher_profile_id,kind,COALESCE(blob_digest,''),external_url,source,model,visibility,revision,active,updated_at`, profile.UUID, profile.UserID, input.Kind, input.Digest, input.Model, input.Visibility, now))
+          VALUES('local-project',$1,$2,$3,$4,$5,$6,$7,1,true,$8) RETURNING id,realm,profile_uuid,user_id,project_id,launcher_profile_id,kind,COALESCE(blob_digest,''),external_url,source,model,visibility,revision,active,updated_at`, profile.UUID, profile.UserID, input.Kind, input.Digest, source, input.Model, input.Visibility, now))
 		if err != nil {
 			return zero, err
 		}
@@ -163,21 +171,25 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 		assignment.Revision++
 		assignment.BlobDigest = input.Digest
 		assignment.ExternalURL = ""
-		assignment.Source = "managed-upload"
+		assignment.Source = source
 		assignment.Model = input.Model
 		assignment.Visibility = input.Visibility
 		assignment.Active = true
 		assignment.UpdatedAt = now
-		if _, err = tx.ExecContext(ctx, `UPDATE texture_assignments SET blob_digest=$2,external_url='',source='managed-upload',model=$3,visibility=$4,active=true,revision=$5,updated_at=$6 WHERE id=$1`, assignment.ID, input.Digest, input.Model, input.Visibility, assignment.Revision, now); err != nil {
+		if _, err = tx.ExecContext(ctx, `UPDATE texture_assignments SET blob_digest=$2,external_url='',source=$3,model=$4,visibility=$5,active=true,revision=$6,updated_at=$7 WHERE id=$1`, assignment.ID, input.Digest, source, input.Model, input.Visibility, assignment.Revision, now); err != nil {
 			return zero, err
 		}
 	}
-	snapshot, err := json.Marshal(map[string]any{"blobDigest": input.Digest, "externalUrl": "", "kind": input.Kind, "model": input.Model, "visibility": input.Visibility, "active": true, "source": "managed-upload", "projectId": ""})
+	snapshot, err := json.Marshal(map[string]any{"blobDigest": input.Digest, "externalUrl": "", "kind": input.Kind, "model": input.Model, "visibility": input.Visibility, "active": true, "source": source, "projectId": ""})
 	if err != nil {
 		return zero, err
 	}
+	event := "upload"
+	if source == "managed-url-import" {
+		event = "import"
+	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO texture_assignment_revisions(assignment_id,revision,snapshot,actor_user_id,reason,event)
-      VALUES($1,$2,$3,$4,'verified normalized PNG upload','upload')`, assignment.ID, assignment.Revision, snapshot, profile.UserID); err != nil {
+      VALUES($1,$2,$3,$4,$5,$6)`, assignment.ID, assignment.Revision, snapshot, profile.UserID, "verified normalized PNG "+event, event); err != nil {
 		return zero, err
 	}
 	if err = tx.Commit(); err != nil {
