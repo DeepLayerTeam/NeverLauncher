@@ -1,3 +1,11 @@
+## 0.25.10 — Gravit TextureProvider Migration
+
+- Added an operator-only, executable TextureProvider importer reading upstream PostgreSQL `textures` records or a JSON export, and resolving local/S3 source objects without fetching legacy HTTP URLs.
+- Added strict UUID ownership mapping with explicit override file, SHA-1/SHA-256 verification of raw PNG, full PNG decode/normalization, bounded reads, source-key validation and row-by-row quarantine reports.
+- Connected imports to the existing per-user quotas, cape entitlements, staging, immutable local/S3 storage, saved gallery and transactional CAS assignment history.
+- Added migration `0073` with atomic, idempotent import receipts and the `gravit-import` revision event; added tests and a targeted CI gate.
+- See [Gravit TextureProvider migration guide](docs/textures/gravit-textureprovider-migration-02510.md). **Release gates:** production DB, S3/MinIO and live Minecraft verification remain required.
+
 ## 0.25.9 — Admin Texture Management
 
 - Added a working Admin **Скины и плащи** workspace for global/project-scoped skin and cape policies, individual allow/deny/inherit exceptions, quotas, public default/fallback PNGs and their classic/slim models.

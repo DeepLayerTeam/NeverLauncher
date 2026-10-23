@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0072_texture_admin_0259" {
+	if st.Current != "0073_texture_gravit_import_02510" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }

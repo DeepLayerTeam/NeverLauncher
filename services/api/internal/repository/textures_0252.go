@@ -22,6 +22,10 @@ type VerifiedTexture0252 struct {
 	Kind, Model, Visibility string
 	Source                  string // managed-upload or managed-url-import
 	ExpectedRevision        int64  // 0 means create-only; >0 means CAS replacement
+	GravitSourceID          string // set together with GravitRowID for verified operator imports
+	GravitRowID             string
+	GravitExternalUUID      string
+	GravitOriginalHash      string
 }
 
 type TextureBlob0252 struct {
@@ -35,6 +39,8 @@ type TextureUploadRepository0252 interface {
 	UploadTexture0252(context.Context, model.MinecraftProfile, VerifiedTexture0252) (model.TextureAssignment0251, error)
 	ReadTextureBlob0252(context.Context, string, model.MinecraftProfile, bool) (TextureBlob0252, bool, error)
 }
+
+var ErrGravitAlreadyImported02510 = errors.New("Gravit texture row already imported")
 
 var ErrTextureUploadDenied0252 = errors.New("texture upload forbidden by policy")
 var ErrTextureUploadLimit0252 = errors.New("texture size exceeds project policy")
@@ -51,8 +57,15 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	if source == "" {
 		source = "managed-upload"
 	}
-	if source != "managed-upload" && source != "managed-url-import" {
+	if source != "managed-upload" && source != "managed-url-import" && source != "managed-gravit-import" {
 		return zero, fmt.Errorf("invalid texture source")
+	}
+	if source == "managed-gravit-import" {
+		if len(input.GravitSourceID) < 1 || len(input.GravitSourceID) > 100 || len(input.GravitRowID) < 1 || len(input.GravitRowID) > 150 || len(input.GravitExternalUUID) < 1 || len(input.GravitOriginalHash) < 1 {
+			return zero, fmt.Errorf("incomplete Gravit import provenance")
+		}
+	} else if input.GravitSourceID != "" || input.GravitRowID != "" {
+		return zero, fmt.Errorf("Gravit provenance only valid for Gravit imports")
 	}
 	if err := validateTextureSelection0251(input.Kind, input.Model, input.Visibility); err != nil {
 		return zero, err
@@ -80,6 +93,15 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	// A transaction-scoped lock serializes the create-only path as well as CAS.
 	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(252,hashtext($1))`, profile.UUID); err != nil {
 		return zero, err
+	}
+	if source == "managed-gravit-import" {
+		var done bool
+		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM texture_gravit_import_receipts WHERE source_id=$1 AND external_row_id=$2)`, input.GravitSourceID, input.GravitRowID).Scan(&done); err != nil {
+			return zero, err
+		}
+		if done {
+			return zero, ErrGravitAlreadyImported02510
+		}
 	}
 	res, err := tx.ExecContext(ctx, `INSERT INTO texture_identities(realm,profile_uuid,user_id,profile_name,origin,local_profile_uuid)
       SELECT 'local-project',uuid,user_id,name,'local-profile',uuid FROM minecraft_profiles WHERE uuid=$1 AND user_id=$2
@@ -156,7 +178,7 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 			return zero, ErrTextureRevisionConflict0251
 		}
 		assignment, err = scanTextureAssignment0251(tx.QueryRowContext(ctx, `INSERT INTO texture_assignments(realm,profile_uuid,user_id,kind,blob_digest,source,model,visibility,revision,active,updated_at)
-          VALUES('local-project',$1,$2,$3,$4,$5,$6,$7,1,true,$8) RETURNING id,realm,profile_uuid,user_id,project_id,launcher_profile_id,kind,COALESCE(blob_digest,''),external_url,source,model,visibility,revision,active,updated_at`, profile.UUID, profile.UserID, input.Kind, input.Digest, source, input.Model, input.Visibility, now))
+          VALUES('local-project',$1,$2,$3,$4,$5,$6,$7,1,true,$8) RETURNING id,realm,profile_uuid,user_id,project_id,launcher_profile_id,kind,COALESCE(blob_digest,''),external_url,source,model,visibility,revision,active,updated_at`, profile.UUID, profile.UserID, input.Kind, input.Digest, dbTextureSource02510(source), input.Model, input.Visibility, now))
 		if err != nil {
 			return zero, err
 		}
@@ -170,12 +192,12 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 		assignment.Revision++
 		assignment.BlobDigest = input.Digest
 		assignment.ExternalURL = ""
-		assignment.Source = source
+		assignment.Source = dbTextureSource02510(source)
 		assignment.Model = input.Model
 		assignment.Visibility = input.Visibility
 		assignment.Active = true
 		assignment.UpdatedAt = now
-		if _, err = tx.ExecContext(ctx, `UPDATE texture_assignments SET blob_digest=$2,external_url='',source=$3,model=$4,visibility=$5,active=true,revision=$6,updated_at=$7 WHERE id=$1`, assignment.ID, input.Digest, source, input.Model, input.Visibility, assignment.Revision, now); err != nil {
+		if _, err = tx.ExecContext(ctx, `UPDATE texture_assignments SET blob_digest=$2,external_url='',source=$3,model=$4,visibility=$5,active=true,revision=$6,updated_at=$7 WHERE id=$1`, assignment.ID, input.Digest, dbTextureSource02510(source), input.Model, input.Visibility, assignment.Revision, now); err != nil {
 			return zero, err
 		}
 	}
@@ -184,20 +206,34 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	if _, err = tx.ExecContext(ctx, `INSERT INTO texture_saved_items(user_id,digest,kind,model,source,last_selected_at)
       VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(user_id,digest,kind)
       DO UPDATE SET model=EXCLUDED.model,source=EXCLUDED.source,last_selected_at=EXCLUDED.last_selected_at`,
-		profile.UserID, input.Digest, input.Kind, input.Model, source, now); err != nil {
+		profile.UserID, input.Digest, input.Kind, input.Model, dbTextureSource02510(source), now); err != nil {
 		return zero, err
 	}
-	snapshot, err := json.Marshal(map[string]any{"blobDigest": input.Digest, "externalUrl": "", "kind": input.Kind, "model": input.Model, "visibility": input.Visibility, "active": true, "source": source, "projectId": ""})
+	snapshot, err := json.Marshal(map[string]any{"blobDigest": input.Digest, "externalUrl": "", "kind": input.Kind, "model": input.Model, "visibility": input.Visibility, "active": true, "source": dbTextureSource02510(source), "projectId": ""})
 	if err != nil {
 		return zero, err
 	}
 	event := "upload"
 	if source == "managed-url-import" {
 		event = "import"
+	} else if source == "managed-gravit-import" {
+		event = "gravit-import"
+	}
+	auditActor := profile.UserID
+	auditReason := "verified normalized PNG " + event
+	if source == "managed-gravit-import" {
+		auditActor = "system:gravit-texture-import"
+		auditReason = "Gravit TextureProvider migration source=" + input.GravitSourceID + " row=" + input.GravitRowID
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO texture_assignment_revisions(assignment_id,revision,snapshot,actor_user_id,reason,event)
-      VALUES($1,$2,$3,$4,$5,$6)`, assignment.ID, assignment.Revision, snapshot, profile.UserID, "verified normalized PNG "+event, event); err != nil {
+      VALUES($1,$2,$3,$4,$5,$6)`, assignment.ID, assignment.Revision, snapshot, auditActor, auditReason, event); err != nil {
 		return zero, err
+	}
+	if source == "managed-gravit-import" {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO texture_gravit_import_receipts(source_id,external_row_id,external_user_uuid,original_hash,target_profile_uuid,kind,normalized_digest,assignment_id,revision)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, input.GravitSourceID, input.GravitRowID, input.GravitExternalUUID, input.GravitOriginalHash, profile.UUID, input.Kind, input.Digest, assignment.ID, assignment.Revision); err != nil {
+			return zero, err
+		}
 	}
 	if err = tx.Commit(); err != nil {
 		return zero, err
@@ -242,4 +278,11 @@ func (r *SQLRepository) ReadTextureBlob0252(ctx context.Context, digest string, 
 		return b, false, nil
 	}
 	return b, err == nil, err
+}
+
+func dbTextureSource02510(source string) string {
+	if source == "managed-gravit-import" {
+		return "imported"
+	}
+	return source
 }
