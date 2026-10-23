@@ -9,6 +9,7 @@ type Props = {
 
 export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Props) {
   const [device, setDevice] = useState<OfficialDevice0257 | null>(null);
+  const [browserPending, setBrowserPending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [variant, setVariant] = useState<'classic'|'slim'>('classic');
@@ -22,7 +23,17 @@ export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Pr
     <h3>Официальный Minecraft (Microsoft)</h3>
     <p>Официальная учётная запись отдельна от локального профиля NeverLauncher. Доступны только скины и плащи, подтверждённые Minecraft Services.</p>
     {!linkedProfile && <div className="toolbar inline">
-      <button disabled={busy} onClick={()=>void perform(async()=>{const d=await client.begin();setDevice(d);onLinked(null);})}>Подключить Microsoft</button>
+      <button disabled={busy||browserPending} onClick={()=>{
+        setBrowserPending(true);setError('');setDevice(null);
+        void client.browserLogin().then(profile=>{onLinked(profile);setDevice(null);}).catch(e=>{
+          if (e instanceof Error && !e.message.includes('отменена')) setError(e.message);
+        }).finally(()=>setBrowserPending(false));
+      }}>Войти через браузер Microsoft (PKCE)</button>
+      {browserPending && <>
+        <span role="status">Завершите вход в открывшемся системном браузере.</span>
+        <button onClick={()=>void perform(async()=>{await client.cancel();setDevice(null);})}>Отменить вход</button>
+      </>}
+      <button disabled={busy||browserPending} onClick={()=>void perform(async()=>{const d=await client.begin();setDevice(d);onLinked(null);})}>Device Code (резервный режим)</button>
       {device && <>
         <span>Код: <strong>{device.userCode}</strong></span>
         <a href={device.verificationUri} target="_blank" rel="noopener noreferrer">Открыть вход Microsoft</a>

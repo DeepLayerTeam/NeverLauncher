@@ -1,0 +1,65 @@
+name: Browser OAuth PKCE 0.26.3
+on:
+  push:
+    paths:
+      - 'services/api/internal/httpapi/minecraft_official_browser_0263*'
+      - 'services/api/internal/httpapi/routes_bridge.go'
+      - 'apps/desktop/src-tauri/**'
+      - 'apps/desktop/src/**'
+      - 'apps/desktop/tests/official_minecraft_0257.test.mjs'
+      - '.github/workflows/browser-oauth-pkce-0263.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/httpapi/minecraft_official_browser_0263*'
+      - 'services/api/internal/httpapi/routes_bridge.go'
+      - 'apps/desktop/src-tauri/**'
+      - 'apps/desktop/src/**'
+      - 'apps/desktop/tests/official_minecraft_0257.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend-real-handler:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: services/api/go.sum
+      - name: Verify OAuth exchange and account-bound flow
+        working-directory: services/api
+        run: go test ./internal/httpapi ./internal/officialminecraft -run 'TestBrowserPKCE|TestOfficial|TestPKCE' -count=1
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux native prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Renderer privacy and cancellation tests
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npm run test:official
+          npm run build
+      - name: Loopback adversarial tests and native compile
+        run: |
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_browser_0263::tests -- --nocapture
+          cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml

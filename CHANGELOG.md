@@ -1,3 +1,12 @@
+## 0.26.3 — Browser OAuth + PKCE
+
+- Implemented native Rust/Tauri desktop Authorization Code + PKCE S256 sign-in using the **system browser** and a dynamically bound IPv4 loopback HTTP callback. The native manager generates fresh cryptographically random verifier/state per attempt, verifies exact Host/path/HTTP method and OAuth state, detects duplicate query parameters, limits callback input, accepts one successful grant, times out and supports cancellation.
+- Connected native browser login to the authenticated Never Backend: its configured **own** Microsoft public client ID is fetched natively; code + verifier are exchanged on the Backend through Microsoft → Xbox Live → XSTS → Minecraft Java profile. No renderer-owned OAuth verifier, authorization code, refresh token, Minecraft bearer or encrypted ticket.
+- Store resulting opaque session in the existing OS vault; the official profile is the only login result returned to React. Preserved restore, refresh, launch and texture operations with the native security boundary from 0.26.2.
+- Promoted browser PKCE to the primary Desktop login action and retained Device Code as an explicit fallback. Cancel also closes the native login flow and prevents late results from being linked.
+- Added provider-chain fixture tests, malformed grant tests, real loopback callback/cancellation Rust tests, privacy/race renderer tests, CI and an operator runbook.
+- **No external approval claim:** real Microsoft application registration, own-app Minecraft Services authorization and live game account testing remain release blockers. This sandbox cannot perform a native Rust build or full Backend suite due unavailable Rust and third-party dependencies.
+
 ## 0.26.2 — Native Identity & Security Boundary
 
 - Migrated Desktop official Minecraft Device Code, polling, profile, cape/skin operations from renderer fetch/session ticket to native Tauri HTTP requests; renderer receives no official flow tickets, refresh tokens or game access tokens.

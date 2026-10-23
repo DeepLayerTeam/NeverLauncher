@@ -10,6 +10,8 @@ use zeroize::Zeroize;
 use rand::RngCore;
 use base64::Engine as _;
 use neverruntime::MinecraftLaunchCredentials;
+use tokio::sync::watch;
+use crate::official_browser_0263;
 
 const SERVICE: &str = "NeverLauncher Official Minecraft 0.26.2";
 const PREFIX: &str = "/api/v1/minecraft/official";
@@ -45,10 +47,13 @@ pub struct PollResult { pub pending: bool, #[serde(skip_serializing_if="Option::
 struct StoredAccount { schema: u32, ticket: String, profile: OfficialProfile }
 impl Drop for StoredAccount { fn drop(&mut self) { self.ticket.zeroize(); } }
 
+struct BrowserFlow0263 { state: String, cancel: watch::Sender<bool> }
+
 struct PendingFlow { ticket: String, next: Instant, expires: Instant }
 impl Drop for PendingFlow { fn drop(&mut self) { self.ticket.zeroize(); } }
 
 pub struct IdentityManager {
+    browser: Mutex<HashMap<String, BrowserFlow0263>>,
     client: Client,
     pending: Mutex<HashMap<String, PendingFlow>>,
     vault_lock: tokio::sync::Mutex<()>,
@@ -202,11 +207,11 @@ impl Drop for Response { fn drop(&mut self) { if let Some(token) = &mut self.rot
 
 impl IdentityManager {
     pub fn new() -> Result<Self, String> {
-        let client = Client::builder().timeout(Duration::from_secs(45))
+        let client = Client::builder().timeout(Duration::from_secs(80))
             .redirect(reqwest::redirect::Policy::none())
             .user_agent(concat!("NeverLauncher/", env!("CARGO_PKG_VERSION")))
             .build().map_err(|_| "Не удалось инициализировать защищённый HTTP-клиент".to_string())?;
-        Ok(Self { client, pending: Mutex::new(HashMap::new()), vault_lock: tokio::sync::Mutex::new(()) })
+        Ok(Self { client, pending: Mutex::new(HashMap::new()), browser: Mutex::new(HashMap::new()), vault_lock: tokio::sync::Mutex::new(()) })
     }
     async fn request(&self, base: &Url, access: &str, route: &str, method: Method, ticket: Option<&str>, body: Option<Value>, skin: Option<(Vec<u8>, String)>) -> Result<Response, String> {
         if access.len() < 16 || access.len() > 8192 { return Err("Необходимо войти в NeverLauncher".into()); }
@@ -261,6 +266,7 @@ impl IdentityManager {
     pub async fn begin(&self, backend: &str, access: &str, session: &str) -> Result<DeviceChallenge, String> {
         let (base, id) = scope(backend, session)?;
         self.pending_remove(&id)?;
+        self.cancel_browser(&id)?;
         let result = self.request(&base, access, "/device/start", Method::POST, None, None, None).await?;
         let ticket = result.data.get("flow").and_then(Value::as_str).filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Microsoft не вернул flow")?.to_owned();
         let uri = result.data.get("verificationUri").and_then(Value::as_str).ok_or("Microsoft не вернул verificationUri")?;
@@ -359,14 +365,74 @@ impl IdentityManager {
         }
         Ok(cred)
     }
+
+    fn cancel_browser(&self, id: &str) -> Result<(), String> {
+        let removed = self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?.remove(id);
+        if let Some(flow) = removed { let _ = flow.cancel.send(true); }
+        Ok(())
+    }
+    fn browser_active(&self, id: &str, state: &str) -> Result<bool,String> {
+        Ok(self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?
+            .get(id).is_some_and(|flow| flow.state == state))
+    }
+    // await the callback and complete provider exchange wholly within Rust.
+    // Renderer sees only the finished profile and never code/state/verifier.
+    pub async fn login_browser(&self, backend: &str, access: &str, session: &str) -> Result<OfficialProfile,String> {
+        let (base,id) = scope(backend,session)?;
+        let state = official_browser_0263::random_secret(32);
+        self.pending_remove(&id)?;
+        self.cancel_browser(&id)?;
+        let (sender,receiver) = watch::channel(false);
+        self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?.insert(id.clone(), BrowserFlow0263 {state: state.to_string(), cancel: sender});
+        // Cleanup always removes only this specific flow. A newer login must
+        // never be removed by completion/cancellation of an older one.
+        let response = async {
+            let client_info = self.request(&base,access,"/browser/config",Method::GET,None,None,None).await?;
+            if !self.browser_active(&id,&state)? { return Err("Microsoft-авторизация отменена".into()); }
+            let client_id = client_info.data.get("clientId").and_then(Value::as_str).filter(|v| official_browser_0263::valid_client_id(v))
+                .ok_or("Собственная Microsoft app registration отсутствует или недействительна")?;
+            let listener = official_browser_0263::bind_loopback().await?;
+            let port = listener.local_addr().map_err(|_| "Не удалось определить OAuth порт")?.port();
+            let redirect = format!("http://localhost:{port}{}",official_browser_0263::CALLBACK_PATH);
+            let verifier = official_browser_0263::random_secret(64);
+            let auth_url = official_browser_0263::authorization_uri(client_id,&redirect,&state,&verifier)?;
+            if !self.browser_active(&id,&state)? { return Err("Microsoft-авторизация отменена".into()); }
+            official_browser_0263::open_system_browser(&auth_url)?;
+            let code = official_browser_0263::receive_callback(listener,&state,receiver).await?;
+            if !self.browser_active(&id,&state)? { return Err("Microsoft-авторизация отменена".into()); }
+            let result = self.request(&base,access,"/browser/exchange",Method::POST,None,
+                Some(json!({"redirectUri":redirect,"verifier":verifier.as_str(),"code":code.as_str()})),None).await?;
+            if result.data.get("realm").and_then(Value::as_str) != Some("official-minecraft") { return Err("Ответ не является официальной Minecraft-сессией".into()); }
+            let profile = Self::profile(&result.data)?;
+            let mut ticket = result.data.get("session").and_then(Value::as_str)
+                .filter(|v| !v.is_empty() && v.len()<8192).ok_or("Не получена защищённая Minecraft-сессия")?.to_owned();
+            let _vault = self.vault_lock.lock().await;
+            // Hold browser lock through the synchronous vault commit so a
+            // cancel cannot race with persistence of a cancelled login.
+            let flows = self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?;
+            if !flows.get(&id).is_some_and(|flow| flow.state == state.as_str()) {
+                ticket.zeroize(); return Err("Microsoft-авторизация отменена".into());
+            }
+            let stored = save(&id,&StoredAccount {schema:1,ticket:std::mem::take(&mut ticket),profile:profile.clone()});
+            ticket.zeroize();
+            stored?;
+            Ok(profile)
+        }.await;
+        let mut flows = self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?;
+        if flows.get(&id).is_some_and(|flow| flow.state == state.as_str()) { flows.remove(&id); }
+        response
+    }
+
     pub fn cancel(&self, backend: &str, session: &str) -> Result<(), String> {
         let (_, id) = scope(backend, session)?;
         self.pending_remove(&id)?;
+        self.cancel_browser(&id)?;
         Ok(())
     }
     pub async fn disconnect(&self, backend: &str, session: &str) -> Result<(), String> {
         let (_, id) = scope(backend, session)?;
         self.pending_remove(&id)?;
+        self.cancel_browser(&id)?;
         let _guard = self.vault_lock.lock().await;
         delete(&id)
     }
@@ -427,4 +493,9 @@ mod tests {
         assert!(!uuid_valid("e-mail@example.com"));
         assert!(!uuid_valid("12345678-1234-1234-1234-1234567890ab"));
     }
+}
+
+#[tauri::command]
+pub async fn official_identity_browser_login_0263(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<OfficialProfile,String> {
+    manager.login_browser(&context.backend_url, &context.never_token, &context.never_session_id).await
 }

@@ -67,3 +67,34 @@ test('never forwards native account tickets or token fields to preview',async()=
  await c.selectCape('cape1');await c.resetCape();await c.resetSkin();
  assert.ok(calls.filter(x=>x.cmd==='official_identity_texture_0262').every(x=>!('session' in x.args) && !('accessToken' in x.args)));
 });
+
+
+test('browser PKCE is a native-only command and returns profile metadata',async()=>{
+  const calls=[];
+  const client = new OfficialMinecraftClient0257('https://backend.example','platform-token','session-1',async(cmd,args)=>{
+    calls.push({cmd,args});
+    if(cmd==='official_identity_browser_login_0263')return profile;
+    if(cmd==='official_identity_cancel_0262')return;
+    throw Error('Unexpected command '+cmd);
+  });
+  assert.deepEqual(await client.browserLogin(),profile);
+  assert.equal(client.linked,true);
+  assert.deepEqual(calls.map(c=>c.cmd),['official_identity_cancel_0262','official_identity_browser_login_0263']);
+  assert.ok(calls.every(c=> !JSON.stringify(c.args).includes('verifier') && !JSON.stringify(c.args).includes('code_challenge') && !JSON.stringify(c.args).includes('microsoftToken')));
+});
+
+test('cancelled browser flow cannot attach a late response to renderer',async()=>{
+  let complete;
+  const pending = new Promise(resolve=>{complete=resolve;});
+  const client=new OfficialMinecraftClient0257('https://backend.example','platform-token','session-1',async cmd=>{
+    if(cmd==='official_identity_cancel_0262')return;
+    if(cmd==='official_identity_browser_login_0263')return pending;
+    throw Error('Unexpected command '+cmd);
+  });
+  const login=client.browserLogin();
+  await new Promise(resolve=>setImmediate(resolve));
+  await client.cancel();
+  complete(profile);
+  await assert.rejects(login,/отменена/);
+  assert.equal(client.linked,false);
+});

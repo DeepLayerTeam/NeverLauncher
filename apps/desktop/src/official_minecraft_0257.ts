@@ -55,6 +55,16 @@ export class OfficialMinecraftClient0257 {
     this.clear();
     await this.native('official_identity_cancel_0262', {backendUrl:this.backendUrl, neverSessionId:this.neverSessionId});
   }
+  /** System-browser OAuth PKCE: authorization code and verifier never enter React. */
+  async browserLogin(): Promise<OfficialProfile0257> {
+    await this.cancel();
+    const generation = this.generation;
+    const profile = await this.call<OfficialProfile0257>('official_identity_browser_login_0263');
+    if (generation !== this.generation) throw new Error('Авторизация отменена.');
+    if (!profile?.id || !profile.name) throw new Error('Microsoft-вход не подтвердил Minecraft Java профиль.');
+    this.active = true;
+    return profile;
+  }
   async begin(): Promise<OfficialDevice0257> {
     await this.cancel();
     const generation = this.generation;

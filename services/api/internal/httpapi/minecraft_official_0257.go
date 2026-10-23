@@ -129,6 +129,10 @@ func officialFail0257(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusForbidden, "official Minecraft account is not entitled or access was denied")
 	case errors.Is(err, officialminecraft.ErrExpired):
 		writeError(w, http.StatusUnauthorized, "Microsoft authorization expired")
+	case errors.As(err, &upstream) && upstream.Status == 403 && upstream.Code == "invalid_app_registration":
+		writeError(w, http.StatusForbidden, "Minecraft Services rejected the registered application ID; provider approval required")
+	case errors.As(err, &upstream) && upstream.Status == 400 && (upstream.Code == "invalid_grant" || upstream.Code == "unauthorized_client"):
+		writeError(w, http.StatusUnauthorized, "Microsoft OAuth grant expired, rejected or app redirect not permitted")
 	case errors.As(err, &upstream) && upstream.Status == 404:
 		writeError(w, http.StatusForbidden, "official Minecraft Java profile not available")
 	case errors.As(err, &upstream) && upstream.Status == 401:
