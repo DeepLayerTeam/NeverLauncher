@@ -220,6 +220,7 @@ def body_schema(path):
       "/authserver/authenticate":"YggdrasilAuthenticateRequest", "/authserver/refresh":"YggdrasilRefreshRequest", "/authserver/validate":"YggdrasilTokenRequest", "/authserver/invalidate":"YggdrasilTokenRequest", "/authserver/signout":"YggdrasilSignoutRequest",
       "/sessionserver/session/minecraft/join":"YggdrasilJoinRequest",
     }
+    if path == "/api/v1/me/textures/{kind}":return ref("TextureSelectionPatch0251")
     if path in exact:return ref(exact[path])
     if path.endswith("/heartbeat"):return ref("HeartbeatRequest")
     if path.endswith("/password"):return ref("PasswordResetRequest")
@@ -293,6 +294,9 @@ def response_schema(path, method):
     if path.endswith("/export") and "/profiles/" in path:return ref("PortableProfile0225")
     if path.endswith("/diff") and "/profiles/" in path:return ref("ProfileDifference0225")
     if path == "/api/v1/admin/login":return ref("AdminSession")
+    if path == "/api/v1/me/textures/{kind}" and method == "patch":return ref("TextureAssignmentResponse0251")
+    if path == "/api/v1/me/textures" and method == "get":return ref("TextureMineResponse0251")
+    if path == "/api/v1/me/textures/{kind}/history" and method == "get":return ref("TextureHistoryResponse0251")
     if path == "/api/v1/server-bridge/capabilities":return ref("ServerBridgeCapabilitiesResponse")
     if path in ("/api/v1/server-bridge/overview", "/api/v1/server-bridge/projects/{projectId}/overview"):return ref("ServerBridgeOverviewResponseGA")
     if path == "/api/v1/server-bridge/servers/{serverId}/events" and method == "post":return ref("ServerBridgeEventAckV3")
@@ -311,6 +315,9 @@ for method,path in routes:
     elif path == "/sessionserver/session/minecraft/hasJoined":
         op["description"] = "Consumes a Yggdrasil-compatible one-time join authorization. The first valid hasJoined succeeds; replay returns no join."
     params=path_parameters(path)
+    if path.startswith("/api/v1/me/textures/"):
+        for param in params:
+            if param["name"]=="kind": param["schema"]={"type":"string","enum":["skin","cape"]}
     if params: op["parameters"]=params
     sec=security_for(method,path)
     if sec: op["security"]=sec
@@ -328,6 +335,12 @@ for method,path in routes:
         op["responses"][success]={"description":"Success"}
     else:
         op["responses"][success]={"description":"Success","content":{ctype:{"schema":response_schema(path,method)}}}
+    if path.startswith("/api/v1/me/textures"):
+        op["responses"]["503"]={"$ref":"#/components/responses/ServiceUnavailable"}
+        if method=="patch":
+            op["responses"]["403"]={"description":"Foreign Minecraft profile"}
+            op["responses"]["404"]={"description":"Assignment does not exist"}
+            op["responses"]["409"]={"$ref":"#/components/responses/Conflict"}
     if path == "/api/v1/server-bridge/servers/{serverId}/control" and method == "post":
         op["responses"]["200"]={"description":"Idempotent replay of the same queued command","content":{"application/json":{"schema":ref("ServerBridgeControlCommandResponseV3")}}}
     if path == "/api/v1/server-bridge/servers/{serverId}/control/poll" and method == "get":
@@ -347,6 +360,11 @@ for method,path in routes:
     paths.setdefault(path,{})[method]=op
 
 schemas={
+"TextureSelectionPatch0251":{"type":"object","required":["expectedRevision","model","visibility","active"],"properties":{"profileUuid":{"type":"string","description":"Optional caller assertion; server derives the actual UUID from the authenticated account."},"expectedRevision":{"type":"integer","minimum":1},"model":{"type":"string","enum":["classic","slim"]},"visibility":{"type":"string","enum":["public","private","unlisted"]},"active":{"type":"boolean"}},"additionalProperties":False},
+"TextureAssignment0251":{"type":"object","required":["id","realm","profileUuid","userId","projectId","launcherProfileId","kind","source","model","visibility","revision","active","updatedAt"],"properties":{"id":{"type":"integer"},"realm":{"const":"local-project"},"profileUuid":{"type":"string"},"userId":{"type":"string"},"projectId":{"type":"string"},"launcherProfileId":{"type":"string"},"kind":{"type":"string","enum":["skin","cape"]},"blobDigest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"externalUrl":{"type":"string"},"source":{"type":"string","enum":["managed-upload","imported","remote-reference","official"]},"model":{"type":"string","enum":["classic","slim"]},"visibility":{"type":"string","enum":["public","private","unlisted"]},"revision":{"type":"integer","minimum":1},"active":{"type":"boolean"},"updatedAt":{"type":"string","format":"date-time"}}},
+"TextureAssignmentResponse0251":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":ref("TextureAssignment0251")}},
+"TextureMineResponse0251":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":{"type":"object","required":["realm","profileUuid","profileName","items"],"properties":{"realm":{"const":"local-project"},"profileUuid":{"type":"string"},"profileName":{"type":"string"},"items":{"type":"array","items":ref("TextureAssignment0251")}}}}},
+"TextureHistoryResponse0251":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":{"type":"array","items":{"type":"object","required":["assignmentId","revision","snapshot","actorUserId","event","reason","createdAt"],"properties":{"assignmentId":{"type":"integer"},"revision":{"type":"integer"},"snapshot":{"type":"object"},"actorUserId":{"type":"string"},"event":{"type":"string"},"reason":{"type":"string"},"createdAt":{"type":"string","format":"date-time"}}}}}},
 "Error":{"type":"object","required":["error"],"properties":{"error":{"type":"object","required":["code","message"],"properties":{"code":{"type":"integer"},"message":{"type":"string"}},"additionalProperties":False}},"additionalProperties":False},
 "ExtensionRegistryPublisherWrite":{"type":"object","required":["id","name"],"properties":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9._-]{2,127}$"},"name":{"type":"string","minLength":1,"maxLength":160},"active":{"type":"boolean"}},"additionalProperties":False},
 "ExtensionRegistryPublisherKeyWrite":{"type":"object","required":["publicKeyBase64"],"properties":{"publicKeyBase64":{"type":"string","description":"Raw 32-byte Ed25519 public key encoded as standard Base64."},"active":{"type":"boolean"}},"additionalProperties":False},

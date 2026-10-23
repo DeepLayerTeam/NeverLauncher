@@ -858,7 +858,7 @@ func (r *SQLRepository) ServerBridgeSummary(ctx context.Context, now time.Time) 
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	var nodes, joins, handoffs, textures int
+	var nodes, joins, handoffs, textures, textureAssignments, textureLegacyRecords, textureUnmatched int
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_nodes_v2`).Scan(&nodes); err != nil {
 		return nil, err
 	}
@@ -868,14 +868,23 @@ func (r *SQLRepository) ServerBridgeSummary(ctx context.Context, now time.Time) 
 	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_handoffs_v2 WHERE status='active' AND expires_at>$1::timestamptz`, now.UTC()).Scan(&handoffs); err != nil {
 		return nil, err
 	}
-	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_textures_v2`).Scan(&textures); err != nil {
+	if err := r.db.QueryRowContext(ctx, `SELECT count(DISTINCT profile_uuid) FROM texture_assignments WHERE realm='local-project'`).Scan(&textures); err != nil {
+		return nil, err
+	}
+	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM texture_assignments`).Scan(&textureAssignments); err != nil {
+		return nil, err
+	}
+	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_textures_v2`).Scan(&textureLegacyRecords); err != nil {
+		return nil, err
+	}
+	if err := r.db.QueryRowContext(ctx, `SELECT count(*) FROM texture_legacy_unmatched`).Scan(&textureUnmatched); err != nil {
 		return nil, err
 	}
 	ha, err := r.ServerBridgeHAStatus(ctx, now)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"servers": nodes, "activeJoins": joins, "activeHandoffs": handoffs, "topologyEdges": ha.TopologyFresh, "topologyEdgesStoredActive": ha.TopologyActive, "staleTopologyEdges": ha.TopologyStale, "freshNodes": ha.NodesFresh, "staleNodes": ha.NodesStale, "textures": textures, "joinTtlSeconds": 120, "handoffTtlSeconds": 30, "topologyFreshnessSeconds": ha.FreshnessSeconds, "topologyMode": "runtime-learned-zero-patch", "nodeAuthentication": "ed25519-signed-requests", "replayProtection": "postgresql-single-use-nonce", "protocolVersion": 3, "supportedProtocolVersions": []int{3, 2}, "sourceOfTruth": "postgresql"}, nil
+	return map[string]any{"servers": nodes, "activeJoins": joins, "activeHandoffs": handoffs, "topologyEdges": ha.TopologyFresh, "topologyEdgesStoredActive": ha.TopologyActive, "staleTopologyEdges": ha.TopologyStale, "freshNodes": ha.NodesFresh, "staleNodes": ha.NodesStale, "textures": textures, "textureAssignments": textureAssignments, "textureLegacyRecords": textureLegacyRecords, "textureUnmatchedLegacy": textureUnmatched, "joinTtlSeconds": 120, "handoffTtlSeconds": 30, "topologyFreshnessSeconds": ha.FreshnessSeconds, "topologyMode": "runtime-learned-zero-patch", "nodeAuthentication": "ed25519-signed-requests", "replayProtection": "postgresql-single-use-nonce", "protocolVersion": 3, "supportedProtocolVersions": []int{3, 2}, "sourceOfTruth": "postgresql"}, nil
 }
 
 func isProxyBridgeKind0148(kind string) bool {

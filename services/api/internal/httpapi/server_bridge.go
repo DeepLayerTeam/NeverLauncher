@@ -162,12 +162,6 @@ type bridgeInvalidateRequest struct {
 	Reason   string `json:"reason,omitempty"`
 }
 
-type textureUpdateRequest struct {
-	SkinURL string `json:"skinUrl"`
-	CapeURL string `json:"capeUrl"`
-	Model   string `json:"model"`
-}
-
 func (s Server) ecosystemServerBridge(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": s.serverBridgePayload910("ecosystem")})
 }
@@ -307,7 +301,16 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	join, err := s.State.ServerBridge.createJoin(user, claims.SessionID, token, trust.TrustedDeviceID, trust.BindingEpoch, minecraftSession.ID, req)
+	canonical, profileErr := s.ensureMinecraftProfile119(user)
+	if profileErr != nil {
+		writeError(w, http.StatusServiceUnavailable, "Minecraft profile unavailable")
+		return
+	}
+	if minecraftSession.ProfileUUID != "" && !strings.EqualFold(minecraftSession.ProfileUUID, canonical.UUID) {
+		writeError(w, http.StatusPreconditionFailed, "Minecraft session profile mismatch")
+		return
+	}
+	join, err := s.State.ServerBridge.createJoin(user, canonical, claims.SessionID, token, trust.TrustedDeviceID, trust.BindingEpoch, minecraftSession.ID, req)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -430,32 +433,7 @@ func (s Server) textureGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	texture := s.State.ServerBridge.textureFor(uuid, uuid)
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": textureProfile910(texture)})
-}
-
-func (s Server) textureSkinUpdate(w http.ResponseWriter, r *http.Request) {
-	claims, _, err := s.bridgeClaimsFromRequest910(r)
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
-		return
-	}
-	var req textureUpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
-		return
-	}
-	user, err := s.Repo.GetUser(claims.Sub)
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "пользователь не найден")
-		return
-	}
-	texture, err := s.State.ServerBridge.updateTexture(playerUUID910(user.ID), user.Email, req)
-	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "ServerBridge texture state не сохранён")
-		return
-	}
-	_ = s.flushPersistenceState950("server-bridge-texture-update")
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("texture-update"), Actor: user.Email, Action: "serverbridge:texture:update", Target: texture.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": textureProfile910(texture)})
 }
 
@@ -512,14 +490,14 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	switch kind {
 	case "ecosystem":
 		base["status"] = "serverbridge-ready"
-		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 GA Protocol v3 frozen with v2 compatibility/deprecation", "capability negotiation", "protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "runtime epoch restart/replacement detection", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "texture profile service", "join audit events", "ordered signed server event stream", "durable Backend-to-Bridge control channel", "RBAC/idempotent control commands", "allowlisted platform console control", "transactional control audit", "Ed25519-attested realtime routing state", "health/capacity-aware proxy routing", "runtime-bound source+target handoff proofs", "maintenance/drain/stale admission blocking"}
+		base["implemented"] = []string{"PostgreSQL source of truth", "ServerBridge 3 GA Protocol v3 frozen with v2 compatibility/deprecation", "capability negotiation", "protocol feature flags", "automatic node/runtime discovery", "Ed25519-attested JVM runtime identity", "runtime epoch restart/replacement detection", "Ed25519 signed node requests", "PostgreSQL nonce replay protection", "one-time atomic join tickets", "identity-bound one-time join tickets", "atomic redemption proof persistence", "consume-once Yggdrasil joins", "cryptographic identity enrollment and rotation", "player session join", "server has-joined validation", "authlib-compatible authenticate/refresh/validate/invalidate/signout/join/hasJoined", "live session/device/risk trust enforcement", "binding-epoch credential invalidation", "revisioned local texture identity and URL assignments (PNG service pending)", "join audit events", "ordered signed server event stream", "durable Backend-to-Bridge control channel", "RBAC/idempotent control commands", "allowlisted platform console control", "transactional control audit", "Ed25519-attested realtime routing state", "health/capacity-aware proxy routing", "runtime-bound source+target handoff proofs", "maintenance/drain/stale admission blocking"}
 		base["trustPolicy"] = gameplayTrustPolicy0127
 		base["trustEnforcement"] = "required"
 		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
 	case "smoke":
 		base["status"] = "checkable"
 		base["requiredCommands"] = []string{"go test -tags neverlauncher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}
-		base["checks"] = []map[string]string{{"id": "protocol-v3", "status": "implemented"}, {"id": "protocol-v2-compatibility-deprecated", "status": "implemented"}, {"id": "capability-negotiation", "status": "implemented"}, {"id": "protocol-feature-flags", "status": "implemented"}, {"id": "runtime-node-discovery", "status": "implemented"}, {"id": "runtime-ed25519-identity", "status": "implemented"}, {"id": "runtime-restart-replacement-detection", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "implemented"}}
+		base["checks"] = []map[string]string{{"id": "protocol-v3", "status": "implemented"}, {"id": "protocol-v2-compatibility-deprecated", "status": "implemented"}, {"id": "capability-negotiation", "status": "implemented"}, {"id": "protocol-feature-flags", "status": "implemented"}, {"id": "runtime-node-discovery", "status": "implemented"}, {"id": "runtime-ed25519-identity", "status": "implemented"}, {"id": "runtime-restart-replacement-detection", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "identity-only"}}
 	default:
 		base["status"] = "active"
 	}
@@ -716,7 +694,7 @@ func minecraftUsernameFromAccount910(email, userID string) string {
 	return value
 }
 
-func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, trustedDeviceID string, bindingEpoch int64, minecraftSessionID string, req bridgeJoinRequest) (bridgeJoinRecord, error) {
+func (b *serverBridgeStore) createJoin(user model.User, canonical model.MinecraftProfile, sessionID, accessToken, trustedDeviceID string, bindingEpoch int64, minecraftSessionID string, req bridgeJoinRequest) (bridgeJoinRecord, error) {
 	if strings.TrimSpace(req.ServerID) == "" || strings.TrimSpace(req.ProjectID) == "" || strings.TrimSpace(req.ProfileID) == "" {
 		return bridgeJoinRecord{}, fmt.Errorf("serverId, projectId и profileId обязательны")
 	}
@@ -751,7 +729,7 @@ func (b *serverBridgeStore) createJoin(user model.User, sessionID, accessToken, 
 		return bridgeJoinRecord{}, fmt.Errorf("username должен соответствовать Minecraft Java: 3-16 символов A-Z, a-z, 0-9 или _")
 	}
 	now := time.Now().UTC()
-	uuid := playerUUID910(user.ID)
+	uuid := canonical.UUID
 	if bindingEpoch < 1 {
 		bindingEpoch = 1
 	}
@@ -879,32 +857,18 @@ func (b *serverBridgeStore) invalidateUser(userID string) int {
 	return count
 }
 
-func (b *serverBridgeStore) updateTexture(uuid, username string, req textureUpdateRequest) (bridgeTextureRecord, error) {
-	modelName := strings.TrimSpace(req.Model)
-	if modelName == "" {
-		modelName = "classic"
-	}
-	if modelName != "classic" && modelName != "slim" {
-		modelName = "classic"
-	}
-	texture := bridgeTextureRecord{UUID: uuid, Username: username, SkinURL: strings.TrimSpace(req.SkinURL), CapeURL: strings.TrimSpace(req.CapeURL), Model: modelName, UpdatedAt: time.Now().UTC()}
-	if backend := b.backendV2(); backend != nil {
-		ctx, cancel := bridgeContextV2()
-		defer cancel()
-		stored, err := backend.SaveServerBridgeTexture(ctx, bridgeTextureToModelV2(texture))
-		if err != nil {
-			return bridgeTextureRecord{}, err
-		}
-		return bridgeTextureFromModelV2(stored), nil
-	}
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.textures[uuid] = texture
-	return texture, nil
-}
-
 func (b *serverBridgeStore) textureFor(uuid, username string) bridgeTextureRecord {
 	if backend := b.backendV2(); backend != nil {
+		if textures, ok := backend.(repository.TextureRepository0251); ok {
+			ctx, cancel := bridgeContextV2()
+			defer cancel()
+			if t, found, err := textures.ReadTextureProfile0251(ctx, uuid); err == nil && found {
+				return bridgeTextureFromModelV2(t)
+			}
+			// Unmatched legacy aliases are quarantined; do not serve them by UUID.
+			return bridgeTextureRecord{UUID: uuid, Username: username, Model: "classic"}
+		}
+
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
 		t, err := backend.GetServerBridgeTexture(ctx, uuid)
@@ -954,6 +918,7 @@ func sanitizeJoinRecord910(join bridgeJoinRecord) map[string]any {
 	return map[string]any{"id": join.ID, "ticketVersion": join.TicketVersion, "username": join.Username, "uuid": join.UUID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "sessionCorrelationId": join.SessionCorrelationID, "protocolVersion": join.ProtocolVersion, "issuedIdentityEpoch": join.IssuedIdentityEpoch, "issuedKeyFingerprint": join.IssuedKeyFingerprint, "status": join.Status, "oneTime": true, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
 }
 
+// playerUUID910 is the legacy 0.25.0 alias algorithm only; never issue this as a new Minecraft UUID.
 func playerUUID910(seed string) string {
 	sum := sha256.Sum256([]byte("neverlauncher-player:" + seed))
 	hexed := hex.EncodeToString(sum[:16])

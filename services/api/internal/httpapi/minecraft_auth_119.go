@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -113,6 +114,9 @@ func (s Server) ensureMinecraftProfile119(user model.User) (model.MinecraftProfi
 		return model.MinecraftProfile{}, err
 	}
 	if item, err := repo.GetMinecraftProfileByUser(user.ID); err == nil {
+		if err := s.syncTextureIdentity0251(item); err != nil {
+			return model.MinecraftProfile{}, err
+		}
 		return item, nil
 	}
 	base := minecraftName119(user)
@@ -142,12 +146,18 @@ func (s Server) ensureMinecraftProfile119(user model.User) (model.MinecraftProfi
 			Issuer: "neverlauncher", Realm: "local", Subject: uuid, IdentityVersion: "independent-v1",
 		})
 		if err == nil {
+			if err := s.syncTextureIdentity0251(profile); err != nil {
+				return model.MinecraftProfile{}, err
+			}
 			return profile, nil
 		}
 		// Другой экземпляр мог создать профиль этого пользователя или такое же имя
 		// без учёта регистра между SELECT и INSERT. Найдите победившую запись и
 		// повторяйте только при конфликте имени; не скрывайте другие ошибки БД.
 		if existing, getErr := repo.GetMinecraftProfileByUser(user.ID); getErr == nil {
+			if err := s.syncTextureIdentity0251(existing); err != nil {
+				return model.MinecraftProfile{}, err
+			}
 			return existing, nil
 		}
 		if existing, getErr := repo.GetMinecraftProfileByName(name); getErr == nil && existing.UserID != user.ID {
@@ -609,4 +619,15 @@ func (s Server) yggdrasilMetadata119(w http.ResponseWriter, r *http.Request) {
 		"skinDomains":        []string{},
 		"signaturePublickey": "",
 	})
+}
+
+func (s Server) syncTextureIdentity0251(profile model.MinecraftProfile) error {
+	if repo, ok := s.Repo.(interface {
+		EnsureTextureIdentity0251(context.Context, model.MinecraftProfile) error
+	}); ok {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return repo.EnsureTextureIdentity0251(ctx, profile)
+	}
+	return nil
 }

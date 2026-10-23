@@ -1,3 +1,11 @@
+## 0.25.1 — Texture Identity & Data Model
+
+- ServerBridge join tickets now use the immutable `minecraft_profiles.uuid` shared with local Yggdrasil; no new user-derived Minecraft UUIDs are issued.
+- PostgreSQL migration `0067` introduces ownership-bound local/official texture identities, texture blob metadata, scoped skin/cape assignments, monotonic revisions, immutable revision snapshots, policy/cape grant records and proven legacy UUID aliases.
+- Existing ServerBridge URL records are imported into canonical assignments without rewriting Minecraft UUIDs. Unmatched identities remain preserved in quarantine, not served as public textures; new profiles receive atomic lazy backfill.
+- Added authenticated player read/selection/history operations with SQL transactions, revision conflict detection, strict model/visibility validation, ownership verification, limited bodies, fail-closed reads and audit events. API schema regenerated from the canonical route generator.
+- **Scope:** this is the real data/identity layer, not full PNG upload, local/S3 delivery, Yggdrasil RSA signing or Desktop UI. Full Go/PostgreSQL integration certification remains required before a production rollout. See [deployment and migration guide](docs/textures/texture-identity-0251.md).
+
 ## 0.25.0 — Optional Components GA (certification-gated)
 
 - Strengthened the real production release entrypoint: 0.25.0 requires an independently Ed25519-signed, exact-commit six-platform Optional Components GA evidence cohort **before** build output cleanup or product signing.
