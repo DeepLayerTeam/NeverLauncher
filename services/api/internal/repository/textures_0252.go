@@ -85,10 +85,12 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	}
 	var allowSkin, allowCape bool
 	var maxBytes int64
+	var maxBlobs int
 	if err = tx.QueryRowContext(ctx, `SELECT COALESCE((SELECT allow_player_skins FROM texture_project_policies WHERE project_id=''),true),
        COALESCE((SELECT allow_player_capes FROM texture_project_policies WHERE project_id=''),false)
          OR COALESCE((SELECT granted FROM texture_cape_grants WHERE project_id='' AND user_id=$1),false),
-       COALESCE((SELECT max_bytes_per_player FROM texture_project_policies WHERE project_id=''),10485760)`, profile.UserID).Scan(&allowSkin, &allowCape, &maxBytes); err != nil {
+       COALESCE((SELECT max_bytes_per_player FROM texture_project_policies WHERE project_id=''),10485760),
+       COALESCE((SELECT max_blobs_per_player FROM texture_project_policies WHERE project_id=''),20)`, profile.UserID).Scan(&allowSkin, &allowCape, &maxBytes, &maxBlobs); err != nil {
 		return zero, err
 	}
 	if (input.Kind == "skin" && !allowSkin) || (input.Kind == "cape" && !allowCape) {
@@ -97,8 +99,36 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	if input.Size > maxBytes {
 		return zero, ErrTextureUploadLimit0252
 	}
+	// Serialize ALL profile uploads of this user (including different kinds)
+	// before quota accounting. The unique owner relation prevents double charge
+	// for reusing the same digest, even when many users share the blob.
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(253,hashtext($1))`, profile.UserID); err != nil {
+		return zero, err
+	}
+	var count int
+	var used int64
+	if err = tx.QueryRowContext(ctx, `SELECT count(*),COALESCE(sum(b.byte_size),0)
+	  FROM texture_blob_owners o JOIN texture_blobs b ON b.digest=o.digest
+	  WHERE o.user_id=$1`, profile.UserID).Scan(&count, &used); err != nil {
+		return zero, err
+	}
+	var owned bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM texture_blob_owners WHERE user_id=$1 AND digest=$2)`, profile.UserID, input.Digest).Scan(&owned); err != nil {
+		return zero, err
+	}
+	if !owned && (count >= maxBlobs || used > maxBytes-input.Size) {
+		return zero, ErrTextureUploadLimit0252
+	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO texture_blobs(digest,byte_size,width,height,media_type,storage_driver,object_key,status,verified_at)
       VALUES($1,$2,$3,$4,'image/png',$5,$6,'verified',now()) ON CONFLICT(digest) DO NOTHING`, input.Digest, input.Size, input.Width, input.Height, input.Driver, input.ObjectKey); err != nil {
+		return zero, err
+	}
+	// The object is now durably persisted: promote its pre-upload staging row.
+	// This update is bounded by the verified digest metadata and never promotes
+	// a GC-quarantined or mismatched object.
+	if _, err = tx.ExecContext(ctx, `UPDATE texture_blobs SET status='verified',verified_at=now()
+	    WHERE digest=$1 AND status='staging' AND byte_size=$2 AND storage_driver=$3 AND object_key=$4`,
+		input.Digest, input.Size, input.Driver, input.ObjectKey); err != nil {
 		return zero, err
 	}
 	// Do not silently attach an existing digest with inconsistent storage metadata.
@@ -108,6 +138,9 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	}
 	if existing.ByteSize != input.Size || existing.StorageDriver != input.Driver || existing.ObjectKey != input.ObjectKey {
 		return zero, fmt.Errorf("blob storage metadata mismatch")
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO texture_blob_owners(user_id,digest) VALUES($1,$2) ON CONFLICT DO NOTHING`, profile.UserID, input.Digest); err != nil {
+		return zero, err
 	}
 	assignment, err := scanTextureAssignment0251(tx.QueryRowContext(ctx, textureAssignmentSelect0251+` WHERE realm='local-project' AND profile_uuid=$1 AND user_id=$2 AND project_id='' AND kind=$3 FOR UPDATE`, profile.UUID, profile.UserID, input.Kind))
 	now := time.Now().UTC()

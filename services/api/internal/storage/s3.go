@@ -166,6 +166,11 @@ func (s *S3Storage) newSignedRequest(ctx context.Context, method, key string, bo
 }
 
 func (s *S3Storage) newSignedRequestWithHash(ctx context.Context, method, key string, body io.Reader, size int64, payloadHash string) (*http.Request, error) {
+	return s.newSignedRequestWithHeaders0253(ctx, method, key, body, size, payloadHash, nil)
+}
+
+// Additional object headers MUST be set before SigV4 canonicalization.
+func (s *S3Storage) newSignedRequestWithHeaders0253(ctx context.Context, method, key string, body io.Reader, size int64, payloadHash string, extra http.Header) (*http.Request, error) {
 	objectURL, err := s.objectURL(key)
 	if err != nil {
 		return nil, err
@@ -186,6 +191,11 @@ func (s *S3Storage) newSignedRequestWithHash(ctx context.Context, method, key st
 	req.Header.Set("Host", req.URL.Host)
 	req.Header.Set("X-Amz-Date", amzDate)
 	req.Header.Set("X-Amz-Content-Sha256", payloadHash)
+	for name, values := range extra {
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
 
 	canonicalRequest, signedHeaders := canonicalRequest(req, payloadHash)
 	scope := fmt.Sprintf("%s/%s/s3/aws4_request", dateStamp, s.cfg.Region)
