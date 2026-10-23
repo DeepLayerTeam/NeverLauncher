@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.25.6. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.25.7. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -10547,6 +10547,470 @@
             "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/TextureUploadMultipart0252"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/minecraft/official/cape": {
+      "delete": {
+        "operationId": "delete_minecraft_official_cape",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "DELETE /api/v1/minecraft/official/cape",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Official Minecraft ownership, account or cape not authorized."
+          },
+          "429": {
+            "description": "Microsoft polling or Minecraft service rate limit exceeded."
+          },
+          "502": {
+            "description": "Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "description": "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session.",
+        "parameters": [
+          {
+            "name": "X-Official-Minecraft-Session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Opaque encrypted device flow or linked Minecraft session (NOT an access token)."
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "put_minecraft_official_cape",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "PUT /api/v1/minecraft/official/cape",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Official Minecraft ownership, account or cape not authorized."
+          },
+          "429": {
+            "description": "Microsoft polling or Minecraft service rate limit exceeded."
+          },
+          "502": {
+            "description": "Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "description": "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session.",
+        "parameters": [
+          {
+            "name": "X-Official-Minecraft-Session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Opaque encrypted device flow or linked Minecraft session (NOT an access token)."
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "capeId"
+                ],
+                "properties": {
+                  "capeId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/minecraft/official/device/poll": {
+      "post": {
+        "operationId": "post_minecraft_official_device_poll",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "POST /api/v1/minecraft/official/device/poll",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Microsoft authorization pending; use returned flow and Retry-After."
+          },
+          "403": {
+            "description": "Official Minecraft ownership, account or cape not authorized."
+          },
+          "429": {
+            "description": "Microsoft polling or Minecraft service rate limit exceeded."
+          },
+          "502": {
+            "description": "Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "description": "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session.",
+        "parameters": [
+          {
+            "name": "X-Official-Minecraft-Session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Opaque encrypted device flow or linked Minecraft session (NOT an access token)."
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/minecraft/official/device/start": {
+      "post": {
+        "operationId": "post_minecraft_official_device_start",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "POST /api/v1/minecraft/official/device/start",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Official Minecraft ownership, account or cape not authorized."
+          },
+          "429": {
+            "description": "Microsoft polling or Minecraft service rate limit exceeded."
+          },
+          "502": {
+            "description": "Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "description": "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/minecraft/official/launch-credentials": {
+      "post": {
+        "operationId": "post_minecraft_official_launch_credentials",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "POST /api/v1/minecraft/official/launch-credentials",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Official Minecraft ownership, account or cape not authorized."
+          },
+          "429": {
+            "description": "Microsoft polling or Minecraft service rate limit exceeded."
+          },
+          "502": {
+            "description": "Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "description": "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session.",
+        "parameters": [
+          {
+            "name": "X-Official-Minecraft-Session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Opaque encrypted device flow or linked Minecraft session (NOT an access token)."
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/minecraft/official/profile": {
+      "get": {
+        "operationId": "get_minecraft_official_profile",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "GET /api/v1/minecraft/official/profile",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Official Minecraft ownership, account or cape not authorized."
+          },
+          "429": {
+            "description": "Microsoft polling or Minecraft service rate limit exceeded."
+          },
+          "502": {
+            "description": "Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "description": "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session.",
+        "parameters": [
+          {
+            "name": "X-Official-Minecraft-Session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Opaque encrypted device flow or linked Minecraft session (NOT an access token)."
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/minecraft/official/skin": {
+      "delete": {
+        "operationId": "delete_minecraft_official_skin",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "DELETE /api/v1/minecraft/official/skin",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Official Minecraft ownership, account or cape not authorized."
+          },
+          "429": {
+            "description": "Microsoft polling or Minecraft service rate limit exceeded."
+          },
+          "502": {
+            "description": "Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "description": "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session.",
+        "parameters": [
+          {
+            "name": "X-Official-Minecraft-Session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Opaque encrypted device flow or linked Minecraft session (NOT an access token)."
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "post_minecraft_official_skin",
+        "tags": [
+          "minecraft-auth"
+        ],
+        "summary": "POST /api/v1/minecraft/official/skin",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Official Minecraft ownership, account or cape not authorized."
+          },
+          "429": {
+            "description": "Microsoft polling or Minecraft service rate limit exceeded."
+          },
+          "502": {
+            "description": "Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "description": "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session.",
+        "parameters": [
+          {
+            "name": "X-Official-Minecraft-Session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Opaque encrypted device flow or linked Minecraft session (NOT an access token)."
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "variant"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "variant": {
+                    "type": "string",
+                    "enum": [
+                      "classic",
+                      "slim"
+                    ]
+                  }
+                }
               }
             }
           }

@@ -1,3 +1,12 @@
+## 0.25.7 — Official Minecraft Integration
+
+- Implemented Microsoft OAuth2 device-code flow, Xbox Live + XSTS exchange, Minecraft Services bearer creation/refresh and live Java profile verification; the official identity remains separate from NeverLauncher local/Yggdrasil UUIDs and ServerBridge.
+- Added authenticated official profile, owned cape selection/hide and PNG skin upload/reset against Minecraft Services; only the account's actual owned resources can be used. Official PNG uploads reuse the full PNG decoding and normalization pipeline.
+- Added encrypted, Never-session-bound AES-GCM official tickets with 30-day ceiling and automatic Microsoft refresh rotation, strict upstream origin/response limits and bounded Microsoft polling.
+- Connected a minimal functional Microsoft login, official skin/cape controls and explicit local/official launch selector in Desktop; official Minecraft uses `msa` and NeverRuntime refuses local authlib-injector/ServerBridge mixing.
+- Added Go/TypeScript unit tests, config and deployment guide, CORS for the official ticket header and updated OpenAPI/version metadata. Live Microsoft/Xbox/Minecraft E2E and complete API/Desktop build remain release-blocking.
+- See [Official Minecraft configuration and usage](docs/textures/official-minecraft-0257.md).
+
 ## 0.25.5 — Texture Service API & Ownership
 
 - Finished the authenticated local-Minecraft texture selection lifecycle: list personal saved PNGs, preview private gallery assets, select by owned digest, reset to default, delete current selection and remove inactive library items.

@@ -8,6 +8,8 @@ import { ComponentChooser0247 } from './ComponentChooser0247';
 import { ComponentPortability02410 } from './ComponentPortability02410';
 import { parseChoice0247 } from './component_selection_0247';
 import { launchPreferences, scopedServers, type ScopedServer } from './desktop_experience_0229';
+import { OfficialMinecraftClient0257, type OfficialProfile0257 } from './official_minecraft_0257';
+import { OfficialMinecraftPanel0257 } from './OfficialMinecraftPanel0257';
 
 type Stage = 'idle' | 'connecting' | 'session' | 'project' | 'profile' | 'manifest' | 'java' | 'files' | 'repair' | 'cleanup' | 'ready' | 'launching' | 'running' | 'failed';
 type Screen = 'firstRun' | 'overview' | 'auth' | 'projects' | 'profile' | 'download' | 'settings' | 'logs' | 'diagnostics' | 'extensions';
@@ -357,9 +359,24 @@ function App() {
   const [email, setEmail] = useState('admin@neverlauncher.local');
   const [password, setPassword] = useState('admin');
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const officialMinecraftClient = useRef<OfficialMinecraftClient0257 | null>(null);
+  const [officialProfile, setOfficialProfile] = useState<OfficialProfile0257 | null>(null);
+  const [minecraftIdentity, setMinecraftIdentity] = useState<'local'|'official'>('local');
+  if (authSession?.accessToken && settings.backendUrl) {
+    if (!officialMinecraftClient.current) officialMinecraftClient.current = new OfficialMinecraftClient0257(settings.backendUrl, authSession.accessToken);
+    else officialMinecraftClient.current.rebind(settings.backendUrl, authSession.accessToken);
+  }
+
   const [deviceKey, setDeviceKey] = useState<DeviceKeyInfo | null>(null);
   const [deviceTrustStatus, setDeviceTrustStatus] = useState<string>('не инициализирован');
   const [managedDevices, setManagedDevices] = useState<ManagedDevice[]>([]);
+  // Switching Never identities invalidates any Microsoft account previously
+  // linked in the running Desktop process (session tickets are SID-bound).
+  useEffect(() => {
+    officialMinecraftClient.current?.clear();
+    setOfficialProfile(null);
+    setMinecraftIdentity('local');
+  }, [authSession?.sessionId]);
 
   useEffect(() => {
     callTauri<DesktopSettings>('load_desktop_config')
@@ -429,6 +446,11 @@ function App() {
   }, [backendStatus, fileSummary.broken, javaInfo, launchPlan, manifest, profiles.length, projects.length, selectedProfile, selectedProject]);
 
   function patchSettings(key: keyof DesktopSettings, value: string | number | boolean) {
+    if (key === 'backendUrl' && value !== settings.backendUrl) {
+      officialMinecraftClient.current?.clear();
+      setOfficialProfile(null);
+      setMinecraftIdentity('local');
+    }
     setSettings((current) => normalizedSettings({ ...current, [key]: value }));
   }
 
@@ -916,6 +938,10 @@ function App() {
     }
     await callTauri<void>('delete_auth_session', { backendUrl: settings.backendUrl });
     setAuthSession(null);
+    officialMinecraftClient.current?.clear();
+    officialMinecraftClient.current = null;
+    setOfficialProfile(null);
+    setMinecraftIdentity('local');
     setManagedDevices([]);
     setDeviceTrustStatus(deviceKey ? 'ключ сохранён локально' : 'не инициализирован');
     log('Сессия отозвана на сервере и удалена из системного хранилища учётных данных. Device key сохранён в OS secure storage для следующего входа.');
@@ -1521,15 +1547,23 @@ function App() {
       // Only cached signed Manifest v2 may be used when the backend is offline.
       // Never manufacture Minecraft access tokens for offline launches.
       let minecraftCredentials: MinecraftLaunchCredentials | undefined;
+      if (minecraftIdentity === 'official' && (preferences.offline || settings.serverId)) {
+        throw new Error('Официальный Minecraft нельзя смешивать с локальным ServerBridge UUID/токеном. Отключите offline и локальный ServerBridge serverId либо используйте локальный профиль.');
+      }
       if (!preferences.offline) {
         const guardAttestationTicket = await createGuardLaunchTicket();
-        minecraftCredentials = await createMinecraftLaunchSession(guardAttestationTicket);
+        if (minecraftIdentity === 'official') {
+          if (!officialProfile || !officialMinecraftClient.current?.linked) throw new Error('Подключите официальный Minecraft-профиль в разделе авторизации.');
+          minecraftCredentials = await officialMinecraftClient.current.credentials();
+        } else {
+          minecraftCredentials = await createMinecraftLaunchSession(guardAttestationTicket);
+        }
       }
       // Auto-enter needs its one-time ServerBridge ticket *before* Java receives
       // --server/--quickPlayMultiplayer, otherwise Minecraft can connect before
       // our post-launch join call. Policies requiring runtime attestation will
       // reject pre-join, in which case we fail closed instead of racing a join.
-      if (preferences.autoEnter && minecraftCredentials) {
+      if (preferences.autoEnter && minecraftCredentials && minecraftIdentity === 'local') {
         await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken);
       }
       const result = await callTauri<ProcessStatus>('launch_minecraft', {
@@ -1557,7 +1591,7 @@ function App() {
         }
       }
       try {
-        if (!preferences.offline && !preferences.autoEnter && minecraftCredentials) {
+        if (!preferences.offline && !preferences.autoEnter && minecraftCredentials && minecraftIdentity === 'local') {
           await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken, continuousGuardTicket, guardAttestationSha256);
         }
       } catch (joinError) {
@@ -1666,6 +1700,13 @@ function App() {
         {screen === 'firstRun' && <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} /> }
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} />}
+        {screen === 'auth' && authSession?.accessToken && officialMinecraftClient.current && <>
+          <OfficialMinecraftPanel0257 client={officialMinecraftClient.current} linkedProfile={officialProfile} onLinked={(p)=>{setOfficialProfile(p); if (!p) setMinecraftIdentity('local');}} />
+          <section className="panel"><label>Идентичность для запуска Minecraft <select value={minecraftIdentity} onChange={e=>setMinecraftIdentity(e.target.value as 'local'|'official')}>
+            <option value="local">Локальный профиль NeverLauncher / Yggdrasil</option>
+            <option value="official" disabled={!officialProfile}>Официальный Microsoft Minecraft {officialProfile?.name||''}</option>
+          </select></label></section>
+        </>}
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} pinnedPublicKey={settings.pinnedPublicKey} root={settings.gameDirectory} transferBusy={transferBusy} installSelection={installComponentSelection0247} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}

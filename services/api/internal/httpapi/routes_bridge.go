@@ -6,6 +6,14 @@ import (
 )
 
 func (s Server) registerBridgeRoutesV1(mux *http.ServeMux) {
+	mux.Handle("POST /api/v1/minecraft/official/device/start", s.requireAuthenticated(s.officialBegin0257))
+	mux.Handle("POST /api/v1/minecraft/official/device/poll", s.requireAuthenticated(s.officialPoll0257))
+	mux.Handle("GET /api/v1/minecraft/official/profile", s.requireAuthenticated(s.officialProfile0257))
+	mux.Handle("POST /api/v1/minecraft/official/skin", s.requireAuthenticated(s.officialSkinUpload0257))
+	mux.Handle("DELETE /api/v1/minecraft/official/skin", s.requireAuthenticated(s.officialResetSkin0257))
+	mux.Handle("PUT /api/v1/minecraft/official/cape", s.requireAuthenticated(s.officialCape0257))
+	mux.Handle("DELETE /api/v1/minecraft/official/cape", s.requireAuthenticated(s.officialCape0257))
+	mux.Handle("POST /api/v1/minecraft/official/launch-credentials", s.requireAuthenticated(s.officialLaunchCredentials0257))
 	mux.Handle("POST /api/v1/minecraft/session", s.requirePermission("profile:launch", s.minecraftSessionExchange119))
 	mux.Handle("GET /api/v1/minecraft/profile", s.requirePermission("profile:launch", s.minecraftProfileCurrent119))
 	mux.HandleFunc("POST /authserver/authenticate", s.yggdrasilAuthenticate119)

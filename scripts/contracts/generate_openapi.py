@@ -321,20 +321,28 @@ for method,path in routes:
         op["description"] = "NeverLauncher 0.14.3 One-Time Join Tickets: issues a short-lived identity-bound ServerBridge authorization that can be redeemed exactly once by the active cryptographic node identity."
     elif path == "/sessionserver/session/minecraft/hasJoined":
         op["description"] = "Consumes a Yggdrasil-compatible one-time join authorization. The first valid hasJoined succeeds; replay returns no join."
+    if path.startswith("/api/v1/minecraft/official/"):
+        op["description"] = "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session."
     params=path_parameters(path)
     if path.startswith("/api/v1/me/textures/"):
         for param in params:
             if param["name"]=="kind": param["schema"]={"type":"string","enum":["skin","cape"]}
+    if path.startswith("/api/v1/minecraft/official/") and not path.endswith("/device/start"):
+        params.append({"name":"X-Official-Minecraft-Session","in":"header","required":True,"schema":{"type":"string","minLength":1},"description":"Opaque encrypted device flow or linked Minecraft session (NOT an access token)."})
     if params: op["parameters"]=params
     sec=security_for(method,path)
     if sec: op["security"]=sec
     elif sec==[]: op["security"]=[]
-    if request_body_allowed(method,path) and not path.endswith("/files") and path not in ("/api/v1/admin/extension-registry/publish", "/api/v1/me/textures/{kind}/upload", "/api/user/profile/{uuid}/{kind}"):
+    if request_body_allowed(method,path) and not path.endswith("/files") and path not in ("/api/v1/minecraft/official/device/start", "/api/v1/minecraft/official/device/poll", "/api/v1/minecraft/official/launch-credentials", "/api/v1/minecraft/official/skin","/api/v1/admin/extension-registry/publish", "/api/v1/me/textures/{kind}/upload", "/api/user/profile/{uuid}/{kind}"):
         op["requestBody"]={"required":request_body_required(method,path),"content":{"application/json":{"schema":body_schema(path)}}}
     if path == "/api/profiles/minecraft" and method=="post":
         op["requestBody"]={"required":True,"content":{"application/json":{"schema":{"type":"array","maxItems":100,"items":{"type":"string","minLength":3,"maxLength":16}}}}}
     if path == "/api/user/profile/{uuid}/{kind}" and method=="put":
         op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":{"type":"object","required":["file"],"properties":{"file":{"type":"string","format":"binary"},"model":{"type":"string","enum":["","slim"]}}}}}}
+    if path == "/api/v1/minecraft/official/skin" and method == "post":
+        op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":{"type":"object","required":["file","variant"],"properties":{"file":{"type":"string","format":"binary"},"variant":{"type":"string","enum":["classic","slim"]}}}}}}
+    if path == "/api/v1/minecraft/official/cape" and method == "put":
+        op["requestBody"]={"required":True,"content":{"application/json":{"schema":{"type":"object","required":["capeId"],"properties":{"capeId":{"type":"string","minLength":1}}}}}}
     if path == "/api/v1/me/textures/{kind}/upload" and method=="post":
         op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":ref("TextureUploadMultipart0252")}}}
     if path.endswith("/files") and method=="post":
@@ -348,6 +356,12 @@ for method,path in routes:
         op["responses"][success]={"description":"Success"}
     else:
         op["responses"][success]={"description":"Success","content":{ctype:{"schema":({"type":"string","format":"binary"} if ctype=="image/png" else response_schema(path,method))}}}
+    if path == "/api/v1/minecraft/official/device/poll" and method == "post":
+        op["responses"]["202"]={"description":"Microsoft authorization pending; use returned flow and Retry-After."}
+    if path.startswith("/api/v1/minecraft/official/"):
+        op["responses"]["403"]={"description":"Official Minecraft ownership, account or cape not authorized."}
+        op["responses"]["429"]={"description":"Microsoft polling or Minecraft service rate limit exceeded."}
+        op["responses"]["502"]={"description":"Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."}
     if path == "/api/profiles/minecraft" and method=="post":
         op["responses"]["200"]["content"]["application/json"]["schema"]={"type":"array","items":{"type":"object","required":["id","name"],"properties":{"id":{"type":"string","pattern":"^[0-9a-f]{32}$"},"name":{"type":"string"}}}}
     if path == "/api/user/profile/{uuid}/{kind}":

@@ -296,8 +296,8 @@ func withCORS(next http.Handler, allowedOrigins []string) http.Handler {
 			} else {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-				w.Header().Set("Access-Control-Expose-Headers", "X-Correlation-ID")
-				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+				w.Header().Set("Access-Control-Expose-Headers", "X-Correlation-ID, X-Official-Minecraft-Session")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Official-Minecraft-Session")
 				w.Header().Set("Access-Control-Max-Age", "600")
 			}
 		}

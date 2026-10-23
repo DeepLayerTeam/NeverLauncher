@@ -1,0 +1,329 @@
+// Package officialminecraft implements the public Microsoft/Xbox/Minecraft Java
+// authentication chain and account-owned texture operations. It never accepts
+// local Yggdrasil identities as proof of ownership.
+package officialminecraft
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+)
+
+const (
+	microsoftOrigin = "https://login.microsoftonline.com/consumers/oauth2/v2.0"
+	xboxOrigin      = "https://user.auth.xboxlive.com"
+	xstsOrigin      = "https://xsts.auth.xboxlive.com"
+	minecraftOrigin = "https://api.minecraftservices.com"
+	maxResponse     = 1 << 20
+)
+
+var ErrPending = errors.New("authorization_pending")
+var ErrSlowDown = errors.New("slow_down")
+var ErrExpired = errors.New("expired_token")
+var ErrDenied = errors.New("access_denied")
+var ErrUnlicensed = errors.New("no accessible Minecraft Java profile")
+
+type Client struct {
+	http                             *http.Client
+	microsoft, xbox, xsts, minecraft string
+}
+
+func New() *Client {
+	return &Client{http: &http.Client{Timeout: 18 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, microsoft: microsoftOrigin, xbox: xboxOrigin, xsts: xstsOrigin, minecraft: minecraftOrigin}
+}
+
+type DeviceCode struct {
+	DeviceCode      string `json:"device_code"`
+	UserCode        string `json:"user_code"`
+	VerificationURI string `json:"verification_uri"`
+	ExpiresIn       int    `json:"expires_in"`
+	Interval        int    `json:"interval"`
+	Message         string `json:"message,omitempty"`
+}
+type OAuthTokens struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	TokenType    string `json:"token_type"`
+}
+type MinecraftToken struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+	TokenType   string `json:"token_type"`
+}
+type Skin struct {
+	ID      string `json:"id"`
+	State   string `json:"state"`
+	URL     string `json:"url"`
+	Variant string `json:"variant"`
+}
+type Cape struct {
+	ID    string `json:"id"`
+	State string `json:"state"`
+	URL   string `json:"url"`
+	Alias string `json:"alias,omitempty"`
+}
+type Profile struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Skins []Skin `json:"skins"`
+	Capes []Cape `json:"capes"`
+}
+type ServiceError struct {
+	Status int
+	Code   string
+}
+
+func (e *ServiceError) Error() string {
+	return fmt.Sprintf("upstream Minecraft authentication service: status=%d code=%s", e.Status, e.Code)
+}
+
+func (c *Client) request(ctx context.Context, method, addr, bearer, contentType string, body io.Reader, out any) error {
+	req, err := http.NewRequestWithContext(ctx, method, addr, body)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json")
+	if bearer != "" {
+		req.Header.Set("Authorization", "Bearer "+bearer)
+	}
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	b, err := io.ReadAll(io.LimitReader(resp.Body, maxResponse+1))
+	if err != nil {
+		return err
+	}
+	if len(b) > maxResponse {
+		return errors.New("official Minecraft response exceeds limit")
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		var body struct {
+			Error        string `json:"error"`
+			ErrorMessage string `json:"errorMessage"`
+			XErr         int64  `json:"XErr"`
+		}
+		_ = json.Unmarshal(b, &body)
+		code := body.Error
+		if code == "" && body.XErr != 0 {
+			code = fmt.Sprintf("xsts_%d", body.XErr)
+		}
+		if code == "" {
+			code = "upstream_error"
+		}
+		switch code {
+		case "authorization_pending":
+			return ErrPending
+		case "slow_down":
+			return ErrSlowDown
+		case "expired_token":
+			return ErrExpired
+		case "authorization_declined", "access_denied", "bad_verification_code":
+			return ErrDenied
+		}
+		return &ServiceError{Status: resp.StatusCode, Code: code}
+	}
+	if out != nil {
+		if len(b) == 0 {
+			return errors.New("empty official Minecraft response")
+		}
+		if err := json.Unmarshal(b, out); err != nil {
+			return fmt.Errorf("invalid official Minecraft JSON: %w", err)
+		}
+	}
+	return nil
+}
+func form(fields url.Values) (io.Reader, string) {
+	return strings.NewReader(fields.Encode()), "application/x-www-form-urlencoded"
+}
+func jsonBody(v any) (io.Reader, string, error) {
+	b, err := json.Marshal(v)
+	return bytes.NewReader(b), "application/json", err
+}
+func (c *Client) Begin(ctx context.Context, clientID string) (DeviceCode, error) {
+	var code DeviceCode
+	body, contentType := form(url.Values{"client_id": {clientID}, "scope": {"XboxLive.signin offline_access"}})
+	err := c.request(ctx, "POST", c.microsoft+"/devicecode", "", contentType, body, &code)
+	if err != nil {
+		return code, err
+	}
+	if code.DeviceCode == "" || code.UserCode == "" || code.ExpiresIn <= 0 || code.ExpiresIn > 1800 || code.VerificationURI == "" {
+		return DeviceCode{}, errors.New("incomplete Microsoft device-code response")
+	}
+	if code.Interval < 5 {
+		code.Interval = 5
+	}
+	u, err := url.Parse(code.VerificationURI)
+	if err != nil || u.Scheme != "https" || (u.Hostname() != "microsoft.com" && !strings.HasSuffix(u.Hostname(), ".microsoft.com") && u.Hostname() != "microsoftonline.com" && !strings.HasSuffix(u.Hostname(), ".microsoftonline.com")) {
+		return DeviceCode{}, errors.New("untrusted Microsoft verification URI")
+	}
+	return code, nil
+}
+func (c *Client) Complete(ctx context.Context, clientID, deviceCode string) (OAuthTokens, error) {
+	var tokens OAuthTokens
+	body, contentType := form(url.Values{"grant_type": {"urn:ietf:params:oauth:grant-type:device_code"}, "client_id": {clientID}, "device_code": {deviceCode}})
+	err := c.request(ctx, "POST", c.microsoft+"/token", "", contentType, body, &tokens)
+	if err != nil {
+		return tokens, err
+	}
+	if tokens.AccessToken == "" || tokens.TokenType != "Bearer" {
+		return OAuthTokens{}, errors.New("incomplete Microsoft tokens")
+	}
+	return tokens, nil
+}
+func (c *Client) Refresh(ctx context.Context, clientID, refresh string) (OAuthTokens, error) {
+	var tokens OAuthTokens
+	body, contentType := form(url.Values{"grant_type": {"refresh_token"}, "client_id": {clientID}, "refresh_token": {refresh}, "scope": {"XboxLive.signin offline_access"}})
+	err := c.request(ctx, "POST", c.microsoft+"/token", "", contentType, body, &tokens)
+	if err != nil {
+		return tokens, err
+	}
+	if tokens.AccessToken == "" || tokens.TokenType != "Bearer" {
+		return OAuthTokens{}, errors.New("invalid Microsoft refresh response")
+	}
+	if tokens.RefreshToken == "" {
+		tokens.RefreshToken = refresh
+	}
+	return tokens, nil
+}
+func (c *Client) Exchange(ctx context.Context, microsoftToken string) (MinecraftToken, error) {
+	var xbl struct {
+		Token         string `json:"Token"`
+		DisplayClaims struct {
+			XUI []struct {
+				UHS string `json:"uhs"`
+			} `json:"xui"`
+		} `json:"DisplayClaims"`
+	}
+	body, ct, err := jsonBody(map[string]any{"Properties": map[string]any{"AuthMethod": "RPS", "SiteName": "user.auth.xboxlive.com", "RpsTicket": "d=" + microsoftToken}, "RelyingParty": "http://auth.xboxlive.com", "TokenType": "JWT"})
+	if err != nil {
+		return MinecraftToken{}, err
+	}
+	if err = c.request(ctx, "POST", c.xbox+"/user/authenticate", "", ct, body, &xbl); err != nil {
+		return MinecraftToken{}, err
+	}
+	if xbl.Token == "" || len(xbl.DisplayClaims.XUI) != 1 || xbl.DisplayClaims.XUI[0].UHS == "" {
+		return MinecraftToken{}, errors.New("invalid Xbox Live response")
+	}
+	var xsts struct {
+		Token         string `json:"Token"`
+		DisplayClaims struct {
+			XUI []struct {
+				UHS string `json:"uhs"`
+			} `json:"xui"`
+		} `json:"DisplayClaims"`
+	}
+	body, ct, err = jsonBody(map[string]any{"Properties": map[string]any{"SandboxId": "RETAIL", "UserTokens": []string{xbl.Token}}, "RelyingParty": "rp://api.minecraftservices.com/", "TokenType": "JWT"})
+	if err != nil {
+		return MinecraftToken{}, err
+	}
+	if err = c.request(ctx, "POST", c.xsts+"/xsts/authorize", "", ct, body, &xsts); err != nil {
+		return MinecraftToken{}, err
+	}
+	if xsts.Token == "" || len(xsts.DisplayClaims.XUI) != 1 || xsts.DisplayClaims.XUI[0].UHS != xbl.DisplayClaims.XUI[0].UHS {
+		return MinecraftToken{}, errors.New("Xbox identity mismatch")
+	}
+	body, ct, err = jsonBody(map[string]string{"identityToken": "XBL3.0 x=" + xsts.DisplayClaims.XUI[0].UHS + ";" + xsts.Token})
+	if err != nil {
+		return MinecraftToken{}, err
+	}
+	var result MinecraftToken
+	if err = c.request(ctx, "POST", c.minecraft+"/authentication/login_with_xbox", "", ct, body, &result); err != nil {
+		return MinecraftToken{}, err
+	}
+	if result.AccessToken == "" || result.TokenType != "Bearer" || result.ExpiresIn <= 0 {
+		return MinecraftToken{}, errors.New("invalid Minecraft access token")
+	}
+	return result, nil
+}
+func (c *Client) Profile(ctx context.Context, token string) (Profile, error) {
+	var p Profile
+	err := c.request(ctx, "GET", c.minecraft+"/minecraft/profile", token, "", nil, &p)
+	if err != nil {
+		return p, err
+	}
+	if len(p.ID) != 32 || p.Name == "" {
+		return Profile{}, ErrUnlicensed
+	}
+	for _, ch := range p.ID {
+		if !strings.ContainsRune("0123456789abcdefABCDEF", ch) {
+			return Profile{}, ErrUnlicensed
+		}
+	}
+	return p, nil
+}
+func (c *Client) Entitled(ctx context.Context, token string) error {
+	// The profile endpoint is authoritative for Game Pass as well as paid Java licences.
+	// Entitlements can legitimately be empty for Game Pass. A non-existent profile
+	// is rejected by Profile, rather than treating an Xbox account as Java ownership.
+	_, err := c.Profile(ctx, token)
+	return err
+}
+func (c *Client) UploadSkin(ctx context.Context, token, variant string, png []byte) (Profile, error) {
+	if variant != "classic" && variant != "slim" {
+		return Profile{}, errors.New("invalid Minecraft skin variant")
+	}
+	if len(png) == 0 || len(png) > 4<<20 {
+		return Profile{}, errors.New("invalid Minecraft skin payload")
+	}
+	var b bytes.Buffer
+	mw := multipart.NewWriter(&b)
+	if err := mw.WriteField("variant", variant); err != nil {
+		return Profile{}, err
+	}
+	part, err := mw.CreateFormFile("file", "skin.png")
+	if err != nil {
+		return Profile{}, err
+	}
+	if _, err = part.Write(png); err != nil {
+		return Profile{}, err
+	}
+	if err = mw.Close(); err != nil {
+		return Profile{}, err
+	}
+	var p Profile
+	err = c.request(ctx, "POST", c.minecraft+"/minecraft/profile/skins", token, mw.FormDataContentType(), &b, &p)
+	return p, err
+}
+func (c *Client) ResetSkin(ctx context.Context, token string) error {
+	return c.request(ctx, "DELETE", c.minecraft+"/minecraft/profile/skins/active", token, "", nil, nil)
+}
+func (c *Client) SelectCape(ctx context.Context, token, id string) (Profile, error) {
+	p, err := c.Profile(ctx, token)
+	if err != nil {
+		return Profile{}, err
+	}
+	owned := false
+	for _, cape := range p.Capes {
+		if cape.ID == id && id != "" {
+			owned = true
+			break
+		}
+	}
+	if !owned {
+		return Profile{}, errors.New("cape not owned by official Minecraft account")
+	}
+	body, ct, err := jsonBody(map[string]string{"capeId": id})
+	if err != nil {
+		return Profile{}, err
+	}
+	var updated Profile
+	err = c.request(ctx, "PUT", c.minecraft+"/minecraft/profile/capes/active", token, ct, body, &updated)
+	return updated, err
+}
+func (c *Client) ResetCape(ctx context.Context, token string) error {
+	return c.request(ctx, "DELETE", c.minecraft+"/minecraft/profile/capes/active", token, "", nil, nil)
+}

@@ -1395,6 +1395,16 @@ async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_exec
 }
 
 fn apply_minecraft_auth119(manifest: &Manifest, root: &Path, credentials: &MinecraftLaunchCredentials, plan: &mut LaunchPlan) -> Result<(), String> {
+    // Official Microsoft/Minecraft Services sessions use Mojang's native
+    // auth/session endpoints. Redirecting an official MSA token through
+    // authlib-injector (or a local Yggdrasil API) mixes security realms.
+    if credentials.user_type == "msa" {
+        if !credentials.auth_server_base_url.trim().is_empty() ||
+            plan.jvm_args.iter().any(|arg| arg.to_ascii_lowercase().contains("authlib-injector")) {
+            return Err("Official Minecraft sessions cannot use local authlib-injector or Yggdrasil URLs".into());
+        }
+        return Ok(());
+    }
     if credentials.access_token.trim().is_empty() || credentials.uuid.trim().is_empty() || credentials.username.trim().is_empty() {
         return Err("authenticated Minecraft launch requires username, uuid and accessToken".to_string());
     }
