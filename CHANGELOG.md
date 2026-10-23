@@ -1,3 +1,11 @@
+## 0.26.1 — Official Minecraft Provider POC & External Approval Gate
+
+- Added executable `official-provider-poc` command that validates NeverLauncher's **own** Microsoft Entra public-client ID using live personal-account Authorization Code + PKCE (system browser, loopback callback) or device-code fallback; no new authentication UI or local-account impersonation.
+- Reused the existing production Microsoft → Xbox Live → XSTS → Minecraft chain; added explicit safe stage observer, Microsoft refresh test, real Minecraft `mcstore` entitlement request and Java profile verification.
+- Added real Minecraft app-registration rejection classification (`invalid_app_registration`) and token-free, private, per-stage JSON evidence reports; a Microsoft/Xbox-only success never marks Minecraft Services accessible.
+- Added callback/state/PKCE security validation, proof redaction and provider-rejection regression tests, targeted CI build, and [operator/approval runbook](docs/authentication/official-provider-poc-0261.md).
+- **External gate unverified:** no developer app UUID, personal account or provider approval evidence was supplied; the real provider POC has **not** been executed. Official provider approval and live Java online-mode server entry remain required. Mocks only cover local regression testing.
+
 ## 0.26.0 — Textures & Personalization GA (release certification required)
 
 - Finished the texture service milestones across 0.25.1–0.25.12: immutable PNG local/S3 storage, personal Desktop preview/library, Admin policy, signed Yggdrasil and strictly isolated official Minecraft integration.

@@ -1,0 +1,38 @@
+name: Official Minecraft Provider POC 0.26.1 (offline tests only)
+
+on:
+  pull_request:
+    paths:
+      - 'services/api/internal/officialminecraft/**'
+      - 'services/api/cmd/official-provider-poc/**'
+      - 'docs/authentication/official-provider-poc-0261.md'
+      - '.github/workflows/official-provider-poc-0261.yml'
+  push:
+    paths:
+      - 'services/api/internal/officialminecraft/**'
+      - 'services/api/cmd/official-provider-poc/**'
+      - '.github/workflows/official-provider-poc-0261.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Run safe offline and simulated-negative tests
+        run: go test -race -count=1 ./internal/officialminecraft ./cmd/official-provider-poc
+      - name: Vet
+        run: go vet ./internal/officialminecraft ./cmd/official-provider-poc
+      - name: Build live-only POC binary (no credentials in CI)
+        run: go build -o "$RUNNER_TEMP/official-provider-poc" ./cmd/official-provider-poc
+      # No provider secrets/client accounts in CI; live verification and
+      # independent external approval remain explicit mandatory release gates.

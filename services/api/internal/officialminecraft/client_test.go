@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -53,6 +54,11 @@ func fixture(t *testing.T) (*Client, *httptest.Server, *[]string) {
 				t.Errorf("unexpected Minecraft identity token")
 			}
 			io.WriteString(w, `{"access_token":"minecraft-secret","token_type":"Bearer","expires_in":7200}`)
+		case "/entitlements/mcstore":
+			if r.Header.Get("Authorization") != "Bearer minecraft-secret" {
+				t.Error("wrong entitlement bearer")
+			}
+			io.WriteString(w, `{"items":[{"name":"product_minecraft"}]}`)
 		case "/minecraft/profile":
 			if r.Header.Get("Authorization") != "Bearer minecraft-secret" {
 				t.Errorf("missing minecraft bearer")
@@ -189,5 +195,71 @@ func TestMicrosoftVerificationHostRestricted(t *testing.T) {
 func TestHTTPTimeoutConfigured(t *testing.T) {
 	if New().http.Timeout > 20*time.Second {
 		t.Fatal("timeout too long")
+	}
+}
+
+func TestPKCEAuthorizationCodeExchangeAndEntitlements(t *testing.T) {
+	clientID := "4b8f7734-4f10-44ca-b870-b4d89d34a319"
+	c, srv, _ := fixture(t)
+	defer srv.Close()
+	redirect := "http://localhost:62481/minecraft-poc/callback"
+	verifier := strings.Repeat("A", 64)
+	challenge, err := PKCEChallenge(verifier)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authURL, err := c.AuthorizationURL(clientID, redirect, strings.Repeat("B", 43), challenge)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := url.Parse(authURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := u.Query()
+	if q.Get("code_challenge") != challenge || q.Get("code_challenge_method") != "S256" || q.Get("scope") != "XboxLive.signin offline_access" || q.Get("redirect_uri") != redirect || q.Get("response_type") != "code" {
+		t.Fatalf("unexpected authorization request: %s", authURL)
+	}
+	tokens, err := c.ExchangeAuthorizationCode(context.Background(), clientID, redirect, "valid-code", verifier)
+	if err != nil || tokens.AccessToken != "ms-secret" {
+		t.Fatalf("code exchange: %v", err)
+	}
+	if count, err := c.EntitlementCount(context.Background(), "minecraft-secret"); err != nil || count != 1 {
+		t.Fatalf("entitlements: count=%d err=%v", count, err)
+	}
+}
+
+func TestRejectUntrustedPKCEInputs(t *testing.T) {
+	c := New()
+	for _, bad := range []string{"", "00000000-0000-0000-0000-000000000000", "microsoft-id", "${CLIENT_ID}"} {
+		if err := ValidateClientID(bad); err == nil {
+			t.Errorf("accepted client ID %q", bad)
+		}
+	}
+	for _, bad := range []string{"https://localhost:1000/minecraft-poc/callback", "http://example.org:1000/minecraft-poc/callback", "http://127.0.0.1:1000/evil", "http://localhost:1000/minecraft-poc/callback?code=secret", "http://evil@localhost:1000/minecraft-poc/callback", "http://0.0.0.0:1000/minecraft-poc/callback"} {
+		if err := ValidateLoopbackRedirect(bad); err == nil {
+			t.Errorf("accepted redirect %q", bad)
+		}
+	}
+	if _, err := PKCEChallenge("too-short"); err == nil {
+		t.Fatal("accepted short verifier")
+	}
+	if _, err := c.AuthorizationURL("4b8f7734-4f10-44ca-b870-b4d89d34a319", "http://localhost:1/minecraft-poc/callback", "short", strings.Repeat("a", 43)); err == nil {
+		t.Fatal("accepted short state")
+	}
+}
+
+func TestMinecraftRegistrationRejectionCodeIsSanitized(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(403)
+		fmt.Fprint(w, `{"errorMessage":"Invalid app registration. https://aka.ms/AppRegInfo"}`)
+	}))
+	defer srv.Close()
+	c := New()
+	c.minecraft = srv.URL
+	_, err := c.EntitlementCount(context.Background(), "redacted")
+	var serviceErr *ServiceError
+	if !errors.As(err, &serviceErr) || serviceErr.Code != "invalid_app_registration" {
+		t.Fatalf("want safe classified rejection, got %v", err)
 	}
 }

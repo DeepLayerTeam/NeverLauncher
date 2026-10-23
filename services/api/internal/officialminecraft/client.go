@@ -118,10 +118,21 @@ func (c *Client) request(ctx context.Context, method, addr, bearer, contentType 
 		}
 		_ = json.Unmarshal(b, &body)
 		code := body.Error
+		// Minecraft Services may reject an otherwise valid OAuth/XSTS chain
+		// because the application's client ID has not been authorized.
+		// Normalize the provider message; never echo arbitrary response text.
+		if resp.StatusCode == http.StatusForbidden && strings.Contains(strings.ToLower(body.ErrorMessage), "invalid app registration") {
+			code = "invalid_app_registration"
+		}
 		if code == "" && body.XErr != 0 {
 			code = fmt.Sprintf("xsts_%d", body.XErr)
 		}
 		if code == "" {
+			code = "upstream_error"
+		}
+		// Codes are untrusted upstream data; prevent credential leakage in
+		// structured CLI evidence, logs or future error instrumentation.
+		if len(code) > 64 || !safeServiceCode(code) {
 			code = "upstream_error"
 		}
 		switch code {
@@ -146,6 +157,15 @@ func (c *Client) request(ctx context.Context, method, addr, bearer, contentType 
 	}
 	return nil
 }
+func safeServiceCode(code string) bool {
+	for _, r := range code {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '_' && r != '-' && r != '.' {
+			return false
+		}
+	}
+	return code != ""
+}
+
 func form(fields url.Values) (io.Reader, string) {
 	return strings.NewReader(fields.Encode()), "application/x-www-form-urlencoded"
 }
@@ -200,6 +220,16 @@ func (c *Client) Refresh(ctx context.Context, clientID, refresh string) (OAuthTo
 	return tokens, nil
 }
 func (c *Client) Exchange(ctx context.Context, microsoftToken string) (MinecraftToken, error) {
+	return c.ExchangeWithStages(ctx, microsoftToken, nil)
+}
+
+// ExchangeWithStages emits only names of successfully completed provider
+// stages, never credentials. It is used to prove exactly where a real POC
+// failed without copying bearer tokens into any evidence file.
+func (c *Client) ExchangeWithStages(ctx context.Context, microsoftToken string, stagePassed func(string)) (MinecraftToken, error) {
+	if microsoftToken == "" {
+		return MinecraftToken{}, errors.New("missing Microsoft access token")
+	}
 	var xbl struct {
 		Token         string `json:"Token"`
 		DisplayClaims struct {
@@ -217,6 +247,9 @@ func (c *Client) Exchange(ctx context.Context, microsoftToken string) (Minecraft
 	}
 	if xbl.Token == "" || len(xbl.DisplayClaims.XUI) != 1 || xbl.DisplayClaims.XUI[0].UHS == "" {
 		return MinecraftToken{}, errors.New("invalid Xbox Live response")
+	}
+	if stagePassed != nil {
+		stagePassed("xbox_live")
 	}
 	var xsts struct {
 		Token         string `json:"Token"`
@@ -236,6 +269,9 @@ func (c *Client) Exchange(ctx context.Context, microsoftToken string) (Minecraft
 	if xsts.Token == "" || len(xsts.DisplayClaims.XUI) != 1 || xsts.DisplayClaims.XUI[0].UHS != xbl.DisplayClaims.XUI[0].UHS {
 		return MinecraftToken{}, errors.New("Xbox identity mismatch")
 	}
+	if stagePassed != nil {
+		stagePassed("xsts")
+	}
 	body, ct, err = jsonBody(map[string]string{"identityToken": "XBL3.0 x=" + xsts.DisplayClaims.XUI[0].UHS + ";" + xsts.Token})
 	if err != nil {
 		return MinecraftToken{}, err
@@ -246,6 +282,9 @@ func (c *Client) Exchange(ctx context.Context, microsoftToken string) (Minecraft
 	}
 	if result.AccessToken == "" || result.TokenType != "Bearer" || result.ExpiresIn <= 0 {
 		return MinecraftToken{}, errors.New("invalid Minecraft access token")
+	}
+	if stagePassed != nil {
+		stagePassed("minecraft_token")
 	}
 	return result, nil
 }
