@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 ROUTES = ROOT / "services/api/internal/httpapi"
 OUT = ROOT / "schemas/openapi.yaml"
 PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-route_re = re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles/minecraft/[^" ]+|/authserver/[^" ]+|/sessionserver/session/minecraft/[^" ]+|/(?:health|ready|metrics))')
+route_re = re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles/minecraft(?:/[^" ]+)?|/api/user/profile/[^" ]+|/authserver/[^" ]+|/sessionserver/session/minecraft/[^" ]+|/(?:health|ready|metrics))')
 files = [ROUTES / "handler.go"] + sorted(p for p in ROUTES.glob("routes_*.go") if "legacy" not in p.name)
 routes = []
 for file in files:
@@ -26,7 +26,7 @@ node_signed_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-brid
 node_signature_security = {"NodeId": [], "NodeKeyFingerprint": [], "NodeTimestamp": [], "NodeNonce": [], "NodeSignature": []}
 
 def is_public(method, path):
-    if path.startswith("/authserver/") or path.startswith("/sessionserver/session/minecraft/") or path.startswith("/api/profiles/minecraft/"): return True
+    if path.startswith("/authserver/") or path.startswith("/sessionserver/session/minecraft/") or path.startswith("/api/profiles/minecraft"): return True
     if path in public_exact: return True
     if path.startswith("/api/v1/auth/oidc/"): return True
     if method == "get" and any(path.startswith(p) for p in public_prefixes): return True
@@ -40,7 +40,7 @@ def security_for(method, path):
 
 def tags_for(path):
     if path in ("/health","/ready","/metrics","/api/v1/status"): return ["operations"]
-    for token, tag in [("/authserver/","minecraft-auth"),("/sessionserver/","minecraft-auth"),("/api/profiles/minecraft/","minecraft-auth"),("/minecraft/","minecraft-auth"),("/auth/","auth"),("/install/","install"),("/server-bridge/","bridge"),("/session/","bridge"),("/textures/","bridge"),("/projects","projects"),("/files/","packages"),("/admin/","admin"),("/runtime/","runtime"),("/loaders","runtime"),("/operations/","operations"),("/telemetry/","operations"),("/crash-reports","operations"),("/diagnostics/","operations")]:
+    for token, tag in [("/authserver/","minecraft-auth"),("/sessionserver/","minecraft-auth"),("/api/profiles/minecraft","minecraft-auth"),("/api/user/profile/","minecraft-auth"),("/minecraft/","minecraft-auth"),("/auth/","auth"),("/install/","install"),("/server-bridge/","bridge"),("/session/","bridge"),("/textures/","bridge"),("/projects","projects"),("/files/","packages"),("/admin/","admin"),("/runtime/","runtime"),("/loaders","runtime"),("/operations/","operations"),("/telemetry/","operations"),("/crash-reports","operations"),("/diagnostics/","operations")]:
         if token in path: return [tag]
     return ["api"]
 
@@ -65,6 +65,8 @@ def path_parameters(path):
         out.append({"name":"againstProfileId","in":"query","required":False,"schema":{"type":"string"}})
     if path.endswith("/files") and path.startswith("/api/v1/projects/"):
         out.append({"name":"versionId","in":"query","required":False,"schema":{"type":"string"}})
+    if path == "/sessionserver/session/minecraft/profile/{uuid}":
+        out.append({"name":"unsigned","in":"query","required":False,"schema":{"type":"boolean","default":True}})
     if path == "/api/v1/session/has-joined":
         out += [{"name":"username","in":"query","required":False,"schema":{"type":"string"}},{"name":"serverId","in":"query","required":False,"schema":{"type":"string"}}]
     if path == "/api/v1/server-bridge/capabilities":
@@ -266,6 +268,7 @@ def request_body_allowed(method,path):
     return True
 
 def success_status(method,path):
+    if path == "/api/user/profile/{uuid}/{kind}": return "204"
     if method=="delete" and path in {"/api/v1/admin/extensions/{extensionId}/permissions/{permission}", "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}"}: return "204"
     if method=="put" and path == "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}": return "201"
     if method=="post" and path == "/api/v1/admin/extensions/{extensionId}/permissions": return "201"
@@ -312,6 +315,8 @@ def response_schema(path, method):
 paths={}
 for method,path in routes:
     op={"operationId":op_id(method,path),"tags":tags_for(path),"summary":f"{method.upper()} {path}","responses":{}}
+    if path == "/api/user/profile/{uuid}/{kind}":
+        op["description"]="Yggdrasil/authlib-injector profile-owned texture PUT/DELETE; requires Minecraft Bearer session token, uses the normalized PNG service, returns 204 on success."
     if path == "/api/v1/session/join":
         op["description"] = "NeverLauncher 0.14.3 One-Time Join Tickets: issues a short-lived identity-bound ServerBridge authorization that can be redeemed exactly once by the active cryptographic node identity."
     elif path == "/sessionserver/session/minecraft/hasJoined":
@@ -324,8 +329,12 @@ for method,path in routes:
     sec=security_for(method,path)
     if sec: op["security"]=sec
     elif sec==[]: op["security"]=[]
-    if request_body_allowed(method,path) and not path.endswith("/files") and path not in ("/api/v1/admin/extension-registry/publish", "/api/v1/me/textures/{kind}/upload"):
+    if request_body_allowed(method,path) and not path.endswith("/files") and path not in ("/api/v1/admin/extension-registry/publish", "/api/v1/me/textures/{kind}/upload", "/api/user/profile/{uuid}/{kind}"):
         op["requestBody"]={"required":request_body_required(method,path),"content":{"application/json":{"schema":body_schema(path)}}}
+    if path == "/api/profiles/minecraft" and method=="post":
+        op["requestBody"]={"required":True,"content":{"application/json":{"schema":{"type":"array","maxItems":100,"items":{"type":"string","minLength":3,"maxLength":16}}}}}
+    if path == "/api/user/profile/{uuid}/{kind}" and method=="put":
+        op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":{"type":"object","required":["file"],"properties":{"file":{"type":"string","format":"binary"},"model":{"type":"string","enum":["","slim"]}}}}}}
     if path == "/api/v1/me/textures/{kind}/upload" and method=="post":
         op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":ref("TextureUploadMultipart0252")}}}
     if path.endswith("/files") and method=="post":
@@ -339,6 +348,14 @@ for method,path in routes:
         op["responses"][success]={"description":"Success"}
     else:
         op["responses"][success]={"description":"Success","content":{ctype:{"schema":({"type":"string","format":"binary"} if ctype=="image/png" else response_schema(path,method))}}}
+    if path == "/api/profiles/minecraft" and method=="post":
+        op["responses"]["200"]["content"]["application/json"]["schema"]={"type":"array","items":{"type":"object","required":["id","name"],"properties":{"id":{"type":"string","pattern":"^[0-9a-f]{32}$"},"name":{"type":"string"}}}}
+    if path == "/api/user/profile/{uuid}/{kind}":
+        op["responses"]["403"]={"description":"Upload or cape permission denied"}
+        op["responses"]["409"]={"$ref":"#/components/responses/Conflict"}
+        op["responses"]["413"]={"description":"PNG too large or project quota exceeded"}
+        op["responses"]["422"]={"description":"Invalid Minecraft PNG"}
+        op["responses"]["503"]={"$ref":"#/components/responses/ServiceUnavailable"}
     if path in ("/api/v1/me/textures/{kind}/upload", "/api/v1/me/textures/{kind}/import"):
         op["responses"]["409"]={"$ref":"#/components/responses/Conflict"}
         op["responses"]["413"]={"description":"Image exceeds upload or project limit"}

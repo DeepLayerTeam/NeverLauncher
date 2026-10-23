@@ -3,7 +3,6 @@ package httpapi
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -389,6 +388,11 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	redemption.TrustReason = trust.Reason
 	redemption.IntegrityReason = integrity.Reason
 	redemption.VerifiedAt = time.Now().UTC()
+	property, propertyErr := s.textureProperty0256(s.State.ServerBridge.textureFor(join.UUID, join.Username), true)
+	if propertyErr != nil {
+		writeError(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
+		return
+	}
 	consumed, consumedOK := s.State.ServerBridge.consumeJoinV2(join, redemption)
 	if !consumedOK {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-replay"), Actor: server.ID, Action: "serverbridge:has-joined:replay-denied", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -397,7 +401,7 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	}
 	join = consumed
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-ok"), Actor: server.ID, Action: "serverbridge:has-joined:ok", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	writeJSON(w, http.StatusOK, map[string]any{"id": join.UUID, "name": join.Username, "properties": []map[string]string{textureProperty910(s.State.ServerBridge.textureFor(join.UUID, join.Username))}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": join.ProtocolVersion, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "sessionCorrelationId": join.SessionCorrelationID, "sessionLifecycle": "active", "trustIntegrityRechecked": true, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
+	writeJSON(w, http.StatusOK, map[string]any{"id": minecraftID119(join.UUID), "name": join.Username, "properties": []map[string]string{property}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": join.ProtocolVersion, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "sessionCorrelationId": join.SessionCorrelationID, "sessionLifecycle": "active", "trustIntegrityRechecked": true, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
 }
 
 func (s Server) sessionInvalidate(w http.ResponseWriter, r *http.Request) {
@@ -433,8 +437,11 @@ func (s Server) textureGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	texture := s.State.ServerBridge.textureFor(uuid, uuid)
+	legacy := textureProfile910(texture)
+	legacy["schemaVersion"] = serverBridgeSchema910
+	legacy["profileId"] = texture.UUID // preserve the original REST API UUID representation
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": textureProfile910(texture)})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": serverBridgeSchema910, "data": legacy})
 }
 
 func (s Server) bridgeClaimsFromRequest910(r *http.Request) (authClaims, string, error) {
@@ -925,21 +932,21 @@ func playerUUID910(seed string) string {
 	return hexed[0:8] + "-" + hexed[8:12] + "-" + hexed[12:16] + "-" + hexed[16:20] + "-" + hexed[20:32]
 }
 
-func textureProperty910(texture bridgeTextureRecord) map[string]string {
-	payload := textureProfile910(texture)
-	encoded, _ := json.Marshal(payload)
-	return map[string]string{"name": "textures", "value": base64.StdEncoding.EncodeToString(encoded)}
-}
-
+// Yggdrasil texture JSON is deliberately separate from the project's manifest
+// and from its internal Ed25519/ServerBridge wire format.
 func textureProfile910(texture bridgeTextureRecord) map[string]any {
 	textures := map[string]any{}
 	if texture.SkinURL != "" {
-		textures["SKIN"] = map[string]any{"url": texture.SkinURL, "metadata": map[string]string{"model": texture.Model}}
+		skin := map[string]any{"url": texture.SkinURL}
+		if texture.Model == "slim" {
+			skin["metadata"] = map[string]string{"model": "slim"}
+		}
+		textures["SKIN"] = skin
 	}
 	if texture.CapeURL != "" {
 		textures["CAPE"] = map[string]any{"url": texture.CapeURL}
 	}
-	return map[string]any{"schemaVersion": serverBridgeSchema910, "timestamp": time.Now().UTC().UnixMilli(), "profileId": texture.UUID, "profileName": texture.Username, "textures": textures}
+	return map[string]any{"timestamp": time.Now().UTC().UnixMilli(), "profileId": strings.ReplaceAll(strings.ToLower(texture.UUID), "-", ""), "profileName": texture.Username, "textures": textures}
 }
 
 func validBridgeServerKindV2(kind string) bool {

@@ -17,6 +17,8 @@ import (
 type Config struct {
 	HTTPAddr                                     string
 	PublicURL                                    string
+	YggdrasilSigningKeyFile                      string
+	YggdrasilTextureDomains                      []string
 	DatabaseDSN                                  string
 	RepositoryDriver                             string
 	SQLDriver                                    string
@@ -205,6 +207,8 @@ func Load() Config {
 	return Config{
 		HTTPAddr:                                     env("NEVERLAUNCHER_HTTP_ADDR", "0.0.0.0:8080"),
 		PublicURL:                                    publicURL,
+		YggdrasilSigningKeyFile:                      env("NEVERLAUNCHER_YGGDRASIL_RSA_KEY_FILE", ""),
+		YggdrasilTextureDomains:                      envCSV("NEVERLAUNCHER_YGGDRASIL_TEXTURE_DOMAINS"),
 		DatabaseDSN:                                  env("NEVERLAUNCHER_DATABASE_DSN", env("NEVERLAUNCHER_DATABASE_URL", "postgres://neverlauncher:neverlauncher@localhost:5432/neverlauncher?sslmode=disable")),
 		RepositoryDriver:                             env("NEVERLAUNCHER_REPOSITORY_DRIVER", "postgres"),
 		SQLDriver:                                    env("NEVERLAUNCHER_SQL_DRIVER", "pgx"),
