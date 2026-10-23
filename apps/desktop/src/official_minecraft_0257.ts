@@ -82,6 +82,24 @@ export class OfficialMinecraftClient0257 {
     else { if (!result.profile?.id) throw new Error('Не удалось подтвердить официальный профиль.'); this.active = true; }
     return result;
   }
+  /** Rust owns all Device Code polling, retry delays and cancellation.
+   * Only a completed, verified Minecraft profile crosses IPC. */
+  async waitDevice(): Promise<OfficialProfile0257> {
+    const generation = this.generation;
+    let profile: OfficialProfile0257;
+    try {
+      profile = await this.call<OfficialProfile0257>('official_identity_wait_device_0264');
+    } catch (cause) {
+      // Tauri may reject with a string. Invalidate a late rejection from an
+      // older flow rather than allowing it to dismiss a newly started flow.
+      if (generation !== this.generation) throw new Error('Авторизация отменена.');
+      throw cause instanceof Error ? cause : new Error(String(cause));
+    }
+    if (generation !== this.generation) throw new Error('Авторизация отменена.');
+    if (!profile?.id || !profile.name) throw new Error('Minecraft Java профиль не подтверждён.');
+    this.active = true;
+    return profile;
+  }
   async profile(): Promise<OfficialProfile0257> {
     const profile = await this.restore();
     if (!profile) throw new Error('Подключите официальный Minecraft-аккаунт.');

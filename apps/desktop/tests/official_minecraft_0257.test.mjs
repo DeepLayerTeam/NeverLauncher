@@ -98,3 +98,72 @@ test('cancelled browser flow cannot attach a late response to renderer',async()=
   await assert.rejects(login,/отменена/);
   assert.equal(client.linked,false);
 });
+
+test('native Device Code waiter returns only verified profile and is automatic',async()=>{
+  const calls=[];
+  const c=new OfficialMinecraftClient0257('https://backend.example','never-platform-token','session-0264',async(cmd,args)=>{
+    calls.push({cmd,args});
+    if(cmd==='official_identity_cancel_0262')return;
+    if(cmd==='official_identity_begin_0262')return {verificationUri:'https://microsoft.com/link',userCode:'ABCD-EFGH',intervalSeconds:5,expiresIn:900};
+    if(cmd==='official_identity_wait_device_0264')return profile;
+    throw new Error('unexpected native command '+cmd);
+  });
+  await c.begin();
+  assert.deepEqual(await c.waitDevice(), profile);
+  assert.equal(c.linked,true);
+  assert.deepEqual(calls.map(r=>r.cmd),['official_identity_cancel_0262','official_identity_begin_0262','official_identity_wait_device_0264']);
+  assert.ok(calls.every(r=>!('ticket' in r.args) && !('deviceCode' in r.args) && !('refreshToken' in r.args)));
+});
+
+test('cancelled Device Code waiter cannot attach late native result',async()=>{
+  let release;
+  const delayed=new Promise(resolve=>{release=resolve;});
+  const c=new OfficialMinecraftClient0257('https://backend.example','platform-token','session-0264',async cmd=>{
+    if(cmd==='official_identity_cancel_0262')return;
+    if(cmd==='official_identity_begin_0262')return {verificationUri:'https://microsoft.com/link',userCode:'ABCD',intervalSeconds:5,expiresIn:900};
+    if(cmd==='official_identity_wait_device_0264')return delayed;
+    throw new Error(cmd);
+  });
+  await c.begin();
+  const waiting=c.waitDevice();
+  await c.cancel();
+  release(profile);
+  await assert.rejects(waiting,/отменена/);
+  assert.equal(c.linked,false);
+});
+
+test('replacing Device Code invalidates previous native waiter',async()=>{
+  let finish;
+  const waitingNative=new Promise(resolve=>{finish=resolve;});
+  let index=0;
+  const c=new OfficialMinecraftClient0257('https://backend.example','platform-token','session-0264',async cmd=>{
+    if(cmd==='official_identity_cancel_0262')return;
+    if(cmd==='official_identity_begin_0262')return {verificationUri:'https://microsoft.com/link',userCode:String(++index),intervalSeconds:5,expiresIn:900};
+    if(cmd==='official_identity_wait_device_0264')return waitingNative;
+    throw new Error(cmd);
+  });
+  await c.begin();
+  const waiting=c.waitDevice();
+  await c.begin();
+  finish(profile);
+  await assert.rejects(waiting,/отменена/);
+  assert.equal(c.linked,false);
+});
+
+test('native string rejection after cancel is sanitized before next Device Code flow',async()=>{
+  let rejectOld;
+  let started=0;
+  const native=new Promise((_,reject)=>{rejectOld=reject;});
+  const c=new OfficialMinecraftClient0257('https://backend.example','platform-token','sid-0264',async cmd=>{
+    if(cmd==='official_identity_cancel_0262')return;
+    if(cmd==='official_identity_begin_0262')return {verificationUri:'https://microsoft.com/link',userCode:String(++started),intervalSeconds:5,expiresIn:900};
+    if(cmd==='official_identity_wait_device_0264')return native;
+    throw new Error(cmd);
+  });
+  await c.begin();
+  const pending=c.waitDevice();
+  await c.begin();
+  rejectOld('Сервис официальной авторизации недоступен');
+  await assert.rejects(pending,/отменена/);
+  assert.equal(c.linked,false);
+});

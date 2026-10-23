@@ -1,3 +1,12 @@
+## 0.26.4 — Device Code Fallback: Native Polling & Recovery
+
+- Device Code now starts an automatic **native Rust/Tauri waiter** in Desktop. It respects the initial Microsoft polling interval, handles backend `202 authorization_pending` and `slow_down` interval rotation, and stops on verified Minecraft profile, cancellation, denial, provider expiry or Never authentication failure. Browser OAuth/PKCE remains the primary login.
+- Implemented bounded exponential backoff on network/temporary HTTP failures (408/429/5xx), honoring numeric `Retry-After`. Transient failures do not discard a valid pending device flow; the waiter automatically resumes until it expires. Nonrecoverable OAuth errors stop polling rather than retry indefinitely.
+- Added resumable post-redemption Backend continuation: a successfully redeemed Microsoft one-use Device Code is not redeemed again after a transient Xbox/XSTS/Minecraft outage. Short-lived Microsoft credentials stay sealed in authenticated AES-GCM flow tickets and are zeroized after native use; permanent denials still stop the flow.
+- Fixed native flow replacement/cancellation races. A random flow nonce and in-flight guard prevent old requests from inserting late pending tickets or connecting a canceled account; a Tokio watch channel interrupts the waiter during its delay **or** ongoing HTTP call. Active flow tickets remain in native memory, are zeroized on removal, and are never returned to React.
+- Updated the Desktop UI with explicit verification URL/user code, automatic progress, remaining lifetime and cancel button; removed the manual poll action. Added native cancellation/expiry/backoff tests and renderer success/late-result/race regressions, plus platform build CI.
+- **No claim of external approval:** real Microsoft app access to Xbox/Minecraft Services, real OS keyring tests and official online-mode server login still require actual credentials, platforms and a certified environment. Source tests are not a live provider E2E.
+
 ## 0.26.3 — Browser OAuth + PKCE
 
 - Implemented native Rust/Tauri desktop Authorization Code + PKCE S256 sign-in using the **system browser** and a dynamically bound IPv4 loopback HTTP callback. The native manager generates fresh cryptographically random verifier/state per attempt, verifies exact Host/path/HTTP method and OAuth state, detects duplicate query parameters, limits callback input, accepts one successful grant, times out and supports cancellation.

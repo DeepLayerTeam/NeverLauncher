@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -33,10 +34,15 @@ type officialState0257 struct {
 	Interval         int    `json:"interval,omitempty"`
 	NextPoll         int64  `json:"nextPoll,omitempty"`
 	MicrosoftRefresh string `json:"microsoftRefresh,omitempty"`
-	MinecraftToken   string `json:"minecraftToken,omitempty"`
-	MinecraftExpires int64  `json:"minecraftExpires,omitempty"`
-	UUID             string `json:"uuid,omitempty"`
-	Name             string `json:"name,omitempty"`
+	// A successfully redeemed device grant must not be redeemed again if an
+	// Xbox/Minecraft stage times out. These fields exist ONLY in AES-GCM flow
+	// tickets, never in the JSON shown to Desktop's renderer.
+	MicrosoftAccess        string `json:"microsoftAccess,omitempty"`
+	MicrosoftAccessExpires int64  `json:"microsoftAccessExpires,omitempty"`
+	MinecraftToken         string `json:"minecraftToken,omitempty"`
+	MinecraftExpires       int64  `json:"minecraftExpires,omitempty"`
+	UUID                   string `json:"uuid,omitempty"`
+	Name                   string `json:"name,omitempty"`
 }
 
 func officialSeal0257(secret string, state officialState0257) (string, error) {
@@ -60,7 +66,11 @@ func officialSeal0257(secret string, state officialState0257) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return base64.RawURLEncoding.EncodeToString(append(nonce, aead.Seal(nil, nonce, plain, []byte("neverlauncher-official-0257"))...)), nil
+	sealed := aead.Seal(nil, nonce, plain, []byte("neverlauncher-official-0257"))
+	for i := range plain {
+		plain[i] = 0
+	}
+	return base64.RawURLEncoding.EncodeToString(append(nonce, sealed...)), nil
 }
 func officialOpen0257(secret, ticket string) (officialState0257, error) {
 	var state officialState0257
@@ -87,6 +97,11 @@ func officialOpen0257(secret, ticket string) (officialState0257, error) {
 	if err != nil {
 		return state, errors.New("invalid official session")
 	}
+	defer func() {
+		for i := range plain {
+			plain[i] = 0
+		}
+	}()
 	if err = json.Unmarshal(plain, &state); err != nil {
 		return state, errors.New("invalid official session")
 	}
@@ -112,7 +127,7 @@ func (s Server) officialRead0257(r *http.Request, kind string) (officialState025
 		return officialState0257{}, claims, err
 	}
 	st, err := officialOpen0257(s.Config.AuthTokenSecret, r.Header.Get("X-Official-Minecraft-Session"))
-	if err != nil || st.Kind != kind || st.User != claims.Sub || st.Session != claims.SessionID {
+	if err != nil || (st.Kind != kind && !(kind == "pending" && st.Kind == "redeemed")) || st.User != claims.Sub || st.Session != claims.SessionID {
 		return officialState0257{}, claims, errAuthRequired
 	}
 	return st, claims, nil
@@ -195,6 +210,53 @@ func (s Server) officialBegin0257(w http.ResponseWriter, r *http.Request) {
 	}
 	officialWrite0257(w, 200, map[string]any{"verificationUri": challenge.VerificationURI, "userCode": challenge.UserCode, "message": challenge.Message, "intervalSeconds": challenge.Interval, "expiresIn": challenge.ExpiresIn, "flow": ticket})
 }
+
+// Temporary upstream failures after Microsoft token redemption must preserve
+// the successful grant. Never repeat the one-use device_code redemption merely
+// because Xbox Live, XSTS or Minecraft Services was briefly unavailable.
+func officialTransient0257(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+	var upstream *officialminecraft.ServiceError
+	if errors.As(err, &upstream) {
+		return upstream.Status == http.StatusRequestTimeout || upstream.Status == http.StatusTooManyRequests || upstream.Status >= 500
+	}
+	// Malformed, unexpected or empty upstream responses can be transient.
+	// Permission/grant failures above are ServiceError or sentinel errors.
+	return !errors.Is(err, officialminecraft.ErrDenied) && !errors.Is(err, officialminecraft.ErrExpired) &&
+		!errors.Is(err, officialminecraft.ErrUnlicensed)
+}
+func (s Server) officialContinue0257(w http.ResponseWriter, state officialState0257, delay int) {
+	if delay < 5 {
+		delay = 5
+	}
+	if delay > 3600 {
+		delay = 3600
+	}
+	state.Interval = delay
+	state.NextPoll = time.Now().Add(time.Duration(delay) * time.Second).Unix()
+	sealed, err := officialSeal0257(s.Config.AuthTokenSecret, state)
+	if err != nil {
+		writeError(w, 503, "secure official session unavailable")
+		return
+	}
+	w.Header().Set("Retry-After", strconv.Itoa(delay))
+	officialWrite0257(w, http.StatusAccepted, map[string]any{
+		"status": "pending", "flow": sealed, "intervalSeconds": delay,
+		"expiresIn": max(int64(1), state.Expires-time.Now().Unix()),
+	})
+}
 func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 	if s.Config.MinecraftMicrosoftClientID == "" {
 		writeError(w, 503, "official Minecraft login is not configured")
@@ -211,39 +273,72 @@ func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 	}
 	now := time.Now()
 	if now.Unix() < st.NextPoll || !officialPollingAllowed0257(st.DeviceCode, interval) {
-		w.Header().Set("Retry-After", strconv.Itoa(st.Interval))
+		w.Header().Set("Retry-After", strconv.Itoa(max(5, st.Interval)))
 		writeError(w, 429, "Microsoft authorization polling too frequent")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
-	tokens, err := officialminecraft.New().Complete(ctx, s.Config.MinecraftMicrosoftClientID, st.DeviceCode)
-	if errors.Is(err, officialminecraft.ErrPending) || errors.Is(err, officialminecraft.ErrSlowDown) {
-		if errors.Is(err, officialminecraft.ErrSlowDown) {
-			st.Interval += 5
-		}
-		st.NextPoll = now.Add(time.Duration(st.Interval) * time.Second).Unix()
-		next, e := officialSeal0257(s.Config.AuthTokenSecret, st)
-		if e != nil {
-			writeError(w, 503, "secure official session unavailable")
+	client := officialminecraft.New()
+	if st.Kind == "pending" {
+		tokens, e := client.Complete(ctx, s.Config.MinecraftMicrosoftClientID, st.DeviceCode)
+		if errors.Is(e, officialminecraft.ErrPending) || errors.Is(e, officialminecraft.ErrSlowDown) {
+			if errors.Is(e, officialminecraft.ErrSlowDown) {
+				st.Interval += 5
+			}
+			s.officialContinue0257(w, st, st.Interval)
 			return
 		}
-		w.Header().Set("Retry-After", strconv.Itoa(st.Interval))
-		officialWrite0257(w, http.StatusAccepted, map[string]any{"status": "pending", "flow": next, "intervalSeconds": st.Interval})
+		if e != nil {
+			officialFail0257(w, e)
+			return
+		}
+		st.Kind = "redeemed"
+		st.MicrosoftAccess = tokens.AccessToken
+		st.MicrosoftRefresh = tokens.RefreshToken
+		st.MicrosoftAccessExpires = time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second).Unix()
+		// The Device Code has already been consumed, but a short recovery window
+		// is needed to finish the Xbox/Minecraft profile verification.
+		if recoveryExpiry := time.Now().Add(5 * time.Minute).Unix(); st.Expires < recoveryExpiry {
+			st.Expires = recoveryExpiry
+		}
+	}
+	if st.MicrosoftAccess == "" {
+		writeError(w, 401, "redeemed Microsoft authorization is incomplete")
 		return
 	}
-	if err != nil {
-		officialFail0257(w, err)
-		return
+	if st.MicrosoftAccessExpires <= time.Now().Add(60*time.Second).Unix() {
+		if st.MicrosoftRefresh == "" {
+			writeError(w, 401, "Microsoft reauthorization required")
+			return
+		}
+		tokens, e := client.Refresh(ctx, s.Config.MinecraftMicrosoftClientID, st.MicrosoftRefresh)
+		if e != nil {
+			if officialTransient0257(e) {
+				s.officialContinue0257(w, st, max(10, st.Interval))
+				return
+			}
+			officialFail0257(w, e)
+			return
+		}
+		st.MicrosoftAccess, st.MicrosoftRefresh = tokens.AccessToken, tokens.RefreshToken
+		st.MicrosoftAccessExpires = time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second).Unix()
 	}
-	client := officialminecraft.New()
-	mc, err := client.Exchange(ctx, tokens.AccessToken)
+	mc, err := client.Exchange(ctx, st.MicrosoftAccess)
 	if err != nil {
+		if officialTransient0257(err) {
+			s.officialContinue0257(w, st, max(10, st.Interval))
+			return
+		}
 		officialFail0257(w, err)
 		return
 	}
 	profile, err := client.Profile(ctx, mc.AccessToken)
 	if err != nil {
+		if officialTransient0257(err) {
+			s.officialContinue0257(w, st, max(10, st.Interval))
+			return
+		}
 		officialFail0257(w, err)
 		return
 	}
@@ -251,7 +346,9 @@ func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 	if expiry > time.Now().Add(24*time.Hour).Unix() {
 		expiry = time.Now().Add(24 * time.Hour).Unix()
 	}
-	linked := officialState0257{Kind: "linked", User: actor.Sub, Session: actor.SessionID, Expires: time.Now().Add(30 * 24 * time.Hour).Unix(), MicrosoftRefresh: tokens.RefreshToken, MinecraftToken: mc.AccessToken, MinecraftExpires: expiry, UUID: strings.ToLower(profile.ID), Name: profile.Name}
+	linked := officialState0257{Kind: "linked", User: actor.Sub, Session: actor.SessionID,
+		Expires: time.Now().Add(30 * 24 * time.Hour).Unix(), MicrosoftRefresh: st.MicrosoftRefresh,
+		MinecraftToken: mc.AccessToken, MinecraftExpires: expiry, UUID: strings.ToLower(profile.ID), Name: profile.Name}
 	if linked.MicrosoftRefresh == "" {
 		linked.Expires = expiry
 	}

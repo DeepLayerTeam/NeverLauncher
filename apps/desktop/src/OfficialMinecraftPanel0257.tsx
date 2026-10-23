@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {OfficialMinecraftClient0257, type OfficialDevice0257, type OfficialProfile0257} from './official_minecraft_0257';
 
 type Props = {
@@ -14,6 +14,33 @@ export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Pr
   const [error, setError] = useState('');
   const [variant, setVariant] = useState<'classic'|'slim'>('classic');
   const [file, setFile] = useState<File | null>(null);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  useEffect(() => {
+    if (!device) { setRemaining(null); return; }
+    const until = Date.now() + device.expiresIn * 1000;
+    const update = () => setRemaining(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [device]);
+  async function beginDeviceLogin() {
+    await perform(async () => {
+      const challenge = await client.begin();
+      setDevice(challenge);
+      onLinked(null);
+      // This command waits natively and applies provider pacing/slow_down.
+      // It never exposes backend session tickets or device_code to React.
+      void client.waitDevice().then(profile => {
+        onLinked(profile);
+        setDevice(null);
+      }).catch(e => {
+        if (!(e instanceof Error && e.message.includes('отменена'))) {
+          setError(e instanceof Error ? e.message : String(e));
+          setDevice(null);
+        }
+      });
+    });
+  }
   async function perform(task: () => Promise<void>) {
     setBusy(true);setError('');
     try { await task(); } catch(e) { setError(e instanceof Error ? e.message : String(e)); }
@@ -33,11 +60,12 @@ export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Pr
         <span role="status">Завершите вход в открывшемся системном браузере.</span>
         <button onClick={()=>void perform(async()=>{await client.cancel();setDevice(null);})}>Отменить вход</button>
       </>}
-      <button disabled={busy||browserPending} onClick={()=>void perform(async()=>{const d=await client.begin();setDevice(d);onLinked(null);})}>Device Code (резервный режим)</button>
+      <button disabled={busy||browserPending} onClick={()=>void beginDeviceLogin()}>Device Code (резервный режим)</button>
       {device && <>
         <span>Код: <strong>{device.userCode}</strong></span>
         <a href={device.verificationUri} target="_blank" rel="noopener noreferrer">Открыть вход Microsoft</a>
-        <button disabled={busy} onClick={()=>void perform(async()=>{const p=await client.poll();if(p.profile){onLinked(p.profile);setDevice(null);}})}>Проверить вход</button>
+        <span role="status">Вход проверяется автоматически. Интервалы Microsoft и slow_down соблюдаются.</span>
+        {remaining !== null && <span>Осталось: {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span>}
         <button disabled={busy} onClick={()=>void perform(async()=>{await client.cancel();setDevice(null);})}>Отменить вход</button>
       </>}
     </div>}

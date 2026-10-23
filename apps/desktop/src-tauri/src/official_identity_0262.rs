@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use reqwest::{Client, Method, Url};
 use sha2::{Digest, Sha256};
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 use rand::RngCore;
 use base64::Engine as _;
 use neverruntime::MinecraftLaunchCredentials;
@@ -49,8 +49,34 @@ impl Drop for StoredAccount { fn drop(&mut self) { self.ticket.zeroize(); } }
 
 struct BrowserFlow0263 { state: String, cancel: watch::Sender<bool> }
 
-struct PendingFlow { ticket: String, next: Instant, expires: Instant }
+struct PendingFlow {
+    ticket: String,
+    next: Instant,
+    expires: Instant,
+    nonce: u64,
+    in_flight: bool,
+    failures: u32,
+    interval: u64,
+    cancel: watch::Sender<bool>,
+}
 impl Drop for PendingFlow { fn drop(&mut self) { self.ticket.zeroize(); } }
+
+fn retry_delay(base: u64, failures: u32, server_hint: Option<u64>) -> u64 {
+    // Exponential backoff, preserving Microsoft's original/slow_down interval.
+    base.max(5).max(5u64.saturating_mul(1u64 << failures.min(5)))
+        .max(server_hint.unwrap_or(0)).clamp(5, 3600)
+}
+
+// Closing a watch channel after SUCCESS must not be mistaken for user cancel.
+// Only an explicit true signal ends an in-flight login.
+async fn await_device_cancel(rx: &mut watch::Receiver<bool>) {
+    loop {
+        if *rx.borrow() { return; }
+        if rx.changed().await.is_err() {
+            std::future::pending::<()>().await;
+        }
+    }
+}
 
 pub struct IdentityManager {
     browser: Mutex<HashMap<String, BrowserFlow0263>>,
@@ -202,8 +228,15 @@ fn delete(id: &str) -> Result<(), String> {
     if let Some(pointer) = prior { remove_fragments(id, &pointer) } else { Ok(()) }
 }
 
-struct Response { status: u16, data: Value, rotation: Option<String> }
-impl Drop for Response { fn drop(&mut self) { if let Some(token) = &mut self.rotation { token.zeroize(); } } }
+struct Response { status: u16, data: Value, rotation: Option<String>, retry_after: Option<u64> }
+impl Drop for Response {
+    fn drop(&mut self) {
+        if let Some(token) = &mut self.rotation { token.zeroize(); }
+        for name in ["flow", "session"] {
+            if let Some(Value::String(value)) = self.data.get_mut(name) { value.zeroize(); }
+        }
+    }
+}
 
 impl IdentityManager {
     pub fn new() -> Result<Self, String> {
@@ -229,6 +262,8 @@ impl IdentityManager {
         let mut response = req.send().await.map_err(|_| "Сервис официальной авторизации недоступен".to_string())?;
         let status = response.status().as_u16();
         let rotation = response.headers().get("X-Official-Minecraft-Session").and_then(|v| v.to_str().ok()).map(str::to_owned);
+        let retry_after = response.headers().get("Retry-After").and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<u64>().ok()).map(|v| v.clamp(5, 3600));
         if response.content_length().is_some_and(|n| n > RESPONSE_LIMIT as u64) {
             return Err("Official API вернул слишком большой ответ".into());
         }
@@ -240,7 +275,13 @@ impl IdentityManager {
         let payload: Value = serde_json::from_slice(&bytes).map_err(|_| "Official API вернул невалидный JSON".to_string())?;
         // Discard any HTTP body containing secret tickets as soon as it is decoded.
         bytes.zeroize();
-        if !(200..300).contains(&status) { return Err(match status {
+        if !(200..300).contains(&status) {
+            // The Device Code waiter owns retries. Do not turn provider backoff
+            // or temporary HTTP failures into terminal sign-out errors.
+            if route == "/device/poll" && (status == 408 || status == 429 || (500..600).contains(&status)) {
+                return Ok(Response { status, data: Value::Null, rotation: None, retry_after });
+            }
+            return Err(match status {
             401 => "Сессия Never/Minecraft недействительна; войдите повторно".into(),
             403 => "Доступ Minecraft запрещён провайдером или настройками аккаунта".into(),
             429 => "Слишком много запросов; повторите позднее".into(),
@@ -248,7 +289,7 @@ impl IdentityManager {
             _ => format!("Официальная авторизация: HTTP {status}"),
         }); }
         let data = payload.get("data").cloned().unwrap_or(payload);
-        Ok(Response { status, data, rotation })
+        Ok(Response { status, data, rotation, retry_after })
     }
     fn profile(data: &Value) -> Result<OfficialProfile, String> {
         let value = data.get("profile").unwrap_or(data);
@@ -256,55 +297,162 @@ impl IdentityManager {
         if !uuid_valid(&profile.id) || profile.name.is_empty() || profile.name.len() > 16 || !profile.name.is_ascii() { return Err("Minecraft Services вернул неверный профиль".into()); }
         Ok(profile)
     }
-    fn pending_remove(&self, id: &str) -> Result<Option<PendingFlow>, String> {
-        Ok(self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?.remove(id))
-    }
-    fn pending_insert(&self, id: String, pending: PendingFlow) -> Result<(), String> {
-        self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?.insert(id, pending);
+    fn pending_remove(&self, id: &str) -> Result<(), String> {
+        let previous = self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?.remove(id);
+        if let Some(flow) = previous { let _ = flow.cancel.send(true); }
         Ok(())
     }
+    // On every asynchronous boundary match the flow nonce. Cancellation or a
+    // replacement login must not resurrect an older Device Code or save its account.
     pub async fn begin(&self, backend: &str, access: &str, session: &str) -> Result<DeviceChallenge, String> {
         let (base, id) = scope(backend, session)?;
         self.pending_remove(&id)?;
         self.cancel_browser(&id)?;
-        let result = self.request(&base, access, "/device/start", Method::POST, None, None, None).await?;
-        let ticket = result.data.get("flow").and_then(Value::as_str).filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Microsoft не вернул flow")?.to_owned();
-        let uri = result.data.get("verificationUri").and_then(Value::as_str).ok_or("Microsoft не вернул verificationUri")?;
-        let url = Url::parse(uri).map_err(|_| "Некорректная ссылка Microsoft")?;
-        if url.scheme() != "https" || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() { return Err("Небезопасная ссылка авторизации".into()); }
-        let code = result.data.get("userCode").and_then(Value::as_str).ok_or("Microsoft не вернул код")?;
-        let interval = result.data.get("intervalSeconds").and_then(Value::as_u64).unwrap_or(5).max(5);
-        let expiry = result.data.get("expiresIn").and_then(Value::as_u64).unwrap_or(900);
-        if !(1..=1800).contains(&expiry) || interval > 120 || code.is_empty() || code.len() > 64 { return Err("Некорректный Device Code challenge".into()); }
-        self.pending_insert(id, PendingFlow { ticket, next: Instant::now() + Duration::from_secs(interval), expires: Instant::now() + Duration::from_secs(expiry) })?;
-        Ok(DeviceChallenge { verification_uri: uri.into(), user_code: code.into(), interval_seconds: interval, expires_in: expiry })
-    }
-    pub async fn poll(&self, backend: &str, access: &str, session: &str) -> Result<PollResult, String> {
-        let (base, id) = scope(backend, session)?;
-        let pending = self.pending_remove(&id)?.ok_or("Нет незавершённой Microsoft-авторизации")?;
-        if Instant::now() >= pending.expires { return Err("Microsoft Device Code истёк".into()); }
-        if Instant::now() < pending.next { self.pending_insert(id, pending)?; return Err("Device Code: соблюдайте интервал опроса".into()); }
-        let response = self.request(&base, access, "/device/poll", Method::POST, Some(&pending.ticket), None, None).await;
-        let result = match response {
+        let nonce = rand::random::<u64>();
+        let (cancel, _) = watch::channel(false);
+        self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?.insert(id.clone(), PendingFlow {
+            ticket: String::new(), next: Instant::now(), expires: Instant::now() + Duration::from_secs(1800),
+            nonce, in_flight: false, failures: 0, interval: 5, cancel,
+        });
+        let result = self.request(&base, access, "/device/start", Method::POST, None, None, None).await;
+        let result = match result {
             Ok(result) => result,
             Err(err) => {
-                // A timeout or 429 must not trigger immediate repeated polling.
-                let mut pending = pending;
-                pending.next = Instant::now() + Duration::from_secs(10);
-                self.pending_insert(id, pending)?;
+                let mut flows = self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?;
+                if flows.get(&id).is_some_and(|f| f.nonce == nonce) { flows.remove(&id); }
                 return Err(err);
             }
         };
+        let validated = (|| -> Result<(String, DeviceChallenge), String> {
+            let ticket = result.data.get("flow").and_then(Value::as_str).filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Microsoft не вернул flow")?.to_owned();
+            let uri = result.data.get("verificationUri").and_then(Value::as_str).ok_or("Microsoft не вернул verificationUri")?;
+            let url = Url::parse(uri).map_err(|_| "Некорректная ссылка Microsoft")?;
+            let trusted = matches!(url.host_str(), Some("microsoft.com" | "microsoftonline.com"))
+                || url.host_str().is_some_and(|h| h.ends_with(".microsoft.com") || h.ends_with(".microsoftonline.com"));
+            if url.scheme() != "https" || !trusted || !url.username().is_empty() || url.password().is_some() { return Err("Небезопасная ссылка авторизации".into()); }
+            let code = result.data.get("userCode").and_then(Value::as_str).ok_or("Microsoft не вернул код")?;
+            let interval = result.data.get("intervalSeconds").and_then(Value::as_u64).unwrap_or(5).max(5);
+            let expiry = result.data.get("expiresIn").and_then(Value::as_u64).unwrap_or(900);
+            if !(1..=1800).contains(&expiry) || interval > 1800 || code.is_empty() || code.len() > 64 { return Err("Некорректный Device Code challenge".into()); }
+            Ok((ticket, DeviceChallenge { verification_uri: uri.into(), user_code: code.into(), interval_seconds: interval, expires_in: expiry }))
+        })();
+        let mut flows = self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?;
+        if !flows.get(&id).is_some_and(|f| f.nonce == nonce) { return Err("Microsoft-авторизация отменена".into()); }
+        match validated {
+            Ok((ticket, challenge)) => {
+                let flow = flows.get_mut(&id).ok_or("Microsoft-авторизация отменена")?;
+                flow.ticket = ticket;
+                flow.interval = challenge.interval_seconds;
+                flow.next = Instant::now() + Duration::from_secs(challenge.interval_seconds);
+                flow.expires = Instant::now() + Duration::from_secs(challenge.expires_in);
+                Ok(challenge)
+            }
+            Err(err) => { flows.remove(&id); Err(err) }
+        }
+    }
+    pub async fn poll(&self, backend: &str, access: &str, session: &str) -> Result<PollResult, String> {
+        let (base, id) = scope(backend, session)?;
+        let (mut ticket, nonce) = {
+            let mut flows = self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?;
+            let flow = flows.get_mut(&id).ok_or("Нет незавершённой Microsoft-авторизации")?;
+            if Instant::now() >= flow.expires { flows.remove(&id); return Err("Microsoft Device Code истёк".into()); }
+            if flow.ticket.is_empty() { return Err("Получение Device Code ещё не завершено".into()); }
+            if flow.in_flight { return Err("Проверка Microsoft-авторизации уже выполняется".into()); }
+            if Instant::now() < flow.next {
+                return Ok(PollResult { pending: true, profile: None,
+                    interval_seconds: Some(flow.next.saturating_duration_since(Instant::now()).as_secs().max(1)) });
+            }
+            flow.in_flight = true;
+            (Zeroizing::new(flow.ticket.clone()), flow.nonce)
+        };
+        let response = self.request(&base, access, "/device/poll", Method::POST, Some(ticket.as_str()), None, None).await;
+        ticket.zeroize();
+        // Acquire the async lock before the std mutex: Tauri command futures must
+        // remain Send, and no flow mutex may be held across an await.
+        let _vault = self.vault_lock.lock().await;
+        let mut flows = self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?;
+        if !flows.get(&id).is_some_and(|f| f.nonce == nonce) { return Err("Microsoft-авторизация отменена".into()); }
+        let flow = flows.get_mut(&id).ok_or("Microsoft-авторизация отменена")?;
+        flow.in_flight = false;
+        if Instant::now() >= flow.expires { flows.remove(&id); return Err("Microsoft Device Code истёк".into()); }
+        let result = match response {
+            Ok(result) => result,
+            Err(err) => {
+                // Network and malformed upstream responses are recoverable; a
+                // revoked Never session, denial, and expired OAuth grant are not.
+                let transient = err.contains("недоступен") || err.contains("Ошибка чтения") || err.contains("невалидный JSON");
+                if !transient { flows.remove(&id); return Err(err); }
+                flow.failures = flow.failures.saturating_add(1);
+                let interval = retry_delay(flow.interval, flow.failures, None);
+                flow.next = Instant::now() + Duration::from_secs(interval);
+                return Ok(PollResult { pending: true, profile: None, interval_seconds: Some(interval) });
+            }
+        };
         if result.status == 202 {
-            let ticket = result.data.get("flow").and_then(Value::as_str).filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Нет продолжения Device Code")?.to_owned();
-            let interval = result.data.get("intervalSeconds").and_then(Value::as_u64).unwrap_or(5).clamp(5, 120);
-            self.pending_insert(id, PendingFlow { ticket, next: Instant::now() + Duration::from_secs(interval), expires: pending.expires })?;
+            let continuation = result.data.get("flow").and_then(Value::as_str)
+                .filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Нет продолжения Device Code")?.to_owned();
+            let interval = result.data.get("intervalSeconds").and_then(Value::as_u64).unwrap_or(5).clamp(5, 3600);
+            flow.ticket.zeroize();
+            flow.ticket = continuation;
+            flow.interval = interval; // Includes provider slow_down (+5 seconds).
+            // After a successful Microsoft grant the Backend may allow a short
+            // recovery window to finish Xbox/Minecraft without reusing the code.
+            if let Some(expires_in) = result.data.get("expiresIn").and_then(Value::as_u64) {
+                if expires_in > 0 && expires_in <= 3600 {
+                    flow.expires = Instant::now() + Duration::from_secs(expires_in);
+                }
+            }
+            flow.failures = 0;
+            flow.next = Instant::now() + Duration::from_secs(interval);
+            return Ok(PollResult { pending: true, profile: None, interval_seconds: Some(interval) });
+        }
+        if result.status == 408 || result.status == 429 || result.status >= 500 {
+            flow.failures = flow.failures.saturating_add(1);
+            let interval = retry_delay(flow.interval, flow.failures, result.retry_after);
+            flow.next = Instant::now() + Duration::from_secs(interval);
             return Ok(PollResult { pending: true, profile: None, interval_seconds: Some(interval) });
         }
         let profile = Self::profile(&result.data)?;
-        let ticket = result.data.get("session").and_then(Value::as_str).filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Official API не выдал защищённую игровую сессию")?.to_owned();
-        save(&id, &StoredAccount { schema: 1, ticket, profile: profile.clone() })?;
+        let ticket = result.data.get("session").and_then(Value::as_str)
+            .filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Official API не выдал защищённую игровую сессию")?;
+        // Keep the nonce guard held across vault persistence. A cancellation
+        // cannot race a successful write and leave a cancelled account linked.
+        save(&id, &StoredAccount { schema: 1, ticket: ticket.to_owned(), profile: profile.clone() })?;
+        flows.remove(&id);
         Ok(PollResult { pending: false, profile: Some(profile), interval_seconds: None })
+    }
+    /// A single native waiter owns pacing, temporary retry backoff and expiry.
+    /// No browser timer can leak session tickets or generate tight poll loops.
+    pub async fn wait_device(&self, backend: &str, access: &str, session: &str) -> Result<OfficialProfile, String> {
+        let (_, id) = scope(backend, session)?;
+        let mut cancelled = {
+            let flows = self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?;
+            flows.get(&id).ok_or("Нет незавершённой Microsoft-авторизации")?.cancel.subscribe()
+        };
+        loop {
+            if *cancelled.borrow() { return Err("Microsoft-авторизация отменена".into()); }
+            let delay = {
+                let mut flows = self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?;
+                let flow = flows.get(&id).ok_or("Microsoft-авторизация отменена")?;
+                if Instant::now() >= flow.expires { flows.remove(&id); return Err("Microsoft Device Code истёк".into()); }
+                flow.next.saturating_duration_since(Instant::now())
+                    .min(flow.expires.saturating_duration_since(Instant::now()))
+            };
+            tokio::select! {
+                _ = tokio::time::sleep(delay) => {},
+                _ = await_device_cancel(&mut cancelled) => return Err("Microsoft-авторизация отменена".into()),
+            }
+            if *cancelled.borrow() { return Err("Microsoft-авторизация отменена".into()); }
+            let step = tokio::select! {
+                outcome = self.poll(backend, access, session) => outcome?,
+                _ = await_device_cancel(&mut cancelled) => return Err("Microsoft-авторизация отменена".into()),
+            };
+            match step {
+                PollResult { pending: false, profile: Some(profile), .. } => return Ok(profile),
+                PollResult { pending: true, .. } => {},
+                _ => return Err("Minecraft Services не подтвердил игровой профиль".into()),
+            }
+        }
     }
     async fn associated(&self, base: &Url, id: &str, access: &str, path: &str, method: Method, body: Option<Value>, skin: Option<(Vec<u8>, String)>) -> Result<(Response, StoredAccount), String> {
         let _guard = self.vault_lock.lock().await;
@@ -454,6 +602,10 @@ pub async fn official_identity_poll_0262(manager: tauri::State<'_, IdentityManag
     manager.poll(&context.backend_url, &context.never_token, &context.never_session_id).await
 }
 #[tauri::command]
+pub async fn official_identity_wait_device_0264(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<OfficialProfile, String> {
+    manager.wait_device(&context.backend_url, &context.never_token, &context.never_session_id).await
+}
+#[tauri::command]
 pub async fn official_identity_status_0262(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<Option<OfficialProfile>, String> {
     manager.status(&context.backend_url, &context.never_token, &context.never_session_id).await
 }
@@ -487,6 +639,51 @@ mod tests {
         let (_, b) = scope("https://example.com", "session-2").unwrap();
         let (_, c) = scope("https://other.example", "session-1").unwrap();
         assert_ne!(a, b); assert_ne!(a, c);
+    }
+    #[tokio::test]
+    async fn cancelling_native_device_flow_notifies_waiter() {
+        let manager = IdentityManager::new().unwrap();
+        let backend = "https://official.example";
+        let session = "never-sid";
+        let (_, id) = scope(backend, session).unwrap();
+        let (cancel, mut receiver) = watch::channel(false);
+        manager.pending.lock().unwrap().insert(id.clone(), PendingFlow {
+            ticket: "secret-device-ticket".into(), next: Instant::now() + Duration::from_secs(30),
+            expires: Instant::now() + Duration::from_secs(900), nonce: 1, in_flight: false,
+            failures: 0, interval: 5, cancel,
+        });
+        manager.cancel(backend, session).unwrap();
+        receiver.changed().await.unwrap();
+        assert!(*receiver.borrow());
+        assert!(manager.pending.lock().unwrap().get(&id).is_none());
+    }
+    #[tokio::test]
+    async fn closing_successful_flow_is_not_mistaken_for_cancel() {
+        let (sender, mut receiver) = watch::channel(false);
+        drop(sender);
+        assert!(tokio::time::timeout(Duration::from_millis(20), await_device_cancel(&mut receiver)).await.is_err());
+    }
+    #[tokio::test]
+    async fn expired_device_flow_does_not_hit_provider() {
+        let manager = IdentityManager::new().unwrap();
+        let backend = "https://official.example";
+        let session = "never-sid";
+        let (_, id) = scope(backend, session).unwrap();
+        let (cancel, _) = watch::channel(false);
+        manager.pending.lock().unwrap().insert(id.clone(), PendingFlow {
+            ticket: "secret-device-ticket".into(), next: Instant::now(),
+            expires: Instant::now() - Duration::from_secs(1), nonce: 2, in_flight: false,
+            failures: 0, interval: 5, cancel,
+        });
+        assert!(manager.wait_device(backend, "never-access-token", session).await.unwrap_err().contains("истёк"));
+        assert!(manager.pending.lock().unwrap().get(&id).is_none());
+    }
+    #[test] fn device_retry_preserves_provider_interval_and_backoff() {
+        assert_eq!(retry_delay(5, 1, None), 10);
+        assert_eq!(retry_delay(15, 1, Some(30)), 30);
+        assert_eq!(retry_delay(25, 0, Some(5)), 25);
+        assert_eq!(retry_delay(5, 100, Some(999)), 999);
+        assert_eq!(retry_delay(350, 1, Some(600)), 700);
     }
     #[test] fn minecraft_identity_requires_java_uuid() {
         assert!(uuid_valid("123456781234123412341234567890ab"));
