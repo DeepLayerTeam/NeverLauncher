@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0073_texture_gravit_import_02510" {
+	if st.Current != "0074_texture_lifecycle_recovery_02511" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }
@@ -750,6 +750,19 @@ func TestDependencyConflictMigrationGuard0243(t *testing.T) {
 	for _, phrase := range []string{"('1.0','2.0','3.0')", "published release cannot be rewritten", "release profileSnapshot is pinned", "release snapshot not found in immutable history"} {
 		if !strings.Contains(string(b), phrase) {
 			t.Fatalf("0063 guard missing %q", phrase)
+		}
+	}
+}
+
+// 0.25.11 maintenance must be deployed only with the database lease fencing.
+func TestTextureLifecycleMigration02511(t *testing.T) {
+	b, err := os.ReadFile("sql/0074_texture_lifecycle_recovery_02511.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, word := range []string{"texture_backup_pins", "gc_lease_token", "expires_at", "ON DELETE CASCADE"} {
+		if !strings.Contains(string(b), word) {
+			t.Errorf("lifecycle migration lacks %q", word)
 		}
 	}
 }

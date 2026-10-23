@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -29,12 +30,13 @@ func main() {
 	}
 }
 func run() error {
-	command := flag.String("command", "", "backup|restore|gc")
+	command := flag.String("command", "", "backup|restore|gc|verify")
 	backup := flag.String("backup", "", "immutable snapshot directory (required for backup/restore)")
 	limit := flag.Int("limit", 100, "GC batch size 1..100")
+	report := flag.String("report", "", "JSON report file for verify (must not exist)")
 	flag.Parse()
-	if *command != "backup" && *command != "restore" && *command != "gc" {
-		return errors.New("--command must be backup, restore or gc")
+	if *command != "backup" && *command != "restore" && *command != "gc" && *command != "verify" {
+		return errors.New("--command must be backup, restore, gc or verify")
 	}
 	if (*command == "backup" || *command == "restore") && *backup == "" {
 		return errors.New("--backup directory required")
@@ -65,14 +67,66 @@ func run() error {
 		return err
 	}
 	switch *command {
-	case "backup", "restore":
-		rows, err := repo.TextureBackupRows0253(ctx, driver)
+	case "backup", "restore", "verify":
+		if _, err := repo.PruneTextureSnapshotPins02511(ctx); err != nil {
+			return err
+		}
+		token, rows, err := repo.BeginTextureSnapshot02511(ctx, driver)
 		if err != nil {
 			return err
 		}
+		defer func() {
+			cleanCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_ = repo.EndTextureSnapshot02511(cleanCtx, token)
+		}()
 		objects := make([]storage.TextureBackupObject0253, 0, len(rows))
 		for _, r := range rows {
 			objects = append(objects, storage.TextureBackupObject0253{Digest: r.Digest, ByteSize: r.ByteSize, Driver: r.Driver, ObjectKey: r.ObjectKey})
+		}
+		if *command == "verify" {
+			checks := make([]storage.TextureVerification02511, 0, len(objects))
+			bad := 0
+			for _, obj := range objects {
+				result := storage.VerifyTexture02511(ctx, store, obj)
+				checks = append(checks, result)
+				if result.Result != "ok" {
+					bad++
+				}
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+			}
+			doc := struct {
+				Driver  string                             `json:"driver"`
+				Checked int                                `json:"checked"`
+				Failed  int                                `json:"failed"`
+				Objects []storage.TextureVerification02511 `json:"objects"`
+			}{driver, len(objects), bad, checks}
+			if *report != "" {
+				file, err := os.OpenFile(*report, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+				if err != nil {
+					return err
+				}
+				encErr := json.NewEncoder(file).Encode(doc)
+				syncErr := file.Sync()
+				closeErr := file.Close()
+				if encErr != nil {
+					return encErr
+				}
+				if syncErr != nil {
+					return syncErr
+				}
+				if closeErr != nil {
+					return closeErr
+				}
+			} else if err := json.NewEncoder(os.Stdout).Encode(doc); err != nil {
+				return err
+			}
+			if bad > 0 {
+				return fmt.Errorf("%d of %d texture objects failed integrity verification", bad, len(objects))
+			}
+			return nil
 		}
 		if *command == "backup" {
 			if err := storage.BackupTextures0253(ctx, store, objects, *backup); err != nil {
@@ -87,20 +141,35 @@ func run() error {
 		}
 		fmt.Printf("restored %d texture objects\n", n)
 	case "gc":
-		candidates, err := repo.ClaimTextureGarbage0253(ctx, driver, *limit)
+		if _, err := repo.PruneTextureSnapshotPins02511(ctx); err != nil {
+			return err
+		}
+		candidates, err := repo.ClaimTextureGarbage02511(ctx, driver, *limit)
 		if err != nil {
 			return err
 		}
+		// Aborted batches must not strand other claimed rows until lease expiry.
+		// Successful rows are already deleted, so their release is a no-op.
+		defer func() {
+			cleanCtx, stop := context.WithTimeout(context.Background(), 10*time.Second)
+			defer stop()
+			for _, candidate := range candidates {
+				_ = repo.ReleaseTextureGC02511(cleanCtx, candidate)
+			}
+		}()
 		for _, candidate := range candidates {
 			// Validate object metadata before destructive operations.
-			if candidate.Driver != driver || candidate.ObjectKey != "texture-blobs/sha256/"+candidate.Digest[:2]+"/"+candidate.Digest+".png" {
+			if len(candidate.Digest) != 64 || candidate.Driver != driver || candidate.ObjectKey != "texture-blobs/sha256/"+candidate.Digest[:2]+"/"+candidate.Digest+".png" {
 				return errors.New("invalid GC object key")
 			}
-			if err := storage.DeleteTexture0253(ctx, store, candidate.Digest); err != nil {
-				_ = repo.ReleaseTextureGarbage0253(ctx, candidate.Digest)
+			if err := repo.CheckTextureGCLease02511(ctx, candidate); err != nil {
+				return err
+			}
+			if err := storage.DeleteTextureSafely02511(ctx, store, candidate.Digest); err != nil {
+				_ = repo.ReleaseTextureGC02511(ctx, candidate)
 				return fmt.Errorf("GC %s: %w", candidate.Digest, err)
 			}
-			if err := repo.FinishTextureGarbage0253(ctx, candidate.Digest); err != nil {
+			if err := repo.FinishTextureGC02511(ctx, candidate); err != nil {
 				return err
 			}
 		}

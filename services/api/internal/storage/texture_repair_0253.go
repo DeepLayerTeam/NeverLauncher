@@ -62,38 +62,36 @@ func RestoreTextureObject0253(ctx context.Context, store Storage, digest string,
 	if bytes.Equal(existing, png) {
 		return key, int64(len(png)), nil
 	}
-	// Use a separate private quarantine in the same directory and preserve it
-	// until replacement is durably linked. Readers with open handles remain safe.
-	old, err := os.CreateTemp(filepath.Dir(filePath), ".texture-repair-*")
+	// Prepare the verified replacement fully before publishing it. Rename is a
+	// single atomic transition for concurrent readers: a process crash cannot
+	// strand the digest without a readable object between two renames.
+	tmp, err := os.CreateTemp(filepath.Dir(filePath), ".texture-repair-*")
 	if err != nil {
 		return "", 0, err
 	}
-	quarantine := old.Name()
-	if err = old.Close(); err != nil {
-		os.Remove(quarantine)
+	defer os.Remove(tmp.Name())
+	if _, err = tmp.Write(png); err != nil {
+		tmp.Close()
 		return "", 0, err
 	}
-	if err = os.Remove(quarantine); err != nil {
+	if err = tmp.Chmod(0644); err != nil {
+		tmp.Close()
 		return "", 0, err
 	}
-	if err = os.Rename(filePath, quarantine); err != nil {
+	if err = tmp.Sync(); err != nil {
+		tmp.Close()
 		return "", 0, err
 	}
-	newKey, n, saveErr := PutTextureImmutable0253(ctx, store, digest, png)
-	if saveErr != nil {
-		// Only restore old bytes when no competing operation produced a new object.
-		if _, statErr := os.Lstat(filePath); errors.Is(statErr, os.ErrNotExist) {
-			_ = os.Rename(quarantine, filePath)
-		}
-		return "", 0, saveErr
+	if err = tmp.Close(); err != nil {
+		return "", 0, err
 	}
-	if err = os.Remove(quarantine); err != nil {
+	if err = os.Rename(tmp.Name(), filePath); err != nil {
 		return "", 0, err
 	}
 	if err = syncDirectory0253(filepath.Dir(filePath)); err != nil {
 		return "", 0, err
 	}
-	return newKey, n, nil
+	return key, int64(len(png)), nil
 }
 
 func restoreS3Texture0253(ctx context.Context, s3 *S3Storage, digest, rel string, png []byte) (string, int64, error) {

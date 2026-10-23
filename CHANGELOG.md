@@ -1,3 +1,11 @@
+## 0.25.11 — Texture Lifecycle & Recovery
+
+- Transactional backup/restore inventory pins prevent garbage collection of in-flight snapshots.
+- 45-minute fenced GC leases prevent stale workers from finalizing a later worker's cleanup.
+- S3 GC verifies SHA-256 and uses signed conditional ETag-based delete.
+- Local object repair publishes complete verified bytes with atomic replacement.
+- Operator integrity verification with JSON reports and real PostgreSQL integration coverage.
+
 ## 0.25.10 — Gravit TextureProvider Migration
 
 - Added an operator-only, executable TextureProvider importer reading upstream PostgreSQL `textures` records or a JSON export, and resolving local/S3 source objects without fetching legacy HTTP URLs.
