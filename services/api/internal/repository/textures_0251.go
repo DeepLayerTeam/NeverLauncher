@@ -75,7 +75,7 @@ func (r *SQLRepository) ReadTextureProfile0251(ctx context.Context, rawUUID stri
 	t.Model = "classic"
 	// Only global public active selections are exposed to the Yggdrasil/ServerBridge path.
 	rows, err := r.db.QueryContext(ctx, `SELECT kind,external_url,COALESCE(blob_digest,''),model FROM texture_assignments
-      WHERE realm='local-project' AND profile_uuid=$1 AND user_id=$2 AND project_id='' AND active=true AND visibility='public'`, t.UUID, userID)
+      WHERE realm='local-project' AND profile_uuid=$1 AND user_id=$2 AND project_id='' AND active=true AND visibility='public' AND texture_permission_allowed_0259(project_id,user_id,kind) AND (blob_digest IS NULL OR EXISTS (SELECT 1 FROM texture_blobs b WHERE b.digest=blob_digest AND b.status='verified'))`, t.UUID, userID)
 	if err != nil {
 		return model.ServerBridgeTexture{}, false, err
 	}
@@ -97,6 +97,51 @@ func (r *SQLRepository) ReadTextureProfile0251(ctx context.Context, rawUUID stri
 	}
 	if err := rows.Err(); err != nil {
 		return model.ServerBridgeTexture{}, false, err
+	}
+	if err := rows.Close(); err != nil {
+		return model.ServerBridgeTexture{}, false, err
+	}
+	// Global defaults apply when a player has no public selection. A separate
+	// fallback applies if a selected texture becomes unavailable or disallowed.
+	// Both paths are restricted to verified local managed objects.
+	if (t.SkinURL == "" || t.CapeURL == "") && r.publicURL != "" {
+		var activeSkin, activeCape bool
+		err = r.db.QueryRowContext(ctx, `SELECT
+          EXISTS(SELECT 1 FROM texture_assignments WHERE realm='local-project' AND profile_uuid=$1 AND user_id=$2 AND project_id='' AND kind='skin' AND active),
+          EXISTS(SELECT 1 FROM texture_assignments WHERE realm='local-project' AND profile_uuid=$1 AND user_id=$2 AND project_id='' AND kind='cape' AND active)`, t.UUID, userID).Scan(&activeSkin, &activeCape)
+		if err != nil {
+			return model.ServerBridgeTexture{}, false, err
+		}
+		var defaultSkin, defaultCape, fallbackSkin, fallbackCape, defaultModel, fallbackModel string
+		err = r.db.QueryRowContext(ctx, `SELECT
+         COALESCE((SELECT default_skin_model FROM texture_project_policies WHERE project_id=''),'classic'),
+         COALESCE((SELECT fallback_skin_model FROM texture_project_policies WHERE project_id=''),'classic'),
+         COALESCE((SELECT b.digest FROM texture_project_policies p JOIN texture_blobs b ON b.digest=p.default_skin_digest AND b.status='verified' WHERE p.project_id=''),''),
+         COALESCE((SELECT b.digest FROM texture_project_policies p JOIN texture_blobs b ON b.digest=p.default_cape_digest AND b.status='verified' WHERE p.project_id=''),''),
+         COALESCE((SELECT b.digest FROM texture_project_policies p JOIN texture_blobs b ON b.digest=p.fallback_skin_digest AND b.status='verified' WHERE p.project_id=''),''),
+         COALESCE((SELECT b.digest FROM texture_project_policies p JOIN texture_blobs b ON b.digest=p.fallback_cape_digest AND b.status='verified' WHERE p.project_id=''),'')`).Scan(&defaultModel, &fallbackModel, &defaultSkin, &defaultCape, &fallbackSkin, &fallbackCape)
+		if err != nil {
+			return model.ServerBridgeTexture{}, false, err
+		}
+		if t.SkinURL == "" {
+			digest, skinModel := defaultSkin, defaultModel
+			if activeSkin && fallbackSkin != "" {
+				digest, skinModel = fallbackSkin, fallbackModel
+			}
+			if digest != "" {
+				t.SkinURL = r.publicURL + "/api/v1/textures/blob/" + digest
+				t.Model = skinModel
+			}
+		}
+		if t.CapeURL == "" {
+			digest := defaultCape
+			if activeCape && fallbackCape != "" {
+				digest = fallbackCape
+			}
+			if digest != "" {
+				t.CapeURL = r.publicURL + "/api/v1/textures/blob/" + digest
+			}
+		}
 	}
 	return t, true, nil
 }
@@ -185,7 +230,7 @@ func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile 
 	}
 	if kind == "skin" && active {
 		var permitted bool
-		if err = tx.QueryRowContext(ctx, `SELECT COALESCE((SELECT allow_player_skins FROM texture_project_policies WHERE project_id=$1),true)`, a.ProjectID).Scan(&permitted); err != nil {
+		if err = tx.QueryRowContext(ctx, `SELECT texture_permission_allowed_0259($1,$2,'skin')`, a.ProjectID, a.UserID).Scan(&permitted); err != nil {
 			return model.TextureAssignment0251{}, err
 		}
 		if !permitted {
@@ -196,8 +241,7 @@ func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile 
 		var permitted bool
 		// Existing legacy CAPE URLs can be read for compatibility, but a user
 		// cannot newly activate or re-publish them without a project grant.
-		err = tx.QueryRowContext(ctx, `SELECT COALESCE((SELECT allow_player_capes FROM texture_project_policies WHERE project_id=$1),false)
-          OR COALESCE((SELECT granted FROM texture_cape_grants WHERE project_id=$1 AND user_id=$2),false)`, a.ProjectID, a.UserID).Scan(&permitted)
+		err = tx.QueryRowContext(ctx, `SELECT texture_permission_allowed_0259($1,$2,'cape')`, a.ProjectID, a.UserID).Scan(&permitted)
 		if err != nil {
 			return model.TextureAssignment0251{}, err
 		}

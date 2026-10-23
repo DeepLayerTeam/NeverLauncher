@@ -21,7 +21,7 @@ export function can(identity: AdminIdentity | null, permission: string, projectI
 
 export const globalPermissionForSection: Record<string, string> = {
   users: 'users:manage', roles: 'users:manage',
-  audit: 'audit:read', config: 'settings:manage', storage: 'project:read', 'extension-registry': 'extension:manage',
+  audit: 'audit:read', config: 'settings:manage', 'texture-management': 'settings:manage', storage: 'project:read', 'extension-registry': 'extension:manage',
   'extensions-manager': 'extension:manage',
   diagnostics: 'diagnostics:read', 'backup-restore': 'storage:manage',
 };

@@ -72,10 +72,7 @@ func lockOwnedTexture0255(ctx context.Context, tx *sql.Tx, p model.MinecraftProf
 
 func texturePermission0255(ctx context.Context, tx *sql.Tx, p model.MinecraftProfile, kind string) error {
 	var allowed bool
-	err := tx.QueryRowContext(ctx, `SELECT CASE WHEN $2='skin' THEN
- COALESCE((SELECT allow_player_skins FROM texture_project_policies WHERE project_id=''),true)
- ELSE COALESCE((SELECT allow_player_capes FROM texture_project_policies WHERE project_id=''),false)
- OR COALESCE((SELECT granted FROM texture_cape_grants WHERE project_id='' AND user_id=$1),false) END`, p.UserID, kind).Scan(&allowed)
+	err := tx.QueryRowContext(ctx, `SELECT texture_permission_allowed_0259('', $1, $2)`, p.UserID, kind).Scan(&allowed)
 	if err != nil {
 		return err
 	}

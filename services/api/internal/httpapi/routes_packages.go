@@ -39,6 +39,16 @@ func (s Server) registerPackageRoutesV1(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/admin/config/validate", s.requirePermission("settings:manage", s.operationalConfigValidate02111))
 	mux.Handle("PUT /api/v1/admin/config", s.requireFreshAuth117("settings:manage", "mfa", 5*time.Minute, s.operationalConfigSave02111))
 	mux.Handle("POST /api/v1/admin/config/restore", s.requireFreshAuth117("settings:manage", "mfa", 5*time.Minute, s.operationalConfigRestore02111))
+	// Administrative texture policies require global settings authority. All writes
+	// require recent MFA and are checked again against PostgreSQL ownership/policy.
+	mux.Handle("GET /api/v1/admin/textures/policy", s.requirePermission("settings:manage", s.adminTexturePolicyGet0259))
+	mux.Handle("PUT /api/v1/admin/textures/policy", s.requireFreshAuth117("settings:manage", "mfa", 5*time.Minute, s.adminTexturePolicyPut0259))
+	mux.Handle("GET /api/v1/admin/textures/policy/history", s.requirePermission("settings:manage", s.adminTexturePolicyHistory0259))
+	mux.Handle("GET /api/v1/admin/textures/exceptions", s.requirePermission("settings:manage", s.adminTextureExceptions0259))
+	mux.Handle("PUT /api/v1/admin/textures/exceptions/{userId}", s.requireFreshAuth117("settings:manage", "mfa", 5*time.Minute, s.adminTextureExceptionPut0259))
+	mux.Handle("GET /api/v1/admin/textures/exceptions/history", s.requirePermission("settings:manage", s.adminTextureExceptionHistory0259))
+	mux.Handle("GET /api/v1/admin/textures/players/{userId}/history", s.requirePermission("settings:manage", s.adminTexturePlayerHistory0259))
+	mux.Handle("GET /api/v1/admin/textures/default-options", s.requirePermission("settings:manage", s.adminTextureDefaultOptions0259))
 	mux.Handle("GET /api/v1/admin/storage/health", s.requireAnyProjectPermission("project:read", s.adminStorageHealth))
 	mux.Handle("GET /api/v1/desktop/extensions/catalog", s.requireDesktopExtensionAuth0209(s.desktopExtensionCatalog0209))
 	mux.Handle("GET /api/v1/desktop/extensions/{extensionId}/ui", s.requireDesktopExtensionAuth0209(s.desktopExtensionEntrypoint0209))

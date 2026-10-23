@@ -94,9 +94,8 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	var allowSkin, allowCape bool
 	var maxBytes int64
 	var maxBlobs int
-	if err = tx.QueryRowContext(ctx, `SELECT COALESCE((SELECT allow_player_skins FROM texture_project_policies WHERE project_id=''),true),
-       COALESCE((SELECT allow_player_capes FROM texture_project_policies WHERE project_id=''),false)
-         OR COALESCE((SELECT granted FROM texture_cape_grants WHERE project_id='' AND user_id=$1),false),
+	if err = tx.QueryRowContext(ctx, `SELECT texture_permission_allowed_0259('', $1, 'skin'),
+       texture_permission_allowed_0259('', $1, 'cape'),
        COALESCE((SELECT max_bytes_per_player FROM texture_project_policies WHERE project_id=''),10485760),
        COALESCE((SELECT max_blobs_per_player FROM texture_project_policies WHERE project_id=''),20)`, profile.UserID).Scan(&allowSkin, &allowCape, &maxBytes, &maxBlobs); err != nil {
 		return zero, err
@@ -222,8 +221,11 @@ func (r *SQLRepository) ReadTextureBlob0252(ctx context.Context, digest string, 
 		}
 	}
 	query := `SELECT b.digest,b.byte_size,b.storage_driver,b.object_key FROM texture_blobs b
-      WHERE b.digest=$1 AND b.status='verified' AND EXISTS (SELECT 1 FROM texture_assignments a
-      WHERE a.blob_digest=b.digest AND a.realm='local-project' AND a.active=true AND a.visibility='public')`
+ WHERE b.digest=$1 AND b.status='verified' AND (
+  EXISTS(SELECT 1 FROM texture_assignments a WHERE a.blob_digest=b.digest AND a.realm='local-project'
+    AND a.active AND a.visibility='public' AND texture_permission_allowed_0259(a.project_id,a.user_id,a.kind))
+  OR EXISTS(SELECT 1 FROM texture_project_policies p WHERE p.project_id='' AND (p.default_skin_digest=b.digest OR p.default_cape_digest=b.digest OR p.fallback_skin_digest=b.digest OR p.fallback_cape_digest=b.digest))
+ )`
 	var err error
 	if owner {
 		if profile.Realm != "local" || profile.Issuer != "neverlauncher" {

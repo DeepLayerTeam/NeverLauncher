@@ -35,7 +35,7 @@ func (r *SQLRepository) ClaimTextureGarbage0253(ctx context.Context, driver stri
      AND NOT EXISTS (SELECT 1 FROM texture_assignments a WHERE a.blob_digest=b.digest)
      AND NOT EXISTS (SELECT 1 FROM texture_saved_items i WHERE i.digest=b.digest)
      AND NOT EXISTS (SELECT 1 FROM texture_project_policies p
-       WHERE p.default_skin_digest=b.digest OR p.default_cape_digest=b.digest)
+       WHERE p.default_skin_digest=b.digest OR p.default_cape_digest=b.digest OR p.fallback_skin_digest=b.digest OR p.fallback_cape_digest=b.digest)
      AND NOT EXISTS (SELECT 1 FROM texture_assignment_revisions rev
        WHERE rev.created_at >= now()-interval '7 days'
        AND rev.snapshot->>'blobDigest'=b.digest)
@@ -67,7 +67,7 @@ func (r *SQLRepository) FinishTextureGarbage0253(ctx context.Context, digest str
   AND NOT EXISTS (SELECT 1 FROM texture_assignments a WHERE a.blob_digest=b.digest)
   AND NOT EXISTS (SELECT 1 FROM texture_saved_items i WHERE i.digest=b.digest)
   AND NOT EXISTS (SELECT 1 FROM texture_project_policies p
-    WHERE p.default_skin_digest=b.digest OR p.default_cape_digest=b.digest)`, digest)
+    WHERE p.default_skin_digest=b.digest OR p.default_cape_digest=b.digest OR p.fallback_skin_digest=b.digest OR p.fallback_cape_digest=b.digest)`, digest)
 	if err != nil {
 		return err
 	}

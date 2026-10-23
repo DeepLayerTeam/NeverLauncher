@@ -8,7 +8,7 @@ export const sections: Section[] = [
   { id: 'operations', title: 'Операции' }, { id: 'release-workspace', title: 'Мастер релизов' }, { id: 'job-monitor', title: 'Монитор jobs' }, { id: 'devices', title: 'Устройства' }, { id: 'audit', title: 'Аудит' }, { id: 'config', title: 'Конфигурация' },
   { id: 'storage', title: 'Хранилище' }, { id: 'extension-registry', title: 'NeverExtensions Registry' },
   { id: 'extensions-manager', title: 'Admin Extensions' }, { id: 'server-bridge', title: 'ServerBridge' },
-  { id: 'diagnostics', title: 'Диагностика' }, { id: 'backup-restore', title: 'Резервное копирование' },
+  { id: 'texture-management', title: 'Скины и плащи' }, { id: 'diagnostics', title: 'Диагностика' }, { id: 'backup-restore', title: 'Резервное копирование' },
 ];
 export function endpointForSection(active: SectionId, projectId: string): string {
   const scoped = `/api/v1/projects/${encodeURIComponent(projectId)}`;
@@ -26,6 +26,7 @@ export function endpointForSection(active: SectionId, projectId: string): string
     case 'devices': return '/api/v1/admin/auth/devices';
     case 'audit': return '/api/v1/admin/audit';
     case 'config': return '/api/v1/admin/config';
+    case 'texture-management': return '/api/v1/admin/textures/policy';
     case 'storage': return '/api/v1/admin/storage/health';
     case 'extension-registry': return '/api/v1/admin/extension-registry/extensions';
     case 'extensions-manager': return '/api/v1/admin/extensions/manager';

@@ -58,9 +58,8 @@ func (r *SQLRepository) StageTextureUpload0253(ctx context.Context, profile mode
 	var allowedSkin, allowedCape bool
 	var maxBytes int64
 	var maxBlobs int
-	if err = tx.QueryRowContext(ctx, `SELECT COALESCE((SELECT allow_player_skins FROM texture_project_policies WHERE project_id=''),true),
- COALESCE((SELECT allow_player_capes FROM texture_project_policies WHERE project_id=''),false)
- OR COALESCE((SELECT granted FROM texture_cape_grants WHERE project_id='' AND user_id=$1),false),
+	if err = tx.QueryRowContext(ctx, `SELECT texture_permission_allowed_0259('', $1, 'skin'),
+ texture_permission_allowed_0259('', $1, 'cape'),
  COALESCE((SELECT max_bytes_per_player FROM texture_project_policies WHERE project_id=''),10485760),
  COALESCE((SELECT max_blobs_per_player FROM texture_project_policies WHERE project_id=''),20)`, profile.UserID).Scan(&allowedSkin, &allowedCape, &maxBytes, &maxBlobs); err != nil {
 		return err

@@ -1,3 +1,11 @@
+## 0.25.9 — Admin Texture Management
+
+- Added a working Admin **Скины и плащи** workspace for global/project-scoped skin and cape policies, individual allow/deny/inherit exceptions, quotas, public default/fallback PNGs and their classic/slim models.
+- Added transactional PostgreSQL policy CAS, immutable policy and exception histories, and read-only player assignment audit; all administrative mutations require global `settings:manage` and recent MFA.
+- Connected policy decisions to the existing upload, saved selection, public texture blob delivery and Yggdrasil/ServerBridge; explicit individual denial overrides a permissive global policy or legacy cape grant.
+- Added separate default vs unavailable-selection fallback resolution and GC protection for pinned local/S3 objects, with verified/public digest validation, new migration `0072`, OpenAPI updates, Admin UI tests and PostgreSQL integration test scenarios.
+- See [Admin texture management and release checks](docs/textures/admin-textures-0259.md). **Certification:** full backend and Admin builds, PostgreSQL integration and live Minecraft tests remain mandatory release gates.
+
 ## 0.25.8 — Desktop Textures UI
 
 - Added the operational **Скины и плащи** Desktop workspace, with authenticated personal gallery, PNG upload, URL import, saved-asset selection, reset/delete, model/visibility controls and immutable revision history using existing production Backend texture routes.

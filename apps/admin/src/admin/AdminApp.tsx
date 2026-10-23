@@ -13,6 +13,7 @@ import { requestJSON, ApiError } from '../api/client';
 import { AdminApi, type AdminOverview } from '../api/admin';
 import { MetricCard, TextInput } from '../components/primitives';
 import { ServerBridgeWorkspace } from './ServerBridgeWorkspace';
+import { TextureManagement0259 } from './TextureManagement0259';
 import { ResourceGrid } from '../components/ResourceGrid';
 import { useAdminRoute, navigate } from './routing';
 import { sections, endpointForSection } from './sections';
@@ -433,9 +434,10 @@ export function AdminApp() {
       {token && mayRead && active === 'devices' && <SessionsDevicesWorkspace backendUrl={backendUrl} token={token} adminAccess={mayManageUsers} onCurrentRevoked={() => {setToken('');setRefreshToken('');setSessionId('');setDashboard(null);setIdentity(null);}} />}
       {token && mayRead && active === 'audit' && <AuditWorkspace backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'config' && <ConfigWorkspace backendUrl={backendUrl} token={token} />}
+      {token && mayRead && active === 'texture-management' && <TextureManagement0259 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
       {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canControl={can(identity, 'serverbridge:control', selectedProjectId)} canConsole={can(identity, 'serverbridge:console', selectedProjectId)} />}
       {token && !mayRead && <section className="card wide emptyState"><h2>Нет доступа</h2><p>Эта операция недоступна для вашей роли либо проект не выбран. Запросите необходимые полномочия у владельца.</p></section>}
-      {token && mayRead && !['extensions-manager','operations','release-workspace','job-monitor','server-bridge','backup-restore','devices','audit','config'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
+      {token && mayRead && !['extensions-manager','operations','release-workspace','job-monitor','server-bridge','texture-management','backup-restore','devices','audit','config'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
 
     </section>
   </main>;

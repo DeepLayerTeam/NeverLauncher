@@ -147,6 +147,10 @@ def path_parameters(path):
           {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
           {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
         ]
+    if path.startswith("/api/v1/admin/textures/"):
+        out.append({"name":"projectId","in":"query","required":False,"description":"Empty or absent = global local Minecraft policy; project ID = project-scoped policy.","schema":{"type":"string","maxLength":128}})
+        if path=="/api/v1/admin/textures/exceptions":
+            out.append({"name":"userId","in":"query","required":False,"schema":{"type":"string","maxLength":128}})
     if path == "/api/v1/admin/extension-events/subscriptions":
         out += [
           {"name":"extensionId","in":"query","required":False,"schema":{"type":"string"}},
@@ -222,6 +226,8 @@ def body_schema(path):
       "/authserver/authenticate":"YggdrasilAuthenticateRequest", "/authserver/refresh":"YggdrasilRefreshRequest", "/authserver/validate":"YggdrasilTokenRequest", "/authserver/invalidate":"YggdrasilTokenRequest", "/authserver/signout":"YggdrasilSignoutRequest",
       "/sessionserver/session/minecraft/join":"YggdrasilJoinRequest",
     }
+    if path == "/api/v1/admin/textures/policy":return ref("TextureAdminPolicyChange0259")
+    if path == "/api/v1/admin/textures/exceptions/{userId}":return ref("TextureAdminExceptionChange0259")
     if path == "/api/v1/me/textures/{kind}":return ref("TextureSelectionPatch0251")
     if path == "/api/v1/me/textures/{kind}/import":return ref("TextureURLImport0254")
     if path in exact:return ref(exact[path])
@@ -298,6 +304,7 @@ def response_schema(path, method):
     if path.endswith("/export") and "/profiles/" in path:return ref("PortableProfile0225")
     if path.endswith("/diff") and "/profiles/" in path:return ref("ProfileDifference0225")
     if path == "/api/v1/admin/login":return ref("AdminSession")
+    if path == "/api/v1/admin/textures/policy": return ref("TextureAdminPolicy0259")
     if path == "/api/v1/me/textures/{kind}" and method == "patch":return ref("TextureAssignmentResponse0251")
     if path == "/api/v1/me/textures" and method == "get":return ref("TextureMineResponse0251")
     if path == "/api/v1/me/textures/{kind}/history" and method == "get":return ref("TextureHistoryResponse0251")
@@ -403,6 +410,9 @@ for method,path in routes:
     paths.setdefault(path,{})[method]=op
 
 schemas={
+"TextureAdminPolicy0259":{"type":"object","required":["projectId","revision","allowPlayerSkins","allowPlayerCapes","defaultSkinModel","fallbackSkinModel","maxBytesPerPlayer","maxBlobsPerPlayer"],"properties":{"projectId":{"type":"string"},"revision":{"type":"integer","minimum":0},"allowPlayerSkins":{"type":"boolean"},"allowPlayerCapes":{"type":"boolean"},"defaultSkinModel":{"type":"string","enum":["classic","slim"]},"fallbackSkinModel":{"type":"string","enum":["classic","slim"]},"defaultSkinDigest":{"type":"string","pattern":"^$|^[0-9a-f]{64}$"},"defaultCapeDigest":{"type":"string","pattern":"^$|^[0-9a-f]{64}$"},"fallbackSkinDigest":{"type":"string","pattern":"^$|^[0-9a-f]{64}$"},"fallbackCapeDigest":{"type":"string","pattern":"^$|^[0-9a-f]{64}$"},"maxBytesPerPlayer":{"type":"integer","minimum":1024,"maximum":1073741824},"maxBlobsPerPlayer":{"type":"integer","minimum":1,"maximum":10000}}},
+"TextureAdminPolicyChange0259":{"type":"object","additionalProperties":False,"required":["expectedRevision","policy","reason"],"properties":{"expectedRevision":{"type":"integer","minimum":0},"policy":ref("TextureAdminPolicy0259"),"reason":{"type":"string","minLength":3,"maxLength":500}}},
+"TextureAdminExceptionChange0259":{"type":"object","additionalProperties":False,"required":["kind","decision","reason"],"properties":{"userId":{"type":"string"},"kind":{"type":"string","enum":["skin","cape"]},"decision":{"type":"string","enum":["allow","deny","inherit"]},"reason":{"type":"string","minLength":3,"maxLength":500}}},
 "TextureURLImport0254":{"type":"object","additionalProperties":False,"required":["url","expectedRevision"],"properties":{"url":{"type":"string","format":"uri","maxLength":2048,"description":"Public HTTPS URL (DNS hostname, TCP 443 only), no redirects, max 4 MiB PNG."},"expectedRevision":{"type":"integer","minimum":0},"model":{"type":"string","enum":["classic","slim"],"default":"classic"},"visibility":{"type":"string","enum":["public","private","unlisted"],"default":"public"},"profileUuid":{"type":"string","description":"Optional ownership assertion; never an identity selector"}}},
 "TextureUploadMultipart0252":{"type":"object","required":["file","expectedRevision"],"properties":{"file":{"type":"string","format":"binary","description":"Fully decoded and normalized Minecraft PNG; at most 4 MiB compressed and 1024x1024 pixels."},"expectedRevision":{"type":"integer","minimum":0,"description":"0 for first assignment; otherwise latest revision"},"model":{"type":"string","enum":["classic","slim"],"default":"classic"},"visibility":{"type":"string","enum":["public","private","unlisted"],"default":"public"},"profileUuid":{"type":"string","description":"Optional owner assertion, never used to determine identity"}}},
 "TextureUploadResponse0252":{"type":"object","properties":{"apiVersion":{"type":"string"},"data":{"type":"object","properties":{"assignment":ref("TextureAssignment0251"),"digest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"width":{"type":"integer"},"height":{"type":"integer"},"bytes":{"type":"integer"},"previewUrl":{"type":"string"}}}}},
