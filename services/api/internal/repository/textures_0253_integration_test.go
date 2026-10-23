@@ -43,7 +43,7 @@ func TestTextureStorageQuota0253(t *testing.T) {
 	if _, err = db.ExecContext(ctx, setup); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"0067_texture_identity_0251.sql", "0068_texture_upload_0252.sql", "0069_texture_storage_0253.sql"} {
+	for _, name := range []string{"0067_texture_identity_0251.sql", "0068_texture_upload_0252.sql", "0069_texture_storage_0253.sql", "0070_texture_fetch_0254.sql", "0071_texture_service_0255.sql"} {
 		bytes, err := os.ReadFile("../dbmigrate/sql/" + name)
 		if err != nil {
 			t.Fatal(err)

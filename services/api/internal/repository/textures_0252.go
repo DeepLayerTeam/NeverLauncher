@@ -180,6 +180,14 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 			return zero, err
 		}
 	}
+	// Upload and URL import make the normalized PNG reusable immediately. Keep
+	// saved library membership in the SAME transaction as assignment and CAS.
+	if _, err = tx.ExecContext(ctx, `INSERT INTO texture_saved_items(user_id,digest,kind,model,source,last_selected_at)
+      VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(user_id,digest,kind)
+      DO UPDATE SET model=EXCLUDED.model,source=EXCLUDED.source,last_selected_at=EXCLUDED.last_selected_at`,
+		profile.UserID, input.Digest, input.Kind, input.Model, source, now); err != nil {
+		return zero, err
+	}
 	snapshot, err := json.Marshal(map[string]any{"blobDigest": input.Digest, "externalUrl": "", "kind": input.Kind, "model": input.Model, "visibility": input.Visibility, "active": true, "source": source, "projectId": ""})
 	if err != nil {
 		return zero, err

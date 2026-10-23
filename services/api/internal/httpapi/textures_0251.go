@@ -113,6 +113,14 @@ func (s Server) textureSelectionPatch0251(w http.ResponseWriter, r *http.Request
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	updated, err := repo.UpdateTextureSelection0251(ctx, profile, kind, input.ExpectedRevision, input.Model, input.Visibility, *input.Active)
+	if errors.Is(err, repository.ErrTextureUploadDenied0252) {
+		writeError(w, http.StatusForbidden, "skin selection is not permitted by project policy")
+		return
+	}
+	if errors.Is(err, repository.ErrTextureNotSelected0255) {
+		writeError(w, http.StatusConflict, "select a saved image before activation")
+		return
+	}
 	if errors.Is(err, repository.ErrTextureCapeDenied0251) {
 		writeError(w, http.StatusForbidden, "cape selection is not permitted by project policy")
 		return

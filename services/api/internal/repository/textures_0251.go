@@ -180,6 +180,18 @@ func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile 
 	if a.Revision != expected {
 		return model.TextureAssignment0251{}, ErrTextureRevisionConflict0251
 	}
+	if active && a.BlobDigest == "" && a.ExternalURL == "" {
+		return model.TextureAssignment0251{}, ErrTextureNotSelected0255
+	}
+	if kind == "skin" && active {
+		var permitted bool
+		if err = tx.QueryRowContext(ctx, `SELECT COALESCE((SELECT allow_player_skins FROM texture_project_policies WHERE project_id=$1),true)`, a.ProjectID).Scan(&permitted); err != nil {
+			return model.TextureAssignment0251{}, err
+		}
+		if !permitted {
+			return model.TextureAssignment0251{}, ErrTextureUploadDenied0252
+		}
+	}
 	if kind == "cape" && active {
 		var permitted bool
 		// Existing legacy CAPE URLs can be read for compatibility, but a user

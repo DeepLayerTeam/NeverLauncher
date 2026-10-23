@@ -33,6 +33,7 @@ func (r *SQLRepository) ClaimTextureGarbage0253(ctx context.Context, driver stri
      AND (b.status IN ('verified','staging') OR (b.status='quarantined'
        AND (b.gc_claimed_at IS NULL OR b.gc_claimed_at < now()-interval '15 minutes')))
      AND NOT EXISTS (SELECT 1 FROM texture_assignments a WHERE a.blob_digest=b.digest)
+     AND NOT EXISTS (SELECT 1 FROM texture_saved_items i WHERE i.digest=b.digest)
      AND NOT EXISTS (SELECT 1 FROM texture_project_policies p
        WHERE p.default_skin_digest=b.digest OR p.default_cape_digest=b.digest)
      AND NOT EXISTS (SELECT 1 FROM texture_assignment_revisions rev
@@ -64,6 +65,7 @@ func (r *SQLRepository) FinishTextureGarbage0253(ctx context.Context, digest str
 	}
 	res, err := r.db.ExecContext(ctx, `DELETE FROM texture_blobs b WHERE b.digest=$1 AND b.status='quarantined'
   AND NOT EXISTS (SELECT 1 FROM texture_assignments a WHERE a.blob_digest=b.digest)
+  AND NOT EXISTS (SELECT 1 FROM texture_saved_items i WHERE i.digest=b.digest)
   AND NOT EXISTS (SELECT 1 FROM texture_project_policies p
     WHERE p.default_skin_digest=b.digest OR p.default_cape_digest=b.digest)`, digest)
 	if err != nil {

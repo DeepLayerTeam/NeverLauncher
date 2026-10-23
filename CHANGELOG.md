@@ -1,3 +1,12 @@
+## 0.25.5 — Texture Service API & Ownership
+
+- Finished the authenticated local-Minecraft texture selection lifecycle: list personal saved PNGs, preview private gallery assets, select by owned digest, reset to default, delete current selection and remove inactive library items.
+- Added `0071_texture_service_0255.sql` with per-account saved texture items and inactive selection tombstones; upload/import now save reusable normalized assets transactionally, while CAS revisions and previous events remain immutable.
+- Enforced PostgreSQL owner verification, skin/cape policy checks, cape grants, per-profile concurrency, denied foreign digests/UUIDs, and no reactivation of empty reset selections.
+- Updated SHA-256 local/S3 GC to protect saved-but-inactive gallery objects; deletion releases per-user quota only after checking remaining assignment/library references, while physical content stays in the existing backup grace period.
+- Added PostgreSQL integration scenarios for CAS, permissions, reset/delete, preview ownership and GC. Synced OpenAPI/SDKs and product version. See [Texture Service API and operations](docs/textures/texture-service-0255.md).
+- **Certification:** full Backend compile, test PostgreSQL and real S3/local integration must pass on release infrastructure before a production rollout; later milestones provide official Minecraft/Yggdrasil signing and Desktop/Admin UX.
+
 ## 0.25.2 — Secure PNG Processing
 
 - Implemented authenticated multipart skin/cape uploads with bounded complete PNG decoding, CRC and chunk integrity checks, Minecraft dimensions/model validation, resource ceilings and deterministic metadata-free NRGBA normalization.
