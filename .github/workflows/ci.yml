@@ -147,6 +147,9 @@ jobs:
       - name: Build Desktop frontend
         working-directory: apps/desktop
         run: npm ci && npm run build
+      - name: Desktop texture operations and official-account isolation tests
+        working-directory: apps/desktop
+        run: npm run test:textures
       - name: Type-check NeverExtensions TypeScript SDKs
         run: |
           apps/admin/node_modules/.bin/tsc --noEmit --strict --target ES2020 --module ESNext --moduleResolution Bundler --lib ES2020,DOM sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/admin/typescript/neverlauncher-admin.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/typescript/neverlauncher-desktop.ts

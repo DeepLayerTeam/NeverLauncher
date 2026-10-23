@@ -76,10 +76,43 @@ export class OfficialMinecraftClient0257 {
     const {data} = await this.request<{profile: OfficialProfile0257}>('/api/v1/minecraft/official/profile', 'GET', undefined, undefined, this.ticket());
     return data.profile;
   }
-  async uploadSkin(file: File, variant: 'classic' | 'slim'): Promise<OfficialProfile0257> {
+  uploadSkin(file: File, variant: 'classic' | 'slim', onProgress?: (progress: number) => void, signal?: AbortSignal): Promise<OfficialProfile0257> {
+    if (file.size < 1 || file.size > 4 * 1024 * 1024 || !file.name.toLowerCase().endsWith('.png') || (file.type && file.type !== 'image/png')) {
+      return Promise.reject(new Error('Требуется PNG не более 4 МиБ.'));
+    }
+    const ticket = this.ticket();
     const form = new FormData(); form.append('variant', variant); form.append('file', file, 'skin.png');
-    const {data} = await this.request<{profile: OfficialProfile0257}>('/api/v1/minecraft/official/skin', 'POST', form, undefined, this.ticket());
-    return data.profile;
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      let completed = false;
+      const cleanup = () => signal?.removeEventListener('abort', abort);
+      const done = (value?: OfficialProfile0257, err?: Error) => {
+        if (completed) return;
+        completed = true; cleanup();
+        if (err) reject(err); else if (value) resolve(value); else reject(new Error('Minecraft Services не вернул профиль.'));
+      };
+      const abort = () => xhr.abort();
+      xhr.open('POST', `${this.backendUrl.replace(/\/$/, '')}/api/v1/minecraft/official/skin`, true);
+      xhr.timeout = 45_000;
+      xhr.setRequestHeader('Authorization', `Bearer ${this.neverToken}`);
+      xhr.setRequestHeader('X-Official-Minecraft-Session', ticket);
+      xhr.upload.onprogress = event => { if (event.lengthComputable && event.total > 0) onProgress?.(Math.min(99, Math.round(event.loaded / event.total * 100))); };
+      xhr.onload = () => {
+        const rotated = xhr.getResponseHeader('X-Official-Minecraft-Session');
+        if (rotated && this.session === ticket) this.session = rotated;
+        let payload: {data?: {profile?: OfficialProfile0257};error?: {message?: string}} | null = null;
+        try { payload = JSON.parse(xhr.responseText); } catch { /* invalid JSON */ }
+        if (xhr.status < 200 || xhr.status >= 300) { done(undefined, new Error(payload?.error?.message || `Minecraft Services: ${xhr.status}`)); return; }
+        if (payload?.data?.profile?.id) { onProgress?.(100); done(payload.data.profile); }
+        else done(undefined, new Error('Minecraft Services не вернул подтверждённый профиль.'));
+      };
+      xhr.onerror = () => done(undefined, new Error('Не удалось передать скин в Minecraft Services.'));
+      xhr.ontimeout = () => done(undefined, new Error('Время загрузки официального скина истекло.'));
+      xhr.onabort = () => done(undefined, new DOMException('Загрузка отменена.', 'AbortError'));
+      if (signal?.aborted) {done(undefined, new DOMException('Загрузка отменена.', 'AbortError')); return;}
+      signal?.addEventListener('abort', abort, {once:true});
+      xhr.send(form);
+    });
   }
   async resetSkin(): Promise<OfficialProfile0257> {
     const {data} = await this.request<{profile: OfficialProfile0257}>('/api/v1/minecraft/official/skin', 'DELETE', undefined, undefined, this.ticket());

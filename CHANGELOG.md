@@ -1,3 +1,11 @@
+## 0.25.8 — Desktop Textures UI
+
+- Added the operational **Скины и плащи** Desktop workspace, with authenticated personal gallery, PNG upload, URL import, saved-asset selection, reset/delete, model/visibility controls and immutable revision history using existing production Backend texture routes.
+- Implemented 2D/3D Minecraft model/cape previews with native skin atlas UVs, Classic/Slim geometry, draggable CSS 3D orbit and overlay layers; no third-party runtime dependency. Owner previews use bounded authenticated PNG fetch and revoke temporary object URLs on unmount.
+- Added cancellable multipart progress for both local uploads and official Minecraft Services uploads; hardened official preview CDN allowlist and kept local Never/Yggdrasil credentials separate from official Minecraft profiles and capes.
+- Added 10 TypeScript client regression tests (CAS, owner-only previews, progress, CDN restrictions, official session rotation), new `npm run test:textures` and the CI frontend test gate. Synced launcher versions, Tauri CSP and OpenAPI.
+- See [Desktop textures workflow and release checks](docs/textures/desktop-textures-0258.md). **Certification:** pure TS tests and OpenAPI/version checks pass; full React/Vite/Tauri builds and real backend/official Minecraft E2E remain unverified in this offline environment.
+
 ## 0.25.7 — Official Minecraft Integration
 
 - Implemented Microsoft OAuth2 device-code flow, Xbox Live + XSTS exchange, Minecraft Services bearer creation/refresh and live Java profile verification; the official identity remains separate from NeverLauncher local/Yggdrasil UUIDs and ServerBridge.
