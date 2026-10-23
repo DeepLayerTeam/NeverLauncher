@@ -2,9 +2,10 @@
 package neverextensions
 
 type CreateVersionRequest struct {
-	ProfileId string `json:"profileId,omitempty"`
-	Channel   string `json:"channel,omitempty"`
-	Version   string `json:"version"`
+	ProfileId             string `json:"profileId,omitempty"`
+	Channel               string `json:"channel,omitempty"`
+	Version               string `json:"version"`
+	ManifestSchemaVersion string `json:"manifestSchemaVersion,omitempty"`
 }
 
 type DesktopExtensionRPCRequest0209 struct {

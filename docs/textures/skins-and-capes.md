@@ -18,3 +18,7 @@ Backend содержит операции хранения и выдачи Minec
 - [Функции клиентского запуска](../clients/profiles-and-launch.md) и [модель доверия](../security/trust-model.md).
 
 При запросе на расширение UI указывайте, что уже работает в API, а что требует нового пользовательского сценария. Не публикуйте изображения третьих лиц без разрешения.
+
+## Version 0.25.2
+
+The secure PNG upload and image-serving pipeline is implemented; see [0.25.2 processing](secure-png-processing-0252.md). Desktop preview and Admin UI are separate forthcoming milestones.

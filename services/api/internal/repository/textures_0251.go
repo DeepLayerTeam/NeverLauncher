@@ -74,16 +74,19 @@ func (r *SQLRepository) ReadTextureProfile0251(ctx context.Context, rawUUID stri
 	}
 	t.Model = "classic"
 	// Only global public active selections are exposed to the Yggdrasil/ServerBridge path.
-	rows, err := r.db.QueryContext(ctx, `SELECT kind,external_url,model FROM texture_assignments
+	rows, err := r.db.QueryContext(ctx, `SELECT kind,external_url,COALESCE(blob_digest,''),model FROM texture_assignments
       WHERE realm='local-project' AND profile_uuid=$1 AND user_id=$2 AND project_id='' AND active=true AND visibility='public'`, t.UUID, userID)
 	if err != nil {
 		return model.ServerBridgeTexture{}, false, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var kind, url, skinModel string
-		if err := rows.Scan(&kind, &url, &skinModel); err != nil {
+		var kind, url, blobDigest, skinModel string
+		if err := rows.Scan(&kind, &url, &blobDigest, &skinModel); err != nil {
 			return model.ServerBridgeTexture{}, false, err
+		}
+		if blobDigest != "" && r.publicURL != "" {
+			url = r.publicURL + "/api/v1/textures/blob/" + blobDigest
 		}
 		if kind == "skin" {
 			t.SkinURL = url

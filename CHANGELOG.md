@@ -1,3 +1,11 @@
+## 0.25.2 — Secure PNG Processing
+
+- Implemented authenticated multipart skin/cape uploads with bounded complete PNG decoding, CRC and chunk integrity checks, Minecraft dimensions/model validation, resource ceilings and deterministic metadata-free NRGBA normalization.
+- Added immutable SHA-256 local object writes and configured S3 storage integration, transactional verified-blob registration and CAS assignment replacement with owner/policy enforcement and persisted revision history.
+- Added private owner preview, public-only digest image delivery with integrity verification, ETag, controlled cache duration and MIME hardening; local Yggdrasil profile URLs now reference verified managed blobs.
+- Migration `0068` records upload events; schema/SDKs and product version updated. See [secure PNG processing and deployment](docs/textures/secure-png-processing-0252.md).
+- **Certification:** processor/storage/model/migration unit tests can run offline. Full API build and PostgreSQL E2E must be performed with dependencies and a test database before production deployment. Signed Yggdrasil profiles, global quota/GC and Desktop UI remain separate roadmap milestones.
+
 ## 0.25.1 — Texture Identity & Data Model
 
 - ServerBridge join tickets now use the immutable `minecraft_profiles.uuid` shared with local Yggdrasil; no new user-derived Minecraft UUIDs are issued.

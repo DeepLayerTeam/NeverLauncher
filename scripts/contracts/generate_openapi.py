@@ -21,7 +21,7 @@ public_prefixes = (
     "/health", "/ready", "/metrics", "/api/v1/status", "/api/v1/diagnostics/", "/api/v1/runtime/", "/api/v1/loaders",
     "/api/v1/install/wizard", "/api/v1/install/profiles", "/api/v1/install/readiness", "/api/v1/projects", "/api/v1/files/",
 )
-public_exact = {"/api/v1/server-bridge/matrix", "/api/v1/server-bridge/capabilities", "/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/providers", "/api/v1/admin/login", "/api/v1/textures/{uuid}"}
+public_exact = {"/api/v1/server-bridge/matrix", "/api/v1/server-bridge/capabilities", "/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/providers", "/api/v1/admin/login", "/api/v1/textures/{uuid}", "/api/v1/textures/blob/{digest}"}
 node_signed_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff", "/api/v1/server-bridge/audit-event", "/api/v1/server-bridge/servers/{serverId}/events", "/api/v1/server-bridge/servers/{serverId}/control/poll", "/api/v1/server-bridge/servers/{serverId}/control/ack", "/api/v1/server-bridge/servers/{serverId}/routes", "/api/v1/session/has-joined"}
 node_signature_security = {"NodeId": [], "NodeKeyFingerprint": [], "NodeTimestamp": [], "NodeNonce": [], "NodeSignature": []}
 
@@ -297,6 +297,7 @@ def response_schema(path, method):
     if path == "/api/v1/me/textures/{kind}" and method == "patch":return ref("TextureAssignmentResponse0251")
     if path == "/api/v1/me/textures" and method == "get":return ref("TextureMineResponse0251")
     if path == "/api/v1/me/textures/{kind}/history" and method == "get":return ref("TextureHistoryResponse0251")
+    if path == "/api/v1/me/textures/{kind}/upload" and method == "post":return ref("TextureUploadResponse0252")
     if path == "/api/v1/server-bridge/capabilities":return ref("ServerBridgeCapabilitiesResponse")
     if path in ("/api/v1/server-bridge/overview", "/api/v1/server-bridge/projects/{projectId}/overview"):return ref("ServerBridgeOverviewResponseGA")
     if path == "/api/v1/server-bridge/servers/{serverId}/events" and method == "post":return ref("ServerBridgeEventAckV3")
@@ -322,19 +323,26 @@ for method,path in routes:
     sec=security_for(method,path)
     if sec: op["security"]=sec
     elif sec==[]: op["security"]=[]
-    if request_body_allowed(method,path) and not path.endswith("/files") and path != "/api/v1/admin/extension-registry/publish":
+    if request_body_allowed(method,path) and not path.endswith("/files") and path not in ("/api/v1/admin/extension-registry/publish", "/api/v1/me/textures/{kind}/upload"):
         op["requestBody"]={"required":request_body_required(method,path),"content":{"application/json":{"schema":body_schema(path)}}}
+    if path == "/api/v1/me/textures/{kind}/upload" and method=="post":
+        op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":ref("TextureUploadMultipart0252")}}}
     if path.endswith("/files") and method=="post":
         op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":{"type":"object","required":["file"],"properties":{"path":{"type":"string"},"file":{"type":"string","format":"binary"}}}}}}
     if path == "/api/v1/admin/extension-registry/publish" and method=="post":
         op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":{"type":"object","required":["artifact"],"properties":{"artifact":{"type":"string","format":"binary"},"publisher":{"type":"string"},"channels":{"type":"string"},"minNeverLauncher":{"type":"string"},"maxNeverLauncher":{"type":"string"},"os":{"type":"string"},"arch":{"type":"string"}}}}}}
     success=success_status(method,path)
-    binary_response = path.startswith("/api/v1/files/") or (path.endswith("/artifact") and "/extension-registry/" in path)
-    ctype="text/plain" if path=="/metrics" else ("application/octet-stream" if binary_response else "application/json")
+    binary_response = path.startswith("/api/v1/files/") or path in ("/api/v1/textures/blob/{digest}", "/api/v1/me/textures/{kind}/image") or (path.endswith("/artifact") and "/extension-registry/" in path)
+    ctype="text/plain" if path=="/metrics" else ("image/png" if path in ("/api/v1/textures/blob/{digest}", "/api/v1/me/textures/{kind}/image") else ("application/octet-stream" if binary_response else "application/json"))
     if success == "204":
         op["responses"][success]={"description":"Success"}
     else:
-        op["responses"][success]={"description":"Success","content":{ctype:{"schema":response_schema(path,method)}}}
+        op["responses"][success]={"description":"Success","content":{ctype:{"schema":({"type":"string","format":"binary"} if ctype=="image/png" else response_schema(path,method))}}}
+    if path == "/api/v1/me/textures/{kind}/upload":
+        op["responses"]["409"]={"$ref":"#/components/responses/Conflict"}
+        op["responses"]["413"]={"description":"Image exceeds upload or project limit"}
+        op["responses"]["422"]={"description":"PNG cannot be decoded or has invalid Minecraft dimensions"}
+        op["responses"]["403"]={"description":"Texture upload denied by project policy"}
     if path.startswith("/api/v1/me/textures"):
         op["responses"]["503"]={"$ref":"#/components/responses/ServiceUnavailable"}
         if method=="patch":
@@ -360,6 +368,8 @@ for method,path in routes:
     paths.setdefault(path,{})[method]=op
 
 schemas={
+"TextureUploadMultipart0252":{"type":"object","required":["file","expectedRevision"],"properties":{"file":{"type":"string","format":"binary","description":"Fully decoded and normalized Minecraft PNG; at most 4 MiB compressed and 1024x1024 pixels."},"expectedRevision":{"type":"integer","minimum":0,"description":"0 for first assignment; otherwise latest revision"},"model":{"type":"string","enum":["classic","slim"],"default":"classic"},"visibility":{"type":"string","enum":["public","private","unlisted"],"default":"public"},"profileUuid":{"type":"string","description":"Optional owner assertion, never used to determine identity"}}},
+"TextureUploadResponse0252":{"type":"object","properties":{"apiVersion":{"type":"string"},"data":{"type":"object","properties":{"assignment":ref("TextureAssignment0251"),"digest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"width":{"type":"integer"},"height":{"type":"integer"},"bytes":{"type":"integer"},"previewUrl":{"type":"string"}}}}},
 "TextureSelectionPatch0251":{"type":"object","required":["expectedRevision","model","visibility","active"],"properties":{"profileUuid":{"type":"string","description":"Optional caller assertion; server derives the actual UUID from the authenticated account."},"expectedRevision":{"type":"integer","minimum":1},"model":{"type":"string","enum":["classic","slim"]},"visibility":{"type":"string","enum":["public","private","unlisted"]},"active":{"type":"boolean"}},"additionalProperties":False},
 "TextureAssignment0251":{"type":"object","required":["id","realm","profileUuid","userId","projectId","launcherProfileId","kind","source","model","visibility","revision","active","updatedAt"],"properties":{"id":{"type":"integer"},"realm":{"const":"local-project"},"profileUuid":{"type":"string"},"userId":{"type":"string"},"projectId":{"type":"string"},"launcherProfileId":{"type":"string"},"kind":{"type":"string","enum":["skin","cape"]},"blobDigest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"externalUrl":{"type":"string"},"source":{"type":"string","enum":["managed-upload","imported","remote-reference","official"]},"model":{"type":"string","enum":["classic","slim"]},"visibility":{"type":"string","enum":["public","private","unlisted"]},"revision":{"type":"integer","minimum":1},"active":{"type":"boolean"},"updatedAt":{"type":"string","format":"date-time"}}},
 "TextureAssignmentResponse0251":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":ref("TextureAssignment0251")}},

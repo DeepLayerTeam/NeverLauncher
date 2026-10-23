@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.25.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.25.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -9848,6 +9848,124 @@
         ]
       }
     },
+    "/api/v1/me/textures/{kind}/image": {
+      "get": {
+        "operationId": "get_me_textures_by_kind_image",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "GET /api/v1/me/textures/{kind}/image",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "skin",
+                "cape"
+              ]
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/me/textures/{kind}/upload": {
+      "post": {
+        "operationId": "post_me_textures_by_kind_upload",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "POST /api/v1/me/textures/{kind}/upload",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextureUploadResponse0252"
+                }
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "description": "Image exceeds upload or project limit"
+          },
+          "422": {
+            "description": "PNG cannot be decoded or has invalid Minecraft dimensions"
+          },
+          "403": {
+            "description": "Texture upload denied by project policy"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "skin",
+                "cape"
+              ]
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TextureUploadMultipart0252"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/minecraft/profile": {
       "get": {
         "operationId": "get_minecraft_profile",
@@ -13671,6 +13789,40 @@
         }
       }
     },
+    "/api/v1/textures/blob/{digest}": {
+      "get": {
+        "operationId": "get_textures_blob_by_digest",
+        "tags": [
+          "bridge"
+        ],
+        "summary": "GET /api/v1/textures/blob/{digest}",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "digest",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": []
+      }
+    },
     "/api/v1/textures/{uuid}": {
       "get": {
         "operationId": "get_textures_by_uuid",
@@ -14117,6 +14269,78 @@
       }
     },
     "schemas": {
+      "TextureUploadMultipart0252": {
+        "type": "object",
+        "required": [
+          "file",
+          "expectedRevision"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "Fully decoded and normalized Minecraft PNG; at most 4 MiB compressed and 1024x1024 pixels."
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "0 for first assignment; otherwise latest revision"
+          },
+          "model": {
+            "type": "string",
+            "enum": [
+              "classic",
+              "slim"
+            ],
+            "default": "classic"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private",
+              "unlisted"
+            ],
+            "default": "public"
+          },
+          "profileUuid": {
+            "type": "string",
+            "description": "Optional owner assertion, never used to determine identity"
+          }
+        }
+      },
+      "TextureUploadResponse0252": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "assignment": {
+                "$ref": "#/components/schemas/TextureAssignment0251"
+              },
+              "digest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "width": {
+                "type": "integer"
+              },
+              "height": {
+                "type": "integer"
+              },
+              "bytes": {
+                "type": "integer"
+              },
+              "previewUrl": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
       "TextureSelectionPatch0251": {
         "type": "object",
         "required": [

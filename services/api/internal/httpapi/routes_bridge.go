@@ -43,7 +43,10 @@ func (s Server) registerBridgeRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/session/invalidate", s.sessionInvalidate)
 	mux.HandleFunc("POST /api/v1/session/invalidate-all", s.sessionInvalidateAll)
 	mux.HandleFunc("GET /api/v1/textures/{uuid}", s.textureGet)
+	mux.HandleFunc("GET /api/v1/textures/blob/{digest}", s.textureBlobGet0252)
 	mux.Handle("GET /api/v1/me/textures", s.requireAuthenticated(s.textureMine0251))
 	mux.Handle("PATCH /api/v1/me/textures/{kind}", s.requireAuthenticated(s.textureSelectionPatch0251))
+	mux.Handle("POST /api/v1/me/textures/{kind}/upload", s.requireAuthenticated(s.textureUpload0252))
+	mux.Handle("GET /api/v1/me/textures/{kind}/image", s.requireAuthenticated(s.textureMineImage0252))
 	mux.Handle("GET /api/v1/me/textures/{kind}/history", s.requireAuthenticated(s.textureHistory0251))
 }
