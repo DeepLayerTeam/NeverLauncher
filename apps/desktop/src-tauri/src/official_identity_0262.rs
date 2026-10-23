@@ -16,6 +16,7 @@ use crate::{official_browser_0263, official_exchange_0265::{NativeProvider, Micr
 const SERVICE: &str = "NeverLauncher Official Minecraft 0.26.2"; // preserve existing vault slots
 const PREFIX: &str = "/api/v1/minecraft/official";
 const RESPONSE_LIMIT: usize = 256 * 1024;
+const MAX_ACCOUNTS: usize = 16;
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -262,6 +263,113 @@ fn delete(id: &str) -> Result<(), String> {
     if let Some(pointer) = prior { remove_fragments(id, &pointer) } else { Ok(()) }
 }
 
+// 0.26.7: account directory is metadata only. Each account's Microsoft refresh
+// and Minecraft bearer remain in an independent, chunked OS credential record.
+// The original 0.26.2 slot is only read while migrating to this directory.
+#[derive(Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+struct AccountDirectory0267 {
+    version: u32,
+    active: Option<String>,
+    ids: Vec<String>,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OfficialAccount0267 {
+    pub id: String,
+    pub name: String,
+    pub active: bool,
+}
+fn normalized_uuid(uuid: &str) -> Result<String, String> {
+    if !uuid_valid(uuid) { return Err("Некорректный Minecraft UUID".into()); }
+    Ok(uuid.to_ascii_lowercase())
+}
+fn account_slot(id: &str, uuid: &str) -> Result<String, String> {
+    Ok(format!("{id}.account.{}", normalized_uuid(uuid)?))
+}
+fn directory_slot(id: &str) -> String { format!("{id}.directory.0267") }
+fn validate_directory(dir: &AccountDirectory0267) -> Result<(), String> {
+    if dir.version != 1 || dir.ids.len() > MAX_ACCOUNTS ||
+        dir.ids.iter().any(|id| normalized_uuid(id).map_or(true, |v| v != *id)) ||
+        dir.ids.iter().enumerate().any(|(i, id)| dir.ids[..i].contains(id)) ||
+        dir.active.as_ref().is_some_and(|id| !dir.ids.contains(id)) ||
+        (dir.ids.is_empty() && dir.active.is_some()) ||
+        (!dir.ids.is_empty() && dir.active.is_none()) {
+        return Err("Реестр официальных Minecraft-аккаунтов повреждён".into());
+    }
+    Ok(())
+}
+fn load_directory(id: &str) -> Result<AccountDirectory0267, String> {
+    let mut raw = match entry(&directory_slot(id))?.get_password() {
+        Ok(raw) => raw,
+        Err(keyring::v1::Error::NoEntry) => return Ok(AccountDirectory0267 {version: 1, ..Default::default()}),
+        Err(_) => return Err("Невозможно прочитать реестр Minecraft-аккаунтов".into()),
+    };
+    let result = serde_json::from_str::<AccountDirectory0267>(&raw)
+        .map_err(|_| "Некорректный реестр Minecraft-аккаунтов".to_string());
+    raw.zeroize();
+    let dir = result?;
+    validate_directory(&dir)?;
+    Ok(dir)
+}
+fn save_directory(id: &str, dir: &AccountDirectory0267) -> Result<(), String> {
+    validate_directory(dir)?;
+    let mut raw = serde_json::to_string(dir).map_err(|_| "Невозможно записать реестр аккаунтов".to_string())?;
+    // Windows Credential Manager stores a small directory (< 2560 bytes).
+    if raw.len() > 2000 {raw.zeroize();return Err("Превышен размер реестра аккаунтов".into());}
+    let result = entry(&directory_slot(id))?.set_password(&raw)
+        .map_err(|_| "Не удалось сохранить реестр аккаунтов в OS vault".to_string());
+    raw.zeroize();
+    result
+}
+// Must be called while holding vault_lock. A failure leaves the old slot intact.
+fn migrate_legacy(id: &str) -> Result<(), String> {
+    let Some(legacy) = read(id)? else { return Ok(()); };
+    let uuid = normalized_uuid(&legacy.profile.id)?;
+    let mut dir = load_directory(id)?;
+    let slot = account_slot(id, &uuid)?;
+    if !dir.ids.contains(&uuid) {
+        if dir.ids.len() >= MAX_ACCOUNTS { return Err("Превышен лимит Minecraft-аккаунтов".into()); }
+        save(&slot, &legacy)?;
+        dir.ids.push(uuid.clone());
+        if dir.active.is_none() { dir.active = Some(uuid); }
+        save_directory(id, &dir)?;
+    }
+    // Deleting the original only after new record and index are durably written.
+    // Retrying after interruption is safe: the indexed account wins.
+    delete(id)
+}
+fn selected_record(id: &str) -> Result<Option<(String, StoredAccount)>, String> {
+    let dir = load_directory(id)?;
+    let Some(uuid) = dir.active else { return Ok(None) };
+    let slot = account_slot(id, &uuid)?;
+    let record = read(&slot)?.ok_or("Выбранный Minecraft-аккаунт отсутствует в OS vault")?;
+    if normalized_uuid(&record.profile.id)? != uuid {return Err("Minecraft identity mismatch в OS vault".into());}
+    Ok(Some((slot, record)))
+}
+fn add_account(id: &str, record: &StoredAccount) -> Result<(), String> {
+    let uuid = normalized_uuid(&record.profile.id)?;
+    let mut dir = load_directory(id)?;
+    if !dir.ids.contains(&uuid) && dir.ids.len() >= MAX_ACCOUNTS {return Err("Превышен лимит Minecraft-аккаунтов".into());}
+    let slot = account_slot(id, &uuid)?;
+    // Save verified tokens first; if committing metadata fails, old active
+    // selection remains usable. The orphaned new slot contains no plaintext.
+    save(&slot, record)?;
+    if !dir.ids.contains(&uuid) {dir.ids.push(uuid.clone());}
+    dir.active = Some(uuid);
+    save_directory(id, &dir)
+}
+fn remove_account(id: &str, uuid: &str) -> Result<(), String> {
+    let uuid = normalized_uuid(uuid)?;
+    let mut dir = load_directory(id)?;
+    if !dir.ids.contains(&uuid) { return Err("Minecraft-аккаунт не найден".into()); }
+    // Invalidate selection before deleting credentials. No removed account
+    // can be launched even if OS keyring cleanup subsequently fails.
+    dir.ids.retain(|value| value != &uuid);
+    if dir.active.as_deref() == Some(&uuid) {dir.active = dir.ids.first().cloned();}
+    save_directory(id, &dir)?;
+    delete(&account_slot(id, &uuid)?)
+}
 struct Response { status: u16, data: Value, rotation: Option<String>, retry_after: Option<u64> }
 impl Drop for Response {
     fn drop(&mut self) {
@@ -451,7 +559,8 @@ impl IdentityManager {
             .filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Official API не выдал защищённую игровую сессию")?;
         // Keep the nonce guard held across vault persistence. A cancellation
         // cannot race a successful write and leave a cancelled account linked.
-        save(&id, &StoredAccount { schema: 1, ticket: ticket.to_owned(), profile: profile.clone(), native: None })?;
+        migrate_legacy(&id)?;
+        add_account(&id, &StoredAccount { schema: 1, ticket: ticket.to_owned(), profile: profile.clone(), native: None })?;
         flows.remove(&id);
         Ok(PollResult { pending: false, profile: Some(profile), interval_seconds: None })
     }
@@ -488,9 +597,10 @@ impl IdentityManager {
             }
         }
     }
+    // Caller MUST hold vault_lock through network operation and credential rotation.
+    // Account selection must not switch mid-operation (wrong-account texture/launch).
     async fn associated(&self, base: &Url, id: &str, access: &str, path: &str, method: Method, body: Option<Value>, skin: Option<(Vec<u8>, String)>) -> Result<(Response, StoredAccount), String> {
-        let _guard = self.vault_lock.lock().await;
-        let mut record = read(id)?.ok_or("Официальный Minecraft-аккаунт не подключён")?;
+        let (slot, mut record) = selected_record(id)?.ok_or("Официальный Minecraft-аккаунт не подключён")?;
         let result = self.request(base, access, path, method, Some(&record.ticket), body, skin).await?;
         let mut changed = false;
         if let Some(ticket) = &result.rotation {
@@ -507,17 +617,17 @@ impl IdentityManager {
             record.profile = profile;
             changed = true;
         }
-        if changed { save(id, &record)?; }
+        if changed { save(&slot, &record)?; }
         Ok((result, record))
     }
     pub async fn status(&self, backend: &str, access: &str, session: &str) -> Result<Option<OfficialProfile>, String> {
         let (base, id) = scope(backend, session)?;
-        if read(&id)?.is_none() { return Ok(None); }
-        if read(&id)?.is_some_and(|v|v.native.is_some()) {
-            let _guard=self.vault_lock.lock().await;
-            let mut record=read(&id)?.ok_or("Официальный аккаунт отсутствует")?;
-            self.native_validate(&base,&id,access,&mut record).await?;
-            return Ok(Some(record.profile));
+        let _guard=self.vault_lock.lock().await;
+        migrate_legacy(&id)?;
+        let Some((slot, mut record)) = selected_record(&id)? else {return Ok(None)};
+        if record.native.is_some() {
+            self.native_validate(&base,&slot,access,&mut record,false).await?;
+            return Ok(Some(record.profile.clone()));
         }
         let (response, record) = self.associated(&base, &id, access, "/profile", Method::GET, None, None).await?;
         let profile = Self::profile(&response.data)?;
@@ -526,15 +636,16 @@ impl IdentityManager {
     }
     pub async fn modify(&self, backend: &str, access: &str, session: &str, operation: &str, cape_id: Option<&str>, skin: Option<(Vec<u8>, String)>) -> Result<OfficialProfile, String> {
         let (base, id) = scope(backend, session)?;
-        if read(&id)?.is_some_and(|v|v.native.is_some()) {
-            let _guard=self.vault_lock.lock().await;
-            let mut record=read(&id)?.ok_or("Официальный аккаунт отсутствует")?;
-            self.native_validate(&base,&id,access,&mut record).await?;
+        let _guard=self.vault_lock.lock().await;
+        migrate_legacy(&id)?;
+        let (slot, mut record)=selected_record(&id)?.ok_or("Официальный аккаунт отсутствует")?;
+        if record.native.is_some() {
+            self.native_validate(&base,&slot,access,&mut record,false).await?;
             let token=&record.native.as_ref().unwrap().minecraft_token;
             let profile=self.provider.texture(token,operation,cape_id,skin).await.map_err(|e|e.message().to_string())?;
             if !profile.id.eq_ignore_ascii_case(&record.profile.id) {return Err("Minecraft official UUID mismatch".into());}
             record.profile=profile.clone();
-            save(&id,&record)?;
+            save(&slot,&record)?;
             return Ok(profile);
         }
         let (path, method, body) = match operation {
@@ -554,10 +665,11 @@ impl IdentityManager {
     }
     pub async fn launch_credentials(&self, backend: &str, access: &str, session: &str) -> Result<MinecraftLaunchCredentials, String> {
         let (base, id) = scope(backend, session)?;
-        if read(&id)?.is_some_and(|v|v.native.is_some()) {
-            let _guard=self.vault_lock.lock().await;
-            let mut record=read(&id)?.ok_or("Официальный аккаунт отсутствует")?;
-            self.native_validate(&base,&id,access,&mut record).await?;
+        let _guard=self.vault_lock.lock().await;
+        migrate_legacy(&id)?;
+        let (slot, mut record)=selected_record(&id)?.ok_or("Официальный аккаунт отсутствует")?;
+        if record.native.is_some() {
+            self.native_validate(&base,&slot,access,&mut record,false).await?;
             return Ok(MinecraftLaunchCredentials {username:record.profile.name.clone(),uuid:record.profile.id.clone(),
                 access_token:record.native.as_ref().unwrap().minecraft_token.clone(),user_type:"msa".into(),auth_server_base_url:String::new()});
         }
@@ -582,14 +694,14 @@ impl IdentityManager {
         Ok((profile,NativeAccount0265 {client_id:client_id.into(),refresh_token:grant.refresh_token.clone(),
             minecraft_token:minecraft.access_token.clone(),minecraft_expires_at:expires_at}))
     }
-    async fn native_validate(&self, base: &Url, id: &str, access: &str, record: &mut StoredAccount) -> Result<(), String> {
+    async fn native_validate(&self, base: &Url, id: &str, access: &str, record: &mut StoredAccount, force_refresh: bool) -> Result<(), String> {
         // Even with a native credential, the Never session must still be valid.
         let config = self.request(base,access,"/browser/config",Method::GET,None,None,None).await?;
         let native = record.native.as_ref().ok_or("Отсутствует native Minecraft identity")?;
         if config.data.get("clientId").and_then(Value::as_str) != Some(native.client_id.as_str()) {
             return Err("Microsoft Client ID проекта изменён: требуется повторный вход".into());
         }
-        if native.minecraft_expires_at <= now().saturating_add(120) {
+        if force_refresh || native.minecraft_expires_at <= now().saturating_add(120) {
             let client_id = native.client_id.clone();
             let refresh_token = Zeroizing::new(native.refresh_token.clone());
             let grant = self.provider.refresh(&client_id,&refresh_token).await.map_err(|e|e.message().to_string())?;
@@ -701,7 +813,8 @@ impl IdentityManager {
             let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
             if !flows.get(&id).is_some_and(|v|v.nonce==nonce) {return Err("Microsoft-авторизация отменена".into());}
             let (profile,account)=completed.unwrap().unwrap();
-            save(&id,&StoredAccount{schema:2,ticket:String::new(),profile:profile.clone(),native:Some(account)})?;
+            migrate_legacy(&id)?;
+            add_account(&id,&StoredAccount{schema:2,ticket:String::new(),profile:profile.clone(),native:Some(account)})?;
             flows.remove(&id);
             return Ok(PollResult{pending:false,profile:Some(profile),interval_seconds:None});
         }
@@ -789,7 +902,8 @@ impl IdentityManager {
             if !flows.get(&id).is_some_and(|flow| flow.state == state.as_str()) {
                 return Err("Microsoft-авторизация отменена".into());
             }
-            save(&id,&StoredAccount {schema:2,ticket:String::new(),profile:profile.clone(),native:Some(native)})?;
+            migrate_legacy(&id)?;
+            add_account(&id,&StoredAccount {schema:2,ticket:String::new(),profile:profile.clone(),native:Some(native)})?;
             Ok(profile)
         }.await;
         let mut flows = self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?;
@@ -804,13 +918,74 @@ impl IdentityManager {
         self.cancel_browser(&id)?;
         Ok(())
     }
+    pub async fn list_accounts(&self, backend: &str, session: &str) -> Result<Vec<OfficialAccount0267>, String> {
+        let (_, id) = scope(backend, session)?;
+        let _guard = self.vault_lock.lock().await;
+        migrate_legacy(&id)?;
+        let dir = load_directory(&id)?;
+        dir.ids.iter().map(|uuid| {
+            let record = read(&account_slot(&id, uuid)?)?.ok_or("Minecraft-аккаунт отсутствует в OS vault")?;
+            if normalized_uuid(&record.profile.id)? != *uuid {return Err("Minecraft identity mismatch в OS vault".into());}
+            Ok(OfficialAccount0267 {id: uuid.clone(), name:record.profile.name.clone(), active:dir.active.as_deref()==Some(uuid)})
+        }).collect()
+    }
+    pub async fn select_account(&self, backend: &str, access: &str, session: &str, uuid: &str) -> Result<OfficialProfile,String> {
+        let (base, id) = scope(backend, session)?;
+        let uuid = normalized_uuid(uuid)?;
+        let _guard = self.vault_lock.lock().await;
+        migrate_legacy(&id)?;
+        let mut dir = load_directory(&id)?;
+        if !dir.ids.contains(&uuid) {return Err("Minecraft-аккаунт не найден".into());}
+        let slot = account_slot(&id, &uuid)?;
+        let mut record=read(&slot)?.ok_or("Minecraft-аккаунт отсутствует в OS vault")?;
+        if normalized_uuid(&record.profile.id)? != uuid {return Err("Minecraft identity mismatch".into());}
+        if record.native.is_some() {
+            self.native_validate(&base, &slot, access, &mut record, false).await?;
+        } else {
+            let response=self.request(&base,access,"/profile",Method::GET,Some(&record.ticket),None,None).await?;
+            let fresh=Self::profile(&response.data)?;
+            if normalized_uuid(&fresh.id)? != uuid {return Err("Minecraft identity mismatch".into());}
+            record.profile=fresh;
+            if let Some(rotated)=response.rotation.as_ref() {record.ticket.zeroize();record.ticket=rotated.clone();}
+            save(&slot,&record)?;
+        }
+        dir.active=Some(uuid);
+        save_directory(&id,&dir)?;
+        Ok(record.profile.clone())
+    }
+    pub async fn refresh_active(&self, backend: &str, access: &str, session: &str) -> Result<OfficialProfile,String> {
+        let (base, id)=scope(backend, session)?;
+        let _guard=self.vault_lock.lock().await;
+        migrate_legacy(&id)?;
+        let (slot,mut record)=selected_record(&id)?.ok_or("Официальный Minecraft-аккаунт не выбран")?;
+        if record.native.is_some() {
+            self.native_validate(&base,&slot,access,&mut record,true).await?;
+            Ok(record.profile.clone())
+        } else {
+            // Backend owns rotation for legacy accounts. Never send its ticket to renderer.
+            let result=self.request(&base,access,"/profile",Method::GET,Some(&record.ticket),None,None).await?;
+            let fresh=Self::profile(&result.data)?;
+            if normalized_uuid(&fresh.id)? != normalized_uuid(&record.profile.id)? {return Err("Minecraft UUID mismatch".into());}
+            record.profile=fresh;
+            if let Some(ticket)=result.rotation.as_ref() {record.ticket.zeroize();record.ticket=ticket.clone();}
+            save(&slot,&record)?;
+            Ok(record.profile.clone())
+        }
+    }
     pub async fn disconnect(&self, backend: &str, session: &str) -> Result<(), String> {
         let (_, id) = scope(backend, session)?;
-        self.pending_remove(&id)?;
-        self.native_pending_remove(&id)?;
-        self.cancel_browser(&id)?;
+        self.cancel(backend,session)?;
         let _guard = self.vault_lock.lock().await;
-        delete(&id)
+        migrate_legacy(&id)?;
+        if let Some(uuid)=load_directory(&id)?.active {remove_account(&id,&uuid)?;}
+        Ok(())
+    }
+    pub async fn disconnect_account(&self, backend: &str, session: &str, uuid: &str) -> Result<(), String> {
+        let (_,id)=scope(backend,session)?;
+        self.cancel(backend,session)?;
+        let _guard=self.vault_lock.lock().await;
+        migrate_legacy(&id)?;
+        remove_account(&id,uuid)
     }
 }
 
@@ -851,9 +1026,44 @@ pub async fn official_identity_disconnect_0262(manager: tauri::State<'_, Identit
     manager.disconnect(&backend_url, &never_session_id).await
 }
 
+#[tauri::command]
+pub async fn official_identity_accounts_0267(manager: tauri::State<'_, IdentityManager>, backend_url: String, never_session_id: String) -> Result<Vec<OfficialAccount0267>,String> {
+    manager.list_accounts(&backend_url,&never_session_id).await
+}
+#[tauri::command]
+pub async fn official_identity_select_0267(manager: tauri::State<'_, IdentityManager>, context: Context, account_id: String) -> Result<OfficialProfile,String> {
+    manager.select_account(&context.backend_url,&context.never_token,&context.never_session_id,&account_id).await
+}
+#[tauri::command]
+pub async fn official_identity_refresh_0267(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<OfficialProfile,String> {
+    manager.refresh_active(&context.backend_url,&context.never_token,&context.never_session_id).await
+}
+#[tauri::command]
+pub async fn official_identity_logout_0267(manager: tauri::State<'_, IdentityManager>, backend_url: String, never_session_id: String, account_id: String) -> Result<(),String> {
+    manager.disconnect_account(&backend_url,&never_session_id,&account_id).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn account_directory_rejects_tampering_and_duplicates() {
+        let a="0123456789abcdef0123456789abcdef".to_string();
+        let b="abcdef0123456789abcdef0123456789".to_string();
+        let mut dir=AccountDirectory0267 {version:1,active:Some(a.clone()),ids:vec![a.clone(),b.clone()]};
+        assert!(validate_directory(&dir).is_ok());
+        dir.ids.push(a.clone());assert!(validate_directory(&dir).is_err());dir.ids.pop();
+        dir.active=Some("deadbeefdeadbeefdeadbeefdeadbeef".into());assert!(validate_directory(&dir).is_err());
+        dir.active=Some(a.clone());dir.ids[0]=a.to_ascii_uppercase();assert!(validate_directory(&dir).is_err());
+        dir.ids[0]=a.clone();dir.version=2;assert!(validate_directory(&dir).is_err());
+        assert!(account_slot("scope",&a).unwrap()!=account_slot("scope",&b).unwrap());
+    }
+    #[test] fn account_directory_has_bounded_size() {
+        let ids:Vec<String>=(0..MAX_ACCOUNTS).map(|i|format!("{i:032x}")).collect();
+        let dir=AccountDirectory0267 {version:1,active:Some(ids[0].clone()),ids};
+        assert!(validate_directory(&dir).is_ok());
+        assert!(serde_json::to_string(&dir).unwrap().len()<2000);
+        assert!(normalized_uuid("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz").is_err());
+    }
     #[test] fn rejects_insecure_or_cross_origin_scopes() {
         assert!(scope("http://example.com", "session-1").is_err());
         assert!(scope("https://example.com/path", "session-1").is_err());

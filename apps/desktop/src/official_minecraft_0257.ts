@@ -8,6 +8,7 @@ export type OfficialProfile0257 = {
   skins: Array<{id: string; state: string; url: string; variant: string}>;
   capes: Array<{id: string; state: string; url: string; alias?: string}>;
 };
+export type OfficialAccount0267 = { id: string; name: string; active: boolean };
 export type OfficialDevice0257 = {
   verificationUri: string;
   userCode: string;
@@ -52,7 +53,9 @@ export class OfficialMinecraftClient0257 {
     return profile;
   }
   async cancel(): Promise<void> {
+    const hadLinkedAccount = this.active;
     this.clear();
+    this.active = hadLinkedAccount; // cancelling an add-account flow does not sign out an existing account
     await this.native('official_identity_cancel_0262', {backendUrl:this.backendUrl, neverSessionId:this.neverSessionId});
   }
   /** System-browser OAuth PKCE: authorization code and verifier never enter React. */
@@ -104,6 +107,37 @@ export class OfficialMinecraftClient0257 {
     const profile = await this.restore();
     if (!profile) throw new Error('Подключите официальный Minecraft-аккаунт.');
     return profile;
+  }
+  /** Metadata-only directory: credentials never leave the Rust OS vault. */
+  async accounts(): Promise<OfficialAccount0267[]> {
+    return this.native('official_identity_accounts_0267', {
+      backendUrl: this.backendUrl, neverSessionId: this.neverSessionId
+    });
+  }
+  /** A selection becomes active only after Rust validates the provider profile/UUID. */
+  async selectAccount(accountId: string): Promise<OfficialProfile0257> {
+    const generation = ++this.generation;
+    const profile = await this.call<OfficialProfile0257>('official_identity_select_0267', {accountId});
+    if (generation !== this.generation) throw new Error('Переключение аккаунта отменено.');
+    this.active = true;
+    return profile;
+  }
+  /** Explicit Microsoft refresh-token rotation and Java profile revalidation. */
+  async refresh(): Promise<OfficialProfile0257> {
+    const generation = this.generation;
+    const profile = await this.call<OfficialProfile0257>('official_identity_refresh_0267');
+    if (generation !== this.generation) throw new Error('Обновление аккаунта отменено.');
+    this.active = true;
+    return profile;
+  }
+  /** Logout deletes one selected UUID's native credential, never all linked accounts. */
+  async logout(accountId: string): Promise<OfficialProfile0257 | null> {
+    ++this.generation;
+    this.active = false;
+    await this.native('official_identity_logout_0267', {
+      backendUrl: this.backendUrl, neverSessionId: this.neverSessionId, accountId
+    });
+    return this.restore();
   }
   async disconnect(): Promise<void> {
     this.clear();

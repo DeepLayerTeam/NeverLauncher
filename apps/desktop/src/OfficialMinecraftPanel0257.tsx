@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {OfficialMinecraftClient0257, type OfficialDevice0257, type OfficialProfile0257} from './official_minecraft_0257';
+import {OfficialMinecraftClient0257, type OfficialDevice0257, type OfficialProfile0257, type OfficialAccount0267} from './official_minecraft_0257';
 
 type Props = {
   client: OfficialMinecraftClient0257;
@@ -9,6 +9,7 @@ type Props = {
 
 export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Props) {
   const [device, setDevice] = useState<OfficialDevice0257 | null>(null);
+  const [accounts, setAccounts] = useState<OfficialAccount0267[]>([]);
   const [browserPending, setBrowserPending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -23,15 +24,26 @@ export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Pr
     const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
   }, [device]);
+  useEffect(() => {
+    let cancelled = false;
+    void client.accounts().then(entries => { if (!cancelled) setAccounts(entries); })
+      .catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)); });
+    return () => {cancelled = true;};
+  }, [client, linkedProfile?.id]);
+  async function updateAccounts() { setAccounts(await client.accounts()); }
+  async function completed(profile: OfficialProfile0257) {
+    onLinked(profile);
+    await updateAccounts();
+  }
   async function beginDeviceLogin() {
     await perform(async () => {
       const challenge = await client.begin();
       setDevice(challenge);
-      onLinked(null);
+      // Existing selected account remains active while adding a new one.
       // This command waits natively and applies provider pacing/slow_down.
       // It never exposes backend session tickets or device_code to React.
       void client.waitDevice().then(profile => {
-        onLinked(profile);
+        void completed(profile).catch(e=>setError(e instanceof Error?e.message:String(e)));
         setDevice(null);
       }).catch(e => {
         if (!(e instanceof Error && e.message.includes('отменена'))) {
@@ -49,10 +61,10 @@ export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Pr
   return <section className="panel">
     <h3>Официальный Minecraft (Microsoft)</h3>
     <p>Официальная учётная запись отдельна от локального профиля NeverLauncher. Доступны только скины и плащи, подтверждённые Minecraft Services.</p>
-    {!linkedProfile && <div className="toolbar inline">
+    <div className="toolbar inline">
       <button disabled={busy||browserPending} onClick={()=>{
         setBrowserPending(true);setError('');setDevice(null);
-        void client.browserLogin().then(profile=>{onLinked(profile);setDevice(null);}).catch(e=>{
+        void client.browserLogin().then(profile=>{void completed(profile).catch(e=>setError(String(e)));setDevice(null);}).catch(e=>{
           if (e instanceof Error && !e.message.includes('отменена')) setError(e.message);
         }).finally(()=>setBrowserPending(false));
       }}>Войти через браузер Microsoft (PKCE)</button>
@@ -68,12 +80,27 @@ export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Pr
         {remaining !== null && <span>Осталось: {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span>}
         <button disabled={busy} onClick={()=>void perform(async()=>{await client.cancel();setDevice(null);})}>Отменить вход</button>
       </>}
+    </div>
+    {accounts.length > 0 && <div className="toolbar inline" aria-label="Официальные аккаунты Minecraft">
+      <label htmlFor="officialAccount0267">Игровой аккаунт:</label>
+      <select id="officialAccount0267" disabled={busy||browserPending||!!device}
+        value={accounts.find(account=>account.active)?.id||''}
+        onChange={e=>void perform(async()=>{await completed(await client.selectAccount(e.target.value));})}>
+        {accounts.map(account=><option key={account.id} value={account.id}>{account.name} · {account.id.slice(0,8)}</option>)}
+      </select>
+      <button disabled={busy||browserPending||!!device||!linkedProfile} onClick={()=>void perform(async()=>{await completed(await client.refresh());})}>Обновить игровую сессию</button>
+      {accounts.some(a=>a.active) && <button disabled={busy||browserPending||!!device} onClick={()=>void perform(async()=>{
+        const active = accounts.find(account=>account.active);
+        if (!active || !window.confirm(`Выйти из Minecraft-аккаунта ${active.name} на этом устройстве?`)) return;
+        let next: OfficialProfile0257 | null = null;
+        try { next = await client.logout(active.id); }
+        finally { onLinked(next); await updateAccounts(); }
+      })}>Выйти из выбранного аккаунта</button>}
     </div>}
     {linkedProfile && <>
       <p>Профиль: <strong>{linkedProfile.name}</strong> · UUID: <code>{linkedProfile.id}</code></p>
       <div className="toolbar inline">
         <button disabled={busy} onClick={()=>void perform(async()=>onLinked(await client.profile()))}>Обновить профиль</button>
-        <button disabled={busy} onClick={()=>void perform(async()=>{await client.disconnect();onLinked(null);setDevice(null);})}>Отключить официальный аккаунт</button>
       </div>
       <div className="toolbar inline">
         <input type="file" accept="image/png" aria-label="Официальный скин PNG" onChange={e=>setFile(e.target.files?.[0]||null)}/>
