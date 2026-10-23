@@ -40,8 +40,11 @@ func (s Server) officialBrowserConfig0263(w http.ResponseWriter, r *http.Request
 		writeError(w, 401, "authentication required")
 		return
 	}
-	if officialminecraft.ValidateClientID(s.Config.MinecraftMicrosoftClientID) != nil || len(s.Config.AuthTokenSecret) < 24 {
-		writeError(w, 503, "own Microsoft public client registration and ticket encryption required")
+	if officialminecraft.ValidateClientID(s.Config.MinecraftMicrosoftClientID) != nil {
+		// Native 0.26.5 requires the registered public Client ID, not a
+		// Backend-issued official session ticket. The legacy exchange route
+		// retains its own ticket-encryption precondition.
+		writeError(w, 503, "own Microsoft public client registration required")
 		return
 	}
 	officialWrite0257(w, 200, map[string]string{

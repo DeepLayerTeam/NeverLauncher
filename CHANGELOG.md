@@ -1,3 +1,11 @@
+## 0.26.5 — Native Xbox & Minecraft Token Exchange
+
+- Browser PKCE and Device Code grants are now exchanged **inside Rust/Tauri** rather than on the Go Backend. Native code performs Microsoft access → Xbox Live → XSTS (Minecraft relying party) → Minecraft access and checks entitlements plus the verified Java profile.
+- Native-only credential vault schema 2 stores the Microsoft refresh token, Minecraft bearer/expiry and the registered Client ID; no bearer, code, verifier or Backend session ticket crosses renderer IPC. Old schema-1 keyring records remain usable without silent account substitution.
+- Integrated native refresh and rotation for status, Minecraft skin/cape actions and NeverRuntime online launch. Checks the Never session and configured client ID, verifies the Java UUID remains stable, and never promotes Yggdrasil/offline accounts to official.
+- Added native Device Code polling with cancellation and backoff, post-redemption retry without reusing Device Code, provider error classification (XSTS family/region/account and invalid Minecraft app registration), deterministic real-HTTP local provider fixtures, native CI on Windows/Linux/macOS and the operational runbook.
+- **External approval and real Minecraft online-mode login remain unverified.** Native Rust toolchain and some Go HTTP API dependencies are unavailable in the current environment; CI and real provider E2E remain mandatory release gates.
+
 ## 0.26.4 — Device Code Fallback: Native Polling & Recovery
 
 - Device Code now starts an automatic **native Rust/Tauri waiter** in Desktop. It respects the initial Microsoft polling interval, handles backend `202 authorization_pending` and `slow_down` interval rotation, and stops on verified Minecraft profile, cancellation, denial, provider expiry or Never authentication failure. Browser OAuth/PKCE remains the primary login.

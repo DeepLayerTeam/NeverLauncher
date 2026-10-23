@@ -1,0 +1,67 @@
+name: Native Xbox and Minecraft Exchange 0.26.5
+on:
+  push:
+    paths:
+      - 'apps/desktop/src-tauri/**'
+      - 'apps/desktop/src/**'
+      - 'apps/desktop/tests/official_minecraft_0257.test.mjs'
+      - 'services/api/internal/httpapi/minecraft_official_browser_0263.go'
+      - 'docs/authentication/native-provider-exchange-0265.md'
+      - '.github/workflows/native-provider-exchange-0265.yml'
+  pull_request:
+    paths:
+      - 'apps/desktop/src-tauri/**'
+      - 'apps/desktop/src/**'
+      - 'services/api/internal/httpapi/minecraft_official_browser_0263.go'
+      - '.github/workflows/native-provider-exchange-0265.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-exchange:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux system prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Rust tests (provider fixture and native identity)
+        run: |
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_exchange_0265::tests -- --nocapture
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests
+      - name: Rust compilation
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: Renderer regressions
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npm run test:official
+          npm run test:textures
+          npm run build
+  backend-client-registration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: services/api/go.sum
+      - name: Existing backend compatibility suite
+        working-directory: services/api
+        run: go test ./internal/httpapi ./internal/officialminecraft -run 'TestOfficial|TestBrowserPKCE|TestRedeemedDevice|TestDeviceTransient' -count=1

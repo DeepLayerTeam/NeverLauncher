@@ -11,9 +11,9 @@ use rand::RngCore;
 use base64::Engine as _;
 use neverruntime::MinecraftLaunchCredentials;
 use tokio::sync::watch;
-use crate::official_browser_0263;
+use crate::{official_browser_0263, official_exchange_0265::{NativeProvider, MicrosoftGrant, ProviderError, now}};
 
-const SERVICE: &str = "NeverLauncher Official Minecraft 0.26.2";
+const SERVICE: &str = "NeverLauncher Official Minecraft 0.26.2"; // preserve existing vault slots
 const PREFIX: &str = "/api/v1/minecraft/official";
 const RESPONSE_LIMIT: usize = 256 * 1024;
 
@@ -44,11 +44,39 @@ pub struct PollResult { pub pending: bool, #[serde(skip_serializing_if="Option::
 // Never serialize this struct back over IPC. Keyring payload is all-or-nothing.
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct StoredAccount { schema: u32, ticket: String, profile: OfficialProfile }
+struct StoredAccount {
+    schema: u32,
+    #[serde(default)] ticket: String, // 0.26.4 backend ticket; retained for migration
+    profile: OfficialProfile,
+    #[serde(default, skip_serializing_if="Option::is_none")] native: Option<NativeAccount0265>,
+}
+#[derive(Serialize, Deserialize)]
+struct NativeAccount0265 {
+    client_id: String,
+    refresh_token: String,
+    minecraft_token: String,
+    minecraft_expires_at: u64,
+}
+impl Drop for NativeAccount0265 {
+    fn drop(&mut self) { self.refresh_token.zeroize(); self.minecraft_token.zeroize(); }
+}
 impl Drop for StoredAccount { fn drop(&mut self) { self.ticket.zeroize(); } }
+
 
 struct BrowserFlow0263 { state: String, cancel: watch::Sender<bool> }
 
+struct NativePending0265 {
+    client_id: String,
+    device: Zeroizing<String>,
+    grant: Option<MicrosoftGrant>,
+    next: Instant,
+    expires: Instant,
+    nonce: u64,
+    in_flight: bool,
+    failures: u32,
+    interval: u64,
+    cancel: watch::Sender<bool>,
+}
 struct PendingFlow {
     ticket: String,
     next: Instant,
@@ -81,6 +109,8 @@ async fn await_device_cancel(rx: &mut watch::Receiver<bool>) {
 pub struct IdentityManager {
     browser: Mutex<HashMap<String, BrowserFlow0263>>,
     client: Client,
+    provider: NativeProvider,
+    native_pending: Mutex<HashMap<String, NativePending0265>>,
     pending: Mutex<HashMap<String, PendingFlow>>,
     vault_lock: tokio::sync::Mutex<()>,
 }
@@ -177,7 +207,11 @@ fn read(id: &str) -> Result<Option<StoredAccount>, String> {
         .map_err(|_| "Сохранённый игровой аккаунт повреждён".to_string());
     raw.zeroize();
     let record = record?;
-    if record.schema != 1 || !uuid_valid(&record.profile.id) || record.ticket.is_empty() {
+    if !uuid_valid(&record.profile.id) || !((record.schema == 1 && !record.ticket.is_empty() && record.native.is_none()) ||
+        (record.schema == 2 && record.ticket.is_empty() && record.native.as_ref().is_some_and(|n|
+            official_browser_0263::valid_client_id(&n.client_id) &&
+            crate::official_exchange_0265::valid_token(&n.refresh_token) &&
+            crate::official_exchange_0265::valid_token(&n.minecraft_token) && n.minecraft_expires_at > 0))) {
         return Err("Некорректная запись игрового аккаунта".into());
     }
     Ok(Some(record))
@@ -244,7 +278,7 @@ impl IdentityManager {
             .redirect(reqwest::redirect::Policy::none())
             .user_agent(concat!("NeverLauncher/", env!("CARGO_PKG_VERSION")))
             .build().map_err(|_| "Не удалось инициализировать защищённый HTTP-клиент".to_string())?;
-        Ok(Self { client, pending: Mutex::new(HashMap::new()), browser: Mutex::new(HashMap::new()), vault_lock: tokio::sync::Mutex::new(()) })
+        Ok(Self { client, provider: NativeProvider::new()?, native_pending: Mutex::new(HashMap::new()), pending: Mutex::new(HashMap::new()), browser: Mutex::new(HashMap::new()), vault_lock: tokio::sync::Mutex::new(()) })
     }
     async fn request(&self, base: &Url, access: &str, route: &str, method: Method, ticket: Option<&str>, body: Option<Value>, skin: Option<(Vec<u8>, String)>) -> Result<Response, String> {
         if access.len() < 16 || access.len() > 8192 { return Err("Необходимо войти в NeverLauncher".into()); }
@@ -417,7 +451,7 @@ impl IdentityManager {
             .filter(|v| !v.is_empty() && v.len() < 8192).ok_or("Official API не выдал защищённую игровую сессию")?;
         // Keep the nonce guard held across vault persistence. A cancellation
         // cannot race a successful write and leave a cancelled account linked.
-        save(&id, &StoredAccount { schema: 1, ticket: ticket.to_owned(), profile: profile.clone() })?;
+        save(&id, &StoredAccount { schema: 1, ticket: ticket.to_owned(), profile: profile.clone(), native: None })?;
         flows.remove(&id);
         Ok(PollResult { pending: false, profile: Some(profile), interval_seconds: None })
     }
@@ -479,6 +513,12 @@ impl IdentityManager {
     pub async fn status(&self, backend: &str, access: &str, session: &str) -> Result<Option<OfficialProfile>, String> {
         let (base, id) = scope(backend, session)?;
         if read(&id)?.is_none() { return Ok(None); }
+        if read(&id)?.is_some_and(|v|v.native.is_some()) {
+            let _guard=self.vault_lock.lock().await;
+            let mut record=read(&id)?.ok_or("Официальный аккаунт отсутствует")?;
+            self.native_validate(&base,&id,access,&mut record).await?;
+            return Ok(Some(record.profile));
+        }
         let (response, record) = self.associated(&base, &id, access, "/profile", Method::GET, None, None).await?;
         let profile = Self::profile(&response.data)?;
         if !record.profile.id.eq_ignore_ascii_case(&profile.id) { return Err("Смена официальной Minecraft identity запрещена".into()); }
@@ -486,6 +526,17 @@ impl IdentityManager {
     }
     pub async fn modify(&self, backend: &str, access: &str, session: &str, operation: &str, cape_id: Option<&str>, skin: Option<(Vec<u8>, String)>) -> Result<OfficialProfile, String> {
         let (base, id) = scope(backend, session)?;
+        if read(&id)?.is_some_and(|v|v.native.is_some()) {
+            let _guard=self.vault_lock.lock().await;
+            let mut record=read(&id)?.ok_or("Официальный аккаунт отсутствует")?;
+            self.native_validate(&base,&id,access,&mut record).await?;
+            let token=&record.native.as_ref().unwrap().minecraft_token;
+            let profile=self.provider.texture(token,operation,cape_id,skin).await.map_err(|e|e.message().to_string())?;
+            if !profile.id.eq_ignore_ascii_case(&record.profile.id) {return Err("Minecraft official UUID mismatch".into());}
+            record.profile=profile.clone();
+            save(&id,&record)?;
+            return Ok(profile);
+        }
         let (path, method, body) = match operation {
             "resetSkin" => ("/skin", Method::DELETE, None),
             "resetCape" => ("/cape", Method::DELETE, None),
@@ -503,6 +554,13 @@ impl IdentityManager {
     }
     pub async fn launch_credentials(&self, backend: &str, access: &str, session: &str) -> Result<MinecraftLaunchCredentials, String> {
         let (base, id) = scope(backend, session)?;
+        if read(&id)?.is_some_and(|v|v.native.is_some()) {
+            let _guard=self.vault_lock.lock().await;
+            let mut record=read(&id)?.ok_or("Официальный аккаунт отсутствует")?;
+            self.native_validate(&base,&id,access,&mut record).await?;
+            return Ok(MinecraftLaunchCredentials {username:record.profile.name.clone(),uuid:record.profile.id.clone(),
+                access_token:record.native.as_ref().unwrap().minecraft_token.clone(),user_type:"msa".into(),auth_server_base_url:String::new()});
+        }
         let (response, record) = self.associated(&base, &id, access, "/launch-credentials", Method::POST, None, None).await?;
         if response.data.get("realm").and_then(Value::as_str) != Some("official-minecraft") { return Err("Backend вернул неофициальную игровую сессию".into()); }
         let cred: MinecraftLaunchCredentials = serde_json::from_value(response.data.clone()).map_err(|_| "Некорректный ответ Minecraft launch credentials".to_string())?;
@@ -514,6 +572,175 @@ impl IdentityManager {
         Ok(cred)
     }
 
+    // Xbox/XSTS/Minecraft are acquired in this process and persist only in the native vault.
+    async fn verified_native_grant(&self, client_id: &str, grant: &MicrosoftGrant) -> Result<(OfficialProfile, NativeAccount0265),ProviderError> {
+        let minecraft = self.provider.exchange(&grant.access_token).await?;
+        // Entitlement count is useful for diagnostics, but Game Pass may have zero items.
+        self.provider.entitlements(&minecraft.access_token).await?;
+        let profile = self.provider.profile(&minecraft.access_token).await?;
+        let expires_at = now().saturating_add(minecraft.expires_in.saturating_sub(60));
+        Ok((profile,NativeAccount0265 {client_id:client_id.into(),refresh_token:grant.refresh_token.clone(),
+            minecraft_token:minecraft.access_token.clone(),minecraft_expires_at:expires_at}))
+    }
+    async fn native_validate(&self, base: &Url, id: &str, access: &str, record: &mut StoredAccount) -> Result<(), String> {
+        // Even with a native credential, the Never session must still be valid.
+        let config = self.request(base,access,"/browser/config",Method::GET,None,None,None).await?;
+        let native = record.native.as_ref().ok_or("Отсутствует native Minecraft identity")?;
+        if config.data.get("clientId").and_then(Value::as_str) != Some(native.client_id.as_str()) {
+            return Err("Microsoft Client ID проекта изменён: требуется повторный вход".into());
+        }
+        if native.minecraft_expires_at <= now().saturating_add(120) {
+            let client_id = native.client_id.clone();
+            let refresh_token = Zeroizing::new(native.refresh_token.clone());
+            let grant = self.provider.refresh(&client_id,&refresh_token).await.map_err(|e|e.message().to_string())?;
+            // Persist rotated refresh token immediately. A later Xbox outage
+            // must not destroy a successfully rotated Microsoft grant.
+            record.native.as_mut().ok_or("Отсутствует Minecraft identity")?.refresh_token.zeroize();
+            record.native.as_mut().unwrap().refresh_token = grant.refresh_token.clone();
+            save(id,record)?;
+            let (profile,updated) = self.verified_native_grant(&client_id,&grant).await.map_err(|e|e.message().to_string())?;
+            if !record.profile.id.eq_ignore_ascii_case(&profile.id) {
+                return Err("Minecraft account changed during refresh; reconnect explicitly".into());
+            }
+            record.native = Some(updated);
+            record.profile = profile;
+            save(id,record)?;
+        }
+        let profile = self.provider.profile(&record.native.as_ref().unwrap().minecraft_token)
+            .await.map_err(|e|e.message().to_string())?;
+        if !profile.id.eq_ignore_ascii_case(&record.profile.id) { return Err("Minecraft official UUID mismatch".into()); }
+        record.profile = profile;
+        save(id,record)?;
+        Ok(())
+    }
+    fn native_pending_remove(&self, id: &str) -> Result<(),String> {
+        let previous = self.native_pending.lock().map_err(|_|"Native identity заблокирован")?.remove(id);
+        if let Some(flow) = previous { let _ = flow.cancel.send(true); }
+        Ok(())
+    }
+    pub async fn native_begin(&self, backend: &str, access: &str, session: &str) -> Result<DeviceChallenge,String> {
+        let (base,id) = scope(backend,session)?;
+        self.pending_remove(&id)?;
+        self.native_pending_remove(&id)?;
+        self.cancel_browser(&id)?;
+        // Reserve the flow BEFORE an async provider request. Cancellation or a
+        // replacement is effective even during the initial network round trips.
+        let nonce=rand::random::<u64>();
+        let (cancel,_) = watch::channel(false);
+        self.native_pending.lock().map_err(|_|"Native identity заблокирован")?.insert(id.clone(),NativePending0265 {
+            client_id:String::new(),device:Zeroizing::new(String::new()),grant:None,
+            next:Instant::now(),expires:Instant::now()+Duration::from_secs(1800),
+            nonce,in_flight:true,failures:0,interval:5,cancel,
+        });
+        let result=async {
+            let config = self.request(&base,access,"/browser/config",Method::GET,None,None,None).await?;
+            let client_id = config.data.get("clientId").and_then(Value::as_str)
+                .filter(|s|official_browser_0263::valid_client_id(s)).ok_or("Microsoft Client ID не настроен")?.to_owned();
+            if !self.native_pending.lock().map_err(|_|"Native identity заблокирован")?.get(&id).is_some_and(|f|f.nonce==nonce) {
+                return Err("Microsoft-авторизация отменена".into());
+            }
+            let challenge = self.provider.device_begin(&client_id).await.map_err(|e|e.message().to_string())?;
+            let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+            let flow=flows.get_mut(&id).filter(|v|v.nonce==nonce).ok_or("Microsoft-авторизация отменена")?;
+            let interval=challenge.interval;
+            let expires_in=challenge.expires_in;
+            flow.client_id=client_id;
+            flow.device=challenge.secret;
+            flow.next=Instant::now()+Duration::from_secs(interval);
+            flow.expires=Instant::now()+Duration::from_secs(expires_in);
+            flow.interval=interval;
+            flow.in_flight=false;
+            Ok(DeviceChallenge {verification_uri:challenge.verification_uri,user_code:challenge.code,
+                interval_seconds:interval,expires_in})
+        }.await;
+        if result.is_err() {
+            let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+            if flows.get(&id).is_some_and(|v|v.nonce==nonce) {flows.remove(&id);}
+        }
+        result
+    }
+    pub async fn native_poll(&self, backend: &str, access: &str, session: &str) -> Result<PollResult,String> {
+        let (base,id) = scope(backend,session)?;
+        let (client_id,device,nonce,prior_grant) = {
+            let mut flows = self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+            let flow = flows.get_mut(&id).ok_or("Нет Device Code авторизации")?;
+            if Instant::now() >= flow.expires { flows.remove(&id);return Err("Microsoft Device Code истёк".into()); }
+            if flow.in_flight {return Err("Microsoft polling или Device Code initialization уже выполняется".into());}
+            if Instant::now()<flow.next { return Ok(PollResult{pending:true,profile:None,interval_seconds:Some(flow.next.saturating_duration_since(Instant::now()).as_secs().max(1))}); }
+            flow.in_flight=true;
+            // Once redeemed, do not reuse a one-time Device Code after Xbox outage.
+            (flow.client_id.clone(),flow.device.clone(),flow.nonce,flow.grant.take())
+        };
+        let mut microsoft = prior_grant;
+        let grant_result = if microsoft.is_none() {
+            Some(self.provider.device_poll(&client_id,device.as_str()).await)
+        } else {None};
+        if let Some(Ok(grant))=grant_result.as_ref() {
+            // Copy is kept only inside native memory until the flow is committed.
+            microsoft=Some(MicrosoftGrant {access_token:grant.access_token.clone(),refresh_token:grant.refresh_token.clone(),
+                expires_in:grant.expires_in,token_type:grant.token_type.clone()});
+        }
+        let completed = if microsoft.is_some() {
+            Some(self.verified_native_grant(&client_id,microsoft.as_ref().unwrap()).await)
+        } else {None};
+        let _vault=self.vault_lock.lock().await;
+        let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+        if !flows.get(&id).is_some_and(|v|v.nonce==nonce) {return Err("Microsoft-авторизация отменена".into());}
+        {
+            let flow=flows.get_mut(&id).ok_or("Microsoft-авторизация отменена")?;
+            flow.in_flight=false;
+            if Instant::now()>=flow.expires {flows.remove(&id);return Err("Microsoft Device Code истёк".into());}
+        }
+        if completed.as_ref().is_some_and(|v|v.is_ok()) {
+            // Revalidate Never session before saving native credentials. Do not
+            // keep a synchronous mutex locked across an HTTP await.
+            drop(flows);
+            self.request(&base,access,"/browser/config",Method::GET,None,None,None).await?;
+            let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+            if !flows.get(&id).is_some_and(|v|v.nonce==nonce) {return Err("Microsoft-авторизация отменена".into());}
+            let (profile,account)=completed.unwrap().unwrap();
+            save(&id,&StoredAccount{schema:2,ticket:String::new(),profile:profile.clone(),native:Some(account)})?;
+            flows.remove(&id);
+            return Ok(PollResult{pending:false,profile:Some(profile),interval_seconds:None});
+        }
+        let flow=flows.get_mut(&id).ok_or("Microsoft-авторизация отменена")?;
+        let mut server_hint=None;
+        match completed {
+            Some(Err(error)) => {
+                if !error.retryable() {flows.remove(&id);return Err(error.message().into());}
+                server_hint=error.retry_after();
+                flow.failures=flow.failures.saturating_add(1);
+            }
+            None => match grant_result {
+                Some(Err(ProviderError::Pending)) => {flow.failures=0;}
+                Some(Err(ProviderError::SlowDown)) => {flow.interval=flow.interval.saturating_add(5).min(3600);flow.failures=0;}
+                Some(Err(error)) if error.retryable() => {server_hint=error.retry_after();flow.failures=flow.failures.saturating_add(1);}
+                Some(Err(error)) => {flows.remove(&id);return Err(error.message().into());}
+                _ => {flows.remove(&id);return Err("Невозможно завершить native Device Code".into());}
+            },
+            Some(Ok(_)) => unreachable!(),
+        }
+        flow.grant=microsoft;
+        let delay=retry_delay(flow.interval,flow.failures,server_hint);
+        flow.next=Instant::now()+Duration::from_secs(delay);
+        Ok(PollResult{pending:true,profile:None,interval_seconds:Some(delay)})
+    }
+    pub async fn native_wait_device(&self, backend:&str,access:&str,session:&str) -> Result<OfficialProfile,String> {
+        let (_,id)=scope(backend,session)?;
+        let mut cancel=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?
+            .get(&id).ok_or("Нет Device Code авторизации")?.cancel.subscribe();
+        loop {
+            let sleep_for={
+                let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
+                let flow=flows.get(&id).ok_or("Microsoft-авторизация отменена")?;
+                if Instant::now()>=flow.expires {flows.remove(&id);return Err("Microsoft Device Code истёк".into());}
+                flow.next.saturating_duration_since(Instant::now()).min(flow.expires.saturating_duration_since(Instant::now()))
+            };
+            tokio::select! { _=tokio::time::sleep(sleep_for)=>{}, _=await_device_cancel(&mut cancel)=>return Err("Microsoft-авторизация отменена".into()) }
+            let reply=tokio::select! { result=self.native_poll(backend,access,session)=>result?, _=await_device_cancel(&mut cancel)=>return Err("Microsoft-авторизация отменена".into()) };
+            if let PollResult{pending:false,profile:Some(profile),..}=reply {return Ok(profile);}
+        }
+    }
     fn cancel_browser(&self, id: &str) -> Result<(), String> {
         let removed = self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?.remove(id);
         if let Some(flow) = removed { let _ = flow.cancel.send(true); }
@@ -529,6 +756,7 @@ impl IdentityManager {
         let (base,id) = scope(backend,session)?;
         let state = official_browser_0263::random_secret(32);
         self.pending_remove(&id)?;
+        self.native_pending_remove(&id)?;
         self.cancel_browser(&id)?;
         let (sender,receiver) = watch::channel(false);
         self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?.insert(id.clone(), BrowserFlow0263 {state: state.to_string(), cancel: sender});
@@ -548,22 +776,18 @@ impl IdentityManager {
             official_browser_0263::open_system_browser(&auth_url)?;
             let code = official_browser_0263::receive_callback(listener,&state,receiver).await?;
             if !self.browser_active(&id,&state)? { return Err("Microsoft-авторизация отменена".into()); }
-            let result = self.request(&base,access,"/browser/exchange",Method::POST,None,
-                Some(json!({"redirectUri":redirect,"verifier":verifier.as_str(),"code":code.as_str()})),None).await?;
-            if result.data.get("realm").and_then(Value::as_str) != Some("official-minecraft") { return Err("Ответ не является официальной Minecraft-сессией".into()); }
-            let profile = Self::profile(&result.data)?;
-            let mut ticket = result.data.get("session").and_then(Value::as_str)
-                .filter(|v| !v.is_empty() && v.len()<8192).ok_or("Не получена защищённая Minecraft-сессия")?.to_owned();
+            // 0.26.5: native MS authorization code exchange and native Xbox/XSTS/Minecraft chain.
+            // No Backend browser/exchange request, no Backend session ticket.
+            let grant = self.provider.authorization_code(client_id,&redirect,code.as_str(),verifier.as_str())
+                .await.map_err(|e|e.message().to_string())?;
+            let (profile, native) = self.verified_native_grant(client_id,&grant).await.map_err(|e|e.message().to_string())?;
             let _vault = self.vault_lock.lock().await;
-            // Hold browser lock through the synchronous vault commit so a
-            // cancel cannot race with persistence of a cancelled login.
+            // Hold flow lock through persistence: a cancelled login must not commit.
             let flows = self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?;
             if !flows.get(&id).is_some_and(|flow| flow.state == state.as_str()) {
-                ticket.zeroize(); return Err("Microsoft-авторизация отменена".into());
+                return Err("Microsoft-авторизация отменена".into());
             }
-            let stored = save(&id,&StoredAccount {schema:1,ticket:std::mem::take(&mut ticket),profile:profile.clone()});
-            ticket.zeroize();
-            stored?;
+            save(&id,&StoredAccount {schema:2,ticket:String::new(),profile:profile.clone(),native:Some(native)})?;
             Ok(profile)
         }.await;
         let mut flows = self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?;
@@ -574,12 +798,14 @@ impl IdentityManager {
     pub fn cancel(&self, backend: &str, session: &str) -> Result<(), String> {
         let (_, id) = scope(backend, session)?;
         self.pending_remove(&id)?;
+        self.native_pending_remove(&id)?;
         self.cancel_browser(&id)?;
         Ok(())
     }
     pub async fn disconnect(&self, backend: &str, session: &str) -> Result<(), String> {
         let (_, id) = scope(backend, session)?;
         self.pending_remove(&id)?;
+        self.native_pending_remove(&id)?;
         self.cancel_browser(&id)?;
         let _guard = self.vault_lock.lock().await;
         delete(&id)
@@ -595,15 +821,15 @@ pub struct LaunchContext { pub backend_url: String, pub never_token: String, pub
 
 #[tauri::command]
 pub async fn official_identity_begin_0262(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<DeviceChallenge, String> {
-    manager.begin(&context.backend_url, &context.never_token, &context.never_session_id).await
+    manager.native_begin(&context.backend_url, &context.never_token, &context.never_session_id).await
 }
 #[tauri::command]
 pub async fn official_identity_poll_0262(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<PollResult, String> {
-    manager.poll(&context.backend_url, &context.never_token, &context.never_session_id).await
+    manager.native_poll(&context.backend_url, &context.never_token, &context.never_session_id).await
 }
 #[tauri::command]
 pub async fn official_identity_wait_device_0264(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<OfficialProfile, String> {
-    manager.wait_device(&context.backend_url, &context.never_token, &context.never_session_id).await
+    manager.native_wait_device(&context.backend_url, &context.never_token, &context.never_session_id).await
 }
 #[tauri::command]
 pub async fn official_identity_status_0262(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<Option<OfficialProfile>, String> {
@@ -684,6 +910,35 @@ mod tests {
         assert_eq!(retry_delay(25, 0, Some(5)), 25);
         assert_eq!(retry_delay(5, 100, Some(999)), 999);
         assert_eq!(retry_delay(350, 1, Some(600)), 700);
+    }
+    #[test]
+    fn native_schema2_serializes_refresh_and_game_credentials_only_inside_record() {
+        let stored=StoredAccount {schema:2,ticket:String::new(),
+            profile:OfficialProfile {id:"123456781234123412341234567890ab".into(),name:"TestPlayer".into(),skins:vec![],capes:vec![]},
+            native:Some(NativeAccount0265 {client_id:"11111111-2222-3333-4444-555555555555".into(),
+                refresh_token:"native-refresh".into(),minecraft_token:"native-game-bearer".into(),minecraft_expires_at:now()+3600})};
+        let encoded=serde_json::to_vec(&stored).unwrap();
+        let decoded:StoredAccount=serde_json::from_slice(&encoded).unwrap();
+        assert!(decoded.ticket.is_empty());
+        assert_eq!(decoded.native.as_ref().unwrap().minecraft_token,"native-game-bearer");
+        let renderer=serde_json::to_value(&decoded.profile).unwrap();
+        let output=renderer.to_string();
+        assert!(!output.contains("native-refresh") && !output.contains("native-game-bearer"));
+    }
+    #[tokio::test]
+    async fn removing_native_pending_flow_prevents_late_commit() {
+        let manager=IdentityManager::new().unwrap();
+        let (_,id)=scope("https://example.com","sid-0265").unwrap();
+        let (cancel,mut receiver)=watch::channel(false);
+        manager.native_pending.lock().unwrap().insert(id.clone(),NativePending0265 {
+            client_id:"11111111-2222-3333-4444-555555555555".into(),device:Zeroizing::new("device-secret".into()),
+            grant:None,next:Instant::now(),expires:Instant::now()+Duration::from_secs(900),nonce:10,
+            in_flight:true,failures:0,interval:5,cancel,
+        });
+        manager.native_pending_remove(&id).unwrap();
+        receiver.changed().await.unwrap();
+        assert!(*receiver.borrow());
+        assert!(!manager.native_pending.lock().unwrap().contains_key(&id));
     }
     #[test] fn minecraft_identity_requires_java_uuid() {
         assert!(uuid_valid("123456781234123412341234567890ab"));
