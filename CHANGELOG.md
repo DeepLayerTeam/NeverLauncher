@@ -1,3 +1,12 @@
+## 0.26.0 — Textures & Personalization GA (release certification required)
+
+- Finished the texture service milestones across 0.25.1–0.25.12: immutable PNG local/S3 storage, personal Desktop preview/library, Admin policy, signed Yggdrasil and strictly isolated official Minecraft integration.
+- Hardened offline snapshot restoration against incomplete database inventory, oversized/symlinked manifests and failed readback after recovery; a partial snapshot can no longer report a complete restore.
+- Maintenance `verify` now validates fully decoded canonical Minecraft skin/cape PNGs in addition to byte lengths and SHA-256 digests.
+- Added an independently signed six-platform GA release verifier (actual Windows/Linux/macOS native builds, game rendering, owned Microsoft operations, PostgreSQL/S3 recovery, trusted OS installers) with adversarial tests and protected GitHub Actions release gate.
+- Synced versions/OpenAPI and added [0.26.0 GA deployment and certification instructions](docs/releases/0.26.0-textures-personalization-ga.md).
+- **Not certified by source tests alone:** external signed evidence and real client/platform execution are mandatory before publication.
+
 ## 0.25.11 — Texture Lifecycle & Recovery
 
 - Transactional backup/restore inventory pins prevent garbage collection of in-flight snapshots.

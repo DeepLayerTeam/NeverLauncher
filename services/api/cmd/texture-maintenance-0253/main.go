@@ -88,7 +88,7 @@ func run() error {
 			checks := make([]storage.TextureVerification02511, 0, len(objects))
 			bad := 0
 			for _, obj := range objects {
-				result := storage.VerifyTexture02511(ctx, store, obj)
+				result := storage.VerifyTextureGA0260(ctx, store, obj)
 				checks = append(checks, result)
 				if result.Result != "ok" {
 					bad++

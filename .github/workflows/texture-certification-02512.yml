@@ -1,5 +1,6 @@
 name: Texture Integration & Compatibility 0.25.12
 on:
+  workflow_call:
   push:
     paths:
       - 'services/api/internal/storage/texture*'

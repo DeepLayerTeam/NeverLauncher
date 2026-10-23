@@ -170,9 +170,27 @@ func syncDirectory0253(path string) error {
 // each restored digest; metadata is not imported or overwritten from a backup.
 // The caller must restore the matching PostgreSQL snapshot separately.
 func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, inventory []TextureBackupObject0253) (int, error) {
-	data, err := os.ReadFile(filepath.Join(snapshot, "manifest.json"))
+	// Never read an untrusted manifest without a bound: ReadFile allocates the
+	// entire input before the legacy size check. Reject symlinks and non-files.
+	manifestPath := filepath.Join(snapshot, "manifest.json")
+	info, err := os.Lstat(manifestPath)
 	if err != nil {
 		return 0, err
+	}
+	if !info.Mode().IsRegular() || info.Size() > 16<<20 {
+		return 0, errors.New("unsafe or oversized backup manifest")
+	}
+	f, err := os.Open(manifestPath)
+	if err != nil {
+		return 0, err
+	}
+	data, readErr := io.ReadAll(io.LimitReader(f, 16<<20+1))
+	closeErr := f.Close()
+	if readErr != nil {
+		return 0, readErr
+	}
+	if closeErr != nil {
+		return 0, closeErr
 	}
 	if len(data) > 16<<20 {
 		return 0, errors.New("backup manifest too large")
@@ -184,9 +202,21 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 	if man.Format != 1 {
 		return 0, errors.New("unsupported texture backup format")
 	}
+	// This command restores a *complete*, pinned database inventory, not a
+	// best-effort subset that could silently leave live profiles with missing
+	// textures. Incremental/partial recovery needs a separate explicit mode.
 	allowed := make(map[string]TextureBackupObject0253, len(inventory))
 	for _, b := range inventory {
+		if err := validateBackupObject0253(store, b); err != nil {
+			return 0, err
+		}
+		if _, duplicate := allowed[b.Digest]; duplicate {
+			return 0, errors.New("duplicate database inventory digest")
+		}
 		allowed[b.Digest] = b
+	}
+	if len(man.Objects) != len(allowed) {
+		return 0, fmt.Errorf("incomplete texture snapshot: backup has %d objects, database has %d", len(man.Objects), len(allowed))
 	}
 	visited := make(map[string]bool, len(man.Objects))
 	for _, obj := range man.Objects {
@@ -225,6 +255,11 @@ func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, in
 		}
 		if key != obj.ObjectKey || n != obj.ByteSize {
 			return restored, errors.New("restored object metadata differs")
+		}
+		// Do not trust the return value of a storage write alone. Read back
+		// through the configured local/S3 path and check the full content.
+		if verification := VerifyTexture02511(ctx, store, obj); verification.Result != "ok" {
+			return restored, fmt.Errorf("restored texture %s failed readback: %s (%s)", obj.Digest, verification.Result, verification.Detail)
 		}
 		restored++
 	}
