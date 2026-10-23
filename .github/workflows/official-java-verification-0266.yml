@@ -1,0 +1,53 @@
+name: Minecraft Java Profile Verification 0.26.6
+on:
+  push:
+    paths:
+      - 'apps/desktop/src-tauri/**'
+      - 'apps/desktop/src/**'
+      - 'apps/desktop/tests/official_minecraft_0257.test.mjs'
+      - 'docs/authentication/java-profile-verification-0266.md'
+      - '.github/workflows/official-java-verification-0266.yml'
+  pull_request:
+    paths:
+      - 'apps/desktop/src-tauri/**'
+      - 'apps/desktop/src/**'
+      - '.github/workflows/official-java-verification-0266.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  java-verification:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux native prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Native account verification unit tests
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_verification_0266::tests
+      - name: Native provider HTTP fixture tests
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_exchange_0265::tests
+      - name: Native identity compatibility tests
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests
+      - name: Rust compilation
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: Renderer regressions and production bundle
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npm run test:official
+          npm run test:textures
+          npm run build

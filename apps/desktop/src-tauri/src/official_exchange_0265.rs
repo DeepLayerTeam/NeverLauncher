@@ -5,7 +5,7 @@ use reqwest::{Client, Method, Url};
 use serde::{Deserialize, de::DeserializeOwned};
 use serde_json::json;
 use zeroize::{Zeroize, Zeroizing};
-use crate::{official_browser_0263, official_identity_0262::{OfficialProfile, OfficialSkin, OfficialCape}};
+use crate::{official_browser_0263, official_verification_0266, official_identity_0262::{OfficialProfile, OfficialSkin, OfficialCape}};
 
 const MICROSOFT: &str = "https://login.microsoftonline.com/consumers/oauth2/v2.0/";
 const XBOX: &str = "https://user.auth.xboxlive.com";
@@ -17,7 +17,7 @@ const SCOPE: &str = "XboxLive.signin offline_access";
 #[derive(Debug, PartialEq, Eq)]
 pub enum ProviderError {
     Pending, SlowDown, Expired, Denied, InvalidGrant, AppNotAuthorized,
-    XboxAccount, XboxRegion, XboxFamily, NoMinecraftJava,
+    XboxAccount, XboxRegion, XboxFamily, NoMinecraftJava, IdentityMismatch,
     Throttled(Option<u64>), Transient, InvalidResponse, Unavailable,
 }
 impl ProviderError {
@@ -33,6 +33,7 @@ impl ProviderError {
             Self::XboxRegion => "Xbox недоступен для региона этого аккаунта",
             Self::XboxFamily => "Настройки семьи или возраста ограничивают Xbox",
             Self::NoMinecraftJava => "Отсутствует доступный Minecraft Java Edition профиль",
+            Self::IdentityMismatch => "Minecraft UUID изменился; требуется явное переподключение аккаунта",
             Self::Throttled(_) => "Провайдер ограничил частоту запросов",
             Self::Transient | Self::Unavailable => "Microsoft/Xbox/Minecraft временно недоступны",
             Self::InvalidResponse => "Неверный или неполный ответ игрового провайдера",
@@ -101,14 +102,14 @@ impl Drop for DeviceGrant { fn drop(&mut self) { self.device_code.zeroize(); } }
 pub struct DeviceChallengeNative { pub secret: Zeroizing<String>, pub code: String, pub verification_uri: String, pub expires_in: u64, pub interval: u64 }
 
 #[derive(Deserialize)]
-struct MinecraftProfile { id: String, name: String, #[serde(default)] skins: Vec<OfficialSkin>, #[serde(default)] capes: Vec<OfficialCape> }
+struct MinecraftProfile { id: String, name: String, #[serde(default)] demo: bool, #[serde(default)] skins: Vec<OfficialSkin>, #[serde(default)] capes: Vec<OfficialCape> }
 impl MinecraftProfile {
     fn checked(self) -> Result<OfficialProfile, ProviderError> {
-        if !valid_account_id(&self.id) || self.name.len() < 3 || self.name.len() > 16 ||
+        if self.demo || !valid_account_id(&self.id) || self.id.bytes().all(|c| c == b'0') || self.name.len() < 3 || self.name.len() > 16 ||
             !self.name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
             return Err(ProviderError::NoMinecraftJava);
         }
-        Ok(OfficialProfile { id: self.id, name: self.name, skins: self.skins, capes: self.capes })
+        Ok(OfficialProfile { id: self.id.to_ascii_lowercase(), name: self.name, skins: self.skins, capes: self.capes })
     }
 }
 
@@ -221,13 +222,25 @@ impl NativeProvider {
         let value: MinecraftProfile = self.get_json(&self.minecraft,"/minecraft/profile",Some(minecraft)).await?;
         value.checked()
     }
-    pub async fn entitlements(&self, minecraft: &str) -> Result<usize,ProviderError> {
-        #[derive(Deserialize)] struct Entitlement { items: Vec<serde_json::Value> }
+    /// Parse actual named entitlements, not merely the length of the array.
+    /// This is NOT a reliable standalone Game Pass check: Java profile is the
+    /// authoritative proof of a playable Java identity when items are empty.
+    pub(crate) async fn entitlements(&self, minecraft: &str) -> Result<official_verification_0266::JavaAccessEvidence,ProviderError> {
+        #[derive(Deserialize)] struct Entitlement { items: Vec<EntitlementItem> }
+        #[derive(Deserialize)] struct EntitlementItem { name: String }
         if !valid_token(minecraft) { return Err(ProviderError::InvalidResponse); }
-        // An empty items array does not disprove Game Pass ownership: a live
-        // Minecraft Java profile is the definitive playability gate.
         let data: Entitlement = self.get_json(&self.minecraft,"/entitlements/mcstore",Some(minecraft)).await?;
-        Ok(data.items.len())
+        let names: Vec<String> = data.items.into_iter().map(|item|item.name).collect();
+        official_verification_0266::inspect_entitlements(&names)
+    }
+    /// Fail closed on HTTP/JSON failures, invalid/demonstration Java profiles,
+    /// or UUID changes. The entitlement response alone cannot establish that a
+    /// given MS token has a playable Java identity.
+    pub async fn verify_java(&self, token: &str, expected_uuid: Option<&str>) -> Result<OfficialProfile,ProviderError> {
+        let evidence = self.entitlements(token).await?;
+        let profile = self.profile(token).await?;
+        official_verification_0266::verify_playable_profile(&profile, expected_uuid, evidence)?;
+        Ok(profile)
     }
     pub async fn texture(&self, token: &str, operation: &str, cape_id: Option<&str>, skin: Option<(Vec<u8>,String)>) -> Result<OfficialProfile,ProviderError> {
         if !valid_token(token) { return Err(ProviderError::InvalidResponse); }
@@ -269,7 +282,7 @@ impl NativeProvider {
 }
 fn valid_code(code: &str) -> bool { !code.is_empty() && code.len()<=4096 && !code.bytes().any(|b| b==b'\r' || b==b'\n') }
 #[derive(Default, Deserialize)]
-struct ErrorBody { #[serde(default)] error: String, #[serde(default,rename="errorMessage")] message: String, #[serde(default,rename="XErr")] xerr: i64 }
+struct ErrorBody { #[serde(default)] error: String, #[serde(default,rename="errorMessage")] message: String, #[serde(default,rename="XErr")] xerr: serde_json::Value }
 impl Drop for ErrorBody { fn drop(&mut self) { self.error.zeroize(); self.message.zeroize(); } }
 fn classify(status: u16, hint: &ErrorBody, retry_after: Option<u64>) -> ProviderError {
     match hint.error.as_str() {
@@ -282,12 +295,15 @@ fn classify(status: u16, hint: &ErrorBody, retry_after: Option<u64>) -> Provider
     }
     if status==403 && (hint.message.to_ascii_lowercase().contains("invalid app registration") || hint.error.to_ascii_lowercase().contains("invalid_app_registration")) { return ProviderError::AppNotAuthorized; }
     if status==401 {
-        return match hint.xerr {
-            2148916233 => ProviderError::XboxAccount,
-            2148916235 => ProviderError::XboxRegion,
-            2148916238 => ProviderError::XboxFamily,
+        return match hint.xerr.as_i64().or_else(||hint.xerr.as_str().and_then(|s|s.parse::<i64>().ok())) {
+            Some(2148916233) => ProviderError::XboxAccount,
+            Some(2148916235) => ProviderError::XboxRegion,
+            Some(2148916238) => ProviderError::XboxFamily,
             _ => ProviderError::InvalidGrant,
         };
+    }
+    if status==403 && matches!(hint.xerr.as_i64().or_else(||hint.xerr.as_str().and_then(|s|s.parse::<i64>().ok())),Some(2148916238)) {
+        return ProviderError::XboxFamily;
     }
     if status==403 { return ProviderError::Denied; }
     if status==404 { return ProviderError::NoMinecraftJava; }
@@ -306,10 +322,10 @@ mod tests {
         assert!(serde_json::from_str::<XboxGrant>(r#"{"Token":"t","DisplayClaims":{"xui":[]}}"#).unwrap().verified_hash().is_err());
     }
     #[test] fn provider_errors_are_specific_and_never_contain_secrets() {
-        let hint=ErrorBody{error:String::new(),message:"Invalid app registration: very-secret".into(),xerr:0};
+        let hint=ErrorBody{error:String::new(),message:"Invalid app registration: very-secret".into(),xerr:serde_json::json!(0)};
         assert_eq!(classify(403,&hint,None),ProviderError::AppNotAuthorized);
         assert_eq!(classify(429,&ErrorBody::default(),Some(31)),ProviderError::Throttled(Some(31)));
-        assert_eq!(classify(401,&ErrorBody{xerr:2148916238,..Default::default()},None),ProviderError::XboxFamily);
+        assert_eq!(classify(401,&ErrorBody{xerr:serde_json::json!(2148916238),..Default::default()},None),ProviderError::XboxFamily);
         assert!(!ProviderError::AppNotAuthorized.message().contains("very-secret"));
     }
     #[test] fn refuses_fake_credential_shapes() {
@@ -432,4 +448,60 @@ mod tests {
         assert!(!official_browser_0263::valid_client_id("00000000-0000-0000-0000-000000000000"));
         assert_eq!(now() > 1700000000,true);
     }
+    #[tokio::test]
+    async fn java_identity_requires_token_authenticated_profile_even_with_entitlement() {
+        let (origin,server)=fixture_server(vec![
+            ("GET /entitlements/mcstore",r#"{"items":[{"name":"game_minecraft"}]}"#),
+            ("GET /minecraft/profile",r#"404:{"error":"NOT_FOUND"}"#),
+        ]).await;
+        let provider=NativeProvider::fixture(&origin);
+        assert_eq!(provider.verify_java("minecraft-bearer",None).await.err(),Some(ProviderError::NoMinecraftJava));
+        let requests=server.await.unwrap();
+        assert_eq!(requests.len(),2);
+        assert!(requests.iter().all(|r| r.contains("authorization: Bearer minecraft-bearer") ||
+            r.contains("Authorization: Bearer minecraft-bearer")));
+    }
+    #[tokio::test]
+    async fn game_pass_without_mcstore_items_requires_live_java_profile() {
+        let (origin,server)=fixture_server(vec![
+            ("GET /entitlements/mcstore",r#"{"items":[]}"#),
+            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"ValidPlayer"}"#),
+        ]).await;
+        let provider=NativeProvider::fixture(&origin);
+        let profile=provider.verify_java("game-pass-mc-bearer",None).await.unwrap();
+        assert_eq!(profile.name,"ValidPlayer");
+        assert_eq!(server.await.unwrap().len(),2);
+    }
+    #[tokio::test]
+    async fn saved_account_mismatch_denies_launch_after_refresh() {
+        let (origin,server)=fixture_server(vec![
+            ("GET /entitlements/mcstore",r#"{"items":[{"name":"game_minecraft_bedrock"}]}"#),
+            ("GET /minecraft/profile",r#"{"id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","name":"ValidPlayer"}"#),
+        ]).await;
+        let provider=NativeProvider::fixture(&origin);
+        assert_eq!(provider.verify_java("mc-bearer",Some("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")).await.err(),Some(ProviderError::IdentityMismatch));
+        assert_eq!(server.await.unwrap().len(),2);
+    }
+    #[tokio::test]
+    async fn demo_profile_and_corrupt_entitlement_data_fail_closed() {
+        let (origin,server)=fixture_server(vec![
+            ("GET /entitlements/mcstore",r#"{"items":[]}"#),
+            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"DemoUser","demo":true}"#),
+        ]).await;
+        let provider=NativeProvider::fixture(&origin);
+        assert_eq!(provider.verify_java("mc-bearer",None).await.err(),Some(ProviderError::NoMinecraftJava));
+        server.await.unwrap();
+        let (origin,server)=fixture_server(vec![("GET /entitlements/mcstore",r#"{"items":"all"}"#)]).await;
+        let provider=NativeProvider::fixture(&origin);
+        assert_eq!(provider.verify_java("mc-bearer",None).await.err(),Some(ProviderError::InvalidResponse));
+        assert_eq!(server.await.unwrap().len(),1);
+    }
+    #[test]
+    fn xbox_family_xerr_accepts_provider_string_or_number_without_leaking_body() {
+        let hint:ErrorBody=serde_json::from_str(r#"{"XErr":"2148916238","message":"private secret"}"#).unwrap();
+        assert_eq!(classify(401,&hint,None),ProviderError::XboxFamily);
+        assert_eq!(classify(403,&hint,None),ProviderError::XboxFamily);
+        assert!(!ProviderError::XboxFamily.message().contains("private secret"));
+    }
+
 }

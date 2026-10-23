@@ -575,9 +575,9 @@ impl IdentityManager {
     // Xbox/XSTS/Minecraft are acquired in this process and persist only in the native vault.
     async fn verified_native_grant(&self, client_id: &str, grant: &MicrosoftGrant) -> Result<(OfficialProfile, NativeAccount0265),ProviderError> {
         let minecraft = self.provider.exchange(&grant.access_token).await?;
-        // Entitlement count is useful for diagnostics, but Game Pass may have zero items.
-        self.provider.entitlements(&minecraft.access_token).await?;
-        let profile = self.provider.profile(&minecraft.access_token).await?;
+        // A playable Java profile is required even if mcstore is empty (Game Pass).
+        // Both requests use the same bearer, in Rust, without renderer IPC.
+        let profile = self.provider.verify_java(&minecraft.access_token, None).await?;
         let expires_at = now().saturating_add(minecraft.expires_in.saturating_sub(60));
         Ok((profile,NativeAccount0265 {client_id:client_id.into(),refresh_token:grant.refresh_token.clone(),
             minecraft_token:minecraft.access_token.clone(),minecraft_expires_at:expires_at}))
@@ -599,16 +599,18 @@ impl IdentityManager {
             record.native.as_mut().unwrap().refresh_token = grant.refresh_token.clone();
             save(id,record)?;
             let (profile,updated) = self.verified_native_grant(&client_id,&grant).await.map_err(|e|e.message().to_string())?;
-            if !record.profile.id.eq_ignore_ascii_case(&profile.id) {
-                return Err("Minecraft account changed during refresh; reconnect explicitly".into());
-            }
+            crate::official_verification_0266::verify_playable_profile(
+                &profile, Some(&record.profile.id),
+                crate::official_verification_0266::JavaAccessEvidence::ProfileBased,
+            ).map_err(|e|e.message().to_string())?;
             record.native = Some(updated);
             record.profile = profile;
             save(id,record)?;
         }
-        let profile = self.provider.profile(&record.native.as_ref().unwrap().minecraft_token)
-            .await.map_err(|e|e.message().to_string())?;
-        if !profile.id.eq_ignore_ascii_case(&record.profile.id) { return Err("Minecraft official UUID mismatch".into()); }
+        // Revalidate entitlements and authenticated Java profile on every
+        // native status/launch/texture action; never trust cached membership.
+        let profile = self.provider.verify_java(&record.native.as_ref().unwrap().minecraft_token,
+            Some(&record.profile.id)).await.map_err(|e|e.message().to_string())?;
         record.profile = profile;
         save(id,record)?;
         Ok(())

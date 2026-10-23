@@ -2,6 +2,7 @@ mod device_keys;
 mod official_identity_0262;
 mod official_browser_0263;
 mod official_exchange_0265;
+mod official_verification_0266;
 
 use neverruntime::{
     self, CleanUnusedResult, DownloadResult, FileCheckResult, GuardProcessPolicyReport, JavaInfoResult,
