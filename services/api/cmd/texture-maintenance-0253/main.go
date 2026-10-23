@@ -162,15 +162,10 @@ func run() error {
 			if len(candidate.Digest) != 64 || candidate.Driver != driver || candidate.ObjectKey != "texture-blobs/sha256/"+candidate.Digest[:2]+"/"+candidate.Digest+".png" {
 				return errors.New("invalid GC object key")
 			}
-			if err := repo.CheckTextureGCLease02511(ctx, candidate); err != nil {
-				return err
-			}
-			if err := storage.DeleteTextureSafely02511(ctx, store, candidate.Digest); err != nil {
-				_ = repo.ReleaseTextureGC02511(ctx, candidate)
+			if err := repo.DeleteTextureWithLease02512(ctx, candidate, func(ctx context.Context, digest string) error {
+				return storage.DeleteTextureSafely02511(ctx, store, digest)
+			}); err != nil {
 				return fmt.Errorf("GC %s: %w", candidate.Digest, err)
-			}
-			if err := repo.FinishTextureGC02511(ctx, candidate); err != nil {
-				return err
 			}
 		}
 		fmt.Printf("deleted %d unreferenced texture objects\n", len(candidates))

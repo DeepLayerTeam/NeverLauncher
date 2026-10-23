@@ -1,0 +1,160 @@
+name: Texture Integration & Compatibility 0.25.12
+on:
+  push:
+    paths:
+      - 'services/api/internal/storage/texture*'
+      - 'services/api/internal/repository/textures*'
+      - 'services/api/internal/httpapi/*texture*'
+      - 'services/api/internal/httpapi/minecraft_*'
+      - 'services/api/internal/officialminecraft/**'
+      - 'services/api/internal/yggdrasiltexture/**'
+      - 'services/api/internal/texturepng/**'
+      - 'services/api/internal/texturefetch/**'
+      - 'services/api/cmd/texture-maintenance-0253/**'
+      - 'services/api/cmd/texture-compat-02512/**'
+      - 'apps/desktop/src/*Texture*'
+      - 'apps/desktop/src/texture_service_0258.ts'
+      - 'apps/admin/src/admin/TextureManagement0259.tsx'
+      - '.github/workflows/texture-certification-02512.yml'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      texture_origin:
+        description: 'Optional running Yggdrasil HTTPS origin for a live protocol probe'
+        required: false
+        type: string
+      local_minecraft_uuid:
+        description: 'Local account with a published managed skin, only for live probe'
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: texture-certification-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  postgres-api:
+    name: Go API, real PostgreSQL transactions, lifecycle and protocol
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: textures
+          POSTGRES_USER: textures
+          POSTGRES_PASSWORD: integration_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U textures -d textures"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      TEST_PG_DSN_0251: postgres://textures:integration_only@localhost:5432/textures?sslmode=disable
+      TEST_PG_DSN_0252: postgres://textures:integration_only@localhost:5432/textures?sslmode=disable
+      TEST_PG_DSN_0253: postgres://textures:integration_only@localhost:5432/textures?sslmode=disable
+      TEST_PG_DSN_0254: postgres://textures:integration_only@localhost:5432/textures?sslmode=disable
+      TEST_PG_DSN_0255: postgres://textures:integration_only@localhost:5432/textures?sslmode=disable
+      TEST_PG_DSN_0259: postgres://textures:integration_only@localhost:5432/textures?sslmode=disable
+      TEST_PG_DSN_02510: postgres://textures:integration_only@localhost:5432/textures?sslmode=disable
+      TEST_PG_DSN_02511: postgres://textures:integration_only@localhost:5432/textures?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: services/api/go.sum
+      - name: Compile real API and maintenance tools (not mock drivers)
+        working-directory: services/api
+        run: |
+          go build -trimpath -o /tmp/neverlauncher-api ./cmd/neverlauncher-api
+          go build -trimpath -o /tmp/texture-maintenance ./cmd/texture-maintenance-0253
+          go build -trimpath -o /tmp/gravit-textures-import ./cmd/gravit-textures-import-02510
+          go build -trimpath -o /tmp/texture-compat ./cmd/texture-compat-02512
+      - name: Execute real PostgreSQL, HTTP and storage tests
+        working-directory: services/api
+        run: |
+          go test -race -count=1 -timeout 12m ./internal/repository ./internal/httpapi ./internal/storage ./internal/dbmigrate ./internal/texturepng ./internal/texturefetch ./internal/yggdrasiltexture ./internal/officialminecraft ./cmd/texture-compat-02512
+          go vet ./internal/repository ./internal/httpapi ./internal/storage ./internal/dbmigrate ./cmd/texture-maintenance-0253 ./cmd/texture-compat-02512
+      - name: Validate generated API and version
+        run: |
+          python3 scripts/version/manage.py check
+          python3 scripts/contracts/validate-openapi.py
+  real-s3:
+    name: Real S3 conditional PUT / backup / restore / GC
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: services/api/go.sum
+      - name: Start disposable MinIO and initialize bucket
+        run: |
+          docker run -d --rm --name textures-minio -p 127.0.0.1:9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=texture_password_cert_only \
+            minio/minio:RELEASE.2024-10-13T13-34-11Z server /data
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:9000/minio/health/live
+          docker run --rm --network host \
+            -e MC_HOST_texture=http://minioadmin:texture_password_cert_only@127.0.0.1:9000 \
+            minio/mc:RELEASE.2024-10-08T09-37-26Z mb --ignore-existing texture/texture-cert-02512
+      - name: Execute live S3 compatibility and local recovery
+        working-directory: services/api
+        env:
+          TEST_TEXTURE_S3_ENDPOINT_02512: http://127.0.0.1:9000
+          TEST_TEXTURE_S3_BUCKET_02512: texture-cert-02512
+          TEST_TEXTURE_S3_ACCESS_KEY_02512: minioadmin
+          TEST_TEXTURE_S3_SECRET_KEY_02512: texture_password_cert_only
+        run: |
+          go test -race -count=1 -timeout 5m ./internal/storage
+      - name: MinIO diagnostics on failure
+        if: failure()
+        run: docker logs textures-minio 2>&1 | tail -80 || true
+  desktop-admin:
+    name: Desktop and Admin integration/build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: |
+            apps/desktop/package-lock.json
+            apps/admin/package-lock.json
+      - name: Desktop install, UI client tests, production frontend build
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npm run test:textures
+          npm run build
+      - name: Admin install, permissions/UI tests, production frontend build
+        working-directory: apps/admin
+        run: |
+          npm ci
+          npm test
+          npm run build
+  live-protocol:
+    name: Live signed-profile/PNG compatibility probe
+    if: github.event_name == 'workflow_dispatch' && inputs.texture_origin != '' && inputs.local_minecraft_uuid != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: services/api/go.sum
+      - name: Verify actual running authlib-injector origin
+        working-directory: services/api
+        env:
+          TEXTURE_ORIGIN: ${{ inputs.texture_origin }}
+          LOCAL_MC_UUID: ${{ inputs.local_minecraft_uuid }}
+        run: |
+          go run ./cmd/texture-compat-02512 --origin "$TEXTURE_ORIGIN" --uuid "$LOCAL_MC_UUID" --expect-skin=true
