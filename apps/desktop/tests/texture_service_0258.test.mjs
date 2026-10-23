@@ -88,30 +88,30 @@ test('multipart upload uses real XHR progress, Authorization and expectedRevisio
   assert.equal(events[0].form.get('model'),'slim');
   t.after(()=>{delete globalThis.XMLHttpRequest;});
 });
-test('official skin upload is bound to official session, reports progress and rotates ticket',async t=>{
+test('official skin upload crosses only native IPC; no browser bearer or game token',async()=>{
   const {OfficialMinecraftClient0257}=await import('../build-tests/official_minecraft_0257.js');
-  const oldFetch=globalThis.fetch, oldXHR=globalThis.XMLHttpRequest, now=Date.now;
-  globalThis.fetch=async(url)=>url.endsWith('/device/start') ? mockResponse({flow:'flow',userCode:'AB',verificationUri:'https://microsoft.com/link',intervalSeconds:1,expiresIn:300})
-    : url.endsWith('/device/poll') ? mockResponse({session:'ticket-a',profile:{id:'123456781234123412341234567890ab',name:'owner',skins:[],capes:[]}})
-    : mockResponse({profile:{id:'123456781234123412341234567890ab',name:'owner',skins:[],capes:[]}});
-  let seen;
-  class FakeXHR {
-    constructor(){this.upload={};seen=this;this.headers={};}
-    open(method,url){this.method=method;this.url=url;}
-    setRequestHeader(k,v){this.headers[k]=v;}
-    getResponseHeader(k){return k==='X-Official-Minecraft-Session'?'ticket-b':null;}
-    send(form){this.form=form;this.upload.onprogress?.({lengthComputable:true,loaded:2,total:4});this.status=200;
-      this.responseText=JSON.stringify({data:{profile:{id:'123456781234123412341234567890ab',name:'owner',skins:[],capes:[]}}});this.onload();}
-  }
-  globalThis.XMLHttpRequest=FakeXHR;
+  const previousFetch=globalThis.fetch, previousXHR=globalThis.XMLHttpRequest, now=Date.now;
+  const profile={id:'123456781234123412341234567890ab',name:'owner',skins:[],capes:[]};
+  const requests=[];
+  const invoke=async(command,args)=>{
+    requests.push({command,args});
+    if(command==='official_identity_begin_0262')return {verificationUri:'https://microsoft.com/link',userCode:'AB',intervalSeconds:5,expiresIn:300};
+    if(command==='official_identity_poll_0262')return {pending:false,profile};
+    if(command==='official_identity_status_0262' || command==='official_identity_texture_0262')return profile;
+  };
+  globalThis.fetch=()=>{throw Error('official renderer fetch is forbidden')};
+  globalThis.XMLHttpRequest=class{constructor(){throw Error('official renderer XHR is forbidden')}};
   try{
-    const c=new OfficialMinecraftClient0257('https://never.example','never-jwt');await c.begin();
-    Date.now=()=>now()+2000;await c.poll();
-    const values=[];
-    const updated=await c.uploadSkin(new File(['p'],'skin.png',{type:'image/png'}),'slim',x=>values.push(x));
-    assert.equal(updated.name,'owner');assert.equal(seen.headers.Authorization,'Bearer never-jwt');
-    assert.equal(seen.headers['X-Official-Minecraft-Session'],'ticket-a');
-    assert.equal(seen.form.get('variant'),'slim');assert.deepEqual(values,[50,100]);
-    await c.profile();
-  }finally{globalThis.fetch=oldFetch;globalThis.XMLHttpRequest=oldXHR;Date.now=now;}
+    const c=new OfficialMinecraftClient0257('https://never.example','never-jwt','never-session',invoke);
+    await c.begin();Date.now=()=>now()+10000;await c.poll();
+    const file=new File([new Uint8Array([137,80,78,71,13,10,26,10,0])],'skin.png',{type:'image/png'});
+    const progress=[];
+    const updated=await c.uploadSkin(file,'slim',value=>progress.push(value));
+    assert.equal(updated.name,'owner');assert.deepEqual(progress,[100]);
+    const upload=requests.find(r=>r.command==='official_identity_texture_0262');
+    assert.equal(upload.args.operation,'uploadSkin');assert.equal(upload.args.variant,'slim');
+    assert.deepEqual(upload.args.skinBytes,[137,80,78,71,13,10,26,10,0]);
+    assert.equal('session' in upload.args,false);
+    assert.equal((await c.profile()).id,profile.id);
+  }finally{globalThis.fetch=previousFetch;globalThis.XMLHttpRequest=previousXHR;Date.now=now;}
 });

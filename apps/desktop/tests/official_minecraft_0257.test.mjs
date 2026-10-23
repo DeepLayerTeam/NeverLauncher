@@ -1,54 +1,69 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {OfficialMinecraftClient0257} from '../build-tests/official_minecraft_0257.js';
+const profile = {id:'123456781234123412341234567890ab',name:'Owner',skins:[],capes:[]};
 
-function mockResponse(data, status = 200, headers = {}) {
- return {ok: status >= 200 && status < 300, status, headers: {get: key => headers[key] || null}, json: async () => ({data})};
-}
-
-test('official device authorization, selected account, refresh, and isolation', async () => {
- const originalFetch = globalThis.fetch;
- const originalDate = Date.now;
- const requests = [];
- let count = 0;
- globalThis.fetch = async (url, options) => {
-  requests.push({url, options});
-  const path = new URL(url).pathname;
-  if (path.endsWith('/device/start')) return mockResponse({flow:'flow-0', userCode:'ABCD', verificationUri:'https://microsoft.com/link', intervalSeconds:5, expiresIn:900});
-  if (path.endsWith('/device/poll')) return count++ === 0
-   ? mockResponse({status:'pending', flow:'flow-1', intervalSeconds:5},202)
-   : mockResponse({session:'encrypted-official-session',profile:{id:'123456781234123412341234567890ab',name:'Owner',skins:[],capes:[]}});
-  if (path.endsWith('/profile')) return mockResponse({profile:{id:'123456781234123412341234567890ab',name:'Owner',skins:[],capes:[]}},200,{'X-Official-Minecraft-Session':'rotated-official-session'});
-  if (path.endsWith('/launch-credentials')) return mockResponse({realm:'official-minecraft',username:'Owner',uuid:'123456781234123412341234567890ab',accessToken:'official-jwt',userType:'msa',authServerBaseUrl:''});
-  throw new Error(`unexpected request: ${path}`);
- };
- try {
-  const c=new OfficialMinecraftClient0257('https://never.example','never-jwt');
-  const device=await c.begin();assert.equal(device.userCode,'ABCD');
-  Date.now=()=>originalDate()+10000;
-  assert.equal((await c.poll()).pending,true);
-  Date.now=()=>originalDate()+20000;
-  const p=await c.poll();assert.equal(p.profile.name,'Owner');
-  const profile=await c.profile();assert.equal(profile.name,'Owner');
-  const creds=await c.credentials();assert.equal(creds.userType,'msa');
-  assert.equal(creds.authServerBaseUrl,'');
-  assert.equal(requests.at(-1).options.headers['X-Official-Minecraft-Session'],'rotated-official-session');
-  assert.equal(requests.at(-1).options.headers.Authorization,'Bearer never-jwt');
-  c.clear();await assert.rejects(c.credentials(),/Подключите официальный аккаунт/);
- } finally {globalThis.fetch=originalFetch;Date.now=originalDate}
+test('official flow uses ONLY the native boundary; no tickets or game credentials in IPC results',async()=>{
+  const requests=[];
+  const invoke=async(command,args)=>{
+    requests.push({command,args});
+    switch(command){
+      case 'official_identity_cancel_0262':return;
+      case 'official_identity_begin_0262':return {verificationUri:'https://microsoft.com/devicelogin',userCode:'ABCD',intervalSeconds:5,expiresIn:900};
+      case 'official_identity_poll_0262':return {pending:false,profile};
+      case 'official_identity_status_0262':return profile;
+      case 'official_identity_disconnect_0262':return;
+      default:throw Error(command);
+    }
+  };
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=()=>{throw Error('renderer must not call official API')};
+  const originalDate=Date.now;
+  try{
+    const c=new OfficialMinecraftClient0257('https://backend.example','never-access','never-session',invoke);
+    assert.equal((await c.begin()).userCode,'ABCD');
+    Date.now=()=>originalDate()+10000;
+    assert.deepEqual((await c.poll()).profile,profile);
+    assert.equal(c.linked,true);
+    assert.equal((await c.profile()).name,'Owner');
+    await assert.rejects(c.credentials(),/native manager/);
+    assert.equal(requests.some(r=>r.command==='official_identity_poll_0262'&&r.args.context.neverSessionId==='never-session'),true);
+    assert.equal(requests.some(r=>r.command==='official_identity_launch_credentials'),false);
+    assert.equal(requests.some(r=>JSON.stringify(r.args).includes('official-jwt')),false);
+    await c.disconnect();assert.equal(c.linked,false);
+  }finally{globalThis.fetch=originalFetch;Date.now=originalDate;}
 });
 
-test('cannot accept local identities as official Minecraft credentials', async () => {
- const originalFetch=globalThis.fetch, originalDate=Date.now;
- globalThis.fetch=async (url) => url.endsWith('/device/start')
-  ? mockResponse({flow:'flow',userCode:'A',verificationUri:'https://microsoft.com/link',intervalSeconds:0,expiresIn:100})
-  : url.endsWith('/device/poll')
-    ? mockResponse({session:'opaque',profile:{id:'aaa',name:'Someone',skins:[],capes:[]}})
-    : mockResponse({realm:'local-project',username:'Someone',uuid:'aaa',accessToken:'local-token',userType:'mojang',authServerBaseUrl:'https://never.example'});
- try {
-  const c=new OfficialMinecraftClient0257('https://never.example','never-jwt');await c.begin();
-  Date.now=()=>originalDate()+10000;
-  await c.poll();
-  await assert.rejects(c.credentials(),/Некорректная официальная Minecraft identity/);
- } finally {globalThis.fetch=originalFetch;Date.now=originalDate}
+test('restoring native profile does not return a session ticket',async()=>{
+  const commands=[];
+  const c=new OfficialMinecraftClient0257('https://backend.example','never-token-123456789','session',async (cmd)=>{
+    commands.push(cmd);return cmd==='official_identity_status_0262'?profile:undefined;
+  });
+  assert.equal(c.linked,false);
+  assert.equal((await c.restore())?.id,profile.id);
+  assert.equal(c.linked,true);
+  assert.deepEqual(commands,['official_identity_status_0262']);
+});
+
+test('rejects early polling before native Device Code call',async()=>{
+  const commands=[];
+  const c=new OfficialMinecraftClient0257('https://backend.example','never-token-123456789','session',async cmd=>{
+    commands.push(cmd);
+    return cmd==='official_identity_begin_0262' ? {verificationUri:'https://microsoft.com/link',userCode:'A',intervalSeconds:5,expiresIn:900} : undefined;
+  });
+  await c.begin();
+  await assert.rejects(c.poll(),/интервал/);
+  assert.equal(commands.includes('official_identity_poll_0262'),false);
+});
+
+test('never forwards native account tickets or token fields to preview',async()=>{
+ const calls=[];
+ const c=new OfficialMinecraftClient0257('https://backend.example','never-platform-token','sid',async(cmd,args)=>{
+   calls.push({cmd,args});
+   if(cmd==='official_identity_texture_0262')return profile;
+   if(cmd==='official_identity_cancel_0262')return;
+   return profile;
+ });
+ await c.selectCape('cape1');await c.resetCape();await c.resetSkin();
+ assert.ok(calls.filter(x=>x.cmd==='official_identity_texture_0262').every(x=>!('session' in x.args) && !('accessToken' in x.args)));
 });

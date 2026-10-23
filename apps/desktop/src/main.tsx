@@ -364,8 +364,8 @@ function App() {
   const [officialProfile, setOfficialProfile] = useState<OfficialProfile0257 | null>(null);
   const [minecraftIdentity, setMinecraftIdentity] = useState<'local'|'official'>('local');
   if (authSession?.accessToken && settings.backendUrl) {
-    if (!officialMinecraftClient.current) officialMinecraftClient.current = new OfficialMinecraftClient0257(settings.backendUrl, authSession.accessToken);
-    else officialMinecraftClient.current.rebind(settings.backendUrl, authSession.accessToken);
+    if (!officialMinecraftClient.current) officialMinecraftClient.current = new OfficialMinecraftClient0257(settings.backendUrl, authSession.accessToken, authSession.sessionId, callTauri);
+    else officialMinecraftClient.current.rebind(settings.backendUrl, authSession.accessToken, authSession.sessionId);
   }
 
   const [deviceKey, setDeviceKey] = useState<DeviceKeyInfo | null>(null);
@@ -374,10 +374,17 @@ function App() {
   // Switching Never identities invalidates any Microsoft account previously
   // linked in the running Desktop process (session tickets are SID-bound).
   useEffect(() => {
-    officialMinecraftClient.current?.clear();
+    let cancelled = false;
+    const client = officialMinecraftClient.current;
+    client?.clear();
     setOfficialProfile(null);
     setMinecraftIdentity('local');
-  }, [authSession?.sessionId]);
+    if (authSession?.accessToken && authSession.sessionId && client) {
+      void client.restore().then(profile => { if (!cancelled && profile) setOfficialProfile(profile); })
+        .catch(() => { /* expired/revoked session must not be treated as linked */ });
+    }
+    return () => { cancelled = true; };
+  }, [authSession?.sessionId, settings.backendUrl]);
 
   useEffect(() => {
     callTauri<DesktopSettings>('load_desktop_config')
@@ -1548,6 +1555,7 @@ function App() {
       // Only cached signed Manifest v2 may be used when the backend is offline.
       // Never manufacture Minecraft access tokens for offline launches.
       let minecraftCredentials: MinecraftLaunchCredentials | undefined;
+      let officialLaunchIdentity: {backendUrl:string;neverToken:string;neverSessionId:string} | undefined;
       if (minecraftIdentity === 'official' && (preferences.offline || settings.serverId)) {
         throw new Error('Официальный Minecraft нельзя смешивать с локальным ServerBridge UUID/токеном. Отключите offline и локальный ServerBridge serverId либо используйте локальный профиль.');
       }
@@ -1555,7 +1563,8 @@ function App() {
         const guardAttestationTicket = await createGuardLaunchTicket();
         if (minecraftIdentity === 'official') {
           if (!officialProfile || !officialMinecraftClient.current?.linked) throw new Error('Подключите официальный Minecraft-профиль в разделе авторизации.');
-          minecraftCredentials = await officialMinecraftClient.current.credentials();
+          if (!authSession?.accessToken || !authSession.sessionId) throw new Error('Необходимо войти в NeverLauncher.');
+          officialLaunchIdentity = {backendUrl:settings.backendUrl,neverToken:authSession.accessToken,neverSessionId:authSession.sessionId};
         } else {
           minecraftCredentials = await createMinecraftLaunchSession(guardAttestationTicket);
         }
@@ -1574,6 +1583,7 @@ function App() {
           javaPath: settings.javaPath || null,
           username: minecraftCredentials?.username || settings.username,
           minecraftCredentials: minecraftCredentials || null,
+          officialIdentity: officialLaunchIdentity || null,
           pinnedPublicKey: settings.pinnedPublicKey,
           preferences,
           componentPreset:settings.componentPreset||null,

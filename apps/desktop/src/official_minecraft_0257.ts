@@ -1,4 +1,7 @@
-/** Official Minecraft operations never read or write Never/Yggdrasil texture IDs. */
+/** 0.26.2 official Minecraft facade. Only native Tauri is allowed to hold official
+ * session tickets/Microsoft refresh/Minecraft access tokens. Renderer receives
+ * profile metadata, Device Code display values and status, never credentials.
+ */
 export type OfficialProfile0257 = {
   id: string;
   name: string;
@@ -10,127 +13,89 @@ export type OfficialDevice0257 = {
   userCode: string;
   intervalSeconds: number;
   expiresIn: number;
-  flow: string;
 };
-export type OfficialMinecraftCredentials0257 = {
-  realm: 'official-minecraft';
-  username: string;
-  uuid: string;
-  accessToken: string;
-  userType: 'msa';
-  authServerBaseUrl: string;
-};
+export type NativeOfficialInvoke0262 = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
 
 export class OfficialMinecraftClient0257 {
-  private flow: string | null = null;
-  private session: string | null = null;
+  private active = false;
   private nextPoll = 0;
-  constructor(private backendUrl: string, private neverToken: string) {}
-  rebind(backendUrl: string, neverToken: string) {
-    if (this.backendUrl !== backendUrl) this.clear();
+  private generation = 0;
+  constructor(private backendUrl: string, private neverToken: string, private neverSessionId: string,
+              private readonly native: NativeOfficialInvoke0262) {}
+  rebind(backendUrl: string, neverToken: string, neverSessionId: string) {
+    if (this.backendUrl !== backendUrl || this.neverSessionId !== neverSessionId) this.clear();
     this.backendUrl = backendUrl;
     this.neverToken = neverToken;
+    this.neverSessionId = neverSessionId;
   }
-  clear() { this.session = null; this.flow = null; this.nextPoll = 0; }
-  get linked() { return Boolean(this.session); }
-  private async request<T>(route: string, method: string, body?: BodyInit, contentType?: string, ticket?: string): Promise<{status: number; data: T}> {
-    if (!this.neverToken) throw new Error('Сначала выполните вход в NeverLauncher.');
-    const headers: Record<string, string> = {Authorization: `Bearer ${this.neverToken}`};
-    if (ticket) headers['X-Official-Minecraft-Session'] = ticket;
-    if (contentType) headers['Content-Type'] = contentType;
-    const response = await fetch(`${this.backendUrl.replace(/\/$/, '')}${route}`, {method, headers, body, cache: 'no-store'});
-    const rotated = response.headers.get('X-Official-Minecraft-Session');
-    if (rotated && this.session) this.session = rotated;
-    const payload = await response.json().catch(() => null);
-    if (!response.ok && response.status !== 202) throw new Error(payload?.error?.message || `Minecraft Services: ${response.status}`);
-    return {status: response.status, data: (payload?.data ?? payload) as T};
+  private get context(): Record<string,string> {
+    if (!this.neverToken || !this.neverSessionId) throw new Error('Сначала выполните вход в NeverLauncher.');
+    return {backendUrl: this.backendUrl, neverToken: this.neverToken, neverSessionId: this.neverSessionId};
+  }
+  private async call<T>(command: string, extra: Record<string,unknown> = {}): Promise<T> {
+    return this.native<T>(command, {context: this.context, ...extra});
+  }
+  clear() {
+    this.generation++;
+    this.active = false;
+    this.nextPoll = 0;
+    // No async command is fired here: begin() must not race a delayed cancel.
+    // Old flows expire natively or can be explicitly cancelled by cancel().
+  }
+  get linked() { return this.active; }
+  /** Restore validates the encrypted backend ticket and official UUID server-side. */
+  async restore(): Promise<OfficialProfile0257|null> {
+    const generation = this.generation;
+    const profile = await this.call<OfficialProfile0257|null>('official_identity_status_0262');
+    if (generation !== this.generation) return null;
+    this.active = Boolean(profile);
+    return profile;
+  }
+  async cancel(): Promise<void> {
+    this.clear();
+    await this.native('official_identity_cancel_0262', {backendUrl:this.backendUrl, neverSessionId:this.neverSessionId});
   }
   async begin(): Promise<OfficialDevice0257> {
-    this.clear();
-    const {data} = await this.request<OfficialDevice0257>('/api/v1/minecraft/official/device/start', 'POST');
-    if (!data?.flow || !data.userCode || !data.verificationUri) throw new Error('Microsoft вернул неполные данные авторизации.');
-    this.flow = data.flow;
-    this.nextPoll = Date.now() + data.intervalSeconds * 1000;
-    return data;
+    await this.cancel();
+    const generation = this.generation;
+    const challenge = await this.call<OfficialDevice0257>('official_identity_begin_0262');
+    if (generation !== this.generation) throw new Error('Авторизация отменена.');
+    this.nextPoll = Date.now() + Math.max(challenge.intervalSeconds,5)*1000;
+    return challenge;
   }
-  async poll(): Promise<{pending: boolean; profile?: OfficialProfile0257}> {
-    if (!this.flow) throw new Error('Нет незавершённой Microsoft-авторизации.');
-    if (Date.now() < this.nextPoll) throw new Error('Запрос выполняется слишком часто.');
-    const {status, data} = await this.request<{status?: string; flow?: string; intervalSeconds?: number; profile?: OfficialProfile0257; session?: string}>('/api/v1/minecraft/official/device/poll', 'POST', undefined, undefined, this.flow);
-    if (status === 202) {
-      if (!data.flow) throw new Error('Сервер не вернул продолжение авторизации.');
-      this.flow = data.flow;
-      this.nextPoll = Date.now() + Math.max(data.intervalSeconds ?? 5, 5) * 1000;
-      return {pending: true};
-    }
-    if (!data.session || !data.profile?.id) throw new Error('Официальный Minecraft-профиль не подтверждён.');
-    this.session = data.session;
-    this.flow = null;
-    return {pending: false, profile: data.profile};
-  }
-  private ticket(): string {
-    if (!this.session) throw new Error('Подключите официальный аккаунт Minecraft.');
-    return this.session;
+  async poll(): Promise<{pending:boolean;profile?:OfficialProfile0257}> {
+    if (Date.now() < this.nextPoll) throw new Error('Соблюдайте интервал Microsoft Device Code.');
+    const generation = this.generation;
+    const result = await this.call<{pending:boolean;profile?:OfficialProfile0257;intervalSeconds?:number}>('official_identity_poll_0262');
+    if (generation !== this.generation) throw new Error('Авторизация отменена.');
+    if (result.pending) this.nextPoll = Date.now() + Math.max(result.intervalSeconds ?? 5,5)*1000;
+    else { if (!result.profile?.id) throw new Error('Не удалось подтвердить официальный профиль.'); this.active = true; }
+    return result;
   }
   async profile(): Promise<OfficialProfile0257> {
-    const {data} = await this.request<{profile: OfficialProfile0257}>('/api/v1/minecraft/official/profile', 'GET', undefined, undefined, this.ticket());
-    return data.profile;
+    const profile = await this.restore();
+    if (!profile) throw new Error('Подключите официальный Minecraft-аккаунт.');
+    return profile;
   }
-  uploadSkin(file: File, variant: 'classic' | 'slim', onProgress?: (progress: number) => void, signal?: AbortSignal): Promise<OfficialProfile0257> {
-    if (file.size < 1 || file.size > 4 * 1024 * 1024 || !file.name.toLowerCase().endsWith('.png') || (file.type && file.type !== 'image/png')) {
-      return Promise.reject(new Error('Требуется PNG не более 4 МиБ.'));
-    }
-    const ticket = this.ticket();
-    const form = new FormData(); form.append('variant', variant); form.append('file', file, 'skin.png');
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      let completed = false;
-      const cleanup = () => signal?.removeEventListener('abort', abort);
-      const done = (value?: OfficialProfile0257, err?: Error) => {
-        if (completed) return;
-        completed = true; cleanup();
-        if (err) reject(err); else if (value) resolve(value); else reject(new Error('Minecraft Services не вернул профиль.'));
-      };
-      const abort = () => xhr.abort();
-      xhr.open('POST', `${this.backendUrl.replace(/\/$/, '')}/api/v1/minecraft/official/skin`, true);
-      xhr.timeout = 45_000;
-      xhr.setRequestHeader('Authorization', `Bearer ${this.neverToken}`);
-      xhr.setRequestHeader('X-Official-Minecraft-Session', ticket);
-      xhr.upload.onprogress = event => { if (event.lengthComputable && event.total > 0) onProgress?.(Math.min(99, Math.round(event.loaded / event.total * 100))); };
-      xhr.onload = () => {
-        const rotated = xhr.getResponseHeader('X-Official-Minecraft-Session');
-        if (rotated && this.session === ticket) this.session = rotated;
-        let payload: {data?: {profile?: OfficialProfile0257};error?: {message?: string}} | null = null;
-        try { payload = JSON.parse(xhr.responseText); } catch { /* invalid JSON */ }
-        if (xhr.status < 200 || xhr.status >= 300) { done(undefined, new Error(payload?.error?.message || `Minecraft Services: ${xhr.status}`)); return; }
-        if (payload?.data?.profile?.id) { onProgress?.(100); done(payload.data.profile); }
-        else done(undefined, new Error('Minecraft Services не вернул подтверждённый профиль.'));
-      };
-      xhr.onerror = () => done(undefined, new Error('Не удалось передать скин в Minecraft Services.'));
-      xhr.ontimeout = () => done(undefined, new Error('Время загрузки официального скина истекло.'));
-      xhr.onabort = () => done(undefined, new DOMException('Загрузка отменена.', 'AbortError'));
-      if (signal?.aborted) {done(undefined, new DOMException('Загрузка отменена.', 'AbortError')); return;}
-      signal?.addEventListener('abort', abort, {once:true});
-      xhr.send(form);
-    });
+  async disconnect(): Promise<void> {
+    this.clear();
+    await this.native('official_identity_disconnect_0262', {backendUrl:this.backendUrl, neverSessionId:this.neverSessionId});
   }
-  async resetSkin(): Promise<OfficialProfile0257> {
-    const {data} = await this.request<{profile: OfficialProfile0257}>('/api/v1/minecraft/official/skin', 'DELETE', undefined, undefined, this.ticket());
-    return data.profile;
+  async uploadSkin(file: File, variant: 'classic'|'slim', onProgress?: (percent:number)=>void, signal?:AbortSignal): Promise<OfficialProfile0257> {
+    if (signal?.aborted) throw new DOMException('Загрузка отменена.', 'AbortError');
+    if (file.size<1 || file.size>4*1024*1024 || !file.name.toLowerCase().endsWith('.png') || (file.type && file.type!=='image/png')) throw new Error('Требуется PNG не более 4 МиБ.');
+    const buffer = new Uint8Array(await file.arrayBuffer());
+    if (signal?.aborted) throw new DOMException('Загрузка отменена.', 'AbortError');
+    // The file is not an OAuth secret. Still validate bytes before crossing IPC.
+    if (buffer[0]!==137 || buffer[1]!==80 || buffer[2]!==78 || buffer[3]!==71) throw new Error('Недопустимый PNG.');
+    const result = await this.call<OfficialProfile0257>('official_identity_texture_0262', {operation:'uploadSkin',skinBytes:Array.from(buffer),variant});
+    if (signal?.aborted) throw new DOMException('Загрузка отменена.', 'AbortError');
+    onProgress?.(100);
+    return result;
   }
-  async selectCape(capeId: string): Promise<OfficialProfile0257> {
-    const {data} = await this.request<{profile: OfficialProfile0257}>('/api/v1/minecraft/official/cape', 'PUT', JSON.stringify({capeId}), 'application/json', this.ticket());
-    return data.profile;
-  }
-  async resetCape(): Promise<OfficialProfile0257> {
-    const {data} = await this.request<{profile: OfficialProfile0257}>('/api/v1/minecraft/official/cape', 'DELETE', undefined, undefined, this.ticket());
-    return data.profile;
-  }
-  async credentials(): Promise<OfficialMinecraftCredentials0257> {
-    const {data} = await this.request<OfficialMinecraftCredentials0257>('/api/v1/minecraft/official/launch-credentials', 'POST', undefined, undefined, this.ticket());
-    if (data.realm !== 'official-minecraft' || data.userType !== 'msa' || data.authServerBaseUrl !== '' || !data.uuid || !data.accessToken) {
-      throw new Error('Некорректная официальная Minecraft identity.');
-    }
-    return data;
-  }
+  async resetSkin():Promise<OfficialProfile0257> { return this.call('official_identity_texture_0262',{operation:'resetSkin'}); }
+  async selectCape(capeId:string):Promise<OfficialProfile0257> { return this.call('official_identity_texture_0262',{operation:'selectCape',capeId}); }
+  async resetCape():Promise<OfficialProfile0257> { return this.call('official_identity_texture_0262',{operation:'resetCape'}); }
+  /** Intentional break: never return game access tokens through renderer. */
+  async credentials():Promise<never> { throw new Error('Official Minecraft launch credentials доступны только NeverRuntime через native manager.'); }
 }

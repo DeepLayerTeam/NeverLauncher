@@ -1,0 +1,47 @@
+name: Native Minecraft Identity 0.26.2
+on:
+  push:
+    paths:
+      - 'apps/desktop/src/**'
+      - 'apps/desktop/src-tauri/**'
+      - 'apps/desktop/tests/official_minecraft_0257.test.mjs'
+      - 'apps/desktop/package*.json'
+      - '.github/workflows/native-official-identity-0262.yml'
+  pull_request:
+    paths:
+      - 'apps/desktop/src/**'
+      - 'apps/desktop/src-tauri/**'
+      - 'apps/desktop/tests/official_minecraft_0257.test.mjs'
+      - 'apps/desktop/package*.json'
+      - '.github/workflows/native-official-identity-0262.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-boundary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Desktop compilation and renderer privacy tests
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npm run test:textures
+          npm run build
+      - name: Compile native identity and execute Rust tests
+        run: |
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_identity_0262::tests -- --nocapture
+          cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml

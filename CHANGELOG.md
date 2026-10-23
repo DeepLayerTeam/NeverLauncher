@@ -1,3 +1,12 @@
+## 0.26.2 — Native Identity & Security Boundary
+
+- Migrated Desktop official Minecraft Device Code, polling, profile, cape/skin operations from renderer fetch/session ticket to native Tauri HTTP requests; renderer receives no official flow tickets, refresh tokens or game access tokens.
+- Added a functioning Rust Official Identity Manager backed by the operating system credential store, scoped to Backend origin + Never session; no plaintext storage fallback. Linked sessions persist across Desktop restart when the Never session is still valid.
+- Routed official launch credential retrieval through the manager directly into NeverRuntime; rejected renderer-supplied MSA credentials, mixed identities and official offline launch.
+- Bounded official API responses, disabled HTTP redirects, required HTTPS (except loopback development), validated profile IDs, enforced Device Code polling/expiry and propagated rotated session tickets atomically to the vault.
+- Implemented user-initiated cancel/disconnect, safe session restore and native texture operations; added renderer privacy tests and Rust validation tests.
+- **External provider gate remains unresolved** until the operator runs the actual own-app POC and real Minecraft account/server checks. Rust compilation and real keyring integration require CI/native builders; no provider credentials were supplied for live E2E.
+
 ## 0.26.1 — Official Minecraft Provider POC & External Approval Gate
 
 - Added executable `official-provider-poc` command that validates NeverLauncher's **own** Microsoft Entra public-client ID using live personal-account Authorization Code + PKCE (system browser, loopback callback) or device-code fallback; no new authentication UI or local-account impersonation.

@@ -27,13 +27,14 @@ export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Pr
         <span>Код: <strong>{device.userCode}</strong></span>
         <a href={device.verificationUri} target="_blank" rel="noopener noreferrer">Открыть вход Microsoft</a>
         <button disabled={busy} onClick={()=>void perform(async()=>{const p=await client.poll();if(p.profile){onLinked(p.profile);setDevice(null);}})}>Проверить вход</button>
+        <button disabled={busy} onClick={()=>void perform(async()=>{await client.cancel();setDevice(null);})}>Отменить вход</button>
       </>}
     </div>}
     {linkedProfile && <>
       <p>Профиль: <strong>{linkedProfile.name}</strong> · UUID: <code>{linkedProfile.id}</code></p>
       <div className="toolbar inline">
         <button disabled={busy} onClick={()=>void perform(async()=>onLinked(await client.profile()))}>Обновить профиль</button>
-        <button disabled={busy} onClick={()=>{client.clear();onLinked(null);setDevice(null);}}>Отключить официальный аккаунт</button>
+        <button disabled={busy} onClick={()=>void perform(async()=>{await client.disconnect();onLinked(null);setDevice(null);})}>Отключить официальный аккаунт</button>
       </div>
       <div className="toolbar inline">
         <input type="file" accept="image/png" aria-label="Официальный скин PNG" onChange={e=>setFile(e.target.files?.[0]||null)}/>
