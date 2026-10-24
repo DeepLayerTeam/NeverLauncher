@@ -67,7 +67,7 @@ jobs:
           python-version: '3.12'
       - run: python3 -m pip install 'cryptography>=43,<47'
       - name: Download externally authorized signed platform attestations
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: optional-components-ga-0250-*
           run-id: ${{ inputs.evidence_run_id }}
