@@ -90,24 +90,26 @@ type factoryPlan0271 struct {
 	ReproducibilitySHA256  string                 `json:"reproducibilitySha256"`
 }
 type factoryBuildOptions0271 struct {
-	Loader           string
-	Minecraft        string
-	LoaderVersion    string
-	ClientDir        string
-	VersionManifest  string
-	AssetBaseURL     string
-	LibraryBaseURL   string
-	MetaBaseURL      string
-	InstallerURL     string
-	InstallerSHA1    string
-	MavenMetadataURL string
-	JavaExecutable   string
-	ProcessorTimeout time.Duration
-	ProcessorSandbox string
-	Targets          []vanillaTarget
-	Workers          int
-	StrictUpstream   bool
-	HTTPClient       *http.Client
+	Loader                string
+	Minecraft             string
+	LoaderVersion         string
+	ClientDir             string
+	VersionManifest       string
+	AssetBaseURL          string
+	LibraryBaseURL        string
+	MetaBaseURL           string
+	InstallerURL          string
+	InstallerSHA1         string
+	InstallerSourceFile   string
+	InstallerSourceSHA256 string
+	MavenMetadataURL      string
+	JavaExecutable        string
+	ProcessorTimeout      time.Duration
+	ProcessorSandbox      string
+	Targets               []vanillaTarget
+	Workers               int
+	StrictUpstream        bool
+	HTTPClient            *http.Client
 }
 type factoryRecorderKey0271 struct{}
 type factoryRecorder0271 struct {
@@ -637,7 +639,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 		profilePath = result.ProfilePath
 		mainClass = result.MainClass
 	case "forge", "neoforge":
-		result, e := installForgeLike(ctx, forgeMaterializeOptions{Loader: o.Loader, MinecraftVersion: o.Minecraft, LoaderVersion: o.LoaderVersion, ClientDir: staging, JavaExecutable: o.JavaExecutable, InstallerURL: o.InstallerURL, InstallerSHA1: o.InstallerSHA1, MavenMetadataURL: o.MavenMetadataURL, VersionManifest: o.VersionManifest, AssetBaseURL: o.AssetBaseURL, LibraryBaseURL: o.LibraryBaseURL, Targets: o.Targets, Workers: o.Workers, StrictUpstream: o.StrictUpstream, ProcessorTimeout: o.ProcessorTimeout, ProcessorSandbox: o.ProcessorSandbox, HTTPClient: o.HTTPClient})
+		result, e := installForgeLike(ctx, forgeMaterializeOptions{Loader: o.Loader, MinecraftVersion: o.Minecraft, LoaderVersion: o.LoaderVersion, ClientDir: staging, JavaExecutable: o.JavaExecutable, InstallerURL: o.InstallerURL, InstallerSHA1: o.InstallerSHA1, InstallerSourceFile: o.InstallerSourceFile, InstallerSourceSHA256: o.InstallerSourceSHA256, MavenMetadataURL: o.MavenMetadataURL, VersionManifest: o.VersionManifest, AssetBaseURL: o.AssetBaseURL, LibraryBaseURL: o.LibraryBaseURL, Targets: o.Targets, Workers: o.Workers, StrictUpstream: o.StrictUpstream, ProcessorTimeout: o.ProcessorTimeout, ProcessorSandbox: o.ProcessorSandbox, HTTPClient: o.HTTPClient})
 		if e != nil {
 			return factoryPlan0271{}, e
 		}
@@ -765,9 +767,12 @@ func rejectFactoryOutputPath0271(root, output string) error {
 
 func handleRuntimeFactory0271(args []string) error {
 	if len(args) < 1 {
-		return errors.New("runtime client-factory requires build|verify|inspect")
+		return errors.New("runtime client-factory requires build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib")
 	}
 	mode := args[0]
+	if mode != "build" && mode != "verify" && mode != "inspect" {
+		return handleRuntimeMirror0274(args)
+	}
 	args = args[1:]
 	dir := strings.TrimSpace(flagValue(args, "--client-dir", ""))
 	if dir == "" {
@@ -801,7 +806,7 @@ func handleRuntimeFactory0271(args []string) error {
 		if err != nil {
 			return err
 		}
-		opts := factoryBuildOptions0271{Loader: flagValue(args, "--loader", "vanilla"), Minecraft: flagValue(args, "--minecraft", "latest-release"), LoaderVersion: flagValue(args, "--loader-version", "latest-stable"), ClientDir: dir, Targets: targets, Workers: workers, StrictUpstream: !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"), VersionManifest: flagValue(args, "--version-manifest", defaultMojangVersionManifest), AssetBaseURL: flagValue(args, "--asset-base-url", defaultMojangAssetBase), LibraryBaseURL: flagValue(args, "--library-base-url", defaultMojangLibraryBase), MetaBaseURL: flagValue(args, "--meta-base-url", ""), InstallerURL: flagValue(args, "--installer-url", ""), InstallerSHA1: flagValue(args, "--installer-sha1", ""), MavenMetadataURL: flagValue(args, "--maven-metadata-url", ""), JavaExecutable: flagValue(args, "--java", ""), ProcessorTimeout: timeout, ProcessorSandbox: strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process")))}
+		opts := factoryBuildOptions0271{Loader: flagValue(args, "--loader", "vanilla"), Minecraft: flagValue(args, "--minecraft", "latest-release"), LoaderVersion: flagValue(args, "--loader-version", "latest-stable"), ClientDir: dir, Targets: targets, Workers: workers, StrictUpstream: !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"), VersionManifest: flagValue(args, "--version-manifest", defaultMojangVersionManifest), AssetBaseURL: flagValue(args, "--asset-base-url", defaultMojangAssetBase), LibraryBaseURL: flagValue(args, "--library-base-url", defaultMojangLibraryBase), MetaBaseURL: flagValue(args, "--meta-base-url", ""), InstallerURL: flagValue(args, "--installer-url", ""), InstallerSHA1: flagValue(args, "--installer-sha1", ""), InstallerSourceFile: flagValue(args, "--installer-file", ""), InstallerSourceSHA256: flagValue(args, "--installer-sha256", ""), MavenMetadataURL: flagValue(args, "--maven-metadata-url", ""), JavaExecutable: flagValue(args, "--java", ""), ProcessorTimeout: timeout, ProcessorSandbox: strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process")))}
 		p, err := executeFactoryBuild0271(context.Background(), opts)
 		if err != nil {
 			return err

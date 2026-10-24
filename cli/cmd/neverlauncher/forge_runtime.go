@@ -41,6 +41,8 @@ type forgeMaterializeOptions struct {
 	JavaExecutable         string
 	InstallerURL           string
 	InstallerSHA1          string
+	InstallerSourceFile    string
+	InstallerSourceSHA256  string
 	MavenMetadataURL       string
 	VersionManifest        string
 	AssetBaseURL           string
@@ -385,6 +387,36 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		return forgeMaterializeResult{}, err
 	}
 	installerSHA1 := strings.ToLower(strings.TrimSpace(opts.InstallerSHA1))
+	// The verified local installer is a cache source, not an alternate runtime
+	// identity: the canonical upstream URL remains in the resolution lock.
+	// Never accept an unpinned local installer or use it to defeat a pinned lock.
+	if opts.InstallerSourceFile != "" {
+		if !isSHA256Hex0271(opts.InstallerSourceSHA256) {
+			return forgeMaterializeResult{}, errors.New("local installer requires exact --installer-sha256")
+		}
+		if _, err := mirrorCheckedHash0274(opts.InstallerSourceFile, opts.InstallerSourceSHA256); err != nil {
+			return forgeMaterializeResult{}, err
+		}
+		if pinned != nil && !strings.EqualFold(pinned.PayloadSHA256, opts.InstallerSourceSHA256) {
+			return forgeMaterializeResult{}, errors.New("local installer differs from pinned installer")
+		}
+		sha1sum, _, _, err := hashFileSHA1SHA256(opts.InstallerSourceFile)
+		if err != nil {
+			return forgeMaterializeResult{}, err
+		}
+		if installerSHA1 != "" && !strings.EqualFold(installerSHA1, sha1sum) {
+			return forgeMaterializeResult{}, errors.New("local installer SHA-1 mismatch")
+		}
+		installerSHA1 = sha1sum
+		if _, err := os.Lstat(installerPath); errors.Is(err, os.ErrNotExist) {
+			if err := copyFileAtomic(opts.InstallerSourceFile, installerPath); err != nil {
+				return forgeMaterializeResult{}, err
+			}
+		} else if err != nil {
+			return forgeMaterializeResult{}, err
+		}
+	}
+
 	installerCacheHit := false
 	upstreamRecoveryUsed := false
 	var installerFile vanillaDownloadedFile
