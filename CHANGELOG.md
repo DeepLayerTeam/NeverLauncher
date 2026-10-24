@@ -1,3 +1,10 @@
+## 0.27.7 — Shared Libraries, Assets & Natives
+
+- Implemented opt-in, content-addressed shared Maven/library/native and asset cache in actual Vanilla/Fabric/Quilt/Forge/NeoForge download workers, with SHA-1 and SHA-256 verification, atomic concurrent cache insertion and independent verified client copies. Added `--shared-cache-dir` for Client Factory, direct materializers, modpack import and workspace builds.
+- Fixed multi-target native materialization: one native JAR may serve several target architectures, but each target receives its own extraction. Reject unknown classifier architectures and conflicting native outputs instead of silently replacing existing binaries.
+- Reject incompatible Java library revisions for the same target in Mojang metadata before materialization; preserve target-disjoint libraries and native classifiers.
+- Added functional HTTP-backed shared-cache and dual-Windows-target native fixture tests, tamper and conflict tests, cross-platform CI, and operator documentation in `docs/releases/0.27.7-shared-libraries-assets-natives.md`. These tests do not certify actual Minecraft launch on every supported OS.
+
 ## 0.27.6 — Manual Artifacts & Permission Gates
 
 - Added verified nested/flat `--manual-dir` recovery with symlink rejection, upstream SHA validation, explicit acquisition provenance and machine-actionable missing-file codes/hashes. Import stays atomic and fail-closed on untrusted metadata, missing files and hash errors.

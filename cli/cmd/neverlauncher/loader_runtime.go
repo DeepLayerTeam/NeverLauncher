@@ -34,6 +34,7 @@ type loaderMaterializeOptions struct {
 	Targets            []vanillaTarget
 	Workers            int
 	StrictUpstream     bool
+	SharedCacheDir     string
 	ResolutionLockPath string
 	LoaderCacheOnly    bool
 	EnforceGASupport   bool
@@ -232,6 +233,11 @@ func validateMetaBaseURL(raw string) error {
 }
 
 func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (loaderMaterializeResult, error) {
+	var cacheErr error
+	ctx, cacheErr = sharedArtifactsContext0277(ctx, opts.SharedCacheDir, opts.ClientDir)
+	if cacheErr != nil {
+		return loaderMaterializeResult{}, cacheErr
+	}
 	loader := strings.ToLower(strings.TrimSpace(opts.Loader))
 	if loader != "fabric" && loader != "quilt" {
 		return loaderMaterializeResult{}, fmt.Errorf("поддерживаются только Fabric и Quilt, получен %s", loader)

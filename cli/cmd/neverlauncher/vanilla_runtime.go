@@ -101,6 +101,7 @@ type vanillaInstallOptions struct {
 	Targets          []vanillaTarget
 	Workers          int
 	StrictUpstream   bool
+	SharedCacheDir   string
 	HTTPClient       *http.Client
 }
 
@@ -112,19 +113,20 @@ type vanillaDownloadTask struct {
 	Kind          string
 	TargetOS      []string
 	NativeExclude []string
-	NativeTarget  *vanillaTarget
+	NativeTargets []vanillaTarget
 }
 
 type vanillaDownloadedFile struct {
-	Path        string   `json:"path"`
-	Kind        string   `json:"kind"`
-	Size        int64    `json:"size"`
-	SHA1        string   `json:"sha1,omitempty"`
-	SHA256      string   `json:"sha256"`
-	TargetOS    []string `json:"targetOs,omitempty"`
-	Cached      bool     `json:"cached"`
-	Resumed     bool     `json:"resumed,omitempty"`
-	Quarantined bool     `json:"quarantinedPrevious,omitempty"`
+	Path           string   `json:"path"`
+	Kind           string   `json:"kind"`
+	Size           int64    `json:"size"`
+	SHA1           string   `json:"sha1,omitempty"`
+	SHA256         string   `json:"sha256"`
+	TargetOS       []string `json:"targetOs,omitempty"`
+	Cached         bool     `json:"cached"`
+	SharedCacheHit bool     `json:"sharedCacheHit,omitempty"`
+	Resumed        bool     `json:"resumed,omitempty"`
+	Quarantined    bool     `json:"quarantinedPrevious,omitempty"`
 }
 
 type vanillaInstallResult struct {
@@ -139,6 +141,7 @@ type vanillaInstallResult struct {
 	Targets           []vanillaTarget         `json:"targets"`
 	Downloaded        int                     `json:"downloaded"`
 	Cached            int                     `json:"cached"`
+	SharedCacheHits   int                     `json:"sharedCacheHits,omitempty"`
 	TotalBytes        int64                   `json:"totalBytes"`
 	Files             []vanillaDownloadedFile `json:"files"`
 	MetadataPath      string                  `json:"metadataPath"`
@@ -216,6 +219,7 @@ func handleRuntimeVanillaInstall(args []string) error {
 		Targets:          targets,
 		Workers:          workers,
 		StrictUpstream:   strict,
+		SharedCacheDir:   flagValue(args, "--shared-cache-dir", ""),
 	})
 	if err != nil {
 		return err
@@ -249,6 +253,7 @@ func handleRuntimeVanillaPackage(args []string) error {
 		Targets:          targets,
 		Workers:          workers,
 		StrictUpstream:   !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"),
+		SharedCacheDir:   flagValue(args, "--shared-cache-dir", ""),
 	})
 	if err != nil {
 		return err
@@ -352,6 +357,11 @@ func installVanillaServer(ctx context.Context, requestedVersion, serverDir, vers
 }
 
 func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaInstallResult, error) {
+	var cacheErr error
+	ctx, cacheErr = sharedArtifactsContext0277(ctx, opts.SharedCacheDir, opts.ClientDir)
+	if cacheErr != nil {
+		return vanillaInstallResult{}, cacheErr
+	}
 	if strings.TrimSpace(opts.ClientDir) == "" {
 		return vanillaInstallResult{}, errors.New("Vanilla install требует clientDir")
 	}
@@ -408,6 +418,9 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	if err := validateVanillaLaunchMetadata(metadata); err != nil {
 		return vanillaInstallResult{}, err
 	}
+	if err := validateVanillaLibraryConflicts0277(metadata.Libraries, opts.Targets); err != nil {
+		return vanillaInstallResult{}, err
+	}
 	clientDownload, ok := metadata.Downloads["client"]
 	if !ok || clientDownload.URL == "" || clientDownload.SHA1 == "" || clientDownload.Size <= 0 {
 		return vanillaInstallResult{}, errors.New("version.json не содержит проверяемый downloads.client")
@@ -435,10 +448,11 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			return fmt.Errorf("%s: upstream metadata не содержит SHA-1; отключение strict возможно только явно", task.Path)
 		}
 		if prev, exists := tasks[task.Path]; exists {
-			if prev.URL != task.URL || (!strings.EqualFold(prev.SHA1, task.SHA1) && prev.SHA1 != "" && task.SHA1 != "") || (prev.Size > 0 && task.Size > 0 && prev.Size != task.Size) {
+			if prev.URL != task.URL || prev.Kind != task.Kind || (!strings.EqualFold(prev.SHA1, task.SHA1) && prev.SHA1 != "" && task.SHA1 != "") || (prev.Size > 0 && task.Size > 0 && prev.Size != task.Size) || !equalStringSets0277(prev.NativeExclude, task.NativeExclude) {
 				return fmt.Errorf("конфликт upstream artifact %s", task.Path)
 			}
 			prev.TargetOS = unionStrings(prev.TargetOS, task.TargetOS)
+			prev.NativeTargets = unionNativeTargets0277(prev.NativeTargets, task.NativeTargets)
 			tasks[task.Path] = prev
 			return nil
 		}
@@ -512,7 +526,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 						continue
 					}
 					t := target
-					if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(artifactPath), "libraries/"), URL: artifactURL, SHA1: artifact.SHA1, Size: artifact.Size, Kind: "native-archive", TargetOS: []string{target.OS}, NativeExclude: extractExcludes(lib.Extract), NativeTarget: &t}); err != nil {
+					if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(artifactPath), "libraries/"), URL: artifactURL, SHA1: artifact.SHA1, Size: artifact.Size, Kind: "native-archive", TargetOS: []string{target.OS}, NativeExclude: extractExcludes(lib.Extract), NativeTargets: []vanillaTarget{t}}); err != nil {
 						return vanillaInstallResult{}, fmt.Errorf("native library %s: %w", lib.Name, err)
 					}
 				}
@@ -541,7 +555,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 						return vanillaInstallResult{}, fmt.Errorf("LWJGL Linux ARM64 checksum invalid for %s", lib.Name)
 					}
 					t := target
-					if err := addTask(vanillaDownloadTask{Path: "libraries/" + nativeRel, URL: upstream, SHA1: sha, Kind: "native-archive", TargetOS: []string{target.OS}, NativeTarget: &t}); err != nil {
+					if err := addTask(vanillaDownloadTask{Path: "libraries/" + nativeRel, URL: upstream, SHA1: sha, Kind: "native-archive", TargetOS: []string{target.OS}, NativeTargets: []vanillaTarget{t}}); err != nil {
 						return vanillaInstallResult{}, fmt.Errorf("LWJGL Linux ARM64 %s: %w", lib.Name, err)
 					}
 				}
@@ -568,7 +582,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				nativeURL = strings.TrimRight(base, "/") + "/" + strings.TrimLeft(nativePath, "/")
 			}
 			t := target
-			if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(nativePath), "libraries/"), URL: nativeURL, SHA1: native.SHA1, Size: native.Size, Kind: "native-archive", TargetOS: []string{target.OS}, NativeExclude: extractExcludes(lib.Extract), NativeTarget: &t}); err != nil {
+			if err := addTask(vanillaDownloadTask{Path: "libraries/" + strings.TrimPrefix(filepath.ToSlash(nativePath), "libraries/"), URL: nativeURL, SHA1: native.SHA1, Size: native.Size, Kind: "native-archive", TargetOS: []string{target.OS}, NativeExclude: extractExcludes(lib.Extract), NativeTargets: []vanillaTarget{t}}); err != nil {
 				return vanillaInstallResult{}, fmt.Errorf("native %s: %w", lib.Name, err)
 			}
 		}
@@ -635,14 +649,16 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 
 	nativeTasks := make([]vanillaDownloadTask, 0)
 	for _, task := range taskList {
-		if task.Kind == "native-archive" && task.NativeTarget != nil {
+		if task.Kind == "native-archive" && len(task.NativeTargets) != 0 {
 			nativeTasks = append(nativeTasks, task)
 		}
 	}
 	nativeByTarget := map[string][]vanillaDownloadTask{}
 	for _, task := range nativeTasks {
-		key := task.NativeTarget.OS + "/" + task.NativeTarget.Arch
-		nativeByTarget[key] = append(nativeByTarget[key], task)
+		for _, target := range task.NativeTargets {
+			key := target.OS + "/" + target.Arch
+			nativeByTarget[key] = append(nativeByTarget[key], task)
+		}
 	}
 	// Сгенерированные нативные библиотеки публикуются транзакционно для каждой
 	// пары ОС и архитектуры. Поэтому ошибка распаковки сохраняет ранее проверенный
@@ -852,6 +868,9 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 		} else {
 			result.Downloaded++
 		}
+		if file.SharedCacheHit {
+			result.SharedCacheHits++
+		}
 	}
 	statePath, err := secureClientDestination(opts.ClientDir, ".neverlauncher/vanilla-install.json")
 	if err != nil {
@@ -938,6 +957,11 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 			return vanillaDownloadedFile{}, fmt.Errorf("%s: %w", task.Path, err)
 		}
 		if ok, sha256sum, size := existingFileMatchesSHA1(dest, task.SHA1, task.Size); ok {
+			if cache := sharedArtifactsFromContext0277(ctx); cache != nil && eligibleSharedArtifact0277(task.Kind) {
+				if err := cache.store(ctx, dest, task.SHA1, sha256sum, size); err != nil {
+					return vanillaDownloadedFile{}, err
+				}
+			}
 			return vanillaDownloadedFile{Path: task.Path, Kind: task.Kind, Size: size, SHA1: strings.ToLower(task.SHA1), SHA256: sha256sum, TargetOS: uniqueStrings(task.TargetOS), Cached: true}, nil
 		}
 	}
@@ -958,6 +982,17 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	}
 	if err := validateRemoteURL(task.URL); err != nil {
 		return vanillaDownloadedFile{}, fmt.Errorf("%s: %w", task.Path, err)
+	}
+	// Shared CAS is opt-in, keyed by upstream checksum and reverified before
+	// copying into this particular client. Never hardlink writable client files.
+	if cache := sharedArtifactsFromContext0277(ctx); cache != nil && task.SHA1 != "" && eligibleSharedArtifact0277(task.Kind) {
+		hit, digest, size, cacheErr := cache.restore(ctx, dest, task.SHA1, task.Size)
+		if cacheErr != nil {
+			return vanillaDownloadedFile{}, fmt.Errorf("%s: shared artifact cache: %w", task.Path, cacheErr)
+		}
+		if hit {
+			return vanillaDownloadedFile{Path: task.Path, Kind: task.Kind, Size: size, SHA1: strings.ToLower(task.SHA1), SHA256: digest, TargetOS: uniqueStrings(task.TargetOS), Cached: true, SharedCacheHit: true, Quarantined: quarantined}, nil
+		}
 	}
 
 	tmp := dest + ".nlpart"
@@ -1063,6 +1098,11 @@ func downloadVanillaArtifact(ctx context.Context, client *http.Client, task vani
 	}
 	if err := replaceFileAtomicPortable(tmp, dest); err != nil {
 		return vanillaDownloadedFile{}, err
+	}
+	if cache := sharedArtifactsFromContext0277(ctx); cache != nil && task.SHA1 != "" && eligibleSharedArtifact0277(task.Kind) {
+		if err := cache.store(ctx, dest, task.SHA1, gotSHA256, totalWritten); err != nil {
+			return vanillaDownloadedFile{}, fmt.Errorf("%s: shared cache store: %w", task.Path, err)
+		}
 	}
 	return vanillaDownloadedFile{Path: task.Path, Kind: task.Kind, Size: totalWritten, SHA1: gotSHA1, SHA256: gotSHA256, TargetOS: uniqueStrings(task.TargetOS), Cached: false, Resumed: resumed, Quarantined: quarantined}, nil
 }
@@ -1221,7 +1261,24 @@ func extractNativeJar(archivePath, targetDir string, excludes []string) ([]strin
 			_ = os.Remove(tmp)
 			return nil, fmt.Errorf("native %s uncompressed size mismatch: got %d expected %d", entry.Name, copied, entry.UncompressedSize64)
 		}
-		if err := replaceFileAtomicPortable(tmp, dst); err != nil {
+		if info, err := os.Lstat(dst); err == nil {
+			if !info.Mode().IsRegular() {
+				_ = os.Remove(tmp)
+				return nil, fmt.Errorf("native path collision: %s", name)
+			}
+			oldHash, oldSize, e1 := hashFile(dst)
+			newHash, newSize, e2 := hashFile(tmp)
+			if e1 != nil || e2 != nil || oldHash != newHash || oldSize != newSize {
+				_ = os.Remove(tmp)
+				return nil, fmt.Errorf("native content collision: %s", name)
+			}
+			_ = os.Remove(tmp)
+		} else if errors.Is(err, os.ErrNotExist) {
+			if err := replaceFileAtomicPortable(tmp, dst); err != nil {
+				_ = os.Remove(tmp)
+				return nil, err
+			}
+		} else {
 			_ = os.Remove(tmp)
 			return nil, err
 		}
@@ -1717,34 +1774,38 @@ func vanillaOSRuleMatches(name string, target vanillaTarget) bool {
 
 func libraryArtifactAppliesToTarget(name string, target vanillaTarget) bool {
 	parts := strings.Split(strings.TrimSpace(name), ":")
-	if len(parts) < 4 {
+	if len(parts) < 4 || !strings.HasPrefix(strings.ToLower(parts[3]), "natives-") {
 		return true
 	}
 	classifier := strings.ToLower(parts[3])
-	if !strings.HasPrefix(classifier, "natives-") {
-		return true
+	aliases := []string{target.OS}
+	if target.OS == "osx" {
+		aliases = []string{"macos", "osx"}
 	}
-	osToken := target.OS
-	if osToken == "osx" {
-		osToken = "macos"
+	for _, osName := range aliases {
+		prefix := "natives-" + osName
+		if classifier == prefix {
+			// Unqualified legacy natives contain both 32/64-bit binaries.
+			return target.Arch == "x86" || target.Arch == "x86_64"
+		}
+		if !strings.HasPrefix(classifier, prefix+"-") {
+			continue
+		}
+		suffix := strings.TrimPrefix(classifier, prefix+"-")
+		switch suffix {
+		case "x64", "x86_64", "amd64":
+			return target.Arch == "x86_64"
+		case "arm64", "aarch64":
+			return target.Arch == "aarch64"
+		case "x86", "i386", "i686":
+			return target.Arch == "x86"
+		case "arm32", "arm":
+			return target.Arch == "arm"
+		default:
+			return false // never install an unknown native architecture
+		}
 	}
-	prefix := "natives-" + osToken
-	if !strings.HasPrefix(classifier, prefix) {
-		return false // Нативный архив другой ОС здесь никогда не выполняется.
-	}
-	suffix := strings.TrimPrefix(classifier, prefix)
-	switch suffix {
-	case "":
-		return target.Arch == "x86_64"
-	case "-arm64", "-aarch64":
-		return target.Arch == "aarch64"
-	case "-x86", "-i386", "-i686":
-		return target.Arch == "x86"
-	case "-arm32":
-		return target.Arch == "arm"
-	default:
-		return true
-	}
+	return false
 }
 
 func extractExcludes(extract map[string]any) []string {

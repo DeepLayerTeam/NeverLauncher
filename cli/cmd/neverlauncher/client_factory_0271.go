@@ -109,6 +109,7 @@ type factoryBuildOptions0271 struct {
 	Targets               []vanillaTarget
 	Workers               int
 	StrictUpstream        bool
+	SharedCacheDir        string
 	HTTPClient            *http.Client
 }
 type factoryRecorderKey0271 struct{}
@@ -556,6 +557,10 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 	if err != nil {
 		return factoryPlan0271{}, err
 	}
+	ctx, err = sharedArtifactsContext0277(ctx, o.SharedCacheDir, dst)
+	if err != nil {
+		return factoryPlan0271{}, err
+	}
 	release, err := acquireFactoryLock0271(dst)
 	if err != nil {
 		return factoryPlan0271{}, err
@@ -812,7 +817,7 @@ func handleRuntimeFactory0271(args []string) error {
 		if err != nil {
 			return err
 		}
-		opts := factoryBuildOptions0271{Loader: flagValue(args, "--loader", "vanilla"), Minecraft: flagValue(args, "--minecraft", "latest-release"), LoaderVersion: flagValue(args, "--loader-version", "latest-stable"), ClientDir: dir, Targets: targets, Workers: workers, StrictUpstream: !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"), VersionManifest: flagValue(args, "--version-manifest", defaultMojangVersionManifest), AssetBaseURL: flagValue(args, "--asset-base-url", defaultMojangAssetBase), LibraryBaseURL: flagValue(args, "--library-base-url", defaultMojangLibraryBase), MetaBaseURL: flagValue(args, "--meta-base-url", ""), InstallerURL: flagValue(args, "--installer-url", ""), InstallerSHA1: flagValue(args, "--installer-sha1", ""), InstallerSourceFile: flagValue(args, "--installer-file", ""), InstallerSourceSHA256: flagValue(args, "--installer-sha256", ""), MavenMetadataURL: flagValue(args, "--maven-metadata-url", ""), JavaExecutable: flagValue(args, "--java", ""), ProcessorTimeout: timeout, ProcessorSandbox: strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process")))}
+		opts := factoryBuildOptions0271{Loader: flagValue(args, "--loader", "vanilla"), Minecraft: flagValue(args, "--minecraft", "latest-release"), LoaderVersion: flagValue(args, "--loader-version", "latest-stable"), ClientDir: dir, Targets: targets, Workers: workers, StrictUpstream: !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"), VersionManifest: flagValue(args, "--version-manifest", defaultMojangVersionManifest), AssetBaseURL: flagValue(args, "--asset-base-url", defaultMojangAssetBase), LibraryBaseURL: flagValue(args, "--library-base-url", defaultMojangLibraryBase), MetaBaseURL: flagValue(args, "--meta-base-url", ""), InstallerURL: flagValue(args, "--installer-url", ""), InstallerSHA1: flagValue(args, "--installer-sha1", ""), InstallerSourceFile: flagValue(args, "--installer-file", ""), InstallerSourceSHA256: flagValue(args, "--installer-sha256", ""), MavenMetadataURL: flagValue(args, "--maven-metadata-url", ""), JavaExecutable: flagValue(args, "--java", ""), ProcessorTimeout: timeout, ProcessorSandbox: strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process"))), SharedCacheDir: strings.TrimSpace(flagValue(args, "--shared-cache-dir", ""))}
 		p, err := executeFactoryBuild0271(context.Background(), opts)
 		if err != nil {
 			return err

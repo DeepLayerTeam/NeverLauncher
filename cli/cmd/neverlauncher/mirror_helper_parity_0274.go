@@ -839,7 +839,7 @@ func handleRuntimeMirror0274(args []string) error {
 		defer os.RemoveAll(stage)
 		options := factoryBuildOptions0271{
 			Loader: ws.Loader, Minecraft: ws.Minecraft, LoaderVersion: ws.LoaderVersion,
-			ClientDir: filepath.Join(stage, "client"), StrictUpstream: true,
+			ClientDir: filepath.Join(stage, "client"), StrictUpstream: true, SharedCacheDir: strings.TrimSpace(flagValue(flags, "--shared-cache-dir", "")),
 			VersionManifest:       flagValue(flags, "--version-manifest", ""),
 			AssetBaseURL:          flagValue(flags, "--asset-base-url", ""),
 			LibraryBaseURL:        flagValue(flags, "--library-base-url", ""),

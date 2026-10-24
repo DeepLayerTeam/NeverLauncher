@@ -50,6 +50,7 @@ type forgeMaterializeOptions struct {
 	Targets                []vanillaTarget
 	Workers                int
 	StrictUpstream         bool
+	SharedCacheDir         string
 	ResolutionLockPath     string
 	ResolutionSourceSHA256 string
 	ProcessorTimeout       time.Duration
@@ -298,6 +299,7 @@ func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializ
 		Targets:            targets,
 		Workers:            workers,
 		StrictUpstream:     !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"),
+		SharedCacheDir:     strings.TrimSpace(flagValue(args, "--shared-cache-dir", "")),
 		ResolutionLockPath: strings.TrimSpace(flagValue(args, "--resolution-lock", "")),
 		ProcessorTimeout:   timeout,
 		ProcessorSandbox:   strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process"))),
@@ -307,6 +309,11 @@ func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializ
 }
 
 func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeMaterializeResult, error) {
+	var cacheErr error
+	ctx, cacheErr = sharedArtifactsContext0277(ctx, opts.SharedCacheDir, opts.ClientDir)
+	if cacheErr != nil {
+		return forgeMaterializeResult{}, cacheErr
+	}
 	loader := strings.ToLower(strings.TrimSpace(opts.Loader))
 	if loader != "forge" && loader != "neoforge" {
 		return forgeMaterializeResult{}, fmt.Errorf("поддерживаются только Forge и NeoForge, получен %s", loader)
