@@ -19,6 +19,8 @@ func handleRuntime(args []string) error {
 		return errors.New("доступные runtime-подкоманды: vanilla-install, vanilla-package, vanilla-server, fabric-install, fabric-package, quilt-install, quilt-package, forge-install, forge-package, neoforge-install, neoforge-package, resolve, inspect, assets, libraries, java-check, launch-plan, verify, resolver, matrix, metadata-policy, fetch-metadata, resolve-version, resolve-loader, build-classpath, build-launch-plan, verify-launch-plan, parity, parity-smoke, build-download-plan, verify-parity-plan")
 	}
 	switch args[0] {
+	case "client-factory":
+		return handleRuntimeFactory0271(args[1:])
 	case "vanilla-install":
 		return handleRuntimeVanillaInstall(args[1:])
 	case "vanilla-package":

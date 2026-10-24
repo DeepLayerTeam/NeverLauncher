@@ -1,3 +1,10 @@
+## 0.27.1 — Unified Client Factory InstallPlan Engine
+
+- **Working Client Factory:** `runtime client-factory build|verify|inspect` reuses the real Vanilla, Fabric, Quilt, Forge and NeoForge materializers to install into a sibling staging directory and publish only verified output trees.
+- **Immutable reproducibility:** canonical plan includes pinned versions, URL/SHA-256 source provenance, Forge processors and outputs, resolved metadata, Java/OS/architecture targets, launch metadata, exact output hashes and reproducibility identity. Rebuild rejects modified files, loader metadata drift and unexpected outputs.
+- **Execution integration:** actual download tasks and processor completions feed the shared plan recorder; existing materializer commands and release workflows stay backward-compatible.
+- **Tests and release scope:** offline real-HTTP materializer integration tests for five loader families and rollback/tamper checks; cross-platform CI workflow and operator documentation. Full external-installer sandboxing, modpack import, visual UI and real graphical/client-server certification are later roadmap milestones. This source change is not a signed or independently certified production release.
+
 ## 0.27.0 — Official Minecraft Authentication GA release gate
 
 - **Production hardening:** prevent an interrupted legacy-to-multi-account OS-vault migration from replacing a newer native credential or retiring its only recoverable source before verifying a readable destination; zeroize partial keyring reads on errors.

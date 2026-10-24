@@ -1,0 +1,44 @@
+name: Client Factory 0.27.1
+on:
+  push:
+    paths:
+      - 'cli/**'
+      - 'VERSION'
+      - '.github/workflows/client-factory-0271.yml'
+  pull_request:
+    paths:
+      - 'cli/**'
+      - 'VERSION'
+      - '.github/workflows/client-factory-0271.yml'
+permissions:
+  contents: read
+jobs:
+  install-plan-fixtures:
+    name: Materializers and InstallPlan (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - name: Format check
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          test -z "$(gofmt -l cli/cmd/neverlauncher/client_factory_0271*.go)"
+      - name: Real materializer fixtures and factory replay
+        working-directory: cli
+        shell: bash
+        run: >-
+          go test ./cmd/neverlauncher
+          -run 'TestClientFactory0271|TestInstallVanillaMaterializesVerifiedClient|TestFabricAndQuiltMaterializersProduceConsumableClientTree|TestForgeAndNeoForgeProcessorMaterializers'
+          -count=1 -timeout=5m
+      - name: Verify CLI build
+        working-directory: cli
+        shell: bash
+        run: go build ./cmd/neverlauncher

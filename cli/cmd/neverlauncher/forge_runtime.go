@@ -1794,6 +1794,9 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 			if _, err := markProcessorJournal(pc, &journal, index, identity, "completed", recovered, ""); err != nil {
 				return stats, fmt.Errorf("processor[%d] journal completion: %w", index, err)
 			}
+			if err := factoryRecorderFromContext0271(ctx).recordProcessor(pc, index, processor); err != nil {
+				return stats, err
+			}
 			stats.Skipped++
 			if recovered {
 				stats.Recovered++
@@ -1868,6 +1871,9 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 			return stats, fmt.Errorf("processor[%d] journal commit: %w", index, err)
 		}
 		stats.JournalSHA256 = journalSHA
+		if err := factoryRecorderFromContext0271(ctx).recordProcessor(pc, index, processor); err != nil {
+			return stats, err
+		}
 		stats.Ran++
 		if interrupted {
 			stats.Recovered++

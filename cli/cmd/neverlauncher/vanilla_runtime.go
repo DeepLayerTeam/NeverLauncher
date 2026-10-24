@@ -385,6 +385,9 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	selected := resolved.Selected
 	selectedID := selected.ID
 	versionBytes := resolved.Bytes
+	if err := factoryRecorderFromContext0271(ctx).recordSource(factorySource0271{Path: filepath.ToSlash(filepath.Join("versions", selectedID, selectedID+".json")), Kind: "version-metadata", URL: selected.URL, SHA1: selected.SHA1, SHA256: sha256HexBytes(versionBytes), Size: int64(len(versionBytes))}); err != nil {
+		return vanillaInstallResult{}, err
+	}
 	var metadata vanillaVersionMetadata
 	if err := json.Unmarshal(versionBytes, &metadata); err != nil {
 		return vanillaInstallResult{}, fmt.Errorf("version.json %s повреждён: %w", selectedID, err)
@@ -582,6 +585,9 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 	assetBytes, assetIndexCached, assetIndexQuarantined, err := fetchVerifiedBytesWithLocalCache(ctx, client, opts.ClientDir, assetIndexPath, metadata.AssetIndex.URL, metadata.AssetIndex.SHA1, metadata.AssetIndex.Size, 64<<20)
 	if err != nil {
 		return vanillaInstallResult{}, fmt.Errorf("asset index: %w", err)
+	}
+	if err := factoryRecorderFromContext0271(ctx).recordSource(factorySource0271{Path: assetIndexPath, Kind: "asset-index", URL: metadata.AssetIndex.URL, SHA1: metadata.AssetIndex.SHA1, SHA256: sha256HexBytes(assetBytes), Size: int64(len(assetBytes))}); err != nil {
+		return vanillaInstallResult{}, err
 	}
 	var assets vanillaAssetIndex
 	if err := json.Unmarshal(assetBytes, &assets); err != nil {
@@ -912,6 +918,9 @@ func runVanillaDownloads(ctx context.Context, client *http.Client, root string, 
 	}
 	if firstErr != nil {
 		return nil, firstErr
+	}
+	if err := factoryRecorderFromContext0271(ctx).recordTasks(tasks, out); err != nil {
+		return nil, err
 	}
 	return out, nil
 }
