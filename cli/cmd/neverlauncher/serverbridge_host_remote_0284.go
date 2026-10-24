@@ -690,7 +690,7 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 func remoteHandle0284(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: nl server-bridge host remote init|issue|revoke|rotate-key|serve|call")
+		return errors.New("usage: nl server-bridge host remote init|issue|revoke|rotate-key|inspect|serve|call")
 	}
 	if args[0] == "call" {
 		return remoteCall0284(args) // A remote client has no local server root.
@@ -700,6 +700,30 @@ func remoteHandle0284(args []string) error {
 		return err
 	}
 	switch args[0] {
+	case "inspect":
+		// Local operator-only inspection of a durable command journal. No
+		// automatic retry or success assertion is made from PID/process state.
+		if _, err := remoteLoad0284(root); err != nil {
+			return err
+		}
+		key := flagValue(args, "--idempotency-key", "")
+		if !remoteIdempotency0284.MatchString(key) {
+			return errors.New("--idempotency-key must be 16-128 safe characters")
+		}
+		path := remoteReceiptFile0284(remoteDir0284(root), key)
+		receipt, err := remoteReadReceipt0284(path)
+		if err != nil {
+			return err
+		}
+		if receipt.KeyHash != strings.TrimSuffix(filepath.Base(path), ".json") {
+			return errors.New("corrupt command journal binding")
+		}
+		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{
+			"receipt": receipt, "observedHostStatus": json.RawMessage(remoteHostStatus0284(root)),
+			"inspectionTime":         time.Now().UTC().Format(time.RFC3339Nano),
+			"verifiedExternalEffect": false,
+			"operatorAction":         "compare game/application state and audit before issuing another idempotency key",
+		})
 	case "init":
 		id, err := remoteInit0284(root)
 		if err != nil {

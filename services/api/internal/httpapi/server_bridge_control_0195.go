@@ -394,7 +394,14 @@ func (s Server) serverBridgeControlPoll0195(w http.ResponseWriter, r *http.Reque
 	payloadBytes, _ := canonicalControlPayload0195(cmd.Payload)
 	payloadB64 := base64.RawURLEncoding.EncodeToString(payloadBytes)
 	issued := now.UnixMilli()
-	expires := cmd.ExpiresAt.UnixMilli()
+	// Bound the SIGNED execution authorization to the active fenced lease.
+	// A delayed HTTP response must not authorize an external side effect after
+	// PostgreSQL/Redis has moved ownership away from this delivery.
+	expires := controlWireExpiry0285(cmd)
+	if expires <= issued {
+		writeError(w, http.StatusConflict, "serverbridge_control_delivery_lease_expired")
+		return
+	}
 	capabilityDigest := serverBridgeExpectedSecurityCapabilityDigest01912()
 
 	activeCanonical := serverBridgeControlCanonical01912(cmd.ServerID, cmd.ID, cmd.RuntimeID, cmd.Type, cmd.PayloadSHA256, cmd.LeaseOwner, cmd.LeaseToken, capabilityDigest, activeKey.Fingerprint, node.IdentityEpoch, cmd.RuntimeEpoch, cmd.DeliverySequence, cmd.Attempt, issued, expires)
@@ -536,6 +543,19 @@ func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"status": "acknowledged", "commandId": completed.ID, "commandStatus": completed.Status, "deliverySequence": completed.DeliverySequence}})
 }
 
+// A signed ServerBridge command cannot remain executable after its specific
+// PostgreSQL delivery lease ends, even if the logical command expiry is later.
+func controlWireExpiry0285(cmd model.ServerBridgeControlCommand) int64 {
+	expires := cmd.ExpiresAt.UnixMilli()
+	if cmd.LeaseUntil.IsZero() {
+		return 0 // fail closed if a repository returned no lease timestamp
+	}
+	if leaseExpiry := cmd.LeaseUntil.UnixMilli(); leaseExpiry < expires {
+		return leaseExpiry
+	}
+	return expires
+}
+
 func serverBridgeControlStringMapEqual0195(a, b map[string]string) bool {
 	if len(a) != len(b) {
 		return false
@@ -576,6 +596,23 @@ func (b *serverBridgeStore) createControl0195(c model.ServerBridgeControlCommand
 	b.controlIdempotency[key] = c.ID
 	return c, false, nil
 }
+
+// A lost ACK does not prove the game command was not applied. In particular,
+// never re-lease work that has already been delivered to any runtime/channel.
+func reconcileControlInMemory0285(c model.ServerBridgeControlCommand, now time.Time) model.ServerBridgeControlCommand {
+	if c.Status == "leased" && (!c.LeaseUntil.After(now) || !c.ExpiresAt.After(now)) {
+		c.Status = "indeterminate"
+		c.Error = "delivered command lost lease without proof of completion"
+	} else if c.Status == "pending" && !c.ExpiresAt.After(now) {
+		c.Status = "expired"
+		c.Error = "expired before delivery"
+	} else {
+		return c
+	}
+	c.CompletedAt, c.UpdatedAt, c.LeaseUntil = now, now, time.Time{}
+	return c
+}
+
 func (b *serverBridgeStore) getControl0195(serverID, commandID string) (model.ServerBridgeControlCommand, error) {
 	if backend := b.backendV2(); backend != nil {
 		ctx, cancel := bridgeContextV2()
@@ -588,6 +625,8 @@ func (b *serverBridgeStore) getControl0195(serverID, commandID string) (model.Se
 	if !ok || c.ServerID != serverID {
 		return model.ServerBridgeControlCommand{}, repository.ErrNotFound
 	}
+	c = reconcileControlInMemory0285(c, time.Now().UTC())
+	b.controlCommands[commandID] = c
 	return c, nil
 }
 
@@ -601,16 +640,20 @@ func (b *serverBridgeStore) leaseControl0195(serverID string, epoch int64, runti
 	defer b.mu.Unlock()
 	var chosen model.ServerBridgeControlCommand
 	for id, c := range b.controlCommands {
-		if c.ServerID != serverID || c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID) || c.DeliverySequence <= resumeAfter {
+		if c.ServerID != serverID {
 			continue
 		}
-		if !c.ExpiresAt.After(now) {
-			if c.Status == "pending" || c.Status == "leased" {
-				c.Status = "expired"
-				c.CompletedAt = now
-				c.LeaseUntil = time.Time{}
-				b.controlCommands[id] = c
-			}
+		if c.Status == "leased" && (c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID)) {
+			c.Status, c.Error = "indeterminate", "delivery belongs to a superseded runtime identity"
+			c.CompletedAt, c.UpdatedAt, c.LeaseUntil = now, now, time.Time{}
+			b.controlCommands[id] = c
+		}
+		if c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID) || c.DeliverySequence <= resumeAfter {
+			continue
+		}
+		updated := reconcileControlInMemory0285(c, now)
+		if updated.Status != c.Status {
+			b.controlCommands[id] = updated
 			continue
 		}
 		if c.Status == "leased" && c.LeaseOwner == leaseOwner && c.LeaseUntil.After(now) {
@@ -619,7 +662,7 @@ func (b *serverBridgeStore) leaseControl0195(serverID string, epoch int64, runti
 			}
 			continue
 		}
-		eligible := c.Status == "pending" || (c.Status == "leased" && !c.LeaseUntil.After(now))
+		eligible := c.Status == "pending"
 		if !eligible {
 			continue
 		}

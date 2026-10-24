@@ -1483,6 +1483,31 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 	return created, false, err
 }
 
+// reconcileControlLeases0285 is executed under the same PostgreSQL transaction
+// as dispatch. A delivered command that lost its lease or its original runtime
+// cannot safely be redelivered, even when its application never ACKed.
+// The identity/token/sequence stay on the row for forensic reconciliation.
+func (r *SQLRepository) reconcileControlLeases0285(ctx context.Context, tx *sql.Tx, serverID string, now time.Time) error {
+	_, err := tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3
+SET status='indeterminate', updated_at=$2, completed_at=$2,
+    error=CASE WHEN expires_at<=$2 THEN 'delivered command expired without proof of completion'
+               WHEN lease_until IS NOT NULL AND lease_until>$2 THEN 'delivery belongs to a superseded runtime identity'
+               ELSE 'delivery lease expired without proof of completion' END,
+    lease_until=NULL
+WHERE server_id=$1 AND status='leased' AND ((lease_until IS NULL OR lease_until<=$2) OR expires_at<=$2
+ OR NOT EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=server_id
+  AND n.status='active' AND n.runtime_epoch=server_bridge_control_commands_v3.runtime_epoch
+  AND n.runtime_id=server_bridge_control_commands_v3.runtime_id))`, serverID, now.UTC())
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3
+SET status='expired',updated_at=$2,completed_at=$2,
+    error='expired before delivery',lease_until=NULL
+WHERE server_id=$1 AND status='pending' AND expires_at<=$2`, serverID, now.UTC())
+	return err
+}
+
 // LeaseServerBridgeControlCommand обеспечивает защищённый от устаревших владельцев возобновляемый канал
 // команд. leaseOwner идентифицирует канал моста и сохраняется при переключении конечной точки Backend;
 // leaseToken защищает от устаревших доставок. Повторное соединение того же владельца получает ещё действующую
@@ -1518,7 +1543,11 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 	if status != "active" || currentEpoch != runtimeEpoch || !strings.EqualFold(strings.TrimSpace(currentRuntime), runtimeID) {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control runtime is not active", ErrConflict)
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='expired',updated_at=$2,completed_at=$2,error='expired before delivery',lease_until=NULL WHERE server_id=$1 AND status IN ('pending','leased') AND expires_at <= $2`, serverID, now.UTC()); err != nil {
+	// A leased command MAY have performed the side effect even if the ACK was
+	// lost. Never convert an expired delivery into another dispatch. The
+	// PostgreSQL row is authoritative across all Backend replicas; Redis is
+	// only an additional ephemeral ownership check.
+	if err = r.reconcileControlLeases0285(ctx, tx, serverID, now); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
 	// При потере ответа HTTP или переключении конечной точки Backend возобновите точно ту же действующую аренду этого канала.
@@ -1531,7 +1560,7 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 		return model.ServerBridgeControlCommand{}, scanErr
 	}
 	var id string
-	err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_control_commands_v3 WHERE server_id=$1 AND runtime_epoch=$2 AND runtime_id=$3 AND delivery_sequence>$4 AND expires_at>$5 AND (status='pending' OR (status='leased' AND lease_until<=$5)) ORDER BY delivery_sequence FOR UPDATE SKIP LOCKED LIMIT 1`, serverID, runtimeEpoch, runtimeID, resumeAfter, now.UTC()).Scan(&id)
+	err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_control_commands_v3 WHERE server_id=$1 AND runtime_epoch=$2 AND runtime_id=$3 AND delivery_sequence>$4 AND expires_at>$5 AND status='pending' ORDER BY delivery_sequence FOR UPDATE SKIP LOCKED LIMIT 1`, serverID, runtimeEpoch, runtimeID, resumeAfter, now.UTC()).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeControlCommand{}, ErrNotFound
 	}
@@ -1618,8 +1647,25 @@ func serverBridgeControlStringMapEqual0195(a, b map[string]string) bool {
 	return true
 }
 
+// Atomic, idempotent status repair performed before command read. It does not
+// release the old lease token to a new executor or rewrite terminal results.
+func (r *SQLRepository) reconcileControlRead0285(ctx context.Context, serverID, commandID string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET
+status=CASE WHEN status='leased' THEN 'indeterminate' ELSE 'expired' END,
+error=CASE WHEN status='leased' THEN 'delivered command lost lease/runtime before ACK' ELSE 'expired before delivery' END,
+updated_at=now(),completed_at=now(),lease_until=NULL
+WHERE ($1='' OR server_id=$1) AND ($2='' OR id=$2) AND (status='pending' AND expires_at<=now() OR status='leased' AND ((lease_until IS NULL OR lease_until<=now()) OR expires_at<=now()
+OR NOT EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=server_id AND n.status='active' AND n.runtime_epoch=server_bridge_control_commands_v3.runtime_epoch AND n.runtime_id=server_bridge_control_commands_v3.runtime_id)))`, serverID, commandID)
+	return err
+}
+
 func (r *SQLRepository) GetServerBridgeControlCommand(ctx context.Context, serverID, commandID string) (model.ServerBridgeControlCommand, error) {
 	if err := r.check(); err != nil {
+		return model.ServerBridgeControlCommand{}, err
+	}
+	// Reconcile at read time as well: a server may never poll again after a
+	// crash, and operators still need the actual indeterminate outcome.
+	if err := r.reconcileControlRead0285(ctx, serverID, commandID); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
 	c, err := scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE server_id=$1 AND id=$2`, serverID, commandID))
@@ -1640,6 +1686,10 @@ func (r *SQLRepository) ListServerBridgeRecentControlCommands(ctx context.Contex
 	}
 	if limit > 200 {
 		limit = 200
+	}
+	// Make uncertainty visible even after the game never reconnects.
+	if err := r.reconcileControlRead0285(ctx, "", ""); err != nil {
+		return nil, err
 	}
 	rows, err := r.db.QueryContext(ctx, serverBridgeControlSelect0195+` ORDER BY updated_at DESC,id DESC LIMIT $1`, limit)
 	if err != nil {

@@ -1,3 +1,12 @@
+## 0.28.5 — Durable Commands & HA Fencing (2026-10-24)
+
+- Closed the production ServerBridge HA redelivery hole: when a delivered PostgreSQL command loses its lease/ACK or runtime identity, it becomes terminal `indeterminate`, not another executable queued command. Pending commands that expire before delivery remain `expired`. Implemented in both SQL and in-memory stores, including Admin history and command reads.
+- Reused PostgreSQL transactional row locks and Redis coordinator checks; signed Java ServerBridge v3 envelopes now expire no later than their particular delivery lease. An overdue/delayed signed HTTP response is no longer executable.
+- Applied migration `0078_control_ha_fencing_0285` to both API and CLI catalogs: repair uncertain legacy rows and install a PostgreSQL trigger fencing old Backend versions from recycling prior delivery ownership. Do not run older Backend code against this database expecting automatic redelivery.
+- Added cross-replica PostgreSQL integration tests (requires explicit test DSN), lease-loss/runtime-change regression tests, and local Host `remote inspect` which reports durable receipt and observed process state without replay or false success claims.
+- Kept local Host RemoteControl idempotency/durable journal separate from Game Server authorization and Backend control; cross-host PostgreSQL/Redis Host orchestration and real Minecraft E2E remain unverified / future work.
+- Operational details in `docs/releases/0.28.5-durable-commands-ha-fencing.md`.
+
 ## 0.28.4 — RemoteControl Agent & Security (2026-10-24)
 
 - Implemented a real, standalone HTTPS host RemoteControl agent using the existing Host Supervisor `start`/`stop`/`restart` operations and verified runtime status; no remote executable/shell/Java argument API is exposed.

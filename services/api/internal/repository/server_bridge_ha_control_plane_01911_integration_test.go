@@ -143,4 +143,41 @@ func TestServerBridgeHAControlPlane01911MultiReplica(t *testing.T) {
 	if replayErr != nil || replayed.Error != failed.Error {
 		t.Fatalf("idempotent failed acknowledgement across replicas: %+v err=%v", replayed, replayErr)
 	}
+
+	// Durable failover: a delivered external side effect with lost ACK cannot
+	// be retried merely because its lease expired. Both API replicas must
+	// observe the SAME indeterminate row, including its original lease fence.
+	unknown := cmd
+	unknown.ID = "ctl_ha01911_uncertain_0285"
+	unknown.IdempotencyKey = "ha01911-uncertain-0285"
+	unknown.CreatedAt, unknown.UpdatedAt = now, now
+	_, _, err = a.CreateServerBridgeControlCommand(ctx, unknown, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := a.LeaseServerBridgeControlCommand(ctx, nodeID, 21, runtimeID,
+		"cccccccccccccccccccccccccccccccc", "lease_uncertain_0123456789abcdef",
+		failedLease.DeliverySequence, now, 5*time.Second)
+	if err != nil || first.Status != "leased" {
+		t.Fatalf("first uncertain lease: %+v %v", first, err)
+	}
+	_, err = b.LeaseServerBridgeControlCommand(ctx, nodeID, 21, runtimeID,
+		"dddddddddddddddddddddddddddddddd", "lease_competing_0123456789abcdef",
+		failedLease.DeliverySequence, now.Add(6*time.Second), 5*time.Second)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("redelivered uncertain command: %v", err)
+	}
+	for _, replica := range []*SQLRepository{a, b} {
+		read, readErr := replica.GetServerBridgeControlCommand(ctx, nodeID, first.ID)
+		if readErr != nil || read.Status != "indeterminate" || read.LeaseToken != first.LeaseToken || read.Attempt != 1 {
+			t.Fatalf("cross-replica uncertain state: %+v %v", read, readErr)
+		}
+	}
+	if _, err = b.CompleteServerBridgeControlCommand(ctx, nodeID, 21, runtimeID, first.ID, first.LeaseOwner, first.LeaseToken, first.DeliverySequence, "succeeded", nil, "", now.Add(7*time.Second)); !errors.Is(err, ErrConflict) {
+		t.Fatalf("stale result committed: %v", err)
+	}
+	// A pre-0.28.5 replica must be fenced by PostgreSQL itself, not just Go.
+	if _, err = b.db.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status='leased', lease_token='stale' WHERE id=$1`, first.ID); err == nil {
+		t.Fatal("database trigger permitted old replica redelivery")
+	}
 }

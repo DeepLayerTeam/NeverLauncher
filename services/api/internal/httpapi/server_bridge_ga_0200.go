@@ -293,7 +293,9 @@ func (b *serverBridgeStore) recentControls0200(parent context.Context, limit int
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	items := make([]model.ServerBridgeControlCommand, 0, len(b.controlCommands))
-	for _, item := range b.controlCommands {
+	for id, item := range b.controlCommands {
+		item = reconcileControlInMemory0285(item, time.Now().UTC())
+		b.controlCommands[id] = item
 		item.LeaseToken = ""
 		items = append(items, item)
 	}
