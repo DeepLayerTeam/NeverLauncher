@@ -1,3 +1,10 @@
+## 0.27.2 — Modern Loader Adapters
+
+- **Executable modern adapters:** Hardened Vanilla release/snapshot selection, Fabric/Quilt Meta API compatibility and Maven identities, Forge/NeoForge version input safety, and library source conflicts in the actual materializers used by Client Factory.
+- **Deterministic resolution:** unsorted upstream lists, pre-release numbering and Fabric `+build.N` suffixes now resolve deterministically; `latest` and `latest-stable` have distinct policies. Special-character Minecraft IDs are correctly URL-encoded.
+- **Pinned provenance:** Client Factory now captures Vanilla release type, exact resolved loader and Maven/intermediary identity, preserves existing resolution hashes and blocks replay drift. No silently updated loaders on rebuild.
+- **Verification:** offline HTTP materializer/processor/recovery fixtures, malformed metadata and URL-safety regressions, Go CLI build, vet and Windows/macOS/Linux CI recipe. Real Minecraft GUI/client-server certifications remain pending.
+
 ## 0.27.1 — Unified Client Factory InstallPlan Engine
 
 - **Working Client Factory:** `runtime client-factory build|verify|inspect` reuses the real Vanilla, Fabric, Quilt, Forge and NeoForge materializers to install into a sibling staging directory and publish only verified output trees.

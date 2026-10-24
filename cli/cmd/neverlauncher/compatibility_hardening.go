@@ -86,7 +86,7 @@ func resolveVanillaMetadataWithRecovery(ctx context.Context, client *http.Client
 func exactMinecraftVersionForRecovery(requested string) (string, bool) {
 	normalized := strings.TrimSpace(requested)
 	switch strings.ToLower(normalized) {
-	case "", "latest", "latest-release", "latest-snapshot", "snapshot":
+	case "", "latest", "latest-release", "release", "latest-snapshot", "snapshot":
 		return "", false
 	case "1.0.0":
 		return "1.0", true

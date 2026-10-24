@@ -1024,6 +1024,11 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 	if requested == "" {
 		requested = "latest-stable"
 	}
+	if !isMutableLoaderSelector(requested) {
+		if err := validateForgeLikeVersionToken0272(requested); err != nil {
+			return "", "", "", "", fmt.Errorf("invalid explicit %s version: %w", loader, err)
+		}
+	}
 	metadataURL := strings.TrimSpace(metadataOverride)
 	legacyNeoForge1201 := loader == "neoforge" && minecraftVersion == "1.20.1"
 	if metadataURL == "" {
@@ -1090,7 +1095,7 @@ func resolveForgeLikeVersionWithEvidence(ctx context.Context, client *http.Clien
 			bestCompatiblePrerelease := ""
 			for _, raw := range versions {
 				candidate := strings.TrimSpace(raw)
-				if candidate == "" {
+				if candidate == "" || validateForgeLikeVersionToken0272(candidate) != nil {
 					continue
 				}
 				matches := false

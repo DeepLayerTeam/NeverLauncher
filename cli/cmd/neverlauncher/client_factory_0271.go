@@ -55,13 +55,16 @@ type factoryJava0271 struct {
 	ProcessorExecutableSHA256 string `json:"processorExecutableSha256,omitempty"`
 }
 type factoryResolution0271 struct {
-	Selector        string `json:"selector"`
-	ArtifactVersion string `json:"artifactVersion,omitempty"`
-	SourceURL       string `json:"sourceUrl"`
-	SourceSHA256    string `json:"sourceSha256"`
-	PayloadURL      string `json:"payloadUrl"`
-	PayloadSHA256   string `json:"payloadSha256"`
-	ProfileSHA256   string `json:"profileSha256"`
+	Selector          string `json:"selector"`
+	ArtifactVersion   string `json:"artifactVersion,omitempty"`
+	SourceURL         string `json:"sourceUrl"`
+	SourceSHA256      string `json:"sourceSha256"`
+	PayloadURL        string `json:"payloadUrl"`
+	PayloadSHA256     string `json:"payloadSha256"`
+	ProfileSHA256     string `json:"profileSha256"`
+	ResolvedVersion   string `json:"resolvedVersion,omitempty"`
+	LoaderMaven       string `json:"loaderMaven,omitempty"`
+	IntermediaryMaven string `json:"intermediaryMaven,omitempty"`
 }
 type factoryLaunch0271 struct {
 	ProfilePath      string `json:"profilePath"`
@@ -72,6 +75,7 @@ type factoryLaunch0271 struct {
 type factoryPlan0271 struct {
 	SchemaVersion          string                 `json:"schemaVersion"`
 	MinecraftVersion       string                 `json:"minecraftVersion"`
+	MinecraftReleaseType   string                 `json:"minecraftReleaseType,omitempty"`
 	Loader                 string                 `json:"loader"`
 	LoaderVersion          string                 `json:"loaderVersion,omitempty"`
 	Targets                []vanillaTarget        `json:"targets"`
@@ -228,11 +232,17 @@ func validateFactoryPlan0271(p factoryPlan0271) error {
 	if strings.TrimSpace(p.MinecraftVersion) == "" || isMutableMinecraft0271(p.MinecraftVersion) || p.Java.Major < 1 || p.Launch.MainClass == "" {
 		return errors.New("incomplete factory launch identity")
 	}
+	if p.MinecraftReleaseType != "" && p.MinecraftReleaseType != "release" && p.MinecraftReleaseType != "snapshot" && p.MinecraftReleaseType != "old_beta" && p.MinecraftReleaseType != "old_alpha" {
+		return fmt.Errorf("invalid Minecraft release type %q", p.MinecraftReleaseType)
+	}
 	if len(p.Targets) == 0 || !reflect.DeepEqual(p.Steps, factorySteps0271(p.Loader)) || len(p.Sources) == 0 || len(p.Outputs) == 0 {
 		return errors.New("factory plan has no targets, executable steps or outputs")
 	}
 	if p.Loader != "vanilla" && (p.LoaderVersion == "" || isMutableLoaderSelector(p.LoaderVersion) || !isSHA256Hex0271(p.LoaderResolutionSHA256) || p.Resolution == nil || !isSHA256Hex0271(p.Resolution.SourceSHA256) || !isSHA256Hex0271(p.Resolution.PayloadSHA256) || !isSHA256Hex0271(p.Resolution.ProfileSHA256)) {
 		return errors.New("factory loader is not pinned")
+	}
+	if p.Resolution != nil && p.Resolution.ResolvedVersion != "" && p.Resolution.ResolvedVersion != p.LoaderVersion {
+		return errors.New("factory loader resolution version disagrees with plan")
 	}
 	seen := map[string]bool{}
 	for _, o := range p.Outputs {
@@ -328,7 +338,7 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 		if err := json.Unmarshal(raw, &resolution); err != nil {
 			return err
 		}
-		if resolution.ResolutionSourceSHA256 != p.Resolution.SourceSHA256 || resolution.PayloadSHA256 != p.Resolution.PayloadSHA256 || resolution.RuntimeProfileSHA256 != p.Resolution.ProfileSHA256 {
+		if resolution.ResolutionSourceSHA256 != p.Resolution.SourceSHA256 || resolution.PayloadSHA256 != p.Resolution.PayloadSHA256 || resolution.RuntimeProfileSHA256 != p.Resolution.ProfileSHA256 || (p.Resolution.ResolvedVersion != "" && resolution.ResolvedVersion != p.Resolution.ResolvedVersion) || (p.Resolution.LoaderMaven != "" && resolution.LoaderMaven != p.Resolution.LoaderMaven) || (p.Resolution.IntermediaryMaven != "" && resolution.IntermediaryMaven != p.Resolution.IntermediaryMaven) {
 			return errors.New("loader resolution details differ from InstallPlan")
 		}
 	}
@@ -650,7 +660,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 		if err := json.Unmarshal(rawLock, &lock); err != nil {
 			return factoryPlan0271{}, err
 		}
-		resolvedIdentity = &factoryResolution0271{Selector: lock.Selector, ArtifactVersion: lock.ArtifactVersion, SourceURL: lock.ResolutionSourceURL, SourceSHA256: lock.ResolutionSourceSHA256, PayloadURL: lock.PayloadURL, PayloadSHA256: lock.PayloadSHA256, ProfileSHA256: lock.RuntimeProfileSHA256}
+		resolvedIdentity = &factoryResolution0271{Selector: lock.Selector, ArtifactVersion: lock.ArtifactVersion, SourceURL: lock.ResolutionSourceURL, SourceSHA256: lock.ResolutionSourceSHA256, PayloadURL: lock.PayloadURL, PayloadSHA256: lock.PayloadSHA256, ProfileSHA256: lock.RuntimeProfileSHA256, ResolvedVersion: lock.ResolvedVersion, LoaderMaven: lock.LoaderMaven, IntermediaryMaven: lock.IntermediaryMaven}
 	}
 	if o.Loader == "forge" || o.Loader == "neoforge" {
 		selected, err := selectInstallerJava(o.JavaExecutable, vanilla.JavaMajorVersion)
@@ -676,11 +686,11 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 		processors = append(processors, p)
 	}
 	sort.Slice(processors, func(i, j int) bool { return processors[i].Index < processors[j].Index })
-	p := factoryPlan0271{SchemaVersion: factoryPlanSchema0271, MinecraftVersion: vanilla.MinecraftVersion, Loader: o.Loader, LoaderVersion: loaderVersion, Targets: o.Targets, Java: factoryJava0271{Major: vanilla.JavaMajorVersion, ProcessorExecutableSHA256: processorExecutableSHA}, Launch: factoryLaunch0271{ProfilePath: profilePath, MainClass: mainClass, AssetIndex: vanilla.AssetIndex, NativesDirectory: "natives"}, Steps: factorySteps0271(o.Loader), Sources: sources, Processors: processors, Outputs: outputs, LoaderResolutionSHA256: loaderResolutionSHA, Resolution: resolvedIdentity}
+	p := factoryPlan0271{SchemaVersion: factoryPlanSchema0271, MinecraftVersion: vanilla.MinecraftVersion, MinecraftReleaseType: vanilla.ReleaseType, Loader: o.Loader, LoaderVersion: loaderVersion, Targets: o.Targets, Java: factoryJava0271{Major: vanilla.JavaMajorVersion, ProcessorExecutableSHA256: processorExecutableSHA}, Launch: factoryLaunch0271{ProfilePath: profilePath, MainClass: mainClass, AssetIndex: vanilla.AssetIndex, NativesDirectory: "natives"}, Steps: factorySteps0271(o.Loader), Sources: sources, Processors: processors, Outputs: outputs, LoaderResolutionSHA256: loaderResolutionSHA, Resolution: resolvedIdentity}
 	if hasPrior {
 		// Source order and metadata can be re-observed, but previously pinned
 		// outputs and loader identity are immutable. This is a true replay.
-		if p.MinecraftVersion != prior.MinecraftVersion || p.LoaderVersion != prior.LoaderVersion || p.Java != prior.Java || p.Launch != prior.Launch || p.LoaderResolutionSHA256 != prior.LoaderResolutionSHA256 || !reflect.DeepEqual(p.Resolution, prior.Resolution) {
+		if p.MinecraftVersion != prior.MinecraftVersion || p.MinecraftReleaseType != prior.MinecraftReleaseType || p.LoaderVersion != prior.LoaderVersion || p.Java != prior.Java || p.Launch != prior.Launch || p.LoaderResolutionSHA256 != prior.LoaderResolutionSHA256 || !reflect.DeepEqual(p.Resolution, prior.Resolution) {
 			return factoryPlan0271{}, errors.New("rebuild changed pinned runtime identity")
 		}
 		if len(p.Outputs) != len(prior.Outputs) {

@@ -1379,7 +1379,7 @@ func isPrivateCompatibilityIP(ip net.IP) bool {
 func resolveRequestedMinecraftVersion(manifest MojangVersionManifest, requested string) string {
 	normalized := strings.TrimSpace(requested)
 	switch strings.ToLower(normalized) {
-	case "", "latest", "latest-release":
+	case "", "latest", "latest-release", "release":
 		return manifest.Latest["release"]
 	case "latest-snapshot", "snapshot":
 		return manifest.Latest["snapshot"]

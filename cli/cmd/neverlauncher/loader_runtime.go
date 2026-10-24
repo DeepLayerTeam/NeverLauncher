@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -288,7 +289,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		}
 	}
 	selectedLoader := selectedEntry.Loader.Version
-	profileURL := fmt.Sprintf("%s/versions/loader/%s/%s/profile/json", strings.TrimRight(opts.MetaBaseURL, "/"), vanilla.MinecraftVersion, selectedLoader)
+	profileURL := fmt.Sprintf("%s/versions/loader/%s/%s/profile/json", strings.TrimRight(opts.MetaBaseURL, "/"), url.PathEscape(vanilla.MinecraftVersion), url.PathEscape(selectedLoader))
 	profileBytes, payloadCacheHit, upstreamRecoveryUsed, err := fetchLoaderProfileWithCache(ctx, opts.HTTPClient, opts.ClientDir, loader, vanilla.MinecraftVersion, profileURL, pinned, opts.LoaderCacheOnly, 16<<20)
 	if err != nil {
 		return loaderMaterializeResult{}, fmt.Errorf("%s profile: %w", loader, err)
@@ -457,7 +458,7 @@ func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Clie
 	if loader != "fabric" && loader != "quilt" {
 		return loaderMetaEntry{}, "", "", fmt.Errorf("meta loader %s не поддерживается", loader)
 	}
-	url := fmt.Sprintf("%s/versions/loader/%s", strings.TrimRight(metaBase, "/"), minecraftVersion)
+	url := fmt.Sprintf("%s/versions/loader/%s", strings.TrimRight(metaBase, "/"), url.PathEscape(minecraftVersion))
 	data, err := fetchJSONBytes(ctx, client, url, 16<<20)
 	if err != nil {
 		if strings.Contains(err.Error(), "HTTP 404") {
@@ -475,48 +476,11 @@ func resolveMetaLoaderVersionWithEvidence(ctx context.Context, client *http.Clie
 	if len(entries) == 0 {
 		return loaderMetaEntry{}, "", "", fmt.Errorf("для Minecraft %s нет совместимых %s loader versions", minecraftVersion, loader)
 	}
-	requested = strings.TrimSpace(requested)
-	mutable := requested == "" || requested == "latest" || requested == "latest-stable" || requested == "stable" || requested == "recommended"
-	if mutable {
-		if loader == "quilt" {
-			// Quilt Meta v3 не гарантирует сортировку от новых версий к старым и не имеет
-			// обязательного флага stable как Fabric. Выбирайте максимальную стабильную версию
-			// SemVer, а не первую стабильную строку, которая может быть старой на несколько лет.
-			best := -1
-			for i, entry := range entries {
-				version := strings.TrimSpace(entry.Loader.Version)
-				if !isStableQuiltLoaderVersion(version) {
-					continue
-				}
-				if best < 0 || quiltStableVersionLess(entries[best].Loader.Version, version) {
-					best = i
-				}
-			}
-			if best >= 0 {
-				return entries[best], url, sha256HexBytes(data), nil
-			}
-		} else {
-			for _, entry := range entries {
-				if strings.TrimSpace(entry.Loader.Version) != "" && entry.Loader.Stable {
-					return entry, url, sha256HexBytes(data), nil
-				}
-			}
-		}
-		if requested == "latest" {
-			for _, entry := range entries {
-				if strings.TrimSpace(entry.Loader.Version) != "" {
-					return entry, url, sha256HexBytes(data), nil
-				}
-			}
-		}
-		return loaderMetaEntry{}, "", "", fmt.Errorf("Meta API не вернул стабильную %s loader version для Minecraft %s", loader, minecraftVersion)
+	selected, err := selectModernMetaEntry0272(loader, minecraftVersion, requested, entries)
+	if err != nil {
+		return loaderMetaEntry{}, "", "", err
 	}
-	for _, entry := range entries {
-		if entry.Loader.Version == requested {
-			return entry, url, sha256HexBytes(data), nil
-		}
-	}
-	return loaderMetaEntry{}, "", "", fmt.Errorf("%s loader %s несовместим с Minecraft %s по Meta API", loader, requested, minecraftVersion)
+	return selected, url, sha256HexBytes(data), nil
 }
 
 // Quilt Meta v3 не гарантирует булево поле `stable` в строках загрузчика,
@@ -586,6 +550,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 	}
 	tasks := make([]vanillaDownloadTask, 0, len(profile.Libraries))
 	seen := map[string]string{}
+	seenURLs := map[string]string{}
 	for index := range profile.Libraries {
 		lib := &profile.Libraries[index]
 		if strings.TrimSpace(lib.Name) == "" {
@@ -635,11 +600,12 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 		}
 		path := "libraries/" + rel
 		if previous, ok := seen[path]; ok {
-			if previous != expectedSHA1 {
-				return nil, fmt.Errorf("loader profile содержит конфликтующие artifacts для %s", path)
+			if previous != expectedSHA1 || seenURLs[path] != artifactURL {
+				return nil, fmt.Errorf("loader profile содержит конфликтующие artifacts/sources для %s", path)
 			}
 		} else {
 			seen[path] = expectedSHA1
+			seenURLs[path] = artifactURL
 			tasks = append(tasks, vanillaDownloadTask{Path: path, URL: artifactURL, SHA1: expectedSHA1, Size: artifact.Size, Kind: "loader-library"})
 		}
 		lib.Downloads.Artifact = MojangDownload{Path: rel, URL: artifactURL, SHA1: expectedSHA1, Size: artifact.Size}
