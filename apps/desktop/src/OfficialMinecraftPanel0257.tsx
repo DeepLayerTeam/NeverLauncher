@@ -1,144 +1,149 @@
-import React, {useEffect, useState} from 'react';
-import {OfficialMinecraftClient0257, type OfficialDevice0257, type OfficialProfile0257, type OfficialAccount0267, type NeverOfficialLink0268} from './official_minecraft_0257';
+import React, {useEffect, useRef, useState} from 'react';
+import {OfficialMinecraftClient0257, type OfficialProfile0257} from './official_minecraft_0257';
+import {AuthenticationExperience02610, initialAuthenticationState02610, type AuthenticationState02610} from './official_auth_experience_02610';
 
 type Props = {
-  client: OfficialMinecraftClient0257;
-  linkedProfile: OfficialProfile0257 | null;
-  onLinked: (profile: OfficialProfile0257 | null) => void;
+  client:OfficialMinecraftClient0257;
+  linkedProfile:OfficialProfile0257|null;
+  onLinked:(profile:OfficialProfile0257|null)=>void;
 };
+const formatTime=(seconds:number):string=>`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
 
-export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Props) {
-  const [device, setDevice] = useState<OfficialDevice0257 | null>(null);
-  const [accounts, setAccounts] = useState<OfficialAccount0267[]>([]);
-  const [neverLinks, setNeverLinks] = useState<NeverOfficialLink0268[] | null>(null);
-  const [browserPending, setBrowserPending] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [variant, setVariant] = useState<'classic'|'slim'>('classic');
-  const [file, setFile] = useState<File | null>(null);
-  const [remaining, setRemaining] = useState<number | null>(null);
-  useEffect(() => {
-    if (!device) { setRemaining(null); return; }
-    const until = Date.now() + device.expiresIn * 1000;
-    const update = () => setRemaining(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
-    update();
-    const timer = setInterval(update, 1000);
-    return () => clearInterval(timer);
-  }, [device]);
-  useEffect(() => {
-    let cancelled = false;
-    void client.accounts().then(entries=>{if (!cancelled) setAccounts(entries);})
-      .catch(e=>{if (!cancelled) setError(e instanceof Error?e.message:String(e));});
-    void client.neverLinks().then(links=>{if (!cancelled) setNeverLinks(links);})
-      .catch(()=>{if (!cancelled) setNeverLinks(null);});
-    return () => {cancelled = true;};
-  }, [client, linkedProfile?.id]);
-  async function updateAccounts() {
-    setAccounts(await client.accounts());
-    try { setNeverLinks(await client.neverLinks()); }
-    catch {setNeverLinks(null);}
-  }
-  async function completed(profile: OfficialProfile0257) {
-    onLinked(profile);
-    await updateAccounts();
-  }
-  async function beginDeviceLogin() {
-    await perform(async () => {
-      const challenge = await client.begin();
-      setDevice(challenge);
-      // Existing selected account remains active while adding a new one.
-      // This command waits natively and applies provider pacing/slow_down.
-      // It never exposes backend session tickets or device_code to React.
-      void client.waitDevice().then(profile => {
-        void completed(profile).catch(e=>setError(e instanceof Error?e.message:String(e)));
-        setDevice(null);
-      }).catch(e => {
-        if (!(e instanceof Error && e.message.includes('отменена'))) {
-          setError(e instanceof Error ? e.message : String(e));
-          setDevice(null);
-        }
-      });
-    });
-  }
-  async function perform(task: () => Promise<void>) {
-    setBusy(true);setError('');
-    try { await task(); } catch(e) { setError(e instanceof Error ? e.message : String(e)); }
-    finally { setBusy(false); }
-  }
-  return <section className="panel">
-    <h3>Официальный Minecraft (Microsoft)</h3>
-    <p>Официальная учётная запись отдельна от локального профиля NeverLauncher. Доступны только скины и плащи, подтверждённые Minecraft Services.</p>
-    <div className="toolbar inline">
-      <button disabled={busy||browserPending} onClick={()=>{
-        setBrowserPending(true);setError('');setDevice(null);
-        void client.browserLogin().then(profile=>{void completed(profile).catch(e=>setError(String(e)));setDevice(null);}).catch(e=>{
-          if (e instanceof Error && !e.message.includes('отменена')) setError(e.message);
-        }).finally(()=>setBrowserPending(false));
-      }}>Войти через браузер Microsoft (PKCE)</button>
-      {browserPending && <>
-        <span role="status">Завершите вход в открывшемся системном браузере.</span>
-        <button onClick={()=>void perform(async()=>{await client.cancel();setDevice(null);})}>Отменить вход</button>
-      </>}
-      <button disabled={busy||browserPending} onClick={()=>void beginDeviceLogin()}>Device Code (резервный режим)</button>
-      {device && <>
-        <span>Код: <strong>{device.userCode}</strong></span>
-        <a href={device.verificationUri} target="_blank" rel="noopener noreferrer">Открыть вход Microsoft</a>
-        <span role="status">Вход проверяется автоматически. Интервалы Microsoft и slow_down соблюдаются.</span>
-        {remaining !== null && <span>Осталось: {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}</span>}
-        <button disabled={busy} onClick={()=>void perform(async()=>{await client.cancel();setDevice(null);})}>Отменить вход</button>
+/** Complete account experience. Only metadata is retained by React; secrets stay in Rust. */
+export function OfficialMinecraftPanel0257({client,linkedProfile,onLinked}:Props) {
+  const [state,setState]=useState<AuthenticationState02610>(initialAuthenticationState02610);
+  const [now,setNow]=useState(Date.now());
+  const [skin,setSkin]=useState<File|null>(null);
+  const [variant,setVariant]=useState<'classic'|'slim'>('classic');
+  const controller=useRef<AuthenticationExperience02610|null>(null);
+  const callback=useRef(onLinked);
+  callback.current=onLinked;
+  useEffect(()=>{
+    const manager=new AuthenticationExperience02610(client,profile=>callback.current(profile));
+    controller.current=manager;
+    const unsubscribe=manager.subscribe(setState);
+    void manager.initialize();
+    return ()=>{unsubscribe();manager.dispose();if(controller.current===manager)controller.current=null;};
+  },[client]);
+  useEffect(()=>{setSkin(null);},[state.profile?.id]);
+  useEffect(()=>{
+    if(!state.deviceExpiresAt)return;
+    const timer=window.setInterval(()=>setNow(Date.now()),1000);
+    setNow(Date.now());
+    return ()=>window.clearInterval(timer);
+  },[state.deviceExpiresAt]);
+  const call=(action:(manager:AuthenticationExperience02610)=>Promise<void>)=>{
+    const manager=controller.current;
+    if(manager)void action(manager);
+  };
+  const busy=state.activity!==null;
+  const loginActive=state.activity==='browser'||state.activity==='device';
+  const loading=state.activity==='loading';
+  const profile=state.profile;
+  const selected=state.accounts.find(account=>account.active);
+  const linked=Boolean(profile && state.links?.some(link=>link.minecraftUuid.toLowerCase()===profile.id.toLowerCase()));
+  const remaining=state.deviceExpiresAt?Math.max(0,Math.ceil((state.deviceExpiresAt-now)/1000)):0;
+  const ready=Boolean(profile && selected?.id.toLowerCase()===profile.id.toLowerCase());
+  const reauthRequired=Boolean(selected && !profile && !loading && !loginActive);
+
+  return <section className="panel officialAuth02610" aria-label="Управление официальными Minecraft-аккаунтами">
+    <div className="officialAuthHeader02610">
+      <div><h3>Официальный Minecraft</h3><p>Вход в игру через Microsoft, отдельно от учётной записи Never. Токены сохраняются только в системном хранилище.</p></div>
+      <span className={`officialAuthStatus02610 ${ready?'ready':reauthRequired?'warning':''}`} role="status">
+        {loading?'Проверка сохранённой сессии…':ready?'Профиль подтверждён':reauthRequired?'Требуется повторная проверка':'Нет активной игровой сессии'}
+      </span>
+    </div>
+
+    {state.issue && <div className="officialAuthError02610" role="alert">
+      {state.issue}
+      {!busy && <button type="button" onClick={()=>call(m=>m.initialize())}>Повторить проверку</button>}
+    </div>}
+
+    <div className="officialAuthSection02610">
+      <div className="officialAuthSectionHeader02610"><h4>Игровые аккаунты</h4><span>{state.accounts.length} / 16</span></div>
+      {!loading && state.accounts.length===0 && <p>Аккаунтов пока нет. Войдите через системный браузер Microsoft или используйте резервный Device Code.</p>}
+      <div className="officialAuthAccounts02610" role="group" aria-label="Сохранённые аккаунты Minecraft">
+        {state.accounts.map(account=><div key={account.id} className={`officialAuthAccount02610 ${account.active?'selected':''}`}>
+          <div className="officialAuthAccountInfo02610">
+            <strong>{account.name}</strong>
+            <code title={account.id}>{account.id}</code>
+            <small>{account.active?(ready?'Выбран · готов к запуску':'Выбран · нужна проверка'):'Сохранён в OS vault'}</small>
+          </div>
+          <div className="officialAuthAccountActions02610">
+            <button type="button" disabled={busy||account.active} onClick={()=>call(m=>m.select(account.id))}
+              aria-label={`Выбрать аккаунт ${account.name}`}>{account.active?'Выбран':'Выбрать'}</button>
+            <button type="button" className="danger" disabled={busy} onClick={()=>{
+              if(window.confirm(`Удалить локальную игровую сессию ${account.name} (${account.id})? Привязка к Never не будет удалена.`))call(m=>m.logout(account.id));
+            }} aria-label={`Выйти из аккаунта ${account.name}`}>Выйти</button>
+          </div>
+        </div>)}
+      </div>
+      {state.accounts.length<16 && !loginActive && <div className="toolbar inline" role="group" aria-label="Добавить игровой аккаунт">
+        <button className="primary" type="button" disabled={busy} onClick={()=>call(m=>m.browserLogin())}>{state.accounts.length?'Добавить через Microsoft':'Войти через Microsoft'}</button>
+        <button type="button" disabled={busy} onClick={()=>call(m=>m.deviceLogin())}>Device Code</button>
+      </div>}
+      {state.accounts.length===16 && !loginActive && <p>Достигнут лимит 16 аккаунтов. Удалите неиспользуемый аккаунт, чтобы добавить новый.</p>}
+      {loginActive && <div className="officialAuthLogin02610" role="group" aria-label="Вход Microsoft">
+        {state.activity==='browser' ? <p role="status">Завершите вход в системном браузере. NeverLauncher ожидает защищённый callback.</p> : <>
+          {!state.device ? <p role="status">Запрашиваем код у Microsoft…</p> : <>
+            <p>Откройте Microsoft и введите код:</p>
+            <div className="officialAuthDevice02610"><code aria-label="Код входа">{state.device.userCode}</code><button type="button" onClick={()=>{if(state.device && navigator.clipboard)void navigator.clipboard.writeText(state.device.userCode).catch(()=>{});}}>Копировать код</button></div>
+            <a href={state.device.verificationUri} target="_blank" rel="noopener noreferrer">Открыть страницу входа Microsoft</a>
+            <p role="status">Проверка автоматическая · осталось {formatTime(remaining)}. Не закрывайте лаунчер.</p>
+          </>}
+        </>}
+        <button type="button" className="danger" onClick={()=>call(m=>m.cancelLogin())}>Отменить вход</button>
+      </div>}
+      {state.activity && !loginActive && !loading && <p role="status" aria-live="polite">{({cancel:'Отменяем вход',select:'Проверяем выбранный аккаунт',refresh:'Обновляем Microsoft и Minecraft токены',logout:'Удаляем игровую сессию',profile:'Проверяем профиль Minecraft',link:'Проверяем привязку Never',unlink:'Отвязываем от Never',skin:'Обновляем скин Minecraft',cape:'Обновляем плащ Minecraft'} as Record<string,string>)[state.activity]}…</p>}
+    </div>
+
+    <div className="officialAuthSection02610">
+      <div className="officialAuthSectionHeader02610"><h4>Активная игровая сессия</h4>{ready && <span>Official Java Edition</span>}</div>
+      {ready && profile ? <>
+        <p><strong>{profile.name}</strong> · UUID: <code>{profile.id}</code></p>
+        <div className="toolbar inline">
+          <button disabled={busy} type="button" onClick={()=>call(m=>m.revalidate())}>Проверить профиль и доступ</button>
+          <button disabled={busy} type="button" onClick={()=>call(m=>m.refresh())}>Обновить игровую сессию</button>
+          <button disabled={busy} type="button" onClick={()=>call(m=>m.browserLogin())}>Войти заново</button>
+        </div>
+      </> : <>
+        <p>{reauthRequired?'Проверка сохранённой сессии не завершилась успешно. Официальный запуск недоступен до нового подтверждения Minecraft profile.':'Выберите или добавьте аккаунт, чтобы запустить официальный Minecraft.'}</p>
+        {reauthRequired && <div className="toolbar inline"><button disabled={busy} onClick={()=>call(m=>m.revalidate())}>Повторить проверку</button><button disabled={busy} onClick={()=>call(m=>m.browserLogin())}>Войти заново через Microsoft</button></div>}
       </>}
     </div>
-    {accounts.length > 0 && <div className="toolbar inline" aria-label="Официальные аккаунты Minecraft">
-      <label htmlFor="officialAccount0267">Игровой аккаунт:</label>
-      <select id="officialAccount0267" disabled={busy||browserPending||!!device}
-        value={accounts.find(account=>account.active)?.id||''}
-        onChange={e=>void perform(async()=>{await completed(await client.selectAccount(e.target.value));})}>
-        {accounts.map(account=><option key={account.id} value={account.id}>{account.name} · {account.id.slice(0,8)}</option>)}
-      </select>
-      <button disabled={busy||browserPending||!!device||!linkedProfile} onClick={()=>void perform(async()=>{await completed(await client.refresh());})}>Обновить игровую сессию</button>
-      {accounts.some(a=>a.active) && <button disabled={busy||browserPending||!!device} onClick={()=>void perform(async()=>{
-        const active = accounts.find(account=>account.active);
-        if (!active || !window.confirm(`Выйти из Minecraft-аккаунта ${active.name} на этом устройстве?`)) return;
-        let next: OfficialProfile0257 | null = null;
-        try { next = await client.logout(active.id); }
-        finally { onLinked(next); await updateAccounts(); }
-      })}>Выйти из выбранного аккаунта</button>}
-    </div>}
-    {linkedProfile && <div className="toolbar inline" aria-label="Связь Never и Minecraft">
-      {!neverLinks ? <span>Связи Never недоступны. Проверьте Backend и базу данных.</span> :
-      neverLinks.some(link=>link.minecraftUuid===linkedProfile.id.toLowerCase()) ? <>
-        <span>Связан с Never identity (официальный UUID подтверждён Backend).</span>
-        <button disabled={busy||browserPending||!!device} onClick={()=>void perform(async()=>{
-          if (!window.confirm(`Отвязать Minecraft ${linkedProfile.name} (${linkedProfile.id}) от Never identity? Игровая сессия на устройстве сохранится.`))return;
-          await client.unlinkFromNever(linkedProfile.id,true);
-          await updateAccounts();
-        })}>Отвязать от Never</button>
-      </> : <>
-        <span>Не привязан к Never identity. Наличие аккаунта в Desktop не означает привязку.</span>
-        <button disabled={busy||browserPending||!!device} onClick={()=>void perform(async()=>{
-          if (!window.confirm(`Привязать Never identity к официальному Minecraft ${linkedProfile.name} (${linkedProfile.id})? Будут проверены Never-сессия и владение Minecraft у Mojang.`))return;
-          await client.linkToNever(linkedProfile.id,true);
-          await updateAccounts();
-        })}>Привязать к Never</button>
-      </>}
-    </div>}
-    {linkedProfile && <>
-      <p>Профиль: <strong>{linkedProfile.name}</strong> · UUID: <code>{linkedProfile.id}</code></p>
-      <div className="toolbar inline">
-        <button disabled={busy} onClick={()=>void perform(async()=>onLinked(await client.profile()))}>Обновить профиль</button>
+
+    {ready && profile && <>
+      <div className="officialAuthSection02610">
+        <div className="officialAuthSectionHeader02610"><h4>Связь с Never identity</h4><span>{linked?'Привязан':state.links?'Не привязан':'Нет данных'}</span></div>
+        {state.links===null ? <p>{state.linksIssue||'Проверяем связь с Never identity.'}</p> :
+          <p>{linked?'Minecraft UUID подтверждён сервером Never.':'Локальный игровой аккаунт не привязан к Never identity.'}</p>}
+        <div className="toolbar inline">
+          {state.links!==null && (linked ?
+            <button disabled={busy} onClick={()=>{
+              if(window.confirm(`Отвязать ${profile.name} (${profile.id}) от Never? Локальная игровая сессия останется.`))call(m=>m.unlink(profile.id));
+            }}>Отвязать от Never</button> :
+            <button disabled={busy} onClick={()=>{
+              if(window.confirm(`Привязать Never identity к ${profile.name} (${profile.id})? Backend проверит владение Minecraft.`))call(m=>m.link(profile.id));
+            }}>Привязать к Never</button>)}
+        </div>
       </div>
-      <div className="toolbar inline">
-        <input type="file" accept="image/png" aria-label="Официальный скин PNG" onChange={e=>setFile(e.target.files?.[0]||null)}/>
-        <select value={variant} onChange={e=>setVariant(e.target.value as 'classic'|'slim')} aria-label="Модель скина"><option value="classic">Classic</option><option value="slim">Slim</option></select>
-        <button disabled={!file||busy} onClick={()=>void perform(async()=>{if(file)onLinked(await client.uploadSkin(file,variant));})}>Загрузить официальный скин</button>
-        <button disabled={busy} onClick={()=>void perform(async()=>onLinked(await client.resetSkin()))}>Сбросить скин</button>
-      </div>
-      <div className="toolbar inline">
-        <span>Плащи аккаунта:</span>
-        {(linkedProfile.capes || []).map(cape=><button key={cape.id} disabled={busy} onClick={()=>void perform(async()=>onLinked(await client.selectCape(cape.id)))}>{cape.alias||cape.id}{cape.state==='ACTIVE'?' (выбран)':''}</button>)}
-        <button disabled={busy} onClick={()=>void perform(async()=>onLinked(await client.resetCape()))}>Снять плащ</button>
+      <div className="officialAuthSection02610">
+        <h4>Скин и плащ</h4>
+        <div className="toolbar inline">
+          <input type="file" accept="image/png" aria-label="Официальный скин PNG" onChange={e=>setSkin(e.target.files?.[0]||null)}/>
+          <select value={variant} aria-label="Модель скина" onChange={e=>setVariant(e.target.value as 'classic'|'slim')}>
+            <option value="classic">Classic</option><option value="slim">Slim</option>
+          </select>
+          <button disabled={busy||!skin} onClick={()=>{if(skin)call(m=>m.uploadSkin(skin,variant));}}>Загрузить скин</button>
+          <button disabled={busy} onClick={()=>call(m=>m.resetSkin())}>Сбросить скин</button>
+        </div>
+        <div className="toolbar inline">
+          {(profile.capes||[]).map(cape=><button key={cape.id} disabled={busy||cape.state==='ACTIVE'} onClick={()=>call(m=>m.selectCape(cape.id))}>{cape.alias||cape.id}{cape.state==='ACTIVE'?' (выбран)':''}</button>)}
+          <button disabled={busy} onClick={()=>call(m=>m.resetCape())}>Снять плащ</button>
+        </div>
       </div>
     </>}
-    {error && <p role="alert">{error}</p>}
+    {/* Parent launch mode is driven solely by the verified profile callback, never by stored metadata. */}
+    {linkedProfile && !ready && <p className="officialAuthError02610">Данные о ранее активном аккаунте перепроверяются. Официальный запуск временно недоступен.</p>}
   </section>;
 }

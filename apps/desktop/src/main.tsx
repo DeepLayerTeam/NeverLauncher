@@ -1719,7 +1719,7 @@ function App() {
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} />}
         {screen === 'auth' && authSession?.accessToken && officialMinecraftClient.current && <>
-          <OfficialMinecraftPanel0257 client={officialMinecraftClient.current} linkedProfile={officialProfile} onLinked={(p)=>{setOfficialProfile(p); if (!p) setMinecraftIdentity('local');}} />
+          <OfficialMinecraftPanel0257 key={`${settings.backendUrl}|${authSession.sessionId}`} client={officialMinecraftClient.current} linkedProfile={officialProfile} onLinked={(p)=>{setOfficialProfile(p); if (!p) setMinecraftIdentity('local');}} />
           <section className="panel"><label>Режим запуска Minecraft <select value={minecraftIdentity} onChange={e=>{
             const mode=e.target.value as GameLaunchMode0269;
             setMinecraftIdentity(mode);

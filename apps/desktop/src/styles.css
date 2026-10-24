@@ -263,3 +263,30 @@ ul { padding-left: 18px; }
 .textureSuccess0258 {border-left:3px solid #4ade80;padding:10px;color:#bbf7d0!important;}
 @media(max-width:1080px){.textureContent0258 {grid-template-columns:1fr;}}
 @media(max-width:520px){.textureSettings0258 {grid-template-columns:1fr;}.textureGallery0258 {grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+/* 0.26.10 — production desktop game-account management */
+.officialAuth02610 { display: grid; gap: 18px; }
+.officialAuthHeader02610, .officialAuthSectionHeader02610 {display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;}
+.officialAuthHeader02610 > div {flex:1;min-width:220px;display:grid;gap:8px;}
+.officialAuthStatus02610 {border:1px solid #475569;border-radius:999px;padding:7px 12px;font-size:13px;color:#cbd5e1;}
+.officialAuthStatus02610.ready {border-color:#16a34a;color:#86efac;}
+.officialAuthStatus02610.warning {border-color:#ca8a04;color:#fde047;}
+.officialAuthSection02610 {display:grid;gap:12px;border-top:1px solid #334155;padding-top:16px;}
+.officialAuthSectionHeader02610 h4,.officialAuthSection02610 h4 {margin:0;}
+.officialAuthSectionHeader02610 span {color:#94a3b8;font-size:13px;}
+.officialAuthAccounts02610 {display:grid;gap:8px;}
+.officialAuthAccount02610 {display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:12px;border:1px solid #334155;border-radius:12px;background:rgba(15,23,42,.45);}
+.officialAuthAccount02610.selected {border-color:#16a34a;}
+.officialAuthAccountInfo02610 {display:grid;gap:5px;min-width:0;flex:1;}
+.officialAuthAccountInfo02610 code {color:#94a3b8;overflow-wrap:anywhere;font-size:12px;}
+.officialAuthAccountInfo02610 small {color:#a1a1aa;}
+.officialAuthAccountActions02610 {display:flex;flex-wrap:wrap;gap:8px;}
+.officialAuthAccountActions02610 button,.officialAuthDevice02610 button,.officialAuthError02610 button {border:1px solid #475569;background:#1e293b;color:#e2e8f0;padding:8px 11px;border-radius:9px;cursor:pointer;}
+.officialAuthAccountActions02610 button:disabled {cursor:not-allowed;opacity:.55;}
+.officialAuthAccountActions02610 .danger {border-color:#7f1d1d;color:#fca5a5;}
+.officialAuthLogin02610 {padding:12px;border:1px solid #475569;border-radius:12px;display:grid;justify-items:start;gap:10px;}
+.officialAuthDevice02610 {display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.officialAuthDevice02610 code {font-size:21px;color:#f8fafc;letter-spacing:2px;user-select:all;}
+.officialAuthError02610 {display:flex;align-items:center;flex-wrap:wrap;gap:12px;border-left:3px solid #dc2626;padding:10px 12px;background:rgba(127,29,29,.16);color:#fca5a5;}
+.officialAuth02610 :focus-visible {outline:2px solid #4ade80;outline-offset:3px;}
+@media (max-width:600px) {.officialAuthAccount02610 {align-items:stretch;}.officialAuthAccountActions02610 {width:100%;}.officialAuthAccountActions02610 button {flex:1;}}

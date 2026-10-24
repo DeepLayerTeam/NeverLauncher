@@ -61,7 +61,10 @@ export class OfficialMinecraftClient0257 {
   }
   /** System-browser OAuth PKCE: authorization code and verifier never enter React. */
   async browserLogin(): Promise<OfficialProfile0257> {
+    const beforeCancel = this.generation;
     await this.cancel();
+    // A user cancellation racing with native cancel must not start a new browser flow.
+    if (this.generation !== beforeCancel + 1) throw new Error('Авторизация отменена.');
     const generation = this.generation;
     const profile = await this.call<OfficialProfile0257>('official_identity_browser_login_0263');
     if (generation !== this.generation) throw new Error('Авторизация отменена.');
@@ -70,7 +73,10 @@ export class OfficialMinecraftClient0257 {
     return profile;
   }
   async begin(): Promise<OfficialDevice0257> {
+    const beforeCancel = this.generation;
     await this.cancel();
+    // Prevent a cancelled pending begin from creating a new Device Code flow.
+    if (this.generation !== beforeCancel + 1) throw new Error('Авторизация отменена.');
     const generation = this.generation;
     const challenge = await this.call<OfficialDevice0257>('official_identity_begin_0262');
     if (generation !== this.generation) throw new Error('Авторизация отменена.');

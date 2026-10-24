@@ -1,0 +1,38 @@
+name: Desktop authentication experience 0.26.10
+on:
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - 'VERSION'
+      - '.github/workflows/desktop-authentication-02610.yml'
+  push:
+    paths:
+      - 'apps/desktop/**'
+      - 'VERSION'
+      - '.github/workflows/desktop-authentication-02610.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-authentication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run test:auth-experience
+      - run: npm run test:official
+      - run: npm run test:textures
+      - run: npm run test:launch-modes
+      - run: npm run test:components
+      - run: npm run build
