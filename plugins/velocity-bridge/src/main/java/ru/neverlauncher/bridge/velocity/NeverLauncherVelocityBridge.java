@@ -4,6 +4,8 @@ import com.google.inject.Inject;
 import com.velocitypowered.api.event.EventTask;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.PreLoginEvent;
+import com.velocitypowered.api.event.connection.LoginEvent;
+import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.player.ServerPreConnectEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
@@ -123,6 +125,21 @@ public final class NeverLauncherVelocityBridge {
         });
     }
 
+    // PreLogin runs before the encrypted Minecraft/online-authlib handshake
+    // has established the player's UUID. Never trust a username-only ticket
+    // as the final identity: compare the authenticated platform UUID here.
+    @Subscribe
+    public void onAuthenticatedLogin(LoginEvent event) {
+        ProxyBridgeRuntime current = runtime;
+        String username = event.getPlayer().getUsername();
+        String authenticatedUUID = event.getPlayer().getUniqueId() == null ? "" : event.getPlayer().getUniqueId().toString();
+        if (current == null || !current.confirmAuthenticatedPlayer(username, authenticatedUUID)) {
+            event.setResult(LoginEvent.ComponentResult.denied(Component.text(
+                "NeverLauncher authenticated Minecraft UUID does not match the launcher session")));
+            logger.warning("neverlauncher.join.uuid-denied username=" + username + " platform=velocity");
+        }
+    }
+
     @Subscribe
     public EventTask onServerPreConnect(ServerPreConnectEvent event) {
         return EventTask.async(() -> {
@@ -195,6 +212,15 @@ public final class NeverLauncherVelocityBridge {
     private static String safeLine(String value, int max) {
         String out = value == null ? "" : value.replace('\r', ' ').replace('\n', ' ').replace('\0', ' ').trim();
         return out.length() > max ? out.substring(0, max) : out;
+    }
+
+    @Subscribe
+    public void onDisconnect(DisconnectEvent event) {
+        ProxyBridgeRuntime current = runtime;
+        if (current == null) return;
+        String username = event.getPlayer().getUsername();
+        current.publishEvent("player.quit", Map.of("username", username));
+        current.playerDisconnected(username);
     }
 
     @Subscribe

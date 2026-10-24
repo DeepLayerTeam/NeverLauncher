@@ -4,6 +4,8 @@ import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.event.PreLoginEvent;
+import net.md_5.bungee.api.event.LoginEvent;
+import net.md_5.bungee.api.event.PlayerDisconnectEvent;
 import net.md_5.bungee.api.event.ServerConnectEvent;
 import net.md_5.bungee.api.plugin.Command;
 import net.md_5.bungee.api.plugin.Listener;
@@ -135,7 +137,10 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         }
         event.registerIntent(this);
         String username = event.getConnection().getName();
-        String uuid = event.getConnection().getUniqueId() == null ? "" : event.getConnection().getUniqueId().toString();
+        // UUID at PreLogin is not yet a verified online/project identity.
+        // The signed Backend ticket is checked here; its UUID is compared
+        // after game authentication in onAuthenticatedLogin below.
+        String uuid = "";
         String ip = remoteIP(event.getConnection().getSocketAddress());
         current.validateJoinAsync(username, uuid, ip).whenComplete((result, error) -> {
             try {
@@ -158,6 +163,28 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                 event.completeIntent(this);
             }
         });
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public final void onAuthenticatedLogin(LoginEvent event) {
+        ProxyBridgeRuntime current = runtime;
+        String username = event.getConnection().getName();
+        String uuid = event.getConnection().getUniqueId() == null ? "" : event.getConnection().getUniqueId().toString();
+        if (current == null || !current.confirmAuthenticatedPlayer(username, uuid)) {
+            event.setCancelled(true);
+            event.setCancelReason(TextComponent.fromLegacyText(
+                "NeverLauncher authenticated Minecraft UUID does not match the launcher session"));
+            getLogger().warning("neverlauncher.join.uuid-denied username=" + username + " platform=" + expectedPlatform.id());
+        }
+    }
+
+    @EventHandler
+    public final void onPlayerDisconnect(PlayerDisconnectEvent event) {
+        ProxyBridgeRuntime current = runtime;
+        if (current == null) return;
+        String username = event.getPlayer().getName();
+        current.publishEvent("player.quit", Map.of("username", username));
+        current.playerDisconnected(username);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)

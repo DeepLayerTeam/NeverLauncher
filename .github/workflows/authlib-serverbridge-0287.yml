@@ -1,0 +1,46 @@
+name: ServerBridge Authlib and Join Binding 0.28.7
+
+on:
+  push:
+    paths:
+      - 'plugins/bridge-common/**'
+      - 'plugins/proxy-family-common/**'
+      - 'plugins/bungee-family-common/**'
+      - 'plugins/velocity-bridge/**'
+      - 'services/api/internal/bridgeidentity/**'
+      - 'services/api/internal/httpapi/bridge_plugins.go'
+      - 'e2e/scripts/run-serverbridge-auth-integration-0287.sh'
+      - '.github/workflows/authlib-serverbridge-0287.yml'
+  pull_request:
+    paths:
+      - 'plugins/bridge-common/**'
+      - 'plugins/proxy-family-common/**'
+      - 'plugins/bungee-family-common/**'
+      - 'plugins/velocity-bridge/**'
+      - 'services/api/internal/bridgeidentity/**'
+      - 'services/api/internal/httpapi/bridge_plugins.go'
+      - 'e2e/scripts/run-serverbridge-auth-integration-0287.sh'
+      - '.github/workflows/authlib-serverbridge-0287.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bridge-auth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      - name: Compile real bridge and run login/handoff negative tests
+        run: bash e2e/scripts/run-serverbridge-auth-integration-0287.sh
+      - name: Version metadata check
+        run: python3 scripts/version/manage.py check

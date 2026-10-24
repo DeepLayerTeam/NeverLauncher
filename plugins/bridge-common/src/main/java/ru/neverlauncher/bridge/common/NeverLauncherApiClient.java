@@ -173,19 +173,20 @@ public final class NeverLauncherApiClient {
             "}";
         IOException lastIo = null;
         InterruptedException lastInterrupted = null;
-        for (int attempt = 0; attempt <= Math.max(0, config.retries); attempt++) {
+        // Join redemption consumes a one-time ticket. A lost ACK must not
+        // silently trigger a second consumption from another Backend replica.
+        for (int attempt = 0; attempt < 1; attempt++) {
             try {
-                // Повторная попытка — новый аутентифицированный запрос с новым nonce. Повторное
-                // использование подписанного запроса справедливо отклоняется как воспроизведение.
-                HttpResponse<String> response = sendSignedWithFailover("POST", config.validateJoinPath(), body);
+                // Signed request with a fresh nonce; never replay on I/O uncertainty.
+                HttpResponse<String> response = sendSignedWithoutReplay0287("POST", config.validateJoinPath(), body);
                 String raw = response.body() == null ? "" : response.body();
-                boolean allowed = response.statusCode() >= 200 && response.statusCode() < 300 && raw.contains("\"allowed\":true");
-                if (allowed) {
-                    String correlation = extractJsonString(raw, "sessionCorrelationId");
-                    if (!correlation.isBlank()) playerSessions.bind(username, correlation);
-                    return new JoinValidationResult(true, "session_valid", raw);
+                BridgeAuthResponse0287.Decision decision = BridgeAuthResponse0287.join(
+                    response.statusCode(), raw, config.serverId, username, uuid);
+                if (decision.allowed()) {
+                    playerSessions.bind(username, decision.correlation());
+                    return new JoinValidationResult(true, "session_valid", raw, decision.uuid());
                 }
-                return new JoinValidationResult(false, extractReason(raw), raw);
+                return new JoinValidationResult(false, decision.reason(), raw);
             } catch (IOException e) {
                 lastIo = e;
             } catch (InterruptedException e) {
@@ -197,8 +198,9 @@ public final class NeverLauncherApiClient {
             }
         }
         String reason = lastInterrupted != null ? "backend_interrupted" : (lastIo != null ? "backend_unavailable" : "backend_denied");
-        boolean failOpen = "open".equalsIgnoreCase(config.failMode) && !config.requireLauncherSession && !config.requireIntegrity;
-        return new JoinValidationResult(failOpen, reason, "{}");
+        // A ticket-authenticated project/online join may never fail open.
+        // Legacy failMode=open is ignored for Minecraft admission.
+        return new JoinValidationResult(false, reason, "{}");
     }
 
     public JoinValidationResult createHandoff(String username, String targetServer) {
@@ -223,14 +225,16 @@ public final class NeverLauncherApiClient {
             "\"targetServer\":" + quote(targetServer) + sessionField +
             "}";
         IOException lastIo = null;
-        for (int attempt = 0; attempt <= Math.max(0, config.retries); attempt++) {
+        // Handoff creation has an external, one-time side effect. If the reply
+        // is lost, never issue a second creation under a different nonce: the
+        // original may have committed. Fail closed and require a new attempt.
+        for (int attempt = 0; attempt < 1; attempt++) {
             try {
-                HttpResponse<String> response = sendSignedWithFailover("POST", config.handoffPath(), body);
+                HttpResponse<String> response = sendSignedWithoutReplay0287("POST", config.handoffPath(), body);
                 String raw = response.body() == null ? "" : response.body();
-                if (response.statusCode() >= 200 && response.statusCode() < 300 && raw.contains("\"status\":\"handoff-created\"")) {
-                    return new JoinValidationResult(true, "handoff_created", raw);
-                }
-                return new JoinValidationResult(false, extractReason(raw), raw);
+                BridgeAuthResponse0287.Decision decision = BridgeAuthResponse0287.handoff(
+                    response.statusCode(), raw, config.serverId, username, targetServer, correlation);
+                return new JoinValidationResult(decision.allowed(), decision.reason(), raw);
             } catch (IOException e) {
                 lastIo = e;
             } catch (InterruptedException e) {
@@ -599,6 +603,26 @@ public final class NeverLauncherApiClient {
         String base = "\"protocolVersion\":" + protocol.protocolVersion();
         if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION) return base;
         return base + ",\"features\":" + jsonArray(protocol.features());
+    }
+
+    /**
+     * One-time join/handoff operations MUST NOT be attempted on another replica
+     * after an uncertain network failure or 502/503/504. PostgreSQL may have
+     * committed the external effect even when the first HTTP reply is lost.
+     */
+    private HttpResponse<String> sendSignedWithoutReplay0287(String method, String relative, String body)
+        throws IOException, InterruptedException, GeneralSecurityException {
+        BridgeBackendPool.Endpoint endpoint = backendPool.candidates(relative).get(0);
+        try {
+            HttpResponse<String> response = client.send(
+                signedRequest(method, endpoint.uri(), body), HttpResponse.BodyHandlers.ofString());
+            if (isRetryableBackendStatus(response.statusCode())) backendPool.failure(endpoint.index());
+            else backendPool.success(endpoint.index());
+            return response;
+        } catch (IOException e) {
+            backendPool.failure(endpoint.index());
+            throw e;
+        }
     }
 
     private HttpResponse<String> sendSignedWithFailover(String method, String relative, String body) throws IOException, InterruptedException, GeneralSecurityException {

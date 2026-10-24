@@ -1,5 +1,6 @@
 package ru.neverlauncher.bridge.proxy;
 
+import ru.neverlauncher.bridge.common.BridgeAuthResponse0287;
 import ru.neverlauncher.bridge.common.BridgeConfig;
 import ru.neverlauncher.bridge.common.BridgeControlCommand;
 import ru.neverlauncher.bridge.common.BridgeControlExecutor;
@@ -14,6 +15,8 @@ import ru.neverlauncher.bridge.common.NodeIdentity;
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,6 +49,9 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     private final AtomicBoolean maintenanceMode = new AtomicBoolean(false);
     private final AtomicBoolean drainMode = new AtomicBoolean(false);
+    private final ConcurrentHashMap<String, PendingIdentity> pendingIdentities = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> authenticatedIdentities = new ConcurrentHashMap<>();
+    private record PendingIdentity(String uuid, Instant expiresAt) {}
     private final ScheduledExecutorService heartbeatExecutor;
     private final ThreadPoolExecutor validationExecutor;
 
@@ -100,6 +106,8 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
 
     public synchronized void reload() throws Exception {
         ensureRunning();
+        pendingIdentities.clear();
+        authenticatedIdentities.clear();
         RuntimeState previous = state;
         RuntimeState next = loadState();
         state = next;
@@ -114,11 +122,44 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     public JoinValidationResult validateJoin(String username, String uuid, String ip) {
         RuntimeState current = state;
         if (current == null || stopping.get()) {
+            playerDisconnected(username);
             return new JoinValidationResult(false, "bridge_runtime_unavailable", "{}");
         }
-        if (maintenanceMode.get()) return new JoinValidationResult(false, "server_maintenance", "{}");
-        if (drainMode.get()) return new JoinValidationResult(false, "server_draining", "{}");
-        return current.api.validateJoin(username, uuid, ip);
+        if (maintenanceMode.get() || drainMode.get()) {
+            playerDisconnected(username);
+            return new JoinValidationResult(false, maintenanceMode.get() ? "server_maintenance" : "server_draining", "{}");
+        }
+        JoinValidationResult result = current.api.validateJoin(username, uuid, ip);
+        String key = username == null ? "" : username.toLowerCase(Locale.ROOT);
+        authenticatedIdentities.remove(key);
+        if (result.allowed && !result.authorizedUUID.isBlank()) {
+            pendingIdentities.put(key, new PendingIdentity(result.authorizedUUID, Instant.now().plusSeconds(60)));
+        } else {
+            pendingIdentities.remove(key);
+        }
+        return result;
+    }
+
+    /** Called after Mojang/project auth has established the game's actual UUID. */
+    public boolean confirmAuthenticatedPlayer(String username, String uuid) {
+        if (stopping.get() || state == null || username == null || maintenanceMode.get() || drainMode.get()) {
+            playerDisconnected(username);
+            return false;
+        }
+        String key = username.toLowerCase(Locale.ROOT);
+        PendingIdentity expected = pendingIdentities.remove(key);
+        boolean accepted = expected != null && Instant.now().isBefore(expected.expiresAt()) &&
+            BridgeAuthResponse0287.matchesAuthenticatedUUID(uuid, expected.uuid());
+        if (accepted) authenticatedIdentities.put(key, expected.uuid());
+        else authenticatedIdentities.remove(key);
+        return accepted;
+    }
+
+    public void playerDisconnected(String username) {
+        if (username == null) return;
+        String key = username.toLowerCase(Locale.ROOT);
+        pendingIdentities.remove(key);
+        authenticatedIdentities.remove(key);
     }
 
     public JoinValidationResult createHandoff(String username, String targetServer) {
@@ -128,6 +169,8 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         }
         if (maintenanceMode.get()) return new JoinValidationResult(false, "server_maintenance", "{}");
         if (drainMode.get()) return new JoinValidationResult(false, "server_draining", "{}");
+        if (username == null || !authenticatedIdentities.containsKey(username.toLowerCase(Locale.ROOT)))
+            return new JoinValidationResult(false, "proxy_authenticated_uuid_missing", "{}");
         return current.api.createHandoff(username, targetServer);
     }
 
@@ -248,6 +291,8 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     @Override
     public void close() {
         if (!stopping.compareAndSet(false, true)) return;
+        pendingIdentities.clear();
+        authenticatedIdentities.clear();
         RuntimeState current = state;
         if (current != null) {
             current.api.publishEvent("server.shutdown", Map.of("platform", platformId));

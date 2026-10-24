@@ -4,11 +4,18 @@ public final class JoinValidationResult {
     public final boolean allowed;
     public final String reason;
     public final String raw;
+    /** UUID from the authoritative ticket, never the network-reported identity. */
+    public final String authorizedUUID;
 
     public JoinValidationResult(boolean allowed, String reason, String raw) {
+        this(allowed, reason, raw, "");
+    }
+
+    public JoinValidationResult(boolean allowed, String reason, String raw, String authorizedUUID) {
         this.allowed = allowed;
         this.reason = reason == null || reason.isBlank() ? (allowed ? "session_valid" : "session_denied") : reason;
         this.raw = raw;
+        this.authorizedUUID = allowed && authorizedUUID != null ? authorizedUUID : "";
     }
 
     public String userMessage() {
@@ -24,6 +31,7 @@ public final class JoinValidationResult {
             case "device_reattest_required" -> "Требуется повторная проверка устройства в NeverLauncher.";
             case "session_step_up_required" -> "Требуется дополнительная проверка входа в NeverLauncher.";
             case "session_risk_revoked", "parent_session_inactive" -> "Сессия NeverLauncher отозвана. Выполните вход заново.";
+            case "serverbridge_player_uuid_mismatch", "serverbridge_player_uuid_invalid", "serverbridge_authorized_uuid_invalid", "join_player_uuid_mismatch", "join_authorized_uuid_invalid", "join_response_identity_mismatch", "join_authorization_missing", "proxy_authenticated_uuid_mismatch" -> "UUID игрока не совпадает с авторизованной игровой сессией. Проверьте конфигурацию online-mode/authlib/forwarding.";
             case "project_mismatch", "profile_mismatch" -> "Эта сессия NeverLauncher не предназначена для данного сервера.";
             case "channel_mismatch" -> "Канал launcher session не совпадает с каналом сервера.";
             case "bridge_integrity_unavailable", "bridge_integrity_measurement_missing", "bridge_integrity_heartbeat_required", "bridge_integrity_policy_unavailable", "bridge_integrity_release_revoked", "bridge_integrity_hash_rejected", "bridge_integrity_server_type_mismatch", "bridge_integrity_request_measurement_mismatch" -> "Целостность ServerBridge не подтверждена. Обновите или перезапустите серверный bridge.";

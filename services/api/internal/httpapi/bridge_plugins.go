@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/bridgeidentity"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
@@ -297,6 +298,18 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "launcher_session_or_handoff_missing_or_expired", req, bridgeJoinRecord{}))
 		return
 	}
+	// The runtime-supplied UUID is an observation, NEVER an authority.
+	// Verify it before redeeming the one-time ticket/handoff; an offline-mode
+	// UUID or a different Mojang/project UUID must not silently replace it.
+	if err := bridgeidentity.Validate(req.UUID, join.UUID); err != nil {
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-uuid-denied"), Actor: server.ID, Action: "serverbridge:validate-join:uuid-denied", Target: req.Username + ":" + err.Error(), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, err.Error(), req, bridgeJoinRecord{}))
+		return
+	}
+	if !strings.EqualFold(req.Username, join.Username) {
+		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "serverbridge_player_name_mismatch", req, bridgeJoinRecord{}))
+		return
+	}
 	if err := planJoinEpochValid02412(join.CreatedAt); err != nil {
 		writeJSON(w, http.StatusPreconditionFailed, bridgeValidateResponse940(s.Version, false, "verified_plan_policy_changed", req, join))
 		return
@@ -499,7 +512,7 @@ func bridgeValidateResponse940(version string, allowed bool, reason string, req 
 		"checkedAt":       time.Now().UTC().Format(time.RFC3339),
 	}}
 	if allowed {
-		payload["data"].(map[string]any)["player"] = map[string]any{"uuid": firstNonEmpty(req.UUID, join.UUID), "username": req.Username}
+		payload["data"].(map[string]any)["player"] = map[string]any{"uuid": join.UUID, "username": req.Username}
 		payload["data"].(map[string]any)["session"] = sanitizeJoinRecord910(join)
 	}
 	return payload

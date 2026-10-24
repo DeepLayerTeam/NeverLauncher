@@ -1,3 +1,11 @@
+## 0.28.7 — Authlib / ServerBridge Integration (2026-10-25)
+
+- Bind runtime-observed Minecraft UUID to the authoritative UUID in the ServerBridge join ticket before redemption; never echo request UUID as authoritative player identity. UUID disagreement fails closed without consuming the ticket or proxy handoff.
+- Verify the full structured Java Backend response (node/name, UUID, accepted admission mode, player correlation) instead of searching JSON for `"allowed":true`. Verify proxy-to-backend handoff target/source, UUID-associated session correlation, one-time handoff ID and 30-second expiry.
+- Velocity and BungeeCord/Waterfall now compare the UUID obtained **after Minecraft authentication** to the join ticket's UUID. Proxy handoffs require this authenticated binding; clear pending/confirmed identities on disconnect/reload/shutdown.
+- Join/handoff use a single Backend attempt: do not replay a non-idempotent one-time operation across replicas when the first response might have been committed. Legacy `failMode=open` can no longer allow bypassing ticket authentication.
+- Introduce dependency-free live bridge Java harness and Go UUID tests. **No claim of real Mojang/game client runtime E2E or full Gradle/API integration certification.** See `docs/releases/0.28.7-authlib-serverbridge-integration.md`.
+
 ## 0.28.6 — Adapter Capabilities & Certification (2026-10-25)
 
 - Enforce signed runtime-advertised per-command capabilities in live Backend create/delivery and Java Bridge execution; absent/stale/unsupported claims fail closed without granting Host/Backend control.
