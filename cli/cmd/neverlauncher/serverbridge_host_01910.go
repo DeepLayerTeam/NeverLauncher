@@ -22,50 +22,62 @@ import (
 const serverBridgeHostStateDir01910 = ".neverlauncher/server-bridge/host"
 
 type serverBridgeHostConfig01910 struct {
-	SchemaVersion        string   `json:"schemaVersion"`
-	ProductVersion       string   `json:"productVersion"`
-	ServerRoot           string   `json:"serverRoot"`
-	Platform             string   `json:"platform"`
-	LaunchMode           string   `json:"launchMode"`
-	JavaPath             string   `json:"javaPath"`
-	JavaMajor            int      `json:"javaMajor"`
-	ServerJar            string   `json:"serverJar,omitempty"`
-	JavaArgsFile         string   `json:"javaArgsFile,omitempty"`
-	JVMArgs              []string `json:"jvmArgs,omitempty"`
-	ServerArgs           []string `json:"serverArgs,omitempty"`
-	RestartPolicy        string   `json:"restartPolicy"`
-	MaxRestarts          int      `json:"maxRestarts"`
-	RestartBackoffMillis int      `json:"restartBackoffMillis"`
-	StopTimeoutSeconds   int      `json:"stopTimeoutSeconds"`
-	CreatedAt            string   `json:"createdAt"`
-	UpdatedAt            string   `json:"updatedAt"`
+	SchemaVersion        string            `json:"schemaVersion"`
+	ProductVersion       string            `json:"productVersion"`
+	ServerRoot           string            `json:"serverRoot"`
+	Platform             string            `json:"platform"`
+	LaunchMode           string            `json:"launchMode"`
+	JavaPath             string            `json:"javaPath"`
+	JavaMajor            int               `json:"javaMajor"`
+	ServerJar            string            `json:"serverJar,omitempty"`
+	JavaArgsFile         string            `json:"javaArgsFile,omitempty"`
+	JVMArgs              []string          `json:"jvmArgs,omitempty"`
+	ServerArgs           []string          `json:"serverArgs,omitempty"`
+	RestartPolicy        string            `json:"restartPolicy"`
+	MaxRestarts          int               `json:"maxRestarts"`
+	RestartBackoffMillis int               `json:"restartBackoffMillis"`
+	StopTimeoutSeconds   int               `json:"stopTimeoutSeconds"`
+	WorkingDirectory     string            `json:"workingDirectory,omitempty"`
+	EnvAllowlist         []string          `json:"envAllowlist,omitempty"`
+	Environment          map[string]string `json:"environment,omitempty"`
+	LogMaxBytes          int64             `json:"logMaxBytes,omitempty"`
+	LogBackups           int               `json:"logBackups,omitempty"`
+	CrashWindowSeconds   int               `json:"crashWindowSeconds,omitempty"`
+	StableRunSeconds     int               `json:"stableRunSeconds,omitempty"`
+	CreatedAt            string            `json:"createdAt"`
+	UpdatedAt            string            `json:"updatedAt"`
 }
 
 type serverBridgeHostRuntime01910 struct {
-	SchemaVersion string   `json:"schemaVersion"`
-	SessionID     string   `json:"sessionId"`
-	Status        string   `json:"status"`
-	Platform      string   `json:"platform"`
-	SupervisorPID int      `json:"supervisorPid"`
-	ProcessPID    int      `json:"processPid"`
-	JavaPath      string   `json:"javaPath"`
-	JavaMajor     int      `json:"javaMajor"`
-	Command       []string `json:"command"`
-	StartedAt     string   `json:"startedAt"`
-	ProcessAt     string   `json:"processStartedAt,omitempty"`
-	LastExitAt    string   `json:"lastExitAt,omitempty"`
-	ExitCode      *int     `json:"exitCode,omitempty"`
-	Crashed       bool     `json:"crashed"`
-	RestartCount  int      `json:"restartCount"`
-	CrashCount    int      `json:"crashCount"`
-	LastCrashAt   string   `json:"lastCrashAt,omitempty"`
-	LastError     string   `json:"lastError,omitempty"`
+	SchemaVersion      string   `json:"schemaVersion"`
+	SessionID          string   `json:"sessionId"`
+	Status             string   `json:"status"`
+	Platform           string   `json:"platform"`
+	SupervisorPID      int      `json:"supervisorPid"`
+	SupervisorIdentity string   `json:"supervisorIdentity,omitempty"`
+	ProcessIdentity    string   `json:"processIdentity,omitempty"`
+	RecoveredFrom      string   `json:"recoveredFrom,omitempty"`
+	StopMethod         string   `json:"stopMethod,omitempty"`
+	ProcessPID         int      `json:"processPid"`
+	JavaPath           string   `json:"javaPath"`
+	JavaMajor          int      `json:"javaMajor"`
+	Command            []string `json:"command"`
+	StartedAt          string   `json:"startedAt"`
+	ProcessAt          string   `json:"processStartedAt,omitempty"`
+	LastExitAt         string   `json:"lastExitAt,omitempty"`
+	ExitCode           *int     `json:"exitCode,omitempty"`
+	Crashed            bool     `json:"crashed"`
+	RestartCount       int      `json:"restartCount"`
+	CrashCount         int      `json:"crashCount"`
+	LastCrashAt        string   `json:"lastCrashAt,omitempty"`
+	LastError          string   `json:"lastError,omitempty"`
 }
 
 type serverBridgeHostLock01910 struct {
 	SchemaVersion string `json:"schemaVersion"`
 	PID           int    `json:"pid"`
 	SessionID     string `json:"sessionId"`
+	Identity      string `json:"identity,omitempty"`
 	CreatedAt     string `json:"createdAt"`
 }
 
@@ -111,7 +123,7 @@ func handleServerBridgeHost01910(args []string) error {
 	switch args[0] {
 	case "configure":
 		return configureServerBridgeHost01910(args[1:])
-	case "start":
+	case "start", "recover":
 		return startServerBridgeHost01910(args[1:])
 	case "run":
 		return runServerBridgeHostCommand01910(args[1:])
@@ -221,12 +233,58 @@ func configureServerBridgeHost01910(args []string) error {
 	if err != nil {
 		return err
 	}
+	workingDirectory := flagValue(args, "--working-directory", root)
+	if !filepath.IsAbs(workingDirectory) {
+		workingDirectory = filepath.Join(root, workingDirectory)
+	}
+	workingDirectory, err = hostResolveDirectory0282(root, workingDirectory)
+	if err != nil {
+		return fmt.Errorf("working directory: %w", err)
+	}
+	envAllowlist := append([]string{}, hostBaseEnvAllowlist0282...)
+	for _, key := range multiFlagValues01910(args, "--env-allow") {
+		if err := validateHostEnvKey0282(key); err != nil {
+			return err
+		}
+		envAllowlist = append(envAllowlist, key)
+	}
+	envAllowlist = hostUniqueSorted0282(envAllowlist)
+	environment := map[string]string{}
+	for _, assignment := range multiFlagValues01910(args, "--env") {
+		parts := strings.SplitN(assignment, "=", 2)
+		if len(parts) != 2 {
+			return errors.New("--env requires KEY=VALUE")
+		}
+		if err := validateHostEnvKey0282(parts[0]); err != nil {
+			return err
+		}
+		if !hostAllowlisted0282(envAllowlist, parts[0]) {
+			return fmt.Errorf("environment variable %s requires --env-allow %s", parts[0], parts[0])
+		}
+		environment[parts[0]] = parts[1]
+	}
+	logMax, err := positiveIntFlag01910(args, "--log-max-bytes", 20*1024*1024)
+	if err != nil {
+		return err
+	}
+	backups, err := positiveOrZeroIntFlag01910(args, "--log-backups", 4)
+	if err != nil {
+		return err
+	}
+	window, err := positiveIntFlag01910(args, "--crash-window-seconds", 300)
+	if err != nil {
+		return err
+	}
+	stable, err := positiveIntFlag01910(args, "--stable-run-seconds", 120)
+	if err != nil {
+		return err
+	}
 
 	paths := hostPaths01910(root)
-	if lock, readErr := readServerBridgeHostLock01910(paths["lock"]); readErr == nil && lock.PID > 0 && updaterProcessAlive0156(lock.PID) {
+	if lock, readErr := readServerBridgeHostLock01910(paths["lock"]); readErr == nil && (hostIdentityMatches0282(lock.PID, lock.Identity) || (lock.Identity == "" && updaterProcessAlive0156(lock.PID))) {
 		return fmt.Errorf("cannot reconfigure while ServerBridge Host supervisor pid=%d is running", lock.PID)
 	}
-	if runtimeState, readErr := readServerBridgeHostRuntime01910(paths["runtime"]); readErr == nil && runtimeState.ProcessPID > 0 && updaterProcessAlive0156(runtimeState.ProcessPID) {
+	if runtimeState, readErr := readServerBridgeHostRuntime01910(paths["runtime"]); readErr == nil && hostIdentityMatches0282(runtimeState.ProcessPID, runtimeState.ProcessIdentity) {
 		return fmt.Errorf("cannot reconfigure while Minecraft process pid=%d is running", runtimeState.ProcessPID)
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
@@ -239,12 +297,14 @@ func configureServerBridgeHost01910(args []string) error {
 		LaunchMode: launchMode, JavaPath: javaPath, JavaMajor: javaMajor, ServerJar: serverJar, JavaArgsFile: javaArgsFile,
 		JVMArgs: jvmArgs, ServerArgs: serverArgs, RestartPolicy: restartPolicy, MaxRestarts: maxRestarts,
 		RestartBackoffMillis: backoff, StopTimeoutSeconds: stopTimeout, CreatedAt: createdAt, UpdatedAt: now,
+		WorkingDirectory: workingDirectory, EnvAllowlist: envAllowlist, Environment: environment,
+		LogMaxBytes: int64(logMax), LogBackups: backups, CrashWindowSeconds: window, StableRunSeconds: stable,
 	}
 	if err := validateServerBridgeHostConfig01910(config); err != nil {
 		return err
 	}
 	if flagBool(args, "--dry-run", false) {
-		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "dryRun": true, "config": config})
+		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "dryRun": true, "config": hostRedactedConfig0282(config)})
 	}
 	if err := os.MkdirAll(paths["dir"], 0o700); err != nil {
 		return err
@@ -252,7 +312,7 @@ func configureServerBridgeHost01910(args []string) error {
 	if err := atomicWriteJSON01910(paths["config"], config, 0o600); err != nil {
 		return err
 	}
-	return writeOrPrintJSON(flagValue(args, "--output", ""), config)
+	return writeOrPrintJSON(flagValue(args, "--output", ""), hostRedactedConfig0282(config))
 }
 
 func resolveServerBridgeHostJava01910(explicit string) (string, int, error) {
@@ -424,10 +484,15 @@ func startServerBridgeHost01910(args []string) error {
 	if err := validateServerBridgeHostConfig01910(config); err != nil {
 		return err
 	}
-	if state, readErr := readServerBridgeHostRuntime01910(paths["runtime"]); readErr == nil && state.ProcessPID > 0 && updaterProcessAlive0156(state.ProcessPID) {
-		return fmt.Errorf("Minecraft process pid=%d is still alive; refusing to start a second supervisor", state.ProcessPID)
+	if state, readErr := readServerBridgeHostRuntime01910(paths["runtime"]); readErr == nil {
+		if hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
+			return fmt.Errorf("Minecraft process pid=%d remains alive; refusing to start another supervisor", state.ProcessPID)
+		}
+		if state.ProcessPID > 0 && state.ProcessIdentity == "" && updaterProcessAlive0156(state.ProcessPID) {
+			return fmt.Errorf("unverified legacy Minecraft process pid=%d may be alive; manual reconciliation required", state.ProcessPID)
+		}
 	}
-	if lock, readErr := readServerBridgeHostLock01910(paths["lock"]); readErr == nil && lock.PID > 0 && updaterProcessAlive0156(lock.PID) {
+	if lock, readErr := readServerBridgeHostLock01910(paths["lock"]); readErr == nil && (hostIdentityMatches0282(lock.PID, lock.Identity) || (lock.Identity == "" && updaterProcessAlive0156(lock.PID))) {
 		return fmt.Errorf("ServerBridge Host lock is owned by live pid=%d", lock.PID)
 	}
 	if flagBool(args, "--dry-run", false) {
@@ -435,12 +500,11 @@ func startServerBridgeHost01910(args []string) error {
 		if buildErr != nil {
 			return buildErr
 		}
-		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "dryRun": true, "action": "start", "command": command, "config": config})
+		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "dryRun": true, "action": "start", "command": command, "config": hostRedactedConfig0282(config)})
 	}
 	if err := os.MkdirAll(paths["dir"], 0o700); err != nil {
 		return err
 	}
-	_ = os.Remove(paths["stop"])
 	executable, err := os.Executable()
 	if err != nil {
 		return err
@@ -496,6 +560,9 @@ func runServerBridgeHost01910(root string, console bool) error {
 	if err := validateServerBridgeHostConfig01910(config); err != nil {
 		return err
 	}
+	if hostOwnIdentity0282() == "" {
+		return errors.New("Host Supervisor requires verifiable process identity on this OS")
+	}
 	sessionID, err := randomHostSessionID01910()
 	if err != nil {
 		return err
@@ -505,6 +572,13 @@ func runServerBridgeHost01910(root string, console bool) error {
 	}
 	defer func() { _ = releaseServerBridgeHostLock01910(paths["lock"], sessionID) }()
 	_ = os.Remove(paths["stop"])
+	previousState, _ := readServerBridgeHostRuntime01910(paths["runtime"])
+	if hostIdentityMatches0282(previousState.ProcessPID, previousState.ProcessIdentity) {
+		return fmt.Errorf("orphan Minecraft pid=%d is still running: manual recovery needed", previousState.ProcessPID)
+	}
+	if previousState.ProcessPID > 0 && previousState.ProcessIdentity == "" && updaterProcessAlive0156(previousState.ProcessPID) {
+		return fmt.Errorf("legacy process pid=%d cannot be safely adopted or terminated", previousState.ProcessPID)
+	}
 
 	command, err := serverBridgeHostCommand01910(config)
 	if err != nil {
@@ -514,31 +588,47 @@ func runServerBridgeHost01910(root string, console bool) error {
 		SchemaVersion: "1.0", SessionID: sessionID, Status: "starting", Platform: config.Platform,
 		SupervisorPID: os.Getpid(), JavaPath: config.JavaPath, JavaMajor: config.JavaMajor,
 		Command: command, StartedAt: time.Now().UTC().Format(time.RFC3339Nano),
+		SupervisorIdentity: hostOwnIdentity0282(),
+	}
+	if previousState.ProcessPID != 0 || previousState.Status == "running" || previousState.Status == "restarting" {
+		state.RecoveredFrom = previousState.SessionID
 	}
 	if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
 		return err
 	}
-
+	restartEvents := make([]time.Time, 0, config.MaxRestarts)
 	for {
 		cmd := exec.Command(command[0], command[1:]...)
 		cmd.Dir = root
+		if config.WorkingDirectory != "" {
+			cmd.Dir = config.WorkingDirectory
+		}
+		cmd.Env = hostChildEnvironment0282(config)
+		stdin, pipeErr := cmd.StdinPipe()
+		if pipeErr != nil {
+			return pipeErr
+		}
 		if err := hostPrepareChildProcess01910(cmd); err != nil {
+			_ = stdin.Close()
 			state.Status = "failed"
 			state.LastError = err.Error()
 			_ = atomicWriteJSON01910(paths["runtime"], state, 0o600)
 			return err
 		}
-		stdoutFile, err := os.OpenFile(paths["stdout"], os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+		stdoutFile, err := newHostRollingWriter0282(paths["stdout"], config.LogMaxBytes, config.LogBackups)
 		if err != nil {
+			_ = stdin.Close()
 			return err
 		}
-		stderrFile, err := os.OpenFile(paths["stderr"], os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+		stderrFile, err := newHostRollingWriter0282(paths["stderr"], config.LogMaxBytes, config.LogBackups)
 		if err != nil {
+			_ = stdin.Close()
 			stdoutFile.Close()
 			return err
 		}
-		combinedFile, err := os.OpenFile(paths["combined"], os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+		combinedFile, err := newHostRollingWriter0282(paths["combined"], config.LogMaxBytes, config.LogBackups)
 		if err != nil {
+			_ = stdin.Close()
 			stdoutFile.Close()
 			stderrFile.Close()
 			return err
@@ -547,6 +637,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 		cmd.Stdout = &hostStreamWriter01910{raw: stdoutFile, combined: combined, label: "STDOUT", console: console, consoleWriter: os.Stdout}
 		cmd.Stderr = &hostStreamWriter01910{raw: stderrFile, combined: combined, label: "STDERR", console: console, consoleWriter: os.Stderr}
 		if err := cmd.Start(); err != nil {
+			_ = stdin.Close()
 			stdoutFile.Close()
 			stderrFile.Close()
 			combinedFile.Close()
@@ -557,22 +648,31 @@ func runServerBridgeHost01910(root string, console bool) error {
 		}
 		state.Status = "running"
 		state.ProcessPID = cmd.Process.Pid
+		state.ProcessIdentity = hostOwnProcessIdentity0282(cmd.Process.Pid)
 		state.ProcessAt = time.Now().UTC().Format(time.RFC3339Nano)
 		state.ExitCode = nil
 		state.Crashed = false
 		state.LastError = ""
 		if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
 			_ = hostKillProcess01910(cmd.Process.Pid)
+			_ = stdin.Close()
 			stdoutFile.Close()
 			stderrFile.Close()
 			combinedFile.Close()
 			return err
 		}
 
-		waitErr := cmd.Wait()
+		// Only the supervisor drives stdin and OS signals. The CLI posts a scoped,
+		// session-bound request; it never signals a potentially reused PID.
+		waitCh := make(chan error, 1)
+		go func() { waitCh <- cmd.Wait() }()
+		started := time.Now()
+		waitErr, stopped, stopMethod := hostWaitForChild0282(cmd.Process.Pid, stdin, waitCh, paths["stop"], state.SessionID, config.StopTimeoutSeconds)
+		_ = stdin.Close()
 		stdoutFile.Close()
 		stderrFile.Close()
 		combinedFile.Close()
+		state.StopMethod = stopMethod
 
 		exitCode := 0
 		if cmd.ProcessState != nil {
@@ -581,6 +681,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 			exitCode = -1
 		}
 		state.ProcessPID = 0
+		state.ProcessIdentity = ""
 		state.LastExitAt = time.Now().UTC().Format(time.RFC3339Nano)
 		state.ExitCode = &exitCode
 		state.Crashed = exitCode != 0
@@ -591,8 +692,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 		if waitErr != nil && exitCode == -1 {
 			state.LastError = waitErr.Error()
 		}
-		stopRequested := consumeHostRequest01910(paths["stop"])
-		if stopRequested {
+		if stopped {
 			state.Status = "stopped"
 			state.Crashed = false
 			if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
@@ -601,14 +701,30 @@ func runServerBridgeHost01910(root string, console bool) error {
 			return nil
 		}
 		shouldRestart := config.RestartPolicy == "always" || (config.RestartPolicy == "on-failure" && exitCode != 0)
-		if shouldRestart && state.RestartCount < config.MaxRestarts {
+		window := time.Duration(hostDefaultInt0282(config.CrashWindowSeconds, 300)) * time.Second
+		cutoff := time.Now().Add(-window)
+		filtered := restartEvents[:0]
+		for _, event := range restartEvents {
+			if event.After(cutoff) {
+				filtered = append(filtered, event)
+			}
+		}
+		restartEvents = filtered
+		if time.Since(started) >= time.Duration(hostDefaultInt0282(config.StableRunSeconds, 120))*time.Second {
+			restartEvents = restartEvents[:0]
+		}
+		if shouldRestart && len(restartEvents) < config.MaxRestarts {
+			restartEvents = append(restartEvents, time.Now())
 			state.RestartCount++
 			state.Status = "restarting"
 			if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
 				return err
 			}
-			if config.RestartBackoffMillis > 0 {
-				time.Sleep(time.Duration(config.RestartBackoffMillis) * time.Millisecond)
+			backoff := hostRestartDelay0282(config.RestartBackoffMillis, len(restartEvents))
+			if hostWaitBackoff0282(backoff, paths["stop"], state.SessionID) {
+				state.Status = "stopped"
+				state.Crashed = false
+				return atomicWriteJSON01910(paths["runtime"], state, 0o600)
 			}
 			continue
 		}
@@ -617,8 +733,8 @@ func runServerBridgeHost01910(root string, console bool) error {
 		} else {
 			state.Status = "crashed"
 		}
-		if shouldRestart && state.RestartCount >= config.MaxRestarts {
-			state.LastError = fmt.Sprintf("restart limit reached (%d)", config.MaxRestarts)
+		if shouldRestart && len(restartEvents) >= config.MaxRestarts {
+			state.LastError = fmt.Sprintf("crash-loop restart limit reached (%d in %s)", config.MaxRestarts, window)
 		}
 		if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
 			return err
@@ -691,6 +807,27 @@ func validateServerBridgeHostConfig01910(config serverBridgeHostConfig01910) err
 	if config.MaxRestarts < 0 || config.RestartBackoffMillis < 0 || config.StopTimeoutSeconds <= 0 {
 		return errors.New("invalid host supervision limits")
 	}
+	if config.WorkingDirectory != "" {
+		if dir, err := hostResolveDirectory0282(root, config.WorkingDirectory); err != nil || dir != config.WorkingDirectory {
+			return errors.New("invalid or escaping working directory")
+		}
+	}
+	if config.LogMaxBytes < 0 || config.LogBackups < 0 || config.LogBackups > 32 || config.CrashWindowSeconds < 0 || config.StableRunSeconds < 0 {
+		return errors.New("invalid log or crash-loop limits")
+	}
+	for _, key := range config.EnvAllowlist {
+		if err := validateHostEnvKey0282(key); err != nil {
+			return err
+		}
+	}
+	for key := range config.Environment {
+		if err := validateHostEnvKey0282(key); err != nil {
+			return err
+		}
+		if !hostAllowlisted0282(config.EnvAllowlist, key) {
+			return fmt.Errorf("environment %s is not allowlisted", key)
+		}
+	}
 	return nil
 }
 
@@ -704,11 +841,15 @@ func stopServerBridgeHost01910(args []string) error {
 	if err != nil {
 		return fmt.Errorf("host runtime unavailable: %w", err)
 	}
-	if state.ProcessPID <= 0 || !updaterProcessAlive0156(state.ProcessPID) {
-		if state.SupervisorPID > 0 && updaterProcessAlive0156(state.SupervisorPID) {
-			return fmt.Errorf("supervisor pid=%d is alive but no Minecraft process is registered", state.SupervisorPID)
+	if state.ProcessPID <= 0 || !hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
+		if state.ProcessPID > 0 && state.ProcessIdentity == "" && updaterProcessAlive0156(state.ProcessPID) {
+			return errors.New("unverified legacy game process; refusing to signal a reused PID")
 		}
 		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "status": "already-stopped", "runtime": state})
+	}
+	lock, err := readServerBridgeHostLock01910(paths["lock"])
+	if err != nil || lock.SessionID != state.SessionID || lock.PID != state.SupervisorPID || !hostIdentityMatches0282(lock.PID, lock.Identity) {
+		return fmt.Errorf("game process pid=%d is orphaned or supervisor identity is unverified; explicit operator reconciliation required", state.ProcessPID)
 	}
 	config, err := readServerBridgeHostConfig01910(paths["config"])
 	if err != nil {
@@ -717,33 +858,22 @@ func stopServerBridgeHost01910(args []string) error {
 	if flagBool(args, "--dry-run", false) {
 		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "dryRun": true, "action": "stop", "pid": state.ProcessPID})
 	}
-	if err := atomicWrite0199(paths["stop"], []byte(time.Now().UTC().Format(time.RFC3339Nano)+"\n"), 0o600); err != nil {
+	request := hostStopRequest0282{SessionID: state.SessionID, ProcessPID: state.ProcessPID, RequestedAt: time.Now().UTC().Format(time.RFC3339Nano)}
+	if err := atomicWriteJSON01910(paths["stop"], request, 0o600); err != nil {
 		return err
 	}
-	if err := hostTerminateProcess01910(state.ProcessPID); err != nil && updaterProcessAlive0156(state.ProcessPID) {
-		return err
-	}
-	timeout := time.Duration(config.StopTimeoutSeconds) * time.Second
-	deadline := time.Now().Add(timeout)
+	deadline := time.Now().Add(time.Duration(config.StopTimeoutSeconds+8) * time.Second)
 	for time.Now().Before(deadline) {
-		if !updaterProcessAlive0156(state.ProcessPID) {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	if updaterProcessAlive0156(state.ProcessPID) {
-		if err := hostKillProcess01910(state.ProcessPID); err != nil {
-			return fmt.Errorf("graceful stop timed out and kill failed: %w", err)
-		}
-	}
-	for i := 0; i < 50; i++ {
 		current, readErr := readServerBridgeHostRuntime01910(paths["runtime"])
-		if readErr == nil && current.ProcessPID == 0 && current.Status == "stopped" {
+		if readErr == nil && current.SessionID == state.SessionID && current.ProcessPID == 0 && current.Status == "stopped" {
 			return writeOrPrintJSON(flagValue(args, "--output", ""), current)
 		}
-		time.Sleep(40 * time.Millisecond)
+		if !hostIdentityMatches0282(lock.PID, lock.Identity) {
+			break
+		}
+		time.Sleep(70 * time.Millisecond)
 	}
-	return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "status": "stopping", "previousPid": state.ProcessPID})
+	return fmt.Errorf("stop not acknowledged: inspect host runtime; cannot safely signal process pid=%d outside supervisor", state.ProcessPID)
 }
 
 func restartServerBridgeHost01910(args []string) error {
@@ -755,7 +885,7 @@ func restartServerBridgeHost01910(args []string) error {
 	oldSupervisor := 0
 	if state, readErr := readServerBridgeHostRuntime01910(paths["runtime"]); readErr == nil {
 		oldSupervisor = state.SupervisorPID
-		if state.ProcessPID > 0 && updaterProcessAlive0156(state.ProcessPID) {
+		if hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
 			stopArgs := []string{"--server-root", root}
 			if err := stopServerBridgeHost01910(stopArgs); err != nil {
 				return err
@@ -764,10 +894,10 @@ func restartServerBridgeHost01910(args []string) error {
 	}
 	if oldSupervisor > 0 && oldSupervisor != os.Getpid() {
 		deadline := time.Now().Add(5 * time.Second)
-		for updaterProcessAlive0156(oldSupervisor) && time.Now().Before(deadline) {
+		for hostIdentityMatches0282(oldSupervisor, hostIdentityForPID0282(oldSupervisor, paths["runtime"])) && time.Now().Before(deadline) {
 			time.Sleep(50 * time.Millisecond)
 		}
-		if updaterProcessAlive0156(oldSupervisor) {
+		if hostIdentityMatches0282(oldSupervisor, hostIdentityForPID0282(oldSupervisor, paths["runtime"])) {
 			return fmt.Errorf("previous ServerBridge Host supervisor pid=%d did not exit after stop", oldSupervisor)
 		}
 	}
@@ -784,14 +914,21 @@ func statusServerBridgeHost01910(args []string) error {
 	state, stateErr := readServerBridgeHostRuntime01910(paths["runtime"])
 	result := map[string]any{"schemaVersion": "1.0", "productVersion": version, "serverRoot": root, "configured": configErr == nil}
 	if configErr == nil {
-		result["config"] = config
+		result["config"] = hostRedactedConfig0282(config)
 	} else {
 		result["configError"] = configErr.Error()
 	}
 	if stateErr == nil {
 		result["runtime"] = state
-		result["supervisorAlive"] = state.SupervisorPID > 0 && updaterProcessAlive0156(state.SupervisorPID)
-		result["processAlive"] = state.ProcessPID > 0 && updaterProcessAlive0156(state.ProcessPID)
+		result["supervisorAlive"] = hostIdentityMatches0282(state.SupervisorPID, state.SupervisorIdentity)
+		result["processAlive"] = hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity)
+		if state.ProcessPID > 0 && !hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
+			result["observedStatus"] = "stale-runtime"
+		} else if hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) && !hostIdentityMatches0282(state.SupervisorPID, state.SupervisorIdentity) {
+			result["observedStatus"] = "orphaned-process"
+		} else {
+			result["observedStatus"] = state.Status
+		}
 	} else {
 		result["status"] = "not-started"
 	}
@@ -835,7 +972,7 @@ func logsServerBridgeHost01910(args []string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	if _, err := file.Seek(0, io.SeekEnd); err != nil {
 		return err
 	}
@@ -850,8 +987,22 @@ func logsServerBridgeHost01910(args []string) error {
 		if readErr != nil && !errors.Is(readErr, io.EOF) {
 			return readErr
 		}
+		// Reopen after a log rotation or truncation instead of silently tailing
+		// the old renamed inode forever.
+		current, statErr := os.Stat(path)
+		opened, openErr := file.Stat()
+		position, _ := file.Seek(0, io.SeekCurrent)
+		if statErr == nil && openErr == nil && (!os.SameFile(current, opened) || current.Size() < position) {
+			replacement, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			file.Close()
+			file = replacement
+			continue
+		}
 		state, stateErr := readServerBridgeHostRuntime01910(paths["runtime"])
-		if stateErr == nil && state.ProcessPID == 0 && !updaterProcessAlive0156(state.SupervisorPID) {
+		if stateErr == nil && state.ProcessPID == 0 && !hostIdentityMatches0282(state.SupervisorPID, state.SupervisorIdentity) {
 			return nil
 		}
 		time.Sleep(200 * time.Millisecond)
@@ -889,7 +1040,7 @@ func acquireServerBridgeHostLock01910(path, sessionID string) error {
 		return err
 	}
 	for attempt := 0; attempt < 2; attempt++ {
-		lock := serverBridgeHostLock01910{SchemaVersion: "1.0", PID: os.Getpid(), SessionID: sessionID, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)}
+		lock := serverBridgeHostLock01910{SchemaVersion: "1.0", PID: os.Getpid(), SessionID: sessionID, Identity: hostOwnIdentity0282(), CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)}
 		data, _ := json.Marshal(lock)
 		file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 		if err == nil {
@@ -904,8 +1055,8 @@ func acquireServerBridgeHostLock01910(path, sessionID string) error {
 			return err
 		}
 		existing, readErr := readServerBridgeHostLock01910(path)
-		if readErr == nil && existing.PID > 0 && updaterProcessAlive0156(existing.PID) {
-			return fmt.Errorf("ServerBridge Host is already supervised by pid=%d", existing.PID)
+		if readErr == nil && (hostIdentityMatches0282(existing.PID, existing.Identity) || (existing.Identity == "" && updaterProcessAlive0156(existing.PID))) {
+			return fmt.Errorf("ServerBridge Host is already supervised (or cannot be verified) by pid=%d", existing.PID)
 		}
 		if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
 			return removeErr

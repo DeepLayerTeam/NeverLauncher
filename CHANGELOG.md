@@ -1,3 +1,11 @@
+## 0.28.2 — Host Supervisor 2.0 & Recovery (2026-10-24)
+
+- Reworked the existing ServerBridge Host runner: verified Linux/Windows process birth identities, session-scoped graceful stdin `stop` followed by bounded signal fallback, and explicit recovery that refuses to adopt a still-running orphan or kill a reused PID.
+- Isolated game JVM environment with an allowlist and restricted working directory, redacting explicitly configured env values from CLI status and configure output.
+- Added crash-loop restart windows, exponential backoff, three rolling log streams, rotation-aware `logs --follow`, and observable stale/orphaned host state.
+- Added executable Go subprocess integration tests (command lifecycle, logs, recovery, stale requests, env controls) and Windows cross-compilation check. No claim of complete CLI suite, Minecraft runtime E2E, reboot autorun, cgroup/Windows Job Object containment, or host service installer.
+- See `docs/releases/0.28.2-host-supervisor-recovery.md` for commands and explicit safety boundaries.
+
 ## 0.28.1 — Control Domains & RBAC (2026-10-24)
 
 - Enforce per-command, live RBAC for every ServerBridge v3 mutation (`gameserver:broadcast`, `gameserver:moderate`, `gameserver:save`, `gameserver:traffic`, `gameserver:shutdown`, `gameserver:console`). Legacy `serverbridge:control` and `serverbridge:console` no longer grant any command automatically.
