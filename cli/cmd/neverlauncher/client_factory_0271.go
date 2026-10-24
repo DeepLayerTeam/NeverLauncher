@@ -820,6 +820,9 @@ func handleRuntimeFactory0271(args []string) error {
 		return errors.New("runtime client-factory requires build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib")
 	}
 	mode := args[0]
+	if mode == "certify-keygen" || mode == "certify-run" || mode == "certify-verify" {
+		return handleRuntimeCertification02712(args)
+	}
 	if mode != "build" && mode != "verify" && mode != "inspect" {
 		if mode == "adapter-inspect" || mode == "adapter-verify" {
 			return handleRuntimeFactoryAdapters02711(args)

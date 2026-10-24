@@ -1,3 +1,11 @@
+## 0.27.12 — Runtime E2E & Certification
+
+- Added executable `runtime client-factory certify-run`: verify pinned InstallPlan and adapter identities, clone immutable files into an isolated temporary test directory, launch the actual Minecraft JVM through hash-pinned NeverRuntime, check exact Java/profile/classpath/OS target and Minecraft process startup evidence.
+- Added Ed25519 signed runtime certificate and strict `certify-verify`: bind observed Java/runner digests, probe JSON and runtime log SHA-256 to the exact reproducible InstallPlan; changes to any managed output or proof revoke validity.
+- Added fail-closed `certify-matrix` with signed per-target verification, exact loader/version/OS/arch checks and default mandatory coverage of all five loader families.
+- Added adversarial Go tests (wrong Java, fake success, tampered output, wrong signing key, missing target, altered log), separate real-upstream CI jobs and a runnable graphical Minecraft E2E entry point.
+- Note: local tests certify *verification logic and HTTP fixtures*, not live Minecraft. CI live GUI and matching-server scenarios are separate gates and must actually pass before production certification can be claimed.
+
 ## 0.27.11 — Adapter Lifecycle & Compatibility
 
 - Record separately versioned executable adapter pins (`id`, independent version and embedded-source SHA-256) inside the immutable InstallPlan.

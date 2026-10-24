@@ -1,0 +1,152 @@
+name: Client Factory 0.27.12 Runtime E2E and Certification
+on:
+  push:
+    paths:
+      - 'cli/cmd/neverlauncher/**'
+      - 'e2e/scripts/run-client-factory-certification-02712.sh'
+      - '.github/workflows/runtime-e2e-certification-02712.yml'
+  pull_request:
+    paths:
+      - 'cli/cmd/neverlauncher/**'
+      - 'e2e/scripts/run-client-factory-certification-02712.sh'
+      - '.github/workflows/runtime-e2e-certification-02712.yml'
+  workflow_dispatch:
+    inputs:
+      actual_minecraft:
+        description: 'Perform actual upstream downloads and GUI JVM launches for every listed family'
+        type: boolean
+        required: true
+        default: true
+permissions:
+  contents: read
+jobs:
+  offline-unit-and-adversarial:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - name: Actual materializers, signed evidence and negative cases (fixture runtime for unit tests)
+        working-directory: cli
+        run: go test ./cmd/neverlauncher -run 'TestRuntimeCertification02712|TestClientFactory0271|TestAdapterLifecycle02711' -count=1 -timeout=7m
+      - name: Race detector
+        working-directory: cli
+        run: go test -race ./cmd/neverlauncher -run 'TestRuntimeCertification02712' -count=1 -timeout=7m
+      - name: Go vet
+        working-directory: cli
+        run: go vet ./cmd/neverlauncher
+  actual-gui-client:
+    if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft
+    needs: offline-unit-and-adversarial
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {id: vanilla-modern, loader: vanilla, minecraft: '1.21.1', java: '21'}
+          - {id: vanilla-legacy, loader: vanilla, minecraft: '1.12.2', java: '8'}
+          - {id: fabric, loader: fabric, minecraft: '1.20.1', java: '17'}
+          - {id: quilt, loader: quilt, minecraft: '1.20.1', java: '17'}
+          - {id: forge-legacy, loader: forge, minecraft: '1.12.2', java: '8'}
+          - {id: neoforge, loader: neoforge, minecraft: '1.21.1', java: '21'}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Install real graphics dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
+      - name: Build real NeverRuntime
+        run: cargo build --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
+      - name: Real upstream materialization and JVM launch
+        env:
+          NEVERLAUNCHER_CERT_LOADER: ${{ matrix.loader }}
+          NEVERLAUNCHER_CERT_MINECRAFT: ${{ matrix.minecraft }}
+          NEVERLAUNCHER_CERT_TARGET: linux/x86_64
+          NEVERLAUNCHER_CERT_RUNTIME_SECONDS: '45'
+          NEVERLAUNCHER_CERT_OUTPUT: e2e/client-factory-02712-result
+        run: |
+          export NEVERLAUNCHER_CERT_JAVA="$JAVA_HOME/bin/java"
+          bash e2e/scripts/run-client-factory-certification-02712.sh
+      - name: Upload evidence (never upload private signing key)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-factory-e2e-${{ matrix.id }}
+          if-no-files-found: warn
+          path: |
+            e2e/client-factory-02712-result/runtime-certificate.json
+            e2e/client-factory-02712-result/runtime-certificate.probe.json
+            e2e/client-factory-02712-result/runtime-certificate.runtime.log
+            e2e/client-factory-02712-result/certification.pub
+            e2e/client-factory-02712-result/install-verified.json
+            e2e/client-factory-02712-result/certificate-verification.json
+  actual-matching-server:
+    if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft
+    needs: offline-unit-and-adversarial
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install graphical dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
+      - name: Actual matching Mojang server start and client join (existing verified native E2E)
+        env:
+          NEVERLAUNCHER_E2E_MINECRAFT_VERSION: '1.17.1'
+          NEVERLAUNCHER_E2E_JAVA_MAJOR: '17'
+          NEVERLAUNCHER_COMPAT_OS: linux
+          NEVERLAUNCHER_COMPAT_ARCH: x86_64
+          NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: '55'
+        run: |
+          export NEVERLAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"
+          bash e2e/scripts/run-vanilla-matching-e2e.sh
+          python3 - <<'PYJOIN'
+          import json
+          from pathlib import Path
+          proof=json.loads(Path('e2e/runtime/matching-server.json').read_text())
+          assert proof['status']=='passed' and proof['clientJoinedServer'] is True, 'no real client/server join'
+          PYJOIN
+      - name: Preserve real matching-server diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-factory-02712-matching-server
+          if-no-files-found: warn
+          path: |
+            e2e/runtime/matching-server.json
+            e2e/runtime/matching-server.log
+            e2e/runtime/vanilla-certification.json
+            e2e/runtime/result.json
+  runtime-e2e-gate:
+    if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft && always()
+    needs: [offline-unit-and-adversarial, actual-gui-client, actual-matching-server]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Refuse incomplete runtime certification
+        env:
+          OFFLINE: ${{ needs.offline-unit-and-adversarial.result }}
+          REAL: ${{ needs.actual-gui-client.result }}
+          JOIN: ${{ needs.actual-matching-server.result }}
+        run: |
+          test "$OFFLINE" = success
+          test "$REAL" = success
+          test "$JOIN" = success
