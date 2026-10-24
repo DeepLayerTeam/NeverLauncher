@@ -1,3 +1,11 @@
+## 0.28.3 — JVM Launch Profiles (2026-10-24)
+
+- Execute real `java-main-class` and `java-module` profiles through existing Host Supervisor alongside compatible `java-jar` and Forge/NeoForge `java-args-file`; provide explicit and auto-inferred launch modes, canonical classpath/modulepath entries and actual Java argument arrays.
+- Reject escaping paths and symlinks (checked on configure and execution), invalid Java main/module identities, JVM agent/response-file injection, and unapproved game arguments. Explicit custom Java executable selection requires local host-level opt-in.
+- Validate optional Forge `user_jvm_args.txt` against approved JVM flags and materialize tokens into the command array to avoid a JVM re-read of mutable user args.
+- Add Go tests for actual Java classpath/JPMS execution, fake-process argv, malicious paths/flags, and 0.28.2 Host lifecycle regressions. The full CLI suite and live Minecraft E2E were not completed.
+- See `docs/releases/0.28.3-jvm-launch-profiles.md` for examples, security boundaries and scope.
+
 ## 0.28.2 — Host Supervisor 2.0 & Recovery (2026-10-24)
 
 - Reworked the existing ServerBridge Host runner: verified Linux/Windows process birth identities, session-scoped graceful stdin `stop` followed by bounded signal fallback, and explicit recovery that refuses to adopt a still-running orphan or kill a reused PID.

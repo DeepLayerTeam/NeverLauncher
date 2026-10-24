@@ -205,7 +205,7 @@ func TestServerBridgeHostForgeArgsMode01910(t *testing.T) {
 
 func writeFakeJava01910(t *testing.T, root, body string) string {
 	t.Helper()
-	path := filepath.Join(root, "fake-java")
+	path := filepath.Join(root, "java")
 	script := `#!/bin/sh
 if [ "${1:-}" = "-version" ]; then
   echo 'openjdk version "21.0.1"' >&2

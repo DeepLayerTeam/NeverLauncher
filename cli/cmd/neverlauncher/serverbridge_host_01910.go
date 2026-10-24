@@ -22,30 +22,35 @@ import (
 const serverBridgeHostStateDir01910 = ".neverlauncher/server-bridge/host"
 
 type serverBridgeHostConfig01910 struct {
-	SchemaVersion        string            `json:"schemaVersion"`
-	ProductVersion       string            `json:"productVersion"`
-	ServerRoot           string            `json:"serverRoot"`
-	Platform             string            `json:"platform"`
-	LaunchMode           string            `json:"launchMode"`
-	JavaPath             string            `json:"javaPath"`
-	JavaMajor            int               `json:"javaMajor"`
-	ServerJar            string            `json:"serverJar,omitempty"`
-	JavaArgsFile         string            `json:"javaArgsFile,omitempty"`
-	JVMArgs              []string          `json:"jvmArgs,omitempty"`
-	ServerArgs           []string          `json:"serverArgs,omitempty"`
-	RestartPolicy        string            `json:"restartPolicy"`
-	MaxRestarts          int               `json:"maxRestarts"`
-	RestartBackoffMillis int               `json:"restartBackoffMillis"`
-	StopTimeoutSeconds   int               `json:"stopTimeoutSeconds"`
-	WorkingDirectory     string            `json:"workingDirectory,omitempty"`
-	EnvAllowlist         []string          `json:"envAllowlist,omitempty"`
-	Environment          map[string]string `json:"environment,omitempty"`
-	LogMaxBytes          int64             `json:"logMaxBytes,omitempty"`
-	LogBackups           int               `json:"logBackups,omitempty"`
-	CrashWindowSeconds   int               `json:"crashWindowSeconds,omitempty"`
-	StableRunSeconds     int               `json:"stableRunSeconds,omitempty"`
-	CreatedAt            string            `json:"createdAt"`
-	UpdatedAt            string            `json:"updatedAt"`
+	SchemaVersion             string            `json:"schemaVersion"`
+	ProductVersion            string            `json:"productVersion"`
+	ServerRoot                string            `json:"serverRoot"`
+	Platform                  string            `json:"platform"`
+	LaunchMode                string            `json:"launchMode"`
+	JavaPath                  string            `json:"javaPath"`
+	JavaMajor                 int               `json:"javaMajor"`
+	ServerJar                 string            `json:"serverJar,omitempty"`
+	JavaArgsFile              string            `json:"javaArgsFile,omitempty"`
+	MainClass                 string            `json:"mainClass,omitempty"`
+	Module                    string            `json:"module,omitempty"`
+	Classpath                 []string          `json:"classpath,omitempty"`
+	Modulepath                []string          `json:"modulepath,omitempty"`
+	AllowCustomJavaExecutable bool              `json:"allowCustomJavaExecutable,omitempty"`
+	JVMArgs                   []string          `json:"jvmArgs,omitempty"`
+	ServerArgs                []string          `json:"serverArgs,omitempty"`
+	RestartPolicy             string            `json:"restartPolicy"`
+	MaxRestarts               int               `json:"maxRestarts"`
+	RestartBackoffMillis      int               `json:"restartBackoffMillis"`
+	StopTimeoutSeconds        int               `json:"stopTimeoutSeconds"`
+	WorkingDirectory          string            `json:"workingDirectory,omitempty"`
+	EnvAllowlist              []string          `json:"envAllowlist,omitempty"`
+	Environment               map[string]string `json:"environment,omitempty"`
+	LogMaxBytes               int64             `json:"logMaxBytes,omitempty"`
+	LogBackups                int               `json:"logBackups,omitempty"`
+	CrashWindowSeconds        int               `json:"crashWindowSeconds,omitempty"`
+	StableRunSeconds          int               `json:"stableRunSeconds,omitempty"`
+	CreatedAt                 string            `json:"createdAt"`
+	UpdatedAt                 string            `json:"updatedAt"`
 }
 
 type serverBridgeHostRuntime01910 struct {
@@ -164,7 +169,13 @@ func configureServerBridgeHost01910(args []string) error {
 	if err != nil {
 		return err
 	}
-	javaPath, javaMajor, err := resolveServerBridgeHostJava01910(flagValue(args, "--java", ""))
+	allowCustomJava := flagBool(args, "--allow-custom-java-executable", false)
+	if candidate := strings.TrimSpace(flagValue(args, "--java", "")); candidate != "" {
+		if err := hostValidateJavaExecutable0283(candidate, allowCustomJava); err != nil {
+			return err
+		}
+	}
+	javaPath, javaMajor, err := resolveServerBridgeHostJava01910(flagValue(args, "--java", ""), allowCustomJava)
 	if err != nil {
 		return err
 	}
@@ -172,7 +183,11 @@ func configureServerBridgeHost01910(args []string) error {
 	serverJar := strings.TrimSpace(flagValue(args, "--server-jar", ""))
 	javaArgsFile := strings.TrimSpace(flagValue(args, "--java-args-file", ""))
 	if launchMode == "" {
-		if javaArgsFile != "" {
+		if flagValue(args, "--module", "") != "" {
+			launchMode = "java-module"
+		} else if flagValue(args, "--main-class", "") != "" {
+			launchMode = "java-main-class"
+		} else if javaArgsFile != "" {
 			launchMode = "java-args-file"
 		} else if detection.Platform == "forge" || detection.Platform == "neoforge" {
 			if argsFile := detectModernForgeArgsFile01910(root, detection.Platform); argsFile != "" {
@@ -197,6 +212,8 @@ func configureServerBridgeHost01910(args []string) error {
 		if err != nil {
 			return fmt.Errorf("server jar: %w", err)
 		}
+	case "java-main-class", "java-module":
+		// Path and Java entry-point checks run below and again immediately before exec.
 	case "java-args-file":
 		if javaArgsFile == "" {
 			javaArgsFile = detectModernForgeArgsFile01910(root, detection.Platform)
@@ -209,7 +226,7 @@ func configureServerBridgeHost01910(args []string) error {
 			return fmt.Errorf("java args file: %w", err)
 		}
 	default:
-		return fmt.Errorf("unsupported host launch mode %q (supported: java-jar, java-args-file)", launchMode)
+		return fmt.Errorf("unsupported host launch mode %q (supported: java-jar, java-args-file, java-main-class, java-module)", launchMode)
 	}
 
 	jvmArgs := multiFlagValues01910(args, "--jvm-arg")
@@ -295,10 +312,17 @@ func configureServerBridgeHost01910(args []string) error {
 	config := serverBridgeHostConfig01910{
 		SchemaVersion: "1.0", ProductVersion: version, ServerRoot: root, Platform: detection.Platform,
 		LaunchMode: launchMode, JavaPath: javaPath, JavaMajor: javaMajor, ServerJar: serverJar, JavaArgsFile: javaArgsFile,
-		JVMArgs: jvmArgs, ServerArgs: serverArgs, RestartPolicy: restartPolicy, MaxRestarts: maxRestarts,
+		MainClass: strings.TrimSpace(flagValue(args, "--main-class", "")), Module: strings.TrimSpace(flagValue(args, "--module", "")),
+		Classpath:                 hostJavaListFlag0283(args, "--classpath", "--classpath-entry"),
+		Modulepath:                hostJavaListFlag0283(args, "--modulepath", "--modulepath-entry"),
+		AllowCustomJavaExecutable: allowCustomJava,
+		JVMArgs:                   jvmArgs, ServerArgs: serverArgs, RestartPolicy: restartPolicy, MaxRestarts: maxRestarts,
 		RestartBackoffMillis: backoff, StopTimeoutSeconds: stopTimeout, CreatedAt: createdAt, UpdatedAt: now,
 		WorkingDirectory: workingDirectory, EnvAllowlist: envAllowlist, Environment: environment,
 		LogMaxBytes: int64(logMax), LogBackups: backups, CrashWindowSeconds: window, StableRunSeconds: stable,
+	}
+	if err := hostNormalizeJavaProfile0283(&config); err != nil {
+		return err
 	}
 	if err := validateServerBridgeHostConfig01910(config); err != nil {
 		return err
@@ -315,7 +339,7 @@ func configureServerBridgeHost01910(args []string) error {
 	return writeOrPrintJSON(flagValue(args, "--output", ""), hostRedactedConfig0282(config))
 }
 
-func resolveServerBridgeHostJava01910(explicit string) (string, int, error) {
+func resolveServerBridgeHostJava01910(explicit string, allowCustom bool) (string, int, error) {
 	candidates := []string{}
 	if strings.TrimSpace(explicit) != "" {
 		candidates = append(candidates, strings.TrimSpace(explicit))
@@ -334,6 +358,10 @@ func resolveServerBridgeHostJava01910(explicit string) (string, int, error) {
 	}
 	var failures []string
 	for _, candidate := range candidates {
+		if err := hostValidateJavaExecutable0283(candidate, allowCustom); err != nil {
+			failures = append(failures, err.Error())
+			continue
+		}
 		resolved := candidate
 		if !filepath.IsAbs(resolved) && !strings.ContainsAny(resolved, `/\\`) {
 			if found, err := exec.LookPath(resolved); err == nil {
@@ -598,6 +626,17 @@ func runServerBridgeHost01910(root string, console bool) error {
 	}
 	restartEvents := make([]time.Time, 0, config.MaxRestarts)
 	for {
+		// A crash-loop restart is a new Java execution. Re-check the current
+		// artifacts, symlinks and approved optional JVM arguments before each
+		// attempt; the preflight at supervisor startup is not enough.
+		command, err = serverBridgeHostCommand01910(config)
+		if err != nil {
+			state.Status = "failed"
+			state.LastError = err.Error()
+			_ = atomicWriteJSON01910(paths["runtime"], state, 0o600)
+			return err
+		}
+		state.Command = command
 		cmd := exec.Command(command[0], command[1:]...)
 		cmd.Dir = root
 		if config.WorkingDirectory != "" {
@@ -754,10 +793,25 @@ func serverBridgeHostCommand01910(config serverBridgeHostConfig01910) ([]string,
 	switch config.LaunchMode {
 	case "java-jar":
 		args = append(args, "-jar", config.ServerJar)
+	case "java-main-class", "java-module":
+		profile, err := hostJavaProfileCommand0283(config)
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, profile...)
 	case "java-args-file":
 		userJVM := filepath.Join(config.ServerRoot, "user_jvm_args.txt")
-		if info, err := os.Stat(userJVM); err == nil && info.Mode().IsRegular() {
-			args = append(args, "@"+userJVM)
+		if _, err := os.Lstat(userJVM); err == nil {
+			if _, err = hostResolveInsideRoot01910(config.ServerRoot, userJVM, true); err != nil {
+				return nil, fmt.Errorf("user JVM argfile: %w", err)
+			}
+			approvedArgs, readErr := hostReadUserJVMArgs0283(userJVM)
+			if readErr != nil {
+				return nil, fmt.Errorf("user JVM argfile: %w", readErr)
+			}
+			args = append(args, approvedArgs...)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
 		}
 		args = append(args, "@"+config.JavaArgsFile)
 	default:
@@ -781,6 +835,9 @@ func validateServerBridgeHostConfig01910(config serverBridgeHostConfig01910) err
 	if config.JavaPath == "" {
 		return errors.New("host config JavaPath is empty")
 	}
+	if err := hostValidateJavaExecutable0283(config.JavaPath, config.AllowCustomJavaExecutable); err != nil {
+		return err
+	}
 	major, err := javaMajorVersion(config.JavaPath)
 	if err != nil {
 		return err
@@ -798,8 +855,11 @@ func validateServerBridgeHostConfig01910(config serverBridgeHostConfig01910) err
 		if err != nil || filepath.Clean(resolved) != filepath.Clean(config.JavaArgsFile) {
 			return errors.New("configured Java args file is unavailable or outside server root")
 		}
-	} else {
+	} else if config.LaunchMode != "java-main-class" && config.LaunchMode != "java-module" {
 		return fmt.Errorf("unsupported launch mode %q", config.LaunchMode)
+	}
+	if err := hostValidateJavaProfile0283(config); err != nil {
+		return err
 	}
 	if config.RestartPolicy != "never" && config.RestartPolicy != "on-failure" && config.RestartPolicy != "always" {
 		return errors.New("invalid restart policy")
