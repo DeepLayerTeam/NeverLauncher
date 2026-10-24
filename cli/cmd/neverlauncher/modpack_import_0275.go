@@ -31,17 +31,18 @@ const modpackMaxBytes0275 int64 = 2 << 30
 const modpackMaxFile0275 int64 = 512 << 20
 
 type modpackFile0275 struct {
-	Path       string   `json:"path"`
-	Source     string   `json:"source"`
-	SHA1       string   `json:"sha1,omitempty"`
-	SHA512     string   `json:"sha512,omitempty"`
-	SHA256     string   `json:"sha256,omitempty"`
-	Size       int64    `json:"size"`
-	URLs       []string `json:"-"`
-	ManualName string   `json:"-"`
-	Required   bool     `json:"-"`
-	ProjectID  int64    `json:"-"`
-	FileID     int64    `json:"-"`
+	Path        string   `json:"path"`
+	Source      string   `json:"source"`
+	SHA1        string   `json:"sha1,omitempty"`
+	SHA512      string   `json:"sha512,omitempty"`
+	SHA256      string   `json:"sha256,omitempty"`
+	Size        int64    `json:"size"`
+	Acquisition string   `json:"acquisition,omitempty"`
+	URLs        []string `json:"-"`
+	ManualName  string   `json:"-"`
+	Required    bool     `json:"-"`
+	ProjectID   int64    `json:"-"`
+	FileID      int64    `json:"-"`
 }
 type modpackSpec0275 struct {
 	Format        string               `json:"format"`
@@ -56,10 +57,16 @@ type modpackSpec0275 struct {
 	Skipped       []string             `json:"skipped,omitempty"`
 }
 type modpackMissing0275 struct {
-	Path         string `json:"path"`
-	Source       string `json:"source"`
-	Reason       string `json:"reason"`
-	ManualAction string `json:"manualAction"`
+	Code           string `json:"code,omitempty"`
+	ExpectedSHA1   string `json:"expectedSha1,omitempty"`
+	ExpectedSHA512 string `json:"expectedSha512,omitempty"`
+	ExpectedSHA256 string `json:"expectedSha256,omitempty"`
+	ExpectedSize   int64  `json:"expectedSize,omitempty"`
+	CanManual      bool   `json:"canManual,omitempty"`
+	Path           string `json:"path"`
+	Source         string `json:"source"`
+	Reason         string `json:"reason"`
+	ManualAction   string `json:"manualAction"`
 }
 type modpackReport0275 struct {
 	SchemaVersion string               `json:"schemaVersion"`
@@ -77,6 +84,7 @@ type modpackReport0275 struct {
 	FileCount     int                  `json:"fileCount"`
 	OverrideCount int                  `json:"overrideCount"`
 	PlanSHA256    string               `json:"planSha256,omitempty"`
+	Distribution  string               `json:"distribution,omitempty"`
 }
 
 type modrinthIndex0275 struct {
@@ -452,9 +460,19 @@ func sortedZipNames0275(m map[string]*zip.File) []string {
 func fetchModpackArtifact0275(ctx context.Context, client *http.Client, dir string, f modpackFile0275, manual string) (string, string, int64, error) {
 	paths := append([]string{}, f.URLs...)
 	if manual != "" && f.ManualName != "" {
-		if path.Base(f.ManualName) == f.ManualName && packPath0275(f.ManualName) == nil {
-			candidate := filepath.Join(manual, f.ManualName)
-			if st, e := os.Lstat(candidate); e == nil && st.Mode().IsRegular() {
+		// Exact path first (multiple mods can share a basename), then the
+		// historical flat --manual-dir fallback. No symlink components.
+		candidates := []string{f.Path}
+		if f.ManualName != f.Path {
+			candidates = append(candidates, f.ManualName)
+		}
+		for i := len(candidates) - 1; i >= 0; i-- {
+			rel := candidates[i]
+			if packOutputPath0275(rel) != nil {
+				continue
+			}
+			candidate, e := secureManualSource0276(manual, rel)
+			if e == nil {
 				paths = append([]string{"file:" + candidate}, paths...)
 			}
 		}
@@ -659,12 +677,20 @@ func modpackReportFromSpec0275(spec modpackSpec0275) modpackReport0275 {
 	return modpackReport0275{SchemaVersion: "neverlauncher.modpack-import.v1", Format: spec.Format, Name: spec.Name, Minecraft: spec.Minecraft, Loader: spec.Loader, LoaderVersion: spec.LoaderVersion, PackSHA256: spec.PackSHA256, Skipped: spec.Skipped, Status: "inspected", FileCount: len(spec.Files), OverrideCount: len(spec.Overrides)}
 }
 func importModpack0275(ctx context.Context, archive, destination, manual, api, key string, includeOptional bool, options factoryBuildOptions0271) (modpackReport0275, error) {
+	return importModpackWithGates0276(ctx, archive, destination, manual, api, key, includeOptional, options, "", "local")
+}
+func importModpackWithGates0276(ctx context.Context, archive, destination, manual, api, key string, includeOptional bool, options factoryBuildOptions0271, permissionFile, distribution string) (modpackReport0275, error) {
+	if distribution != "local" && distribution != "redistributable" {
+		return modpackReport0275{}, errors.New("--distribution must be local or redistributable")
+	}
+
 	spec, zr, err := parseModpack0275(archive, includeOptional)
 	if err != nil {
 		return modpackReport0275{}, err
 	}
 	defer zr.Close()
 	report := modpackReportFromSpec0275(spec)
+	report.Distribution = distribution
 	if destination == "" {
 		return report, errors.New("--client-dir required")
 	}
@@ -696,7 +722,7 @@ func importModpack0275(ctx context.Context, archive, destination, manual, api, k
 	}
 	if spec.Format == "curseforge" && key == "" {
 		for _, f := range spec.Files {
-			report.Missing = append(report.Missing, modpackMissing0275{Path: f.Source, Source: f.Source, Reason: "CurseForge API key required", ManualAction: "provide NEVERLAUNCHER_CURSEFORGE_API_KEY and verified artifact"})
+			report.Missing = append(report.Missing, modpackMissing0275{Code: "api_key_required", Path: f.Source, Source: f.Source, Reason: "CurseForge API key required", ManualAction: "provide NEVERLAUNCHER_CURSEFORGE_API_KEY to resolve upstream hash; no unverified manual override is accepted"})
 		}
 		report.Status = "blocked"
 		return report, errors.New("CurseForge API key required; no artifacts were published")
@@ -709,7 +735,7 @@ func importModpack0275(ctx context.Context, archive, destination, manual, api, k
 		f := spec.Files[i]
 		if spec.Format == "curseforge" {
 			if e := curseFileMetadata0275(ctx, client, api, key, &f); e != nil {
-				report.Missing = append(report.Missing, modpackMissing0275{Path: f.Source, Source: f.Source, Reason: e.Error(), ManualAction: "resolve exact CurseForge project/file metadata and verified artifact"})
+				report.Missing = append(report.Missing, modpackMissing0275{Code: "metadata_unavailable", Path: f.Source, Source: f.Source, Reason: e.Error(), ManualAction: "resolve exact CurseForge project/file metadata and verified artifact"})
 				continue
 			}
 		}
@@ -726,8 +752,21 @@ func importModpack0275(ctx context.Context, archive, destination, manual, api, k
 		byPath[strings.ToLower(f.Path)] = true
 		downloadedFile, sha, size, e := fetchModpackArtifact0275(ctx, client, cache, f, manual)
 		if e != nil {
-			report.Missing = append(report.Missing, modpackMissing0275{Path: f.Path, Source: f.Source, Reason: e.Error(), ManualAction: "provide permitted download or --manual-dir with file matching upstream SHA-1/SHA-512"})
+			report.Missing = append(report.Missing, missingModpackArtifact0276(f, e))
 			continue
+		}
+		f.Acquisition = "download"
+		if manual != "" && f.ManualName != "" {
+			for _, rel := range []string{f.Path, f.ManualName} {
+				candidate, e := secureManualSource0276(manual, rel)
+				if e == nil {
+					sum, _, e := hashFile(candidate)
+					if e == nil && sum == sha {
+						f.Acquisition = "manual-verified"
+						break
+					}
+				}
+			}
 		}
 		f.SHA256 = sha
 		f.Size = size
@@ -747,6 +786,15 @@ func importModpack0275(ctx context.Context, archive, destination, manual, api, k
 		imported = append(imported, modpackFile0275{Path: p, Source: "archive:override", SHA256: sha, Size: size})
 	}
 	sort.Slice(imported, func(i, j int) bool { return imported[i].Path < imported[j].Path })
+	if distribution == "redistributable" && len(report.Missing) == 0 {
+		permissions, e := readArtifactPermissions0276(permissionFile)
+		if e != nil {
+			report.Missing = append(report.Missing, modpackMissing0275{Code: "permissions_unavailable", Path: "permissions", Source: "permissions", Reason: e.Error(), ManualAction: "supply valid --permissions-file with exact per-file rights"})
+		} else {
+			result := verifyPermissionGrants0276(spec.PackSHA256, "", imported, permissions)
+			report.Missing = append(report.Missing, result.Missing...)
+		}
+	}
 	if len(report.Missing) > 0 {
 		report.Status = "blocked"
 		return report, fmt.Errorf("%d required modpack artifacts unavailable; destination not published", len(report.Missing))
@@ -843,7 +891,7 @@ func handleModpack0275(args []string) error {
 		options := factoryBuildOptions0271{Targets: target, Workers: workers, ProcessorTimeout: timeout, ProcessorSandbox: flagValue(flags, "--processor-sandbox", "process"), VersionManifest: flagValue(flags, "--version-manifest", ""), AssetBaseURL: flagValue(flags, "--asset-base-url", ""), LibraryBaseURL: flagValue(flags, "--library-base-url", ""), MetaBaseURL: flagValue(flags, "--meta-base-url", ""), InstallerURL: flagValue(flags, "--installer-url", ""), InstallerSHA1: flagValue(flags, "--installer-sha1", ""), InstallerSourceFile: flagValue(flags, "--installer-file", ""), InstallerSourceSHA256: flagValue(flags, "--installer-sha256", ""), MavenMetadataURL: flagValue(flags, "--maven-metadata-url", ""), JavaExecutable: flagValue(flags, "--java", "")}
 		manual := flagValue(flags, "--manual-dir", "")
 		key := flagValue(flags, "--curseforge-api-key", os.Getenv("NEVERLAUNCHER_CURSEFORGE_API_KEY"))
-		report, err := importModpack0275(context.Background(), archive, dir, manual, flagValue(flags, "--curseforge-api", ""), key, optional, options)
+		report, err := importModpackWithGates0276(context.Background(), archive, dir, manual, flagValue(flags, "--curseforge-api", ""), key, optional, options, flagValue(flags, "--permissions-file", ""), flagValue(flags, "--distribution", "local"))
 		if reportFile != "" {
 			if e := writeOrPrintJSON(reportFile, report); e != nil {
 				return e

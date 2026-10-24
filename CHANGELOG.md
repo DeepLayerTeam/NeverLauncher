@@ -1,3 +1,10 @@
+## 0.27.6 — Manual Artifacts & Permission Gates
+
+- Added verified nested/flat `--manual-dir` recovery with symlink rejection, upstream SHA validation, explicit acquisition provenance and machine-actionable missing-file codes/hashes. Import stays atomic and fail-closed on untrusted metadata, missing files and hash errors.
+- Added independent exact-pack/exact-path/exact-SHA256 redistribution policy gates, `--distribution redistributable`, `--permissions-file`, and `verify-publication` against the installed immutable InstallPlan and import receipt. Unsupported/unknown policy fields and conflicting grants fail closed.
+- Added `export-modpack-artifacts` with mandatory gate, content rehash during ZIP stream, atomic non-overwrite creation, and **artifact-only** packaging, excluding Minecraft runtime/loader content. All rights records are operator assertions, not independently validated legal grants.
+- Fixture/integration tests for Modrinth, missing/manual recovery, grant rejection, import-time blocking, tamper verification and export. CI workflow for Linux/Windows/macOS; see `docs/releases/0.27.6-manual-artifacts-permission-gates.md`. Live Minecraft launch, third-party legal authorization and upstream permission checks require external verification.
+
 ## 0.27.5 — Modpack Import Engine
 
 - Working `runtime client-factory import-modpack` for Modrinth `.mrpack` and CurseForge ZIP manifests; builds pinned Minecraft/loader through the existing Unified InstallPlan materializers, then stages every verified package artifact and publishes only after checking the full result.

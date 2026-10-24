@@ -771,6 +771,9 @@ func handleRuntimeFactory0271(args []string) error {
 	}
 	mode := args[0]
 	if mode != "build" && mode != "verify" && mode != "inspect" {
+		if mode == "verify-publication" || mode == "export-modpack-artifacts" {
+			return handlePermissionGates0276(args)
+		}
 		if mode == "inspect-modpack" || mode == "inspectmodpack" || mode == "import-modpack" || mode == "importmodpack" {
 			return handleModpack0275(args)
 		}
