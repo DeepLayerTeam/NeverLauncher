@@ -1,6 +1,7 @@
 pub mod attestation;
 pub mod compatibility;
 mod deterministic_launch;
+mod launch_identity_0269;
 pub mod file_ownership;
 pub mod component_catalog_0241;
 pub mod component_actions_0245;
@@ -1164,6 +1165,8 @@ pub(crate) async fn create_launch_plan(manifest: &Manifest, root: &Path, java_pa
 }
 
 pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, root: &Path, java_path: Option<String>, username: Option<String>, credentials: Option<&MinecraftLaunchCredentials>) -> Result<LaunchPlan, String> {
+    launch_identity_0269::identity(credentials)?;
+    let offline_username_0269 = username.clone().unwrap_or_else(|| "Player".into());
     let strategy = manifest.runtime.launch.classpath_strategy.trim().to_ascii_lowercase();
     if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") { validate_runtime_constraints_0223(manifest)?; }
     let mut required_java = manifest.runtime.java.major_version;
@@ -1299,6 +1302,12 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
             std::env::consts::ARCH,
         );
     }
+    // Resolved Mojang metadata and signed project arguments must not override
+    // the selected account. This is the final authority for game auth args.
+    launch_identity_0269::pin_game_identity(&mut plan, &manifest.minecraft.version, credentials, &offline_username_0269)?;
+    if credentials.is_none() && launch_identity_0269::forbidden_auth_agent(&plan.jvm_args) {
+        return Err("offline game may not load an online authentication injector".into());
+    }
     if (manifest.schema_version == "2.0" || manifest.schema_version == "3.0") {
         // A reproducible plan identity covers resolved metadata/order/options,
         // but deliberately excludes local installation roots and auth secrets.
@@ -1395,38 +1404,31 @@ async fn create_manifest_launch_plan(manifest: &Manifest, root: &Path, java_exec
 }
 
 fn apply_minecraft_auth119(manifest: &Manifest, root: &Path, credentials: &MinecraftLaunchCredentials, plan: &mut LaunchPlan) -> Result<(), String> {
-    // Official Microsoft/Minecraft Services sessions use Mojang's native
-    // auth/session endpoints. Redirecting an official MSA token through
-    // authlib-injector (or a local Yggdrasil API) mixes security realms.
-    if credentials.user_type == "msa" {
-        if !credentials.auth_server_base_url.trim().is_empty() ||
-            plan.jvm_args.iter().any(|arg| arg.to_ascii_lowercase().contains("authlib-injector")) {
-            return Err("Official Minecraft sessions cannot use local authlib-injector or Yggdrasil URLs".into());
-        }
-        return Ok(());
-    }
-    if credentials.access_token.trim().is_empty() || credentials.uuid.trim().is_empty() || credentials.username.trim().is_empty() {
-        return Err("authenticated Minecraft launch requires username, uuid and accessToken".to_string());
-    }
-    if !credentials.auth_server_base_url.trim().is_empty() {
-        let mut injector: Option<PathBuf> = None;
-        for file in &manifest.files {
-            let normalized = file.path.replace('\\', "/");
-            let filename = normalized.rsplit('/').next().unwrap_or("").to_ascii_lowercase();
-            if filename.starts_with("authlib-injector") && filename.ends_with(".jar") && file.required && manifest_file_applies(file) {
-                let path = safe_join(root, &file.path)?;
-                injector = Some(path);
-                break;
+    use launch_identity_0269::{identity,GameIdentity,forbidden_auth_agent};
+    match identity(Some(credentials))? {
+        GameIdentity::Official => {
+            if forbidden_auth_agent(&plan.jvm_args) {
+                return Err("Official Minecraft must use Mojang sessionserver; authlib-injector is forbidden".into());
             }
         }
-        if let Some(path) = injector {
-            if !tokio_path_exists119(&path) { return Err(format!("authlib-injector declared by signed manifest but missing: {}", path.display())); }
-            let base = credentials.auth_server_base_url.trim().trim_end_matches('/');
-            if !(base.starts_with("https://") || base.starts_with("http://127.0.0.1") || base.starts_with("http://localhost")) {
-                return Err("authlib-injector Backend URL must use HTTPS (HTTP is allowed only for localhost)".to_string());
+        GameIdentity::Yggdrasil => {
+            if forbidden_auth_agent(&plan.jvm_args) {return Err("Yggdrasil auth agent must be supplied exclusively by NeverRuntime".into());}
+            let mut injector: Option<PathBuf> = None;
+            for file in &manifest.files {
+                let normalized = file.path.replace('\\', "/");
+                let filename = normalized.rsplit('/').next().unwrap_or("").to_ascii_lowercase();
+                if filename.starts_with("authlib-injector") && filename.ends_with(".jar") && file.required && manifest_file_applies(file) &&
+                    !matches!(file.ownership.as_str(),"user-owned"|"generated") {
+                    if injector.is_some() {return Err("multiple signed authlib-injector agents".into());}
+                    injector = Some(safe_join(root, &file.path)?);
+                }
             }
-            plan.jvm_args.push(format!("-javaagent:{}={}", path.to_string_lossy(), base));
+            let path=injector.ok_or("Yggdrasil online launch requires a required, signed authlib-injector JAR")?;
+            if !tokio_path_exists119(&path) {return Err("signed authlib-injector is missing".into());}
+            let base=credentials.auth_server_base_url.trim_end_matches('/');
+            plan.jvm_args.push(format!("-javaagent:{}={}",path.to_string_lossy(),base));
         }
+        GameIdentity::Offline => return Err("authenticated launch cannot use offline identity".into()),
     }
     Ok(())
 }

@@ -37,7 +37,7 @@ export function validMinecraftHost(host: string): boolean {
   return host.split('.').every((part) => part.length > 0 && part.length <= 63 && /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(part));
 }
 
-export function launchPreferences(settings: LocalLaunchSettings, memory: { minimumMb?: number; maximumMb?: number } | undefined, offlineAllowed: boolean, servers: ScopedServer[], requireServer = false) {
+export function launchPreferences(settings: LocalLaunchSettings, memory: { minimumMb?: number; maximumMb?: number } | undefined, offlineAllowed: boolean, servers: ScopedServer[], requireServer = false, allowDirectServer = false) {
   const min = Math.max(512, memory?.minimumMb || 512);
   const max = Math.min(32768, memory?.maximumMb || 32768);
   if (!Number.isInteger(settings.memoryMb) || settings.memoryMb < min || settings.memoryMb > max || max < min)
@@ -47,7 +47,7 @@ export function launchPreferences(settings: LocalLaunchSettings, memory: { minim
     throw new Error('Screen resolution is outside supported bounds');
   if (settings.offlineEnabled && !offlineAllowed) throw new Error('Offline mode is not allowed by the signed Manifest');
   if (settings.offlineEnabled && settings.autoEnter) throw new Error('Offline and server auto-enter are mutually exclusive');
-  if ((settings.autoEnter || requireServer) && (!settings.serverId || !servers.some((server) => server.id === settings.serverId)))
+  if (((settings.autoEnter && !allowDirectServer) || requireServer) && (!settings.serverId || !servers.some((server) => server.id === settings.serverId)))
     throw new Error('Select an available server from the profile browser');
   if (settings.autoEnter && (!validMinecraftHost(settings.serverHost) ||
       !Number.isInteger(settings.serverPort) || settings.serverPort < 1 || settings.serverPort > 65535))

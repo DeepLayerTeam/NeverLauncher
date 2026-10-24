@@ -101,10 +101,35 @@ struct GuardAttestationV2Request {
     process_id: String,
 }
 
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum LaunchRealm0269 { Official, Yggdrasil, Offline }
+
+// Validate the complete selection before touching the OS runtime. A JS caller
+// cannot claim 'offline' while slipping a bearer, nor label a project token MSA.
+fn validate_launch_realm_0269(
+    mode: LaunchRealm0269,
+    credentials: Option<&MinecraftLaunchCredentials>,
+    official: bool,
+    preferences: Option<&neverruntime::LaunchPreferences>,
+) -> Result<(), String> {
+    match mode {
+        LaunchRealm0269::Official if official && credentials.is_none() &&
+            !preferences.is_some_and(|p|p.offline) => Ok(()),
+        LaunchRealm0269::Yggdrasil if !official &&
+            credentials.is_some_and(|c|c.user_type=="mojang" && !c.auth_server_base_url.is_empty()) &&
+            !preferences.is_some_and(|p|p.offline) => Ok(()),
+        LaunchRealm0269::Offline if !official && credentials.is_none() &&
+            preferences.is_some_and(|p|p.offline) => Ok(()),
+        _ => Err("Minecraft launch auth mode and credentials disagree".into()),
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct LaunchMinecraftRequest {
     manifest: Manifest,
+    auth_mode: LaunchRealm0269,
     root: String,
     java_path: Option<String>,
     username: Option<String>,
@@ -720,8 +745,9 @@ async fn launch_minecraft(
     official_manager: tauri::State<'_, official_identity_0262::IdentityManager>,
 ) -> Result<ProcessStatus, String> {
     let LaunchMinecraftRequest {
-        manifest, root, java_path, username, minecraft_credentials, official_identity, pinned_public_key, preferences, component_preset,
+        manifest, auth_mode, root, java_path, username, minecraft_credentials, official_identity, pinned_public_key, preferences, component_preset,
     } = request;
+    validate_launch_realm_0269(auth_mode, minecraft_credentials.as_ref(), official_identity.is_some(), preferences.as_ref())?;
     #[cfg(windows)]
     {
         let status = neverguard.ensure_started().await?;
@@ -1252,4 +1278,24 @@ fn main() {
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
         .invoke_handler(tauri::generate_handler![official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
+}
+
+#[cfg(test)]
+mod launch_realm_0269_tests {
+    use super::*;
+    fn local() -> MinecraftLaunchCredentials {
+        MinecraftLaunchCredentials{username:"NeverPlayer".into(),uuid:"11111111222233334444555555555555".into(),access_token:"project-token".into(),user_type:"mojang".into(),auth_server_base_url:"https://never.example".into()}
+    }
+    #[test]
+    fn native_rejects_cross_realm_launch() {
+        let local=local();
+        let online=neverruntime::LaunchPreferences::default();
+        let offline=neverruntime::LaunchPreferences{offline:true,..Default::default()};
+        assert!(validate_launch_realm_0269(LaunchRealm0269::Yggdrasil,Some(&local),false,Some(&online)).is_ok());
+        assert!(validate_launch_realm_0269(LaunchRealm0269::Yggdrasil,Some(&local),false,Some(&offline)).is_err());
+        assert!(validate_launch_realm_0269(LaunchRealm0269::Official,Some(&local),true,Some(&online)).is_err());
+        assert!(validate_launch_realm_0269(LaunchRealm0269::Official,None,true,Some(&online)).is_ok());
+        assert!(validate_launch_realm_0269(LaunchRealm0269::Offline,None,false,Some(&offline)).is_ok());
+        assert!(validate_launch_realm_0269(LaunchRealm0269::Offline,Some(&local),false,Some(&offline)).is_err());
+    }
 }

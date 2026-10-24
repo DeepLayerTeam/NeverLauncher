@@ -8,6 +8,7 @@ import { ComponentChooser0247 } from './ComponentChooser0247';
 import { ComponentPortability02410 } from './ComponentPortability02410';
 import { parseChoice0247 } from './component_selection_0247';
 import { launchPreferences, scopedServers, type ScopedServer } from './desktop_experience_0229';
+import { resolveLaunchMode0269, type GameLaunchMode0269 } from './launch_modes_0269';
 import { OfficialMinecraftClient0257, type OfficialProfile0257 } from './official_minecraft_0257';
 import { OfficialMinecraftPanel0257 } from './OfficialMinecraftPanel0257';
 import { TexturesPanel0258 } from './TexturesPanel0258';
@@ -362,7 +363,7 @@ function App() {
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const officialMinecraftClient = useRef<OfficialMinecraftClient0257 | null>(null);
   const [officialProfile, setOfficialProfile] = useState<OfficialProfile0257 | null>(null);
-  const [minecraftIdentity, setMinecraftIdentity] = useState<'local'|'official'>('local');
+  const [minecraftIdentity, setMinecraftIdentity] = useState<GameLaunchMode0269>(settings.offlineEnabled ? 'offline' : 'local');
   if (authSession?.accessToken && settings.backendUrl) {
     if (!officialMinecraftClient.current) officialMinecraftClient.current = new OfficialMinecraftClient0257(settings.backendUrl, authSession.accessToken, authSession.sessionId, callTauri);
     else officialMinecraftClient.current.rebind(settings.backendUrl, authSession.accessToken, authSession.sessionId);
@@ -1078,7 +1079,7 @@ function App() {
   function currentLaunchPreferences() {
     if (!manifest) throw new Error('Manifest не загружен');
     if (!['2.0','3.0'].includes(manifest.schemaVersion)) throw new Error('Desktop launch settings require Manifest v2/v3');
-    return launchPreferences(settings, manifest.runtime.memory, Boolean(manifest.runtime.launch?.offlineMode), profileServers);
+    return launchPreferences({...settings, offlineEnabled: minecraftIdentity === 'offline'}, manifest.runtime.memory, Boolean(manifest.runtime.launch?.offlineMode), profileServers, false, minecraftIdentity === 'official');
   }
 
   async function loadManifest(projectId = selectedProject || settings.projectId, profileId = selectedProfile || settings.profileId) {
@@ -1552,16 +1553,21 @@ function App() {
     setStage('launching');
     try {
       const preferences = currentLaunchPreferences();
+      const launchMode = resolveLaunchMode0269({
+        identity: minecraftIdentity, offlineAllowed: Boolean(manifest.runtime.launch?.offlineMode),
+        autoEnter: preferences.autoEnter, serverId: settings.serverId,
+        hasOfficialProfile: Boolean(officialProfile && officialMinecraftClient.current?.linked),
+      });
       // Only cached signed Manifest v2 may be used when the backend is offline.
       // Never manufacture Minecraft access tokens for offline launches.
       let minecraftCredentials: MinecraftLaunchCredentials | undefined;
       let officialLaunchIdentity: {backendUrl:string;neverToken:string;neverSessionId:string} | undefined;
-      if (minecraftIdentity === 'official' && (preferences.offline || settings.serverId)) {
-        throw new Error('Официальный Minecraft нельзя смешивать с локальным ServerBridge UUID/токеном. Отключите offline и локальный ServerBridge serverId либо используйте локальный профиль.');
+      if (launchMode === 'official' && preferences.offline) {
+        throw new Error('Официальный Minecraft несовместим с offline-запуском.');
       }
       if (!preferences.offline) {
         const guardAttestationTicket = await createGuardLaunchTicket();
-        if (minecraftIdentity === 'official') {
+        if (launchMode === 'official') {
           if (!officialProfile || !officialMinecraftClient.current?.linked) throw new Error('Подключите официальный Minecraft-профиль в разделе авторизации.');
           if (!authSession?.accessToken || !authSession.sessionId) throw new Error('Необходимо войти в NeverLauncher.');
           officialLaunchIdentity = {backendUrl:settings.backendUrl,neverToken:authSession.accessToken,neverSessionId:authSession.sessionId};
@@ -1573,12 +1579,13 @@ function App() {
       // --server/--quickPlayMultiplayer, otherwise Minecraft can connect before
       // our post-launch join call. Policies requiring runtime attestation will
       // reject pre-join, in which case we fail closed instead of racing a join.
-      if (preferences.autoEnter && minecraftCredentials && minecraftIdentity === 'local') {
+      if (preferences.autoEnter && minecraftCredentials && launchMode === 'local') {
         await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken);
       }
       const result = await callTauri<ProcessStatus>('launch_minecraft', {
         request: {
           manifest,
+          authMode: launchMode === 'local' ? 'yggdrasil' : launchMode,
           root: settings.gameDirectory,
           javaPath: settings.javaPath || null,
           username: minecraftCredentials?.username || settings.username,
@@ -1602,7 +1609,7 @@ function App() {
         }
       }
       try {
-        if (!preferences.offline && !preferences.autoEnter && minecraftCredentials && minecraftIdentity === 'local') {
+        if (!preferences.offline && !preferences.autoEnter && minecraftCredentials && launchMode === 'local') {
           await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken, continuousGuardTicket, guardAttestationSha256);
         }
       } catch (joinError) {
@@ -1713,16 +1720,22 @@ function App() {
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} />}
         {screen === 'auth' && authSession?.accessToken && officialMinecraftClient.current && <>
           <OfficialMinecraftPanel0257 client={officialMinecraftClient.current} linkedProfile={officialProfile} onLinked={(p)=>{setOfficialProfile(p); if (!p) setMinecraftIdentity('local');}} />
-          <section className="panel"><label>Идентичность для запуска Minecraft <select value={minecraftIdentity} onChange={e=>setMinecraftIdentity(e.target.value as 'local'|'official')}>
-            <option value="local">Локальный профиль NeverLauncher / Yggdrasil</option>
-            <option value="official" disabled={!officialProfile}>Официальный Microsoft Minecraft {officialProfile?.name||''}</option>
-          </select></label></section>
+          <section className="panel"><label>Режим запуска Minecraft <select value={minecraftIdentity} onChange={e=>{
+            const mode=e.target.value as GameLaunchMode0269;
+            setMinecraftIdentity(mode);
+            patchSettings('offlineEnabled', mode === 'offline');
+            if (mode !== 'local') patchSettings('serverId', '');
+          }}>
+            <option value="local">Project Yggdrasil (Never identity / ServerBridge)</option>
+            <option value="official" disabled={!officialProfile}>Official Minecraft (Microsoft) {officialProfile?.name||''}</option>
+            <option value="offline" disabled={!manifest?.runtime.launch?.offlineMode}>Offline (разрешённый подписанным профилем)</option>
+          </select></label><p>Official использует Mojang sessionserver; Yggdrasil — подписанный authlib-injector. Offline не позволяет входить на online-mode сервер.</p></section>
         </>}
-        {screen === 'textures' && <TexturesPanel0258 backendUrl={settings.backendUrl} token={authSession?.accessToken||''} officialClient={officialMinecraftClient.current} officialProfile={officialProfile} onOfficialProfile={(p)=>{setOfficialProfile(p);if(!p)setMinecraftIdentity('local');}} identityMode={minecraftIdentity} />}
+        {screen === 'textures' && <TexturesPanel0258 backendUrl={settings.backendUrl} token={authSession?.accessToken||''} officialClient={officialMinecraftClient.current} officialProfile={officialProfile} onOfficialProfile={(p)=>{setOfficialProfile(p);if(!p)setMinecraftIdentity('local');}} identityMode={minecraftIdentity === 'official' ? 'official' : 'local'} />}
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} pinnedPublicKey={settings.pinnedPublicKey} root={settings.gameDirectory} transferBusy={transferBusy} installSelection={installComponentSelection0247} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
-        {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} />}
+        {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} minecraftIdentity={minecraftIdentity} setMinecraftIdentity={setMinecraftIdentity} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
         {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}
         {screen === 'diagnostics' && <DiagnosticsPanel exportDiagnostics={exportDiagnostics} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} settingsCheck={settingsCheck} />}
@@ -1812,7 +1825,7 @@ function DownloadPanel({ files, download, downloadProgress, transferBusy, repair
   </section>;
 }
 
-function SettingsPanel({ settings, patchSettings, validateSettings, settingsCheck, checkJavaRuntime, javaInfo, openGameDirectory, manifest, profileServers, loadProfileServers, loadCachedOfflineManifest, cacheSignedManifest }: any) {
+function SettingsPanel({ settings, patchSettings, validateSettings, settingsCheck, checkJavaRuntime, javaInfo, openGameDirectory, manifest, profileServers, loadProfileServers, loadCachedOfflineManifest, cacheSignedManifest, minecraftIdentity, setMinecraftIdentity }: any) {
   return <section className="panel"><h3>Настройки запуска</h3>
     <div className="settings">
       <label>Путь к Java<input value={settings.javaPath} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('javaPath', e.target.value)} placeholder="auto / managed Java" /></label>
@@ -1820,10 +1833,10 @@ function SettingsPanel({ settings, patchSettings, validateSettings, settingsChec
       <label>Ширина окна<input type="number" min={640} max={7680} value={settings.screenWidth} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('screenWidth', Number(e.target.value))} /></label>
       <label>Высота окна<input type="number" min={480} max={4320} value={settings.screenHeight} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('screenHeight', Number(e.target.value))} /></label>
       <label className="checkSetting"><input type="checkbox" checked={settings.fullscreen} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('fullscreen', e.target.checked)} /> Полный экран</label>
-      <label className="checkSetting"><input type="checkbox" checked={settings.autoEnter} disabled={settings.offlineEnabled} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('autoEnter', e.target.checked)} /> Автоматически подключаться к серверу</label>
+      <label className="checkSetting"><input type="checkbox" checked={settings.autoEnter} disabled={minecraftIdentity === 'offline'} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('autoEnter', e.target.checked)} /> Автоматически подключаться к серверу</label>
       <label>Сервер профиля<select value={settings.serverId || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => patchSettings('serverId', e.target.value)}><option value="">Без выбранного сервера</option>{profileServers.map((server: ScopedServer) => <option value={server.id} key={server.id}>{server.name} ({server.kind})</option>)}</select></label>
       {settings.autoEnter && <><label>Публичный игровой адрес<input value={settings.serverHost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverHost', e.target.value)} placeholder="mc.example.org" /></label><label>Порт<input type="number" min={1} max={65535} value={settings.serverPort} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverPort', Number(e.target.value))} /></label></>}
-      <label className="checkSetting"><input type="checkbox" checked={settings.offlineEnabled} disabled={!manifest?.runtime.launch?.offlineMode} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('offlineEnabled', e.target.checked)} /> Offline (только разрешённый подписанным Manifest v2)</label>
+      <label className="checkSetting"><input type="checkbox" checked={minecraftIdentity === 'offline'} disabled={!manifest?.runtime.launch?.offlineMode} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {const offline=e.target.checked;setMinecraftIdentity(offline ? 'offline' : 'local');patchSettings('offlineEnabled',offline);if(offline)patchSettings('serverId','');}} /> Offline (только разрешённый подписанным Manifest v2)</label>
       <label>Закреплённый ключ Ed25519<input value={settings.pinnedPublicKey} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('pinnedPublicKey', e.target.value)} /></label>
     </div>
     <div className="toolbar inline"><button onClick={validateSettings}>Проверить настройки</button><button onClick={checkJavaRuntime}>Проверить Java</button><button onClick={openGameDirectory}>Открыть каталог клиента</button><button onClick={() => loadProfileServers().catch(console.error)}>Обновить серверы</button><button onClick={() => cacheSignedManifest().catch(console.error)}>Сохранить подписанный кеш</button><button onClick={loadCachedOfflineManifest}>Загрузить offline-кеш</button></div>

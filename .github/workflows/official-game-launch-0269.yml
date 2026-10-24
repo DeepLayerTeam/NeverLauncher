@@ -1,0 +1,51 @@
+name: Official / Yggdrasil / Offline launch 0.26.9
+on:
+  push:
+    paths:
+      - 'apps/desktop/src-tauri/src/main.rs'
+      - 'apps/desktop/src/main.tsx'
+      - 'apps/desktop/src/launch_modes_0269.ts'
+      - 'apps/desktop/src/desktop_experience_0229.ts'
+      - 'apps/desktop/tests/launch_modes_0269.test.mjs'
+      - 'runtime/neverruntime/src/lib.rs'
+      - 'runtime/neverruntime/src/launch_identity_0269.rs'
+      - '.github/workflows/official-game-launch-0269.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-launch:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux Tauri native prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Runtime realm tests
+        run: cargo test --manifest-path runtime/neverruntime/Cargo.toml launch_identity_0269::tests
+      - name: Tauri realm command tests
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml launch_realm_0269_tests
+      - name: Rust compilation
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: Renderer and full desktop verification
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npm run test:launch-modes
+          npm run test:official
+          npm run test:textures
+          npm run build
