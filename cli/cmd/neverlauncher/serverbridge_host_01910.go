@@ -123,11 +123,13 @@ func (w *hostStreamWriter01910) Write(p []byte) (int, error) {
 
 func handleServerBridgeHost01910(args []string) error {
 	if len(args) == 0 {
-		return errors.New("использование: nl server-bridge host configure|start|run|stop|restart|status|logs [параметры]")
+		return errors.New("использование: nl server-bridge host configure|start|run|stop|restart|status|logs|remote [параметры]")
 	}
 	switch args[0] {
 	case "configure":
 		return configureServerBridgeHost01910(args[1:])
+	case "remote":
+		return remoteHandle0284(args[1:])
 	case "start", "recover":
 		return startServerBridgeHost01910(args[1:])
 	case "run":
@@ -946,7 +948,7 @@ func restartServerBridgeHost01910(args []string) error {
 	if state, readErr := readServerBridgeHostRuntime01910(paths["runtime"]); readErr == nil {
 		oldSupervisor = state.SupervisorPID
 		if hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
-			stopArgs := []string{"--server-root", root}
+			stopArgs := append([]string{"--server-root", root}, passThroughFlag01910(args, "--output")...)
 			if err := stopServerBridgeHost01910(stopArgs); err != nil {
 				return err
 			}

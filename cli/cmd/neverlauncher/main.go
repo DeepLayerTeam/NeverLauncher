@@ -43,6 +43,7 @@ const helpText = `NeverLauncher CLI
   x <namespace> <command>            выполнить namespaced CLI extension через Extension Host Protocol
   plugin ...                      legacy compatibility alias
   server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host  Zero-Patch provisioning + host supervisor
+  server-bridge host remote init|issue|revoke|rotate-key|serve|call  HTTPS RemoteControl with scoped service tokens
 
 Backend / production:
   auth login|capabilities|accounts|roles|sessions|revoke|logout-all|session-policy|password-policy

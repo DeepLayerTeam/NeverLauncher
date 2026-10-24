@@ -1,3 +1,12 @@
+## 0.28.4 — RemoteControl Agent & Security (2026-10-24)
+
+- Implemented a real, standalone HTTPS host RemoteControl agent using the existing Host Supervisor `start`/`stop`/`restart` operations and verified runtime status; no remote executable/shell/Java argument API is exposed.
+- Add explicit local node initialization, a protected HMAC-SHA256 node identity, short-lived node-bound service tokens with exact host-level scopes and CIDR restrictions, explicit local revocation and live key rotation; credentials are never placed in query strings or printed by the CLI.
+- Require TLS 1.3, server certificate verification for the remote CLI, optional client-certificate verification, a network source allowlist, and private token/key files. Reject unauthorized operations without dispatch.
+- Persist idempotency intents **before** executing external effects and successes after proof; replayed requests are read from a protected command journal and uncertain outcomes are `indeterminate` and never silently rerun. Enforce a single active agent lease for each server root, append a restricted audit log.
+- Add real HTTPS CLI, negative authorization/replay/concurrency/rotation/revocation tests and an integration test that remotely stops a real supervised POSIX JVM fixture. Live Minecraft cluster, complete repository CI and Backend-to-agent orchestration are not claimed.
+- Operator guide: `docs/releases/0.28.4-remotecontrol-agent-security.md`.
+
 ## 0.28.3 — JVM Launch Profiles (2026-10-24)
 
 - Execute real `java-main-class` and `java-module` profiles through existing Host Supervisor alongside compatible `java-jar` and Forge/NeoForge `java-args-file`; provide explicit and auto-inferred launch modes, canonical classpath/modulepath entries and actual Java argument arrays.
