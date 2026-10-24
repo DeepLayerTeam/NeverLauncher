@@ -250,6 +250,9 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 	if len(changes) == 0 {
 		return plan, nil // idempotent no-op
 	}
+	if err := attachCompatToPlan0279(stage, &plan); err != nil {
+		return plan, err
+	}
 	ledger := mirrorActions0274{SchemaVersion: "neverlauncher.mirror-actions.v1", Actions: []mirrorAction0274{}}
 	if raw, e := os.ReadFile(filepath.Join(stage, mirrorActionsPath0274)); e == nil {
 		if err = json.Unmarshal(raw, &ledger); err != nil {
@@ -302,7 +305,7 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 		plan.Sources = append(plan.Sources, ledgerSource)
 	}
 	for _, change := range changes {
-		if change.Kind != "install-mods" && change.Kind != "lwjgl-download" && change.Kind != "modpack-import" {
+		if change.Kind != "install-mods" && change.Kind != "lwjgl-download" && change.Kind != "modpack-import" && change.Kind != "authlib-patch-source" && change.Kind != "compat-artifact" && change.Kind != "compat-receipt" {
 			continue
 		}
 		full, err := secureClientDestination(stage, change.Path)
@@ -325,6 +328,33 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 		plan.Sources = append(plan.Sources, factorySource0271{
 			Path: change.Path, Kind: change.Kind, URL: source, SHA256: change.After, Size: size,
 		})
+	}
+	// Provenance of any authlib byte changes must be pinned as an internal
+	// InstallPlan source, not just left in an unverified sidecar.
+	if full := filepath.Join(stage, filepath.FromSlash(authlibProvenancePath0279)); true {
+		if st, statErr := os.Lstat(full); statErr == nil {
+			if !st.Mode().IsRegular() {
+				return plan, errors.New("authlib provenance is not a regular file")
+			}
+			sum, size, e := hashFile(full)
+			if e != nil {
+				return plan, e
+			}
+			src := factorySource0271{Path: authlibProvenancePath0279, Kind: "authlib-transform-provenance", URL: "internal:authlib-provenance", SHA256: sum, Size: size}
+			found := false
+			for i := range plan.Sources {
+				if plan.Sources[i].Path == src.Path {
+					plan.Sources[i] = src
+					found = true
+					break
+				}
+			}
+			if !found {
+				plan.Sources = append(plan.Sources, src)
+			}
+		} else if !errors.Is(statErr, os.ErrNotExist) {
+			return plan, statErr
+		}
 	}
 	sort.Slice(plan.Sources, func(i, j int) bool { return plan.Sources[i].Path < plan.Sources[j].Path })
 	plan.Outputs, err = scanFactoryOutputs0271(stage)
@@ -497,6 +527,18 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 	if len(patches) == 0 {
 		return nil, errors.New("patch contains no authlib classes")
 	}
+	// Reject signed archives before opening a writable output. A modified
+	// class invalidates embedded signature metadata; silently publishing it
+	// would create a broken runtime JAR.
+	for _, f := range base.File {
+		if f.FileInfo().IsDir() {
+			continue
+		}
+		upper := strings.ToUpper(f.Name)
+		if strings.HasPrefix(upper, "META-INF/") && (strings.HasSuffix(upper, ".SF") || strings.HasSuffix(upper, ".RSA") || strings.HasSuffix(upper, ".DSA") || strings.HasSuffix(upper, ".EC")) {
+			return nil, errors.New("signed authlib archive cannot be transformed by class overlay")
+		}
+	}
 	tmp, err := os.CreateTemp(filepath.Dir(dst), ".authlib-patched-*")
 	if err != nil {
 		return nil, err
@@ -590,7 +632,33 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 	if err = replaceFileAtomicPortable(tmp.Name(), dst); err != nil {
 		return nil, err
 	}
-	return []mirrorAction0274{{Kind: "patch-authlib", Path: target, Before: strings.ToLower(baseSHA), After: strings.ToLower(expectedSHA)}}, nil
+	// Pin the actual overlay bytes in the build, not just its digest.
+	patchRel := ".neverlauncher/compat/patches/" + strings.ToLower(patchSHA) + ".jar"
+	patchDst, err := secureClientDestination(stage, patchRel)
+	if err != nil {
+		return nil, err
+	}
+	if _, statErr := os.Lstat(patchDst); errors.Is(statErr, os.ErrNotExist) {
+		if _, err := mirrorCopyVerified0274(context.Background(), patchDst, mirrorArtifact0274{File: patch, SHA256: patchSHA}); err != nil {
+			return nil, err
+		}
+	} else if statErr != nil {
+		return nil, statErr
+	} else {
+		if _, err := mirrorCheckedHash0274(patchDst, patchSHA); err != nil {
+			return nil, err
+		}
+	}
+	if err := addAuthlibProvenance0279(stage, authlibChange0279{
+		Rule: "authlib-class-overlay.sha256.v1", Path: target,
+		BeforeSHA256: strings.ToLower(baseSHA), PatchSHA256: strings.ToLower(patchSHA), AfterSHA256: strings.ToLower(expectedSHA),
+	}); err != nil {
+		return nil, err
+	}
+	return []mirrorAction0274{
+		{Kind: "authlib-patch-source", Path: patchRel, After: strings.ToLower(patchSHA)},
+		{Kind: "patch-authlib", Path: target, Before: strings.ToLower(baseSHA), After: strings.ToLower(expectedSHA)},
+	}, nil
 }
 
 // Deduplicate only byte-identical library JARs. Linking happens in sibling

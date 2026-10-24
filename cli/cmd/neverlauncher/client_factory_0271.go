@@ -88,6 +88,7 @@ type factoryPlan0271 struct {
 	LoaderResolutionSHA256 string                 `json:"loaderResolutionSha256,omitempty"`
 	Resolution             *factoryResolution0271 `json:"resolution,omitempty"`
 	Legacy                 *legacyLaunch0278      `json:"legacy,omitempty"`
+	Compatibility          *compatLock0279        `json:"compatibility,omitempty"`
 	ReproducibilitySHA256  string                 `json:"reproducibilitySha256"`
 }
 type factoryBuildOptions0271 struct {
@@ -377,6 +378,12 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 	}
 	if err := verifyLegacyLaunch0278(root, p); err != nil {
 		return fmt.Errorf("legacy launch verification: %w", err)
+	}
+	if err := verifyCompat0279(root, p); err != nil {
+		return fmt.Errorf("authlib/classloader verification: %w", err)
+	}
+	if err := verifyAuthlibProvenance0279(root, p); err != nil {
+		return fmt.Errorf("authlib provenance verification: %w", err)
 	}
 	return nil
 }
@@ -713,6 +720,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 	sort.Slice(processors, func(i, j int) bool { return processors[i].Index < processors[j].Index })
 	p := factoryPlan0271{SchemaVersion: factoryPlanSchema0271, MinecraftVersion: vanilla.MinecraftVersion, MinecraftReleaseType: vanilla.ReleaseType, Loader: o.Loader, LoaderVersion: loaderVersion, Targets: o.Targets, Java: factoryJava0271{Major: vanilla.JavaMajorVersion, ProcessorExecutableSHA256: processorExecutableSHA}, Launch: factoryLaunch0271{ProfilePath: profilePath, MainClass: mainClass, AssetIndex: vanilla.AssetIndex, NativesDirectory: "natives"}, Steps: factorySteps0271(o.Loader), Sources: sources, Processors: processors, Outputs: outputs, LoaderResolutionSHA256: loaderResolutionSHA, Resolution: resolvedIdentity, Legacy: legacyRecipe}
 	if hasPrior {
+		p.Compatibility = prior.Compatibility
 		// Source order and metadata can be re-observed, but previously pinned
 		// outputs and loader identity are immutable. This is a true replay.
 		if p.MinecraftVersion != prior.MinecraftVersion || p.MinecraftReleaseType != prior.MinecraftReleaseType || p.LoaderVersion != prior.LoaderVersion || p.Java != prior.Java || p.Launch != prior.Launch || p.LoaderResolutionSHA256 != prior.LoaderResolutionSHA256 || !reflect.DeepEqual(p.Resolution, prior.Resolution) || !reflect.DeepEqual(p.Legacy, prior.Legacy) {
@@ -790,6 +798,9 @@ func handleRuntimeFactory0271(args []string) error {
 	}
 	mode := args[0]
 	if mode != "build" && mode != "verify" && mode != "inspect" {
+		if mode == "compat-inspect" || mode == "compat-verify" || mode == "compat-apply" {
+			return handleRuntimeCompat0279(args)
+		}
 		if mode == "legacy-inspect" || mode == "legacy-run" {
 			return handleRuntimeLegacy0278(args)
 		}

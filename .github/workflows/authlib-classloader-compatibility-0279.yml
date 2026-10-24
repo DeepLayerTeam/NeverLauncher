@@ -1,0 +1,48 @@
+name: Authlib and Classloader Compatibility 0.27.9
+on:
+  push:
+    paths:
+      - 'cli/cmd/neverlauncher/**'
+      - '.github/workflows/authlib-classloader-compatibility-0279.yml'
+      - 'VERSION'
+  pull_request:
+    paths:
+      - 'cli/cmd/neverlauncher/**'
+      - '.github/workflows/authlib-classloader-compatibility-0279.yml'
+      - 'VERSION'
+permissions:
+  contents: read
+jobs:
+  authlib-classloader:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - name: Gofmt verification
+        if: runner.os == 'Linux'
+        shell: bash
+        run: test -z "$(gofmt -l cli/cmd/neverlauncher/authlib_classloader_0279*.go cli/cmd/neverlauncher/legacy_client_adapters_0278.go cli/cmd/neverlauncher/client_factory_0271.go cli/cmd/neverlauncher/mirror_helper_parity_0274.go)"
+      - name: Authlib/classloader and factory regression fixtures
+        working-directory: cli
+        shell: bash
+        run: >-
+          go test ./cmd/neverlauncher
+          -run 'TestAuthlibClassloader0279|TestLegacyAdapters0278|TestMirrorHelper0274|TestClientFactory0271|TestModernLoaderAdapters0272'
+          -count=1 -timeout=8m
+      - name: Static analysis
+        working-directory: cli
+        run: go vet ./cmd/neverlauncher
+      - name: Build CLI
+        working-directory: cli
+        run: go build ./cmd/neverlauncher
+      - name: Authlib/classloader race tests
+        if: runner.os == 'Linux'
+        working-directory: cli
+        run: go test -race ./cmd/neverlauncher -run 'TestAuthlibClassloader0279|TestLegacyAdapters0278' -count=1 -timeout=6m

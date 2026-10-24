@@ -427,14 +427,35 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 		"user_properties": "{}", "user_type": "legacy", "version_name": p.MinecraftVersion, "version_type": "release",
 		"game_directory": absRoot, "game_assets": gameAssets,
 		"assets_root": filepath.Join(absRoot, "assets"), "assets_index_name": p.Launch.AssetIndex,
-		"launcher_name": "NeverLauncher", "launcher_version": "0.27.8", "classpath": strings.Join(classpath, string(os.PathListSeparator)),
+		"launcher_name": "NeverLauncher", "launcher_version": "0.27.9", "classpath": strings.Join(classpath, string(os.PathListSeparator)),
 		"natives_directory": natives,
+	}
+	if p.Compatibility != nil {
+		switch p.Compatibility.AuthMode {
+		case "official", "yggdrasil":
+			if token == "" || uuid == "" {
+				return errors.New("selected authenticated mode requires token and UUID")
+			}
+			variables["user_type"] = "msa"
+		case "offline":
+			variables["auth_access_token"] = ""
+			variables["auth_session"] = "-"
+			variables["user_type"] = "legacy"
+		}
 	}
 	gameArgs, err := expandLegacyArgs0278(p.Legacy.GameArguments, variables)
 	if err != nil {
 		return err
 	}
-	args := []string{"-Djava.library.path=" + natives, "-Dorg.lwjgl.librarypath=" + natives, "-cp", strings.Join(classpath, string(os.PathListSeparator)), p.Legacy.MainClass}
+	compatJVM, compatClasspath, err := compatJVMArgs0279(root, p)
+	if err != nil {
+		return err
+	}
+	classpath = append(classpath, compatClasspath...)
+	variables["classpath"] = strings.Join(classpath, string(os.PathListSeparator))
+	args := []string{"-Djava.library.path=" + natives, "-Dorg.lwjgl.librarypath=" + natives}
+	args = append(args, compatJVM...)
+	args = append(args, "-cp", strings.Join(classpath, string(os.PathListSeparator)), p.Legacy.MainClass)
 	args = append(args, gameArgs...)
 	cmd := exec.CommandContext(ctx, javaExecutable, args...)
 	cmd.Dir = absRoot

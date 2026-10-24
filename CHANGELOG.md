@@ -1,3 +1,10 @@
+## 0.27.9 — Authlib & Classloader Compatibility
+
+- Introduced executable, receipt-verified classloader compatibility configurations. `runtime client-factory compat-apply --client-dir ... --file ...` copies exact SHA-256-pinned local JARs through transactional staging; the immutable receipt, sources and modified InstallPlan digest prevent silent mutation. `compat-inspect`/`compat-verify` validate every pinned byte.
+- Extended existing Java 8 `legacy-run` to use verified additional classpath and JVM Java agents, with explicit official/offline/Yggdrasil authentication policies and required token/UUID for authenticated modes. Agent JARs must contain a valid `Premain-Class` manifest. Java 9+ modulepath and `--add-opens` are strictly validated and pinned but are not claimed as end-to-end launched modern clients.
+- Added audit-preserving authlib overlays: exact before/patch/after SHA-256, retained patch JAR bytes, chained transformation provenance, signed-archive rejection and strict whole-client verification at subsequent launch/rebuild. Unknown class transforms and Java 17 bridge rewrites are not silently accepted.
+- Added integration tests for transactional application, Java argv execution, invalid agent files, replay isolation, corrupted lock/artifacts, wrong hashes, failed transformation rollback, legacy regressions and CI. Real Minecraft GUI login and legacy bridge/modern module launch remain outside certification.
+
 ## 0.27.8 — Legacy Client Adapters
 
 - Integrated executable legacy launch adapters into Unified InstallPlan for original Vanilla 1.0–1.12.2 profiles and Forge 1.7.10/1.12.2. A generated `.neverlauncher/legacy-launch.json` contains checked parent/child version-profile identities, inherited game arguments, exact ordered classpath with SHA-256, platform native directories, Forge LaunchWrapper tweaker and Java 8 requirement. The recipe and artifact hashes are bound to InstallPlan and revalidated on rebuild/launch.
