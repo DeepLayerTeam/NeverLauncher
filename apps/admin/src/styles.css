@@ -151,3 +151,16 @@ code { color: #bfdbfe; }
 .componentEditorGraph0248 { max-height:250px; overflow:auto; }
 .componentEditorGraph0248 li { overflow-wrap:anywhere; }
 @media(max-width:760px) { .componentEditorLayout0248 { grid-template-columns:1fr; } .componentEditorList0248 { max-height:300px; overflow:auto; } }
+
+/* Client Factory 0.27.10: responsive, keyboard-operable build workflow */
+.clientFactory { margin-block: 1rem; min-width: 0; }
+.clientFactorySteps { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0 1.25rem; }
+.clientFactorySteps button[aria-current="step"] { outline: 2px solid currentColor; outline-offset: 2px; font-weight: 700; }
+.clientFactoryMeta { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(0,3fr); gap: .5rem 1rem; margin: 1rem 0; }
+.clientFactoryMeta dt { font-weight: 600; }
+.clientFactoryMeta dd { margin: 0; overflow-wrap: anywhere; }
+.clientFactoryMeta code { overflow-wrap: anywhere; }
+.clientFactoryLog { background: #151923; color: #f1f5f9; border: 1px solid #42506b; border-radius: 6px; padding: 1rem; white-space: pre-wrap; overflow: auto; max-height: 25rem; overflow-wrap: anywhere; font-size: .8rem; }
+.clientFactoryFileList { padding: .75rem; margin-block: .75rem; border: 1px solid var(--border-color, #9ca3af); border-radius: 6px; max-height: 22rem; overflow: auto; }
+.clientFactoryFileList > div { border-bottom: 1px solid var(--border-color, #9ca3af); padding: .4rem 0; overflow-wrap: anywhere; }
+@media (max-width: 680px) {.clientFactoryMeta { grid-template-columns: 1fr; }.clientFactorySteps button {flex:1 1 42%;}}

@@ -1,3 +1,10 @@
+## 0.27.10 — Visual Client Factory Builder
+
+- Added real authenticated, workspace-scoped API execution of the existing Client Factory CLI, durable jobs with polling/logs/cancellation, exact-version input enforcement, isolated per-job directories, bounded concurrency, verification and restricted export.
+- Added React Client Factory source wizard for Vanilla/Fabric/Quilt/Forge/NeoForge and Modrinth/CurseForge ZIP uploads, with pinned workspace checks, InstallPlan source/output/processor inspection, SHA-256 job diff and operator download. Existing Build Workspace release flow stays intact.
+- Configured API Docker image to include the CLI and Java runtime and a dedicated factory volume in production Compose; added API, CLI, Admin and container CI gates and operator documentation.
+- Scope limitation: previews show exact input configuration before materialization (not fully resolved upstream dependency graph); no automatic promotion into a signed release, sandbox certification, or real Minecraft GUI launch is claimed.
+
 ## 0.27.9 — Authlib & Classloader Compatibility
 
 - Introduced executable, receipt-verified classloader compatibility configurations. `runtime client-factory compat-apply --client-dir ... --file ...` copies exact SHA-256-pinned local JARs through transactional staging; the immutable receipt, sources and modified InstallPlan digest prevent silent mutation. `compat-inspect`/`compat-verify` validate every pinned byte.

@@ -109,6 +109,7 @@ services:
     volumes:
       - neverlauncher_storage:/var/lib/neverlauncher/storage
       - neverlauncher_backups:/var/lib/neverlauncher/backups
+      - neverlauncher_factory:/var/lib/neverlauncher/factory
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/ready"]
       interval: 10s
@@ -164,6 +165,7 @@ volumes:
   neverlauncher_redis:
   neverlauncher_storage:
   neverlauncher_backups:
+  neverlauncher_factory:
 
 networks:
   neverlauncher:

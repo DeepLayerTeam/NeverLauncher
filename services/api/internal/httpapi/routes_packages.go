@@ -6,6 +6,14 @@ import (
 )
 
 func (s Server) registerPackageRoutesV1(mux *http.ServeMux) {
+	mux.Handle("POST /api/v1/build-workspaces/{workspaceId}/factory/modpack-jobs", s.requireAuthenticated(s.factoryModpackCreate02710))
+	mux.Handle("GET /api/v1/build-workspaces/{workspaceId}/factory/jobs", s.requireAuthenticated(s.factoryList02710))
+	mux.Handle("POST /api/v1/build-workspaces/{workspaceId}/factory/jobs", s.requireAuthenticated(s.factoryCreate02710))
+	mux.Handle("DELETE /api/v1/build-workspaces/{workspaceId}/factory/jobs/{jobId}", s.requireAuthenticated(s.factoryDelete02710))
+	mux.Handle("GET /api/v1/build-workspaces/{workspaceId}/factory/jobs/{jobId}", s.requireAuthenticated(s.factoryGet02710))
+	mux.Handle("POST /api/v1/build-workspaces/{workspaceId}/factory/jobs/{jobId}/cancel", s.requireAuthenticated(s.factoryCancel02710))
+	mux.Handle("GET /api/v1/build-workspaces/{workspaceId}/factory/jobs/{jobId}/diff", s.requireAuthenticated(s.factoryDiff02710))
+	mux.Handle("GET /api/v1/build-workspaces/{workspaceId}/factory/jobs/{jobId}/export", s.requireAuthenticated(s.factoryExport02710))
 	mux.Handle("POST /api/v1/build-workspaces", s.requireAuthenticated(s.workspaceCreate0226))
 	mux.Handle("GET /api/v1/build-workspaces", s.requireAuthenticated(s.workspaceList0226))
 	mux.Handle("GET /api/v1/build-workspaces/{workspaceId}", s.requireAuthenticated(s.workspaceGet0226))

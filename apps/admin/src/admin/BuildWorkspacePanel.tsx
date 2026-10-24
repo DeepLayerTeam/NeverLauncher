@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {ClientFactoryBuilder02710} from './ClientFactoryBuilder02710';
 
 interface BuildFile {path:string;size:number;sha256:string;ownership:string;executable:boolean;selected:boolean}
 interface Settings {
@@ -94,6 +95,7 @@ export function BuildWorkspacePanel({base,token,projectId,profileId,channel,vers
      {items.length>0&&<><h5>Продолжить workspace</h5><ul>{items.map(x=><li key={x.id}><button disabled={busy} onClick={()=>load(x)}>{x.id} · {x.state} · r{x.revision}</button></li>)}</ul></>}
    </>}
    {workspace&&<>
+     <ClientFactoryBuilder02710 backend={base} token={token} workspaceId={workspace.id} minecraft={workspace.settings.minecraft.version} loader={workspace.settings.minecraft.loader} canBuild={canFileWrite && workspace.state!=='built'} />
      <p>Workspace: <code>{workspace.id}</code> · {workspace.state} · revision {workspace.revision} · Profile revision {workspace.profileRevision}</p>
      <div className="buttonRow"><button disabled={busy} onClick={()=>{setWorkspace(null);void refresh()}}>Другой workspace</button><button disabled={busy} onClick={()=>void scanFiles()}>Scan / SHA-256</button></div>
      {workspace.state!=='built'&&<label className="field">Импорт каталога Minecraft (включая вложенные папки)

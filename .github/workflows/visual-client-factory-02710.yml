@@ -1,0 +1,76 @@
+name: Visual Client Factory Builder 0.27.10
+on:
+  push:
+    paths:
+      - 'apps/admin/**'
+      - 'services/api/**'
+      - 'cli/**'
+      - 'deploy/production/docker-compose.yml'
+      - '.github/workflows/visual-client-factory-02710.yml'
+      - 'VERSION'
+  pull_request:
+    paths:
+      - 'apps/admin/**'
+      - 'services/api/**'
+      - 'cli/**'
+      - 'deploy/production/docker-compose.yml'
+      - '.github/workflows/visual-client-factory-02710.yml'
+permissions:
+  contents: read
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Go formatting
+        run: test -z "$(gofmt -l services/api/internal/httpapi/client_factory_builder_02710*.go)"
+      - name: API real-package tests
+        working-directory: services/api
+        run: go test ./internal/httpapi -run 'TestFactoryBuilder.*02710|TestBuildWorkspaceDirectoryStageAndMaterialize0226' -count=1 -timeout=8m
+      - name: Race detection
+        working-directory: services/api
+        run: go test -race ./internal/httpapi -run 'TestFactoryBuilder.*02710' -count=1 -timeout=8m
+      - name: Static analysis
+        working-directory: services/api
+        run: go vet ./internal/httpapi
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - name: Existing Client Factory and adapters regression
+        working-directory: cli
+        run: go test ./cmd/neverlauncher -run 'TestClientFactory0271|TestModernLoaderAdapters0272|TestForge.*|TestModpack.*' -count=1 -timeout=8m
+      - name: Build executable used by API
+        working-directory: cli
+        run: go build ./cmd/neverlauncher
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: Install pinned dependencies
+        working-directory: apps/admin
+        run: npm ci
+      - name: Type-check and build
+        working-directory: apps/admin
+        run: npm run build
+      - name: Admin tests
+        working-directory: apps/admin
+        run: npm test
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build runnable API and Client Factory CLI image
+        run: docker build -f services/api/Dockerfile -t neverlauncher-factory-ci .
