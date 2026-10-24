@@ -5,8 +5,12 @@ on:
     inputs:
       optional_components_ga_evidence_run_id:
         type: string
+        required: false
+        description: 'Only for historical 0.25.0 GA: approved six signed Optional Components attestations'
+      official_minecraft_ga_evidence_run_id:
+        type: string
         required: true
-        description: 'Approved run with six signed independent 0.25.0 GA attestations and exact signed installers'
+        description: 'Protected operator run with six independently signed live official Minecraft 0.27.0 attestations'
 
 permissions:
   contents: read
@@ -148,6 +152,36 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Ed25519 verification dependency
+        run: python3 -m pip install 'cryptography>=43,<47'
+      - name: Download independently signed live official Minecraft GA evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: official-minecraft-ga-0270-*
+          run-id: ${{ inputs.official_minecraft_ga_evidence_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: official-minecraft-ga-raw
+          merge-multiple: false
+      - name: Require six exact platform attestations; verify pinned operator signature
+        shell: bash
+        env:
+          APPROVED_OPERATOR_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${APPROVED_OPERATOR_PUBLIC_KEY}" || { echo 'missing protected GA verification key' >&2; exit 2; }
+          mkdir -p official-minecraft-ga-0270
+          for target in windows-amd64 windows-arm64 linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
+            source="official-minecraft-ga-raw/official-minecraft-ga-0270-${target}"
+            test -d "$source"
+            cp -a "$source" "official-minecraft-ga-0270/$target"
+          done
+          python3 scripts/ga/official_minecraft_0270.py \
+            --attestations official-minecraft-ga-0270 \
+            --public-key "$APPROVED_OPERATOR_PUBLIC_KEY" \
+            --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/official-minecraft-ga-0270.json"
       - name: Verify exact-commit Admin GA result
         uses: actions/download-artifact@v4
         with:
@@ -275,7 +309,8 @@ jobs:
           openssl pkey -in /tmp/neverlauncher-release-private.pem -noout >/dev/null
           openssl pkey -pubin -in /tmp/neverlauncher-release-root-public.pem -noout >/dev/null
           jq -e '.schemaVersion and .trustDomain' /tmp/neverlauncher-release-trust-policy.json >/dev/null
-      - name: Download approved six signed Optional Components GA evidence packages
+      - name: Download historical 0.25.0 Optional Components GA evidence packages
+        if: inputs.optional_components_ga_evidence_run_id != ''
         uses: actions/download-artifact@v4
         with:
           pattern: optional-components-ga-0250-*
@@ -283,7 +318,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: optional-components-ga-0250-raw
           merge-multiple: false
-      - name: Require exactly six platform folders for the GA preflight
+      - name: Require exactly six historical Optional Components platform folders
+        if: inputs.optional_components_ga_evidence_run_id != ''
         shell: bash
         run: |
           set -euo pipefail
@@ -314,12 +350,16 @@ jobs:
           NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
           NEVERLAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/optional-components-ga-0250
           NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY }}
+          NEVERLAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/official-minecraft-ga-0270
+          NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
         run: bash scripts/release/build-release.sh
       - name: Assert required production artifacts
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
           DIR="dist/release-${VERSION}"
           test -s "${DIR}/SHA256SUMS.sig"
+          test -s "${DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
+          jq -e --arg commit "$GITHUB_SHA" '.schemaVersion == "neverlauncher.official-minecraft.ga-receipt.v1" and .status == "passed" and .commit == $commit and .productVersion == "0.27.0" and (.targets | length) == 6 and all(.targets[]; .status == "passed")' "${DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json" >/dev/null
           test -s "${DIR}/PROVENANCE.json.sig"
           test -s "${DIR}/RELEASE_TRUST_POLICY.json"
           test -s "${DIR}/COMPATIBILITY_TARGETS.json"

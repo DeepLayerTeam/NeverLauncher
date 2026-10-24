@@ -1,3 +1,11 @@
+## 0.27.0 — Official Minecraft Authentication GA release gate
+
+- **Production hardening:** prevent an interrupted legacy-to-multi-account OS-vault migration from replacing a newer native credential or retiring its only recoverable source before verifying a readable destination; zeroize partial keyring reads on errors.
+- **Real release admission:** fail-closed Ed25519 verification of six independently collected *live* browser/device, Minecraft sessionserver, vanilla/modded world join, OS vault/lifecycle and signed native installer attestations for the exact release commit; stale/mocked/unsigned/mismatched evidence is rejected. Six SHA-256 hashes must also match the exact native archives imported into the shipping bundle.
+- **Signed delivery integration:** `build-release.sh` and the production-release-candidate workflow now require the independent official-Minecraft evidence before producing a 0.27.0 signed bundle; existing Authenticode, notarization, signed release hashes and public delivery verification remain mandatory.
+- **Version/documentation:** synchronized 0.27.0 package/version/OpenAPI metadata; CLI provider reports identify 0.27.0; updated operator execution, migration, signing, rollback and testing procedures.
+- **External GA blocker:** own-app Minecraft Services approval, real native keyring runs and actual online-mode Java server joins have **not** been certified in this source-only environment. The changes do not claim that a signed GA build or provider approval exists.
+
 ## 0.26.12 — Official Integration & Compatibility Certification Preflight
 
 - Added live Minecraft Java sessionserver `join` + `hasJoined` verification on the same official bearer and subject obtained through Microsoft's OAuth → Xbox Live → XSTS → Minecraft Services chain. Real ephemeral RSA/AES challenge and Java signed SHA-1 hash; identity mismatch and upstream rejection block the POC result.

@@ -62,6 +62,33 @@ if [[ "${VERSION}" == "0.25.0" ]]; then
     --commit "${SOURCE_COMMIT}" --output "${COMPONENTS_GA_RECEIPT}"
 fi
 
+# 0.27.0 GA requires an independent, signed LIVE Microsoft/Xbox/Minecraft
+# attestation for each shipping OS/architecture. Unit tests and CI builds
+# cannot satisfy this gate. Keep operator keys outside the source tree.
+OFFICIAL_GA_RECEIPT=""
+if [[ "${VERSION}" == "0.27.0" ]]; then
+  OFFICIAL_GA_DIR="${NEVERLAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR:-}"
+  OFFICIAL_GA_PUB="${NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY:-}"
+  [[ -d "${OFFICIAL_GA_DIR}" && -n "${OFFICIAL_GA_PUB}" ]] || {
+    echo "0.27.0 GA BLOCKED: six signed live official Minecraft attestations and a pinned operator public key are required" >&2
+    exit 2
+  }
+  command -v git >/dev/null 2>&1 || { echo "GA requires git" >&2; exit 2; }
+  HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
+  [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${HEAD_COMMIT}" ]] || {
+    echo "official GA source commit mismatch" >&2; exit 2;
+  }
+  SOURCE_COMMIT="${HEAD_COMMIT}"
+  [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal)" ]] || {
+    echo "official GA signing requires a clean, committed source tree" >&2; exit 2;
+  }
+  OFFICIAL_GA_RECEIPT="$(mktemp)"
+  trap '[[ -z "${COMPONENTS_GA_RECEIPT}" ]] || rm -f "${COMPONENTS_GA_RECEIPT}"; [[ -z "${OFFICIAL_GA_RECEIPT}" ]] || rm -f "${OFFICIAL_GA_RECEIPT}"' EXIT
+  python3 "${ROOT_DIR}/scripts/ga/official_minecraft_0270.py" \
+    --attestations "${OFFICIAL_GA_DIR}" --public-key "${OFFICIAL_GA_PUB}" \
+    --commit "${SOURCE_COMMIT}" --output "${OFFICIAL_GA_RECEIPT}"
+fi
+
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
 mkdir -p "${OUT_DIR}" "${WORK_DIR}"
 
@@ -595,6 +622,14 @@ if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
 fi
 if [[ "${WINDOWS_PROTECTION_GA_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/WINDOWS_ADVERSARIAL_CERTIFICATE.json"
+fi
+
+if [[ "${VERSION}" == "0.27.0" ]]; then
+  [[ -s "${OFFICIAL_GA_RECEIPT}" ]] || { echo "missing signed official Minecraft GA receipt" >&2; exit 2; }
+  cp "${OFFICIAL_GA_RECEIPT}" "${OUT_DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
+  log "Binding independent six-platform LIVE official Minecraft certification into signed manifest"
+  python3 "${ROOT_DIR}/scripts/ga/verify_official_artifacts_0270.py" \
+    --bundle "${OUT_DIR}" --receipt "${OUT_DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
 fi
 
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"

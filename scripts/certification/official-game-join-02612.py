@@ -84,7 +84,7 @@ def check_evidence(report_path: Path, properties_path: Path, log_path: Path, kin
         raise CertificationFailure("no matching official UUID followed by successful login event")
     return {
         "schema": "neverlauncher.official-game-join-evidence.v1",
-        "release": "0.26.12",
+        "release": report.get("version", "0.26.12"),
         "verifiedUTC": datetime.now(timezone.utc).isoformat(),
         "serverKind": kind,
         "onlineMode": True,

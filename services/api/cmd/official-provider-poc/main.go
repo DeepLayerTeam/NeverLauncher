@@ -29,6 +29,9 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/officialminecraft"
 )
 
+// Overridden by -ldflags -X at production build time.
+var releaseVersion = "0.27.0"
+
 type providerClient interface {
 	Begin(context.Context, string) (officialminecraft.DeviceCode, error)
 	Complete(context.Context, string, string) (officialminecraft.OAuthTokens, error)
@@ -78,7 +81,7 @@ type report struct {
 }
 
 func newReport(opt options) *report {
-	return &report{Schema: "neverlauncher.official-provider-poc.v1", Version: "0.26.12", TimestampUTC: time.Now().UTC().Format(time.RFC3339Nano), ClientID: opt.ClientID, OAuthFlow: opt.Flow, Provider: "fixed_official_microsoft_xbox_minecraft_hosts", Stages: []stage{}, Result: "blocked", MinecraftServicesAccess: "not_verified", ExternalAppApproval: "requires_independent_provider_confirmation", OS: runtime.GOOS, Architecture: runtime.GOARCH, OnlineModeSession: "not_verified", ServerHandshake: "not_tested"}
+	return &report{Schema: "neverlauncher.official-provider-poc.v1", Version: releaseVersion, TimestampUTC: time.Now().UTC().Format(time.RFC3339Nano), ClientID: opt.ClientID, OAuthFlow: opt.Flow, Provider: "fixed_official_microsoft_xbox_minecraft_hosts", Stages: []stage{}, Result: "blocked", MinecraftServicesAccess: "not_verified", ExternalAppApproval: "requires_independent_provider_confirmation", OS: runtime.GOOS, Architecture: runtime.GOARCH, OnlineModeSession: "not_verified", ServerHandshake: "not_tested"}
 }
 
 func (r *report) pass(name string) { r.Stages = append(r.Stages, stage{Name: name, Status: "passed"}) }
@@ -424,7 +427,7 @@ func main() {
 	output := flag.String("report", "", "new JSON report path (exclusive, mode 0600); default stdout")
 	timeout := flag.Duration("timeout", 15*time.Minute, "overall timeout")
 	noOpen := flag.Bool("no-open", false, "print browser link without launching default browser")
-	online := flag.Bool("online-session", true, "perform a live Mojang join/hasJoined challenge; required for 0.26.12 certification")
+	online := flag.Bool("online-session", true, "perform a live Mojang join/hasJoined challenge; required for official Minecraft GA certification")
 	server := flag.String("probe-server", "", "optional host:port of an authorized online-mode server (handshake probe, NOT full game login)")
 	protocol := flag.Int("protocol", 0, "Minecraft protocol version for --probe-server, e.g. 767 for 1.21")
 	flag.Parse()

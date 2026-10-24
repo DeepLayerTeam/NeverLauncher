@@ -185,7 +185,9 @@ fn remove_fragments(id: &str, pointer: &VaultPointer) -> Result<(), String> {
 }
 fn read(id: &str) -> Result<Option<StoredAccount>, String> {
     let Some(pointer) = read_pointer(id)? else { return Ok(None) };
-    let mut raw = Vec::new();
+    // Zeroize partial credential bytes even when a later fragment fails to
+    // decode or the platform keyring becomes unavailable mid-read.
+    let mut raw = Zeroizing::new(Vec::<u8>::new());
     for index in 0..pointer.count {
         let mut part = entry(&fragment_id(id, &pointer.generation, index))?
             .get_password().map_err(|_| "Защищённая запись игрового аккаунта неполная".to_string())?;
@@ -328,15 +330,31 @@ fn migrate_legacy(id: &str) -> Result<(), String> {
     let uuid = normalized_uuid(&legacy.profile.id)?;
     let mut dir = load_directory(id)?;
     let slot = account_slot(id, &uuid)?;
+    // Never overwrite a newer native account (schema 2) with an old backend
+    // ticket left behind by an interrupted 0.26.7 migration. And never delete
+    // the only recoverable legacy ticket if the indexed slot is incomplete.
+    let existing = read(&slot)?;
+    if let Some(ref current) = existing {
+        if normalized_uuid(&current.profile.id)? != uuid {
+            return Err("Minecraft UUID mismatch при миграции OS vault".into());
+        }
+    }
     if !dir.ids.contains(&uuid) {
         if dir.ids.len() >= MAX_ACCOUNTS { return Err("Превышен лимит Minecraft-аккаунтов".into()); }
-        save(&slot, &legacy)?;
+        if existing.as_ref().is_none_or(|current| current.schema < legacy.schema) {
+            save(&slot, &legacy)?;
+        }
         dir.ids.push(uuid.clone());
         if dir.active.is_none() { dir.active = Some(uuid); }
         save_directory(id, &dir)?;
+    } else if existing.is_none() {
+        return Err("OS vault migration incomplete: active account slot missing".into());
     }
-    // Deleting the original only after new record and index are durably written.
-    // Retrying after interruption is safe: the indexed account wins.
+    // Only retire the old credential AFTER verifying a readable replacement.
+    let migrated = read(&slot)?.ok_or("OS vault migration incomplete")?;
+    if normalized_uuid(&migrated.profile.id)? != uuid {
+        return Err("OS vault migration identity mismatch".into());
+    }
     delete(id)
 }
 fn selected_record(id: &str) -> Result<Option<(String, StoredAccount)>, String> {

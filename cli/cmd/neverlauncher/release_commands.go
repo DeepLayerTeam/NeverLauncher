@@ -652,9 +652,16 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		}
 	}
 
+	if err := verifyOfficialGAReceipt0270(out, ver, expectedCommit); err != nil {
+		return fmt.Errorf("official Minecraft 0.27 GA gate: %w", err)
+	}
 	entries := releaseBundleEntries(ver, out)
 	requiredFiles := []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}
 	checks := []string{"required-artifacts", "sha256", "ed25519-external-trust", "sbom", "provenance", "release-notes", "source-secret-scan"}
+	if ver == "0.27.0" {
+		requiredFiles = append(requiredFiles, officialGACertification0270)
+		checks = append(checks, "six-target-live-official-minecraft-ed25519-ga")
+	}
 	if deliveryManifestRequired0151(ver) {
 		requiredFiles = append(requiredFiles, deliveryManifestFile0151)
 		checks = append(checks, "delivery-manifest-platform-architecture")
@@ -960,6 +967,21 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	if strings.TrimSpace(manifest.Version) == "" {
 		return errors.New("RELEASE_MANIFEST.json не содержит version")
 	}
+	if manifest.Version == "0.27.0" {
+		if err := verifyOfficialGAReceipt0270(dir, manifest.Version, manifest.SourceCommit); err != nil {
+			return err
+		}
+		found := false
+		for _, required := range manifest.RequiredFiles {
+			if required == officialGACertification0270 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errors.New("official Minecraft GA certificate is not required by signed release manifest")
+		}
+	}
 	if deliveryManifestRequired0151(manifest.Version) {
 		if err := verifyDeliveryManifest0151(dir, manifest.Version); err != nil {
 			return fmt.Errorf("delivery manifest: %w", err)
@@ -1224,6 +1246,9 @@ func releaseArtifacts(ver string) []string {
 	}
 	if productionDeliveryReleaseRequired0160(ver) {
 		artifacts = append(artifacts, productionDeliveryReleaseFile0160)
+	}
+	if ver == "0.27.0" {
+		artifacts = append(artifacts, officialGACertification0270)
 	}
 	if windowsProtectionReleaseRequired01812(ver) {
 		artifacts = append(artifacts, windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812)
