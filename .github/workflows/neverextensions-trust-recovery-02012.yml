@@ -26,7 +26,7 @@ jobs:
             os: macos
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.x'
@@ -69,7 +69,7 @@ jobs:
     needs: cross-platform-e2e
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           pattern: neverextensions-trust-evidence-*

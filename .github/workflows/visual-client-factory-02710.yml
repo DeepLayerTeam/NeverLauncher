@@ -21,7 +21,7 @@ jobs:
   api:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
@@ -40,7 +40,7 @@ jobs:
   cli:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod
@@ -53,7 +53,7 @@ jobs:
   admin:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -71,6 +71,6 @@ jobs:
   image:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build runnable API and Client Factory CLI image
         run: docker build -f services/api/Dockerfile -t neverlauncher-factory-ci .
