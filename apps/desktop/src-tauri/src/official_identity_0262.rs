@@ -426,6 +426,7 @@ impl IdentityManager {
             return Err(match status {
             401 => "Сессия Never/Minecraft недействительна; войдите повторно".into(),
             403 => "Доступ Minecraft запрещён провайдером или настройками аккаунта".into(),
+            409 if route == "/link" => "Minecraft UUID уже связан с другой учётной записью Never".into(),
             429 => "Слишком много запросов; повторите позднее".into(),
             502..=599 => "Сервис Microsoft/Minecraft временно недоступен".into(),
             _ => format!("Официальная авторизация: HTTP {status}"),
@@ -972,6 +973,42 @@ impl IdentityManager {
             Ok(record.profile.clone())
         }
     }
+    // Link is a server-side, durable Never relationship, not merely a local
+    // vault association. Hold the selection lock across provider verification
+    // and Backend transaction to prevent linking a just-switched account.
+    pub async fn never_links_0268(&self, backend:&str, access:&str, session:&str) -> Result<Vec<NeverOfficialLink0268>,String> {
+        let (base,_)=scope(backend,session)?;
+        let response=self.request(&base,access,"/link",Method::GET,None,None,None).await?;
+        serde_json::from_value(response.data.get("links").cloned().ok_or("Некорректный список Never links")?)
+            .map_err(|_|"Некорректные записи Never identity".into())
+    }
+    pub async fn never_link_0268(&self, backend:&str, access:&str, session:&str, expected_uuid:&str, confirmed:bool) -> Result<NeverOfficialLink0268,String> {
+        if !confirmed {return Err("Необходимо явное подтверждение привязки Never и Minecraft".into());}
+        let (base,id)=scope(backend,session)?;
+        let requested=normalized_uuid(expected_uuid)?;
+        let _guard=self.vault_lock.lock().await;
+        migrate_legacy(&id)?;
+        let (slot,mut record)=selected_record(&id)?.ok_or("Minecraft-аккаунт не выбран")?;
+        if normalized_uuid(&record.profile.id)?!=requested {return Err("Выбранный Minecraft UUID изменился".into());}
+        if record.native.is_none() {return Err("Для привязки требуется повторный официальный вход Microsoft через native flow".into());}
+        self.native_validate(&base,&slot,access,&mut record,false).await?;
+        if normalized_uuid(&record.profile.id)?!=requested {return Err("Minecraft UUID изменился при проверке".into());}
+        let bearer=Zeroizing::new(record.native.as_ref().ok_or("Отсутствует официальный token")?.minecraft_token.clone());
+        // Native-only credential: renderer sees only the verified result.
+        let response=self.request(&base,access,"/link",Method::POST,None,Some(json!({
+            "expectedUuid":requested,"minecraftAccessToken":bearer.as_str(),"confirm":true
+        })),None).await?;
+        let link:NeverOfficialLink0268=serde_json::from_value(response.data.clone()).map_err(|_|"Некорректный ответ привязки".to_string())?;
+        if normalized_uuid(&link.minecraft_uuid)?!=requested{return Err("Backend изменил Minecraft identity".into());}
+        Ok(link)
+    }
+    pub async fn never_unlink_0268(&self, backend:&str, access:&str, session:&str, uuid:&str, confirmed:bool) -> Result<(),String> {
+        if !confirmed {return Err("Необходимо явное подтверждение отвязывания".into());}
+        let (base,_)=scope(backend,session)?;
+        let uuid=normalized_uuid(uuid)?;
+        self.request(&base,access,&format!("/link/{uuid}"),Method::DELETE,None,None,None).await?;
+        Ok(())
+    }
     pub async fn disconnect(&self, backend: &str, session: &str) -> Result<(), String> {
         let (_, id) = scope(backend, session)?;
         self.cancel(backend,session)?;
@@ -987,6 +1024,14 @@ impl IdentityManager {
         migrate_legacy(&id)?;
         remove_account(&id,uuid)
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct NeverOfficialLink0268 {
+    pub minecraft_uuid: String,
+    pub minecraft_name: String,
+    pub verified_at: String,
 }
 
 #[derive(Deserialize)]
@@ -1043,9 +1088,39 @@ pub async fn official_identity_logout_0267(manager: tauri::State<'_, IdentityMan
     manager.disconnect_account(&backend_url,&never_session_id,&account_id).await
 }
 
+#[tauri::command]
+pub async fn official_identity_links_0268(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<Vec<NeverOfficialLink0268>,String> {
+    manager.never_links_0268(&context.backend_url,&context.never_token,&context.never_session_id).await
+}
+#[tauri::command]
+pub async fn official_identity_link_0268(manager: tauri::State<'_, IdentityManager>, context: Context, account_id: String, confirmed: bool) -> Result<NeverOfficialLink0268,String> {
+    manager.never_link_0268(&context.backend_url,&context.never_token,&context.never_session_id,&account_id,confirmed).await
+}
+#[tauri::command]
+pub async fn official_identity_unlink_0268(manager: tauri::State<'_, IdentityManager>, context: Context, account_id: String, confirmed: bool) -> Result<(),String> {
+    manager.never_unlink_0268(&context.backend_url,&context.never_token,&context.never_session_id,&account_id,confirmed).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn official_never_linking_requires_explicit_confirmation() {
+        let manager=IdentityManager::new().expect("http manager");
+        let uuid="123456789abcdef0123456789abcdef0";
+        let result=manager.never_link_0268("https://example.com","never-access-token","never-session",uuid,false).await;
+        assert!(result.unwrap_err().contains("подтверждение"));
+        let result=manager.never_unlink_0268("https://example.com","never-access-token","never-session",uuid,false).await;
+        assert!(result.unwrap_err().contains("подтверждение"));
+    }
+    #[test]
+    fn never_link_response_only_contains_nonsecret_identity_fields() {
+        let link=NeverOfficialLink0268{minecraft_uuid:"a".repeat(32),minecraft_name:"ValidUser".into(),verified_at:"2026-10-23T12:00:00Z".into()};
+        let serialized=serde_json::to_string(&link).unwrap();
+        assert!(serialized.contains("minecraftUuid"));
+        assert!(!serialized.contains("Token") && !serialized.contains("ticket"));
+    }
+
     #[test] fn account_directory_rejects_tampering_and_duplicates() {
         let a="0123456789abcdef0123456789abcdef".to_string();
         let b="abcdef0123456789abcdef0123456789".to_string();

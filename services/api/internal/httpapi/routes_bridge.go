@@ -6,6 +6,9 @@ import (
 )
 
 func (s Server) registerBridgeRoutesV1(mux *http.ServeMux) {
+	mux.Handle("GET /api/v1/minecraft/official/link", s.requireAuthenticated(s.officialLinksGet0268))
+	mux.Handle("POST /api/v1/minecraft/official/link", s.requireAuthenticated(s.officialLinkCreate0268))
+	mux.Handle("DELETE /api/v1/minecraft/official/link/{minecraftUuid}", s.requireAuthenticated(s.officialLinkRemove0268))
 	mux.Handle("GET /api/v1/minecraft/official/browser/config", s.requireAuthenticated(s.officialBrowserConfig0263))
 	mux.Handle("POST /api/v1/minecraft/official/browser/exchange", s.requireAuthenticated(s.officialBrowserExchange0263))
 	mux.Handle("POST /api/v1/minecraft/official/device/start", s.requireAuthenticated(s.officialBegin0257))

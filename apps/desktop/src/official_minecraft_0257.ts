@@ -8,6 +8,7 @@ export type OfficialProfile0257 = {
   skins: Array<{id: string; state: string; url: string; variant: string}>;
   capes: Array<{id: string; state: string; url: string; alias?: string}>;
 };
+export type NeverOfficialLink0268 = { minecraftUuid:string; minecraftName:string; verifiedAt:string };
 export type OfficialAccount0267 = { id: string; name: string; active: boolean };
 export type OfficialDevice0257 = {
   verificationUri: string;
@@ -158,6 +159,18 @@ export class OfficialMinecraftClient0257 {
   async resetSkin():Promise<OfficialProfile0257> { return this.call('official_identity_texture_0262',{operation:'resetSkin'}); }
   async selectCape(capeId:string):Promise<OfficialProfile0257> { return this.call('official_identity_texture_0262',{operation:'selectCape',capeId}); }
   async resetCape():Promise<OfficialProfile0257> { return this.call('official_identity_texture_0262',{operation:'resetCape'}); }
+  /** Durable Never-to-Minecraft links are verified independently by the Backend. */
+  async neverLinks(): Promise<NeverOfficialLink0268[]> {
+    return this.call<NeverOfficialLink0268[]>('official_identity_links_0268');
+  }
+  async linkToNever(accountId:string, confirmed:boolean): Promise<NeverOfficialLink0268> {
+    if (!confirmed) throw new Error('Требуется подтверждение привязки.');
+    return this.call<NeverOfficialLink0268>('official_identity_link_0268',{accountId,confirmed:true});
+  }
+  async unlinkFromNever(accountId:string, confirmed:boolean): Promise<void> {
+    if (!confirmed) throw new Error('Требуется подтверждение отвязывания.');
+    await this.call<void>('official_identity_unlink_0268',{accountId,confirmed:true});
+  }
   /** Intentional break: never return game access tokens through renderer. */
   async credentials():Promise<never> { throw new Error('Official Minecraft launch credentials доступны только NeverRuntime через native manager.'); }
 }

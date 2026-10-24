@@ -231,3 +231,21 @@ test('0.26.7 a stale account switch is rejected after local clear',async()=>{
  await assert.rejects(switching,/отменено/);
  assert.equal(client.linked,false);
 });
+
+test('0.26.8 Never identity linking uses native commands and exposes no Minecraft bearer', async()=>{
+ const calls=[];
+ const client=new OfficialMinecraftClient0257('https://backend.example','platform-token','sid',async (command,args)=>{
+  calls.push({command,args});
+  if (command==='official_identity_links_0268') return [{minecraftUuid:profile.id,minecraftName:profile.name,verifiedAt:'2026-10-23T00:00:00Z'}];
+  if (command==='official_identity_link_0268') return {minecraftUuid:profile.id,minecraftName:profile.name,verifiedAt:'2026-10-23T00:00:00Z'};
+  if (command==='official_identity_unlink_0268') return;
+  throw Error(command);
+ });
+ assert.equal((await client.neverLinks())[0].minecraftUuid,profile.id);
+ await assert.rejects(client.linkToNever(profile.id,false),/подтверждение/i);
+ assert.equal((await client.linkToNever(profile.id,true)).minecraftName,'Owner');
+ await assert.rejects(client.unlinkFromNever(profile.id,false),/подтверждение/i);
+ await client.unlinkFromNever(profile.id,true);
+ assert.deepEqual(calls.map(x=>x.command),['official_identity_links_0268','official_identity_link_0268','official_identity_unlink_0268']);
+ assert.ok(calls.every(x=>!JSON.stringify(x.args).includes('minecraftAccessToken')&&!JSON.stringify(x.args).includes('refreshToken')));
+});

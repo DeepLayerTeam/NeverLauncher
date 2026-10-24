@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {OfficialMinecraftClient0257, type OfficialDevice0257, type OfficialProfile0257, type OfficialAccount0267} from './official_minecraft_0257';
+import {OfficialMinecraftClient0257, type OfficialDevice0257, type OfficialProfile0257, type OfficialAccount0267, type NeverOfficialLink0268} from './official_minecraft_0257';
 
 type Props = {
   client: OfficialMinecraftClient0257;
@@ -10,6 +10,7 @@ type Props = {
 export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Props) {
   const [device, setDevice] = useState<OfficialDevice0257 | null>(null);
   const [accounts, setAccounts] = useState<OfficialAccount0267[]>([]);
+  const [neverLinks, setNeverLinks] = useState<NeverOfficialLink0268[] | null>(null);
   const [browserPending, setBrowserPending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -26,11 +27,17 @@ export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Pr
   }, [device]);
   useEffect(() => {
     let cancelled = false;
-    void client.accounts().then(entries => { if (!cancelled) setAccounts(entries); })
-      .catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)); });
+    void client.accounts().then(entries=>{if (!cancelled) setAccounts(entries);})
+      .catch(e=>{if (!cancelled) setError(e instanceof Error?e.message:String(e));});
+    void client.neverLinks().then(links=>{if (!cancelled) setNeverLinks(links);})
+      .catch(()=>{if (!cancelled) setNeverLinks(null);});
     return () => {cancelled = true;};
   }, [client, linkedProfile?.id]);
-  async function updateAccounts() { setAccounts(await client.accounts()); }
+  async function updateAccounts() {
+    setAccounts(await client.accounts());
+    try { setNeverLinks(await client.neverLinks()); }
+    catch {setNeverLinks(null);}
+  }
   async function completed(profile: OfficialProfile0257) {
     onLinked(profile);
     await updateAccounts();
@@ -96,6 +103,24 @@ export function OfficialMinecraftPanel0257({client, linkedProfile, onLinked}: Pr
         try { next = await client.logout(active.id); }
         finally { onLinked(next); await updateAccounts(); }
       })}>Выйти из выбранного аккаунта</button>}
+    </div>}
+    {linkedProfile && <div className="toolbar inline" aria-label="Связь Never и Minecraft">
+      {!neverLinks ? <span>Связи Never недоступны. Проверьте Backend и базу данных.</span> :
+      neverLinks.some(link=>link.minecraftUuid===linkedProfile.id.toLowerCase()) ? <>
+        <span>Связан с Never identity (официальный UUID подтверждён Backend).</span>
+        <button disabled={busy||browserPending||!!device} onClick={()=>void perform(async()=>{
+          if (!window.confirm(`Отвязать Minecraft ${linkedProfile.name} (${linkedProfile.id}) от Never identity? Игровая сессия на устройстве сохранится.`))return;
+          await client.unlinkFromNever(linkedProfile.id,true);
+          await updateAccounts();
+        })}>Отвязать от Never</button>
+      </> : <>
+        <span>Не привязан к Never identity. Наличие аккаунта в Desktop не означает привязку.</span>
+        <button disabled={busy||browserPending||!!device} onClick={()=>void perform(async()=>{
+          if (!window.confirm(`Привязать Never identity к официальному Minecraft ${linkedProfile.name} (${linkedProfile.id})? Будут проверены Never-сессия и владение Minecraft у Mojang.`))return;
+          await client.linkToNever(linkedProfile.id,true);
+          await updateAccounts();
+        })}>Привязать к Never</button>
+      </>}
     </div>}
     {linkedProfile && <>
       <p>Профиль: <strong>{linkedProfile.name}</strong> · UUID: <code>{linkedProfile.id}</code></p>
