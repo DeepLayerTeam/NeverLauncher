@@ -41,7 +41,7 @@ jobs:
       NEVER_TEST_POSTGRES_DSN: postgresql://ci:ci@localhost:5432/neverlauncher_link_ci?sslmode=disable
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
