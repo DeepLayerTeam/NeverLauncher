@@ -1,0 +1,48 @@
+name: Modpack Import Engine 0.27.5
+on:
+  push:
+    paths:
+      - 'cli/cmd/neverlauncher/**'
+      - '.github/workflows/modpack-import-engine-0275.yml'
+      - 'VERSION'
+  pull_request:
+    paths:
+      - 'cli/cmd/neverlauncher/**'
+      - '.github/workflows/modpack-import-engine-0275.yml'
+      - 'VERSION'
+permissions:
+  contents: read
+jobs:
+  client-factory-modpack:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - name: Formatting
+        if: runner.os == 'Linux'
+        shell: bash
+        run: test -z "$(gofmt -l cli/cmd/neverlauncher/modpack_import_0275*.go cli/cmd/neverlauncher/client_factory_0271.go cli/cmd/neverlauncher/mirror_helper_parity_0274.go)"
+      - name: Real modpack import HTTP fixtures and regression
+        working-directory: cli
+        shell: bash
+        run: >-
+          go test ./cmd/neverlauncher
+          -run 'TestModpack0275|TestClientFactory0271|TestMirrorHelper0274|TestModernLoader0272|TestProcessorWorker0273'
+          -count=1 -timeout=5m
+      - name: Static checks
+        working-directory: cli
+        run: go vet ./cmd/neverlauncher
+      - name: Build CLI
+        working-directory: cli
+        run: go build ./cmd/neverlauncher
+      - name: Race tests
+        if: runner.os == 'Linux'
+        working-directory: cli
+        run: go test -race ./cmd/neverlauncher -run 'TestModpack0275|TestClientFactory0271' -count=1 -timeout=5m

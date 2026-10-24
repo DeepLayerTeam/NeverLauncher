@@ -1,3 +1,11 @@
+## 0.27.5 — Modpack Import Engine
+
+- Working `runtime client-factory import-modpack` for Modrinth `.mrpack` and CurseForge ZIP manifests; builds pinned Minecraft/loader through the existing Unified InstallPlan materializers, then stages every verified package artifact and publishes only after checking the full result.
+- `inspect-modpack` local archive preflight; Modrinth client/server optional rules, `overrides` and `client-overrides` layer precedence; CurseForge project/file metadata and permitted download URL resolution.
+- SHA-1/SHA-512 verification for Modrinth; CurseForge API SHA-1 verification; SHA-256 provenance and immutable InstallPlan receipt for imported output; manual verified artifact fallback, missing report and fail-closed publication.
+- Limits and safety: ZIP path/mode/collision validation, constrained decompression/downloads, untrusted URL validation, private temporary workspace and atomic release, rejection of managed-path overrides.
+- Local HTTP-backed end-to-end fixtures and regression tests. Real Minecraft launch and hosted CurseForge production API access are **not** certified by fixture tests.
+
 ## 0.27.4 — MirrorHelper Command Parity (verified executable operations)
 
 - **Client Factory commands:** `install-client` and `launch-installer` execute the existing pinned Vanilla/Fabric/Quilt/Forge/NeoForge materializers; Forge/NeoForge continue using the 0.27.3 isolated processor worker. Verified local installer JARs can seed the Forge/NeoForge build without fetching a second, potentially changed copy.

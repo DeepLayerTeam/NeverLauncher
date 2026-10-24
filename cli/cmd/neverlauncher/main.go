@@ -28,7 +28,7 @@ const helpText = `NeverLauncher CLI
   update plan|apply|components|status|recover|migrate-state|self-test|component-self-test|stabilization-self-test transactional updater core
   hashes check                    проверить SHA-256 файлов
   diagnostics collect|redact|validate|policy|bundle
-  runtime client-factory build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib
+  runtime client-factory build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib|inspect-modpack|import-modpack
                                    reproducible Minecraft factory + verified MirrorHelper-equivalent operations
   runtime vanilla-install|fabric-install|quilt-install|forge-install|neoforge-install|...  Minecraft materializers
   loader ...                      loader tooling

@@ -302,7 +302,7 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 		plan.Sources = append(plan.Sources, ledgerSource)
 	}
 	for _, change := range changes {
-		if change.Kind != "install-mods" && change.Kind != "lwjgl-download" {
+		if change.Kind != "install-mods" && change.Kind != "lwjgl-download" && change.Kind != "modpack-import" {
 			continue
 		}
 		full, err := secureClientDestination(stage, change.Path)
