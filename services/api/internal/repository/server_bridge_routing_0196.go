@@ -113,7 +113,7 @@ func (r *SQLRepository) ListServerBridgeAllowedBackends(ctx context.Context, sou
 		return nil, fmt.Errorf("%w: source proxy is not routable", ErrConflict)
 	}
 
-	rows, err := r.db.QueryContext(ctx, `SELECT n.id,n.name,n.kind,n.project_id,n.profile_id,n.runtime_id,n.runtime_epoch,n.routing_health,n.routing_state,n.routing_players_online,n.routing_capacity_max,n.routing_revision,n.routing_digest,n.routing_observed_at,n.last_heartbeat_at,
+	rows, err := r.db.QueryContext(ctx, `SELECT n.id,n.name,n.kind,n.project_id,n.profile_id,n.runtime_id,n.runtime_epoch,n.routing_health,n.routing_state,n.routing_players_online,CASE WHEN n.operator_capacity_max IS NULL THEN n.routing_capacity_max WHEN n.routing_capacity_max=0 THEN n.operator_capacity_max ELSE LEAST(n.routing_capacity_max,n.operator_capacity_max) END,n.routing_revision,n.routing_digest,n.routing_observed_at,n.last_heartbeat_at,
         COALESCE((SELECT count(*) FROM server_bridge_handoffs_v2 h WHERE h.target_node_id=n.id AND ((h.status='active' AND h.expires_at>$4) OR (h.status='consumed' AND h.consumed_at>$4::timestamptz-interval '30 seconds'))),0) AS reserved
         FROM server_bridge_nodes_v2 n
         WHERE n.status='active' AND n.kind IN ('bukkit','spigot','paper','purpur','folia','fabric','forge','neoforge')
@@ -121,6 +121,7 @@ func (r *SQLRepository) ListServerBridgeAllowedBackends(ctx context.Context, sou
           AND n.runtime_epoch>0 AND n.runtime_id ~ '^[0-9a-f]{64}$'
           AND n.last_heartbeat_at>$3 AND n.routing_observed_at>$3
           AND n.routing_state='ready' AND n.routing_accepting=TRUE AND n.routing_health IN ('healthy','degraded')
+          AND (n.operator_capacity_max IS NULL OR (n.operator_capacity_max>0 AND n.routing_players_online + COALESCE((SELECT count(*) FROM server_bridge_handoffs_v2 hc WHERE hc.target_node_id=n.id AND ((hc.status='active' AND hc.expires_at>$4) OR (hc.status='consumed' AND hc.consumed_at>$4::timestamptz-interval '30 seconds'))),0)<n.operator_capacity_max))
           AND (n.routing_capacity_max=0 OR n.routing_players_online + COALESCE((SELECT count(*) FROM server_bridge_handoffs_v2 h WHERE h.target_node_id=n.id AND ((h.status='active' AND h.expires_at>$4) OR (h.status='consumed' AND h.consumed_at>$4::timestamptz-interval '30 seconds'))),0) < n.routing_capacity_max)
         ORDER BY CASE n.routing_health WHEN 'healthy' THEN 0 ELSE 1 END,
                  CASE WHEN n.routing_capacity_max>0 THEN (n.routing_players_online + COALESCE((SELECT count(*) FROM server_bridge_handoffs_v2 h WHERE h.target_node_id=n.id AND ((h.status='active' AND h.expires_at>$4) OR (h.status='consumed' AND h.consumed_at>$4::timestamptz-interval '30 seconds'))),0))::double precision/n.routing_capacity_max ELSE 0 END,
@@ -163,7 +164,7 @@ func (r *SQLRepository) EnsureServerBridgeNodeRoutable(ctx context.Context, serv
 	}
 	freshAfter := now.UTC().Add(-serverBridgeRoutingFreshness0196)
 	var ok bool
-	err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=$1 AND n.status='active' AND n.runtime_epoch=$2 AND n.runtime_id=$3 AND n.last_heartbeat_at>$4 AND n.routing_observed_at>$4 AND n.routing_state='ready' AND n.routing_accepting=TRUE AND n.routing_health IN ('healthy','degraded') AND (n.routing_capacity_max=0 OR n.routing_players_online + COALESCE((SELECT count(*) FROM server_bridge_handoffs_v2 h WHERE h.target_node_id=n.id AND ((h.status='active' AND h.expires_at>$5) OR (h.status='consumed' AND h.consumed_at>$5::timestamptz-interval '30 seconds'))),0) < n.routing_capacity_max))`, serverID, runtimeEpoch, runtimeID, freshAfter, now.UTC()).Scan(&ok)
+	err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=$1 AND n.status='active' AND n.runtime_epoch=$2 AND n.runtime_id=$3 AND n.last_heartbeat_at>$4 AND n.routing_observed_at>$4 AND n.routing_state='ready' AND n.routing_accepting=TRUE AND n.routing_health IN ('healthy','degraded') AND (n.operator_capacity_max IS NULL OR (n.operator_capacity_max>0 AND n.routing_players_online + COALESCE((SELECT count(*) FROM server_bridge_handoffs_v2 hc WHERE hc.target_node_id=n.id AND ((hc.status='active' AND hc.expires_at>$5) OR (hc.status='consumed' AND hc.consumed_at>$5::timestamptz-interval '30 seconds'))),0)<n.operator_capacity_max)) AND (n.routing_capacity_max=0 OR n.routing_players_online + COALESCE((SELECT count(*) FROM server_bridge_handoffs_v2 h WHERE h.target_node_id=n.id AND ((h.status='active' AND h.expires_at>$5) OR (h.status='consumed' AND h.consumed_at>$5::timestamptz-interval '30 seconds'))),0) < n.routing_capacity_max))`, serverID, runtimeEpoch, runtimeID, freshAfter, now.UTC()).Scan(&ok)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ServerBridgeClient, gameCommandPermissions, commandLifecycle, telemetryState, canControlNode, supportsControlCapability, buildControlPayload } from '../src/api/serverbridge.ts';
+import { ServerBridgeClient, gameCommandPermissions, commandLifecycle, telemetryState, canControlNode, supportsControlCapability, buildControlPayload, networkStateFresh, parseCapacityDraft } from '../src/api/serverbridge.ts';
 import { canSeeSection, can } from '../src/admin/permissions.ts';
 import { endpointForSection } from '../src/admin/sections.ts';
 
@@ -106,4 +106,34 @@ test('0.28.6 capability filtering is signed-runtime-fresh and fail closed', () =
   assert.equal(supportsControlCapability({...reported,runtimeCapabilities:undefined},'message.broadcast',now),false);
   assert.equal(supportsControlCapability({...reported,runtimeLastSeenAt:new Date(now-100_000).toISOString()},'message.broadcast',now),false);
   assert.equal(supportsControlCapability({...reported,protocolVersion:2},'message.broadcast',now),false);
+});
+
+
+test('0.28.8 signed routing freshness is independent from browser overview', () => {
+  const state={nodeId:'paper-one',runtimeId:'a'.repeat(64),runtimeEpoch:12,routingRevision:8,
+    observedAt:new Date(now-5000).toISOString(),lastHeartbeatAt:new Date(now-4000).toISOString()};
+  assert.equal(networkStateFresh(state,now),true);
+  assert.equal(networkStateFresh({...state,routingRevision:0},now),false);
+  assert.equal(networkStateFresh({...state,observedAt:new Date(now-100000).toISOString()},now),false);
+  assert.equal(networkStateFresh({...state,runtimeId:'b'},now),false);
+  assert.equal(networkStateFresh({...state,runtimeEpoch:0},now),false);
+});
+test('0.28.8 capacity policy differentiates clear, deny and bounded values', () => {
+  assert.equal(parseCapacityDraft(''),null);
+  assert.equal(parseCapacityDraft('0'),0);
+  assert.equal(parseCapacityDraft('1000000'),1000000);
+  for (const value of ['-1','1.5','1e3','001','1000001','Infinity']) assert.throws(()=>parseCapacityDraft(value));
+});
+test('0.28.8 capacity writes use exact runtime and optimistic revision', async () => {
+  const previous=globalThis.fetch;let captured;
+  try {
+    globalThis.fetch=async (url,opts)=>{captured={url,opts};return {ok:true,json:async()=>({data:{nodeId:'paper-one',operatorCapacityMax:0,operatorCapacityRevision:6,status:'applied'}})};};
+    const client=new ServerBridgeClient('https://api.test','token');
+    const state={runtimeId:'a'.repeat(64),runtimeEpoch:12,operatorCapacityRevision:5};
+    const result=await client.setCapacity('paper-one',state,0);
+    assert.equal(result.operatorCapacityRevision,6);
+    assert.equal(captured.opts.method,'PUT');
+    assert.equal(captured.url,'https://api.test/api/v1/server-bridge/servers/paper-one/network-capacity');
+    assert.deepEqual(JSON.parse(captured.opts.body),{capacityLimit:0,runtimeId:state.runtimeId,runtimeEpoch:12,expectedRevision:5});
+  } finally {globalThis.fetch=previous;}
 });

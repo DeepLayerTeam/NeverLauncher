@@ -42,6 +42,8 @@ type ServerBridgeRepository interface {
 	ConsumeServerBridgeHandoff(context.Context, string, model.ServerBridgeJoinRedemption, time.Time) (model.ServerBridgeHandoff, error)
 	InvalidateServerBridgeHandoff(context.Context, string, time.Time) (bool, error)
 	ListServerBridgeTopology(context.Context) ([]model.ServerBridgeTopologyEdge, error)
+	ListServerBridgeNetworkStates(context.Context, string, time.Time) ([]model.ServerBridgeNetworkState, error)
+	SetServerBridgeNetworkCapacity(context.Context, string, string, string, int64, int64, *int, string, time.Time) (int64, error)
 	MaintainServerBridge(context.Context, time.Time) (model.ServerBridgeMaintenanceResult, error)
 	ServerBridgeHAStatus(context.Context, time.Time) (model.ServerBridgeHAStatus, error)
 	InvalidateServerBridgeJoinTicket(context.Context, string, time.Time) (bool, error)
@@ -744,11 +746,17 @@ func (r *SQLRepository) ConsumeServerBridgeJoinTicket(ctx context.Context, id st
 		return model.ServerBridgeJoinTicket{}, err
 	}
 	defer tx.Rollback()
+	// Serialize new direct-join admission with operator policy writes. Unlike
+	// ordinary reads, FOR SHARE conflicts with the writer's FOR UPDATE.
+	var admissionNode string
+	if err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, redemption.NodeID).Scan(&admissionNode); err != nil {
+		return model.ServerBridgeJoinTicket{}, fmt.Errorf("%w: node admission unavailable: %v", ErrConflict, err)
+	}
 	q := `UPDATE server_bridge_join_tickets_v2 AS j
 SET status='consumed',consumed_at=$6,redeemed_identity_epoch=$3,redeemed_key_fingerprint=$4,redeemed_nonce_hash=$5,redeemed_by_ip=$7
 WHERE j.id=$1 AND j.server_id=$2 AND j.ticket_version=2 AND j.status='active' AND j.expires_at>$6
   AND j.issued_identity_epoch=$3 AND j.issued_key_fingerprint=$4
-  AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=j.server_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$4)
+  AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=j.server_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$4 AND (n.operator_capacity_max IS NULL OR (n.operator_capacity_max>0 AND n.routing_players_online + COALESCE((SELECT count(*) FROM server_bridge_join_tickets_v2 jc WHERE jc.server_id=n.id AND jc.status='consumed' AND jc.consumed_at>$6::timestamptz-interval '30 seconds'),0)<n.operator_capacity_max)))
 RETURNING id,ticket_version,username,username_normalized,player_uuid,user_id,session_id,server_id,project_id,profile_id,channel,access_token_hash,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),protocol_version,issued_identity_epoch,issued_key_fingerprint,status,created_at,expires_at,consumed_at,redeemed_identity_epoch,redeemed_key_fingerprint,redeemed_nonce_hash,redeemed_by_ip,session_correlation_id`
 	j, err := scanBridgeJoin(tx.QueryRowContext(ctx, q, id, redemption.NodeID, redemption.IdentityEpoch, redemption.KeyFingerprint, redemption.NonceHash, now.UTC(), redemption.RemoteIP))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -987,7 +995,8 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	var targetProtocolVersion, targetPlayers, targetCapacity int
 	var targetRouteAccepting bool
 	var targetHeartbeat, targetRouteObserved sql.NullTime
-	rows, err := tx.QueryContext(ctx, `SELECT id,name,kind,status,project_id,profile_id,identity_epoch,key_fingerprint,protocol_version,runtime_id,runtime_epoch,routing_state,routing_health,routing_accepting,routing_players_online,routing_capacity_max,routing_revision,routing_digest,routing_signature,last_heartbeat_at,routing_observed_at FROM server_bridge_nodes_v2 WHERE id=$1 OR lower(name)=lower($1) ORDER BY CASE WHEN id=$1 THEN 0 ELSE 1 END,id LIMIT 2 FOR UPDATE`, targetRef)
+	var targetOperatorCapacity sql.NullInt64
+	rows, err := tx.QueryContext(ctx, `SELECT id,name,kind,status,project_id,profile_id,identity_epoch,key_fingerprint,protocol_version,runtime_id,runtime_epoch,routing_state,routing_health,routing_accepting,routing_players_online,routing_capacity_max,routing_revision,routing_digest,routing_signature,last_heartbeat_at,routing_observed_at,operator_capacity_max FROM server_bridge_nodes_v2 WHERE id=$1 OR lower(name)=lower($1) ORDER BY CASE WHEN id=$1 THEN 0 ELSE 1 END,id LIMIT 2 FOR UPDATE`, targetRef)
 	if err != nil {
 		return model.ServerBridgeHandoff{}, err
 	}
@@ -996,7 +1005,7 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	for rows.Next() {
 		matches++
 		if matches == 1 {
-			if err = rows.Scan(&targetID, &targetName, &targetKind, &targetStatus, &targetProject, &targetProfile, &targetEpoch, &targetFingerprint, &targetProtocolVersion, &targetRuntimeID, &targetRuntimeEpoch, &targetRouteState, &targetRouteHealth, &targetRouteAccepting, &targetPlayers, &targetCapacity, &targetRouteRevision, &targetRouteDigest, &targetRouteSignature, &targetHeartbeat, &targetRouteObserved); err != nil {
+			if err = rows.Scan(&targetID, &targetName, &targetKind, &targetStatus, &targetProject, &targetProfile, &targetEpoch, &targetFingerprint, &targetProtocolVersion, &targetRuntimeID, &targetRuntimeEpoch, &targetRouteState, &targetRouteHealth, &targetRouteAccepting, &targetPlayers, &targetCapacity, &targetRouteRevision, &targetRouteDigest, &targetRouteSignature, &targetHeartbeat, &targetRouteObserved, &targetOperatorCapacity); err != nil {
 				return model.ServerBridgeHandoff{}, err
 			}
 		}
@@ -1016,19 +1025,24 @@ func (r *SQLRepository) CreateServerBridgeHandoff(ctx context.Context, h model.S
 	if targetStatus != "active" || !isBackendBridgeKind0148(targetKind) || targetEpoch < 1 || len(targetFingerprint) != 64 {
 		return model.ServerBridgeHandoff{}, fmt.Errorf("target node is not an active backend")
 	}
+	// Legacy v2 handoffs cannot prove current routing capacity. Once an operator
+	// ceiling exists, only runtime-bound v3 handoffs may proceed.
+	if targetOperatorCapacity.Valid && !routingV3 {
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: operator capacity requires runtime-bound routing", ErrConflict)
+	}
 	if routingV3 {
 		if len(targetRuntimeID) != 64 || targetRuntimeEpoch < 1 || targetRouteRevision < 1 || len(targetRouteDigest) != 64 || targetRouteSignature == "" ||
 			!targetHeartbeat.Valid || targetHeartbeat.Time.Before(freshAfter) || !targetRouteObserved.Valid || targetRouteObserved.Time.Before(freshAfter) ||
 			targetRouteState != "ready" || !targetRouteAccepting || (targetRouteHealth != "healthy" && targetRouteHealth != "degraded") ||
-			(targetCapacity > 0 && targetPlayers >= targetCapacity) {
+			(targetCapacity > 0 && targetPlayers >= targetCapacity) || (targetOperatorCapacity.Valid && (targetOperatorCapacity.Int64 == 0 || int64(targetPlayers) >= targetOperatorCapacity.Int64)) {
 			return model.ServerBridgeHandoff{}, fmt.Errorf("target node is unhealthy, draining, in maintenance, stale, or at capacity")
 		}
-		if targetCapacity > 0 {
+		if targetCapacity > 0 || targetOperatorCapacity.Valid {
 			var reservations int
 			if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM server_bridge_handoffs_v2 WHERE target_node_id=$1 AND ((status='active' AND expires_at>$2) OR (status='consumed' AND consumed_at>$2::timestamptz-interval '30 seconds'))`, targetID, now.UTC()).Scan(&reservations); err != nil {
 				return model.ServerBridgeHandoff{}, err
 			}
-			if targetPlayers+reservations >= targetCapacity {
+			if (targetCapacity > 0 && targetPlayers+reservations >= targetCapacity) || (targetOperatorCapacity.Valid && int64(targetPlayers+reservations) >= targetOperatorCapacity.Int64) {
 				return model.ServerBridgeHandoff{}, fmt.Errorf("target node has no unreserved capacity")
 			}
 		}
@@ -1154,7 +1168,13 @@ func (r *SQLRepository) ConsumeServerBridgeHandoff(ctx context.Context, id strin
 		return model.ServerBridgeHandoff{}, err
 	}
 	defer tx.Rollback()
-	q := `UPDATE server_bridge_handoffs_v2 h SET status='consumed',consumed_at=$5,redeemed_nonce_hash=$4,redeemed_by_ip=$6 WHERE h.id=$1 AND h.target_node_id=$2 AND h.status='active' AND h.expires_at>$5 AND h.target_identity_epoch=$3 AND h.target_key_fingerprint=$7 AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=h.target_node_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$7 AND (h.target_runtime_id='' OR (n.runtime_id=h.target_runtime_id AND n.runtime_epoch=h.target_runtime_epoch AND n.routing_state='ready' AND n.routing_accepting=TRUE AND n.routing_health IN ('healthy','degraded') AND n.last_heartbeat_at>$5::timestamptz-interval '90 seconds' AND n.routing_observed_at>$5::timestamptz-interval '90 seconds' AND (n.routing_capacity_max=0 OR n.routing_players_online<n.routing_capacity_max)))) RETURNING id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip,session_correlation_id,transfer_sequence`
+	// A lowering of admission capacity invalidates handoffs in the same
+	// node-locked transaction. Acquire the node lock FIRST to avoid a cycle.
+	var admissionNode string
+	if err = tx.QueryRowContext(ctx, `SELECT id FROM server_bridge_nodes_v2 WHERE id=$1 FOR SHARE`, redemption.NodeID).Scan(&admissionNode); err != nil {
+		return model.ServerBridgeHandoff{}, fmt.Errorf("%w: node admission unavailable: %v", ErrConflict, err)
+	}
+	q := `UPDATE server_bridge_handoffs_v2 h SET status='consumed' ,consumed_at=$5,redeemed_nonce_hash=$4,redeemed_by_ip=$6 WHERE h.id=$1 AND h.target_node_id=$2 AND h.status='active' AND h.expires_at>$5 AND h.target_identity_epoch=$3 AND h.target_key_fingerprint=$7 AND EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=h.target_node_id AND n.status='active' AND n.identity_epoch=$3 AND n.key_fingerprint=$7 AND (n.operator_capacity_max IS NULL OR (h.target_runtime_id<>'' AND n.operator_capacity_max>0 AND n.routing_players_online<n.operator_capacity_max)) AND (h.target_runtime_id='' OR (n.runtime_id=h.target_runtime_id AND n.runtime_epoch=h.target_runtime_epoch AND n.routing_state='ready' AND n.routing_accepting=TRUE AND n.routing_health IN ('healthy','degraded') AND n.last_heartbeat_at>$5::timestamptz-interval '90 seconds' AND n.routing_observed_at>$5::timestamptz-interval '90 seconds' AND (n.routing_capacity_max=0 OR n.routing_players_online<n.routing_capacity_max) AND (n.operator_capacity_max IS NULL OR (n.operator_capacity_max>0 AND n.routing_players_online<n.operator_capacity_max))))) RETURNING id,username,username_normalized,player_uuid,user_id,session_id,source_node_id,target_node_id,backend_name,project_id,profile_id,channel,COALESCE(trusted_device_id,''),binding_epoch,COALESCE(minecraft_session_id,''),source_identity_epoch,source_key_fingerprint,target_identity_epoch,target_key_fingerprint,protocol_version,source_runtime_id,source_runtime_epoch,source_routing_revision,source_routing_digest,source_routing_signature,target_runtime_id,target_runtime_epoch,target_routing_revision,target_routing_digest,target_routing_signature,status,created_at,expires_at,consumed_at,redeemed_nonce_hash,redeemed_by_ip,session_correlation_id,transfer_sequence`
 	h, err := scanServerBridgeHandoff(tx.QueryRowContext(ctx, q, strings.TrimSpace(id), redemption.NodeID, redemption.IdentityEpoch, redemption.NonceHash, now.UTC(), strings.TrimSpace(redemption.RemoteIP), redemption.KeyFingerprint))
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.ServerBridgeHandoff{}, ErrConflict
@@ -1205,8 +1225,9 @@ CASE
  WHEN t.routing_state='draining' THEN 'draining'
  WHEN t.routing_health='unhealthy' OR NOT t.routing_accepting THEN 'unhealthy'
  WHEN t.routing_capacity_max>0 AND t.routing_players_online + COALESCE((SELECT count(*) FROM server_bridge_handoffs_v2 hcap WHERE hcap.target_node_id=t.id AND ((hcap.status='active' AND hcap.expires_at>CURRENT_TIMESTAMP) OR (hcap.status='consumed' AND hcap.consumed_at>CURRENT_TIMESTAMP-interval '30 seconds'))),0)>=t.routing_capacity_max THEN 'full'
+ WHEN t.operator_capacity_max IS NOT NULL AND t.routing_players_online + COALESCE((SELECT count(*) FROM server_bridge_handoffs_v2 hcap WHERE hcap.target_node_id=t.id AND ((hcap.status='active' AND hcap.expires_at>CURRENT_TIMESTAMP) OR (hcap.status='consumed' AND hcap.consumed_at>CURRENT_TIMESTAMP-interval '30 seconds'))),0)>=t.operator_capacity_max THEN 'operator-capacity-full'
  ELSE 'active' END AS effective_status,
-s.routing_health,t.routing_health,t.routing_state,t.routing_players_online,t.routing_capacity_max,t.routing_accepting,
+s.routing_health,t.routing_health,t.routing_state,t.routing_players_online,CASE WHEN t.operator_capacity_max IS NULL THEN t.routing_capacity_max WHEN t.routing_capacity_max=0 THEN t.operator_capacity_max ELSE LEAST(t.routing_capacity_max,t.operator_capacity_max) END,(t.routing_accepting AND (t.operator_capacity_max IS NULL OR (t.operator_capacity_max>0 AND t.routing_players_online<t.operator_capacity_max))),
 t.runtime_id,t.runtime_epoch,t.routing_revision,
 -- Legacy nodes have no signed routing snapshot yet; preserve a non-NULL
 -- observation timestamp for the API model without treating them as routable.

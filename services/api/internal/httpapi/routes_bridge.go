@@ -36,6 +36,7 @@ func (s Server) registerBridgeRoutesV1(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/server-bridge/servers", s.requirePermission("project:read", s.serverBridgeServersList))
 	mux.Handle("GET /api/v1/server-bridge/overview", s.requirePermission("project:read", s.serverBridgeOverview0200))
 	mux.Handle("GET /api/v1/server-bridge/projects/{projectId}/overview", s.requireProjectPermission("project:read", "projectId", "project", s.serverBridgeOverview0200))
+	mux.Handle("PUT /api/v1/server-bridge/servers/{serverId}/network-capacity", s.requireFreshSession117("mfa", 5*time.Minute, s.serverBridgeNetworkCapacity0288))
 	mux.Handle("POST /api/v1/server-bridge/servers/register", s.requirePermission("settings:manage", s.serverBridgeRegister))
 	mux.Handle("POST /api/v1/server-bridge/servers/{serverId}/rotate-identity", s.requireFreshAuth117("settings:manage", "phishing-resistant", 5*time.Minute, s.serverBridgeRotateIdentity))
 	mux.HandleFunc("POST /api/v1/server-bridge/servers/{serverId}/heartbeat", s.serverBridgeHeartbeat)

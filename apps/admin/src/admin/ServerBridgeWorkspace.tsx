@@ -3,7 +3,7 @@ import { ApiError } from '../api/client';
 import { ResourceGrid } from '../components/ResourceGrid';
 import { MetricCard } from '../components/primitives';
 import { ServerBridgeClient, buildControlPayload, canControlNode, commandLifecycle, telemetryState,
-  supportsControlCapability, type BridgeCommandRequest, type BridgeCommandType, type BridgeOverview, type ServerBridgeCommand, type ServerBridgeNode } from '../api/serverbridge';
+  supportsControlCapability, networkStateFresh, parseCapacityDraft, type BridgeCommandRequest, type BridgeCommandType, type BridgeOverview, type ServerBridgeCommand, type ServerBridgeNode } from '../api/serverbridge';
 
 type Props = { backendUrl: string; token: string; projectId: string; allowedCommands: BridgeCommandType[] };
 const actions: Array<{ type: BridgeCommandType; label: string; confirm?: boolean }> = [
@@ -60,6 +60,8 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
   const [busy, setBusy] = useState(false);
   const [kind, setKind] = useState<BridgeCommandType>('server.save');
   const [fields, setFields] = useState(initialFields);
+  const [capacityDraft, setCapacityDraft] = useState('');
+  const [capacityBusy, setCapacityBusy] = useState(false);
   // Update selection when RBAC or the signed runtime's capabilities change.
   useEffect(() => {
     const current = overview?.nodes.find(item => item.id === selectedServer);
@@ -73,6 +75,12 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
   const nodes = overview?.nodes ?? [];
   const node = nodes.find(item => item.id === selectedServer) ?? null;
   const controls = (overview?.control ?? []).filter(item => !selectedServer || item.serverId === selectedServer);
+  const network = (overview?.network ?? []).find(item => item.nodeId === selectedServer);
+  const networkFresh = !!network && networkStateFresh(network, clock) && network.runtimeId === node?.runtimeId && network.runtimeEpoch === node?.runtimeEpoch;
+  const projectRoutes = (overview?.topology ?? []).filter(edge => edge.sourceNodeId === selectedServer || edge.targetNodeId === selectedServer);
+  const canTraffic = canCommand('server.drain') || canCommand('server.maintenance');
+  useEffect(() => { setCapacityDraft(network?.operatorCapacityMax == null ? '' : String(network.operatorCapacityMax)); }, [selectedServer, network?.operatorCapacityRevision]);
+
 
   useEffect(() => { setOverview(null); setSelectedServer(''); setSelectedCommand(null); setError(''); setPending(readPending(projectId, backendUrl));
     const persisted = sessionStorage.getItem(monitorStorageKey(projectId, backendUrl, currentSession()));
@@ -157,6 +165,24 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
     } catch (e) { setError(`${showProblem(e)}. Повторите отправку с тем же ключом; новая команда не создаётся автоматически.`); }
     finally { submitInFlight.current = false; setBusy(false); }
   }
+  async function applyNetworkCapacity() {
+    if (!node || !network || !canTraffic || capacityBusy || !networkFresh ||
+        lastReadAt === null || Date.now() - lastReadAt >= 45_000 || pending) return;
+    let limit: number | null;
+    try { limit = parseCapacityDraft(capacityDraft); } catch (e) { setError(showProblem(e)); return; }
+    if (limit === network.operatorCapacityMax) return;
+    const label = limit === null ? 'Снять операторский лимит' : limit === 0 ? 'Закрыть приём новых игроков' : `Установить максимум ${limit} мест`;
+    if (!window.confirm(`${label} для ${node.name || node.id}?\nСуществующие соединения не отключаются. Незавершённые handoff будут отозваны.`)) return;
+    setCapacityBusy(true); setError(''); setMessage('');
+    try {
+      await api.setCapacity(node.id, network, limit);
+      const current = await api.overview(projectId);
+      setOverview(current); setLastReadAt(Date.now());
+      setMessage('Операторский лимит применён в PostgreSQL и проверен обновлённым снимком.');
+    } catch (e) {
+      setError(`${showProblem(e)}. Если запрос оборвался, проверьте актуальную ревизию политики перед повторной отправкой.`);
+    } finally { setCapacityBusy(false); }
+  }
   if (!projectId) return <section className="card wide"><h2>ServerBridge</h2><p>Выберите доступный проект.</p></section>;
   const monitor = selectedCommand ? commandLifecycle(selectedCommand.status) : null;
   const monitorFresh = lastCommandReadAt !== null && clock - lastCommandReadAt < 15_000;
@@ -193,7 +219,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
           <dt>Loader</dt><dd>{node.loaderName || '—'} {node.loaderVersion || ''}</dd>
           <dt>Adapter capabilities</dt><dd>{node.runtimeCapabilities?.filter(c=>c.startsWith('adapter.')).length ?? 0} заявлено узлом; последнее подписанное runtime-состояние: {timeLabel(node.runtimeLastSeenAt)}. Это не сертификат Minecraft E2E.</dd>
           <dt>Login gate</dt><dd>{node.kind === 'vanilla' ? 'Нет: sidecar/RCON не перехватывает вход до логина' : node.runtimeCapabilities?.includes('adapter.auth.login-gate') ? 'Заявлен адаптером (runtime E2E отдельно)' : 'Не подтверждён'}</dd>
-          <dt>Maintenance / drain</dt><dd>Текущее состояние неизвестно: heartbeat/telemetry v3 не содержат отдельного подтверждения этого режима. Проверяйте ACK команды и маршрутизацию.</dd></dl>
+          <dt>Maintenance / drain</dt><dd>{networkFresh ? `Подписанный routing: ${network?.state}; admission: ${network?.reason}` : "Не подтверждено актуальным routing snapshot"}. ACK команд проверяйте отдельно.</dd></dl>
       </article>
       <article className="bridgeSection"><h3>Телеметрия и игроки</h3>
         <span className={`badge ${tele?.state==='fresh' && snapshotFresh?'ok':'warn'}`}>{tele?.state === 'fresh' && snapshotFresh ? `Fresh · ${tele.ageSeconds} сек` : tele?.reason || 'нет данных'}</span>
@@ -206,6 +232,40 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
         <p className="muted">Protocol v3 сообщает число игроков, а не список ников. Для kick/ban имя вводится вручную.</p>
       </article>
     </div>}
+    <section className="bridgeSection" aria-label="Панель серверной сети"><h3>Сеть · Topology & Admission</h3>
+      <p className="muted">PostgreSQL: подписанное состояние узлов + независимая политика доступа оператора. Routing обновляется узлами, журнал команд отдельно подтверждает их выполнение.</p>
+      <div className="bridgeMetricGrid"><MetricCard label="Доступные маршруты" value={(overview?.topology ?? []).filter(e=>e.status==='active').length}/>
+        <MetricCard label="Недоступные маршруты" value={(overview?.topology ?? []).filter(e=>e.status!=='active').length}/>
+        <MetricCard label="Узлы с актуальным routing" value={(overview?.network ?? []).filter(n=>networkStateFresh(n,clock)).length}/>
+        <MetricCard label="Приём закрыт политикой" value={(overview?.network ?? []).filter(n=>n.operatorCapacityMax===0).length}/></div>
+      {node && <><h4>Admission для {node.name || node.id}</h4>
+        {!network && <p className="bridgeAttention">PostgreSQL routing state отсутствует; управление capacity недоступно.</p>}
+        {network && <><dl className="bridgeFacts">
+          <dt>Источник / свежесть</dt><dd>{network.source} · {networkFresh && snapshotFresh?'актуально':'stale/не подтверждено'} · наблюдение {timeLabel(network.observedAt ?? undefined)}</dd>
+          <dt>Runtime</dt><dd><code>{network.runtimeId}</code> · epoch {network.runtimeEpoch} · routing revision {network.routingRevision}</dd>
+          <dt>Готовность маршрута</dt><dd><span className={`badge ${networkFresh && network.routable ? 'ok':'warn'}`}>{networkFresh && network.routable?'принимает новых игроков':network.reason}</span> · узел {network.state} / {network.health}</dd>
+          <dt>Загрузка / резерв</dt><dd>{network.playersOnline} игроков · {network.reservedSlots} handoff reservations · свободно {network.availableSlots === -1?'без лимита':network.availableSlots}</dd>
+          <dt>Capacity</dt><dd>Подписанный лимит {network.capacityMax===0?'без лимита':network.capacityMax} · операторский {network.operatorCapacityMax===null?'не задан':network.operatorCapacityMax} · эффективный {network.effectiveCapacityMax===0 && network.operatorCapacityMax===null?'без лимита':network.effectiveCapacityMax}</dd>
+          <dt>Политика</dt><dd>revision {network.operatorCapacityRevision} · {timeLabel(network.operatorUpdatedAt ?? undefined)} · {network.operatorUpdatedBy || 'системное значение'}</dd></dl>
+          {canTraffic && ['bukkit','spigot','paper','purpur','folia','fabric','forge','neoforge'].includes(node.kind ?? '') && <form onSubmit={e=>{e.preventDefault();void applyNetworkCapacity();}}>
+            <label className="field"><span>Лимит новых подключений: пусто — без ограничения оператора, 0 — запрет, 1–1000000 — максимум</span>
+              <input type="number" min={0} max={1000000} step={1} value={capacityDraft} disabled={capacityBusy || !networkFresh || !snapshotFresh || !!pending} onChange={e=>setCapacityDraft(e.target.value)} placeholder="Не ограничивать"/></label>
+            <div className="buttonRow"><button type="submit" disabled={capacityBusy || !networkFresh || !snapshotFresh || !!pending || !canControlNode(node,clock)}>{capacityBusy?'Применяется…':'Применить лимит в сети'}</button></div>
+          </form>}
+          {canTraffic && <div className="buttonRow">
+            <button type="button" disabled={!canCommand('server.drain') || !supportsControlCapability(node,'server.drain',clock)} onClick={()=>{setKind('server.drain');setFields(f=>({...f,enabled:true}));}}>Подготовить drain</button>
+            <button type="button" disabled={!canCommand('server.maintenance') || !supportsControlCapability(node,'server.maintenance',clock)} onClick={()=>{setKind('server.maintenance');setFields(f=>({...f,enabled:true}));}}>Подготовить maintenance</button>
+            <button type="button" disabled={!canCommand('server.drain') || !supportsControlCapability(node,'server.drain',clock)} onClick={()=>{setKind('server.drain');setFields(f=>({...f,enabled:false}));}}>Подготовить возврат из drain</button>
+          </div>}
+          <p className="muted">Команды drain/maintenance исполняются через форму ниже с MFA, idempotency и Bridge ACK. Capacity применяется непосредственно к маршрутам и handoff через PostgreSQL, не меняет max-players в Minecraft и не отключает существующих игроков.</p>
+        </>}
+        <h4>Маршруты proxy → backend</h4>
+        {projectRoutes.length === 0 ? <p className="muted">Для узла нет доступных связей или наблюдений topology.</p> : <div className="bridgeNetworkTable"><table><thead><tr><th>Proxy</th><th>Backend</th><th>Маршрут</th><th>Игроки / ёмкость</th><th>Наблюдение</th></tr></thead><tbody>
+          {projectRoutes.map(e=><tr key={`${e.sourceNodeId}:${e.targetNodeId}`}><td>{nodes.find(n=>n.id===e.sourceNodeId)?.name || e.sourceNodeId}</td>
+            <td>{e.backendName || e.targetNodeId}</td><td><span className={`badge ${e.status==='active' && snapshotFresh?'ok':'warn'}`}>{snapshotFresh?e.status:'stale snapshot'}</span></td>
+            <td>{e.targetPlayers??'—'} / {e.targetCapacity===0?'∞':e.targetCapacity??'—'}</td><td>{timeLabel(e.lastSeenAt)}</td></tr>)}</tbody></table></div>}
+      </>}
+    </section>
     {node && <section className="bridgeSection bridgeControls"><h3>Управление сервером и игроками</h3>
       {!canControl && <p className="bridgeAttention">Необходимы разрешения семейства <code>gameserver:*</code> для выбранного проекта.</p>}
       {!usable && <p className="bridgeAttention">Отправка отключена: heartbeat, runtime, Protocol v3 или снимок недоступны. Обновите Backend и соединение с сервером.</p>}

@@ -764,6 +764,32 @@ type ServerBridgeTopologyEdge struct {
 	CreatedAt            time.Time `json:"createdAt"`
 }
 
+// ServerBridgeNetworkState carries a signed node observation alongside the independent
+// PostgreSQL operator admission ceiling. A server may report ready while policy denies admissions.
+type ServerBridgeNetworkState struct {
+	NodeID                   string     `json:"nodeId"`
+	RuntimeID                string     `json:"runtimeId"`
+	RuntimeEpoch             int64      `json:"runtimeEpoch"`
+	State                    string     `json:"state"`
+	Health                   string     `json:"health"`
+	AcceptingConnections     bool       `json:"acceptingConnections"`
+	PlayersOnline            int        `json:"playersOnline"`
+	CapacityMax              int        `json:"capacityMax"`
+	OperatorCapacityMax      *int       `json:"operatorCapacityMax"`
+	OperatorCapacityRevision int64      `json:"operatorCapacityRevision"`
+	EffectiveCapacityMax     int        `json:"effectiveCapacityMax"`
+	AvailableSlots           int        `json:"availableSlots"`
+	ReservedSlots            int        `json:"reservedSlots"`
+	Routable                 bool       `json:"routable"`
+	Reason                   string     `json:"reason"`
+	RoutingRevision          int64      `json:"routingRevision"`
+	ObservedAt               *time.Time `json:"observedAt"`
+	LastHeartbeatAt          *time.Time `json:"lastHeartbeatAt"`
+	OperatorUpdatedAt        *time.Time `json:"operatorUpdatedAt,omitempty"`
+	OperatorUpdatedBy        string     `json:"operatorUpdatedBy,omitempty"`
+	Source                   string     `json:"source"`
+}
+
 // ServerBridgeRouteTarget — серверная часть, в данный момент допустимая для подключения через прокси.
 type ServerBridgeRouteTarget struct {
 	NodeID          string    `json:"nodeId"`

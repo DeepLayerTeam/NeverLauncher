@@ -57,11 +57,43 @@ export type ServerBridgeCommand = {
   requestedBy?: string; payload?: Record<string, string>; result?: Record<string, string>;
   error?: string; createdAt: string; updatedAt: string; expiresAt: string; completedAt?: string;
 };
+export type BridgeNetworkState = {
+  nodeId: string; runtimeId: string; runtimeEpoch: number; state: string; health: string;
+  acceptingConnections: boolean; playersOnline: number; capacityMax: number;
+  operatorCapacityMax: number | null; operatorCapacityRevision: number;
+  effectiveCapacityMax: number; availableSlots: number; reservedSlots: number;
+  routable: boolean; reason: string; routingRevision: number;
+  observedAt?: string | null; lastHeartbeatAt?: string | null;
+  operatorUpdatedAt?: string | null; operatorUpdatedBy?: string; source: string;
+};
+export type BridgeTopologyEdge = {
+  sourceNodeId: string; targetNodeId: string; backendName: string; projectId: string;
+  status: string; sourceHealth?: string; targetHealth?: string; targetState?: string;
+  targetPlayers?: number; targetCapacity?: number; acceptingConnections: boolean;
+  targetRuntimeId?: string; targetRuntimeEpoch?: number; routingRevision?: number;
+  lastSeenAt?: string;
+} & Record<string, unknown>;
+export function networkStateFresh(state: BridgeNetworkState, now = Date.now()): boolean {
+  const observed = Date.parse(state.observedAt ?? '');
+  const heartbeat = Date.parse(state.lastHeartbeatAt ?? '');
+  return Number.isFinite(observed) && Number.isFinite(heartbeat) &&
+    observed <= now + 30_000 && heartbeat <= now + 30_000 &&
+    now - observed < 90_000 && now - heartbeat < 90_000 &&
+    state.routingRevision > 0 && /^[0-9a-f]{64}$/i.test(state.runtimeId) && state.runtimeEpoch > 0;
+}
+/** Blank removes an operator override; zero explicitly closes admission. */
+export function parseCapacityDraft(input: string): number | null {
+  if (!input.trim()) return null;
+  if (!/^(0|[1-9][0-9]*)$/.test(input.trim())) throw new Error('Capacity: целое число 0–1000000 или пустое поле');
+  const number = Number(input.trim());
+  if (!Number.isSafeInteger(number) || number > 1_000_000) throw new Error('Capacity: диапазон 0–1000000');
+  return number;
+}
 export type BridgeOverview = {
   generatedAt?: string; release?: string; protocol?: { version?: number; status?: string; frozen?: boolean; featureDigest?: string; v2Mode?: string };
   nodes: ServerBridgeNode[]; control: ServerBridgeCommand[];
   metrics?: { nodesTotal?: number; nodesFresh?: number; nodesStale?: number; controlStatus?: Record<string, number> };
-  topology?: Array<Record<string, unknown>>; audit?: Array<Record<string, unknown>>;
+  topology?: BridgeTopologyEdge[]; network?: BridgeNetworkState[]; audit?: Array<Record<string, unknown>>;
 };
 export type BridgeCommandRequest = { serverId: string; type: BridgeCommandType; payload: Record<string, string>; idempotencyKey: string };
 
@@ -77,6 +109,12 @@ export class ServerBridgeClient {
     return requestJSON(this.baseUrl, `/api/v1/server-bridge/servers/${encodeURIComponent(request.serverId)}/control`, this.token, {
       method: 'POST', headers: { 'Idempotency-Key': request.idempotencyKey },
       body: JSON.stringify({ type: request.type, payload: request.payload, idempotencyKey: request.idempotencyKey }),
+    });
+  }
+  async setCapacity(serverId: string, state: BridgeNetworkState, capacityLimit: number | null): Promise<{ nodeId: string; operatorCapacityMax: number | null; operatorCapacityRevision: number; status: string }> {
+    return requestJSON(this.baseUrl, `/api/v1/server-bridge/servers/${encodeURIComponent(serverId)}/network-capacity`, this.token, {
+      method: 'PUT', body: JSON.stringify({ capacityLimit, runtimeId: state.runtimeId,
+        runtimeEpoch: state.runtimeEpoch, expectedRevision: state.operatorCapacityRevision }),
     });
   }
   async command(serverId: string, commandId: string): Promise<ServerBridgeCommand> {

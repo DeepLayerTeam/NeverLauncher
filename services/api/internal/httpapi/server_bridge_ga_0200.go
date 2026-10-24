@@ -182,6 +182,17 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	network := []model.ServerBridgeNetworkState{}
+	if backend := s.State.ServerBridge.backendV2(); backend != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		items, networkErr := backend.ListServerBridgeNetworkStates(ctx, projectFilter, now)
+		cancel()
+		if networkErr != nil {
+			writeError(w, http.StatusServiceUnavailable, "ServerBridge network admission unavailable")
+			return
+		}
+		network = items
+	}
 	controls, err := s.State.ServerBridge.recentControls0200(r.Context(), 100)
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "ServerBridge control history unavailable")
@@ -275,6 +286,7 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 			},
 			"nodes":       nodes,
 			"topology":    topology,
+			"network":     network,
 			"control":     controls,
 			"audit":       audit,
 			"generatedAt": now.Format(time.RFC3339Nano),

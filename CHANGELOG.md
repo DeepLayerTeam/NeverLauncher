@@ -1,3 +1,12 @@
+## 0.28.8 — Network Panel & Topology (2026-10-25)
+
+- Introduced a working network panel in the existing ServerBridge Workspace displaying the runtime-learned proxy/backend topology, signed routing state, freshness of observations, reservations, player load and active route status from PostgreSQL.
+- Added project/server-authorized, fresh-MFA network admission limit changes (`gameserver:traffic`). The operator ceiling is stored independently of node-signed max players; `null` clears it, `0` blocks new admissions. Optimistic policy revision and exact runtime precondition prevent stale operator writes.
+- Applied the ceiling to actual route discovery, single-use handoff issuance, handoff redemption and direct join redemption, plus topology status. Changing policy invalidates outstanding handoffs in the same transaction. Legacy handoffs cannot bypass active capacity policy.
+- Reused existing ServerBridge `server.maintenance` and `server.drain` command flows (signed runtime capability, idempotency, Bridge ACK) without changing frozen Protocol v3 or inventing remote shell operations.
+- Added Go validation/capacity tests and browser API regression tests. **The full API suite and PostgreSQL multi-node E2E cannot be certified without external Go modules and a running PostgreSQL server.** Live Minecraft proxy E2E and Admin dependency installation also remain outstanding.
+- Operator guidance: `docs/releases/0.28.8-network-panel-topology.md`.
+
 ## 0.28.7 — Authlib / ServerBridge Integration (2026-10-25)
 
 - Bind runtime-observed Minecraft UUID to the authoritative UUID in the ServerBridge join ticket before redemption; never echo request UUID as authoritative player identity. UUID disagreement fails closed without consuming the ticket or proxy handoff.
