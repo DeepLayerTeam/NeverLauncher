@@ -133,3 +133,13 @@ The unit tests mock network responses to verify cryptographic/HTTP input
 validation, status classification, callback state validation, report redaction,
 and stage ordering. There is intentionally **no mock/live selector** in the
 compiled CLI: production execution always targets fixed provider HTTPS hosts.
+
+## Added in 0.26.12: REAL sessionserver verification
+
+`official-provider-poc` now performs Mojang's live `join` and `hasJoined`
+challenge by default (`--online-session=true`), with the authenticated
+Minecraft bearer, a fresh RSA public key and random AES shared secret.
+Use the 0.26.12 [release runbook](../releases/0.26.12-official-integration-certification.md)
+for the optional server handshake probe, actual client/server game-login
+checks and platform matrix. `--online-session=false` checks only provider
+profile accessibility and is not 0.26.12 certification evidence.

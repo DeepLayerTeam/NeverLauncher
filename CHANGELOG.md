@@ -1,3 +1,11 @@
+## 0.26.12 — Official Integration & Compatibility Certification Preflight
+
+- Added live Minecraft Java sessionserver `join` + `hasJoined` verification on the same official bearer and subject obtained through Microsoft's OAuth → Xbox Live → XSTS → Minecraft Services chain. Real ephemeral RSA/AES challenge and Java signed SHA-1 hash; identity mismatch and upstream rejection block the POC result.
+- Added non-credentialed Minecraft 1.20.2+ online-mode server Encryption Request probe and an actual server-log evidence checker that binds the official UUID digest to a successful player login with `online-mode=true`; optional Fabric/Forge/NeoForge loader startup checks.
+- Added negative and adversarial tests for provider HTTP, failed join/hasJoined, mismatching official UUID, callback pollution, offline server responses and file evidence rules, with privacy-safe reporting.
+- Added Windows/Linux/macOS Go + native Tauri/Rust + renderer CI matrix. Unit/fixture/build success does not constitute external provider approval or a real successful Minecraft client login.
+- **Live certification pending:** own Microsoft app approval, actual Windows/Linux/macOS vault operation, and real vanilla/modded authenticated client-to-server joins require operator-owned accounts/servers. No such credentials, server logs or platform test stations were provided. See [operator procedure](docs/releases/0.26.12-official-integration-certification.md).
+
 ## 0.26.5 — Native Xbox & Minecraft Token Exchange
 
 ## 0.26.11 — Admin Official Provider Management

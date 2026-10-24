@@ -32,12 +32,12 @@ var ErrDenied = errors.New("access_denied")
 var ErrUnlicensed = errors.New("no accessible Minecraft Java profile")
 
 type Client struct {
-	http                             *http.Client
-	microsoft, xbox, xsts, minecraft string
+	http                                            *http.Client
+	microsoft, xbox, xsts, minecraft, sessionserver string
 }
 
 func New() *Client {
-	return &Client{http: &http.Client{Timeout: 18 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, microsoft: microsoftOrigin, xbox: xboxOrigin, xsts: xstsOrigin, minecraft: minecraftOrigin}
+	return &Client{http: &http.Client{Timeout: 18 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, microsoft: microsoftOrigin, xbox: xboxOrigin, xsts: xstsOrigin, minecraft: minecraftOrigin, sessionserver: sessionServerOrigin}
 }
 
 type DeviceCode struct {

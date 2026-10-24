@@ -1,0 +1,127 @@
+name: Official Minecraft Integration & Compatibility 0.26.12
+
+# This workflow runs actual native builds and offline fault-injection tests on
+# all target operating systems. LIVE provider sign-in and real game-join checks
+# require an operator-owned account and servers; the workflow MUST NOT label
+# those external gates successful simply because these jobs pass.
+on:
+  pull_request:
+    paths:
+      - 'services/api/internal/officialminecraft/**'
+      - 'services/api/cmd/official-provider-poc/**'
+      - 'apps/desktop/**'
+      - 'runtime/neverruntime/**'
+      - 'scripts/certification/official-game-join-02612.py'
+      - 'scripts/certification/test_official_game_join_02612.py'
+      - '.github/workflows/official-compatibility-02612.yml'
+      - 'VERSION'
+  push:
+    paths:
+      - 'services/api/internal/officialminecraft/**'
+      - 'services/api/cmd/official-provider-poc/**'
+      - 'apps/desktop/**'
+      - 'runtime/neverruntime/**'
+      - 'scripts/certification/official-game-join-02612.py'
+      - 'scripts/certification/test_official_game_join_02612.py'
+      - '.github/workflows/official-compatibility-02612.yml'
+      - 'VERSION'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provider-chain-and-sessionserver:
+    name: Go provider chain, sessionserver, security / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Provider chain / sessionserver tests (fault-injection only)
+        run: go test -count=1 ./internal/officialminecraft ./cmd/official-provider-poc
+      - name: Go race detector (supported runner)
+        if: runner.os == 'Linux'
+        run: go test -race -count=1 ./internal/officialminecraft ./cmd/official-provider-poc
+      - name: Vet actual POC implementation
+        run: go vet ./internal/officialminecraft ./cmd/official-provider-poc
+      - name: Compile interactive live provider E2E binary
+        run: go build -o "$RUNNER_TEMP/official-provider-poc${{ runner.os == 'Windows' && '.exe' || '' }}" ./cmd/official-provider-poc
+        shell: bash
+      - name: Operator-log evidence parser tests (not live evidence)
+        run: python ../../scripts/certification/test_official_game_join_02612.py
+
+  native-runtime-and-desktop:
+    name: Native launcher, OS credential boundary / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linux native prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Test real native official identity paths
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_
+      - name: Test launch mode isolation and runtime
+        run: cargo test --manifest-path runtime/neverruntime/Cargo.toml launch_identity_0269
+      - name: Rust compilation (native platform)
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: Install pinned Desktop dependencies
+        working-directory: apps/desktop
+        run: npm ci
+      - name: Official / textures / launch / session lifecycle regressions
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          npm run test:auth-experience
+          npm run test:official
+          npm run test:textures
+          npm run test:launch-modes
+          npm run test:components
+      - name: Production renderer build
+        working-directory: apps/desktop
+        run: npm run build
+
+  certification-preflight:
+    name: All automated checks (LIVE E2E remains external blocker)
+    if: always()
+    needs: [provider-chain-and-sessionserver, native-runtime-and-desktop]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fail if any real compilation or test failed
+        env:
+          GO_RESULT: ${{ needs.provider-chain-and-sessionserver.result }}
+          NATIVE_RESULT: ${{ needs.native-runtime-and-desktop.result }}
+        run: |
+          test "$GO_RESULT" = success
+          test "$NATIVE_RESULT" = success
+      - name: Explicitly preserve live release blocker
+        run: |
+          echo 'Automated preflight only: live own-app Microsoft/Xbox/Minecraft proof,'
+          echo 'real vanilla and modded game joins, OS vault behavior and provider'
+          echo 'approval MUST be verified separately before 0.27.0 GA.'

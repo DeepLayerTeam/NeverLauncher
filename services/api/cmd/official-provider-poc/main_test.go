@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -21,8 +22,10 @@ const ownClientID = "4b8f7734-4f10-44ca-b870-b4d89d34a319"
 // All these tests are SIMULATIONS. The CLI has no switch for replacing real
 // endpoints, and none of these reports constitutes external approval evidence.
 type simulatedProvider struct {
-	reject   error
-	badState bool
+	reject            error
+	badState          bool
+	onlineReject      error
+	duplicateCallback chan int
 }
 
 func (*simulatedProvider) Begin(context.Context, string) (officialminecraft.DeviceCode, error) {
@@ -39,6 +42,15 @@ func (p *simulatedProvider) AuthorizationURL(_ string, redirect, state, challeng
 		if p.badState { // Wrong state may never authorize or terminate the local listener.
 			_, _ = http.Get(redirect + "?state=attacker&code=wrong")
 			time.Sleep(15 * time.Millisecond)
+		}
+		if p.duplicateCallback != nil {
+			response, err := http.Get(redirect + "?state=" + url.QueryEscape(state) + "&state=attacker&code=authorized")
+			if err != nil {
+				p.duplicateCallback <- 0
+			} else {
+				p.duplicateCallback <- response.StatusCode
+				response.Body.Close()
+			}
 		}
 		_, _ = http.Get(redirect + "?state=" + url.QueryEscape(state) + "&code=authorized")
 	}()
@@ -73,6 +85,15 @@ func (*simulatedProvider) EntitlementCount(_ context.Context, token string) (int
 		return 0, errors.New("wrong bearer")
 	}
 	return 0, nil
+}
+func (p *simulatedProvider) VerifyOnlineSession(_ context.Context, token string, profile officialminecraft.Profile) error {
+	if p.onlineReject != nil {
+		return p.onlineReject
+	}
+	if token != "PRIVATE-MC" || profile.Name != "PrivatePerson" {
+		return errors.New("wrong online session identity")
+	}
+	return nil
 }
 func (*simulatedProvider) Profile(_ context.Context, token string) (officialminecraft.Profile, error) {
 	if token != "PRIVATE-MC" {
@@ -154,5 +175,32 @@ func TestReportExclusivePrivateAndAtomicEnoughForProof(t *testing.T) {
 	}
 	if parsed.Schema != "neverlauncher.official-provider-poc.v1" {
 		t.Fatal("wrong report schema")
+	}
+}
+
+func TestSessionserviceFailureAlwaysBlocksPOC(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	provider := &simulatedProvider{onlineReject: officialminecraft.ErrOnlineIdentityMismatch}
+	r := verify(ctx, provider, options{ClientID: ownClientID, Flow: "browser", RequireOnlineSession: true}, io.Discard)
+	if r.Result != "blocked" || r.OnlineModeSession != "not_verified" || r.MinecraftServicesAccess != "verified_live_profile" {
+		t.Fatalf("incorrect release gate %+v", r)
+	}
+	last := r.Stages[len(r.Stages)-1]
+	if last.Name != "sessionserver_join_has_joined" || last.ErrorCode != "online_mode_identity_mismatch" {
+		t.Fatalf("unexpected stage %+v", last)
+	}
+}
+
+func TestOAuthCallbackRejectsDuplicateStateWithoutConsumingGrant(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	p := &simulatedProvider{duplicateCallback: make(chan int, 1)}
+	r := verify(ctx, p, options{ClientID: ownClientID, Flow: "browser"}, io.Discard)
+	if r.Result != "provider_access_verified" {
+		t.Fatalf("later legitimate callback rejected: %+v", r)
+	}
+	if status := <-p.duplicateCallback; status != http.StatusBadRequest {
+		t.Fatalf("duplicate state accepted: %d", status)
 	}
 }

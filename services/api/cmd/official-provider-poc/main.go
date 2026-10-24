@@ -38,13 +38,17 @@ type providerClient interface {
 	ExchangeWithStages(context.Context, string, func(string)) (officialminecraft.MinecraftToken, error)
 	EntitlementCount(context.Context, string) (int, error)
 	Profile(context.Context, string) (officialminecraft.Profile, error)
+	VerifyOnlineSession(context.Context, string, officialminecraft.Profile) error
 }
 
 type options struct {
-	ClientID    string
-	Flow        string
-	Timeout     time.Duration
-	OpenBrowser bool
+	ClientID             string
+	Flow                 string
+	Timeout              time.Duration
+	OpenBrowser          bool
+	RequireOnlineSession bool
+	ProbeServer          string
+	ProbeProtocol        int
 }
 
 type stage struct {
@@ -69,10 +73,12 @@ type report struct {
 	EntitlementItems        *int    `json:"entitlementItems,omitempty"`
 	OS                      string  `json:"os"`
 	Architecture            string  `json:"architecture"`
+	OnlineModeSession       string  `json:"onlineModeSession"`
+	ServerHandshake         string  `json:"serverHandshake"`
 }
 
 func newReport(opt options) *report {
-	return &report{Schema: "neverlauncher.official-provider-poc.v1", Version: "0.26.1", TimestampUTC: time.Now().UTC().Format(time.RFC3339Nano), ClientID: opt.ClientID, OAuthFlow: opt.Flow, Provider: "fixed_official_microsoft_xbox_minecraft_hosts", Stages: []stage{}, Result: "blocked", MinecraftServicesAccess: "not_verified", ExternalAppApproval: "requires_independent_provider_confirmation", OS: runtime.GOOS, Architecture: runtime.GOARCH}
+	return &report{Schema: "neverlauncher.official-provider-poc.v1", Version: "0.26.12", TimestampUTC: time.Now().UTC().Format(time.RFC3339Nano), ClientID: opt.ClientID, OAuthFlow: opt.Flow, Provider: "fixed_official_microsoft_xbox_minecraft_hosts", Stages: []stage{}, Result: "blocked", MinecraftServicesAccess: "not_verified", ExternalAppApproval: "requires_independent_provider_confirmation", OS: runtime.GOOS, Architecture: runtime.GOARCH, OnlineModeSession: "not_verified", ServerHandshake: "not_tested"}
 }
 
 func (r *report) pass(name string) { r.Stages = append(r.Stages, stage{Name: name, Status: "passed"}) }
@@ -111,6 +117,10 @@ func classify(err error) (string, int) {
 		return "user_denied", 0
 	case errors.Is(err, officialminecraft.ErrExpired):
 		return "authorization_expired", 0
+	case errors.Is(err, officialminecraft.ErrOnlineIdentityMismatch):
+		return "online_mode_identity_mismatch", 0
+	case errors.Is(err, officialminecraft.ErrOnlineSessionRejected):
+		return "online_mode_session_rejected", 0
 	case errors.Is(err, officialminecraft.ErrUnlicensed):
 		return "minecraft_java_profile_missing", 0
 	case errors.Is(err, context.Canceled):
@@ -179,7 +189,15 @@ func browserGrant(ctx context.Context, c providerClient, opt options, output io.
 			http.Error(w, "Invalid callback", http.StatusBadRequest)
 			return
 		}
-		got := r.URL.Query().Get("state")
+		params := r.URL.Query()
+		if len(r.URL.RawQuery) > 8192 || len(params["state"]) != 1 ||
+			(len(params["code"]) != 1 && len(params["error"]) != 1) ||
+			(len(params["code"]) > 0 && len(params["error"]) > 0) ||
+			len(params["code"]) > 1 || len(params["error"]) > 1 {
+			http.Error(w, "Invalid callback", http.StatusBadRequest)
+			return
+		}
+		got := params.Get("state")
 		if subtle.ConstantTimeCompare([]byte(got), []byte(state)) != 1 {
 			http.Error(w, "Invalid state", http.StatusBadRequest)
 			return
@@ -350,6 +368,30 @@ func verify(ctx context.Context, c providerClient, opt options, output io.Writer
 	r.MinecraftProfileSHA256 = hex.EncodeToString(digest[:])
 	r.MinecraftServicesAccess = "verified_live_profile"
 	r.Result = "provider_access_verified"
+	if opt.RequireOnlineSession {
+		if err := c.VerifyOnlineSession(ctx, token.AccessToken, profile); err != nil {
+			r.Result = "blocked"
+			r.fail("sessionserver_join_has_joined", err)
+			return r
+		}
+		r.pass("sessionserver_join_has_joined")
+		r.OnlineModeSession = "verified_live_join_has_joined"
+		r.Result = "online_session_verified"
+	}
+	if opt.ProbeServer != "" {
+		if !opt.RequireOnlineSession {
+			r.fail("server_online_mode_probe", errors.New("online sessionserver verification required before probing server"))
+			r.Result = "blocked"
+			return r
+		}
+		if err := probeOnlineMode(ctx, opt.ProbeServer, opt.ProbeProtocol); err != nil {
+			r.fail("server_online_mode_probe", err)
+			r.Result = "blocked"
+			return r
+		}
+		r.pass("server_online_mode_probe")
+		r.ServerHandshake = "encryption_requested_without_completing_game_login"
+	}
 	return r
 }
 
@@ -382,7 +424,14 @@ func main() {
 	output := flag.String("report", "", "new JSON report path (exclusive, mode 0600); default stdout")
 	timeout := flag.Duration("timeout", 15*time.Minute, "overall timeout")
 	noOpen := flag.Bool("no-open", false, "print browser link without launching default browser")
+	online := flag.Bool("online-session", true, "perform a live Mojang join/hasJoined challenge; required for 0.26.12 certification")
+	server := flag.String("probe-server", "", "optional host:port of an authorized online-mode server (handshake probe, NOT full game login)")
+	protocol := flag.Int("protocol", 0, "Minecraft protocol version for --probe-server, e.g. 767 for 1.21")
 	flag.Parse()
+	if *server != "" && (!*online || *protocol < 1 || *protocol > 1000000) {
+		fmt.Fprintln(os.Stderr, "--probe-server requires --online-session=true and a positive --protocol")
+		os.Exit(2)
+	}
 	if *timeout <= 0 || *timeout > 30*time.Minute {
 		fmt.Fprintln(os.Stderr, "--timeout must be within (0, 30m]")
 		os.Exit(2)
@@ -391,12 +440,12 @@ func main() {
 	defer stop()
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()
-	r := verify(ctx, officialminecraft.New(), options{ClientID: *clientID, Flow: *flow, Timeout: *timeout, OpenBrowser: !*noOpen}, os.Stderr)
+	r := verify(ctx, officialminecraft.New(), options{ClientID: *clientID, Flow: *flow, Timeout: *timeout, OpenBrowser: !*noOpen, RequireOnlineSession: *online, ProbeServer: *server, ProbeProtocol: *protocol}, os.Stderr)
 	if err := writeReport(*output, r); err != nil {
 		fmt.Fprintln(os.Stderr, "Could not safely save report:", err)
 		os.Exit(3)
 	}
-	if r.Result != "provider_access_verified" {
+	if r.Result != "provider_access_verified" && r.Result != "online_session_verified" {
 		os.Exit(2)
 	}
 }
