@@ -40,16 +40,11 @@ func (s Server) officialBrowserConfig0263(w http.ResponseWriter, r *http.Request
 		writeError(w, 401, "authentication required")
 		return
 	}
-	if officialminecraft.ValidateClientID(s.Config.MinecraftMicrosoftClientID) != nil {
-		// Native 0.26.5 requires the registered public Client ID, not a
-		// Backend-issued official session ticket. The legacy exchange route
-		// retains its own ticket-encryption precondition.
-		writeError(w, 503, "own Microsoft public client registration required")
+	policy, ok := s.officialProviderPolicy02611(w, r, "")
+	if !ok {
 		return
 	}
-	officialWrite0257(w, 200, map[string]string{
-		"clientId": s.Config.MinecraftMicrosoftClientID,
-	})
+	officialWrite0257(w, 200, map[string]any{"clientId": policy.ClientID, "enabled": policy.Enabled, "browserEnabled": policy.BrowserEnabled, "deviceEnabled": policy.DeviceEnabled, "issuer": policy.Issuer})
 }
 
 // provider is a narrow injectable seam for verifying the complete token chain
@@ -114,7 +109,11 @@ func (s Server) officialBrowserExchange0263(w http.ResponseWriter, r *http.Reque
 		writeError(w, 401, "authentication required")
 		return
 	}
-	if officialminecraft.ValidateClientID(s.Config.MinecraftMicrosoftClientID) != nil || len(s.Config.AuthTokenSecret) < 24 {
+	policy, allowed := s.officialProviderPolicy02611(w, r, "browser")
+	if !allowed {
+		return
+	}
+	if len(s.Config.AuthTokenSecret) < 24 {
 		writeError(w, 503, "own official application registration is not configured")
 		return
 	}
@@ -137,7 +136,7 @@ func (s Server) officialBrowserExchange0263(w http.ResponseWriter, r *http.Reque
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 70*time.Second)
 	defer cancel()
-	tokens, mc, profile, err := exchangeOfficialBrowser0263(ctx, officialminecraft.New(), s.Config.MinecraftMicrosoftClientID, v)
+	tokens, mc, profile, err := exchangeOfficialBrowser0263(ctx, officialminecraft.New(), policy.ClientID, v)
 	if err != nil {
 		officialFail0257(w, err)
 		return

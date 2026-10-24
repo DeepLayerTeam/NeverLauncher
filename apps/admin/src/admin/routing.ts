@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-export const routeIds = ['dashboard','projects','profiles','channels','packages','releases','users','roles','devices','audit','config','storage','extension-registry','extensions-manager','server-bridge','texture-management','diagnostics','backup-restore','operations','release-workspace','job-monitor'] as const;
+export const routeIds = ['dashboard','projects','profiles','channels','packages','releases','users','roles','devices','audit','config','official-provider','storage','extension-registry','extensions-manager','server-bridge','texture-management','diagnostics','backup-restore','operations','release-workspace','job-monitor'] as const;
 export type SectionId = typeof routeIds[number];
 const ids: ReadonlySet<string> = new Set(routeIds);
 function fromHash(): SectionId {

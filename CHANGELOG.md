@@ -1,5 +1,12 @@
 ## 0.26.5 — Native Xbox & Minecraft Token Exchange
 
+## 0.26.11 — Admin Official Provider Management
+
+- PostgreSQL-backed Microsoft public Client ID, personal-account issuer policy and browser/device flow controls with CAS revisions and immutable history.
+- Admin controls require global settings authorization and recent MFA. Native login/refresh and Backend legacy flows now honor the live provider policy.
+- Bounded network diagnostics for Microsoft, Xbox and Minecraft Services with security-safe audit events; provider approval remains unverified until real account POC.
+
+
 - Browser PKCE and Device Code grants are now exchanged **inside Rust/Tauri** rather than on the Go Backend. Native code performs Microsoft access → Xbox Live → XSTS (Minecraft relying party) → Minecraft access and checks entitlements plus the verified Java profile.
 - Native-only credential vault schema 2 stores the Microsoft refresh token, Minecraft bearer/expiry and the registered Client ID; no bearer, code, verifier or Backend session ticket crosses renderer IPC. Old schema-1 keyring records remain usable without silent account substitution.
 - Integrated native refresh and rotation for status, Minecraft skin/cape actions and NeverRuntime online launch. Checks the Never session and configured client ID, verifies the Java UUID remains stable, and never promotes Yggdrasil/offline accounts to official.

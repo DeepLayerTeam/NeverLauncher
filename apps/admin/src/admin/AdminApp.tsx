@@ -9,6 +9,7 @@ import { BackupWorkspace } from './BackupWorkspace';
 import { SessionsDevicesWorkspace } from './SessionsDevicesWorkspace';
 import { AuditWorkspace } from './AuditWorkspace';
 import { ConfigWorkspace } from './ConfigWorkspace';
+import { OfficialProviderWorkspace02611 } from './OfficialProviderWorkspace02611';
 import { requestJSON, ApiError } from '../api/client';
 import { AdminApi, type AdminOverview } from '../api/admin';
 import { MetricCard, TextInput } from '../components/primitives';
@@ -255,7 +256,7 @@ export function AdminApp() {
   }
 
   async function loadActive() {
-    if (!token || !mayRead || ['release-workspace','job-monitor','backup-restore','devices','audit','config'].includes(active) || (['profiles','channels','packages','releases'].includes(active) && !selectedProjectId)) { setPayload(null); return; }
+    if (!token || !mayRead || ['release-workspace','job-monitor','backup-restore','devices','audit','config','official-provider'].includes(active) || (['profiles','channels','packages','releases'].includes(active) && !selectedProjectId)) { setPayload(null); return; }
     const result = await requestJSON<Record<string, unknown>>(backendUrl, activeEndpoint, token);
     setPayload(result);
   }
@@ -290,7 +291,7 @@ export function AdminApp() {
   useEffect(() => {
     let live = true;
     setPayload(null); setSelectedRecordId('');
-    if (!token || !mayRead || ['release-workspace','job-monitor','backup-restore','devices','audit','config'].includes(active) || (['profiles', 'channels', 'packages', 'releases'].includes(active) && !selectedProjectId)) return;
+    if (!token || !mayRead || ['release-workspace','job-monitor','backup-restore','devices','audit','config','official-provider'].includes(active) || (['profiles', 'channels', 'packages', 'releases'].includes(active) && !selectedProjectId)) return;
     requestJSON<Record<string, unknown>>(backendUrl, activeEndpoint, token)
       .then(result => { if (live) { setPayload(result); setError(null); } })
       .catch((err: Error) => { if (live) setError(err.message); });
@@ -434,10 +435,11 @@ export function AdminApp() {
       {token && mayRead && active === 'devices' && <SessionsDevicesWorkspace backendUrl={backendUrl} token={token} adminAccess={mayManageUsers} onCurrentRevoked={() => {setToken('');setRefreshToken('');setSessionId('');setDashboard(null);setIdentity(null);}} />}
       {token && mayRead && active === 'audit' && <AuditWorkspace backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'config' && <ConfigWorkspace backendUrl={backendUrl} token={token} />}
+      {token && mayRead && active === 'official-provider' && <OfficialProviderWorkspace02611 backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'texture-management' && <TextureManagement0259 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
       {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canControl={can(identity, 'serverbridge:control', selectedProjectId)} canConsole={can(identity, 'serverbridge:console', selectedProjectId)} />}
       {token && !mayRead && <section className="card wide emptyState"><h2>Нет доступа</h2><p>Эта операция недоступна для вашей роли либо проект не выбран. Запросите необходимые полномочия у владельца.</p></section>}
-      {token && mayRead && !['extensions-manager','operations','release-workspace','job-monitor','server-bridge','texture-management','backup-restore','devices','audit','config'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
+      {token && mayRead && !['extensions-manager','operations','release-workspace','job-monitor','server-bridge','texture-management','backup-restore','devices','audit','config','official-provider'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
 
     </section>
   </main>;

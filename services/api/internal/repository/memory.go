@@ -141,6 +141,8 @@ type MemoryRepository struct {
 	buildMu                        sync.Mutex
 	buildWorkspaces                map[string]BuildWorkspace
 	operationalConfigMu            sync.Mutex
+	officialProviderMu             sync.Mutex
+	officialProviderHistory        []OfficialProviderRevision02611
 	operationalConfigRevisions     []OperationalConfigRevision
 	draftMu                        sync.Mutex
 	releaseDrafts                  map[string]ReleaseDraft

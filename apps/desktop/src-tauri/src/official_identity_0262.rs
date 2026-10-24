@@ -699,6 +699,7 @@ impl IdentityManager {
         // Even with a native credential, the Never session must still be valid.
         let config = self.request(base,access,"/browser/config",Method::GET,None,None,None).await?;
         let native = record.native.as_ref().ok_or("Отсутствует native Minecraft identity")?;
+        if config.data.get("enabled").and_then(Value::as_bool) == Some(false) { return Err("Официальная авторизация отключена администратором".into()); }
         if config.data.get("clientId").and_then(Value::as_str) != Some(native.client_id.as_str()) {
             return Err("Microsoft Client ID проекта изменён: требуется повторный вход".into());
         }
@@ -749,6 +750,7 @@ impl IdentityManager {
         });
         let result=async {
             let config = self.request(&base,access,"/browser/config",Method::GET,None,None,None).await?;
+            if config.data.get("enabled").and_then(Value::as_bool) == Some(false) || config.data.get("deviceEnabled").and_then(Value::as_bool) == Some(false) { return Err("Device Code запрещён политикой игрового провайдера".into()); }
             let client_id = config.data.get("clientId").and_then(Value::as_str)
                 .filter(|s|official_browser_0263::valid_client_id(s)).ok_or("Microsoft Client ID не настроен")?.to_owned();
             if !self.native_pending.lock().map_err(|_|"Native identity заблокирован")?.get(&id).is_some_and(|f|f.nonce==nonce) {
@@ -810,7 +812,8 @@ impl IdentityManager {
             // Revalidate Never session before saving native credentials. Do not
             // keep a synchronous mutex locked across an HTTP await.
             drop(flows);
-            self.request(&base,access,"/browser/config",Method::GET,None,None,None).await?;
+            let current = self.request(&base,access,"/browser/config",Method::GET,None,None,None).await?;
+            if current.data.get("enabled").and_then(Value::as_bool) == Some(false) || current.data.get("deviceEnabled").and_then(Value::as_bool) == Some(false) || current.data.get("clientId").and_then(Value::as_str) != Some(client_id.as_str()) { return Err("Device Code запрещён или Client ID изменился".into()); }
             let mut flows=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
             if !flows.get(&id).is_some_and(|v|v.nonce==nonce) {return Err("Microsoft-авторизация отменена".into());}
             let (profile,account)=completed.unwrap().unwrap();
@@ -880,6 +883,7 @@ impl IdentityManager {
         // never be removed by completion/cancellation of an older one.
         let response = async {
             let client_info = self.request(&base,access,"/browser/config",Method::GET,None,None,None).await?;
+            if client_info.data.get("enabled").and_then(Value::as_bool) == Some(false) || client_info.data.get("browserEnabled").and_then(Value::as_bool) == Some(false) { return Err("Вход через браузер запрещён политикой игрового провайдера".into()); }
             if !self.browser_active(&id,&state)? { return Err("Microsoft-авторизация отменена".into()); }
             let client_id = client_info.data.get("clientId").and_then(Value::as_str).filter(|v| official_browser_0263::valid_client_id(v))
                 .ok_or("Собственная Microsoft app registration отсутствует или недействительна")?;
@@ -897,6 +901,8 @@ impl IdentityManager {
             let grant = self.provider.authorization_code(client_id,&redirect,code.as_str(),verifier.as_str())
                 .await.map_err(|e|e.message().to_string())?;
             let (profile, native) = self.verified_native_grant(client_id,&grant).await.map_err(|e|e.message().to_string())?;
+            let current = self.request(&base,access,"/browser/config",Method::GET,None,None,None).await?;
+            if current.data.get("enabled").and_then(Value::as_bool) == Some(false) || current.data.get("browserEnabled").and_then(Value::as_bool) == Some(false) || current.data.get("clientId").and_then(Value::as_str) != Some(client_id) { return Err("Авторизация отключена или Client ID изменён".into()); }
             let _vault = self.vault_lock.lock().await;
             // Hold flow lock through persistence: a cancelled login must not commit.
             let flows = self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?;

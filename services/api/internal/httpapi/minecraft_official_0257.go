@@ -191,13 +191,17 @@ func (s Server) officialBegin0257(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 401, "authentication required")
 		return
 	}
-	if s.Config.MinecraftMicrosoftClientID == "" || len(s.Config.AuthTokenSecret) < 24 {
+	policy, allowed := s.officialProviderPolicy02611(w, r, "device")
+	if !allowed {
+		return
+	}
+	if len(s.Config.AuthTokenSecret) < 24 {
 		writeError(w, 503, "official Minecraft login is not configured")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
-	challenge, err := officialminecraft.New().Begin(ctx, s.Config.MinecraftMicrosoftClientID)
+	challenge, err := officialminecraft.New().Begin(ctx, policy.ClientID)
 	if err != nil {
 		officialFail0257(w, err)
 		return
@@ -258,7 +262,11 @@ func (s Server) officialContinue0257(w http.ResponseWriter, state officialState0
 	})
 }
 func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
-	if s.Config.MinecraftMicrosoftClientID == "" {
+	policy, allowed := s.officialProviderPolicy02611(w, r, "device")
+	if !allowed {
+		return
+	}
+	if policy.ClientID == "" {
 		writeError(w, 503, "official Minecraft login is not configured")
 		return
 	}
@@ -281,7 +289,7 @@ func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	client := officialminecraft.New()
 	if st.Kind == "pending" {
-		tokens, e := client.Complete(ctx, s.Config.MinecraftMicrosoftClientID, st.DeviceCode)
+		tokens, e := client.Complete(ctx, policy.ClientID, st.DeviceCode)
 		if errors.Is(e, officialminecraft.ErrPending) || errors.Is(e, officialminecraft.ErrSlowDown) {
 			if errors.Is(e, officialminecraft.ErrSlowDown) {
 				st.Interval += 5
@@ -312,7 +320,7 @@ func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 			writeError(w, 401, "Microsoft reauthorization required")
 			return
 		}
-		tokens, e := client.Refresh(ctx, s.Config.MinecraftMicrosoftClientID, st.MicrosoftRefresh)
+		tokens, e := client.Refresh(ctx, policy.ClientID, st.MicrosoftRefresh)
 		if e != nil {
 			if officialTransient0257(e) {
 				s.officialContinue0257(w, st, max(10, st.Interval))
@@ -360,6 +368,10 @@ func (s Server) officialPoll0257(w http.ResponseWriter, r *http.Request) {
 	officialWrite0257(w, 200, map[string]any{"realm": "official-minecraft", "profile": profile, "session": ticket, "expiresAt": linked.Expires})
 }
 func (s Server) officialAuthorized0257(w http.ResponseWriter, r *http.Request) (officialState0257, *officialminecraft.Client, bool) {
+	policy, allowed := s.officialProviderPolicy02611(w, r, "")
+	if !allowed {
+		return officialState0257{}, nil, false
+	}
 	st, _, err := s.officialRead0257(r, "linked")
 	if err != nil {
 		writeError(w, 401, "official Minecraft session required")
@@ -377,7 +389,7 @@ func (s Server) officialAuthorized0257(w http.ResponseWriter, r *http.Request) (
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 35*time.Second)
 		defer cancel()
-		tokens, e := client.Refresh(ctx, s.Config.MinecraftMicrosoftClientID, st.MicrosoftRefresh)
+		tokens, e := client.Refresh(ctx, policy.ClientID, st.MicrosoftRefresh)
 		if e != nil {
 			officialFail0257(w, e)
 			return st, nil, false
