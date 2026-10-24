@@ -235,6 +235,14 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 	if err = verifyFactoryPlan0271(dst, plan); err != nil {
 		return plan, err
 	}
+	if len(plan.AdapterPins) > 0 {
+		// Legacy 0.27.10 fixtures/workspaces remain editable without silently
+		// assigning a new adapter version. Any versioned plan with an obsolete
+		// fingerprint must be rebuilt explicitly before it can be changed.
+		if err = requireCurrentFactoryAdapters02711(plan); err != nil {
+			return plan, fmt.Errorf("cannot modify client using obsolete adapter: %w", err)
+		}
+	}
 	stage, err := os.MkdirTemp(filepath.Dir(dst), ".mirror-stage-")
 	if err != nil {
 		return plan, err

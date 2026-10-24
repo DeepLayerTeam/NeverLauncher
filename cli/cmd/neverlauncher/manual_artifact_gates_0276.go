@@ -142,6 +142,9 @@ func readModpackReceipt0276(dir string) (modpackReport0275, factoryPlan0271, err
 	if err = verifyFactoryPlan0271(dir, p); err != nil {
 		return report, p, err
 	}
+	if err = requireCurrentFactoryAdapters02711(p); err != nil {
+		return report, p, fmt.Errorf("modpack publication requires current install adapters: %w", err)
+	}
 	receipt := filepath.Join(dir, filepath.FromSlash(modpackEvidencePath0275))
 	st, err := os.Lstat(receipt)
 	if err != nil {

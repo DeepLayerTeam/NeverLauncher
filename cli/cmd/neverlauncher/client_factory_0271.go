@@ -73,23 +73,24 @@ type factoryLaunch0271 struct {
 	NativesDirectory string `json:"nativesDirectory"`
 }
 type factoryPlan0271 struct {
-	SchemaVersion          string                 `json:"schemaVersion"`
-	MinecraftVersion       string                 `json:"minecraftVersion"`
-	MinecraftReleaseType   string                 `json:"minecraftReleaseType,omitempty"`
-	Loader                 string                 `json:"loader"`
-	LoaderVersion          string                 `json:"loaderVersion,omitempty"`
-	Targets                []vanillaTarget        `json:"targets"`
-	Java                   factoryJava0271        `json:"java"`
-	Launch                 factoryLaunch0271      `json:"launch"`
-	Steps                  []factoryStep0271      `json:"steps"`
-	Sources                []factorySource0271    `json:"sources"`
-	Processors             []factoryProcessor0271 `json:"processors"`
-	Outputs                []factoryOutput0271    `json:"outputs"`
-	LoaderResolutionSHA256 string                 `json:"loaderResolutionSha256,omitempty"`
-	Resolution             *factoryResolution0271 `json:"resolution,omitempty"`
-	Legacy                 *legacyLaunch0278      `json:"legacy,omitempty"`
-	Compatibility          *compatLock0279        `json:"compatibility,omitempty"`
-	ReproducibilitySHA256  string                 `json:"reproducibilitySha256"`
+	SchemaVersion          string                   `json:"schemaVersion"`
+	MinecraftVersion       string                   `json:"minecraftVersion"`
+	MinecraftReleaseType   string                   `json:"minecraftReleaseType,omitempty"`
+	Loader                 string                   `json:"loader"`
+	LoaderVersion          string                   `json:"loaderVersion,omitempty"`
+	Targets                []vanillaTarget          `json:"targets"`
+	Java                   factoryJava0271          `json:"java"`
+	Launch                 factoryLaunch0271        `json:"launch"`
+	Steps                  []factoryStep0271        `json:"steps"`
+	Sources                []factorySource0271      `json:"sources"`
+	Processors             []factoryProcessor0271   `json:"processors"`
+	Outputs                []factoryOutput0271      `json:"outputs"`
+	LoaderResolutionSHA256 string                   `json:"loaderResolutionSha256,omitempty"`
+	Resolution             *factoryResolution0271   `json:"resolution,omitempty"`
+	Legacy                 *legacyLaunch0278        `json:"legacy,omitempty"`
+	Compatibility          *compatLock0279          `json:"compatibility,omitempty"`
+	AdapterPins            []factoryAdapterPin02711 `json:"adapterPins,omitempty"`
+	ReproducibilitySHA256  string                   `json:"reproducibilitySha256"`
 }
 type factoryBuildOptions0271 struct {
 	Loader                string
@@ -111,6 +112,7 @@ type factoryBuildOptions0271 struct {
 	Targets               []vanillaTarget
 	Workers               int
 	StrictUpstream        bool
+	UpgradeAdapters       bool
 	SharedCacheDir        string
 	HTTPClient            *http.Client
 }
@@ -243,6 +245,12 @@ func validateFactoryPlan0271(p factoryPlan0271) error {
 	}
 	if len(p.Targets) == 0 || !reflect.DeepEqual(p.Steps, factorySteps0271(p.Loader)) || len(p.Sources) == 0 || len(p.Outputs) == 0 {
 		return errors.New("factory plan has no targets, executable steps or outputs")
+	}
+	if err := factoryAdapterTargetCheck02711(p); err != nil {
+		return err
+	}
+	if err := validateFactoryAdapterPins02711(p); err != nil {
+		return err
 	}
 	if p.Loader != "vanilla" && (p.LoaderVersion == "" || isMutableLoaderSelector(p.LoaderVersion) || !isSHA256Hex0271(p.LoaderResolutionSHA256) || p.Resolution == nil || !isSHA256Hex0271(p.Resolution.SourceSHA256) || !isSHA256Hex0271(p.Resolution.PayloadSHA256) || !isSHA256Hex0271(p.Resolution.ProfileSHA256)) {
 		return errors.New("factory loader is not pinned")
@@ -583,6 +591,11 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 	}
 	hasPrior := readErr == nil
 	if hasPrior {
+		if !o.UpgradeAdapters {
+			if err := requireCurrentFactoryAdapters02711(prior); err != nil {
+				return factoryPlan0271{}, fmt.Errorf("explicit adapter upgrade required (--upgrade-adapters): %w", err)
+			}
+		}
 		if prior.Loader != o.Loader {
 			return factoryPlan0271{}, fmt.Errorf("locked loader %s is not %s", prior.Loader, o.Loader)
 		}
@@ -628,6 +641,11 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 	if hasPrior {
 		if err := copyFactoryExisting0271(dst, staging); err != nil {
 			return factoryPlan0271{}, err
+		}
+		if o.UpgradeAdapters && !reflect.DeepEqual(prior.AdapterPins, currentFactoryAdapterPins02711(o.Loader)) {
+			if err := invalidateFactoryProcessorRecovery02711(staging, o.Loader); err != nil {
+				return factoryPlan0271{}, err
+			}
 		}
 	}
 	rec := &factoryRecorder0271{sources: map[string]factorySource0271{}, processors: map[string]factoryProcessor0271{}}
@@ -718,7 +736,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 		processors = append(processors, p)
 	}
 	sort.Slice(processors, func(i, j int) bool { return processors[i].Index < processors[j].Index })
-	p := factoryPlan0271{SchemaVersion: factoryPlanSchema0271, MinecraftVersion: vanilla.MinecraftVersion, MinecraftReleaseType: vanilla.ReleaseType, Loader: o.Loader, LoaderVersion: loaderVersion, Targets: o.Targets, Java: factoryJava0271{Major: vanilla.JavaMajorVersion, ProcessorExecutableSHA256: processorExecutableSHA}, Launch: factoryLaunch0271{ProfilePath: profilePath, MainClass: mainClass, AssetIndex: vanilla.AssetIndex, NativesDirectory: "natives"}, Steps: factorySteps0271(o.Loader), Sources: sources, Processors: processors, Outputs: outputs, LoaderResolutionSHA256: loaderResolutionSHA, Resolution: resolvedIdentity, Legacy: legacyRecipe}
+	p := factoryPlan0271{SchemaVersion: factoryPlanSchema0271, MinecraftVersion: vanilla.MinecraftVersion, MinecraftReleaseType: vanilla.ReleaseType, Loader: o.Loader, LoaderVersion: loaderVersion, Targets: o.Targets, Java: factoryJava0271{Major: vanilla.JavaMajorVersion, ProcessorExecutableSHA256: processorExecutableSHA}, Launch: factoryLaunch0271{ProfilePath: profilePath, MainClass: mainClass, AssetIndex: vanilla.AssetIndex, NativesDirectory: "natives"}, Steps: factorySteps0271(o.Loader), Sources: sources, Processors: processors, Outputs: outputs, AdapterPins: currentFactoryAdapterPins02711(o.Loader), LoaderResolutionSHA256: loaderResolutionSHA, Resolution: resolvedIdentity, Legacy: legacyRecipe}
 	if hasPrior {
 		p.Compatibility = prior.Compatibility
 		// Source order and metadata can be re-observed, but previously pinned
@@ -726,24 +744,29 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 		if p.MinecraftVersion != prior.MinecraftVersion || p.MinecraftReleaseType != prior.MinecraftReleaseType || p.LoaderVersion != prior.LoaderVersion || p.Java != prior.Java || p.Launch != prior.Launch || p.LoaderResolutionSHA256 != prior.LoaderResolutionSHA256 || !reflect.DeepEqual(p.Resolution, prior.Resolution) || !reflect.DeepEqual(p.Legacy, prior.Legacy) {
 			return factoryPlan0271{}, errors.New("rebuild changed pinned runtime identity")
 		}
-		if len(p.Outputs) != len(prior.Outputs) {
-			return factoryPlan0271{}, errors.New("rebuild changed output count")
-		}
-		for i := range p.Outputs {
-			if p.Outputs[i] != prior.Outputs[i] {
-				return factoryPlan0271{}, fmt.Errorf("rebuild changed %s", p.Outputs[i].Path)
+		if !o.UpgradeAdapters {
+			if len(p.Outputs) != len(prior.Outputs) {
+				return factoryPlan0271{}, errors.New("rebuild changed output count")
+			}
+			for i := range p.Outputs {
+				if p.Outputs[i] != prior.Outputs[i] {
+					return factoryPlan0271{}, fmt.Errorf("rebuild changed %s", p.Outputs[i].Path)
+				}
+			}
+			// Preserve the original evidence only on an unchanged adapter replay.
+			p.Sources = prior.Sources
+			p.Processors = prior.Processors
+		} else {
+			if err := checkAdapterUpgradeSources02711(prior.Sources, p.Sources); err != nil {
+				return factoryPlan0271{}, err
 			}
 		}
-		// Pinned sources from the first build remain authoritative, including
-		// entries fetched through caches on replay.
-		p.Sources = prior.Sources
-		p.Processors = prior.Processors
 	}
 	p.ReproducibilitySHA256, err = factoryDigest0271(p)
 	if err != nil {
 		return factoryPlan0271{}, err
 	}
-	if hasPrior && p.ReproducibilitySHA256 != prior.ReproducibilitySHA256 {
+	if hasPrior && !o.UpgradeAdapters && p.ReproducibilitySHA256 != prior.ReproducibilitySHA256 {
 		return factoryPlan0271{}, errors.New("rebuild identity differs from lockfile")
 	}
 	rawPlan, err := json.MarshalIndent(p, "", "  ")
@@ -798,6 +821,9 @@ func handleRuntimeFactory0271(args []string) error {
 	}
 	mode := args[0]
 	if mode != "build" && mode != "verify" && mode != "inspect" {
+		if mode == "adapter-inspect" || mode == "adapter-verify" {
+			return handleRuntimeFactoryAdapters02711(args)
+		}
 		if mode == "compat-inspect" || mode == "compat-verify" || mode == "compat-apply" {
 			return handleRuntimeCompat0279(args)
 		}
@@ -830,6 +856,9 @@ func handleRuntimeFactory0271(args []string) error {
 			if err = verifyFactoryPlan0271(dir, p); err != nil {
 				return err
 			}
+			if err = requireCurrentFactoryAdapters02711(p); err != nil {
+				return err
+			}
 		}
 		return writeOrPrintJSON(flagValue(args, "--output", ""), p)
 	case "build":
@@ -845,7 +874,7 @@ func handleRuntimeFactory0271(args []string) error {
 		if err != nil {
 			return err
 		}
-		opts := factoryBuildOptions0271{Loader: flagValue(args, "--loader", "vanilla"), Minecraft: flagValue(args, "--minecraft", "latest-release"), LoaderVersion: flagValue(args, "--loader-version", "latest-stable"), ClientDir: dir, Targets: targets, Workers: workers, StrictUpstream: !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"), VersionManifest: flagValue(args, "--version-manifest", defaultMojangVersionManifest), AssetBaseURL: flagValue(args, "--asset-base-url", defaultMojangAssetBase), LibraryBaseURL: flagValue(args, "--library-base-url", defaultMojangLibraryBase), MetaBaseURL: flagValue(args, "--meta-base-url", ""), InstallerURL: flagValue(args, "--installer-url", ""), InstallerSHA1: flagValue(args, "--installer-sha1", ""), InstallerSourceFile: flagValue(args, "--installer-file", ""), InstallerSourceSHA256: flagValue(args, "--installer-sha256", ""), MavenMetadataURL: flagValue(args, "--maven-metadata-url", ""), JavaExecutable: flagValue(args, "--java", ""), ProcessorTimeout: timeout, ProcessorSandbox: strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process"))), SharedCacheDir: strings.TrimSpace(flagValue(args, "--shared-cache-dir", ""))}
+		opts := factoryBuildOptions0271{Loader: flagValue(args, "--loader", "vanilla"), Minecraft: flagValue(args, "--minecraft", "latest-release"), LoaderVersion: flagValue(args, "--loader-version", "latest-stable"), ClientDir: dir, Targets: targets, Workers: workers, StrictUpstream: !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"), UpgradeAdapters: flagBool(args, "--upgrade-adapters", false), VersionManifest: flagValue(args, "--version-manifest", defaultMojangVersionManifest), AssetBaseURL: flagValue(args, "--asset-base-url", defaultMojangAssetBase), LibraryBaseURL: flagValue(args, "--library-base-url", defaultMojangLibraryBase), MetaBaseURL: flagValue(args, "--meta-base-url", ""), InstallerURL: flagValue(args, "--installer-url", ""), InstallerSHA1: flagValue(args, "--installer-sha1", ""), InstallerSourceFile: flagValue(args, "--installer-file", ""), InstallerSourceSHA256: flagValue(args, "--installer-sha256", ""), MavenMetadataURL: flagValue(args, "--maven-metadata-url", ""), JavaExecutable: flagValue(args, "--java", ""), ProcessorTimeout: timeout, ProcessorSandbox: strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process"))), SharedCacheDir: strings.TrimSpace(flagValue(args, "--shared-cache-dir", ""))}
 		p, err := executeFactoryBuild0271(context.Background(), opts)
 		if err != nil {
 			return err

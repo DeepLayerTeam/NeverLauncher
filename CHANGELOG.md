@@ -1,3 +1,12 @@
+## 0.27.11 — Adapter Lifecycle & Compatibility
+
+- Record separately versioned executable adapter pins (`id`, independent version and embedded-source SHA-256) inside the immutable InstallPlan.
+- Fail closed on adapter fingerprint drift during replay; opt in to actual re-materialization with `--upgrade-adapters=true`, validating locked runtime, source hashes and final outputs before atomic replacement.
+- Add `runtime client-factory adapter-inspect` and `adapter-verify` for binary/lockfile comparisons and strict integrity verification.
+- Keep older unpinned lockfiles readable without assigning fictitious adapter history; block them from strict verification and modpack redistribution until an explicit upgrade.
+- Add target/Java compatibility checks, including strict Java 8 handling for classic Forge 1.7.10/1.12.2; add executable regression tests and cross-platform CI.
+- No claim of Minecraft runtime certification: that requires real client/server runs in 0.27.12.
+
 ## 0.27.10 — Visual Client Factory Builder
 
 - Added real authenticated, workspace-scoped API execution of the existing Client Factory CLI, durable jobs with polling/logs/cancellation, exact-version input enforcement, isolated per-job directories, bounded concurrency, verification and restricted export.
