@@ -14,7 +14,7 @@
     "test:auth-experience": "tsc src/official_minecraft_0257.ts src/official_auth_experience_02610.ts --module es2020 --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/official_auth_experience_02610.test.mjs"
   },
   "dependencies": {
-    "@tauri-apps/api": "2.5.0",
+    "@tauri-apps/api": "2.12.4",
     "@vitejs/plugin-react": "6.0.2",
     "react": "19.2.6",
     "react-dom": "19.2.6",
