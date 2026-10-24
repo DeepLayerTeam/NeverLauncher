@@ -593,7 +593,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Download Guard target evidence
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: guard-ci-*-${{ github.sha }}
           path: guard-ci-results
@@ -1142,7 +1142,7 @@ jobs:
           python-version: '3.12'
       - name: Download per-Java adversarial evidence
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: neverguard-windows-adversarial-java-*
           path: guard-ci-result/windows-adversarial/results
