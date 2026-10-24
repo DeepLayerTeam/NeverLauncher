@@ -103,6 +103,7 @@ type factoryBuildOptions0271 struct {
 	MavenMetadataURL string
 	JavaExecutable   string
 	ProcessorTimeout time.Duration
+	ProcessorSandbox string
 	Targets          []vanillaTarget
 	Workers          int
 	StrictUpstream   bool
@@ -436,6 +437,9 @@ func normalizedFactoryOptions0271(o factoryBuildOptions0271) (factoryBuildOption
 	if o.ProcessorTimeout < time.Second || o.ProcessorTimeout > time.Hour {
 		return o, errors.New("processor timeout must be between 1s and 1h")
 	}
+	if o.ProcessorSandbox != "" && o.ProcessorSandbox != "process" && o.ProcessorSandbox != "required" {
+		return o, errors.New("processor sandbox must be process or required")
+	}
 	return o, nil
 }
 func isMutableMinecraft0271(v string) bool {
@@ -633,7 +637,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 		profilePath = result.ProfilePath
 		mainClass = result.MainClass
 	case "forge", "neoforge":
-		result, e := installForgeLike(ctx, forgeMaterializeOptions{Loader: o.Loader, MinecraftVersion: o.Minecraft, LoaderVersion: o.LoaderVersion, ClientDir: staging, JavaExecutable: o.JavaExecutable, InstallerURL: o.InstallerURL, InstallerSHA1: o.InstallerSHA1, MavenMetadataURL: o.MavenMetadataURL, VersionManifest: o.VersionManifest, AssetBaseURL: o.AssetBaseURL, LibraryBaseURL: o.LibraryBaseURL, Targets: o.Targets, Workers: o.Workers, StrictUpstream: o.StrictUpstream, ProcessorTimeout: o.ProcessorTimeout, HTTPClient: o.HTTPClient})
+		result, e := installForgeLike(ctx, forgeMaterializeOptions{Loader: o.Loader, MinecraftVersion: o.Minecraft, LoaderVersion: o.LoaderVersion, ClientDir: staging, JavaExecutable: o.JavaExecutable, InstallerURL: o.InstallerURL, InstallerSHA1: o.InstallerSHA1, MavenMetadataURL: o.MavenMetadataURL, VersionManifest: o.VersionManifest, AssetBaseURL: o.AssetBaseURL, LibraryBaseURL: o.LibraryBaseURL, Targets: o.Targets, Workers: o.Workers, StrictUpstream: o.StrictUpstream, ProcessorTimeout: o.ProcessorTimeout, ProcessorSandbox: o.ProcessorSandbox, HTTPClient: o.HTTPClient})
 		if e != nil {
 			return factoryPlan0271{}, e
 		}
@@ -797,7 +801,7 @@ func handleRuntimeFactory0271(args []string) error {
 		if err != nil {
 			return err
 		}
-		opts := factoryBuildOptions0271{Loader: flagValue(args, "--loader", "vanilla"), Minecraft: flagValue(args, "--minecraft", "latest-release"), LoaderVersion: flagValue(args, "--loader-version", "latest-stable"), ClientDir: dir, Targets: targets, Workers: workers, StrictUpstream: !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"), VersionManifest: flagValue(args, "--version-manifest", defaultMojangVersionManifest), AssetBaseURL: flagValue(args, "--asset-base-url", defaultMojangAssetBase), LibraryBaseURL: flagValue(args, "--library-base-url", defaultMojangLibraryBase), MetaBaseURL: flagValue(args, "--meta-base-url", ""), InstallerURL: flagValue(args, "--installer-url", ""), InstallerSHA1: flagValue(args, "--installer-sha1", ""), MavenMetadataURL: flagValue(args, "--maven-metadata-url", ""), JavaExecutable: flagValue(args, "--java", ""), ProcessorTimeout: timeout}
+		opts := factoryBuildOptions0271{Loader: flagValue(args, "--loader", "vanilla"), Minecraft: flagValue(args, "--minecraft", "latest-release"), LoaderVersion: flagValue(args, "--loader-version", "latest-stable"), ClientDir: dir, Targets: targets, Workers: workers, StrictUpstream: !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"), VersionManifest: flagValue(args, "--version-manifest", defaultMojangVersionManifest), AssetBaseURL: flagValue(args, "--asset-base-url", defaultMojangAssetBase), LibraryBaseURL: flagValue(args, "--library-base-url", defaultMojangLibraryBase), MetaBaseURL: flagValue(args, "--meta-base-url", ""), InstallerURL: flagValue(args, "--installer-url", ""), InstallerSHA1: flagValue(args, "--installer-sha1", ""), MavenMetadataURL: flagValue(args, "--maven-metadata-url", ""), JavaExecutable: flagValue(args, "--java", ""), ProcessorTimeout: timeout, ProcessorSandbox: strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process")))}
 		p, err := executeFactoryBuild0271(context.Background(), opts)
 		if err != nil {
 			return err

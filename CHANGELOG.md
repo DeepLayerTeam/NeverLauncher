@@ -1,3 +1,11 @@
+## 0.27.3 — Isolated Build Worker & Recovery
+
+- **Executable out-of-process workers:** Forge/NeoForge processors now execute in a short-lived subprocess launched from the same CLI binary. The worker receives a bounded JSON request, has a scrubbed environment, restricted temporary directory and bounded diagnostic log; Java has a bounded heap and hard wall-clock timeout. Linux and macOS enforce CPU, file size and descriptor rlimits; Windows uses process-tree termination.
+- **Cancellation and crash containment:** Linux parent-death signal, process-group teardown, worker exit/status logs, ephemeral worker directories and journaled processor completion. Existing materializers and Client Factory use the same execution path; no API/CLI process executes upstream Java processors in-process.
+- **Strict Linux filesystem/network sandbox:** `--processor-sandbox required` uses bubblewrap with a private root, only the client staging root writable and a disconnected network namespace. Missing bubblewrap or unavailable namespace support fails closed without unsafe fallback. Default `process` mode preserves existing compatibility, but is **not** a host-filesystem or network sandbox.
+- **Tamper-safe recovery:** journal schema 1.1 binds each processor to SHA-256 of Java and all input JARs, quarantines incomplete/corrupt outputs and disallows symlinks and paths outside client root before accepting outputs. Previous journal format is invalidated and processors are safely rerun.
+- **Validation:** offline Forge/NeoForge and Client Factory integration tests, real child worker/cancellation/log fixtures, input/output tamper tests, cross-compiled Windows/macOS binaries, Go vet. Live Minecraft client starts and namespace-enabled bubblewrap execution still require external certification.
+
 ## 0.27.2 — Modern Loader Adapters
 
 - **Executable modern adapters:** Hardened Vanilla release/snapshot selection, Fabric/Quilt Meta API compatibility and Maven identities, Forge/NeoForge version input safety, and library source conflicts in the actual materializers used by Client Factory.

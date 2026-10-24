@@ -11,10 +11,12 @@ import (
 	"time"
 )
 
-const forgeProcessorJournalSchema = "1.0"
+const forgeProcessorJournalSchema = "1.1"
 
 type forgeProcessorJournalEntry struct {
 	IdentitySHA256 string `json:"identitySha256"`
+	InputSHA256    string `json:"inputSha256,omitempty"`
+	WorkerLogPath  string `json:"workerLogPath,omitempty"`
 	State          string `json:"state"`
 	Attempts       int    `json:"attempts"`
 	Recovered      bool   `json:"recovered,omitempty"`
@@ -56,11 +58,15 @@ func loadForgeProcessorJournal(pc forgeProcessorContext) (forgeProcessorJournal,
 	}
 	var journal forgeProcessorJournal
 	if err := json.Unmarshal(raw, &journal); err != nil {
-		_ = quarantineProcessorJournal(pc, "processor journal JSON is corrupt")
+		if err := quarantineProcessorJournal(pc, "processor journal JSON is corrupt"); err != nil {
+			return forgeProcessorJournal{}, false, err
+		}
 		return fresh, true, nil
 	}
 	if journal.SchemaVersion != forgeProcessorJournalSchema || journal.Loader != fresh.Loader || journal.MinecraftVersion != fresh.MinecraftVersion || !strings.EqualFold(journal.InstallerSHA256, fresh.InstallerSHA256) || journal.Entries == nil {
-		_ = quarantineProcessorJournal(pc, "processor journal identity mismatch")
+		if err := quarantineProcessorJournal(pc, "processor journal identity mismatch"); err != nil {
+			return forgeProcessorJournal{}, false, err
+		}
 		return fresh, true, nil
 	}
 	return journal, false, nil
@@ -119,7 +125,7 @@ func processorJournalKey(index int) string {
 	return strconv.Itoa(index)
 }
 
-func markProcessorJournal(pc forgeProcessorContext, journal *forgeProcessorJournal, index int, identity, state string, recovered bool, lastErr string) (string, error) {
+func markProcessorJournal(pc forgeProcessorContext, journal *forgeProcessorJournal, index int, identity, inputSHA, state, workerLog string, recovered bool, lastErr string) (string, error) {
 	key := processorJournalKey(index)
 	entry := journal.Entries[key]
 	if entry.IdentitySHA256 != identity {
@@ -128,7 +134,11 @@ func markProcessorJournal(pc forgeProcessorContext, journal *forgeProcessorJourn
 	if state == "running" {
 		entry.Attempts++
 	}
+	entry.InputSHA256 = inputSHA
 	entry.State = state
+	if workerLog != "" {
+		entry.WorkerLogPath = workerLog
+	}
 	entry.Recovered = recovered
 	entry.LastError = strings.TrimSpace(lastErr)
 	if len(entry.LastError) > 2048 {

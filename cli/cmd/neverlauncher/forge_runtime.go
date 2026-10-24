@@ -51,6 +51,7 @@ type forgeMaterializeOptions struct {
 	ResolutionLockPath     string
 	ResolutionSourceSHA256 string
 	ProcessorTimeout       time.Duration
+	ProcessorSandbox       string
 	LoaderCacheOnly        bool
 	EnforceGASupport       bool
 	HTTPClient             *http.Client
@@ -276,6 +277,10 @@ func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializ
 	if err != nil || timeout < time.Second || timeout > time.Hour {
 		return forgeMaterializeOptions{}, errors.New("--processor-timeout должен быть от 1s до 1h")
 	}
+	sandbox := strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process")))
+	if sandbox != "process" && sandbox != "required" {
+		return forgeMaterializeOptions{}, errors.New("--processor-sandbox must be process or required")
+	}
 	return forgeMaterializeOptions{
 		Loader:             loader,
 		MinecraftVersion:   minecraftVersion,
@@ -293,6 +298,7 @@ func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializ
 		StrictUpstream:     !strings.EqualFold(flagValue(args, "--strict-upstream", "true"), "false"),
 		ResolutionLockPath: strings.TrimSpace(flagValue(args, "--resolution-lock", "")),
 		ProcessorTimeout:   timeout,
+		ProcessorSandbox:   strings.ToLower(strings.TrimSpace(flagValue(args, "--processor-sandbox", "process"))),
 		LoaderCacheOnly:    strings.EqualFold(flagValue(args, "--loader-cache-only", "false"), "true"),
 		EnforceGASupport:   true,
 	}, nil
@@ -542,6 +548,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		JavaExecutable:   javaPath,
 		Profile:          &bundle.Profile,
 		Timeout:          opts.ProcessorTimeout,
+		StrictSandbox:    opts.ProcessorSandbox == "required",
 	})
 	if err != nil {
 		return forgeMaterializeResult{}, err
@@ -1762,8 +1769,27 @@ type forgeProcessorContext struct {
 	InstallerPath    string
 	InstallerDataDir string
 	JavaExecutable   string
+	StrictSandbox    bool
 	Profile          *forgeInstallerProfile
 	Timeout          time.Duration
+}
+
+// The processor cache is valid only for the exact Java, processor JAR and
+// dependency JAR bytes. Installer metadata alone is not sufficient.
+func fingerprintForgeProcessor0273(pc forgeProcessorContext, p forgeProcessor) (string, error) {
+	jar, err := resolveProcessorArtifactPath(pc.ClientDir, p.Jar)
+	if err != nil {
+		return "", err
+	}
+	cp := []string{jar}
+	for _, coordinate := range p.Classpath {
+		path, err := resolveProcessorArtifactPath(pc.ClientDir, coordinate)
+		if err != nil {
+			return "", err
+		}
+		cp = append(cp, path)
+	}
+	return hashProcessorInputs0273(pc.JavaExecutable, cp)
 }
 
 func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processorStats, error) {
@@ -1783,9 +1809,13 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 			return stats, fmt.Errorf("processor[%d] не содержит jar", index)
 		}
 		identity := forgeProcessorIdentity(pc, index, processor)
+		inputSHA, err := fingerprintForgeProcessor0273(pc, processor)
+		if err != nil {
+			return stats, fmt.Errorf("processor[%d] input hash: %w", index, err)
+		}
 		key := processorJournalKey(index)
 		entry, hasEntry := journal.Entries[key]
-		entryMatches := hasEntry && entry.IdentitySHA256 == identity
+		entryMatches := hasEntry && entry.IdentitySHA256 == identity && entry.InputSHA256 == inputSHA
 		// Прерванный процессор может оставить проверенные выходные файлы для принятия либо
 		// потребовать чистого повторного запуска. Оба варианта являются настоящим восстановлением;
 		// второй учитывайте только после успешного запуска и проверки результата.
@@ -1794,9 +1824,9 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 		if err != nil {
 			return stats, fmt.Errorf("processor[%d] outputs: %w", index, err)
 		}
-		if allReady && len(processor.Outputs) > 0 {
+		if allReady && entryMatches && len(processor.Outputs) > 0 {
 			recovered := entryMatches && (entry.State == "running" || entry.State == "failed")
-			if _, err := markProcessorJournal(pc, &journal, index, identity, "completed", recovered, ""); err != nil {
+			if _, err := markProcessorJournal(pc, &journal, index, identity, inputSHA, "completed", "", recovered, ""); err != nil {
 				return stats, fmt.Errorf("processor[%d] journal completion: %w", index, err)
 			}
 			if err := factoryRecorderFromContext0271(ctx).recordProcessor(pc, index, processor); err != nil {
@@ -1808,7 +1838,7 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 			}
 			continue
 		}
-		if entryMatches && entry.State != "" && len(processor.Outputs) > 0 {
+		if len(processor.Outputs) > 0 && !allReady || (len(processor.Outputs) > 0 && allReady && !entryMatches) {
 			if err := quarantineProcessorOutputs(pc, processor, fmt.Sprintf("processor[%d] journal recovery found incomplete or corrupt outputs", index)); err != nil {
 				return stats, fmt.Errorf("processor[%d] recovery cleanup: %w", index, err)
 			}
@@ -1837,41 +1867,25 @@ func runForgeProcessors(ctx context.Context, pc forgeProcessorContext) (processo
 			}
 			args = append(args, resolved)
 		}
-		if _, err := markProcessorJournal(pc, &journal, index, identity, "running", false, ""); err != nil {
+		if _, err := markProcessorJournal(pc, &journal, index, identity, inputSHA, "running", "", false, ""); err != nil {
 			return stats, fmt.Errorf("processor[%d] journal start: %w", index, err)
 		}
-		timeout := pc.Timeout
-		if timeout <= 0 {
-			timeout = 10 * time.Minute
-		}
-		procCtx, cancel := context.WithTimeout(ctx, timeout)
 		cmdArgs := append([]string{"-cp", strings.Join(classpath, string(os.PathListSeparator)), mainClass}, args...)
-		cmd := exec.CommandContext(procCtx, pc.JavaExecutable, cmdArgs...)
-		cmd.Dir = pc.ClientDir
-		var output limitedBuffer
-		output.Limit = 2 << 20
-		cmd.Stdout = &output
-		cmd.Stderr = &output
-		runErr := cmd.Run()
-		cancel()
-		if procCtx.Err() == context.DeadlineExceeded {
-			_, _ = markProcessorJournal(pc, &journal, index, identity, "failed", false, "timeout: "+timeout.String())
-			return stats, fmt.Errorf("processor[%d] превысил timeout %s", index, timeout)
-		}
+		logPath, runErr := runIsolatedProcessor0273(ctx, pc, index, cmdArgs)
 		if runErr != nil {
-			_, _ = markProcessorJournal(pc, &journal, index, identity, "failed", false, output.String())
-			return stats, fmt.Errorf("processor[%d] завершился с ошибкой: %w\n%s", index, runErr, output.String())
+			_, _ = markProcessorJournal(pc, &journal, index, identity, inputSHA, "failed", logPath, false, runErr.Error())
+			return stats, fmt.Errorf("processor[%d] isolated worker: %w (log: %s)", index, runErr, logPath)
 		}
 		allReady, err = processorOutputsMatch(pc, processor)
 		if err != nil {
-			_, _ = markProcessorJournal(pc, &journal, index, identity, "failed", false, err.Error())
+			_, _ = markProcessorJournal(pc, &journal, index, identity, inputSHA, "failed", logPath, false, err.Error())
 			return stats, fmt.Errorf("processor[%d] output verification: %w", index, err)
 		}
 		if len(processor.Outputs) > 0 && !allReady {
-			_, _ = markProcessorJournal(pc, &journal, index, identity, "failed", false, "expected outputs were not produced")
+			_, _ = markProcessorJournal(pc, &journal, index, identity, inputSHA, "failed", logPath, false, "expected outputs were not produced")
 			return stats, fmt.Errorf("processor[%d] не создал ожидаемые outputs", index)
 		}
-		journalSHA, err := markProcessorJournal(pc, &journal, index, identity, "completed", interrupted, "")
+		journalSHA, err := markProcessorJournal(pc, &journal, index, identity, inputSHA, "completed", logPath, interrupted, "")
 		if err != nil {
 			return stats, fmt.Errorf("processor[%d] journal commit: %w", index, err)
 		}
@@ -1906,6 +1920,26 @@ func processorAppliesToClient(sides []string) bool {
 	return false
 }
 
+// Reject output symlinks and paths outside the materialized client root,
+// including symlinks in an existing parent directory. This check runs before
+// a digest can be trusted for crash recovery.
+func validateProcessorOutput0273(root, output string) error {
+	base, err := filepath.Abs(root)
+	if err != nil {
+		return err
+	}
+	absolute, err := filepath.Abs(output)
+	if err != nil {
+		return err
+	}
+	rel, err := filepath.Rel(base, absolute)
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return fmt.Errorf("processor output outside client root: %s", output)
+	}
+	_, err = secureClientDestination(base, filepath.ToSlash(rel))
+	return err
+}
+
 func processorOutputsMatch(pc forgeProcessorContext, processor forgeProcessor) (bool, error) {
 	if len(processor.Outputs) == 0 {
 		return false, nil
@@ -1913,6 +1947,9 @@ func processorOutputsMatch(pc forgeProcessorContext, processor forgeProcessor) (
 	for outputToken, expected := range processor.Outputs {
 		outputPath, err := resolveProcessorToken(pc, outputToken)
 		if err != nil {
+			return false, err
+		}
+		if err := validateProcessorOutput0273(pc.ClientDir, outputPath); err != nil {
 			return false, err
 		}
 		expectedResolved, err := resolveProcessorToken(pc, expected)
