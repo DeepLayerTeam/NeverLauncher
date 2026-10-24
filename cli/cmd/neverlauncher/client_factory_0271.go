@@ -87,6 +87,7 @@ type factoryPlan0271 struct {
 	Outputs                []factoryOutput0271    `json:"outputs"`
 	LoaderResolutionSHA256 string                 `json:"loaderResolutionSha256,omitempty"`
 	Resolution             *factoryResolution0271 `json:"resolution,omitempty"`
+	Legacy                 *legacyLaunch0278      `json:"legacy,omitempty"`
 	ReproducibilitySHA256  string                 `json:"reproducibilitySha256"`
 }
 type factoryBuildOptions0271 struct {
@@ -373,6 +374,9 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 		if a != p.Outputs[i] {
 			return fmt.Errorf("factory output mismatch: expected %+v got %+v", p.Outputs[i], a)
 		}
+	}
+	if err := verifyLegacyLaunch0278(root, p); err != nil {
+		return fmt.Errorf("legacy launch verification: %w", err)
 	}
 	return nil
 }
@@ -683,6 +687,16 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 			return factoryPlan0271{}, err
 		}
 	}
+	var legacyRecipe *legacyLaunch0278
+	if !hasPrior || prior.Legacy != nil {
+		legacyRecipe, err = resolveLegacyLaunch0278(staging, o.Loader, vanilla.MinecraftVersion, profilePath, vanilla.JavaMajorVersion, o.Targets)
+	}
+	if err != nil {
+		return factoryPlan0271{}, err
+	}
+	if err := writeLegacyLaunch0278(staging, legacyRecipe); err != nil {
+		return factoryPlan0271{}, err
+	}
 	outputs, err := scanFactoryOutputs0271(staging)
 	if err != nil {
 		return factoryPlan0271{}, err
@@ -697,11 +711,11 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 		processors = append(processors, p)
 	}
 	sort.Slice(processors, func(i, j int) bool { return processors[i].Index < processors[j].Index })
-	p := factoryPlan0271{SchemaVersion: factoryPlanSchema0271, MinecraftVersion: vanilla.MinecraftVersion, MinecraftReleaseType: vanilla.ReleaseType, Loader: o.Loader, LoaderVersion: loaderVersion, Targets: o.Targets, Java: factoryJava0271{Major: vanilla.JavaMajorVersion, ProcessorExecutableSHA256: processorExecutableSHA}, Launch: factoryLaunch0271{ProfilePath: profilePath, MainClass: mainClass, AssetIndex: vanilla.AssetIndex, NativesDirectory: "natives"}, Steps: factorySteps0271(o.Loader), Sources: sources, Processors: processors, Outputs: outputs, LoaderResolutionSHA256: loaderResolutionSHA, Resolution: resolvedIdentity}
+	p := factoryPlan0271{SchemaVersion: factoryPlanSchema0271, MinecraftVersion: vanilla.MinecraftVersion, MinecraftReleaseType: vanilla.ReleaseType, Loader: o.Loader, LoaderVersion: loaderVersion, Targets: o.Targets, Java: factoryJava0271{Major: vanilla.JavaMajorVersion, ProcessorExecutableSHA256: processorExecutableSHA}, Launch: factoryLaunch0271{ProfilePath: profilePath, MainClass: mainClass, AssetIndex: vanilla.AssetIndex, NativesDirectory: "natives"}, Steps: factorySteps0271(o.Loader), Sources: sources, Processors: processors, Outputs: outputs, LoaderResolutionSHA256: loaderResolutionSHA, Resolution: resolvedIdentity, Legacy: legacyRecipe}
 	if hasPrior {
 		// Source order and metadata can be re-observed, but previously pinned
 		// outputs and loader identity are immutable. This is a true replay.
-		if p.MinecraftVersion != prior.MinecraftVersion || p.MinecraftReleaseType != prior.MinecraftReleaseType || p.LoaderVersion != prior.LoaderVersion || p.Java != prior.Java || p.Launch != prior.Launch || p.LoaderResolutionSHA256 != prior.LoaderResolutionSHA256 || !reflect.DeepEqual(p.Resolution, prior.Resolution) {
+		if p.MinecraftVersion != prior.MinecraftVersion || p.MinecraftReleaseType != prior.MinecraftReleaseType || p.LoaderVersion != prior.LoaderVersion || p.Java != prior.Java || p.Launch != prior.Launch || p.LoaderResolutionSHA256 != prior.LoaderResolutionSHA256 || !reflect.DeepEqual(p.Resolution, prior.Resolution) || !reflect.DeepEqual(p.Legacy, prior.Legacy) {
 			return factoryPlan0271{}, errors.New("rebuild changed pinned runtime identity")
 		}
 		if len(p.Outputs) != len(prior.Outputs) {
@@ -776,6 +790,9 @@ func handleRuntimeFactory0271(args []string) error {
 	}
 	mode := args[0]
 	if mode != "build" && mode != "verify" && mode != "inspect" {
+		if mode == "legacy-inspect" || mode == "legacy-run" {
+			return handleRuntimeLegacy0278(args)
+		}
 		if mode == "verify-publication" || mode == "export-modpack-artifacts" {
 			return handlePermissionGates0276(args)
 		}
