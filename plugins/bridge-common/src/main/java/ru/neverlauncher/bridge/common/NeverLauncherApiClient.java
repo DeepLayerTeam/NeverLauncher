@@ -476,9 +476,17 @@ public final class NeverLauncherApiClient {
         BridgeControlJournal.State state = controlJournal.state(command);
         BridgeControlResult result;
         if (state == null) {
+            BridgeAdapterCapability needed = BridgeAdapterCapability.forControl(command.type());
+            // Capability checks are execution gates, not merely Admin presentation hints.
+            // The signed runtime identity is what was actually advertised to Backend.
+            boolean allowed = needed != null && runtimeIdentity.descriptor().capabilities().contains(needed.runtimeCapability());
             controlJournal.begin(command);
-            try { result = executor.execute(command); }
-            catch (Exception e) { result = BridgeControlResult.failed(e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage())); }
+            if (!allowed) {
+                result = BridgeControlResult.unsupported("adapter_capability_not_advertised");
+            } else {
+                try { result = executor.execute(command); }
+                catch (Exception e) { result = BridgeControlResult.failed(e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage())); }
+            }
             if (result == null) result = BridgeControlResult.failed("platform executor returned no result");
             controlJournal.complete(command, result);
         } else if ("executing".equals(state.phase())) {

@@ -230,6 +230,10 @@ func (s Server) serverBridgeControlCreate0195(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusConflict, "serverbridge_control_runtime_not_active")
 		return
 	}
+	if !serverBridgeNodeAllowsControl0286(node, kind) {
+		writeError(w, http.StatusConflict, "serverbridge_control_capability_not_advertised")
+		return
+	}
 	headerIdempotency := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	bodyIdempotency := strings.TrimSpace(req.IdempotencyKey)
 	if headerIdempotency != "" && bodyIdempotency != "" && headerIdempotency != bodyIdempotency {
@@ -384,6 +388,12 @@ func (s Server) serverBridgeControlPoll0195(w http.ResponseWriter, r *http.Reque
 		}
 	} else if s.State.ServerBridgeHARequired {
 		writeError(w, http.StatusServiceUnavailable, "serverbridge_ha_coordinator_unavailable")
+		return
+	}
+	// A runtime may have been replaced or its capabilities revoked after command creation.
+	// Never sign delivery to a node that no longer advertises this operation.
+	if !serverBridgeNodeAllowsControl0286(node, cmd.Type) {
+		writeError(w, http.StatusConflict, "serverbridge_control_capability_revoked")
 		return
 	}
 	activeKey, previousKey, err := s.serverBridgeSigningKeys01912()

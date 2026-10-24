@@ -14,6 +14,7 @@ export type ServerBridgeNode = {
   protocolMigrationRequired?: boolean; upgradeRecommended?: boolean; pluginVersion?: string;
   integrityStatus?: string; serverBrand?: string; minecraftVersion?: string;
   javaVersion?: string; loaderName?: string; loaderVersion?: string; telemetry?: ServerBridgeTelemetry;
+  runtimeCapabilities?: string[]; runtimeLastSeenAt?: string;
 };
 export type BridgeCommandType =
   'player.kick' | 'message.broadcast' | 'whitelist.add' | 'whitelist.remove' |
@@ -32,6 +33,23 @@ export const gameCommandPermissions: Record<BridgeCommandType, string> = {
   'server.console': 'gameserver:console',
 };
 export function gameCommandPermission(kind: BridgeCommandType): string { return gameCommandPermissions[kind]; }
+
+// This describes an observed, node-signed capability, NOT an E2E certificate.
+const commandAdapterCapability: Record<BridgeCommandType, string> = {
+  'player.kick': 'adapter.control.kick', 'message.broadcast': 'adapter.control.broadcast',
+  'whitelist.add': 'adapter.control.whitelist', 'whitelist.remove': 'adapter.control.whitelist',
+  'whitelist.enable': 'adapter.control.whitelist', 'whitelist.disable': 'adapter.control.whitelist',
+  'ban.add': 'adapter.control.ban', 'ban.remove': 'adapter.control.ban',
+  'server.save': 'adapter.control.save', 'server.maintenance': 'adapter.control.maintenance',
+  'server.drain': 'adapter.control.drain', 'server.shutdown': 'adapter.control.shutdown',
+  'server.console': 'adapter.control.console',
+};
+export function supportsControlCapability(node: ServerBridgeNode, kind: BridgeCommandType, now = Date.now()): boolean {
+  const seen = Date.parse(node.runtimeLastSeenAt ?? '');
+  if (!Number.isFinite(seen) || seen > now + 120_000 || now - seen > 90_000) return false;
+  if (!canControlNode(node, now)) return false;
+  return node.runtimeCapabilities?.includes(commandAdapterCapability[kind]) === true;
+}
 
 export type ServerBridgeCommand = {
   id: string; serverId: string; runtimeId: string; runtimeEpoch: number; type: BridgeCommandType;

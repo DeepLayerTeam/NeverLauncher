@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import zipfile
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -210,7 +211,9 @@ def main() -> int:
                         die('vanilla: executable sidecar Main-Class missing')
         except zipfile.BadZipFile:
             die(f'{target}: invalid JAR/ZIP')
-        evidence.append({'id': target, 'file': filename, 'sha256': digest, 'bytes': jar.stat().st_size})
+        coverage = next(r.get('coverage') for r in target_rows if r.get('id') == target)
+        evidence.append({'id': target, 'file': filename, 'sha256': digest, 'bytes': jar.stat().st_size,
+                         'requiredCoverage': coverage, 'runtimeEvidenceVerified': False})
 
     sums_path = artifacts / 'SHA256SUMS'
     if not sums_path.is_file():
@@ -224,8 +227,21 @@ def main() -> int:
         if sums.get(item['file']) != item['sha256']:
             die(f"{item['id']}: SHA256SUMS mismatch")
 
+    # Verify the actual bridge-common Java policy at the same commit before
+    # certifying an artifact cohort. This is NOT a live Minecraft server test.
+    suite = ROOT / 'e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh'
+    try:
+        result = subprocess.run(['bash', str(suite)], cwd=ROOT, text=True,
+                                capture_output=True, timeout=120, check=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        die(f'adapter policy execution unavailable: {exc}')
+    if result.returncode != 0 or 'CAPABILITY_POLICY_OK total=14 runtime_certified=false' not in result.stdout:
+        die(f'adapter policy execution failed: {result.stderr[-2048:]}')
+
     report = {
         'schemaVersion': '1.1', 'release': 'ServerBridge 3', 'version': VERSION,
+        'certificationScope': 'artifact-integrity-and-java-capability-policy',
+        'adapterCapabilityPolicyExecuted': True, 'runtimeE2eVerifiedByThisReport': False,
         'protocolVersion': 3, 'status': 'certified', 'targetCount': len(evidence),
         'ga': True, 'protocolV3Frozen': True, 'protocolV3FeatureDigest': PROTOCOL_V3_FEATURE_DIGEST,
         'protocolV2Mode': 'compatibility-deprecated', 'installerUpgradePath': True,
@@ -254,7 +270,7 @@ def main() -> int:
     }
     out = args.out or (artifacts / 'SERVERBRIDGE3_CERTIFICATION.json')
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    print(f'ServerBridge 3 release certified: {VERSION}, {len(evidence)} platform artifacts -> {out}')
+    print(f'ServerBridge artifact cohort verified (not Minecraft runtime E2E): {VERSION}, {len(evidence)} platform artifacts -> {out}')
     return 0
 
 

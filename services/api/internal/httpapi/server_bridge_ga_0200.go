@@ -103,6 +103,8 @@ type serverBridgeOverviewNode0200 struct {
 	LoaderName                string                       `json:"loaderName,omitempty"`
 	LoaderVersion             string                       `json:"loaderVersion,omitempty"`
 	ServerBrand               string                       `json:"serverBrand,omitempty"`
+	RuntimeCapabilities       []string                     `json:"runtimeCapabilities,omitempty"`
+	RuntimeLastSeenAt         time.Time                    `json:"runtimeLastSeenAt,omitempty"`
 	Telemetry                 *model.ServerBridgeTelemetry `json:"telemetry,omitempty"`
 }
 
@@ -154,7 +156,9 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 			IntegrityStatus: server.IntegrityStatus, LastHeartbeatAt: server.LastHeartbeatAt, Fresh: fresh,
 			RuntimeID: server.RuntimeID, RuntimeEpoch: server.RuntimeEpoch, RuntimeTransition: server.RuntimeTransition,
 			Hostname: server.Hostname, MinecraftVersion: server.MinecraftVersion, JavaVersion: server.JavaVersion,
-			LoaderName: server.LoaderName, LoaderVersion: server.LoaderVersion, ServerBrand: server.ServerBrand, Telemetry: server.Telemetry,
+			LoaderName: server.LoaderName, LoaderVersion: server.LoaderVersion, ServerBrand: server.ServerBrand,
+			RuntimeCapabilities: append([]string(nil), server.RuntimeCapabilities...), RuntimeLastSeenAt: server.RuntimeLastSeenAt,
+			Telemetry: server.Telemetry,
 		})
 	}
 

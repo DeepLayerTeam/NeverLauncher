@@ -1,0 +1,58 @@
+name: ServerBridge 0.28.6 Adapter Capabilities
+on:
+  push:
+    paths:
+      - 'plugins/**'
+      - 'services/api/internal/httpapi/server_bridge_adapter_capabilities_0286*.go'
+      - 'services/api/internal/httpapi/server_bridge_runtime_0192.go'
+      - 'services/api/internal/httpapi/server_bridge_control_0195.go'
+      - 'services/api/internal/httpapi/server_bridge_ga_0200.go'
+      - 'apps/admin/src/api/serverbridge.ts'
+      - 'apps/admin/src/admin/ServerBridgeWorkspace.tsx'
+      - 'apps/admin/tests/serverbridge-operations.test.mjs'
+      - 'e2e/java/ru/neverlauncher/bridge/common/ServerBridgeAdapterCapability0286Harness.java'
+      - 'e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh'
+      - 'serverbridge/certify_release.py'
+      - '.github/workflows/serverbridge-adapter-capabilities-0286.yml'
+  pull_request:
+    paths:
+      - 'plugins/**'
+      - 'services/api/internal/httpapi/server_bridge_adapter_capabilities_0286*.go'
+      - 'services/api/internal/httpapi/server_bridge_runtime_0192.go'
+      - 'services/api/internal/httpapi/server_bridge_control_0195.go'
+      - 'services/api/internal/httpapi/server_bridge_ga_0200.go'
+      - 'apps/admin/src/api/serverbridge.ts'
+      - 'apps/admin/src/admin/ServerBridgeWorkspace.tsx'
+      - 'e2e/java/ru/neverlauncher/bridge/common/ServerBridgeAdapterCapability0286Harness.java'
+      - 'e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh'
+      - '.github/workflows/serverbridge-adapter-capabilities-0286.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  enforce-capabilities:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache: true
+          cache-dependency-path: services/api/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Actual Java production sources / 14 adapter policies
+        run: bash e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh
+      - name: Java v3 security regressions (not live Minecraft)
+        run: bash e2e/scripts/run-serverbridge-security-certification-01912-e2e.sh
+      - name: Go runtime verification / capability gates
+        working-directory: services/api
+        run: go test ./internal/httpapi -run 'TestAdapter|TestServerBridgeRuntimeIdentity0192|TestServerBridgeControl' -count=1 -timeout=5m
+      - name: JavaScript operator restrictions
+        working-directory: apps/admin
+        run: npm test

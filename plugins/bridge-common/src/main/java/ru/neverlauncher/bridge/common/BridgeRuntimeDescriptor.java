@@ -30,7 +30,15 @@ public record BridgeRuntimeDescriptor(
         }
         BridgeAdapterProfile adapterProfile = BridgeAdapterProfiles.find(platform);
         if (adapterProfile != null) {
-            normalized.addAll(adapterProfile.runtimeCapabilities(List.of()));
+            // Plugin-provided free-form features may describe telemetry, but cannot
+            // add an unsupported adapter.* claim to its signed runtime identity.
+            java.util.Set<String> allowed = java.util.Set.copyOf(adapterProfile.runtimeCapabilities(List.of()));
+            for (String claimed : normalized) {
+                if (claimed.startsWith("adapter.") && !allowed.contains(claimed)) {
+                    throw new IllegalArgumentException("unsupported adapter capability claim: " + claimed);
+                }
+            }
+            normalized.addAll(allowed);
         }
         capabilities = List.copyOf(normalized);
     }

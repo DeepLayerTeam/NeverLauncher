@@ -135,6 +135,9 @@ func validateAndVerifyBridgeRuntime0192(server bridgeServerRecord, req bridgePlu
 	if !ed25519.Verify(ed25519.PublicKey(publicKey), []byte(canonical), signature) {
 		return model.ServerBridgeRuntimeIdentity{}, fmt.Errorf("serverbridge_runtime_signature_invalid")
 	}
+	if err := verifyAdapterCapabilities0286(r.Platform, r.ServerBrand, capabilities); err != nil {
+		return model.ServerBridgeRuntimeIdentity{}, err
+	}
 	digest := sha256.Sum256([]byte(canonical))
 	return model.ServerBridgeRuntimeIdentity{
 		RuntimeID:           r.RuntimeID,

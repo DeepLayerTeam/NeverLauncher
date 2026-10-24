@@ -47,4 +47,21 @@ public enum BridgeAdapterCapability {
     public String runtimeCapability() {
         return "adapter." + wireName;
     }
+
+    /** Map every remotely executable command to its explicitly advertised capability. */
+    public static BridgeAdapterCapability forControl(String type) {
+        if (type == null) return null;
+        return switch (type) {
+            case "player.kick" -> CONTROL_KICK;
+            case "message.broadcast" -> CONTROL_BROADCAST;
+            case "whitelist.add", "whitelist.remove", "whitelist.enable", "whitelist.disable" -> CONTROL_WHITELIST;
+            case "ban.add", "ban.remove" -> CONTROL_BAN;
+            case "server.save" -> CONTROL_SAVE;
+            case "server.maintenance" -> CONTROL_MAINTENANCE;
+            case "server.drain" -> CONTROL_DRAIN;
+            case "server.shutdown" -> CONTROL_SHUTDOWN;
+            case "server.console" -> CONTROL_CONSOLE;
+            default -> null;
+        };
+    }
 }

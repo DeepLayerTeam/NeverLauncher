@@ -1,3 +1,11 @@
+## 0.28.6 — Adapter Capabilities & Certification (2026-10-25)
+
+- Enforce signed runtime-advertised per-command capabilities in live Backend create/delivery and Java Bridge execution; absent/stale/unsupported claims fail closed without granting Host/Backend control.
+- Reject overclaimed adapter capabilities, uncertified hybrid cores and unknown adapter flags in the signed runtime identity verification path. Correct Sponge flags; never treat Vanilla RCON as a pre-login gate.
+- Surface fresh signed capabilities to project-scoped Admin; filter actions by permissions **and** runtime support. Add Java 14-platform capability harness and Go/Node negative tests.
+- Keep ServerBridge v3 frozen; artifact certification now explicitly states its scope and coverage. Real target-version Minecraft login/server runtime certification was not executed in this source delivery.
+- See `docs/releases/0.28.6-adapter-capabilities-certification.md` for verification and rollout.
+
 ## 0.28.5 — Durable Commands & HA Fencing (2026-10-24)
 
 - Closed the production ServerBridge HA redelivery hole: when a delivered PostgreSQL command loses its lease/ACK or runtime identity, it becomes terminal `indeterminate`, not another executable queued command. Pending commands that expire before delivery remain `expired`. Implemented in both SQL and in-memory stores, including Admin history and command reads.

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ServerBridgeClient, gameCommandPermissions, commandLifecycle, telemetryState, canControlNode, buildControlPayload } from '../src/api/serverbridge.ts';
+import { ServerBridgeClient, gameCommandPermissions, commandLifecycle, telemetryState, canControlNode, supportsControlCapability, buildControlPayload } from '../src/api/serverbridge.ts';
 import { canSeeSection, can } from '../src/admin/permissions.ts';
 import { endpointForSection } from '../src/admin/sections.ts';
 
@@ -94,4 +94,16 @@ test('project role wildcard cannot grant host or backend in admin view', () => {
   assert.equal(can(role, 'backend:control', 'p'), false);
   assert.equal(can(role, 'host:process', 'p'), false);
   assert.equal(can(role, 'host:exec', 'p'), false);
+});
+
+
+test('0.28.6 capability filtering is signed-runtime-fresh and fail closed', () => {
+  const reported = {...node, kind:'sponge', runtimeLastSeenAt:new Date(now-1000).toISOString(),
+    runtimeCapabilities:['adapter.control.broadcast', 'adapter.control.kick']};
+  assert.equal(supportsControlCapability(reported,'message.broadcast',now),true);
+  assert.equal(supportsControlCapability(reported,'server.save',now),false);
+  assert.equal(supportsControlCapability(reported,'server.console',now),false);
+  assert.equal(supportsControlCapability({...reported,runtimeCapabilities:undefined},'message.broadcast',now),false);
+  assert.equal(supportsControlCapability({...reported,runtimeLastSeenAt:new Date(now-100_000).toISOString()},'message.broadcast',now),false);
+  assert.equal(supportsControlCapability({...reported,protocolVersion:2},'message.broadcast',now),false);
 });
