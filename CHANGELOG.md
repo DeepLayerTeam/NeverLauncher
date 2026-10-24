@@ -1,3 +1,12 @@
+## 0.28.1 — Control Domains & RBAC (2026-10-24)
+
+- Enforce per-command, live RBAC for every ServerBridge v3 mutation (`gameserver:broadcast`, `gameserver:moderate`, `gameserver:save`, `gameserver:traffic`, `gameserver:shutdown`, `gameserver:console`). Legacy `serverbridge:control` and `serverbridge:console` no longer grant any command automatically.
+- Keep Backend, Host process and Host exec as distinct **global-only** permission domains. No Backend restart or shell/host execution route is exposed through game control.
+- Require fresh MFA plus server-side project visibility and the exact command right before dispatch, with denial audit; re-check project/command permissions before returning a journal entry; remove unauthorized commands from scoped overview.
+- Project-owner wildcards are projected as known project actions in Admin rather than leaking `*` to non-project domains. The action dropdown reflects actual rights, including retries of previously pending commands.
+- Apply migration `0077` with explicit legacy admin/operator game-only grants, leaving custom roles unchanged. No Backend/Host privileges are migrated.
+- Preserve frozen ServerBridge Protocol v3 payloads, node identity, command leasing and idempotency.
+
 ## [0.28.0] — Client Factory GA integration (source implementation)
 
 - Repaired executable `certify-matrix` CLI routing; added fail-closed `certify-ga` and independently signed matching-server join attestations bound to exact release version and commit.

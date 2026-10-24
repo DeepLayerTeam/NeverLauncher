@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0074_texture_lifecycle_recovery_02511" {
+	if st.Current != "0077_control_domains_rbac_0281" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }

@@ -109,6 +109,12 @@ func (s Server) adminMe(w http.ResponseWriter, r *http.Request) {
 		permissions := s.permissionsForRole(roleID)
 		projectScoped := make([]string, 0, len(permissions))
 		for _, permission := range permissions {
+			if permission == "*" {
+				// A project owner gets all PROJECT actions, never host/backend
+				// privileges and never an unbounded wildcard in Admin identity.
+				projectScoped = authorization.ProjectActionCatalog()
+				break
+			}
 			if authorization.IsProjectAction(permission) {
 				projectScoped = append(projectScoped, permission)
 			}

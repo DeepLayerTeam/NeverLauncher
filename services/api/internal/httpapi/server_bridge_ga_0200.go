@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
@@ -191,6 +192,39 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 		}
 		controls = filtered
 	}
+	// Do not leak console payloads, player moderation results or privileged
+	// command history via a project-read-only overview.
+	claims, authErr := s.adminClaims(r)
+	if authErr != nil {
+		writeError(w, http.StatusUnauthorized, "invalid admin session")
+		return
+	}
+	projectByServer := make(map[string]string, len(servers))
+	for _, server := range servers {
+		projectByServer[server.ID] = server.ProjectID
+	}
+	filteredControls := controls[:0]
+	// Authorization is evaluated from the live repository, but avoid an
+	// expensive repeat DB lookup for every journal row of the same server.
+	controlPermissionCache := make(map[string]bool)
+	for _, cmd := range controls {
+		permission, known := authorization.GameCommandPermission(cmd.Type)
+		projectID, exists := projectByServer[cmd.ServerID]
+		if !known || !exists {
+			continue
+		}
+		key := projectID + "\x00" + cmd.ServerID + "\x00" + permission
+		allowed, cached := controlPermissionCache[key]
+		if !cached {
+			allowed = s.authorizeClaims(r, claims, "project:read", projectID, "server", cmd.ServerID).Allowed &&
+				s.authorizeClaims(r, claims, permission, projectID, "server", cmd.ServerID).Allowed
+			controlPermissionCache[key] = allowed
+		}
+		if allowed {
+			filteredControls = append(filteredControls, cmd)
+		}
+	}
+	controls = filteredControls
 	controlCounts := map[string]int{}
 	for _, item := range controls {
 		controlCounts[item.Status]++

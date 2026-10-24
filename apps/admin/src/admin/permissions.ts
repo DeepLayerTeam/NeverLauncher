@@ -16,6 +16,8 @@ export function can(identity: AdminIdentity | null, permission: string, projectI
   if (globals.includes('*') || globals.includes(permission)) return true;
   if (!projectId || projectId === '*') return false;
   const scoped = identity.projectPermissions?.[projectId] ?? [];
+  // Project wildcard must not be interpreted as a host or backend grant.
+  if (permission.startsWith('host:') || permission.startsWith('backend:')) return false;
   return scoped.includes('*') || scoped.includes(permission);
 }
 

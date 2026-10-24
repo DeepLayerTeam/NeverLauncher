@@ -19,6 +19,20 @@ export type BridgeCommandType =
   'player.kick' | 'message.broadcast' | 'whitelist.add' | 'whitelist.remove' |
   'whitelist.enable' | 'whitelist.disable' | 'ban.add' | 'ban.remove' |
   'server.save' | 'server.maintenance' | 'server.drain' | 'server.shutdown' | 'server.console';
+// UI visibility mirrors the API's closed, server-authoritative command policy.
+// In particular, a game broadcast can NEVER grant backend restart or host shell.
+export const gameCommandPermissions: Record<BridgeCommandType, string> = {
+  'player.kick': 'gameserver:moderate',
+  'message.broadcast': 'gameserver:broadcast',
+  'whitelist.add': 'gameserver:moderate', 'whitelist.remove': 'gameserver:moderate',
+  'whitelist.enable': 'gameserver:moderate', 'whitelist.disable': 'gameserver:moderate',
+  'ban.add': 'gameserver:moderate', 'ban.remove': 'gameserver:moderate',
+  'server.save': 'gameserver:save', 'server.maintenance': 'gameserver:traffic',
+  'server.drain': 'gameserver:traffic', 'server.shutdown': 'gameserver:shutdown',
+  'server.console': 'gameserver:console',
+};
+export function gameCommandPermission(kind: BridgeCommandType): string { return gameCommandPermissions[kind]; }
+
 export type ServerBridgeCommand = {
   id: string; serverId: string; runtimeId: string; runtimeEpoch: number; type: BridgeCommandType;
   status: string; idempotencyKey: string; attempt: number; deliverySequence: number;

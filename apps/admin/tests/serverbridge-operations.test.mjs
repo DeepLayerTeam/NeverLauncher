@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ServerBridgeClient, commandLifecycle, telemetryState, canControlNode, buildControlPayload } from '../src/api/serverbridge.ts';
+import { ServerBridgeClient, gameCommandPermissions, commandLifecycle, telemetryState, canControlNode, buildControlPayload } from '../src/api/serverbridge.ts';
 import { canSeeSection, can } from '../src/admin/permissions.ts';
 import { endpointForSection } from '../src/admin/sections.ts';
 
@@ -69,4 +69,29 @@ test('real API uses command endpoint, scoped overview and unchanged idempotency 
     assert.equal(calls[2].options.headers.get('Idempotency-Key'),'idempotency-fixed');
     assert.equal(calls[3].url,'https://api.test/api/v1/server-bridge/servers/node/control/cmd-1');
   } finally {globalThis.fetch=previous;}
+});
+
+
+test('0.28.1 control domain permissions are independent and fail closed', () => {
+  const actor = { user: { id: 'broadcaster', roleId: 'player' }, permissions: [],
+    projectPermissions: { one: ['project:read','gameserver:broadcast'] } };
+  assert.equal(can(actor, gameCommandPermissions['message.broadcast'], 'one'), true);
+  for (const type of Object.keys(gameCommandPermissions).filter(t => t !== 'message.broadcast')) {
+    assert.equal(can(actor, gameCommandPermissions[type], 'one'), false, `${type} escalated from broadcast`);
+  }
+  assert.equal(can(actor, 'backend:control', 'one'), false);
+  assert.equal(can(actor, 'host:process', 'one'), false);
+  assert.equal(can(actor, 'host:exec', 'one'), false);
+  assert.equal(can(actor, 'gameserver:broadcast', 'other'), false);
+  assert.equal(can(actor, 'serverbridge:control', 'one'), false);
+  assert.equal(Object.keys(gameCommandPermissions).length, 13);
+});
+
+
+test('project role wildcard cannot grant host or backend in admin view', () => {
+  const role = { user: { id: 'u', roleId: 'player' }, permissions: [], projectPermissions: { p: ['*'] } };
+  assert.equal(can(role, 'gameserver:broadcast', 'p'), true);
+  assert.equal(can(role, 'backend:control', 'p'), false);
+  assert.equal(can(role, 'host:process', 'p'), false);
+  assert.equal(can(role, 'host:exec', 'p'), false);
 });

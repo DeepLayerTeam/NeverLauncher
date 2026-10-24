@@ -96,6 +96,14 @@ func (s *Service) Authorize(_ context.Context, actor Actor, action string, scope
 	roles := roleIndex(s.repo.ListRoles())
 	decision.PolicyRevision = policyRevision(user, roles)
 
+	// Even a project-scoped owner/wildcard is not an instance-wide host or
+	// backend administrator. Deny before checking the global role as well:
+	// privileged callers must explicitly request GLOBAL scope.
+	if domain, ok := ControlActionDomain(action); ok && domain != DomainGame && scope.Kind != ScopeGlobal {
+		decision.ReasonCode = "instance-scope-required"
+		return decision
+	}
+
 	if roleAllows(roles[user.RoleID], action) {
 		decision.Allowed = true
 		decision.ReasonCode = "global-role"
@@ -130,20 +138,28 @@ func (s *Service) Authorize(_ context.Context, actor Actor, action string, scope
 	return decision
 }
 
+// ProjectActionCatalog returns project-capable actions without instance-wide
+// permissions. Use it when projecting a project owner's '*' to UI claims:
+// never project the literal wildcard into projectPermissions.
+func ProjectActionCatalog() []string {
+	return []string{
+		"project:read", "project:write", "release:prepare", "release:publish", "file:write",
+		"audit:read", "diagnostics:read", "serverbridge:control", "serverbridge:console",
+		GameBroadcast, GameModerate, GameSave, GameTraffic, GameShutdown, GameConsole,
+		"profile:download", "profile:launch",
+	}
+}
+
 // IsProjectAction — строгая граница между правами всего экземпляра и
 // отдельного проекта. Добавление сюда глобального административного
 // права меняет безопасность и проверяется фиксированной проверкой 0.21.1.
 func IsProjectAction(action string) bool {
-	switch strings.TrimSpace(action) {
-	case "project:read", "project:write",
-		"release:prepare", "release:publish", "file:write",
-		"audit:read", "diagnostics:read",
-		"serverbridge:control", "serverbridge:console",
-		"profile:download", "profile:launch":
-		return true
-	default:
-		return false
+	for _, allowed := range ProjectActionCatalog() {
+		if strings.TrimSpace(action) == allowed {
+			return true
+		}
 	}
+	return false
 }
 
 func roleIndex(roles []model.Role) map[string]model.Role {

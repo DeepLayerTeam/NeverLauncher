@@ -14,6 +14,7 @@ import { requestJSON, ApiError } from '../api/client';
 import { AdminApi, type AdminOverview } from '../api/admin';
 import { MetricCard, TextInput } from '../components/primitives';
 import { ServerBridgeWorkspace } from './ServerBridgeWorkspace';
+import { gameCommandPermissions, type BridgeCommandType } from '../api/serverbridge';
 import { TextureManagement0259 } from './TextureManagement0259';
 import { ResourceGrid } from '../components/ResourceGrid';
 import { useAdminRoute, navigate } from './routing';
@@ -437,7 +438,7 @@ export function AdminApp() {
       {token && mayRead && active === 'config' && <ConfigWorkspace backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'official-provider' && <OfficialProviderWorkspace02611 backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'texture-management' && <TextureManagement0259 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
-      {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canControl={can(identity, 'serverbridge:control', selectedProjectId)} canConsole={can(identity, 'serverbridge:console', selectedProjectId)} />}
+      {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} allowedCommands={(Object.keys(gameCommandPermissions) as BridgeCommandType[]).filter(kind => can(identity, gameCommandPermissions[kind], selectedProjectId))} />}
       {token && !mayRead && <section className="card wide emptyState"><h2>Нет доступа</h2><p>Эта операция недоступна для вашей роли либо проект не выбран. Запросите необходимые полномочия у владельца.</p></section>}
       {token && mayRead && !['extensions-manager','operations','release-workspace','job-monitor','server-bridge','texture-management','backup-restore','devices','audit','config','official-provider'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
 

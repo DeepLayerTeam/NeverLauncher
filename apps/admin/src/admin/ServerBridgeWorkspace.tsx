@@ -5,7 +5,7 @@ import { MetricCard } from '../components/primitives';
 import { ServerBridgeClient, buildControlPayload, canControlNode, commandLifecycle, telemetryState,
   type BridgeCommandRequest, type BridgeCommandType, type BridgeOverview, type ServerBridgeCommand, type ServerBridgeNode } from '../api/serverbridge';
 
-type Props = { backendUrl: string; token: string; projectId: string; canControl: boolean; canConsole: boolean };
+type Props = { backendUrl: string; token: string; projectId: string; allowedCommands: BridgeCommandType[] };
 const actions: Array<{ type: BridgeCommandType; label: string; confirm?: boolean }> = [
   { type: 'player.kick', label: 'Отключить игрока', confirm: true },
   { type: 'message.broadcast', label: 'Сообщение всем игрокам' },
@@ -45,7 +45,10 @@ const readPending = (projectId: string, backendUrl: string): BridgeCommandReques
   return null;
 };
 
-export function ServerBridgeWorkspace({ backendUrl, token, projectId, canControl, canConsole }: Props) {
+export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCommands }: Props) {
+  const canCommand = (kind: BridgeCommandType) => allowedCommands.includes(kind);
+  const canControl = allowedCommands.length > 0;
+  const canConsole = canCommand('server.console');
   const api = useMemo(() => new ServerBridgeClient(backendUrl, token), [backendUrl, token]);
   const [overview, setOverview] = useState<BridgeOverview | null>(null);
   const [selectedServer, setSelectedServer] = useState('');
@@ -57,6 +60,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, canControl
   const [busy, setBusy] = useState(false);
   const [kind, setKind] = useState<BridgeCommandType>('server.save');
   const [fields, setFields] = useState(initialFields);
+  useEffect(() => { if (!canCommand(kind) && allowedCommands.length) setKind(allowedCommands[0]); }, [kind, allowedCommands.join('|')]);
   const [pending, setPending] = useState<BridgeCommandRequest | null>(() => readPending(projectId, backendUrl));
   // A ref closes the double-click window before React commits busy=true.
   const submitInFlight = useRef(false);
@@ -117,7 +121,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, canControl
     if (submitInFlight.current || busy) return;
     // Refuse to submit on stale overview or when a previous request has an
     // indeterminate outcome. The saved payload is the only safe retry.
-    if (!node || !canControl || !canControlNode(node, clock) ||
+    if (!node || !canControl || !canCommand(existing?.type ?? kind) || !canControlNode(node, clock) ||
         lastReadAt === null || clock - lastReadAt >= 45_000 ||
         (existing?.type === 'server.console' || (!existing && kind === 'server.console')) && !canConsole) return;
     const unresolved = readPending(projectId, backendUrl);
@@ -196,19 +200,19 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, canControl
       </article>
     </div>}
     {node && <section className="bridgeSection bridgeControls"><h3>Управление сервером и игроками</h3>
-      {!canControl && <p className="bridgeAttention">Необходимо право <code>serverbridge:control</code> в этом проекте.</p>}
+      {!canControl && <p className="bridgeAttention">Необходимы разрешения семейства <code>gameserver:*</code> для выбранного проекта.</p>}
       {!usable && <p className="bridgeAttention">Отправка отключена: heartbeat, runtime, Protocol v3 или снимок недоступны. Обновите Backend и соединение с сервером.</p>}
       <form onSubmit={e=>{e.preventDefault();void submit();}}>
-        <label className="field"><span>Действие</span><select value={kind} disabled={busy || !!pending} onChange={e=>setKind(e.target.value as BridgeCommandType)}>{actions.filter(a=>a.type!=='server.console'||canConsole).map(a=><option value={a.type} key={a.type}>{a.label}</option>)}</select></label>
+        <label className="field"><span>Действие</span><select value={kind} disabled={busy || !!pending} onChange={e=>setKind(e.target.value as BridgeCommandType)}>{actions.filter(a=>canCommand(a.type)).map(a=><option value={a.type} key={a.type}>{a.label}</option>)}</select></label>
         {playerKinds.has(kind) && <label className="field"><span>Имя Minecraft-игрока</span><input required maxLength={16} pattern="[A-Za-z0-9_]{3,16}" autoComplete="off" value={fields.username} onChange={e=>setFields(f=>({...f,username:e.target.value}))}/></label>}
         {kind==='message.broadcast' && <label className="field"><span>Сообщение</span><textarea maxLength={1024} required rows={3} value={fields.message} onChange={e=>setFields(f=>({...f,message:e.target.value}))}/></label>}
         {['player.kick','ban.add','server.maintenance','server.drain','server.shutdown'].includes(kind) && <label className="field"><span>Причина (необязательно)</span><input maxLength={1024} value={fields.reason} onChange={e=>setFields(f=>({...f,reason:e.target.value}))}/></label>}
         {(kind==='server.maintenance'||kind==='server.drain') && <label className="check"><input type="checkbox" checked={fields.enabled} onChange={e=>setFields(f=>({...f,enabled:e.target.checked}))}/><span>{fields.enabled?'Включить':'Выключить'} {kind==='server.drain'?'drain':'maintenance'}</span></label>}
         {kind==='server.console' && canConsole && <label className="field"><span>Разрешённая команда (без shell)</span><input required maxLength={512} value={fields.command} onChange={e=>setFields(f=>({...f,command:e.target.value}))} placeholder="say Плановая перезагрузка" autoComplete="off"/></label>}
-        <div className="buttonRow"><button disabled={!canControl || !usable || busy || !!pending || (kind==='server.console'&&!canConsole)} type="submit">{busy?'Отправка…':'Проверить эффект и отправить'}</button></div>
+        <div className="buttonRow"><button disabled={!canCommand(kind) || !usable || busy || !!pending} type="submit">{busy?'Отправка…':'Проверить эффект и отправить'}</button></div>
       </form>
-      {pending && <div className="bridgePending"><p className="bridgeAttention">Запрос {pending.type} для {pending.serverId} не получил подтверждённого ответа. Идемпотентный ключ сохранён в этой сессии.</p><div className="buttonRow"><button disabled={busy || selectedServer!==pending.serverId || !usable || !canControl} onClick={()=>void submit(pending)}>Повторить с тем же ключом</button><button disabled={busy} onClick={()=>{if(window.confirm('Отказаться от восстановления? При неизвестном результате создание новой команды может повторить действие.'))persistPending(null);}}>Отказаться от восстановления</button></div></div>}
-      <p className="muted">Все команды проверяет Backend: RBAC, MFA (fresh ≤ 5 минут), runtime identity и allowlist. Shell-доступ не используется.</p>
+      {pending && <div className="bridgePending"><p className="bridgeAttention">Запрос {pending.type} для {pending.serverId} не получил подтверждённого ответа. Идемпотентный ключ сохранён в этой сессии.</p><div className="buttonRow"><button disabled={busy || selectedServer!==pending.serverId || !usable || !canCommand(pending.type)} onClick={()=>void submit(pending)}>Повторить с тем же ключом</button><button disabled={busy} onClick={()=>{if(window.confirm('Отказаться от восстановления? При неизвестном результате создание новой команды может повторить действие.'))persistPending(null);}}>Отказаться от восстановления</button></div></div>}
+      <p className="muted">Каждая команда требует собственное право gameserver:*. Backend проверяет RBAC, MFA (fresh ≤ 5 минут), runtime identity и allowlist. Право broadcast не даёт доступа к shutdown, Backend или Host. Shell-доступ не используется.</p>
     </section>}
     {selectedCommand && <section className="bridgeSection" aria-live="polite"><h3>Монитор команды</h3><div className="bridgeHero"><strong><code>{selectedCommand.id}</code></strong><span className={`badge ${monitorFresh?lifecycleClass(selectedCommand.status):'warn'}`}>{monitorFresh?monitor?.label:'Статус устарел / неизвестен'}</span></div>
       <dl className="bridgeFacts"><dt>Команда</dt><dd>{selectedCommand.type}</dd><dt>Сервер / runtime</dt><dd>{selectedCommand.serverId} / epoch {selectedCommand.runtimeEpoch}</dd><dt>Попытка / sequence</dt><dd>{selectedCommand.attempt} / {selectedCommand.deliverySequence}</dd><dt>Доставка</dt><dd>{monitorFresh && monitor?.deliveryConfirmed?'подтверждена ответом Bridge':'не подтверждена; dispatch не равен delivery'}</dd><dt>Результат</dt><dd>{monitorFresh && monitor?.lifecycle==='executed'?'исполнено':monitorFresh?monitor?.label:'неизвестно'}</dd><dt>Обновлено</dt><dd>{timeLabel(selectedCommand.updatedAt)}</dd><dt>Ошибка</dt><dd>{selectedCommand.error || '—'}</dd></dl>

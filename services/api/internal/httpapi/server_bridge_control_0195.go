@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/serverbridgeha"
@@ -205,9 +206,19 @@ func (s Server) serverBridgeControlCreate0195(w http.ResponseWriter, r *http.Req
 		return
 	}
 	kind := strings.ToLower(strings.TrimSpace(req.Type))
-	if kind == "server.console" && !s.authorizeClaims(r, claims, "serverbridge:console", node.ProjectID, "server", serverID).Allowed {
-		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("control-console-denied"), Actor: claims.Email, Action: "serverbridge:control:denied", Target: serverID + ":" + kind, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeError(w, http.StatusForbidden, "serverbridge_console_permission_required")
+	permission, known := authorization.GameCommandPermission(kind)
+	if !known {
+		writeError(w, http.StatusBadRequest, "serverbridge_control_type_unsupported")
+		return
+	}
+	// First establish project visibility; do not disclose cross-project node IDs.
+	if !s.authorizeClaims(r, claims, "project:read", node.ProjectID, "server", serverID).Allowed {
+		writeError(w, http.StatusNotFound, "serverbridge_server_not_found")
+		return
+	}
+	if !s.authorizeClaims(r, claims, permission, node.ProjectID, "server", serverID).Allowed {
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("control-domain-denied"), Actor: firstNonEmpty(claims.Email, claims.Sub), Action: "authorization:denied", Target: "game-server:" + serverID + ":" + kind, ReasonCode: "missing:" + permission, CorrelationID: correlationID02111(r), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeError(w, http.StatusForbidden, "game_server_command_permission_required:"+permission)
 		return
 	}
 	payload, err := validateServerBridgeControlRequest0195(kind, req.Payload)
@@ -270,7 +281,7 @@ func (s Server) serverBridgeControlCreate0195(w http.ResponseWriter, r *http.Req
 	if reused {
 		status = http.StatusOK
 	}
-	writeJSON(w, status, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"status": stored.Status, "command": stored, "idempotentReplay": reused}})
+	writeJSON(w, status, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"status": stored.Status, "command": stored, "idempotentReplay": reused, "controlDomain": "game-server", "requiredPermission": permission}})
 }
 
 func (s Server) serverBridgeControlGet0195(w http.ResponseWriter, r *http.Request) {
@@ -287,6 +298,21 @@ func (s Server) serverBridgeControlGet0195(w http.ResponseWriter, r *http.Reques
 	}
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "serverbridge_control_storage_unavailable")
+		return
+	}
+	node, err := s.State.ServerBridge.getNode0142(serverID)
+	if err != nil || strings.TrimSpace(cmd.ServerID) != serverID {
+		writeError(w, http.StatusNotFound, "serverbridge_control_command_not_found")
+		return
+	}
+	claims, err := s.adminClaims(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid admin session")
+		return
+	}
+	permission, known := authorization.GameCommandPermission(cmd.Type)
+	if !known || !s.authorizeClaims(r, claims, "project:read", node.ProjectID, "server", serverID).Allowed || !s.authorizeClaims(r, claims, permission, node.ProjectID, "server", serverID).Allowed {
+		writeError(w, http.StatusNotFound, "serverbridge_control_command_not_found")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": bridgePluginsSchema940, "data": map[string]any{"command": cmd}})
