@@ -38,13 +38,16 @@ print(h.hexdigest())
 PY
 )"
 CLIENT="$DEST/client"
+PROCESSOR_ARGS=()
+if [[ "${NEVERLAUNCHER_CERT_PROCESSOR_SANDBOX:-process}" == required ]]; then PROCESSOR_ARGS=(--processor-sandbox required); fi
 "$BIN" runtime client-factory build \
  --client-dir "$CLIENT" --loader "$LOADER" --minecraft "$MC" \
  --loader-version "$LOADER_VERSION" --target "$TARGET" --java "$JAVA" \
- --processor-timeout 10m --output "$DEST/install-plan-result.json"
+ --processor-timeout 10m "${PROCESSOR_ARGS[@]}" --output "$DEST/install-plan-result.json"
 "$BIN" runtime client-factory verify --client-dir "$CLIENT" --output "$DEST/install-verified.json"
-KEY="$DEST/ci-only-private.key"; PUB="$DEST/certification.pub"
+KEY="${NEVERLAUNCHER_CERT_SIGNING_KEY:-$DEST/ci-only-private.key}"; PUB="${NEVERLAUNCHER_CERT_PUBLIC_KEY:-$DEST/certification.pub}"
 if [[ ! -f "$KEY" ]]; then
+ [[ -z "${NEVERLAUNCHER_CERT_SIGNING_KEY:-}" ]] || { echo "Protected signing key is missing" >&2; exit 2; }
  "$BIN" runtime client-factory certify-keygen --private-key "$KEY" --public-key "$PUB"
 fi
 CERT="$DEST/runtime-certificate.json"
@@ -60,5 +63,5 @@ else
 fi
 "$BIN" runtime client-factory certify-verify --client-dir "$CLIENT" --certificate "$CERT" --public-key "$PUB" --output "$DEST/certificate-verification.json"
 # Never publish this ephemeral CI private key as a build artifact.
-if [[ "${NEVERLAUNCHER_CERT_KEEP_TEST_KEY:-0}" != 1 ]]; then rm -f "$KEY"; fi
+if [[ -z "${NEVERLAUNCHER_CERT_SIGNING_KEY:-}" && "${NEVERLAUNCHER_CERT_KEEP_TEST_KEY:-0}" != 1 ]]; then rm -f "$KEY"; fi
 printf '[client-factory-certification] certified loader=%s mc=%s target=%s output=%s\n' "$LOADER" "$MC" "$TARGET" "$CERT"

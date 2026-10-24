@@ -1,0 +1,66 @@
+name: Client Factory 0.28.0 — offline regression checks
+on:
+  push:
+    paths:
+      - 'cli/cmd/neverlauncher/**'
+      - 'services/api/internal/httpapi/client_factory*'
+      - 'scripts/ga/*client_factory_0280*'
+      - 'apps/admin/src/admin/ClientFactoryBuilder02710.tsx'
+      - '.github/workflows/client-factory-ga-0280*.yml'
+  pull_request:
+    paths:
+      - 'cli/cmd/neverlauncher/**'
+      - 'services/api/internal/httpapi/client_factory*'
+      - 'scripts/ga/*client_factory_0280*'
+      - 'apps/admin/src/admin/ClientFactoryBuilder02710.tsx'
+      - '.github/workflows/client-factory-ga-0280*.yml'
+permissions:
+  contents: read
+jobs:
+  cli-and-evidence:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - name: Go unit, adversarial, existing materializer integration
+        working-directory: cli
+        run: |
+          go test ./cmd/neverlauncher -run 'TestClientFactoryGA0280|TestRuntimeCertification02712|TestClientFactory0271|TestAdapterLifecycle02711|TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases' -count=1 -timeout=7m
+          go test -race ./cmd/neverlauncher -run 'TestClientFactoryGA0280|TestRuntimeCertification02712' -count=1 -timeout=7m
+          go vet ./cmd/neverlauncher
+      - name: Verify independently signed evidence with negative fixtures
+        run: |
+          python3 -m pip install 'cryptography>=43,<47'
+          python3 -m unittest discover -s scripts/ga -p 'test_verify_client_factory_0280.py' -v
+      - name: Canonical release metadata and shell validation
+        run: |
+          python3 scripts/version/manage.py check
+          bash -n e2e/scripts/run-client-factory-certification-02712.sh
+  api-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: HTTP export integrity and source code tests
+        working-directory: services/api
+        run: |
+          go test -race ./internal/httpapi -run 'TestFactoryPackageVerified0280|TestFactoryBuilder.*02710' -count=1 -timeout=8m
+          go vet ./internal/httpapi
+  admin-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: Install pinned dependencies and compile UI
+        working-directory: apps/admin
+        run: |
+          npm ci
+          npm run build

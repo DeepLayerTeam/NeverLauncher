@@ -1,0 +1,162 @@
+name: Client Factory 0.28.0 — protected production GA
+on:
+  workflow_dispatch:
+    inputs:
+      expected_commit:
+        description: Exact 40-character release commit SHA (must equal checked-out commit)
+        required: true
+        type: string
+      confirm_live:
+        description: Execute real Mojang/loader downloads, native GUI launch matrix and matching-server join
+        type: boolean
+        default: false
+        required: true
+permissions:
+  contents: read
+jobs:
+  client-factory-production-gate:
+    if: inputs.confirm_live
+    environment: production-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Require exact release identity and protected signing keys
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+          RUNTIME_SIGNING_B64: ${{ secrets.NEVERLAUNCHER_FACTORY_RUNTIME_PRIVATE_KEY_B64 }}
+          JOIN_SIGNING_B64: ${{ secrets.NEVERLAUNCHER_FACTORY_JOIN_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test "$(cat VERSION)" = '0.28.0'
+          test "$EXPECTED_COMMIT" = "$GITHUB_SHA"
+          test "${#GITHUB_SHA}" -eq 40
+          test -n "$RUNTIME_SIGNING_B64"
+          test -n "$JOIN_SIGNING_B64"
+          mkdir -p "$RUNNER_TEMP/client-factory-keys"
+          chmod 700 "$RUNNER_TEMP/client-factory-keys"
+          printf '%s' "$RUNTIME_SIGNING_B64" | base64 -d > "$RUNNER_TEMP/client-factory-keys/runtime.key"
+          printf '%s' "$JOIN_SIGNING_B64" | base64 -d > "$RUNNER_TEMP/client-factory-keys/join.key"
+          chmod 600 "$RUNNER_TEMP/client-factory-keys/"*.key
+          python3 -m pip install 'cryptography>=43,<47'
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, os
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+          from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+          directory=Path(os.environ['RUNNER_TEMP'])/'client-factory-keys'
+          for name in ('runtime','join'):
+              encoded=(directory/f'{name}.key').read_text().strip()
+              raw=base64.b64decode(encoded,validate=True)
+              if len(raw)!=64: raise ValueError('expected 64-byte Ed25519 private key')
+              key=Ed25519PrivateKey.from_private_bytes(raw[:32]); public=key.public_key().public_bytes(Encoding.Raw,PublicFormat.Raw)
+              if raw[32:]!=public: raise ValueError('invalid Ed25519 keypair')
+              (directory/f'{name}.pub').write_text(base64.b64encode(public).decode()+'\n')
+          if (directory/'runtime.pub').read_bytes()==(directory/'join.pub').read_bytes():
+              raise ValueError('runtime and matching-server trust roots must be independent')
+          PY
+          python3 scripts/version/manage.py check
+      - name: Full Go Client Factory suite, race and vet
+        working-directory: cli
+        run: |
+          go test -count=1 -timeout=12m ./cmd/neverlauncher
+          go test -race -count=1 -timeout=12m ./cmd/neverlauncher -run 'TestClientFactoryGA0280|TestRuntimeCertification02712|TestAdapterLifecycle02711|TestClientFactory0271'
+          go vet ./cmd/neverlauncher
+      - name: API and Admin Panel build gates
+        run: |
+          (cd services/api && go test -count=1 -timeout=10m ./internal/httpapi)
+          (cd apps/admin && npm ci && npm run build)
+      - name: Build NeverRuntime and install actual graphics dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64 bubblewrap
+          cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
+          (cd cli && go build -trimpath -o "$RUNNER_TEMP/client-factory-ga" ./cmd/neverlauncher)
+      - name: Real Client Factory five-family native GUI certification
+        env:
+          NEVERLAUNCHER_CERT_PROCESSOR_SANDBOX: required
+          NEVERLAUNCHER_CERT_SIGNING_KEY: ${{ runner.temp }}/client-factory-keys/runtime.key
+          NEVERLAUNCHER_CERT_PUBLIC_KEY: ${{ runner.temp }}/client-factory-keys/runtime.pub
+          NEVERLAUNCHER_CERT_RUNTIME_BIN: ${{ github.workspace }}/runtime/neverruntime/target/release/neverruntime
+        run: |
+          set -euo pipefail
+          mkdir -p e2e/client-factory-ga-0280
+          for spec in 'vanilla:1.21.1:21' 'fabric:1.20.1:17' 'quilt:1.20.1:17' 'forge:1.12.2:8' 'neoforge:1.21.1:21'; do
+            IFS=: read -r loader mc major <<< "$spec"
+            java_var="JAVA_HOME_${major}_X64"
+            java="${!java_var}/bin/java"
+            test -x "$java"
+            NEVERLAUNCHER_CERT_LOADER="$loader" NEVERLAUNCHER_CERT_MINECRAFT="$mc" \
+            NEVERLAUNCHER_CERT_JAVA="$java" NEVERLAUNCHER_CERT_TARGET='linux/x86_64' \
+            NEVERLAUNCHER_CERT_OUTPUT="e2e/client-factory-ga-0280/$loader" \
+            bash e2e/scripts/run-client-factory-certification-02712.sh
+          done
+      - name: Actual Mojang server start and client join
+        env:
+          NEVERLAUNCHER_E2E_MINECRAFT_VERSION: '1.17.1'
+          NEVERLAUNCHER_E2E_JAVA_MAJOR: '17'
+          NEVERLAUNCHER_COMPAT_OS: linux
+          NEVERLAUNCHER_COMPAT_ARCH: x86_64
+          NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: '55'
+        run: |
+          set -euo pipefail
+          export NEVERLAUNCHER_E2E_JAVA="$JAVA_HOME_17_X64/bin/java"
+          bash e2e/scripts/run-vanilla-matching-e2e.sh
+      - name: Sign real join result and require complete GA certificate matrix
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('e2e/client-factory-ga-0280')
+          versions={'vanilla':'1.21.1','fabric':'1.20.1','quilt':'1.20.1','forge':'1.12.2','neoforge':'1.21.1'}
+          targets=[{'id':loader+'-linux-x64','loader':loader,'minecraft':mc,'os':'linux','arch':'x86_64','clientDir':loader+'/client','certificate':loader+'/runtime-certificate.json'} for loader,mc in versions.items()]
+          (root/'matrix.json').write_text(json.dumps({'schema':'neverlauncher.factory.certification-matrix.v1','targets':targets},indent=2)+'\n')
+          PY
+          "$RUNNER_TEMP/client-factory-ga" runtime client-factory ga-sign-join \
+            --join-evidence e2e/runtime/matching-server.json \
+            --private-key "$RUNNER_TEMP/client-factory-keys/join.key" \
+            --version 0.28.0 --commit "$GITHUB_SHA" \
+            --output e2e/client-factory-ga-0280/join-attestation.json
+          "$RUNNER_TEMP/client-factory-ga" runtime client-factory certify-ga \
+            --matrix e2e/client-factory-ga-0280/matrix.json \
+            --runtime-public-key "$RUNNER_TEMP/client-factory-keys/runtime.pub" \
+            --join-evidence e2e/runtime/matching-server.json \
+            --join-attestation e2e/client-factory-ga-0280/join-attestation.json \
+            --join-public-key "$RUNNER_TEMP/client-factory-keys/join.pub" \
+            --version 0.28.0 --commit "$GITHUB_SHA" \
+            --output e2e/client-factory-ga-0280/ga-report.json
+      - name: Preserve audit results without private signing keys
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-factory-ga-0280-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            e2e/client-factory-ga-0280/**/runtime-certificate*.json
+            e2e/client-factory-ga-0280/**/runtime-certificate.runtime.log
+            e2e/client-factory-ga-0280/**/install-verified.json
+            e2e/client-factory-ga-0280/matrix.json
+            e2e/client-factory-ga-0280/join-attestation.json
+            e2e/client-factory-ga-0280/ga-report.json
+            e2e/runtime/matching-server.json
+            e2e/runtime/matching-server.log

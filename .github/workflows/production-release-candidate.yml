@@ -7,6 +7,10 @@ on:
         type: string
         required: false
         description: 'Only for historical 0.25.0 GA: approved six signed Optional Components attestations'
+      client_factory_ga_evidence_run_id:
+        type: string
+        required: true
+        description: 'Protected Client Factory 0.28.0 run (same commit, five actual JVM launches and matching-server join)'
       official_minecraft_ga_evidence_run_id:
         type: string
         required: true
@@ -141,9 +145,22 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+  certify-platform-signing:
+    name: Require both authenticated Windows and notarized macOS builds
+    needs: [base-ci, windows-production-signed, macos-production-notarized]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require successful platform signing prerequisites
+        env:
+          WINDOWS: ${{ needs.windows-production-signed.result }}
+          MACOS: ${{ needs.macos-production-notarized.result }}
+        run: |
+          test "$WINDOWS" = success
+          test "$MACOS" = success
+
   release-bundle:
     name: Release candidate bundle
-    needs: [base-ci, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized]
+    needs: [base-ci, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
     permissions:
       contents: read
       actions: read
@@ -182,6 +199,31 @@ jobs:
             --attestations official-minecraft-ga-0270 \
             --public-key "$APPROVED_OPERATOR_PUBLIC_KEY" \
             --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/official-minecraft-ga-0270.json"
+      - name: Require approved same-commit protected Client Factory GA workflow
+        env:
+          GA_RUN_ID: ${{ inputs.client_factory_ga_evidence_run_id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ "$GA_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GA_RUN_ID"             --jq '{commit:.head_sha,conclusion:.conclusion,event:.event,path:.path}' > "$RUNNER_TEMP/client-factory-run.json"
+          jq -e --arg commit "$GITHUB_SHA"             '.commit == $commit and .conclusion == "success" and .event == "workflow_dispatch" and (.path | endswith(".github/workflows/client-factory-ga-0280.yml"))'             "$RUNNER_TEMP/client-factory-run.json" >/dev/null
+      - name: Retrieve Client Factory protected GA evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: client-factory-ga-0280-${{ github.sha }}
+          run-id: ${{ inputs.client_factory_ga_evidence_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: client-factory-ga-0280-evidence
+      - name: Verify signed Client Factory GA evidence without private keys
+        env:
+          CLIENT_FACTORY_RUNTIME_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_FACTORY_RUNTIME_PUBLIC_KEY }}
+          CLIENT_FACTORY_JOIN_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_FACTORY_JOIN_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$CLIENT_FACTORY_RUNTIME_PUBLIC_KEY"
+          test -n "$CLIENT_FACTORY_JOIN_PUBLIC_KEY"
+          python3 scripts/ga/verify_client_factory_0280.py             --evidence client-factory-ga-0280-evidence             --runtime-public-key "$CLIENT_FACTORY_RUNTIME_PUBLIC_KEY"             --join-public-key "$CLIENT_FACTORY_JOIN_PUBLIC_KEY"             --commit "$GITHUB_SHA" --version 0.28.0
       - name: Verify exact-commit Admin GA result
         uses: actions/download-artifact@v4
         with:

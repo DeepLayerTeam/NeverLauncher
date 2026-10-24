@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -529,6 +530,142 @@ func factoryVerifyArtifact02710(root, path, digest string) (string, error) {
 	}
 	return full, nil
 }
+
+// factoryPackageVerified0280 writes to a temporary archive before the response starts.
+// In addition to the CLI verifier, hash every file as it is copied to prevent
+// handing out a partial or silently modified ZIP after a concurrent file edit.
+func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (string, error) {
+	const maxExportBytes int64 = 8 << 30
+	paths := make([]string, 0, len(p.Outputs)+1)
+	expected := map[string]struct {
+		digest string
+		size   int64
+	}{}
+	var total int64
+	for _, f := range p.Outputs {
+		if f.Size < 0 || f.Size > maxExportBytes-total || len(f.SHA256) != 64 {
+			return "", errors.New("export exceeds verified size budget or invalid file")
+		}
+		if _, exists := expected[f.Path]; exists {
+			return "", errors.New("duplicate export entry")
+		}
+		expected[f.Path] = struct {
+			digest string
+			size   int64
+		}{f.SHA256, f.Size}
+		paths = append(paths, f.Path)
+		total += f.Size
+	}
+	paths = append(paths, ".neverlauncher/install-plan.json")
+	sort.Strings(paths)
+	archiveFile, err := os.CreateTemp(jobDir, "client-export-*.zip")
+	if err != nil {
+		return "", err
+	}
+	name := archiveFile.Name()
+	success := false
+	defer func() {
+		_ = archiveFile.Close()
+		if !success {
+			_ = os.Remove(name)
+		}
+	}()
+	archive := zip.NewWriter(archiveFile)
+	for _, path := range paths {
+		// Neither the file nor any directory on its path may be a symlink.
+		if path == "" || filepath.IsAbs(path) || strings.Contains(path, "\\") {
+			return "", errors.New("unsafe output path")
+		}
+		full := client
+		for _, part := range strings.Split(path, "/") {
+			if part == "" || part == "." || part == ".." {
+				return "", errors.New("unsafe output component")
+			}
+			full = filepath.Join(full, part)
+			st, e := os.Lstat(full)
+			if e != nil {
+				return "", e
+			}
+			if st.Mode()&os.ModeSymlink != 0 {
+				return "", errors.New("symlink in output tree")
+			}
+		}
+		file, e := os.Open(full)
+		if e != nil {
+			return "", e
+		}
+		stat, e := file.Stat()
+		if e != nil || !stat.Mode().IsRegular() {
+			file.Close()
+			return "", errors.New("non-regular output file")
+		}
+		if exp, ok := expected[path]; ok && stat.Size() != exp.size {
+			file.Close()
+			return "", errors.New("export file size changed")
+		}
+		if path == ".neverlauncher/install-plan.json" && (stat.Size() > 8<<20 || total+stat.Size() > maxExportBytes) {
+			file.Close()
+			return "", errors.New("InstallPlan too large")
+		}
+		entry, e := archive.Create(path)
+		if e != nil {
+			file.Close()
+			return "", e
+		}
+		digest := sha256.New()
+		copyDest := io.MultiWriter(entry, digest)
+		var planCopy bytes.Buffer
+		expectedFile, tracked := expected[path]
+		if !tracked {
+			copyDest = io.MultiWriter(entry, digest, &planCopy)
+		}
+		var copied int64
+		if tracked {
+			copied, e = io.CopyN(copyDest, file, expectedFile.size)
+			if e == nil {
+				var extra [1]byte
+				n, peekErr := file.Read(extra[:])
+				if n != 0 || (peekErr != nil && peekErr != io.EOF) {
+					e = errors.New("export file grew during packaging")
+				}
+			}
+		} else {
+			copied, e = io.Copy(copyDest, io.LimitReader(file, 8<<20+1))
+			if e == nil && copied > 8<<20 {
+				e = errors.New("InstallPlan exceeded size limit during copy")
+			}
+		}
+		closeErr := file.Close()
+		if e != nil {
+			return "", e
+		}
+		if closeErr != nil {
+			return "", closeErr
+		}
+		if tracked && (copied != expectedFile.size || hex.EncodeToString(digest.Sum(nil)) != expectedFile.digest) {
+			return "", errors.New("export content changed during packaging")
+		}
+		if !tracked {
+			var locked struct {
+				ReproducibilitySHA256 string `json:"reproducibilitySha256"`
+			}
+			if json.Unmarshal(planCopy.Bytes(), &locked) != nil || locked.ReproducibilitySHA256 != p.ReproducibilitySHA256 {
+				return "", errors.New("InstallPlan identity changed during copy")
+			}
+		}
+	}
+	if err = archive.Close(); err != nil {
+		return "", err
+	}
+	if err = archiveFile.Sync(); err != nil {
+		return "", err
+	}
+	if err = archiveFile.Close(); err != nil {
+		return "", err
+	}
+	success = true
+	return name, nil
+}
 func (s Server) factoryExport02710(w http.ResponseWriter, r *http.Request) {
 	job, dir, binary, _, ok := s.factoryOwnedJob02710(w, r)
 	if !ok {
@@ -544,69 +681,47 @@ func (s Server) factoryExport02710(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	client := filepath.Join(dir, "client")
-	// Re-run the CLI's complete verifier before serving any bytes.
 	ctx, cancel := context.WithTimeout(r.Context(), 4*time.Minute)
 	defer cancel()
-	if err = factoryInvoke02710(ctx, binary, dir, io.Discard, "runtime", "client-factory", "verify", "--client-dir", client, "--output", filepath.Join(dir, "export-verification.json")); err != nil {
+	verifiedPath := filepath.Join(dir, "export-verification.json")
+	if err = factoryInvoke02710(ctx, binary, dir, io.Discard, "runtime", "client-factory", "verify", "--client-dir", client, "--output", verifiedPath); err != nil {
 		writeError(w, 409, "runtime integrity verification failed")
 		return
 	}
-	paths := make([]string, 0, len(p.Outputs))
-	sha := map[string]string{}
-	for _, f := range p.Outputs {
-		paths = append(paths, f.Path)
-		sha[f.Path] = f.SHA256
+	verified, err := os.ReadFile(verifiedPath)
+	if err != nil {
+		writeError(w, 409, "cannot inspect verified plan")
+		return
 	}
-	paths = append(paths, ".neverlauncher/install-plan.json")
-	sha[".neverlauncher/install-plan.json"] = "" // verifier checked the canonical lockfile
-	sort.Strings(paths)
-	// Verify paths before any response bytes are written. Avoid symlink traversal
-	// through ancestors (which Lstat on the leaf alone would not detect).
-	for _, path := range paths {
-		full := client
-		for _, part := range strings.Split(path, "/") {
-			full = filepath.Join(full, part)
-			st, e := os.Lstat(full)
-			if e != nil || st.Mode()&os.ModeSymlink != 0 {
-				writeError(w, 409, "unsafe artifact in output tree")
-				return
-			}
-		}
-		if sha[path] != "" {
-			if _, err = factoryVerifyArtifact02710(client, path, sha[path]); err != nil {
-				writeError(w, 409, err.Error())
-				return
-			}
-		}
+	var result factoryPlanView02710
+	if json.Unmarshal(verified, &result) != nil || result.ReproducibilitySHA256 != p.ReproducibilitySHA256 {
+		writeError(w, 409, "InstallPlan changed since job verification")
+		return
+	}
+	zipPath, err := factoryPackageVerified0280(dir, client, result)
+	if err != nil {
+		writeError(w, 409, "export integrity/packaging failed: "+err.Error())
+		return
+	}
+	defer os.Remove(zipPath)
+	file, err := os.Open(zipPath)
+	if err != nil {
+		writeError(w, 503, "cannot open verified export")
+		return
+	}
+	defer file.Close()
+	stat, err := file.Stat()
+	if err != nil {
+		writeError(w, 503, "cannot stat verified export")
+		return
 	}
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=neverlauncher-client-%s.zip", job.ID))
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Cache-Control", "private, no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	archive := zip.NewWriter(w)
-	for _, path := range paths {
-		if err = r.Context().Err(); err != nil {
-			break
-		}
-		file, e := os.Open(filepath.Join(client, filepath.FromSlash(path)))
-		if e != nil {
-			err = e
-			break
-		}
-		entry, e := archive.Create(path)
-		if e == nil {
-			_, e = io.Copy(entry, file)
-		}
-		_ = file.Close()
-		if e != nil {
-			err = e
-			break
-		}
-	}
-	_ = archive.Close()
-	if err == nil {
-		s.audit(r, job.OwnerID, "client-factory:export", job.ID)
-	}
+	w.Header().Set("X-NeverLauncher-Distribution", "local-only; publication requires permission gates and signed runtime certification")
+	http.ServeContent(w, r, "client.zip", stat.ModTime(), file)
+	s.audit(r, job.OwnerID, "client-factory:export", job.ID)
 }
 
 // Lists durable jobs after browser refresh or an API restart. No directory

@@ -328,7 +328,7 @@ func TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases(t *testing.
 		_, _ = w.Write(payload)
 	})
 
-	if _, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "26.3", "latest-stable"); err == nil || !strings.Contains(err.Error(), "стабильную quilt loader version") {
+	if _, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "26.3", "latest-stable"); err == nil || !strings.Contains(err.Error(), "no compatible latest-stable loader") {
 		t.Fatalf("latest-stable must reject prerelease-only Quilt metadata, got %v", err)
 	}
 	entry, err := resolveMetaLoaderVersion(context.Background(), server.Client(), "quilt", server.URL, "26.3", "0.32.0-beta.3")

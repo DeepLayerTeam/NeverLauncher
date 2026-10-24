@@ -30,7 +30,7 @@ const helpText = `NeverLauncher CLI
   diagnostics collect|redact|validate|policy|bundle
   runtime client-factory build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib|compat-inspect|compat-verify|compat-apply|inspect-modpack|import-modpack
                                    reproducible Minecraft factory + verified MirrorHelper-equivalent operations
-  runtime client-factory certify-keygen|certify-run|certify-verify|certify-matrix
+  runtime client-factory certify-keygen|certify-run|certify-verify|certify-matrix|certify-ga|ga-sign-join
                                    Ed25519 signed real Minecraft runtime E2E certification
   runtime vanilla-install|fabric-install|quilt-install|forge-install|neoforge-install|...  Minecraft materializers
   loader ...                      loader tooling
