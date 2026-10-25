@@ -24,10 +24,11 @@ var className = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$.]{1,200}$`)
 var javaVersionPattern = regexp.MustCompile(`(?:java|openjdk) version "(?:1\.)?(\d+)(?:[.\-+"_]|$)`)
 
 type JarInfo struct {
-	EntrypointClass string `json:"entrypointClass"`
-	ClassFiles      int    `json:"classFiles"`
-	MaxClassMajor   int    `json:"maxClassMajor"`
-	MinimumJava     int    `json:"minimumJava"`
+	EntrypointClass   string `json:"entrypointClass"`
+	GravitModuleClass string `json:"gravitModuleClass,omitempty"`
+	ClassFiles        int    `json:"classFiles"`
+	MaxClassMajor     int    `json:"maxClassMajor"`
+	MinimumJava       int    `json:"minimumJava"`
 }
 
 type RuntimeInfo struct {
@@ -170,6 +171,24 @@ func Inspect(file string) (JarInfo, error) {
 	}
 	if !classes[strings.ReplaceAll(class, ".", "/")+".class"] {
 		return JarInfo{}, errors.New("declared extension class absent from JAR")
+	}
+	// The Gravit adapter is opt-in, with a fixed entrypoint and an explicit
+	// ported module. Never treat arbitrary Gravit JARs as compatible.
+	const gravitAdapter = "ru.neverlauncher.sdk.gravit.GravitCompatExtension"
+	portedModule := attrs["neverlauncher-gravit-module-class"]
+	if class == gravitAdapter {
+		if !className.MatchString(portedModule) || strings.Contains(portedModule, "..") || strings.HasPrefix(portedModule, ".") || strings.HasSuffix(portedModule, ".") || strings.HasPrefix(portedModule, "pro.gravit.launcher.") || strings.HasPrefix(portedModule, "ru.neverlauncher.sdk.") {
+			return JarInfo{}, errors.New("Gravit compatibility package requires valid NeverLauncher-Gravit-Module-Class")
+		}
+		if !classes[strings.ReplaceAll(portedModule, ".", "/")+".class"] {
+			return JarInfo{}, errors.New("ported Gravit module class absent from JAR")
+		}
+		if !classes["ru/neverlauncher/sdk/gravit/GravitCompatExtension.class"] {
+			return JarInfo{}, errors.New("Gravit compatibility runtime class absent from JAR")
+		}
+		result.GravitModuleClass = portedModule
+	} else if portedModule != "" {
+		return JarInfo{}, errors.New("Gravit module class requires the explicit compatibility adapter entrypoint")
 	}
 	if !classes["ru/neverlauncher/sdk/host/JavaExtensionHost.class"] {
 		return JarInfo{}, errors.New("Java Extension Host class absent from JAR")

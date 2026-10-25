@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "2.0",
+  "id": "org.example.gravit-port",
+  "name": "Gravit Port Compatibility Example",
+  "version": "0.1.0",
+  "publisher": "NeverLauncher Examples",
+  "description": "Signed and runnable Gravit-style Java module backed by real Go events, storage and CLI",
+  "api": "1.0",
+  "targets": [
+    {"kind":"backend","entrypoint":"backend/gravit-port.jar"},
+    {"kind":"cli","entrypoint":"backend/gravit-port.jar"}
+  ],
+  "permissions": ["events:subscribe","release:read","storage:read","storage:write","cli:contribute"],
+  "cli": {"namespace":"gravitport","commands":[
+    {"name":"status","description":"Report the latest published release received by the module"}
+  ]}
+}

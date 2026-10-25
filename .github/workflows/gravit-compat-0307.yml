@@ -1,0 +1,79 @@
+name: Gravit Compatibility Adapter 0.30.7 — source-port JVM E2E
+on:
+  push:
+    paths:
+      - 'sdk/java/core/**'
+      - 'sdk/java/gravit-compat/**'
+      - 'examples/extensions/gravit-compat/**'
+      - 'services/api/internal/extensionjava/**'
+      - '.github/workflows/gravit-compat-0307.yml'
+  pull_request:
+    paths:
+      - 'sdk/java/core/**'
+      - 'sdk/java/gravit-compat/**'
+      - 'examples/extensions/gravit-compat/**'
+      - 'services/api/internal/extensionjava/**'
+      - '.github/workflows/gravit-compat-0307.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  java-source-port:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+        java: ['17', '21']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Java Core regression and Gravit compatibility tests
+        shell: bash
+        run: |
+          sh sdk/java/core/build.sh test
+          sh sdk/java/gravit-compat/build.sh test
+      - name: Build ported module fat JAR
+        shell: bash
+        run: sh examples/extensions/gravit-compat/build.sh
+      - name: Real JVM RPC/events/CLI integration
+        shell: bash
+        run: python3 examples/extensions/gravit-compat/test-runner.py
+  go-preflight-and-signature:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Build real adapter JAR
+        run: sh examples/extensions/gravit-compat/build.sh
+      - name: Reject unsupported/missing Gravit entrypoint class and verify a real JAR
+        working-directory: services/api
+        env:
+          NEVERLAUNCHER_TEST_GRAVIT_PORT_JAR: ${{ github.workspace }}/examples/extensions/gravit-compat/build/package/backend/gravit-port.jar
+        run: go test -race -count=1 ./internal/extensionjava
+      - name: Build CLI and verify signed .nlext
+        shell: bash
+        run: |
+          set -eu
+          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+          openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/private.pem"
+          openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
+          "$RUNNER_TEMP/nl" extension pack examples/extensions/gravit-compat/build/package --output "$RUNNER_TEMP/gravit-port.nlext" --private-key "$RUNNER_TEMP/private.pem"
+          "$RUNNER_TEMP/nl" extension verify "$RUNNER_TEMP/gravit-port.nlext" --public-key "$RUNNER_TEMP/public.pem"
+          test -s "$RUNNER_TEMP/gravit-port.nlext"
+      - name: Version consistency
+        run: python3 scripts/version/manage.py check
