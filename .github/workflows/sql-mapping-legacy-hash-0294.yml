@@ -1,0 +1,73 @@
+name: SQL Mapping and Gravit Legacy Hash 0.29.4
+on:
+  push:
+    paths:
+      - 'services/api/internal/sqlconnector/**'
+      - 'services/api/go.*'
+      - '.github/workflows/sql-mapping-legacy-hash-0294.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/sqlconnector/**'
+      - 'services/api/go.*'
+      - '.github/workflows/sql-mapping-legacy-hash-0294.yml'
+permissions:
+  contents: read
+jobs:
+  live-sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: auth
+          POSTGRES_USER: auth
+          POSTGRES_PASSWORD: integration-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U auth -d auth" --health-interval 5s --health-timeout 5s --health-retries 20
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: auth
+          MYSQL_USER: auth
+          MYSQL_PASSWORD: integration-only
+          MYSQL_ROOT_PASSWORD: integration-root-only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent" --health-interval 5s --health-timeout 5s --health-retries 30
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: auth
+          MARIADB_USER: auth
+          MARIADB_PASSWORD: integration-only
+          MARIADB_ROOT_PASSWORD: integration-root-only
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized" --health-interval 5s --health-timeout 5s --health-retries 30
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Check formatting
+        run: test -z "$(gofmt -l internal/sqlconnector)"
+      - name: Legacy verifier unit tests including race detector
+        run: go test -race -count=1 -timeout=4m ./internal/sqlconnector -run 'TestGravit|TestNormalizeGravit|TestAuthenticateGravit|TestInspectMapping'
+      - name: PostgreSQL, MySQL and MariaDB real login, schema validation and fail-closed verification
+        env:
+          NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable
+          NEVERLAUNCHER_SQL_TEST_MYSQL_DSN: auth:integration-only@tcp(localhost:3306)/auth?tls=false
+          NEVERLAUNCHER_SQL_TEST_MARIADB_DSN: auth:integration-only@tcp(localhost:3307)/auth?tls=false
+          NEVERLAUNCHER_SQL_REQUIRE_ALL: '1'
+        run: go test -count=1 -timeout=5m ./internal/sqlconnector -run '^TestLiveSQLLegacyAuthentication0294$' -v
+      - name: Build Backend API
+        run: go build ./cmd/...

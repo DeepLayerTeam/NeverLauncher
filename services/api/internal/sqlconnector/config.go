@@ -27,9 +27,16 @@ type Columns struct {
 }
 
 type PasswordConfig struct {
-	Algorithm           string `json:"algorithm"`
-	AllowLegacySHA256   bool   `json:"allowLegacySha256,omitempty"`
-	PBKDF2MinIterations int    `json:"pbkdf2MinIterations,omitempty"`
+	Algorithm         string `json:"algorithm"`
+	AllowLegacySHA256 bool   `json:"allowLegacySha256,omitempty"`
+	// Legacy verifiers must be opted into explicitly. No automatic algorithm detection.
+	AllowLegacyHashes bool   `json:"allowLegacyHashes,omitempty"`
+	DigestAlgorithm   string `json:"digestAlgorithm,omitempty"`
+	DigestEncoding    string `json:"digestEncoding,omitempty"`
+	// Gravit doubleDigest: hash the lowercase hex representation of the first digest
+	// (true), or its binary bytes (false).
+	DoubleDigestHex     bool `json:"doubleDigestHex,omitempty"`
+	PBKDF2MinIterations int  `json:"pbkdf2MinIterations,omitempty"`
 }
 
 type ProvisioningConfig struct {
@@ -97,6 +104,8 @@ func Normalize(input Config) (RuntimeConfig, error) {
 	cfg.DSNEnv = strings.TrimSpace(cfg.DSNEnv)
 	cfg.Table = strings.TrimSpace(cfg.Table)
 	cfg.Password.Algorithm = strings.ToLower(strings.TrimSpace(cfg.Password.Algorithm))
+	cfg.Password.DigestAlgorithm = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(cfg.Password.DigestAlgorithm), "-", ""))
+	cfg.Password.DigestEncoding = strings.ToLower(strings.TrimSpace(cfg.Password.DigestEncoding))
 	cfg.Provisioning.Mode = strings.ToLower(strings.TrimSpace(cfg.Provisioning.Mode))
 	cfg.Provisioning.DefaultRole = strings.TrimSpace(cfg.Provisioning.DefaultRole)
 
@@ -146,6 +155,31 @@ func Normalize(input Config) (RuntimeConfig, error) {
 			return RuntimeConfig{}, fmt.Errorf("SQL connector %q: argon2id verification is unavailable in this build", cfg.ID)
 		}
 	case "bcrypt", "pbkdf2-sha256":
+	case "digest", "gravit-digest", "doubledigest", "double-digest", "gravit-double-digest", "phpass", "gravit-phpass":
+		if !cfg.Password.AllowLegacyHashes {
+			return RuntimeConfig{}, fmt.Errorf("SQL connector %q: legacy password verifier requires password.allowLegacyHashes=true", cfg.ID)
+		}
+		switch cfg.Password.Algorithm {
+		case "gravit-digest":
+			cfg.Password.Algorithm = "digest"
+		case "doubledigest", "gravit-double-digest":
+			cfg.Password.Algorithm = "double-digest"
+		case "gravit-phpass":
+			cfg.Password.Algorithm = "phpass"
+		}
+		if cfg.Password.Algorithm == "digest" || cfg.Password.Algorithm == "double-digest" {
+			switch cfg.Password.DigestAlgorithm {
+			case "md5", "sha1", "sha256", "sha512":
+			default:
+				return RuntimeConfig{}, fmt.Errorf("SQL connector %q: digestAlgorithm must be one of md5, sha1, sha256, sha512", cfg.ID)
+			}
+			if cfg.Password.DigestEncoding == "" {
+				cfg.Password.DigestEncoding = "hex"
+			}
+			if cfg.Password.DigestEncoding != "hex" && cfg.Password.DigestEncoding != "base64" {
+				return RuntimeConfig{}, fmt.Errorf("SQL connector %q: digestEncoding must be hex or base64", cfg.ID)
+			}
+		}
 	case "sha256", "legacy-sha256":
 		if !cfg.Password.AllowLegacySHA256 {
 			return RuntimeConfig{}, fmt.Errorf("SQL connector %q: legacy SHA-256 requires password.allowLegacySha256=true", cfg.ID)
@@ -153,6 +187,12 @@ func Normalize(input Config) (RuntimeConfig, error) {
 		cfg.Password.Algorithm = "legacy-sha256"
 	default:
 		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: unsupported password algorithm %q", cfg.ID, cfg.Password.Algorithm)
+	}
+	if cfg.Password.Algorithm == "digest" && cfg.Password.DoubleDigestHex {
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: doubleDigestHex applies only to double-digest", cfg.ID)
+	}
+	if cfg.Password.Algorithm != "digest" && cfg.Password.Algorithm != "double-digest" && (cfg.Password.DigestAlgorithm != "" || cfg.Password.DigestEncoding != "" || cfg.Password.DoubleDigestHex) {
+		return RuntimeConfig{}, fmt.Errorf("SQL connector %q: digest configuration is only valid for digest/double-digest", cfg.ID)
 	}
 	if cfg.Password.PBKDF2MinIterations <= 0 {
 		cfg.Password.PBKDF2MinIterations = 10000
@@ -217,6 +257,11 @@ func validateTableIdentifier(value string) error {
 		return fmt.Errorf("table %q must be table or schema.table", value)
 	}
 	for _, part := range parts {
+		// PostgreSQL silently truncates identifiers above 63 bytes. Reject
+		// before building any SQL instead of accidentally selecting another field.
+		if len(part) > 63 {
+			return fmt.Errorf("SQL identifier %q exceeds 63 bytes", part)
+		}
 		if !identifierPattern.MatchString(part) {
 			return fmt.Errorf("table identifier %q is invalid", value)
 		}
@@ -242,6 +287,9 @@ func validateColumns(columns Columns) error {
 	for _, item := range values {
 		if item.value == "" {
 			continue
+		}
+		if len(item.value) > 63 {
+			return fmt.Errorf("column %s identifier exceeds 63 bytes", item.name)
 		}
 		if !identifierPattern.MatchString(item.value) {
 			return fmt.Errorf("column %s=%q is invalid", item.name, item.value)

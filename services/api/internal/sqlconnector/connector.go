@@ -42,6 +42,12 @@ func New(ctx context.Context, input Config) (*Connector, error) {
 	if err != nil {
 		return nil, fmt.Errorf("SQL connector %q open database: %w", cfg.ID, err)
 	}
+	// Fail at activation when the live SQL schema doesn't match the declared
+	// mapping; do not leave a provider healthy until its first real login.
+	if _, err := InspectMapping(ctx, db, cfg); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("SQL connector %q mapping validation failed: %w", cfg.ID, err)
+	}
 	connector, err := newWithDB(ctx, cfg, db)
 	if err != nil {
 		_ = db.Close()

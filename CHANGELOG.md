@@ -1,3 +1,9 @@
+## 0.29.4 — SQL Mapping & Legacy Hash (2026-10-25)
+
+- Validate real PostgreSQL/MySQL/MariaDB SQL column mapping on provider startup through a read-only, zero-row projection; reject missing columns and binary password/UUID columns without exposing row data.
+- Implement explicit Gravit digest and doubleDigest (binary/HEX modes, MD5/SHA-1/SHA-256/SHA-512) and AdditionalHash PHPass ($P$/$H$) verification in the existing live SQL password authentication path, with legacy opt-in, strict encodings and bounded CPU cost. Unsupported hashes fail closed; external passwords are never modified.
+- Add PHP cross-checked PHPass vectors, digest/encoding negative cases, real SQL fixture login tests, optional live PostgreSQL/MySQL/MariaDB integration with a dedicated CI workflow, and operator docs. Independent CI/live certification remains pending in this offline environment. See `docs/releases/0.29.4-sql-mapping-legacy-hash.md`.
+
 ## 0.29.3 — Provider Routing & Account Linking (2026-10-25)
 
 - Configure explicit, immutable runtime password routing via validated JSON/file policy: exact email-domain selection, strict domain providers, optional explicit-provider requirement and a deterministic default. Auth errors never trigger another connector attempt.

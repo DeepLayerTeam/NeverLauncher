@@ -33,6 +33,16 @@ func verifyPassword(secret, encoded string, cfg PasswordConfig) (bool, error) {
 		return verifyBcryptSystem(secret, encoded), nil
 	case "pbkdf2-sha256":
 		return verifyPBKDF2SHA256(secret, encoded, cfg.PBKDF2MinIterations)
+	case "digest", "double-digest":
+		if !cfg.AllowLegacyHashes {
+			return false, errors.New("legacy digests are disabled")
+		}
+		return verifyGravitDigest(secret, encoded, cfg)
+	case "phpass":
+		if !cfg.AllowLegacyHashes {
+			return false, errors.New("legacy PHPass is disabled")
+		}
+		return verifyPHPass(secret, encoded)
 	case "legacy-sha256":
 		if !cfg.AllowLegacySHA256 {
 			return false, errors.New("legacy SHA-256 verification is disabled")
@@ -62,6 +72,18 @@ func consumePasswordWork(secret string, cfg PasswordConfig) {
 		}
 		salt := []byte("neverlauncher-dummy-salt")
 		encoded = "$pbkdf2-sha256$" + strconv.Itoa(iterations) + "$" + base64.RawStdEncoding.EncodeToString(salt) + "$" + base64.RawStdEncoding.EncodeToString(make([]byte, 32))
+	case "digest", "double-digest":
+		size := digestLength(cfg.DigestAlgorithm)
+		if size == 0 {
+			return
+		}
+		encoded = strings.Repeat("0", size*2)
+		if cfg.DigestEncoding == "base64" {
+			encoded = base64.StdEncoding.EncodeToString(make([]byte, size))
+		}
+	case "phpass":
+		// Valid fixed-cost dummy hash; never inspect or expose account existence.
+		encoded = "$P$B12345678QjY5zqJqT433Q3av7QGRM/"
 	case "legacy-sha256":
 		encoded = strings.Repeat("0", sha256.Size*2)
 	default:
