@@ -1,3 +1,10 @@
+## 0.28.10 — Game World Backup & Restore (2026-10-25)
+
+- Implemented Host CLI `server-bridge host world-backup create|list|verify|restore` with separate private storage, real file-level SHA-256 snapshot verification and atomic isolated restore. The game world, UUID playerdata, plugin data and selected configurations are copied as files, not as Backend/storage backups.
+- Use confirmed Host Supervisor console `stop` and clean exit as the only supported running-server consistency policy; refuse crashed, unverified and force-killed process states. No unsafe unacknowledged online snapshot and no implicit post-backup restart.
+- Added strict path/symlink validation, an OS-identity exclusive operation lock, manifest verification, no-overwrite restoration, Go negative tests, and a real CLI subprocess integration fixture in CI.
+- Explicit limits: no Minecraft runtime test with actual player login/inventory restore, no Admin/RemoteControl world-backup API and no automatic offsite retention in 0.28.10. See `docs/releases/0.28.10-game-world-backup-restore.md`.
+
 ## 0.28.9 — Backend Operations (2026-10-25)
 
 - Added instance-scoped, globally authorized Backend Operations workspace with verified version/commit/uptime, storage/repository health, runtime identity and current operational-config revision. Existing validate/apply/restore and build/sign/extension/session lifecycle flows are reused, not duplicated.

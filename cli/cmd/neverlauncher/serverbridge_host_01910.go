@@ -123,13 +123,15 @@ func (w *hostStreamWriter01910) Write(p []byte) (int, error) {
 
 func handleServerBridgeHost01910(args []string) error {
 	if len(args) == 0 {
-		return errors.New("использование: nl server-bridge host configure|start|run|stop|restart|status|logs|remote [параметры]")
+		return errors.New("использование: nl server-bridge host configure|start|run|stop|restart|status|logs|remote|world-backup [параметры]")
 	}
 	switch args[0] {
 	case "configure":
 		return configureServerBridgeHost01910(args[1:])
 	case "remote":
 		return remoteHandle0284(args[1:])
+	case "world-backup":
+		return worldBackupHandle02810(args[1:])
 	case "start", "recover":
 		return startServerBridgeHost01910(args[1:])
 	case "run":
