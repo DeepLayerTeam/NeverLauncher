@@ -38,6 +38,9 @@ type DesktopSettings = {
   serverHost: string;
   serverPort: number;
   offlineEnabled: boolean;
+  discordPresenceEnabled?: boolean;
+  discordApplicationId?: string;
+  discordActionUrl?: string;
   componentPreset?: string;
   configPath?: string;
 };
@@ -271,6 +274,9 @@ const defaultSettings: DesktopSettings = {
   serverHost: '',
   serverPort: 25565,
   offlineEnabled: false,
+  discordPresenceEnabled: false,
+  discordApplicationId: '',
+  discordActionUrl: '',
 };
 
 function loadSettings(): DesktopSettings {
@@ -444,6 +450,33 @@ function App() {
         log('Конфигурация Tauri недоступна: localStorage fallback разрешён только для web-preview; production-сборка должна использовать конфигурацию Tauri и защищённое хранилище.');
       });
   }, []);
+
+  // Rich Presence is opt-in and never part of Minecraft launch readiness.
+  // A timer re-establishes IPC after Discord restarts without coupling it to game launch.
+  useEffect(() => {
+    if (!settings.discordPresenceEnabled || !settings.discordApplicationId?.trim()) {
+      void callTauri<void>('discord_presence_clear').catch(() => undefined);
+      return;
+    }
+    const phase = stage === 'running' ? 'В игре' :
+      stage === 'launching' ? 'Запуск Minecraft' :
+      screen === 'auth' || !authSession ? 'Вход в NeverLauncher' :
+      selectedProfile ? 'Выбор / подготовка профиля' : 'Выбор проекта';
+    const details = stage === 'running' ? `Minecraft · ${selectedProfile || 'Клиент'}` :
+      'NeverLauncher';
+    const update = () => void callTauri<void>('discord_presence_set', {
+      request: {
+        applicationId: settings.discordApplicationId?.trim(),
+        state: phase,
+        details,
+        actionUrl: settings.discordActionUrl?.trim() || null,
+      },
+    }).catch(() => undefined); // Discord is optional: failure must not block gameplay.
+    update();
+    const timer = window.setInterval(update, 30000);
+    return () => window.clearInterval(timer);
+  }, [settings.discordPresenceEnabled, settings.discordApplicationId, settings.discordActionUrl,
+      screen, stage, selectedProfile, authSession?.sessionId]);
 
   useEffect(() => {
     if (!settings.backendUrl.trim()) return;
@@ -1895,6 +1928,11 @@ function SettingsPanel({ settings, patchSettings, validateSettings, settingsChec
       <label>Сервер профиля<select value={settings.serverId || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => patchSettings('serverId', e.target.value)}><option value="">Без выбранного сервера</option>{profileServers.map((server: ScopedServer) => <option value={server.id} key={server.id}>{server.name} ({server.kind})</option>)}</select></label>
       {settings.autoEnter && <><label>Публичный игровой адрес<input value={settings.serverHost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverHost', e.target.value)} placeholder="mc.example.org" /></label><label>Порт<input type="number" min={1} max={65535} value={settings.serverPort} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverPort', Number(e.target.value))} /></label></>}
       <label className="checkSetting"><input type="checkbox" checked={minecraftIdentity === 'offline'} disabled={!manifest?.runtime.launch?.offlineMode} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {const offline=e.target.checked;setMinecraftIdentity(offline ? 'offline' : 'local');patchSettings('offlineEnabled',offline);if(offline)patchSettings('serverId','');}} /> Offline (только разрешённый подписанным Manifest v2)</label>
+      <label className="checkSetting"><input type="checkbox" checked={Boolean(settings.discordPresenceEnabled)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordPresenceEnabled', e.target.checked)} /> Показывать активность в Discord (опционально)</label>
+      {settings.discordPresenceEnabled && <>
+        <label>Discord Application ID<input value={settings.discordApplicationId || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordApplicationId', e.target.value)} placeholder="123456789012345678" /></label>
+        <label>Ссылка кнопки активности (HTTPS, необязательно)<input value={settings.discordActionUrl || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordActionUrl', e.target.value)} placeholder="https://example.org" /></label>
+      </>}
       <label>Закреплённый ключ Ed25519<input value={settings.pinnedPublicKey} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('pinnedPublicKey', e.target.value)} /></label>
     </div>
     <div className="toolbar inline"><button onClick={validateSettings}>Проверить настройки</button><button onClick={checkJavaRuntime}>Проверить Java</button><button onClick={openGameDirectory}>Открыть каталог клиента</button><button onClick={() => loadProfileServers().catch(console.error)}>Обновить серверы</button><button onClick={() => cacheSignedManifest().catch(console.error)}>Сохранить подписанный кеш</button><button onClick={loadCachedOfflineManifest}>Загрузить offline-кеш</button></div>

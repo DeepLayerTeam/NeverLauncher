@@ -1,3 +1,10 @@
+## 0.30.8 — Discord Rich Presence & LAN Discovery (2026-10-25)
+
+- Implement Discord desktop Rich Presence through authenticated local IPC handshake, framed SET_ACTIVITY with nonce-matched acknowledgments, bounded timeouts, reconnection on state changes and optional HTTPS activity buttons. User opt-in, app ID, action URL and activity states are persisted in the native desktop configuration. Discord failures never gate Minecraft launch.
+- Implement DNS-SD/mDNS `_neverlauncher._tcp.local.` over real IPv4 multicast with PTR/SRV/TXT/A announcements, multicast discovery, response parsing, source/interface constraints and TTL=0 goodbye.
+- Add CLI `nl lan publish|discover|verify` and `nl discord presence` with stdin-driven activity changes. Publishing requires a live TLS backend on the advertised local interface and a matching SHA-256 certificate fingerprint. Discovery TXT fingerprints stay UNTRUSTED; explicit verification requires a separately supplied pin (no trust-anchor mutation).
+- Add Go protocol tests (Discord IPC Unix-socket handshake and SET_ACTIVITY ACK, DNS parser corruption and round-trip, TLS pin positives/negatives, CLI fail-closed cases), real multicast+TLS smoke testing, and Windows/macOS/Linux CI; desktop Rust/React builds require CI as they could not be compiled locally.
+
 ## 0.30.6 — Trusted JVM Agent (2026-10-25)
 
 - Ship a Java 8-bytecode compatible, executable Minecraft JVM premain agent with signed-plugin classloading, `Instrumentation`/`ClassFileTransformer` hooks and before/after entrypoint callbacks. The plugin runs with **full process privileges**, not a sandbox.

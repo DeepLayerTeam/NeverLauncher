@@ -1,0 +1,71 @@
+name: Discord Rich Presence and LAN discovery 0.30.8
+on:
+  push:
+    paths:
+      - 'cli/internal/discordrpc/**'
+      - 'cli/internal/lanmdns/**'
+      - 'cli/cmd/neverlauncher/lan_discord_0308*'
+      - 'cli/cmd/neverlauncher/main.go'
+      - 'apps/desktop/src-tauri/src/discord_presence_0308.rs'
+      - 'apps/desktop/src-tauri/src/main.rs'
+      - 'apps/desktop/src/main.tsx'
+      - '.github/workflows/discord-lan-0308.yml'
+  pull_request:
+    paths:
+      - 'cli/internal/discordrpc/**'
+      - 'cli/internal/lanmdns/**'
+      - 'cli/cmd/neverlauncher/lan_discord_0308*'
+      - 'cli/cmd/neverlauncher/main.go'
+      - 'apps/desktop/src-tauri/src/discord_presence_0308.rs'
+      - 'apps/desktop/src-tauri/src/main.rs'
+      - 'apps/desktop/src/main.tsx'
+      - '.github/workflows/discord-lan-0308.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cli-integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - name: Test Discord IPC and DNS-SD/TLS pinning
+        working-directory: cli
+        run: go test -race -count=1 -timeout 3m ./internal/discordrpc ./internal/lanmdns
+      - name: Test and build CLI
+        working-directory: cli
+        run: |
+          go test -run 'TestLAN0308|TestDiscord0308' ./cmd/neverlauncher
+          go build ./cmd/neverlauncher
+      - name: Verify release metadata
+        run: python3 scripts/version/manage.py check
+  desktop-ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Compile TypeScript application
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npm run build
+      - name: Native Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile and unit-test desktop Discord IPC bridge
+        working-directory: apps/desktop/src-tauri
+        run: cargo test discord_presence_0308
