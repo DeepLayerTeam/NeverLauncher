@@ -17,26 +17,39 @@ public final class ExtensionRunner {
         throw new IllegalArgumentException("usage: ExtensionRunner <manifest.json> <extension-class> OR --cli <manifest.json> <extension-class> <command> [args...]");
     }
     public static void run(String manifestPath,String className,Map<String,String> env) throws Exception {
-        launch(manifestPath,className,env,null);
+        launch(manifestPath,className,env,null,false,null);
+    }
+    public static void runManaged(String manifestPath,String className,Map<String,String> env)throws Exception {
+        launch(manifestPath,className,env,null,true,null);
+    }
+    public static Object runManagedCli(String manifestPath,String className,Map<String,String> env,String[] argv)throws Exception {
+        return launch(manifestPath,className,env,argv,true,null);
     }
     public static Object runCli(String manifestPath,String className,Map<String,String> env,String[] argv)throws Exception {
         if(argv.length==0||argv.length>128)throw new IllegalArgumentException("CLI command required");
-        return launch(manifestPath,className,env,argv);
+        return launch(manifestPath,className,env,argv,false,null);
     }
-    private static Object launch(String manifestPath,String className,Map<String,String> env,String[] argv)throws Exception {
-        ExtensionManifest manifest=ExtensionManifest.load(Path.of(manifestPath));
+    public static void runManagedFromHost(String className,Map<String,String> env)throws Exception {
+        launch(null,className,env,null,true,HostSession.fetchManifestFromEnvironment(env));
+    }
+    public static Object runManagedCliFromHost(String className,Map<String,String> env,String[] argv)throws Exception {
+        return launch(null,className,env,argv,true,HostSession.fetchManifestFromEnvironment(env));
+    }
+    private static Object launch(String manifestPath,String className,Map<String,String> env,String[] argv,boolean managed,String suppliedManifest)throws Exception {
+        String source=suppliedManifest==null?Files.readString(Path.of(manifestPath)):suppliedManifest;
+        ExtensionManifest manifest=ExtensionManifest.parse(source);
         String kind=argv==null?"backend":"cli";
         if(manifest.targets().stream().noneMatch(t->t.kind().equals(kind)))throw new IllegalArgumentException("Java extension requires "+kind+" target");
         if(!kind.equals(env.getOrDefault("NEVERLAUNCHER_EXTENSION_TARGET","backend")))throw new IllegalArgumentException("host target mismatch");
         Class<?> type=Class.forName(className);
         if(!Extension.class.isAssignableFrom(type))throw new IllegalArgumentException("class does not implement Extension: "+className);
         Extension extension=(Extension)type.getDeclaredConstructor().newInstance();
-        Set<String> declared=declaredCommands(manifestPath);
+        Set<String> declared=declaredCommands(source);
         if(argv!=null&&!declared.contains(argv[0]))throw new SecurityException("undeclared CLI command");
         try(HostSession host=HostSession.fromEnvironment(env,manifest);
             RuntimeServices services=new RuntimeServices(host,declared);
-            RuntimeCallbackServer callback=new RuntimeCallbackServer(required(env,"NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN"),services);
-            ExtensionLifecycle lifecycle=new ExtensionLifecycle(extension,manifest,services)) {
+            ExtensionLifecycle lifecycle=new ExtensionLifecycle(extension,manifest,services);
+            RuntimeCallbackServer callback=new RuntimeCallbackServer(required(env,"NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN"),services,()->lifecycle.state().name())) {
             CountDownLatch stopping=new CountDownLatch(1);
             AtomicBoolean shuttingDown=new AtomicBoolean();
             Thread shutdown=new Thread(()->{
@@ -47,6 +60,7 @@ public final class ExtensionRunner {
             try {
                 host.connect(callback.url());
                 lifecycle.start(Duration.ofSeconds(8));
+                if(managed&&argv==null)host.ready();
                 if(argv!=null){
                     Object response=services.commands().invoke(argv[0],Map.of("args",Arrays.asList(Arrays.copyOfRange(argv,1,argv.length))));
                     System.out.println(Json.encode(response));
@@ -63,8 +77,8 @@ public final class ExtensionRunner {
         }
     }
     private static String required(Map<String,String> env,String key){String v=env.get(key);if(v==null||v.isBlank())throw new IllegalArgumentException("missing "+key);return v;}
-    private static Set<String> declaredCommands(String path)throws IOException {
-        Map<String,Object> raw=Json.object(Json.parse(Files.readString(Path.of(path))));
+    private static Set<String> declaredCommands(String source) {
+        Map<String,Object> raw=Json.object(Json.parse(source));
         Object cli=raw.get("cli");if(cli==null)return Set.of();
         Map<String,Object> obj=Json.object(cli);Object commands=obj.get("commands");
         if(!(commands instanceof List<?> list))return Set.of();

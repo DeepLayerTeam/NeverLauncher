@@ -59,6 +59,7 @@ type Config struct {
 	CrashLimit           int
 	CrashWindow          time.Duration
 	RestartBackoff       time.Duration
+	JavaExecutable       string // trusted absolute java binary; otherwise resolved from PATH
 }
 
 func (c Config) normalized() Config {
@@ -174,6 +175,8 @@ type Status struct {
 	FilesystemSandbox string     `json:"filesystemSandbox"`
 	Permissions       []string   `json:"permissions,omitempty"`
 	Entrypoint        string     `json:"entrypoint,omitempty"`
+	Runtime           string     `json:"runtime"`
+	RPCFailures       int        `json:"rpcFailures,omitempty"`
 }
 
 type ringLog struct {
@@ -230,6 +233,12 @@ type processState struct {
 	helloOnce                                                 sync.Once
 	doneCh                                                    chan struct{}
 	logs                                                      ringLog
+	javaHost                                                  bool
+	readyCh                                                   chan struct{}
+	readyOnce                                                 sync.Once
+	rpcBusy                                                   bool
+	rpcCheckAt                                                time.Time
+	rpcFailures                                               int
 }
 
 type Supervisor struct {
@@ -300,6 +309,8 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/hello", s.handleHello)
 	mux.HandleFunc("POST /v1/heartbeat", s.handleHeartbeat)
+	mux.HandleFunc("POST /v1/ready", s.handleJavaReady0304)
+	mux.HandleFunc("GET /v1/manifest", s.handleJavaManifest0304)
 	mux.HandleFunc("POST /v1/log", s.handleLog)
 	mux.HandleFunc("POST /v1/capabilities/{capability}", s.handleCapability)
 	mux.HandleFunc("GET /v1/events/subscriptions", s.handleEventSubscriptions)
@@ -372,6 +383,17 @@ func safeEntrypoint(root, rel string) (string, error) {
 	if fullAbs == rootAbs || !strings.HasPrefix(fullAbs, rootAbs+string(os.PathSeparator)) {
 		return "", errors.New("backend extension entrypoint escapes payload")
 	}
+	// The package installer rejects symlinks. Enforce the same rule again at
+	// execution time, including every parent below the trusted payload root.
+	for parent := filepath.Dir(fullAbs); parent != rootAbs; parent = filepath.Dir(parent) {
+		info, err := os.Lstat(parent)
+		if err != nil {
+			return "", err
+		}
+		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			return "", errors.New("extension entrypoint parent is not a regular directory")
+		}
+	}
 	info, err := os.Lstat(fullAbs)
 	if err != nil {
 		return "", err
@@ -379,8 +401,13 @@ func safeEntrypoint(root, rel string) (string, error) {
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
 		return "", errors.New("backend extension entrypoint must be a regular non-symlink file")
 	}
-	if runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0 {
+	if runtime.GOOS != "windows" && !sameHostJar0304(fullAbs) && info.Mode().Perm()&0o111 == 0 {
 		return "", errors.New("backend extension entrypoint is not executable")
+	}
+	if sameHostJar0304(fullAbs) {
+		if err := validateJavaJar0304(fullAbs); err != nil {
+			return "", err
+		}
 	}
 	return fullAbs, nil
 }
@@ -470,7 +497,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	for _, p := range effective {
 		permissions[p] = struct{}{}
 	}
-	st := &processState{key: key, install: install, manifest: manifestVersion.Manifest, permissions: permissions, token: token, callbackToken: callbackToken, instanceID: instance, entrypoint: target.Entrypoint, state: "starting", helloCh: make(chan struct{}), doneCh: make(chan struct{}), logs: ringLog{maxBytes: s.cfg.MaxLogBytes, maxEntries: s.cfg.MaxLogEntries}}
+	st := &processState{key: key, install: install, manifest: manifestVersion.Manifest, permissions: permissions, token: token, callbackToken: callbackToken, instanceID: instance, entrypoint: target.Entrypoint, state: "starting", helloCh: make(chan struct{}), readyCh: make(chan struct{}), javaHost: sameHostJar0304(entrypoint), doneCh: make(chan struct{}), logs: ringLog{maxBytes: s.cfg.MaxLogBytes, maxEntries: s.cfg.MaxLogEntries}}
 	s.mu.Lock()
 	if existing := s.processes[k]; existing != nil {
 		existing.mu.Lock()
@@ -490,11 +517,20 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 		s.removeProcessToken(st)
 		return errors.New("extension host protocol server is not started")
 	}
-	cmd := exec.Command(entrypoint)
+	var cmd *exec.Cmd
+	if st.javaHost {
+		cmd, err = s.javaCommand0304(entrypoint, nil)
+		if err != nil {
+			s.removeProcessToken(st)
+			return err
+		}
+	} else {
+		cmd = exec.Command(entrypoint)
+	}
 	cmd.Dir = payloadRoot
 	cmd.Env = sanitizedEnvironment(map[string]string{
 		"NEVERLAUNCHER_EXTENSION_HOST_URL": baseURL, "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": token, "NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "NEVERLAUNCHER_EXTENSION_API_VERSION": extensioncontract.ExtensionAPIVersion, "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": instance,
-		"NEVERLAUNCHER_EXTENSION_ID": install.ExtensionID, "NEVERLAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "NEVERLAUNCHER_EXTENSION_SCOPE": install.Scope, "NEVERLAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID,
+		"NEVERLAUNCHER_EXTENSION_ID": install.ExtensionID, "NEVERLAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "NEVERLAUNCHER_EXTENSION_SCOPE": install.Scope, "NEVERLAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID, "NEVERLAUNCHER_EXTENSION_TARGET": "backend",
 	})
 	configureProcess(cmd)
 	stdout, err := cmd.StdoutPipe()
@@ -524,7 +560,12 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	timer := time.NewTimer(s.cfg.StartupTimeout)
 	defer timer.Stop()
 	select {
-	case <-st.helloCh:
+	case <-func() <-chan struct{} {
+		if st.javaHost {
+			return st.readyCh
+		}
+		return st.helloCh
+	}():
 		if err := s.reconcileManifestSubscriptions0206(ctx, st); err != nil {
 			s.failProcess(st, "event subscription reconcile failed: "+err.Error(), true)
 			return err
@@ -865,6 +906,11 @@ func (s *Supervisor) statusOf(st *processState) Status {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	status := Status{ExtensionID: st.key.ExtensionID, Scope: st.key.Scope, ScopeID: st.key.ScopeID, Version: st.install.CurrentVersion, Generation: st.install.Generation, InstanceID: st.instanceID, State: st.state, Restarts: st.restarts, LastError: st.lastError, MemoryBytes: st.memoryBytes, ProcessCount: st.processCount, ResourceIsolation: resourceIsolationMode(), ExecutionTrust: "trusted-process", ProcessIsolation: resourceIsolationMode(), OSSandbox: "none", NetworkSandbox: "none", FilesystemSandbox: "none", Entrypoint: st.entrypoint}
+	status.Runtime = "native"
+	if st.javaHost {
+		status.Runtime = "java-jvm"
+		status.RPCFailures = st.rpcFailures
+	}
 	if st.cmd != nil && st.cmd.Process != nil {
 		status.PID = st.cmd.Process.Pid
 	}
@@ -929,6 +975,26 @@ func (s *Supervisor) monitorOnce(now time.Time) {
 		if !hello.IsZero() && now.Sub(hb) > s.cfg.HeartbeatTimeout {
 			s.failProcess(st, "heartbeat timeout", false)
 			continue
+		}
+		if state == "running" {
+			st.mu.Lock()
+			every := s.cfg.HeartbeatTimeout / 3
+			if every < 2*time.Second {
+				every = 2 * time.Second
+			}
+			if every > 10*time.Second {
+				every = 10 * time.Second
+			}
+			probe := st.javaHost && !st.rpcBusy && (st.rpcCheckAt.IsZero() || now.Sub(st.rpcCheckAt) >= every)
+			if probe {
+				st.rpcBusy = true
+				st.rpcCheckAt = now
+			}
+			st.mu.Unlock()
+			if probe {
+				s.wg.Add(1)
+				go func() { defer s.wg.Done(); s.probeJava0304(st) }()
+			}
 		}
 		if pid > 0 {
 			rss, count, err := processTreeUsage(pid)
@@ -1045,18 +1111,66 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 	st.helloAt = now
 	st.heartbeatAt = now
 	st.callbackURL = callbackURL
-	st.state = "running"
+	if st.javaHost {
+		st.state = "starting"
+	} else {
+		st.state = "running"
+	}
 	st.helloOnce.Do(func() { close(st.helloCh) })
 	st.mu.Unlock()
 	jsonResponse(w, 200, map[string]any{"protocolVersion": ProtocolVersion, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "instanceId": st.instanceID, "heartbeatTimeoutSeconds": int(s.cfg.HeartbeatTimeout.Seconds()), "capabilities": s.allowedCapabilities(st), "events": eventbus.KnownEventTypes(), "eventProtocolVersion": eventbus.ProtocolVersion})
 }
+
+// The JVM bootstraps from the authoritative, installed package manifest.
+// We never trust a second manifest shipped alongside the JAR.
+func (s *Supervisor) handleJavaManifest0304(w http.ResponseWriter, r *http.Request) {
+	st, ok := s.authenticate(w, r)
+	if !ok {
+		return
+	}
+	st.mu.Lock()
+	valid := st.javaHost && (st.state == "starting" || st.state == "running")
+	manifest := st.manifest
+	st.mu.Unlock()
+	if !valid {
+		http.Error(w, "Java manifest is unavailable", http.StatusConflict)
+		return
+	}
+	jsonResponse(w, 200, manifest)
+}
+
+func (s *Supervisor) handleJavaReady0304(w http.ResponseWriter, r *http.Request) {
+	st, ok := s.authenticate(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		ProtocolVersion string `json:"protocolVersion"`
+		InstanceID      string `json:"instanceId"`
+	}
+	if err := decodeJSONBody(w, r, s.cfg.MaxProtocolBody, &req); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	st.mu.Lock()
+	if !st.javaHost || req.ProtocolVersion != javaRPCVersion0304 || req.InstanceID != st.instanceID || st.helloAt.IsZero() || (st.state != "starting" && st.state != "running") {
+		st.mu.Unlock()
+		http.Error(w, "Java readiness mismatch", http.StatusConflict)
+		return
+	}
+	st.state = "running"
+	st.readyOnce.Do(func() { close(st.readyCh) })
+	st.mu.Unlock()
+	jsonResponse(w, 200, map[string]any{"ready": true})
+}
+
 func (s *Supervisor) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 	st, ok := s.authenticate(w, r)
 	if !ok {
 		return
 	}
 	st.mu.Lock()
-	if st.state != "running" {
+	if st.state != "running" && !(st.javaHost && st.state == "starting") {
 		st.mu.Unlock()
 		http.Error(w, "host is not running", 409)
 		return

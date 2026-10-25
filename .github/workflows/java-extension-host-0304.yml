@@ -1,0 +1,105 @@
+name: Java Extension Host 0.30.4 — production JVM subprocess, RPC, supervisor and signing
+on:
+  push:
+    paths:
+      - 'sdk/java/core/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'examples/extensions/java-host/**'
+      - 'examples/extensions/java-runtime/**'
+      - 'examples/extensions/java-lifecycle/**'
+      - '.github/workflows/java-extension-host-0304.yml'
+  pull_request:
+    paths:
+      - 'sdk/java/core/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'examples/extensions/java-host/**'
+      - 'examples/extensions/java-runtime/**'
+      - 'examples/extensions/java-lifecycle/**'
+      - '.github/workflows/java-extension-host-0304.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  java-host-cross-platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+        java: ['17','21']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile SDK with --release 17 and run actual API tests
+        shell: bash
+        run: sh sdk/java/core/build.sh test
+      - name: Build standalone executable Java host JAR
+        shell: bash
+        run: sh examples/extensions/java-host/build.sh
+      - name: Real JVM host/CLI, authenticated RPC and deadline integration
+        shell: bash
+        run: python3 examples/extensions/java-host/test-runner.py
+      - name: Validate packed host classes
+        shell: bash
+        run: |
+          jar tf examples/extensions/java-host/build/package/backend/java-host.jar | grep -q 'ru/neverlauncher/sdk/host/JavaExtensionHost.class'
+          jar tf examples/extensions/java-host/build/package/backend/java-host.jar | grep -q 'ru/example/neverlauncher/HostExample.class'
+  go-jvm-supervisor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Build Java executable test package
+        run: sh examples/extensions/java-host/build.sh
+      - name: Real Go supervisor spawning Java (ready, RPC, CLI and hung callback kill)
+        working-directory: services/api
+        env:
+          NEVERLAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
+        run: go test -race -count=1 -timeout 3m -run 'TestJava.*0304' ./internal/extensionhost
+      - name: Regression of existing Go extension host
+        working-directory: services/api
+        run: go test -count=1 ./internal/extensionhost
+      - name: Version validation
+        run: python3 scripts/version/manage.py check
+  sign-and-verify-java-extension:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - name: Build a launchable signed .nlext and verify Ed25519
+        run: |
+          set -eu
+          sh examples/extensions/java-host/build.sh
+          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+          openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/private.pem"
+          openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
+          "$RUNNER_TEMP/nl" extension pack examples/extensions/java-host/build/package --output "$RUNNER_TEMP/java-host.nlext" --private-key "$RUNNER_TEMP/private.pem"
+          "$RUNNER_TEMP/nl" extension verify "$RUNNER_TEMP/java-host.nlext" --public-key "$RUNNER_TEMP/public.pem"
+          test -s "$RUNNER_TEMP/java-host.nlext"
+      - name: Legacy subprocess examples regression
+        run: |
+          sh examples/extensions/java-runtime/build.sh
+          python3 examples/extensions/java-runtime/test-runner.py
+          sh examples/extensions/java-lifecycle/build.sh
+          python3 examples/extensions/java-lifecycle/test-runner.py

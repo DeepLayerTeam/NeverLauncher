@@ -42,7 +42,7 @@ jobs:
           javac --release 17 -cp sdk/java/core/build/classes -d "$RUNNER_TEMP/runtime-example" examples/extensions/java-runtime/src/ru/example/neverlauncher/RuntimeExample.java
       - name: Verify actual jar artifact
         shell: bash
-        run: jar tf sdk/java/core/build/neverlauncher-java-sdk-core-0.30.3.jar | grep -q 'ru/neverlauncher/sdk/core/RuntimeCallbackServer.class'
+        run: jar tf sdk/java/core/build/neverlauncher-java-sdk-core-0.30.4.jar | grep -q 'ru/neverlauncher/sdk/core/RuntimeCallbackServer.class'
   java-two-process-e2e:
     runs-on: ubuntu-24.04
     timeout-minutes: 15

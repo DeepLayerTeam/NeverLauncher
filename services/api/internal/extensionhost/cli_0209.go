@@ -144,7 +144,7 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	for _, p := range effective {
 		permissions[p] = struct{}{}
 	}
-	st := &processState{key: Key{install.ExtensionID, install.Scope, install.ScopeID}.normalized(), install: install, manifest: ver.Manifest, permissions: permissions, token: token, callbackToken: callbackToken, instanceID: instance, entrypoint: target.Entrypoint, state: "starting", helloCh: make(chan struct{}), doneCh: make(chan struct{}), logs: ringLog{maxBytes: s.cfg.MaxLogBytes, maxEntries: s.cfg.MaxLogEntries}}
+	st := &processState{key: Key{install.ExtensionID, install.Scope, install.ScopeID}.normalized(), install: install, manifest: ver.Manifest, permissions: permissions, token: token, callbackToken: callbackToken, instanceID: instance, entrypoint: target.Entrypoint, state: "starting", javaHost: sameHostJar0304(entrypoint), helloCh: make(chan struct{}), readyCh: make(chan struct{}), doneCh: make(chan struct{}), logs: ringLog{maxBytes: s.cfg.MaxLogBytes, maxEntries: s.cfg.MaxLogEntries}}
 	s.mu.RLock()
 	baseURL := s.baseURL
 	s.mu.RUnlock()
@@ -155,7 +155,15 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		return CLIResult0209{}, err
 	}
 	defer s.removeProcessToken(st)
-	cmd := exec.Command(entrypoint, argv...)
+	var cmd *exec.Cmd
+	if sameHostJar0304(entrypoint) {
+		cmd, err = s.javaCommand0304(entrypoint, argv)
+		if err != nil {
+			return CLIResult0209{}, err
+		}
+	} else {
+		cmd = exec.Command(entrypoint, argv...)
+	}
 	cmd.Dir = payloadRoot
 	cmd.Env = sanitizedEnvironment(map[string]string{
 		"NEVERLAUNCHER_EXTENSION_HOST_URL": baseURL, "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": token, "NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "NEVERLAUNCHER_EXTENSION_API_VERSION": extensioncontract.ExtensionAPIVersion, "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": instance,

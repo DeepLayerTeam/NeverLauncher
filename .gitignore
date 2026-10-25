@@ -101,3 +101,9 @@ coverage*.out
 *.bak
 # Desktop component selection unit-test output
 apps/desktop/build-tests/
+
+# Java SDK/host compiled artifacts
+/sdk/java/core/build/
+/examples/extensions/java-lifecycle/build/
+/examples/extensions/java-runtime/build/
+/examples/extensions/java-host/build/

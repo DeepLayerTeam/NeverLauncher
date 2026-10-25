@@ -1,4 +1,4 @@
-# NeverLauncher Java SDK Core / Runtime 0.30.3
+# NeverLauncher Java SDK Core / Runtime 0.30.4
 
 A **working Java 17+** SDK for the existing NeverExtensions API `1.0` / Manifest `2.0` / local Go Extension Host Protocol `1.0`. The SDK does not introduce another manifest, server API or registry. No Maven dependency download is needed to build its jar.
 
@@ -6,7 +6,7 @@ A **working Java 17+** SDK for the existing NeverExtensions API `1.0` / Manifest
 
 ```bash
 sh sdk/java/core/build.sh test
-# Output: sdk/java/core/build/neverlauncher-java-sdk-core-0.30.3.jar
+# Output: sdk/java/core/build/neverlauncher-java-sdk-core-0.30.4.jar
 sh examples/extensions/java-lifecycle/build.sh
 python3 examples/extensions/java-lifecycle/test-runner.py  # Linux/macOS, requires Java on PATH
 ```
@@ -17,7 +17,7 @@ The core jar can be included in an extension package as `backend/lib/neverlaunch
 
 Implement `ru.neverlauncher.sdk.core.Extension` with `start(ExtensionContext)` and `stop(ExtensionContext)` methods. The provided `ExtensionRunner` loads the implementation class, validates its shipped manifest and its host identity, performs a real authenticated `POST /v1/hello`, maintains `POST /v1/heartbeat` and executes lifecycle methods on managed executor threads. Exit when the host becomes unreachable or on process shutdown.
 
-A Linux/macOS backend target is an executable launcher script (see `examples/extensions/java-lifecycle/backend/bin/java-lifecycle`). The existing Go supervisor launches it with the active package payload directory as working directory, injecting the `NEVERLAUNCHER_EXTENSION_*` environment variables. The extension process **must not be launched as a general network-facing service**; the SDK accepts only the loopback host origin. `ExtensionRunner` explicitly rejects manifest hooks at this stage: event delivery/subscriptions belong to 0.30.3.
+A Linux/macOS backend target is an executable launcher script (see `examples/extensions/java-lifecycle/backend/bin/java-lifecycle`). The existing Go supervisor launches it with the active package payload directory as working directory, injecting the `NEVERLAUNCHER_EXTENSION_*` environment variables. The extension process **must not be launched as a general network-facing service**; the SDK accepts only the loopback host origin. `ExtensionRunner` supports typed subscriptions and callback dispatch. For first-class JAR launch, use the 0.30.4 Java Extension Host described below.
 
 ## Packaging with existing NeverExtensions CLI
 
@@ -57,5 +57,31 @@ python3 examples/extensions/java-runtime/test-runner.py
 # Prepare a signable package with existing nl extension pack/sign/verify commands.
 ```
 
-`Java SDK Runtime` operates on the **existing** NeverExtensions host process, permissions, signing and local event protocol. Go-host state is not OS-isolated from untrusted programs running under the same filesystem user; deployments requiring hostile-code isolation must use an OS sandbox/container/user boundary and access control for `data/extensions`. JVM is not a sandbox. Native Windows launchers and the separate Java Extension Host are planned for later milestones.
+`Java SDK Runtime` operates on the **existing** NeverExtensions host process, permissions, signing and local event protocol. Go-host state is not OS-isolated from untrusted programs running under the same filesystem user; deployments requiring hostile-code isolation must use an OS sandbox/container/user boundary and access control for `data/extensions`. JVM is not a sandbox. The 0.30.4 Java Extension Host supports direct JAR targets on Windows, macOS and Linux. Legacy POSIX example launchers remain available; do not rely on a JVM security sandbox.
 
+
+## Java Extension Host (0.30.4)
+
+`backend` and `cli` manifest targets may point directly to the same **fat JAR** rather than a shell script. Build a JAR containing the SDK (`ru.neverlauncher.sdk.host.JavaExtensionHost`), extension implementation classes and the JAR main attributes:
+
+```
+Manifest-Version: 1.0
+Main-Class: ru.neverlauncher.sdk.host.JavaExtensionHost
+NeverLauncher-Extension-Class: org.example.MyExtension
+```
+
+NeverLauncher Go validates the JAR before execution, launches it as `java -jar <entrypoint>` using an administrator-configured Java executable or `java` from PATH, and passes **only** sanitized NeverExtensions environment variables. The JAR must be within the signed `.nlext` package, with its `backend` target entrypoint declared in the signed manifest. Before hello, the Java host fetches the **authoritative manifest** from the authenticated Go `GET /v1/manifest`; no copied manifest in the payload is required or trusted. A Java target is considered healthy only after an authenticated `POST /v1/ready`, sent **after** `Extension.start()` succeeds. `hello` alone does not mark Java startup as complete.
+
+The JVM opens an authenticated loopback callback server. The existing Java→Go broker/host remains the sole way to access backend capabilities. Go→JVM RPC is `POST /v1/rpc`, with a versioned envelope, a per-request nonce, a maximum 64 KiB body/response, explicit method allowlist (`health`, `command.invoke`, `event.deliver`, `hook.deliver`) and a maximum 1.8s deadline. Java callback handlers run in bounded thread pools/queues; a noncooperative callback can exhaust them, but Go does not wait indefinitely. The Go supervisor periodically issues concurrent liveness probes and terminates an unresponsive JVM after three consecutive RPC health failures, even when regular heartbeats continue. Existing process tree memory/process limits, restart backoff and crash-loop handling still apply. All event and command permissions continue to be enforced in the Go broker and Java's declared CLI command registry.
+
+Build and run a working example:
+
+```bash
+sh examples/extensions/java-host/build.sh
+python3 examples/extensions/java-host/test-runner.py
+nl extension pack examples/extensions/java-host/build/package --output /tmp/java-host.nlext --private-key /secure/signing-key.pem
+```
+
+Java 17+ is required on the backend host. The Java runtime itself is an external administrator dependency: deployments can pin its absolute executable path using the Go `extensionhost.Config.JavaExecutable` field. A fat JAR is not sandboxed and runs with its process user's permissions. Publisher signing only proves package provenance, not harmlessness; hostile packages require an OS-level sandbox/container/service account boundary. Go unit/integration tests and the CI Java-host E2E workflow must pass for release certification. No arbitrary Gravit/LaunchServer JAR compatibility is implied.
+
+The `java-host` sample includes a deliberately noncooperative `hang` command strictly for supervisor resilience tests. Do not deploy this sample in production.

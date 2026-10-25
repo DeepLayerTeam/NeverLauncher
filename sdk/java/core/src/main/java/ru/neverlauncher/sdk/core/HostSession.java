@@ -18,10 +18,25 @@ public final class HostSession implements AutoCloseable {
     private volatile boolean healthy=true;
     private volatile Set<String> capabilities=Set.of();
     private HostSession(URI origin,String token,String extensionId,String instanceId){this.origin=origin;this.token=token;this.extensionId=extensionId;this.instanceId=instanceId;}
-    public static HostSession fromEnvironment(Map<String,String> env,ExtensionManifest manifest) {
-        String raw=required(env,"NEVERLAUNCHER_EXTENSION_HOST_URL");URI url;
+    /** Read the exact active manifest from the authenticated Go supervisor, not package payload copies. */
+    public static String fetchManifestFromEnvironment(Map<String,String> env)throws IOException,InterruptedException {
+        String raw=required(env,"NEVERLAUNCHER_EXTENSION_HOST_URL");
+        URI origin=validateOrigin(raw);
+        if(!"1.0".equals(required(env,"NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL")) ||
+           !"1.0".equals(required(env,"NEVERLAUNCHER_EXTENSION_API_VERSION")))throw new IllegalArgumentException("Java host protocol/API incompatible");
+        try(HostSession bootstrap=new HostSession(origin,required(env,"NEVERLAUNCHER_EXTENSION_HOST_TOKEN"),
+            required(env,"NEVERLAUNCHER_EXTENSION_ID"),required(env,"NEVERLAUNCHER_EXTENSION_INSTANCE_ID"))){
+            return Json.encode(bootstrap.send("GET","/v1/manifest",null,200));
+        }
+    }
+    private static URI validateOrigin(String raw){
+        URI url;
         try{url=URI.create(raw);}catch(IllegalArgumentException e){throw new IllegalArgumentException("invalid local host URL",e);}
         String host=url.getHost();if(!"http".equals(url.getScheme())||host==null||(!host.equals("127.0.0.1")&&!host.equals("::1"))||url.getPort()<1||url.getRawUserInfo()!=null||url.getRawQuery()!=null||url.getRawFragment()!=null||!(url.getPath().isEmpty()||url.getPath().equals("/")))throw new IllegalArgumentException("host URL must be a loopback HTTP origin");
+        return url;
+    }
+    public static HostSession fromEnvironment(Map<String,String> env,ExtensionManifest manifest) {
+        URI url=validateOrigin(required(env,"NEVERLAUNCHER_EXTENSION_HOST_URL"));
         String id=required(env,"NEVERLAUNCHER_EXTENSION_ID");
         if(!id.equals(manifest.id())||!required(env,"NEVERLAUNCHER_EXTENSION_VERSION").equals(manifest.versionText()))throw new IllegalArgumentException("host identity differs from manifest");
         if(!required(env,"NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL").equals("1.0")||!required(env,"NEVERLAUNCHER_EXTENSION_API_VERSION").equals("1.0"))throw new IllegalArgumentException("host protocol/API incompatible");
@@ -39,6 +54,11 @@ public final class HostSession implements AutoCloseable {
         Object hb=response.get("heartbeatTimeoutSeconds");if(!(hb instanceof Number n)||n.longValue()<2||n.longValue()>3600)throw new IOException("invalid heartbeat interval");
         long period=Math.max(1,n.longValue()/3);
         timer.scheduleWithFixedDelay(()->{try{post("/v1/heartbeat",Map.of());}catch(Exception e){healthy=false;close();}},period,period,TimeUnit.SECONDS);
+    }
+    /** A Java target is only marked running after Extension.start() completed. */
+    public void ready() throws IOException,InterruptedException {
+        Map<String,Object> answer=post("/v1/ready",Map.of("protocolVersion","1.0","instanceId",instanceId));
+        if(!Boolean.TRUE.equals(answer.get("ready")))throw new IOException("host did not acknowledge Java readiness");
     }
     public boolean healthy(){return healthy&&!closed.get();}
     public Set<String> capabilities(){return capabilities;}

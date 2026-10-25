@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "2.0",
+  "id": "org.example.java-host",
+  "name": "Java Extension Host Example",
+  "version": "0.1.0",
+  "publisher": "NeverLauncher Examples",
+  "description": "Executable signed JAR with authenticated Go/Java RPC, lifecycle and CLI",
+  "api": "1.0",
+  "targets": [
+    {"kind": "backend", "entrypoint": "backend/java-host.jar"},
+    {"kind": "cli", "entrypoint": "backend/java-host.jar"}
+  ],
+  "permissions": ["cli:contribute"],
+  "cli": {
+    "namespace": "javahost",
+    "commands": [
+      {"name": "status", "description": "Get Java extension status"},
+      {"name": "echo", "description": "Return arguments as JSON"},
+      {"name": "hang", "description": "Supervisor resilience test; only in demonstration extension"}
+    ]
+  }
+}
