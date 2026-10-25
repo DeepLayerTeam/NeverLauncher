@@ -62,6 +62,10 @@ func (s Server) authProviderLinkPassword0291(w http.ResponseWriter, r *http.Requ
 			writeError(w, http.StatusConflict, "external identity уже связана с другим пользователем")
 			return
 		}
+		if errors.Is(err, federation.ErrLinkingDisabled) {
+			writeError(w, http.StatusForbidden, "связывание с данным провайдером запрещено политикой")
+			return
+		}
 		if errors.Is(err, federation.ErrCapabilityUnsupported) || errors.Is(err, federation.ErrProviderNotFound) {
 			writeError(w, http.StatusBadRequest, "provider не поддерживает выбранный способ подтверждения")
 			return

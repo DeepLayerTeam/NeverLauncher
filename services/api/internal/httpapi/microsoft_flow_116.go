@@ -35,8 +35,16 @@ func (s Server) authMicrosoftLinkBegin116(w http.ResponseWriter, r *http.Request
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
+	if err := s.Federation.EnsureLinkAllowed(providerID); err != nil {
+		writeError(w, http.StatusForbidden, "связывание с данным Microsoft provider запрещено")
+		return
+	}
 	if _, ok := s.microsoftConnector116(providerID); !ok {
 		writeError(w, http.StatusNotFound, "Microsoft provider не найден")
+		return
+	}
+	if user, err := s.Repo.GetUser(claims.Sub); err != nil || user.Status != "active" {
+		writeError(w, http.StatusForbidden, "учётная запись недоступна для связывания")
 		return
 	}
 	var req oidcBeginRequest115
@@ -73,6 +81,10 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
+	if err := s.Federation.EnsureLinkAllowed(providerID); err != nil {
+		writeError(w, http.StatusForbidden, "связывание с данным Microsoft provider запрещено")
+		return
+	}
 	if _, ok := s.microsoftConnector116(providerID); !ok {
 		writeError(w, http.StatusNotFound, "Microsoft provider не найден")
 		return
@@ -113,7 +125,7 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	now := time.Now().UTC()
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-microsoft-linked-" + now.Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:microsoft:linked", Target: providerID + "/" + identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
+	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-microsoft-linked-" + now.Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:microsoft:linked", Target: providerID + "/" + identity.Issuer + "/" + identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "linked", "provider": meta.ID,
 		"identity": map[string]any{"id": identity.ID, "provider": identity.Provider, "issuer": identity.Issuer, "subject": identity.Subject},
@@ -165,7 +177,7 @@ func (s Server) authProviderCredentialRefresh116(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusConflict, "provider refresh изменил issuer или subject; credential не обновлён")
 		return
 	}
-	identity, err := s.Federation.LinkAuthenticatedIdentity(claims.Sub, providerID, refreshed)
+	identity, err := s.Federation.RefreshLinkedIdentity(claims.Sub, providerID, selected.ID, refreshed)
 	if err != nil {
 		s.writeOIDCError115(w, err)
 		return

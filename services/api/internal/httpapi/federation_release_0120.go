@@ -23,6 +23,14 @@ func (s Server) authProviderLinkBegin0120(w http.ResponseWriter, r *http.Request
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
+	if user, err := s.Repo.GetUser(claims.Sub); err != nil || user.Status != "active" {
+		writeError(w, http.StatusForbidden, "учётная запись недоступна для связывания")
+		return
+	}
+	if err := s.Federation.EnsureLinkAllowed(providerID); err != nil {
+		writeError(w, http.StatusForbidden, "связывание с данным провайдером запрещено")
+		return
+	}
 	connector, ok := s.Federation.Connector(providerID)
 	if !ok {
 		writeError(w, http.StatusNotFound, "auth provider не найден")
@@ -68,6 +76,10 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
+	if err := s.Federation.EnsureLinkAllowed(providerID); err != nil {
+		writeError(w, http.StatusForbidden, "связывание с данным провайдером запрещено")
+		return
+	}
 	connector, ok := s.Federation.Connector(providerID)
 	if !ok {
 		writeError(w, http.StatusNotFound, "auth provider не найден")
@@ -116,7 +128,7 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 		}
 	}
 	now := time.Now().UTC()
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-provider-linked-" + now.Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:provider:linked", Target: providerID + "/" + identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
+	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-provider-linked-" + now.Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:provider:linked", Target: providerID + "/" + identity.Issuer + "/" + identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "linked", "provider": verifiedMeta.ID,
 		"identity": map[string]any{"id": identity.ID, "provider": identity.Provider, "issuer": identity.Issuer, "subject": identity.Subject},
@@ -147,6 +159,13 @@ func (s Server) authFederationStatus0120(w http.ResponseWriter, r *http.Request)
 			"linkedIdentities": counts[h.Metadata.ID],
 		})
 	}
+	routing := s.Federation.Routing()
+	strictRules := 0
+	for _, rule := range routing.Rules {
+		if rule.Strict {
+			strictRules++
+		}
+	}
 	ready := len(providers) > 0 && healthy == len(providers)
 	status := "ready"
 	if !ready {
@@ -156,5 +175,6 @@ func (s Server) authFederationStatus0120(w http.ResponseWriter, r *http.Request)
 		"schemaVersion": apiContractVersion, "toolVersion": s.Version, "release": "auth-federation",
 		"status": status, "ready": ready, "providers": items, "providerCount": len(providers),
 		"healthyProviders": healthy, "identityCount": len(identities),
+		"routing": map[string]any{"defaultProvider": routing.DefaultProvider, "requireExplicitProvider": routing.RequireExplicitProvider, "configuredDomainRules": len(routing.Rules), "strictDomainRules": strictRules, "linkingDisabled": routing.DisableLinking, "linkingAllowProviderCount": len(routing.LinkingAllowProviders)},
 	}})
 }

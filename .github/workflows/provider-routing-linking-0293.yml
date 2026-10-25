@@ -1,0 +1,71 @@
+name: Provider Routing and Linking 0.29.3
+on:
+  push:
+    paths:
+      - 'services/api/internal/federation/**'
+      - 'services/api/internal/httpapi/**'
+      - 'services/api/internal/repository/**'
+      - 'services/api/internal/config/**'
+      - 'apps/desktop/src/**'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+      - '.github/workflows/provider-routing-linking-0293.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/federation/**'
+      - 'services/api/internal/httpapi/**'
+      - 'services/api/internal/repository/**'
+      - 'services/api/internal/config/**'
+      - 'apps/desktop/src/**'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+      - '.github/workflows/provider-routing-linking-0293.yml'
+permissions:
+  contents: read
+jobs:
+  provider-routing-linking:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: routing_ci
+          POSTGRES_PASSWORD: routing_ci_only
+          POSTGRES_DB: neverlauncher_routing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U routing_ci -d neverlauncher_routing"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://routing_ci:routing_ci_only@127.0.0.1:5432/neverlauncher_routing?sslmode=disable
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Go format gate
+        run: test -z "$(gofmt -l internal/federation internal/repository/auth_conflict_0293.go internal/repository/memory.go internal/repository/postgres.go internal/config/config.go internal/httpapi/auth_accounts.go internal/httpapi/provider_routing_0293_test.go internal/httpapi/sql_connector_113.go internal/httpapi/federation_112.go internal/httpapi/federation_release_0120.go internal/httpapi/auth_link_password_0291.go internal/httpapi/microsoft_flow_116.go internal/federation/linked_refresh_0293.go)"
+      - name: Provider selection and explicit proof regressions
+        run: go test -count=1 -timeout=5m ./internal/federation ./internal/config ./internal/httpapi -run 'TestRouting0293|TestHTTPLoginRouting0293|TestHTTPLinkBlockedBeforeCredentialProof0293|TestGenericBrowserProviderExplicitLink0120'
+      - name: Real PostgreSQL issuer and collision checks
+        run: go test -count=1 -timeout=3m ./internal/repository -run 'TestCanonicalIssuerPostgres0291|TestAuthIdentityCollisionPostgres0293'
+      - name: Race checks on federation and persistence
+        run: go test -race -count=1 -timeout=5m ./internal/federation ./internal/repository
+      - name: Compile full Backend
+        run: go build ./cmd/...
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Build desktop provider selection and verified linking UI
+        working-directory: apps/desktop
+        run: npm ci --ignore-scripts && npm run build

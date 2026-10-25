@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
 )
@@ -76,16 +77,25 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	identifier := strings.TrimSpace(firstNonEmpty(req.Identifier, req.Email))
-	rateKey := strings.ToLower(identifier)
 	if identifier == "" || req.Password == "" {
 		writeError(w, http.StatusBadRequest, "identifier/email и password обязательны")
 		return
 	}
+	providerID, routeErr := s.Federation.RoutePasswordProvider(req.ProviderID, identifier)
+	if routeErr != nil {
+		if errors.Is(routeErr, federation.ErrRoutingRequired) || errors.Is(routeErr, federation.ErrRoutingDenied) {
+			writeError(w, http.StatusForbidden, "выберите разрешённого провайдера авторизации")
+		} else {
+			writeError(w, http.StatusBadRequest, "выбранный auth provider недоступен или не поддерживает вход по паролю")
+		}
+		return
+	}
+	rateKey := providerID + ":" + strings.ToLower(identifier)
 	if allowed, retry := s.State.Security.allowLogin(rateKey, clientIP(r)); !allowed {
 		writeError(w, http.StatusTooManyRequests, "слишком много неудачных входов; повторите после "+retry.Format(time.RFC3339))
 		return
 	}
-	result, authErr := s.Federation.AuthenticatePassword(r.Context(), req.ProviderID, authconnector.PasswordRequest{Identifier: identifier, Secret: req.Password})
+	result, authErr := s.Federation.AuthenticatePassword(r.Context(), providerID, authconnector.PasswordRequest{Identifier: identifier, Secret: req.Password})
 	if authErr != nil {
 		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
 		_ = s.flushPersistenceState950("auth-login-failed")
@@ -147,13 +157,13 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		user = updated
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-login-" + time.Now().UTC().Format("20060102150405"), Actor: user.Email, Action: "auth:login", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-federation-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:federation:authenticated", Target: result.Provider.ID + "/" + result.Identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-federation-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:federation:authenticated", Target: result.Provider.ID + "/" + result.Identity.Issuer + "/" + result.Identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"schemaVersion": apiContractVersion,
 		"toolVersion":   s.Version,
 		"status":        "authenticated",
 		"provider":      result.Provider.ID,
-		"identity":      map[string]any{"id": result.Identity.ID, "provider": result.Identity.Provider, "subject": result.Identity.Subject},
+		"identity":      map[string]any{"id": result.Identity.ID, "provider": result.Identity.Provider, "issuer": result.Identity.Issuer, "subject": result.Identity.Subject},
 		"authMethods":   mfa.Methods,
 		"user":          sanitizeUserAccount(user),
 		"session":       sanitizeSessionRecord(session),

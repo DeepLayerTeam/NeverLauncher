@@ -52,6 +52,7 @@ type Core struct {
 	mu         sync.RWMutex
 	connectors map[string]authconnector.Connector
 	policies   map[string]ProviderPolicy
+	routing    RoutingConfig
 }
 
 func New(repo repository.Repository) *Core {
@@ -144,9 +145,10 @@ func (c *Core) ProviderPolicy(id string) ProviderPolicy {
 }
 
 func (c *Core) AuthenticatePassword(ctx context.Context, providerID string, request authconnector.PasswordRequest) (Result, error) {
-	providerID = strings.ToLower(strings.TrimSpace(providerID))
-	if providerID == "" {
-		providerID = "local"
+	var routingErr error
+	providerID, routingErr = c.RoutePasswordProvider(providerID, request.Identifier)
+	if routingErr != nil {
+		return Result{}, routingErr
 	}
 	connector, ok := c.Connector(providerID)
 	if !ok {
@@ -169,6 +171,9 @@ func (c *Core) AuthenticatePassword(ctx context.Context, providerID string, requ
 // provisions a user or creates a Never session. No provider fallback is allowed.
 func (c *Core) LinkPasswordIdentity(ctx context.Context, userID, providerID string, request authconnector.PasswordRequest) (model.AuthIdentity, authconnector.Authentication, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
+	if err := c.EnsureLinkAllowed(providerID); err != nil {
+		return model.AuthIdentity{}, authconnector.Authentication{}, err
+	}
 	if userID == "" || strings.TrimSpace(request.Identifier) == "" || request.Secret == "" {
 		return model.AuthIdentity{}, authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "identity proof requires identifier and password")
 	}
@@ -388,11 +393,15 @@ func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID st
 // запрещено: одну пару провайдер/subject нельзя переносить между пользователями Never.
 func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authentication authconnector.Authentication) (model.AuthIdentity, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
-	if _, ok := c.Connector(providerID); !ok {
-		return model.AuthIdentity{}, ErrProviderNotFound
-	}
-	if _, err := c.repo.GetUser(userID); err != nil {
+	if err := c.EnsureLinkAllowed(providerID); err != nil {
 		return model.AuthIdentity{}, err
+	}
+	user, err := c.repo.GetUser(userID)
+	if err != nil {
+		return model.AuthIdentity{}, err
+	}
+	if user.Status != "active" {
+		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "canonical user cannot link identities")
 	}
 	if err := authconnector.ValidateAuthentication(authentication); err != nil {
 		return model.AuthIdentity{}, err

@@ -192,6 +192,8 @@ type DesktopDiagnosticsPolicy = { enabled?: boolean; version?: string; privacyMo
 type DesktopBindingPolicy = { apiVersion: 'v1'; manifestVerification: 'Ed25519 pinned-key required'; runtime: 'NeverRuntime' };
 type DesktopBindingResult = { status: string; configPath: string; gameDirectory: string; message: string };
 type AuthSession = { accessToken: string; refreshToken: string; sessionId: string; email: string; userId: string; expiresAt?: string };
+type AuthProvider0293 = { id: string; displayName: string; capabilities: string[]; healthy: boolean };
+type AuthRouting0293 = { defaultProvider: string; requireExplicitProvider: boolean };
 type DeviceKeyInfo = { userId: string; publicKey: string; fingerprint: string; deviceId?: string; createdAtUnix: number; storageBackend: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean; privateKeyExposedToFrontend: boolean };
 type DeviceSignatureResult = { fingerprint: string; publicKey: string; signature: string; keyAlgorithm: string; keyBinding: string; hardwareProvider: string; hardwareBound: boolean };
 type ManagedDevice = { id: string; name: string; status: 'active' | 'revoked' | string; trustState: string; assurance: string; keyAlgorithm: string; keyBinding: string; hardwareProvider?: string; attestationState?: string; attestationExpiresAt?: string; keyFingerprint: string; platform?: string; clientVersion?: string; lastSeenAt?: string; lastIp?: string; revokedAt?: string; revokedReason?: string; replacedAt?: string; replacedByDeviceId?: string; replacementReason?: string; current: boolean; revocationPermanent: boolean };
@@ -361,6 +363,42 @@ function App() {
   const [email, setEmail] = useState('admin@neverlauncher.local');
   const [password, setPassword] = useState('admin');
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [authProviders0293, setAuthProviders0293] = useState<AuthProvider0293[]>([]);
+  const [routing0293, setRouting0293] = useState<AuthRouting0293>({ defaultProvider: 'local', requireExplicitProvider: false });
+  const [selectedAuthProvider0293, setSelectedAuthProvider0293] = useState('');
+  const [authProviderError0293, setAuthProviderError0293] = useState('');
+  const [linkedProvider0293, setLinkedProvider0293] = useState('');
+  const [linkedIdentifier0293, setLinkedIdentifier0293] = useState('');
+  const [linkedPassword0293, setLinkedPassword0293] = useState('');
+  const [linkFeedback0293, setLinkFeedback0293] = useState('');
+  useEffect(() => {
+    let active = true;
+    const base = settings.backendUrl.trim().replace(/\/$/, '');
+    setAuthProviders0293([]);
+    setAuthProviderError0293('');
+    if (!/^https?:\/\//i.test(base)) return;
+    const controller = new AbortController();
+    void fetch(`${base}/api/v1/auth/providers`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((payload: any) => {
+        if (!active) return;
+        const data = payload?.data ?? {};
+        const providers = Array.isArray(data.items) ? data.items : [];
+        setAuthProviders0293(providers.filter((item: any) => typeof item?.id === 'string' && Array.isArray(item.capabilities)).map((item: any) => ({
+          id: item.id, displayName: String(item.displayName || item.id), capabilities: item.capabilities,
+          healthy: item.healthy === true,
+        })));
+        setRouting0293({
+          defaultProvider: String(data.routing?.defaultProvider || 'local'),
+          requireExplicitProvider: data.routing?.requireExplicitProvider === true,
+        });
+      })
+      .catch((error) => { if (active) setAuthProviderError0293(`Невозможно получить список auth providers: ${String(error)}`); });
+    return () => { active = false; controller.abort(); };
+  }, [settings.backendUrl]);
   const officialMinecraftClient = useRef<OfficialMinecraftClient0257 | null>(null);
   const [officialProfile, setOfficialProfile] = useState<OfficialProfile0257 | null>(null);
   const [minecraftIdentity, setMinecraftIdentity] = useState<GameLaunchMode0269>(settings.offlineEnabled ? 'offline' : 'local');
@@ -873,7 +911,7 @@ function App() {
     const response = await fetch(endpoint('/api/v1/auth/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, deviceId: 'desktop-client' }),
+      body: JSON.stringify({ email, password, deviceId: 'desktop-client', ...(selectedAuthProvider0293 ? { providerId: selectedAuthProvider0293 } : {}) }),
     });
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
     const payload = await response.json();
@@ -895,6 +933,24 @@ function App() {
       setDeviceTrustStatus('ошибка');
       log(`Device Trust не активирован: ${String(error)}`);
     }
+  }
+
+  async function linkPasswordProvider0293(): Promise<void> {
+    if (!authSession?.accessToken) throw new Error('Сначала войдите в NeverLauncher.');
+    if (!linkedProvider0293 || !linkedIdentifier0293.trim() || !linkedPassword0293) throw new Error('Провайдер, идентификатор и пароль обязательны.');
+    setLinkFeedback0293('');
+    const response = await fetch(endpoint(`/api/v1/auth/providers/${encodeURIComponent(linkedProvider0293)}/link/password`), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authSession.accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: linkedIdentifier0293.trim(), password: linkedPassword0293 }),
+    });
+    if (!response.ok) throw new Error(`Внешняя identity не привязана: HTTP ${response.status}`);
+    const payload = await response.json();
+    const linked = payload?.data?.identity;
+    if (payload?.data?.status !== 'linked' || linked?.provider !== linkedProvider0293 || !linked?.id) throw new Error('Backend не подтвердил привязку identity.');
+    setLinkedPassword0293('');
+    setLinkFeedback0293(`Привязана identity ${linked.provider} / ${linked.issuer} / ${linked.subject}.`);
+    log(`Провайдер ${linked.provider} привязан с подтверждением внешних credentials.`);
   }
 
   async function rotateDesktopSession(session: AuthSession): Promise<AuthSession> {
@@ -1717,7 +1773,7 @@ function App() {
 
         {screen === 'firstRun' && <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} /> }
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
-        {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} />}
+        {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} authProviders0293={authProviders0293} routing0293={routing0293} selectedAuthProvider0293={selectedAuthProvider0293} setSelectedAuthProvider0293={setSelectedAuthProvider0293} authProviderError0293={authProviderError0293} setAuthProviderError0293={setAuthProviderError0293} linkedProvider0293={linkedProvider0293} setLinkedProvider0293={setLinkedProvider0293} linkedIdentifier0293={linkedIdentifier0293} setLinkedIdentifier0293={setLinkedIdentifier0293} linkedPassword0293={linkedPassword0293} setLinkedPassword0293={setLinkedPassword0293} linkFeedback0293={linkFeedback0293} setLinkFeedback0293={setLinkFeedback0293} linkPasswordProvider0293={linkPasswordProvider0293} />}
         {screen === 'auth' && authSession?.accessToken && officialMinecraftClient.current && <>
           <OfficialMinecraftPanel0257 key={`${settings.backendUrl}|${authSession.sessionId}`} client={officialMinecraftClient.current} linkedProfile={officialProfile} onLinked={(p)=>{setOfficialProfile(p); if (!p) setMinecraftIdentity('local');}} />
           <section className="panel"><label>Режим запуска Minecraft <select value={minecraftIdentity} onChange={e=>{
@@ -1770,8 +1826,8 @@ function Overview({ readiness, backendStatus, manifest, javaInfo, fileSummary, l
   );
 }
 
-function AuthPanel({ email, setEmail, password, setPassword, session, deviceKey, deviceTrustStatus, managedDevices, checkBackend, loginDesktop, refreshDesktopSession, logoutDesktop, restoreSession, refreshDeviceKeyStatus, loadManagedDevices, renameManagedDevice, revokeManagedDevice, revokeOtherManagedDevices, replaceDesktopDeviceKey }: any) {
-  return <section className="panel"><h3>Вход, сессия и Device Management</h3><p>NeverLauncher {DESKTOP_VERSION} регистрирует отдельную device identity, подтверждает владение ключом и для hardware P-256 выполняет challenge-response attestation. В этой версии revoke необратим для старого ключа: Backend отзывает связанные Never/refresh/Minecraft-сессии, инвалидирует незавершённые device challenges и ServerBridge joins. Повторное подключение отозванной установки требует нового device key.</p><div className="settings"><label>Электронная почта<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => console.error(error))}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button>{session && <button onClick={() => loadManagedDevices().catch((error: Error) => console.error(error))}>Обновить устройства</button>}{session && deviceKey?.deviceId && <button onClick={() => replaceDesktopDeviceKey('rotate').catch((error: Error) => console.error(error))}>Ротировать ключ</button>}{session && <button onClick={() => replaceDesktopDeviceKey('recover').catch((error: Error) => console.error(error))}>Восстановить ключ</button>}{session && <button className="danger" onClick={() => revokeOtherManagedDevices().catch((error: Error) => console.error(error))}>Отозвать остальные</button>}</div><pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, keyBinding: deviceKey.keyBinding, hardwareProvider: deviceKey.hardwareProvider || null, hardwareBound: deviceKey.hardwareBound, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre>{session && <div className="deviceList">{managedDevices.map((device: ManagedDevice) => <article className={`deviceCard ${device.current ? 'currentDevice' : ''}`} key={device.id}><div><strong>{device.name}{device.current ? ' · текущее' : ''}</strong><span>{device.status} · {device.keyAlgorithm}/{device.keyBinding}{device.hardwareProvider ? ` · ${device.hardwareProvider}` : ''}</span><small>{device.platform || 'platform n/a'} · {device.clientVersion || 'version n/a'} · last seen: {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : '—'}</small><small>fingerprint: {device.keyFingerprint.slice(0, 20)}… · attestation: {device.attestationState || 'unattested'}</small>{device.status === 'revoked' && <small>revoked: {device.revokedAt ? new Date(device.revokedAt).toLocaleString() : '—'} · {device.revokedReason || 'reason n/a'}{device.replacedByDeviceId ? ` · replaced by ${device.replacedByDeviceId}` : ''}</small>}</div>{device.status === 'active' && <div className="deviceActions"><button onClick={() => renameManagedDevice(device).catch((error: Error) => console.error(error))}>Переименовать</button><button className="danger" onClick={() => revokeManagedDevice(device).catch((error: Error) => console.error(error))}>{device.current ? 'Отозвать текущее' : 'Отозвать'}</button></div>}</article>)}</div>}</section>;
+function AuthPanel({ email, setEmail, password, setPassword, session, deviceKey, deviceTrustStatus, managedDevices, checkBackend, loginDesktop, refreshDesktopSession, logoutDesktop, restoreSession, refreshDeviceKeyStatus, loadManagedDevices, renameManagedDevice, revokeManagedDevice, revokeOtherManagedDevices, replaceDesktopDeviceKey, authProviders0293, routing0293, selectedAuthProvider0293, setSelectedAuthProvider0293, authProviderError0293, setAuthProviderError0293, linkedProvider0293, setLinkedProvider0293, linkedIdentifier0293, setLinkedIdentifier0293, linkedPassword0293, setLinkedPassword0293, linkFeedback0293, setLinkFeedback0293, linkPasswordProvider0293 }: any) {
+  return <section className="panel"><h3>Вход, сессия и Device Management</h3><p>NeverLauncher {DESKTOP_VERSION} регистрирует отдельную device identity, подтверждает владение ключом и для hardware P-256 выполняет challenge-response attestation. В этой версии revoke необратим для старого ключа: Backend отзывает связанные Never/refresh/Minecraft-сессии, инвалидирует незавершённые device challenges и ServerBridge joins. Повторное подключение отозванной установки требует нового device key.</p><div className="settings"><label>Электронная почта / идентификатор<input value={email} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} /></label><label>Пароль<input type="password" value={password} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} /></label><label>Провайдер авторизации<select value={selectedAuthProvider0293} onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setSelectedAuthProvider0293(event.target.value)}><option value="">Автоматический выбор (правила Backend)</option>{authProviders0293.filter((item: AuthProvider0293) => item.capabilities.includes('password-auth')).map((item: AuthProvider0293) => <option key={item.id} value={item.id} disabled={!item.healthy}>{item.displayName} ({item.id}){!item.healthy ? ' — недоступен' : ''}</option>)}</select></label></div><p>Маршрутизация: default={routing0293.defaultProvider || 'не задан'}, {routing0293.requireExplicitProvider ? 'неизвестный идентификатор требует явного провайдера' : 'fallback при ошибке авторизации запрещён'}. {authProviderError0293}</p><div className="toolbar inline"><button onClick={checkBackend}>Проверить Backend</button><button onClick={() => loginDesktop().catch((error: Error) => { setAuthProviderError0293(String(error)); console.error(error); })}>Войти</button><button onClick={() => refreshDesktopSession().catch((error: Error) => console.error(error))}>Обновить сессию</button><button onClick={() => logoutDesktop().catch((error: Error) => console.error(error))}>Выйти</button><button onClick={restoreSession}>Проверить восстановление сессии</button><button onClick={() => refreshDeviceKeyStatus().catch((error: Error) => console.error(error))}>Проверить device key</button>{session && <button onClick={() => loadManagedDevices().catch((error: Error) => console.error(error))}>Обновить устройства</button>}{session && deviceKey?.deviceId && <button onClick={() => replaceDesktopDeviceKey('rotate').catch((error: Error) => console.error(error))}>Ротировать ключ</button>}{session && <button onClick={() => replaceDesktopDeviceKey('recover').catch((error: Error) => console.error(error))}>Восстановить ключ</button>}{session && <button className="danger" onClick={() => revokeOtherManagedDevices().catch((error: Error) => console.error(error))}>Отозвать остальные</button>}</div>{session && <div className="settings"><h4>Привязать внешний password provider</h4><p>Необходима активная Never-сессия и свежая проверка внешнего пароля; email сам по себе не подтверждает владение identity.</p><label>Provider<select value={linkedProvider0293} onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setLinkedProvider0293(event.target.value)}><option value="">Выберите провайдера</option>{authProviders0293.filter((item: AuthProvider0293) => item.id !== 'local' && item.capabilities.includes('password-auth') && item.healthy).map((item: AuthProvider0293) => <option key={item.id} value={item.id}>{item.displayName} ({item.id})</option>)}</select></label><label>Внешний идентификатор<input value={linkedIdentifier0293} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setLinkedIdentifier0293(event.target.value)} /></label><label>Пароль внешнего провайдера<input type="password" value={linkedPassword0293} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setLinkedPassword0293(event.target.value)} /></label><button onClick={() => linkPasswordProvider0293().catch((error: Error) => { setLinkedPassword0293(''); setLinkFeedback0293(String(error)); })}>Подтвердить и связать</button><p role="status">{linkFeedback0293}</p></div>}<pre>{JSON.stringify({ session: session ? { email: session.email, userId: session.userId, sessionId: session.sessionId, status: 'активна', refreshToken: 'скрыт' } : null, deviceTrust: deviceTrustStatus, deviceKey: deviceKey ? { deviceId: deviceKey.deviceId ?? null, fingerprint: deviceKey.fingerprint, algorithm: deviceKey.keyAlgorithm, keyBinding: deviceKey.keyBinding, hardwareProvider: deviceKey.hardwareProvider || null, hardwareBound: deviceKey.hardwareBound, storageBackend: deviceKey.storageBackend, privateKeyExposedToFrontend: deviceKey.privateKeyExposedToFrontend } : null }, null, 2)}</pre>{session && <div className="deviceList">{managedDevices.map((device: ManagedDevice) => <article className={`deviceCard ${device.current ? 'currentDevice' : ''}`} key={device.id}><div><strong>{device.name}{device.current ? ' · текущее' : ''}</strong><span>{device.status} · {device.keyAlgorithm}/{device.keyBinding}{device.hardwareProvider ? ` · ${device.hardwareProvider}` : ''}</span><small>{device.platform || 'platform n/a'} · {device.clientVersion || 'version n/a'} · last seen: {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : '—'}</small><small>fingerprint: {device.keyFingerprint.slice(0, 20)}… · attestation: {device.attestationState || 'unattested'}</small>{device.status === 'revoked' && <small>revoked: {device.revokedAt ? new Date(device.revokedAt).toLocaleString() : '—'} · {device.revokedReason || 'reason n/a'}{device.replacedByDeviceId ? ` · replaced by ${device.replacedByDeviceId}` : ''}</small>}</div>{device.status === 'active' && <div className="deviceActions"><button onClick={() => renameManagedDevice(device).catch((error: Error) => console.error(error))}>Переименовать</button><button className="danger" onClick={() => revokeManagedDevice(device).catch((error: Error) => console.error(error))}>{device.current ? 'Отозвать текущее' : 'Отозвать'}</button></div>}</article>)}</div>}</section>;
 }
 
 function ActionPanel({ title, description, actions }: { title: string; description: string; actions: [string, () => void | Promise<void>][] }) {

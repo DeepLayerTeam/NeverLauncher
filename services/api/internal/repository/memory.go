@@ -738,11 +738,11 @@ func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.
 	for i := range r.identities {
 		item := r.identities[i]
 		if item.Provider == identity.Provider && item.Issuer == identity.Issuer && item.Subject == identity.Subject && item.UserID != identity.UserID {
-			return model.AuthIdentity{}, fmt.Errorf("identity %s/%s уже связана с другим пользователем", identity.Provider, identity.Subject)
+			return model.AuthIdentity{}, fmt.Errorf("%w: identity %s/%s уже связана с другим пользователем", ErrConflict, identity.Provider, identity.Subject)
 		}
 		if item.UserID == identity.UserID && item.Provider == identity.Provider && item.Issuer == identity.Issuer {
 			if item.Subject != identity.Subject {
-				return model.AuthIdentity{}, fmt.Errorf("provider %s уже связан с другим subject для пользователя", identity.Provider)
+				return model.AuthIdentity{}, fmt.Errorf("%w: provider %s уже связан с другим subject для пользователя", ErrConflict, identity.Provider)
 			}
 			if identity.ID == "" {
 				identity.ID = item.ID

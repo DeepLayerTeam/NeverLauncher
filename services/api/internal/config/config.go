@@ -94,6 +94,8 @@ type Config struct {
 	RuntimeValidationKeysJSON                    string
 	ServerBridgeControlSigningPrivateKey         string
 	ServerBridgeControlPreviousSigningPrivateKey string
+	AuthRoutingJSON                              string
+	AuthRoutingFile                              string
 	AuthSQLProvidersJSON                         string
 	AuthSQLProvidersFile                         string
 	AuthHTTPProvidersJSON                        string
@@ -285,6 +287,8 @@ func Load() Config {
 		RuntimeValidationKeysJSON:                    env("NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON", ""),
 		ServerBridgeControlSigningPrivateKey:         serverBridgeControlSigningPrivateKey,
 		ServerBridgeControlPreviousSigningPrivateKey: serverBridgeControlPreviousSigningPrivateKey,
+		AuthRoutingJSON:                              env("NEVERLAUNCHER_AUTH_ROUTING_JSON", ""),
+		AuthRoutingFile:                              env("NEVERLAUNCHER_AUTH_ROUTING_FILE", ""),
 		AuthSQLProvidersJSON:                         env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),
 		AuthSQLProvidersFile:                         env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
 		AuthHTTPProvidersJSON:                        env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON", ""),

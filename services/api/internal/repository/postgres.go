@@ -742,7 +742,7 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 	}
 	existing, lookupErr := r.GetAuthIdentityByIssuer(identity.Provider, identity.Issuer, identity.Subject)
 	if lookupErr == nil && existing.UserID != identity.UserID {
-		return model.AuthIdentity{}, fmt.Errorf("identity %s/%s уже связана с другим пользователем", identity.Provider, identity.Subject)
+		return model.AuthIdentity{}, fmt.Errorf("%w: identity %s/%s уже связана с другим пользователем", ErrConflict, identity.Provider, identity.Subject)
 	}
 	if lookupErr != nil && !errors.Is(lookupErr, ErrNotFound) {
 		return model.AuthIdentity{}, lookupErr
@@ -750,7 +750,7 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 	var currentSubject string
 	err := r.db.QueryRow(`SELECT subject FROM auth_identities WHERE user_id=$1 AND provider=$2 AND issuer=$3`, identity.UserID, identity.Provider, identity.Issuer).Scan(&currentSubject)
 	if err == nil && currentSubject != identity.Subject {
-		return model.AuthIdentity{}, fmt.Errorf("provider %s уже связан с другим subject для пользователя", identity.Provider)
+		return model.AuthIdentity{}, fmt.Errorf("%w: provider %s уже связан с другим subject для пользователя", ErrConflict, identity.Provider)
 	}
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return model.AuthIdentity{}, err
@@ -770,7 +770,7 @@ VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,now(),$11)
 ON CONFLICT(user_id,provider,issuer) DO UPDATE SET email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,claims=EXCLUDED.claims,updated_at=now(),last_authenticated_at=COALESCE(EXCLUDED.last_authenticated_at,auth_identities.last_authenticated_at)
 WHERE auth_identities.subject=EXCLUDED.subject`, identity.ID, identity.UserID, identity.Provider, identity.Issuer, identity.Subject, identity.Email, identity.Username, identity.DisplayName, string(claims), identity.CreatedAt, nullTime(identity.LastAuthenticatedAt))
 	if err != nil {
-		return model.AuthIdentity{}, err
+		return model.AuthIdentity{}, authIdentityConflict0293(err)
 	}
 	affected, err := result.RowsAffected()
 	if err != nil {

@@ -1,3 +1,11 @@
+## 0.29.3 — Provider Routing & Account Linking (2026-10-25)
+
+- Configure explicit, immutable runtime password routing via validated JSON/file policy: exact email-domain selection, strict domain providers, optional explicit-provider requirement and a deterministic default. Auth errors never trigger another connector attempt.
+- Apply the same routing decision before HTTP rate-limiting and inside the federation itself; provider IDs are included in per-login attempt limits. OIDC/Microsoft authorization remains explicitly provider-bound and PKCE/state-protected.
+- Add enforced provider linking allowlist / global linking disable to existing password and browser proof flows, with active-user verification and issuer/subject collision checks (including Microsoft-specific links). Refreshing already linked credentials stays available and pins identity ID even when new links are disabled; do not link by matching email.
+- Normalize duplicate identity collisions to `repository.ErrConflict` in memory and PostgreSQL (including concurrent PostgreSQL uniqueness failures), rather than exposing backend errors.
+- Add working Desktop password-provider selection and authenticated password-proof linking UI, plus federation routing/no-fallback, explicit proof/collision and HTTP login/link regression tests, CI gates (including Desktop build), docs and synced version metadata. Live PostgreSQL and HTTP/API E2E require CI dependencies and environment; see `docs/releases/0.29.3-provider-routing-linking.md`.
+
 ## 0.29.2 — Auth SDK v2 & Conformance (2026-10-25)
 
 - Enforce one fail-closed capability/implementation validator at real provider registration; block undeclared privileged provider operations.

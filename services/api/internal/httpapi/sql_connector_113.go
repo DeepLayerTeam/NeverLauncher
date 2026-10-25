@@ -105,6 +105,15 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 			return nil, fmt.Errorf("Microsoft connector registration: %w", err)
 		}
 	}
+	routing, err := federation.LoadRoutingConfig(cfg.AuthRoutingJSON, cfg.AuthRoutingFile)
+	if err != nil {
+		_ = core.Close()
+		return nil, err
+	}
+	if err := core.ConfigureRouting(routing); err != nil {
+		_ = core.Close()
+		return nil, err
+	}
 	return core, nil
 }
 
