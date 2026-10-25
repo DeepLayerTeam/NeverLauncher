@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
 )
@@ -24,17 +25,26 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	identifier := strings.TrimSpace(firstNonEmpty(req.Identifier, req.Email))
-	rateKey := strings.ToLower(identifier)
 	if identifier == "" || req.Password == "" {
 		writeError(w, http.StatusBadRequest, "identifier/email и пароль обязательны")
 		return
 	}
+	providerID, routeErr := s.Federation.RoutePasswordProvider(req.ProviderID, identifier)
+	if routeErr != nil {
+		if errors.Is(routeErr, federation.ErrRoutingDenied) || errors.Is(routeErr, federation.ErrRoutingRequired) {
+			writeError(w, http.StatusForbidden, "выберите разрешённого провайдера авторизации")
+		} else {
+			writeError(w, http.StatusBadRequest, "auth provider недоступен")
+		}
+		return
+	}
+	rateKey := providerID + ":" + strings.ToLower(identifier)
 	if allowed, retry := s.State.Security.allowLogin(rateKey, clientIP(r)); !allowed {
 		s.audit(r, identifier, "admin:login:rate-limited", "admin-panel")
 		writeError(w, http.StatusTooManyRequests, fmt.Sprintf("слишком много неудачных входов; повторите после %s", retry.Format(time.RFC3339)))
 		return
 	}
-	result, authErr := s.Federation.AuthenticatePassword(r.Context(), req.ProviderID, authconnector.PasswordRequest{Identifier: identifier, Secret: req.Password})
+	result, authErr := s.Federation.AuthenticatePassword(r.Context(), providerID, authconnector.PasswordRequest{Identifier: identifier, Secret: req.Password})
 	if authErr != nil {
 		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
 		_ = s.flushPersistenceState950("admin-login-failed")
@@ -69,7 +79,7 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if mfa.NeedPasskey {
-		continuation, err := s.startPasskeyMFAContinuation117(user, result.Provider.ID, result.Identity.ID, "admin-panel", mfa.Methods)
+		continuation, err := s.startPasskeyMFAContinuation117(user, result.Provider.ID, result.Identity.ID, "admin-panel", mfa.Methods, result.ProviderToken)
 		if err != nil {
 			writeError(w, http.StatusForbidden, "MFA policy требует зарегистрированный passkey")
 			return
@@ -88,8 +98,18 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "не удалось создать серверную сессию")
 		return
 	}
+	// The Admin password endpoint must preserve provider credentials with the
+	// same encrypted-storage and session rollback contract as Desktop login.
+	if strings.TrimSpace(result.ProviderToken) != "" {
+		if err := s.saveProviderCredential116(user, result.Identity, result.ProviderToken, false); err != nil {
+			s.State.AuthSessions.revoke(session.ID, "provider-credential-persistence-failed")
+			_ = s.flushPersistenceState950("admin-provider-credential-failed")
+			writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить provider credential")
+			return
+		}
+	}
 	s.audit(r, user.Email, "admin:login", session.ID)
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: "admin-federation-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:federation:authenticated", Target: result.Provider.ID + "/" + result.Identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	s.Repo.AddAuditEvent(model.AuditEvent{ID: "admin-federation-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:federation:authenticated", Target: result.Provider.ID + "/" + result.Identity.Issuer + "/" + result.Identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	writeJSON(w, http.StatusOK, model.AdminSession{Token: token, RefreshToken: refreshToken, SessionID: session.ID, User: user, ExpiresAt: time.Now().UTC().Add(accessTokenTTL), RefreshExpiresAt: session.ExpiresAt})
 }
 

@@ -130,7 +130,7 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	deviceID := firstNonEmpty(req.DeviceID, "desktop-client")
 	if mfa.NeedPasskey {
-		continuation, err := s.startPasskeyMFAContinuation117(user, result.Provider.ID, result.Identity.ID, deviceID, mfa.Methods)
+		continuation, err := s.startPasskeyMFAContinuation117(user, result.Provider.ID, result.Identity.ID, deviceID, mfa.Methods, result.ProviderToken)
 		if err != nil {
 			writeError(w, http.StatusForbidden, "MFA policy требует зарегистрированный passkey")
 			return

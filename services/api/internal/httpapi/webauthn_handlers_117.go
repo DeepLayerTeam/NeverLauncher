@@ -230,7 +230,7 @@ func (s Server) authPasskeyMFALoginComplete117(w http.ResponseWriter, r *http.Re
 	provider := metadataString117(tx.Metadata, "provider")
 	identityID := metadataString117(tx.Metadata, "identityId")
 	device := firstNonEmpty(req.DeviceID, metadataString117(tx.Metadata, "deviceId"), "desktop-client")
-	s.issuePasskeyLogin117(w, r, user, device, provider, identityID, methods)
+	s.issuePasskeyLogin117(w, r, user, device, provider, identityID, methods, metadataString117(tx.Metadata, "sealedProviderCredential"))
 }
 
 func (s Server) authPasskeyStepUpBegin117(w http.ResponseWriter, r *http.Request) {
@@ -427,12 +427,25 @@ func (s Server) authMFAPolicy117(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"requirement": target, "previous": current}})
 }
 
-func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, user model.User, deviceID, provider, identityID string, baseMethods []string) {
+func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, user model.User, deviceID, provider, identityID string, baseMethods []string, pendingCredential ...string) {
 	methods := mergeAuthMethods117(baseMethods, "passkey", "user-verification")
 	access, refresh, session, err := s.issueLoginSessionWithAuth(user, r, deviceID, methods, "phishing-resistant", time.Now().UTC(), identityID, firstNonEmpty(provider, "passkey"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось создать серверную сессию")
 		return
+	}
+	// A browser/password provider may have returned an upstream refresh token
+	// before the Never WebAuthn challenge. The MFA transaction contains only
+	// its AEAD ciphertext. Commit it after a successful passkey assertion and
+	// session creation, never before local MFA. A failed commit revokes the
+	// just-created session and never returns tokens to the client.
+	if len(pendingCredential) != 0 && pendingCredential[0] != "" {
+		if err := s.commitPendingProviderCredential0296(user, provider, identityID, pendingCredential[0]); err != nil {
+			s.State.AuthSessions.revoke(session.ID, "provider-credential-persistence-failed")
+			_ = s.flushPersistenceState950("passkey-provider-credential-failed")
+			writeError(w, http.StatusInternalServerError, "не удалось безопасно сохранить provider credential")
+			return
+		}
 	}
 	if updated, err := s.Repo.TouchUserLogin(user.ID); err == nil {
 		user = updated
@@ -442,7 +455,7 @@ func (s Server) issuePasskeyLogin117(w http.ResponseWriter, r *http.Request, use
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"status": "authenticated", "authMethods": methods, "authStrength": "phishing-resistant", "user": sanitizeUserAccount(user), "session": sanitizeSessionRecord(session), "tokens": map[string]any{"accessToken": access, "accessTokenTtlMinutes": int(accessTokenTTL.Minutes()), "refreshToken": refresh, "refreshTokenTtlDays": int(refreshTokenTTL.Hours() / 24), "rotation": true}}})
 }
 
-func (s Server) startPasskeyMFAContinuation117(user model.User, provider, identityID, deviceID string, methods []string) (map[string]any, error) {
+func (s Server) startPasskeyMFAContinuation117(user model.User, provider, identityID, deviceID string, methods []string, providerToken ...string) (map[string]any, error) {
 	if s.State.Passkeys.countByUser(user.ID) == 0 {
 		return nil, errors.New("MFA policy requires passkey but no passkey is registered")
 	}
@@ -450,7 +463,19 @@ func (s Server) startPasskeyMFAContinuation117(user model.User, provider, identi
 	if err != nil {
 		return nil, err
 	}
-	token, err := s.State.Passkeys.createChallenge(user.ID, "passkey-mfa-login", challenge, map[string]any{"provider": provider, "identityId": identityID, "deviceId": deviceID, "authMethods": methods})
+	metadata := map[string]any{"provider": provider, "identityId": identityID, "deviceId": deviceID, "authMethods": methods}
+	if len(providerToken) > 0 && strings.TrimSpace(providerToken[0]) != "" {
+		identity, err := s.pendingProviderIdentity0296(user.ID, provider, identityID)
+		if err != nil {
+			return nil, err
+		}
+		ciphertext, err := s.encryptProviderCredential116(user.ID, identity.ID, provider, identity.Subject, providerToken[0])
+		if err != nil {
+			return nil, err
+		}
+		metadata["sealedProviderCredential"] = ciphertext
+	}
+	token, err := s.State.Passkeys.createChallenge(user.ID, "passkey-mfa-login", challenge, metadata)
 	if err != nil {
 		return nil, err
 	}

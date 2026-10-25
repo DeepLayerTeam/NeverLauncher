@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
 )
 
 type loginMFAResult117 struct {
@@ -32,7 +33,12 @@ func authMethodStrength117(methods []string) string {
 // удовлетворить второму фактору. Политика пользователя также
 // может требовать любой MFA или устойчивый к фишингу passkey.
 func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp, recovery string) (loginMFAResult117, error) {
-	methods := mergeAuthMethods117(baseMethods)
+	// A connector's authMethods (including signed HTTP claims and verified OIDC
+	// amr) report what the *upstream* provider did. They are not evidence that
+	// NeverLauncher verified a local TOTP, recovery code or passkey. In
+	// particular a remote "passkey"/"mfa" string must never satisfy the local
+	// MFA policy or produce a privileged Never authStrength.
+	methods := mergeAuthMethods117(authconnector.SafeUpstreamAuthMethods(baseMethods))
 	strength := authMethodStrength117(methods)
 	policy := s.State.Passkeys.policy(user.ID)
 	passkeys := s.State.Passkeys.countByUser(user.ID)

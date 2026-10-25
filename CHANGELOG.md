@@ -1,3 +1,11 @@
+## 0.29.6 — Provider Runtime Parity (2026-10-25)
+
+- Enforce identical Never MFA assurance for local, SQL, signed HTTP, OIDC and Microsoft runtime logins: upstream AMR/factor labels are retained as non-authoritative provenance and cannot elevate Never sessions.
+- Admin password login now uses the configured provider routing before rate limiting and securely persists external credentials, revoking its issued session on storage failure.
+- OIDC/Microsoft browser login defers provider credential storage until after Never MFA and session issuance, with safe rollback and issuer-aware responses/audit. WebAuthn continuations keep any pending upstream token AEAD-sealed and commit it only after local passkey proof.
+- Add SDK assurance regression tests, Admin/browser provider E2E tests and CI with real SQL engines and race checks. See `docs/releases/0.29.6-provider-runtime-parity.md`.
+- Full production certification of live cloud Microsoft identity and licensed Minecraft launch remains pending; tests require an environment with external Go dependencies.
+
 ## 0.29.5 — Local Auth, FileAuth & Rehash (2026-10-25)
 
 - Add a real Gravit FileAuthSystem `Database.json` importer: transactional PostgreSQL account + local identity + original Minecraft UUID, dry-run, strict collision refusal and no `Sessions.json`/password/session export.
