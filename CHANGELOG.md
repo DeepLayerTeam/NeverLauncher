@@ -779,3 +779,9 @@
 [0.21.7]: https://github.com/DeepLayerTeam/NeverLauncher/releases
 [0.21.6]: https://github.com/DeepLayerTeam/NeverLauncher/releases
 [0.21.5]: https://github.com/DeepLayerTeam/NeverLauncher/releases
+
+## 0.30.9 — Diagnostics & Sentry
+
+- Opt-in Backend, Desktop (Tauri/JS) and JVM diagnostics with Sentry envelope ingestion, bounded error transport and sensitive-data minimization.
+- Reproducible release upload path for JS source maps, Rust/native debug symbols and actual ProGuard mappings; reject mismatched or missing artifacts.
+- Automated HTTP ingest/privacy tests and release artifact upload regression checks.

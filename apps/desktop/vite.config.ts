@@ -13,6 +13,7 @@ export default defineConfig({
     __NEVERLAUNCHER_VERSION__: JSON.stringify(version),
   },
   clearScreen: false,
+  build: { sourcemap: process.env.NEVERLAUNCHER_SENTRY_RELEASE_BUILD === '1' ? 'hidden' : false }, // maps only in authenticated release pipeline
   server: {
     port: 1420,
     strictPort: true

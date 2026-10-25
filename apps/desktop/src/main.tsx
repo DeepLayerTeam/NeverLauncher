@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import './styles.css';
+import { installErrorCapture0309 } from './sentry_diagnostics_0309';
 import { DesktopExtensions0209 } from './extensions_0209';
 import { ComponentChooser0247 } from './ComponentChooser0247';
 import { ComponentPortability02410 } from './ComponentPortability02410';
@@ -38,6 +39,7 @@ type DesktopSettings = {
   serverHost: string;
   serverPort: number;
   offlineEnabled: boolean;
+  sentryDiagnosticsEnabled?: boolean;
   discordPresenceEnabled?: boolean;
   discordApplicationId?: string;
   discordActionUrl?: string;
@@ -274,6 +276,7 @@ const defaultSettings: DesktopSettings = {
   serverHost: '',
   serverPort: 25565,
   offlineEnabled: false,
+  sentryDiagnosticsEnabled: false,
   discordPresenceEnabled: false,
   discordApplicationId: '',
   discordActionUrl: '',
@@ -450,6 +453,15 @@ function App() {
         log('Конфигурация Tauri недоступна: localStorage fallback разрешён только для web-preview; production-сборка должна использовать конфигурацию Tauri и защищённое хранилище.');
       });
   }, []);
+
+  // Explicit opt-in is enforced independently by the native process.
+  useEffect(() => {
+    void callTauri<void>('desktop_sentry_consent', { enabled: settings.sentryDiagnosticsEnabled === true }).catch(() => undefined);
+    return () => { void callTauri<void>('desktop_sentry_consent', { enabled: false }).catch(() => undefined); };
+  }, [settings.sentryDiagnosticsEnabled]);
+  useEffect(() => installErrorCapture0309(window, (category, frames) => {
+    void callTauri<void>('desktop_sentry_report', { category, frames }).catch(() => undefined);
+  }), []);
 
   // Rich Presence is opt-in and never part of Minecraft launch readiness.
   // A timer re-establishes IPC after Discord restarts without coupling it to game launch.
@@ -1928,6 +1940,7 @@ function SettingsPanel({ settings, patchSettings, validateSettings, settingsChec
       <label>Сервер профиля<select value={settings.serverId || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => patchSettings('serverId', e.target.value)}><option value="">Без выбранного сервера</option>{profileServers.map((server: ScopedServer) => <option value={server.id} key={server.id}>{server.name} ({server.kind})</option>)}</select></label>
       {settings.autoEnter && <><label>Публичный игровой адрес<input value={settings.serverHost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverHost', e.target.value)} placeholder="mc.example.org" /></label><label>Порт<input type="number" min={1} max={65535} value={settings.serverPort} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverPort', Number(e.target.value))} /></label></>}
       <label className="checkSetting"><input type="checkbox" checked={minecraftIdentity === 'offline'} disabled={!manifest?.runtime.launch?.offlineMode} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {const offline=e.target.checked;setMinecraftIdentity(offline ? 'offline' : 'local');patchSettings('offlineEnabled',offline);if(offline)patchSettings('serverId','');}} /> Offline (только разрешённый подписанным Manifest v2)</label>
+      <label className="checkSetting"><input type="checkbox" checked={Boolean(settings.sentryDiagnosticsEnabled)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('sentryDiagnosticsEnabled', e.target.checked)} /> Отправлять обезличенные отчёты о сбоях в Sentry (по согласию)</label>
       <label className="checkSetting"><input type="checkbox" checked={Boolean(settings.discordPresenceEnabled)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordPresenceEnabled', e.target.checked)} /> Показывать активность в Discord (опционально)</label>
       {settings.discordPresenceEnabled && <>
         <label>Discord Application ID<input value={settings.discordApplicationId || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordApplicationId', e.target.value)} placeholder="123456789012345678" /></label>

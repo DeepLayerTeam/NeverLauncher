@@ -1,0 +1,60 @@
+name: Diagnostics and Sentry 0.30.9
+on:
+  push:
+    paths:
+      - 'services/api/internal/sentrydiag/**'
+      - 'services/api/cmd/neverlauncher-api/main.go'
+      - 'apps/desktop/src/sentry_diagnostics_0309.ts'
+      - 'apps/desktop/src-tauri/src/sentry_diagnostics_0309.rs'
+      - 'sdk/java/core/**'
+      - 'scripts/diagnostics/**'
+      - '.github/workflows/diagnostics-sentry-0309.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/sentrydiag/**'
+      - 'services/api/cmd/neverlauncher-api/main.go'
+      - 'apps/desktop/**'
+      - 'sdk/java/core/**'
+      - 'scripts/diagnostics/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version-file: services/api/go.mod}
+      - run: go test -race -count=1 ./internal/sentrydiag ./cmd/neverlauncher-api
+        working-directory: services/api
+      - run: go vet ./internal/sentrydiag ./cmd/neverlauncher-api
+        working-directory: services/api
+  jvm:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21'}
+      - run: sh sdk/java/core/build.sh test
+  frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm, cache-dependency-path: apps/desktop/package-lock.json}
+      - run: npm ci && npm run test:sentry && npm run build
+        working-directory: apps/desktop
+      - run: python3 -m unittest discover -s scripts/diagnostics -p 'test_*.py'
+      - run: python3 scripts/version/manage.py check
+  native:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test sentry_diagnostics_0309
+        working-directory: apps/desktop/src-tauri

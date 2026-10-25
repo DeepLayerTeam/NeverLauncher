@@ -22,6 +22,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/httpapi"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sentrydiag"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
 )
 
@@ -32,6 +33,18 @@ var commit = "unknown"
 
 func main() {
 	cfg := config.Load()
+	var diagnostics *sentrydiag.Reporter
+	if sentrydiag.EnabledFromEnvironment() {
+		if os.Getenv("NEVERLAUNCHER_SENTRY_BACKEND_DSN") == "" {
+			log.Fatal("Sentry backend reporting enabled without DSN")
+		}
+		var err error
+		diagnostics, err = sentrydiag.New(os.Getenv("NEVERLAUNCHER_SENTRY_BACKEND_DSN"), "neverlauncher@"+version+"+"+commit, cfg.Environment)
+		if err != nil {
+			log.Fatalf("invalid backend Sentry configuration: %v", err)
+		}
+	}
+	defer diagnostics.Close()
 	noExtensions := hasCommandArg02012(os.Args[1:], "--no-extensions")
 
 	if err := config.ValidateProduction(cfg); err != nil {
@@ -275,7 +288,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	httpServer := &http.Server{Handler: server.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	httpServer := &http.Server{Handler: diagnostics.Wrap(server.Handler()), ReadHeaderTimeout: 10 * time.Second}
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- httpServer.Serve(listener) }()
 	stop := make(chan os.Signal, 1)

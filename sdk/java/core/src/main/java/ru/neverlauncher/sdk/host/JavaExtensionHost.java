@@ -11,6 +11,7 @@ import ru.neverlauncher.sdk.core.ExtensionRunner;
 public final class JavaExtensionHost {
     private JavaExtensionHost(){}
     public static void main(String[] args)throws Exception {
+        ru.neverlauncher.sdk.core.SentryDiagnostics.installFromEnvironment(System.getenv());
         URI location=JavaExtensionHost.class.getProtectionDomain().getCodeSource().getLocation().toURI();
         Path jar=Path.of(location).toRealPath();
         if(!jar.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".jar"))throw new IllegalArgumentException("Java Extension Host must be launched from a JAR");
