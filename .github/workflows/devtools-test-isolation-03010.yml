@@ -1,0 +1,62 @@
+name: DevTools and Test Isolation 0.30.10
+on:
+  push:
+    paths:
+      - 'cli/internal/devtools/**'
+      - 'cli/cmd/neverlauncher/devtools_03010*'
+      - 'scripts/devtools/**'
+      - '.github/workflows/devtools-test-isolation-03010.yml'
+  pull_request:
+    paths:
+      - 'cli/internal/devtools/**'
+      - 'cli/cmd/neverlauncher/devtools_03010*'
+      - 'scripts/devtools/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version-file: cli/go.mod}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21'}
+      - name: Real JVM and fixture Go tests
+        run: go test -count=1 ./internal/devtools ./cmd/neverlauncher -run 'Test(AnalyzeAndTransformJava|SuspiciousReferenceAndSignatures|JarZipTraversalRejected|RunProcessSanitized|RunTimeout|AuthFixtureIntegration|AuthExpiryAndListener|AuthTokenNotProductionJWT|DevTools03010)'
+        working-directory: cli
+      - name: CLI build and vet
+        run: go build ./cmd/neverlauncher && go vet ./internal/devtools ./cmd/neverlauncher
+        working-directory: cli
+  linux-race-and-cli:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version-file: cli/go.mod}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21'}
+      - run: go test -race -count=1 ./internal/devtools
+        working-directory: cli
+      - run: go build -o /tmp/nl-devtools ./cmd/neverlauncher
+        working-directory: cli
+      - run: python3 scripts/devtools/smoke_03010.py --cli /tmp/nl-devtools
+      - run: python3 scripts/version/manage.py check
+  linux-bubblewrap:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version-file: cli/go.mod}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21'}
+      - name: Install Linux OS sandbox and verify user namespaces
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+      - run: go build -o /tmp/nl-devtools ./cmd/neverlauncher
+        working-directory: cli
+      - run: bash scripts/devtools/sandbox_smoke_03010.sh /tmp/nl-devtools

@@ -1,3 +1,10 @@
+## 0.30.10 — DevTools & Test Isolation (2026-10-25)
+
+- Add executable `nl devtools jar analyze|strip-debug` with bounded, path-safe JAR parsing, classfile constant-pool risk indicators and actual debug-attribute bytecode rewriting; refuse modifications to signed JARs.
+- Add `nl devtools component test` with sanitized, time-limited external JVM subprocess, bounded output and Linux bubblewrap OS sandbox as the default. Explicit `--ack-unconfined` is mandatory for process-only testing, which is not a security sandbox.
+- Add an opt-in loopback-only test auth fixture server with ephemeral debug identities, control-scoped issue/revoke, strict login, HMAC/TTL checks and real auth event history, without production credential/API access.
+- Add executable javac/JVM/HTTP CLI smoke tests, Go race tests and multi-OS CI gates. Sandbox user namespace availability and full production release certification require independent CI verification.
+
 ## 0.30.8 — Discord Rich Presence & LAN Discovery (2026-10-25)
 
 - Implement Discord desktop Rich Presence through authenticated local IPC handshake, framed SET_ACTIVITY with nonce-matched acknowledgments, bounded timeouts, reconnection on state changes and optional HTTPS activity buttons. User opt-in, app ID, action URL and activity states are persisted in the native desktop configuration. Discord failures never gate Minecraft launch.

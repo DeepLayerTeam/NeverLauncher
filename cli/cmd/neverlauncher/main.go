@@ -41,6 +41,7 @@ const helpText = `NeverLauncher CLI
   sdk ...                         SDK tooling
   lan publish|discover|verify         DNS-SD/mDNS LAN backend discovery and pinned TLS verification
   discord presence                    local Discord IPC Rich Presence and activity actions
+  devtools jar analyze|strip-debug; component test; auth serve  isolated test tooling (no production credentials)
   module-parity audit [--run-tests] [--module M01,...]    audit real M01-M19 sources and regression tests
   extension init|dev|test|build|template|validate|import-legacy|pack|sign|verify|inspect|registry|updates|trust|quarantine|emergency|recovery|ga|upgrade-source|installed|status|install|enable|disable|update|rollback|uninstall|host|cli|capabilities|permissions|permission-grant|permission-revoke|secrets|secret-set|secret-delete  NeverExtensions tooling
   x <namespace> <command>            выполнить namespaced CLI extension через Extension Host Protocol
@@ -338,6 +339,8 @@ func run(args []string) error {
 		return handleLAN0308(args[1:])
 	case "discord":
 		return handleDiscord0308(args[1:])
+	case "devtools":
+		return handleDevTools03010(args[1:])
 	case "module-parity":
 		return handleModuleParity0301(args[1:])
 	case "x":
