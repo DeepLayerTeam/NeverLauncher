@@ -64,6 +64,35 @@ func main() {
 		}
 	}
 
+	// Physically purge expired voluntary HWID risk observations and appeals.
+	// Runs on all replicas; the idempotent repository operation is safe in HA.
+	if janitor, ok := repo.(interface {
+		PruneHWID0299(context.Context, time.Time) error
+	}); ok {
+		maintenanceCtx, stopHWID := context.WithCancel(context.Background())
+		defer stopHWID()
+		go func() {
+			prune := func() {
+				ctx, cancel := context.WithTimeout(maintenanceCtx, 20*time.Second)
+				defer cancel()
+				if err := janitor.PruneHWID0299(ctx, time.Now().UTC()); err != nil && ctx.Err() == nil {
+					log.Printf("HWID data retention cleanup failed: %v", err)
+				}
+			}
+			prune()
+			ticker := time.NewTicker(6 * time.Hour)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-maintenanceCtx.Done():
+					return
+				case <-ticker.C:
+					prune()
+				}
+			}
+		}()
+	}
+
 	if strings.EqualFold(cfg.Environment, "production") || strings.EqualFold(cfg.Environment, "prod") {
 		if err := httpapi.ValidateManifestSigningConfig(cfg.ManifestSigningPrivateKey); err != nil {
 			log.Fatal(err)

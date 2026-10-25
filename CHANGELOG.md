@@ -1,3 +1,10 @@
+## 0.29.9 — HWID Risk & Recovery (2026-10-25)
+
+- Implement voluntary native Desktop machine-continuity hashing, account-scoped server HMAC and 30-day PostgreSQL/Memory retention with scheduled physical cleanup.
+- Integrate HWID change into existing session risk assessment as a limited step-up signal; never treat it as immutable identity or an automatic ban condition.
+- Support phishing-resistant re-baselining, user appeals, operator approval/rejection fenced to the observed digest, secure device ownership, redacted status and opt-out deletion.
+- Add migration `0084` to Backend and CLI, cross-replica PostgreSQL tests and Desktop/UI CI gates. Full external-module/API/Desktop/PostgreSQL E2E remains pending verification; details in `docs/releases/0.29.9-hwid-risk-recovery.md`.
+
 ## 0.29.8 — Protection SDK & Policy Engine (2026-10-25)
 
 - Add runtime `pkg/protection` with ordered before/after auth and before launch/join hooks, fail-closed mandatory decisions and explicit allow/deny/step-up/reattest/review semantics. Enforce active bans in the existing federation, token/session, Minecraft and ServerBridge trust paths.

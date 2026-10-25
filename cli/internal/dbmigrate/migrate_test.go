@@ -60,6 +60,7 @@ func TestMigrationApplyAndVerifyScriptsAreFailClosed(t *testing.T) {
 		"0081_auth_canonical_issuer_0291",
 		"0082_global_session_revocation_0297",
         "0083_protection_policy_0298",
+        "0084_hwid_risk_recovery_0299",
 		"database contains migrations unknown to this binary",
 		"UPDATE schema_migrations SET checksum=",
 		"pg_advisory_lock(718033100100)",

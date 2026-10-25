@@ -60,6 +60,7 @@ func removeRiskReasons0126(existing []string, remove ...string) []string {
 func evaluateRiskReasons0126(reasons []string) (state string, score int, action string) {
 	reasons = mergeRiskReasons118(nil, reasons...)
 	network := false
+	hwidChanged := false
 	reattest := false
 	compromise := false
 	for _, reason := range reasons {
@@ -70,6 +71,8 @@ func evaluateRiskReasons0126(reasons []string) (state string, score int, action 
 		case "user-agent-changed":
 			score += 35
 			network = true
+		case "hwid-signal-changed":
+			hwidChanged = true
 		case "device-attestation-stale":
 			score += 40
 			reattest = true
@@ -80,6 +83,17 @@ func evaluateRiskReasons0126(reasons []string) (state string, score int, action 
 			// Неизвестные сохранённые причины безопасности не понижаются молча.
 			score += 25
 			network = true
+		}
+	}
+	// HWID may request a step-up but must never independently turn a session
+	// into a compromised/ban decision or push another weak signal over 100.
+	if hwidChanged && !compromise {
+		network = true
+		if score < 100 {
+			score += 20
+			if score >= 100 {
+				score = 99
+			}
 		}
 	}
 	if score > 100 {
@@ -143,6 +157,16 @@ func (s Server) reconcileSessionDeviceRisk0126(r *http.Request, rec authSessionR
 		} else if device.Status != "active" || device.TrustState != "verified" || rec.DeviceTrustState != "verified" {
 			reasons = mergeRiskReasons118(reasons, "trusted-device-revoked")
 		} else {
+			// Optional HWID observation is not attestation. Storage failure
+			// does not trigger mass revocation or an automatic ban.
+			if store, ok := s.Repo.(repository.HWIDStore0299); ok {
+				observation, hwidErr := store.GetHWID0299(r.Context(), rec.UserID, rec.TrustedDeviceID, now)
+				if hwidErr == nil && observation.State == "changed" {
+					reasons = mergeRiskReasons118(reasons, "hwid-signal-changed")
+				} else {
+					reasons = removeRiskReasons0126(reasons, "hwid-signal-changed")
+				}
+			}
 			reasons = removeRiskReasons0126(reasons, "trusted-device-missing", "trusted-device-revoked", "trusted-device-invalid")
 			if device.KeyBinding == "hardware" && device.KeyAlgorithm == "p256" {
 				state, _ := effectiveDeviceAttestation0124(device, now)
@@ -156,7 +180,7 @@ func (s Server) reconcileSessionDeviceRisk0126(r *http.Request, rec authSessionR
 			}
 		}
 	} else {
-		reasons = removeRiskReasons0126(reasons, "trusted-device-missing", "trusted-device-revoked", "trusted-device-invalid", "device-attestation-stale")
+		reasons = removeRiskReasons0126(reasons, "trusted-device-missing", "trusted-device-revoked", "trusted-device-invalid", "device-attestation-stale", "hwid-signal-changed")
 	}
 	rec.RiskReasons = reasons
 	recomputeSessionRisk0126(&rec, now)
