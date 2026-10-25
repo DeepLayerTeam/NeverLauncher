@@ -1,4 +1,4 @@
-# Gravit Compatibility Adapter 0.30.7
+# Gravit Compatibility Adapter 0.31.0 (limited API)
 
 This is a **working, deliberately limited source-port adapter** for GravitLauncher-style Java modules, not a universal Gravit JAR loader. It runs in NeverLauncher's existing Java Extension Host (`java -jar`) under Go supervisor deadlines and Ed25519-signed `.nlext` package verification. Gravit's internal LaunchServer/LauncherRuntime/JavaFX APIs are not present and are not emulated. This code is independently implemented and is not a copy of Gravit sources.
 

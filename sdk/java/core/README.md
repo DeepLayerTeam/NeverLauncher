@@ -1,4 +1,4 @@
-# NeverLauncher Java SDK Core / Runtime 0.30.7
+# NeverLauncher Java SDK Core / Runtime 0.31.0
 
 A **working Java 17+** SDK for the existing NeverExtensions API `1.0` / Manifest `2.0` / local Go Extension Host Protocol `1.0`. The SDK does not introduce another manifest, server API or registry. No Maven dependency download is needed to build its jar.
 
@@ -6,7 +6,7 @@ A **working Java 17+** SDK for the existing NeverExtensions API `1.0` / Manifest
 
 ```bash
 sh sdk/java/core/build.sh test
-# Output: sdk/java/core/build/neverlauncher-java-sdk-core-0.30.7.jar
+# Output: sdk/java/core/build/neverlauncher-java-sdk-core-0.31.0.jar
 sh examples/extensions/java-lifecycle/build.sh
 python3 examples/extensions/java-lifecycle/test-runner.py  # Linux/macOS, requires Java on PATH
 ```

@@ -1,3 +1,11 @@
+## 0.31.0 — Java SDK publication & conditional GA release (2026-10-26)
+
+- Build deterministic Java 17 Maven-compatible Core and source-port Gravit SDK artifacts with POM dependencies, sources, actual generated Javadoc, integrity digests and independent Java consumer smoke tests.
+- Fix Gravit compatibility JAR hardcoded version; update JVM Sentry release defaults and retain executable Java Host/Gravit E2E.
+- Build and Ed25519-verify real reference `.nlext` packages using the existing Go CLI; intentionally keep test-only fixtures separate from certified production extensions.
+- Version the current M01–M19 inventory at 0.31.0 while preserving past release baselines and honest partial/blocked statuses.
+- Require exact-commit cross-platform E2E, native Tauri CI and independently Ed25519-authorized evidence before production release signing; reject missing/modified evidence and skipped tests. Full upstream module binary parity and actual GA approval are NOT claimed without required external evidence.
+
 ## 0.30.10 — DevTools & Test Isolation (2026-10-25)
 
 - Add executable `nl devtools jar analyze|strip-debug` with bounded, path-safe JAR parsing, classfile constant-pool risk indicators and actual debug-attribute bytecode rewriting; refuse modifications to signed JARs.

@@ -9,7 +9,8 @@ import (
 
 // CurrentMatrixPath is the executable, post-0.30.10 evidence inventory.
 // The historical MatrixPath is kept unchanged for baseline regression tests.
-const CurrentMatrixPath = "compatibility/gravit/module-parity-03012.json"
+const CurrentMatrixPath = "compatibility/gravit/module-parity-0310.json"
+const PreviousMatrixPath03012 = "compatibility/gravit/module-parity-03012.json"
 const PreviousMatrixPath03011 = "compatibility/gravit/module-parity-03011.json"
 
 func LoadCurrentMatrix(root string) (Matrix, error) {
@@ -20,7 +21,17 @@ func LoadCurrentMatrix(root string) (Matrix, error) {
 
 // InspectCurrent checks the current inventory without ever inferring parity.
 func InspectCurrent(root string) (Report, error) {
-	return inspectEvidenceMatrix03012(root, CurrentMatrixPath, "0.30.12", "0.30.11", true)
+	return inspectEvidenceMatrix03012(root, CurrentMatrixPath, "0.31.0", "0.30.12", true)
+}
+
+// Keep the exact previous release auditable without pretending the current tree is 0.30.12.
+func InspectPrevious03012(root string) (Report, error) {
+ return inspectEvidenceMatrix03012(root, PreviousMatrixPath03012, "0.30.12", "0.30.11", false)
+}
+func LoadPreviousMatrix03012(root string) (Matrix, error) {
+ var m Matrix
+ err := readJSON(filepath.Join(root, PreviousMatrixPath03012), &m)
+ return m, err
 }
 
 // Historical 0.30.11 evidence remains directly auditable after upgrading.

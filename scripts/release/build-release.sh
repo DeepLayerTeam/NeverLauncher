@@ -89,6 +89,28 @@ if [[ "${VERSION}" == "0.27.0" ]]; then
     --commit "${SOURCE_COMMIT}" --output "${OFFICIAL_GA_RECEIPT}"
 fi
 
+# 0.31.0 Java SDK & Module Parity GA: no unsigned/incomplete evidence may
+# authorize production signing. Validate before deleting any release outputs.
+if [[ "${VERSION}" == "0.31.0" ]]; then
+  for name in NEVERLAUNCHER_JAVA_GA_EVIDENCE_DIR NEVERLAUNCHER_JAVA_GA_APPROVAL_PUBLIC_KEY_FILE NEVERLAUNCHER_JAVA_GA_APPROVAL_SIGNATURE_FILE; do
+    [[ -n "${!name:-}" ]] || { echo "0.31.0 GA BLOCKED: missing ${name}" >&2; exit 2; }
+  done
+  command -v git >/dev/null 2>&1 || { echo "0.31.0 GA requires git" >&2; exit 2; }
+  HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
+  [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${HEAD_COMMIT}" ]] || {
+    echo "0.31.0 GA source commit mismatch" >&2; exit 2;
+  }
+  [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal)" ]] || {
+    echo "0.31.0 GA signing requires a clean source checkout" >&2; exit 2;
+  }
+  SOURCE_COMMIT="${HEAD_COMMIT}"
+  python3 "${ROOT_DIR}/scripts/ga/verify_java_ga_0310.py" \
+    --evidence "${NEVERLAUNCHER_JAVA_GA_EVIDENCE_DIR}" \
+    --revision "${HEAD_COMMIT}" \
+    --public-key "${NEVERLAUNCHER_JAVA_GA_APPROVAL_PUBLIC_KEY_FILE}" \
+    --signature "${NEVERLAUNCHER_JAVA_GA_APPROVAL_SIGNATURE_FILE}" >/dev/null || exit 2
+fi
+
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
 mkdir -p "${OUT_DIR}" "${WORK_DIR}"
 
