@@ -52,6 +52,7 @@ if __name__ == '__main__':
     env.update({
         'NEVERLAUNCHER_EXTENSION_HOST_URL': f'http://127.0.0.1:{host.server_port}',
         'NEVERLAUNCHER_EXTENSION_HOST_TOKEN': 'test-secret',
+        'NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN': 'callback-test-secret',
         'NEVERLAUNCHER_EXTENSION_ID': 'org.example.java-lifecycle',
         'NEVERLAUNCHER_EXTENSION_VERSION': '0.1.0',
         'NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL': '1.0',

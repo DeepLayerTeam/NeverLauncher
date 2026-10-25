@@ -11,15 +11,17 @@ public final class ExtensionLifecycle implements AutoCloseable {
     private static final AtomicInteger IDS=new AtomicInteger();
     private final Extension extension;
     private final ExtensionManifest manifest;
+    private final RuntimeServices runtime;
     private final ExecutorService executor=Executors.newSingleThreadExecutor(r->{Thread t=new Thread(r,"neverext-lifecycle-"+IDS.incrementAndGet());t.setDaemon(true);return t;});
     private final Cancellation cancellation=new Cancellation();
     private State state=State.NEW;
-    public ExtensionLifecycle(Extension extension,ExtensionManifest manifest){this.extension=Objects.requireNonNull(extension);this.manifest=Objects.requireNonNull(manifest);}
+    public ExtensionLifecycle(Extension extension,ExtensionManifest manifest){this.extension=Objects.requireNonNull(extension);this.manifest=Objects.requireNonNull(manifest);this.runtime=null;}
+    public ExtensionLifecycle(Extension extension,ExtensionManifest manifest,RuntimeServices runtime){this.extension=Objects.requireNonNull(extension);this.manifest=Objects.requireNonNull(manifest);this.runtime=Objects.requireNonNull(runtime);}
     public synchronized State state(){return state;}
     public synchronized void start(Duration timeout) throws Exception {
         if(state!=State.NEW)throw new IllegalStateException("cannot start in state "+state);
         state=State.STARTING;
-        try{invoke(()->extension.start(new ExtensionContext(manifest,cancellation,Deadline.after(timeout))),timeout);state=State.RUNNING;}
+        try{invoke(()->extension.start(new ExtensionContext(manifest,cancellation,Deadline.after(timeout),runtime)),timeout);state=State.RUNNING;}
         catch(Exception e){state=State.FAILED;cancellation.cancel();executor.shutdownNow();throw e;}
     }
     public synchronized void stop(Duration timeout) throws Exception {
@@ -27,7 +29,7 @@ public final class ExtensionLifecycle implements AutoCloseable {
         if(state==State.NEW){state=State.STOPPED;cancellation.cancel();executor.shutdownNow();return;}
         if(state!=State.RUNNING)throw new IllegalStateException("cannot stop in state "+state);
         state=State.STOPPING;cancellation.cancel();
-        try{invoke(()->extension.stop(new ExtensionContext(manifest,cancellation,Deadline.after(timeout))),timeout);state=State.STOPPED;}
+        try{invoke(()->extension.stop(new ExtensionContext(manifest,cancellation,Deadline.after(timeout),runtime)),timeout);state=State.STOPPED;}
         catch(Exception e){state=State.FAILED;throw e;}
         finally{executor.shutdownNow();}
     }

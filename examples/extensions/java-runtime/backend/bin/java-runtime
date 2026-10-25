@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+exec java -cp backend/lib/neverlauncher-java-sdk-core.jar:backend/lib/java-runtime.jar ru.neverlauncher.sdk.core.ExtensionRunner backend/manifest.json ru.example.neverlauncher.RuntimeExample

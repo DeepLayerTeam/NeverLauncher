@@ -251,6 +251,7 @@ type Supervisor struct {
 	eventBus         *eventbus.Bus
 	security         *extensionsecurity.Manager
 	callbackClient   *http.Client
+	runtimeMu0303    sync.Mutex
 	crashLoopHandler func(context.Context, Key, string)
 }
 
@@ -1111,6 +1112,7 @@ func (s *Supervisor) permissionAllowed0207(ctx context.Context, st *processState
 func (s *Supervisor) allowedCapabilities(st *processState) []string {
 	caps := []string{"extension.self", "host.health"}
 	checks := []struct{ permission, capability string }{
+		{"storage:read", "runtime.config.get"}, {"storage:write", "runtime.config.put"}, {"storage:read", "runtime.storage.get"}, {"storage:write", "runtime.storage.put"},
 		{"project:read", "project.get"}, {"release:read", "release.list"}, {"storage:read", "storage.read"},
 		{"telemetry:write", "telemetry.emit"}, {"http:outbound", "http.fetch"}, {"secrets:read", "secret.get"},
 	}
@@ -1146,6 +1148,8 @@ type capabilityRequest struct {
 	URL        string            `json:"url,omitempty"`
 	Headers    map[string]string `json:"headers,omitempty"`
 	BodyBase64 string            `json:"bodyBase64,omitempty"`
+	Key        string            `json:"key,omitempty"`
+	Value      json.RawMessage   `json:"value,omitempty"`
 	ProfileID  string            `json:"profileId,omitempty"`
 	Event      string            `json:"event,omitempty"`
 	Status     string            `json:"status,omitempty"`
@@ -1175,6 +1179,8 @@ type capabilityResult0205 struct {
 
 func (s *Supervisor) executeCapability(ctx context.Context, st *processState, capName string, req capabilityRequest) capabilityResult0205 {
 	switch capName {
+	case "runtime.config.get", "runtime.config.put", "runtime.config.delete", "runtime.storage.get", "runtime.storage.put", "runtime.storage.delete":
+		return s.executeRuntime0303(ctx, st, capName, req)
 	case "host.health":
 		return capabilityResult0205{value: map[string]any{"status": s.statusOf(st)}, status: http.StatusOK}
 	case "extension.self":

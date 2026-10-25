@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "2.0",
+  "id": "org.example.java-runtime",
+  "name": "Java Runtime API Example",
+  "version": "0.1.0",
+  "publisher": "NeverLauncher Examples",
+  "description": "Real Java backend event handler with durable JSON state and declared CLI status command",
+  "api": "1.0",
+  "targets": [
+    {"kind": "backend", "entrypoint": "backend/bin/java-runtime"},
+    {"kind": "cli", "entrypoint": "cli/bin/java-runtime"}
+  ],
+  "permissions": ["storage:read", "storage:write", "events:subscribe", "release:read", "cli:contribute"],
+  "cli": {
+    "namespace": "javaruntime",
+    "commands": [{"name": "status", "description": "Print latest release event and extension settings"}]
+  }
+}

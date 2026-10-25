@@ -1,0 +1,84 @@
+name: Java SDK Runtime API 0.30.3 — actual processes, Go broker and signed packages
+on:
+  push:
+    paths:
+      - 'sdk/java/core/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'examples/extensions/java-runtime/**'
+      - 'examples/extensions/java-lifecycle/**'
+      - '.github/workflows/java-sdk-runtime-0303.yml'
+  pull_request:
+    paths:
+      - 'sdk/java/core/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'examples/extensions/java-runtime/**'
+      - 'examples/extensions/java-lifecycle/**'
+      - '.github/workflows/java-sdk-runtime-0303.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  java-runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['17', '21']
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Core + real local HTTP runtime tests
+        shell: bash
+        run: sh sdk/java/core/build.sh test
+      - name: Compile executable backend/CLI example
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/runtime-example"
+          javac --release 17 -cp sdk/java/core/build/classes -d "$RUNNER_TEMP/runtime-example" examples/extensions/java-runtime/src/ru/example/neverlauncher/RuntimeExample.java
+      - name: Verify actual jar artifact
+        shell: bash
+        run: jar tf sdk/java/core/build/neverlauncher-java-sdk-core-0.30.3.jar | grep -q 'ru/neverlauncher/sdk/core/RuntimeCallbackServer.class'
+  java-two-process-e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - name: Build and test real Java backend and CLI subprocesses
+        run: |
+          sh examples/extensions/java-runtime/build.sh
+          python3 examples/extensions/java-runtime/test-runner.py
+          sh examples/extensions/java-lifecycle/build.sh
+          python3 examples/extensions/java-lifecycle/test-runner.py
+      - name: Pack signed NeverExtensions Java backend/CLI example and verify Ed25519
+        run: |
+          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+          openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/extension-key.pem"
+          openssl pkey -in "$RUNNER_TEMP/extension-key.pem" -pubout -out "$RUNNER_TEMP/extension-pub.pem"
+          "$RUNNER_TEMP/nl" extension pack examples/extensions/java-runtime/build/package --output "$RUNNER_TEMP/java-runtime.nlext" --private-key "$RUNNER_TEMP/extension-key.pem"
+          "$RUNNER_TEMP/nl" extension verify "$RUNNER_TEMP/java-runtime.nlext" --public-key "$RUNNER_TEMP/extension-pub.pem"
+  go-runtime-broker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Real Go host HTTP broker, persistence, permission revocation and security tests
+        working-directory: services/api
+        run: go test -race -count=1 -run 'TestRuntime.*0303' ./internal/extensionhost
+      - name: Go host regression tests
+        working-directory: services/api
+        run: go test -count=1 ./internal/extensionhost

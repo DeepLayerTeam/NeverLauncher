@@ -1,4 +1,4 @@
-name: Java SDK Core 0.30.2 — compile, unit and live protocol tests
+name: Java SDK Core 0.30.3 — compile, unit and live protocol tests
 on:
   push:
     paths:
@@ -40,7 +40,7 @@ jobs:
         run: python3 -m json.tool examples/extensions/java-lifecycle/neverlauncher-extension.json >/dev/null
       - name: Verify produced SDK artifact
         shell: bash
-        run: jar tf sdk/java/core/build/neverlauncher-java-sdk-core-0.30.2.jar | grep -q 'ru/neverlauncher/sdk/core/ExtensionRunner.class'
+        run: jar tf sdk/java/core/build/neverlauncher-java-sdk-core-0.30.3.jar | grep -q 'ru/neverlauncher/sdk/core/ExtensionRunner.class'
   java-process-e2e:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
