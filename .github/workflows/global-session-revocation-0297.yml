@@ -1,0 +1,58 @@
+name: Global Session Revocation 0.29.7
+on:
+  push:
+    paths:
+      - 'services/api/internal/dbmigrate/**'
+      - 'services/api/internal/repository/**'
+      - 'services/api/internal/httpapi/**'
+      - 'cli/internal/dbmigrate/**'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+      - '.github/workflows/global-session-revocation-0297.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/dbmigrate/**'
+      - 'services/api/internal/repository/**'
+      - 'services/api/internal/httpapi/**'
+      - 'cli/internal/dbmigrate/**'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+      - '.github/workflows/global-session-revocation-0297.yml'
+permissions:
+  contents: read
+jobs:
+  revoke-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: neverlauncher
+          POSTGRES_USER: neverlauncher
+          POSTGRES_PASSWORD: test-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher -d neverlauncher" --health-interval 5s --health-timeout 5s --health-retries 20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher:test-only@localhost:5432/neverlauncher?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Compile real API and CLI
+        run: go build ./cmd/...
+      - name: Build CLI and validate its sealed migration catalog
+        working-directory: cli
+        run: go build ./cmd/... && go test -count=1 ./internal/dbmigrate
+      - name: Validate migrations and actual cross-replica revocations
+        run: go test -count=1 -timeout=10m ./internal/dbmigrate ./internal/repository -run 'TestGlobalSessionRevocationPostgres0297|TestEvaluateAppliedSealedCatalog|TestCanonicalIssuerPostgres0291'
+      - name: Exercise HTTP role-revoke enforcement
+        run: go test -race -count=1 -timeout=10m ./internal/httpapi -run 'TestRoleUpdateRevokesLiveNeverToken0297|TestCompromisedRiskRevokesSessionAndRefreshMemory0297|TestSecurityHardening902TOTPAndPasswordReset'
+      - name: Static analysis
+        run: go vet ./internal/dbmigrate ./internal/repository ./internal/httpapi

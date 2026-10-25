@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -185,6 +186,11 @@ func (s Server) adminUserUpdate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "пользователь не найден")
 		return
 	}
+	previousRole := user.RoleID
+	previousProjectRoles := make(map[string]string, len(user.ProjectRoles))
+	for projectID, role := range user.ProjectRoles {
+		previousProjectRoles[projectID] = role
+	}
 	var req userWriteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
@@ -206,6 +212,12 @@ func (s Server) adminUserUpdate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	if previousRole != saved.RoleID || !maps.Equal(previousProjectRoles, saved.ProjectRoles) {
+		// MemoryRepository needs an explicit cascade; PostgreSQL also enforces
+		// this atomically through nl_user_security_change_0297.
+		s.State.AuthSessions.revokeUser(saved.ID, "permissions-changed")
+		_ = s.flushPersistenceState950("user-permissions-revoked")
 	}
 	s.audit(r, s.adminActor(r), "user:update", saved.ID)
 	writeJSON(w, http.StatusOK, saved)

@@ -1,3 +1,10 @@
+## 0.29.7 — Global Session Revocation (2026-10-25)
+
+- Enforce transactional PostgreSQL cascade of Never session revocation into refresh families/tokens, Minecraft sessions/joins, ServerBridge tickets/handoffs/player sessions/transfers and user jobs across all API replicas.
+- Queue real `player.kick` commands to the existing durable ServerBridge control plane when active players lose authorization; guard racing game admission through parent-row locks and permanently fence revoked sessions.
+- Revoke sessions and job leases on password, user status, project/global roles, role-definition permissions, device trust/key changes and compromised risk; reject stale/new user or device bindings. Harden HTTP role checks and in-memory role/risk handling.
+- Sync sealed migration `0082` between Backend and CLI; add memory, HTTP and PostgreSQL integration tests and CI. Live PostgreSQL/ServerBridge E2E and full API build remain **unverified locally** without external dependencies; see `docs/releases/0.29.7-global-session-revocation.md`.
+
 ## 0.29.6 — Provider Runtime Parity (2026-10-25)
 
 - Enforce identical Never MFA assurance for local, SQL, signed HTTP, OIDC and Microsoft runtime logins: upstream AMR/factor labels are retained as non-authoritative provenance and cannot elevate Never sessions.

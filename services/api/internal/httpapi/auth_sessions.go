@@ -582,6 +582,12 @@ func (s *authSessionStore) applyRisk0126(sessionID, userID, state string, score 
 	} else {
 		rec.RiskUpdatedAt = riskUpdatedAt.UTC()
 	}
+	if rec.RiskState == "compromised" || rec.RiskAction == "revoke" {
+		rec.Status = "revoked"
+		rec.RevokedAt = time.Now().UTC()
+		rec.RevokedReason = "risk-compromised"
+		s.revokeFamilyLocked111(rec.RefreshFamily, rec.RevokedReason, rec.RevokedAt)
+	}
 	s.sessions[sessionID] = rec
 	return sanitizeSessionRecord(rec), nil
 }

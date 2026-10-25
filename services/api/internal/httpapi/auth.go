@@ -333,7 +333,7 @@ func (s Server) verifyAdminToken(token string) (authClaims, error) {
 		return authClaims{}, errAuthRequired
 	}
 	user, err := s.Repo.GetUser(claims.Sub)
-	if err != nil || strings.TrimSpace(user.Status) != "active" {
+	if err != nil || strings.TrimSpace(user.Status) != "active" || user.RoleID != session.RoleID || claims.RoleID != session.RoleID {
 		return authClaims{}, errAuthRequired
 	}
 	return claims, nil

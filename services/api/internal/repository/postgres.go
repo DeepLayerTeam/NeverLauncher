@@ -549,11 +549,16 @@ ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.d
 	if err != nil {
 		return model.User{}, err
 	}
-	if _, err = tx.Exec(`DELETE FROM project_user_roles WHERE user_id=$1`, user.ID); err != nil {
+	// Update only changed bindings. A security trigger revokes sessions on
+	// real role changes, so delete-and-reinsert of identical bindings would
+	// otherwise log users out on an unrelated profile update.
+	if _, err = tx.Exec(`DELETE FROM project_user_roles WHERE user_id=$1 AND NOT (project_id = ANY(SELECT jsonb_object_keys($2::jsonb)))`, user.ID, string(projectRoles)); err != nil {
 		return model.User{}, err
 	}
 	for projectID, roleID := range user.ProjectRoles {
-		if _, err = tx.Exec(`INSERT INTO project_user_roles(project_id,user_id,role_id,created_at,updated_at) VALUES($1,$2,$3,now(),now())`, projectID, user.ID, roleID); err != nil {
+		if _, err = tx.Exec(`INSERT INTO project_user_roles(project_id,user_id,role_id,created_at,updated_at) VALUES($1,$2,$3,now(),now())
+ON CONFLICT (project_id,user_id) DO UPDATE SET role_id=EXCLUDED.role_id,updated_at=now()
+WHERE project_user_roles.role_id IS DISTINCT FROM EXCLUDED.role_id`, projectID, user.ID, roleID); err != nil {
 			return model.User{}, fmt.Errorf("project role %s/%s: %w", projectID, roleID, err)
 		}
 	}
