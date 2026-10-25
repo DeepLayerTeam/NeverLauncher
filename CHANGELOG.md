@@ -6,6 +6,13 @@
 - Introduce `scripts/ga/assert_go_test_0300.py`: parse genuine `go test -json` events and reject missing/skipped/failed mandatory integration tests rather than treating successful command invocation as sufficient evidence. Test the verifier against malicious/incomplete reports.
 - **Certification status:** implementation supplied, **0.30.0 production GA not yet certified locally**. `internal/authrequest` and `pkg/protection` race tests, release version consistency, and Python gate unit tests pass. Full Backend build, multi-database E2E, Microsoft live tenant, and game/ServerBridge matrix require CI or staging evidence. See `docs/releases/0.30.0-auth-platform-protection-ga.md`.
 
+## 0.30.1 — Module Parity Audit & Java API Verification
+
+- Shipped the executable `nl module-parity audit` command with fail-closed source/test inventory for Gravit M01–M19, pinned upstream provenance and honest partial/planned/blocked statuses.
+- Added selective real Go/Node test execution with per-module attribution, timeout/skip rejection, and machine-readable SHA-256 evidence; no false full-parity claims.
+- Validated the proposed Java type bindings against shipping NeverExtensions protocol types, Go version constants and actual host routes. This is **not** a released Java runtime/SDK.
+- Added automated auditor tamper tests and Linux/Node test CI. Historical 0.21.1 locked coverage remains unchanged.
+
 ## 0.29.12 — Security & Real Auth E2E (2026-10-25)
 
 - Harden live Admin and Launcher password login and refresh request parsing with a strict 16 KiB limit, exact JSON object semantics, duplicate/case-colliding key detection, disallowed unknown fields, and rejection of trailing JSON. Malformed requests cannot select a different issuer/provider or reach upstream credentials. Oversized requests return HTTP 413.

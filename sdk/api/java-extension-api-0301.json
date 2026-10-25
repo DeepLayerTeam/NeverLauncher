@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "1.0",
+  "phase": "design-not-a-shipping-sdk",
+  "hostProtocolVersion": "1.0",
+  "extensionApiVersion": "1.0",
+  "manifestSchemaVersion": "2.0",
+  "minimumJava": 17,
+  "typeBindings": {
+    "HostEnvironment": {
+      "extensionId": "string",
+      "version": "string",
+      "extensionApiVersion": "string",
+      "scope": "string",
+      "scopeId": "string",
+      "target": "string",
+      "hostUrl": "string",
+      "hostToken": "string",
+      "callbackToken": "string",
+      "instanceId": "string"
+    },
+    "HelloRequest": {
+      "protocolVersion": "string",
+      "extensionApiVersion": "string",
+      "instanceId": "string",
+      "extensionId": "string",
+      "pid": "integer",
+      "callbackUrl": "string"
+    },
+    "HelloResponse": {
+      "protocolVersion": "string",
+      "extensionApiVersion": "string",
+      "instanceId": "string",
+      "heartbeatTimeoutSeconds": "integer",
+      "capabilities": "string[]",
+      "events": "string[]",
+      "eventProtocolVersion": "string"
+    },
+    "LogRequest": {
+      "level": "string",
+      "message": "string",
+      "fields": "object"
+    },
+    "EventSubscription": {
+      "id": "string",
+      "eventType": "string",
+      "mode": "string",
+      "projectId": "string"
+    },
+    "AdminContext": {
+      "extensionId": "string",
+      "version": "string",
+      "extensionApiVersion": "string",
+      "scope": "string",
+      "scopeId": "string",
+      "pageId": "string",
+      "actionId": "string"
+    },
+    "DesktopContext": {
+      "extensionId": "string",
+      "version": "string",
+      "extensionApiVersion": "string",
+      "scope": "string",
+      "scopeId": "string",
+      "pageId": "string",
+      "actionId": "string",
+      "bridgeAllowed": "boolean"
+    }
+  },
+  "requiredHostRoutes": [
+    "POST /v1/hello",
+    "POST /v1/heartbeat",
+    "POST /v1/log",
+    "POST /v1/capabilities/{capability}",
+    "GET /v1/events/subscriptions",
+    "POST /v1/events/subscriptions",
+    "DELETE /v1/events/subscriptions/{subscriptionId}"
+  ],
+  "rules": [
+    "Java backend extensions execute out-of-process only, via the established local authenticated host API.",
+    "NeverExtensions manifest 2.0 signing and capability authorization remain authoritative.",
+    "Trusted Minecraft JVM plugins are separate explicitly approved full-access code, never implicitly sandboxed.",
+    "No Gravit JavaFX/LaunchServer internal API compatibility is claimed."
+  ]
+}

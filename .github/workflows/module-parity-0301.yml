@@ -1,0 +1,66 @@
+name: Module parity inventory and executable regression audit 0.30.1
+on:
+  push:
+    paths:
+      - 'VERSION'
+      - 'compatibility/gravit/**'
+      - 'sdk/api/**'
+      - 'services/api/internal/extensioncontract/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'cli/**'
+      - 'prestarter/**'
+      - 'apps/desktop/**'
+      - '.github/workflows/module-parity-0301.yml'
+  pull_request:
+    paths:
+      - 'VERSION'
+      - 'compatibility/gravit/**'
+      - 'sdk/api/**'
+      - 'services/api/internal/extensioncontract/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'cli/**'
+      - 'prestarter/**'
+      - 'apps/desktop/**'
+      - '.github/workflows/module-parity-0301.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Version metadata, native auditor and negative tests
+        run: |
+          python3 scripts/version/manage.py check
+          (cd cli && go test -count=1 ./internal/moduleparity ./cmd/neverlauncher -run '^TestAudit0301|^TestModuleParityCLI0301' )
+          (cd cli && go vet ./internal/moduleparity)
+          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+      - name: Validate all M01-M19 sources and Java protocol binding
+        run: |
+          mkdir -p audit-evidence
+          "$RUNNER_TEMP/nl" module-parity audit --report audit-evidence/source.json
+      - name: Execute desktop startup regression tests
+        run: |
+          "$RUNNER_TEMP/nl" module-parity audit --run-tests --require-tests --module M07 --timeout 90s --report audit-evidence/desktop-linux.json
+      - name: Execute native prestarter regression tests
+        run: |
+          "$RUNNER_TEMP/nl" module-parity audit --run-tests --require-tests --module M11 --timeout 240s --report audit-evidence/prestarter-linux.json
+      - name: Prove missing modules cannot become full parity by declaration
+        run: |
+          if "$RUNNER_TEMP/nl" module-parity audit --require-full-parity --report audit-evidence/uncertified.json; then
+            echo 'Uncertified matrix falsely reported full M01-M19 parity' >&2
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: module-parity-0301-source-and-linux-test-evidence
+          path: audit-evidence/
