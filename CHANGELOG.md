@@ -1,3 +1,10 @@
+## 0.29.11 — Migration & Compatibility (2026-10-25)
+
+- Add `nl db auth-upgrade preflight|apply|verify`: read-only repeatable-read PostgreSQL account and Minecraft identity scan, privacy-preserving SHA-256 checkpoints, sealed migration application, and post-upgrade preservation verification. Require explicit custom/external provider acknowledgment and reject unsupported local password hashes instead of guessing formats.
+- Enforce immutable canonical owner/provider/issuer/subject for existing linked identities at the PostgreSQL boundary via migration `0086`, byte-identical in Backend and CLI. Keep GameProfile UUID immutability from `0081` and explicit account linking/legacy importer semantics.
+- Block upgrade if duplicate/corrupt identities, orphaned owners, duplicate names/UUIDs, or drift in users, identity ownership and Minecraft UUIDs are detected. Provide controlled backup/maintenance gates; database rollback requires verified backup restoration, never lossy automatic down-migrations.
+- Add repeatable Go tests and PostgreSQL CI for multi-issuer same-subject coexistence, live migration/checkpoint, identity UUID immutability and drift detection. Real PostgreSQL CI certification and Minecraft login/join E2E must be verified independently; see `docs/releases/0.29.11-migration-compatibility.md`.
+
 ## 0.29.10 — Admin Auth Provider Wizard (2026-10-25)
 
 - Add a real Admin-managed lifecycle for SQL, signed HTTP, OIDC and Microsoft connectors: real test connection, SQL mapping preview, credential-reference validation, versioned PostgreSQL drafts, transactional CAS activation, rollback and disable.

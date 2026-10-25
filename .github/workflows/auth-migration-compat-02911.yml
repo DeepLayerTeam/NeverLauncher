@@ -1,0 +1,78 @@
+name: Auth Migration and Compatibility 0.29.11
+on:
+  push:
+    paths:
+      - 'cli/**'
+      - 'services/api/internal/dbmigrate/**'
+      - '.github/workflows/auth-migration-compat-02911.yml'
+  pull_request:
+    paths:
+      - 'cli/**'
+      - 'services/api/internal/dbmigrate/**'
+      - '.github/workflows/auth-migration-compat-02911.yml'
+permissions:
+  contents: read
+jobs:
+  auth-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: never
+          POSTGRES_USER: never
+          POSTGRES_PASSWORD: integration-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U never -d never' --health-interval 5s --health-timeout 5s --health-retries 25
+    env:
+      NEVERLAUNCHER_DATABASE_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - name: Verify embedded catalogue and upgrade tests
+        working-directory: cli
+        run: |
+          go test -race ./internal/authupgrade ./internal/dbmigrate
+          go vet ./internal/authupgrade ./internal/dbmigrate
+          go build -o /tmp/nl-upgrade ./cmd/neverlauncher
+      - name: Reproduce upgrade from the exact 0.29.10 migration catalogue
+        run: |
+          # Copy the CLI migration catalogue, excluding ONLY 0086. This creates
+          # a database with every immutable migration through 0.29.10.
+          cp -a cli /tmp/nl-cli-prior
+          rm /tmp/nl-cli-prior/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
+          (cd /tmp/nl-cli-prior && go build -o /tmp/nl-prior ./cmd/neverlauncher)
+          /tmp/nl-prior db migrate apply
+      - name: Seed two isolated issuers before upgrade
+        run: |
+          psql "$NEVERLAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 <<'SQL'
+          BEGIN;
+          INSERT INTO users(id,email,display_name,role_id,password_hash)
+          VALUES ('migration-a','migration-a@example.invalid','Migration_A','player',''),('migration-b','migration-b@example.invalid','Migration_B','player','');
+          INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims)
+          VALUES
+            ('migration-id-a','migration-a','oidc-smoke','https://issuer-a.example.invalid','shared-subject','shared@example.invalid','Migration_A','Migration_A','{}'::jsonb),
+            ('migration-id-b','migration-b','oidc-smoke','https://issuer-b.example.invalid','shared-subject','shared@example.invalid','Migration_B','Migration_B','{}'::jsonb);
+          INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version)
+          VALUES ('migration-a','7e58de9e-6dde-40ea-bfe6-16c85ae32971','Migration_A','neverlauncher','local','7e58de9e-6dde-40ea-bfe6-16c85ae32971','legacy-migration'),
+                 ('migration-b','7e58de9e-6dde-40ea-bfe6-16c85ae32972','Migration_B','neverlauncher','local','7e58de9e-6dde-40ea-bfe6-16c85ae32972','legacy-migration');
+          COMMIT;
+          SQL
+      - name: Actual PostgreSQL checkpoint, apply and verify
+        run: |
+          /tmp/nl-upgrade db auth-upgrade preflight --snapshot /tmp/nl-identity.json --allow-provider oidc-smoke
+          /tmp/nl-upgrade db auth-upgrade apply --snapshot /tmp/nl-identity.json --backup-confirmed --maintenance-confirmed
+          /tmp/nl-upgrade db auth-upgrade verify --snapshot /tmp/nl-identity.json
+          # Even a privileged UPDATE must not remap an existing subject or GameProfile UUID.
+          if psql "$NEVERLAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE auth_identities SET issuer='https://malicious.invalid' WHERE id='migration-id-a'"; then exit 1; fi
+          if psql "$NEVERLAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_profiles SET uuid='7e58de9e-6dde-40ea-bfe6-16c85ae32973' WHERE user_id='migration-a'"; then exit 1; fi
+          # Local data drift must be detected by the offline checkpoint.
+          psql "$NEVERLAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE users SET display_name='Changed' WHERE id='migration-a'"
+          if /tmp/nl-upgrade db auth-upgrade verify --snapshot /tmp/nl-identity.json; then exit 1; fi
+      - name: Backend catalogue matches CLI byte-for-byte
+        run: |
+          diff -u cli/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql services/api/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql

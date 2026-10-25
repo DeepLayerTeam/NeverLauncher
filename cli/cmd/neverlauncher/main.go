@@ -53,7 +53,7 @@ Backend / production:
   operations status|readiness|diagnostics|diagnostics-bundle
   adminops status|readiness|diagnostics|backup
   backup status|create|inspect|restore-dry-run|restore|audit-export|diagnostics-bundle
-  db migrations|migration-doctor|migrate|status|validate|repository
+  db migrations|migration-doctor|migrate|auth-upgrade|status|validate|repository
   storage ...
   migrate ...
   production deployment|first-run|e2e

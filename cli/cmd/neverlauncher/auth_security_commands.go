@@ -389,6 +389,8 @@ func handleDB(args []string) error {
 	}
 	out := flagValue(args, "--output", "")
 	switch args[0] {
+	case "auth-upgrade":
+		return handleAuthUpgrade02911(args[1:])
 	case "migrations":
 		migrations, err := dbmigrate.List()
 		if err != nil {
