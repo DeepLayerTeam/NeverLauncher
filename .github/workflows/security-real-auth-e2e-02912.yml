@@ -1,0 +1,85 @@
+name: Security and Real Auth E2E 0.29.12
+on:
+  push:
+    paths:
+      - 'services/api/**'
+      - 'cli/**'
+      - '.github/workflows/security-real-auth-e2e-02912.yml'
+  pull_request:
+    paths:
+      - 'services/api/**'
+      - 'cli/**'
+      - '.github/workflows/security-real-auth-e2e-02912.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  auth-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: neverauth
+          POSTGRES_USER: neverauth
+          POSTGRES_PASSWORD: integration-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U neverauth -d neverauth' --health-interval 5s --health-timeout 5s --health-retries 25
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: neverauth
+          MYSQL_USER: neverauth
+          MYSQL_PASSWORD: integration-only
+          MYSQL_ROOT_PASSWORD: integration-root-only
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd 'mysqladmin ping -h 127.0.0.1 --silent' --health-interval 5s --health-timeout 5s --health-retries 30
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: neverauth
+          MARIADB_USER: neverauth
+          MARIADB_PASSWORD: integration-only
+          MARIADB_ROOT_PASSWORD: integration-root-only
+        ports: ['3307:3306']
+        options: >-
+          --health-cmd 'healthcheck.sh --connect --innodb_initialized' --health-interval 5s --health-timeout 5s --health-retries 30
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://neverauth:integration-only@localhost:5432/neverauth?sslmode=disable
+      NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://neverauth:integration-only@localhost:5432/neverauth?sslmode=disable
+      NEVERLAUNCHER_SQL_TEST_MYSQL_DSN: neverauth:integration-only@tcp(localhost:3306)/neverauth?tls=false
+      NEVERLAUNCHER_SQL_TEST_MARIADB_DSN: neverauth:integration-only@tcp(localhost:3307)/neverauth?tls=false
+      NEVERLAUNCHER_SQL_REQUIRE_ALL: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Parse formatting and compile production Backend
+        run: |
+          test -z "$(gofmt -l internal/authrequest internal/httpapi/auth_accounts.go internal/httpapi/admin_handlers.go internal/httpapi/auth.go internal/httpapi/*02912*.go)"
+          go build ./cmd/...
+          go vet ./internal/authrequest ./internal/httpapi ./internal/federation ./internal/repository
+      - name: Live HTTP issuer isolation, malicious JSON, MFA and refresh replay
+        run: |
+          go test -race -count=1 -timeout=8m ./internal/authrequest ./internal/httpapi -run '02912|0296|TestProtectionBanUnbanLiveHTTP0298|TestRoleUpdateRevokesLiveNeverToken0297' -v
+      - name: Two separate API replicas, genuine PostgreSQL transactions and cross-replica revocation
+        run: |
+          go test -count=1 -timeout=10m ./internal/httpapi -run '^TestSecurityRealAuthPostgresTwoReplicas02912$' -v
+          go test -count=1 -timeout=10m ./internal/repository -run 'TestGlobalSessionRevocationPostgres0297|TestProtectionPostgres0298' -v
+      - name: Genuine PostgreSQL MySQL MariaDB password mapping and unknown verifier denial
+        run: go test -count=1 -timeout=8m ./internal/sqlconnector -run '^TestLiveSQLLegacyAuthentication0294$' -v
+      - name: OIDC HTTP Microsoft signed provider behavior and SDK conformance
+        run: go test -race -count=1 -timeout=8m ./pkg/authconnector/... ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/federation
+      - name: Backend/CLI migration catalogues and real upgrade prerequisites
+        run: |
+          go test -count=1 ./internal/dbmigrate
+          cmp internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql ../../cli/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
+          (cd ../../cli && go test ./internal/dbmigrate ./internal/authupgrade && go build ./cmd/neverlauncher)

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authrequest"
 	"io"
 	"maps"
 	"net/http"
@@ -22,8 +23,12 @@ import (
 
 func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	if err := authrequest.Decode(r.Body, &req); err != nil {
+		if errors.Is(err, authrequest.ErrTooLarge) {
+			writeError(w, http.StatusRequestEntityTooLarge, "auth request exceeds 16 KiB")
+		} else {
+			writeError(w, http.StatusBadRequest, "некорректный JSON")
+		}
 		return
 	}
 	identifier := strings.TrimSpace(firstNonEmpty(req.Identifier, req.Email))

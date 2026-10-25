@@ -232,6 +232,10 @@ func (s Server) issueLoginSessionWithAuth(user model.User, r *http.Request, devi
 	_ = s.flushPersistenceState950("auth-session-create")
 	accessToken, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
+		// A signing/configuration failure must not leave behind a usable
+		// refresh family with no access token delivered to the client.
+		s.State.AuthSessions.revoke(session.ID, "access-token-issuance-failed")
+		_ = s.flushPersistenceState950("auth-session-issuance-failed")
 		return "", "", authSessionRecord{}, err
 	}
 	return accessToken, refreshToken, session, nil

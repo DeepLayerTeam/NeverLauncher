@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authrequest"
 	"net/http"
 	"strings"
 	"time"
@@ -73,8 +74,12 @@ func (s Server) authLoginAudit(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 	var req authLoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	if err := authrequest.Decode(r.Body, &req); err != nil {
+		if errors.Is(err, authrequest.ErrTooLarge) {
+			writeError(w, http.StatusRequestEntityTooLarge, "auth request exceeds 16 KiB")
+		} else {
+			writeError(w, http.StatusBadRequest, "некорректный JSON")
+		}
 		return
 	}
 	identifier := strings.TrimSpace(firstNonEmpty(req.Identifier, req.Email))
@@ -178,8 +183,12 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	var req authRefreshRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	if err := authrequest.Decode(r.Body, &req); err != nil {
+		if errors.Is(err, authrequest.ErrTooLarge) {
+			writeError(w, http.StatusRequestEntityTooLarge, "auth request exceeds 16 KiB")
+		} else {
+			writeError(w, http.StatusBadRequest, "некорректный JSON")
+		}
 		return
 	}
 	req.RefreshToken = strings.TrimSpace(req.RefreshToken)
@@ -227,13 +236,21 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, err := s.Repo.GetUser(session.UserID)
-	if err != nil || user.Status == "disabled" {
-		s.State.AuthSessions.revoke(session.ID, "user-disabled-or-missing")
+	if err != nil || user.Status != "active" {
+		s.State.AuthSessions.revoke(session.ID, "user-inactive-or-missing")
 		writeError(w, http.StatusUnauthorized, "пользователь недоступен")
+		return
+	}
+	// Evaluate the authoritative policy again after refresh rotation. A ban,
+	// role mutation or device revocation may have happened between preview
+	// and the final token issuance (possibly on another API replica).
+	if !s.enforceProtection0298(w, r, protection.AfterAuth, user.ID, session.ID, session.TrustedDeviceID, session.RoleID) {
+		s.State.AuthSessions.revoke(session.ID, "protection-after-refresh")
 		return
 	}
 	accessToken, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {
+		s.State.AuthSessions.revoke(session.ID, "access-token-refresh-signing-failed")
 		writeError(w, http.StatusInternalServerError, "не удалось выпустить access token")
 		return
 	}

@@ -1,3 +1,11 @@
+## 0.29.12 — Security & Real Auth E2E (2026-10-25)
+
+- Harden live Admin and Launcher password login and refresh request parsing with a strict 16 KiB limit, exact JSON object semantics, duplicate/case-colliding key detection, disallowed unknown fields, and rejection of trailing JSON. Malformed requests cannot select a different issuer/provider or reach upstream credentials. Oversized requests return HTTP 413.
+- Revoke newly created Never sessions and refresh families if access JWT signing fails; after refresh rotation, re-evaluate live role/account/ban/session protection and revoke on denial or token-signing failure. No inactive user may renew access.
+- Add real-socket HTTP E2E for multi-issuer identical subject/email isolation, strict routing, invalid password, malicious JSON, separate external/Never credentials, refresh rotation and replay compromise, ban/recovery without resurrecting revoked tokens.
+- Add PostgreSQL two-replica real-socket integration: separate SQL repositories, session connections and Federation cores; refresh/replay and ban must propagate without shared in-memory sessions. Add a CI job with actual PostgreSQL 16, MySQL 8.4 and MariaDB 11.4, signed HTTP/OIDC/Microsoft local IdP suites, SDK conformance, migration checks and build/race/vet gates.
+- **Verification boundary:** offline race/unit tests of the new standard-library-only auth-request decoder pass. Complete API build and live databases require external Go modules and CI runners unavailable in the local environment; do not represent the new E2E or Minecraft/game-server certification as passed until corresponding CI artifacts are reviewed.
+
 ## 0.29.11 — Migration & Compatibility (2026-10-25)
 
 - Add `nl db auth-upgrade preflight|apply|verify`: read-only repeatable-read PostgreSQL account and Minecraft identity scan, privacy-preserving SHA-256 checkpoints, sealed migration application, and post-upgrade preservation verification. Require explicit custom/external provider acknowledgment and reject unsupported local password hashes instead of guessing formats.
