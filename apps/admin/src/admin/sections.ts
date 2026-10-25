@@ -6,7 +6,7 @@ export const sections: Section[] = [
   { id: 'packages', title: 'Пакеты и файлы' }, { id: 'releases', title: 'Релизы' },
   { id: 'users', title: 'Пользователи' }, { id: 'roles', title: 'Роли' },
   { id: 'operations', title: 'Операции' }, { id: 'backend-operations', title: 'Backend Operations' }, { id: 'release-workspace', title: 'Мастер релизов' }, { id: 'job-monitor', title: 'Монитор jobs' }, { id: 'devices', title: 'Устройства' }, { id: 'audit', title: 'Аудит' }, { id: 'config', title: 'Конфигурация' },
-  { id: 'official-provider', title: 'Minecraft Provider' }, { id: 'storage', title: 'Хранилище' }, { id: 'extension-registry', title: 'NeverExtensions Registry' },
+  { id: 'official-provider', title: 'Minecraft Provider' }, { id: 'auth-provider-wizard', title: 'Auth Provider Wizard' }, { id: 'storage', title: 'Хранилище' }, { id: 'extension-registry', title: 'NeverExtensions Registry' },
   { id: 'extensions-manager', title: 'Admin Extensions' }, { id: 'server-bridge', title: 'ServerBridge' },
   { id: 'texture-management', title: 'Скины и плащи' }, { id: 'diagnostics', title: 'Диагностика' }, { id: 'backup-restore', title: 'Резервное копирование' },
 ];
@@ -28,6 +28,7 @@ export function endpointForSection(active: SectionId, projectId: string): string
     case 'audit': return '/api/v1/admin/audit';
     case 'config': return '/api/v1/admin/config';
     case 'official-provider': return '/api/v1/admin/official-provider';
+    case 'auth-provider-wizard': return '/api/v1/admin/auth/provider-wizard';
     case 'texture-management': return '/api/v1/admin/textures/policy';
     case 'storage': return '/api/v1/admin/storage/health';
     case 'extension-registry': return '/api/v1/admin/extension-registry/extensions';

@@ -48,11 +48,14 @@ type ProviderPolicy struct {
 }
 
 type Core struct {
-	repo       repository.Repository
-	mu         sync.RWMutex
-	connectors map[string]authconnector.Connector
-	policies   map[string]ProviderPolicy
-	routing    RoutingConfig
+	repo             repository.Repository
+	mu               sync.RWMutex
+	connectors       map[string]authconnector.Connector
+	policies         map[string]ProviderPolicy
+	routing          RoutingConfig
+	managedSync      sync.Mutex
+	managedRevisions map[string]int64
+	retiredManaged   []authconnector.Connector
 }
 
 func New(repo repository.Repository) *Core {
@@ -489,7 +492,8 @@ func (c *Core) ResolveProviderProfile(ctx context.Context, providerID, subject s
 
 func (c *Core) Close() error {
 	c.mu.RLock()
-	connectors := make([]authconnector.Connector, 0, len(c.connectors))
+	connectors := make([]authconnector.Connector, 0, len(c.connectors)+len(c.retiredManaged))
+	connectors = append(connectors, c.retiredManaged...)
 	for _, connector := range c.connectors {
 		connectors = append(connectors, connector)
 	}

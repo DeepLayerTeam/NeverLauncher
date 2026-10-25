@@ -462,3 +462,8 @@ var _ authconnector.PasswordAuthenticator = (*Connector)(nil)
 var _ authconnector.IdentityResolver = (*Connector)(nil)
 var _ authconnector.ProfileResolver = (*Connector)(nil)
 var _ authconnector.Connector = (*Connector)(nil)
+
+// MappingPreview executes the same read-only schema inspection used for activation.
+func (c *Connector) MappingPreview(ctx context.Context) ([]MappedColumn, error) {
+	return InspectMapping(ctx, c.db, c.cfg)
+}

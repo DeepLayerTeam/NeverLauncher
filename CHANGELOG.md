@@ -1,3 +1,10 @@
+## 0.29.10 — Admin Auth Provider Wizard (2026-10-25)
+
+- Add a real Admin-managed lifecycle for SQL, signed HTTP, OIDC and Microsoft connectors: real test connection, SQL mapping preview, credential-reference validation, versioned PostgreSQL drafts, transactional CAS activation, rollback and disable.
+- Reconcile active provider revisions on authentication paths across API replicas without restart, preserving Federation Core issuer identity and Never RBAC/MFA; failure is fail-closed, and env-configured/local providers cannot be replaced by Admin.
+- Require global `settings:manage`, MFA for draft changes, phishing-resistant MFA for activation and audit every change. Reject plaintext secrets and unknown configuration fields. Include migration `0085` in Backend and CLI, Admin UI, regression tests and CI gates.
+- **Not certified locally:** full HTTP/API and Admin production builds and real SQL/browser E2E require external dependencies/infrastructure; progressive percentage canary is not included. See `docs/releases/0.29.10-admin-auth-provider-wizard.md`.
+
 ## 0.29.9 — HWID Risk & Recovery (2026-10-25)
 
 - Implement voluntary native Desktop machine-continuity hashing, account-scoped server HMAC and 30-day PostgreSQL/Memory retention with scheduled physical cleanup.

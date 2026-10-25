@@ -1,0 +1,70 @@
+name: Auth Provider Wizard 0.29.10
+on:
+  push:
+    paths:
+      - 'services/api/**'
+      - 'apps/admin/**'
+      - 'cli/internal/dbmigrate/**'
+      - '.github/workflows/auth-provider-wizard-02910.yml'
+  pull_request:
+    paths:
+      - 'services/api/**'
+      - 'apps/admin/**'
+      - 'cli/internal/dbmigrate/**'
+      - '.github/workflows/auth-provider-wizard-02910.yml'
+permissions:
+  contents: read
+jobs:
+  provider-wizard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: never
+          POSTGRES_USER: never
+          POSTGRES_PASSWORD: integration-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U never -d never" --health-interval 5s --health-timeout 5s --health-retries 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Go format and Backend build
+        working-directory: services/api
+        run: |
+          test -z "$(gofmt -l internal/repository/*02910*.go internal/federation/*02910*.go internal/httpapi/*02910*.go internal/sqlconnector/connector.go)"
+          go build ./cmd/...
+      - name: Apply real PostgreSQL migrations
+        working-directory: services/api
+        env:
+          NEVERLAUNCHER_DATABASE_URL: postgres://never:integration-only@localhost:5432/never?sslmode=disable
+        run: |
+          # Apply migration catalogue with the same repository implementation used by production.
+          go test ./internal/dbmigrate -count=1
+          psql 'postgres://never:integration-only@localhost:5432/never?sslmode=disable' -v ON_ERROR_STOP=1 -f internal/dbmigrate/sql/0085_auth_provider_wizard_02910.sql
+      - name: Auth Provider Wizard unit, race and PostgreSQL integration tests
+        working-directory: services/api
+        env:
+          NEVERLAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
+        run: |
+          go test -race -count=1 -timeout=8m ./internal/repository ./internal/federation ./internal/httpapi ./internal/sqlconnector -run '02910|TestProviderRouting|TestAuthenticatePassword'
+          go vet ./internal/repository ./internal/federation ./internal/httpapi ./internal/sqlconnector
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: Admin UI production build and tests
+        working-directory: apps/admin
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: CLI migrations remain in sync
+        working-directory: cli
+        run: go test ./internal/dbmigrate

@@ -139,6 +139,8 @@ type Repository interface {
 }
 
 type MemoryRepository struct {
+ managedProviderMu sync.Mutex
+ managedProviders map[string]ManagedProviderHead02910
 	hwidMu                         sync.Mutex
 	hwidObservations               map[string]HWIDObservation0299
 	hwidAppeals                    map[string]HWIDAppeal0299
