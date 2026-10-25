@@ -69,12 +69,35 @@ pub fn parse_http_date(value: &str, now: SystemTime) -> Option<Duration> {
     Some(deadline.duration_since(now).unwrap_or(Duration::ZERO))
 }
 
+// Providers use either RFC 9110 Retry-After (seconds/HTTP-date) or
+// X-RateLimit-Reset (Unix epoch seconds). We obey the longer server hint,
+// bounded to keep cancellation responsive and prevent unbounded stalls.
+fn retry_after_value(value: &str, now: SystemTime) -> Option<Duration> {
+    if let Ok(seconds) = value.trim().parse::<u64>() {
+        return Some(Duration::from_secs(seconds));
+    }
+    parse_http_date(value, now)
+}
+
+fn rate_limit_reset_value(value: &str, now: SystemTime) -> Option<Duration> {
+    let timestamp = value.trim().parse::<u64>().ok()?;
+    let expires = UNIX_EPOCH.checked_add(Duration::from_secs(timestamp))?;
+    Some(expires.duration_since(now).unwrap_or(Duration::ZERO))
+}
+
 pub fn retry_after(response: &Response) -> Option<Duration> {
-    let value = response.headers().get(RETRY_AFTER)?.to_str().ok()?.trim();
-    let duration = if let Ok(seconds) = value.parse::<u64>() {
-        Duration::from_secs(seconds)
-    } else { parse_http_date(value, SystemTime::now())? };
-    Some(duration.min(Duration::from_millis(MAX_SERVER_WAIT_MS)))
+    let now = SystemTime::now();
+    let from_retry_after = response.headers().get(RETRY_AFTER)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| retry_after_value(v, now));
+    let from_reset = response.headers().get("X-RateLimit-Reset")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| rate_limit_reset_value(v, now));
+    match (from_retry_after, from_reset) {
+        (Some(a), Some(b)) => Some(a.max(b).min(Duration::from_millis(MAX_SERVER_WAIT_MS))),
+        (Some(delay), None) | (None, Some(delay)) => Some(delay.min(Duration::from_millis(MAX_SERVER_WAIT_MS))),
+        (None, None) => None,
+    }
 }
 
 // Structured transient error marker consumed only by the worker retry loop.
@@ -108,6 +131,13 @@ mod tests {
         assert_eq!(parse_http_date("Sun, 06 Nov 1994 08:49:47 GMT", UNIX_EPOCH + Duration::from_secs(784111777)), Some(Duration::from_secs(10)));
         assert!(parse_http_date("Sun, 31 Feb 2026 08:49:37 GMT", SystemTime::now()).is_none());
         assert!(retry_delay(&transient("HTTP 429", Some(Duration::from_secs(10))), 0).unwrap() >= Duration::from_secs(10));
+        assert_eq!(retry_after_value("18", UNIX_EPOCH), Some(Duration::from_secs(18)));
+        assert_eq!(retry_after_value("not a delay", UNIX_EPOCH), None);
+        assert_eq!(rate_limit_reset_value("1020", UNIX_EPOCH + Duration::from_secs(1000)), Some(Duration::from_secs(20)));
+        assert_eq!(rate_limit_reset_value("990", UNIX_EPOCH + Duration::from_secs(1000)), Some(Duration::ZERO));
+        assert_eq!(rate_limit_reset_value("bad", UNIX_EPOCH), None);
+        assert_eq!(MAX_ATTEMPTS, 7);
+        assert_eq!(MAX_SERVER_WAIT_MS, 120_000);
     }
     #[tokio::test]
     async fn pause_interrupts_backoff() {

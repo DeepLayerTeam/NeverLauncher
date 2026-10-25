@@ -961,6 +961,10 @@ jobs:
         run: bash e2e/scripts/run-device-trust-e2e.sh
       - name: Materialize -> publish -> sync -> launch actual Minecraft -> join -> revoke -> deny
         run: bash e2e/scripts/run-minecraft-e2e.sh
+      - name: Require real Paper world backup/restore evidence for 0.29.0
+        run: |
+          python3 scripts/ga/verify_server_control_0290.py \
+            --e2e-dir e2e/runtime --version "$(cat VERSION)" --source-commit "$GITHUB_SHA"
       - name: Verify Minecraft health evidence
         run: |
           jq -e '.status == "passed" and .minecraft.client == "actual-mojang-client" and .minecraft.paperJoin == "passed" and .checks.bukkitFamilyRuntime == true and .checks.proxyFamilyRuntime == true and .checks.foliaPinnedRuntime == true and .checks.foliaPinnedBuildDependency == true and .checks.bytesocksPinnedBuildDependency == true and .health.velocity == "healthy" and .health.bungeecord == "healthy" and .health.waterfall == "healthy" and .health.spigot == "healthy" and .health.paper == "healthy" and .health.purpur == "healthy" and .health.folia == "healthy" and .health.fabric == "healthy" and .health.forge == "healthy" and .health.neoforge == "healthy"' e2e/runtime/result.json >/dev/null
@@ -977,6 +981,7 @@ jobs:
           name: neverlauncher-minecraft-client-e2e-evidence
           path: |
             e2e/runtime/result.json
+            e2e/runtime/world-backup-0290.json
             e2e/runtime/client-package.json
             e2e/runtime/materialized-client-verify.json
             e2e/runtime/published-client-package.json
@@ -992,6 +997,7 @@ jobs:
             e2e/runtime-durable-0213/*.log
             e2e/runtime/validate-*.json
             e2e/runtime/join-*.json
+            e2e/runtime/handoff-velocity-paper.json
             e2e/runtime/revoke-*.json
             e2e/runtime/probe-*.txt
           if-no-files-found: ignore

@@ -675,12 +675,31 @@ for required in [
 neverruntime_lib = read("runtime/neverruntime/src/lib.rs")
 if '#[serde(default)]\n    pub executable: bool,' not in neverruntime_lib:
     fail("NeverRuntime manifest signing payload must preserve executable=false exactly like Go ManifestFile")
-for required in [
-    'reqwest::StatusCode::TOO_MANY_REQUESTS', 'Retry-After', 'X-RateLimit-Reset',
-    'tokio::time::sleep(Duration::from_secs(delay)).await', 'FILE_DOWNLOAD_RATE_LIMIT_RETRIES',
-]:
-    if required not in neverruntime_lib:
-        fail(f"NeverRuntime clean sync не уважает production rate-limit retry contract: {required}")
+# The real signed-file download path is lib.rs -> durable_downloads ->
+# download_scheduler -> http_resume -> network_resilience. Checking old
+# inlined retry constants in lib.rs was a false negative and missed the actual
+# execution path. Keep this guard tied to every active hop instead.
+resilience = read("runtime/neverruntime/src/network_resilience.rs")
+resume = read("runtime/neverruntime/src/http_resume.rs")
+scheduler = read("runtime/neverruntime/src/download_scheduler.rs")
+durable = read("runtime/neverruntime/src/durable_downloads.rs")
+for required in ["StatusCode::TOO_MANY_REQUESTS", '"X-RateLimit-Reset"',
+                 "RETRY_AFTER", "MAX_ATTEMPTS", "rate_limit_reset_value",
+                 "retry_after_value", "MAX_SERVER_WAIT_MS", "pub async fn wait"]:
+    if required not in resilience:
+        fail(f"NeverRuntime clean sync missing bounded rate-limit handling: {required}")
+for required in ["retryable_status(response.status())", "retry_after(&response)",
+                 "network_resilience::transient"]:
+    if required not in resume:
+        fail(f"NeverRuntime verified HTTP downloader ignores rate-limit response: {required}")
+for required in ["network_resilience::retry_delay", "network_resilience::wait"]:
+    if required not in scheduler:
+        fail(f"NeverRuntime scheduler cannot retry with cancellable backoff: {required}")
+transactional = read("runtime/neverruntime/src/transactional_release.rs")
+if ('transactional_release::install' not in durable
+        or 'download_scheduler::run_selected' not in transactional
+        or 'durable_downloads::start_with_preset' not in neverruntime_lib):
+    fail("NeverRuntime clean sync must use verified resumable download scheduler")
 
 for required in ['JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"', '${JAVA_HOME}/bin/java', '--java "$JAVA_BIN"']:
     if required not in e2e_script:
@@ -793,8 +812,10 @@ for required in [
 ]:
     if required not in forge_runtime_tests:
         fail(f"NeoForge Maven metadata retry regression test missing: {required}")
-if managed_java.count("check_java(Some(java.to_string_lossy().to_string()), Some(major)).await?") != 1:
-    fail("Managed Java cached runtime validation must invoke java -version exactly once")
+# Java 1.3 record validates the entire file inventory and then performs one
+# real JVM -version self-test with OS/arch checks (not a cached metadata claim).
+if managed_java.count("if self_test_java(&java, major, &record.os, &record.arch).await.is_err()") != 1 or 'command.args(["-XshowSettings:properties", "-version"])' not in managed_java:
+    fail("Managed Java cached runtime must execute one full OS/arch JVM self-test")
 if "compatibility path содержит symlink" not in runtime_compat:
     fail("NeverRuntime Compatibility Engine must reject symlink path components")
 for required in [
@@ -838,8 +859,8 @@ for required in [
     if required not in read("cli/cmd/neverlauncher/compatibility_hardening_test.go"):
         fail(f"0.16.11 compatibility hardening regression test missing: {required}")
 for required in [
-    "java_sha256", "schema_version: \"1.2\"", "managed_java_send_with_retry",
-    "quarantine_broken_archive", "Managed Java partial archive must not be a symlink",
+    "java_sha256", "schema_version: \"1.3\"", "file_hashes", "managed_java_send_with_retry",
+    "quarantine_broken_archive", "fs::symlink_metadata(path).await", "metadata.file_type().is_symlink()",
 ]:
     if required not in managed_java:
         fail(f"0.16.11 Managed Java hardening missing: {required}")
@@ -1449,7 +1470,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "ensure_managed_java_from_distribution", "NEVERLAUNCHER_MANAGED_JRE_MANIFEST",
         "NEVERLAUNCHER_MANAGED_JRE_MANIFEST_SHA256", "exact vendor archive SHA-256",
-        "ensure_local_archive", "Managed JRE javaEntry mismatch",
+        "ensure_managed_archive", "Managed JRE javaEntry mismatch",
     ]:
         if required not in jre_runtime_0155:
             fail(f"0.15.5 NeverRuntime Managed JRE consumer incomplete: {required}")
@@ -1508,7 +1529,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "MANAGED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25]",
         "assets/latest/{major}/hotspot", "assets/feature_releases/{major}/ga",
         'for image_type in ["jre", "jdk"]', "validate_managed_java_major",
-        "ensure_archive", "validate_installed_runtime",
+        "ensure_managed_archive", "validate_installed_runtime",
     ]:
         if required not in managed_java_0165:
             fail(f"0.16.5 Managed Java II runtime incomplete: {required}")
@@ -2236,7 +2257,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in ["QUILT_COMPATIBILITY_II_0172", "quilt_compatibility_ii_0172_required", "Quilt Compatibility II 0.17.2"]:
         if required not in quilt_matrix_0172:
             fail(f"0.17.2 Quilt compatibility matrix incomplete: {required}")
-    for required in ["isStableQuiltLoaderVersion", "Meta API не вернул стабильную %s loader version", "materializeLoaderLibraries", "installed-and-verified"]:
+    for required in ["isStableQuiltLoaderVersion", "selectModernMetaEntry0272", "materializeLoaderLibraries", "installed-and-verified"]:
         if required not in quilt_runtime_0172:
             fail(f"0.17.2 Quilt runtime/materializer incomplete: {required}")
     for required in ["runtime quilt-package", "client verify", "quilt-install.json", "quilt-certification.json", "certify-vanilla", "mutable loader selector leaked", "actual-mojang-client"]:
@@ -3570,6 +3591,29 @@ if 'neverguard-windows-protection-ga-0190.py' not in preflight or 'neverguard-wi
     fail("0.19.0 Windows Protection GA mandatory gate/Go tests are not wired into preflight/CI")
 if "NeverGuard Windows Protection GA 0.19.0 production gate: OK" not in windows_protection_ga_gate_0190:
     fail("0.19.0 mandatory Windows Protection GA gate incomplete")
+
+# 0.29.0: the production candidate must contain evidence from a real
+# Minecraft JVM and an independently checked restore of *its* saved world.
+# A synthetic Host test never substitutes for this execution path.
+if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (0, 29, 0):
+    game_e2e = read("e2e/scripts/run-minecraft-e2e.sh")
+    real_backup = read("e2e/scripts/verify-real-world-backup-0290.py")
+    certification = read("scripts/ga/verify_server_control_0290.py")
+    pipeline = read(".github/workflows/ci.yml")
+    release_pipeline = read(".github/workflows/production-release-candidate.yml")
+    for required in ["verify-real-world-backup-0290.py", "world-backup-0290.json", "realWorldBackupRestore", "verify_server_control_0290.py"]:
+        if required not in game_e2e:
+            fail(f"0.29.0 real Minecraft E2E lacks world restoration gate: {required}")
+    for required in ["docker", "paper:/data/.", "world-backup", "--consistency", "verify", "restore", "playerdata", "plugins", "returnedToHealthyService", "overwriteRejected", "rcon-cli", "save-all", "flush"]:
+        if required not in real_backup:
+            fail(f"0.29.0 actual Paper world restore implementation incomplete: {required}")
+    for required in ["actual-mojang-client", "oneTime", "validate-paper-e2e-p3-deny.json", "handoff-velocity-paper.json", "worldFileSha256", "minecraftSaveFlushAcknowledged", "returnedToHealthyService"]:
+        if required not in certification:
+            fail(f"0.29.0 required E2E attestation validation missing: {required}")
+    if "verify_server_control_0290.py" not in pipeline or "world-backup-0290.json" not in pipeline:
+        fail("0.29.0 CI must execute and retain the real Paper world restoration gate")
+    if "server-control-ga:" not in release_pipeline or "server-control-ga, admin-ga-certification" not in release_pipeline:
+        fail("0.29.0 production release must depend on separately validated real Minecraft evidence")
 
 if errors:
     print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)

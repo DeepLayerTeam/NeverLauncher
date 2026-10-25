@@ -1,3 +1,11 @@
+## 0.29.0 — Production corrections & Real E2E release gate (2026-10-25)
+
+- Restored 11 missing CLI PostgreSQL migrations (0067–0077) byte-identical to Backend, and synchronized embedded first-run deployment templates with the production source of truth.
+- Hardened the real NeverRuntime HTTP 429 retry path (`Retry-After`, `X-RateLimit-Reset`, bounded cancellation-aware backoff) and Managed Java archive symlink rejection. Updated repository policy checks for actual call paths and current Java schema 1.3.
+- Added a required full Minecraft E2E phase: authenticated internal RCON `save-all flush`/`stop`, real Paper playerdata/plugin data backup and isolated restore via production Host CLI, negative overwrite check and restart-to-healthy verification.
+- Added exact-commit production-release dependency on the CI artifact and fail-closed independent evidence checks for real join, replay, handoff and world restoration. See `docs/releases/0.29.0-production-ga-real-e2e.md`.
+- **GA certification is pending** until the protected CI, real Docker/Paper, systemd and platform tests provide passing evidence. Locally passing repository/unit tests do not qualify as Production GA.
+
 ## 0.28.12 — Provisioning & Operator Workflow (2026-10-25)
 
 - Extended real ServerBridge CLI with local + signed-runtime `verify` (artifact/identity/configuration, Backend heartbeat freshness/version/digest/runtime); offline mode never claims runtime health.

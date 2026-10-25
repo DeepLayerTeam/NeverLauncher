@@ -10,6 +10,7 @@ DB_DSN="postgres://neverlauncher:neverlauncher@127.0.0.1:55432/neverlauncher?ssl
 BOOTSTRAP_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 AUTH_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 REDIS_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+RCON_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(36))')"
 SIGNING_SEED="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
 # ServerBridge v3 не допускает первое доверие через обычный HTTP к имени Docker-сервиса.
 # Явно закрепляйте Ed25519-ключ управляющих подписей API во всех мостах. По умолчанию
@@ -113,6 +114,7 @@ NEVERLAUNCHER_E2E_BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN
 NEVERLAUNCHER_E2E_SIGNING_SEED=$SIGNING_SEED
 NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY=$CONTROL_PUBLIC_KEY
 NEVERLAUNCHER_E2E_REDIS_PASSWORD=$REDIS_PASSWORD
+NEVERLAUNCHER_E2E_RCON_PASSWORD=$RCON_PASSWORD
 NEVERLAUNCHER_E2E_PROFILE_ID=$PROFILE_ID
 NEVERLAUNCHER_E2E_BRIDGE_RELEASE_ALLOWLIST_JSON=$BRIDGE_ALLOWLIST_JSON
 NEVERLAUNCHER_E2E_HOST_UID=$(id -u)
@@ -1001,6 +1003,18 @@ if [[ "$MODE" == "full" ]]; then
   certify_aux_bridge neoforge-e2e-p3 "$NEOFORGE_NODE_KEY" "$NEOFORGE_BRIDGE_SHA" neoforge 25579
 fi
 
+# Real-world GA: after the actual client has joined, gracefully stop Paper,
+# back up its persisted UUID/playerdata and plugin files with the production
+# Host CLI, and independently verify a restoration. Only for >= 0.29.0.
+if [[ "$MODE" == "full" && "$(printf '%s\n' '0.29.0' "$VERSION" | sort -V | head -1)" == "0.29.0" ]]; then
+  (cd "$ROOT/cli" && go build -trimpath -o "$RUNTIME_DIR/nl-server-control-0290" ./cmd/neverlauncher)
+  python3 "$ROOT/e2e/scripts/verify-real-world-backup-0290.py" \
+    --cli "$RUNTIME_DIR/nl-server-control-0290" \
+    --compose-file "$COMPOSE_FILE" --override-file "$GUARD_POLICY_OVERRIDE" \
+    --env-file "$ENV_FILE" --version "$VERSION" --source-commit "${GITHUB_SHA:-}" \
+    --output "$RUNTIME_DIR/world-backup-0290.json"
+fi
+
 curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H "Authorization: Bearer $ACCESS_TOKEN" "$API/api/v1/server-bridge/diagnostics" > "$RUNTIME_DIR/bridge-diagnostics.json"
 jq -e '.data.protocolVersion == 3 and .data.summary.protocolVersion == 3 and .data.supportedProtocolVersions == [3,2] and .data.summary.supportedProtocolVersions == [3,2] and .data.summary.sourceOfTruth == "postgresql"' "$RUNTIME_DIR/bridge-diagnostics.json" >/dev/null
 serverbridge_nodes="$(psql "$DB_DSN" -Atqc 'SELECT count(*) FROM server_bridge_nodes_v2')"
@@ -1042,4 +1056,11 @@ jq -n \
   --arg loaderNative "$LOADER_NATIVE_HEALTH" \
   '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed",loaderNativeE2E:(if $loader == "vanilla" then "not-applicable" else "passed" end),loaderResolution:{lockSha256:$resolutionLockSha256,reproducibilitySha256:$resolutionReproSha256,sourceSha256:$resolutionSourceSha256,pinned:($loader != "vanilla")}},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge,loaderNative:$loaderNative},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,loaderNativeServer:($loader == "vanilla" or $loaderNative == "healthy"),loaderNativeClientJoin:($loader == "vanilla" or $loaderNative == "healthy"),loaderVersionMatched:($loader == "vanilla" or $loaderNative == "healthy"),bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true,foliaPinnedBuildDependency:true,bytesocksPinnedBuildDependency:true},evidence:(["folia-runtime.json","spark-paper-build.json","bytesocks-build.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"] + (if $loader == "vanilla" then [] else ["loader-native-server.json","loader-native-client.json","loader-native-server.log","loader-native-server-artifacts.txt","loader-native-server-process.txt","health-loader-native.json"] end))}' \
   > "$RUNTIME_DIR/result.json"
+if [[ "$MODE" == "full" && "$(printf '%s\n' '0.29.0' "$VERSION" | sort -V | head -1)" == "0.29.0" ]]; then
+  python3 "$ROOT/scripts/ga/verify_server_control_0290.py" \
+    --e2e-dir "$RUNTIME_DIR" --version "$VERSION" --source-commit "${GITHUB_SHA:-}"
+  jq -c '.checks.realWorldBackupRestore=true | .evidence += ["world-backup-0290.json"]' \
+    "$RUNTIME_DIR/result.json" > "$RUNTIME_DIR/result-0290-tmp.json"
+  mv "$RUNTIME_DIR/result-0290-tmp.json" "$RUNTIME_DIR/result.json"
+fi
 printf '[e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"

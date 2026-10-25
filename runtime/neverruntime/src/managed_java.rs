@@ -928,11 +928,13 @@ async fn quarantine_broken_archive(path: &Path) -> Result<(), String> {
 }
 
 async fn verify_file_sha256(path: &Path, expected: &str, expected_size: u64) -> Result<bool, String> {
-    let metadata = match fs::metadata(path).await {
+    // Never follow an archive symlink: neither a warm-cache hit nor an
+    // operator-provided offline archive may resolve outside trusted storage.
+    let metadata = match fs::symlink_metadata(path).await {
         Ok(value) => value,
         Err(_) => return Ok(false),
     };
-    if metadata.len() != expected_size {
+    if !metadata.is_file() || metadata.file_type().is_symlink() || metadata.len() != expected_size {
         return Ok(false);
     }
     let mut file = fs::File::open(path).await.map_err(|err| format!("runtime archive open: {err}"))?;
@@ -1471,6 +1473,21 @@ mod tests {
         assert!(validate_archive_entry("jdk/bin/java").is_ok());
         assert!(validate_archive_entry("../escape").is_err());
         assert!(validate_archive_entry("/absolute").is_err());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn managed_java_archive_does_not_follow_symlink() {
+        let root = std::env::temp_dir().join(format!("never-java-archive-link-{:016x}", rand::random::<u64>()));
+        fs::create_dir_all(&root).await.unwrap();
+        let original = root.join("vendor.tar.gz");
+        fs::write(&original, b"signed vendor bytes").await.unwrap();
+        let digest = hex::encode(Sha256::digest(b"signed vendor bytes"));
+        assert!(verify_file_sha256(&original, &digest, 19).await.unwrap());
+        let linked = root.join("cached.tar.gz");
+        std::os::unix::fs::symlink(&original, &linked).unwrap();
+        assert!(!verify_file_sha256(&linked, &digest, 19).await.unwrap());
+        fs::remove_dir_all(root).await.unwrap();
     }
 
     #[test]

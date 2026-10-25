@@ -229,7 +229,10 @@ services:
       VERSION: "1.21.1"
       ONLINE_MODE: "FALSE"
       MEMORY: 768M
-      ENABLE_RCON: "false"
+      ENABLE_RCON: "true"
+      # Internal E2E console only; no host RCON port exposure. The world GA
+      # test must request `save-all flush` and `stop`, never trust SIGTERM alone.
+      RCON_PASSWORD: ${NEVERLAUNCHER_E2E_RCON_PASSWORD:?E2E private RCON password required}
       SPAWN_PROTECTION: "0"
       UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}

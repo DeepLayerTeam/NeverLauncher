@@ -2176,8 +2176,10 @@ mod tests {
 
     #[test]
     fn file_download_rate_limit_retry_budget_remains_bounded() {
-        assert_eq!(FILE_DOWNLOAD_RATE_LIMIT_RETRIES, 8);
-        assert_eq!(FILE_DOWNLOAD_RATE_LIMIT_MAX_DELAY_SECS, 65);
+        // These are the actual bounded retry settings used by HTTP Resume and
+        // the durable download worker, not unused legacy constants.
+        assert_eq!(network_resilience::MAX_ATTEMPTS, 7);
+        assert_eq!(network_resilience::REQUEST_TIMEOUT, Duration::from_secs(30));
     }
 
     #[test]
