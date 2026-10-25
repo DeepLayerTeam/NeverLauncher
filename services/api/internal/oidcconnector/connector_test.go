@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
 )
 
 func TestOIDCConnectorAuthorizationCodePKCEAndIDTokenValidation(t *testing.T) {
@@ -42,10 +43,15 @@ func TestOIDCConnectorAuthorizationCodePKCEAndIDTokenValidation(t *testing.T) {
 				http.Error(w, "bad form", 400)
 				return
 			}
-			verifier := r.Form.Get("code_verifier")
-			sum := sha256.Sum256([]byte(verifier))
-			if base64.RawURLEncoding.EncodeToString(sum[:]) != expectedChallenge {
-				http.Error(w, "pkce mismatch", 400)
+			if r.Form.Get("grant_type") == "authorization_code" {
+				verifier := r.Form.Get("code_verifier")
+				sum := sha256.Sum256([]byte(verifier))
+				if base64.RawURLEncoding.EncodeToString(sum[:]) != expectedChallenge {
+					http.Error(w, "pkce mismatch", 400)
+					return
+				}
+			} else if r.Form.Get("grant_type") != "refresh_token" || r.Form.Get("refresh_token") != "refresh-1" {
+				http.Error(w, "invalid refresh grant", 400)
 				return
 			}
 			accessHash := sha256.Sum256([]byte("access-1"))
@@ -97,6 +103,18 @@ func TestOIDCConnectorAuthorizationCodePKCEAndIDTokenValidation(t *testing.T) {
 	}
 	if _, err := c.CompleteBrowserAuth(context.Background(), authconnector.BrowserAuthCallback{RedirectURI: "https://launcher.example.test/callback", Code: "code-2", State: strings.Repeat("s", 43), Nonce: "wrong-" + expectedNonce, PKCEVerifier: verifier}); err == nil {
 		t.Fatal("expected nonce validation failure")
+	}
+	report := conformance.RunBehavioral(context.Background(), c, conformance.Fixture{
+		Subject: "user-42", Issuer: issuer,
+		Browser: &conformance.BrowserFixture{
+			Start: authconnector.BrowserAuthRequest{RedirectURI: "https://launcher.example.test/callback", State: strings.Repeat("s", 43), Nonce: expectedNonce, PKCEChallenge: expectedChallenge},
+			Complete: func(_ context.Context, start authconnector.BrowserAuthStart) (authconnector.BrowserAuthCallback, error) {
+				return authconnector.BrowserAuthCallback{RedirectURI: "https://launcher.example.test/callback", Code: "code-3", State: start.State, Nonce: expectedNonce, PKCEVerifier: verifier}, nil
+			},
+		},
+	})
+	if !report.Passed {
+		t.Fatalf("signed OIDC browser+refresh conformance failed: %+v", report)
 	}
 }
 

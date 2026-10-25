@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
 )
 
 const fixtureSecret = "0123456789abcdef0123456789abcdef-fixture"
@@ -82,6 +83,13 @@ func TestHTTPConnectorProductionFlow(t *testing.T) {
 
 	connector := newFixtureConnector(t, server)
 	defer connector.Close()
+	report := conformance.RunBehavioral(context.Background(), connector, conformance.Fixture{
+		Password: &authconnector.PasswordRequest{Identifier: "player@example.test", Secret: "secret"},
+		Subject:  "user-42", Issuer: "fixture-issuer", AllowRevoke: true,
+	})
+	if !report.Passed {
+		t.Fatalf("real signed HTTP conformance failed: %+v", report)
+	}
 
 	auth, err := connector.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "player@example.test", Secret: "secret"})
 	if err != nil {
@@ -109,6 +117,19 @@ func TestHTTPConnectorProductionFlow(t *testing.T) {
 	_, err = connector.AuthenticatePassword(context.Background(), authconnector.PasswordRequest{Identifier: "player@example.test", Secret: "wrong"})
 	if authconnector.CodeOf(err) != authconnector.ErrInvalidCredentials {
 		t.Fatalf("expected invalid credentials, got %v", err)
+	}
+}
+
+func TestHTTPConfigMigrationActivatesTheSameProvider(t *testing.T) {
+	old := `[ {"id":"http-test","baseUrl":"https://auth.example","issuer":"issuer-prod","hmac":{"secretEnv":"NL_SECRET"}} ]`
+	configs, err := LoadConfigs(old, "")
+	if err != nil || len(configs) != 1 || configs[0].Issuer != "issuer-prod" {
+		t.Fatalf("legacy config failed: %v", err)
+	}
+	modern := `{"schemaVersion":2,"providers":` + old + `}`
+	migrated, err := LoadConfigs(modern, "")
+	if err != nil || len(migrated) != 1 || migrated[0].ID != configs[0].ID || migrated[0].HMAC.SecretEnv != configs[0].HMAC.SecretEnv {
+		t.Fatalf("versioned config drifted: %+v %v", migrated, err)
 	}
 }
 

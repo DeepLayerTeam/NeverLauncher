@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
 )
 
 const (
@@ -132,6 +133,18 @@ func TestMicrosoftConnectorAuthorizationCodePKCEMultitenantAndRefresh(t *testing
 	}
 	if _, err := connector.ProviderLogoutURL("https://evil.example/signed-out"); err == nil {
 		t.Fatal("expected unregistered post-logout redirect rejection")
+	}
+	report := conformance.RunBehavioral(context.Background(), connector, conformance.Fixture{
+		Subject: strings.ToLower(testTenantID + ":" + testObjectID),
+		Browser: &conformance.BrowserFixture{
+			Start: authconnector.BrowserAuthRequest{RedirectURI: "https://launcher.example.test/callback", State: strings.Repeat("s", 43), Nonce: expectedNonce, PKCEChallenge: expectedChallenge},
+			Complete: func(_ context.Context, start authconnector.BrowserAuthStart) (authconnector.BrowserAuthCallback, error) {
+				return authconnector.BrowserAuthCallback{RedirectURI: "https://launcher.example.test/callback", Code: "code", State: start.State, Nonce: expectedNonce, PKCEVerifier: verifier}, nil
+			},
+		},
+	})
+	if !report.Passed {
+		t.Fatalf("signed Microsoft browser+refresh conformance failed: %+v", report)
 	}
 }
 

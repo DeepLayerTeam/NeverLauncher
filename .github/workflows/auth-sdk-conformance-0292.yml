@@ -1,0 +1,47 @@
+name: Auth SDK v2 Conformance 0.29.2
+on:
+  push:
+    paths:
+      - 'services/api/pkg/authconnector/**'
+      - 'services/api/internal/federation/**'
+      - 'services/api/internal/httpconnector/**'
+      - 'services/api/internal/oidcconnector/**'
+      - 'services/api/internal/microsoftconnector/**'
+      - 'services/api/internal/sqlconnector/**'
+      - '.github/workflows/auth-sdk-conformance-0292.yml'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+  pull_request:
+    paths:
+      - 'services/api/pkg/authconnector/**'
+      - 'services/api/internal/federation/**'
+      - 'services/api/internal/httpconnector/**'
+      - 'services/api/internal/oidcconnector/**'
+      - 'services/api/internal/microsoftconnector/**'
+      - 'services/api/internal/sqlconnector/**'
+      - '.github/workflows/auth-sdk-conformance-0292.yml'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+permissions:
+  contents: read
+jobs:
+  auth-sdk-conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Check formatting
+        run: test -z "$(gofmt -l pkg/authconnector internal/federation/core.go internal/httpconnector/config.go internal/httpconnector/connector_test.go internal/oidcconnector/config.go internal/oidcconnector/connector_test.go internal/microsoftconnector/config.go internal/microsoftconnector/connector_test.go internal/sqlconnector/config.go)"
+      - name: SDK, federation and real signed protocol conformance
+        run: go test -count=1 -timeout=5m ./pkg/authconnector/... ./internal/federation ./internal/repository ./internal/model ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/sqlconnector
+      - name: Race checks for conformance and issuer linkage
+        run: go test -race -count=1 -timeout=5m ./pkg/authconnector/... ./internal/federation ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector
+      - name: Compile Backend API with SDK v2
+        run: go build ./cmd/...

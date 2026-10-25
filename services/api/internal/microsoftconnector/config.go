@@ -1,10 +1,9 @@
 package microsoftconnector
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/configmigration"
 	"net"
 	"net/url"
 	"os"
@@ -81,18 +80,9 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 		}
 		raw = data
 	}
-	var configs []Config
-	dec := json.NewDecoder(strings.NewReader(string(raw)))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&configs); err != nil {
-		return nil, fmt.Errorf("decode Microsoft providers configuration: %w", err)
-	}
-	var extra any
-	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
-		return nil, errors.New("Microsoft providers configuration contains trailing JSON data")
-	}
-	if len(configs) == 0 {
-		return nil, errors.New("Microsoft providers configuration is empty")
+	configs, err := configmigration.Decode[Config](raw)
+	if err != nil {
+		return nil, fmt.Errorf("decode configured microsoftconnector auth providers: %w", err)
 	}
 	return configs, nil
 }

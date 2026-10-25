@@ -1,9 +1,9 @@
 package sqlconnector
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/configmigration"
 	"os"
 	"regexp"
 	"strings"
@@ -81,12 +81,9 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 		}
 		raw = data
 	}
-	var configs []Config
-	if err := json.Unmarshal(raw, &configs); err != nil {
-		return nil, fmt.Errorf("decode SQL auth providers configuration: %w", err)
-	}
-	if len(configs) == 0 {
-		return nil, errors.New("SQL auth providers configuration is empty")
+	configs, err := configmigration.Decode[Config](raw)
+	if err != nil {
+		return nil, fmt.Errorf("decode configured sqlconnector auth providers: %w", err)
 	}
 	return configs, nil
 }

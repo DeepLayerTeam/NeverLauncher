@@ -66,40 +66,10 @@ func (c *Core) RegisterWithPolicy(connector authconnector.Connector, policy Prov
 	if connector == nil {
 		return errors.New("connector is nil")
 	}
-	meta := authconnector.NormalizedMetadata(connector.Metadata())
-	if err := authconnector.ValidateMetadata(meta); err != nil {
+	if err := authconnector.ValidateConnector(connector); err != nil {
 		return err
 	}
-	if authconnector.HasCapability(meta, authconnector.CapabilityPasswordAuth) {
-		if _, ok := connector.(authconnector.PasswordAuthenticator); !ok {
-			return fmt.Errorf("connector %q advertises password-auth without PasswordAuthenticator", meta.ID)
-		}
-	}
-	if authconnector.HasCapability(meta, authconnector.CapabilityBrowserAuth) {
-		if _, ok := connector.(authconnector.BrowserAuthenticator); !ok {
-			return fmt.Errorf("connector %q advertises browser-auth without BrowserAuthenticator", meta.ID)
-		}
-	}
-	if authconnector.HasCapability(meta, authconnector.CapabilityProfile) {
-		if _, ok := connector.(authconnector.ProfileResolver); !ok {
-			return fmt.Errorf("connector %q advertises profile without ProfileResolver", meta.ID)
-		}
-	}
-	if authconnector.HasCapability(meta, authconnector.CapabilityTokenRefresh) {
-		if _, ok := connector.(authconnector.TokenRefresher); !ok {
-			return fmt.Errorf("connector %q advertises token-refresh without TokenRefresher", meta.ID)
-		}
-	}
-	if authconnector.HasCapability(meta, authconnector.CapabilityTokenRevoke) {
-		if _, ok := connector.(authconnector.Revoker); !ok {
-			return fmt.Errorf("connector %q advertises token-revoke without Revoker", meta.ID)
-		}
-	}
-	if authconnector.HasCapability(meta, authconnector.CapabilityUserLookup) {
-		if _, ok := connector.(authconnector.IdentityResolver); !ok {
-			return fmt.Errorf("connector %q advertises user-lookup without IdentityResolver", meta.ID)
-		}
-	}
+	meta := authconnector.NormalizedMetadata(connector.Metadata())
 	policy.DefaultRole = strings.TrimSpace(policy.DefaultRole)
 	if policy.AutoProvision {
 		if policy.DefaultRole == "" {
@@ -215,6 +185,9 @@ func (c *Core) LinkPasswordIdentity(ctx context.Context, userID, providerID stri
 	if err != nil {
 		return model.AuthIdentity{}, authconnector.Authentication{}, err
 	}
+	if err := authconnector.ValidateAuthentication(proof); err != nil {
+		return model.AuthIdentity{}, authconnector.Authentication{}, err
+	}
 	linked, err := c.LinkAuthenticatedIdentity(userID, providerID, proof)
 	if err != nil {
 		return model.AuthIdentity{}, authconnector.Authentication{}, err
@@ -263,8 +236,8 @@ func (c *Core) CompleteBrowserAuthProof(ctx context.Context, providerID string, 
 	if err != nil {
 		return authconnector.Metadata{}, authconnector.Authentication{}, err
 	}
-	if strings.TrimSpace(auth.Identity.Subject) == "" {
-		return authconnector.Metadata{}, authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "connector returned empty subject")
+	if err := authconnector.ValidateAuthentication(auth); err != nil {
+		return authconnector.Metadata{}, authconnector.Authentication{}, err
 	}
 	issuer, err := model.CanonicalAuthIssuer(meta.ID, auth.Identity.Issuer)
 	if err != nil {
@@ -291,8 +264,8 @@ func (c *Core) RefreshProviderCredential(ctx context.Context, providerID, provid
 	if err != nil {
 		return authconnector.Authentication{}, err
 	}
-	if strings.TrimSpace(auth.Identity.Subject) == "" {
-		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "connector refresh returned empty subject")
+	if err := authconnector.ValidateAuthentication(auth); err != nil {
+		return authconnector.Authentication{}, err
 	}
 	if expected := strings.TrimSpace(expectedSubject); expected != "" && auth.Identity.Subject != expected {
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrConflict, "provider refresh changed identity subject")
@@ -301,10 +274,10 @@ func (c *Core) RefreshProviderCredential(ctx context.Context, providerID, provid
 }
 
 func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Metadata, auth authconnector.Authentication) (Result, error) {
-	auth.Identity.Subject = strings.TrimSpace(auth.Identity.Subject)
-	if auth.Identity.Subject == "" {
-		return Result{}, authconnector.NewError(authconnector.ErrMisconfigured, "connector returned empty subject")
+	if err := authconnector.ValidateAuthentication(auth); err != nil {
+		return Result{}, err
 	}
+	auth.Identity.Subject = strings.TrimSpace(auth.Identity.Subject)
 	issuer, err := model.CanonicalAuthIssuer(meta.ID, auth.Identity.Issuer)
 	if err != nil {
 		return Result{}, authconnector.WrapError(authconnector.ErrMisconfigured, "invalid authenticated issuer", err)
@@ -421,6 +394,9 @@ func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authenticati
 	if _, err := c.repo.GetUser(userID); err != nil {
 		return model.AuthIdentity{}, err
 	}
+	if err := authconnector.ValidateAuthentication(authentication); err != nil {
+		return model.AuthIdentity{}, err
+	}
 	identity := authentication.Identity
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	if identity.Subject == "" {
@@ -448,6 +424,58 @@ func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authenticati
 		return model.AuthIdentity{}, err
 	}
 	return c.repo.SaveAuthIdentity(model.AuthIdentity{UserID: userID, Provider: providerID, Issuer: issuer, Subject: identity.Subject, Email: identity.Email, Username: identity.Username, DisplayName: identity.DisplayName, Claims: cloneClaims(identity.Claims), LastAuthenticatedAt: time.Now().UTC()})
+}
+
+// ResolveProviderIdentity reads the configured issuer's subject without linking
+// or provisioning a Never account. Response subjects must match the requested
+// value; identity data cannot retarget a canonical account.
+func (c *Core) ResolveProviderIdentity(ctx context.Context, providerID, subject string) (authconnector.Identity, error) {
+	connector, ok := c.Connector(providerID)
+	if !ok {
+		return authconnector.Identity{}, ErrProviderNotFound
+	}
+	if !authconnector.HasCapability(connector.Metadata(), authconnector.CapabilityUserLookup) {
+		return authconnector.Identity{}, ErrCapabilityUnsupported
+	}
+	resolver := connector.(authconnector.IdentityResolver)
+	subject = strings.TrimSpace(subject)
+	if subject == "" {
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "subject is required")
+	}
+	identity, err := resolver.ResolveIdentity(ctx, authconnector.ResolveRequest{Subject: subject})
+	if err != nil {
+		return authconnector.Identity{}, err
+	}
+	if err := authconnector.ValidateIdentity(identity); err != nil {
+		return authconnector.Identity{}, err
+	}
+	if identity.Subject != subject {
+		return authconnector.Identity{}, authconnector.NewError(authconnector.ErrConflict, "provider resolve changed subject")
+	}
+	return identity, nil
+}
+
+// ResolveProviderProfile resolves a profile from its verified provider subject.
+func (c *Core) ResolveProviderProfile(ctx context.Context, providerID, subject string) (authconnector.Profile, error) {
+	connector, ok := c.Connector(providerID)
+	if !ok {
+		return authconnector.Profile{}, ErrProviderNotFound
+	}
+	if !authconnector.HasCapability(connector.Metadata(), authconnector.CapabilityProfile) {
+		return authconnector.Profile{}, ErrCapabilityUnsupported
+	}
+	subject = strings.TrimSpace(subject)
+	if subject == "" {
+		return authconnector.Profile{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "subject is required")
+	}
+	profile, err := connector.(authconnector.ProfileResolver).ResolveProfile(ctx, authconnector.ResolveRequest{Subject: subject})
+	if err != nil {
+		return authconnector.Profile{}, err
+	}
+	if err := authconnector.ValidateProfile(profile, subject); err != nil {
+		return authconnector.Profile{}, err
+	}
+	return profile, nil
 }
 
 func (c *Core) Close() error {

@@ -1,3 +1,12 @@
+## 0.29.2 — Auth SDK v2 & Conformance (2026-10-25)
+
+- Enforce one fail-closed capability/implementation validator at real provider registration; block undeclared privileged provider operations.
+- Validate identity, profile, issuer, subject, token size and methods at live federation operations, including password, browser, refresh and explicit proof linking.
+- Add runnable `RunBehavioral` with dedicated fixtures, wrong-password checks, safe no-secret reports and opt-in provider revocation; retain safe structural `Run` at startup.
+- Exercise behavioral conformance against signed HTTP and TLS/OIDC/Microsoft test providers, plus SDK stateful revocation/issuer mismatch checks.
+- Upgrade configured SQL/HTTP/OIDC/Microsoft JSON provider lists from legacy arrays or v1 envelopes to a strict v2 envelope at load time, without modifying the original files or secrets.
+- Add automated CI formatting, conformance, race and Backend build gates. Details and verification limitations: `docs/releases/0.29.2-auth-sdk-v2-conformance.md`.
+
 ## 0.29.1 — Canonical Identity & Issuer (2026-10-25)
 
 - Make canonical auth identity `provider + verified issuer + subject` across the real federation login/link/JIT flows and both repositories; no implicit merging by identical email. Existing external identities keep an isolated legacy provider-scoped issuer unless explicitly linked with fresh proof.

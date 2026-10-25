@@ -2,10 +2,9 @@ package httpconnector
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/configmigration"
 	"net"
 	"net/url"
 	"os"
@@ -92,18 +91,9 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 		}
 		raw = data
 	}
-	var configs []Config
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&configs); err != nil {
-		return nil, fmt.Errorf("decode HTTP auth providers configuration: %w", err)
-	}
-	var extra any
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		return nil, errors.New("HTTP auth providers configuration contains trailing JSON data")
-	}
-	if len(configs) == 0 {
-		return nil, errors.New("HTTP auth providers configuration is empty")
+	configs, err := configmigration.Decode[Config](raw)
+	if err != nil {
+		return nil, fmt.Errorf("decode configured httpconnector auth providers: %w", err)
 	}
 	return configs, nil
 }
