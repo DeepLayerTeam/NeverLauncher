@@ -1,0 +1,44 @@
+name: Host Service Installers and Watchdog 0.28.11
+on:
+  push:
+    paths:
+      - 'cli/**'
+      - 'scripts/test/host-systemd-e2e-02811.py'
+      - '.github/workflows/host-services-systemd-02811.yml'
+  pull_request:
+    paths:
+      - 'cli/**'
+      - 'scripts/test/host-systemd-e2e-02811.py'
+      - '.github/workflows/host-services-systemd-02811.yml'
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - name: Race and regression tests
+        working-directory: cli
+        run: go test -race ./cmd/neverlauncher -run 'TestHostSystemd|TestHostService|TestServerBridgeHost|TestWorldBackup' -count=1
+      - name: CLI binary, sd_notify and graceful SIGTERM E2E
+        run: |
+          cd cli
+          go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher
+          cd ..
+          python3 scripts/test/host-systemd-e2e-02811.py --cli "$RUNNER_TEMP/nl"
+      - name: Vet
+        working-directory: cli
+        run: go vet ./cmd/neverlauncher
+  windows-compile:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - name: Windows host CLI regression compile
+        working-directory: cli
+        run: go test ./cmd/neverlauncher -run 'TestWorldBackup|TestServerBridgeHost' -count=1

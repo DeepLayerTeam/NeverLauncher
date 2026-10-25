@@ -123,13 +123,15 @@ func (w *hostStreamWriter01910) Write(p []byte) (int, error) {
 
 func handleServerBridgeHost01910(args []string) error {
 	if len(args) == 0 {
-		return errors.New("использование: nl server-bridge host configure|start|run|stop|restart|status|logs|remote|world-backup [параметры]")
+		return errors.New("использование: nl server-bridge host configure|start|run|stop|restart|status|logs|remote|world-backup|service [параметры]")
 	}
 	switch args[0] {
 	case "configure":
 		return configureServerBridgeHost01910(args[1:])
 	case "remote":
 		return remoteHandle0284(args[1:])
+	case "service":
+		return hostServiceHandle02811(args[1:])
 	case "world-backup":
 		return worldBackupHandle02810(args[1:])
 	case "start", "recover":
@@ -603,6 +605,8 @@ func runServerBridgeHost01910(root string, console bool) error {
 		return err
 	}
 	defer func() { _ = releaseServerBridgeHostLock01910(paths["lock"], sessionID) }()
+	finishService := hostServiceRun02811(paths, sessionID)
+	defer finishService()
 	_ = os.Remove(paths["stop"])
 	previousState, _ := readServerBridgeHostRuntime01910(paths["runtime"])
 	if hostIdentityMatches0282(previousState.ProcessPID, previousState.ProcessIdentity) {
@@ -705,6 +709,8 @@ func runServerBridgeHost01910(root string, console bool) error {
 			return err
 		}
 
+		hostServiceReady02811(state)
+
 		// Only the supervisor drives stdin and OS signals. The CLI posts a scoped,
 		// session-bound request; it never signals a potentially reused PID.
 		waitCh := make(chan error, 1)
@@ -736,6 +742,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 			state.LastError = waitErr.Error()
 		}
 		if stopped {
+			hostServiceStopping02811()
 			state.Status = "stopped"
 			state.Crashed = false
 			if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
@@ -760,6 +767,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 			restartEvents = append(restartEvents, time.Now())
 			state.RestartCount++
 			state.Status = "restarting"
+			hostServiceStatus02811("Minecraft restarting after exit")
 			if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
 				return err
 			}

@@ -1,3 +1,11 @@
+## 0.28.11 — Service Installers & Watchdog (2026-10-25)
+
+- Added real `server-bridge host service install|uninstall|start|stop|restart|status` systemd lifecycle for unprivileged user services and explicitly privileged system installation (Host JVM supervisor and scoped HTTPS RemoteControl agent).
+- Host `run` now implements sd_notify READY/STATUS/STOPPING and identity-aware WATCHDOG, plus graceful systemd SIGTERM forwarding to the existing session-bound Minecraft `stop` mechanism.
+- Installed system units use a dedicated non-root account, capability drop, no-new-privileges, protected mounts, cgroup stop semantics, controlled timeout, safe unit generation, exclusive installation and rollback on systemctl failure.
+- Added Linux socket, unit policy, installer lifecycle, race and live process/notification E2E regression tests. Windows installer intentionally unsupported; actual systemd PID 1 and Minecraft world E2E still require deployment validation.
+- See `docs/releases/0.28.11-service-installers-watchdog.md`.
+
 ## 0.28.10 — Game World Backup & Restore (2026-10-25)
 
 - Implemented Host CLI `server-bridge host world-backup create|list|verify|restore` with separate private storage, real file-level SHA-256 snapshot verification and atomic isolated restore. The game world, UUID playerdata, plugin data and selected configurations are copied as files, not as Backend/storage backups.
