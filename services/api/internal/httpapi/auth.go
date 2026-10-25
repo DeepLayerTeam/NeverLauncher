@@ -13,6 +13,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/localpassword"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
 )
 
 type authClaims struct {
@@ -214,9 +215,19 @@ func (s Server) issueLoginSession(user model.User, r *http.Request, deviceID str
 }
 
 func (s Server) issueLoginSessionWithAuth(user model.User, r *http.Request, deviceID string, methods []string, strength string, authTime time.Time, identityID, provider string) (string, string, authSessionRecord, error) {
+	decision := s.evaluateProtection0298(r.Context(), protection.Request{Stage: protection.BeforeAuth, UserID: user.ID, DeviceID: deviceID, RoleID: user.RoleID})
+	if !decision.Allowed() {
+		return "", "", authSessionRecord{}, errAuthRequired
+	}
 	session, refreshToken, err := s.State.AuthSessions.createWithAuth(user, r, deviceID, methods, strength, authTime, identityID, provider)
 	if err != nil {
 		return "", "", authSessionRecord{}, err
+	}
+	// Recheck after session creation: revocation may have raced with a ban.
+	decision = s.evaluateProtection0298(r.Context(), protection.Request{Stage: protection.AfterAuth, UserID: user.ID, SessionID: session.ID, DeviceID: deviceID, RoleID: user.RoleID})
+	if !decision.Allowed() {
+		s.State.AuthSessions.revoke(session.ID, "protection:"+decision.Reason)
+		return "", "", authSessionRecord{}, errAuthRequired
 	}
 	_ = s.flushPersistenceState950("auth-session-create")
 	accessToken, err := s.issueAccessTokenForSession(user, session)
@@ -330,6 +341,9 @@ func (s Server) verifyAdminToken(token string) (authClaims, error) {
 		return authClaims{}, errAuthRequired
 	}
 	if !sessionBindingClaimsMatch0126(claims, session) {
+		return authClaims{}, errAuthRequired
+	}
+	if !s.evaluateProtection0298(context.Background(), protection.Request{Stage: protection.BeforeAuth, UserID: claims.Sub, SessionID: claims.SessionID, DeviceID: session.TrustedDeviceID, RoleID: claims.RoleID}).Allowed() {
 		return authClaims{}, errAuthRequired
 	}
 	user, err := s.Repo.GetUser(claims.Sub)

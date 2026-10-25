@@ -17,6 +17,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
 )
 
 func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +72,9 @@ func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := result.User
+	if !s.enforceProtection0298(w, r, protection.BeforeAuth, user.ID, "", "admin-panel", user.RoleID) {
+		return
+	}
 	mfa, mfaErr := s.evaluateLoginMFA117(user, result.AuthMethods, req.TOTP, req.RecoveryCode)
 	if mfaErr != nil {
 		s.State.Security.recordLoginFailure(rateKey, clientIP(r))

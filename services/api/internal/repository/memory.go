@@ -139,6 +139,8 @@ type Repository interface {
 }
 
 type MemoryRepository struct {
+	protectionMu                   sync.RWMutex
+	protectionBans                 map[string]ProtectionBan
 	buildMu                        sync.Mutex
 	buildWorkspaces                map[string]BuildWorkspace
 	operationalConfigMu            sync.Mutex

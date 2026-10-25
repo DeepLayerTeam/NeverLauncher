@@ -1,3 +1,9 @@
+## 0.29.8 — Protection SDK & Policy Engine (2026-10-25)
+
+- Add runtime `pkg/protection` with ordered before/after auth and before launch/join hooks, fail-closed mandatory decisions and explicit allow/deny/step-up/reattest/review semantics. Enforce active bans in the existing federation, token/session, Minecraft and ServerBridge trust paths.
+- Implement persistent admin ban/unban/list with reason and optional expiry; user status remains separate. PostgreSQL migration `0083` serializes ban/login races, revokes all associated sessions via the existing `0082` cascade, and is synced with CLI migrations. Protect mutation with `users:manage` plus fresh phishing-resistant MFA and audit each action.
+- Add SDK, repository and protection gate regression tests and operator notes. Full SQL/HTTP E2E and live multi-replica/game-server certification are not locally verified: `docs/releases/0.29.8-protection-sdk-policy-engine.md`.
+
 ## 0.29.7 — Global Session Revocation (2026-10-25)
 
 - Enforce transactional PostgreSQL cascade of Never session revocation into refresh families/tokens, Minecraft sessions/joins, ServerBridge tickets/handoffs/player sessions/transfers and user jobs across all API replicas.

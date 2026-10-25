@@ -17,6 +17,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
 )
 
 const minecraftSessionTTL119 = 24 * time.Hour
@@ -189,6 +190,10 @@ func (s Server) issueMinecraftSessionWithTrust119(user model.User, neverSessionI
 }
 
 func (s Server) issueMinecraftSessionWithTrustAndIntegrity119(user model.User, neverSessionID, clientToken, trustedDeviceID string, bindingEpoch int64, integrity *minecraftIntegritySnapshot0135) (model.MinecraftSession, string, model.MinecraftProfile, error) {
+	decision := s.evaluateProtection0298(context.Background(), protection.Request{Stage: protection.BeforeLaunch, UserID: user.ID, SessionID: neverSessionID, DeviceID: trustedDeviceID, RoleID: user.RoleID})
+	if !decision.Allowed() {
+		return model.MinecraftSession{}, "", model.MinecraftProfile{}, errAuthRequired
+	}
 	repo, err := s.minecraftRepo119()
 	if err != nil {
 		return model.MinecraftSession{}, "", model.MinecraftProfile{}, err
@@ -257,6 +262,9 @@ func (s Server) validateMinecraftToken119(token string) (model.MinecraftSession,
 		if minecraftIntegrityPermanentFailure0135(integrity.Reason) {
 			_ = repo.RevokeMinecraftSession(session.ID, "integrity-policy:"+integrity.Reason)
 		}
+		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
+	}
+	if !s.evaluateProtection0298(context.Background(), protection.Request{Stage: protection.BeforeJoin, UserID: session.UserID, SessionID: session.NeverSessionID, DeviceID: session.TrustedDeviceID}).Allowed() {
 		return model.MinecraftSession{}, model.MinecraftProfile{}, model.User{}, errAuthRequired
 	}
 	user, err := s.Repo.GetUser(session.UserID)
@@ -398,6 +406,10 @@ func (s Server) yggdrasilAuthenticate119(w http.ResponseWriter, r *http.Request)
 			status = http.StatusForbidden
 		}
 		writeYggdrasilError119(w, status, "Invalid credentials")
+		return
+	}
+	if !s.evaluateProtection0298(r.Context(), protection.Request{Stage: protection.BeforeAuth, UserID: result.User.ID, DeviceID: "minecraft-authlib", RoleID: result.User.RoleID}).Allowed() {
+		writeYggdrasilError119(w, http.StatusForbidden, "Protection policy denied authentication")
 		return
 	}
 	mfa, err := s.evaluateLoginMFA117(result.User, result.AuthMethods, req.TOTP, req.RecoveryCode)

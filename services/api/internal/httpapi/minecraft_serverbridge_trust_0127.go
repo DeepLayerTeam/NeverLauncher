@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"context"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
 )
 
 const gameplayTrustPolicy0127 = "session-device-risk-v1"
@@ -53,6 +55,14 @@ func gameplayTrustAllow0127(rec authSessionRecord) gameplayTrustDecision0127 {
 // серверный /hasJoined и запросы плагинов идут от игрового сервера,
 // а не лаунчера игрока, и не должны менять риск по IP/UA игрока.
 func (s Server) evaluateGameplayTrust0127(r *http.Request, userID, sessionID, expectedDeviceID string, expectedBindingEpoch int64, requireBoundDevice bool) (authSessionRecord, gameplayTrustDecision0127) {
+	ctx := context.Background()
+	if r != nil {
+		ctx = r.Context()
+	}
+	decision := s.evaluateProtection0298(ctx, protection.Request{Stage: protection.BeforeJoin, UserID: userID, SessionID: sessionID, DeviceID: expectedDeviceID})
+	if !decision.Allowed() {
+		return authSessionRecord{}, gameplayTrustDeny0127("protection:"+decision.Reason, authSessionRecord{})
+	}
 	rec, ok := s.State.AuthSessions.get(strings.TrimSpace(sessionID), strings.TrimSpace(userID))
 	if !ok {
 		return authSessionRecord{}, gameplayTrustDeny0127("parent_session_inactive", authSessionRecord{})

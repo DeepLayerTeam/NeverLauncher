@@ -18,9 +18,11 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
 )
 
 type Server struct {
+	Protection        *protection.Engine
 	Version           string
 	SourceCommit      string
 	ExtensionSafeMode bool

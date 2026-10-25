@@ -10,6 +10,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
 )
 
 type authLoginRequest struct {
@@ -120,6 +121,9 @@ func (s Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := result.User
+	if !s.enforceProtection0298(w, r, protection.BeforeAuth, user.ID, "", req.DeviceID, user.RoleID) {
+		return
+	}
 	mfa, mfaErr := s.evaluateLoginMFA117(user, result.AuthMethods, req.TOTP, req.RecoveryCode)
 	if mfaErr != nil {
 		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
@@ -194,6 +198,10 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-reuse-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: "unknown", Action: "auth:refresh:reuse-detected", Target: "refresh-token-family", IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		}
 		writeError(w, http.StatusUnauthorized, "refresh token недействителен или отозван")
+		return
+	}
+	if !s.enforceProtection0298(w, r, protection.BeforeAuth, preview.UserID, preview.ID, preview.TrustedDeviceID, preview.RoleID) {
+		s.State.AuthSessions.revoke(preview.ID, "protection-refresh")
 		return
 	}
 	if preview.TrustedDeviceID != "" {

@@ -1,0 +1,54 @@
+name: Protection SDK and Policy 0.29.8
+on:
+  push:
+    paths:
+      - 'services/api/pkg/protection/**'
+      - 'services/api/internal/httpapi/**'
+      - 'services/api/internal/repository/**'
+      - 'services/api/internal/dbmigrate/**'
+      - 'cli/internal/dbmigrate/**'
+      - '.github/workflows/protection-sdk-policy-0298.yml'
+  pull_request:
+    paths:
+      - 'services/api/pkg/protection/**'
+      - 'services/api/internal/httpapi/**'
+      - 'services/api/internal/repository/**'
+      - 'services/api/internal/dbmigrate/**'
+      - 'cli/internal/dbmigrate/**'
+      - '.github/workflows/protection-sdk-policy-0298.yml'
+permissions:
+  contents: read
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: neverlauncher
+          POSTGRES_USER: neverlauncher
+          POSTGRES_PASSWORD: test-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher -d neverlauncher" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher:test-only@localhost:5432/neverlauncher?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Real API build and integration tests
+        working-directory: services/api
+        run: |
+          go build ./cmd/...
+          go test -count=1 -timeout=10m ./pkg/protection ./internal/dbmigrate ./internal/repository ./internal/httpapi -run 'TestProtection.*0298|TestEvaluateAppliedSealedCatalog|TestRoleUpdateRevokesLiveNeverToken0297'
+          go test -race -count=1 -timeout=10m ./pkg/protection ./internal/repository -run 'TestProtection.*0298'
+      - name: CLI migrations
+        working-directory: cli
+        run: go test ./internal/dbmigrate -count=1
+      - name: Go vet
+        working-directory: services/api
+        run: go vet ./pkg/protection ./internal/httpapi ./internal/repository

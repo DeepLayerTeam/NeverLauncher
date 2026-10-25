@@ -16,6 +16,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
 )
 
 const oidcTransactionTTL115 = 10 * time.Minute
@@ -175,6 +176,9 @@ func (s Server) completeOIDC115(w http.ResponseWriter, r *http.Request, tx oidcT
 
 func (s Server) finishFederatedLogin115(w http.ResponseWriter, r *http.Request, result federation.Result, deviceID, totp, recoveryCode, rateKey string) {
 	user := result.User
+	if !s.enforceProtection0298(w, r, protection.BeforeAuth, user.ID, "", deviceID, user.RoleID) {
+		return
+	}
 	mfa, mfaErr := s.evaluateLoginMFA117(user, result.AuthMethods, totp, recoveryCode)
 	if mfaErr != nil {
 		s.State.Security.recordLoginFailure(rateKey, clientIP(r))
