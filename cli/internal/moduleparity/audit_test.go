@@ -134,3 +134,22 @@ func TestAudit0301VersionDrift(t *testing.T) {
 		t.Fatal("version drift accepted")
 	}
 }
+
+func TestAudit0302PinnedBaselineSupportsLaterRelease(t *testing.T) {
+	root := fixture(t)
+	if err := os.WriteFile(filepath.Join(root, "VERSION"), []byte("0.30.2\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	report, err := Inspect(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.ProductVersion != "0.30.2" || report.FullyCertified || len(report.Results) != 19 {
+		t.Fatalf("bad report: %+v", report)
+	}
+	for _, version := range []string{"0.30.0", "0.29.99", "0.30.01", "2.bad.0"} {
+		if notBeforeModuleAudit0302(version) {
+			t.Fatalf("accepted incompatible release %s", version)
+		}
+	}
+}

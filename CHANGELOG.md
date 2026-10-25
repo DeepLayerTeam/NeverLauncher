@@ -1,3 +1,11 @@
+## 0.30.2 — Java SDK Core (2026-10-25)
+
+- Ship dependency-free Java 17+ NeverExtensions SDK Core with an actual runnable HTTP Host Protocol 1.0 client: authenticated hello, periodic heartbeats, identity/protocol validation, loopback-only connection and fail-closed loss of host heartbeat.
+- Implement strict manifest 2.0 parsing, SemVer constraints, deterministic transitive dependency resolution with conflicts, optional dependencies, cycle detection and backtracking.
+- Add timed asynchronous start/stop execution, lifecycle state transitions, monotonic deadlines, cooperative cancellation with callbacks/child scopes and bounded thread shutdown; timed-out tasks are interrupted and the existing Go supervisor remains responsible for process termination/isolation.
+- Supply a runnable and signable Java backend extension, real child-process SIGTERM lifecycle test, and cross-platform JDK 17/21 build/test CI, including a real loopback HTTP test host. Preserve the pinned 0.30.1 audit on newer product versions. Signed package installation and authorization remain managed by existing Go NeverExtensions.
+- No claim that standalone Java Host (0.30.4), event/command APIs (0.30.3), JVM agent (0.30.6), or arbitrary Gravit JAR compatibility are implemented here. OS-level sandboxing is not provided by the JVM SDK.
+
 ## 0.30.0 — Auth Platform & Protection GA candidate (2026-10-25)
 
 - Reject ambiguous, trailing, unknown and oversized JSON (16 KiB limit) at live OIDC begin/complete, Microsoft linking/logout, password-identity proof, administrator ban and session-revocation entry points. Invalid or empty destructive revocation payloads no longer silently revoke all sessions. The managed SQL/HTTP/OIDC/Microsoft provider activation path now rejects case-colliding and nested duplicate configuration properties before probing or storing a revision.

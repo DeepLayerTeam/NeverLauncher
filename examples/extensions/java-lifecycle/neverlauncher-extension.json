@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "2.0",
+  "id": "org.example.java-lifecycle",
+  "name": "Java Lifecycle Example",
+  "version": "0.1.0",
+  "publisher": "NeverLauncher Examples",
+  "description": "Java SDK Core example with start, cancellation and stop callbacks",
+  "api": "1.0",
+  "targets": [{"kind":"backend","entrypoint":"backend/bin/java-lifecycle"}],
+  "permissions": []
+}

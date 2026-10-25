@@ -1,0 +1,6 @@
+#!/bin/sh
+# NeverExtensions Go Host executes this file with cwd at the active payload root.
+set -eu
+exec java -cp 'backend/lib/neverlauncher-java-sdk-core.jar:backend/lib/java-lifecycle.jar' \
+  ru.neverlauncher.sdk.core.ExtensionRunner 'backend/manifest.json' \
+  ru.example.neverlauncher.LifecycleExample

@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -220,6 +221,39 @@ func validateJavaContract(root string) error {
 	return nil
 }
 
+// notBeforeModuleAudit0302 keeps the immutable 0.30.1 snapshot useful in
+// subsequent releases, while rejecting an older checkout masquerading as new.
+func notBeforeModuleAudit0302(version string) bool {
+	core := strings.SplitN(strings.SplitN(version, "+", 2)[0], "-", 2)[0]
+	parts := strings.Split(core, ".")
+	if len(parts) != 3 {
+		return false
+	}
+	numbers := [3]int{}
+	for i, p := range parts {
+		if p == "" || (len(p) > 1 && p[0] == '0') {
+			return false
+		}
+		for _, ch := range p {
+			if ch < '0' || ch > '9' {
+				return false
+			}
+		}
+		n, err := strconv.Atoi(p)
+		if err != nil {
+			return false
+		}
+		numbers[i] = n
+	}
+	if numbers[0] != 0 {
+		return numbers[0] > 0
+	}
+	if numbers[1] != 30 {
+		return numbers[1] > 30
+	}
+	return numbers[2] >= 1
+}
+
 // Inspect validates current source/test existence and protocol contract without
 // invoking builds. A PASS here means evidence integrity, never Gravit parity.
 func Inspect(root string) (Report, error) {
@@ -237,7 +271,9 @@ func Inspect(root string) (Report, error) {
 		return out, err
 	}
 	version := strings.TrimSpace(string(versionBytes))
-	if m.SchemaVersion != "1.0" || m.ProductVersion != version || m.AuditBaseline != "0.30.0" || version != "0.30.1" {
+	// The M01-M19 inventory is a pinned 0.30.1 baseline. Later releases retain
+	// its audit without rewriting historical evidence or claiming fresh parity.
+	if m.SchemaVersion != "1.0" || m.ProductVersion != "0.30.1" || m.AuditBaseline != "0.30.0" || !notBeforeModuleAudit0302(version) {
 		return out, fmt.Errorf("registry/version mismatch: registry=%s repo=%s", m.ProductVersion, version)
 	}
 	if m.Upstream.Repository != "GravitLauncher/LauncherModules" || !validCommit.MatchString(m.Upstream.Commit) {
