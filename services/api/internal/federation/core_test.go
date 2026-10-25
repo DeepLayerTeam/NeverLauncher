@@ -119,12 +119,15 @@ func TestJITProvisioningDoesNotAutoLinkMatchingEmail(t *testing.T) {
 	if err := core.RegisterWithPolicy(jitFixtureConnector{}, ProviderPolicy{AutoProvision: true, DefaultRole: "player"}); err != nil {
 		t.Fatal(err)
 	}
-	_, err := core.AuthenticatePassword(context.Background(), "website", authconnector.PasswordRequest{Identifier: "player", Secret: "secret"})
-	if authconnector.CodeOf(err) != authconnector.ErrConflict {
-		t.Fatalf("expected explicit-link conflict, got %v", err)
+	result, err := core.AuthenticatePassword(context.Background(), "website", authconnector.PasswordRequest{Identifier: "player", Secret: "secret"})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if _, err := repo.GetAuthIdentity("website", "42"); err == nil {
-		t.Fatal("matching email silently linked external identity")
+	if result.User.ID == "existing" || result.User.Email == "player@example.test" {
+		t.Fatalf("external email was used as canonical account link: %+v", result.User)
+	}
+	if result.Identity.Email != "player@example.test" {
+		t.Fatalf("external issuer claim was lost: %+v", result.Identity)
 	}
 }
 

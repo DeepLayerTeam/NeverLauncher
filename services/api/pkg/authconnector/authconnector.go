@@ -36,6 +36,9 @@ type Metadata struct {
 }
 
 type Identity struct {
+	// Issuer is the verified issuer of the authenticated identity. It must
+	// come from the validated protocol, not an untrusted client request.
+	Issuer      string         `json:"issuer,omitempty"`
 	Subject     string         `json:"subject"`
 	Email       string         `json:"email,omitempty"`
 	Username    string         `json:"username,omitempty"`

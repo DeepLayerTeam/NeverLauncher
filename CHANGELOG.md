@@ -1,3 +1,10 @@
+## 0.29.1 — Canonical Identity & Issuer (2026-10-25)
+
+- Make canonical auth identity `provider + verified issuer + subject` across the real federation login/link/JIT flows and both repositories; no implicit merging by identical email. Existing external identities keep an isolated legacy provider-scoped issuer unless explicitly linked with fresh proof.
+- Preserve ID-token verified OIDC issuer and signed/configuration-checked HTTP issuer. Require exact issuer when selecting ambiguous external refresh credentials; persist encrypted provider credentials per identity, not merely by provider slug.
+- Enforce immutable Minecraft GameProfile UUID/ownership in memory, PostgreSQL and a direct SQL guard trigger; mirror migration `0081` in Backend and CLI. Password proof linking requires an active Never session and per-identifier/IP rate limiting.
+- Add regression and optional real PostgreSQL tests, rollout guidance and explicit local testing limits. The complete live PostgreSQL + HTTP + Minecraft E2E certification remains pending. See `docs/releases/0.29.1-canonical-identity-issuer.md`.
+
 ## 0.29.0 — Production corrections & Real E2E release gate (2026-10-25)
 
 - Restored 11 missing CLI PostgreSQL migrations (0067–0077) byte-identical to Backend, and synchronized embedded first-run deployment templates with the production source of truth.

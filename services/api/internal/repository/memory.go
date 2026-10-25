@@ -45,6 +45,7 @@ type Repository interface {
 	SetUserPassword(id, passwordHash string) (model.User, error)
 	TouchUserLogin(id string) (model.User, error)
 	GetAuthIdentity(provider, subject string) (model.AuthIdentity, error)
+	GetAuthIdentityByIssuer(provider, issuer, subject string) (model.AuthIdentity, error)
 	ListAuthIdentities(userID string) []model.AuthIdentity
 	SaveAuthIdentity(identity model.AuthIdentity) (model.AuthIdentity, error)
 	SaveFederatedUser(ctx context.Context, user model.User, identity model.AuthIdentity) (model.User, model.AuthIdentity, error)
@@ -304,7 +305,7 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 			{ID: "admin", Email: "admin@neverlauncher.local", DisplayName: "Администратор", RoleID: "owner", Status: "active", ProjectRoles: map[string]string{"demo-project": "owner"}, PasswordHash: "sha256:8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", PasswordUpdatedAt: now, CreatedAt: now, UpdatedAt: now},
 		},
 		identities: []model.AuthIdentity{
-			{ID: "identity-local-admin", UserID: "admin", Provider: "local", Subject: "admin", Email: "admin@neverlauncher.local", Username: "admin@neverlauncher.local", DisplayName: "Администратор", CreatedAt: now, UpdatedAt: now},
+			{ID: "identity-local-admin", UserID: "admin", Provider: "local", Issuer: "neverlauncher", Subject: "admin", Email: "admin@neverlauncher.local", Username: "admin@neverlauncher.local", DisplayName: "Администратор", CreatedAt: now, UpdatedAt: now},
 		},
 		audit: []model.AuditEvent{
 			{ID: "audit-start", Actor: "system", Action: "backend:start", Target: "neverlauncher-api", CreatedAt: now},
@@ -665,8 +666,30 @@ func (r *MemoryRepository) TouchUserLogin(id string) (model.User, error) {
 func (r *MemoryRepository) GetAuthIdentity(provider, subject string) (model.AuthIdentity, error) {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	subject = strings.TrimSpace(subject)
+	var found model.AuthIdentity
 	for _, item := range r.identities {
 		if item.Provider == provider && item.Subject == subject {
+			if found.ID != "" {
+				return model.AuthIdentity{}, ErrConflict
+			}
+			found = item
+		}
+	}
+	if found.ID == "" {
+		return model.AuthIdentity{}, ErrNotFound
+	}
+	return found, nil
+}
+
+func (r *MemoryRepository) GetAuthIdentityByIssuer(provider, issuer, subject string) (model.AuthIdentity, error) {
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	normalized, err := model.CanonicalAuthIssuer(provider, issuer)
+	if err != nil {
+		return model.AuthIdentity{}, err
+	}
+	subject = strings.TrimSpace(subject)
+	for _, item := range r.identities {
+		if item.Provider == provider && item.Issuer == normalized && item.Subject == subject {
 			return item, nil
 		}
 	}
@@ -699,6 +722,11 @@ func (r *MemoryRepository) ListAuthIdentities(userID string) []model.AuthIdentit
 func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.AuthIdentity, error) {
 	now := time.Now().UTC()
 	identity.Provider = strings.ToLower(strings.TrimSpace(identity.Provider))
+	var issuerErr error
+	identity.Issuer, issuerErr = model.CanonicalAuthIssuer(identity.Provider, identity.Issuer)
+	if issuerErr != nil {
+		return model.AuthIdentity{}, issuerErr
+	}
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	identity.UserID = strings.TrimSpace(identity.UserID)
 	if identity.Provider == "" || identity.Subject == "" || identity.UserID == "" {
@@ -709,10 +737,10 @@ func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.
 	}
 	for i := range r.identities {
 		item := r.identities[i]
-		if item.Provider == identity.Provider && item.Subject == identity.Subject && item.UserID != identity.UserID {
+		if item.Provider == identity.Provider && item.Issuer == identity.Issuer && item.Subject == identity.Subject && item.UserID != identity.UserID {
 			return model.AuthIdentity{}, fmt.Errorf("identity %s/%s уже связана с другим пользователем", identity.Provider, identity.Subject)
 		}
-		if item.UserID == identity.UserID && item.Provider == identity.Provider {
+		if item.UserID == identity.UserID && item.Provider == identity.Provider && item.Issuer == identity.Issuer {
 			if item.Subject != identity.Subject {
 				return model.AuthIdentity{}, fmt.Errorf("provider %s уже связан с другим subject для пользователя", identity.Provider)
 			}
@@ -728,7 +756,7 @@ func (r *MemoryRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.
 		}
 	}
 	if identity.ID == "" {
-		identity.ID = "identity-" + identity.Provider + "-" + identity.UserID
+		identity.ID = scopedAuthIdentityID0291(identity.Provider, identity.Issuer, identity.UserID)
 	}
 	identity.CreatedAt = now
 	identity.UpdatedAt = now
@@ -741,6 +769,11 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 	user.ID = strings.TrimSpace(user.ID)
 	user.Email = strings.TrimSpace(user.Email)
 	identity.Provider = strings.ToLower(strings.TrimSpace(identity.Provider))
+	var issuerErr error
+	identity.Issuer, issuerErr = model.CanonicalAuthIssuer(identity.Provider, identity.Issuer)
+	if issuerErr != nil {
+		return model.User{}, model.AuthIdentity{}, issuerErr
+	}
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	if user.ID == "" || user.Email == "" || identity.Provider == "" || identity.Subject == "" {
 		return model.User{}, model.AuthIdentity{}, fmt.Errorf("federated user id/email and provider/subject are required")
@@ -758,7 +791,10 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 		}
 	}
 	for _, existing := range r.identities {
-		if existing.Provider == identity.Provider && existing.Subject == identity.Subject {
+		if existing.UserID == user.ID && existing.Provider == identity.Provider && existing.Issuer == identity.Issuer && existing.Subject != identity.Subject {
+			return model.User{}, model.AuthIdentity{}, ErrConflict
+		}
+		if existing.Provider == identity.Provider && existing.Issuer == identity.Issuer && existing.Subject == identity.Subject {
 			if existing.UserID != user.ID {
 				return model.User{}, model.AuthIdentity{}, fmt.Errorf("%w: external identity is already linked", ErrConflict)
 			}
@@ -786,7 +822,7 @@ func (r *MemoryRepository) SaveFederatedUser(_ context.Context, user model.User,
 	}
 	identity.UserID = user.ID
 	if identity.ID == "" {
-		identity.ID = "identity-" + identity.Provider + "-" + user.ID
+		identity.ID = scopedAuthIdentityID0291(identity.Provider, identity.Issuer, user.ID)
 	}
 	identity.CreatedAt = now
 	identity.UpdatedAt = now
@@ -1141,8 +1177,24 @@ func (r *MemoryRepository) ListCrashReports() []model.CrashReport {
 func (r *MemoryRepository) GetProviderCredential(userID, provider string) (model.ProviderCredential, error) {
 	userID = strings.TrimSpace(userID)
 	provider = strings.ToLower(strings.TrimSpace(provider))
+	var found model.ProviderCredential
 	for _, item := range r.providerCredentials {
 		if item.UserID == userID && item.Provider == provider {
+			if found.ID != "" {
+				return model.ProviderCredential{}, ErrConflict
+			}
+			found = item
+		}
+	}
+	if found.ID == "" {
+		return model.ProviderCredential{}, ErrNotFound
+	}
+	return found, nil
+}
+
+func (r *MemoryRepository) GetProviderCredentialByIdentity(userID, identityID string) (model.ProviderCredential, error) {
+	for _, item := range r.providerCredentials {
+		if item.UserID == strings.TrimSpace(userID) && item.IdentityID == strings.TrimSpace(identityID) {
 			return item, nil
 		}
 	}
@@ -1161,17 +1213,23 @@ func (r *MemoryRepository) SaveProviderCredential(item model.ProviderCredential)
 	if _, err := r.GetUser(item.UserID); err != nil {
 		return model.ProviderCredential{}, err
 	}
-	identity, err := r.GetAuthIdentity(item.Provider, item.Subject)
-	if err != nil || identity.UserID != item.UserID || identity.ID != item.IdentityID {
+	var matched bool
+	for _, identity := range r.identities {
+		if identity.ID == item.IdentityID && identity.UserID == item.UserID && identity.Provider == item.Provider && identity.Subject == item.Subject {
+			matched = true
+			break
+		}
+	}
+	if !matched {
 		return model.ProviderCredential{}, fmt.Errorf("provider credential identity mismatch")
 	}
 	now := time.Now().UTC()
 	for i := range r.providerCredentials {
 		existing := r.providerCredentials[i]
-		if existing.Provider == item.Provider && existing.Subject == item.Subject && existing.UserID != item.UserID {
+		if existing.IdentityID == item.IdentityID && (existing.UserID != item.UserID || existing.Provider != item.Provider || existing.Subject != item.Subject) {
 			return model.ProviderCredential{}, ErrConflict
 		}
-		if existing.UserID == item.UserID && existing.Provider == item.Provider {
+		if existing.IdentityID == item.IdentityID {
 			item.ID = existing.ID
 			item.CreatedAt = existing.CreatedAt
 			item.UpdatedAt = now
@@ -1180,7 +1238,7 @@ func (r *MemoryRepository) SaveProviderCredential(item model.ProviderCredential)
 		}
 	}
 	if item.ID == "" {
-		item.ID = "provider-credential-" + item.Provider + "-" + item.UserID
+		item.ID = "provider-credential-" + item.IdentityID
 	}
 	item.CreatedAt = now
 	item.UpdatedAt = now
@@ -1189,10 +1247,16 @@ func (r *MemoryRepository) SaveProviderCredential(item model.ProviderCredential)
 }
 
 func (r *MemoryRepository) DeleteProviderCredential(userID, provider string) error {
-	userID = strings.TrimSpace(userID)
-	provider = strings.ToLower(strings.TrimSpace(provider))
+	item, err := r.GetProviderCredential(userID, provider)
+	if err != nil {
+		return err
+	}
+	return r.DeleteProviderCredentialByIdentity(userID, item.IdentityID)
+}
+
+func (r *MemoryRepository) DeleteProviderCredentialByIdentity(userID, identityID string) error {
 	for i, item := range r.providerCredentials {
-		if item.UserID == userID && item.Provider == provider {
+		if item.UserID == strings.TrimSpace(userID) && item.IdentityID == strings.TrimSpace(identityID) {
 			r.providerCredentials = append(r.providerCredentials[:i], r.providerCredentials[i+1:]...)
 			return nil
 		}
@@ -1263,7 +1327,7 @@ func (r *MemoryRepository) SaveMinecraftProfile(item model.MinecraftProfile) (mo
 	item.UpdatedAt = now
 	for i, existing := range r.minecraftProfiles {
 		if existing.UserID == item.UserID || strings.EqualFold(existing.UUID, item.UUID) || strings.EqualFold(existing.Name, item.Name) {
-			if existing.UserID != item.UserID {
+			if existing.UserID != item.UserID || !strings.EqualFold(existing.UUID, item.UUID) || existing.Issuer != item.Issuer || existing.Realm != item.Realm || existing.Subject != item.Subject {
 				return model.MinecraftProfile{}, ErrConflict
 			}
 			item.CreatedAt = existing.CreatedAt

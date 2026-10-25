@@ -559,9 +559,10 @@ ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, display_name = EXCLUDED.d
 	}
 	if strings.TrimSpace(user.PasswordHash) != "" {
 		identityID := "identity-local-" + user.ID
-		_, err = tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at)
-VALUES($1,$2,'local',$2,$3,$3,$4,'{}'::jsonb,now(),now())
-ON CONFLICT(user_id,provider) DO UPDATE SET subject=EXCLUDED.subject,email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,updated_at=now()`, identityID, user.ID, user.Email, user.DisplayName)
+		_, err = tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)
+VALUES($1,$2,'local','neverlauncher',$2,$3,$3,$4,'{}'::jsonb,now(),now())
+ON CONFLICT(user_id,provider,issuer) DO UPDATE SET email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,updated_at=now()
+WHERE auth_identities.subject=EXCLUDED.subject`, identityID, user.ID, user.Email, user.DisplayName)
 		if err != nil {
 			return model.User{}, err
 		}
@@ -605,9 +606,10 @@ func (r *SQLRepository) SetUserPassword(id, passwordHash string) (model.User, er
 		return model.User{}, err
 	}
 	if strings.TrimSpace(passwordHash) != "" {
-		if _, err := tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at)
-VALUES($1,$2,'local',$2,$3,$3,$4,'{}'::jsonb,now(),now())
-ON CONFLICT(user_id,provider) DO UPDATE SET subject=EXCLUDED.subject,email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,updated_at=now()`, "identity-local-"+id, id, email, displayName); err != nil {
+		if _, err := tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)
+VALUES($1,$2,'local','neverlauncher',$2,$3,$3,$4,'{}'::jsonb,now(),now())
+ON CONFLICT(user_id,provider,issuer) DO UPDATE SET email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,updated_at=now()
+WHERE auth_identities.subject=EXCLUDED.subject`, "identity-local-"+id, id, email, displayName); err != nil {
 			return model.User{}, err
 		}
 	}
@@ -632,9 +634,16 @@ func (r *SQLRepository) GetAuthIdentity(provider, subject string) (model.AuthIde
 		return model.AuthIdentity{}, err
 	}
 	var item model.AuthIdentity
+	var count int
+	if err := r.db.QueryRow(`SELECT count(*) FROM auth_identities WHERE provider=$1 AND subject=$2`, strings.ToLower(strings.TrimSpace(provider)), strings.TrimSpace(subject)).Scan(&count); err != nil {
+		return model.AuthIdentity{}, err
+	}
+	if count > 1 {
+		return model.AuthIdentity{}, ErrConflict
+	}
 	var claimsRaw []byte
 	var lastAuth sql.NullTime
-	err := r.db.QueryRow(`SELECT id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at FROM auth_identities WHERE provider=$1 AND subject=$2`, strings.ToLower(strings.TrimSpace(provider)), strings.TrimSpace(subject)).Scan(&item.ID, &item.UserID, &item.Provider, &item.Subject, &item.Email, &item.Username, &item.DisplayName, &claimsRaw, &item.CreatedAt, &item.UpdatedAt, &lastAuth)
+	err := r.db.QueryRow(`SELECT id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at FROM auth_identities WHERE provider=$1 AND subject=$2 AND (SELECT count(*) FROM auth_identities WHERE provider=$1 AND subject=$2)=1`, strings.ToLower(strings.TrimSpace(provider)), strings.TrimSpace(subject)).Scan(&item.ID, &item.UserID, &item.Provider, &item.Issuer, &item.Subject, &item.Email, &item.Username, &item.DisplayName, &claimsRaw, &item.CreatedAt, &item.UpdatedAt, &lastAuth)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.AuthIdentity{}, ErrNotFound
 	}
@@ -650,11 +659,39 @@ func (r *SQLRepository) GetAuthIdentity(provider, subject string) (model.AuthIde
 	return item, nil
 }
 
+func (r *SQLRepository) GetAuthIdentityByIssuer(provider, issuer, subject string) (model.AuthIdentity, error) {
+	if err := r.check(); err != nil {
+		return model.AuthIdentity{}, err
+	}
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	normalized, err := model.CanonicalAuthIssuer(provider, issuer)
+	if err != nil {
+		return model.AuthIdentity{}, err
+	}
+	var item model.AuthIdentity
+	var claimsRaw []byte
+	var lastAuth sql.NullTime
+	err = r.db.QueryRow(`SELECT id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at FROM auth_identities WHERE provider=$1 AND issuer=$2 AND subject=$3`, provider, normalized, strings.TrimSpace(subject)).Scan(&item.ID, &item.UserID, &item.Provider, &item.Issuer, &item.Subject, &item.Email, &item.Username, &item.DisplayName, &claimsRaw, &item.CreatedAt, &item.UpdatedAt, &lastAuth)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.AuthIdentity{}, ErrNotFound
+	}
+	if err != nil {
+		return model.AuthIdentity{}, err
+	}
+	if err := json.Unmarshal(claimsRaw, &item.Claims); err != nil {
+		return model.AuthIdentity{}, err
+	}
+	if lastAuth.Valid {
+		item.LastAuthenticatedAt = lastAuth.Time
+	}
+	return item, nil
+}
+
 func (r *SQLRepository) ListAuthIdentities(userID string) []model.AuthIdentity {
 	if err := r.check(); err != nil {
 		return nil
 	}
-	query := `SELECT id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at FROM auth_identities`
+	query := `SELECT id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at FROM auth_identities`
 	var rows *sql.Rows
 	var err error
 	if strings.TrimSpace(userID) == "" {
@@ -671,7 +708,7 @@ func (r *SQLRepository) ListAuthIdentities(userID string) []model.AuthIdentity {
 		var item model.AuthIdentity
 		var claimsRaw []byte
 		var lastAuth sql.NullTime
-		if err := rows.Scan(&item.ID, &item.UserID, &item.Provider, &item.Subject, &item.Email, &item.Username, &item.DisplayName, &claimsRaw, &item.CreatedAt, &item.UpdatedAt, &lastAuth); err != nil {
+		if err := rows.Scan(&item.ID, &item.UserID, &item.Provider, &item.Issuer, &item.Subject, &item.Email, &item.Username, &item.DisplayName, &claimsRaw, &item.CreatedAt, &item.UpdatedAt, &lastAuth); err != nil {
 			continue
 		}
 		if len(claimsRaw) > 0 {
@@ -690,6 +727,11 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 		return model.AuthIdentity{}, err
 	}
 	identity.Provider = strings.ToLower(strings.TrimSpace(identity.Provider))
+	var issuerErr error
+	identity.Issuer, issuerErr = model.CanonicalAuthIssuer(identity.Provider, identity.Issuer)
+	if issuerErr != nil {
+		return model.AuthIdentity{}, issuerErr
+	}
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	identity.UserID = strings.TrimSpace(identity.UserID)
 	if identity.Provider == "" || identity.Subject == "" || identity.UserID == "" {
@@ -698,7 +740,7 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 	if _, err := r.GetUser(identity.UserID); err != nil {
 		return model.AuthIdentity{}, err
 	}
-	existing, lookupErr := r.GetAuthIdentity(identity.Provider, identity.Subject)
+	existing, lookupErr := r.GetAuthIdentityByIssuer(identity.Provider, identity.Issuer, identity.Subject)
 	if lookupErr == nil && existing.UserID != identity.UserID {
 		return model.AuthIdentity{}, fmt.Errorf("identity %s/%s уже связана с другим пользователем", identity.Provider, identity.Subject)
 	}
@@ -706,7 +748,7 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 		return model.AuthIdentity{}, lookupErr
 	}
 	var currentSubject string
-	err := r.db.QueryRow(`SELECT subject FROM auth_identities WHERE user_id=$1 AND provider=$2`, identity.UserID, identity.Provider).Scan(&currentSubject)
+	err := r.db.QueryRow(`SELECT subject FROM auth_identities WHERE user_id=$1 AND provider=$2 AND issuer=$3`, identity.UserID, identity.Provider, identity.Issuer).Scan(&currentSubject)
 	if err == nil && currentSubject != identity.Subject {
 		return model.AuthIdentity{}, fmt.Errorf("provider %s уже связан с другим subject для пользователя", identity.Provider)
 	}
@@ -714,7 +756,7 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 		return model.AuthIdentity{}, err
 	}
 	if identity.ID == "" {
-		identity.ID = "identity-" + identity.Provider + "-" + identity.UserID
+		identity.ID = scopedAuthIdentityID0291(identity.Provider, identity.Issuer, identity.UserID)
 	}
 	if identity.CreatedAt.IsZero() {
 		identity.CreatedAt = time.Now().UTC()
@@ -723,13 +765,21 @@ func (r *SQLRepository) SaveAuthIdentity(identity model.AuthIdentity) (model.Aut
 	if err != nil {
 		return model.AuthIdentity{}, err
 	}
-	_, err = r.db.Exec(`INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,now(),$10)
-ON CONFLICT(user_id,provider) DO UPDATE SET subject=EXCLUDED.subject,email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,claims=EXCLUDED.claims,updated_at=now(),last_authenticated_at=COALESCE(EXCLUDED.last_authenticated_at,auth_identities.last_authenticated_at)`, identity.ID, identity.UserID, identity.Provider, identity.Subject, identity.Email, identity.Username, identity.DisplayName, string(claims), identity.CreatedAt, nullTime(identity.LastAuthenticatedAt))
+	result, err := r.db.Exec(`INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,now(),$11)
+ON CONFLICT(user_id,provider,issuer) DO UPDATE SET email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,claims=EXCLUDED.claims,updated_at=now(),last_authenticated_at=COALESCE(EXCLUDED.last_authenticated_at,auth_identities.last_authenticated_at)
+WHERE auth_identities.subject=EXCLUDED.subject`, identity.ID, identity.UserID, identity.Provider, identity.Issuer, identity.Subject, identity.Email, identity.Username, identity.DisplayName, string(claims), identity.CreatedAt, nullTime(identity.LastAuthenticatedAt))
 	if err != nil {
 		return model.AuthIdentity{}, err
 	}
-	return r.GetAuthIdentity(identity.Provider, identity.Subject)
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return model.AuthIdentity{}, err
+	}
+	if affected != 1 {
+		return model.AuthIdentity{}, ErrConflict
+	}
+	return r.GetAuthIdentityByIssuer(identity.Provider, identity.Issuer, identity.Subject)
 }
 
 func (r *SQLRepository) SaveFederatedUser(ctx context.Context, user model.User, identity model.AuthIdentity) (model.User, model.AuthIdentity, error) {
@@ -743,6 +793,11 @@ func (r *SQLRepository) SaveFederatedUser(ctx context.Context, user model.User, 
 	user.ID = strings.TrimSpace(user.ID)
 	user.Email = strings.TrimSpace(user.Email)
 	identity.Provider = strings.ToLower(strings.TrimSpace(identity.Provider))
+	var issuerErr error
+	identity.Issuer, issuerErr = model.CanonicalAuthIssuer(identity.Provider, identity.Issuer)
+	if issuerErr != nil {
+		return model.User{}, model.AuthIdentity{}, issuerErr
+	}
 	identity.Subject = strings.TrimSpace(identity.Subject)
 	if user.ID == "" || user.Email == "" || identity.Provider == "" || identity.Subject == "" {
 		return model.User{}, model.AuthIdentity{}, fmt.Errorf("federated user id/email and provider/subject are required")
@@ -762,7 +817,7 @@ func (r *SQLRepository) SaveFederatedUser(ctx context.Context, user model.User, 
 	user.UpdatedAt = now
 	identity.UserID = user.ID
 	if identity.ID == "" {
-		identity.ID = "identity-" + identity.Provider + "-" + user.ID
+		identity.ID = scopedAuthIdentityID0291(identity.Provider, identity.Issuer, user.ID)
 	}
 	if identity.CreatedAt.IsZero() {
 		identity.CreatedAt = now
@@ -827,14 +882,14 @@ ON CONFLICT DO NOTHING`, user.ID, user.Email, user.DisplayName, user.RoleID, use
 		}
 	}
 
-	_, err = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11)
-ON CONFLICT(provider,subject) DO NOTHING`, identity.ID, identity.UserID, identity.Provider, identity.Subject, identity.Email, identity.Username, identity.DisplayName, string(claims), identity.CreatedAt, identity.UpdatedAt, identity.LastAuthenticatedAt)
+	_, err = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at,last_authenticated_at)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12)
+ON CONFLICT DO NOTHING`, identity.ID, identity.UserID, identity.Provider, identity.Issuer, identity.Subject, identity.Email, identity.Username, identity.DisplayName, string(claims), identity.CreatedAt, identity.UpdatedAt, identity.LastAuthenticatedAt)
 	if err != nil {
 		return model.User{}, model.AuthIdentity{}, fmt.Errorf("save federated identity: %w", err)
 	}
 	var linkedUserID string
-	if err := tx.QueryRowContext(ctx, `SELECT user_id FROM auth_identities WHERE provider=$1 AND subject=$2`, identity.Provider, identity.Subject).Scan(&linkedUserID); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT user_id FROM auth_identities WHERE provider=$1 AND issuer=$2 AND subject=$3`, identity.Provider, identity.Issuer, identity.Subject).Scan(&linkedUserID); err != nil {
 		return model.User{}, model.AuthIdentity{}, err
 	}
 	if linkedUserID != user.ID {
@@ -847,7 +902,7 @@ ON CONFLICT(provider,subject) DO NOTHING`, identity.ID, identity.UserID, identit
 	if err != nil {
 		return model.User{}, model.AuthIdentity{}, err
 	}
-	linked, err := r.GetAuthIdentity(identity.Provider, identity.Subject)
+	linked, err := r.GetAuthIdentityByIssuer(identity.Provider, identity.Issuer, identity.Subject)
 	return canonical, linked, err
 }
 
@@ -855,14 +910,14 @@ func (r *SQLRepository) TouchAuthIdentity(id string) (model.AuthIdentity, error)
 	if err := r.check(); err != nil {
 		return model.AuthIdentity{}, err
 	}
-	var provider, subject string
-	if err := r.db.QueryRow(`UPDATE auth_identities SET last_authenticated_at=now(),updated_at=now() WHERE id=$1 RETURNING provider,subject`, id).Scan(&provider, &subject); err != nil {
+	var provider, issuer, subject string
+	if err := r.db.QueryRow(`UPDATE auth_identities SET last_authenticated_at=now(),updated_at=now() WHERE id=$1 RETURNING provider,issuer,subject`, id).Scan(&provider, &issuer, &subject); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.AuthIdentity{}, ErrNotFound
 		}
 		return model.AuthIdentity{}, err
 	}
-	return r.GetAuthIdentity(provider, subject)
+	return r.GetAuthIdentityByIssuer(provider, issuer, subject)
 }
 
 func (r *SQLRepository) ListRoles() []model.Role {
@@ -1471,7 +1526,33 @@ func (r *SQLRepository) GetProviderCredential(userID, provider string) (model.Pr
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	var item model.ProviderCredential
 	var refreshed sql.NullTime
-	err := r.db.QueryRow(`SELECT id,user_id,identity_id,provider,subject,encrypted_refresh_token,created_at,updated_at,last_refreshed_at FROM provider_credentials WHERE user_id=$1 AND provider=$2`, userID, provider).Scan(&item.ID, &item.UserID, &item.IdentityID, &item.Provider, &item.Subject, &item.EncryptedRefreshToken, &item.CreatedAt, &item.UpdatedAt, &refreshed)
+	err := r.db.QueryRow(`SELECT id,user_id,identity_id,provider,subject,encrypted_refresh_token,created_at,updated_at,last_refreshed_at FROM provider_credentials WHERE user_id=$1 AND provider=$2 AND (SELECT count(*) FROM provider_credentials WHERE user_id=$1 AND provider=$2)=1`, userID, provider).Scan(&item.ID, &item.UserID, &item.IdentityID, &item.Provider, &item.Subject, &item.EncryptedRefreshToken, &item.CreatedAt, &item.UpdatedAt, &refreshed)
+	if errors.Is(err, sql.ErrNoRows) {
+		var n int
+		if countErr := r.db.QueryRow(`SELECT count(*) FROM provider_credentials WHERE user_id=$1 AND provider=$2`, userID, provider).Scan(&n); countErr != nil {
+			return model.ProviderCredential{}, countErr
+		}
+		if n > 1 {
+			return model.ProviderCredential{}, ErrConflict
+		}
+		return model.ProviderCredential{}, ErrNotFound
+	}
+	if err != nil {
+		return model.ProviderCredential{}, err
+	}
+	if refreshed.Valid {
+		item.LastRefreshedAt = refreshed.Time
+	}
+	return item, nil
+}
+
+func (r *SQLRepository) GetProviderCredentialByIdentity(userID, identityID string) (model.ProviderCredential, error) {
+	if err := r.check(); err != nil {
+		return model.ProviderCredential{}, err
+	}
+	var item model.ProviderCredential
+	var refreshed sql.NullTime
+	err := r.db.QueryRow(`SELECT id,user_id,identity_id,provider,subject,encrypted_refresh_token,created_at,updated_at,last_refreshed_at FROM provider_credentials WHERE user_id=$1 AND identity_id=$2`, strings.TrimSpace(userID), strings.TrimSpace(identityID)).Scan(&item.ID, &item.UserID, &item.IdentityID, &item.Provider, &item.Subject, &item.EncryptedRefreshToken, &item.CreatedAt, &item.UpdatedAt, &refreshed)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.ProviderCredential{}, ErrNotFound
 	}
@@ -1507,28 +1588,57 @@ func (r *SQLRepository) SaveProviderCredential(item model.ProviderCredential) (m
 		return model.ProviderCredential{}, fmt.Errorf("provider credential identity belongs to another user")
 	}
 	if item.ID == "" {
-		item.ID = "provider-credential-" + item.Provider + "-" + item.UserID
+		item.ID = "provider-credential-" + item.IdentityID
 	}
 	if item.CreatedAt.IsZero() {
 		item.CreatedAt = time.Now().UTC()
 	}
-	_, err := r.db.Exec(`INSERT INTO provider_credentials(id,user_id,identity_id,provider,subject,encrypted_refresh_token,created_at,updated_at,last_refreshed_at)
+	result, err := r.db.Exec(`INSERT INTO provider_credentials(id,user_id,identity_id,provider,subject,encrypted_refresh_token,created_at,updated_at,last_refreshed_at)
 VALUES($1,$2,$3,$4,$5,$6,$7,now(),$8)
-ON CONFLICT(user_id,provider) DO UPDATE SET identity_id=EXCLUDED.identity_id,subject=EXCLUDED.subject,encrypted_refresh_token=EXCLUDED.encrypted_refresh_token,updated_at=now(),last_refreshed_at=EXCLUDED.last_refreshed_at`, item.ID, item.UserID, item.IdentityID, item.Provider, item.Subject, item.EncryptedRefreshToken, item.CreatedAt, nullTime(item.LastRefreshedAt))
+ON CONFLICT(identity_id) DO UPDATE SET encrypted_refresh_token=EXCLUDED.encrypted_refresh_token,updated_at=now(),last_refreshed_at=EXCLUDED.last_refreshed_at
+WHERE provider_credentials.user_id=EXCLUDED.user_id AND provider_credentials.provider=EXCLUDED.provider AND provider_credentials.subject=EXCLUDED.subject`, item.ID, item.UserID, item.IdentityID, item.Provider, item.Subject, item.EncryptedRefreshToken, item.CreatedAt, nullTime(item.LastRefreshedAt))
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "unique") {
 			return model.ProviderCredential{}, fmt.Errorf("%w: provider credential identity already belongs to another user", ErrConflict)
 		}
 		return model.ProviderCredential{}, err
 	}
-	return r.GetProviderCredential(item.UserID, item.Provider)
+	affected, rowsErr := result.RowsAffected()
+	if rowsErr != nil {
+		return model.ProviderCredential{}, rowsErr
+	}
+	if affected != 1 {
+		return model.ProviderCredential{}, ErrConflict
+	}
+	return r.GetProviderCredentialByIdentity(item.UserID, item.IdentityID)
 }
 
 func (r *SQLRepository) DeleteProviderCredential(userID, provider string) error {
 	if err := r.check(); err != nil {
 		return err
 	}
-	result, err := r.db.Exec(`DELETE FROM provider_credentials WHERE user_id=$1 AND provider=$2`, strings.TrimSpace(userID), strings.ToLower(strings.TrimSpace(provider)))
+	result, err := r.db.Exec(`DELETE FROM provider_credentials WHERE user_id=$1 AND provider=$2 AND (SELECT count(*) FROM provider_credentials WHERE user_id=$1 AND provider=$2)=1`, strings.TrimSpace(userID), strings.ToLower(strings.TrimSpace(provider)))
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		var count int
+		if err := r.db.QueryRow(`SELECT count(*) FROM provider_credentials WHERE user_id=$1 AND provider=$2`, strings.TrimSpace(userID), strings.ToLower(strings.TrimSpace(provider))).Scan(&count); err != nil {
+			return err
+		}
+		if count > 1 {
+			return ErrConflict
+		}
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (r *SQLRepository) DeleteProviderCredentialByIdentity(userID, identityID string) error {
+	if err := r.check(); err != nil {
+		return err
+	}
+	result, err := r.db.Exec(`DELETE FROM provider_credentials WHERE user_id=$1 AND identity_id=$2`, strings.TrimSpace(userID), strings.TrimSpace(identityID))
 	if err != nil {
 		return err
 	}
@@ -1602,10 +1712,17 @@ func (r *SQLRepository) SaveMinecraftProfile(item model.MinecraftProfile) (model
 		item.CreatedAt = now
 	}
 	item.UpdatedAt = now
-	_, err := r.db.Exec(`INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
-ON CONFLICT (user_id) DO UPDATE SET uuid=EXCLUDED.uuid,name=EXCLUDED.name,issuer=EXCLUDED.issuer,realm=EXCLUDED.realm,subject=EXCLUDED.subject,identity_version=EXCLUDED.identity_version,updated_at=EXCLUDED.updated_at`, item.UserID, item.UUID, item.Name, item.Issuer, item.Realm, item.Subject, item.IdentityVersion, item.CreatedAt, item.UpdatedAt)
+	result, err := r.db.Exec(`INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+ON CONFLICT (user_id) DO UPDATE SET name=EXCLUDED.name,issuer=EXCLUDED.issuer,realm=EXCLUDED.realm,subject=EXCLUDED.subject,identity_version=EXCLUDED.identity_version,updated_at=EXCLUDED.updated_at WHERE minecraft_profiles.uuid=EXCLUDED.uuid AND minecraft_profiles.issuer=EXCLUDED.issuer AND minecraft_profiles.realm=EXCLUDED.realm AND minecraft_profiles.subject=EXCLUDED.subject`, item.UserID, item.UUID, item.Name, item.Issuer, item.Realm, item.Subject, item.IdentityVersion, item.CreatedAt, item.UpdatedAt)
 	if err != nil {
 		return model.MinecraftProfile{}, err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return model.MinecraftProfile{}, err
+	}
+	if affected != 1 {
+		return model.MinecraftProfile{}, ErrConflict
 	}
 	return r.GetMinecraftProfileByUser(item.UserID)
 }

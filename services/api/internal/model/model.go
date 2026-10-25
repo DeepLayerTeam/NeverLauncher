@@ -90,6 +90,7 @@ type AuthIdentity struct {
 	ID                  string         `json:"id"`
 	UserID              string         `json:"userId"`
 	Provider            string         `json:"provider"`
+	Issuer              string         `json:"issuer"`
 	Subject             string         `json:"subject"`
 	Email               string         `json:"email,omitempty"`
 	Username            string         `json:"username,omitempty"`

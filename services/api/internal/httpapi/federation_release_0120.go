@@ -119,7 +119,7 @@ func (s Server) authProviderLinkComplete0120(w http.ResponseWriter, r *http.Requ
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-provider-linked-" + now.Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:provider:linked", Target: providerID + "/" + identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "linked", "provider": verifiedMeta.ID,
-		"identity": map[string]any{"id": identity.ID, "provider": identity.Provider, "subject": identity.Subject},
+		"identity": map[string]any{"id": identity.ID, "provider": identity.Provider, "issuer": identity.Issuer, "subject": identity.Subject},
 	}})
 }
 

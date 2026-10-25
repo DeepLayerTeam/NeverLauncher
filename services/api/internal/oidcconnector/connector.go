@@ -453,7 +453,7 @@ func (c *Connector) identityFromClaims(claims map[string]any) (authconnector.Ide
 	if len(methods) == 0 {
 		methods = []string{"oidc"}
 	}
-	return authconnector.Identity{Subject: subject, Email: email, Username: claimString(claims, c.cfg.Claims.Username), DisplayName: claimString(claims, c.cfg.Claims.DisplayName), Groups: groups, Roles: roles, Claims: cloneMap(claims)}, methods, nil
+	return authconnector.Identity{Issuer: claimString(claims, "iss"), Subject: subject, Email: email, Username: claimString(claims, c.cfg.Claims.Username), DisplayName: claimString(claims, c.cfg.Claims.DisplayName), Groups: groups, Roles: roles, Claims: cloneMap(claims)}, methods, nil
 }
 func claimValue(claims map[string]any, path string) any {
 	var cur any = claims

@@ -194,6 +194,34 @@ func (c *Core) AuthenticatePassword(ctx context.Context, providerID string, requ
 	return c.resolveAuthentication(ctx, meta, auth)
 }
 
+// LinkPasswordIdentity uses fresh provider credentials solely as proof for an
+// explicitly authenticated Never account. Unlike AuthenticatePassword it never
+// provisions a user or creates a Never session. No provider fallback is allowed.
+func (c *Core) LinkPasswordIdentity(ctx context.Context, userID, providerID string, request authconnector.PasswordRequest) (model.AuthIdentity, authconnector.Authentication, error) {
+	providerID = strings.ToLower(strings.TrimSpace(providerID))
+	if userID == "" || strings.TrimSpace(request.Identifier) == "" || request.Secret == "" {
+		return model.AuthIdentity{}, authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "identity proof requires identifier and password")
+	}
+	connector, ok := c.Connector(providerID)
+	if !ok {
+		return model.AuthIdentity{}, authconnector.Authentication{}, ErrProviderNotFound
+	}
+	meta := authconnector.NormalizedMetadata(connector.Metadata())
+	passwordConnector, ok := connector.(authconnector.PasswordAuthenticator)
+	if !ok || !authconnector.HasCapability(meta, authconnector.CapabilityPasswordAuth) {
+		return model.AuthIdentity{}, authconnector.Authentication{}, ErrCapabilityUnsupported
+	}
+	proof, err := passwordConnector.AuthenticatePassword(ctx, request)
+	if err != nil {
+		return model.AuthIdentity{}, authconnector.Authentication{}, err
+	}
+	linked, err := c.LinkAuthenticatedIdentity(userID, providerID, proof)
+	if err != nil {
+		return model.AuthIdentity{}, authconnector.Authentication{}, err
+	}
+	return linked, proof, nil
+}
+
 func (c *Core) BeginBrowserAuth(ctx context.Context, providerID string, request authconnector.BrowserAuthRequest) (authconnector.BrowserAuthStart, error) {
 	providerID = strings.ToLower(strings.TrimSpace(providerID))
 	connector, ok := c.Connector(providerID)
@@ -238,6 +266,11 @@ func (c *Core) CompleteBrowserAuthProof(ctx context.Context, providerID string, 
 	if strings.TrimSpace(auth.Identity.Subject) == "" {
 		return authconnector.Metadata{}, authconnector.Authentication{}, authconnector.NewError(authconnector.ErrMisconfigured, "connector returned empty subject")
 	}
+	issuer, err := model.CanonicalAuthIssuer(meta.ID, auth.Identity.Issuer)
+	if err != nil {
+		return authconnector.Metadata{}, authconnector.Authentication{}, authconnector.WrapError(authconnector.ErrMisconfigured, "invalid authenticated issuer", err)
+	}
+	auth.Identity.Issuer = issuer
 	return meta, auth, nil
 }
 
@@ -272,7 +305,11 @@ func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Met
 	if auth.Identity.Subject == "" {
 		return Result{}, authconnector.NewError(authconnector.ErrMisconfigured, "connector returned empty subject")
 	}
-	linked, err := c.repo.GetAuthIdentity(meta.ID, auth.Identity.Subject)
+	issuer, err := model.CanonicalAuthIssuer(meta.ID, auth.Identity.Issuer)
+	if err != nil {
+		return Result{}, authconnector.WrapError(authconnector.ErrMisconfigured, "invalid authenticated issuer", err)
+	}
+	linked, err := c.repo.GetAuthIdentityByIssuer(meta.ID, issuer, auth.Identity.Subject)
 	var user model.User
 	if err != nil {
 		if !errors.Is(err, repository.ErrNotFound) {
@@ -282,6 +319,18 @@ func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Met
 		if !policy.AutoProvision {
 			return Result{}, ErrIdentityNotLinked
 		}
+		// An unqualified pre-0.29.1 identity must not be silently claimed by
+		// a new issuer (even when the email/subject matches). Require an
+		// authenticated Never user to explicitly perform browser linking.
+		legacyIssuer, _ := model.CanonicalAuthIssuer(meta.ID, "")
+		if issuer != legacyIssuer {
+			if _, legacyErr := c.repo.GetAuthIdentityByIssuer(meta.ID, legacyIssuer, auth.Identity.Subject); legacyErr == nil {
+				return Result{}, ErrIdentityNotLinked
+			} else if !errors.Is(legacyErr, repository.ErrNotFound) {
+				return Result{}, legacyErr
+			}
+		}
+		auth.Identity.Issuer = issuer
 		user, linked, err = c.provisionAuthenticatedIdentity(ctx, meta.ID, policy, auth.Identity)
 		if err != nil {
 			if errors.Is(err, repository.ErrConflict) {
@@ -304,6 +353,7 @@ func (c *Core) resolveAuthentication(ctx context.Context, meta authconnector.Met
 	if user.Status == "disabled" {
 		return Result{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "canonical user is disabled")
 	}
+	linked.Issuer = issuer
 	linked.Email = auth.Identity.Email
 	linked.Username = auth.Identity.Username
 	linked.DisplayName = auth.Identity.DisplayName
@@ -321,13 +371,17 @@ func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID st
 	if subject == "" {
 		return model.User{}, model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "authenticated identity subject is empty")
 	}
-	digest := sha256.Sum256([]byte(providerID + "\x00" + subject))
+	issuer, err := model.CanonicalAuthIssuer(providerID, identity.Issuer)
+	if err != nil {
+		return model.User{}, model.AuthIdentity{}, err
+	}
+	digest := sha256.Sum256([]byte(providerID + "\x00" + issuer + "\x00" + subject))
 	stableSuffix := hex.EncodeToString(digest[:12])
 	userID := "user-" + providerID + "-" + stableSuffix
-	email := strings.TrimSpace(identity.Email)
-	if email == "" {
-		email = stableSuffix + "@identity.invalid"
-	}
+	// Email is a mutable claim and may be shared across distinct issuers.
+	// Reserve a unique internal login address; the asserted address is saved
+	// only on AuthIdentity and is never used for implicit account linking.
+	email := stableSuffix + "@identity.invalid"
 	displayName := strings.TrimSpace(identity.DisplayName)
 	if displayName == "" {
 		displayName = strings.TrimSpace(identity.Username)
@@ -352,7 +406,7 @@ func (c *Core) provisionAuthenticatedIdentity(ctx context.Context, providerID st
 	return c.repo.SaveFederatedUser(ctx, model.User{
 		ID: userID, Email: email, DisplayName: displayName, RoleID: roleID, Status: "active", ProjectRoles: map[string]string{}, CreatedAt: now, UpdatedAt: now,
 	}, model.AuthIdentity{
-		UserID: userID, Provider: providerID, Subject: subject, Email: identity.Email, Username: identity.Username, DisplayName: identity.DisplayName, Claims: cloneClaims(identity.Claims), LastAuthenticatedAt: now,
+		UserID: userID, Provider: providerID, Issuer: issuer, Subject: subject, Email: identity.Email, Username: identity.Username, DisplayName: identity.DisplayName, Claims: cloneClaims(identity.Claims), LastAuthenticatedAt: now,
 	})
 }
 
@@ -372,14 +426,28 @@ func (c *Core) LinkAuthenticatedIdentity(userID, providerID string, authenticati
 	if identity.Subject == "" {
 		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrIdentityNotFound, "authenticated identity subject is empty")
 	}
-	existing, err := c.repo.GetAuthIdentity(providerID, identity.Subject)
+	issuer, err := model.CanonicalAuthIssuer(providerID, identity.Issuer)
+	if err != nil {
+		return model.AuthIdentity{}, err
+	}
+	legacyIssuer, _ := model.CanonicalAuthIssuer(providerID, "")
+	if issuer != legacyIssuer {
+		legacy, legacyErr := c.repo.GetAuthIdentityByIssuer(providerID, legacyIssuer, identity.Subject)
+		if legacyErr == nil && legacy.UserID != userID {
+			return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "legacy identity belongs to another canonical user")
+		}
+		if legacyErr != nil && !errors.Is(legacyErr, repository.ErrNotFound) {
+			return model.AuthIdentity{}, legacyErr
+		}
+	}
+	existing, err := c.repo.GetAuthIdentityByIssuer(providerID, issuer, identity.Subject)
 	if err == nil && existing.UserID != userID {
 		return model.AuthIdentity{}, authconnector.NewError(authconnector.ErrConflict, "identity already linked")
 	}
 	if err != nil && !errors.Is(err, repository.ErrNotFound) {
 		return model.AuthIdentity{}, err
 	}
-	return c.repo.SaveAuthIdentity(model.AuthIdentity{UserID: userID, Provider: providerID, Subject: identity.Subject, Email: identity.Email, Username: identity.Username, DisplayName: identity.DisplayName, Claims: cloneClaims(identity.Claims), LastAuthenticatedAt: time.Now().UTC()})
+	return c.repo.SaveAuthIdentity(model.AuthIdentity{UserID: userID, Provider: providerID, Issuer: issuer, Subject: identity.Subject, Email: identity.Email, Username: identity.Username, DisplayName: identity.DisplayName, Claims: cloneClaims(identity.Claims), LastAuthenticatedAt: time.Now().UTC()})
 }
 
 func (c *Core) Close() error {

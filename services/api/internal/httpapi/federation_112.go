@@ -118,7 +118,7 @@ func (s Server) authIdentities112(w http.ResponseWriter, r *http.Request) {
 	identities := s.Repo.ListAuthIdentities(claims.Sub)
 	items := make([]map[string]any, 0, len(identities))
 	for _, identity := range identities {
-		items = append(items, map[string]any{"id": identity.ID, "provider": identity.Provider, "subject": identity.Subject, "email": identity.Email, "username": identity.Username, "displayName": identity.DisplayName, "createdAt": identity.CreatedAt, "updatedAt": identity.UpdatedAt, "lastAuthenticatedAt": identity.LastAuthenticatedAt})
+		items = append(items, map[string]any{"id": identity.ID, "provider": identity.Provider, "issuer": identity.Issuer, "subject": identity.Subject, "email": identity.Email, "username": identity.Username, "displayName": identity.DisplayName, "createdAt": identity.CreatedAt, "updatedAt": identity.UpdatedAt, "lastAuthenticatedAt": identity.LastAuthenticatedAt})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "items": items}})
 }

@@ -20,6 +20,7 @@ func (s Server) registerAuthRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/auth/providers/{providerId}/credential/refresh", s.authProviderCredentialRefresh116)
 	mux.HandleFunc("DELETE /api/v1/auth/providers/{providerId}/credential", s.authProviderCredentialDelete116)
 	mux.HandleFunc("POST /api/v1/auth/providers/{providerId}/logout", s.authProviderLogout118)
+	mux.HandleFunc("POST /api/v1/auth/providers/{providerId}/link/password", s.authProviderLinkPassword0291)
 	mux.HandleFunc("POST /api/v1/auth/providers/{providerId}/link/begin", s.authProviderLinkBegin0120)
 	mux.HandleFunc("POST /api/v1/auth/providers/{providerId}/link/complete", s.authProviderLinkComplete0120)
 	mux.HandleFunc("GET /api/v1/auth/providers", s.authProviders112)

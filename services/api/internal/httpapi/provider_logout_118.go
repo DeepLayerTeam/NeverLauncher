@@ -22,16 +22,12 @@ func (s Server) authProviderLogout118(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "providerId обязателен")
 		return
 	}
-	var identity model.AuthIdentity
-	found := false
-	for _, item := range s.Repo.ListAuthIdentities(claims.Sub) {
-		if item.Provider == providerID {
-			identity = item
-			found = true
-			break
-		}
+	identity, err := selectedAuthIdentity0291(s.Repo, claims.Sub, providerID, r.URL.Query().Get("issuer"))
+	if errors.Is(err, repository.ErrConflict) {
+		writeError(w, http.StatusConflict, "несколько issuer: укажите параметр ?issuer=<точный issuer>")
+		return
 	}
-	if !found {
+	if err != nil {
 		writeError(w, http.StatusNotFound, "provider identity не связана с текущей учётной записью")
 		return
 	}
@@ -40,7 +36,7 @@ func (s Server) authProviderLogout118(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotImplemented, "repository не поддерживает provider credentials")
 		return
 	}
-	credential, err := store.GetProviderCredential(claims.Sub, providerID)
+	credential, err := store.GetProviderCredentialByIdentity(claims.Sub, identity.ID)
 	if errors.Is(err, repository.ErrNotFound) {
 		writeError(w, http.StatusConflict, "provider credential отсутствует; Never session не изменена")
 		return
@@ -62,7 +58,7 @@ func (s Server) authProviderLogout118(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadGateway, "provider logout/revoke завершился ошибкой; Never session не изменена")
 		return
 	}
-	if err := store.DeleteProviderCredential(claims.Sub, providerID); err != nil && !errors.Is(err, repository.ErrNotFound) {
+	if err := store.DeleteProviderCredentialByIdentity(claims.Sub, identity.ID); err != nil && !errors.Is(err, repository.ErrNotFound) {
 		writeError(w, http.StatusInternalServerError, "provider credential revoked, но локальная credential запись не удалена")
 		return
 	}

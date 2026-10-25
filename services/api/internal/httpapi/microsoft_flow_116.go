@@ -116,7 +116,7 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-microsoft-linked-" + now.Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:microsoft:linked", Target: providerID + "/" + identity.Subject, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "linked", "provider": meta.ID,
-		"identity": map[string]any{"id": identity.ID, "provider": identity.Provider, "subject": identity.Subject},
+		"identity": map[string]any{"id": identity.ID, "provider": identity.Provider, "issuer": identity.Issuer, "subject": identity.Subject},
 	}})
 }
 
@@ -132,7 +132,16 @@ func (s Server) authProviderCredentialRefresh116(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusNotImplemented, "repository не поддерживает provider credentials")
 		return
 	}
-	credential, err := store.GetProviderCredential(claims.Sub, providerID)
+	selected, selectErr := selectedAuthIdentity0291(s.Repo, claims.Sub, providerID, r.URL.Query().Get("issuer"))
+	if errors.Is(selectErr, repository.ErrConflict) {
+		writeError(w, http.StatusConflict, "несколько issuer: укажите параметр ?issuer=<точный issuer>")
+		return
+	}
+	if selectErr != nil {
+		writeError(w, http.StatusNotFound, "provider identity отсутствует")
+		return
+	}
+	credential, err := store.GetProviderCredentialByIdentity(claims.Sub, selected.ID)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			writeError(w, http.StatusNotFound, "provider credential не найден")
@@ -149,6 +158,11 @@ func (s Server) authProviderCredentialRefresh116(w http.ResponseWriter, r *http.
 	refreshed, err := s.Federation.RefreshProviderCredential(r.Context(), providerID, plain, credential.Subject)
 	if err != nil {
 		s.writeOIDCError115(w, err)
+		return
+	}
+	issuer, issuerErr := model.CanonicalAuthIssuer(providerID, refreshed.Identity.Issuer)
+	if issuerErr != nil || issuer != selected.Issuer || strings.TrimSpace(refreshed.Identity.Subject) != selected.Subject {
+		writeError(w, http.StatusConflict, "provider refresh изменил issuer или subject; credential не обновлён")
 		return
 	}
 	identity, err := s.Federation.LinkAuthenticatedIdentity(claims.Sub, providerID, refreshed)
@@ -169,7 +183,7 @@ func (s Server) authProviderCredentialRefresh116(w http.ResponseWriter, r *http.
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-provider-refreshed-" + now.Format("20060102150405.000000000"), Actor: user.Email, Action: "auth:provider-credential:refreshed", Target: providerID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"schemaVersion": apiContractVersion, "toolVersion": s.Version, "status": "refreshed", "provider": providerID,
-		"identity":  map[string]any{"id": identity.ID, "provider": identity.Provider, "subject": identity.Subject},
+		"identity":  map[string]any{"id": identity.ID, "provider": identity.Provider, "issuer": identity.Issuer, "subject": identity.Subject},
 		"expiresAt": refreshed.ExpiresAt,
 	}})
 }
@@ -186,7 +200,16 @@ func (s Server) authProviderCredentialDelete116(w http.ResponseWriter, r *http.R
 		writeError(w, http.StatusNotImplemented, "repository не поддерживает provider credentials")
 		return
 	}
-	if err := store.DeleteProviderCredential(claims.Sub, providerID); err != nil && !errors.Is(err, repository.ErrNotFound) {
+	selected, selectErr := selectedAuthIdentity0291(s.Repo, claims.Sub, providerID, r.URL.Query().Get("issuer"))
+	if errors.Is(selectErr, repository.ErrConflict) {
+		writeError(w, http.StatusConflict, "несколько issuer: укажите параметр ?issuer=<точный issuer>")
+		return
+	}
+	if selectErr != nil {
+		writeError(w, http.StatusNotFound, "provider identity отсутствует")
+		return
+	}
+	if err := store.DeleteProviderCredentialByIdentity(claims.Sub, selected.ID); err != nil && !errors.Is(err, repository.ErrNotFound) {
 		writeError(w, http.StatusInternalServerError, "не удалось удалить provider credential")
 		return
 	}

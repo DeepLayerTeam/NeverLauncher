@@ -8,6 +8,9 @@ import "gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 // Реализован для PostgreSQL и тестового репозитория в памяти начиная с 0.11.6.
 type ProviderCredentialRepository interface {
 	GetProviderCredential(userID, provider string) (model.ProviderCredential, error)
+	// GetProviderCredentialByIdentity prevents cross-issuer token selection.
+	GetProviderCredentialByIdentity(userID, identityID string) (model.ProviderCredential, error)
 	SaveProviderCredential(credential model.ProviderCredential) (model.ProviderCredential, error)
 	DeleteProviderCredential(userID, provider string) error
+	DeleteProviderCredentialByIdentity(userID, identityID string) error
 }

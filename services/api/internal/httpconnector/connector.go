@@ -210,6 +210,7 @@ func (c *Connector) validateIdentityResponse(response identityResponse, expected
 		claims = map[string]any{}
 	}
 	return authconnector.Identity{
+		Issuer:  response.Issuer,
 		Subject: response.Subject,
 		Email:   strings.TrimSpace(response.Email), Username: strings.TrimSpace(response.Username), DisplayName: strings.TrimSpace(response.DisplayName),
 		Groups: groups, Roles: roles, Claims: claims,
