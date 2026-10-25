@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -42,8 +41,7 @@ func (s Server) v1AuthRenameSession118(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req renameSessionRequest118
-	if json.NewDecoder(r.Body).Decode(&req) != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	if !decodeSensitiveRequest0300(w, r, &req) {
 		return
 	}
 	rec, err := s.State.AuthSessions.renameDevice118(strings.TrimSpace(r.PathValue("sessionId")), claims.Sub, req.Device)
@@ -101,7 +99,9 @@ func (s Server) v1AuthRevokeSessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req revokeCurrentSessionsRequest
-	_ = json.NewDecoder(r.Body).Decode(&req)
+	if !decodeSensitiveRequest0300(w, r, &req) {
+		return
+	}
 	revoked := 0
 	if req.AllExceptCurrent {
 		revoked = s.State.AuthSessions.revokeOthers118(claims.Sub, claims.SessionID, "user-revoke-other-sessions")
@@ -125,8 +125,7 @@ func (s Server) adminAuthRevokeSessions118(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var req adminSessionRevokeRequest118
-	if json.NewDecoder(r.Body).Decode(&req) != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	if !decodeSensitiveRequest0300(w, r, &req) {
 		return
 	}
 	req.UserID = strings.TrimSpace(req.UserID)

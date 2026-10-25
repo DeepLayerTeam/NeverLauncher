@@ -1,3 +1,11 @@
+## 0.30.0 — Auth Platform & Protection GA candidate (2026-10-25)
+
+- Reject ambiguous, trailing, unknown and oversized JSON (16 KiB limit) at live OIDC begin/complete, Microsoft linking/logout, password-identity proof, administrator ban and session-revocation entry points. Invalid or empty destructive revocation payloads no longer silently revoke all sessions. The managed SQL/HTTP/OIDC/Microsoft provider activation path now rejects case-colliding and nested duplicate configuration properties before probing or storing a revision.
+- Make the executable protection engine fail closed on canceled contexts (including empty/optional-only policy chains), panicking mandatory policy handlers and handler deadlines, without leaking panic payloads. Require an available session store whenever the policy is asked to validate an existing Never session.
+- Add real HTTP adversarial tests for ban/no-ban and refresh/session safety; add protection runtime timeout/panic/cancellation regressions. Add a dedicated real PostgreSQL two-replica, PostgreSQL/MySQL/MariaDB, federation provider SDK and Admin build GA CI workflow and require its success before a production release candidate can assemble its bundle.
+- Introduce `scripts/ga/assert_go_test_0300.py`: parse genuine `go test -json` events and reject missing/skipped/failed mandatory integration tests rather than treating successful command invocation as sufficient evidence. Test the verifier against malicious/incomplete reports.
+- **Certification status:** implementation supplied, **0.30.0 production GA not yet certified locally**. `internal/authrequest` and `pkg/protection` race tests, release version consistency, and Python gate unit tests pass. Full Backend build, multi-database E2E, Microsoft live tenant, and game/ServerBridge matrix require CI or staging evidence. See `docs/releases/0.30.0-auth-platform-protection-ga.md`.
+
 ## 0.29.12 — Security & Real Auth E2E (2026-10-25)
 
 - Harden live Admin and Launcher password login and refresh request parsing with a strict 16 KiB limit, exact JSON object semantics, duplicate/case-colliding key detection, disallowed unknown fields, and rejection of trailing JSON. Malformed requests cannot select a different issuer/provider or reach upstream credentials. Oversized requests return HTTP 413.

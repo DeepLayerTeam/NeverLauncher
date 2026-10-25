@@ -110,14 +110,21 @@ func (e *Engine) Evaluate(ctx context.Context, req Request) Decision {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if ctx.Err() != nil {
+		return Decision{Action: Deny, Reason: "policy_context_unavailable", Handler: "engine"}
+	}
 	for _, h := range handlers {
 		if !h.stages[req.Stage] {
 			continue
 		}
+		if ctx.Err() != nil {
+			return Decision{Action: Deny, Reason: "policy_context_unavailable", Handler: "engine"}
+		}
 		scoped, cancel := context.WithTimeout(ctx, timeout)
 		// Handlers run synchronously: timeout-aware storage/network handlers must
 		// honor the context, without creating unbounded goroutines on timeout.
-		decision, err := h.handler.Evaluate(scoped, req)
+		// Untrusted extension panics are failures, never successful authorizations.
+		decision, err := evaluateHandlerSafely(scoped, h.handler, req)
 		deadlineErr := scoped.Err()
 		cancel()
 		if err != nil || deadlineErr != nil {
@@ -139,5 +146,19 @@ func (e *Engine) Evaluate(ctx context.Context, req Request) Decision {
 			return Decision{Action: Deny, Reason: "invalid_policy_decision", Handler: h.handler.Name()}
 		}
 	}
+	if ctx.Err() != nil {
+		return Decision{Action: Deny, Reason: "policy_context_unavailable", Handler: "engine"}
+	}
 	return Decision{Action: Allow, Reason: "policy_approved", Handler: "engine"}
+}
+
+func evaluateHandlerSafely(ctx context.Context, handler Handler, req Request) (decision Decision, err error) {
+	defer func() {
+		if recover() != nil {
+			// Do not log/re-emit panic payloads: extensions may panic with secrets.
+			decision = Decision{}
+			err = errors.New("protection handler panicked")
+		}
+	}()
+	return handler.Evaluate(ctx, req)
 }

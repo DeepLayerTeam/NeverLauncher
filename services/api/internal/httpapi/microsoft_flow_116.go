@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -48,8 +47,7 @@ func (s Server) authMicrosoftLinkBegin116(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var req oidcBeginRequest115
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	if !decodeSensitiveRequest0300(w, r, &req) {
 		return
 	}
 	start, sealed, err := s.beginOIDC115(r, providerID, req.RedirectURI, req.DeviceID)
@@ -90,8 +88,7 @@ func (s Server) authMicrosoftLinkComplete116(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var req oidcCompleteRequest115
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	if !decodeSensitiveRequest0300(w, r, &req) {
 		return
 	}
 	tx, err := s.openOIDCTransaction115(req.Transaction)
@@ -253,8 +250,7 @@ func (s Server) authMicrosoftLogoutURL116(w http.ResponseWriter, r *http.Request
 	}
 	var req microsoftLogoutRequest116
 	if r.Body != nil && r.ContentLength != 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, "некорректный JSON")
+		if !decodeSensitiveRequest0300(w, r, &req) {
 			return
 		}
 	}

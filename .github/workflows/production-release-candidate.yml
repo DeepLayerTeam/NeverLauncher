@@ -40,6 +40,11 @@ jobs:
     needs: [validate-release-ref]
     uses: ./.github/workflows/ci.yml
 
+  auth-platform-protection-ga:
+    name: 0.30.0 live federated authentication and protection gate
+    needs: [base-ci]
+    uses: ./.github/workflows/auth-platform-protection-ga-0300.yml
+
   server-control-ga:
     name: Require exact-commit real Minecraft world restore certification 0.29.0
     needs: [base-ci]
@@ -179,7 +184,7 @@ jobs:
 
   release-bundle:
     name: Release candidate bundle
-    needs: [base-ci, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
+    needs: [base-ci, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
     permissions:
       contents: read
       actions: read

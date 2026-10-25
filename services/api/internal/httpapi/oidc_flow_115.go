@@ -46,8 +46,7 @@ type oidcTransaction115 struct {
 
 func (s Server) authOIDCBegin115(w http.ResponseWriter, r *http.Request) {
 	var req oidcBeginRequest115
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	if !decodeSensitiveRequest0300(w, r, &req) {
 		return
 	}
 	start, tx, err := s.beginOIDC115(r, r.PathValue("providerId"), req.RedirectURI, req.DeviceID)
@@ -75,8 +74,7 @@ func (s Server) authOIDCStart115(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) authOIDCComplete115(w http.ResponseWriter, r *http.Request) {
 	var req oidcCompleteRequest115
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный JSON")
+	if !decodeSensitiveRequest0300(w, r, &req) {
 		return
 	}
 	tx, err := s.openOIDCTransaction115(req.Transaction)

@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authrequest"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/httpconnector"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/microsoftconnector"
@@ -30,16 +30,7 @@ type managedProbe02910 struct {
 }
 
 func strictProviderConfig02910(raw json.RawMessage, dest any) error {
-	d := json.NewDecoder(bytes.NewReader(raw))
-	d.DisallowUnknownFields()
-	if err := d.Decode(dest); err != nil {
-		return err
-	}
-	var tail any
-	if err := d.Decode(&tail); err != io.EOF {
-		return errors.New("trailing configuration data")
-	}
-	return nil
+	return authrequest.Decode(bytes.NewReader(raw), dest)
 }
 
 // Prevent secret material reaching the DB, API responses, audit or browser.

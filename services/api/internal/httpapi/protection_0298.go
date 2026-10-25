@@ -2,9 +2,6 @@ package httpapi
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -41,8 +38,14 @@ type accountHandler0298 struct {
 }
 
 func (h accountHandler0298) Name() string { return "account-session-role" }
-func (h accountHandler0298) Evaluate(_ context.Context, req protection.Request) (protection.Decision, error) {
+func (h accountHandler0298) Evaluate(ctx context.Context, req protection.Request) (protection.Decision, error) {
+	if ctx.Err() != nil {
+		return protection.Decision{}, ctx.Err()
+	}
 	user, err := h.repo.GetUser(req.UserID)
+	if ctx.Err() != nil {
+		return protection.Decision{}, ctx.Err()
+	}
 	if err != nil {
 		return protection.Decision{Action: protection.Deny, Reason: "account_missing"}, nil
 	}
@@ -52,7 +55,10 @@ func (h accountHandler0298) Evaluate(_ context.Context, req protection.Request) 
 	if req.RoleID != "" && user.RoleID != req.RoleID {
 		return protection.Decision{Action: protection.Deny, Reason: "role_changed"}, nil
 	}
-	if req.SessionID != "" && h.sessions != nil {
+	if req.SessionID != "" {
+		if h.sessions == nil {
+			return protection.Decision{Action: protection.Deny, Reason: "session_store_unavailable"}, nil
+		}
 		if _, ok := h.sessions.get(req.SessionID, user.ID); !ok {
 			return protection.Decision{Action: protection.Deny, Reason: "session_inactive"}, nil
 		}
@@ -130,18 +136,11 @@ func (s Server) adminProtectionBan0298(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "account not found")
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	var input protectionBanInput0298
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid ban request")
+	if !decodeSensitiveRequest0300(w, r, &input) {
 		return
 	}
-	if err := dec.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		writeError(w, http.StatusBadRequest, "invalid ban request")
-		return
-	}
+
 	input.Reason = strings.TrimSpace(input.Reason)
 	if len(input.Reason) < 3 || len(input.Reason) > 512 || (input.ExpiresAt != nil && !input.ExpiresAt.After(time.Now().UTC())) {
 		writeError(w, http.StatusBadRequest, "reason length 3..512 and future expiry required")

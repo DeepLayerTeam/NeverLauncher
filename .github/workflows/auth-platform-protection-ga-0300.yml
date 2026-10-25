@@ -1,0 +1,134 @@
+name: Auth Platform and Protection 0.30.0 - executable GA gates
+on:
+  push:
+    paths:
+      - 'services/api/**'
+      - 'cli/**'
+      - 'apps/admin/**'
+      - 'scripts/ga/*0300*'
+      - '.github/workflows/auth-platform-protection-ga-0300.yml'
+  pull_request:
+    paths:
+      - 'services/api/**'
+      - 'cli/**'
+      - 'apps/admin/**'
+      - 'scripts/ga/*0300*'
+      - '.github/workflows/auth-platform-protection-ga-0300.yml'
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  real-auth-protection:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: neverauth
+          POSTGRES_USER: neverauth
+          POSTGRES_PASSWORD: integration-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U neverauth -d neverauth' --health-interval 5s --health-timeout 5s --health-retries 25
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: neverauth
+          MYSQL_USER: neverauth
+          MYSQL_PASSWORD: integration-only
+          MYSQL_ROOT_PASSWORD: integration-root-only
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd 'mysqladmin ping -h 127.0.0.1 --silent' --health-interval 5s --health-timeout 5s --health-retries 30
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: neverauth
+          MARIADB_USER: neverauth
+          MARIADB_PASSWORD: integration-only
+          MARIADB_ROOT_PASSWORD: integration-root-only
+        ports: ['3307:3306']
+        options: >-
+          --health-cmd 'healthcheck.sh --connect --innodb_initialized' --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://neverauth:integration-only@127.0.0.1:5432/neverauth?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverauth:integration-only@127.0.0.1:5432/neverauth?sslmode=disable
+      NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://neverauth:integration-only@127.0.0.1:5432/neverauth?sslmode=disable
+      NEVERLAUNCHER_SQL_TEST_MYSQL_DSN: neverauth:integration-only@tcp(127.0.0.1:3306)/neverauth?tls=false
+      NEVERLAUNCHER_SQL_TEST_MARIADB_DSN: neverauth:integration-only@tcp(127.0.0.1:3307)/neverauth?tls=false
+      NEVERLAUNCHER_SQL_REQUIRE_ALL: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: |
+            services/api/go.sum
+            cli/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: Verify exact source version, Go formatting, and GA assertion code
+        run: |
+          test "$(cat VERSION)" = 0.30.0
+          python3 scripts/version/manage.py check
+          test -z "$(gofmt -l services/api/internal/httpapi/*0300*.go services/api/pkg/protection/*.go services/api/internal/httpapi/auth_v1.go services/api/internal/httpapi/oidc_flow_115.go services/api/internal/httpapi/microsoft_flow_116.go services/api/internal/httpapi/protection_0298.go services/api/internal/httpapi/auth_link_password_0291.go services/api/internal/httpapi/auth_provider_runtime_02910.go)"
+          python3 -m unittest discover -s scripts/ga -p 'test_assert_go_test_0300.py' -v
+      - name: Compile and vet production Go Backend
+        working-directory: services/api
+        run: |
+          go build ./cmd/...
+          go vet ./internal/authrequest ./pkg/protection ./internal/httpapi ./internal/federation ./internal/repository ./internal/sqlconnector
+      - name: Live HTTP, WebAuthn, protection, replay and parser regressions
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          go test -json -race -count=1 -timeout=12m ./internal/authrequest ./pkg/protection ./internal/httpapi -run 'Test.*0300|TestSecurityRealAuthHTTP02912|TestProtectionBanUnbanLiveHTTP0298' | tee "$RUNNER_TEMP/never-auth-http.json"
+          python3 ../../scripts/ga/assert_go_test_0300.py "$RUNNER_TEMP/never-auth-http.json" \
+            --require TestAuthPlatformRejectsAmbiguousMutations0300 \
+            --require TestProtectionCannotUseMissingSessionStore0300 \
+            --require TestProviderConfigRejectsDuplicateAndNestedAliases0300 \
+            --require TestFailClosedOnCancelledPolicyContext0300 \
+            --require TestMandatoryPanicAndTimeoutCannotGrantAccess0300 \
+            --require TestSecurityRealAuthHTTP02912 \
+            --require TestProtectionBanUnbanLiveHTTP0298
+      - name: Real PostgreSQL replicas, revocation cascade, protection ban and SQL provider authentication
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          go test -json -count=1 -timeout=12m ./internal/httpapi -run '^TestSecurityRealAuthPostgresTwoReplicas02912$' | tee "$RUNNER_TEMP/never-auth-postgres.json"
+          go test -json -count=1 -timeout=12m ./internal/repository -run '^TestGlobalSessionRevocationPostgres0297$|^TestProtectionBanPostgres0298$' | tee -a "$RUNNER_TEMP/never-auth-postgres.json"
+          python3 ../../scripts/ga/assert_go_test_0300.py "$RUNNER_TEMP/never-auth-postgres.json" \
+            --require TestSecurityRealAuthPostgresTwoReplicas02912 \
+            --require TestGlobalSessionRevocationPostgres0297 \
+            --require TestProtectionBanPostgres0298
+          go test -json -count=1 -timeout=9m ./internal/sqlconnector -run '^TestLiveSQLLegacyAuthentication0294$' | tee "$RUNNER_TEMP/never-auth-sql.json"
+          python3 ../../scripts/ga/assert_go_test_0300.py "$RUNNER_TEMP/never-auth-sql.json" \
+            --require TestLiveSQLLegacyAuthentication0294/postgresql \
+            --require TestLiveSQLLegacyAuthentication0294/mysql \
+            --require TestLiveSQLLegacyAuthentication0294/mariadb
+      - name: Real signed HTTP OIDC Microsoft and federation SDK tests
+        working-directory: services/api
+        run: go test -race -count=1 -timeout=10m ./pkg/authconnector/... ./internal/httpconnector ./internal/oidcconnector ./internal/microsoftconnector ./internal/federation
+      - name: Database migrations and genuine Admin production compilation
+        run: |
+          (cd services/api && go test -count=1 ./internal/dbmigrate)
+          cmp services/api/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql cli/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
+          (cd cli && go test -count=1 ./internal/dbmigrate ./internal/authupgrade && go build ./cmd/neverlauncher)
+          (cd apps/admin && npm ci --no-audit --no-fund && npm run build)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auth-platform-protection-e2e-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/never-auth-http.json
+            ${{ runner.temp }}/never-auth-postgres.json
+            ${{ runner.temp }}/never-auth-sql.json
+          if-no-files-found: warn
+          retention-days: 30

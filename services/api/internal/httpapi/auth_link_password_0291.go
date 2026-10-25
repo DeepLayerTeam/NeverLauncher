@@ -1,9 +1,7 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -35,19 +33,15 @@ func (s Server) authProviderLinkPassword0291(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	providerID := strings.ToLower(strings.TrimSpace(r.PathValue("providerId")))
-	r.Body = http.MaxBytesReader(w, r.Body, 8192)
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
 	var req passwordIdentityProof0291
-	if err := decoder.Decode(&req); err != nil || len(req.Identifier) > 512 || len(req.Password) > 4096 || strings.TrimSpace(req.Identifier) == "" || req.Password == "" {
+	if !decodeSensitiveRequest0300(w, r, &req) {
+		return
+	}
+	if len(req.Identifier) > 512 || len(req.Password) > 4096 || strings.TrimSpace(req.Identifier) == "" || req.Password == "" {
 		writeError(w, http.StatusBadRequest, "некорректное доказательство учётной записи")
 		return
 	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		writeError(w, http.StatusBadRequest, "ожидался один JSON объект")
-		return
-	}
+
 	// Each external credential proof is rate-limited independently from the
 	// canonical user session to prevent a signed-in attacker from guessing
 	// passwords of other accounts or exhausting the provider.
