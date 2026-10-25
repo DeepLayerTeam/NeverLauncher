@@ -10,12 +10,13 @@ import (
 )
 
 type RuntimeState struct {
-	AuthSessions    *authSessionStore
-	Security        *securityHardeningStore
-	Passkeys        *passkeyStore117
-	ServerBridge    *serverBridgeStore
-	Maintenance     *maintenanceGate
-	PackageMutation *sync.Mutex
+	AuthSessions         *authSessionStore
+	Security             *securityHardeningStore
+	Passkeys             *passkeyStore117
+	ServerBridge         *serverBridgeStore
+	Maintenance          *maintenanceGate
+	PackageMutation      *sync.Mutex
+	BackendLifecycle0289 *BackendLifecycle0289
 
 	RateLimiter                    ratelimit.Limiter
 	RateLimitEnabled               bool

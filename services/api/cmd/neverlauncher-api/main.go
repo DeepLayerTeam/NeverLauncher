@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
@@ -72,6 +75,11 @@ func main() {
 	}
 
 	state := httpapi.NewRuntimeState()
+	lifecycle, err := httpapi.NewBackendLifecycle0289(os.Getenv("NEVERLAUNCHER_BACKEND_SUPERVISED_RESTART") == "true" && (strings.EqualFold(cfg.RepositoryDriver, "postgres") || strings.EqualFold(cfg.RepositoryDriver, "postgresql") || strings.EqualFold(cfg.RepositoryDriver, "sql")))
+	if err != nil {
+		log.Fatalf("backend instance identity: %v", err)
+	}
+	state.BackendLifecycle0289 = lifecycle
 	if err := state.ConfigureProductRuntime(cfg); err != nil {
 		log.Fatal(err)
 	}
@@ -232,9 +240,37 @@ func main() {
 		store.Driver(),
 		cfg.Environment,
 	)
-	if err := http.ListenAndServe(cfg.HTTPAddr, server.Handler()); err != nil {
+	// Own the HTTP server so a fenced restart request can drain open requests
+	// without killing unrelated processes or using shell commands.
+	listener, err := net.Listen("tcp", cfg.HTTPAddr)
+	if err != nil {
 		log.Fatal(err)
 	}
+	httpServer := &http.Server{Handler: server.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- httpServer.Serve(listener) }()
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(stop)
+	select {
+	case <-lifecycle.RestartRequested():
+		log.Printf("supervised restart requested for instance %s; draining HTTP", lifecycle.InstanceID)
+	case sig := <-stop:
+		log.Printf("shutdown signal: %s", sig)
+	case err := <-serveErr:
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Printf("graceful shutdown failed: %v; closing open connections", err)
+		_ = httpServer.Close()
+	}
+	// Exiting successfully is intentional. Only the externally configured service
+	// manager should restart this process; the API does not spawn its own child.
 }
 
 func newRepository(cfg config.Config) repository.Repository {

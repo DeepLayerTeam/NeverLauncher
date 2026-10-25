@@ -1,3 +1,12 @@
+## 0.28.9 — Backend Operations (2026-10-25)
+
+- Added instance-scoped, globally authorized Backend Operations workspace with verified version/commit/uptime, storage/repository health, runtime identity and current operational-config revision. Existing validate/apply/restore and build/sign/extension/session lifecycle flows are reused, not duplicated.
+- Added read-only recent Admin and Minecraft launcher session observability from actual session stores, excluding tokens and distinguishing recent auth activity from live sockets.
+- Added `backend:control` + fresh MFA operational-settings reload and persisted user-targeted notifications with actor-bound idempotency, per-recipient poll/ack, 24-hour expiration and an Admin inbox. It is not in-game/Desktop push.
+- Added opt-in supervised Backend restart: random per-runtime identity, fresh phishing-resistant MFA, exact confirmation, PostgreSQL once-per-instance journal (migration `0080`), no shell or PID execution, and graceful HTTP drain. Process recreation is exclusively the external supervisor's responsibility.
+- Added schema migration to both API and CLI catalogs, Admin regression tests and Go lifecycle/key/validation tests. Full Go API and PostgreSQL/systemd E2E verification are not yet certified (missing modules / infrastructure).
+- Operational guide: `docs/releases/0.28.9-backend-operations.md`.
+
 ## 0.28.8 — Network Panel & Topology (2026-10-25)
 
 - Introduced a working network panel in the existing ServerBridge Workspace displaying the runtime-learned proxy/backend topology, signed routing state, freshness of observations, reservations, player load and active route status from PostgreSQL.

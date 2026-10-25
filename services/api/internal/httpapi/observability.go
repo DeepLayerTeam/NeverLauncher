@@ -10,6 +10,10 @@ import (
 )
 
 func (s Server) ready(w http.ResponseWriter, r *http.Request) {
+	if s.State != nil && s.State.BackendLifecycle0289 != nil && s.State.BackendLifecycle0289.IsDraining() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "draining", "version": s.Version})
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 

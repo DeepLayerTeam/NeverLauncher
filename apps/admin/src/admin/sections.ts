@@ -5,7 +5,7 @@ export const sections: Section[] = [
   { id: 'profiles', title: 'Профили' }, { id: 'channels', title: 'Каналы' },
   { id: 'packages', title: 'Пакеты и файлы' }, { id: 'releases', title: 'Релизы' },
   { id: 'users', title: 'Пользователи' }, { id: 'roles', title: 'Роли' },
-  { id: 'operations', title: 'Операции' }, { id: 'release-workspace', title: 'Мастер релизов' }, { id: 'job-monitor', title: 'Монитор jobs' }, { id: 'devices', title: 'Устройства' }, { id: 'audit', title: 'Аудит' }, { id: 'config', title: 'Конфигурация' },
+  { id: 'operations', title: 'Операции' }, { id: 'backend-operations', title: 'Backend Operations' }, { id: 'release-workspace', title: 'Мастер релизов' }, { id: 'job-monitor', title: 'Монитор jobs' }, { id: 'devices', title: 'Устройства' }, { id: 'audit', title: 'Аудит' }, { id: 'config', title: 'Конфигурация' },
   { id: 'official-provider', title: 'Minecraft Provider' }, { id: 'storage', title: 'Хранилище' }, { id: 'extension-registry', title: 'NeverExtensions Registry' },
   { id: 'extensions-manager', title: 'Admin Extensions' }, { id: 'server-bridge', title: 'ServerBridge' },
   { id: 'texture-management', title: 'Скины и плащи' }, { id: 'diagnostics', title: 'Диагностика' }, { id: 'backup-restore', title: 'Резервное копирование' },
@@ -13,6 +13,7 @@ export const sections: Section[] = [
 export function endpointForSection(active: SectionId, projectId: string): string {
   const scoped = `/api/v1/projects/${encodeURIComponent(projectId)}`;
   switch (active) {
+    case 'backend-operations': return '/api/v1/operations/backend/status';
     case 'operations': return '/api/v1/operations';
     case 'release-workspace': return '/api/v1/release-drafts';
     case 'job-monitor': return '/api/v1/operations';

@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0079_serverbridge_network_admission_0288" {
+	if st.Current != "0080_backend_restart_0289" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }

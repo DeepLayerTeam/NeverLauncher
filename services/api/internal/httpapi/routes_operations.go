@@ -6,6 +6,14 @@ import (
 )
 
 func (s Server) registerOperationsRoutesV1(mux *http.ServeMux) {
+	// Backend control is instance-scoped; it is never delegated by project roles.
+	mux.Handle("GET /api/v1/operations/backend/status", s.requirePermission("backend:control", s.backendInstanceStatus0289))
+	mux.Handle("GET /api/v1/operations/backend/clients", s.requirePermission("backend:control", s.backendConnectedClients0289))
+	mux.Handle("POST /api/v1/operations/backend/config/reload", s.requireFreshAuth117("backend:control", "mfa", 5*time.Minute, s.backendConfigReload0289))
+	mux.Handle("POST /api/v1/operations/backend/notify", s.requireFreshAuth117("backend:control", "mfa", 5*time.Minute, s.backendSendNotice0289))
+	mux.Handle("GET /api/v1/backend/notices", s.requireAuthenticated(s.backendInbox0289))
+	mux.Handle("POST /api/v1/backend/notices/{noticeId}/ack", s.requireAuthenticated(s.backendNoticeAck0289))
+	mux.Handle("POST /api/v1/operations/backend/restart", s.requireFreshAuth117("backend:control", "phishing-resistant", 5*time.Minute, s.backendRestart0289))
 	mux.Handle("GET /api/v1/operations/diagnostics", s.requirePermission("diagnostics:read", s.adminOpsDiagnostics))
 	mux.Handle("GET /api/v1/operations/backup", s.requirePermission("storage:manage", s.adminOpsBackup))
 	mux.Handle("GET /api/v1/operations/audit/export", s.requirePermission("audit:read", s.operationsAuditExport))
