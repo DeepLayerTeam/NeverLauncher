@@ -97,10 +97,39 @@ export type BridgeOverview = {
 };
 export type BridgeCommandRequest = { serverId: string; type: BridgeCommandType; payload: Record<string, string>; idempotencyKey: string };
 
+export type BridgeEnrollmentRequest = {
+  schemaVersion: string; id: string; name: string; kind: string; projectId: string; profileId: string;
+  keyAlgorithm: 'ed25519'; publicKey: string; keyFingerprint: string; backendUrl: string;
+  artifactFile: string; artifactSha256: string;
+};
+/** Verify the exported public request, not a private-key file. Backend revalidates everything. */
+export function parseBridgeEnrollment(input: string, projectId: string): BridgeEnrollmentRequest {
+  if (input.length > 16_384) throw new Error('Слишком большой enrollment request');
+  const raw: unknown = JSON.parse(input);
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Неверный enrollment JSON');
+  const request = raw as Record<string, unknown>;
+  const fields = ['id','name','kind','projectId','profileId','keyAlgorithm','publicKey','keyFingerprint','backendUrl','artifactFile','artifactSha256'];
+  if (fields.some(field => typeof request[field] !== 'string')) throw new Error('Enrollment request не содержит обязательные поля');
+  if (Object.keys(request).some(field => /private|secret|token|password/i.test(field))) throw new Error('Не загружайте приватные ключи или токены');
+  if (request.projectId !== projectId) throw new Error('Проект в enrollment request не соответствует выбранному проекту');
+  if (request.keyAlgorithm !== 'ed25519' || !/^[0-9a-f]{64}$/i.test(String(request.keyFingerprint)) || !/^[0-9a-f]{64}$/i.test(String(request.artifactSha256))) throw new Error('Неверная криптографическая идентичность или SHA-256');
+  if (!/^[A-Za-z0-9_-]{43}$/.test(String(request.publicKey))) throw new Error('Неверный формат публичного ключа Ed25519');
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$/.test(String(request.id)) || !String(request.kind).trim()) throw new Error('Неверный сервер или тип адаптера');
+  return request as BridgeEnrollmentRequest;
+}
+
 export class ServerBridgeClient {
   private readonly baseUrl: string;
   private readonly token: string;
   constructor(baseUrl: string, token: string) { this.baseUrl = baseUrl; this.token = token; }
+  register(request: BridgeEnrollmentRequest): Promise<{ status: string; server: { id: string; keyFingerprint: string } }> {
+    return requestJSON(this.baseUrl, '/api/v1/server-bridge/servers/register', this.token, {
+      method: 'POST', body: JSON.stringify({
+        id: request.id, name: request.name, kind: request.kind, projectId: request.projectId,
+        profileId: request.profileId, keyAlgorithm: 'ed25519', publicKey: request.publicKey,
+      }),
+    });
+  }
   overview(projectId: string): Promise<BridgeOverview> {
     if (!projectId) throw new Error('Выберите проект');
     return requestJSON(this.baseUrl, `/api/v1/server-bridge/projects/${encodeURIComponent(projectId)}/overview`, this.token);

@@ -97,7 +97,7 @@ type bridgeIdentityMaterial0199 struct {
 
 func handleServerBridge0199(args []string) error {
 	if len(args) == 0 {
-		return errors.New("использование: nl server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host [параметры]")
+		return errors.New("использование: nl server-bridge detect|install|enroll|status|verify|upgrade|rollout|migrate-v3|rollback|host [параметры]")
 	}
 	switch args[0] {
 	case "detect":
@@ -110,18 +110,49 @@ func handleServerBridge0199(args []string) error {
 			return err
 		}
 		return writeOrPrintJSON(flagValue(args, "--output", ""), detection)
-	case "install":
-		return provisionServerBridge0199(args, false)
-	case "upgrade":
-		return provisionServerBridge0199(args, true)
-	case "enroll":
-		return enrollServerBridge0199(args)
+	case "install", "upgrade", "enroll", "rollback", "rollout":
+		// Read-only preview must never create an operator.lock or other state.
+		if flagBool(args, "--dry-run", false) {
+			switch args[0] {
+			case "install":
+				return provisionServerBridge0199(args, false)
+			case "upgrade":
+				return provisionServerBridge0199(args, true)
+			case "enroll":
+				return enrollServerBridge0199(args)
+			case "rollback":
+				return rollbackServerBridge0199(args)
+			default:
+				return bridgeRollout02812(args)
+			}
+		}
+		root, err := canonicalServerRoot0199(flagValue(args, "--server-root", "."))
+		if err != nil {
+			return err
+		}
+		unlock, err := bridgeOperatorLock02812(root)
+		if err != nil {
+			return err
+		}
+		defer unlock()
+		switch args[0] {
+		case "install":
+			return provisionServerBridge0199(args, false)
+		case "upgrade":
+			return provisionServerBridge0199(args, true)
+		case "enroll":
+			return enrollServerBridge0199(args)
+		case "rollback":
+			return rollbackServerBridge0199(args)
+		default:
+			return bridgeRollout02812(args)
+		}
+	case "verify":
+		return verifyServerBridge02812(args)
 	case "status":
 		return serverBridgeProvisionStatus0199(args)
 	case "migrate-v3":
 		return serverBridgeMigrateV30200(args)
-	case "rollback":
-		return rollbackServerBridge0199(args)
 	case "host":
 		return handleServerBridgeHost01910(args[1:])
 	default:
@@ -1093,6 +1124,9 @@ func enrollServerBridge0199(args []string) error {
 	if backend == "" {
 		return errors.New("enroll requires --backend or backendUrl in enrollment-request.json")
 	}
+	if err := bridgeEndpointSecure02812(backend); err != nil {
+		return err
+	}
 	if token == "" {
 		return errors.New("enroll requires --token or NEVERLAUNCHER_TOKEN")
 	}
@@ -1293,6 +1327,13 @@ func rollbackServerBridge0199(args []string) error {
 		}
 		txID = state.TransactionID
 	}
+	if !bridgeTxID02812.MatchString(txID) {
+		return errors.New("invalid transaction identifier")
+	}
+	current, currentErr := readBridgeProvisionState0199(filepath.Join(root, filepath.FromSlash(serverBridgeProvisionStateDir0199), "current.json"))
+	if currentErr != nil || current.TransactionID != txID {
+		return errors.New("rollback requires the currently active transaction (reconcile changes before rollback)")
+	}
 	txPath := bridgeTransactionPath0199(root, txID)
 	raw, err := os.ReadFile(txPath)
 	if err != nil {
@@ -1301,6 +1342,15 @@ func rollbackServerBridge0199(args []string) error {
 	var tx bridgeProvisionTransaction0199
 	if err := json.Unmarshal(raw, &tx); err != nil {
 		return err
+	}
+	if tx.ID != txID {
+		return errors.New("transaction id mismatch")
+	}
+	if err := bridgeSafeTransaction02812(root, &tx); err != nil {
+		return err
+	}
+	if tx.CompletedAt == "" {
+		return errors.New("incomplete transaction requires manual reconciliation")
 	}
 	if tx.RolledBackAt != "" {
 		return fmt.Errorf("transaction %s is already rolled back", tx.ID)

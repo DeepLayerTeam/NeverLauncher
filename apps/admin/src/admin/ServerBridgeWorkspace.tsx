@@ -3,9 +3,9 @@ import { ApiError } from '../api/client';
 import { ResourceGrid } from '../components/ResourceGrid';
 import { MetricCard } from '../components/primitives';
 import { ServerBridgeClient, buildControlPayload, canControlNode, commandLifecycle, telemetryState,
-  supportsControlCapability, networkStateFresh, parseCapacityDraft, type BridgeCommandRequest, type BridgeCommandType, type BridgeOverview, type ServerBridgeCommand, type ServerBridgeNode } from '../api/serverbridge';
+  supportsControlCapability, networkStateFresh, parseCapacityDraft, parseBridgeEnrollment, type BridgeCommandRequest, type BridgeCommandType, type BridgeOverview, type ServerBridgeCommand, type ServerBridgeNode } from '../api/serverbridge';
 
-type Props = { backendUrl: string; token: string; projectId: string; allowedCommands: BridgeCommandType[] };
+type Props = { backendUrl: string; token: string; projectId: string; allowedCommands: BridgeCommandType[]; allowEnrollment: boolean };
 const actions: Array<{ type: BridgeCommandType; label: string; confirm?: boolean }> = [
   { type: 'player.kick', label: 'Отключить игрока', confirm: true },
   { type: 'message.broadcast', label: 'Сообщение всем игрокам' },
@@ -45,7 +45,7 @@ const readPending = (projectId: string, backendUrl: string): BridgeCommandReques
   return null;
 };
 
-export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCommands }: Props) {
+export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCommands, allowEnrollment }: Props) {
   const canCommand = (kind: BridgeCommandType) => allowedCommands.includes(kind);
   const canControl = allowedCommands.length > 0;
   const canConsole = canCommand('server.console');
@@ -57,6 +57,8 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
   const [lastCommandReadAt, setLastCommandReadAt] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [enrollmentJSON, setEnrollmentJSON] = useState('');
+  const [enrolling, setEnrolling] = useState(false);
   const [busy, setBusy] = useState(false);
   const [kind, setKind] = useState<BridgeCommandType>('server.save');
   const [fields, setFields] = useState(initialFields);
@@ -165,6 +167,23 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
     } catch (e) { setError(`${showProblem(e)}. Повторите отправку с тем же ключом; новая команда не создаётся автоматически.`); }
     finally { submitInFlight.current = false; setBusy(false); }
   }
+  async function enrollNode() {
+    if (!allowEnrollment || enrolling || !projectId) return;
+    setError(''); setMessage('');
+    try {
+      const request = parseBridgeEnrollment(enrollmentJSON, projectId);
+      if (nodes.some(item => item.id === request.id)) throw new Error('Узел уже зарегистрирован. Ротация идентичности выполняется отдельно с phishing-resistant MFA.');
+      if (!window.confirm(`Зарегистрировать ${request.id} (${request.kind}) в проекте ${projectId}?\nПубличный Ed25519 fingerprint: ${request.keyFingerprint}\nПриватный ключ должен остаться на хосте.`)) return;
+      setEnrolling(true);
+      const result = await api.register(request);
+      if (result.server?.id !== request.id || result.server.keyFingerprint !== request.keyFingerprint) throw new Error('Backend вернул не ту идентичность; проверьте запись узла и аудит.');
+      setEnrollmentJSON('');
+      const fresh = await api.overview(projectId);
+      setOverview(fresh); setLastReadAt(Date.now()); setSelectedServer(request.id);
+      setMessage(`Узел ${request.id} зарегистрирован. Запустите установленный адаптер и дождитесь свежего подписанного heartbeat; регистрация не подтверждает работоспособность.`);
+    } catch (e) { setError(`Enrollment: ${showProblem(e)}. При потере HTTP-ответа проверьте список узлов перед повторением.`); }
+    finally { setEnrolling(false); }
+  }
   async function applyNetworkCapacity() {
     if (!node || !network || !canTraffic || capacityBusy || !networkFresh ||
         lastReadAt === null || Date.now() - lastReadAt >= 45_000 || pending) return;
@@ -194,6 +213,16 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
   return <section className="card wide bridgeWorkspace">
     <header className="bridgeHero"><div><h2>ServerBridge Operations</h2><p className="muted">Проект <code>{projectId}</code> · Protocol v3 frozen · данные обновляются каждые 15 секунд</p></div><span className={`badge ${snapshotFresh && !error ? 'ok' : 'warn'}`}>{snapshotFresh && !error ? 'снимок актуален' : 'снимок устарел / неизвестен'}</span></header>
     {error && <p className="error" role="alert">{error}</p>}{message && <p className="success" role="status">{message}</p>}
+    <details className="advanced" open={nodes.length === 0 && allowEnrollment}>
+      <summary>Подключить узел ServerBridge (проверенная регистрация)</summary>
+      <p className="muted">На хосте игрового сервера выполните <code>nl server-bridge detect</code>, затем <code>nl server-bridge install --server-root &lt;path&gt; --artifact-dir &lt;certified-release&gt; --backend &lt;url&gt; --server-id &lt;id&gt; --project &lt;project&gt;</code>. Для установки необходим сертифицированный JAR. В панели используется только открытый <code>.neverlauncher/server-bridge/enrollment-request.json</code>, никогда не загружайте <code>node-identity.properties</code>.</p>
+      {allowEnrollment ? <form onSubmit={e=>{e.preventDefault();void enrollNode();}}>
+        <label className="field"><span>Содержимое enrollment-request.json (только public key)</span>
+          <textarea value={enrollmentJSON} rows={7} maxLength={16384} autoComplete="off" spellCheck={false} onChange={e=>setEnrollmentJSON(e.target.value)} required placeholder="{ &quot;schemaVersion&quot;: &quot;1.0&quot;, &quot;id&quot;: ... }"/></label>
+        <button type="submit" disabled={enrolling || !enrollmentJSON.trim() || !snapshotFresh}>{enrolling ? 'Регистрация…' : 'Зарегистрировать публичный ключ'}</button>
+      </form> : <p className="bridgeAttention">Регистрация требует глобального settings:manage. Проектные разрешения не дают доступ к регистрации узлов.</p>}
+      <p className="muted">После запуска выполните на хосте <code>nl server-bridge verify --server-root &lt;path&gt; --backend &lt;url&gt;</code> с административным токеном из защищённого окружения. Свежий heartbeat и версия/хеш проверяются отдельно от факта регистрации.</p>
+    </details>
     {overview && <div className="bridgeMetricGrid"><MetricCard label="Серверы проекта" value={nodes.length}/><MetricCard label="Активные heartbeat" value={nodes.filter(n=>n.fresh).length}/><MetricCard label="Устаревшие / нет данных" value={nodes.filter(n=>!n.fresh).length}/><MetricCard label="v3" value={nodes.filter(n=>n.protocolVersion===3).length}/><MetricCard label="Требуется миграция" value={nodes.filter(n=>n.protocolMigrationRequired).length}/><MetricCard label="Контрольные команды" value={controls.length}/></div>}
     {!overview && !error && <p role="status">Загрузка серверов…</p>}
     {overview && nodes.length === 0 && <div className="emptyState"><h3>Серверов нет</h3><p>В проекте ещё не зарегистрировано ни одного узла ServerBridge.</p></div>}

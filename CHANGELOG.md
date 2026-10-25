@@ -1,3 +1,11 @@
+## 0.28.12 — Provisioning & Operator Workflow (2026-10-25)
+
+- Extended real ServerBridge CLI with local + signed-runtime `verify` (artifact/identity/configuration, Backend heartbeat freshness/version/digest/runtime); offline mode never claims runtime health.
+- Added Host Supervisor-based `rollout` with preflight release verification, session-bound stop/start, runtime-health convergence and failure rollback of managed artifact/config; refuses unsafe or unverified process state.
+- Protected operator mutations with an exclusive file lock and strengthened rollback against forged transaction IDs, world-file targets, symlink escapes and mismatched active transactions; deployment now rejects non-loopback HTTP credentials.
+- Added a real Admin ServerBridge public-key enrollment workflow, gated by global `settings:manage`, using the existing authenticated Backend registration API without transmitting node private keys.
+- Added Go and Admin negative tests, operational documentation and explicit limits around systemd-managed rollouts and real Minecraft runtime certification. See `docs/releases/0.28.12-provisioning-operator-workflow.md`.
+
 ## 0.28.11 — Service Installers & Watchdog (2026-10-25)
 
 - Added real `server-bridge host service install|uninstall|start|stop|restart|status` systemd lifecycle for unprivileged user services and explicitly privileged system installation (Host JVM supervisor and scoped HTTPS RemoteControl agent).
