@@ -1,6 +1,7 @@
 package extensionlifecycle
 
 import (
+	"bytes"
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -30,6 +31,7 @@ const operationLockTTL0204 = 4 * time.Hour
 type Manager struct {
 	Root            string
 	BackupRetention int
+	JavaExecutable  string
 	Repo            repository.Repository
 	Storage         storage.Storage
 }
@@ -350,6 +352,17 @@ func (m *Manager) prepareArtifact0204(ctx context.Context, item model.ExtensionR
 	if verified.PackageIdentity != item.Artifact.PackageIdentity || verified.SHA256 != item.Artifact.SHA256 || verified.Manifest.ID != item.ExtensionID || verified.Manifest.Version != item.Version || verified.Manifest.Publisher != item.PublisherID {
 		return preparedArtifact0204{}, errors.New("verified artifact identity does not match registry publication")
 	}
+	actualManifest, marshalErr := json.Marshal(verified.Manifest)
+	if marshalErr != nil {
+		return preparedArtifact0204{}, marshalErr
+	}
+	expectedManifest, marshalErr := json.Marshal(item.Manifest)
+	if marshalErr != nil {
+		return preparedArtifact0204{}, marshalErr
+	}
+	if !bytes.Equal(actualManifest, expectedManifest) {
+		return preparedArtifact0204{}, errors.New("signed artifact manifest differs from published registry manifest")
+	}
 	ok = true
 	return preparedArtifact0204{Path: p, Verified: verified}, nil
 }
@@ -542,15 +555,18 @@ func (m *Manager) Install(ctx context.Context, item model.ExtensionRegistryVersi
 		return model.ExtensionInstall{}, err
 	}
 	defer os.Remove(prepared.Path)
-	if _, err := m.Repo.SaveExtensionVersion(ctx, item.Manifest); err != nil {
-		return model.ExtensionInstall{}, err
-	}
 	stage, err := makeStage0204(m.Root, scope, id)
 	if err != nil {
 		return model.ExtensionInstall{}, err
 	}
 	defer os.RemoveAll(stage)
 	if _, err := extensionpackage.ExtractPayloadFile(prepared.Path, stage, item.Artifact.PackageIdentity); err != nil {
+		return model.ExtensionInstall{}, err
+	}
+	if err := m.ValidateCandidate0305(ctx, stage, item.Manifest, scope, false); err != nil {
+		return model.ExtensionInstall{}, fmt.Errorf("extension pre-activation check rejected %s@%s: %w", id, item.Version, err)
+	}
+	if _, err := m.Repo.SaveExtensionVersion(ctx, item.Manifest); err != nil {
 		return model.ExtensionInstall{}, err
 	}
 	current := currentDir0204(m.Root, scope, id)
@@ -598,15 +614,18 @@ func (m *Manager) Update(ctx context.Context, item model.ExtensionRegistryVersio
 		return model.ExtensionInstall{}, err
 	}
 	defer os.Remove(prepared.Path)
-	if _, err := m.Repo.SaveExtensionVersion(ctx, item.Manifest); err != nil {
-		return model.ExtensionInstall{}, err
-	}
 	stage, err := makeStage0204(m.Root, scope, id)
 	if err != nil {
 		return model.ExtensionInstall{}, err
 	}
 	defer os.RemoveAll(stage)
 	if _, err := extensionpackage.ExtractPayloadFile(prepared.Path, stage, item.Artifact.PackageIdentity); err != nil {
+		return model.ExtensionInstall{}, err
+	}
+	if err := m.ValidateCandidate0305(ctx, stage, item.Manifest, scope, false); err != nil {
+		return model.ExtensionInstall{}, fmt.Errorf("extension pre-activation check rejected %s@%s: %w", id, item.Version, err)
+	}
+	if _, err := m.Repo.SaveExtensionVersion(ctx, item.Manifest); err != nil {
 		return model.ExtensionInstall{}, err
 	}
 	backup := filepath.Join(backupRoot0204(m.Root, scope, id), backupName0204(before.Generation+1, before.CurrentVersion, before.CurrentPackageIdentity))
@@ -655,6 +674,15 @@ func (m *Manager) setEnabled0204(ctx context.Context, id string, scope Scope, en
 			return model.ExtensionInstall{}, errors.New("extension is emergency-disabled; clear the persistent kill-switch before enabling")
 		} else if !errors.Is(emergencyErr, repository.ErrNotFound) {
 			return model.ExtensionInstall{}, emergencyErr
+		}
+	}
+	if enabled {
+		version, e := m.Repo.GetExtensionVersion(ctx, id, before.CurrentVersion)
+		if e != nil {
+			return model.ExtensionInstall{}, e
+		}
+		if e := m.ValidateCandidate0305(ctx, currentDir0204(m.Root, scope, id), version.Manifest, scope, true); e != nil {
+			return model.ExtensionInstall{}, fmt.Errorf("extension enable preflight: %w", e)
 		}
 	}
 	if before.CurrentState == state {
@@ -747,6 +775,16 @@ func (m *Manager) Rollback(ctx context.Context, id string, scope Scope) (model.E
 	}
 	if err := copyTree0204(target.BackupPath, stage); err != nil {
 		return model.ExtensionInstall{}, err
+	}
+	targetVersion, e := m.Repo.GetExtensionVersion(ctx, id, target.FromVersion)
+	if e != nil {
+		return model.ExtensionInstall{}, fmt.Errorf("rollback manifest: %w", e)
+	}
+	if e := m.ValidateCandidate0305(ctx, stage, targetVersion.Manifest, scope, false); e != nil {
+		return model.ExtensionInstall{}, fmt.Errorf("rollback preflight: %w", e)
+	}
+	if e := m.checkRollbackPayload0305(ctx, scope, id, target.FromVersion, target.FromPackageIdentity, stage, targetVersion.Manifest); e != nil {
+		return model.ExtensionInstall{}, fmt.Errorf("rollback trust verification: %w", e)
 	}
 	current := currentDir0204(m.Root, scope, id)
 	newBackup := ""

@@ -39,7 +39,7 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 			return err
 		}
 		return writeOrPrintJSON(out, payload)
-	case "status":
+	case "status", "diagnose":
 		if len(args) < 1 || strings.HasPrefix(args[0], "--") {
 			return errors.New("extension status требует extension id")
 		}
@@ -47,6 +47,9 @@ func handleExtensionLifecycle0204(command string, args []string) error {
 		values.Set("scope", scope)
 		if scopeID != "" {
 			values.Set("scopeId", scopeID)
+		}
+		if command == "diagnose" {
+			values.Set("diagnostics", "1")
 		}
 		endpoint := backend + "/api/v1/admin/extension-installs/" + url.PathEscape(args[0]) + "?" + values.Encode()
 		payload, err := httpJSONWithAuth(http.MethodGet, endpoint, nil, token)

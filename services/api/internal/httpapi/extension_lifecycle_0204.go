@@ -78,7 +78,24 @@ func (s Server) extensionInstallDetail0204(w http.ResponseWriter, r *http.Reques
 	if err := s.lifecycleManager0204().VerifyLockfile(r.Context(), item.ExtensionID, lifecycleScopeFromRequest0204(item.Scope, item.ScopeID)); err != nil {
 		lockStatus = err.Error()
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"install": item, "revisions": revisions, "lockfile": lockStatus}})
+	data := map[string]any{"install": item, "revisions": revisions, "lockfile": lockStatus}
+	if r.URL.Query().Get("diagnostics") == "1" {
+		diagnosis, diagErr := s.lifecycleManager0204().DiagnoseJava0305(r.Context(), item.ExtensionID, lifecycleScopeFromRequest0204(item.Scope, item.ScopeID))
+		if diagErr != nil {
+			writeLifecycleError0204(w, diagErr)
+			return
+		}
+		data["javaDiagnostics"] = diagnosis
+		if s.ExtensionHost != nil {
+			hostStatus, hostErr := s.ExtensionHost.Get(hostKeyForInstall0205(item))
+			if hostErr == nil {
+				data["host"] = hostStatus
+			} else {
+				data["hostStatus"] = hostErr.Error()
+			}
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": data})
 }
 
 func (s Server) resolveLifecycleRegistryVersion0204(r *http.Request, id, versionValue, channel string) (model.ExtensionRegistryVersion, error) {

@@ -1,7 +1,6 @@
 package extensionhost
 
 import (
-	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -12,119 +11,19 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
+
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionjava"
 )
 
 const javaRPCVersion0304 = "1.0"
-const javaHostMain0304 = "ru.neverlauncher.sdk.host.JavaExtensionHost"
 
-var javaExtensionClass0304 = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$.]{1,200}$`)
-
-// validateJavaJar0304 rejects malformed/non-host JARs before executing any JVM code.
-// Package integrity and publisher trust are still enforced by the existing installer.
+// All JAR validation is shared with the lifecycle preflight (0.30.5).
+// Never downgrade checks when an operator starts a JAR outside the installer.
 func validateJavaJar0304(path string) error {
-	st, err := os.Lstat(path)
-	if err != nil {
-		return err
-	}
-	if !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 || st.Size() > 128<<20 || st.Size() < 64 {
-		return errors.New("Java entrypoint must be a regular JAR of at most 128 MiB")
-	}
-	zr, err := zip.OpenReader(path)
-	if err != nil {
-		return fmt.Errorf("open Java JAR: %w", err)
-	}
-	defer zr.Close()
-	if len(zr.File) > 4096 {
-		return errors.New("Java JAR has too many entries")
-	}
-	var descriptor *zip.File
-	classes := map[string]bool{}
-	seen := map[string]bool{}
-	var total uint64
-	for _, f := range zr.File {
-		clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(f.Name)))
-		if f.Name == "" || strings.HasPrefix(f.Name, "/") || strings.Contains(f.Name, "\\") || clean == ".." || strings.HasPrefix(clean, "../") {
-			return errors.New("invalid Java JAR archive entry path")
-		}
-		if seen[f.Name] {
-			return errors.New("duplicate Java JAR entry")
-		}
-		seen[f.Name] = true
-		if f.UncompressedSize64 > 32<<20 {
-			return errors.New("oversized Java JAR entry")
-		}
-		total += f.UncompressedSize64
-		if total > 384<<20 {
-			return errors.New("oversized Java JAR uncompressed contents")
-		}
-		if f.Mode()&os.ModeSymlink != 0 {
-			return errors.New("Java JAR contains a symlink")
-		}
-		if f.Name == "META-INF/MANIFEST.MF" {
-			if descriptor != nil {
-				return errors.New("duplicate JAR manifest")
-			}
-			descriptor = f
-		}
-		if strings.HasSuffix(f.Name, ".class") {
-			classes[f.Name] = true
-		}
-	}
-	if descriptor == nil || descriptor.UncompressedSize64 > 65536 {
-		return errors.New("Java JAR manifest missing or oversized")
-	}
-	r, err := descriptor.Open()
-	if err != nil {
-		return err
-	}
-	data, err := io.ReadAll(io.LimitReader(r, 65537))
-	_ = r.Close()
-	if err != nil {
-		return err
-	}
-	attributes := map[string]string{}
-	var current string
-	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
-		if line == "" {
-			break
-		}
-		if strings.HasPrefix(line, " ") {
-			if current == "" {
-				return errors.New("invalid JAR manifest continuation")
-			}
-			attributes[current] += strings.TrimPrefix(line, " ")
-			continue
-		}
-		kv := strings.SplitN(line, ": ", 2)
-		if len(kv) != 2 {
-			return errors.New("invalid JAR manifest attribute")
-		}
-		current = strings.ToLower(kv[0])
-		if _, exists := attributes[current]; exists {
-			return errors.New("duplicate JAR manifest attribute")
-		}
-		attributes[current] = kv[1]
-	}
-	if attributes["main-class"] != javaHostMain0304 {
-		return fmt.Errorf("JAR Main-Class must be %s", javaHostMain0304)
-	}
-	class := attributes["neverlauncher-extension-class"]
-	if !javaExtensionClass0304.MatchString(class) || strings.Contains(class, "..") {
-		return errors.New("invalid NeverLauncher-Extension-Class")
-	}
-	if _, ok := attributes["class-path"]; ok {
-		return errors.New("external Java JAR Class-Path is not supported")
-	}
-	if !classes[strings.ReplaceAll(class, ".", "/")+".class"] {
-		return errors.New("extension implementation class missing from JAR")
-	}
-	if !classes["ru/neverlauncher/sdk/host/JavaExtensionHost.class"] {
-		return errors.New("Java Extension Host implementation class missing from JAR")
-	}
-	return nil
+	_, err := extensionjava.Inspect(path)
+	return err
 }
 
 // javaCommand0304 resolves a trusted Java executable; never accepts Java command arguments from a package.
