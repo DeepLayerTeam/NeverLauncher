@@ -1,0 +1,86 @@
+name: 0.30.11 Gravit equivalents and desktop asset startup
+on:
+  push:
+    paths:
+      - 'compatibility/gravit/**'
+      - 'cli/internal/moduleparity/**'
+      - 'cli/cmd/neverlauncher/module_parity_0301.go'
+      - 'apps/desktop/**'
+      - 'scripts/desktop/**'
+      - 'scripts/diagnostics/**'
+      - 'VERSION'
+      - '.github/workflows/module-parity-completion-03011.yml'
+  pull_request:
+    paths:
+      - 'compatibility/gravit/**'
+      - 'cli/internal/moduleparity/**'
+      - 'cli/cmd/neverlauncher/module_parity_0301.go'
+      - 'apps/desktop/**'
+      - 'scripts/desktop/**'
+      - 'scripts/diagnostics/**'
+      - 'VERSION'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  parity-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: {go-version-file: cli/go.mod}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Version and native parity checks
+        run: |
+          python3 scripts/version/manage.py check
+          (cd cli && go test -count=1 ./internal/moduleparity ./cmd/neverlauncher -run 'TestAudit0301|TestAudit0302PinnedBaseline|TestModuleParityCLI0301|TestModuleParity03011')
+          (cd cli && go vet ./internal/moduleparity && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+      - name: All modules have real sources and runnable test evidence
+        run: |
+          mkdir -p parity-reports
+          "$RUNNER_TEMP/nl" module-parity audit --report parity-reports/03011.json
+      - name: Execute new equivalents independently (not generic package success)
+        run: |
+          "$RUNNER_TEMP/nl" module-parity audit --module M02,M04,M13,M14,M15,M17,M18,M19 --run-tests --require-tests --timeout 120s --report parity-reports/new-equivalents.json
+      - name: Intentional unsafe-command policy exception cannot be marked verified
+        run: |
+          if "$RUNNER_TEMP/nl" module-parity audit --require-full-parity --report parity-reports/uncertified.json; then
+            echo 'Full equivalence must not be claimed without module-specific certification' >&2
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: module-parity-03011-reports, path: parity-reports/}
+  desktop-prebuilt:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm, cache-dependency-path: apps/desktop/package-lock.json}
+      - name: Asset and prewarm tests
+        run: |
+          node --test scripts/desktop/prebuild_assets_03011.test.mjs
+          node --experimental-strip-types --test scripts/desktop/startup_prewarmer_03011.test.mjs
+      - name: Production Vite code splitting + asset index
+        working-directory: apps/desktop
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+          npm run verify:assets
+      - name: Prove that lazy chunks exist
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const assets=JSON.parse(fs.readFileSync('apps/desktop/dist/asset-index-03011.json'));
+          const js=assets.assets.filter(x=>x.path.endsWith('.js'));
+          if(js.length<3)throw Error(`expected real Vite JS code splitting, got ${js.length} chunks`);
+          console.log(`Vite emitted ${js.length} content-hashed JS chunks`);
+          NODE

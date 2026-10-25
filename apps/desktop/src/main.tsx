@@ -4,16 +4,25 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import './styles.css';
 import { installErrorCapture0309 } from './sentry_diagnostics_0309';
-import { DesktopExtensions0209 } from './extensions_0209';
-import { ComponentChooser0247 } from './ComponentChooser0247';
-import { ComponentPortability02410 } from './ComponentPortability02410';
+import { loadDesktopView03011, prewarmDesktop03011 } from './startup_optimizer_03011';
+
+
 import { parseChoice0247 } from './component_selection_0247';
 import { launchPreferences, scopedServers, type ScopedServer } from './desktop_experience_0229';
 import { resolveLaunchMode0269, type GameLaunchMode0269 } from './launch_modes_0269';
 import { OfficialMinecraftClient0257, type OfficialProfile0257 } from './official_minecraft_0257';
-import { OfficialMinecraftPanel0257 } from './OfficialMinecraftPanel0257';
-import { TexturesPanel0258 } from './TexturesPanel0258';
-import { HWIDRisk0299 } from './HWIDRisk0299';
+
+
+
+
+// Lazy chunks stay out of the startup bundle; Vite emits content-hashed
+// assets that the desktop WebView caches across subsequent screen visits.
+const DesktopExtensions0209 = React.lazy(() => loadDesktopView03011('extensions'));
+const ComponentChooser0247 = React.lazy(() => loadDesktopView03011('components'));
+const ComponentPortability02410 = React.lazy(() => loadDesktopView03011('portability'));
+const OfficialMinecraftPanel0257 = React.lazy(() => loadDesktopView03011('official'));
+const TexturesPanel0258 = React.lazy(() => loadDesktopView03011('textures'));
+const HWIDRisk0299 = React.lazy(() => loadDesktopView03011('deviceRisk'));
 
 type Stage = 'idle' | 'connecting' | 'session' | 'project' | 'profile' | 'manifest' | 'java' | 'files' | 'repair' | 'cleanup' | 'ready' | 'launching' | 'running' | 'failed';
 type Screen = 'firstRun' | 'overview' | 'auth' | 'projects' | 'profile' | 'textures' | 'download' | 'settings' | 'logs' | 'diagnostics' | 'extensions';
@@ -1817,6 +1826,7 @@ function App() {
           <label>Канал<input value={settings.channel} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('channel', event.target.value)} /></label>
         </section>
 
+        <React.Suspense fallback={<section className="panel">Загрузка экрана…</section>}>
         {screen === 'firstRun' && <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} /> }
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} authProviders0293={authProviders0293} routing0293={routing0293} selectedAuthProvider0293={selectedAuthProvider0293} setSelectedAuthProvider0293={setSelectedAuthProvider0293} authProviderError0293={authProviderError0293} setAuthProviderError0293={setAuthProviderError0293} linkedProvider0293={linkedProvider0293} setLinkedProvider0293={setLinkedProvider0293} linkedIdentifier0293={linkedIdentifier0293} setLinkedIdentifier0293={setLinkedIdentifier0293} linkedPassword0293={linkedPassword0293} setLinkedPassword0293={setLinkedPassword0293} linkFeedback0293={linkFeedback0293} setLinkFeedback0293={setLinkFeedback0293} linkPasswordProvider0293={linkPasswordProvider0293} />}
@@ -1842,6 +1852,7 @@ function App() {
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
         {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}
         {screen === 'diagnostics' && <DiagnosticsPanel exportDiagnostics={exportDiagnostics} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} settingsCheck={settingsCheck} />}
+        </React.Suspense>
       </section>
     </main>
   );
@@ -1962,4 +1973,6 @@ function DiagnosticsPanel({ exportDiagnostics, readinessContract, diagnosticsPol
   return <section className="panel"><h3>Диагностика</h3><p>Экспортирует локальный диагностический пакет без токенов и серверных секретов. Политика берётся из <code>/api/v1/diagnostics/policy</code>.</p><div className="toolbar inline"><button onClick={exportDiagnostics}>Экспортировать диагностический пакет</button></div><pre>{JSON.stringify({ readinessContract, diagnosticsPolicy, settingsCheck }, null, 2)}</pre></section>;
 }
 
+// The idle prewarm is not part of the critical authentication/render path.
+prewarmDesktop03011();
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(<App />);

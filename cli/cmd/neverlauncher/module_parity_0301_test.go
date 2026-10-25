@@ -50,3 +50,40 @@ func TestModuleParityCLI0301Flags(t *testing.T) {
 		t.Fatal("invalid module accepted")
 	}
 }
+
+func TestModuleParityCLI03011HistoricalSelection(t *testing.T) {
+	root, err := filepath.Abs("../../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, baseline := range []string{"0.30.1", "0.30.11"} {
+		out := filepath.Join(t.TempDir(), "report.json")
+		if err = handleModuleParity0301([]string{"audit", "--root", root, "--baseline", baseline, "--report", out}); err != nil {
+			t.Fatalf("%s: %v", baseline, err)
+		}
+		data, e := os.ReadFile(out)
+		if e != nil {
+			t.Fatal(e)
+		}
+		var report struct {
+			Results []struct {
+				Status string `json:"status"`
+			} `json:"results"`
+		}
+		if e = json.Unmarshal(data, &report); e != nil {
+			t.Fatal(e)
+		}
+		if len(report.Results) != 19 {
+			t.Fatalf("%s: %d records", baseline, len(report.Results))
+		}
+		if baseline == "0.30.1" && report.Results[1].Status != "planned" {
+			t.Fatal("historical registry rewritten")
+		}
+		if baseline == "0.30.11" && report.Results[1].Status != "partial" {
+			t.Fatal("current Discord evidence missing")
+		}
+	}
+	if err = handleModuleParity0301([]string{"audit", "--root", root, "--baseline", "future"}); err == nil {
+		t.Fatal("unsupported baseline accepted")
+	}
+}

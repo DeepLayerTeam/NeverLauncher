@@ -792,3 +792,10 @@
 - Opt-in Backend, Desktop (Tauri/JS) and JVM diagnostics with Sentry envelope ingestion, bounded error transport and sensitive-data minimization.
 - Reproducible release upload path for JS source maps, Rust/native debug symbols and actual ProGuard mappings; reject mismatched or missing artifacts.
 - Automated HTTP ingest/privacy tests and release artifact upload regression checks.
+
+## 0.30.11 — Module Parity Completion and desktop startup optimization
+
+- M01–M19 re-audited against 0.30.10 shipping implementations with module-specific executable evidence, while preserving the 0.30.1 immutable snapshot and the M17 security exception.
+- Desktop optional screens split into lazy-loaded chunks with cancellable, bounded idle prewarming and a local loading boundary.
+- Deterministic, verified SHA-256 prebuild index for Vite output, including no-shipping-source-map enforcement after Sentry uploader.
+- Regression tests for current matrix trust boundaries, asset tampering, JS startup deferral, Discord, Sentry, DevTools and LAN discovery.
