@@ -455,7 +455,13 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 	variables["classpath"] = strings.Join(classpath, string(os.PathListSeparator))
 	args := []string{"-Djava.library.path=" + natives, "-Dorg.lwjgl.librarypath=" + natives}
 	args = append(args, compatJVM...)
-	args = append(args, "-cp", strings.Join(classpath, string(os.PathListSeparator)), p.Legacy.MainClass)
+	trustedJVM, trustedMain, trustedCleanup, err := trustedPrepare0306(root, p.Legacy.MainClass)
+	if err != nil {
+		return err
+	}
+	defer trustedCleanup()
+	args = append(args, trustedJVM...)
+	args = append(args, "-cp", strings.Join(classpath, string(os.PathListSeparator)), trustedMain)
 	args = append(args, gameArgs...)
 	cmd := exec.CommandContext(ctx, javaExecutable, args...)
 	cmd.Dir = absRoot

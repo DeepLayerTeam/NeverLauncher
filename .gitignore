@@ -107,3 +107,7 @@ apps/desktop/build-tests/
 /examples/extensions/java-lifecycle/build/
 /examples/extensions/java-runtime/build/
 /examples/extensions/java-host/build/
+
+# Trusted JVM sample/build artifacts
+/sdk/java/trusted-agent/build/
+/examples/extensions/trusted-jvm/build/

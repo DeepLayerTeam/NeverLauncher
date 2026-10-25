@@ -1,3 +1,10 @@
+## 0.30.6 — Trusted JVM Agent (2026-10-25)
+
+- Ship a Java 8-bytecode compatible, executable Minecraft JVM premain agent with signed-plugin classloading, `Instrumentation`/`ClassFileTransformer` hooks and before/after entrypoint callbacks. The plugin runs with **full process privileges**, not a sandbox.
+- Reuse the actual signed `.nlext` Ed25519 verifier for agent/plugin bundles. Install to a versioned, SHA-256-addressed directory; activate with a separate atomic record. Validate archive/JAR hashes on each Minecraft launch using an **external publisher trust anchor** and explicit full-access approval.
+- Integrate `-javaagent` and original-main forwarding with the existing executable legacy Minecraft launch path; preserve all existing classloader/official-auth compatibility checks. Other launcher routes require their own explicit activation integration.
+- Run real Java subprocess tests covering premain, ServiceLoader plugins, Minecraft class-load interception, original game arguments, successful/failed after-main callbacks, tampering and trust-key mismatches; add platform/JDK CI. Full official Minecraft version/loader matrix is not yet certified.
+
 ## 0.30.2 — Java SDK Core (2026-10-25)
 
 - Ship dependency-free Java 17+ NeverExtensions SDK Core with an actual runnable HTTP Host Protocol 1.0 client: authenticated hello, periodic heartbeats, identity/protocol validation, loopback-only connection and fail-closed loss of host heartbeat.

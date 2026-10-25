@@ -1,0 +1,57 @@
+name: Trusted Minecraft JVM Agent 0.30.6 — signed bundle and real JVM hooks
+on:
+  push:
+    paths:
+      - 'cli/cmd/neverlauncher/trusted_jvm_0306*'
+      - 'cli/cmd/neverlauncher/client_factory_0271.go'
+      - 'cli/cmd/neverlauncher/legacy_client_adapters_0278.go'
+      - 'sdk/java/trusted-agent/**'
+      - 'examples/extensions/trusted-jvm/**'
+      - '.github/workflows/trusted-jvm-agent-0306.yml'
+  pull_request:
+    paths:
+      - 'cli/cmd/neverlauncher/trusted_jvm_0306*'
+      - 'cli/cmd/neverlauncher/client_factory_0271.go'
+      - 'cli/cmd/neverlauncher/legacy_client_adapters_0278.go'
+      - 'sdk/java/trusted-agent/**'
+      - 'examples/extensions/trusted-jvm/**'
+      - '.github/workflows/trusted-jvm-agent-0306.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  trusted-jvm-integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+        java: ['17', '21']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Compile Java 8-compatible premain and real hook plugin
+        shell: bash
+        run: sh examples/extensions/trusted-jvm/build.sh
+      - name: Signed bundle -> install -> JVM launch -> transform -> post-main -> tamper tests
+        working-directory: cli
+        shell: bash
+        run: go test -count=1 -timeout 4m -run '^TestTrustedJVM0306' ./cmd/neverlauncher
+      - name: Existing authlib/classloader legacy regression
+        working-directory: cli
+        shell: bash
+        run: go test -count=1 -timeout 4m -run '^TestAuthlibClassloader0279' ./cmd/neverlauncher
+      - name: Build production CLI
+        working-directory: cli
+        shell: bash
+        run: go build ./cmd/neverlauncher
+      - name: Check canonical version metadata
+        shell: bash
+        run: python3 scripts/version/manage.py check

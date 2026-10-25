@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "2.0",
+  "id": "org.neverlauncher.trusted-jvm-sample",
+  "name": "Trusted Minecraft JVM Hook Example",
+  "version": "0.30.6",
+  "publisher": "NeverLauncher",
+  "description": "Signed trusted Java agent and classloader plugin (full JVM access)",
+  "api": "1.0",
+  "targets": [{"kind": "backend", "entrypoint": "trusted/agent.jar"}],
+  "permissions": []
+}
