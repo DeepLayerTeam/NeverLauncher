@@ -18,7 +18,7 @@ func currentFixture(t *testing.T) string {
 	if err = readJSON(filepath.Join(original, CurrentMatrixPath), &m); err != nil {
 		t.Fatal(err)
 	}
-	refs := []string{CurrentMatrixPath}
+	refs := []string{CurrentMatrixPath, PreviousMatrixPath03011}
 	for _, mod := range m.Modules {
 		refs = append(refs, mod.SourceRefs...)
 		refs = append(refs, mod.TestRefs...)
@@ -41,7 +41,7 @@ func currentFixture(t *testing.T) string {
 			t.Fatal(e)
 		}
 	}
-	if err = os.WriteFile(filepath.Join(root, "VERSION"), []byte("0.30.11\n"), 0644); err != nil {
+	if err = os.WriteFile(filepath.Join(root, "VERSION"), []byte("0.30.12\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	return root
@@ -51,7 +51,7 @@ func TestModuleParity03011CurrentEvidence(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if r.ProductVersion != "0.30.11" || len(r.Results) != 19 || r.FullyCertified {
+	if r.ProductVersion != "0.30.12" || len(r.Results) != 19 || r.FullyCertified {
 		t.Fatalf("invalid current report: %+v", r)
 	}
 	for _, mod := range r.Results {
@@ -90,5 +90,23 @@ func TestModuleParity03011RejectForgedParity(t *testing.T) {
 				t.Fatal("tampered implementation status accepted")
 			}
 		})
+	}
+}
+
+// The previous shipping inventory stays inspectable without mutating its file
+// or claiming it was certified on the current version.
+func TestModuleParity03012PreviousEvidenceStillAuditable(t *testing.T) {
+	root := currentFixture(t)
+	previous, err := InspectPrevious03011(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := InspectCurrent(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if previous.ProductVersion != "0.30.11" || current.ProductVersion != "0.30.12" ||
+		len(previous.Results) != 19 || len(current.Results) != 19 || previous.FullyCertified || current.FullyCertified {
+		t.Fatalf("historical inventory lost or falsely certified: old=%+v new=%+v", previous, current)
 	}
 }

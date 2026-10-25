@@ -799,3 +799,11 @@
 - Desktop optional screens split into lazy-loaded chunks with cancellable, bounded idle prewarming and a local loading boundary.
 - Deterministic, verified SHA-256 prebuild index for Vite output, including no-shipping-source-map enforcement after Sentry uploader.
 - Regression tests for current matrix trust boundaries, asset tampering, JS startup deferral, Discord, Sentry, DevTools and LAN discovery.
+
+## 0.30.12 — Integration & Certification
+
+- Fixed concurrent JVM-host forced-failure handling and preservation of the RPC/heartbeat root cause through process exit.
+- Repaired Java SDK JAR version drift and Java E2E packaging; fixed Windows-compatible Java classpaths.
+- Added real subprocess E2E runner for JVM/Gravit/trusted agents/DevTools/LAN/Discord/Sentry and updated M01–M19 evidence matrix, without inventing upstream parity certification.
+- Added fail-closed Windows/macOS/Linux evidence review, CI JVM hang/crash regression and native Tauri production build gates.
+- Local full Go supervisor, native desktop and live-service acceptance remain unverified pending CI.

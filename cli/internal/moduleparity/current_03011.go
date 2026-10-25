@@ -9,7 +9,8 @@ import (
 
 // CurrentMatrixPath is the executable, post-0.30.10 evidence inventory.
 // The historical MatrixPath is kept unchanged for baseline regression tests.
-const CurrentMatrixPath = "compatibility/gravit/module-parity-03011.json"
+const CurrentMatrixPath = "compatibility/gravit/module-parity-03012.json"
+const PreviousMatrixPath03011 = "compatibility/gravit/module-parity-03011.json"
 
 func LoadCurrentMatrix(root string) (Matrix, error) {
 	var m Matrix
@@ -17,15 +18,28 @@ func LoadCurrentMatrix(root string) (Matrix, error) {
 	return m, err
 }
 
-// InspectCurrent checks both historical Java ABI / frozen-upstream invariants
-// and updated sources/tests. It NEVER infers complete module equivalence.
+// InspectCurrent checks the current inventory without ever inferring parity.
 func InspectCurrent(root string) (Report, error) {
+	return inspectEvidenceMatrix03012(root, CurrentMatrixPath, "0.30.12", "0.30.11", true)
+}
+
+// Historical 0.30.11 evidence remains directly auditable after upgrading.
+func InspectPrevious03011(root string) (Report, error) {
+	return inspectEvidenceMatrix03012(root, PreviousMatrixPath03011, "0.30.11", "0.30.10", false)
+}
+func LoadPreviousMatrix03011(root string) (Matrix, error) {
+	var m Matrix
+	err := readJSON(filepath.Join(root, PreviousMatrixPath03011), &m)
+	return m, err
+}
+
+func inspectEvidenceMatrix03012(root, filename, expectedVersion, expectedBaseline string, requireCurrent bool) (Report, error) {
 	baseline, err := Inspect(root)
 	if err != nil {
 		return Report{}, fmt.Errorf("historical contract regression: %w", err)
 	}
-	m, err := LoadCurrentMatrix(root)
-	if err != nil {
+	var m Matrix
+	if err := readJSON(filepath.Join(root, filename), &m); err != nil {
 		return Report{}, err
 	}
 	versionBytes, err := os.ReadFile(filepath.Join(root, "VERSION"))
@@ -33,13 +47,13 @@ func InspectCurrent(root string) (Report, error) {
 		return Report{}, err
 	}
 	version := strings.TrimSpace(string(versionBytes))
-	if version != "0.30.11" || m.SchemaVersion != "1.0" || m.ProductVersion != version || m.AuditBaseline != "0.30.10" || m.Upstream.Commit != baseline.UpstreamCommit || m.Upstream.Repository != "GravitLauncher/LauncherModules" {
-		return Report{}, fmt.Errorf("0.30.11 parity matrix/version/upstream mismatch")
+	if (requireCurrent && version != expectedVersion) || m.SchemaVersion != "1.0" || m.ProductVersion != expectedVersion || m.AuditBaseline != expectedBaseline || m.Upstream.Commit != baseline.UpstreamCommit || m.Upstream.Repository != "GravitLauncher/LauncherModules" {
+		return Report{}, fmt.Errorf("%s parity matrix/version/upstream mismatch", expectedVersion)
 	}
 	if len(m.Modules) != 19 {
 		return Report{}, fmt.Errorf("expected 19 Gravit modules, got %d", len(m.Modules))
 	}
-	report := Report{SchemaVersion: "1.0", ProductVersion: version, UpstreamCommit: m.Upstream.Commit, AuditStatus: "current-evidence-not-certified", FullyCertified: false, Results: make([]Result, 0, 19)}
+	report := Report{SchemaVersion: "1.0", ProductVersion: expectedVersion, UpstreamCommit: m.Upstream.Commit, AuditStatus: "current-evidence-not-certified", FullyCertified: false, Results: make([]Result, 0, 19)}
 	for i, mod := range m.Modules {
 		old := baseline.Results[i]
 		if mod.ID != old.ModuleID || mod.UpstreamModule != old.UpstreamModule || strings.TrimSpace(mod.Equivalent) == "" || strings.TrimSpace(mod.Limitations) == "" {

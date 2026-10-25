@@ -47,7 +47,7 @@ func paritySwitch0301(args []string, name string) bool {
 
 func handleModuleParity0301(args []string) error {
 	if len(args) == 0 || args[0] != "audit" {
-		return errors.New("usage: nl module-parity audit [--root PATH] [--baseline 0.30.1|0.30.11] [--run-tests] [--module M01,M03] [--timeout 180s] [--report PATH|-] [--require-tests] [--require-full-parity]")
+		return errors.New("usage: nl module-parity audit [--root PATH] [--baseline 0.30.1|0.30.11|0.30.12] [--run-tests] [--module M01,M03] [--timeout 180s] [--report PATH|-] [--require-tests] [--require-full-parity]")
 	}
 	args = args[1:]
 	root := flagValue(args, "--root", "")
@@ -76,7 +76,7 @@ func handleModuleParity0301(args []string) error {
 	if err != nil || timeout <= 0 {
 		return errors.New("--timeout requires a positive duration")
 	}
-	baseline := flagValue(args, "--baseline", "0.30.11")
+	baseline := flagValue(args, "--baseline", "0.30.12")
 	var report moduleparity.Report
 	var registry moduleparity.Matrix
 	switch baseline {
@@ -87,6 +87,12 @@ func handleModuleParity0301(args []string) error {
 		}
 		registry, err = moduleparity.LoadMatrix(root)
 	case "0.30.11":
+		report, err = moduleparity.InspectPrevious03011(root)
+		if err != nil {
+			return err
+		}
+		registry, err = moduleparity.LoadPreviousMatrix03011(root)
+	case "0.30.12":
 		report, err = moduleparity.InspectCurrent(root)
 		if err != nil {
 			return err

@@ -4,14 +4,17 @@ cd "$(dirname "$0")"
 : "${JAVA_HOME:=}"
 if [ -n "$JAVA_HOME" ]; then JAVAC="$JAVA_HOME/bin/javac"; JAVA="$JAVA_HOME/bin/java"; JAR="$JAVA_HOME/bin/jar"; else JAVAC=javac; JAVA=java; JAR=jar; fi
 [ "${1:-}" != clean ] || { rm -rf build; exit 0; }
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) cpsep=';' ;; *) cpsep=':' ;; esac
 mkdir -p build/classes build/test-classes
 find src/main/java -name '*.java' | LC_ALL=C sort > build/sources.txt
 "$JAVAC" --release 17 -encoding UTF-8 -d build/classes @build/sources.txt
-"$JAR" --create --file build/neverlauncher-java-sdk-core-0.30.9.jar -C build/classes .
+version=$(cat ../../../VERSION)
+"$JAR" --create --file "build/neverlauncher-java-sdk-core-$version.jar" -C build/classes .
+cp "build/neverlauncher-java-sdk-core-$version.jar" build/neverlauncher-java-sdk-core.jar
 if [ "${1:-}" = test ]; then
   find src/test/java -name '*.java' | LC_ALL=C sort > build/tests.txt
   "$JAVAC" --release 17 -encoding UTF-8 -cp build/classes -d build/test-classes @build/tests.txt
-  "$JAVA" -cp build/classes:build/test-classes ru.neverlauncher.sdk.core.CoreTests
-  "$JAVA" -cp build/classes:build/test-classes ru.neverlauncher.sdk.core.RuntimeApiTests
-  "$JAVA" -cp build/classes:build/test-classes ru.neverlauncher.sdk.core.SentryDiagnosticsTests
+  "$JAVA" -cp build/classes${cpsep}build/test-classes ru.neverlauncher.sdk.core.CoreTests
+  "$JAVA" -cp build/classes${cpsep}build/test-classes ru.neverlauncher.sdk.core.RuntimeApiTests
+  "$JAVA" -cp build/classes${cpsep}build/test-classes ru.neverlauncher.sdk.core.SentryDiagnosticsTests
 fi

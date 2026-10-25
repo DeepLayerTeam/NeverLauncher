@@ -1,0 +1,129 @@
+name: NeverLauncher 0.30.12 - executable integration and platform security gates
+on:
+  push:
+    paths:
+      - 'services/api/internal/extensionhost/**'
+      - 'sdk/java/**'
+      - 'examples/extensions/**'
+      - 'cli/internal/moduleparity/**'
+      - 'cli/internal/devtools/**'
+      - 'cli/internal/lanmdns/**'
+      - 'cli/internal/discordrpc/**'
+      - 'compatibility/gravit/**'
+      - 'apps/desktop/**'
+      - 'scripts/certification/**'
+      - 'scripts/desktop/**'
+      - 'scripts/diagnostics/**'
+      - 'VERSION'
+      - '.github/workflows/integration-certification-03012.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            label: linux
+            cases: java-sdk,jvm-host-e2e,gravit-e2e,java-lifecycle-e2e,java-runtime-e2e,java-supervisor-go,trusted-agent-e2e,devtools-e2e,lan-security,discord-ipc,devtools-security,sentry-backend,asset-integrity,sentry-release,module-parity
+          - os: macos-14
+            label: darwin
+            cases: java-sdk,jvm-host-e2e,gravit-e2e,java-lifecycle-e2e,java-runtime-e2e,trusted-agent-e2e,devtools-e2e,lan-security,discord-ipc,devtools-security,sentry-backend,asset-integrity,sentry-release,module-parity
+          - os: windows-2022
+            label: windows
+            cases: java-sdk,jvm-host-e2e,gravit-e2e,trusted-agent-e2e,devtools-e2e,discord-ipc,devtools-security,sentry-backend,asset-integrity,sentry-release,module-parity
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate version and fail-closed review rules
+        shell: bash
+        run: |
+          python3 scripts/version/manage.py check
+          python3 scripts/certification/test_integration_03012.py
+      - name: Execute real subprocess/JAR/Go/platform integration tests
+        shell: bash
+        env:
+          SUITE_CASES: ${{ matrix.cases }}
+        run: |
+          set -euo pipefail
+          ext=''
+          if [ "$RUNNER_OS" = Windows ]; then ext='.exe'; fi
+          python3 scripts/certification/run_integration_03012.py \
+            --cases "$SUITE_CASES" \
+            --cli "$RUNNER_TEMP/nl-03012$ext" \
+            --report "$RUNNER_TEMP/integration-03012.json" \
+            --timeout 300 --revision "$GITHUB_SHA"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-03012-${{ matrix.label }}
+          path: ${{ runner.temp }}/integration-03012.json
+          if-no-files-found: error
+  desktop-native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux native Tauri prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+      - name: Build production JS, validate actual distributable asset hashes
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          npm ci
+          npm run build
+          npm run verify:assets
+      - name: Compile real native Tauri runtime
+        working-directory: apps/desktop/src-tauri
+        shell: bash
+        run: cargo check --locked
+  review:
+    needs: [integration, desktop-native]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: integration-03012-*
+          path: reports
+      - name: Verify full OS x test-case matrix against the same commit
+        run: |
+          python3 scripts/certification/review_integration_03012.py \
+            --evidence reports --revision "$GITHUB_SHA" --output integration-review-03012.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integration-review-03012
+          path: integration-review-03012.json

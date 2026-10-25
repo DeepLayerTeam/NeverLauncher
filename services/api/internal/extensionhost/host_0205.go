@@ -239,6 +239,7 @@ type processState struct {
 	rpcBusy                                                   bool
 	rpcCheckAt                                                time.Time
 	rpcFailures                                               int
+	terminationInitiated                                      bool
 }
 
 type Supervisor struct {
@@ -699,10 +700,14 @@ func (s *Supervisor) waitProcess(st *processState) {
 		st.state = "stopped"
 	} else {
 		st.state = "crashed"
-		if err != nil {
-			st.lastError = err.Error()
-		} else {
-			st.lastError = fmt.Sprintf("unexpected exit code %d", code)
+		// Preserve the actionable supervisor failure (RPC, heartbeat, memory,
+		// process quota) instead of overwriting it with "signal: killed".
+		if st.lastError == "" {
+			if err != nil {
+				st.lastError = err.Error()
+			} else {
+				st.lastError = fmt.Sprintf("unexpected exit code %d", code)
+			}
 		}
 	}
 	close(st.doneCh)
@@ -773,8 +778,16 @@ func minInt(a, b int) int {
 
 func (s *Supervisor) failProcess(st *processState, reason string, expected bool) {
 	st.mu.Lock()
+	// The monitor, RPC probe and startup timer can all fire concurrently.
+	// Only the first terminal failure may kill the process and set its cause.
+	if st.terminationInitiated || st.expectedStop || (st.state != "running" && st.state != "starting") {
+		st.mu.Unlock()
+		return
+	}
+	st.terminationInitiated = true
 	st.lastError = reason
 	st.expectedStop = expected
+	st.state = "failing"
 	cmd := st.cmd
 	st.mu.Unlock()
 	s.addLog(st, "host", "error", reason, nil)

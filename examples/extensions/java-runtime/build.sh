@@ -6,7 +6,7 @@ sh "$SDK/build.sh" test
 mkdir -p build/classes build/package/backend/bin build/package/backend/lib build/package/cli/bin
 javac --release 17 -encoding UTF-8 -cp "$SDK/build/classes" -d build/classes src/ru/example/neverlauncher/RuntimeExample.java
 jar --create --file build/package/backend/lib/java-runtime.jar -C build/classes .
-cp "$SDK/build/neverlauncher-java-sdk-core-0.30.4.jar" build/package/backend/lib/neverlauncher-java-sdk-core.jar
+cp "$SDK/build/neverlauncher-java-sdk-core.jar" build/package/backend/lib/neverlauncher-java-sdk-core.jar
 cp neverlauncher-extension.json build/package/backend/manifest.json
 cp neverlauncher-extension.json build/package/neverlauncher-extension.json
 cp backend/bin/java-runtime build/package/backend/bin/java-runtime
