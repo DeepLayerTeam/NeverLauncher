@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/fileauth"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/localpassword"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
 )
@@ -37,11 +39,40 @@ func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req aut
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "identifier and password are required")
 	}
 	user, err := c.repo.GetUserByEmail(identifier)
-	if err != nil || !verifyPassword(req.Secret, user.PasswordHash) {
+	if err != nil {
+		// Only a Minecraft-safe name can resolve an imported FileAuth account.
+		// No fallback is attempted for emails or other auth providers.
+		if alias, ok := fileauth.UsernameEmail(req.Identifier); ok {
+			candidate, lookupErr := c.repo.GetUserByEmail(alias)
+			if lookupErr == nil && strings.HasPrefix(candidate.ID, "gravit-fileauth-") && candidate.DisplayName == req.Identifier {
+				user, err = candidate, nil
+			}
+		}
+	}
+	if err != nil || !localpassword.Verify(req.Secret, user.PasswordHash) {
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "invalid credentials")
 	}
-	if user.Status == "disabled" {
+	if user.Status != "active" {
 		return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrIdentityDisabled, "local identity disabled")
+	}
+	if localpassword.NeedsRehash(user.PasswordHash) {
+		// Rehash only a password that has just passed its explicitly configured verifier.
+		// A concurrent reset must win over the old credential, not be overwritten.
+		replacement, hashErr := localpassword.Hash(req.Secret)
+		if hashErr != nil {
+			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "local password upgrade failed")
+		}
+		cas, ok := c.repo.(repository.PasswordCAS0295)
+		if !ok {
+			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "local repository doesn't support atomic password upgrade")
+		}
+		changed, casErr := cas.ReplacePasswordIfMatch0295(ctx, user.ID, user.PasswordHash, replacement)
+		if casErr != nil {
+			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrUnavailable, "local password upgrade failed")
+		}
+		if !changed {
+			return authconnector.Authentication{}, authconnector.NewError(authconnector.ErrInvalidCredentials, "local credential changed during authentication")
+		}
 	}
 	return authconnector.Authentication{Identity: authconnector.Identity{Subject: user.ID, Email: user.Email, Username: user.Email, DisplayName: user.DisplayName, Roles: []string{user.RoleID}, Claims: map[string]any{"roleId": user.RoleID}}, AuthMethods: []string{"password"}}, nil
 }

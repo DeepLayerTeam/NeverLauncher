@@ -5,13 +5,13 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"net/http"
 	"strings"
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/localpassword"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
@@ -356,20 +356,7 @@ func hashPassword(password string) string {
 }
 
 func verifyPassword(password, encoded string) bool {
-	if encoded == "" {
-		return false
-	}
-	if strings.HasPrefix(encoded, "$argon2id$") {
-		return verifyPasswordArgon2id(password, encoded)
-	}
-	// Миграционная совместимость с пользователями, созданными до 5.0.1.
-	// Новые пароли всегда сохраняются в Argon2id/PHC формате.
-	if strings.HasPrefix(encoded, "sha256:") {
-		sum := sha256.Sum256([]byte(password))
-		legacy := "sha256:" + hex.EncodeToString(sum[:])
-		return hmac.Equal([]byte(legacy), []byte(encoded))
-	}
-	return false
+	return localpassword.Verify(password, encoded)
 }
 
 func (s Server) canAccessProject(claims authClaims, projectID string) bool {

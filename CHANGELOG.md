@@ -1,3 +1,10 @@
+## 0.29.5 — Local Auth, FileAuth & Rehash (2026-10-25)
+
+- Add a real Gravit FileAuthSystem `Database.json` importer: transactional PostgreSQL account + local identity + original Minecraft UUID, dry-run, strict collision refusal and no `Sessions.json`/password/session export.
+- Verify explicitly selected legacy password formats inside the existing local connector; after successful known-password proof upgrade Never-owned rows to Argon2id with atomic compare-and-swap, rejecting concurrent resets. Never mutate external providers.
+- Enable original Minecraft-name login only for verified imported local account identities. Add an operator CLI using the live Admin API for ordinary account management and protected stdin passwords.
+- Add parser/hash regression tests, real PostgreSQL atomic import/UUID/CAS integration test and CI build/test gate. Full runtime/PostgreSQL/Minecraft certification remains pending. See `docs/releases/0.29.5-local-auth-fileauth-rehash.md`.
+
 ## 0.29.4 — SQL Mapping & Legacy Hash (2026-10-25)
 
 - Validate real PostgreSQL/MySQL/MariaDB SQL column mapping on provider startup through a read-only, zero-row projection; reject missing columns and binary password/UUID columns without exposing row data.
