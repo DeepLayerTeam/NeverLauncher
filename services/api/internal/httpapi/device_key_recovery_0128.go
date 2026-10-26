@@ -120,6 +120,10 @@ func (s Server) authDeviceKeyReplacementBegin0128(w http.ResponseWriter, r *http
 		writeError(w, http.StatusConflict, "rotation разрешён только для device текущей сессии")
 		return
 	}
+	if oldDevice.KeyFingerprint == newPub.fingerprint {
+		writeError(w, http.StatusConflict, "replacement требует новую device identity; повторное использование старого ключа запрещено")
+		return
+	}
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
 		name = oldDevice.Name
@@ -224,6 +228,18 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 	newPub, err := decodeDevicePublicKey0123(newPublicKey, algorithm)
 	if err != nil || newPub.fingerprint != newFingerprint {
 		writeError(w, http.StatusInternalServerError, "replacement public key metadata повреждена")
+		return
+	}
+	// A previously revoked fingerprint cannot be reintroduced by a stale
+	// replacement challenge, including when a different active device is
+	// substituted between begin and complete.
+	if oldDevice.KeyFingerprint == newFingerprint || newDeviceID == oldDeviceID || oldFingerprint != oldDevice.KeyFingerprint {
+		writeError(w, http.StatusConflict, "device identity или replacement binding изменились")
+		return
+	}
+	sessionBeforeReplace, active := s.State.AuthSessions.get(claims.SessionID, claims.Sub)
+	if !active || sessionBeforeReplace.Status != "active" {
+		writeError(w, http.StatusUnauthorized, "replacement session больше не активна")
 		return
 	}
 	if err := verifyDeviceSignature0123(newPub, payload, req.NewSignature); err != nil {

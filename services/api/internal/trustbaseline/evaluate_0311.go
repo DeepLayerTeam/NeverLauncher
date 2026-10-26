@@ -25,6 +25,12 @@ type Decision struct {
 	RecoveryAction string   `json:"recoveryAction,omitempty"`
 }
 
+func isMacPlatform0316(value string) bool {
+	platform := strings.ToLower(strings.TrimSpace(value))
+	return platform == "darwin" || platform == "macos" || platform == "macintosh" ||
+		platform == "macintel" || platform == "macppc" || strings.HasPrefix(platform, "mac os")
+}
+
 func Evaluate(device model.TrustedDevice, sessionBound bool, now time.Time) model.TrustAssessment {
 	now = now.UTC()
 	a := model.TrustAssessment{
@@ -70,11 +76,14 @@ func Evaluate(device model.TrustedDevice, sessionBound bool, now time.Time) mode
 	// binding epoch, strict cannot be granted even for a legacy row marked
 	// "verified" or a locally TPM-backed key.
 	strictReasons = append(strictReasons, "remote-hardware-verifier-unavailable", "guard-runtime-evidence-unavailable")
-	platform := strings.ToLower(strings.TrimSpace(device.Platform))
-	if platform == "darwin" || platform == "macos" || strings.HasPrefix(platform, "mac os") {
-		strictReasons = append(strictReasons, "macos-device-key-provenance-unsupported")
+	if isMacPlatform0316(device.Platform) {
+		strictReasons = append(strictReasons, "macos-device-key-provenance-unsupported", "macos-app-attest-not-bound-to-device-identity")
 	}
-	strict := Decision{Profile: Strict, Result: Deny, ReasonCodes: strictReasons, RecoveryAction: "use-standard-profile-or-supported-verified-device"}
+	recovery := "use-standard-profile-or-supported-verified-device"
+	if isMacPlatform0316(device.Platform) {
+		recovery = "use-standard-profile-or-recover-device-with-fresh-passkey-then-reattest"
+	}
+	strict := Decision{Profile: Strict, Result: Deny, ReasonCodes: strictReasons, RecoveryAction: recovery}
 	a.ReasonCodes = strictReasons
 	a.ProfileDecisions = map[string]model.TrustProfileDecision{
 		Standard: {Profile: standard.Profile, Result: standard.Result, ReasonCodes: standard.ReasonCodes, RecoveryAction: standard.RecoveryAction},

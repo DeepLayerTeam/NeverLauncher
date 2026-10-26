@@ -1,0 +1,51 @@
+name: macOS Device Trust and Recovery 0.31.6
+on:
+  push:
+    paths:
+      - 'apps/desktop/**'
+      - 'services/api/internal/httpapi/device_key_recovery_0128.go'
+      - 'services/api/internal/httpapi/macos_recovery_0316_test.go'
+      - 'services/api/internal/trustbaseline/**'
+      - '.github/workflows/macos-device-trust-recovery-0316.yml'
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - 'services/api/internal/httpapi/device_key_recovery_0128.go'
+      - 'services/api/internal/httpapi/macos_recovery_0316_test.go'
+      - 'services/api/internal/trustbaseline/**'
+      - '.github/workflows/macos-device-trust-recovery-0316.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  server-recovery:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Server trust and recovery (includes negative HTTP integration cases)
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/trustbaseline ./internal/httpapi ./internal/repository
+  native-macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+      - name: Compile and test actual native Keychain/DeviceCheck integration
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Desktop UI compile
+        working-directory: apps/desktop
+        run: npm ci && npm run build

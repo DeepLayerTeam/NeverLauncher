@@ -798,14 +798,28 @@ fn sign_with_record(record: &mut SecureDeviceKeyRecord, payload: &str) -> Result
 
 pub fn stage_device_key_replacement(backend_url: &str, user_id: &str) -> Result<DeviceKeyInfo, String> {
     let user = normalize_user_id(user_id)?;
-    abort_staged_device_key(backend_url, &user)?;
+    // If the server committed a replacement but the HTTP response was lost,
+    // deleting the staged key makes the newly bound account unrecoverable.
+    // Reuse the same staged identity until its server state is reconciled or
+    // the user explicitly discards it.
+    if let Some(mut previous) = load_staged_record(backend_url, &user)? {
+        validate_record(&mut previous)?;
+        return Ok(record_to_info(&previous));
+    }
     let generation = random_key_generation();
     let mut record = match try_new_hardware_record_with_generation(backend_url, &user, &generation) {
         Ok(record) => record,
         Err(_) => new_software_record(&user),
     };
-    validate_record(&mut record)?;
-    save_staged_record(backend_url, &user, &record)?;
+    if let Err(err) = validate_record(&mut record).and_then(|_| save_staged_record(backend_url, &user, &record)) {
+        // Hardware key creation succeeded but metadata did not persist.
+        if record.key_binding == "hardware" && !record.hardware_label.is_empty() {
+            if let Ok((signer, _)) = hardware_signer(&record.hardware_label) {
+                let _ = signer.delete_key(&record.hardware_label);
+            }
+        }
+        return Err(err);
+    }
     Ok(record_to_info(&record))
 }
 
@@ -929,6 +943,23 @@ pub fn delete_device_key(backend_url: &str, user_id: &str) -> Result<(), String>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(target_os = "macos"))]
+    #[test]
+    fn macos_capability_probe_never_elevates_non_mac_hosts_0316() {
+        let info = macos_trust_status_0316("https://example.test", "user").unwrap();
+        assert_eq!(info.remote_device_key_provenance, "not-verified");
+        assert_eq!(info.strict_profile, "deny");
+        assert_eq!(info.app_attest, "unsupported");
+    }
+
+    #[test]
+    fn native_replacement_payload_refuses_forged_scope_0316() {
+        let payload = "NeverLauncher Device Key Replacement v1\npurpose=recover\nchallenge=x\nuser=user-a\nsession=s\nold-device=d1\nold-fingerprint=f1\nnew-device=d2\nnew-fingerprint=f2\nnew-algorithm=ed25519\nnew-binding=software\nnew-provider=\nissued-at=2026-01-01T00:00:00Z\nexpires-at=2026-01-01T00:01:00Z\n";
+        assert!(validate_device_replacement_payload(payload, "user-a").is_ok());
+        assert!(validate_device_replacement_payload(payload, "user-b").is_err());
+        assert!(validate_device_replacement_payload(&payload.replace("purpose=recover", "purpose=admin"), "user-a").is_err());
+    }
 
     #[test]
     fn storage_username_is_scoped_by_backend_and_user() {
@@ -1155,4 +1186,86 @@ pub fn measured_boot_quote_0315(
   let _=(extra,selection,ak_key,certificate,intermediates);
   Err("Measured Boot TPM Quote requires Windows or Linux TPM 2.0".into())
  }
+}
+
+// 0.31.6 — native macOS capability probe. This is LOCAL diagnostics, never
+// accepted by the server as hardware provenance or an App Attest assertion.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MacOSTrustStatus0316 {
+    pub platform: &'static str,
+    pub local_device_key: String,
+    pub local_secure_enclave: String,
+    pub app_attest: String,
+    pub remote_device_key_provenance: &'static str,
+    pub strict_profile: &'static str,
+    pub reason_codes: Vec<&'static str>,
+}
+
+#[cfg(target_os = "macos")]
+fn app_attest_available_0316() -> bool {
+    use std::ffi::{c_char, c_void};
+    #[link(name = "objc")]
+    extern "C" {
+        fn objc_getClass(name: *const c_char) -> *mut c_void;
+        fn sel_registerName(name: *const c_char) -> *mut c_void;
+        fn objc_msgSend();
+    }
+    // Linking ensures the actual DeviceCheck framework is loaded. Merely
+    // observing OS version, CPU type or an entitlement is insufficient.
+    #[link(name = "DeviceCheck", kind = "framework")]
+    extern "C" {}
+    unsafe {
+        let klass = objc_getClass(b"DCAppAttestService\0".as_ptr().cast());
+        if klass.is_null() { return false; }
+        let shared_selector = sel_registerName(b"sharedService\0".as_ptr().cast());
+        let supported_selector = sel_registerName(b"isSupported\0".as_ptr().cast());
+        if shared_selector.is_null() || supported_selector.is_null() { return false; }
+        let send_object: unsafe extern "C" fn(*mut c_void, *mut c_void) -> *mut c_void =
+            std::mem::transmute(objc_msgSend as *const ());
+        let service = send_object(klass, shared_selector);
+        if service.is_null() { return false; }
+        let send_bool: unsafe extern "C" fn(*mut c_void, *mut c_void) -> i8 =
+            std::mem::transmute(objc_msgSend as *const ());
+        send_bool(service, supported_selector) != 0
+    }
+}
+
+pub fn macos_trust_status_0316(backend_url: &str, user_id: &str) -> Result<MacOSTrustStatus0316, String> {
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (backend_url, user_id);
+        return Ok(MacOSTrustStatus0316 {
+            platform: std::env::consts::OS, local_device_key: "unsupported".into(),
+            local_secure_enclave: "unsupported".into(), app_attest: "unsupported".into(),
+            remote_device_key_provenance: "not-verified", strict_profile: "deny",
+            reason_codes: vec!["macos-only-capability-probe"],
+        });
+    }
+    #[cfg(target_os = "macos")]
+    {
+        // Validate the REAL key in Keychain/Enclave. The provider label itself
+        // is not used to grant remote assurance.
+        let (local_key, enclave) = match device_key_status(backend_url, user_id) {
+            Ok(Some(key)) if key.key_binding == "hardware" && key.key_algorithm == "p256"
+                && key.hardware_provider.to_ascii_lowercase().contains("secureenclave") =>
+                ("verified-local-possession", "locally-available"),
+            Ok(Some(_)) => ("verified-local-possession", "not-used-by-current-key"),
+            Ok(None) => ("not-registered", "not-verified"),
+            Err(_) => ("keychain-unavailable-or-key-invalid", "not-verified"),
+        };
+        let app_attest = if app_attest_available_0316() {
+            "api-supported-not-attested"
+        } else {
+            "api-unavailable"
+        };
+        Ok(MacOSTrustStatus0316 {
+            platform: "macos", local_device_key: local_key.into(),
+            local_secure_enclave: enclave.into(), app_attest: app_attest.into(),
+            remote_device_key_provenance: "not-verified", strict_profile: "deny",
+            reason_codes: vec!["macos-device-key-provenance-not-remotely-verified",
+                               "macos-app-attest-not-bound-to-device-identity",
+                               "guard-runtime-evidence-unavailable"],
+        })
+    }
 }
