@@ -149,34 +149,37 @@ type LogEntry struct {
 }
 
 type Status struct {
-	ExtensionID       string     `json:"extensionId"`
-	Scope             string     `json:"scope"`
-	ScopeID           string     `json:"scopeId,omitempty"`
-	Version           string     `json:"version,omitempty"`
-	Generation        int64      `json:"generation"`
-	InstanceID        string     `json:"instanceId,omitempty"`
-	PID               int        `json:"pid,omitempty"`
-	State             string     `json:"state"`
-	Healthy           bool       `json:"healthy"`
-	StartedAt         *time.Time `json:"startedAt,omitempty"`
-	HelloAt           *time.Time `json:"helloAt,omitempty"`
-	LastHeartbeatAt   *time.Time `json:"lastHeartbeatAt,omitempty"`
-	ExitedAt          *time.Time `json:"exitedAt,omitempty"`
-	ExitCode          *int       `json:"exitCode,omitempty"`
-	Restarts          int        `json:"restarts"`
-	LastError         string     `json:"lastError,omitempty"`
-	MemoryBytes       int64      `json:"memoryBytes,omitempty"`
-	ProcessCount      int        `json:"processCount,omitempty"`
-	ResourceIsolation string     `json:"resourceIsolation"`
-	ExecutionTrust    string     `json:"executionTrust"`
-	ProcessIsolation  string     `json:"processIsolation"`
-	OSSandbox         string     `json:"osSandbox"`
-	NetworkSandbox    string     `json:"networkSandbox"`
-	FilesystemSandbox string     `json:"filesystemSandbox"`
-	Permissions       []string   `json:"permissions,omitempty"`
-	Entrypoint        string     `json:"entrypoint,omitempty"`
-	Runtime           string     `json:"runtime"`
-	RPCFailures       int        `json:"rpcFailures,omitempty"`
+	ExtensionID           string     `json:"extensionId"`
+	Scope                 string     `json:"scope"`
+	ScopeID               string     `json:"scopeId,omitempty"`
+	Version               string     `json:"version,omitempty"`
+	Generation            int64      `json:"generation"`
+	InstanceID            string     `json:"instanceId,omitempty"`
+	PID                   int        `json:"pid,omitempty"`
+	State                 string     `json:"state"`
+	Healthy               bool       `json:"healthy"`
+	StartedAt             *time.Time `json:"startedAt,omitempty"`
+	HelloAt               *time.Time `json:"helloAt,omitempty"`
+	LastHeartbeatAt       *time.Time `json:"lastHeartbeatAt,omitempty"`
+	ExitedAt              *time.Time `json:"exitedAt,omitempty"`
+	ExitCode              *int       `json:"exitCode,omitempty"`
+	Restarts              int        `json:"restarts"`
+	LastError             string     `json:"lastError,omitempty"`
+	MemoryBytes           int64      `json:"memoryBytes,omitempty"`
+	ProcessCount          int        `json:"processCount,omitempty"`
+	ResourceIsolation     string     `json:"resourceIsolation"`
+	ExecutionTrust        string     `json:"executionTrust"`
+	IsolationStatus       string     `json:"isolationStatus"`
+	IsolationReasonCodes  []string   `json:"isolationReasonCodes"`
+	EffectiveRestrictions []string   `json:"effectiveRestrictions"`
+	ProcessIsolation      string     `json:"processIsolation"`
+	OSSandbox             string     `json:"osSandbox"`
+	NetworkSandbox        string     `json:"networkSandbox"`
+	FilesystemSandbox     string     `json:"filesystemSandbox"`
+	Permissions           []string   `json:"permissions,omitempty"`
+	Entrypoint            string     `json:"entrypoint,omitempty"`
+	Runtime               string     `json:"runtime"`
+	RPCFailures           int        `json:"rpcFailures,omitempty"`
 }
 
 type ringLog struct {
@@ -918,7 +921,7 @@ func (s *Supervisor) Logs(key Key, limit int) ([]LogEntry, error) {
 func (s *Supervisor) statusOf(st *processState) Status {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	status := Status{ExtensionID: st.key.ExtensionID, Scope: st.key.Scope, ScopeID: st.key.ScopeID, Version: st.install.CurrentVersion, Generation: st.install.Generation, InstanceID: st.instanceID, State: st.state, Restarts: st.restarts, LastError: st.lastError, MemoryBytes: st.memoryBytes, ProcessCount: st.processCount, ResourceIsolation: resourceIsolationMode(), ExecutionTrust: "trusted-process", ProcessIsolation: resourceIsolationMode(), OSSandbox: "none", NetworkSandbox: "none", FilesystemSandbox: "none", Entrypoint: st.entrypoint}
+	status := Status{ExtensionID: st.key.ExtensionID, Scope: st.key.Scope, ScopeID: st.key.ScopeID, Version: st.install.CurrentVersion, Generation: st.install.Generation, InstanceID: st.instanceID, State: st.state, Restarts: st.restarts, LastError: st.lastError, MemoryBytes: st.memoryBytes, ProcessCount: st.processCount, ResourceIsolation: resourceIsolationMode(), ExecutionTrust: "legacy-unisolated", IsolationStatus: "unsupported", IsolationReasonCodes: []string{"extension-os-sandbox-not-enforced"}, EffectiveRestrictions: DiagnoseIsolation0311().EffectiveRestrictions, ProcessIsolation: resourceIsolationMode(), OSSandbox: "none", NetworkSandbox: "none", FilesystemSandbox: "none", Entrypoint: st.entrypoint}
 	status.Runtime = "native"
 	if st.javaHost {
 		status.Runtime = "java-jvm"

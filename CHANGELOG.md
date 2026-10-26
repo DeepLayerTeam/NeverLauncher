@@ -1,3 +1,11 @@
+## 0.31.1 — Trust Model & Capability Baseline (2026-10-26)
+
+- Enforce server-computed standard/strict Device Trust decisions from verified devices and session binding. Strict fails closed until remote key provenance and Guard runtime evidence are independently verified; no upgrade from local TPM label or historical DB state.
+- Sanitize legacy hardware-provenance claims on repository writes and all device/attestation API outputs. Expose deterministic reason codes and an optional HTTP 403 profile requirement without breaking existing status reads.
+- Run read-only OS/TPM capability diagnostics through `neverlauncher-api diagnose device-trust|extension-sandbox` with non-zero strict/isolation readiness gates.
+- Label all existing extension host processes `legacy-unisolated` and expose actual, limited restrictions and unsupported reasons rather than false `trusted-process` status; show assessments in Admin and Desktop UI.
+- Add Go negative tests, native capability probe cross-compilation, three-OS CI and explicit threat model/compatibility limits. OS-enforced sandboxing and remotely verified TPM attestations remain future releases.
+
 ## 0.31.0 — Java SDK publication & conditional GA release (2026-10-26)
 
 - Build deterministic Java 17 Maven-compatible Core and source-port Gravit SDK artifacts with POM dependencies, sources, actual generated Javadoc, integrity digests and independent Java consumer smoke tests.

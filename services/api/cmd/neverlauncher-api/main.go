@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/trustbaseline"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -32,6 +35,29 @@ var version = "dev"
 var commit = "unknown"
 
 func main() {
+	// Read-only diagnostics work without a database, signing keys, TPM rights
+	// or a running backend. They cannot produce a trusted attestation verdict.
+	if len(os.Args) >= 3 && os.Args[1] == "diagnose" {
+		switch os.Args[2] {
+		case "device-trust":
+			result := trustbaseline.DiagnoseHost()
+			_ = json.NewEncoder(os.Stdout).Encode(result)
+			if len(os.Args) == 4 && os.Args[3] == "--require-strict" {
+				os.Exit(2)
+			}
+			return
+		case "extension-sandbox":
+			result := extensionhost.DiagnoseIsolation0311()
+			_ = json.NewEncoder(os.Stdout).Encode(result)
+			if len(os.Args) == 4 && os.Args[3] == "--require-isolation" && !result.Enforced {
+				os.Exit(2)
+			}
+			return
+		default:
+			fmt.Fprintf(os.Stderr, "unknown diagnostic %q (expected device-trust or extension-sandbox; OS=%s)\n", os.Args[2], runtime.GOOS)
+			os.Exit(2)
+		}
+	}
 	cfg := config.Load()
 	var diagnostics *sentrydiag.Reporter
 	if sentrydiag.EnabledFromEnvironment() {

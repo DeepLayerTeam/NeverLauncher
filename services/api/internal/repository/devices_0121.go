@@ -62,12 +62,13 @@ func normalizeTrustedDevice0121(device model.TrustedDevice) (model.TrustedDevice
 	if device.KeyBinding == "" {
 		device.KeyBinding = "software"
 	}
-	if device.RemoteHardwareProvenance == "" {
-		device.RemoteHardwareProvenance = "not-verified"
-	}
-	if device.RemoteHardwareProvenance != "not-verified" && device.RemoteHardwareProvenance != "verified" {
+	// No remote vendor verifier is installed in 0.31.1. A legacy DB field
+	// or registering client label must never promote a key into hardware
+	// provenance. Normalize older values down when a row is saved.
+	if device.RemoteHardwareProvenance != "not-verified" && device.RemoteHardwareProvenance != "verified" && device.RemoteHardwareProvenance != "" {
 		return model.TrustedDevice{}, fmt.Errorf("unsupported remote hardware provenance %q", device.RemoteHardwareProvenance)
 	}
+	device.RemoteHardwareProvenance = "not-verified"
 	if device.AttestationState == "" {
 		device.AttestationState = "unattested"
 	}

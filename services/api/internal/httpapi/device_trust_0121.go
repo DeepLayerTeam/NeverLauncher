@@ -18,6 +18,7 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/trustbaseline"
 )
 
 const deviceChallengeTTL0121 = 5 * time.Minute
@@ -210,34 +211,11 @@ func metadataString0121(m map[string]any, key string) string {
 
 func sanitizeTrustedDevice0121(d model.TrustedDevice) model.TrustedDevice {
 	d = sanitizeAttestationFreshness0124(d)
-	now := time.Now().UTC()
-	assessment := model.TrustAssessment{
-		KeyPossession: "not-verified", LocalHardwareBinding: "not-verified",
-		RemoteHardwareProvenance: "not-verified", ArtifactIntegrity: "unknown",
-		RuntimeEvidence: "none", PolicyDecision: "deny", AssessedAt: now,
-	}
-	if d.Status == "active" && d.TrustState == "verified" {
-		assessment.KeyPossession = "verified"
-		assessment.PolicyDecision = "allow"
-	}
-	if d.KeyBinding == "hardware" && d.KeyAlgorithm == "p256" && strings.TrimSpace(d.HardwareProvider) != "" {
-		assessment.LocalHardwareBinding = "verified-local"
-	}
-	if d.RemoteHardwareProvenance == "verified" {
-		assessment.RemoteHardwareProvenance = "verified"
-	} else {
-		d.RemoteHardwareProvenance = "not-verified"
-	}
-	if d.AttestationState == "verified" && d.AttestationExpiresAt.After(now) {
-		assessment.EvidenceExpiresAt = d.AttestationExpiresAt
-	}
-	if assessment.RemoteHardwareProvenance != "verified" && d.KeyBinding == "hardware" {
-		assessment.ReasonCodes = append(assessment.ReasonCodes, "remote-hardware-provenance-not-verified")
-	}
-	if d.Status != "active" || d.TrustState != "verified" {
-		assessment.ReasonCodes = append(assessment.ReasonCodes, "device-not-active")
-	}
-	d.TrustAssessment = assessment
+	// No remotely verifiable TPM/Secure Enclave attestation is implemented in
+	// 0.31.1. Downgrade legacy claims even when the repository contains
+	// "verified". This must never cause a privilege increase.
+	d.RemoteHardwareProvenance = "not-verified"
+	d.TrustAssessment = trustbaseline.Evaluate(d, false, time.Now().UTC())
 	d.PublicKey = ""
 	return d
 }
@@ -527,6 +505,12 @@ func (s Server) authDeviceTrustStatus0121(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusUnauthorized, "сессия недействительна")
 		return
 	}
+	requestedProfile := strings.TrimSpace(r.URL.Query().Get("requireProfile"))
+	if requestedProfile != "" && requestedProfile != trustbaseline.Standard && requestedProfile != trustbaseline.Strict {
+		writeError(w, http.StatusBadRequest, "requireProfile must be standard or strict")
+		return
+	}
+	assessment := trustbaseline.Evaluate(model.TrustedDevice{}, false, time.Now().UTC())
 	var device any
 	attestationState := "unattested"
 	attestationMethod := ""
@@ -539,10 +523,17 @@ func (s Server) authDeviceTrustStatus0121(w http.ResponseWriter, r *http.Request
 				attestedAt = d.AttestedAt
 				attestationExpiresAt = d.AttestationExpiresAt
 			}
-			device = sanitizeTrustedDevice0121(d)
+			clean := sanitizeTrustedDevice0121(d)
+			clean.TrustAssessment = trustbaseline.Evaluate(d, session.Status == "active" && session.TrustedDeviceID == d.ID && session.DeviceTrustState == "verified", time.Now().UTC())
+			assessment = clean.TrustAssessment
+			device = clean
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"sessionId": session.ID, "deviceTrustState": firstNonEmpty(session.DeviceTrustState, "unverified"), "trustedDeviceId": session.TrustedDeviceID, "deviceVerifiedAt": session.DeviceVerifiedAt, "deviceAttestationState": attestationState, "deviceAttestationMethod": attestationMethod, "deviceAttestedAt": attestedAt, "deviceAttestationExpiresAt": attestationExpiresAt, "device": device}})
+	status := http.StatusOK
+	if requestedProfile != "" && assessment.ProfileDecisions[requestedProfile].Result != trustbaseline.Allow {
+		status = http.StatusForbidden
+	}
+	writeJSON(w, status, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"trustAssessment": assessment, "requestedProfile": requestedProfile, "sessionId": session.ID, "deviceTrustState": firstNonEmpty(session.DeviceTrustState, "unverified"), "trustedDeviceId": session.TrustedDeviceID, "deviceVerifiedAt": session.DeviceVerifiedAt, "deviceAttestationState": attestationState, "deviceAttestationMethod": attestationMethod, "deviceAttestedAt": attestedAt, "deviceAttestationExpiresAt": attestationExpiresAt, "device": device}})
 }
 
 func deviceTrustSummary0121(repo repository.Repository) map[string]any {

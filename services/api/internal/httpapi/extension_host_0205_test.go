@@ -33,7 +33,7 @@ func TestExtensionHostAdminList0205(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	if body := rec.Body.String(); body == "" || !containsAll0205(body, "protocolVersion", "resourceIsolation", "executionTrust", "trusted-process", "osSandbox", "none", "items") {
+	if body := rec.Body.String(); body == "" || !containsAll0205(body, "protocolVersion", "resourceIsolation", "executionTrust", "legacy-unisolated", "isolationDiagnostics", "extension-os-sandbox-not-enforced", "osSandbox", "none", "items") {
 		t.Fatalf("unexpected body: %s", body)
 	}
 }

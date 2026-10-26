@@ -35,7 +35,7 @@ func killProcessTree(p *os.Process) error {
 	}
 	return err
 }
-func resourceIsolationMode() string { return "linux-process-group+proc-tree-rss+process-count" }
+func resourceIsolationMode() string { return "linux-process-group+pgid-rss+process-count" }
 
 func processTreeUsage(rootPID int) (int64, int, error) {
 	entries, err := os.ReadDir("/proc")

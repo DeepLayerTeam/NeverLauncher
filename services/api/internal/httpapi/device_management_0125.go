@@ -10,6 +10,7 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/trustbaseline"
 )
 
 type deviceRevokeRequest0125 struct {
@@ -39,9 +40,12 @@ func normalizeDeviceRevokeReason0125(value, fallback string) (string, error) {
 }
 
 func managedDeviceView0125(device model.TrustedDevice, currentDeviceID string) managedTrustedDevice0125 {
+	current := device.ID != "" && device.ID == strings.TrimSpace(currentDeviceID)
+	cleaned := sanitizeTrustedDevice0121(device)
+	cleaned.TrustAssessment = trustbaseline.Evaluate(device, current, time.Now().UTC())
 	return managedTrustedDevice0125{
-		TrustedDevice:       sanitizeTrustedDevice0121(device),
-		Current:             device.ID != "" && device.ID == strings.TrimSpace(currentDeviceID),
+		TrustedDevice:       cleaned,
+		Current:             current,
 		RevocationPermanent: true,
 	}
 }

@@ -47,18 +47,28 @@ type RuntimeValidationResult struct {
 	CreatedAt            time.Time         `json:"createdAt"`
 }
 
+// TrustProfileDecision exposes a deterministic server-computed allow/deny per
+// profile; it is an assessment, not an authorization token.
+type TrustProfileDecision struct {
+	Profile        string   `json:"profile"`
+	Result         string   `json:"result"`
+	ReasonCodes    []string `json:"reasonCodes"`
+	RecoveryAction string   `json:"recoveryAction,omitempty"`
+}
+
 // TrustAssessment — каноническое представление доверия. Assurance остаётся
 // устаревшим полем совместимости TrustedDevice и не должно смешивать эти аспекты.
 type TrustAssessment struct {
-	KeyPossession            string    `json:"keyPossession"`
-	LocalHardwareBinding     string    `json:"localHardwareBinding"`
-	RemoteHardwareProvenance string    `json:"remoteHardwareProvenance"`
-	ArtifactIntegrity        string    `json:"artifactIntegrity"`
-	RuntimeEvidence          string    `json:"runtimeEvidence"`
-	PolicyDecision           string    `json:"policyDecision"`
-	ReasonCodes              []string  `json:"reasonCodes,omitempty"`
-	AssessedAt               time.Time `json:"assessedAt"`
-	EvidenceExpiresAt        time.Time `json:"evidenceExpiresAt,omitempty"`
+	ProfileDecisions         map[string]TrustProfileDecision `json:"profileDecisions,omitempty"`
+	KeyPossession            string                          `json:"keyPossession"`
+	LocalHardwareBinding     string                          `json:"localHardwareBinding"`
+	RemoteHardwareProvenance string                          `json:"remoteHardwareProvenance"`
+	ArtifactIntegrity        string                          `json:"artifactIntegrity"`
+	RuntimeEvidence          string                          `json:"runtimeEvidence"`
+	PolicyDecision           string                          `json:"policyDecision"`
+	ReasonCodes              []string                        `json:"reasonCodes,omitempty"`
+	AssessedAt               time.Time                       `json:"assessedAt"`
+	EvidenceExpiresAt        time.Time                       `json:"evidenceExpiresAt,omitempty"`
 }
 
 // ProjectValidationPolicy задаёт минимальные доказательства, необходимые для публикации.
