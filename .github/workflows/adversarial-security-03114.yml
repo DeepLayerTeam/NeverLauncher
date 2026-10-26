@@ -1,0 +1,114 @@
+name: NeverLauncher 0.31.14 Adversarial Security Gate
+on:
+  push:
+    paths:
+      - 'services/api/internal/**'
+      - 'scripts/security/certify_03114.py'
+      - '.github/workflows/adversarial-security-03114.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/**'
+      - 'scripts/security/**'
+  workflow_dispatch:
+    inputs:
+      live_linux:
+        type: boolean
+        default: false
+        description: 'Run Linux sandbox on pre-provisioned delegated cgroup v2 runner'
+      live_windows:
+        type: boolean
+        default: false
+        description: 'Run AppContainer/Job test on provisioned Windows runner'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-adversarial:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Mandatory threat-focused tests (race detector, no test skips allowed)
+        run: python3 scripts/security/certify_03114.py --tier offline --output "$RUNNER_TEMP/03114-offline.json"
+      - name: Guard runtime and ServerBridge adversarial session checks
+        run: python3 scripts/security/certify_03114.py --tier backend-security --output "$RUNNER_TEMP/03114-backend-security.json"
+      - name: Full production dependency build
+        working-directory: services/api
+        run: |
+          go vet ./internal/attestverify ./internal/extensionhost ./internal/extensionpolicy ./internal/extensionbroker ./internal/linuxsandbox
+          go build ./...
+      - name: Upload evidence regardless of outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-03114-offline-evidence
+          path: |
+            ${{ runner.temp }}/03114-offline.json
+            ${{ runner.temp }}/03114-backend-security.json
+          if-no-files-found: error
+  windows-compile:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Windows sandbox and Host Protocol compilation
+        working-directory: services/api
+        run: go test ./internal/windowssandbox ./internal/extensionhost ./internal/extensionpolicy
+      - name: Production API build
+        working-directory: services/api
+        run: go build ./...
+  darwin-cross-compile:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: macOS compile is NOT OS confinement certification
+        working-directory: services/api
+        run: |
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./internal/macossandbox ./internal/extensionhost
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build ./internal/macossandbox ./internal/extensionhost
+  live-linux-boundary:
+    if: github.event_name == 'workflow_dispatch' && inputs.live_linux
+    runs-on: [self-hosted, linux, x64, neverlauncher-sandbox]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Real namespaces, cgroup and descendant isolation (SKIP is failure)
+        run: python3 scripts/security/certify_03114.py --tier linux-live --output "$RUNNER_TEMP/03114-linux-live.json"
+      - name: Publish kernel evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-03114-linux-live-evidence
+          path: ${{ runner.temp }}/03114-linux-live.json
+          if-no-files-found: error
+  live-windows-boundary:
+    if: github.event_name == 'workflow_dispatch' && inputs.live_windows
+    runs-on: [self-hosted, windows, x64, neverlauncher-appcontainer]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Real AppContainer, ACL, Job and child process tests (SKIP is failure)
+        shell: pwsh
+        run: python scripts/security/certify_03114.py --tier windows-live --output "$env:RUNNER_TEMP/03114-windows-live.json"
+      - name: Publish Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-03114-windows-live-evidence
+          path: ${{ runner.temp }}/03114-windows-live.json
+          if-no-files-found: error

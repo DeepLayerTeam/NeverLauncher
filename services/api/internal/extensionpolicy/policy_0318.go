@@ -148,6 +148,9 @@ func ApprovalDigest(m model.ExtensionManifest) (string, error) {
 // ChangesRequireApproval compares the exact security-relevant policy. Even a
 // narrowing or reordering that changes meaning is reviewed, never inferred.
 func ChangesRequireApproval(before, after model.ExtensionManifest) (bool, error) {
+	if before.ID == "" || after.ID == "" || before.ID != after.ID {
+		return true, errors.New("sandbox policy transition must preserve extension identity")
+	}
 	a, err := Validate(before.Sandbox)
 	if err != nil {
 		return true, err
@@ -174,6 +177,11 @@ func ChangesRequireApproval(before, after model.ExtensionManifest) (bool, error)
 }
 
 func RequireReview(before, after model.ExtensionManifest, submittedDigest string) error {
+	// A security review always belongs to a single signed extension identity.
+	// Never treat an ID switch with otherwise identical grants as a safe update.
+	if before.ID == "" || after.ID == "" || before.ID != after.ID {
+		return errors.New("sandbox approval cannot cross extension identities")
+	}
 	changed, err := ChangesRequireApproval(before, after)
 	if err != nil {
 		return err
