@@ -1124,3 +1124,35 @@ pub fn linux_tpm_certify_0314(
         serde_json::to_value(proof).map_err(|e|e.to_string())
     }
 }
+
+
+/// TPM Quote is signed by the enrolled AK and matched against the pinned AK
+/// certificate on the server. Never exposes a software fallback.
+pub fn measured_boot_quote_0315(
+ backend_url:&str,user_id:&str,device_id:&str,extra:&str,selection:&str,ak_key:&str,
+ certificate:&str,intermediates:Vec<String>,
+)->Result<serde_json::Value,String>{
+ let user=normalize_user_id(user_id)?;
+ let record=load_record(backend_url,&user)?.ok_or("Registered hardware device key missing")?;
+ if record.user_id!=user || record.device_id.as_deref()!=Some(device_id) || record.key_algorithm!="p256" || record.key_binding!="hardware" {
+  return Err("TPM Quote requires bound hardware P-256 device".into());
+ }
+ let _=validate_hardware_record(&record)?;
+ #[cfg(target_os="windows")]
+ {
+  if !record.hardware_provider.to_ascii_lowercase().contains("tpm") {return Err("Windows TPM key required".into());}
+  let proof=crate::tpm_windows_0313::quote0315(extra,selection,ak_key,certificate,intermediates)?;
+  return serde_json::to_value(proof).map_err(|e|e.to_string());
+ }
+ #[cfg(target_os="linux")]
+ {
+  if !record.hardware_provider.eq_ignore_ascii_case("LinuxTpm"){return Err("Linux TPM key required".into());}
+  let proof=crate::tpm_linux_0314::quote0315(extra,selection,ak_key,certificate,intermediates)?;
+  return serde_json::to_value(proof).map_err(|e|e.to_string());
+ }
+ #[cfg(not(any(target_os="windows",target_os="linux")))]
+ {
+  let _=(extra,selection,ak_key,certificate,intermediates);
+  Err("Measured Boot TPM Quote requires Windows or Linux TPM 2.0".into())
+ }
+}

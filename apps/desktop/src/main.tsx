@@ -436,6 +436,9 @@ function App() {
   const [windowsAkChain0313, setWindowsAkChain0313] = useState('');
   const [tpmStatus0313, setTpmStatus0313] = useState('not-verified');
   const [tpmBusy0313, setTpmBusy0313] = useState(false);
+  const [measuredBootPolicyId0315, setMeasuredBootPolicyId0315] = useState('');
+  const [measuredBootStatus0315, setMeasuredBootStatus0315] = useState('not-verified');
+  const [measuredBootBusy0315, setMeasuredBootBusy0315] = useState(false);
 
   const [managedDevices, setManagedDevices] = useState<ManagedDevice[]>([]);
   // Switching Never identities invalidates any Microsoft account previously
@@ -873,6 +876,58 @@ function App() {
     } finally {
       setTpmBusy0313(false);
     }
+  }
+
+  async function verifyMeasuredBoot0315(): Promise<void> {
+    if (!authSession?.accessToken || !deviceKey?.deviceId || deviceKey.keyBinding !== 'hardware' || deviceKey.keyAlgorithm !== 'p256') {
+      throw new Error('TPM measured boot requires a registered hardware P-256 device');
+    }
+    if (!measuredBootPolicyId0315.trim() || measuredBootPolicyId0315.length > 96 ||
+        !/^[a-zA-Z0-9_.-]+$/.test(measuredBootPolicyId0315.trim())) {
+      throw new Error('Введите идентификатор операторской PCR policy');
+    }
+    if (!windowsAkName0313.trim() || !windowsAkCert0313.includes('-----BEGIN CERTIFICATE-----')) {
+      throw new Error('Настройте сертифицированный TPM Attestation Key');
+    }
+    if (measuredBootBusy0315) return;
+    setMeasuredBootBusy0315(true);
+    setMeasuredBootStatus0315('TPM Quote: запрашивается одноразовый challenge');
+    try {
+      const base = `/api/v1/auth/devices/${encodeURIComponent(deviceKey.deviceId)}/measured-boot`;
+      const began = await postDeviceJson(`${base}/begin?policyId=${encodeURIComponent(measuredBootPolicyId0315.trim())}`, authSession.accessToken);
+      if (!began.ok) throw new Error(`PCR policy / TPM Certify prerequisite rejected HTTP ${began.status}: ${(await began.text()).slice(0,350)}`);
+      const beginJson = await began.json(); const challenge = beginJson.data ?? beginJson;
+      if (challenge.format !== 'tpm2-quote-sha256-v1' || !challenge.tpmExtraDataSha256 ||
+          !challenge.pcrSelection?.startsWith('sha256:') || !challenge.challengeId || !challenge.challenge ||
+          challenge.sessionId !== authSession.sessionId || challenge.deviceId !== deviceKey.deviceId ||
+          challenge.bindingEpoch !== accessTokenBindingEpoch(authSession.accessToken) ||
+          challenge.policyId !== measuredBootPolicyId0315.trim()) {
+        throw new Error('TPM Quote challenge/session/epoch/policy mismatch');
+      }
+      setMeasuredBootStatus0315(`TPM Quote: ${challenge.pcrSelection} · policy ${challenge.policyId}`);
+      const evidence = await callTauri<{
+        tpm2bAttest: string; tpmtSignature: string; pcrValues: Record<string,string>;
+        akCertificatePem: string; intermediatesPem: string[];
+      }>('measured_boot_quote_0315', {
+        backendUrl: settings.backendUrl, userId: authSession.userId, deviceId: deviceKey.deviceId,
+        tpmExtraDataSha256: challenge.tpmExtraDataSha256, pcrSelection: challenge.pcrSelection,
+        akKey: windowsAkName0313.trim(), akCertificatePem: windowsAkCert0313.trim(),
+        intermediatesPem: windowsAkChain0313.trim() ? [windowsAkChain0313.trim()] : [],
+      });
+      const completed = await postDeviceJson(`${base}/complete`,authSession.accessToken, {
+        challengeId: challenge.challengeId, challenge: challenge.challenge, evidence,
+      });
+      if (!completed.ok) throw new Error(`TPM Quote verifier rejected HTTP ${completed.status}: ${(await completed.text()).slice(0,350)}`);
+      const completedJson = await completed.json(); const result = completedJson.data ?? completedJson;
+      if (result.verification !== 'tpm-quote-pcr-policy-verified' ||
+          result.bindingEpoch !== challenge.bindingEpoch || result.policyHash !== challenge.policyHash ||
+          result.guardRuntime !== 'not-verified') throw new Error('Unexpected measured-boot verification semantics');
+      setMeasuredBootStatus0315(`PCR policy verified: ${result.policyId}; expires ${result.expiresAt}; Guard runtime not verified`);
+      log(`Measured boot PCR Quote verified on server: device=${deviceKey.deviceId}, policy=${result.policyId}, digest=${result.pcrDigest}. Guard/runtime not verified.`);
+    } catch (error) {
+      setMeasuredBootStatus0315(`not-verified: ${String(error)}`);
+      throw error;
+    } finally {setMeasuredBootBusy0315(false);}
   }
 
   async function registerDesktopDeviceKey(session: AuthSession, key: DeviceKeyInfo, retryOnConflict = true): Promise<AuthSession> {
@@ -1903,6 +1958,13 @@ function App() {
           </div>
           <button disabled={tpmBusy0313 || !authSession || !deviceKey?.deviceId || deviceKey.keyBinding !== 'hardware' || deviceKey.keyAlgorithm !== 'p256'} onClick={() => certifyPlatformTPM0314().catch((e:Error)=>log(`TPM Certify: ${String(e)}`))}>{tpmBusy0313 ? 'Проверка TPM…' : 'Подтвердить TPM-происхождение'}</button>
           <p role="status">{tpmStatus0313}</p>
+          <h4>Measured Boot / PCR Verification (0.31.5)</h4>
+          <p>Отдельная проверка TPM Quote и разрешённых PCR через серверную политику. Требуется ранее подтверждённый TPM Certify в этой же device/session epoch. Смена PCR policy, AK, сессии или устройства аннулирует текущую проверку. Это не доказательство целостности JVM, Guard или защиты от пользовательской инъекции.</p>
+          <label>Идентификатор разрешённой PCR policy<input value={measuredBootPolicyId0315} onChange={e=>setMeasuredBootPolicyId0315(e.target.value)} placeholder="approved-boot-linux-2026" /></label>
+          <button disabled={tpmBusy0313 || measuredBootBusy0315 || !authSession || !deviceKey?.deviceId || deviceKey.keyBinding !== 'hardware' || deviceKey.keyAlgorithm !== 'p256'} onClick={() => verifyMeasuredBoot0315().catch((e:Error)=>log(`TPM Quote: ${String(e)}`))}>
+            {measuredBootBusy0315 ? 'Проверка PCR…' : 'Проверить Measured Boot по TPM Quote'}
+          </button>
+          <p role="status">{measuredBootStatus0315}</p>
           <small>Linux: необходимы /dev/tpmrm0, tpm2-tools 5.x и AK на TPM persistent handle. Windows: пустая auth-сессия PCP-ключа. Несовместимые TPM/AK завершаются отказом без аппаратного assurance. AK root policy задаётся оператором на Backend.</small>
         </section>}
         {screen === 'auth' && authSession && deviceKey?.deviceId && accessTokenDeviceId(authSession.accessToken) === deviceKey.deviceId && <HWIDRisk0299 backendUrl={settings.backendUrl} token={authSession.accessToken} deviceId={deviceKey.deviceId} />}

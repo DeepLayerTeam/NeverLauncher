@@ -116,7 +116,7 @@ impl TempTPMDir {
 impl Drop for TempTPMDir { fn drop(&mut self){ let _=fs::remove_dir_all(&self.0); } }
 
 fn tool(program: &str, args: &[String]) -> Result<(),String> {
-    const NAMES: &[&str]=&["tpm2_createprimary","tpm2_load","tpm2_readpublic","tpm2_certify"];
+    const NAMES: &[&str]=&["tpm2_createprimary","tpm2_load","tpm2_readpublic","tpm2_certify","tpm2_quote","tpm2_pcrread"];
     if !NAMES.contains(&program) { return Err("unknown TPM command".into()); }
     // Absolute fixed executable path: no PATH search, no shell expansion.
     let path=Path::new("/usr/bin").join(program);
@@ -250,4 +250,71 @@ mod tests {
         let a=attestation_with_size(v).unwrap();
         assert_eq!(&a[2..6],&0xff544347u32.to_be_bytes());
     }
+}
+
+// 0.31.5: Quote is a distinct TPM operation. PCR bytes come from tpm2_pcrread,
+// but only the signed TPM Quote's digest is trusted by the backend. Reading
+// PCRs after Quote is deliberately fail-closed when measurements race/change.
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct LinuxTPMQuote0315 {
+    pub tpm2b_attest: String,
+    pub tpmt_signature: String,
+    pub pcr_values: std::collections::BTreeMap<String,String>,
+    pub ak_certificate_pem: String,
+    pub intermediates_pem: Vec<String>,
+}
+fn pcr_indices0315(selection: &str) -> Result<Vec<u8>,String> {
+    let indices=selection.strip_prefix("sha256:").ok_or("only SHA-256 PCR bank supported")?;
+    let mut values=Vec::new();
+    for component in indices.split(',') {
+        if component.len()>2 || component.len()==0 || (component.starts_with('0') && component!="0") ||
+           !component.bytes().all(|b|b.is_ascii_digit()) {return Err("invalid PCR index".into());}
+        let i=component.parse::<u8>().map_err(|_|"invalid PCR index")?;
+        if i>23 || values.last().map_or(false,|previous|*previous>=i) {return Err("PCR indices must be strictly ascending and unique 0..23".into());}
+        values.push(i);
+    }
+    if values.len()==0 || values.len()>24 {return Err("invalid PCR index count".into());}
+    Ok(values)
+}
+pub fn quote0315(
+    extra_b64url: &str, pcr_selection: &str, ak_handle: &str,
+    ak_certificate_pem: &str, intermediates_pem: Vec<String>,
+) -> Result<LinuxTPMQuote0315,String> {
+    if !Path::new("/dev/tpmrm0").exists() {return Err("TPM resource manager unavailable".into());}
+    let extra=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"invalid server Quote qualifier")?;
+    let extra: [u8;32]=extra.try_into().map_err(|_|"Quote qualifier must contain 32 bytes")?;
+    let ak=parse_ak_handle(ak_handle)?;
+    let indices=pcr_indices0315(pcr_selection)?;
+    if ak_certificate_pem.len()>MAX_CERT || !ak_certificate_pem.contains("-----BEGIN CERTIFICATE-----") ||
+       !ak_certificate_pem.contains("-----END CERTIFICATE-----") || intermediates_pem.len()>8 ||
+       intermediates_pem.iter().any(|c|c.len()>MAX_CERT || !c.contains("-----BEGIN CERTIFICATE-----")) {
+        return Err("issuer-certified AK required".into());
+    }
+    let dir=TempTPMDir::new()?;
+    let nonce=dir.write("nonce.bin",&extra)?;
+    let attest_file=dir.file("quote.msg");
+    let signature_file=dir.file("quote.sig");
+    let pcr_file=dir.file("quote.pcr-values");
+    let stringify=|p:&Path|p.to_string_lossy().into_owned();
+    tool("tpm2_quote",&arglist(&["-Q","-c",&ak,"-l",pcr_selection,"-q",&stringify(&nonce),
+        "-g","sha256","-f","tss","-m",&stringify(&attest_file),"-s",&stringify(&signature_file)]))?;
+    // Read values independently; the backend recomputes and authenticates
+    // their combined digest from the signed TPMS_ATTEST.
+    tool("tpm2_pcrread",&arglist(&["-Q","-o",&stringify(&pcr_file),"-F","values",pcr_selection]))?;
+    let values=bytes_from(&pcr_file,24*32)?;
+    if values.len()!=indices.len()*32 {return Err("unexpected PCR value file length".into());}
+    let mut pcr_values=std::collections::BTreeMap::new();
+    for (position,index) in indices.iter().enumerate(){
+        pcr_values.insert(index.to_string(),hex::encode(&values[position*32..(position+1)*32]));
+    }
+    let attest=attestation_with_size(bytes_from(&attest_file,4098)?)?;
+    let signature=bytes_from(&signature_file,2048)?;
+    // Independently reject wrong nonce and PCR set before contacting backend.
+    crate::tpm_wire_0313::validate_quote_0315(&attest,&signature,&extra,&indices)?;
+    Ok(LinuxTPMQuote0315 {
+        tpm2b_attest:URL_SAFE_NO_PAD.encode(attest),
+        tpmt_signature:URL_SAFE_NO_PAD.encode(signature),
+        pcr_values,ak_certificate_pem:ak_certificate_pem.to_owned(),intermediates_pem,
+    })
 }

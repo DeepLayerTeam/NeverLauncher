@@ -1,3 +1,11 @@
+## 0.31.5 — Measured Boot & PCR Verification (2026-10-26)
+
+- Implement independently verified TPM2_Quote (Windows PCP/TBS and Linux tpm2-tools) with a one-time, domain-separated nonce bound to user/device/session/epoch and an explicit operator-owned PCR policy ID+hash.
+- Require an AK already verified through TPM2 Certify for the exact active session; verify AK X.509 chain, active root and AK fingerprint, signed TPM Quote magic/type, exact SHA-256 selection bitmap and PCR digest derived from all submitted PCR values.
+- Enforce operator-pinned, per-platform exact SHA-256 PCR allowlists, reject unknown/rotated policies and forbid client-reported baseline enrollment. Persist short-lived evidence independently of key provenance and Guard trust.
+- Provide measured-boot begin/complete/status APIs, Windows/Linux native quote producers, Desktop UI, PostgreSQL migration 0088, negative Go tests and platform build CI.
+- No automatic strict Device/Guard elevation. Quote does not prove live JVM/Guard integrity. Physical Windows/Linux TPM validation and full native/backend builds remain requirements for production certification.
+
 ## 0.31.1 — Trust Model & Capability Baseline (2026-10-26)
 
 - Enforce server-computed standard/strict Device Trust decisions from verified devices and session binding. Strict fails closed until remote key provenance and Guard runtime evidence are independently verified; no upgrade from local TPM label or historical DB state.

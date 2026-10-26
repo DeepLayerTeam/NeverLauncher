@@ -123,3 +123,39 @@ pub fn certify(
         intermediates_pem,
     })
 }
+
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct WindowsTPMQuote0315 {
+    pub tpm2b_attest: String,
+    pub tpmt_signature: String,
+    pub pcr_values: std::collections::BTreeMap<String,String>,
+    pub ak_certificate_pem: String,
+    pub intermediates_pem: Vec<String>,
+}
+pub fn quote0315(extra_b64url:&str,selection:&str,ak_key_name:&str,
+    ak_certificate_pem:&str,intermediates_pem:Vec<String>) -> Result<WindowsTPMQuote0315,String> {
+    let data=URL_SAFE_NO_PAD.decode(extra_b64url).map_err(|_|"invalid TPM Quote qualifier")?;
+    let extra:[u8;32]=data.try_into().map_err(|_|"TPM Quote qualifier must contain 32 bytes")?;
+    if ak_certificate_pem.len()>16384 || !ak_certificate_pem.contains("-----BEGIN CERTIFICATE-----") ||
+       !ak_certificate_pem.contains("-----END CERTIFICATE-----") || intermediates_pem.len()>8 ||
+       intermediates_pem.iter().any(|s|s.len()>16384 || !s.contains("-----BEGIN CERTIFICATE-----")) {
+        return Err("issuer-certified AK required".into());
+    }
+    let indices=crate::tpm_wire_0313::parse_pcr_selection_0315(selection)?;
+    let provider=open_provider()?;
+    let ak=open_key(&provider,ak_key_name,0).or_else(|_|open_key(&provider,ak_key_name,0x20))?;
+    let ak_handle=key_handle(&ak)?;
+    let ctx=context_handle(&provider)?;
+    let quote=submit(ctx,&crate::tpm_wire_0313::quote_command_0315(ak_handle,&extra,&indices))?;
+    let (attest,signature)=crate::tpm_wire_0313::parse_quote_response_0315(&quote,&extra,&indices)?;
+    // A second TPM operation reads the PCR values; backend detects races by
+    // checking that they hash to the PCR digest in the signed Quote.
+    let read=submit(ctx,&crate::tpm_wire_0313::pcr_read_command_0315(&indices))?;
+    let values=crate::tpm_wire_0313::parse_pcr_read_response_0315(&read,&indices)?;
+    let mut pcr_values=std::collections::BTreeMap::new();
+    for (index,value) in indices.iter().zip(values.iter()) {pcr_values.insert(index.to_string(),value.iter().map(|b|format!("{b:02x}")).collect::<String>());}
+    Ok(WindowsTPMQuote0315{tpm2b_attest:URL_SAFE_NO_PAD.encode(attest),
+        tpmt_signature:URL_SAFE_NO_PAD.encode(signature),pcr_values,
+        ak_certificate_pem:ak_certificate_pem.to_string(),intermediates_pem})
+}

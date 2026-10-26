@@ -217,3 +217,131 @@ mod linux_signing_scheme_tests_0314 {
         assert!(parse_public_response(&frame).is_err());
     }
 }
+
+// A TPM Quote must contain one SHA-256 bank with the exact PCR selection and
+// the caller's 32-byte qualifying nonce. This is a local defensive parser; the
+// backend independently validates the signature and PCR digest.
+pub fn validate_quote_0315(att: &[u8], sig: &[u8], extra: &[u8;32], indices: &[u8]) -> Result<(),String> {
+    if att.len()<2 || be16(att)?+2!=att.len() {return Err("invalid TPM2B Quote length".into());}
+    let bytes=&att[2..];
+    if bytes.len()<6 || be32(bytes)?!=0xff544347 || be16(&bytes[4..])?!=0x8018 {
+        return Err("invalid TPM Quote magic/type".into());
+    }
+    let (_,pos)=item(bytes,6,128)?;
+    let (nonce,mut pos)=item(bytes,pos,64)?;
+    if nonce.len()!=34 || &nonce[2..]!=extra {return Err("TPM quote nonce mismatch".into());}
+    pos+=25;
+    if bytes.len()<pos+4 || be32(&bytes[pos..])?!=1 {return Err("exactly one PCR bank required".into());}
+    pos+=4;
+    if bytes.len()<pos+6 || be16(&bytes[pos..])?!=0x000b || bytes[pos+2]!=3 {
+        return Err("only SHA-256 PCR bank (size=3) supported".into());
+    }
+    let mut mask=[0u8;3];
+    for &i in indices {if i>23 {return Err("invalid PCR index".into());} mask[(i/8) as usize]|=1<<(i%8);}
+    if bytes[pos+3..pos+6]!=mask {return Err("quote PCR selection differs from requested selection".into());}
+    pos+=6;
+    let (digest,end)=item(bytes,pos,64)?;
+    if digest.len()!=34 || end!=bytes.len(){return Err("Quote must contain exactly one SHA-256 PCR digest".into());}
+    if sig.len()<6 || sig.len()>2048 {return Err("invalid TPM Quote signature".into());}
+    Ok(())
+}
+
+pub fn quote_command_0315(ak_handle:u32,extra:&[u8;32],indices:&[u8])->Vec<u8>{
+    let mut command=Vec::new();
+    command.extend_from_slice(&0x8002u16.to_be_bytes());
+    command.extend_from_slice(&0u32.to_be_bytes());
+    command.extend_from_slice(&0x00000158u32.to_be_bytes()); // TPM_CC_Quote
+    command.extend_from_slice(&ak_handle.to_be_bytes());
+    command.extend_from_slice(&9u32.to_be_bytes()); // one TPM_RS_PW session
+    command.extend_from_slice(&0x40000009u32.to_be_bytes());
+    command.extend_from_slice(&0u16.to_be_bytes());command.push(0);command.extend_from_slice(&0u16.to_be_bytes());
+    command.extend_from_slice(&32u16.to_be_bytes());command.extend_from_slice(extra);
+    command.extend_from_slice(&0x0010u16.to_be_bytes()); // inScheme = TPM_ALG_NULL
+    command.extend_from_slice(&1u32.to_be_bytes()); // count=1
+    command.extend_from_slice(&0x000bu16.to_be_bytes());
+    command.push(3);
+    let mut mask=[0u8;3];for &i in indices {mask[(i/8) as usize]|=1<<(i%8);}
+    command.extend_from_slice(&mask);
+    let n=command.len() as u32;command[2..6].copy_from_slice(&n.to_be_bytes());command
+}
+
+pub fn parse_quote_response_0315(reply:&[u8],extra:&[u8;32],indices:&[u8])->Result<(Vec<u8>,Vec<u8>),String>{
+    let params=response_parameters(reply,true)?;
+    let (att,offset)=item(params,0,4096)?;
+    let sig=params.get(offset..).ok_or("missing TPM Quote signature")?;
+    validate_quote_0315(att,sig,extra,indices)?;
+    Ok((att.to_vec(),sig.to_vec()))
+}
+
+pub fn pcr_read_command_0315(indices:&[u8])->Vec<u8>{
+    let mut command=Vec::new();
+    command.extend_from_slice(&0x8001u16.to_be_bytes());
+    command.extend_from_slice(&0u32.to_be_bytes());
+    command.extend_from_slice(&0x0000017eu32.to_be_bytes()); // TPM_CC_PCR_Read
+    command.extend_from_slice(&1u32.to_be_bytes());
+    command.extend_from_slice(&0x000bu16.to_be_bytes());command.push(3);
+    let mut mask=[0u8;3];for &i in indices {mask[(i/8) as usize]|=1<<(i%8);}
+    command.extend_from_slice(&mask);
+    let n=command.len() as u32;command[2..6].copy_from_slice(&n.to_be_bytes());command
+}
+pub fn parse_pcr_read_response_0315(reply:&[u8],indices:&[u8])->Result<Vec<[u8;32]>,String>{
+    let params=response_parameters(reply,false)?;
+    if params.len()<4+4+2+1+3+4 {return Err("truncated PCR_Read response".into());}
+    let mut pos=4; // pcrUpdateCounter (unsigned; not a trust signal)
+    if be32(&params[pos..])?!=1{return Err("PCR_Read returned unsupported bank count".into());}pos+=4;
+    if be16(&params[pos..])?!=0x000b || params[pos+2]!=3{return Err("PCR_Read returned unexpected bank".into());}
+    let mut mask=[0u8;3];for &i in indices{mask[(i/8) as usize]|=1<<(i%8);}
+    if params[pos+3..pos+6]!=mask {return Err("PCR_Read returned partial/wrong selection".into());}pos+=6;
+    if be32(&params[pos..])? as usize!=indices.len(){return Err("PCR_Read returned incomplete PCR values".into());}pos+=4;
+    let mut out=Vec::new();
+    for _ in indices {
+        let (value,end)=item(params,pos,32)?;
+        if value.len()!=34 {return Err("PCR_Read returned non-SHA256 value".into());}
+        let mut x=[0u8;32];x.copy_from_slice(&value[2..]);out.push(x);pos=end;
+    }
+    if pos!=params.len(){return Err("trailing PCR_Read response data".into());}
+    Ok(out)
+}
+pub fn parse_pcr_selection_0315(selection:&str)->Result<Vec<u8>,String>{
+    let text=selection.strip_prefix("sha256:").ok_or("only SHA-256 PCRs supported")?;
+    let mut out=Vec::new();
+    for value in text.split(',') {
+        if value.is_empty() || value.len()>2 || (value.starts_with('0') && value!="0") ||
+           !value.bytes().all(|b|b.is_ascii_digit()) {return Err("invalid PCR index".into());}
+        let index=value.parse::<u8>().map_err(|_|"invalid PCR index")?;
+        if index>23 || out.last().map_or(false,|previous|*previous>=index){return Err("PCR index not strictly increasing 0..23".into());}
+        out.push(index);
+    }
+    if out.is_empty() || out.len()>24{return Err("empty/oversized PCR selection".into());}
+    Ok(out)
+}
+
+
+#[cfg(test)]
+mod measured_boot_0315_tests {
+    use super::*;
+    #[test]
+    fn quote_and_read_commands_have_complete_frames() {
+        let indices=parse_pcr_selection_0315("sha256:0,2,7,11,23").unwrap();
+        let q=quote_command_0315(0x80000001,&[7;32],&indices);
+        assert_eq!(be16(&q).unwrap(),0x8002);
+        assert_eq!(be32(&q[2..]).unwrap() as usize,q.len());
+        assert_eq!(be32(&q[6..]).unwrap(),0x158);
+        let read=pcr_read_command_0315(&indices);
+        assert_eq!(be16(&read).unwrap(),0x8001);
+        assert_eq!(be32(&read[2..]).unwrap() as usize,read.len());
+        assert_eq!(be32(&read[6..]).unwrap(),0x17e);
+        for input in ["", "sha1:0", "sha256:24", "sha256:2,2", "sha256:7,2", "sha256:01", "sha256:0;bad"] {
+            assert!(parse_pcr_selection_0315(input).is_err(),"{input}");
+        }
+    }
+    #[test]
+    fn forged_quote_and_pcr_read_fail_closed() {
+        assert!(validate_quote_0315(&[],&[],&[0;32],&[0]).is_err());
+        assert!(parse_quote_response_0315(&[],&[0;32],&[0]).is_err());
+        assert!(parse_pcr_read_response_0315(&[],&[0]).is_err());
+        let mut r=vec![0u8;10];r[0..2].copy_from_slice(&0x8001u16.to_be_bytes());
+        r[2..6].copy_from_slice(&10u32.to_be_bytes());
+        assert!(parse_pcr_read_response_0315(&r,&[0]).is_err());
+    }
+}

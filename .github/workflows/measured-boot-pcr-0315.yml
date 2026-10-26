@@ -1,0 +1,70 @@
+name: TPM2 Quote and Measured Boot 0.31.5
+on:
+  push:
+    paths:
+      - 'services/api/internal/attestverify/**'
+      - 'services/api/internal/httpapi/measured_boot_0315.go'
+      - 'services/api/internal/repository/measured_boot_0315.go'
+      - 'services/api/internal/dbmigrate/sql/0088_measured_boot_pcr_0315.sql'
+      - 'apps/desktop/src-tauri/src/tpm_wire_0313.rs'
+      - 'apps/desktop/src-tauri/src/tpm_windows_0313.rs'
+      - 'apps/desktop/src-tauri/src/tpm_linux_0314.rs'
+      - 'apps/desktop/src-tauri/src/device_keys.rs'
+      - 'apps/desktop/src-tauri/src/main.rs'
+      - 'apps/desktop/src/main.tsx'
+      - '.github/workflows/measured-boot-pcr-0315.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quote-verifier:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: TPM quote cryptography and negative tests with race detector
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/attestverify ./internal/trustbaseline
+      - name: API and database packages compile
+        working-directory: services/api
+        run: go test ./internal/httpapi ./internal/repository ./internal/dbmigrate -run '^$'
+  windows-tpm-quote:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: TPM Quote frame tests
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml measured_boot_0315_tests
+      - name: Full Windows native compile
+        run: cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml
+  linux-tpm-quote:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Linux native libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libtss2-dev tpm2-tools libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev patchelf
+      - name: TPM Quote frame and native CLI checks
+        run: |
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml measured_boot_0315_tests
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_linux_0314
+          cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml
+  desktop-typescript:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Typecheck desktop
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npx tsc --noEmit

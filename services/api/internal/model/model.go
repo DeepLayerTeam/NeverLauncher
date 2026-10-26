@@ -323,6 +323,25 @@ type DeviceHardwareEvidence struct {
 	ExpiresAt       time.Time `json:"expiresAt"`
 }
 
+// MeasuredBootEvidence0315 is ONLY evidence of approved TPM PCR measurements.
+// It does not authenticate the running JVM or raise Guard assurance.
+type MeasuredBootEvidence0315 struct {
+	UserID          string    `json:"-"`
+	DeviceID        string    `json:"deviceId"`
+	SessionID       string    `json:"-"`
+	BindingEpoch    int64     `json:"bindingEpoch"`
+	KeyFingerprint  string    `json:"-"`
+	RootID          string    `json:"rootId"`
+	RootFingerprint string    `json:"-"`
+	AKFingerprint   string    `json:"-"`
+	PolicyID        string    `json:"policyId"`
+	PolicyHash      string    `json:"policyHash"`
+	PCRDigest       string    `json:"pcrDigest"`
+	ChallengeID     string    `json:"-"`
+	VerifiedAt      time.Time `json:"verifiedAt"`
+	ExpiresAt       time.Time `json:"expiresAt"`
+}
+
 // DeviceChallenge — краткосрочный одноразовый запрос доказательства
 // владения ключом. Хранится только SHA-256 переданного challenge.
 type DeviceChallenge struct {
