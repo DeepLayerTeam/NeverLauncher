@@ -1,0 +1,34 @@
+name: Windows TPM Key Attestation 0.31.3
+on:
+  push:
+    paths:
+      - 'apps/desktop/src-tauri/src/tpm_wire_0313.rs'
+      - 'apps/desktop/src-tauri/src/tpm_windows_0313.rs'
+      - 'apps/desktop/src-tauri/src/device_keys.rs'
+      - 'apps/desktop/src-tauri/src/main.rs'
+      - 'apps/desktop/src-tauri/Cargo.toml'
+      - 'services/api/internal/attestverify/**'
+      - '.github/workflows/windows-tpm-key-attestation-0313.yml'
+  pull_request:
+  workflow_dispatch:
+jobs:
+  windows-native-tpm:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check native Windows build and TPM wire negative tests
+        run: |
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_wire_0313
+          cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml
+  backend-verifier:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - run: go test -count=1 ./internal/attestverify
