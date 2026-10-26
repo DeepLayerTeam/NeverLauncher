@@ -31,6 +31,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/linuxsandbox"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
@@ -244,6 +245,8 @@ type processState struct {
 	rpcCheckAt                                                time.Time
 	rpcFailures                                               int
 	terminationInitiated                                      bool
+	sandbox                                                   *linuxsandbox.Handle
+	sandboxReady                                              bool
 }
 
 type Supervisor struct {
@@ -540,18 +543,49 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 		"NEVERLAUNCHER_EXTENSION_HOST_URL": baseURL, "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": token, "NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "NEVERLAUNCHER_EXTENSION_API_VERSION": extensioncontract.ExtensionAPIVersion, "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": instance,
 		"NEVERLAUNCHER_EXTENSION_ID": install.ExtensionID, "NEVERLAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "NEVERLAUNCHER_EXTENSION_SCOPE": install.Scope, "NEVERLAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID, "NEVERLAUNCHER_EXTENSION_TARGET": "backend",
 	})
-	configureProcess(cmd)
+	var isolatedHandle *linuxsandbox.Handle
+	if manifestVersion.Manifest.Sandbox != nil && manifestVersion.Manifest.Sandbox.Mode == "isolated" {
+		if st.javaHost {
+			s.removeProcessToken(st)
+			return errors.New("sandbox-unavailable: Java RPC callback isolation requires broker in 0.31.10")
+		}
+		pol := manifestVersion.Manifest.Sandbox
+		isolatedHandle, err = linuxsandbox.Prepare(linuxsandbox.Options{
+			PayloadRoot: payloadRoot, Entrypoint: entrypoint, Args: cmd.Args[1:], Environment: cmd.Env,
+			HostURL: baseURL, HostHandler: s.server.Handler,
+			Policy: linuxsandbox.Policy{FilesystemRead: pol.FilesystemRead, FilesystemWrite: pol.FilesystemWrite, NetworkOutbound: pol.NetworkOutbound, Secrets: pol.Secrets,
+				MaxMemoryBytes: pol.MaxMemoryBytes, MaxProcesses: pol.MaxProcesses, MaxCPUPercent: pol.MaxCPUPercent, TimeoutSeconds: pol.TimeoutSeconds},
+		})
+		if err != nil {
+			s.removeProcessToken(st)
+			return fmt.Errorf("sandbox-unavailable: %w", err)
+		}
+		cmd = isolatedHandle.Cmd
+		st.sandbox = isolatedHandle
+	} else {
+		configureProcess(cmd)
+	}
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		if isolatedHandle != nil {
+			isolatedHandle.Close()
+		}
 		s.removeProcessToken(st)
 		return err
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
+		if isolatedHandle != nil {
+			isolatedHandle.Close()
+		}
 		s.removeProcessToken(st)
 		return err
 	}
 	if err := cmd.Start(); err != nil {
+		if isolatedHandle != nil {
+			isolatedHandle.Close()
+		}
 		s.removeProcessToken(st)
 		return fmt.Errorf("start backend extension: %w", err)
 	}
@@ -560,6 +594,16 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	st.startedAt = time.Now().UTC()
 	st.processCount = 1
 	st.mu.Unlock()
+	if isolatedHandle != nil {
+		if err := isolatedHandle.Started(); err != nil {
+			_ = cmd.Wait() // sandbox Close() killed the entire cgroup; reap the bootstrap
+			s.removeProcessToken(st)
+			return fmt.Errorf("sandbox enforcement failed: %w", err)
+		}
+		st.mu.Lock()
+		st.sandboxReady = true
+		st.mu.Unlock()
+	}
 	s.addLog(st, "host", "info", fmt.Sprintf("process started pid=%d", cmd.Process.Pid), nil)
 	s.wg.Add(3)
 	go s.captureStream(st, "stdout", stdout)
@@ -694,6 +738,9 @@ func (s *Supervisor) addLog(st *processState, stream, level, message string, fie
 func (s *Supervisor) waitProcess(st *processState) {
 	defer s.wg.Done()
 	err := st.cmd.Wait()
+	if st.sandbox != nil {
+		st.sandbox.Close()
+	}
 	now := time.Now().UTC()
 	code := -1
 	if st.cmd.ProcessState != nil {
@@ -926,6 +973,17 @@ func (s *Supervisor) statusOf(st *processState) Status {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	status := Status{ExtensionID: st.key.ExtensionID, Scope: st.key.Scope, ScopeID: st.key.ScopeID, Version: st.install.CurrentVersion, Generation: st.install.Generation, InstanceID: st.instanceID, State: st.state, Restarts: st.restarts, LastError: st.lastError, MemoryBytes: st.memoryBytes, ProcessCount: st.processCount, ResourceIsolation: resourceIsolationMode(), ExecutionTrust: "legacy-unisolated", IsolationStatus: "unsupported", IsolationReasonCodes: []string{"extension-os-sandbox-not-enforced"}, EffectiveRestrictions: DiagnoseIsolation0311().EffectiveRestrictions, ProcessIsolation: resourceIsolationMode(), OSSandbox: "none", NetworkSandbox: "none", FilesystemSandbox: "none", Entrypoint: st.entrypoint}
+	if st.sandbox != nil && st.sandboxReady {
+		status.ExecutionTrust = "os-isolated"
+		status.IsolationStatus = "isolated"
+		status.IsolationReasonCodes = []string{}
+		status.ResourceIsolation = "linux-cgroup-v2"
+		status.ProcessIsolation = "linux-pid-namespace+cgroup-v2"
+		status.OSSandbox = "linux-user-mount-pid-ipc-uts-net+seccomp"
+		status.NetworkSandbox = "linux-disconnected-netns+local-host-ipc"
+		status.FilesystemSandbox = "linux-pivot-root+readonly-package+tmpfs-scratch"
+		status.EffectiveRestrictions = []string{"user-namespace", "mount-namespace", "pid-namespace", "ipc-namespace", "network-namespace", "no-new-privileges", "seccomp-bpf", "capabilities-dropped", "cgroups-v2-memory-pids-cpu", "recursive-readonly-package", "private-tmpfs", "runtime-lifetime"}
+	}
 	status.Runtime = "native"
 	if st.javaHost {
 		status.Runtime = "java-jvm"
@@ -1122,7 +1180,12 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 	if st.cmd != nil && st.cmd.Process != nil {
 		expectedPID = st.cmd.Process.Pid
 	}
-	if req.PID != 0 && expectedPID != 0 && req.PID != expectedPID {
+	if st.sandbox != nil && req.CallbackURL != "" {
+		st.mu.Unlock()
+		http.Error(w, "sandbox-callback-broker-unavailable", http.StatusConflict)
+		return
+	}
+	if (st.sandbox == nil && req.PID != 0 && expectedPID != 0 && req.PID != expectedPID) || (st.sandbox != nil && req.PID != 1) {
 		st.mu.Unlock()
 		http.Error(w, "pid mismatch", 409)
 		return

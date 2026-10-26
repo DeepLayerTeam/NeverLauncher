@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/linuxsandbox"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
@@ -100,7 +101,23 @@ func LaunchAllowed(m model.ExtensionManifest) error {
 		return err
 	}
 	if p != nil && p.Mode == "isolated" {
-		return errors.New("sandbox-unavailable: isolated extension requires enforced OS sandbox; refusing unsandboxed launch")
+		o := linuxsandbox.Options{Policy: linuxsandbox.Policy{FilesystemRead: p.FilesystemRead, FilesystemWrite: p.FilesystemWrite, NetworkOutbound: p.NetworkOutbound, Secrets: p.Secrets, MaxMemoryBytes: p.MaxMemoryBytes, MaxProcesses: p.MaxProcesses, MaxCPUPercent: p.MaxCPUPercent, TimeoutSeconds: p.TimeoutSeconds}}
+		if len(o.Policy.NetworkOutbound) > 0 || len(o.Policy.Secrets) > 0 {
+			return errors.New("sandbox-unavailable: network/secrets require scoped broker in 0.31.10")
+		}
+		for _, g := range o.Policy.FilesystemRead {
+			if g != "package" {
+				return errors.New("sandbox-unavailable: shared filesystem grant requires broker in 0.31.10")
+			}
+		}
+		for _, g := range o.Policy.FilesystemWrite {
+			if g != "scratch" {
+				return errors.New("sandbox-unavailable: shared filesystem grant requires broker in 0.31.10")
+			}
+		}
+		if err := linuxsandbox.Available(); err != nil {
+			return fmt.Errorf("sandbox-unavailable: %w", err)
+		}
 	}
 	return nil
 }

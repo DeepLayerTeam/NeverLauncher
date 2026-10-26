@@ -1,0 +1,32 @@
+name: NeverExtensions Linux Native Sandbox 0.31.9
+on:
+  push:
+    paths:
+      - 'services/api/internal/linuxsandbox/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionpolicy/**'
+      - '.github/workflows/linux-native-extension-sandbox-0319.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/linuxsandbox/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionpolicy/**'
+      - '.github/workflows/linux-native-extension-sandbox-0319.yml'
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Sandbox and Extension Host unit tests
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost ./internal/extensionlifecycle
+      - name: Validate build and security policy
+        working-directory: services/api
+        run: go vet ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
+# Hardware/kernel acceptance requires a separate self-hosted runner with a
+# dedicated unprivileged service identity and pre-delegated cgroups v2.
+# NL_RUN_LIVE_LINUX_SANDBOX=1 is not set on GitHub-hosted runners.

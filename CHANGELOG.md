@@ -1,3 +1,11 @@
+## 0.31.9 — Linux Native Extension Sandbox (2026-10-26)
+
+- Implement kernel-backed sandbox for signed `isolated` native Backend and CLI targets on supported Linux x86-64: user/mount/PID/network/IPC/UTS namespaces, `pivot_root`, recursive read-only bind mounts, private `/proc`, scratch tmpfs, locked securebits, no-new-privileges, capability drop and seccomp BPF.
+- Create every isolated process directly in a delegated cgroup v2 using `CLONE_INTO_CGROUP`; enforce memory, swap, CPU, pids, lifetime and `cgroup.kill` for all descendants regardless of process group.
+- Keep Host Protocol reachable through a private namespace-local loopback proxy over a Unix socketpair; seal startup configuration in `memfd`. Mark a process `isolated` only after sandbox setup returns READY; never downgrade to unsandboxed execution.
+- Refuse root Backend service, missing controller delegation, non-x86-64 hosts, absent required kernel features, Java callback RPC, reverse native callbacks, shared mounts, outbound network and secrets until their isolation/broker support is implemented.
+- Add strict policy tests, Linux sandbox kernel-acceptance test (requires a suitably delegated real host), CI and operator threat model. Full cross-service build and live cgroup/userns security acceptance are not certified in this release environment.
+
 ## 0.31.5 — Measured Boot & PCR Verification (2026-10-26)
 
 - Implement independently verified TPM2_Quote (Windows PCP/TBS and Linux tpm2-tools) with a one-time, domain-separated nonce bound to user/device/session/epoch and an explicit operator-owned PCR policy ID+hash.

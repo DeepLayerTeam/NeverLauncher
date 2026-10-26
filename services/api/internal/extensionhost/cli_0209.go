@@ -13,6 +13,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/linuxsandbox"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
@@ -173,7 +174,27 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		"NEVERLAUNCHER_EXTENSION_HOST_URL": baseURL, "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": token, "NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "NEVERLAUNCHER_EXTENSION_API_VERSION": extensioncontract.ExtensionAPIVersion, "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": instance,
 		"NEVERLAUNCHER_EXTENSION_ID": install.ExtensionID, "NEVERLAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "NEVERLAUNCHER_EXTENSION_SCOPE": install.Scope, "NEVERLAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID, "NEVERLAUNCHER_EXTENSION_TARGET": "cli",
 	})
-	configureProcess(cmd)
+	var isolatedHandle *linuxsandbox.Handle
+	if ver.Manifest.Sandbox != nil && ver.Manifest.Sandbox.Mode == "isolated" {
+		if st.javaHost {
+			return CLIResult0209{}, errors.New("sandbox-unavailable: Java callbacks require broker in 0.31.10")
+		}
+		pol := ver.Manifest.Sandbox
+		isolatedHandle, err = linuxsandbox.Prepare(linuxsandbox.Options{
+			PayloadRoot: payloadRoot, Entrypoint: entrypoint, Args: cmd.Args[1:], Environment: cmd.Env, HostURL: baseURL, HostHandler: s.server.Handler,
+			Policy: linuxsandbox.Policy{FilesystemRead: pol.FilesystemRead, FilesystemWrite: pol.FilesystemWrite, NetworkOutbound: pol.NetworkOutbound, Secrets: pol.Secrets,
+				MaxMemoryBytes: pol.MaxMemoryBytes, MaxProcesses: pol.MaxProcesses, MaxCPUPercent: pol.MaxCPUPercent, TimeoutSeconds: pol.TimeoutSeconds},
+		})
+		if err != nil {
+			return CLIResult0209{}, fmt.Errorf("sandbox-unavailable: %w", err)
+		}
+		defer isolatedHandle.Close()
+		cmd = isolatedHandle.Cmd
+		st.sandbox = isolatedHandle
+	} else {
+		configureProcess(cmd)
+	}
+
 	stdout := &boundedBuffer0209{max: maxCLIOutput0209}
 	stderr := &boundedBuffer0209{max: maxCLIOutput0209}
 	cmd.Stdout = stdout
@@ -182,10 +203,16 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	if err := cmd.Start(); err != nil {
 		return CLIResult0209{}, fmt.Errorf("start cli extension: %w", err)
 	}
+	if isolatedHandle != nil {
+		if err := isolatedHandle.Started(); err != nil {
+			return CLIResult0209{}, fmt.Errorf("sandbox enforcement failed: %w", err)
+		}
+	}
 	st.mu.Lock()
 	st.cmd = cmd
 	st.startedAt = started
 	st.processCount = 1
+	st.sandboxReady = isolatedHandle != nil
 	stopRequested := st.expectedStop
 	st.mu.Unlock()
 	if stopRequested {
