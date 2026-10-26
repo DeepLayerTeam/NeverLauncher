@@ -1,0 +1,35 @@
+name: TPM Certify verifier 0.31.2
+on:
+  push:
+    paths:
+      - 'services/api/**'
+      - 'cli/internal/dbmigrate/**'
+      - '.github/workflows/tpm-certify-verifier-0312.yml'
+  pull_request:
+    paths:
+      - 'services/api/**'
+      - 'cli/internal/dbmigrate/**'
+      - '.github/workflows/tpm-certify-verifier-0312.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  certify:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-15]
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: services/api/go.sum
+      - name: TPM Certify negative fixtures and repository/session policy
+        run: go test -race -count=1 ./internal/attestverify ./internal/model ./internal/trustbaseline ./internal/repository ./internal/httpapi
+      - name: Compile backend
+        run: go build ./cmd/neverlauncher-api

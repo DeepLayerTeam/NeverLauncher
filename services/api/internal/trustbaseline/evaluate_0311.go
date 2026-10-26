@@ -82,3 +82,26 @@ func Evaluate(device model.TrustedDevice, sessionBound bool, now time.Time) mode
 	}
 	return a
 }
+
+// EvaluateWithHardwareEvidence promotes hardware provenance only from a
+// server-verified TPM Certify result whose active root, epoch and session have
+// been rechecked by the caller. Guard runtime remains independently unverified.
+func EvaluateWithHardwareEvidence(device model.TrustedDevice, sessionBound bool, evidence model.DeviceHardwareEvidence, now time.Time) model.TrustAssessment {
+	a := Evaluate(device, sessionBound, now)
+	if !sessionBound || a.KeyPossession != "verified" || evidence.DeviceID != device.ID || evidence.UserID != device.UserID || evidence.KeyFingerprint != device.KeyFingerprint || evidence.RootID == "" || evidence.AKFingerprint == "" || evidence.VerifiedAt.After(now) || !evidence.ExpiresAt.After(now) {
+		return a
+	}
+	a.RemoteHardwareProvenance = "tpm-ak-certified"
+	a.EvidenceExpiresAt = evidence.ExpiresAt
+	reasons := make([]string, 0, len(a.ReasonCodes))
+	for _, v := range a.ReasonCodes {
+		if v != "remote-hardware-verifier-unavailable" {
+			reasons = append(reasons, v)
+		}
+	}
+	a.ReasonCodes = reasons
+	strict := a.ProfileDecisions[Strict]
+	strict.ReasonCodes = append([]string(nil), reasons...)
+	a.ProfileDecisions[Strict] = strict
+	return a
+}

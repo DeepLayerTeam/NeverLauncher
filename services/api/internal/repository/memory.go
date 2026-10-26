@@ -59,6 +59,8 @@ type Repository interface {
 	RevokeOtherTrustedDevices(ctx context.Context, userID, exceptDeviceID, reason string) (model.DeviceRevocationBatch, error)
 	TouchTrustedDevice(ctx context.Context, userID, deviceID, ip, userAgent string) (model.TrustedDevice, error)
 	AttestTrustedDevice(ctx context.Context, userID, deviceID, method string, attestedAt, expiresAt time.Time) (model.TrustedDevice, error)
+	SaveHardwareEvidence(ctx context.Context, evidence model.DeviceHardwareEvidence) error
+	LatestHardwareEvidence(ctx context.Context, userID, deviceID string) (model.DeviceHardwareEvidence, error)
 	SaveDeviceChallenge(ctx context.Context, challenge model.DeviceChallenge) error
 	ConsumeDeviceChallenge(ctx context.Context, id, userID, deviceID, purpose, challengeHash string, now time.Time) (model.DeviceChallenge, error)
 	ListRoles() []model.Role
@@ -139,8 +141,8 @@ type Repository interface {
 }
 
 type MemoryRepository struct {
- managedProviderMu sync.Mutex
- managedProviders map[string]ManagedProviderHead02910
+	managedProviderMu              sync.Mutex
+	managedProviders               map[string]ManagedProviderHead02910
 	hwidMu                         sync.Mutex
 	hwidObservations               map[string]HWIDObservation0299
 	hwidAppeals                    map[string]HWIDAppeal0299
@@ -187,6 +189,7 @@ type MemoryRepository struct {
 	minecraftJoins                 []model.MinecraftJoin
 	trustedDevices                 []model.TrustedDevice
 	deviceChallenges               []model.DeviceChallenge
+	hardwareEvidence               []model.DeviceHardwareEvidence
 	roles                          []model.Role
 	audit                          []model.AuditEvent
 	telemetry                      []model.TelemetryEvent

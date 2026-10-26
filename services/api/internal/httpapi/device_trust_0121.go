@@ -524,7 +524,23 @@ func (s Server) authDeviceTrustStatus0121(w http.ResponseWriter, r *http.Request
 				attestationExpiresAt = d.AttestationExpiresAt
 			}
 			clean := sanitizeTrustedDevice0121(d)
-			clean.TrustAssessment = trustbaseline.Evaluate(d, session.Status == "active" && session.TrustedDeviceID == d.ID && session.DeviceTrustState == "verified", time.Now().UTC())
+			bound := session.Status == "active" && session.TrustedDeviceID == d.ID && session.DeviceTrustState == "verified"
+			clean.TrustAssessment = trustbaseline.Evaluate(d, bound, time.Now().UTC())
+			if bound {
+				evidence, verified := activeHardwareEvidence0312(s, d, session, time.Now().UTC())
+				if verified {
+					clean.TrustAssessment = trustbaseline.EvaluateWithHardwareEvidence(d, bound, evidence, time.Now().UTC())
+					clean.RemoteHardwareProvenance = "verified"
+				} else if previous, err := s.Repo.LatestHardwareEvidence(r.Context(), claims.Sub, d.ID); err == nil && previous.DeviceID == d.ID {
+					// Stale epoch, revoked/removed AK root or expired certificate:
+					// make the re-attestation requirement explicit to the UI.
+					strict := clean.TrustAssessment.ProfileDecisions[trustbaseline.Strict]
+					strict.ReasonCodes = append(strict.ReasonCodes, "tpm-evidence-expired-revoked-or-binding-changed")
+					strict.RecoveryAction = "repeat-tpm-certify-on-current-device-session"
+					clean.TrustAssessment.ProfileDecisions[trustbaseline.Strict] = strict
+					clean.TrustAssessment.ReasonCodes = append(clean.TrustAssessment.ReasonCodes, "tpm-evidence-expired-revoked-or-binding-changed")
+				}
+			}
 			assessment = clean.TrustAssessment
 			device = clean
 		}

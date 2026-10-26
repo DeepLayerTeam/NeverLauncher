@@ -307,6 +307,22 @@ type TrustedDevice struct {
 	TrustAssessment          TrustAssessment `json:"trustAssessment"`
 }
 
+// DeviceHardwareEvidence is persisted only after successful TPM Certify verification.
+// A legacy client-provided provenance field is never authoritative.
+type DeviceHardwareEvidence struct {
+	UserID          string    `json:"-"`
+	DeviceID        string    `json:"deviceId"`
+	SessionID       string    `json:"-"`
+	BindingEpoch    int64     `json:"bindingEpoch"`
+	KeyFingerprint  string    `json:"keyFingerprint"`
+	RootID          string    `json:"rootId"`
+	RootFingerprint string    `json:"rootFingerprint"`
+	AKFingerprint   string    `json:"akFingerprint"`
+	ChallengeID     string    `json:"-"`
+	VerifiedAt      time.Time `json:"verifiedAt"`
+	ExpiresAt       time.Time `json:"expiresAt"`
+}
+
 // DeviceChallenge — краткосрочный одноразовый запрос доказательства
 // владения ключом. Хранится только SHA-256 переданного challenge.
 type DeviceChallenge struct {
