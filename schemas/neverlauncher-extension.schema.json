@@ -425,6 +425,83 @@
           }
         }
       }
+    },
+    "sandbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "mode"
+      ],
+      "description": "Signed package policy. Mode isolated fails closed until enforced sandbox host exists. Trusted is unsandboxed.",
+      "properties": {
+        "version": {
+          "const": "1"
+        },
+        "mode": {
+          "enum": [
+            "trusted",
+            "isolated"
+          ]
+        },
+        "filesystemRead": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(package|shared:[a-z][a-z0-9_-]{0,63})$"
+          }
+        },
+        "filesystemWrite": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(scratch|shared:[a-z][a-z0-9_-]{0,63})$"
+          }
+        },
+        "networkOutbound": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 260
+          }
+        },
+        "secrets": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          }
+        },
+        "maxProcesses": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 128
+        },
+        "maxMemoryBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 68719476736
+        },
+        "maxCpuPercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400
+        }
+      }
     }
   }
 }

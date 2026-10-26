@@ -15,10 +15,11 @@ import (
 )
 
 type extensionUpdateRequest02011 struct {
-	Scope   string                      `json:"scope,omitempty"`
-	ScopeID string                      `json:"scopeId,omitempty"`
-	Channel string                      `json:"channel,omitempty"`
-	Roots   []model.ExtensionUpdateRoot `json:"roots,omitempty"`
+	Scope            string                      `json:"scope,omitempty"`
+	ScopeID          string                      `json:"scopeId,omitempty"`
+	Channel          string                      `json:"channel,omitempty"`
+	Roots            []model.ExtensionUpdateRoot `json:"roots,omitempty"`
+	SandboxApprovals map[string]string           `json:"sandboxApprovals,omitempty"`
 }
 type extensionPinWrite02011 struct {
 	Scope   string `json:"scope,omitempty"`
@@ -62,7 +63,7 @@ func (s Server) extensionUpdateApply02011(w http.ResponseWriter, r *http.Request
 		writeLifecycleError0204(w, err)
 		return
 	}
-	tx, err := s.updateManager02011().Apply(r.Context(), plan)
+	tx, err := s.updateManager02011().ApplyWithSandboxApprovals0318(r.Context(), plan, req.SandboxApprovals)
 	if err != nil {
 		s.audit(r, s.adminActor(r), "extension:update-transaction:failed", tx.ID+":"+tx.Status)
 		writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": err.Error(), "data": map[string]any{"transaction": tx}})

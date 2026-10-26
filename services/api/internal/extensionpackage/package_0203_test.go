@@ -36,6 +36,7 @@ func buildRegistryTestPackage0203(t *testing.T, creatorVersion string) (string, 
 	manifest, canonicalDigest, err := repository.NormalizeExtensionManifest(model.ExtensionManifest{
 		SchemaVersion: "2.0", ID: "example.registry-extension", Name: "Registry Extension", Version: "1.2.3", Publisher: "deeplayer.team", API: "1.0",
 		Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "backend/extension"}}, Permissions: []string{"project:read"},
+		Sandbox: &model.ExtensionSandboxPolicy{Version: "1", Mode: "trusted", FilesystemRead: []string{"package"}},
 	})
 	if err != nil {
 		t.Fatal(err)

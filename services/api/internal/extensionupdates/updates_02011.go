@@ -11,6 +11,7 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
@@ -73,6 +74,12 @@ func hostKey02011(x model.ExtensionInstall) extensionhost.Key {
 }
 
 func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (model.ExtensionUpdateTransaction, error) {
+	return m.ApplyWithSandboxApprovals0318(ctx, plan, nil)
+}
+
+// Approval maps extension IDs to the exact digest displayed during owner review.
+// Automatic updates never provide approvals and cannot enlarge privileges.
+func (m *Manager) ApplyWithSandboxApprovals0318(ctx context.Context, plan model.ExtensionUpdatePlan, approvals map[string]string) (model.ExtensionUpdateTransaction, error) {
 	if m == nil || m.Repo == nil || m.Lifecycle == nil {
 		return model.ExtensionUpdateTransaction{}, errors.New("extension update manager is not configured")
 	}
@@ -134,6 +141,15 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 		}
 		if reg.YankedAt != nil || reg.Artifact.PackageIdentity != item.PackageIdentity {
 			return m.fail(tx, errors.New("resolved registry artifact changed or was yanked after planning"))
+		}
+		if item.Operation == "update" {
+			old, e := m.Repo.GetExtensionVersion(ctx, item.ExtensionID, cur.CurrentVersion)
+			if e != nil {
+				return m.fail(tx, e)
+			}
+			if e = extensionpolicy.RequireReview(old.Manifest, reg.Manifest, approvals[item.ExtensionID]); e != nil {
+				return m.fail(tx, fmt.Errorf("%s: %w", item.ExtensionID, e))
+			}
 		}
 		if item.Operation == "update" || item.Operation == "install" {
 			if m.Security == nil {
@@ -198,7 +214,27 @@ func (m *Manager) Apply(ctx context.Context, plan model.ExtensionUpdatePlan) (mo
 				after, e = m.Lifecycle.Enable(ctx, item.ExtensionID, scope02011(plan))
 			}
 		case "update":
-			after, e = m.Lifecycle.Update(ctx, reg, scope02011(plan))
+			if approved, ok := m.Lifecycle.(interface {
+				UpdateWithSandboxApproval0318(context.Context, model.ExtensionRegistryVersion, extensionlifecycle.Scope, string) (model.ExtensionInstall, error)
+			}); ok {
+				after, e = approved.UpdateWithSandboxApproval0318(ctx, reg, scope02011(plan), approvals[item.ExtensionID])
+			} else {
+				previous, lookupErr := m.Repo.GetExtensionVersion(ctx, item.ExtensionID, before.CurrentVersion)
+				if lookupErr != nil {
+					e = lookupErr
+					break
+				}
+				changed, compareErr := extensionpolicy.ChangesRequireApproval(previous.Manifest, reg.Manifest)
+				if compareErr != nil {
+					e = compareErr
+					break
+				}
+				if changed {
+					e = errors.New("lifecycle does not support owner-reviewed sandbox policy updates")
+					break
+				}
+				after, e = m.Lifecycle.Update(ctx, reg, scope02011(plan))
+			}
 		default:
 			e = fmt.Errorf("unsupported update operation %q", item.Operation)
 		}

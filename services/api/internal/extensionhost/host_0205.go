@@ -29,6 +29,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
@@ -459,6 +460,9 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	k := key.String()
 	manifestVersion, err := s.repo.GetExtensionVersion(ctx, install.ExtensionID, install.CurrentVersion)
 	if err != nil {
+		return err
+	}
+	if err := extensionpolicy.LaunchAllowed(manifestVersion.Manifest); err != nil {
 		return err
 	}
 	target, err := backendTarget(manifestVersion.Manifest)

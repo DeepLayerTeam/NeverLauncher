@@ -1,0 +1,40 @@
+name: NeverExtensions Signed Sandbox Policy 0.31.8
+on:
+  push:
+    paths:
+      - 'services/api/internal/extensionpolicy/**'
+      - 'services/api/internal/extensionpackage/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionlifecycle/**'
+      - 'services/api/internal/extensionupdates/**'
+      - 'services/api/internal/repository/extensions_0201.go'
+      - '.github/workflows/signed-extension-sandbox-policy-0318.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/extensionpolicy/**'
+      - 'services/api/internal/extensionpackage/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionlifecycle/**'
+      - 'services/api/internal/extensionupdates/**'
+      - 'services/api/internal/repository/extensions_0201.go'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-sandbox-policy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Signature / owner review / launch-denial tests
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/extensionpolicy ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionupdates ./internal/extensionhost ./internal/httpapi
+      - name: Vet modified packages
+        working-directory: services/api
+        run: go vet ./internal/extensionpolicy ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionupdates ./internal/extensionhost ./internal/httpapi
+      - name: Full backend build
+        working-directory: services/api
+        run: go build ./cmd/neverlauncher-api

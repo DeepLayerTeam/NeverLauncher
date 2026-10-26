@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
@@ -121,6 +122,10 @@ func normalizeExtensionManifest0201(in model.ExtensionManifest) (model.Extension
 	m.Hooks, err = normalizeUnique(m.Hooks, extensionPermission0201, "hook")
 	if err != nil {
 		return model.ExtensionManifest{}, "", err
+	}
+	m.Sandbox, err = extensionpolicy.Validate(m.Sandbox)
+	if err != nil {
+		return model.ExtensionManifest{}, "", fmt.Errorf("invalid signed sandbox policy: %w", err)
 	}
 
 	deps := make([]model.ExtensionDependency, 0, len(m.Dependencies))

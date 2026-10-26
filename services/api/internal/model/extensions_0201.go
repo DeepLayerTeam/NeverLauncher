@@ -125,6 +125,7 @@ type ExtensionManifest struct {
 	API           string                         `json:"api"`
 	Targets       []ExtensionTarget              `json:"targets"`
 	Permissions   []string                       `json:"permissions,omitempty"`
+	Sandbox       *ExtensionSandboxPolicy        `json:"sandbox,omitempty"`
 	Hooks         []string                       `json:"hooks,omitempty"`
 	Dependencies  []ExtensionDependency          `json:"dependencies,omitempty"`
 	Conflicts     []ExtensionConflict            `json:"conflicts,omitempty"`

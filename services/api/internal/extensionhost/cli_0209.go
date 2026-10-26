@@ -12,6 +12,7 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
@@ -95,6 +96,9 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	}
 	ver, err := s.repo.GetExtensionVersion(ctx, install.ExtensionID, install.CurrentVersion)
 	if err != nil {
+		return CLIResult0209{}, err
+	}
+	if err := extensionpolicy.LaunchAllowed(ver.Manifest); err != nil {
 		return CLIResult0209{}, err
 	}
 	target, err := cliTarget0209(ver.Manifest)

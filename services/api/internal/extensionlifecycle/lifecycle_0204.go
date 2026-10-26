@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpackage"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensiontrust"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
@@ -583,6 +584,12 @@ func (m *Manager) Install(ctx context.Context, item model.ExtensionRegistryVersi
 }
 
 func (m *Manager) Update(ctx context.Context, item model.ExtensionRegistryVersion, scope Scope) (model.ExtensionInstall, error) {
+	return m.UpdateWithSandboxApproval0318(ctx, item, scope, "")
+}
+
+// UpdateWithSandboxApproval0318 requires the owner-reviewed digest of the exact
+// target version. Only the authenticated administrative update route supplies it.
+func (m *Manager) UpdateWithSandboxApproval0318(ctx context.Context, item model.ExtensionRegistryVersion, scope Scope, approvalDigest string) (model.ExtensionInstall, error) {
 	scope, err := normalizeScope0204(scope)
 	if err != nil {
 		return model.ExtensionInstall{}, err
@@ -608,6 +615,18 @@ func (m *Manager) Update(ctx context.Context, item model.ExtensionRegistryVersio
 	}
 	if before.CurrentVersion == item.Version && before.CurrentPackageIdentity == item.Artifact.PackageIdentity {
 		return before, nil
+	}
+	previous, err := m.Repo.GetExtensionVersion(ctx, id, before.CurrentVersion)
+	if err != nil {
+		return model.ExtensionInstall{}, err
+	}
+	if err = extensionpolicy.RequireReview(previous.Manifest, item.Manifest, approvalDigest); err != nil {
+		return model.ExtensionInstall{}, err
+	}
+	if before.CurrentState == model.ExtensionInstallStateEnabled {
+		if e := extensionpolicy.LaunchAllowed(item.Manifest); e != nil {
+			return model.ExtensionInstall{}, e
+		}
 	}
 	prepared, err := m.prepareArtifact0204(ctx, item)
 	if err != nil {
@@ -679,6 +698,9 @@ func (m *Manager) setEnabled0204(ctx context.Context, id string, scope Scope, en
 	if enabled {
 		version, e := m.Repo.GetExtensionVersion(ctx, id, before.CurrentVersion)
 		if e != nil {
+			return model.ExtensionInstall{}, e
+		}
+		if e := extensionpolicy.LaunchAllowed(version.Manifest); e != nil {
 			return model.ExtensionInstall{}, e
 		}
 		if e := m.ValidateCandidate0305(ctx, currentDir0204(m.Root, scope, id), version.Manifest, scope, true); e != nil {
@@ -779,6 +801,19 @@ func (m *Manager) Rollback(ctx context.Context, id string, scope Scope) (model.E
 	targetVersion, e := m.Repo.GetExtensionVersion(ctx, id, target.FromVersion)
 	if e != nil {
 		return model.ExtensionInstall{}, fmt.Errorf("rollback manifest: %w", e)
+	}
+	// Rolling back to the immediately preceding, previously activated signed
+	// package restores an already-owner-approved policy (including on failed
+	// update transactions). Older arbitrary backups must still be reviewed.
+	restoringPrior := target.FromVersion == before.PreviousVersion && target.FromPackageIdentity == before.PreviousPackageIdentity && before.PreviousVersion != ""
+	if before.CurrentVersion != "" && !restoringPrior {
+		previous, e := m.Repo.GetExtensionVersion(ctx, id, before.CurrentVersion)
+		if e != nil {
+			return model.ExtensionInstall{}, e
+		}
+		if e = extensionpolicy.RequireReview(previous.Manifest, targetVersion.Manifest, ""); e != nil {
+			return model.ExtensionInstall{}, fmt.Errorf("rollback requires explicit security-policy review: %w", e)
+		}
 	}
 	if e := m.ValidateCandidate0305(ctx, stage, targetVersion.Manifest, scope, false); e != nil {
 		return model.ExtensionInstall{}, fmt.Errorf("rollback preflight: %w", e)

@@ -17,10 +17,11 @@ import (
 )
 
 type extensionLifecycleWrite0204 struct {
-	Version string `json:"version,omitempty"`
-	Channel string `json:"channel,omitempty"`
-	Scope   string `json:"scope,omitempty"`
-	ScopeID string `json:"scopeId,omitempty"`
+	Version               string `json:"version,omitempty"`
+	Channel               string `json:"channel,omitempty"`
+	Scope                 string `json:"scope,omitempty"`
+	ScopeID               string `json:"scopeId,omitempty"`
+	SandboxApprovalDigest string `json:"sandboxApprovalDigest,omitempty"`
 }
 
 func (s Server) lifecycleManager0204() *extensionlifecycle.Manager {
@@ -293,7 +294,11 @@ func (s Server) extensionUpdate0204(w http.ResponseWriter, r *http.Request) {
 		writeLifecycleError0204(w, err)
 		return
 	}
-	tx, err := s.updateManager02011().Apply(r.Context(), plan)
+	approvals := map[string]string{}
+	if req.SandboxApprovalDigest != "" {
+		approvals[root.ExtensionID] = req.SandboxApprovalDigest
+	}
+	tx, err := s.updateManager02011().ApplyWithSandboxApprovals0318(r.Context(), plan, approvals)
 	if err != nil {
 		s.audit(r, s.adminActor(r), "extension:lifecycle:update-failed", tx.ID+":"+tx.Status)
 		writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": err.Error(), "data": map[string]any{"transaction": tx, "plan": plan}})

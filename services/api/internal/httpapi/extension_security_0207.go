@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
@@ -83,6 +84,11 @@ func (s Server) extensionPermissionState0207(w http.ResponseWriter, r *http.Requ
 			fromVersion = install.CurrentVersion
 		}
 	}
+	if fromVersion == "" {
+		if current, e := s.Repo.GetExtensionInstallState(r.Context(), id, scope, scopeID); e == nil && current.CurrentVersion != toVersion {
+			fromVersion = current.CurrentVersion
+		}
+	}
 	diff, err := s.ExtensionSecurity.PermissionDiff(r.Context(), id, fromVersion, toVersion, scope, scopeID)
 	if err != nil {
 		writeLifecycleError0204(w, err)
@@ -93,7 +99,30 @@ func (s Server) extensionPermissionState0207(w http.ResponseWriter, r *http.Requ
 		writeError(w, 500, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"diff": diff, "grants": grants}})
+	toManifest, err := s.Repo.GetExtensionVersion(r.Context(), id, toVersion)
+	if err != nil {
+		writeLifecycleError0204(w, err)
+		return
+	}
+	digest, err := extensionpolicy.ApprovalDigest(toManifest.Manifest)
+	if err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	needsReview := false
+	if fromVersion != "" {
+		fromManifest, e := s.Repo.GetExtensionVersion(r.Context(), id, fromVersion)
+		if e != nil {
+			writeLifecycleError0204(w, e)
+			return
+		}
+		needsReview, err = extensionpolicy.ChangesRequireApproval(fromManifest.Manifest, toManifest.Manifest)
+		if err != nil {
+			writeError(w, 400, err.Error())
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"diff": diff, "grants": grants, "sandboxReview": map[string]any{"required": needsReview, "approvalDigest": digest, "sandbox": toManifest.Manifest.Sandbox, "permissions": toManifest.Manifest.Permissions, "fromVersion": fromVersion, "toVersion": toVersion}}})
 }
 func (s Server) extensionPermissionGrant0207(w http.ResponseWriter, r *http.Request) {
 	if !s.extensionSecurityReady0207(w) {
