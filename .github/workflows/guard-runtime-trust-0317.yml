@@ -1,0 +1,45 @@
+name: Guard Runtime Trust Enforcement 0.31.7
+on:
+  push:
+    paths:
+      - 'services/api/internal/httpapi/guard_attestation_0134.go'
+      - 'services/api/internal/httpapi/guard_attestation_v2_01810.go'
+      - 'services/api/internal/httpapi/guard_attestation_v2_01810_test.go'
+      - 'services/api/internal/httpapi/guard_runtime_policy_0317*'
+      - '.github/workflows/guard-runtime-trust-0317.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/httpapi/guard_attestation_0134.go'
+      - 'services/api/internal/httpapi/guard_attestation_v2_01810.go'
+      - 'services/api/internal/httpapi/guard_attestation_v2_01810_test.go'
+      - 'services/api/internal/httpapi/guard_runtime_policy_0317*'
+      - '.github/workflows/guard-runtime-trust-0317.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  runtime-trust-policy:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Guard Runtime Trust policy and HTTP security tests
+        working-directory: services/api
+        run: go test -count=1 ./internal/httpapi ./internal/trustbaseline ./internal/attestverify
+      - name: Backend full build
+        working-directory: services/api
+        run: go build ./cmd/neverlauncher-api
+      - name: Go vet
+        working-directory: services/api
+        run: go vet ./internal/httpapi
+      - name: Race detector and replay/policy revocation tests
+        if: matrix.os == 'ubuntu-24.04'
+        working-directory: services/api
+        run: go test -race -count=1 -run 'TestRuntimePolicy0317|TestGuardProcessID0317|TestGuardAttestationV2EndpointIssuesOneTimeContinuousTicket01810' ./internal/httpapi

@@ -1676,7 +1676,7 @@ function App() {
     return data.launchTicket;
   }
 
-  async function createContinuousGuardTicket(processId: string): Promise<string> {
+  async function createContinuousGuardTicket(processId: string, minecraftAccessToken?: string): Promise<{ticket: string; attestationSha256: string}> {
     if (!authSession?.accessToken) throw new Error('Guard Attestation v2 требует активную Never session.');
     const userId = authSession.userId || accessTokenSubject(authSession.accessToken);
     const deviceId = accessTokenDeviceId(authSession.accessToken);
@@ -1686,7 +1686,7 @@ function App() {
       throw new Error('Guard Attestation v2 требует hardware-bound P-256 device key текущего trusted device.');
     }
     const beginResponse = await postDeviceJson(`/api/v1/auth/devices/${encodeURIComponent(deviceId)}/guard-attest-v2/begin`, authSession.accessToken, {
-      launcherVersion: DESKTOP_VERSION,
+      launcherVersion: DESKTOP_VERSION, minecraftAccessToken,
     });
     const beginPayload = await beginResponse.json().catch(() => null);
     if (!beginResponse.ok) throw new Error(beginPayload?.error?.message || `Guard Attestation v2 begin: ${beginResponse.status} ${beginResponse.statusText}`);
@@ -1722,10 +1722,11 @@ function App() {
     const completePayload = await completeResponse.json().catch(() => null);
     if (!completeResponse.ok) throw new Error(completePayload?.error?.message || `Guard Attestation v2 complete: ${completeResponse.status} ${completeResponse.statusText}`);
     const data = completePayload?.data ?? completePayload;
-    if (!data?.verified || data.attestationVersion !== 2 || !data?.continuousGuardTicket || !data?.oneTime) {
-      throw new Error('Backend не подтвердил Continuous Guard Attestation v2.');
+    if (!data?.verified || data.attestationVersion !== 2 || !data?.continuousGuardTicket || !data?.oneTime ||
+        data.runtimePolicyEnforced !== true || data.runtimeAssurance !== 'device-signed-user-mode-observation') {
+      throw new Error('Backend не подтвердил обязательную Guard Runtime Trust allowlist; запуск заблокирован.');
     }
-    log(`Continuous Guard Attestation v2 подтверждена: evidence=${String(data.continuousEvidenceSha256 || '').slice(0, 16)}…, cross-checks=${data.crossCheckCount ?? 0}.`);
+    log(`Continuous Guard Attestation v2: прошла серверная runtime allowlist (user-mode evidence), hash=${String(data.continuousEvidenceSha256 || '').slice(0, 16)}…, cross-checks=${data.crossCheckCount ?? 0}.`);
     return {ticket: String(data.continuousGuardTicket), attestationSha256: String(data.attestationSha256)};
   }
 
@@ -1845,7 +1846,7 @@ function App() {
       let guardAttestationSha256: string | undefined;
       if (!preferences.offline && result.windowsSensor) {
         try {
-          const guard = await createContinuousGuardTicket(result.id);
+          const guard = await createContinuousGuardTicket(result.id, minecraftCredentials?.accessToken);
           continuousGuardTicket = guard.ticket;
           guardAttestationSha256 = guard.attestationSha256;
         } catch (attestationError) {

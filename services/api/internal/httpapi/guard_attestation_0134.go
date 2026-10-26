@@ -49,8 +49,9 @@ type guardReleaseArtifactPair0140 struct {
 }
 
 type guardReleasePlatformPolicy0140 struct {
-	SigningMode string                         `json:"signingMode"`
-	Artifacts   []guardReleaseArtifactPair0140 `json:"artifacts"`
+	SigningMode     string                         `json:"signingMode"`
+	Artifacts       []guardReleaseArtifactPair0140 `json:"artifacts"`
+	RuntimeProfiles []guardRuntimeProfile0317      `json:"runtimeProfiles,omitempty"`
 }
 
 type guardReleaseEntry0140 struct {
@@ -73,6 +74,7 @@ type guardReleasePolicy0134 struct {
 	ProtocolVersion     uint32                                    `json:"-"`
 	PlatformArtifacts   map[string][]guardReleaseArtifactPair0140 `json:"-"`
 	PlatformSigningMode map[string]string                         `json:"-"`
+	RuntimeProfiles     map[string][]guardRuntimeProfile0317      `json:"-"`
 }
 
 type guardAttestationBeginRequest0134 struct {
@@ -418,6 +420,7 @@ func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, e
 			}
 			normalizedPlatforms := map[string][]guardReleaseArtifactPair0140{}
 			normalizedSigningModes := map[string]string{}
+			normalizedRuntimes := map[string][]guardRuntimeProfile0317{}
 			for rawPlatform, platformPolicy := range release.Platforms {
 				platform := strings.ToLower(strings.TrimSpace(rawPlatform))
 				if platform != "windows" && platform != "linux" && platform != "macos" {
@@ -460,6 +463,16 @@ func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, e
 					seen[key] = struct{}{}
 					artifacts = append(artifacts, pair)
 				}
+				profiles, err := normalizeGuardRuntimeProfiles0317(platformPolicy.RuntimeProfiles)
+				if err != nil {
+					return nil, fmt.Errorf("NeverGuard release %s platform %s: %w", version, platform, err)
+				}
+				// Windows Guard Attestation v2 has runtime evidence. Starting in
+				// 0.31.7, an unpinned module/JVM set is not a certified runtime.
+				if platform == "windows" && guardRuntimePolicyRequired0317(s.Version) && len(profiles) == 0 {
+					return nil, fmt.Errorf("NeverGuard release %s windows requires runtimeProfiles for Guard Runtime Trust", version)
+				}
+				normalizedRuntimes[platform] = profiles
 				normalizedPlatforms[platform] = artifacts
 				normalizedSigningModes[platform] = signingMode
 			}
@@ -475,6 +488,7 @@ func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, e
 				ProtocolVersion:     release.ProtocolVersion,
 				PlatformArtifacts:   normalizedPlatforms,
 				PlatformSigningMode: normalizedSigningModes,
+				RuntimeProfiles:     normalizedRuntimes,
 			}
 			for platform := range normalizedPlatforms {
 				if _, _, _, err := policy.metadataForPlatform0140(platform); err != nil {

@@ -81,6 +81,13 @@ type guardRemoteAttestationV201810 struct {
 	AttestationSHA256  string                       `json:"attestationSha256"`
 }
 
+// A runtime witness can authorize a Minecraft session only when its one-time
+// challenge was explicitly bound to that session before collecting evidence.
+type guardAttestationV2BeginRequest0317 struct {
+	LauncherVersion      string `json:"launcherVersion"`
+	MinecraftAccessToken string `json:"minecraftAccessToken,omitempty"`
+}
+
 type guardAttestationV2CompleteRequest01810 struct {
 	ChallengeID        string                        `json:"challengeId"`
 	Challenge          string                        `json:"challenge"`
@@ -157,7 +164,7 @@ func recomputeGuardAttestationV2SHA25601810(a guardRemoteAttestationV201810) str
 }
 
 func validateGuardContinuousEvidence01810(e guardContinuousEvidence01810, now time.Time) error {
-	if e.Schema != guardContinuousEvidenceSchema01810 || e.EvidenceVersion != guardContinuousEvidenceVersion01810 || strings.TrimSpace(e.ProcessID) == "" || e.RuntimePID == 0 {
+	if e.Schema != guardContinuousEvidenceSchema01810 || e.EvidenceVersion != guardContinuousEvidenceVersion01810 || !validGuardProcessID0317(e.ProcessID) || e.RuntimePID == 0 {
 		return errors.New("Guard Attestation v2 continuous evidence schema/identity mismatch")
 	}
 	if e.SensorProtocolVersion != 3 || e.ModuleGuardVersion != 1 || e.ContinuousGuardVersion != 1 {
@@ -199,7 +206,7 @@ func validateGuardContinuousEvidence01810(e guardContinuousEvidence01810, now ti
 	nowMS := uint64(now.UTC().UnixMilli())
 	maxFuture := nowMS + 2_000
 	maxStale := uint64(guardContinuousMaxStaleness01810 / time.Millisecond)
-	if e.CollectedAtUnixMS > maxFuture || nowMS > e.CollectedAtUnixMS+maxStale || nowMS > e.LastSensorHeartbeatUnixMS+maxStale || nowMS > e.LastGuardHeartbeatUnixMS+maxStale {
+	if e.CollectedAtUnixMS > maxFuture || nowMS > e.CollectedAtUnixMS+maxStale || nowMS > e.LastSensorHeartbeatUnixMS+maxStale || nowMS > e.LastGuardHeartbeatUnixMS+maxStale || e.LastSensorHeartbeatUnixMS > e.CollectedAtUnixMS+2_000 || e.LastGuardHeartbeatUnixMS > e.CollectedAtUnixMS+2_000 {
 		return errors.New("Guard Attestation v2 continuous evidence is stale")
 	}
 	expected := recomputeGuardContinuousEvidenceSHA25601810(e)
@@ -275,7 +282,7 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusConflict, "текущая сессия не привязана к trusted device")
 		return
 	}
-	var req guardAttestationBeginRequest0134
+	var req guardAttestationV2BeginRequest0317
 	if err := decodeDeviceJSON0121(w, r, &req, 8<<10); err != nil {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
@@ -314,6 +321,15 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusPreconditionFailed, "Guard Attestation v2 требует свежую device attestation")
 		return
 	}
+	minecraftSessionID := ""
+	if req.MinecraftAccessToken != "" {
+		ms, _, _, err := s.validateMinecraftToken119(strings.TrimSpace(req.MinecraftAccessToken))
+		if err != nil || ms.ID == "" || ms.UserID != claims.Sub || ms.NeverSessionID != claims.SessionID || ms.TrustedDeviceID != deviceID || ms.BindingEpoch != claims.BindingEpoch || ms.LauncherVersion != req.LauncherVersion || !ms.IntegrityVerified {
+			writeError(w, http.StatusPreconditionFailed, "Minecraft runtime session does not match current Never session, device, epoch and release")
+			return
+		}
+		minecraftSessionID = ms.ID
+	}
 	challengeID, err := randomToken("ngav2")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось создать Guard Attestation v2 challenge")
@@ -328,7 +344,7 @@ func (s Server) authGuardAttestationV2Begin01810(w http.ResponseWriter, r *http.
 	expires := canonicalGuardAttestationTime0134(now.Add(guardAttestationV2ChallengeTTL01810))
 	entry := model.DeviceChallenge{ID: challengeID, UserID: claims.Sub, DeviceID: device.ID, Purpose: guardAttestationV2Purpose01810, ChallengeHash: deviceChallengeHash0121(challenge), Metadata: map[string]any{
 		"sessionId": claims.SessionID, "bindingEpoch": strconv.FormatInt(claims.BindingEpoch, 10), "launcherVersion": req.LauncherVersion,
-		"keyFingerprint": device.KeyFingerprint, "guardReleasePolicySchema": policySchema, "guardProtocolVersion": strconv.FormatUint(uint64(protocolVersion), 10), "guardPlatform": "windows",
+		"keyFingerprint": device.KeyFingerprint, "minecraftSessionId": minecraftSessionID, "guardReleasePolicySchema": policySchema, "guardProtocolVersion": strconv.FormatUint(uint64(protocolVersion), 10), "guardPlatform": "windows",
 	}, CreatedAt: now, ExpiresAt: expires}
 	if err := s.Repo.SaveDeviceChallenge(r.Context(), entry); err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось сохранить Guard Attestation v2 challenge")
@@ -422,6 +438,13 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
+	// Evaluate the exact release/platform runtime allowlist AFTER consuming the
+	// challenge, so its state cannot be replayed across a policy update.
+	runtimePolicyDigest, err := verifyGuardRuntimePolicy0317(policy, device.Platform, req.Attestation.ContinuousEvidence)
+	if err != nil {
+		writeError(w, http.StatusPreconditionFailed, "NeverGuard runtime denied: "+err.Error())
+		return
+	}
 	ticketID, err := randomToken("ngctid")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось выпустить Continuous Guard ticket")
@@ -435,10 +458,18 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 	ticketExpires := canonicalGuardAttestationTime0134(now.Add(guardContinuousJoinTTL01810))
 	ticket := model.DeviceChallenge{ID: ticketID, UserID: claims.Sub, DeviceID: deviceID, Purpose: guardContinuousJoinPurpose01810, ChallengeHash: deviceChallengeHash0121(ticketSecret), Metadata: map[string]any{
 		"sessionId": claims.SessionID, "bindingEpoch": strconv.FormatInt(claims.BindingEpoch, 10), "launcherVersion": req.LauncherVersion,
+		"deviceKeyFingerprint": device.KeyFingerprint, "minecraftSessionId": metadataString0121(stored.Metadata, "minecraftSessionId"),
 		"attestationSha256": req.Attestation.AttestationSHA256, "continuousEvidenceSha256": req.Attestation.ContinuousEvidence.EvidenceSHA256,
 		"baseAttestationSha256": req.Attestation.BaseAttestation.AttestationSHA256, "runtimePid": strconv.FormatUint(uint64(req.Attestation.ContinuousEvidence.RuntimePID), 10),
 		"guardSha256": req.Attestation.BaseAttestation.Evidence.Guard.ImageSHA256, "launcherSha256": req.Attestation.BaseAttestation.Evidence.Launcher.ImageSHA256,
 		"sensorEventChainSha256": req.Attestation.ContinuousEvidence.SensorEventChainSHA256, "lastCrossCheckSha256": req.Attestation.ContinuousEvidence.LastCrossCheckSHA256,
+		"runtimePolicySha256": runtimePolicyDigest,
+		"processId":           req.Attestation.ContinuousEvidence.ProcessID,
+		"moduleSetSha256":     req.Attestation.ContinuousEvidence.ModuleSetSHA256,
+		"codeSetSha256":       req.Attestation.ContinuousEvidence.CodeSetSHA256,
+		"hookSetSha256":       req.Attestation.ContinuousEvidence.HookSetSHA256,
+		"jvmStateSha256":      req.Attestation.ContinuousEvidence.JVMStateSHA256,
+		"javaMajor":           strconv.FormatUint(uint64(req.Attestation.ContinuousEvidence.JavaMajor), 10),
 	}, CreatedAt: now, ExpiresAt: ticketExpires}
 	if err := s.Repo.SaveDeviceChallenge(r.Context(), ticket); err != nil {
 		writeError(w, http.StatusInternalServerError, "не удалось сохранить Continuous Guard ticket")
@@ -451,6 +482,7 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 		"sensorHeartbeatCount": req.Attestation.ContinuousEvidence.SensorHeartbeatCount, "guardHeartbeatCount": req.Attestation.ContinuousEvidence.GuardHeartbeatCount,
 		"crossCheckCount": req.Attestation.ContinuousEvidence.CrossCheckCount, "continuousGuardTicket": ticketID + "." + ticketSecret,
 		"expiresAt": ticketExpires, "oneTime": true,
+		"runtimeAssurance": "device-signed-user-mode-observation", "runtimePolicyEnforced": runtimePolicyDigest != "",
 	}})
 }
 
@@ -474,12 +506,23 @@ func (s Server) consumeGuardContinuousJoinTicket01810(r *http.Request, claims au
 	if runtimePID, err := strconv.ParseUint(metadataString0121(ticket.Metadata, "runtimePid"), 10, 32); err != nil || runtimePID == 0 {
 		return model.DeviceChallenge{}, errors.New("Continuous Guard ticket runtime binding malformed")
 	}
+	// A ticket is not authoritative indefinitely. Recheck the device, session
+	// eligibility and CURRENT release/runtime allowlists before allowing join.
+	if err := s.recheckContinuousGuardTicket0317(claims, ticket, now); err != nil {
+		return model.DeviceChallenge{}, err
+	}
 	return ticket, nil
 }
 
 func validateContinuousGuardTicketForMinecraftSession01810(ticket model.DeviceChallenge, session model.MinecraftSession) error {
 	if strings.TrimSpace(session.ID) == "" || !session.IntegrityVerified {
 		return errors.New("Minecraft integrity session is not verified")
+	}
+	if !session.CreatedAt.IsZero() && ticket.CreatedAt.Before(session.CreatedAt.Add(-guardAttestationClockSkew0134)) {
+		return errors.New("Continuous Guard runtime evidence predates Minecraft session")
+	}
+	if guardRuntimePolicyRequired0317(session.LauncherVersion) && (metadataString0121(ticket.Metadata, "minecraftSessionId") == "" || metadataString0121(ticket.Metadata, "minecraftSessionId") != session.ID) {
+		return errors.New("Continuous Guard runtime not bound to this Minecraft session")
 	}
 	if metadataString0121(ticket.Metadata, "launcherVersion") != strings.TrimSpace(session.LauncherVersion) {
 		return errors.New("Continuous Guard ticket launcher version does not match Minecraft integrity session")

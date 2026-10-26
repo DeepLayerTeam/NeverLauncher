@@ -83,7 +83,7 @@ func TestGuardAttestationV2RejectsStaleAndDivergedContinuousEvidence01810(t *tes
 }
 
 func TestGuardAttestationV2EndpointIssuesOneTimeContinuousTicket01810(t *testing.T) {
-	allowlist := `{"schemaVersion":"2.0","releases":{"0.18.10":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"` + testGuardHash0134 + `","launcherSha256":"` + testLauncherHash0134 + `","requireAuthenticode":true}]}}}}}`
+	allowlist := `{"schemaVersion":"2.0","releases":{"0.18.10":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"` + testGuardHash0134 + `","launcherSha256":"` + testLauncherHash0134 + `","requireAuthenticode":true}],"runtimeProfiles":[{"javaMajor":21,"moduleSetSha256":"` + strings.Repeat("2", 64) + `"}]}}}}}`
 	cfg := config.Config{
 		PublicURL: "https://api.example.test", Environment: "test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-guard-attestation-v2",
 		AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api",
@@ -142,6 +142,20 @@ func TestGuardAttestationV2EndpointIssuesOneTimeContinuousTicket01810(t *testing
 	if err := validateContinuousGuardTicketForMinecraftSession01810(consumed, minecraftSession); err != nil {
 		t.Fatalf("Continuous Guard ticket did not bind to the verified Minecraft session: %v", err)
 	}
+	if err := server.recheckContinuousGuardTicket0317(claims, consumed, time.Now().UTC()); err != nil {
+		t.Fatalf("Valid runtime policy rejected by post-join recheck: %v", err)
+	}
+	savedPolicy := server.Config.GuardReleaseAllowlistJSON
+	server.Config.GuardReleaseAllowlistJSON = strings.Replace(savedPolicy, strings.Repeat("2", 64), strings.Repeat("f", 64), 1)
+	if err := server.recheckContinuousGuardTicket0317(claims, consumed, time.Now().UTC()); err == nil {
+		t.Fatal("Previous Continuous Guard runtime ticket survived operator runtime policy revocation")
+	}
+	server.Config.GuardReleaseAllowlistJSON = savedPolicy
+	consumed.Metadata["deviceKeyFingerprint"] = strings.Repeat("c", 64)
+	if err := server.recheckContinuousGuardTicket0317(claims, consumed, time.Now().UTC()); err == nil {
+		t.Fatal("Continuous Guard runtime ticket accepted substituted device key")
+	}
+	consumed.Metadata["deviceKeyFingerprint"] = device.KeyFingerprint
 	minecraftSession.GuardSHA256 = strings.Repeat("f", 64)
 	if err := validateContinuousGuardTicketForMinecraftSession01810(consumed, minecraftSession); err == nil {
 		t.Fatal("Continuous Guard ticket accepted a different Guard artifact hash")
