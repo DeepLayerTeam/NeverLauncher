@@ -1,0 +1,35 @@
+name: Scoped NeverExtensions Brokers 0.31.10
+on:
+  push:
+    paths:
+      - 'services/api/internal/extensionbroker/**'
+      - 'services/api/internal/linuxsandbox/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionpolicy/**'
+      - '.github/workflows/scoped-extension-brokers-03110.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/extensionbroker/**'
+      - 'services/api/internal/linuxsandbox/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionpolicy/**'
+      - '.github/workflows/scoped-extension-brokers-03110.yml'
+jobs:
+  broker-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Validate scoped brokers, sandbox integration and trust policy
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/extensionbroker ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
+      - name: Static analyzer
+        working-directory: services/api
+        run: go vet ./internal/extensionbroker ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
+      - name: Build API with production PostgreSQL driver
+        working-directory: services/api
+        run: go build ./cmd/neverlauncher-api
+# Live namespace/cgroup test requires a dedicated preconfigured non-root host.

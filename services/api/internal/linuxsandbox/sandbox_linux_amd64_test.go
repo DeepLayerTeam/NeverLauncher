@@ -30,17 +30,17 @@ func TestPolicyGateAndHostPaths0319(t *testing.T) {
 		t.Fatal(e)
 	}
 	cases := map[string]func(*Options){
-		"backend-secret-path": func(o *Options) { o.Policy.FilesystemRead = []string{"/var/lib/neverlauncher/.env"} },
-		"shared-mount":        func(o *Options) { o.Policy.FilesystemWrite = []string{"shared:project"} },
-		"network":             func(o *Options) { o.Policy.NetworkOutbound = []string{"example.com:443"} },
-		"secrets":             func(o *Options) { o.Policy.Secrets = []string{"database"} },
-		"unlimited-cpu":       func(o *Options) { o.Policy.MaxCPUPercent = 0 },
-		"unlimited-processes": func(o *Options) { o.Policy.MaxProcesses = 0 },
-		"unlimited-memory":    func(o *Options) { o.Policy.MaxMemoryBytes = 0 },
-		"unlimited-lifetime":  func(o *Options) { o.Policy.TimeoutSeconds = 0 },
-		"non-loopback-host":   func(o *Options) { o.HostURL = "http://0.0.0.0:9091" },
-		"out-of-package":      func(o *Options) { o.Entrypoint = "/bin/sh" },
-		"missing-handler":     func(o *Options) { o.HostHandler = nil },
+		"backend-secret-path":  func(o *Options) { o.Policy.FilesystemRead = []string{"/var/lib/neverlauncher/.env"} },
+		"invalid-shared-mount": func(o *Options) { o.Policy.FilesystemWrite = []string{"shared:../../etc"} },
+		"invalid-network":      func(o *Options) { o.Policy.NetworkOutbound = []string{"*.example.com:443"} },
+		"invalid-secret":       func(o *Options) { o.Policy.Secrets = []string{"../database"} },
+		"unlimited-cpu":        func(o *Options) { o.Policy.MaxCPUPercent = 0 },
+		"unlimited-processes":  func(o *Options) { o.Policy.MaxProcesses = 0 },
+		"unlimited-memory":     func(o *Options) { o.Policy.MaxMemoryBytes = 0 },
+		"unlimited-lifetime":   func(o *Options) { o.Policy.TimeoutSeconds = 0 },
+		"non-loopback-host":    func(o *Options) { o.HostURL = "http://0.0.0.0:9091" },
+		"out-of-package":       func(o *Options) { o.Entrypoint = "/bin/sh" },
+		"missing-handler":      func(o *Options) { o.HostHandler = nil },
 	}
 	for name, mutate := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -139,5 +139,16 @@ func TestUnsupportedKernelOrMissingDelegationFailsClosed0319(t *testing.T) {
 			h.Close()
 		}
 		t.Fatal("non-capable host accepted isolated package")
+	}
+}
+
+func TestBrokerGrantsAcceptedInPrivateNamespace03110(t *testing.T) {
+	o := validOptions0319(t)
+	o.Policy.FilesystemRead = []string{"package", "shared:reports"}
+	o.Policy.FilesystemWrite = []string{"scratch", "shared:reports"}
+	o.Policy.NetworkOutbound = []string{"api.example.com:443"}
+	o.Policy.Secrets = []string{"api_token"}
+	if err := validate(o); err != nil {
+		t.Fatalf("valid broker-only grants rejected: %v", err)
 	}
 }

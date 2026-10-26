@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionbroker"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
@@ -61,7 +62,8 @@ type Config struct {
 	CrashLimit           int
 	CrashWindow          time.Duration
 	RestartBackoff       time.Duration
-	JavaExecutable       string // trusted absolute java binary; otherwise resolved from PATH
+	JavaExecutable       string            // trusted absolute java binary; otherwise resolved from PATH
+	SharedRoots          map[string]string // administrator-defined shared:<name> destinations
 }
 
 func (c Config) normalized() Config {
@@ -268,6 +270,8 @@ type Supervisor struct {
 	eventBus         *eventbus.Bus
 	security         *extensionsecurity.Manager
 	callbackClient   *http.Client
+	sharedRoots      map[string]string
+	sharedRootsErr   error
 	runtimeMu0303    sync.Mutex
 	crashLoopHandler func(context.Context, Key, string)
 }
@@ -277,7 +281,19 @@ func New(cfg Config, repo repository.Repository, store storage.Storage) *Supervi
 	transport := &http.Transport{Proxy: nil, DialContext: (&net.Dialer{Timeout: time.Second}).DialContext, MaxIdleConns: 16, MaxIdleConnsPerHost: 2, IdleConnTimeout: 30 * time.Second}
 	client := &http.Client{Transport: transport, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
 	security, _ := extensionsecurity.New(repo, nil)
-	return &Supervisor{cfg: cfg, repo: repo, storage: store, processes: map[string]*processState{}, transients: map[string]map[string]*processState{}, tokens: map[string]*processState{}, crashes: map[string][]time.Time{}, restarts: map[string]int{}, security: security, callbackClient: client}
+	roots := cfg.SharedRoots
+	var rootsErr error
+	if roots == nil {
+		roots, rootsErr = extensionbroker.ParseRoots(os.Getenv("NEVERLAUNCHER_EXTENSION_SHARED_ROOTS_JSON"))
+	} else {
+		data, err := json.Marshal(roots)
+		if err != nil {
+			rootsErr = err
+		} else {
+			roots, rootsErr = extensionbroker.ParseRoots(string(data))
+		}
+	}
+	return &Supervisor{sharedRoots: roots, sharedRootsErr: rootsErr, cfg: cfg, repo: repo, storage: store, processes: map[string]*processState{}, transients: map[string]map[string]*processState{}, tokens: map[string]*processState{}, crashes: map[string][]time.Time{}, restarts: map[string]int{}, security: security, callbackClient: client}
 }
 
 func (s *Supervisor) SetSecurity(security *extensionsecurity.Manager) {
@@ -547,7 +563,11 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	if manifestVersion.Manifest.Sandbox != nil && manifestVersion.Manifest.Sandbox.Mode == "isolated" {
 		if st.javaHost {
 			s.removeProcessToken(st)
-			return errors.New("sandbox-unavailable: Java RPC callback isolation requires broker in 0.31.10")
+			return errors.New("sandbox-unavailable: Java RPC callback isolation requires authenticated reverse RPC")
+		}
+		if err := s.validateSharedRoots03110(manifestVersion.Manifest.Sandbox); err != nil {
+			s.removeProcessToken(st)
+			return err
 		}
 		pol := manifestVersion.Manifest.Sandbox
 		isolatedHandle, err = linuxsandbox.Prepare(linuxsandbox.Options{
@@ -980,9 +1000,9 @@ func (s *Supervisor) statusOf(st *processState) Status {
 		status.ResourceIsolation = "linux-cgroup-v2"
 		status.ProcessIsolation = "linux-pid-namespace+cgroup-v2"
 		status.OSSandbox = "linux-user-mount-pid-ipc-uts-net+seccomp"
-		status.NetworkSandbox = "linux-disconnected-netns+local-host-ipc"
-		status.FilesystemSandbox = "linux-pivot-root+readonly-package+tmpfs-scratch"
-		status.EffectiveRestrictions = []string{"user-namespace", "mount-namespace", "pid-namespace", "ipc-namespace", "network-namespace", "no-new-privileges", "seccomp-bpf", "capabilities-dropped", "cgroups-v2-memory-pids-cpu", "recursive-readonly-package", "private-tmpfs", "runtime-lifetime"}
+		status.NetworkSandbox = "linux-disconnected-netns+scoped-https-broker"
+		status.FilesystemSandbox = "linux-pivot-root+readonly-package+tmpfs-scratch+scoped-file-broker"
+		status.EffectiveRestrictions = []string{"user-namespace", "mount-namespace", "pid-namespace", "ipc-namespace", "network-namespace", "no-new-privileges", "seccomp-bpf", "capabilities-dropped", "cgroups-v2-memory-pids-cpu", "recursive-readonly-package", "private-tmpfs", "runtime-lifetime", "scoped-host-filesystem-broker", "signed-network-origin-allowlist", "opaque-secret-operation"}
 	}
 	status.Runtime = "native"
 	if st.javaHost {
@@ -1312,12 +1332,26 @@ func (s *Supervisor) allowedCapabilities(st *processState) []string {
 		{"storage:read", "runtime.config.get"}, {"storage:write", "runtime.config.put"}, {"storage:read", "runtime.storage.get"}, {"storage:write", "runtime.storage.put"},
 		{"project:read", "project.get"}, {"release:read", "release.list"}, {"storage:read", "storage.read"},
 		{"telemetry:write", "telemetry.emit"}, {"http:outbound", "http.fetch"}, {"secrets:read", "secret.get"},
+		{"storage:read", "fs.read"}, {"storage:write", "fs.write"},
 	}
 	projectID := ""
 	if st.key.Scope == "project" {
 		projectID = st.key.ScopeID
 	}
 	for _, item := range checks {
+		if st.manifest.Sandbox == nil || st.manifest.Sandbox.Mode != "isolated" {
+			if item.capability == "fs.read" || item.capability == "fs.write" {
+				continue
+			}
+		}
+		if st.manifest.Sandbox != nil && st.manifest.Sandbox.Mode == "isolated" {
+			if item.capability == "secret.get" {
+				continue
+			} // raw secrets are not exposed to isolated processes
+			if (item.capability == "fs.read" && len(st.manifest.Sandbox.FilesystemRead) == 0) || (item.capability == "fs.write" && len(st.manifest.Sandbox.FilesystemWrite) == 0) {
+				continue
+			}
+		}
 		if ok, err := s.permissionAllowed0207(context.Background(), st, item.permission, projectID); err == nil && ok {
 			caps = append(caps, item.capability)
 		}
@@ -1345,6 +1379,7 @@ type capabilityRequest struct {
 	URL        string            `json:"url,omitempty"`
 	Headers    map[string]string `json:"headers,omitempty"`
 	BodyBase64 string            `json:"bodyBase64,omitempty"`
+	SecretName string            `json:"secretName,omitempty"`
 	Key        string            `json:"key,omitempty"`
 	Value      json.RawMessage   `json:"value,omitempty"`
 	ProfileID  string            `json:"profileId,omitempty"`
@@ -1448,6 +1483,9 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		return capabilityResult0205{value: map[string]any{"size": len(data), "contentBase64": base64.StdEncoding.EncodeToString(data)}, status: http.StatusOK}
 	case "secret.get":
+		if st.manifest.Sandbox != nil && st.manifest.Sandbox.Mode == "isolated" {
+			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("isolated extensions must use scoped secret operations; raw secret.get is prohibited")}
+		}
 		security := s.securityValue0207()
 		if security == nil {
 			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("secrets broker unavailable")}
@@ -1497,13 +1535,61 @@ func (s *Supervisor) executeCapability(ctx context.Context, st *processState, ca
 		}
 		s.repo.AddTelemetryEvent(model.TelemetryEvent{ProjectID: id, ProfileID: strings.TrimSpace(req.ProfileID), LauncherVersion: "extension:" + st.key.ExtensionID + "@" + st.install.CurrentVersion, ProfileVersion: st.install.CurrentVersion, Event: eventName, Status: strings.TrimSpace(req.Status), CreatedAt: time.Now().UTC()})
 		return capabilityResult0205{value: map[string]any{"accepted": true}, status: http.StatusAccepted}
+	case "fs.read", "fs.write":
+		return s.fileCapability03110(ctx, st, capName, req)
 	case "http.fetch":
+		if st.manifest.Sandbox != nil && st.manifest.Sandbox.Mode == "isolated" {
+			if !sandboxEnforced03110(st) {
+				return capabilityResult0205{status: http.StatusForbidden, err: errors.New("sandbox not ready")}
+			}
+			if !extensionbroker.AllowedDestination(req.URL, st.manifest.Sandbox.NetworkOutbound) {
+				return capabilityResult0205{status: http.StatusForbidden, err: errors.New("outbound origin outside signed sandbox policy")}
+			}
+		} else if req.SecretName != "" {
+			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("opaque secret-backed HTTP requires isolated sandbox")}
+		}
 		allowed, authErr := s.permissionAllowed0207(ctx, st, "http:outbound", "")
 		if authErr != nil {
 			return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("capability policy unavailable")}
 		}
 		if !allowed {
 			return capabilityResult0205{status: http.StatusForbidden, err: errors.New("permission http:outbound not granted")}
+		}
+		if req.SecretName != "" {
+			if !extensionbroker.HasGrant(st.manifest.Sandbox.Secrets, req.SecretName) {
+				return capabilityResult0205{status: http.StatusForbidden, err: errors.New("secret outside signed sandbox policy")}
+			}
+			if _, exists := req.Headers["Authorization"]; exists {
+				return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("conflicting authorization header")}
+			}
+			for k := range req.Headers {
+				if http.CanonicalHeaderKey(k) == "Authorization" {
+					return capabilityResult0205{status: http.StatusBadRequest, err: errors.New("conflicting authorization header")}
+				}
+			}
+			secretAllowed, secretErr := s.permissionAllowed0207(ctx, st, "secrets:read", st.key.ScopeID)
+			if secretErr != nil {
+				return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("secret policy unavailable")}
+			}
+			if !secretAllowed {
+				return capabilityResult0205{status: http.StatusForbidden, err: errors.New("secret capability not granted")}
+			}
+			security := s.securityValue0207()
+			if security == nil {
+				return capabilityResult0205{status: http.StatusServiceUnavailable, err: errors.New("secret broker unavailable")}
+			}
+			plain, secretErr := security.GetSecret(ctx, st.key.ExtensionID, st.key.Scope, st.key.ScopeID, req.SecretName)
+			if secretErr != nil {
+				return capabilityResult0205{status: http.StatusForbidden, err: errors.New("scoped secret unavailable")}
+			}
+			defer clear(plain)
+			if len(plain) == 0 || len(plain) > 8192 || strings.ContainsAny(string(plain), "\r\n") {
+				return capabilityResult0205{status: http.StatusForbidden, err: errors.New("invalid secret for header operation")}
+			}
+			if req.Headers == nil {
+				req.Headers = map[string]string{}
+			}
+			req.Headers["Authorization"] = "Bearer " + string(plain)
 		}
 		value, status, err := s.secureHTTPFetch0207(ctx, req.Method, req.URL, req.Headers, req.BodyBase64)
 		return capabilityResult0205{value: value, status: status, err: err}

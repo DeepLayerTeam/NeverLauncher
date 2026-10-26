@@ -168,17 +168,27 @@ func validate(o Options) error {
 	if p.MaxMemoryBytes <= 0 || p.MaxProcesses <= 0 || p.MaxCPUPercent <= 0 || p.MaxCPUPercent > 100 || p.TimeoutSeconds <= 0 {
 		return errors.New("sandbox-requires-finite-memory-pids-cpu-time")
 	}
-	if len(p.NetworkOutbound) > 0 || len(p.Secrets) > 0 {
-		return errors.New("sandbox-network-or-secret-grant-requires-broker-03110")
-	}
-	for _, g := range p.FilesystemRead {
-		if g != "package" {
-			return errors.New("sandbox-shared-read-requires-mount-broker-03110")
+	// Scoped grants are carried only to the host capability broker via the
+	// authenticated socketpair. This namespace still has no host network or
+	// shared host mounts: access cannot bypass policy checks in the broker.
+	for _, grant := range p.FilesystemRead {
+		if grant != "package" && !validSharedGrant03110(grant) {
+			return errors.New("sandbox-invalid-read-grant")
 		}
 	}
-	for _, g := range p.FilesystemWrite {
-		if g != "scratch" {
-			return errors.New("sandbox-shared-write-requires-mount-broker-03110")
+	for _, grant := range p.FilesystemWrite {
+		if grant != "scratch" && !validSharedGrant03110(grant) {
+			return errors.New("sandbox-invalid-write-grant")
+		}
+	}
+	for _, grant := range p.Secrets {
+		if !validResourceName03110(grant) {
+			return errors.New("sandbox-invalid-secret-grant")
+		}
+	}
+	for _, grant := range p.NetworkOutbound {
+		if !validDestination03110(grant) {
+			return errors.New("sandbox-invalid-network-grant")
 		}
 	}
 	if o.HostHandler == nil {

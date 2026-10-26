@@ -177,7 +177,10 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	var isolatedHandle *linuxsandbox.Handle
 	if ver.Manifest.Sandbox != nil && ver.Manifest.Sandbox.Mode == "isolated" {
 		if st.javaHost {
-			return CLIResult0209{}, errors.New("sandbox-unavailable: Java callbacks require broker in 0.31.10")
+			return CLIResult0209{}, errors.New("sandbox-unavailable: Java callbacks require authenticated reverse RPC")
+		}
+		if err := s.validateSharedRoots03110(ver.Manifest.Sandbox); err != nil {
+			return CLIResult0209{}, err
 		}
 		pol := ver.Manifest.Sandbox
 		isolatedHandle, err = linuxsandbox.Prepare(linuxsandbox.Options{

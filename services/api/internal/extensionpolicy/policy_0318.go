@@ -56,7 +56,7 @@ func netGrant(v string) bool {
 	if err != nil || port == "" || host == "" || strings.ContainsAny(host, "/%*\\") {
 		return false
 	}
-	if !hostname.MatchString(host) && net.ParseIP(host) == nil {
+	if !hostname.MatchString(host) || net.ParseIP(host) != nil || strings.HasSuffix(host, ".") {
 		return false
 	}
 	n, e := strconv.Atoi(port)
@@ -101,20 +101,6 @@ func LaunchAllowed(m model.ExtensionManifest) error {
 		return err
 	}
 	if p != nil && p.Mode == "isolated" {
-		o := linuxsandbox.Options{Policy: linuxsandbox.Policy{FilesystemRead: p.FilesystemRead, FilesystemWrite: p.FilesystemWrite, NetworkOutbound: p.NetworkOutbound, Secrets: p.Secrets, MaxMemoryBytes: p.MaxMemoryBytes, MaxProcesses: p.MaxProcesses, MaxCPUPercent: p.MaxCPUPercent, TimeoutSeconds: p.TimeoutSeconds}}
-		if len(o.Policy.NetworkOutbound) > 0 || len(o.Policy.Secrets) > 0 {
-			return errors.New("sandbox-unavailable: network/secrets require scoped broker in 0.31.10")
-		}
-		for _, g := range o.Policy.FilesystemRead {
-			if g != "package" {
-				return errors.New("sandbox-unavailable: shared filesystem grant requires broker in 0.31.10")
-			}
-		}
-		for _, g := range o.Policy.FilesystemWrite {
-			if g != "scratch" {
-				return errors.New("sandbox-unavailable: shared filesystem grant requires broker in 0.31.10")
-			}
-		}
 		if err := linuxsandbox.Available(); err != nil {
 			return fmt.Errorf("sandbox-unavailable: %w", err)
 		}
