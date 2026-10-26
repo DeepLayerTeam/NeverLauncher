@@ -1,0 +1,43 @@
+name: Windows Extension Sandbox 0.31.11
+on:
+  push:
+    paths:
+      - 'services/api/internal/windowssandbox/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionbroker/**'
+      - 'sdk/backend/go/**'
+      - 'sdk/cli/go/**'
+      - '.github/workflows/windows-extension-sandbox-03111.yml'
+  pull_request:
+  workflow_dispatch:
+jobs:
+  windows-isolation:
+    runs-on: windows-2022
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Windows SDK compilation
+        run: |
+          cd sdk/backend/go
+          go test ./...
+          cd ../../cli/go
+          go test ./...
+      - name: Windows API and AppContainer live verification
+        env:
+          NL_RUN_LIVE_WIN_SANDBOX: '1'
+        run: |
+          cd services/api
+          go test -tags neverlauncher_nopgx -count=1 -v ./internal/windowssandbox
+          go test -tags neverlauncher_nopgx -run 'TestSignedPolicy|TestExtensionHost' ./internal/extensionpolicy ./internal/extensionhost
+      - name: Windows backend build
+        run: |
+          cd services/api
+          go build -o "$env:RUNNER_TEMP/neverlauncher-api.exe" ./cmd/neverlauncher-api

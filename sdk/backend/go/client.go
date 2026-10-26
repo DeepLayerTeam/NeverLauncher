@@ -75,6 +75,9 @@ func New(env HostEnvironment) *Client {
 		MaxIdleConnsPerHost: 4,
 		IdleConnTimeout:     30 * time.Second,
 	}
+	if dial := hostPipeDialer(); dial != nil {
+		transport.DialContext = dial
+	}
 	return &Client{env: env, http: &http.Client{Transport: transport, Timeout: defaultTimeout, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}}
 }
 

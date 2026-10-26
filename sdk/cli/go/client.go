@@ -43,6 +43,9 @@ func NewFromEnvironment() (*Client, error) {
 		return nil, err
 	}
 	tr := &http.Transport{Proxy: nil, DialContext: (&net.Dialer{Timeout: 3 * time.Second}).DialContext, MaxIdleConns: 4, IdleConnTimeout: 15 * time.Second}
+	if dial := hostPipeDialer(); dial != nil {
+		tr.DialContext = dial
+	}
 	return &Client{env: env, http: &http.Client{Transport: tr, Timeout: 10 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}}, nil
 }
 func (c *Client) Environment() HostEnvironment { return c.env }

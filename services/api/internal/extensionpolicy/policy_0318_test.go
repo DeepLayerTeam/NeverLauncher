@@ -1,6 +1,8 @@
 package extensionpolicy
 
 import (
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/windowssandbox"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -40,8 +42,12 @@ func TestSignedPolicy0318NormalizeAndReject(t *testing.T) {
 	}
 }
 func TestSignedPolicy0318FailClosedRuntime(t *testing.T) {
-	if err := LaunchAllowed(signedPolicy0318()); err == nil || !strings.Contains(err.Error(), "sandbox-unavailable") {
-		t.Fatalf("isolated launch accepted: %v", err)
+	if err := LaunchAllowed(signedPolicy0318()); runtime.GOOS == "windows" && windowssandbox.Available() == nil {
+		if err != nil {
+			t.Fatalf("Windows AppContainer preflight refused: %v", err)
+		}
+	} else if err == nil || !strings.Contains(err.Error(), "sandbox-unavailable") {
+		t.Fatalf("isolated policy accepted without sandbox capability: %v", err)
 	}
 	legacy := signedPolicy0318()
 	legacy.Sandbox = nil

@@ -32,7 +32,6 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/linuxsandbox"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
@@ -247,7 +246,7 @@ type processState struct {
 	rpcCheckAt                                                time.Time
 	rpcFailures                                               int
 	terminationInitiated                                      bool
-	sandbox                                                   *linuxsandbox.Handle
+	sandbox                                                   *extensionSandbox03111
 	sandboxReady                                              bool
 }
 
@@ -559,7 +558,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 		"NEVERLAUNCHER_EXTENSION_HOST_URL": baseURL, "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": token, "NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "NEVERLAUNCHER_EXTENSION_API_VERSION": extensioncontract.ExtensionAPIVersion, "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": instance,
 		"NEVERLAUNCHER_EXTENSION_ID": install.ExtensionID, "NEVERLAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "NEVERLAUNCHER_EXTENSION_SCOPE": install.Scope, "NEVERLAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID, "NEVERLAUNCHER_EXTENSION_TARGET": "backend",
 	})
-	var isolatedHandle *linuxsandbox.Handle
+	var isolatedHandle *extensionSandbox03111
 	if manifestVersion.Manifest.Sandbox != nil && manifestVersion.Manifest.Sandbox.Mode == "isolated" {
 		if st.javaHost {
 			s.removeProcessToken(st)
@@ -569,13 +568,7 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 			s.removeProcessToken(st)
 			return err
 		}
-		pol := manifestVersion.Manifest.Sandbox
-		isolatedHandle, err = linuxsandbox.Prepare(linuxsandbox.Options{
-			PayloadRoot: payloadRoot, Entrypoint: entrypoint, Args: cmd.Args[1:], Environment: cmd.Env,
-			HostURL: baseURL, HostHandler: s.server.Handler,
-			Policy: linuxsandbox.Policy{FilesystemRead: pol.FilesystemRead, FilesystemWrite: pol.FilesystemWrite, NetworkOutbound: pol.NetworkOutbound, Secrets: pol.Secrets,
-				MaxMemoryBytes: pol.MaxMemoryBytes, MaxProcesses: pol.MaxProcesses, MaxCPUPercent: pol.MaxCPUPercent, TimeoutSeconds: pol.TimeoutSeconds},
-		})
+		isolatedHandle, err = prepareExtensionSandbox03111(payloadRoot, entrypoint, cmd, baseURL, s.server.Handler, manifestVersion.Manifest.Sandbox)
 		if err != nil {
 			s.removeProcessToken(st)
 			return fmt.Errorf("sandbox-unavailable: %w", err)
@@ -1003,6 +996,14 @@ func (s *Supervisor) statusOf(st *processState) Status {
 		status.NetworkSandbox = "linux-disconnected-netns+scoped-https-broker"
 		status.FilesystemSandbox = "linux-pivot-root+readonly-package+tmpfs-scratch+scoped-file-broker"
 		status.EffectiveRestrictions = []string{"user-namespace", "mount-namespace", "pid-namespace", "ipc-namespace", "network-namespace", "no-new-privileges", "seccomp-bpf", "capabilities-dropped", "cgroups-v2-memory-pids-cpu", "recursive-readonly-package", "private-tmpfs", "runtime-lifetime", "scoped-host-filesystem-broker", "signed-network-origin-allowlist", "opaque-secret-operation"}
+		if st.sandbox.windows != nil {
+			status.ResourceIsolation = "windows-job-object-memory-cpu-process"
+			status.ProcessIsolation = "windows-appcontainer+job-no-breakaway"
+			status.OSSandbox = "windows-appcontainer"
+			status.NetworkSandbox = "windows-appcontainer-no-network-capability+named-pipe-host-broker"
+			status.FilesystemSandbox = "windows-appcontainer-acl-readonly-package+private-profile-scratch+scoped-file-broker"
+			status.EffectiveRestrictions = []string{"appcontainer-token", "per-extension-profile-sid", "package-read-execute-acl", "private-scratch", "job-kill-on-close", "job-process-memory-limit", "job-total-memory-limit", "job-cpu-hard-cap", "job-active-process-limit", "no-job-breakaway", "runtime-lifetime", "named-pipe-ipc-acl", "scoped-host-filesystem-broker", "signed-network-origin-allowlist", "opaque-secret-operation"}
+		}
 	}
 	status.Runtime = "native"
 	if st.javaHost {
@@ -1011,6 +1012,9 @@ func (s *Supervisor) statusOf(st *processState) Status {
 	}
 	if st.cmd != nil && st.cmd.Process != nil {
 		status.PID = st.cmd.Process.Pid
+		if st.sandbox != nil && st.sandbox.PID() > 0 {
+			status.PID = st.sandbox.PID()
+		}
 	}
 	if !st.startedAt.IsZero() {
 		x := st.startedAt
@@ -1063,6 +1067,9 @@ func (s *Supervisor) monitorOnce(now time.Time) {
 		pid := 0
 		if st.cmd != nil && st.cmd.Process != nil {
 			pid = st.cmd.Process.Pid
+			if st.sandbox != nil && st.sandbox.PID() > 0 {
+				pid = st.sandbox.PID()
+			}
 		}
 		hb := st.heartbeatAt
 		hello := st.helloAt
@@ -1122,8 +1129,12 @@ func loopbackRequest(r *http.Request) bool {
 	return ip != nil && ip.IsLoopback()
 }
 func (s *Supervisor) authenticate(w http.ResponseWriter, r *http.Request) (*processState, bool) {
-	if !loopbackRequest(r) {
-		http.Error(w, "loopback required", http.StatusForbidden)
+	// The Windows IPC listener is not TCP. Only its exact per-instance named
+	// pipe may authenticate a sandboxed extension; regular TCP stays loopback.
+	tcpLoopback := loopbackRequest(r)
+	pipeRequest := strings.HasPrefix(r.RemoteAddr, `\\.\pipe\LOCAL\NeverLauncher-Extension-`)
+	if !tcpLoopback && !pipeRequest {
+		http.Error(w, "loopback or authenticated sandbox pipe required", http.StatusForbidden)
 		return nil, false
 	}
 	auth := strings.TrimSpace(r.Header.Get("Authorization"))
@@ -1137,6 +1148,16 @@ func (s *Supervisor) authenticate(w http.ResponseWriter, r *http.Request) (*proc
 	s.mu.RUnlock()
 	if st == nil || subtle.ConstantTimeCompare([]byte(token), []byte(st.token)) != 1 {
 		http.Error(w, "invalid host token", http.StatusUnauthorized)
+		return nil, false
+	}
+	if pipeRequest && (st.sandbox == nil || st.sandbox.windows == nil || r.RemoteAddr != st.sandbox.windows.HostPipe()) {
+		http.Error(w, "named pipe does not belong to extension instance", http.StatusForbidden)
+		return nil, false
+	}
+	if tcpLoopback && st.sandbox != nil && st.sandbox.windows != nil {
+		// An AppContainer must never bypass the policy-controlled pipe by
+		// using the ordinary loopback listener.
+		http.Error(w, "isolated extension must use named IPC", http.StatusForbidden)
 		return nil, false
 	}
 	return st, true
@@ -1199,13 +1220,18 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 	expectedPID := 0
 	if st.cmd != nil && st.cmd.Process != nil {
 		expectedPID = st.cmd.Process.Pid
+		if st.sandbox != nil && st.sandbox.PID() > 0 {
+			expectedPID = st.sandbox.PID()
+		}
 	}
 	if st.sandbox != nil && req.CallbackURL != "" {
 		st.mu.Unlock()
 		http.Error(w, "sandbox-callback-broker-unavailable", http.StatusConflict)
 		return
 	}
-	if (st.sandbox == nil && req.PID != 0 && expectedPID != 0 && req.PID != expectedPID) || (st.sandbox != nil && req.PID != 1) {
+	if (st.sandbox == nil && req.PID != 0 && expectedPID != 0 && req.PID != expectedPID) ||
+		(st.sandbox != nil && st.sandbox.linux != nil && req.PID != 1) ||
+		(st.sandbox != nil && st.sandbox.windows != nil && (expectedPID == 0 || req.PID != expectedPID)) {
 		st.mu.Unlock()
 		http.Error(w, "pid mismatch", 409)
 		return

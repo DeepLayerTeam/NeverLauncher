@@ -3,6 +3,8 @@
 package extensionpolicy
 
 import (
+	"runtime"
+
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -16,6 +18,7 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/linuxsandbox"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/windowssandbox"
 )
 
 var resourceName = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,63}$`)
@@ -101,7 +104,13 @@ func LaunchAllowed(m model.ExtensionManifest) error {
 		return err
 	}
 	if p != nil && p.Mode == "isolated" {
-		if err := linuxsandbox.Available(); err != nil {
+		var err error
+		if runtime.GOOS == "windows" {
+			err = windowssandbox.Available()
+		} else {
+			err = linuxsandbox.Available()
+		}
+		if err != nil {
 			return fmt.Errorf("sandbox-unavailable: %w", err)
 		}
 	}

@@ -2,15 +2,27 @@
 
 package extensionhost
 
-import "runtime"
+import (
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/windowssandbox"
+	"runtime"
+)
 
 func probePlatformIsolation0311(d *IsolationDiagnostics0311) {
 	switch runtime.GOOS {
 	case "windows":
-		d.AppContainer = Capability0311{"unknown", "appcontainer-token-not-created"}
-		d.JobObjects = Capability0311{"unknown", "job-confinement-not-applied"}
+		if err := windowssandbox.Available(); err != nil {
+			d.AppContainer = Capability0311{"blocked", "appcontainer-API-unavailable"}
+			d.JobObjects = Capability0311{"blocked", "job-object-API-unavailable"}
+		} else {
+			d.AppContainer = Capability0311{"detected", "AppContainer-capable-not-yet-enforced"}
+			d.JobObjects = Capability0311{"detected", "Job-Objects-capable-not-yet-enforced"}
+		}
 	case "darwin":
 		d.AppSandbox = Capability0311{"unknown", "signed-sandbox-helper-not-provisioned"}
 	}
-	d.ReasonCodes = append(d.ReasonCodes, "network-and-filesystem-not-confined", "process-tree-not-confined")
+	if runtime.GOOS == "windows" {
+		d.ReasonCodes = append(d.ReasonCodes, "per-extension-AppContainer-status-required-for-enforcement")
+	} else {
+		d.ReasonCodes = append(d.ReasonCodes, "network-and-filesystem-not-confined", "process-tree-not-confined")
+	}
 }
