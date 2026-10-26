@@ -1,0 +1,44 @@
+name: SQLite DEP00 durable storage (0.32.1)
+on:
+  push:
+    paths:
+      - "services/api/internal/sqlitedurable/**"
+      - "services/api/cmd/neverlauncher-sqlite/**"
+      - "services/api/go.mod"
+      - "services/api/go.sum"
+      - ".github/workflows/sqlite-dep00-0321.yml"
+  pull_request:
+  workflow_dispatch:
+jobs:
+  sqlite-dep00:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.3"
+          cache-dependency-path: services/api/go.sum
+      - name: Validate local filesystem and Go module resolution
+        run: |
+          set -euo pipefail
+          go mod download
+          go mod tidy
+          go mod verify
+          mkdir -p "$RUNNER_TEMP/never-sqlite-dep00"
+          chmod 0700 "$RUNNER_TEMP/never-sqlite-dep00"
+          stat -f -c '%T' "$RUNNER_TEMP/never-sqlite-dep00"
+      - name: Real WAL crash, process fencing and transaction tests
+        env:
+          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: "1"
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-dep00
+        run: go test -race -count=1 -v ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+      - name: Build actual CLI
+        run: go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+      - name: Real CLI probe and verification
+        run: |
+          "$RUNNER_TEMP/neverlauncher-sqlite" probe --db "$RUNNER_TEMP/never-sqlite-dep00/preflight.sqlite"
+          "$RUNNER_TEMP/neverlauncher-sqlite" verify --db "$RUNNER_TEMP/never-sqlite-dep00/preflight.sqlite"

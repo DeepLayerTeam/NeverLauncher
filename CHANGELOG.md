@@ -1,3 +1,11 @@
+## 0.32.1 — DEP00 SQLite Driver & WAL (baseline; 2026-10-26)
+
+- Added fail-closed `internal/sqlitedurable` SQLite 3.54.1 driver (`modernc.org/sqlite` v1.61.0) for real on-disk WAL transactions, one-writer / bounded-reader pools, `BEGIN IMMEDIATE`, rollback on error, and explicit uncertain-commit failures.
+- Added Linux ext4/xfs/btrfs filesystem verification, symlink/permission/owner guards, durable file and directory fsync probe, and cross-process exclusive owner locking. Other filesystems/OSes are not certified and reject SQLite opening.
+- Added a `neverlauncher-sqlite verify|probe --db <path>` operational binary; `probe` actually commits a record, closes the DB, reopens it, and checks durability.
+- Added process/crash/rollback/concurrency/fail-closed tests and a DEP00 CI job; updated backend Go build toolchain to 1.27.3.
+- SQLite is **NOT** yet an API repository or single-node installation mode: DEP01–DEP10 remain necessary. Production API stays on PostgreSQL until parity is verified.
+
 ## 0.31.9 — Linux Native Extension Sandbox (2026-10-26)
 
 - Implement kernel-backed sandbox for signed `isolated` native Backend and CLI targets on supported Linux x86-64: user/mount/PID/network/IPC/UTS namespaces, `pivot_root`, recursive read-only bind mounts, private `/proc`, scratch tmpfs, locked securebits, no-new-privileges, capability drop and seccomp BPF.
