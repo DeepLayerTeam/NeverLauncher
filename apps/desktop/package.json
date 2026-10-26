@@ -16,7 +16,7 @@
     "verify:assets": "node ../../scripts/desktop/prebuild_assets_03011.mjs verify --dist dist"
   },
   "dependencies": {
-    "@tauri-apps/api": "2.5.0",
+    "@tauri-apps/api": "2.12.4",
     "@vitejs/plugin-react": "6.0.2",
     "react": "19.2.6",
     "react-dom": "19.2.6",
