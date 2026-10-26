@@ -1092,3 +1092,35 @@ pub fn windows_tpm_certify_0313(
         serde_json::to_value(evidence).map_err(|e|e.to_string())
     }
 }
+
+/// Linux TPM2 Certify against the exact previously registered hardware-enclave
+/// signing identity. The AK is enrolled out-of-band and persisted in the TPM.
+/// No software attestation, key replacement, or permission downgrade.
+pub fn linux_tpm_certify_0314(
+    backend_url: &str, user_id: &str, device_id: &str,
+    tpm_extra_data_sha256: &str, ak_handle: &str,
+    ak_certificate_pem: &str, intermediates_pem: Vec<String>,
+) -> Result<serde_json::Value, String> {
+    #[cfg(not(target_os="linux"))]
+    {
+        let _=(backend_url,user_id,device_id,tpm_extra_data_sha256,ak_handle,ak_certificate_pem,intermediates_pem);
+        Err("Native Linux TPM evidence requires Linux glibc and a TPM 2.0 device".into())
+    }
+    #[cfg(target_os="linux")]
+    {
+        let user=normalize_user_id(user_id)?;
+        let record=load_record(backend_url,&user)?.ok_or("No registered Linux device key")?;
+        if record.user_id!=user || record.device_id.as_deref()!=Some(device_id) ||
+           record.key_algorithm!="p256" || record.key_binding!="hardware" ||
+           !record.hardware_provider.eq_ignore_ascii_case("LinuxTpm") {
+            return Err("Registered Linux TPM P-256 signing identity required (not keyring/software/WSL)".into());
+        }
+        // Also verifies that the actual hardware-enclave signer still owns
+        // exactly the public key registered to this device.
+        let _=validate_hardware_record(&record)?;
+        let sec1=URL_SAFE_NO_PAD.decode(&record.public_key).map_err(|_|"corrupt registered public key")?;
+        let proof=crate::tpm_linux_0314::certify(&record.hardware_label,&sec1,
+            tpm_extra_data_sha256,ak_handle,ak_certificate_pem,intermediates_pem)?;
+        serde_json::to_value(proof).map_err(|e|e.to_string())
+    }
+}

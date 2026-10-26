@@ -84,11 +84,16 @@ pub fn parse_public_response(resp: &[u8]) -> Result<(Vec<u8>, [u8;65]), String> 
     if attrs & required != required { return Err("TPM device key is not fixed TPM-origin signing key".into()); }
     let (_, policy_end) = item(b, 8, 64)?;
     if b.len() < policy_end + 8 { return Err("truncated TPM ECC parameters".into()); }
-    if be16(&b[policy_end..])? != 0x0010 || be16(&b[policy_end+2..])? != 0x0010 ||
-       be16(&b[policy_end+4..])? != 0x0003 || be16(&b[policy_end+6..])? != 0x0010 {
-        return Err("TPM ECC params not NIST P-256/null".into());
+    if be16(&b[policy_end..])? != 0x0010 {return Err("TPM ECC symmetric must be null".into());}
+    let scheme=be16(&b[policy_end+2..])?;
+    let curve_offset=if scheme==0x0010 {policy_end+4} else if scheme==0x0018 {
+        if be16(&b[policy_end+4..])? != 0x000b {return Err("TPM ECDSA key must use SHA-256".into());}
+        policy_end+6
+    } else {return Err("unsupported TPM ECC signing scheme".into());};
+    if be16(&b[curve_offset..])? != 0x0003 || be16(&b[curve_offset+2..])? != 0x0010 {
+        return Err("TPM ECC curve/KDF not NIST P-256/null".into());
     }
-    let (x, nx) = item(b, policy_end + 8, 32)?;
+    let (x, nx) = item(b, curve_offset+4, 32)?;
     let (y, ny) = item(b, nx, 32)?;
     if x.len() != 34 || y.len() != 34 || ny != b.len() { return Err("invalid TPM P-256 coordinates".into()); }
     let mut sec1 = [0u8; 65]; sec1[0] = 4;
@@ -184,5 +189,31 @@ mod test_vectors {
         assert!(parse_certify_response(&bad,&extra).is_err());
         let mut short=resp;short.truncate(short.len()-1);
         assert!(parse_certify_response(&short,&extra).is_err());
+    }
+}
+
+#[cfg(test)]
+mod linux_signing_scheme_tests_0314 {
+    use super::*;
+    #[test]
+    fn accepts_linux_hardware_enclave_scheme_only_when_sha256() {
+        let mut tpmt=Vec::new();
+        tpmt.extend_from_slice(&0x0023u16.to_be_bytes());
+        tpmt.extend_from_slice(&0x000bu16.to_be_bytes());
+        tpmt.extend_from_slice(&((1u32<<1)|(1<<4)|(1<<5)|(1<<18)).to_be_bytes());
+        tpmt.extend_from_slice(&[0,0]); // empty authPolicy
+        for w in [0x0010u16, 0x0018, 0x000b, 0x0003, 0x0010] {tpmt.extend_from_slice(&w.to_be_bytes());}
+        let x=hex::decode("6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296").unwrap();
+        let y=hex::decode("4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5").unwrap();
+        for coord in [x,y] {tpmt.extend_from_slice(&32u16.to_be_bytes());tpmt.extend_from_slice(&coord);}
+        let mut params=(tpmt.len() as u16).to_be_bytes().to_vec();params.extend_from_slice(&tpmt);
+        params.extend_from_slice(&[0,0,0,0]);
+        let mut frame=Vec::new();frame.extend_from_slice(&0x8001u16.to_be_bytes());
+        frame.extend_from_slice(&((10+params.len()) as u32).to_be_bytes());frame.extend_from_slice(&[0;4]);frame.extend_from_slice(&params);
+        assert!(parse_public_response(&frame).is_ok());
+        // The hash parameter in the ECC scheme is at TPMT_PUBLIC index 14-15.
+        let hash_offset=10+2+2+2+4+2+2+2;
+        frame[hash_offset+1]=0x04;
+        assert!(parse_public_response(&frame).is_err());
     }
 }

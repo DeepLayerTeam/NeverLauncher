@@ -153,6 +153,18 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 	if e != nil {
 		return nil, nil, e
 	}
+	// Linux hardware-enclave 0.2.10 generates unrestricted P-256 signing
+	// children with TPMT_ECC_SCHEME=ECDSA(SHA-256). Windows PCP may encode
+	// NULL. Both are valid; accepting ECDSA must consume its mandatory
+	// hash parameter, never misinterpret it as the curve identifier.
+	if scheme == tpmECDSA {
+		schemeHash, err := p.u16()
+		if err != nil || schemeHash != tpmSHA256 {
+			return nil, nil, errors.New("TPM ECC scheme must use ECDSA SHA-256")
+		}
+	} else if scheme != tpmNull {
+		return nil, nil, errors.New("unsupported TPM ECC signing scheme")
+	}
 	curve, e := p.u16()
 	if e != nil {
 		return nil, nil, e
@@ -161,7 +173,7 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 	if e != nil {
 		return nil, nil, e
 	}
-	if symmetric != tpmNull || scheme != tpmNull || curve != tpmNISTP256 || kdf != tpmNull {
+	if symmetric != tpmNull || curve != tpmNISTP256 || kdf != tpmNull {
 		return nil, nil, errors.New("unsupported TPM ECC public parameters")
 	}
 	x, e := p.tpm2b(32)

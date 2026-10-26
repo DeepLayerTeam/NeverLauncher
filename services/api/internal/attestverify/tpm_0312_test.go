@@ -23,6 +23,9 @@ func be32(v uint32) []byte  { return []byte{byte(v >> 24), byte(v >> 16), byte(v
 func sized(b []byte) []byte { return append(be16(uint16(len(b))), b...) }
 func b64(b []byte) string   { return base64.RawURLEncoding.EncodeToString(b) }
 func makeCertifyFixture(t *testing.T) (Evidence, Binding, *Store, func(RootFile)) {
+	return makeCertifyFixtureWithScheme(t, false)
+}
+func makeCertifyFixtureWithScheme(t *testing.T, linuxEcdsaScheme bool) (Evidence, Binding, *Store, func(RootFile)) {
 	t.Helper()
 	now := time.Now().UTC().Truncate(time.Second)
 	rootKey, e := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -75,7 +78,12 @@ func makeCertifyFixture(t *testing.T) (Evidence, Binding, *Store, func(RootFile)
 	payload = append(payload, be32(1<<1|1<<4|1<<5|1<<18)...)
 	payload = append(payload, sized(nil)...)
 	payload = append(payload, be16(tpmNull)...)
-	payload = append(payload, be16(tpmNull)...)
+	if linuxEcdsaScheme {
+		payload = append(payload, be16(tpmECDSA)...)
+		payload = append(payload, be16(tpmSHA256)...)
+	} else {
+		payload = append(payload, be16(tpmNull)...)
+	}
 	payload = append(payload, be16(tpmNISTP256)...)
 	payload = append(payload, be16(tpmNull)...)
 	payload = append(payload, sized(pubPoint[1:33])...)
@@ -215,4 +223,30 @@ func TestMalformedTPMRejectsTrailingBytes0312(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLinuxHardwareEnclaveECDSAKeyScheme0314(t *testing.T) {
+	ev, binding, roots, _ := makeCertifyFixtureWithScheme(t, true)
+	if _, err := Verify(ev, binding, roots, time.Now().UTC()); err != nil {
+		t.Fatalf("real Linux TPM key template rejected: %v", err)
+	}
+	orig, _ := base64.RawURLEncoding.DecodeString(ev.TPM2BPublic)
+	// TPMT_PUBLIC offsets: type[2], nameAlg[2], attrs[4], authPolicy[2],
+	// symmetric[2], scheme[2], schemeHash[2]. Reject SHA-1 and unknown.
+	for _, tc := range []struct {
+		name   string
+		offset int
+		value  byte
+	}{
+		{"sha1", 17, 0x04}, {"unknown-scheme", 15, 0xff},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			corrupted := append([]byte(nil), orig...)
+			corrupted[tc.offset] = tc.value
+			if _, _, err := parsePublic(corrupted); err == nil {
+				t.Fatal("unsupported TPM ECC scheme/hash accepted")
+			}
+		})
+	}
+	// The root, AK and signed cert still do not establish Guard/PCR trust.
 }

@@ -1,6 +1,6 @@
 [package]
 name = "neverlauncher-desktop"
-version = "0.31.3"
+version = "0.31.4"
 description = "Desktop-клиент NeverLauncher"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
@@ -29,3 +29,7 @@ zeroize = "1"
 # поскольку выбор бэкенда и поведение резервного режима влияют на безопасность.
 hardware-enclave = { version = "=0.2.10", default-features = false, features = ["signing", "encryption", "linux-tpm"] }
 p256 = { version = "0.13", features = ["ecdsa"] }
+
+# Native Linux TPM producer: harden TPM blob reads with O_NOFOLLOW and UID checks.
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"

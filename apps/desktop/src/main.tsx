@@ -821,12 +821,12 @@ function App() {
     return persistTrustedAccess(session, data.accessToken);
   }
 
-  async function certifyWindowsTPM0313(): Promise<void> {
+  async function certifyPlatformTPM0314(): Promise<void> {
     if (!authSession?.accessToken || !deviceKey?.deviceId ||
         deviceKey.keyBinding !== 'hardware' || deviceKey.keyAlgorithm !== 'p256' ||
-        !/Win/i.test(navigator.platform)) throw new Error('Windows TPM device and authenticated bound session required');
+        !/(Win|Linux)/i.test(navigator.platform)) throw new Error('Windows/Linux TPM device and authenticated bound session required');
     if (!windowsAkName0313.trim() || !windowsAkCert0313.includes('-----BEGIN CERTIFICATE-----')) {
-      throw new Error('Provisioned AK PCP key name and issuer-certified AK leaf PEM required');
+      throw new Error('Provisioned Windows AK name / Linux AK persistent handle and issuer-certified AK PEM required');
     }
     if (tpmBusy0313) return;
     setTpmBusy0313(true);
@@ -846,10 +846,11 @@ function App() {
       const evidence = await callTauri<{
         tpm2bPublic: string; tpm2bAttest: string; tpmtSignature: string;
         akCertificatePem: string; intermediatesPem: string[];
-      }>('windows_tpm_certify_0313', {
+      }>(/Linux/i.test(navigator.platform) ? 'linux_tpm_certify_0314' : 'windows_tpm_certify_0313', {
         backendUrl: settings.backendUrl, userId: authSession.userId,
         deviceId: deviceKey.deviceId, tpmExtraDataSha256: challenge.tpmExtraDataSha256,
-        akKeyName: windowsAkName0313.trim(), akCertificatePem: windowsAkCert0313.trim(),
+        ...(/Linux/i.test(navigator.platform) ? { akHandle: windowsAkName0313.trim() } : { akKeyName: windowsAkName0313.trim() }),
+        akCertificatePem: windowsAkCert0313.trim(),
         intermediatesPem: windowsAkChain0313.trim() ? [windowsAkChain0313.trim()] : [],
       });
       // Server consumes the challenge even if validation fails, preventing replay.
@@ -864,7 +865,7 @@ function App() {
         throw new Error('Unexpected server verification semantics');
       }
       setTpmStatus0313(`tpm-ak-certified · CA=${result.rootId} · expires=${result.expiresAt} · Guard/PCR not verified`);
-      log(`Windows TPM Certify verified by backend: device=${deviceKey.deviceId}; CA=${result.rootId}; Guard/PCR not verified`);
+      log(`TPM Certify verified by backend: device=${deviceKey.deviceId}; CA=${result.rootId}; Guard/PCR not verified`);
       await loadManagedDevices();
     } catch (error) {
       setTpmStatus0313(`not-verified: ${String(error)}`);
@@ -1892,17 +1893,17 @@ function App() {
         {screen === 'firstRun' && <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} /> }
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} authProviders0293={authProviders0293} routing0293={routing0293} selectedAuthProvider0293={selectedAuthProvider0293} setSelectedAuthProvider0293={setSelectedAuthProvider0293} authProviderError0293={authProviderError0293} setAuthProviderError0293={setAuthProviderError0293} linkedProvider0293={linkedProvider0293} setLinkedProvider0293={setLinkedProvider0293} linkedIdentifier0293={linkedIdentifier0293} setLinkedIdentifier0293={setLinkedIdentifier0293} linkedPassword0293={linkedPassword0293} setLinkedPassword0293={setLinkedPassword0293} linkFeedback0293={linkFeedback0293} setLinkFeedback0293={setLinkFeedback0293} linkPasswordProvider0293={linkPasswordProvider0293} />}
-        {screen === 'auth' && /Win/i.test(navigator.platform) && <section className="panel">
-          <h3>Windows TPM Key Attestation (0.31.3)</h3>
-          <p>TPM2_Certify для существующего зарегистрированного P-256 ключа. AK должен быть заранее выпущен доверенным TPM Attestation CA и доступен через Microsoft Platform Crypto Provider. Это не проверка Guard/PCR и не античит.</p>
+        {screen === 'auth' && /(Win|Linux)/i.test(navigator.platform) && <section className="panel">
+          <h3>Windows/Linux TPM Key Attestation (0.31.4)</h3>
+          <p>TPM2_Certify для существующего зарегистрированного P-256 ключа. AK должен быть заранее выпущен доверенным TPM Attestation CA. Windows использует Platform Crypto Provider; Linux — предварительно provisioned persistent TPM AK handle 0x81xxxxxx. Это не проверка Guard/PCR и не античит.</p>
           <div className="settings">
-            <label>Имя AK в Windows Platform Crypto Provider<input value={windowsAkName0313} onChange={e=>setWindowsAkName0313(e.target.value)} placeholder="Имя ранее выпущенного AK в PCP" /></label>
+            <label>{/Linux/i.test(navigator.platform) ? "Linux AK persistent handle (0x81xxxxxx)" : "Имя AK в Windows Platform Crypto Provider"}<input value={windowsAkName0313} onChange={e=>setWindowsAkName0313(e.target.value)} placeholder={/Linux/i.test(navigator.platform) ? "0x81010001" : "Имя AK в PCP"} /></label>
             <label>AK X.509 leaf certificate PEM<textarea rows={4} value={windowsAkCert0313} onChange={e=>setWindowsAkCert0313(e.target.value)} placeholder="-----BEGIN CERTIFICATE-----" /></label>
             <label>Промежуточный сертификат PEM (если нужен)<textarea rows={3} value={windowsAkChain0313} onChange={e=>setWindowsAkChain0313(e.target.value)} /></label>
           </div>
-          <button disabled={tpmBusy0313 || !authSession || !deviceKey?.deviceId || deviceKey.keyBinding !== 'hardware' || deviceKey.keyAlgorithm !== 'p256'} onClick={() => certifyWindowsTPM0313().catch((e:Error)=>log(`Windows TPM Certify: ${String(e)}`))}>{tpmBusy0313 ? 'Проверка TPM…' : 'Подтвердить TPM-происхождение'}</button>
+          <button disabled={tpmBusy0313 || !authSession || !deviceKey?.deviceId || deviceKey.keyBinding !== 'hardware' || deviceKey.keyAlgorithm !== 'p256'} onClick={() => certifyPlatformTPM0314().catch((e:Error)=>log(`TPM Certify: ${String(e)}`))}>{tpmBusy0313 ? 'Проверка TPM…' : 'Подтвердить TPM-происхождение'}</button>
           <p role="status">{tpmStatus0313}</p>
-          <small>Если TPM запрещает пустую auth-сессию для PCP-ключа, попытка завершается отказом, без выдачи аппаратного assurance. AK root policy задаётся оператором на Backend.</small>
+          <small>Linux: необходимы /dev/tpmrm0, tpm2-tools 5.x и AK на TPM persistent handle. Windows: пустая auth-сессия PCP-ключа. Несовместимые TPM/AK завершаются отказом без аппаратного assurance. AK root policy задаётся оператором на Backend.</small>
         </section>}
         {screen === 'auth' && authSession && deviceKey?.deviceId && accessTokenDeviceId(authSession.accessToken) === deviceKey.deviceId && <HWIDRisk0299 backendUrl={settings.backendUrl} token={authSession.accessToken} deviceId={deviceKey.deviceId} />}
         {screen === 'auth' && authSession?.accessToken && officialMinecraftClient.current && <>

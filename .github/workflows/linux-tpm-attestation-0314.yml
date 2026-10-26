@@ -1,0 +1,41 @@
+name: Linux TPM2 Certify 0.31.4
+on:
+  push:
+    paths:
+      - 'apps/desktop/src-tauri/src/tpm_linux_0314.rs'
+      - 'apps/desktop/src-tauri/src/tpm_wire_0313.rs'
+      - 'apps/desktop/src-tauri/src/device_keys.rs'
+      - 'apps/desktop/src-tauri/src/main.rs'
+      - 'apps/desktop/src-tauri/Cargo.toml'
+      - 'services/api/internal/attestverify/**'
+      - '.github/workflows/linux-tpm-attestation-0314.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux-native-build-and-parser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install native Tauri and TPM development libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libtss2-dev tpm2-tools libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev patchelf
+      - name: Linux TPM negative tests and production desktop compilation
+        run: |
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_linux_0314
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_wire_0313
+          cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml
+  backend-native-scheme-and-verifier:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Real X.509 and TPM binary fixture negative tests
+        working-directory: services/api
+        run: go test -race -count=1 ./internal/attestverify ./internal/trustbaseline
