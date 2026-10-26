@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitecore"
 	"os"
 	"time"
 
@@ -16,8 +17,11 @@ import (
 
 func main() { os.Exit(run(os.Args[1:])) }
 func run(args []string) int {
-	if len(args) == 0 || (args[0] != "verify" && args[0] != "probe") {
-		fmt.Fprintln(os.Stderr, "usage: neverlauncher-sqlite {verify|probe} --db /secure/local/directory/state.db")
+	if len(args) > 0 && isCoreAction(args[0]) {
+		return runCoreAction(args)
+	}
+	if len(args) == 0 || (args[0] != "verify" && args[0] != "probe" && args[0] != "core-init" && args[0] != "core-status") {
+		fmt.Fprintln(os.Stderr, "usage: neverlauncher-sqlite {verify|probe|core-init|core-status} --db /secure/local/directory/state.db")
 		return 2
 	}
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
@@ -34,9 +38,33 @@ func run(args []string) int {
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 	opts := sqlitedurable.Options{Path: *path, Readers: *readers}
-	payload := map[string]any{"component": "sqlite-dep00", "platform": sqlitedurable.Platform(), "driver": sqlitedurable.DriverVersion, "sqliteEngine": sqlitedurable.EngineVersion, "operation": args[0]}
+	payload := map[string]any{"component": "sqlite-storage", "platform": sqlitedurable.Platform(), "driver": sqlitedurable.DriverVersion, "sqliteEngine": sqlitedurable.EngineVersion, "operation": args[0]}
 	var err error
-	if args[0] == "probe" {
+	if args[0] == "core-init" || args[0] == "core-status" {
+		var repo *sqlitecore.Repository
+		if args[0] == "core-init" {
+			repo, err = sqlitecore.Open(ctx, opts)
+		} else {
+			// core-status must never create a previously nonexistent file.
+			if _, statErr := os.Stat(*path); statErr != nil {
+				err = statErr
+			} else {
+				repo, err = sqlitecore.OpenExisting(ctx, opts)
+			}
+		}
+		if err == nil {
+			var counts map[string]int64
+			counts, err = repo.Count(ctx)
+			if err == nil {
+				payload["schemaVersion"] = sqlitecore.SchemaVersion
+				payload["counts"] = counts
+			}
+			closeErr := repo.Close()
+			if err == nil {
+				err = closeErr
+			}
+		}
+	} else if args[0] == "probe" {
 		var status sqlitedurable.WALStatus
 		status, err = sqlitedurable.ProbeDurability(ctx, opts)
 		if err == nil {
@@ -57,7 +85,7 @@ func run(args []string) int {
 		}
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "sqlite DEP00 failed closed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "sqlite storage failed closed: %v\n", err)
 		return 1
 	}
 	payload["status"] = "ok"

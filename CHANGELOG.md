@@ -1,3 +1,10 @@
+## 0.32.2 — DEP01 SQLite Core Repository (2026-10-26)
+
+- Implement actual SQLite transactional CRUD for projects, profiles with immutable history/revision CAS, channels, signed release drafts/publication with atomic channel-head CAS, users/normalized role assignments and append-only audit.
+- Persist the eight platform roles with real foreign keys. Enforce last-active-owner, role-change `auth_epoch`, trusted Ed25519 signature verification, immutability and fail-closed repository integrity checks.
+- Add `neverlauncher-sqlite core-init|core-status|core-put|core-get|core-draft|core-update-manifest|core-publish`, real-driver integration and restart/concurrency/security tests, runner job, and operator runbook.
+- Do **not** switch the Backend to SQLite until the remaining mandatory state (sessions, joins, jobs, extensions, packages, coordinator) has parity; PostgreSQL remains the live API repository. Full Go 1.27.3 + modernc SQLite driver test run is required before production certification.
+
 ## 0.32.1 — DEP00 SQLite Driver & WAL (baseline; 2026-10-26)
 
 - Added fail-closed `internal/sqlitedurable` SQLite 3.54.1 driver (`modernc.org/sqlite` v1.61.0) for real on-disk WAL transactions, one-writer / bounded-reader pools, `BEGIN IMMEDIATE`, rollback on error, and explicit uncertain-commit failures.
