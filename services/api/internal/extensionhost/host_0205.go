@@ -996,6 +996,14 @@ func (s *Supervisor) statusOf(st *processState) Status {
 		status.NetworkSandbox = "linux-disconnected-netns+scoped-https-broker"
 		status.FilesystemSandbox = "linux-pivot-root+readonly-package+tmpfs-scratch+scoped-file-broker"
 		status.EffectiveRestrictions = []string{"user-namespace", "mount-namespace", "pid-namespace", "ipc-namespace", "network-namespace", "no-new-privileges", "seccomp-bpf", "capabilities-dropped", "cgroups-v2-memory-pids-cpu", "recursive-readonly-package", "private-tmpfs", "runtime-lifetime", "scoped-host-filesystem-broker", "signed-network-origin-allowlist", "opaque-secret-operation"}
+		if st.sandbox.macos != nil {
+			status.ResourceIsolation = "macos-app-sandbox+per-process-rlimits"
+			status.ProcessIsolation = "macos-signed-app-sandbox-helper+inherited-child"
+			status.OSSandbox = "macos-app-sandbox"
+			status.NetworkSandbox = "macos-no-network-entitlement+scoped-host-ipc"
+			status.FilesystemSandbox = "macos-private-container+scoped-file-broker"
+			status.EffectiveRestrictions = []string{"developer-id-signed-helper", "minimal-sandbox-entitlements", "inherited-app-sandbox", "private-container-executable", "no-direct-network-entitlement", "private-broker-socket", "per-process-address-space-and-cpu-limits", "process-group-lifetime", "scoped-host-file-network-secret-brokers"}
+		}
 		if st.sandbox.windows != nil {
 			status.ResourceIsolation = "windows-job-object-memory-cpu-process"
 			status.ProcessIsolation = "windows-appcontainer+job-no-breakaway"
@@ -1133,7 +1141,8 @@ func (s *Supervisor) authenticate(w http.ResponseWriter, r *http.Request) (*proc
 	// pipe may authenticate a sandboxed extension; regular TCP stays loopback.
 	tcpLoopback := loopbackRequest(r)
 	pipeRequest := strings.HasPrefix(r.RemoteAddr, `\\.\pipe\LOCAL\NeverLauncher-Extension-`)
-	if !tcpLoopback && !pipeRequest {
+	macRequest := strings.HasPrefix(r.RemoteAddr, "nlmac:")
+	if !tcpLoopback && !pipeRequest && !macRequest {
 		http.Error(w, "loopback or authenticated sandbox pipe required", http.StatusForbidden)
 		return nil, false
 	}
@@ -1154,7 +1163,11 @@ func (s *Supervisor) authenticate(w http.ResponseWriter, r *http.Request) (*proc
 		http.Error(w, "named pipe does not belong to extension instance", http.StatusForbidden)
 		return nil, false
 	}
-	if tcpLoopback && st.sandbox != nil && st.sandbox.windows != nil {
+	if macRequest && (st.sandbox == nil || st.sandbox.macos == nil || r.RemoteAddr != st.sandbox.macos.HostPipe()) {
+		http.Error(w, "macos IPC socket not owned by extension", http.StatusForbidden)
+		return nil, false
+	}
+	if tcpLoopback && st.sandbox != nil && (st.sandbox.windows != nil || st.sandbox.macos != nil) {
 		// An AppContainer must never bypass the policy-controlled pipe by
 		// using the ordinary loopback listener.
 		http.Error(w, "isolated extension must use named IPC", http.StatusForbidden)
@@ -1231,7 +1244,7 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 	}
 	if (st.sandbox == nil && req.PID != 0 && expectedPID != 0 && req.PID != expectedPID) ||
 		(st.sandbox != nil && st.sandbox.linux != nil && req.PID != 1) ||
-		(st.sandbox != nil && st.sandbox.windows != nil && (expectedPID == 0 || req.PID != expectedPID)) {
+		(st.sandbox != nil && (st.sandbox.windows != nil || st.sandbox.macos != nil) && (expectedPID == 0 || req.PID != expectedPID)) {
 		st.mu.Unlock()
 		http.Error(w, "pid mismatch", 409)
 		return

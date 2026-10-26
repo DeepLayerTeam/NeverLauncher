@@ -1,0 +1,50 @@
+name: macOS Signed Sandbox Helper 0.31.12
+on:
+  push:
+    paths:
+      - 'macos/sandbox-helper/**'
+      - 'services/api/internal/macossandbox/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'scripts/security/build-macos-sandbox-helper-03112.sh'
+      - '.github/workflows/macos-signed-sandbox-helper-03112.yml'
+  pull_request:
+    paths:
+      - 'macos/sandbox-helper/**'
+      - 'services/api/internal/macossandbox/**'
+      - 'services/api/internal/extensionhost/**'
+      - '.github/workflows/macos-signed-sandbox-helper-03112.yml'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Swift compile and verify entitlements plist
+        run: |
+          xcrun swiftc -O ../../macos/sandbox-helper/NeverExtensionSandbox.swift -o /tmp/NeverExtensionSandbox -lsandbox
+          plutil -lint ../../macos/sandbox-helper/NeverExtensionSandbox.entitlements
+      - name: Test and cross-build core Go packages
+        run: |
+          go test -race ./internal/macossandbox ./internal/extensionhost ./internal/extensionpolicy ./internal/extensionbroker
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./internal/macossandbox ./internal/extensionhost
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build ./internal/macossandbox ./internal/extensionhost
+      - name: Darwin SDK compilation
+        run: |
+          (cd ../../sdk/backend/go && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./...)
+          (cd ../../sdk/cli/go && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./...)
+      - name: Release certificate required for signed artifact
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          SIGN_IDENTITY: ${{ vars.NEVERLAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY }}
+          TEAM_ID: ${{ vars.NEVERLAUNCHER_MACOS_SANDBOX_TEAM_ID }}
+        run: |
+          test -n "$SIGN_IDENTITY" && test -n "$TEAM_ID" || { echo 'No release certificate: refusing isolated artifact' >&2; exit 1; }
+          NEVERLAUNCHER_MACOS_SANDBOX_TEAM_ID="$TEAM_ID" NEVERLAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY="$SIGN_IDENTITY" \
+            ../../scripts/security/build-macos-sandbox-helper-03112.sh /tmp/NeverExtensionSandbox-signed
