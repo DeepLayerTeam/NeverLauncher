@@ -1,0 +1,204 @@
+name: NeverLauncher 0.32.0 Device Guard OS Isolation GA
+
+on:
+  push:
+    paths:
+      - 'services/api/**'
+      - 'scripts/security/**'
+      - '.github/workflows/device-guard-os-isolation-ga-0320.yml'
+      - 'VERSION'
+  pull_request:
+    paths:
+      - 'services/api/**'
+      - 'scripts/security/**'
+      - '.github/workflows/device-guard-os-isolation-ga-0320.yml'
+      - 'VERSION'
+  workflow_dispatch:
+    inputs:
+      live_linux:
+        type: boolean
+        default: false
+        description: 'Run real delegated-cgroup Linux boundary tests on dedicated host'
+      live_windows:
+        type: boolean
+        default: false
+        description: 'Run real Windows AppContainer and Job tests on dedicated host'
+      signed_evidence_run_id:
+        type: string
+        required: false
+        description: 'Previously approved run containing seven independently signed evidence tiers'
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install 'cryptography>=43,<47'
+      - name: Source and metadata consistency
+        run: |
+          test "$(cat VERSION)" = 0.32.0
+          test -z "$(git status --porcelain)"
+          python3 scripts/version/manage.py check
+      - name: Cryptographic GA verifier negative tests
+        run: python3 -m unittest discover -s scripts/security -p 'test_ga_verify_0320.py' -v
+      - name: Offline adversarial tests with race detector
+        run: python3 scripts/security/certify_0320.py --tier offline --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-offline-0320.json"
+      - name: Production Backend build
+        working-directory: services/api
+        run: |
+          go vet ./...
+          go test -count=1 ./internal/extensionhost ./internal/extensionpolicy ./internal/attestverify ./internal/trustbaseline ./internal/linuxsandbox
+          go build ./...
+      - name: Upload signed-candidate evidence (NOT signed and NOT GA)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-0320-offline-unsigned
+          path: ${{ runner.temp }}/security-offline-0320.json
+          if-no-files-found: warn
+
+  backend-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Runtime session binding, policy revocation and ServerBridge joins
+        run: python3 scripts/security/certify_0320.py --tier backend-security --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-backend-0320.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-0320-backend-unsigned
+          path: ${{ runner.temp }}/security-backend-0320.json
+          if-no-files-found: warn
+
+  windows-compile:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Compile and test Windows restricted handle inheritance and Job path
+        working-directory: services/api
+        run: |
+          go test -count=1 ./internal/windowssandbox ./internal/extensionhost ./internal/extensionpolicy
+          go build ./...
+
+  macos-compile:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: macOS helper syntax and sandbox policy tests (not live isolation certification)
+        run: |
+          swiftc -parse macos/sandbox-helper/NeverExtensionSandbox.swift
+          cd services/api
+          go test -count=1 ./internal/macossandbox ./internal/extensionpolicy
+          go build ./internal/macossandbox ./internal/extensionhost
+
+  live-linux:
+    if: github.event_name == 'workflow_dispatch' && inputs.live_linux
+    runs-on: [self-hosted, linux, x64, neverlauncher-sandbox]
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Enforce namespaces, mounts, seccomp and cgroup.kill against descendants
+        run: python3 scripts/security/certify_0320.py --tier linux-live --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/security-linux-0320.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-0320-linux-live-unsigned
+          path: ${{ runner.temp }}/security-linux-0320.json
+          if-no-files-found: warn
+
+  live-windows:
+    if: github.event_name == 'workflow_dispatch' && inputs.live_windows
+    runs-on: [self-hosted, windows, x64, neverlauncher-appcontainer]
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: AppContainer token, handle allowlist, ACL, broker and Job containment
+        shell: pwsh
+        run: python scripts/security/certify_0320.py --tier windows-live --commit "$env:GITHUB_SHA" --output "$env:RUNNER_TEMP/security-windows-0320.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-0320-windows-live-unsigned
+          path: ${{ runner.temp }}/security-windows-0320.json
+          if-no-files-found: warn
+
+  signed-security-ga:
+    if: github.event_name == 'workflow_dispatch' && inputs.signed_evidence_run_id != ''
+    needs: [source-and-offline, backend-guard, windows-compile, macos-compile]
+    runs-on: ubuntu-24.04
+    environment: production-release
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install 'cryptography>=43,<47'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.signed_evidence_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: security-0320-approved-*
+          path: dist/security-0320-approved
+          merge-multiple: true
+      - name: Verify seven independently approved signed tiers for exact source and commit
+        env:
+          TRUSTED_KEY: ${{ vars.NEVERLAUNCHER_SECURITY_GA_PUBLIC_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, subprocess, sys
+          sys.path.insert(0, 'scripts/security')
+          from certify_0320 import source_fingerprint
+          root=pathlib.Path('dist/security-0320-approved')
+          paths=sorted(root.glob('*.json'))
+          if len(paths)!=7:
+              raise SystemExit('BLOCKED: seven independently signed evidence reports required')
+          cmd=[sys.executable, 'scripts/security/ga_verify_0320.py', '--commit', os.environ['GITHUB_SHA'], '--source-sha256', source_fingerprint(), '--trusted-public-key', os.environ.get('TRUSTED_KEY',''), '--output', 'dist/security-0320-GA-verdict.json', '--evidence', *map(str,paths)]
+          raise SystemExit(subprocess.call(cmd))
+          PY
+      - name: Publish authenticated verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-0320-signed-ga-verdict
+          path: dist/security-0320-GA-verdict.json
+          if-no-files-found: warn

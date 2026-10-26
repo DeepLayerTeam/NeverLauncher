@@ -42,6 +42,8 @@ var (
 	getTokenInformation = advapi.NewProc("GetTokenInformation")
 	equalSID            = advapi.NewProc("EqualSid")
 	terminateProcess    = kernel32.NewProc("TerminateProcess")
+	getCurrentProcess   = kernel32.NewProc("GetCurrentProcess")
+	duplicateHandle     = kernel32.NewProc("DuplicateHandle")
 )
 
 func winerr(op string, r uintptr, e error) error {
@@ -153,6 +155,8 @@ type processInfo struct {
 
 const (
 	procThreadSecurityCapabilities = 0x00020009
+	procThreadHandleList           = 0x00020002
+	duplicateSameAccess            = 0x00000002
 	extendedStartupInfo            = 0x00080000
 	createSuspended                = 0x00000004
 	createUnicodeEnvironment       = 0x00000400
@@ -215,17 +219,44 @@ func verifyAppContainerToken(process uintptr, wantSID uintptr) error {
 	}
 	return nil
 }
+
+// Only three explicitly duplicated standard streams may cross the AppContainer
+// boundary. A generic inheritable Win32 HANDLE (database socket, broker pipe,
+// secret file, service token) must never be inherited by the extension.
+func inheritableStandardHandles() ([3]uintptr, error) {
+	var handles [3]uintptr
+	own, _, _ := getCurrentProcess.Call()
+	for i, original := range []uintptr{uintptr(syscall.Stdin), uintptr(syscall.Stdout), uintptr(syscall.Stderr)} {
+		if original == 0 || original == ^uintptr(0) {
+			for _, h := range handles {
+				closeHandle(h)
+			}
+			return [3]uintptr{}, errors.New("sandbox-standard-handle-unavailable")
+		}
+		var duplicated uintptr
+		ok, _, err := duplicateHandle.Call(own, original, own, uintptr(unsafe.Pointer(&duplicated)), 0, 1, duplicateSameAccess)
+		if e := winerr("DuplicateHandle isolated standard stream", ok, err); e != nil {
+			for _, h := range handles {
+				closeHandle(h)
+			}
+			return [3]uintptr{}, e
+		}
+		handles[i] = duplicated
+	}
+	return handles, nil
+}
+
 func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintptr, uint32, error) {
 	// Request a real AppContainer token through the Windows process attribute.
 	// Windows will return ERROR_NOT_SUPPORTED if it cannot apply it.
 	var size uintptr
-	initAttrs.Call(0, 1, 0, uintptr(unsafe.Pointer(&size)))
+	initAttrs.Call(0, 2, 0, uintptr(unsafe.Pointer(&size)))
 	if size == 0 {
 		return 0, 0, 0, 0, errors.New("AppContainer attribute list unavailable")
 	}
 	backing := make([]byte, size)
 	attrs := uintptr(unsafe.Pointer(&backing[0]))
-	r, _, e := initAttrs.Call(attrs, 1, 0, uintptr(unsafe.Pointer(&size)))
+	r, _, e := initAttrs.Call(attrs, 2, 0, uintptr(unsafe.Pointer(&size)))
 	if err := winerr("InitializeProcThreadAttributeList", r, e); err != nil {
 		return 0, 0, 0, 0, err
 	}
@@ -233,6 +264,22 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	sc := securityCapabilities{appContainerSid: sid}
 	r, _, e = updateAttrs.Call(attrs, 0, procThreadSecurityCapabilities, uintptr(unsafe.Pointer(&sc)), unsafe.Sizeof(sc), 0, 0)
 	if err := winerr("AppContainer SECURITY_CAPABILITIES", r, e); err != nil {
+		return 0, 0, 0, 0, err
+	}
+	streams, err := inheritableStandardHandles()
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+	defer func() {
+		for _, handle := range streams {
+			closeHandle(handle)
+		}
+	}()
+	// bInheritHandles must be TRUE for STARTF_USESTDHANDLES, but it is
+	// restricted to this explicit whitelist (not every inheritable handle).
+	r, _, e = updateAttrs.Call(attrs, 0, procThreadHandleList,
+		uintptr(unsafe.Pointer(&streams[0])), unsafe.Sizeof(streams), 0, 0)
+	if err := winerr("AppContainer inherited-handle allowlist", r, e); err != nil {
 		return 0, 0, 0, 0, err
 	}
 	job, _, e := createJob.Call(0, 0)
@@ -282,11 +329,10 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	}
 	envBlock = append(envBlock, 0)
 	si := startupInfoEx{startupInfo: startupInfo{cb: uint32(unsafe.Sizeof(startupInfoEx{})), flags: startfUseStdHandles}, attrList: attrs}
-	// Only the child's standard streams are inherited; the AppContainer token prohibits
-	// opening backend process handles, but handles must still be audited in deployment.
-	si.stdInput = uintptr(syscall.Stdin)
-	si.stdOutput = uintptr(syscall.Stdout)
-	si.stdError = uintptr(syscall.Stderr)
+	// Whitelisted duplicate handles only. The handle-list attribute is mandatory.
+	si.stdInput = streams[0]
+	si.stdOutput = streams[1]
+	si.stdError = streams[2]
 	var pi processInfo
 	r, _, e = createProc.Call(uintptr(unsafe.Pointer(utf16(c.Entrypoint))), uintptr(unsafe.Pointer(utf16(commandLine))), 0, 0, 1,
 		extendedStartupInfo|createSuspended|createUnicodeEnvironment, uintptr(unsafe.Pointer(&envBlock[0])), uintptr(unsafe.Pointer(utf16(c.PayloadRoot))), uintptr(unsafe.Pointer(&si)), uintptr(unsafe.Pointer(&pi)))

@@ -232,12 +232,34 @@ func makeCgroup(p Policy) (string, *os.File, error) {
 			return fail(fmt.Errorf("sandbox-cgroup-%s: %w", key, e))
 		}
 	}
+	// cgroup.kill is mandatory, not optional cleanup. Without it an extension
+	// that creates a new process group could survive Close() or expiration.
+	if err := requireCgroupKill03120(dir); err != nil {
+		return fail(err)
+	}
 	f, err := os.Open(dir)
 	if err != nil {
 		return fail(err)
 	}
 	return dir, f, nil
 }
+func requireCgroupKill03120(path string) error {
+	fi, err := os.Stat(filepath.Join(path, "cgroup.kill"))
+	if err != nil {
+		return fmt.Errorf("sandbox-cgroup-kill-required: %w", err)
+	}
+	if !fi.Mode().IsRegular() {
+		return errors.New("sandbox-cgroup-kill-not-regular")
+	}
+	// The newly created cgroup is empty at this point. Writing 1 proves that
+	// delegation actually permits killing all descendants later, rather than
+	// trusting only the presence of a cgroup.kill pseudo-file.
+	if err := os.WriteFile(filepath.Join(path, "cgroup.kill"), []byte("1"), 0); err != nil {
+		return fmt.Errorf("sandbox-cgroup-kill-not-writable: %w", err)
+	}
+	return nil
+}
+
 func Prepare(o Options) (*Handle, error) {
 	if err := validate(o); err != nil {
 		return nil, err
@@ -392,6 +414,7 @@ type childConfig struct {
 type oneConnListener struct {
 	conn net.Conn
 	done chan struct{}
+	once sync.Once
 	mu   sync.Mutex
 	used bool
 }
@@ -408,11 +431,7 @@ func (l *oneConnListener) Accept() (net.Conn, error) {
 	return nil, net.ErrClosed
 }
 func (l *oneConnListener) Close() error {
-	select {
-	case <-l.done:
-	default:
-		close(l.done)
-	}
+	l.once.Do(func() { close(l.done) })
 	return l.conn.Close()
 }
 func (l *oneConnListener) Addr() net.Addr { return l.conn.LocalAddr() }
