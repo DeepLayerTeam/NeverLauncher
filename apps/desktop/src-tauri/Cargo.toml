@@ -28,7 +28,7 @@ zeroize = "1"
 # Аппаратно привязанная идентификация устройства. Точная версия закреплена,
 # поскольку выбор бэкенда и поведение резервного режима влияют на безопасность.
 hardware-enclave = { version = "=0.2.10", default-features = false, features = ["signing", "encryption", "linux-tpm"] }
-p256 = { version = "0.13", features = ["ecdsa"] }
+p256 = { version = "0.14", features = ["ecdsa"] }
 
 # Native Linux TPM producer: harden TPM blob reads with O_NOFOLLOW and UID checks.
 [target.'cfg(target_os = "linux")'.dependencies]
