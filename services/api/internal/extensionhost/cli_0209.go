@@ -196,6 +196,17 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	stderr := &boundedBuffer0209{max: maxCLIOutput0209}
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
+	if ver.Manifest.Sandbox != nil && ver.Manifest.Sandbox.Mode == "isolated" {
+		// A shared quota covers both streams and the Host Protocol replies.
+		var outputBreach sync.Once
+		abort := func() {
+			if cmd.Process != nil {
+				_ = killProcessTree(cmd.Process)
+			}
+		}
+		cmd.Stdout = &cliOutputWriter03113{st: st, target: stdout, policy: ver.Manifest.Sandbox, abort: abort, once: &outputBreach}
+		cmd.Stderr = &cliOutputWriter03113{st: st, target: stderr, policy: ver.Manifest.Sandbox, abort: abort, once: &outputBreach}
+	}
 	started := time.Now().UTC()
 	if err := cmd.Start(); err != nil {
 		return CLIResult0209{}, fmt.Errorf("start cli extension: %w", err)

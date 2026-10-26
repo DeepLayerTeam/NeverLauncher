@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/linuxsandbox"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/macossandbox"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/windowssandbox"
 )
@@ -92,6 +93,9 @@ func Validate(in *model.ExtensionSandboxPolicy) (*model.ExtensionSandboxPolicy, 
 	if p.MaxProcesses < 0 || p.MaxProcesses > 128 || p.MaxMemoryBytes < 0 || p.MaxMemoryBytes > 64<<30 || p.MaxCPUPercent < 0 || p.MaxCPUPercent > 100 || p.TimeoutSeconds < 0 || p.TimeoutSeconds > 86400 {
 		return nil, errors.New("invalid sandbox resource limit")
 	}
+	if p.MaxRequestsPerSecond < 0 || p.MaxRequestsPerSecond > 64 || p.MaxOutputBytes < 0 || p.MaxOutputBytes > 8<<20 {
+		return nil, errors.New("sandbox IPC rate/output limit exceeds host maximum")
+	}
 	if p.Mode == "isolated" && (p.MaxProcesses == 0 || p.MaxMemoryBytes == 0 || p.TimeoutSeconds == 0 || p.MaxCPUPercent == 0) {
 		return nil, errors.New("isolated sandbox requires finite process, memory, CPU and time limits")
 	}
@@ -107,6 +111,8 @@ func LaunchAllowed(m model.ExtensionManifest) error {
 		var err error
 		if runtime.GOOS == "windows" {
 			err = windowssandbox.Available()
+		} else if runtime.GOOS == "darwin" {
+			err = macossandbox.Available()
 		} else {
 			err = linuxsandbox.Available()
 		}

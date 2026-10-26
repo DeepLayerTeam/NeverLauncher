@@ -1,0 +1,71 @@
+name: NeverExtensions Resource Enforcement 0.31.13
+on:
+  push:
+    paths:
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionpolicy/**'
+      - 'services/api/internal/model/extension_sandbox_0318.go'
+      - 'services/api/internal/linuxsandbox/**'
+      - 'services/api/internal/windowssandbox/**'
+      - 'services/api/internal/macossandbox/**'
+      - 'apps/admin/src/admin_extensions_0208.tsx'
+      - '.github/workflows/extension-resource-enforcement-03113.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionpolicy/**'
+      - 'services/api/internal/model/extension_sandbox_0318.go'
+      - 'apps/admin/src/admin_extensions_0208.tsx'
+  workflow_dispatch:
+jobs:
+  go-resource-tests:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Production Go package tests (real dependencies)
+        run: go test -race ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
+      - name: Vet
+        run: go vet ./internal/extensionhost ./internal/extensionpolicy ./internal/linuxsandbox ./internal/macossandbox ./internal/windowssandbox
+      - name: API integration compile
+        run: go build ./...
+      - name: Windows cross-build
+        run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/windowssandbox
+      - name: macOS cross-build arm64 and amd64
+        run: |
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/macossandbox
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build ./internal/extensionhost ./internal/macossandbox
+  admin-ui:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - run: npm ci
+      - run: npm run build
+  win-os-boundary:
+    runs-on: windows-2025
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - run: go test ./internal/windowssandbox ./internal/extensionhost ./internal/extensionpolicy
+      - run: go build ./...
+    # Actual AppContainer child/ACL/Job bypass checks require separately
+    # provisioned E2E runners; compilation is not proof of OS confinement.

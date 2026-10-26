@@ -178,8 +178,18 @@ func signedHelper() (string, error) {
 	}
 	return p, nil
 }
-func Available() error { _, e := signedHelper(); return e }
+func Available() error {
+	if _, err := signedHelper(); err != nil {
+		return err
+	}
+	return errors.New("macos-aggregate-process-tree-resource-boundary-unavailable")
+}
 func Prepare(o Options) (_ *Handle, err error) {
+	// RLIMIT_AS and RLIMIT_CPU apply per process; process groups are escapable.
+	// Refuse isolated mode until an OS-verifiable aggregate descendant boundary exists.
+	if err := Available(); err != nil {
+		return nil, err
+	}
 	if o.HostHandler == nil || !strings.HasPrefix(o.HostURL, "http://127.0.0.1:") {
 		return nil, errors.New("sandbox-macos-host-handler-and-loopback-required")
 	}
@@ -201,9 +211,13 @@ func Prepare(o Options) (_ *Handle, err error) {
 		}
 	}
 	fi, e := os.Lstat(o.Entrypoint)
- if e != nil { return nil,e }
- if !fi.Mode().IsRegular() || fi.Size() <= 0 || fi.Size() > maxExecutable {return nil,errors.New("sandbox-macos-native-executable-size-or-file-type-unsupported")}
- executable, e := os.ReadFile(o.Entrypoint)
+	if e != nil {
+		return nil, e
+	}
+	if !fi.Mode().IsRegular() || fi.Size() <= 0 || fi.Size() > maxExecutable {
+		return nil, errors.New("sandbox-macos-native-executable-size-or-file-type-unsupported")
+	}
+	executable, e := os.ReadFile(o.Entrypoint)
 	if e != nil {
 		return nil, e
 	}

@@ -183,6 +183,11 @@ type Status struct {
 	Entrypoint            string     `json:"entrypoint,omitempty"`
 	Runtime               string     `json:"runtime"`
 	RPCFailures           int        `json:"rpcFailures,omitempty"`
+	MaxRequestsPerSecond  int        `json:"maxRequestsPerSecond"`
+	MaxOutputBytes        int64      `json:"maxOutputBytes"`
+	HostRequestsRejected  int64      `json:"hostRequestsRejected"`
+	HostOutputBytes       int64      `json:"hostOutputBytes"`
+	HostActiveRequests    int        `json:"hostActiveRequests"`
 }
 
 type ringLog struct {
@@ -248,6 +253,7 @@ type processState struct {
 	terminationInitiated                                      bool
 	sandbox                                                   *extensionSandbox03111
 	sandboxReady                                              bool
+	budget                                                    hostBudget03113
 }
 
 type Supervisor struct {
@@ -339,7 +345,7 @@ func (s *Supervisor) Start(ctx context.Context) error {
 	mux.HandleFunc("GET /v1/events/subscriptions", s.handleEventSubscriptions)
 	mux.HandleFunc("POST /v1/events/subscriptions", s.handleEventSubscribe)
 	mux.HandleFunc("DELETE /v1/events/subscriptions/{subscriptionId}", s.handleEventUnsubscribe)
-	s.server = &http.Server{Handler: mux, ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
+	s.server = &http.Server{Handler: s.limitedHostHandler03113(mux), ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
 	s.wg.Add(2)
 	go func() {
 		defer s.wg.Done()
@@ -739,13 +745,30 @@ func (s *Supervisor) captureStream(st *processState, stream string, r io.Reader)
 		s.addLog(st, stream, "", sc.Text(), nil)
 	}
 	if err := sc.Err(); err != nil {
-		s.addLog(st, "host", "warn", stream+" log stream: "+err.Error(), nil)
+		// A single unbounded line must not evade the cumulative stdout cap:
+		// Scanner would otherwise stop consuming while the child kept running.
+		if st.manifest.Sandbox != nil && st.manifest.Sandbox.Mode == "isolated" {
+			s.failProcess(st, "extension-output-line-limit-exceeded: "+stream, false)
+		} else {
+			s.addLog(st, "host", "warn", stream+" log stream: "+err.Error(), nil)
+		}
 	}
 }
 func (s *Supervisor) addLog(st *processState, stream, level, message string, fields map[string]any) {
 	st.mu.Lock()
-	st.logs.add(LogEntry{Timestamp: time.Now().UTC(), Stream: stream, Level: level, Message: message, Fields: fields})
+	// Charge bytes before retaining them. On exhaustion terminate isolated process,
+	// not merely drop a log line while it continues flooding stdout/IPC.
+	breach := false
+	if st.manifest.Sandbox != nil && st.manifest.Sandbox.Mode == "isolated" {
+		breach = !st.budget.chargeLocked03113(int64(len(message)+len(stream)+len(level)), st.manifest.Sandbox)
+	}
+	if !breach {
+		st.logs.add(LogEntry{Timestamp: time.Now().UTC(), Stream: stream, Level: level, Message: message, Fields: fields})
+	}
 	st.mu.Unlock()
+	if breach {
+		go s.failProcess(st, "host-output-budget-exceeded", false)
+	}
 }
 
 func (s *Supervisor) waitProcess(st *processState) {
@@ -1012,6 +1035,13 @@ func (s *Supervisor) statusOf(st *processState) Status {
 			status.FilesystemSandbox = "windows-appcontainer-acl-readonly-package+private-profile-scratch+scoped-file-broker"
 			status.EffectiveRestrictions = []string{"appcontainer-token", "per-extension-profile-sid", "package-read-execute-acl", "private-scratch", "job-kill-on-close", "job-process-memory-limit", "job-total-memory-limit", "job-cpu-hard-cap", "job-active-process-limit", "no-job-breakaway", "runtime-lifetime", "named-pipe-ipc-acl", "scoped-host-filesystem-broker", "signed-network-origin-allowlist", "opaque-secret-operation"}
 		}
+	}
+	status.MaxRequestsPerSecond, status.MaxOutputBytes = limits03113(st.manifest.Sandbox)
+	status.HostRequestsRejected = st.budget.rejected
+	status.HostOutputBytes = st.budget.output
+	status.HostActiveRequests = st.budget.active
+	if st.sandbox != nil && st.sandboxReady {
+		status.EffectiveRestrictions = append(status.EffectiveRestrictions, "host-ipc-request-rate", "host-ipc-concurrent-limit", "host-output-cumulative-budget")
 	}
 	status.Runtime = "native"
 	if st.javaHost {
