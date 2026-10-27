@@ -1,0 +1,68 @@
+name: SQLite replay nonces and join tickets DEP01/02 (0.32.4)
+on:
+  push:
+    paths:
+      - 'services/api/internal/sqlitecore/**'
+      - 'services/api/internal/sqlitedurable/**'
+      - 'services/api/cmd/neverlauncher-sqlite/**'
+      - '.github/workflows/sqlite-replay-join-0324.yml'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+  pull_request:
+  workflow_dispatch:
+jobs:
+  replay-join-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: services/api/go.sum
+      - name: Verify pinned dependencies and formatting
+        run: |
+          set -euo pipefail
+          go mod download
+          go mod verify
+          test -z "$(gofmt -l internal/sqlitecore cmd/neverlauncher-sqlite)"
+      - name: Require native supported filesystem and test real SQLite driver
+        env:
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-join
+          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+        run: |
+          set -euo pipefail
+          mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+          go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+      - name: Build real operational CLI and initialize schema 324
+        env:
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-join
+        run: |
+          set -euo pipefail
+          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+          db="$NEVERLAUNCHER_SQLITE_TEST_ROOT/production.db"
+          "$RUNNER_TEMP/neverlauncher-sqlite" core-init --db "$db" > "$RUNNER_TEMP/created.json"
+          "$RUNNER_TEMP/neverlauncher-sqlite" core-status --db "$db" > "$RUNNER_TEMP/status.json"
+          python3 - <<'PY'
+          import json,os
+          with open(os.environ['RUNNER_TEMP']+'/status.json') as f: j=json.load(f)
+          assert j['status']=='ok' and j['schemaVersion']==324,j
+          assert j['counts']['roles']==8,j
+          assert j['counts']['bridge_join_tickets']==0,j
+          assert j['counts']['bridge_nonces']==0,j
+          PY
+          mkdir "$NEVERLAUNCHER_SQLITE_TEST_ROOT/keys"
+          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT/keys"
+          "$RUNNER_TEMP/neverlauncher-sqlite" join-keygen --key-file "$NEVERLAUNCHER_SQLITE_TEST_ROOT/keys/node.key" > "$RUNNER_TEMP/public.json"
+          test "$(stat -c '%a' "$NEVERLAUNCHER_SQLITE_TEST_ROOT/keys/node.key")" = 600
+          python3 - <<'PY'
+          import json,os
+          with open(os.environ['RUNNER_TEMP']+'/public.json') as f: j=json.load(f)
+          assert len(j['publicKeyHex'])==64 and len(j['fingerprint'])==64
+          PY

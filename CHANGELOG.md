@@ -1,3 +1,11 @@
+## 0.32.4 — DEP01/02 SQLite Replay & Join Tickets (2026-10-27)
+
+- Add persisted, uniquely constrained signed-request replay nonce ledger on SQLite WAL; pin nonce checks to Ed25519 node trust anchors, identity epoch, signed payload digest and bounded timestamp skew.
+- Implement 256-bit opaque one-use join tickets, checked against current NeverLauncher/Minecraft sessions, project scope, roles, access-token revocation and auth epoch; atomically replace older active tickets.
+- Atomically commit signed nonce consumption, ticket redemption CAS and append-only audit in one `BEGIN IMMEDIATE` write. Expired, consumed, revoked and rotated-key tickets fail closed; old tokens cannot be resurrected by ordinary update or deletion.
+- Add transactional node enrollment/key rotation/revocation, secure operational CLI commands and schema migration 323→324 while preserving existing MFA encryption format.
+- Add restart/concurrency/replay/migration tests, SQLite native-runner CI and an operator runbook. Single-node HTTP/ServerBridge remains disabled pending trusted-device/Guard/coordination parity and real-driver certification.
+
 ## 0.32.3 — DEP01 SQLite Authentication & Revocation (2026-10-27)
 
 - Implement real transactional SQLite local login, session access/refresh tokens, persistent replay detection and family compromise with cascading Minecraft token revocation.

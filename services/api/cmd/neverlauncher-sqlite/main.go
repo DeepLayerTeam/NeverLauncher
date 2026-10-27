@@ -17,6 +17,9 @@ import (
 
 func main() { os.Exit(run(os.Args[1:])) }
 func run(args []string) int {
+	if len(args) > 0 && isJoinAction(args[0]) {
+		return runJoinAction(args)
+	}
 	if len(args) > 0 && isAuthAction(args[0]) {
 		return runAuthAction(args)
 	}

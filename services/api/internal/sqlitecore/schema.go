@@ -1,6 +1,6 @@
 // Package sqlitecore provides transactional SQLite persistence for DEP01 core
 // entities. It deliberately does not implement the whole Backend Repository:
-// sessions, joins, device attestation and coordinator state remain PostgreSQL-
+// device attestation and coordinator state remain PostgreSQL-
 // only until their durable SQLite implementations exist. No memory fallback.
 package sqlitecore
 
@@ -22,7 +22,7 @@ var (
 	ErrImmutable = errors.New("sqlite core: immutable published release or history")
 )
 
-const SchemaVersion = 323
+const SchemaVersion = 324
 
 type Repository struct{ store *sqlitedurable.Store }
 
@@ -68,7 +68,7 @@ func (r *Repository) migrate(ctx context.Context) error {
 		if err := q.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 			return err
 		}
-		if version != 0 && version != 322 && version != SchemaVersion {
+		if version != 0 && version != 322 && version != 323 && version != SchemaVersion {
 			return fmt.Errorf("sqlite core schema %d incompatible with %d", version, SchemaVersion)
 		}
 		if version == 0 {
@@ -83,10 +83,17 @@ func (r *Repository) migrate(ctx context.Context) error {
 				}
 			}
 		}
-		if version != SchemaVersion {
+		if version == 0 || version == 322 {
 			for _, stmt := range authDDL {
 				if _, err := q.ExecContext(ctx, stmt); err != nil {
 					return fmt.Errorf("sqlite auth migration 323: %w", err)
+				}
+			}
+		}
+		if version != SchemaVersion {
+			for _, stmt := range joinDDL {
+				if _, err := q.ExecContext(ctx, stmt); err != nil {
+					return fmt.Errorf("sqlite replay/join migration 324: %w", err)
 				}
 			}
 			if _, err := q.ExecContext(ctx, fmt.Sprintf("PRAGMA user_version=%d", SchemaVersion)); err != nil {
@@ -143,6 +150,9 @@ func (r *Repository) Check(ctx context.Context) error {
 			`SELECT COUNT(*) FROM project_user_roles pur LEFT JOIN roles r ON r.id=pur.role_id WHERE r.id IS NULL`,
 			`SELECT COUNT(*) FROM refresh_tokens t JOIN refresh_families f ON f.id=t.family_id JOIN auth_sessions s ON s.id=f.session_id WHERE f.status='active' AND s.status<>'active' AND t.status='current'`,
 			`SELECT COUNT(*) FROM minecraft_sessions m JOIN auth_sessions s ON s.id=m.never_session_id WHERE m.status='active' AND s.status<>'active'`,
+			`SELECT COUNT(*) FROM bridge_join_tickets t JOIN bridge_nodes n ON n.id=t.node_id WHERE t.status='active' AND (n.status<>'active' OR t.issued_identity_epoch<>n.identity_epoch OR t.issued_fingerprint<>n.fingerprint)`,
+			`SELECT COUNT(*) FROM bridge_join_tickets WHERE status='consumed' AND consumed_at=0`,
+			`SELECT COUNT(*) FROM bridge_nodes WHERE length(public_key)<>32`,
 		}
 		for _, stmt := range checks {
 			var n int
