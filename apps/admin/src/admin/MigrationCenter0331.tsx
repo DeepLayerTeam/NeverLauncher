@@ -21,6 +21,7 @@ type Credentials0335 = {format:string;runId:string;sourceSha256:string;identityS
 type Security0336 = {format:string;runId:string;importedAccounts:number;existingNeverUntouched:number;manualResets:number;sessionsRevoked:number;devicesRevoked:number;challengesConsumed:number;hardwareEvidenceDeleted:number;measuredBootEvidenceDeleted:number;activeJwtKid:string;manifestPublicSha256:string;appliedAt?:string;verified:boolean;readyForCutover:boolean;requiresLogin:boolean;requiresDeviceEnrollment:boolean;requiresGuardAttestation:boolean};
 type ContentPlan0337 = {format:string;sourceSha256:string;inventorySha256:string;profilePath:string;filesSha256:string;ready:boolean;blockers:string[];files:{sourcePath:string;targetPath:string;size:number;sha256:string;ownership:string}[];profile:{fields:{field:string;status:string;reason:string}[];settings:unknown};optional?:{ready:boolean;summary:Record<string,number>;fields:{field:string;status:string;reason:string}[]}};
 type ContentState0337 = {plan:ContentPlan0337;workspaceId:string;workspaceRevision:number;state:string;stagedFiles:number;totalFiles:number;complete:boolean;validation:string;buildWorkspaceUrl:string};
+type Modules0338 = {format:string;sourceSha256:string;inventorySha256:string;ready:boolean;cutoverAllowed:boolean;blockers:string[];modules:{path:string;sha256:string;name:string;implementation:string;status:string;reason:string;authHook:boolean;launchHook:boolean;sourcesPresent:boolean}[];wrappers:{path:string;mode:string;serverName?:string;legacyTokenPresent:boolean;legacyAddressPresent:boolean;replacement:string;status:string;reason:string}[]};
 type Event = { sequence: number; kind: string; step: string; revision: number; detail: unknown; createdAt: string };
 
 /** A working server-backed migration run operator. No client-side state is
@@ -52,6 +53,15 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
   const [contentConfirm,setContentConfirm] = useState('');
   const [contentPreview,setContentPreview] = useState<ContentPlan0337|null>(null);
   const [contentState,setContentState] = useState<ContentState0337|null>(null);
+  const [modules0338,setModules0338]=useState<Modules0338|null>(null);
+  const [wrapperPath0338,setWrapperPath0338]=useState('');
+  const [bridgeNode0338,setBridgeNode0338]=useState('');
+  const [bridgeName0338,setBridgeName0338]=useState('');
+  const [bridgeKind0338,setBridgeKind0338]=useState('paper');
+  const [bridgeProfile0338,setBridgeProfile0338]=useState('');
+  const [bridgePublicKey0338,setBridgePublicKey0338]=useState('');
+  const [bridgeConfirm0338,setBridgeConfirm0338]=useState('');
+  const [bridgeFreshKeys0338,setBridgeFreshKeys0338]=useState(false);
   const [passwordFormat,setPasswordFormat] = useState('');
   const [confirmRun,setConfirmRun] = useState('');
   const [error, setError] = useState('');
@@ -74,6 +84,8 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setIdentities(null); else throw e;}
     try {setCredentials(await requestJSON<Credentials0335>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/credentials`,token));}
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setCredentials(null); else throw e;}
+    try {setModules0338(await requestJSON<Modules0338>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/modules`,token));}
+    catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setModules0338(null); else throw e;}
     try {setCompatibility(await requestJSON<Compatibility0332>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/compatibility`,token));}
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setCompatibility(null); else throw e;}
   }, [backendUrl, token, projectId, runId]);
@@ -225,6 +237,24 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
       finally {URL.revokeObjectURL(url)}
     } catch(e){setError(String(e))}finally{setBusy(false)}
   }
+  async function inspectModules0338(){
+    if (!runId||!source||!inventory||busy) return;
+    setBusy(true);setError('');
+    try {
+      const result=await requestJSON<Modules0338>(backendUrl,`${base}/${encodeURIComponent(runId)}/modules/analyze`,token,{method:'POST',headers:{'Content-Type':'application/zip'},body:source});
+      setModules0338(result);await refresh(runId);
+    } catch(e){setError(String(e));await refresh(runId).catch(()=>undefined)}finally{setBusy(false)}
+  }
+  async function enrollBridge0338(){
+    if (!runId||!modules0338?.ready||bridgeConfirm0338!==runId||!bridgeFreshKeys0338||busy) return;
+    setBusy(true);setError('');
+    try {
+      await requestJSON(backendUrl,`${base}/${encodeURIComponent(runId)}/modules/enroll-serverbridge`,token,{
+        method:'POST',headers:{'X-Migration-Modules-Confirm':runId,'X-Migration-Fresh-Keys-Confirmed':'true'},
+        body:JSON.stringify({wrapperPath:wrapperPath0338,id:bridgeNode0338,name:bridgeName0338,kind:bridgeKind0338,profileId:bridgeProfile0338,publicKey:bridgePublicKey0338})});
+      setBridgeConfirm0338('');setBridgePublicKey0338('');setBridgeFreshKeys0338(false);await refresh(runId);
+    }catch(e){setError(String(e))}finally{setBusy(false)}
+  }
   return <section className="card wide" aria-label="Migration Center 0.33.7">
     <h2>Migration Center · 0.33.7</h2>
     <p>Durable workflow для проверки целевого проекта Never и фиксации инвентаризации. Статус «prepared» означает только сохранённый baseline; совместимость Gravit анализируется отдельно по ZIP; импорт поддерживаемых учётных записей доступен отдельно. Cutover не выполняется.</p>
@@ -336,6 +366,28 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
         <p>Workspace: <code>{contentState.workspaceId}</code>; сохранено {contentState.stagedFiles}/{contentState.totalFiles} файлов; состояние: {contentState.state}.</p>
         <p>Проверка: {contentState.validation||'требуется повторная проверка'}. Сборка и подпись выполняются через стандартные операции Build Workspace и Packages.</p>
         {contentState.plan.optional && <button disabled={busy||contentConfirm!==runId||contentState.state!=='built'} onClick={()=>void applyOptionals0337()}>Применить проверенный optional catalog к unsigned draft</button>}
+      </>}
+    </article>}
+    {run && <article className="subcard">
+      <h3>Module &amp; ServerWrapper Migration · MIG08</h3>
+      <p>Статическая проверка JAR без запуска. Неизвестные исполняемые модули блокируют миграцию до переноса исходников либо сертифицированного адаптера. Старые ServerWrapper токены не применяются.</p>
+      <button disabled={busy||!source||!inventory||run.status!=='prepared'} onClick={()=>void inspectModules0338()}>Проверить модули и ServerWrapper</button>
+      {modules0338 && <>
+        <p>Модулей: {modules0338.modules.length}, ServerWrapper: {modules0338.wrappers.length}, блокеров: {modules0338.blockers.length}. Cutover запрещён.</p>
+        {modules0338.blockers.map((x,i)=><p key={i} className="error">{x}</p>)}
+        <details><summary>Модули, SHA-256 и ServerWrapper</summary><pre>{JSON.stringify(modules0338,null,2)}</pre></details>
+        {modules0338.ready&&modules0338.wrappers.length>0&&<>
+          <p>Для подключения Never ServerBridge нужен новый Ed25519 publicKey; private key остаётся на игровом сервере. Регистрация не завершает проверку login/join.</p>
+          <label className="field"><span>Файл ServerWrapper из отчёта</span><select value={wrapperPath0338} onChange={e=>setWrapperPath0338(e.target.value)}><option value="">Выберите</option>{modules0338.wrappers.map(x=><option key={x.path}>{x.path}</option>)}</select></label>
+          <label className="field"><span>Новый ServerBridge node ID</span><input value={bridgeNode0338} onChange={e=>setBridgeNode0338(e.target.value)}/></label>
+          <label className="field"><span>Название</span><input value={bridgeName0338} onChange={e=>setBridgeName0338(e.target.value)}/></label>
+          <label className="field"><span>Kind</span><select value={bridgeKind0338} onChange={e=>setBridgeKind0338(e.target.value)}>{['paper','purpur','spigot','bukkit','fabric','forge','neoforge','velocity','bungeecord','waterfall','vanilla'].map(x=><option key={x}>{x}</option>)}</select></label>
+          <label className="field"><span>Новый профиль Never</span><input value={bridgeProfile0338} onChange={e=>setBridgeProfile0338(e.target.value)}/></label>
+          <label className="field"><span>Новый publicKey Ed25519 base64url</span><input value={bridgePublicKey0338} onChange={e=>setBridgePublicKey0338(e.target.value)}/></label>
+          <label className="field"><input type="checkbox" checked={bridgeFreshKeys0338} onChange={e=>setBridgeFreshKeys0338(e.target.checked)}/> Независимый новый Ed25519 keypair Never, не унаследованный от Gravit</label>
+          <label className="field"><span>Введите точный run ID (требуется свежая MFA-сессия)</span><input value={bridgeConfirm0338} onChange={e=>setBridgeConfirm0338(e.target.value)}/></label>
+          <button disabled={busy||!wrapperPath0338||!bridgeNode0338||!bridgeProfile0338||!bridgePublicKey0338||bridgeConfirm0338!==runId||!bridgeFreshKeys0338} onClick={()=>void enrollBridge0338()}>Зарегистрировать новый ServerBridge node</button>
+        </>}
       </>}
     </article>}
     {compatibility && <article className="subcard">

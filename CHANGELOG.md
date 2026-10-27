@@ -1,3 +1,14 @@
+## [0.33.8] - 2026-10-27
+
+### Module & ServerWrapper Migration (MIG08)
+
+- Static, bounded JAR inspection from a MIG03 hash-pinned Gravit source ZIP; no JAR execution.
+- Unknown executable JARs (including auth/launch hooks) are explicit blockers, not falsely compatible adapters.
+- ServerWrapper JSON and inline environment recognition; sanitized reports never include legacy secrets.
+- Immutable module review in PostgreSQL, audit trail and replay-safe receipt.
+- Fresh Ed25519 Never ServerBridge registration of reviewed ServerWrapper nodes with MFA, new key, exact run confirmation and durable binding receipt. Fresh signed heartbeat and login/join tests remain required.
+- CLI and Admin controls, race-test fixtures and CI for MIG08.
+
 ## [0.33.7] - 2026-10-27
 
 ### Content & Profile Migration (MIG07)

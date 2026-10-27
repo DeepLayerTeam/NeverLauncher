@@ -17,7 +17,7 @@ import (
 // the database checkpoint and lease, not the CLI process, own progress.
 func handleMigrationWorkflow0331(args []string) error {
 	if len(args) < 1 {
-		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|content|preview-content|import-content|apply-optionals|generate-never-keys")
+		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|content|preview-content|import-content|apply-optionals|modules|analyze-modules|enroll-serverbridge|generate-never-keys")
 	}
 	command := args[0]
 	if command == "generate-never-keys" {
@@ -49,12 +49,22 @@ func handleMigrationWorkflow0331(args []string) error {
 			return errors.New("list requires --project")
 		}
 		path = base + "?projectId=" + url.QueryEscape(project)
-	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities", "credentials", "preview-credentials", "import-credentials", "security", "preview-security", "activate-security", "content", "preview-content", "import-content", "apply-optionals":
+	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities", "credentials", "preview-credentials", "import-credentials", "security", "preview-security", "activate-security", "content", "preview-content", "import-content", "apply-optionals", "modules", "analyze-modules", "enroll-serverbridge":
 		id := strings.TrimSpace(flagValue(args, "--run", ""))
 		if id == "" {
 			return fmt.Errorf("%s requires --run", command)
 		}
 		path = base + "/" + url.PathEscape(id)
+		if command == "modules" || command == "analyze-modules" || command == "enroll-serverbridge" {
+			path += "/modules"
+			if command == "analyze-modules" {
+				return migrationModuleAnalyze0338(path+"/analyze", token, flagValue(args, "--source", ""), out)
+			}
+			if command == "enroll-serverbridge" {
+				return migrationModuleEnroll0338(path+"/enroll-serverbridge", token, id, out, flagValue(args, "--wrapper", ""), flagValue(args, "--server-id", ""), flagValue(args, "--name", ""), flagValue(args, "--kind", ""), flagValue(args, "--profile-id", ""), flagValue(args, "--public-key", ""), flagValue(args, "--fresh-keys-confirmed", "") == "true")
+			}
+			break
+		}
 		if command == "content" || command == "preview-content" || command == "import-content" || command == "apply-optionals" {
 			path += "/content"
 			pp := flagValue(args, "--profile-path", "")

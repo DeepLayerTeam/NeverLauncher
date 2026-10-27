@@ -1777,6 +1777,283 @@
         },
         "description": "Explicit run ID confirmation required; signing and publication remain separate high-assurance operations."
       }
+    },
+    "/api/v1/admin/migration-runs/{runId}/modules": {
+      "get": {
+        "operationId": "migration0338_modules_get",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Read persisted sanitized module and ServerWrapper assessment",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "X-Migration-Modules-Confirm",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Migration-Fresh-Keys-Confirmed",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "const": "true"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized report or fresh ServerBridge identity receipt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Operator permission / MFA required"
+          },
+          "409": {
+            "description": "Source conflict, critical module blocker or duplicate node"
+          },
+          "422": {
+            "description": "Unrecognized source or invalid request"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/modules/analyze": {
+      "post": {
+        "operationId": "migration0338_modules_analyze",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Inspect hash-pinned Gravit JARs and wrapper configuration without executing code",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "X-Migration-Modules-Confirm",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Migration-Fresh-Keys-Confirmed",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "const": "true"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized report or fresh ServerBridge identity receipt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Operator permission / MFA required"
+          },
+          "409": {
+            "description": "Source conflict, critical module blocker or duplicate node"
+          },
+          "422": {
+            "description": "Unrecognized source or invalid request"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/modules/enroll-serverbridge": {
+      "post": {
+        "operationId": "migration0338_serverbridge_enroll",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Enroll reviewed ServerWrapper replacement with independent Ed25519 identity and fresh MFA",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "X-Migration-Modules-Confirm",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Migration-Fresh-Keys-Confirmed",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "const": "true"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized report or fresh ServerBridge identity receipt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Operator permission / MFA required"
+          },
+          "409": {
+            "description": "Source conflict, critical module blocker or duplicate node"
+          },
+          "422": {
+            "description": "Unrecognized source or invalid request"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "wrapperPath",
+                  "id",
+                  "kind",
+                  "profileId",
+                  "publicKey"
+                ],
+                "properties": {
+                  "wrapperPath": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "profileId": {
+                    "type": "string"
+                  },
+                  "publicKey": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "schemas": {

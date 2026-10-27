@@ -203,3 +203,27 @@ for(const action of ['preview','status','import','optionals']) {
   }catch(e){message(e.message,true)}finally{btn.disabled=false}
  });
 }
+
+// MIG08: JARs are inspected server-side and are never executed or installed.
+for(const action of ['analyze','get','enroll']) {
+ byId('migration-modules-'+action).addEventListener('click',async ev=>{
+  const id=migrationId();if(!id){message('Укажите migration run ID',true);return}
+  const file=byId('migration-assess').querySelector('[name=source]').files[0];
+  if(action==='analyze'&&!file){message('Выберите исходный ZIP',true);return}
+  if(action==='enroll'&&(!byId('migration-modules-fresh').checked||byId('migration-modules-confirm').value.trim()!==id)){message('Подтвердите точный ID',true);return}
+  const button=ev.currentTarget;button.disabled=true;
+  try {
+   let url=`/api/v1/admin/migration-runs/${encodeURIComponent(id)}/modules`,method='GET',body;
+   const headers={Authorization:`Bearer ${token}`};
+   if(action==='analyze'){url+='/analyze';method='POST';body=file;headers['Content-Type']='application/zip'}
+   if(action==='enroll'){
+    url+='/enroll-serverbridge';method='POST';headers['Content-Type']='application/json';headers['X-Migration-Modules-Confirm']=id;headers['X-Migration-Fresh-Keys-Confirmed']='true';
+    body=JSON.stringify({wrapperPath:byId('migration-modules-wrapper').value.trim(),id:byId('migration-modules-node').value.trim(),name:byId('migration-modules-name').value.trim(),kind:byId('migration-modules-kind').value.trim(),profileId:byId('migration-modules-profile').value.trim(),publicKey:byId('migration-modules-public-key').value.trim()});
+   }
+   const response=await fetch(url,{method,headers,body,cache:'no-store',redirect:'error',credentials:'same-origin'});
+   const json=await response.json();byId('migration-report').textContent=JSON.stringify({modules:json.data??json},null,2);
+   if(!response.ok)throw new Error(json?.error?.message||`HTTP ${response.status}`);
+   message(action==='enroll'?'ServerBridge node registered with new key; heartbeat required':'Module inspection received');
+  }catch(e){message(e.message,true)}finally{button.disabled=false}
+ });
+}

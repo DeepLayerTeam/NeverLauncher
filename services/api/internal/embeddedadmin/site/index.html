@@ -7,7 +7,7 @@
 <section id="login" hidden><h2>Вход администратора</h2><form id="login-form"><label>Email<input name="email" type="email" autocomplete="username" required></label><label>Пароль<input name="password" type="password" autocomplete="current-password" required></label><label>TOTP (если требуется)<input name="totp" inputmode="numeric" autocomplete="one-time-code"></label><button type="submit">Войти</button></form></section>
 <section id="admin" hidden><h2>Состояние Backend</h2><button id="refresh" type="button">Обновить</button><button id="logout" type="button">Выйти</button><pre id="overview"></pre>
 <h2>Создание первого проекта</h2><p>Создаёт черновой релиз после проверки прав текущего владельца.</p><form id="project-form"><label>Проект<input name="projectId" value="default-project" required></label><label>Профиль<input name="profileId" value="vanilla" required></label><label>Канал<input name="channel" value="stable" required></label><label>Версия<input name="version" value="0.1.0" required></label><button type="submit">Создать проект</button></form>
-<h2>Migration Center · 0.33.7</h2>
+<h2>Migration Center · 0.33.8</h2>
 <p>Проверка и сохранение целевой конфигурации Never. Это ещё не импорт Gravit и не разрешение на cutover.</p>
 <form id="migration-create"><label>ID проекта<input name="projectId" required maxlength="128" value="default-project"></label><label>Ключ повторного выполнения<input name="idempotencyKey" required minlength="8" maxlength="128" placeholder="change-request-2026-001"></label><button type="submit">Создать migration run</button></form>
 <form id="migration-select"><label>Migration run ID<input id="migration-run-id" required></label><button type="submit">Показать</button></form>
@@ -36,6 +36,18 @@
 <label>Подтвердить точный run ID<input id="migration-content-run" autocomplete="off"></label>
 <button id="migration-content-import" type="button">Перенести проверенные файлы</button>
 <button id="migration-content-optionals" type="button">Применить optional catalog после сборки</button></fieldset>
+<fieldset id="migration-modules"><legend>Module &amp; ServerWrapper Migration (MIG08)</legend>
+<p>Проверка JAR без исполнения, проверка исходного ZIP по MIG03, отчёт по неизвестным модулям. Перенос старых ServerWrapper токенов запрещён.</p>
+<button id="migration-modules-analyze" type="button">Анализировать модули и ServerWrapper</button><button id="migration-modules-get" type="button">Прочитать сохранённый отчёт</button>
+<label>Исходный путь ServerWrapperConfig.json или .env<input id="migration-modules-wrapper" placeholder="server/ServerWrapperConfig.json"></label>
+<label>Новый ServerBridge Node ID<input id="migration-modules-node" placeholder="my-server"></label>
+<label>Название сервера<input id="migration-modules-name" placeholder="Minecraft Server"></label>
+<label>Тип сервера<input id="migration-modules-kind" value="paper" placeholder="paper / forge / velocity"></label>
+<label>ID профиля Never<input id="migration-modules-profile" placeholder="my-profile"></label>
+<label>НОВЫЙ Ed25519 publicKey (base64url; private key никогда не отправляется)<input id="migration-modules-public-key" autocomplete="off"></label>
+<label><input id="migration-modules-fresh" type="checkbox"> Подтверждаю, что это новый независимый Ed25519 keypair Never; старые ключи Gravit не используются</label>
+<label>Подтвердить точный run ID<input id="migration-modules-confirm" autocomplete="off"></label>
+<button id="migration-modules-enroll" type="button">Зарегистрировать новый ServerBridge node (MFA)</button></fieldset>
 <p>Сначала выполните dry-run. Импорт не обновляет пароли существующих пользователей, не переносит токены или права и не разрешает cutover.</p>
 <p>Экспорт содержит исходные конфигурации и может включать пароли/ключи. Сохраняйте его в защищённом каталоге.</p>
 <pre id="migration-report"></pre>
