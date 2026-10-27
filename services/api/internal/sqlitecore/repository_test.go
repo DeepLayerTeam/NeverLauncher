@@ -29,6 +29,9 @@ func openTest(t *testing.T) (*Repository, string) {
 			t.Fatal(e)
 		}
 	}
+	if e := os.Chmod(dir, 0700); e != nil {
+		t.Fatal(e)
+	}
 	path := filepath.Join(dir, "core.db")
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()

@@ -1,3 +1,11 @@
+## 0.32.3 — DEP01 SQLite Authentication & Revocation (2026-10-27)
+
+- Implement real transactional SQLite local login, session access/refresh tokens, persistent replay detection and family compromise with cascading Minecraft token revocation.
+- Add operator-key-encrypted TOTP MFA, step replay fences, one-use recovery codes, and immediate session revocation on MFA changes.
+- Persist stable Minecraft identities, Minecraft sessions tied to Never auth epochs, explicit revocation and local CLI lifecycle.
+- Add schema upgrade 322→323, security/restart/concurrency tests, native-filesystem CI and operator runbook.
+- SQLite HTTP API/coordinator is **not** enabled; complete parity, live driver testing and CI certification are still pending.
+
 ## 0.32.2 — DEP01 SQLite Core Repository (2026-10-26)
 
 - Implement actual SQLite transactional CRUD for projects, profiles with immutable history/revision CAS, channels, signed release drafts/publication with atomic channel-head CAS, users/normalized role assignments and append-only audit.

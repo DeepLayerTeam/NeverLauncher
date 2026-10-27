@@ -1,0 +1,68 @@
+name: SQLite authentication and revocation DEP01 (0.32.3)
+on:
+  push:
+    paths:
+      - 'services/api/internal/sqlitecore/**'
+      - 'services/api/internal/sqlitedurable/**'
+      - 'services/api/internal/localpassword/**'
+      - 'services/api/cmd/neverlauncher-sqlite/**'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+      - '.github/workflows/sqlite-auth-0323.yml'
+  pull_request:
+  workflow_dispatch:
+jobs:
+  sqlite-auth-security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: services/api/go.sum
+      - name: Verify go modules and formatting
+        run: |
+          set -euo pipefail
+          go mod download
+          go mod verify
+          test -z "$(gofmt -l internal/sqlitecore cmd/neverlauncher-sqlite)"
+      - name: Certify native local filesystem
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/never-sqlite-auth"
+          chmod 0700 "$RUNNER_TEMP/never-sqlite-auth"
+          stat -f -c '%T' "$RUNNER_TEMP/never-sqlite-auth"
+      - name: Run real-driver auth/MFA/replay/revocation/restart/migration tests
+        env:
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-auth
+          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+        run: |
+          set -euo pipefail
+          go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+          go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+      - name: Compile and initialize CLI with current schema
+        run: |
+          set -euo pipefail
+          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+          db="$RUNNER_TEMP/never-sqlite-auth/live.sqlite"
+          "$RUNNER_TEMP/neverlauncher-sqlite" core-init --db "$db" > "$RUNNER_TEMP/auth-init.json"
+          "$RUNNER_TEMP/neverlauncher-sqlite" core-status --db "$db" > "$RUNNER_TEMP/auth-status.json"
+          python3 - <<'PY'
+          import json,os
+          with open(os.environ['RUNNER_TEMP']+'/auth-status.json') as f: result=json.load(f)
+          assert result['status']=='ok' and result['schemaVersion']==323
+          assert result['counts']['roles']==8
+          assert result['counts']['auth_sessions']==0
+          PY
+          printf '{"password":"correct long secret"}\n' > "$RUNNER_TEMP/never-sqlite-auth/password.json"
+          chmod 0600 "$RUNNER_TEMP/never-sqlite-auth/password.json"
+          "$RUNNER_TEMP/neverlauncher-sqlite" auth-hash-password --input "$RUNNER_TEMP/never-sqlite-auth/password.json" > "$RUNNER_TEMP/never-sqlite-auth/hash.json"
+          python3 - <<'PY'
+          import json,os
+          with open(os.environ['RUNNER_TEMP']+'/never-sqlite-auth/hash.json') as f: result=json.load(f)
+          assert result['passwordHash'].startswith('$argon2id$')
+          PY
