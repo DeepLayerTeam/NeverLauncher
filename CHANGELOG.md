@@ -1,3 +1,13 @@
+## [0.33.10] - 2026-10-28
+
+### Isolated Migration Rehearsal (MIG10)
+
+- CLI executes seven real, operator-provisioned stage-side probe binaries without a shell, with bounded runtime/stdout, minimal environment and on-disk evidence hashing. Refuses missing tests and staging paths escaping the operator-declared sandbox.
+- Source and post-test target snapshots compare Minecraft UUIDs, world checksums, inventory, plugin permissions, economy, skins, loader, optional presets and administrator roles.
+- Server independently recomputes results, binds player identities to MIG04 and prerequisites to MIG03/MIG05/MIG06/MIG07/MIG08; migrated workspaces must have complete staged file paths and checksums.
+- PostgreSQL migration 0097 stores immutable stage-specific reports with event journaling, safe retry and history across distinct rehearsal stage IDs. CLI, React Admin and Embedded Admin expose actual status. Cutover is **always forbidden** by MIG10.
+- Unit/race tests, CLI process execution tests, PostgreSQL integration test and CI workflow. The operator MUST provision a physically/network isolated test environment and real Minecraft/plugin test binaries; CLI cannot prove that an operator-declared stage is isolated, and probe results are not cryptographic attestation of gameplay. This does not implement staged cutover or rollback.
+
 ## [0.33.9] - 2026-10-28
 
 ### Player Migration Assistant (MIG09)

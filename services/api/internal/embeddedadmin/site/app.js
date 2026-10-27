@@ -227,3 +227,15 @@ for(const action of ['analyze','get','enroll']) {
   }catch(e){message(e.message,true)}finally{button.disabled=false}
  });
 }
+
+// MIG10 reports are read-only in Embedded Admin: arbitrary staging programs
+// can only be executed by the operator's local CLI in an isolated environment.
+byId('migration-rehearsal-get').addEventListener('click',async e=>{
+ const id=migrationId();if(!id){message('Укажите Migration run ID',true);return}
+ e.currentTarget.disabled=true;
+ try{
+  const report=await api(`/api/v1/admin/migration-runs/${encodeURIComponent(id)}/rehearsal`);
+  byId('migration-report').textContent=JSON.stringify({rehearsal:report},null,2);
+  message(report.ready?'Проверенная репетиция прошла; cutover остаётся запрещённым':'Репетиция имеет блокировки; см. отчёт');
+ }catch(err){message(err.message,true)}finally{e.currentTarget.disabled=false}
+});

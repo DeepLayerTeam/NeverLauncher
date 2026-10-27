@@ -22,6 +22,7 @@ type Security0336 = {format:string;runId:string;importedAccounts:number;existing
 type ContentPlan0337 = {format:string;sourceSha256:string;inventorySha256:string;profilePath:string;filesSha256:string;ready:boolean;blockers:string[];files:{sourcePath:string;targetPath:string;size:number;sha256:string;ownership:string}[];profile:{fields:{field:string;status:string;reason:string}[];settings:unknown};optional?:{ready:boolean;summary:Record<string,number>;fields:{field:string;status:string;reason:string}[]}};
 type ContentState0337 = {plan:ContentPlan0337;workspaceId:string;workspaceRevision:number;state:string;stagedFiles:number;totalFiles:number;complete:boolean;validation:string;buildWorkspaceUrl:string};
 type Modules0338 = {format:string;sourceSha256:string;inventorySha256:string;ready:boolean;cutoverAllowed:boolean;blockers:string[];modules:{path:string;sha256:string;name:string;implementation:string;status:string;reason:string;authHook:boolean;launchHook:boolean;sourcesPresent:boolean}[];wrappers:{path:string;mode:string;serverName?:string;legacyTokenPresent:boolean;legacyAddressPresent:boolean;replacement:string;status:string;reason:string}[]};
+type Rehearsal03310 = {format:string;runId:string;stageId:string;sourceInventorySha256:string;sourceSnapshotSha256:string;targetSnapshotSha256:string;ready:boolean;cutoverAllowed:boolean;blockers:string[];probes:{name:string;passed:boolean;uuid?:string;evidenceSha256:string}[]};
 type Event = { sequence: number; kind: string; step: string; revision: number; detail: unknown; createdAt: string };
 
 /** A working server-backed migration run operator. No client-side state is
@@ -54,6 +55,7 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
   const [contentPreview,setContentPreview] = useState<ContentPlan0337|null>(null);
   const [contentState,setContentState] = useState<ContentState0337|null>(null);
   const [modules0338,setModules0338]=useState<Modules0338|null>(null);
+  const [rehearsal03310,setRehearsal03310]=useState<Rehearsal03310|null>(null);
   const [wrapperPath0338,setWrapperPath0338]=useState('');
   const [bridgeNode0338,setBridgeNode0338]=useState('');
   const [bridgeName0338,setBridgeName0338]=useState('');
@@ -84,6 +86,8 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setIdentities(null); else throw e;}
     try {setCredentials(await requestJSON<Credentials0335>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/credentials`,token));}
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setCredentials(null); else throw e;}
+    try {setRehearsal03310(await requestJSON<Rehearsal03310>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/rehearsal`,token));}
+    catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setRehearsal03310(null); else throw e;}
     try {setModules0338(await requestJSON<Modules0338>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/modules`,token));}
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setModules0338(null); else throw e;}
     try {setCompatibility(await requestJSON<Compatibility0332>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/compatibility`,token));}
@@ -388,6 +392,17 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
           <label className="field"><span>Введите точный run ID (требуется свежая MFA-сессия)</span><input value={bridgeConfirm0338} onChange={e=>setBridgeConfirm0338(e.target.value)}/></label>
           <button disabled={busy||!wrapperPath0338||!bridgeNode0338||!bridgeProfile0338||!bridgePublicKey0338||bridgeConfirm0338!==runId||!bridgeFreshKeys0338} onClick={()=>void enrollBridge0338()}>Зарегистрировать новый ServerBridge node</button>
         </>}
+      </>}
+    </article>}
+    {run && <article className="subcard">
+      <h3>Isolated Migration Rehearsal · MIG10</h3>
+      <p>Проверки исполняются CLI на отдельном изолированном стенде. Backend сверяет результаты с MIG03–MIG08 и UUID из сохранённой карты. Административный сервер не запускает JAR или команды из браузера.</p>
+      <p><code>nl migrate gravit rehearse --run {runId} --stage /srv/staging-rehearsal --inventory-sha256 &lt;MIG03-manifest-sha256&gt; --backend https://your-never-backend --token &lt;token&gt;</code></p>
+      <button disabled={busy} onClick={()=>void refresh(runId)}>Прочитать последнюю репетицию</button>
+      {rehearsal03310 && <>
+        <p>Стенд: <code>{rehearsal03310.stageId}</code> · проверок: {rehearsal03310.probes.length} · результат: {rehearsal03310.ready?'пройдена':'заблокирована'} · cutover: запрещён.</p>
+        {rehearsal03310.blockers.map((x,i)=><p key={i} className="error">{x}</p>)}
+        <details><summary>SHA-256, UUID и результаты проверок</summary><pre>{JSON.stringify(rehearsal03310,null,2)}</pre></details>
       </>}
     </article>}
     {compatibility && <article className="subcard">

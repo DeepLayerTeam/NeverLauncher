@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.33.9. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.33.10. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -19869,6 +19869,140 @@
                     "type": "string"
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/rehearsal": {
+      "get": {
+        "operationId": "migration03310_get",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Read latest isolated rehearsal evidence",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified server-side rehearsal report and blockers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "No permission / fresh MFA required"
+          },
+          "404": {
+            "description": "No rehearsal"
+          },
+          "409": {
+            "description": "Conflict or missing migration prerequisites"
+          },
+          "503": {
+            "description": "Repository unavailable"
+          }
+        }
+      },
+      "post": {
+        "operationId": "migration03310_submit",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Validate and save operator-executed isolated rehearsal evidence (fresh MFA)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified server-side rehearsal report and blockers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "No permission / fresh MFA required"
+          },
+          "404": {
+            "description": "No rehearsal"
+          },
+          "409": {
+            "description": "Conflict or missing migration prerequisites"
+          },
+          "503": {
+            "description": "Repository unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "format",
+                  "runId",
+                  "stageId",
+                  "sourceInventorySha256",
+                  "source",
+                  "target",
+                  "probes",
+                  "sourceSnapshotSha256",
+                  "targetSnapshotSha256"
+                ],
+                "additionalProperties": true
               }
             }
           }

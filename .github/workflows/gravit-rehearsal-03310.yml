@@ -1,0 +1,52 @@
+name: Gravit Isolated Migration Rehearsal 0.33.10
+on:
+  push:
+    paths:
+      - 'services/api/internal/gravitrehearsal/**'
+      - 'services/api/internal/repository/migration_rehearsal*'
+      - 'services/api/internal/httpapi/migration_rehearsal*'
+      - 'services/api/internal/dbmigrate/sql/0097*'
+      - 'cli/cmd/neverlauncher/migration_rehearsal*'
+      - 'schemas/openapi*'
+      - '.github/workflows/gravit-rehearsal-03310.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  migration-rehearsal:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: neverlauncher_test
+          POSTGRES_USER: neverlauncher_test
+          POSTGRES_PASSWORD: test_only_not_production
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Unit and PostgreSQL integration
+        working-directory: services/api
+        run: |
+          go test -race -count=1 ./internal/gravitrehearsal
+          go test -race -count=1 ./internal/repository -run 'TestMigrationRehearsal03310'
+          go test -count=1 ./internal/httpapi -run '^$'
+      - name: CLI real-process probes and security checks
+        working-directory: cli
+        run: go test -race -count=1 ./cmd/neverlauncher -run 'TestRehearsal'
+      - name: Contract and version
+        run: |
+          python3 scripts/version/manage.py check
+          python3 scripts/contracts/validate-openapi.py
