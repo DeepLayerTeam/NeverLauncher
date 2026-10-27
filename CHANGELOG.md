@@ -1,5 +1,13 @@
 ## 0.32.5 — DEP01/02 SQLite Durable Jobs, Leases & Outbox (2026-10-27)
 
+## [0.32.9] - 2026-10-27
+
+- Добавлен Go CLI для подписанных Ed25519 offline installer bundles: pack/verify/install с SHA-256, проверкой пути и атомарной публикацией без перезаписи.
+- Добавлены безопасное создание конфигурации и first-owner bootstrap из защищённых файлов.
+- В Backend встроена компактная Admin-страница (`/admin/`) для readiness, первого владельца, входа и первого проекта.
+- Интеграция 0.32.9 не заменяет полную React Admin SPA и не открывает SQLite-only HTTP Backend.
+
+
 ## 0.32.8 — Deployment Modes (DEP05; 2026-10-27)
 
 - Detect actual Standard vs Network/HA topology and report evidence without exposing secrets (`neverlauncher-api diagnose deployment`). No unsafe automatic downgrade to memory.

@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NeverLauncher · Embedded Admin</title><link href="/admin/app.css" rel="stylesheet"></head>
+<body><main><header><h1>NeverLauncher</h1><p>Embedded Admin · первичная настройка и контроль проекта</p></header>
+<aside id="status" role="status" aria-live="polite">Проверка состояния…</aside>
+<section id="bootstrap" hidden><h2>Создание владельца</h2><p>Только для новой установки. Введите одноразовый bootstrap token из защищённого конфигурационного файла.</p>
+<form id="bootstrap-form"><label>Токен<input name="bootstrapToken" type="password" autocomplete="off" required minlength="32"></label><label>Email<input name="email" type="email" autocomplete="email" required></label><label>Имя<input name="displayName" required maxlength="200"></label><label>Пароль владельца<input name="password" type="password" autocomplete="new-password" minlength="12" required></label><button type="submit">Создать владельца</button></form></section>
+<section id="login" hidden><h2>Вход администратора</h2><form id="login-form"><label>Email<input name="email" type="email" autocomplete="username" required></label><label>Пароль<input name="password" type="password" autocomplete="current-password" required></label><label>TOTP (если требуется)<input name="totp" inputmode="numeric" autocomplete="one-time-code"></label><button type="submit">Войти</button></form></section>
+<section id="admin" hidden><h2>Состояние Backend</h2><button id="refresh" type="button">Обновить</button><button id="logout" type="button">Выйти</button><pre id="overview"></pre>
+<h2>Создание первого проекта</h2><p>Создаёт черновой релиз после проверки прав текущего владельца.</p><form id="project-form"><label>Проект<input name="projectId" value="default-project" required></label><label>Профиль<input name="profileId" value="vanilla" required></label><label>Канал<input name="channel" value="stable" required></label><label>Версия<input name="version" value="0.1.0" required></label><button type="submit">Создать проект</button></form>
+<h2>Проекты</h2><pre id="projects"></pre></section>
+<footer>Полная Admin SPA развёртывается отдельно. Здесь доступны bootstrap, вход, readiness и создание первого проекта.</footer></main><script src="/admin/app.js" defer></script></body></html>

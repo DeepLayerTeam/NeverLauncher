@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/embeddedadmin"
+
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
 )
 
@@ -27,6 +29,10 @@ func (s Server) Handler() http.Handler {
 		s.Federation = core
 	}
 	mux := http.NewServeMux()
+	mux.Handle("GET /admin", embeddedadmin.Handler())
+	mux.Handle("GET /admin/", embeddedadmin.Handler())
+	mux.Handle("GET /admin/app.js", embeddedadmin.Handler())
+	mux.Handle("GET /admin/app.css", embeddedadmin.Handler())
 	mux.HandleFunc("GET /health", s.health)
 	mux.HandleFunc("GET /ready", s.ready)
 	mux.HandleFunc("GET /metrics", s.metrics)

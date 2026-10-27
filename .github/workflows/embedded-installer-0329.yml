@@ -1,0 +1,43 @@
+name: NeverLauncher 0.32.9 signed installer and embedded Admin
+on:
+  push:
+    paths:
+      - 'installer/**'
+      - 'services/api/internal/embeddedadmin/**'
+      - 'services/api/internal/httpapi/handler.go'
+      - '.github/workflows/embedded-installer-0329.yml'
+  pull_request:
+    paths:
+      - 'installer/**'
+      - 'services/api/internal/embeddedadmin/**'
+      - 'services/api/internal/httpapi/handler.go'
+      - '.github/workflows/embedded-installer-0329.yml'
+jobs:
+  installer:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: installer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: installer/go.mod
+      - run: go test -race -count=1 ./...
+      - run: go vet ./...
+      - run: go build -trimpath -o "$RUNNER_TEMP/neverlauncher-install" ./cmd/neverlauncher-install
+      - name: CLI sanity
+        run: |
+          "$RUNNER_TEMP/neverlauncher-install" verify --bundle /nonexistent --trusted-key /nonexistent && exit 1 || true
+  embedded-admin:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: GO111MODULE=off go test -race ./services/api/internal/embeddedadmin
+      - run: node --check services/api/internal/embeddedadmin/site/app.js
