@@ -1,0 +1,44 @@
+name: Player Migration Assistant 0.33.9
+on:
+  push:
+    paths:
+      - 'runtime/neverruntime/src/player_migration_0339.rs'
+      - 'runtime/neverruntime/src/content_cache.rs'
+      - 'apps/desktop/src/PlayerMigration0339.tsx'
+      - 'apps/desktop/src/main.tsx'
+      - 'apps/desktop/src-tauri/src/main.rs'
+      - '.github/workflows/player-migration-0339.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rust-migration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Rust tests including actual signed-manifest, source hashing and symlink defense
+        working-directory: runtime/neverruntime
+        run: cargo test --locked --lib player_migration_0339 -- --nocapture
+      - name: Compile desktop Tauri bridge
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+          cd apps/desktop/src-tauri
+          cargo check --locked
+  desktop-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Version and Desktop TypeScript build
+        run: |
+          python3 scripts/version/manage.py check
+          cd apps/desktop
+          npm ci --ignore-scripts
+          npm run build

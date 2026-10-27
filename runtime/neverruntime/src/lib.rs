@@ -13,6 +13,7 @@ mod http_resume;
 mod content_cache;
 mod network_resilience;
 pub mod durable_downloads;
+pub mod player_migration_0339;
 pub mod transactional_release;
 mod release_generations;
 mod trust_policy;

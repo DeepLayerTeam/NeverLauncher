@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import './styles.css';
+import PlayerMigration0339 from './PlayerMigration0339';
 import { installErrorCapture0309 } from './sentry_diagnostics_0309';
 import { loadDesktopView03011, prewarmDesktop03011 } from './startup_optimizer_03011';
 
@@ -25,7 +26,7 @@ const TexturesPanel0258 = React.lazy(() => loadDesktopView03011('textures'));
 const HWIDRisk0299 = React.lazy(() => loadDesktopView03011('deviceRisk'));
 
 type Stage = 'idle' | 'connecting' | 'session' | 'project' | 'profile' | 'manifest' | 'java' | 'files' | 'repair' | 'cleanup' | 'ready' | 'launching' | 'running' | 'failed';
-type Screen = 'firstRun' | 'overview' | 'auth' | 'projects' | 'profile' | 'textures' | 'download' | 'settings' | 'logs' | 'diagnostics' | 'extensions';
+type Screen = 'firstRun' | 'overview' | 'auth' | 'projects' | 'profile' | 'textures' | 'download' | 'migration' | 'settings' | 'logs' | 'diagnostics' | 'extensions';
 
 type DesktopSettings = {
   schemaVersion?: string;
@@ -1926,7 +1927,7 @@ function App() {
         <nav>
           {[
             ['firstRun', 'Первый запуск'], ['overview', 'Обзор'], ['auth', 'Вход'], ['projects', 'Проекты'], ['profile', 'Профиль'],
-            ['download', 'Загрузка'], ['textures', 'Скины и плащи'], ['settings', 'Настройки'], ['extensions', 'Расширения'], ['logs', 'Логи'], ['diagnostics', 'Диагностика'],
+            ['download', 'Загрузка'], ['migration', 'Переход с Gravit'], ['textures', 'Скины и плащи'], ['settings', 'Настройки'], ['extensions', 'Расширения'], ['logs', 'Логи'], ['diagnostics', 'Диагностика'],
           ].map(([id, title]) => <button key={id} className={screen === id ? 'active' : ''} onClick={() => setScreen(id as Screen)}>{title}</button>)}
         </nav>
       </aside>
@@ -2002,6 +2003,21 @@ function App() {
         {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} pinnedPublicKey={settings.pinnedPublicKey} root={settings.gameDirectory} transferBusy={transferBusy} installSelection={installComponentSelection0247} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
+        {screen === 'migration' && <PlayerMigration0339
+          manifest={manifest} pinnedPublicKey={settings.pinnedPublicKey}
+          componentPreset={settings.componentPreset || ''} transferBusy={transferBusy}
+          applyDisplayPreferences={async (suggestion) => {
+            const next = normalizedSettings({ ...settings, projectId: selectedProject || settings.projectId,
+              profileId: selectedProfile || settings.profileId,
+              ...(suggestion.fullscreen != null ? { fullscreen: suggestion.fullscreen } : {}),
+              ...(suggestion.screenWidth != null ? { screenWidth: suggestion.screenWidth } : {}),
+              ...(suggestion.screenHeight != null ? { screenHeight: suggestion.screenHeight } : {}),
+            });
+            await callTauri('save_desktop_config', { config: next });
+            setSettings(next);
+          }}
+          onAdopted={() => { log('Проверенные файлы прежней установки добавлены в content cache.'); void verifyFiles(); }}
+        />}
         {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} minecraftIdentity={minecraftIdentity} setMinecraftIdentity={setMinecraftIdentity} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
         {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}

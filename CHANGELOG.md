@@ -1,3 +1,12 @@
+## [0.33.9] - 2026-10-28
+
+### Player Migration Assistant (MIG09)
+
+- Desktop UI to choose a previous Gravit/Minecraft directory, preview verified reusable files and explicitly approve adoption; common legacy locations are suggested without automatic copying.
+- Only bytes whose size and SHA-256 match the independently Ed25519-signed Never release manifest are published to NeverRuntime's existing shared content cache. Existing OS-wide per-object locks, rehash on publication and ordinary signed release installation are reused. No direct modification of the game tree.
+- Candidate optional components are reported from signed file content, never automatically enabled. Minecraft display preferences can be applied only with explicit consent; no tokens, keys, passwords, JAR execution or old trust anchors are imported.
+- Rust tests, Tauri commands, UI panel, CI workflow and player runbook. Independent installer distribution signatures and end-to-end clean installs still require release validation.
+
 ## [0.33.8] - 2026-10-27
 
 ### Module & ServerWrapper Migration (MIG08)
