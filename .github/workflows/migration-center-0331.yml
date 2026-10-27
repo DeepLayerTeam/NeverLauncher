@@ -1,0 +1,60 @@
+name: Migration Center 0.33.1 — durable execution
+on:
+  push:
+    paths:
+      - 'services/api/internal/migrationworkflow/**'
+      - 'services/api/internal/repository/migration_0331*'
+      - 'services/api/internal/httpapi/migration_0331*'
+      - 'services/api/internal/dbmigrate/sql/0089_*'
+      - 'services/api/internal/httpapi/handler.go'
+      - 'cli/cmd/neverlauncher/migration_workflow_0331*'
+      - 'apps/admin/src/admin/**'
+      - '.github/workflows/migration-center-0331.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  durable-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: neverlauncher_test
+          POSTGRES_USER: neverlauncher_test
+          POSTGRES_PASSWORD: test_only_not_production
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Migration engine, SQL integration, target baseline
+        working-directory: services/api
+        run: go test -race -count=1 -timeout 5m ./internal/migrationworkflow ./internal/repository ./internal/httpapi -run 'TestMigrationDurability0331|TestMigrationFailureResume0331|TestMigrationTargetSteps0331|TestMigrationStepGate0331'
+      - name: CLI contract
+        working-directory: cli
+        run: go test -count=1 ./cmd/neverlauncher -run '^TestMigrationWorkflowCLI0331$'
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: apps/admin
+      - run: npm run build
+        working-directory: apps/admin

@@ -38,3 +38,32 @@ byId('refresh').addEventListener('click',dashboard);
 byId('logout').addEventListener('click',async()=>{try{await api('/api/v1/admin/logout','POST',{})}catch{}token='';byId('overview').textContent='';byId('projects').textContent='';await readiness()});
 byId('project-form').addEventListener('submit',async event=>{event.preventDefault();const submit=byId('project-form').querySelector('button');submit.disabled=true;try{const result=await api('/api/v1/install/first-project','POST',values('project-form'));message(`Черновой релиз ${result.releaseId} создан`);await dashboard()}catch(e){message(e.message,true)}finally{submit.disabled=false}});
 readiness();
+
+// 0.33.1 uses the same secured Admin API as the CLI. The operator supplies
+// the target project and sees the persisted state/events, never a fake success.
+const migrationId=()=>byId('migration-run-id').value.trim();
+async function migrationView(){
+ const id=migrationId();if(!id)return;
+ const [run,events]=await Promise.all([
+  api(`/api/v1/admin/migration-runs/${encodeURIComponent(id)}`),
+  api(`/api/v1/admin/migration-runs/${encodeURIComponent(id)}/events`)
+ ]);
+ byId('migration-report').textContent=JSON.stringify({run,events},null,2);
+}
+byId('migration-create').addEventListener('submit',async e=>{
+ e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;
+ try{
+  const idempotencyKey=values('migration-create').idempotencyKey;
+  const result=await api('/api/v1/admin/migration-runs','POST',{projectId:values('migration-create').projectId,idempotencyKey,sourceKind:'gravit'});
+  byId('migration-run-id').value=result.id;await migrationView();message('Migration run created; source assessment is not yet supported.');
+ }catch(err){message(err.message,true)}finally{button.disabled=false}
+});
+byId('migration-select').addEventListener('submit',async e=>{e.preventDefault();try{await migrationView()}catch(err){message(err.message,true)}});
+for(const op of ['execute','pause','resume']){
+ byId('migration-'+op).addEventListener('click',async e=>{
+  if(!migrationId()){message('Укажите Migration run ID',true);return}
+  e.currentTarget.disabled=true;
+  try{await api(`/api/v1/admin/migration-runs/${encodeURIComponent(migrationId())}/${op}`,'POST',{});await migrationView();}
+  catch(err){message(err.message,true)}finally{e.currentTarget.disabled=false}
+ });
+}

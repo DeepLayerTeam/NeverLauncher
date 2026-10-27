@@ -7,6 +7,7 @@ import { BackendNoticeInbox0289 } from './BackendNoticeInbox0289';
 import { ReleaseWorkspace } from './ReleaseWorkspace';
 import { ProfileManagementWorkspace } from './ProfileManagementWorkspace';
 import { JobMonitor } from './JobMonitor';
+import { MigrationCenter0331 } from './MigrationCenter0331';
 import { BackupWorkspace } from './BackupWorkspace';
 import { SessionsDevicesWorkspace } from './SessionsDevicesWorkspace';
 import { AuditWorkspace } from './AuditWorkspace';
@@ -260,7 +261,7 @@ export function AdminApp() {
   }
 
   async function loadActive() {
-    if (!token || !mayRead || ['release-workspace','job-monitor','backup-restore','devices','audit','config','official-provider','auth-provider-wizard'].includes(active) || (['profiles','channels','packages','releases'].includes(active) && !selectedProjectId)) { setPayload(null); return; }
+    if (!token || !mayRead || ['release-workspace','job-monitor','migration-center','backup-restore','devices','audit','config','official-provider','auth-provider-wizard'].includes(active) || (['profiles','channels','packages','releases'].includes(active) && !selectedProjectId)) { setPayload(null); return; }
     const result = await requestJSON<Record<string, unknown>>(backendUrl, activeEndpoint, token);
     setPayload(result);
   }
@@ -295,7 +296,7 @@ export function AdminApp() {
   useEffect(() => {
     let live = true;
     setPayload(null); setSelectedRecordId('');
-    if (!token || !mayRead || ['release-workspace','job-monitor','backup-restore','devices','audit','config','official-provider','auth-provider-wizard'].includes(active) || (['profiles', 'channels', 'packages', 'releases'].includes(active) && !selectedProjectId)) return;
+    if (!token || !mayRead || ['release-workspace','job-monitor','migration-center','backup-restore','devices','audit','config','official-provider','auth-provider-wizard'].includes(active) || (['profiles', 'channels', 'packages', 'releases'].includes(active) && !selectedProjectId)) return;
     requestJSON<Record<string, unknown>>(backendUrl, activeEndpoint, token)
       .then(result => { if (live) { setPayload(result); setError(null); } })
       .catch((err: Error) => { if (live) setError(err.message); });
@@ -436,6 +437,7 @@ export function AdminApp() {
       {token && mayRead && active === 'backend-operations' && <BackendOperations0289 backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'operations' && <OperationsWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
       {token && mayRead && active === 'release-workspace' && <ReleaseWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPrepare={canPrepare} canFileWrite={canFileWrite} canPublish={canPublish} />}
+      {token && mayRead && active === 'migration-center' && <MigrationCenter0331 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
       {token && mayRead && active === 'job-monitor' && <JobMonitor backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
       {token && mayRead && active === 'backup-restore' && <BackupWorkspace backendUrl={backendUrl} token={token} canRestore={can(identity, 'settings:manage') && can(identity, 'storage:manage')} />}
       {token && mayRead && active === 'devices' && <SessionsDevicesWorkspace backendUrl={backendUrl} token={token} adminAccess={mayManageUsers} onCurrentRevoked={() => {setToken('');setRefreshToken('');setSessionId('');setDashboard(null);setIdentity(null);}} />}
@@ -446,7 +448,7 @@ export function AdminApp() {
       {token && mayRead && active === 'texture-management' && <TextureManagement0259 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
       {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} allowedCommands={(Object.keys(gameCommandPermissions) as BridgeCommandType[]).filter(kind => can(identity, gameCommandPermissions[kind], selectedProjectId))} allowEnrollment={can(identity, 'settings:manage')} />}
       {token && !mayRead && <section className="card wide emptyState"><h2>Нет доступа</h2><p>Эта операция недоступна для вашей роли либо проект не выбран. Запросите необходимые полномочия у владельца.</p></section>}
-      {token && mayRead && !['extensions-manager','backend-operations','operations','release-workspace','job-monitor','server-bridge','texture-management','backup-restore','devices','audit','config','official-provider','auth-provider-wizard'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
+      {token && mayRead && !['extensions-manager','backend-operations','operations','release-workspace','job-monitor','migration-center','server-bridge','texture-management','backup-restore','devices','audit','config','official-provider','auth-provider-wizard'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
 
     </section>
   </main>;

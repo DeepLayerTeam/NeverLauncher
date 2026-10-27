@@ -1,3 +1,9 @@
+## [0.33.1] - 2026-10-27
+### Added
+- MIG01 durable PostgreSQL migration run engine: atomic claims, leases, fencing, transaction-bound checkpoints, append-only events, idempotent run creation, pause/resume and failure recovery.
+- Authenticated Admin routes, embedded Admin controls and `nl migrate gravit` CLI for running a real, read-only Never target baseline verification and inventory.
+- Explicit fail-closed handling for unknown Gravit source adapters, import, cutover and rollback (planned for subsequent 0.33.x milestones). `prepared` is not a completed migration.
+
 ## [0.33.0] - 2026-10-27
 
 ### Added

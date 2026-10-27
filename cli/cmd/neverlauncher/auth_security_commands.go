@@ -556,6 +556,7 @@ func handleTenantAudit(args []string) error {
 }
 
 func handleMigrate(args []string) error {
+	if len(args)>0 && args[0]=="gravit" {return handleMigrationWorkflow0331(args[1:])}
 	if len(args) < 1 {
 		return errors.New("доступные migrate-подкоманды: plan, apply, rollback")
 	}
