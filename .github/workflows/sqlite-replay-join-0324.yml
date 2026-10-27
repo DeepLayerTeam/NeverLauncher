@@ -40,7 +40,7 @@ jobs:
           stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
           go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
           go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
-      - name: Build real operational CLI and initialize latest SQLite schema 325
+      - name: Build real operational CLI and initialize latest SQLite schema 326
         env:
           NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-join
         run: |
@@ -52,7 +52,7 @@ jobs:
           python3 - <<'PY'
           import json,os
           with open(os.environ['RUNNER_TEMP']+'/status.json') as f: j=json.load(f)
-          assert j['status']=='ok' and j['schemaVersion']==325,j
+          assert j['status']=='ok' and j['schemaVersion']==326,j
           assert j['counts']['roles']==8,j
           assert j['counts']['bridge_join_tickets']==0,j
           assert j['counts']['bridge_nonces']==0,j

@@ -125,6 +125,9 @@ func (r *Repository) RegisterNode(ctx context.Context, input NodeRegistration) (
 			if _, er = q.ExecContext(ctx, `UPDATE bridge_join_tickets SET status='invalidated',terminal_at=? WHERE node_id=? AND status='active'`, now, input.ID); er != nil {
 				return er
 			}
+			if er = invalidateBridgeRuntimeTx(ctx, q, input.ID, "node identity rotated", now); er != nil {
+				return er
+			}
 			_, er = q.ExecContext(ctx, `UPDATE bridge_nodes SET project_id=?,profile_id=?,channel=?,public_key=?,fingerprint=?,identity_epoch=identity_epoch+1,status='active',updated_at=? WHERE id=?`, input.ProjectID, input.ProfileID, input.Channel, key, fingerprint, now, input.ID)
 			if er != nil {
 				return conflict(er)
@@ -166,6 +169,9 @@ func (r *Repository) DisableNode(ctx context.Context, nodeID, actor string) erro
 		if _, e := q.ExecContext(ctx, `UPDATE bridge_nodes SET status='disabled',identity_epoch=identity_epoch+1,updated_at=? WHERE id=?`, now, nodeID); e != nil {
 			return e
 		}
+		if e := invalidateBridgeRuntimeTx(ctx, q, nodeID, "node disabled", now); e != nil {
+			return e
+		}
 		return recordAudit(ctx, q, audit(actor, "bridge:node-disable", nodeID))
 	})
 }
@@ -173,7 +179,7 @@ func (r *Repository) DisableNode(ctx context.Context, nodeID, actor string) erro
 // verifyProofTx compares persisted trust anchors and validates the signature, timestamp
 // and random nonce. It never trusts a caller-supplied fingerprint or epoch alone.
 func verifyProofTx(ctx context.Context, q sqlitedurable.Executor, action string, proof NodeProof, payloadHash string, now time.Time) error {
-	if proof.NodeID == "" || proof.IdentityEpoch < 1 || !isHex256(payloadHash) || (action != "ping" && action != "redeem") {
+	if proof.NodeID == "" || proof.IdentityEpoch < 1 || !isHex256(payloadHash) || (action != "ping" && action != "redeem" && action != "runtime" && action != "control-lease" && action != "control-ack") {
 		return ErrNodeProof
 	}
 	nowSec := now.UTC().Unix()

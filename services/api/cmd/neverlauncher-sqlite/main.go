@@ -17,6 +17,9 @@ import (
 
 func main() { os.Exit(run(os.Args[1:])) }
 func run(args []string) int {
+	if len(args) > 0 && isFullStateAction(args[0]) {
+		return runFullStateAction(args)
+	}
 	if len(args) > 0 && isDurableAction(args[0]) {
 		return runDurableAction(args)
 	}

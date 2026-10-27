@@ -57,7 +57,7 @@ jobs:
           with open(root+'/sqlite-core-status.json') as f:
               payload=json.load(f)
           assert payload['status']=='ok'
-          assert payload['schemaVersion']==325
+          assert payload['schemaVersion']==326
           assert payload['counts']['roles']==8
           with open(root+'/sqlite-core-read.json') as f:
               project=json.load(f)

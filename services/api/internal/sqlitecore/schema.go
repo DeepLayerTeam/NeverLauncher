@@ -22,7 +22,7 @@ var (
 	ErrImmutable = errors.New("sqlite core: immutable published release or history")
 )
 
-const SchemaVersion = 325
+const SchemaVersion = 326
 
 type Repository struct{ store *sqlitedurable.Store }
 
@@ -68,7 +68,7 @@ func (r *Repository) migrate(ctx context.Context) error {
 		if err := q.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 			return err
 		}
-		if version != 0 && version != 322 && version != 323 && version != 324 && version != SchemaVersion {
+		if version != 0 && version != 322 && version != 323 && version != 324 && version != 325 && version != SchemaVersion {
 			return fmt.Errorf("sqlite core schema %d incompatible with %d", version, SchemaVersion)
 		}
 		if version == 0 {
@@ -90,17 +90,24 @@ func (r *Repository) migrate(ctx context.Context) error {
 				}
 			}
 		}
-		if version != 324 && version != SchemaVersion {
+		if version != 324 && version != 325 && version != SchemaVersion {
 			for _, stmt := range joinDDL {
 				if _, err := q.ExecContext(ctx, stmt); err != nil {
 					return fmt.Errorf("sqlite replay/join migration 324: %w", err)
 				}
 			}
 		}
-		if version != SchemaVersion {
+		if version != 325 && version != SchemaVersion {
 			for _, stmt := range durableDDL {
 				if _, err := q.ExecContext(ctx, stmt); err != nil {
 					return fmt.Errorf("sqlite durable migration 325: %w", err)
+				}
+			}
+		}
+		if version != SchemaVersion {
+			for _, stmt := range fullStateDDL {
+				if _, err := q.ExecContext(ctx, stmt); err != nil {
+					return fmt.Errorf("sqlite full durable migration 326: %w", err)
 				}
 			}
 			if _, err := q.ExecContext(ctx, fmt.Sprintf("PRAGMA user_version=%d", SchemaVersion)); err != nil {
@@ -229,7 +236,7 @@ func (r *Repository) Check(ctx context.Context) error {
 				return er
 			}
 		}
-		return nil
+		return r.checkFullState(ctx, q)
 	})
 }
 

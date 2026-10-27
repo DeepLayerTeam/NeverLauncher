@@ -1,0 +1,59 @@
+name: SQLite full-state core (0.32.6)
+on:
+  push:
+    paths:
+      - 'services/api/internal/sqlitecore/**'
+      - 'services/api/internal/sqlitedurable/**'
+      - 'services/api/cmd/neverlauncher-sqlite/**'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+      - '.github/workflows/sqlite-full-state-0326.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-sqlite326:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Verify exact dependencies and source formatting
+        run: |
+          set -euo pipefail
+          go mod download
+          go mod verify
+          test -z "$(gofmt -l internal/sqlitecore internal/sqlitedurable cmd/neverlauncher-sqlite)"
+      - name: SQLite WAL integration and concurrent state tests
+        env:
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/neverlauncher-sqlite-326
+          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+        run: |
+          set -euo pipefail
+          mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          go test -race -count=1 -timeout=15m ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+          go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+      - name: Native build + schema 326 and backup-compatible startup check
+        run: |
+          set -euo pipefail
+          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+          mkdir -p "$RUNNER_TEMP/nl-326-db"
+          chmod 700 "$RUNNER_TEMP/nl-326-db"
+          "$RUNNER_TEMP/neverlauncher-sqlite" core-init --db "$RUNNER_TEMP/nl-326-db/state.db" > "$RUNNER_TEMP/nl-326-init.json"
+          "$RUNNER_TEMP/neverlauncher-sqlite" core-status --db "$RUNNER_TEMP/nl-326-db/state.db" > "$RUNNER_TEMP/nl-326-status.json"
+          python3 - "$RUNNER_TEMP/nl-326-status.json" <<'PY'
+          import json,sys
+          value=json.load(open(sys.argv[1]))
+          assert value['status']=='ok' and value['schemaVersion']==326,value
+          for table in ['bridge_runtime','bridge_commands','package_blobs','extension_packages','extension_installs','extension_kv']:
+            assert table in value['counts'],table
+          PY

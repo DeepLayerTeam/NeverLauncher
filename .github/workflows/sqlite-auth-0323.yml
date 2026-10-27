@@ -54,7 +54,7 @@ jobs:
           python3 - <<'PY'
           import json,os
           with open(os.environ['RUNNER_TEMP']+'/auth-status.json') as f: result=json.load(f)
-          assert result['status']=='ok' and result['schemaVersion']==325
+          assert result['status']=='ok' and result['schemaVersion']==326
           assert result['counts']['roles']==8
           assert result['counts']['auth_sessions']==0
           PY

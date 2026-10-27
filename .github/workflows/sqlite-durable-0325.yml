@@ -54,7 +54,7 @@ jobs:
           python3 - <<'PY'
           import json,os
           data=json.load(open('status.json'))
-          assert data['schemaVersion']==325,data
+          assert data['schemaVersion']==326,data
           for t in ['durable_jobs','durable_job_attempts','durable_scope_leases','durable_outbox']:
             assert data['counts'][t]==0,(t,data)
           with open('enqueue.json','w') as f:json.dump({'job':{'kind':'release','actorType':'user','actorId':'u','action':'publish','resourceType':'release','resourceId':'r','idempotencyKey':'key-1','payload':{'release':'r'},'maxAttempts':2}},f)
