@@ -519,6 +519,9 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err
 	}
+	if err := verifySingleNodeGA0330(out, ver, expectedCommit, ""); err != nil {
+		return fmt.Errorf("single-node GA build gate: %w", err)
+	}
 	if productionReleaseCandidateRequired01511(ver) {
 		if _, err := normalizeSourceCommit01511(expectedCommit); err != nil {
 			return err
@@ -655,6 +658,11 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if err := verifyOfficialGAReceipt0270(out, ver, expectedCommit); err != nil {
 		return fmt.Errorf("official Minecraft 0.27 GA gate: %w", err)
 	}
+	if singleNodeGARequired0330(ver) {
+        if err := verifySingleNodeGATestedArtifacts0330(out); err != nil {
+            return fmt.Errorf("0.33.0 tested release binary binding: %w", err)
+        }
+    }
 	if err := writeReleaseBOM03214(out, sourceRoot, ver); err != nil {
 		return fmt.Errorf("Release BOM: %w", err)
 	}
@@ -664,6 +672,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if releaseBOMRequired03214(ver) {
 		requiredFiles = append(requiredFiles, releaseBOMFile03214)
 		checks = append(checks, "pinned-release-bom-exact-byte-cohort")
+	}
+	if singleNodeGARequired0330(ver) {
+		requiredFiles = append(requiredFiles, singleNodeGAFiles0330...)
+		checks = append(checks, "independent-ed25519-single-node-ga-exact-commit")
 	}
 	if ver == "0.27.0" {
 		requiredFiles = append(requiredFiles, officialGACertification0270)
@@ -974,6 +986,9 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	if strings.TrimSpace(manifest.Version) == "" {
 		return errors.New("RELEASE_MANIFEST.json не содержит version")
 	}
+	if err := verifySingleNodeGABundle0330(dir, manifest.Version, manifest.SourceCommit, ""); err != nil {
+		return fmt.Errorf("0.33.0 single-node GA: %w", err)
+	}
 	if manifest.Version == "0.27.0" {
 		if err := verifyOfficialGAReceipt0270(dir, manifest.Version, manifest.SourceCommit); err != nil {
 			return err
@@ -1234,6 +1249,9 @@ func releaseArtifacts(ver string) []string {
 	}
 	if releaseBOMRequired03214(ver) {
 		artifacts = append(artifacts, releaseBOMFile03214)
+	}
+	if singleNodeGARequired0330(ver) {
+		artifacts = append(artifacts, singleNodeGAFiles0330...)
 	}
 	if linuxProductionRequired0153(ver) {
 		artifacts = append(artifacts, linuxProductionArtifacts0153(ver)...)

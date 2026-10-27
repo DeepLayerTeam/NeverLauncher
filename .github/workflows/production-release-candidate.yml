@@ -11,6 +11,10 @@ on:
         type: string
         required: true
         description: 'Protected Client Factory 0.28.0 run (same commit, five actual JVM launches and matching-server join)'
+      single_node_ga_evidence_run_id:
+        type: string
+        required: true
+        description: 'Independently signed LIVE SQLite-only installed GA attestation, exact 0.33.0 commit'
       official_minecraft_ga_evidence_run_id:
         type: string
         required: true
@@ -97,7 +101,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
+          go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
       - uses: actions/setup-node@v4
         with:
@@ -147,7 +151,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
+          go-version-file: services/api/go.mod
           cache-dependency-path: |
             services/api/go.sum
             cli/go.sum
@@ -187,9 +191,66 @@ jobs:
     needs: [base-ci]
     uses: ./.github/workflows/production-rc-03216.yml
 
+  single-node-ga-0330:
+    name: 0.33.0 independently signed installed SQLite-only GA evidence
+    needs: [production-rc-03216]
+    runs-on: ubuntu-24.04
+    environment: production-release
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch independent signed acceptance evidence from protected run
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-single-node-ga-0330-${{ github.sha }}
+          run-id: ${{ inputs.single_node_ga_evidence_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: single-node-ga-evidence
+      - name: Fetch this workflow's independently executed RC result
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-03216-rc-${{ github.sha }}
+          path: live-rc-03216
+      - name: Verify complete installed GA evidence and RC integrity
+        env:
+          TRUSTED_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVIDENCE_RUN_ID: ${{ inputs.single_node_ga_evidence_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$EVIDENCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$EVIDENCE_RUN_ID" \
+            --jq '{sha:.head_sha,result:.conclusion,event:.event}' > "$RUNNER_TEMP/ga-run.json"
+          jq -e --arg sha "$GITHUB_SHA" '.sha == $sha and .result == "success" and .event == "workflow_dispatch"' \
+            "$RUNNER_TEMP/ga-run.json" >/dev/null
+          test -n "$TRUSTED_GA_PUBLIC_KEY"
+          umask 077
+          printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > "$RUNNER_TEMP/ga-trust.pub"
+          cmp live-rc-03216/neverlauncher-03216-rc.json single-node-ga-evidence/SINGLE_NODE_GA_RC.json
+          python3 -m pip install 'cryptography>=43,<47'
+          python3 scripts/ga/single_node_ga_0330.py \
+            --evidence-dir single-node-ga-evidence \
+            --public-key "$RUNNER_TEMP/ga-trust.pub" \
+            --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/SINGLE_NODE_GA_CERTIFICATION.json"
+      - name: Stage independently checked GA certification
+        run: cp "$RUNNER_TEMP/SINGLE_NODE_GA_CERTIFICATION.json" single-node-ga-evidence/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-single-node-ga-verified-${{ github.sha }}
+          path: single-node-ga-evidence/
+          if-no-files-found: error
+          retention-days: 90
+
   release-bundle:
     name: Release candidate bundle
-    needs: [base-ci, production-rc-03216, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
+    needs: [base-ci, production-rc-03216, single-node-ga-0330, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
     permissions:
       contents: read
       actions: read
@@ -339,7 +400,7 @@ jobs:
             --poll-seconds 15
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23.x'
+          go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
       - uses: actions/setup-node@v4
         with:
@@ -400,6 +461,20 @@ jobs:
             test -d "$source"
             mv "$source" "optional-components-ga-0250/$target"
           done
+      - name: Download independently verified Single-Node GA evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-single-node-ga-verified-${{ github.sha }}
+          path: single-node-ga-approved
+      - name: Pin independent GA verification key for release signing
+        env:
+          TRUSTED_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$TRUSTED_GA_PUBLIC_KEY"
+          umask 077
+          printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > /tmp/neverlauncher-single-node-ga.pub
+          test -s single-node-ga-approved/SINGLE_NODE_GA_ATTESTATION.json
       - name: Build and cryptographically verify complete release bundle
         env:
           NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/neverlauncher-release-private.pem
@@ -419,6 +494,8 @@ jobs:
           NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts
           NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE: ${{ github.workspace }}/windows-adversarial-certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.json
           NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
+          NEVERLAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR: ${{ github.workspace }}/single-node-ga-approved
+          NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE: /tmp/neverlauncher-single-node-ga.pub
           NEVERLAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/optional-components-ga-0250
           NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY }}
           NEVERLAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/official-minecraft-ga-0270

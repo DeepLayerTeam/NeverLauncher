@@ -51,6 +51,18 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 	if err := verifyReleaseBOMBinding03214(dir, bundleVersion); err != nil {
 		return fmt.Errorf("refusing to sign unbound release BOM: %w", err)
 	}
+	if singleNodeGARequired0330(bundleVersion) {
+        raw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
+        if err != nil { return err }
+        var m struct { SourceCommit string `json:"sourceCommit"` }
+        if err := json.Unmarshal(raw, &m); err != nil { return err }
+        if err := verifySingleNodeGABundle0330(dir, bundleVersion, m.SourceCommit, ""); err != nil {
+            return fmt.Errorf("refusing GA signature without independent certification: %w", err)
+        }
+        pubPath := os.Getenv("NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE")
+        gaKey, err := loadEd25519PublicKey(pubPath); if err != nil { return err }
+        if string(gaKey) == string(privateKey.Public().(ed25519.PublicKey)) { return errors.New("release and independent GA keys must be different") }
+    }
 	if bundleVersion, err := releaseBundleVersion(dir); err == nil && releaseVerificationV2Required0158(bundleVersion) {
 		return signReleaseBundleV20158(dir, privateKey)
 	}

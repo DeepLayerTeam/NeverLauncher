@@ -1,0 +1,37 @@
+name: NeverLauncher 0.33.0 Single-Node GA verifier
+on:
+  push:
+    paths:
+      - 'scripts/ga/single_node_ga_0330.py'
+      - 'scripts/ga/test_single_node_ga_0330.py'
+      - 'cli/cmd/neverlauncher/release_single_node_ga_0330.go'
+      - 'scripts/release/build-release.sh'
+      - '.github/workflows/production-single-node-ga-0330.yml'
+  pull_request:
+    paths:
+      - 'scripts/ga/**'
+      - 'cli/cmd/neverlauncher/release_single_node_ga_0330.go'
+      - '.github/workflows/production-single-node-ga-0330.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verifier-regressions:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install 'cryptography>=43,<47' 'pyyaml>=6,<7'
+      - run: python3 -m unittest discover -s scripts/ga -p 'test_single_node_ga_0330.py' -v
+      - run: python3 scripts/version/manage.py check
+      - run: bash -n scripts/release/build-release.sh
+      - run: |
+          python3 - <<'PY'
+          import yaml
+          for f in ['.github/workflows/production-single-node-ga-0330.yml', '.github/workflows/production-release-candidate.yml']:
+              with open(f) as inp: yaml.safe_load(inp)
+          PY

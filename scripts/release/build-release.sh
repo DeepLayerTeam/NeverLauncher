@@ -111,8 +111,47 @@ if [[ "${VERSION}" == "0.31.0" ]]; then
     --signature "${NEVERLAUNCHER_JAVA_GA_APPROVAL_SIGNATURE_FILE}" >/dev/null || exit 2
 fi
 
+# NeverLauncher 0.33.0 must not be shipped as GA based on an RC test receipt,
+# a PostgreSQL+SQLite coordinator, or a self-attestation. Verify an independent
+# operator-signed, actual SQLite-only HTTP deployment report BEFORE touching
+# an existing output bundle.
+SINGLE_NODE_GA_DIR=""
+SINGLE_NODE_GA_VERIFIED_DIR=""
+if [[ "${VERSION}" == "0.33.0" ]]; then
+  SINGLE_NODE_GA_DIR="${NEVERLAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR:-}"
+  SINGLE_NODE_GA_PUBLIC_KEY="${NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE:-}"
+  [[ -d "${SINGLE_NODE_GA_DIR}" && -f "${SINGLE_NODE_GA_PUBLIC_KEY}" ]] || {
+    echo "0.33.0 GA BLOCKED: signed live SQLite-only evidence and an independently pinned public key are mandatory" >&2; exit 2;
+  }
+  command -v git >/dev/null 2>&1 || { echo "0.33.0 GA requires git" >&2; exit 2; }
+  HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)" || exit 2
+  [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${HEAD_COMMIT}" ]] || {
+    echo "0.33.0 GA BLOCKED: source commit mismatch" >&2; exit 2;
+  }
+  SOURCE_COMMIT="${HEAD_COMMIT}"
+  [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal)" ]] || {
+    echo "0.33.0 GA signing requires clean tracked and untracked sources" >&2; exit 2;
+  }
+  SINGLE_NODE_GA_VERIFIED_DIR="$(mktemp -d)"
+  trap 'rm -rf -- "${SINGLE_NODE_GA_VERIFIED_DIR}"' EXIT
+  python3 "${ROOT_DIR}/scripts/ga/single_node_ga_0330.py" \
+    --evidence-dir "${SINGLE_NODE_GA_DIR}" \
+    --public-key "${SINGLE_NODE_GA_PUBLIC_KEY}" \
+    --commit "${SOURCE_COMMIT}" \
+    --output "${SINGLE_NODE_GA_VERIFIED_DIR}/SINGLE_NODE_GA_CERTIFICATION.json" || exit 2
+fi
+
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
 mkdir -p "${OUT_DIR}" "${WORK_DIR}"
+if [[ "${VERSION}" == "0.33.0" ]]; then
+  for name in SINGLE_NODE_GA_ATTESTATION.json SINGLE_NODE_GA_ATTESTATION.sig SINGLE_NODE_GA_RC.json SINGLE_NODE_GA_CERTIFICATION.json; do
+    if [[ "${name}" == "SINGLE_NODE_GA_CERTIFICATION.json" ]]; then
+      cp -- "${SINGLE_NODE_GA_VERIFIED_DIR}/${name}" "${OUT_DIR}/${name}"
+    else
+      cp -- "${SINGLE_NODE_GA_DIR}/${name}" "${OUT_DIR}/${name}"
+    fi
+  done
+fi
 
 log() { printf '[NeverLauncher %s] %s\n' "${VERSION}" "$*"; }
 require() {

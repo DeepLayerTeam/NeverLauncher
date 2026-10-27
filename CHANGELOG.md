@@ -1,3 +1,12 @@
+## [0.33.0] - 2026-10-27
+
+### Added
+- Fail-closed Single-Node GA release certification: independently signed Ed25519 live acceptance, pinned out-of-band public key, exact-commit 0.33.0 RC receipt, strict rejection of PostgreSQL/Redis masquerading as SQLite-only.
+- Bound signed GA evidence to release BOM, signed manifest, build, sign, verify and publish-check; protected release workflow and production operating runbook.
+
+### Not certified
+- Full SQLite-only HTTP repository, independent installed GA evidence, multi-host HA and automatic SQLite-to-PostgreSQL production cutover remain unconfirmed. Release publishing is blocked without real GA evidence.
+
 ## [0.32.16] - 2026-10-27
 
 ### Production RC — fail-closed executable testing

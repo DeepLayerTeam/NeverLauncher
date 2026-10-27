@@ -54,3 +54,12 @@ python3 scripts/contracts/validate-openapi.py
 ## Участие
 
 Перед изменением кода прочитайте [CONTRIBUTING.md](CONTRIBUTING.md), [DEVELOPMENT.md](DEVELOPMENT.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Не помещайте секреты, персональные данные или неподписанные артефакты релиза в pull request.
+
+
+### 0.33.0 Single-Node GA certification
+
+The signed GA release path is fail-closed. The shipped 0.32.16 baseline still
+requires PostgreSQL for the HTTP Repository; SQLite coordinator support does
+not make a SQLite-only production backend. 0.33.0 GA cannot be signed without
+a real independently attested installed SQLite-only deployment and same-commit
+RC receipt. See [Single-Node GA operations](docs/operations/single-node-ga-0330.md).

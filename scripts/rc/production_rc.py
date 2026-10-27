@@ -129,8 +129,9 @@ def validate_preflight(env: dict[str, str]) -> str:
 
 def run_gate(output: Path, env: dict[str, str]) -> None:
     root = validate_preflight(env)
-    if (ROOT / 'VERSION').read_text().strip() != '0.32.16':
-        raise GateError('RC gate must run on canonical 0.32.16 sources')
+    canonical = (ROOT / 'VERSION').read_text().strip()
+    if canonical not in ('0.32.16', '0.33.0'):
+        raise GateError('RC gate supports only 0.32.16 and 0.33.0 exact sources')
     git_sha = env.get('GITHUB_SHA', '')
     if git_sha:
         git = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True, text=True)
@@ -153,7 +154,7 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
         print(f'{suite.name}: {receipts[-1]["count"]} real tests passed', flush=True)
     receipt = {
         'format': 'neverlauncher-03216-rc-test-evidence-v1',
-        'version': '0.32.16', 'commit': git_sha or None,
+        'version': canonical, 'commit': git_sha or None,
         'sqlite_root': root, 'toolchain': version.stdout.strip(),
         'suites': receipts,
         'disclaimer': 'Tests are required but not proof of multi-host HA or complete product GA certification.',
