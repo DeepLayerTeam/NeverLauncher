@@ -1,3 +1,12 @@
+## [0.32.11] - 2026-10-27
+
+### DEP07 — Verified SQLite → PostgreSQL staging transfer (not production cutover)
+- Add executable `sqlite-to-postgres` CLI reading an existing verified v326 SQLite backup and a PostgreSQL DSN from an environment variable.
+- Transactional import of every SQLite durable table into a separate immutable PostgreSQL schema, preserving IDs, exact nanosecond timestamps, revocations, Minecraft UUIDs, package blobs, audits, leases and fencing values.
+- Isolated test restore plus SQLite Core invariant validation; PostgreSQL read-back verifies row counts, actual payload SHA-256, PK/uniqueness and foreign keys before committing.
+- Atomic one-shot staging, no partial writes to existing PostgreSQL Backend tables, no overwrite of existing import; native PostgreSQL integration tests supplied for CI.
+- **Not complete DEP07:** the PostgreSQL HTTP Repository is not yet compatible with imported SQLite security state. Backend cutover and production-ready migration remain blocked.
+
 ## [0.32.10] - 2026-10-27
 
 ### DEP06 — SQLite Online Backup, Restore & Pre-Upgrade Gate

@@ -17,6 +17,9 @@ import (
 
 func main() { os.Exit(run(os.Args[1:])) }
 func run(args []string) int {
+	if len(args) > 0 && args[0] == "sqlite-to-postgres" {
+		return runPGTransfer(args[1:])
+	}
 	if len(args) > 0 && isBackupAction(args[0]) {
 		return runBackupAction(args)
 	}
