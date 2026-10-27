@@ -22,7 +22,7 @@ var (
 	ErrImmutable = errors.New("sqlite core: immutable published release or history")
 )
 
-const SchemaVersion = 324
+const SchemaVersion = 325
 
 type Repository struct{ store *sqlitedurable.Store }
 
@@ -68,7 +68,7 @@ func (r *Repository) migrate(ctx context.Context) error {
 		if err := q.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 			return err
 		}
-		if version != 0 && version != 322 && version != 323 && version != SchemaVersion {
+		if version != 0 && version != 322 && version != 323 && version != 324 && version != SchemaVersion {
 			return fmt.Errorf("sqlite core schema %d incompatible with %d", version, SchemaVersion)
 		}
 		if version == 0 {
@@ -90,10 +90,17 @@ func (r *Repository) migrate(ctx context.Context) error {
 				}
 			}
 		}
-		if version != SchemaVersion {
+		if version != 324 && version != SchemaVersion {
 			for _, stmt := range joinDDL {
 				if _, err := q.ExecContext(ctx, stmt); err != nil {
 					return fmt.Errorf("sqlite replay/join migration 324: %w", err)
+				}
+			}
+		}
+		if version != SchemaVersion {
+			for _, stmt := range durableDDL {
+				if _, err := q.ExecContext(ctx, stmt); err != nil {
+					return fmt.Errorf("sqlite durable migration 325: %w", err)
 				}
 			}
 			if _, err := q.ExecContext(ctx, fmt.Sprintf("PRAGMA user_version=%d", SchemaVersion)); err != nil {
@@ -153,6 +160,8 @@ func (r *Repository) Check(ctx context.Context) error {
 			`SELECT COUNT(*) FROM bridge_join_tickets t JOIN bridge_nodes n ON n.id=t.node_id WHERE t.status='active' AND (n.status<>'active' OR t.issued_identity_epoch<>n.identity_epoch OR t.issued_fingerprint<>n.fingerprint)`,
 			`SELECT COUNT(*) FROM bridge_join_tickets WHERE status='consumed' AND consumed_at=0`,
 			`SELECT COUNT(*) FROM bridge_nodes WHERE length(public_key)<>32`,
+			`SELECT COUNT(*) FROM durable_jobs j WHERE j.status='running' AND NOT EXISTS (SELECT 1 FROM durable_job_attempts a WHERE a.job_id=j.id AND a.attempt=j.attempt_count AND a.status='running' AND a.lease_fence=j.lease_fence)`,
+			`SELECT COUNT(*) FROM durable_job_attempts a WHERE a.status='running' AND NOT EXISTS (SELECT 1 FROM durable_jobs j WHERE j.id=a.job_id AND j.status='running' AND j.attempt_count=a.attempt AND j.lease_fence=a.lease_fence)`,
 		}
 		for _, stmt := range checks {
 			var n int
@@ -195,7 +204,32 @@ func (r *Repository) Check(ctx context.Context) error {
 				return errors.New("sqlite core channel manifest digest mismatch")
 			}
 		}
-		return errors.Join(heads.Err(), heads.Close())
+		if e = errors.Join(heads.Err(), heads.Close()); e != nil {
+			return e
+		}
+		// Detect payload tampering not visible to PRAGMA integrity_check.
+		for _, table := range []string{"durable_jobs", "durable_outbox"} {
+			items, er := q.QueryContext(ctx, "SELECT payload,payload_digest FROM "+table)
+			if er != nil {
+				return er
+			}
+			for items.Next() {
+				var payload, stored string
+				if er = items.Scan(&payload, &stored); er != nil {
+					break
+				}
+				actual := sha256.Sum256([]byte(payload))
+				if hex.EncodeToString(actual[:]) != stored {
+					er = fmt.Errorf("sqlite durable %s payload digest mismatch", table)
+					break
+				}
+			}
+			er = errors.Join(er, items.Err(), items.Close())
+			if er != nil {
+				return er
+			}
+		}
+		return nil
 	})
 }
 

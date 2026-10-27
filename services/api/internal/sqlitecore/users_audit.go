@@ -364,7 +364,7 @@ func (r *Repository) ListAudit(ctx context.Context, limit int) (out []model.Audi
 // Count is an operational diagnostic: failed queries return an error rather
 // than silently emitting an empty list as some legacy interfaces do.
 func (r *Repository) Count(ctx context.Context) (map[string]int64, error) {
-	names := []string{"projects", "profiles", "profile_revisions", "channels", "releases", "channel_heads", "users", "project_user_roles", "roles", "audit_events", "auth_sessions", "refresh_families", "refresh_tokens", "access_tokens", "mfa_totp", "mfa_recovery", "minecraft_profiles", "minecraft_sessions", "auth_revocation_events", "bridge_nodes", "bridge_nonces", "bridge_join_tickets"}
+	names := []string{"projects", "profiles", "profile_revisions", "channels", "releases", "channel_heads", "users", "project_user_roles", "roles", "audit_events", "auth_sessions", "refresh_families", "refresh_tokens", "access_tokens", "mfa_totp", "mfa_recovery", "minecraft_profiles", "minecraft_sessions", "auth_revocation_events", "bridge_nodes", "bridge_nonces", "bridge_join_tickets", "durable_jobs", "durable_job_attempts", "durable_scope_leases", "durable_outbox"}
 	values := map[string]int64{}
 	err := r.store.Read(ctx, func(q sqlitedurable.Executor) error {
 		for _, name := range names {

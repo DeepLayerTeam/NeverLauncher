@@ -172,7 +172,7 @@ func TestJoinUpgrade323PreservesUsers(t *testing.T) {
 		t.Fatal(e)
 	}
 	e = store.Write(ctx, func(q sqlitedurable.Executor) error {
-		for _, stmt := range []string{"DROP TABLE bridge_join_tickets", "DROP TRIGGER bridge_nonces_no_update", "DROP INDEX bridge_nonces_expiry", "DROP TABLE bridge_nonces", "DROP TABLE bridge_nodes", "PRAGMA user_version=323"} {
+		for _, stmt := range []string{"DROP TABLE durable_job_attempts", "DROP TABLE durable_jobs", "DROP TABLE durable_outbox", "DROP TABLE durable_scope_leases", "DROP TABLE bridge_join_tickets", "DROP TRIGGER bridge_nonces_no_update", "DROP INDEX bridge_nonces_expiry", "DROP TABLE bridge_nonces", "DROP TABLE bridge_nodes", "PRAGMA user_version=323"} {
 			if _, e := q.ExecContext(ctx, stmt); e != nil {
 				return e
 			}

@@ -1,3 +1,11 @@
+## 0.32.5 — DEP01/02 SQLite Durable Jobs, Leases & Outbox (2026-10-27)
+
+- Add atomic migration 324→325 and SQLite WAL-backed durable job queue with permanent actor/action/payload idempotency scopes, retriable attempts, persistent lease fencing and crash recovery.
+- Add single-writer job claiming, lease renewal, terminal/dead-letter states and append-only attempt history; expired workers cannot acknowledge or mutate jobs under outdated lease tokens.
+- Implement persistent scope leases whose fencing tokens increase across release/expiry/restart; `CommitFencedJob` transactionally checks job + scope epochs and commits trusted local data mutations, job success and outbox events together.
+- Add idempotent, lease-fenced at-least-once outbox delivery with backoff, retry limit and durable dedup tombstones. Never claim exactly-once external side effects.
+- Ship live SQLite CLI operations, native-driver CI, concurrency/restart/failure/fencing tests and operational documentation. HTTP backend remains on PostgreSQL pending remaining DEP01/DEP03 gates; no production certification without native driver and supported filesystem tests.
+
 ## 0.32.4 — DEP01/02 SQLite Replay & Join Tickets (2026-10-27)
 
 - Add persisted, uniquely constrained signed-request replay nonce ledger on SQLite WAL; pin nonce checks to Ed25519 node trust anchors, identity epoch, signed payload digest and bounded timestamp skew.

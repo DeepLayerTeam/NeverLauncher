@@ -248,7 +248,7 @@ func TestSQLiteSchemaUpgrade322To323(t *testing.T) {
 		t.Fatal(e)
 	}
 	e = s.Write(ctx, func(q sqlitedurable.Executor) error {
-		for _, name := range []string{"auth_revocation_events", "minecraft_sessions", "minecraft_profiles", "mfa_recovery", "mfa_totp", "access_tokens", "refresh_tokens", "refresh_families", "auth_sessions"} {
+		for _, name := range []string{"durable_job_attempts", "durable_jobs", "durable_outbox", "durable_scope_leases", "bridge_join_tickets", "bridge_nonces", "bridge_nodes", "auth_revocation_events", "minecraft_sessions", "minecraft_profiles", "mfa_recovery", "mfa_totp", "access_tokens", "refresh_tokens", "refresh_families", "auth_sessions"} {
 			if _, er := q.ExecContext(ctx, "DROP TABLE "+name); er != nil {
 				return er
 			}

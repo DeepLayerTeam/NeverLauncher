@@ -1,0 +1,91 @@
+name: SQLite durable jobs, leases, outbox DEP01-02 (0.32.5)
+on:
+  push:
+    paths:
+      - 'services/api/internal/sqlitecore/**'
+      - 'services/api/internal/sqlitedurable/**'
+      - 'services/api/cmd/neverlauncher-sqlite/**'
+      - '.github/workflows/sqlite-durable-0325.yml'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+  pull_request:
+  workflow_dispatch:
+jobs:
+  sqlite-durable-real-driver:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: services/api/go.sum
+      - name: Verify actual SQLite dependency and formatting
+        run: |
+          set -euo pipefail
+          go mod download
+          go mod verify
+          test -z "$(gofmt -l internal/sqlitecore internal/sqlitedurable cmd/neverlauncher-sqlite)"
+      - name: Require supported native filesystem; race + restart tests
+        env:
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/neverlauncher-durable
+          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+        run: |
+          set -euo pipefail
+          mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+          go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+      - name: Build production CLI and exercise real durable queue & outbox
+        env:
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/neverlauncher-durable
+        run: |
+          set -euo pipefail
+          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+          cd "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          db="$PWD/durable.db"
+          cli="$RUNNER_TEMP/neverlauncher-sqlite"
+          "$cli" core-init --db "$db" > init.json
+          "$cli" core-status --db "$db" > status.json
+          python3 - <<'PY'
+          import json,os
+          data=json.load(open('status.json'))
+          assert data['schemaVersion']==325,data
+          for t in ['durable_jobs','durable_job_attempts','durable_scope_leases','durable_outbox']:
+            assert data['counts'][t]==0,(t,data)
+          with open('enqueue.json','w') as f:json.dump({'job':{'kind':'release','actorType':'user','actorId':'u','action':'publish','resourceType':'release','resourceId':'r','idempotencyKey':'key-1','payload':{'release':'r'},'maxAttempts':2}},f)
+          with open('claim.json','w') as f:json.dump({'kind':'release','worker':'worker-1','limit':1,'ttlSeconds':30},f)
+          os.chmod('enqueue.json',0o600);os.chmod('claim.json',0o600)
+          PY
+          "$cli" job-enqueue --db "$db" --input enqueue.json > enqueued.json
+          "$cli" job-enqueue --db "$db" --input enqueue.json > dedup.json
+          "$cli" job-claim --db "$db" --input claim.json > claim-result.json
+          python3 - <<'PY'
+          import json,os
+          a=json.load(open('enqueued.json'));b=json.load(open('dedup.json'));c=json.load(open('claim-result.json'))
+          assert a['created'] and not b['created'] and a['job']['id']==b['job']['id']
+          assert len(c)==1 and c[0]['leaseFence']==1 and len(c[0]['leaseToken'])==64
+          with open('complete.json','w') as f:json.dump({'id':c[0]['id'],'token':c[0]['leaseToken'],'result':{'ok':True},'outbox':[{'eventType':'release.published','aggregateType':'release','aggregateId':'r','idempotencyKey':'key-1','payload':{'release':'r'}}]},f)
+          with open('outbox-claim.json','w') as f:json.dump({'worker':'sender','limit':1,'ttlSeconds':30},f)
+          os.chmod('complete.json',0o600);os.chmod('outbox-claim.json',0o600)
+          PY
+          "$cli" job-complete --db "$db" --input complete.json > complete-result.json
+          "$cli" outbox-claim --db "$db" --input outbox-claim.json > outbox-result.json
+          python3 - <<'PY'
+          import json,os
+          c=json.load(open('complete-result.json'));v=json.load(open('outbox-result.json'))
+          assert c['status']=='succeeded' and len(v)==1 and v[0]['leaseFence']==1
+          with open('outbox-ack.json','w') as f:json.dump({'id':v[0]['id'],'token':v[0]['leaseToken']},f)
+          os.chmod('outbox-ack.json',0o600)
+          PY
+          "$cli" outbox-complete --db "$db" --input outbox-ack.json > ack.json
+          "$cli" core-status --db "$db" > final.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('final.json'))['counts']
+          assert d['durable_jobs']==1 and d['durable_job_attempts']==1 and d['durable_outbox']==1,d
+          PY
