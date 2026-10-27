@@ -17,6 +17,9 @@ import (
 
 func main() { os.Exit(run(os.Args[1:])) }
 func run(args []string) int {
+	if len(args) > 0 && isBackupAction(args[0]) {
+		return runBackupAction(args)
+	}
 	if len(args) > 0 && isFullStateAction(args[0]) {
 		return runFullStateAction(args)
 	}
@@ -33,7 +36,7 @@ func run(args []string) int {
 		return runCoreAction(args)
 	}
 	if len(args) == 0 || (args[0] != "verify" && args[0] != "probe" && args[0] != "core-init" && args[0] != "core-status") {
-		fmt.Fprintln(os.Stderr, "usage: neverlauncher-sqlite {verify|probe|core-init|core-status} --db /secure/local/directory/state.db")
+		fmt.Fprintln(os.Stderr, "usage: neverlauncher-sqlite {verify|probe|core-init|core-status|backup|backup-verify|restore|pre-upgrade} [--db PATH] [--backup PATH]")
 		return 2
 	}
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)

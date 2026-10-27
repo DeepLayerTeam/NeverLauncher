@@ -11,7 +11,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
 )
@@ -32,6 +35,10 @@ func Open(ctx context.Context, options sqlitedurable.Options) (*Repository, erro
 		return nil, err
 	}
 	repo := &Repository{store: store}
+	if err = repo.ensureMigrationBackup(ctx, options.Path); err != nil {
+		_ = store.Close()
+		return nil, err
+	}
 	if err = repo.migrate(ctx); err != nil {
 		_ = store.Close()
 		return nil, err
@@ -59,6 +66,57 @@ func OpenExisting(ctx context.Context, options sqlitedurable.Options) (*Reposito
 }
 
 func (r *Repository) Close() error { return r.store.Close() }
+
+// ensureMigrationBackup makes a verified, restorable snapshot mandatory before
+// modifying any existing SQLite schema. New installations do not need a backup.
+// A failed backup blocks the migration; there is no unsafe override.
+func (r *Repository) ensureMigrationBackup(ctx context.Context, path string) error {
+	var old int
+	if err := r.store.Read(ctx, func(q sqlitedurable.Executor) error { return q.QueryRowContext(ctx, "PRAGMA user_version").Scan(&old) }); err != nil {
+		return err
+	}
+	if old == 0 || old == SchemaVersion {
+		return nil
+	}
+	// Do not perform backups for unsupported/future versions or migrate them.
+	if old != 322 && old != 323 && old != 324 && old != 325 {
+		return fmt.Errorf("SQLite schema %d unsupported; refusing migration", old)
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
+	backupDir := filepath.Join(filepath.Dir(abs), "pre-upgrade-backups")
+	if err = os.Mkdir(backupDir, 0700); err != nil && !os.IsExist(err) {
+		return err
+	}
+	if st, e := os.Lstat(backupDir); e != nil {
+		return e
+	} else if !st.IsDir() || st.Mode().Perm() != 0700 || st.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("unsafe pre-upgrade backup directory")
+	}
+	name := fmt.Sprintf("%s-schema-%d-%d.db", filepath.Base(abs), old, time.Now().UTC().UnixNano())
+	destination := filepath.Join(backupDir, name)
+	if _, err = sqlitedurable.OnlineBackup(ctx, abs, destination); err != nil {
+		return fmt.Errorf("mandatory pre-upgrade backup: %w", err)
+	}
+	if _, err = sqlitedurable.VerifyBackup(ctx, destination); err != nil {
+		return fmt.Errorf("mandatory pre-upgrade backup validation: %w", err)
+	}
+	// Restore verification in a separate temporary path before allowing DDL.
+	tmpDir, err := os.MkdirTemp(backupDir, ".restore-proof-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
+	restored := filepath.Join(tmpDir, "state.db")
+	if _, err = sqlitedurable.RestoreBackup(ctx, destination, restored, false); err != nil {
+		return fmt.Errorf("pre-upgrade restore proof failed: %w", err)
+	}
+	// Structural verification is performed during RestoreBackup. Older core
+	// schemas need not pass new-version application-level checks yet.
+	return nil
+}
 
 // Schema changes and built-in role seeding are committed atomically. An
 // unrecognised schema version fails closed, including databases from the future.

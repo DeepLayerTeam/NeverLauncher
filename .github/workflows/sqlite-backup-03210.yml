@@ -1,0 +1,77 @@
+name: SQLite online backup and restore (0.32.10)
+on:
+  push:
+    paths:
+      - 'services/api/internal/sqlitedurable/**'
+      - 'services/api/internal/sqlitecore/**'
+      - 'services/api/cmd/neverlauncher-sqlite/**'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+      - '.github/workflows/sqlite-backup-03210.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dep06:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Verify dependencies and format
+        run: |
+          set -euo pipefail
+          go mod download
+          go mod verify
+          test -z "$(gofmt -l internal/sqlitedurable internal/sqlitecore cmd/neverlauncher-sqlite)"
+      - name: Verify local durable filesystem
+        env:
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-backup-tests
+        run: |
+          set -euo pipefail
+          mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          fstype="$(stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT")"
+          case "$fstype" in ext2/ext3|ext4|xfs|btrfs) ;; *) echo "Unsupported filesystem: $fstype"; exit 1 ;; esac
+          echo "NEVERLAUNCHER_SQLITE_TEST_ROOT=$NEVERLAUNCHER_SQLITE_TEST_ROOT" >> "$GITHUB_ENV"
+          echo 'NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS=1' >> "$GITHUB_ENV"
+      - name: Integration, concurrency and source vet
+        run: |
+          set -euo pipefail
+          go test -race -count=1 -timeout=20m ./internal/sqlitedurable ./internal/sqlitecore ./cmd/neverlauncher-sqlite
+          go vet ./internal/sqlitedurable ./internal/sqlitecore ./cmd/neverlauncher-sqlite
+      - name: End-to-end CLI backup, verify, restore, pre-upgrade
+        run: |
+          set -euo pipefail
+          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+          mkdir -p "$RUNNER_TEMP/dep06/live" "$RUNNER_TEMP/dep06/backups" "$RUNNER_TEMP/dep06/restored"
+          chmod 0700 "$RUNNER_TEMP/dep06" "$RUNNER_TEMP/dep06/live" "$RUNNER_TEMP/dep06/backups" "$RUNNER_TEMP/dep06/restored"
+          exe="$RUNNER_TEMP/neverlauncher-sqlite"
+          "$exe" core-init --db "$RUNNER_TEMP/dep06/live/state.db"
+          "$exe" backup --db "$RUNNER_TEMP/dep06/live/state.db" --backup "$RUNNER_TEMP/dep06/backups/initial.db"
+          "$exe" backup-verify --backup "$RUNNER_TEMP/dep06/backups/initial.db"
+          "$exe" restore --backup "$RUNNER_TEMP/dep06/backups/initial.db" --db "$RUNNER_TEMP/dep06/restored/state.db"
+          "$exe" core-status --db "$RUNNER_TEMP/dep06/restored/state.db"
+          "$exe" pre-upgrade --db "$RUNNER_TEMP/dep06/live/state.db" --backup "$RUNNER_TEMP/dep06/backups/preupgrade.db"
+          python3 - "$RUNNER_TEMP/dep06/backups/preupgrade.db" <<'PY'
+          import json,sys,sqlite3,pathlib
+          p=pathlib.Path(sys.argv[1]); m=json.loads((pathlib.Path(str(p)+'.json')).read_text())
+          assert m['schemaVersion']==326 and m['bytes']==p.stat().st_size,m
+          assert sqlite3.connect(f'file:{p}?mode=ro',uri=True).execute('PRAGMA integrity_check').fetchone()[0]=='ok'
+          PY
+          # File-level tampering must fail closed.
+          python3 - "$RUNNER_TEMP/dep06/backups/initial.db" <<'PY'
+          import sys
+          with open(sys.argv[1],'r+b') as f:
+              f.seek(0); f.write(b'XXXX'); f.flush()
+          PY
+          if "$exe" backup-verify --backup "$RUNNER_TEMP/dep06/backups/initial.db"; then
+            echo 'ERROR: tampered snapshot verified'; exit 1
+          fi

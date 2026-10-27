@@ -1,3 +1,13 @@
+## [0.32.10] - 2026-10-27
+
+### DEP06 — SQLite Online Backup, Restore & Pre-Upgrade Gate
+- Online WAL-consistent `VACUUM INTO` snapshot on a separate read-only connection without taking the application's owner lock.
+- Protected `0600` immutable backup, fsync, SHA-256 manifest, integrity and foreign-key verification; rejection of corrupt snapshots.
+- Offline restore with owner lock, explicit replacement, refusal of WAL sidecars, atomic publication and retained rollback hardlink.
+- `neverlauncher-sqlite backup`, `backup-verify`, `restore`, `pre-upgrade` (isolated restore and Core invariant verification).
+- Mandatory verified snapshot before automatic SQLite Core schema migrations, regression tests and CI workflow.
+- **Limitation:** Full live-driver integration tests and production certification are not confirmed in this environment; HTTP Repository remains PostgreSQL.
+
 ## 0.32.5 — DEP01/02 SQLite Durable Jobs, Leases & Outbox (2026-10-27)
 
 ## [0.32.9] - 2026-10-27
