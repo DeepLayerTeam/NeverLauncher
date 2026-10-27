@@ -1,0 +1,131 @@
+name: Production RC 0.32.16 live security disaster load
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'services/api/internal/sqlitecore/**'
+      - 'services/api/internal/sqlitedurable/**'
+      - 'services/api/internal/sqlitecoord/**'
+      - 'services/api/internal/sqlitepg/**'
+      - 'services/api/internal/deployment/**'
+      - 'services/api/internal/httpapi/**'
+      - 'services/api/cmd/neverlauncher-capacity-bench/**'
+      - 'scripts/rc/**'
+      - 'VERSION'
+      - '.github/workflows/production-rc-03216.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/sqlitecore/**'
+      - 'services/api/internal/sqlitedurable/**'
+      - 'services/api/internal/sqlitecoord/**'
+      - 'services/api/internal/sqlitepg/**'
+      - 'services/api/internal/deployment/**'
+      - 'services/api/internal/httpapi/**'
+      - 'services/api/cmd/neverlauncher-capacity-bench/**'
+      - 'scripts/rc/**'
+      - 'VERSION'
+      - '.github/workflows/production-rc-03216.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live-rc-gate:
+    name: PostgreSQL Redis S3 SQLite WAL crash replay auth load
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: neverlauncher_rc
+          POSTGRES_PASSWORD: rc-temporary-password
+          POSTGRES_DB: neverlauncher_rc
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U neverlauncher_rc -d neverlauncher_rc'
+          --health-interval 5s --health-timeout 5s --health-retries 30
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd 'redis-cli ping | grep -q PONG'
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+      NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/neverlauncher-rc-sqlite
+      NEVERLAUNCHER_PG_TEST_DSN: postgres://neverlauncher_rc:rc-temporary-password@127.0.0.1:5432/neverlauncher_rc?sslmode=disable
+      NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://neverlauncher_rc:rc-temporary-password@127.0.0.1:5432/neverlauncher_rc?sslmode=disable
+      NEVERLAUNCHER_GROWTH_TEST_REDIS_URL: redis://127.0.0.1:6379/0
+      NEVERLAUNCHER_RC_S3_ENDPOINT: http://127.0.0.1:9000
+      NEVERLAUNCHER_RC_S3_BUCKET: neverlauncher-rc
+      NEVERLAUNCHER_RC_S3_REGION: us-east-1
+      NEVERLAUNCHER_RC_S3_ACCESS_KEY: neverlauncher-rc-user
+      NEVERLAUNCHER_RC_S3_SECRET_KEY: neverlauncher-rc-temporary-secret
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache: true
+          cache-dependency-path: services/api/go.sum
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify RC scripts and canonical version
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s scripts/rc -p 'test_*.py' -v
+          python3 scripts/version/manage.py check
+          ( cd services/api && go mod download && go mod verify )
+      - name: Require a verified local SQLite filesystem
+        run: |
+          set -euo pipefail
+          install -d -m 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          case "$(stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT")" in
+            ext2/ext3|ext4|xfs|btrfs) ;;
+            *) echo 'RC BLOCKED: only a supported native ext4/xfs/btrfs volume is allowed' >&2; exit 2;;
+          esac
+      - name: Start a real isolated MinIO S3 service
+        run: |
+          set -euo pipefail
+          docker run -d --name neverlauncher-rc-minio \
+            -p 127.0.0.1:9000:9000 \
+            -e MINIO_ROOT_USER="$NEVERLAUNCHER_RC_S3_ACCESS_KEY" \
+            -e MINIO_ROOT_PASSWORD="$NEVERLAUNCHER_RC_S3_SECRET_KEY" \
+            minio/minio:RELEASE.2025-02-07T23-21-09Z \
+            server /data --address ':9000'
+          python3 -m pip install 'boto3==1.35.99'
+          python3 - <<'PY'
+          import os, time, urllib.request
+          import boto3
+          endpoint = os.environ['NEVERLAUNCHER_RC_S3_ENDPOINT']
+          for _ in range(60):
+              try:
+                  with urllib.request.urlopen(endpoint+'/minio/health/live', timeout=2) as response:
+                      if response.status == 200: break
+              except Exception:
+                  time.sleep(1)
+          else:
+              raise SystemExit('RC BLOCKED: MinIO did not become healthy')
+          s3 = boto3.client('s3', endpoint_url=endpoint,
+                           aws_access_key_id=os.environ['NEVERLAUNCHER_RC_S3_ACCESS_KEY'],
+                           aws_secret_access_key=os.environ['NEVERLAUNCHER_RC_S3_SECRET_KEY'],
+                           region_name=os.environ['NEVERLAUNCHER_RC_S3_REGION'])
+          s3.create_bucket(Bucket=os.environ['NEVERLAUNCHER_RC_S3_BUCKET'])
+          PY
+      - name: Execute strictly verified live release candidate tests
+        run: |
+          set -euo pipefail
+          python3 scripts/rc/production_rc.py --output "$RUNNER_TEMP/neverlauncher-03216-rc.json"
+      - name: Upload actual passing RC test receipt only
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-03216-rc-${{ github.sha }}
+          path: ${{ runner.temp }}/neverlauncher-03216-rc.json
+          if-no-files-found: error
+          retention-days: 30

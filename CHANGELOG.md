@@ -1,3 +1,12 @@
+## [0.32.16] - 2026-10-27
+
+### Production RC — fail-closed executable testing
+- Bounded, concurrent, persistent SQLite coordinator load test verifies the exact authorization budget after restart.
+- Fixes the capacity benchmark wrongly counting 401/403/redirects and mixed unsuccessful HTTP responses as healthy capacity.
+- Adds a Go JSON event-validated RC gate covering security, join/replay, crash recovery, backup/restore, leases/fencing, PostgreSQL transfer, real PostgreSQL/Redis/S3, and HTTP tests. SKIP/missing/failed tests block evidence generation.
+- Wires the live PostgreSQL/Redis/MinIO CI gate into the existing production-release workflow before artifact release.
+- **Not GA:** entire installed-product E2E, multi-host HA failover and full Go 1.27.3 integration results remain unverified here; SQLite-only HTTP and live PostgreSQL cutover remain unsupported.
+
 ## [0.32.15] - 2026-10-27
 
 ### DEP10 — Capacity & Diagnostics

@@ -24,6 +24,7 @@ type Result struct {
 	Successful      int     `json:"successful"`
 	Status429       int     `json:"status429"`
 	Status5xx       int     `json:"status5xx"`
+	UnexpectedHTTP  int     `json:"unexpectedHttp"`
 	TransportErrors int     `json:"transportErrors"`
 	RPS             float64 `json:"requestsPerSecond"`
 	P95Milliseconds float64 `json:"p95Milliseconds"`
@@ -146,6 +147,8 @@ func run(ctx context.Context, client *http.Client, endpoint string, concurrency 
 			r.Status5xx++
 		} else if v.status >= 200 && v.status < 300 {
 			r.Successful++
+		} else {
+			r.UnexpectedHTTP++
 		}
 		hist[bucketLatency(v.elapsed)]++
 	}
@@ -156,7 +159,9 @@ func run(ctx context.Context, client *http.Client, endpoint string, concurrency 
 	r.P95Milliseconds = histogramQuantile(hist, r.Requests, 95)
 	r.P99Milliseconds = histogramQuantile(hist, r.Requests, 99)
 	// Operation-oriented SLO. Passed only after at least 10 observations.
-	r.Passed = r.Requests >= 10 && float64(r.Status5xx+r.TransportErrors)/float64(r.Requests) < .01 && r.Status429 == 0 && r.P95Milliseconds <= 1000
+	// A 401/403/302 or any other non-2xx must never count as healthy capacity.
+	// A partial 2xx success rate is equally unacceptable for this read-only probe.
+	r.Passed = r.Requests >= 10 && r.Successful == r.Requests && r.P95Milliseconds <= 1000
 	return r
 }
 func main() {
@@ -193,7 +198,7 @@ func main() {
 		}
 	}
 	_ = json.NewEncoder(os.Stdout).Encode(out)
-	if len(out.Results) == 0 || !out.Results[0].Passed {
+	if len(out.Results) == 0 || !out.Results[len(out.Results)-1].Passed {
 		os.Exit(2)
 	}
 }

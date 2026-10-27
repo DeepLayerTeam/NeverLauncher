@@ -133,3 +133,29 @@ func TestGrowthLivePostgresRedis03212(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestProductionRCLiveS3Growth checks the real configured object store, not
+// the in-memory HTTP double used for unit tests. The RC runner requires its
+// environment and rejects a skipped test as a release failure.
+func TestProductionRCLiveS3Growth(t *testing.T) {
+	keys := []string{
+		"NEVERLAUNCHER_RC_S3_ENDPOINT", "NEVERLAUNCHER_RC_S3_BUCKET",
+		"NEVERLAUNCHER_RC_S3_REGION", "NEVERLAUNCHER_RC_S3_ACCESS_KEY",
+		"NEVERLAUNCHER_RC_S3_SECRET_KEY",
+	}
+	for _, k := range keys {
+		if os.Getenv(k) == "" {
+			t.Skipf("real S3 RC test requires %s", k)
+		}
+	}
+	cfg := storage.S3Config{
+		Endpoint: os.Getenv(keys[0]), Bucket: os.Getenv(keys[1]),
+		Region: os.Getenv(keys[2]), AccessKey: os.Getenv(keys[3]),
+		SecretKey: os.Getenv(keys[4]), PathStyle: true,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
+	if err := verifyS3Growth(ctx, cfg); err != nil {
+		t.Fatalf("live S3 cross-client write/read/hash/cleanup: %v", err)
+	}
+}
