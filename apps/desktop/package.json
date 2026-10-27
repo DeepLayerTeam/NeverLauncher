@@ -1,6 +1,6 @@
 {
   "name": "neverlauncher-desktop",
-  "version": "0.32.14",
+  "version": "0.32.15",
   "private": true,
   "type": "module",
   "scripts": {

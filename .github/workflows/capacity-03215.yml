@@ -1,0 +1,51 @@
+name: Capacity & Diagnostics 0.32.15
+on:
+  push:
+    paths:
+      - 'services/api/internal/capacity/**'
+      - 'services/api/cmd/neverlauncher-capacity-bench/**'
+      - 'services/api/cmd/neverlauncher-api/main.go'
+      - 'services/api/internal/httpapi/**'
+      - 'VERSION'
+      - '.github/workflows/capacity-03215.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/capacity/**'
+      - 'services/api/cmd/neverlauncher-capacity-bench/**'
+      - 'services/api/cmd/neverlauncher-api/main.go'
+      - 'services/api/internal/httpapi/**'
+      - 'VERSION'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capacity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache: true
+          cache-dependency-path: services/api/go.sum
+      - name: Version metadata
+        run: python3 scripts/version/manage.py check
+      - name: Capacity metrics and bounded benchmark race tests
+        working-directory: services/api
+        run: |
+          go test -race -count=1 ./internal/capacity ./cmd/neverlauncher-capacity-bench
+          go vet ./internal/capacity ./cmd/neverlauncher-capacity-bench
+      - name: Full API compile and HTTP integration (real pinned dependencies)
+        working-directory: services/api
+        run: |
+          go test -run '^TestCanonicalStatusReadyAndMetrics$' -count=1 ./internal/httpapi
+          go test -run '^$' ./cmd/neverlauncher-api
+          go build -o /tmp/neverlauncher-capacity-bench ./cmd/neverlauncher-capacity-bench
+          go build -o /tmp/neverlauncher-api ./cmd/neverlauncher-api
+      - name: Read-only benchmark rejects unconfirmed execution
+        run: |
+          if /tmp/neverlauncher-capacity-bench --url http://127.0.0.1:8080/api/v1/status; then
+            echo 'FAIL: benchmark ran without --confirm' >&2
+            exit 1
+          fi

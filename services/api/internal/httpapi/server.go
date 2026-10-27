@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/capacity"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionga"
@@ -22,6 +23,7 @@ import (
 )
 
 type Server struct {
+	Capacity          *capacity.Collector
 	Protection        *protection.Engine
 	Version           string
 	SourceCommit      string

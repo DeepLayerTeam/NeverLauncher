@@ -115,34 +115,14 @@ func (s Server) metrics(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "метрики отключены")
 		return
 	}
-	projects := len(s.Repo.ListProjects())
-	users := len(s.Repo.ListUsers())
-	roles := len(s.Repo.ListRoles())
-	auditEvents := len(s.Repo.ListAuditEvents())
-	telemetryEvents := len(s.Repo.ListTelemetryEvents())
-	crashReports := len(s.Repo.ListCrashReports())
-	backups := 0
-	if items, err := s.listOperationsBackups880(); err == nil {
-		backups = len(items)
-	}
+	// Capacity collector samples SQL out of band; metrics must never fan out
+	// into full-table ORM reads on a request path.
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-	_, _ = fmt.Fprintf(w, "# HELP neverlauncher_info Информация о Backend API\n")
-	_, _ = fmt.Fprintf(w, "# TYPE neverlauncher_info gauge\n")
-	_, _ = fmt.Fprintf(w, "neverlauncher_info{version=%q,storage=%q,repository=%q} 1\n", s.Version, s.Storage.Driver(), s.Config.RepositoryDriver)
-	_, _ = fmt.Fprintf(w, "# HELP neverlauncher_projects_total Количество проектов\n")
-	_, _ = fmt.Fprintf(w, "# TYPE neverlauncher_projects_total gauge\nneverlauncher_projects_total %d\n", projects)
-	_, _ = fmt.Fprintf(w, "# HELP neverlauncher_users_total Количество пользователей\n")
-	_, _ = fmt.Fprintf(w, "# TYPE neverlauncher_users_total gauge\nneverlauncher_users_total %d\n", users)
-	_, _ = fmt.Fprintf(w, "# HELP neverlauncher_roles_total Количество ролей\n")
-	_, _ = fmt.Fprintf(w, "# TYPE neverlauncher_roles_total gauge\nneverlauncher_roles_total %d\n", roles)
-	_, _ = fmt.Fprintf(w, "# HELP neverlauncher_audit_events_total Количество audit events\n")
-	_, _ = fmt.Fprintf(w, "# TYPE neverlauncher_audit_events_total gauge\nneverlauncher_audit_events_total %d\n", auditEvents)
-	_, _ = fmt.Fprintf(w, "# HELP neverlauncher_telemetry_events_total Количество telemetry events\n")
-	_, _ = fmt.Fprintf(w, "# TYPE neverlauncher_telemetry_events_total gauge\nneverlauncher_telemetry_events_total %d\n", telemetryEvents)
-	_, _ = fmt.Fprintf(w, "# HELP neverlauncher_crash_reports_total Количество crash reports\n")
-	_, _ = fmt.Fprintf(w, "# TYPE neverlauncher_crash_reports_total gauge\nneverlauncher_crash_reports_total %d\n", crashReports)
-	_, _ = fmt.Fprintf(w, "# HELP neverlauncher_backups_total Количество созданных backup archives\n")
-	_, _ = fmt.Fprintf(w, "# TYPE neverlauncher_backups_total gauge\nneverlauncher_backups_total %d\n", backups)
+	_, _ = fmt.Fprintf(w, "# HELP neverlauncher_info Backend identity\n# TYPE neverlauncher_info gauge\nneverlauncher_info{version=%q,storage=%q,repository=%q} 1\n", s.Version, s.Storage.Driver(), s.Config.RepositoryDriver)
+	if s.Capacity != nil {
+		s.Capacity.Prometheus(w)
+	}
+
 	if s.State != nil && s.State.ServerBridge != nil && s.State.ServerBridge.backendV2() != nil {
 		if ha, err := s.State.ServerBridge.haStatus0149(); err == nil {
 			_, _ = fmt.Fprintf(w, "# HELP neverlauncher_serverbridge_nodes_active Active ServerBridge nodes\n# TYPE neverlauncher_serverbridge_nodes_active gauge\nneverlauncher_serverbridge_nodes_active %d\n", ha.NodesActive)

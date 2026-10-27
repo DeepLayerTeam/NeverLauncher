@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/capacity"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/deployment"
@@ -45,6 +46,30 @@ func main() {
 			_ = json.NewEncoder(os.Stdout).Encode(result)
 			if len(os.Args) == 4 && os.Args[3] == "--require-strict" {
 				os.Exit(2)
+			}
+			return
+		case "capacity":
+			cfg := config.Load()
+			plan, err := deployment.Detect(cfg)
+			if err == nil {
+				err = config.ValidateProduction(cfg)
+			}
+			if err != nil {
+				_ = json.NewEncoder(os.Stdout).Encode(map[string]any{"verified": false, "error": err.Error()})
+				os.Exit(2)
+			}
+			options := capacityOptions03215(cfg, string(plan.Mode))
+			ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+			report := capacity.Probe(ctx, options)
+			cancel()
+			_ = json.NewEncoder(os.Stdout).Encode(report)
+			if !report.Verified {
+				os.Exit(2)
+			}
+			for _, issue := range report.Issues {
+				if issue.Severity == "critical" {
+					os.Exit(2)
+				}
 			}
 			return
 		case "growth":
@@ -241,6 +266,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	capacityCollector := capacity.NewCollector(capacityOptions03215(cfg, string(plan.Mode)))
+	capacityCtx, stopCapacity := context.WithCancel(context.Background())
+	defer stopCapacity()
+	go capacityCollector.Run(capacityCtx)
+
 	secretKey, err := extensionsecurity.ParseKey(cfg.ExtensionSecretsKey)
 	if err != nil {
 		log.Fatalf("NeverExtensions secrets key: %v", err)
@@ -344,6 +374,7 @@ func main() {
 	}
 
 	server := httpapi.Server{
+		Capacity:          capacityCollector,
 		Version:           version,
 		SourceCommit:      commit,
 		ExtensionSafeMode: noExtensions,
@@ -456,4 +487,13 @@ func hasCommandArg02012(args []string, wanted string) bool {
 		}
 	}
 	return false
+}
+
+// Only select configured local paths; the report never includes secrets or paths.
+func capacityOptions03215(cfg config.Config, mode string) capacity.Options {
+	opt := capacity.Options{Mode: mode, Driver: cfg.RepositoryDriver, DatabaseDSN: cfg.DatabaseDSN, CoordinatorPath: cfg.SQLiteCoordinatorPath, BackupPath: cfg.BackupRoot}
+	if strings.EqualFold(cfg.StorageDriver, "local") || cfg.StorageDriver == "" {
+		opt.StoragePath = cfg.StorageLocalPath
+	}
+	return opt
 }

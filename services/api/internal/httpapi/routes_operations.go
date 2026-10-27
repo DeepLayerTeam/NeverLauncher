@@ -6,6 +6,7 @@ import (
 )
 
 func (s Server) registerOperationsRoutesV1(mux *http.ServeMux) {
+	mux.Handle("GET /api/v1/operations/capacity", s.requirePermission("diagnostics:read", s.operationsCapacity03215))
 	// Backend control is instance-scoped; it is never delegated by project roles.
 	mux.Handle("GET /api/v1/operations/backend/status", s.requirePermission("backend:control", s.backendInstanceStatus0289))
 	mux.Handle("GET /api/v1/operations/backend/clients", s.requirePermission("backend:control", s.backendConnectedClients0289))

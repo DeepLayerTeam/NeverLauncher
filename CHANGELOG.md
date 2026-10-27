@@ -1,3 +1,12 @@
+## [0.32.15] - 2026-10-27
+
+### DEP10 — Capacity & Diagnostics
+- Live 60-second HTTP request/5xx/429/latency metrics and in-flight requests, served by a bounded low-cardinality collector; direct `/metrics` scrapes perform no new PostgreSQL reads.
+- Background 30-second capacity snapshots: host heap/goroutines, local storage volume, PostgreSQL server-wide connections, DB size, durable job lease age/backlog, outbox backlog and aggregate inventory counts.
+- Runtime `diagnose capacity` and diagnostics-permission-gated `/api/v1/operations/capacity` with fail-closed monitoring errors, staleness detection and actionable scaling warnings.
+- Opt-in, read-only `neverlauncher-capacity-bench`: capped concurrency/duration, explicit remote approval, measured throughput/p95/p99 and early stop on SLO failure.
+- Race tests, negative cases, CI and runbook. Thresholds are operator alert conditions, **not** hardware throughput guarantees. Full API CI/production workload certification and Network/HA multi-host failover validation remain outstanding.
+
 ## [0.32.11] - 2026-10-27
 
 ### DEP07 — Verified SQLite → PostgreSQL staging transfer (not production cutover)
