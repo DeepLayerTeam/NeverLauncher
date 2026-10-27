@@ -1,0 +1,22 @@
+# DEP09 Network/HA overlay. Invoke with docker compose --profile network-ha
+# -f docker-compose.yml -f docker-compose.network-ha.yml. Do not scale `api` on
+# one host without unique replica IDs and separate state directories.
+services:
+  api:
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      NEVERLAUNCHER_DEPLOYMENT_MODE: network-ha
+      NEVERLAUNCHER_REDIS_URL: redis://:${REDIS_PASSWORD:?Redis password required}@redis:6379/0
+      NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH: ""
+      NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED: "true"
+      NEVERLAUNCHER_DATABASE_AUTO_MIGRATE: "false"
+      NEVERLAUNCHER_STORAGE_DRIVER: s3
+      NEVERLAUNCHER_STORAGE_S3_ENDPOINT: ${NEVERLAUNCHER_STORAGE_S3_ENDPOINT:?S3 endpoint required}
+      NEVERLAUNCHER_STORAGE_S3_BUCKET: ${NEVERLAUNCHER_STORAGE_S3_BUCKET:?S3 bucket required}
+      NEVERLAUNCHER_STORAGE_S3_REGION: ${NEVERLAUNCHER_STORAGE_S3_REGION:?S3 region required}
+      NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY: ${NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY:?S3 key required}
+      NEVERLAUNCHER_STORAGE_S3_SECRET_KEY: ${NEVERLAUNCHER_STORAGE_S3_SECRET_KEY:?S3 secret required}
+      NEVERLAUNCHER_STORAGE_S3_PATH_STYLE: ${NEVERLAUNCHER_STORAGE_S3_PATH_STYLE:-true}
+      NEVERLAUNCHER_REPLICA_ID: ${NEVERLAUNCHER_REPLICA_ID:?Stable distinct replica ID required}
