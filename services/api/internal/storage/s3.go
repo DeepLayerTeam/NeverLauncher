@@ -17,6 +17,9 @@ import (
 	"time"
 )
 
+// ErrObjectNotFound identifies an HTTP 404 from S3 on a signed object GET.
+var ErrObjectNotFound = errors.New("файл не найден")
+
 // S3Config описывает параметры S3-совместимого хранилища.
 type S3Config struct {
 	Endpoint  string
@@ -51,6 +54,13 @@ func NewS3Storage(cfg S3Config) (*S3Storage, error) {
 func (s *S3Storage) Driver() string { return "s3" }
 
 func (s *S3Storage) Save(projectID, versionID, relativePath string, reader io.Reader) (string, int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	return s.SaveContext(ctx, projectID, versionID, relativePath, reader)
+}
+
+// SaveContext performs a signed, cancellable streaming S3 upload.
+func (s *S3Storage) SaveContext(ctx context.Context, projectID, versionID, relativePath string, reader io.Reader) (string, int64, error) {
 	key, err := objectKey(projectID, versionID, relativePath)
 	if err != nil {
 		return "", 0, err
@@ -82,8 +92,6 @@ func (s *S3Storage) Save(projectID, versionID, relativePath string, reader io.Re
 	}
 	payloadHash := hex.EncodeToString(hasher.Sum(nil))
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
 	req, err := s.newSignedRequestWithHash(ctx, http.MethodPut, key, tmp, size, payloadHash)
 	if err != nil {
 		return "", 0, err
@@ -101,34 +109,63 @@ func (s *S3Storage) Save(projectID, versionID, relativePath string, reader io.Re
 	return key, size, nil
 }
 
+// Delete removes an exact object with a signed S3 request. It is used for
+// temporary cross-replica storage probes and never accepts an arbitrary URL.
+func (s *S3Storage) Delete(ctx context.Context, projectID, versionID, relativePath string) error {
+	key, err := objectKey(projectID, versionID, relativePath)
+	if err != nil {
+		return err
+	}
+	req, err := s.newSignedRequest(ctx, http.MethodDelete, key, nil, 0)
+	if err != nil {
+		return err
+	}
+	response, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("S3 delete: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusOK || response.StatusCode == http.StatusNoContent || response.StatusCode == http.StatusAccepted || response.StatusCode == http.StatusNotFound {
+		return nil
+	}
+	body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
+	return fmt.Errorf("S3 delete status %d: %s", response.StatusCode, strings.TrimSpace(string(body)))
+}
+
 func (s *S3Storage) Open(projectID, versionID, relativePath string) (io.ReadCloser, int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	r, size, err := s.OpenContext(ctx, projectID, versionID, relativePath)
+	if err != nil {
+		cancel()
+		return nil, 0, err
+	}
+	return &cancelReadCloser{ReadCloser: r, cancel: cancel}, size, nil
+}
+
+// OpenContext is the cancellable equivalent of Open; caller closes the stream.
+func (s *S3Storage) OpenContext(ctx context.Context, projectID, versionID, relativePath string) (io.ReadCloser, int64, error) {
 	key, err := objectKey(projectID, versionID, relativePath)
 	if err != nil {
 		return nil, 0, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	req, err := s.newSignedRequest(ctx, http.MethodGet, key, nil, 0)
 	if err != nil {
-		cancel()
 		return nil, 0, err
 	}
 	res, err := s.client.Do(req)
 	if err != nil {
-		cancel()
 		return nil, 0, fmt.Errorf("не удалось получить файл из S3: %w", err)
 	}
 	if res.StatusCode == http.StatusNotFound {
 		res.Body.Close()
-		cancel()
-		return nil, 0, errors.New("файл не найден")
+		return nil, 0, ErrObjectNotFound
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		body, _ := io.ReadAll(io.LimitReader(res.Body, 4096))
 		res.Body.Close()
-		cancel()
 		return nil, 0, fmt.Errorf("S3 вернул статус %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
 	}
-	return &cancelReadCloser{ReadCloser: res.Body, cancel: cancel}, res.ContentLength, nil
+	return res.Body, res.ContentLength, nil
 }
 
 type cancelReadCloser struct {

@@ -47,6 +47,31 @@ func main() {
 				os.Exit(2)
 			}
 			return
+		case "growth":
+			cfg := config.Load()
+			plan, err := deployment.Detect(cfg)
+			if err == nil {
+				err = config.ValidateProduction(cfg)
+			}
+			report := deployment.GrowthReport{Mode: plan.Mode}
+			if err == nil {
+				ctx, cancel := context.WithTimeout(context.Background(), 35*time.Second)
+				report, err = deployment.VerifyGrowth(ctx, cfg, plan)
+				cancel()
+			}
+			result := struct {
+				Checks   deployment.GrowthReport `json:"checks"`
+				Verified bool                    `json:"verified"`
+				Error    string                  `json:"error,omitempty"`
+			}{Checks: report, Verified: err == nil}
+			if err != nil {
+				result.Error = err.Error()
+			}
+			_ = json.NewEncoder(os.Stdout).Encode(result)
+			if err != nil {
+				os.Exit(2)
+			}
+			return
 		case "deployment":
 			cfg := config.Load()
 			plan, err := deployment.Detect(cfg)
@@ -111,6 +136,15 @@ func main() {
 		log.Fatalf("deployment owner lock: %v", err)
 	}
 	defer owner.Close()
+	if plan.Mode == deployment.Standard || plan.Mode == deployment.NetworkHA {
+		ctx, cancel := context.WithTimeout(context.Background(), 35*time.Second)
+		growth, probeErr := deployment.VerifyGrowth(ctx, cfg, plan)
+		cancel()
+		if probeErr != nil {
+			log.Fatalf("deployment infrastructure preflight failed closed: %v", probeErr)
+		}
+		log.Printf("deployment infrastructure verified PostgreSQL=%t RedisLease=%t S3RoundTrip=%t", growth.PostgreSQL, growth.RedisLease, growth.S3RoundTrip)
+	}
 	log.Printf("deployment mode=%s repository=%s coordinator=%s storage=%s single_instance=%t reasons=%q", plan.Mode, plan.Repository, plan.Coordinator, plan.Storage, plan.SingleInstance, plan.Reasons)
 	repo := newRepository(cfg)
 	if migrator, ok := repo.(interface {

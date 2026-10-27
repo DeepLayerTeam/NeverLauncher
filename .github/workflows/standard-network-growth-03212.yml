@@ -1,0 +1,65 @@
+name: Standard and Network/HA live infrastructure checks (0.32.12)
+on:
+  push:
+    paths:
+      - 'services/api/internal/deployment/**'
+      - 'services/api/internal/storage/**'
+      - 'services/api/cmd/neverlauncher-api/**'
+      - '.github/workflows/standard-network-growth-03212.yml'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  growth:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: neverlauncher_growth
+          POSTGRES_USER: neverlauncher_growth
+          POSTGRES_PASSWORD: growth-ci-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher_growth -d neverlauncher_growth"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping | grep -q PONG"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://neverlauncher_growth:growth-ci-only@127.0.0.1:5432/neverlauncher_growth?sslmode=disable
+      NEVERLAUNCHER_GROWTH_TEST_REDIS_URL: redis://127.0.0.1:6379/0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Verify module and formatting
+        run: |
+          set -euo pipefail
+          go mod download
+          go mod verify
+          test -z "$(gofmt -l internal/deployment internal/storage cmd/neverlauncher-api/main.go)"
+      - name: Real PostgreSQL lock, Redis lease, S3 signed round-trip and failure tests
+        run: |
+          set -euo pipefail
+          go test -race -count=1 -timeout=10m ./internal/deployment ./internal/storage
+          go vet ./internal/deployment ./internal/storage ./cmd/neverlauncher-api
+      - name: Compile the actual HTTP backend with pgx
+        run: |
+          set -euo pipefail
+          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-api-03212" ./cmd/neverlauncher-api
+      - name: Verify canonical product version
+        working-directory: .
+        run: python3 scripts/version/manage.py check
