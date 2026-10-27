@@ -26,6 +26,8 @@ type Config struct {
 	RedisAddr                                    string
 	RedisURL                                     string
 	SQLiteCoordinatorPath                        string
+	DeploymentMode                               string
+	DeploymentLockPath                           string
 	ServerBridgeHARequired                       bool
 	ServerBridgeReplicaID                        string
 	TrustedProxyCIDRs                            []string
@@ -220,6 +222,8 @@ func Load() Config {
 		RedisAddr:                                    redisAddr,
 		RedisURL:                                     redisURL,
 		SQLiteCoordinatorPath:                        env("NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", ""),
+		DeploymentMode:                               env("NEVERLAUNCHER_DEPLOYMENT_MODE", "auto"),
+		DeploymentLockPath:                           env("NEVERLAUNCHER_DEPLOYMENT_LOCK_PATH", ""),
 		ServerBridgeHARequired:                       envBool("NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED", production && env("NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", "") == ""),
 		ServerBridgeReplicaID:                        env("NEVERLAUNCHER_REPLICA_ID", ""),
 		TrustedProxyCIDRs:                            envCSV("NEVERLAUNCHER_TRUSTED_PROXY_CIDRS"),

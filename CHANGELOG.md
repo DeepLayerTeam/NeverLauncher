@@ -1,5 +1,14 @@
 ## 0.32.5 — DEP01/02 SQLite Durable Jobs, Leases & Outbox (2026-10-27)
 
+## 0.32.8 — Deployment Modes (DEP05; 2026-10-27)
+
+- Detect actual Standard vs Network/HA topology and report evidence without exposing secrets (`neverlauncher-api diagnose deployment`). No unsafe automatic downgrade to memory.
+- Acquire an OS-level exclusive single-instance lock before PostgreSQL migrations or worker startup; anchor to shared local storage or explicitly configured persistent lock path, and retain until shutdown.
+- Reject mismatched HA configuration and unsupported SQLite-only HTTP repository instead of advertising a production Single-node mode before remaining repository parity is integrated.
+- Retain fail-closed production rate limits and health-enforced runtime coordinator selection.
+- Add Linux cross-process locking / mode selection tests and a native build CI gate.
+
+
 - Add atomic migration 324→325 and SQLite WAL-backed durable job queue with permanent actor/action/payload idempotency scopes, retriable attempts, persistent lease fencing and crash recovery.
 - Add single-writer job claiming, lease renewal, terminal/dead-letter states and append-only attempt history; expired workers cannot acknowledge or mutate jobs under outdated lease tokens.
 - Implement persistent scope leases whose fencing tokens increase across release/expiry/restart; `CommitFencedJob` transactionally checks job + scope epochs and commits trusted local data mutations, job success and outbox events together.

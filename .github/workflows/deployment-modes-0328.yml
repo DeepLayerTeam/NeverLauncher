@@ -1,0 +1,47 @@
+name: DEP05 deployment mode and owner locks (0.32.8)
+on:
+  push:
+    paths:
+      - 'services/api/internal/deployment/**'
+      - 'services/api/internal/config/**'
+      - 'services/api/cmd/neverlauncher-api/**'
+      - 'services/api/internal/httpapi/rate_limit.go'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+      - '.github/workflows/deployment-modes-0328.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deployment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Verify toolchain, modules and formatting
+        run: |
+          set -euo pipefail
+          go version
+          go mod download
+          go mod verify
+          test -z "$(gofmt -l internal/deployment internal/config/config.go cmd/neverlauncher-api/main.go)"
+      - name: Topology and real cross-process OS lock tests
+        run: |
+          set -euo pipefail
+          go test -race -count=1 -timeout=5m ./internal/deployment ./internal/config
+          go vet ./internal/deployment ./internal/config ./cmd/neverlauncher-api
+      - name: Compile production API (real drivers)
+        run: |
+          set -euo pipefail
+          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-api-328" ./cmd/neverlauncher-api
+          NEVERLAUNCHER_ENV=production NEVERLAUNCHER_DEPLOYMENT_MODE=single-node "$RUNNER_TEMP/neverlauncher-api-328" diagnose deployment > "$RUNNER_TEMP/diagnose-single.json" && exit 1 || test $? -eq 2
+          grep -q '"configurationValid":false' "$RUNNER_TEMP/diagnose-single.json"
+          grep -q 'SQLite-only HTTP repository is not implemented' "$RUNNER_TEMP/diagnose-single.json"

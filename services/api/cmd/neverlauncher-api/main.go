@@ -17,6 +17,7 @@ import (
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/deployment"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionga"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
@@ -46,6 +47,25 @@ func main() {
 				os.Exit(2)
 			}
 			return
+		case "deployment":
+			cfg := config.Load()
+			plan, err := deployment.Detect(cfg)
+			if err == nil {
+				err = config.ValidateProduction(cfg)
+			}
+			result := struct {
+				Topology           deployment.Plan `json:"topology"`
+				ConfigurationValid bool            `json:"configurationValid"`
+				Error              string          `json:"error,omitempty"`
+			}{Topology: plan, ConfigurationValid: err == nil}
+			if err != nil {
+				result.Error = err.Error()
+			}
+			_ = json.NewEncoder(os.Stdout).Encode(result)
+			if err != nil {
+				os.Exit(2)
+			}
+			return
 		case "extension-sandbox":
 			result := extensionhost.DiagnoseIsolation0311()
 			_ = json.NewEncoder(os.Stdout).Encode(result)
@@ -54,7 +74,7 @@ func main() {
 			}
 			return
 		default:
-			fmt.Fprintf(os.Stderr, "unknown diagnostic %q (expected device-trust or extension-sandbox; OS=%s)\n", os.Args[2], runtime.GOOS)
+			fmt.Fprintf(os.Stderr, "unknown diagnostic %q (expected deployment, device-trust or extension-sandbox; OS=%s)\n", os.Args[2], runtime.GOOS)
 			os.Exit(2)
 		}
 	}
@@ -79,6 +99,19 @@ func main() {
 	if err := httpapi.ValidatePersistenceConfig950(cfg); err != nil {
 		log.Fatal(err)
 	}
+	// Lock the entire service BEFORE schema migration, installation bootstrap,
+	// workers or an HTTP listener can mutate shared state. A second process
+	// with a different SQLite coordinator path still conflicts on local storage.
+	plan, err := deployment.Detect(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	owner, err := deployment.Acquire(plan)
+	if err != nil {
+		log.Fatalf("deployment owner lock: %v", err)
+	}
+	defer owner.Close()
+	log.Printf("deployment mode=%s repository=%s coordinator=%s storage=%s single_instance=%t reasons=%q", plan.Mode, plan.Repository, plan.Coordinator, plan.Storage, plan.SingleInstance, plan.Reasons)
 	repo := newRepository(cfg)
 	if migrator, ok := repo.(interface {
 		MigrationStatus(context.Context) (dbmigrate.Status, error)
