@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"io"
 	"sync"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 )
 
 type RuntimeState struct {
+	productRuntimeCloser io.Closer
 	AuthSessions         *authSessionStore
 	Security             *securityHardeningStore
 	Passkeys             *passkeyStore117
@@ -44,4 +46,13 @@ func NewRuntimeState() *RuntimeState {
 		RateLimitAuthPerMinute:         20,
 		RateLimitServerBridgePerMinute: 6000,
 	}
+}
+
+// CloseProductRuntime releases the exclusive single-node SQLite owner lock.
+// Call after HTTP requests and workers have stopped.
+func (s *RuntimeState) CloseProductRuntime() error {
+	if s == nil || s.productRuntimeCloser == nil {
+		return nil
+	}
+	return s.productRuntimeCloser.Close()
 }

@@ -25,6 +25,7 @@ type Config struct {
 	SQLDriver                                    string
 	RedisAddr                                    string
 	RedisURL                                     string
+	SQLiteCoordinatorPath                        string
 	ServerBridgeHARequired                       bool
 	ServerBridgeReplicaID                        string
 	TrustedProxyCIDRs                            []string
@@ -218,7 +219,8 @@ func Load() Config {
 		SQLDriver:                                    env("NEVERLAUNCHER_SQL_DRIVER", "pgx"),
 		RedisAddr:                                    redisAddr,
 		RedisURL:                                     redisURL,
-		ServerBridgeHARequired:                       envBool("NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED", production),
+		SQLiteCoordinatorPath:                        env("NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", ""),
+		ServerBridgeHARequired:                       envBool("NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED", production && env("NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", "") == ""),
 		ServerBridgeReplicaID:                        env("NEVERLAUNCHER_REPLICA_ID", ""),
 		TrustedProxyCIDRs:                            envCSV("NEVERLAUNCHER_TRUSTED_PROXY_CIDRS"),
 		RateLimitEnabled:                             envBool("NEVERLAUNCHER_RATE_LIMIT_ENABLED", true),
@@ -433,21 +435,29 @@ func ValidateProduction(cfg Config) error {
 		}
 	}
 
-	// Производственная конфигурация через Load() всегда содержит
-	// явную политику ограничения частоты. Там обязателен строгий
-	// Redis-limiter; нулевые значения остаются лишь для обратной
-	// совместимости с прямым созданием Config в тестах.
-	haPolicySpecified := cfg.ServerBridgeHARequired || strings.TrimSpace(cfg.ServerBridgeReplicaID) != ""
-	if haPolicySpecified {
-		if !cfg.ServerBridgeHARequired {
-			problems = append(problems, "production требует NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED=true")
+	// Explicit single-node SQLite is mutually exclusive with distributed HA.
+	// Legacy production configurations retain their Redis/HA policy.
+	singleNode := strings.TrimSpace(cfg.SQLiteCoordinatorPath) != ""
+	if singleNode {
+		if !filepath.IsAbs(cfg.SQLiteCoordinatorPath) {
+			problems = append(problems, "single-node SQLite coordinator path должен быть абсолютным")
 		}
-		if strings.TrimSpace(cfg.RedisURL) == "" {
-			problems = append(problems, "NEVERLAUNCHER_REDIS_URL обязателен для ServerBridge HA fencing")
+		if cfg.ServerBridgeHARequired {
+			problems = append(problems, "SQLite single-node не поддерживает SERVERBRIDGE_HA_REQUIRED")
+		}
+	} else {
+		haPolicySpecified := cfg.ServerBridgeHARequired || strings.TrimSpace(cfg.ServerBridgeReplicaID) != ""
+		if haPolicySpecified {
+			if !cfg.ServerBridgeHARequired {
+				problems = append(problems, "production требует NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED=true")
+			}
+			if strings.TrimSpace(cfg.RedisURL) == "" {
+				problems = append(problems, "NEVERLAUNCHER_REDIS_URL обязателен для ServerBridge HA fencing")
+			}
 		}
 	}
 
-	ratePolicySpecified := strings.TrimSpace(cfg.RedisURL) != "" || cfg.RateLimitEnabled || cfg.RateLimitGlobalPerMinute != 0 || cfg.RateLimitAuthPerMinute != 0 || cfg.RateLimitServerBridgePerMinute != 0 || cfg.RateLimitFailClosed
+	ratePolicySpecified := singleNode || strings.TrimSpace(cfg.RedisURL) != "" || cfg.RateLimitEnabled || cfg.RateLimitGlobalPerMinute != 0 || cfg.RateLimitAuthPerMinute != 0 || cfg.RateLimitServerBridgePerMinute != 0 || cfg.RateLimitFailClosed
 	if ratePolicySpecified {
 		if !cfg.RateLimitEnabled {
 			problems = append(problems, "production требует NEVERLAUNCHER_RATE_LIMIT_ENABLED=true")
@@ -455,7 +465,7 @@ func ValidateProduction(cfg Config) error {
 		if !cfg.RateLimitFailClosed {
 			problems = append(problems, "production требует NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED=true")
 		}
-		if strings.TrimSpace(cfg.RedisURL) == "" {
+		if !singleNode && strings.TrimSpace(cfg.RedisURL) == "" {
 			problems = append(problems, "NEVERLAUNCHER_REDIS_URL обязателен для distributed production rate limiting")
 		}
 		if cfg.RateLimitGlobalPerMinute <= 0 || cfg.RateLimitAuthPerMinute <= 0 || cfg.RateLimitServerBridgePerMinute <= 0 {

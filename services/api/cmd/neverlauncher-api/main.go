@@ -151,6 +151,7 @@ func main() {
 	if err := state.ConfigureProductRuntime(cfg); err != nil {
 		log.Fatal(err)
 	}
+	defer state.CloseProductRuntime()
 	federationCtx, federationCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	federationCore, err := httpapi.NewFederationCore(federationCtx, repo, cfg)
 	federationCancel()

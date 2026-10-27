@@ -12,6 +12,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/ratelimit"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/serverbridgeha"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitecoord"
 )
 
 func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
@@ -29,6 +30,32 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 			hostname = "unknown-host"
 		}
 		s.ServerBridgeReplicaID = fmt.Sprintf("%s-%d", hostname, os.Getpid())
+	}
+
+	// Explicit SQLite single-node path: both coordination and rate limiting
+	// share one durable writer. No Redis fallback, no in-memory success path.
+	if path := strings.TrimSpace(cfg.SQLiteCoordinatorPath); path != "" {
+		if cfg.ServerBridgeHARequired {
+			return fmt.Errorf("SQLite single-node cannot satisfy distributed ServerBridge HA")
+		}
+		if cfg.RateLimitEnabled && !cfg.RateLimitFailClosed {
+			return fmt.Errorf("SQLite rate limiting must fail closed")
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		coordinator, openErr := sqlitecoord.Open(ctx, path)
+		cancel()
+		if openErr != nil {
+			return fmt.Errorf("SQLite single-node coordinator unavailable: %w", openErr)
+		}
+		s.productRuntimeCloser = coordinator
+		s.ServerBridgeCoordinator = coordinator
+		s.RateLimiter = coordinator
+		s.RateLimitEnabled = cfg.RateLimitEnabled
+		s.RateLimitGlobalPerMinute = cfg.RateLimitGlobalPerMinute
+		s.RateLimitAuthPerMinute = cfg.RateLimitAuthPerMinute
+		s.RateLimitServerBridgePerMinute = cfg.RateLimitServerBridgePerMinute
+		s.RateLimitFailClosed = true
+		return nil
 	}
 
 	// У ServerBridge HA собственный Redis-ограничитель. Он независим от rate limiting:

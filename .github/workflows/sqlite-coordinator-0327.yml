@@ -1,0 +1,48 @@
+name: SQLite single-node coordinator (0.32.7)
+on:
+  push:
+    paths:
+      - 'services/api/internal/sqlitecoord/**'
+      - 'services/api/internal/sqlitedurable/**'
+      - 'services/api/internal/httpapi/**'
+      - 'services/api/internal/config/**'
+      - 'services/api/cmd/neverlauncher-api/**'
+      - 'services/api/go.mod'
+      - 'services/api/go.sum'
+      - '.github/workflows/sqlite-coordinator-0327.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sqlite-coordinator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Verify reproducible module dependencies
+        run: |
+          set -euo pipefail
+          go mod download
+          go mod verify
+          test -z "$(gofmt -l internal/sqlitecoord internal/sqlitedurable internal/config/sqlite_single_node_0327_test.go internal/httpapi/rate_limit.go internal/httpapi/runtime_state.go cmd/neverlauncher-api/main.go)"
+      - name: Local filesystem and WAL integration (no skips permitted)
+        env:
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/neverlauncher-coordinator-327
+          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+        run: |
+          set -euo pipefail
+          mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          go test -race -count=1 -timeout=15m ./internal/sqlitecoord ./internal/sqlitedurable ./internal/config
+          go vet ./internal/sqlitecoord ./internal/sqlitedurable ./internal/config ./internal/httpapi ./cmd/neverlauncher-api
+      - name: Build actual API with SQLite coordinator path
+        run: go build -trimpath -o "$RUNNER_TEMP/neverlauncher-api-327" ./cmd/neverlauncher-api
