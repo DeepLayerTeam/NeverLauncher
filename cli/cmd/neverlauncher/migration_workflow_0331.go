@@ -17,7 +17,7 @@ import (
 // the database checkpoint and lease, not the CLI process, own progress.
 func handleMigrationWorkflow0331(args []string) error {
 	if len(args) < 1 {
-		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export")
+		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities")
 	}
 	command := args[0]
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
@@ -46,12 +46,23 @@ func handleMigrationWorkflow0331(args []string) error {
 			return errors.New("list requires --project")
 		}
 		path = base + "?projectId=" + url.QueryEscape(project)
-	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export":
+	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities":
 		id := strings.TrimSpace(flagValue(args, "--run", ""))
 		if id == "" {
 			return fmt.Errorf("%s requires --run", command)
 		}
 		path = base + "/" + url.PathEscape(id)
+		if command == "identities" || command == "map-identities" || command == "verify-identities" {
+			path += "/identities"
+			if command == "map-identities" {
+				return postGravitInventory0333(path, token, flagValue(args, "--source", ""), out, false)
+			}
+			if command == "verify-identities" {
+				method = "POST"
+				path += "/verify"
+				body = map[string]any{}
+			}
+		}
 		if command == "inventory" || command == "export" {
 			path += "/" + command
 			source := flagValue(args, "--source", "")
@@ -83,6 +94,9 @@ func handleMigrationWorkflow0331(args []string) error {
 	result, err := httpJSONWithAuth(method, path, body, token)
 	if err != nil {
 		return err
+	}
+	if command == "identities" || command == "verify-identities" {
+		return writePrivateIdentityReport0334(out, result)
 	}
 	return writeOrPrintJSON(out, result)
 }

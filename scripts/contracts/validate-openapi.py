@@ -12,7 +12,7 @@ errors=[]
 if spec.get('openapi')!='3.1.1': errors.append('openapi must be 3.1.1')
 if spec.get('info',{}).get('version')!='1.0.0': errors.append('info.version must be 1.0.0')
 route_re=re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles/minecraft(?:/[^" ]+)?|/api/user/profile/[^" ]+|/authserver/[^" ]+|/sessionserver/session/minecraft/[^" ]+|/(?:health|ready|metrics))')
-files=[HTTP/'handler.go']+sorted(p for p in HTTP.glob('routes_*.go') if 'legacy' not in p.name)+[HTTP/'migration_0331.go',HTTP/'migration_compat_0332.go',HTTP/'migration_inventory_0333.go']
+files=[HTTP/'handler.go']+sorted(p for p in HTTP.glob('routes_*.go') if 'legacy' not in p.name)+[HTTP/'migration_0331.go',HTTP/'migration_compat_0332.go',HTTP/'migration_inventory_0333.go',HTTP/'migration_identity_0334.go']
 code=set()
 for f in files:
     for method,path in route_re.findall(f.read_text(encoding="utf-8")): code.add((method.lower(),path.replace('{path...}','{path}')))

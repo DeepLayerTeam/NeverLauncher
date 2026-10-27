@@ -841,6 +841,205 @@
           }
         }
       }
+    },
+    "/api/v1/admin/migration-runs/{runId}/identities": {
+      "get": {
+        "operationId": "migration0334_get_identites",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Read persisted UUID mapping and collisions",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified sanitized identity map; no passwords or sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitIdentityReport0334"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "Run or inventory missing"
+          },
+          "409": {
+            "description": "Invalid workflow state or source changed"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      },
+      "post": {
+        "operationId": "migration0334_scan_identites",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Scan real FileAuth and SQL identity data from identical pinned source ZIP",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary",
+                "maxLength": 536870912
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verified sanitized identity map; no passwords or sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitIdentityReport0334"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "Run or inventory missing"
+          },
+          "409": {
+            "description": "Invalid workflow state or source changed"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          },
+          "413": {
+            "description": "Bounded source ZIP too large"
+          },
+          "415": {
+            "description": "application/zip required"
+          },
+          "422": {
+            "description": "Source identity format invalid or unsupported"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/identities/verify": {
+      "post": {
+        "operationId": "migration0334_verify_identites",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Reconcile persisted source UUID map against current Never identities",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified sanitized identity map; no passwords or sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitIdentityReport0334"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "Run or inventory missing"
+          },
+          "409": {
+            "description": "Invalid workflow state or source changed"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
     }
   },
   "schemas": {
@@ -1115,6 +1314,96 @@
                 "type": "boolean"
               }
             }
+          }
+        }
+      }
+    },
+    "GravitIdentityReport0334": {
+      "type": "object",
+      "required": [
+        "format",
+        "runId",
+        "sourceSha256",
+        "inventorySha256",
+        "entriesSha256",
+        "rows",
+        "summary",
+        "ready"
+      ],
+      "properties": {
+        "format": {
+          "const": "neverlauncher.gravit-identity-map.v1"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "sourceSha256": {
+          "type": "string"
+        },
+        "inventorySha256": {
+          "type": "string"
+        },
+        "entriesSha256": {
+          "type": "string"
+        },
+        "ready": {
+          "type": "boolean",
+          "description": "All identities matched; DOES NOT authorize cutover"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "provider",
+              "sourceId",
+              "username",
+              "uuid",
+              "sourcePath",
+              "status",
+              "reason"
+            ],
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "fileauth",
+                  "sql"
+                ]
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              },
+              "uuid": {
+                "type": "string"
+              },
+              "sourcePath": {
+                "type": "string"
+              },
+              "targetUserId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "matched",
+                  "pending_import",
+                  "blocked"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
           }
         }
       }

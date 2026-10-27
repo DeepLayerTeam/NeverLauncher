@@ -179,6 +179,9 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 		if e = json.Unmarshal(b, &doc); e != nil {
 			return e
 		}
+		if strings.HasSuffix(u.Path, "/identities") {
+			return writePrivateIdentityReport0334(out, doc)
+		}
 		return writeOrPrintJSON(out, doc)
 	}
 	if response.Header.Get("Content-Type") != "application/zip" {

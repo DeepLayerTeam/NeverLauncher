@@ -1,0 +1,71 @@
+name: Gravit 0.33.4 Identity and UUID Mapping
+on:
+  push:
+    paths:
+      - 'services/api/internal/gravitidentity/**'
+      - 'services/api/internal/repository/migration_identity_0334*'
+      - 'services/api/internal/httpapi/migration_identity_0334.go'
+      - 'services/api/internal/dbmigrate/sql/0092_*'
+      - 'services/api/internal/httpapi/handler.go'
+      - 'cli/cmd/neverlauncher/migration_workflow_0331.go'
+      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'services/api/internal/embeddedadmin/site/**'
+      - 'schemas/openapi-migration-center.json'
+      - '.github/workflows/gravit-identity-0334.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  server-and-cli:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: neverlauncher_test
+          POSTGRES_USER: neverlauncher_test
+          POSTGRES_PASSWORD: disposable_only_0334
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:disposable_only_0334@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Identity detector and reproducible inventory race tests
+        working-directory: services/api
+        run: go test -race -count=1 -timeout 10m ./internal/gravitidentity ./internal/gravitinventory
+      - name: PostgreSQL transactional mapping and target collision tests
+        working-directory: services/api
+        run: go test -race -count=1 -timeout 10m ./internal/repository -run '^TestMigrationIdentityTransactional0334$'
+      - name: Compile full Backend and HTTP handlers
+        working-directory: services/api
+        run: go test -run '^$' ./internal/httpapi ./internal/repository
+      - name: CLI integration
+        working-directory: cli
+        run: go test -race -count=1 -timeout 5m ./cmd/neverlauncher
+      - name: OpenAPI and versions
+        run: |
+          python3 scripts/contracts/validate-openapi.py
+          python3 scripts/version/manage.py check
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - working-directory: apps/admin
+        run: npm ci --ignore-scripts
+      - working-directory: apps/admin
+        run: npm run build

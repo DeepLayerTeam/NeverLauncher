@@ -103,3 +103,19 @@ for (const action of ['inventory','export']) {
   }catch(err){message(err.message,true)}finally{e.currentTarget.disabled=false}
  });
 }
+
+// MIG04: identity snapshots are persisted only after the 0.33.3 inventory.
+for(const action of ['map-identities','verify-identities']) {
+ byId('migration-'+action).addEventListener('click',async event=>{
+  const id=migrationId(),file=byId('migration-assess').querySelector('[name=source]').files[0];
+  if(!id||(action==='map-identities'&&(!file||file.size>512*1024*1024))){message('Выберите run и исходный ZIP до 512 MiB',true);return}
+  const uri=`/api/v1/admin/migration-runs/${encodeURIComponent(id)}/identities`+(action==='verify-identities'?'/verify':'');
+  event.currentTarget.disabled=true;
+  try {
+   const response=await fetch(uri,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':action==='map-identities'?'application/zip':'application/json'},body:action==='map-identities'?file:'{}',cache:'no-store',redirect:'error',credentials:'same-origin'});
+   if(!response.ok)throw new Error(`HTTP ${response.status}: ${(await response.text()).slice(0,240)}`);
+   const result=await response.json();byId('migration-report').textContent=JSON.stringify({identities:result.data},null,2);
+   message('Карта UUID сверена. Cutover не разрешён.');
+  }catch(e){message(e.message,true)}finally{event.currentTarget.disabled=false}
+ });
+}

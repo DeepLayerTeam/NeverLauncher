@@ -1,3 +1,13 @@
+## [0.33.4] - 2026-10-27
+### Added
+- MIG04 executable identity mapping for real Gravit FileAuthSystem `Database.json` (UUID-keyed records) and normalized SQL CSV `sql-export/users.csv` (id,username,uuid).
+- Immutable source-scoped identity snapshots with SHA-256 provenance pinned to MIG03 inventory, PostgreSQL target reconciliation, UUID/name/provider ID collision detection, and transactional event journaling.
+- Authenticated Admin, Embedded Admin and CLI identity scan, display and live re-verification. Credentials, tokens, external trust and passwords are not imported.
+### Limitations
+- A source UUID without an existing matching Never identity remains `pending_import` for later authentication migration; same-name matching never proves account ownership.
+- No account auto-creation, manual override, world/plugin-data reassignment, player session migration or cutover is performed in MIG04. `ready` refers only to the identity mapping, not project migration readiness.
+- Complete Go 1.27.3/PostgreSQL/React production integration verification requires an environment with those toolchains/services.
+
 ## [0.33.3] - 2026-10-27
 ### Added
 - MIG03 operational source inventory of a real bounded Gravit ZIP: streaming CRC/SHA-256 validation of every file; detailed classes for clients, assets, libraries, profiles, modules, textures, auth providers, optionals, server references and keys; malicious path/duplicate/ZIP bomb rejection.
