@@ -1,3 +1,12 @@
+## [0.33.5] - 2026-10-27
+### Added
+- MIG05 executable transactional PostgreSQL account import from immutable MIG03/MIG04 Gravit ZIP snapshots; preserves supported FileAuthSystem and normalized SQL password verifiers and Minecraft UUIDs.
+- Per-account manual reset classification for unsupported SQL verifiers, safe dry-run, explicit import confirmation, durable idempotent receipt/retry, no credential overwrites for matched Never identities.
+- CLI, React Admin and Embedded Admin operations, sanitized OpenAPI contract, integration/race tests, 0093 database migration and operational runbook.
+### Limitations
+- Existing Never passwords and official/remote providers are never silently replaced. No sessions, administrator rights, old signing keys, unknown JAR execution, cutover or rollback are migrated in this release.
+- Full Backend Go 1.27.3/PostgreSQL and Admin integration certification requires the configured CI workflow; do not treat this implementation as a certified production release until those checks pass.
+
 ## [0.33.4] - 2026-10-27
 ### Added
 - MIG04 executable identity mapping for real Gravit FileAuthSystem `Database.json` (UUID-keyed records) and normalized SQL CSV `sql-export/users.csv` (id,username,uuid).

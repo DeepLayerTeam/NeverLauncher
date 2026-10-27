@@ -9,7 +9,7 @@ ROUTES = ROOT / "services/api/internal/httpapi"
 OUT = ROOT / "schemas/openapi.yaml"
 PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 route_re = re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles/minecraft(?:/[^" ]+)?|/api/user/profile/[^" ]+|/authserver/[^" ]+|/sessionserver/session/minecraft/[^" ]+|/(?:health|ready|metrics))')
-files = [ROUTES / "handler.go"] + sorted(p for p in ROUTES.glob("routes_*.go") if "legacy" not in p.name) + [ROUTES / "migration_0331.go",ROUTES / "migration_compat_0332.go", ROUTES / "migration_inventory_0333.go", ROUTES / "migration_identity_0334.go"]
+files = [ROUTES / "handler.go"] + sorted(p for p in ROUTES.glob("routes_*.go") if "legacy" not in p.name) + [ROUTES / "migration_0331.go",ROUTES / "migration_compat_0332.go", ROUTES / "migration_inventory_0333.go", ROUTES / "migration_identity_0334.go", ROUTES / "migration_auth_0335.go"]
 routes = []
 for file in files:
     for method, path in route_re.findall(file.read_text()):

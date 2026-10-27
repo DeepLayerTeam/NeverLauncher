@@ -17,6 +17,7 @@ type Finding0332 = {code: string; severity: string; component: string; path?: st
 type Compatibility0332 = {sourceSha256:string; sourceEntries:number; claimedVersion?:string; detectedVersion?:string; versionStatus:string; versionEvidence:string; status:string; cutoverAllowed:boolean; components:{kind:string;path:string;status:string;type?:string}[]; findings:Finding0332[]; summary:Record<string,number>};
 type Inventory0333 = {format:string; sourceSha256:string; sourceEntries:number; sourceBytes:number; totalBytes:number; sensitiveEntries:number; manifestSha256:string; categories:Record<string,number>; authProviders:Record<string,number>; textureProviders:Record<string,number>; optionalActions:Record<string,number>; serverReferences:number; files:{path:string;kind:string;size:number;sha256:string;sensitive?:boolean}[]};
 type Identity0334 = {format:string;runId:string;sourceSha256:string;inventorySha256:string;entriesSha256:string;summary:Record<string,number>;ready:boolean;rows:{provider:string;sourceId:string;username:string;uuid:string;sourcePath:string;targetUserId?:string;status:string;reason:string}[]};
+type Credentials0335 = {format:string;runId:string;sourceSha256:string;identitySha256:string;imported:number;existingUnchanged:number;manualReset:number;complete:boolean;dryRun:boolean;rows:{provider:string;sourceId:string;username:string;uuid:string;state:string;reason?:string}[]};
 type Event = { sequence: number; kind: string; step: string; revision: number; detail: unknown; createdAt: string };
 
 /** A working server-backed migration run operator. No client-side state is
@@ -33,6 +34,10 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
   const [compatibility, setCompatibility] = useState<Compatibility0332 | null>(null);
   const [inventory, setInventory] = useState<Inventory0333 | null>(null);
   const [identities,setIdentities] = useState<Identity0334|null>(null);
+  const [credentials,setCredentials] = useState<Credentials0335|null>(null);
+  const [credentialPreview,setCredentialPreview] = useState<Credentials0335|null>(null);
+  const [passwordFormat,setPasswordFormat] = useState('');
+  const [confirmRun,setConfirmRun] = useState('');
   const [error, setError] = useState('');
   const base = '/api/v1/admin/migration-runs';
 
@@ -40,7 +45,7 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
     if (!projectId) return;
     const all = await requestJSON<Run[]>(backendUrl, `${base}?projectId=${encodeURIComponent(projectId)}`, token);
     setRuns(all);
-    if (!selectedId) { setRun(null); setEvents([]); setCompatibility(null); setInventory(null); setIdentities(null); return; }
+    if (!selectedId) { setRun(null); setEvents([]); setCompatibility(null); setInventory(null); setIdentities(null); setCredentials(null); return; }
     const [current, journal] = await Promise.all([
       requestJSON<Run>(backendUrl, `${base}/${encodeURIComponent(selectedId)}`, token),
       requestJSON<Event[]>(backendUrl, `${base}/${encodeURIComponent(selectedId)}/events`, token)
@@ -51,11 +56,13 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setInventory(null); else throw e;}
     try {setIdentities(await requestJSON<Identity0334>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/identities`,token));}
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setIdentities(null); else throw e;}
+    try {setCredentials(await requestJSON<Credentials0335>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/credentials`,token));}
+    catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setCredentials(null); else throw e;}
     try {setCompatibility(await requestJSON<Compatibility0332>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/compatibility`,token));}
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setCompatibility(null); else throw e;}
   }, [backendUrl, token, projectId, runId]);
 
-  useEffect(() => { setRunId(''); setRun(null); setEvents([]); setRuns([]); setCompatibility(null); setInventory(null); setIdentities(null); setError('');
+  useEffect(() => { setRunId(''); setRun(null); setEvents([]); setRuns([]); setCompatibility(null); setInventory(null); setIdentities(null); setCredentials(null); setCredentialPreview(null); setConfirmRun(''); setError('');
     if (projectId) void requestJSON<Run[]>(backendUrl,`${base}?projectId=${encodeURIComponent(projectId)}`,token)
       .then(setRuns).catch((e: Error) => setError(e.message));
   }, [backendUrl, token, projectId]);
@@ -125,6 +132,20 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
       await refresh(runId);
     } catch(e){setError(String(e));await refresh(runId).catch(()=>undefined)}finally{setBusy(false)}
   }
+  async function migrationCredentials(commit: boolean) {
+    if (!runId || !source || !identities || !inventory || busy) return;
+    if (commit && (confirmRun !== runId || !credentialPreview)) {setError('Для импорта введите точный ID запуска и выполните предварительную проверку');return;}
+    setBusy(true);setError('');
+    try {
+      const action=commit?'import':'preview';
+      const report=await requestJSON<Credentials0335>(backendUrl,`${base}/${encodeURIComponent(runId)}/credentials/${action}`,token,{
+        method:'POST',headers:{'Content-Type':'application/zip','X-Gravit-Password-Format':passwordFormat,
+        ...(commit?{'X-Migration-Import-Confirm':runId}:{})},body:source
+      });
+      if(commit){setCredentials(report);setCredentialPreview(null);setConfirmRun('');await refresh(runId);}
+      else setCredentialPreview(report);
+    }catch(e){setError(String(e));await refresh(runId).catch(()=>undefined)}finally{setBusy(false)}
+  }
   async function exportSource() {
     if (!runId || !source || busy || !inventory) return;
     if (source.size < 1 || source.size > 512 * 1024 * 1024) {setError('ZIP must be 1..512 MiB');return;}
@@ -141,9 +162,9 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
       finally {URL.revokeObjectURL(url)}
     } catch(e){setError(String(e))}finally{setBusy(false)}
   }
-  return <section className="card wide" aria-label="Migration Center 0.33.4">
-    <h2>Migration Center · 0.33.4</h2>
-    <p>Durable workflow для проверки целевого проекта Never и фиксации инвентаризации. Статус «prepared» означает только сохранённый baseline; совместимость Gravit анализируется отдельно по ZIP; перенос пользователей и cutover не выполняются.</p>
+  return <section className="card wide" aria-label="Migration Center 0.33.5">
+    <h2>Migration Center · 0.33.5</h2>
+    <p>Durable workflow для проверки целевого проекта Never и фиксации инвентаризации. Статус «prepared» означает только сохранённый baseline; совместимость Gravit анализируется отдельно по ZIP; импорт поддерживаемых учётных записей доступен отдельно. Cutover не выполняется.</p>
     <form onSubmit={e => void create(e)} className="subcard">
       <label className="field"><span>Проект назначения</span><input value={projectId} readOnly /></label>
       <label className="field"><span>Ключ идемпотентности (сохраните до завершения операции)</span>
@@ -163,7 +184,7 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
     {run && <form onSubmit={e => void assess(e)} className="subcard">
       <h3>Gravit Compatibility Detector</h3>
       <p>Архив исходного проекта (LaunchServer.json, profiles/, runtime, modules/). Конфигурации и секреты не сохраняются на сервере. Неизвестные модули требуют проверки. Даже отчёт без блокеров не разрешает cutover.</p>
-      <label className="field"><span>ZIP проекта Gravit (максимум 64 MiB)</span><input type="file" required accept=".zip,application/zip" onChange={e=>setSource(e.target.files?.[0]??null)}/></label>
+      <label className="field"><span>ZIP проекта Gravit (максимум 64 MiB)</span><input type="file" required accept=".zip,application/zip" onChange={e=>{setSource(e.target.files?.[0]??null);setCredentialPreview(null);setConfirmRun('');}}/></label>
       <label className="field"><span>Предполагаемая версия Gravit (не является подтверждением)</span><input value={claimedVersion} maxLength={40} onChange={e=>setClaimedVersion(e.target.value)} placeholder="5.7.12" /></label>
       <button type="submit" disabled={busy || !source || run.status !== 'prepared' || run.step !== 'source_assessment'}>Проверить ZIP и сохранить отчёт</button>
     </form>}
@@ -193,6 +214,25 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
         <p>Совпало: {identities.summary.matched??0}; ожидает импорта: {identities.summary.pending_import??0}; заблокировано: {identities.summary.blocked??0}. Все сопоставлены: {identities.ready?'да':'нет'}. Это не разрешение на cutover.</p>
         <details><summary>UUID mapping ({identities.rows.length})</summary><pre>{JSON.stringify(identities.rows,null,2)}</pre></details>
       </>}
+    </article>}
+    {run && <article className="subcard">
+      <h3>Authentication Migration · MIG05</h3>
+      <p>Импортируются только новые local-аккаунты с проверенными исходными UUID и поддерживаемыми хешами. SQL: sql-export/users.csv с id,username,uuid,password_format,password_hash. Существующие аккаунты Never не перезаписываются. Неподдерживаемые SQL-хеши требуют индивидуального сброса.</p>
+      <label className="field"><span>Формат хеша FileAuthSystem (обязательно при FileAuth, определяется оператором из конфигурации)</span>
+        <select value={passwordFormat} onChange={e=>{setPasswordFormat(e.target.value);setCredentialPreview(null);}}>
+          {['','sha256-hex','sha256-base64url','md5-hex','sha1-hex','sha512-hex','double-sha256-hex','double-sha256-binary-hex','phpass','bcrypt','argon2id'].map(x=><option key={x} value={x}>{x||'Нет FileAuth / только SQL'}</option>)}
+        </select>
+      </label>
+      <div className="buttonRow">
+        <button disabled={busy||!source||!identities||identities.summary.blocked>0||run.status!=='prepared'} onClick={()=>void migrationCredentials(false)}>Проверить импорт паролей (dry-run)</button>
+      </div>
+      {credentialPreview && <>
+        <p>Dry-run: импортируемых {credentialPreview.imported}, существующих без изменений {credentialPreview.existingUnchanged}, индивидуальный сброс {credentialPreview.manualReset}.</p>
+        <label className="field"><span>Для подтверждения введите ID запуска</span><input value={confirmRun} onChange={e=>setConfirmRun(e.target.value)} placeholder={runId}/></label>
+        <button disabled={busy||confirmRun!==runId||run.status!=='prepared'} onClick={()=>void migrationCredentials(true)}>Подтверждаю реальный импорт аккаунтов</button>
+      </>}
+      {credentials && <p>Зафиксированный результат: импортировано {credentials.imported}, существующих не изменено {credentials.existingUnchanged}, сброс пароля требуется {credentials.manualReset}. Это не разрешение на cutover.</p>}
+      {(credentialPreview||credentials) && <details><summary>Отчёт (без секретов)</summary><pre>{JSON.stringify(credentialPreview||credentials,null,2)}</pre></details>}
     </article>}
     {compatibility && <article className="subcard">
       <h3>Совместимость: {compatibility.status}</h3>

@@ -1040,6 +1040,281 @@
           }
         }
       }
+    },
+    "/api/v1/admin/migration-runs/{runId}/credentials": {
+      "get": {
+        "operationId": "migration0335_credentials_get",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Read durable auth import receipt; never exposes hashes",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized credential migration result. No passwords or password hashes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitCredentialResult0335"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "Run or inventory missing"
+          },
+          "409": {
+            "description": "Invalid workflow state or source changed"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/credentials/preview": {
+      "post": {
+        "operationId": "migration0335_credentials_preview",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Dry-run new Gravit local account creation without any writes",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "X-Gravit-Password-Format",
+            "in": "header",
+            "required": false,
+            "description": "Explicit algorithm for FileAuthSystem; not needed for normalized SQL CSV which includes password_format per row",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "",
+                "sha256-hex",
+                "sha256-base64url",
+                "md5-hex",
+                "sha1-hex",
+                "sha512-hex",
+                "double-sha256-hex",
+                "double-sha256-binary-hex",
+                "phpass",
+                "bcrypt",
+                "argon2id"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary",
+                "maxLength": 536870912
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sanitized credential migration result. No passwords or password hashes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitCredentialResult0335"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "Run or inventory missing"
+          },
+          "409": {
+            "description": "Invalid workflow state or source changed"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          },
+          "422": {
+            "description": "Unsupported or malformed credential source; no accounts written"
+          },
+          "413": {
+            "description": "ZIP above the bounded source upload limit"
+          },
+          "415": {
+            "description": "Expected application/zip"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/credentials/import": {
+      "post": {
+        "operationId": "migration0335_credentials_import",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Transactionally import new Gravit users, UUIDs and password verifiers",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "X-Migration-Import-Confirm",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact migration run ID to authorize irreversible account creation"
+          },
+          {
+            "name": "X-Gravit-Password-Format",
+            "in": "header",
+            "required": false,
+            "description": "Explicit algorithm for FileAuthSystem; not needed for normalized SQL CSV which includes password_format per row",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "",
+                "sha256-hex",
+                "sha256-base64url",
+                "md5-hex",
+                "sha1-hex",
+                "sha512-hex",
+                "double-sha256-hex",
+                "double-sha256-binary-hex",
+                "phpass",
+                "bcrypt",
+                "argon2id"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary",
+                "maxLength": 536870912
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sanitized credential migration result. No passwords or password hashes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitCredentialResult0335"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "Run or inventory missing"
+          },
+          "409": {
+            "description": "Invalid workflow state or source changed"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          },
+          "422": {
+            "description": "Unsupported or malformed credential source; no accounts written"
+          },
+          "413": {
+            "description": "ZIP above the bounded source upload limit"
+          },
+          "415": {
+            "description": "Expected application/zip"
+          }
+        }
+      }
     }
   },
   "schemas": {
@@ -1404,6 +1679,100 @@
           "type": "object",
           "additionalProperties": {
             "type": "integer"
+          }
+        }
+      }
+    },
+    "GravitCredentialResult0335": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "runId",
+        "sourceSha256",
+        "identitySha256",
+        "imported",
+        "existingUnchanged",
+        "manualReset",
+        "complete",
+        "dryRun",
+        "rows"
+      ],
+      "properties": {
+        "format": {
+          "const": "neverlauncher.gravit-credentials.v1"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "sourceSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "identitySha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "imported": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "existingUnchanged": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "manualReset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "complete": {
+          "type": "boolean",
+          "description": "Only credential processing completed; does not authorize cutover"
+        },
+        "dryRun": {
+          "type": "boolean"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "provider",
+              "sourceId",
+              "username",
+              "uuid",
+              "state"
+            ],
+            "properties": {
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "fileauth",
+                  "sql"
+                ]
+              },
+              "sourceId": {
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              },
+              "uuid": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "imported",
+                  "existing_unchanged",
+                  "manual_reset"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
           }
         }
       }

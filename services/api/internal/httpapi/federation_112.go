@@ -44,7 +44,7 @@ func (c localAuthConnector112) AuthenticatePassword(ctx context.Context, req aut
 		// No fallback is attempted for emails or other auth providers.
 		if alias, ok := fileauth.UsernameEmail(req.Identifier); ok {
 			candidate, lookupErr := c.repo.GetUserByEmail(alias)
-			if lookupErr == nil && strings.HasPrefix(candidate.ID, "gravit-fileauth-") && candidate.DisplayName == req.Identifier {
+			if lookupErr == nil && (strings.HasPrefix(candidate.ID, "gravit-fileauth-") || strings.HasPrefix(candidate.ID, "gravit-sql-")) && candidate.DisplayName == req.Identifier {
 				user, err = candidate, nil
 			}
 		}

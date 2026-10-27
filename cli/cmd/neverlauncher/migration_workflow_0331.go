@@ -17,7 +17,7 @@ import (
 // the database checkpoint and lease, not the CLI process, own progress.
 func handleMigrationWorkflow0331(args []string) error {
 	if len(args) < 1 {
-		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities")
+		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials")
 	}
 	command := args[0]
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
@@ -46,12 +46,24 @@ func handleMigrationWorkflow0331(args []string) error {
 			return errors.New("list requires --project")
 		}
 		path = base + "?projectId=" + url.QueryEscape(project)
-	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities":
+	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities", "credentials", "preview-credentials", "import-credentials":
 		id := strings.TrimSpace(flagValue(args, "--run", ""))
 		if id == "" {
 			return fmt.Errorf("%s requires --run", command)
 		}
 		path = base + "/" + url.PathEscape(id)
+		if command == "credentials" || command == "preview-credentials" || command == "import-credentials" {
+			path += "/credentials"
+			if command == "preview-credentials" || command == "import-credentials" {
+				apply := command == "import-credentials"
+				if apply {
+					path += "/import"
+				} else {
+					path += "/preview"
+				}
+				return postMigrationAuth0335(path, token, flagValue(args, "--source", ""), flagValue(args, "--fileauth-format", ""), id, out, apply)
+			}
+		}
 		if command == "identities" || command == "map-identities" || command == "verify-identities" {
 			path += "/identities"
 			if command == "map-identities" {
@@ -95,7 +107,7 @@ func handleMigrationWorkflow0331(args []string) error {
 	if err != nil {
 		return err
 	}
-	if command == "identities" || command == "verify-identities" {
+	if command == "identities" || command == "verify-identities" || command == "credentials" {
 		return writePrivateIdentityReport0334(out, result)
 	}
 	return writeOrPrintJSON(out, result)

@@ -119,3 +119,27 @@ for(const action of ['map-identities','verify-identities']) {
   }catch(e){message(e.message,true)}finally{event.currentTarget.disabled=false}
  });
 }
+
+// 0.33.5 auth migration: require the same verified ZIP and explicit operator
+// acknowledgement; secrets never enter logs, reports, URLs or local storage.
+let credentialPreview335=null;
+for(const action of ['preview','import']){
+ byId('migration-'+action+'-credentials').addEventListener('click',async event=>{
+  const id=migrationId(),file=byId('migration-assess').querySelector('[name=source]').files[0];
+  if(!id||!file){message('Укажите migration run и исходный ZIP',true);return}
+  const decision=values('migration-auth');
+  if(action==='import' && (decision.confirmRun!==id || !credentialPreview335)){message('Сначала dry-run, затем введите точный run ID',true);return}
+  const button=event.currentTarget;button.disabled=true;
+  try{
+   const headers={'Authorization':`Bearer ${token}`,'Content-Type':'application/zip','X-Gravit-Password-Format':decision.format||''};
+   if(action==='import')headers['X-Migration-Import-Confirm']=id;
+   const response=await fetch(`/api/v1/admin/migration-runs/${encodeURIComponent(id)}/credentials/${action}`,{
+    method:'POST',headers,body:file,cache:'no-store',redirect:'error',credentials:'same-origin'
+   });
+   const payload=await response.json();if(!response.ok)throw new Error(payload?.error?.message||`HTTP ${response.status}`);
+   byId('migration-report').textContent=JSON.stringify({credentials:payload.data},null,2);
+   if(action==='preview'){credentialPreview335=payload.data;message('Предварительная проверка готова; проверьте все статусы');}
+   else{credentialPreview335=null;byId('migration-auth').querySelector('[name=confirmRun]').value='';message('Auth import сохранён транзакционно');}
+  }catch(err){message(err.message,true)}finally{button.disabled=false}
+ });
+}

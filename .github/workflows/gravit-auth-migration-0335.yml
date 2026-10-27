@@ -1,0 +1,73 @@
+name: Gravit Auth Migration 0.33.5
+on:
+  push:
+    paths:
+      - 'services/api/internal/gravitcredentials/**'
+      - 'services/api/internal/repository/migration_auth_0335*'
+      - 'services/api/internal/httpapi/migration_auth_0335*'
+      - 'services/api/internal/httpapi/federation_112.go'
+      - 'services/api/internal/dbmigrate/sql/0093*'
+      - 'cli/cmd/neverlauncher/migration_auth_0335*'
+      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'schemas/openapi-migration-center.json'
+      - '.github/workflows/gravit-auth-migration-0335.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend-postgresql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: neverlauncher_test
+          POSTGRES_USER: neverlauncher_test
+          POSTGRES_PASSWORD: test_only_not_production
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Backend integration, races and real auth verifier unit tests
+        working-directory: services/api
+        run: |
+          go test -race -count=1 -timeout 5m ./internal/gravitcredentials ./internal/gravitidentity ./internal/gravitinventory ./internal/fileauth ./internal/localpassword
+          go test -race -count=1 -timeout 5m ./internal/repository -run 'TestMigrationAuthAtomicIdempotent0335|TestMigrationIdentityTransactional0334|TestMigrationDurability0331'
+          go test -count=1 -timeout 5m ./internal/httpapi -run 'TestImportedFileAuthLocalLoginAndAtomicRehash0295|TestMigrationTargetSteps0331'
+      - name: CLI builds and tests
+        working-directory: cli
+        run: go test -count=1 ./cmd/neverlauncher
+  contract-admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: OpenAPI and product version
+        run: |
+          python3 scripts/version/manage.py check
+          python3 scripts/contracts/validate-openapi.py
+      - name: Admin build
+        working-directory: apps/admin
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+      - name: Embedded Admin syntax
+        run: node --check services/api/internal/embeddedadmin/site/app.js
