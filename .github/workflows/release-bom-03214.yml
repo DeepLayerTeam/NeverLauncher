@@ -1,0 +1,53 @@
+name: Release BOM 0.32.14
+on:
+  push:
+    paths:
+      - 'VERSION'
+      - 'cli/cmd/neverlauncher/release_bom_03214*'
+      - 'cli/cmd/neverlauncher/release_commands.go'
+      - 'cli/cmd/neverlauncher/release_signing.go'
+      - 'scripts/release/build-release.sh'
+      - 'apps/**/package*.json'
+      - 'apps/desktop/src-tauri/**'
+      - 'runtime/**/Cargo.toml'
+      - 'plugins/**/build.gradle.kts'
+      - 'serverbridge/**'
+      - 'guard-ci/**'
+      - 'services/api/go.mod'
+      - '.github/workflows/release-bom-03214.yml'
+  pull_request:
+    paths:
+      - 'VERSION'
+      - 'cli/cmd/neverlauncher/release_bom_03214*'
+      - 'cli/cmd/neverlauncher/release_commands.go'
+      - 'cli/cmd/neverlauncher/release_signing.go'
+      - 'scripts/release/build-release.sh'
+      - 'apps/**/package*.json'
+      - 'apps/desktop/src-tauri/**'
+      - 'runtime/**/Cargo.toml'
+      - 'plugins/**/build.gradle.kts'
+      - 'serverbridge/**'
+      - 'guard-ci/**'
+      - 'services/api/go.mod'
+      - '.github/workflows/release-bom-03214.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bom:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: cli/go.mod
+          cache: false
+      - name: Version sync and release source checks
+        run: python3 scripts/version/manage.py check
+      - name: Real Go BOM tests and race checks
+        working-directory: cli
+        run: |
+          go test -race ./cmd/neverlauncher -run '^TestReleaseBOM03214' -count=1 -v
+          go vet ./cmd/neverlauncher
+      - name: Validate bash entrypoint
+        run: bash -n scripts/release/build-release.sh

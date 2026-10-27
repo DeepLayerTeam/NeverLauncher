@@ -41,6 +41,16 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 	if err != nil {
 		return fmt.Errorf("release signing key: %w", err)
 	}
+	bundleVersion, versionErr := releaseBundleVersion(dir)
+	if versionErr != nil {
+		return fmt.Errorf("release BOM gate: %w", versionErr)
+	}
+	if err := verifyReleaseBOM03214(dir, bundleVersion); err != nil {
+		return fmt.Errorf("refusing to sign inconsistent release BOM: %w", err)
+	}
+	if err := verifyReleaseBOMBinding03214(dir, bundleVersion); err != nil {
+		return fmt.Errorf("refusing to sign unbound release BOM: %w", err)
+	}
 	if bundleVersion, err := releaseBundleVersion(dir); err == nil && releaseVerificationV2Required0158(bundleVersion) {
 		return signReleaseBundleV20158(dir, privateKey)
 	}

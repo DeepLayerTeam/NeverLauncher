@@ -655,9 +655,16 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if err := verifyOfficialGAReceipt0270(out, ver, expectedCommit); err != nil {
 		return fmt.Errorf("official Minecraft 0.27 GA gate: %w", err)
 	}
+	if err := writeReleaseBOM03214(out, sourceRoot, ver); err != nil {
+		return fmt.Errorf("Release BOM: %w", err)
+	}
 	entries := releaseBundleEntries(ver, out)
 	requiredFiles := []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}
 	checks := []string{"required-artifacts", "sha256", "ed25519-external-trust", "sbom", "provenance", "release-notes", "source-secret-scan"}
+	if releaseBOMRequired03214(ver) {
+		requiredFiles = append(requiredFiles, releaseBOMFile03214)
+		checks = append(checks, "pinned-release-bom-exact-byte-cohort")
+	}
 	if ver == "0.27.0" {
 		requiredFiles = append(requiredFiles, officialGACertification0270)
 		checks = append(checks, "six-target-live-official-minecraft-ed25519-ga")
@@ -1174,6 +1181,12 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	if verified == 0 {
 		return errors.New("SHA256SUMS не содержит проверяемых файлов")
 	}
+	if err := verifyReleaseBOM03214(dir, manifest.Version); err != nil {
+		return fmt.Errorf("release BOM verification: %w", err)
+	}
+	if err := verifyReleaseBOMBinding03214(dir, manifest.Version); err != nil {
+		return fmt.Errorf("release BOM signature boundary: %w", err)
+	}
 	if releaseVerificationV2Required0158(manifest.Version) {
 		ctx, err := verifyReleaseSignatureV20158(dir, publicKeyPath, trustStatePath, trustPolicyPath)
 		if err != nil {
@@ -1218,6 +1231,9 @@ func releaseArtifacts(ver string) []string {
 		"SBOM.spdx.json",
 		"PROVENANCE.json",
 		"RELEASE_NOTES.txt",
+	}
+	if releaseBOMRequired03214(ver) {
+		artifacts = append(artifacts, releaseBOMFile03214)
 	}
 	if linuxProductionRequired0153(ver) {
 		artifacts = append(artifacts, linuxProductionArtifacts0153(ver)...)
