@@ -18,6 +18,7 @@ type Compatibility0332 = {sourceSha256:string; sourceEntries:number; claimedVers
 type Inventory0333 = {format:string; sourceSha256:string; sourceEntries:number; sourceBytes:number; totalBytes:number; sensitiveEntries:number; manifestSha256:string; categories:Record<string,number>; authProviders:Record<string,number>; textureProviders:Record<string,number>; optionalActions:Record<string,number>; serverReferences:number; files:{path:string;kind:string;size:number;sha256:string;sensitive?:boolean}[]};
 type Identity0334 = {format:string;runId:string;sourceSha256:string;inventorySha256:string;entriesSha256:string;summary:Record<string,number>;ready:boolean;rows:{provider:string;sourceId:string;username:string;uuid:string;sourcePath:string;targetUserId?:string;status:string;reason:string}[]};
 type Credentials0335 = {format:string;runId:string;sourceSha256:string;identitySha256:string;imported:number;existingUnchanged:number;manualReset:number;complete:boolean;dryRun:boolean;rows:{provider:string;sourceId:string;username:string;uuid:string;state:string;reason?:string}[]};
+type Security0336 = {format:string;runId:string;importedAccounts:number;existingNeverUntouched:number;manualResets:number;sessionsRevoked:number;devicesRevoked:number;challengesConsumed:number;hardwareEvidenceDeleted:number;measuredBootEvidenceDeleted:number;activeJwtKid:string;manifestPublicSha256:string;appliedAt?:string;verified:boolean;readyForCutover:boolean;requiresLogin:boolean;requiresDeviceEnrollment:boolean;requiresGuardAttestation:boolean};
 type Event = { sequence: number; kind: string; step: string; revision: number; detail: unknown; createdAt: string };
 
 /** A working server-backed migration run operator. No client-side state is
@@ -36,6 +37,10 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
   const [identities,setIdentities] = useState<Identity0334|null>(null);
   const [credentials,setCredentials] = useState<Credentials0335|null>(null);
   const [credentialPreview,setCredentialPreview] = useState<Credentials0335|null>(null);
+  const [security,setSecurity]=useState<Security0336|null>(null);
+  const [securityPreview,setSecurityPreview]=useState<Security0336|null>(null);
+  const [freshKeysConfirmed,setFreshKeysConfirmed]=useState(false);
+  const [securityRunConfirm,setSecurityRunConfirm]=useState('');
   const [passwordFormat,setPasswordFormat] = useState('');
   const [confirmRun,setConfirmRun] = useState('');
   const [error, setError] = useState('');
@@ -146,6 +151,26 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
       else setCredentialPreview(report);
     }catch(e){setError(String(e));await refresh(runId).catch(()=>undefined)}finally{setBusy(false)}
   }
+  async function migrationSecurity0336(activate:boolean) {
+    if(!runId||busy||!credentials) return;
+    if(activate&&(!securityPreview||securityRunConfirm!==runId||!freshKeysConfirmed)) {
+      setError('Для смены доверия сначала выполните preview, проверьте ключи и введите точный run ID');return;
+    }
+    setBusy(true);setError('');
+    try {
+      const result=await requestJSON<Security0336>(backendUrl,`${base}/${encodeURIComponent(runId)}/security/${activate?'activate':'preview'}`,token,{
+        method:'POST',headers:activate?{'X-Migration-Trust-Confirm':runId,'X-Migration-Fresh-Keys-Confirmed':'true'}:undefined
+      });
+      if(activate){setSecurity(result);setSecurityPreview(null);setSecurityRunConfirm('');setFreshKeysConfirmed(false);await refresh(runId);}
+      else setSecurityPreview(result);
+    }catch(e){setError(String(e));}finally{setBusy(false);}
+  }
+  async function verifySecurity0336(){
+    if(!runId||busy)return;
+    setBusy(true);setError('');
+    try { const result=await requestJSON<Security0336>(backendUrl,`${base}/${encodeURIComponent(runId)}/security`,token);setSecurity(result);}
+    catch(e){setError(String(e))}finally{setBusy(false)}
+  }
   async function exportSource() {
     if (!runId || !source || busy || !inventory) return;
     if (source.size < 1 || source.size > 512 * 1024 * 1024) {setError('ZIP must be 1..512 MiB');return;}
@@ -162,8 +187,8 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
       finally {URL.revokeObjectURL(url)}
     } catch(e){setError(String(e))}finally{setBusy(false)}
   }
-  return <section className="card wide" aria-label="Migration Center 0.33.5">
-    <h2>Migration Center · 0.33.5</h2>
+  return <section className="card wide" aria-label="Migration Center 0.33.6">
+    <h2>Migration Center · 0.33.6</h2>
     <p>Durable workflow для проверки целевого проекта Never и фиксации инвентаризации. Статус «prepared» означает только сохранённый baseline; совместимость Gravit анализируется отдельно по ZIP; импорт поддерживаемых учётных записей доступен отдельно. Cutover не выполняется.</p>
     <form onSubmit={e => void create(e)} className="subcard">
       <label className="field"><span>Проект назначения</span><input value={projectId} readOnly /></label>
@@ -231,6 +256,19 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
         <label className="field"><span>Для подтверждения введите ID запуска</span><input value={confirmRun} onChange={e=>setConfirmRun(e.target.value)} placeholder={runId}/></label>
         <button disabled={busy||confirmRun!==runId||run.status!=='prepared'} onClick={()=>void migrationCredentials(true)}>Подтверждаю реальный импорт аккаунтов</button>
       </>}
+      <h3>Security &amp; Trust Reset · 0.33.6</h3>
+      <p>Для новых импортированных пользователей: транзакционный отзыв всех старых сеансов Never, привязок устройств, challenges, TPM/measured-boot доказательств. Уже существующие Never-аккаунты не изменяются. Внешние ключи Gravit не импортируются. Cutover запрещён.</p>
+      <div className="buttonRow">
+        <button disabled={busy||!credentials||run.status!=='prepared'} onClick={()=>void migrationSecurity0336(false)}>Предварительная проверка reset</button>
+        <button disabled={busy} onClick={()=>void verifySecurity0336()}>Проверить security receipt</button>
+      </div>
+      {securityPreview && <>
+        <p>Предварительный reset для {securityPreview.importedAccounts} импортированных аккаунтов. Существующие Never-аккаунты без изменений: {securityPreview.existingNeverUntouched}. KID: {securityPreview.activeJwtKid}; SHA-256 публичного ключа: {securityPreview.manifestPublicSha256}.</p>
+        <label className="field"><span>Введите точный run ID</span><input value={securityRunConfirm} onChange={e=>setSecurityRunConfirm(e.target.value)} autoComplete="off"/></label>
+        <label className="field"><input type="checkbox" checked={freshKeysConfirmed} onChange={e=>setFreshKeysConfirmed(e.target.checked)}/> Подтверждаю, что активный JWT secret и manifest Ed25519 seed Never созданы независимо от Gravit и доставлены через защищённое хранилище секретов</label>
+        <button disabled={busy||securityRunConfirm!==runId||!freshKeysConfirmed} onClick={()=>void migrationSecurity0336(true)}>Применить отзыв доверия</button>
+      </>}
+      {security && <p>Security reset: {security.verified?'проверен':'зафиксирован'} · sessions {security.sessionsRevoked} · devices {security.devicesRevoked} · challenges {security.challengesConsumed}. Требуются повторный вход, device enrollment и свежая Guard attestation.</p>}
       {credentials && <p>Зафиксированный результат: импортировано {credentials.imported}, существующих не изменено {credentials.existingUnchanged}, сброс пароля требуется {credentials.manualReset}. Это не разрешение на cutover.</p>}
       {(credentialPreview||credentials) && <details><summary>Отчёт (без секретов)</summary><pre>{JSON.stringify(credentialPreview||credentials,null,2)}</pre></details>}
     </article>}

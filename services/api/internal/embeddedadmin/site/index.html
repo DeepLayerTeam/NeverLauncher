@@ -7,7 +7,7 @@
 <section id="login" hidden><h2>Вход администратора</h2><form id="login-form"><label>Email<input name="email" type="email" autocomplete="username" required></label><label>Пароль<input name="password" type="password" autocomplete="current-password" required></label><label>TOTP (если требуется)<input name="totp" inputmode="numeric" autocomplete="one-time-code"></label><button type="submit">Войти</button></form></section>
 <section id="admin" hidden><h2>Состояние Backend</h2><button id="refresh" type="button">Обновить</button><button id="logout" type="button">Выйти</button><pre id="overview"></pre>
 <h2>Создание первого проекта</h2><p>Создаёт черновой релиз после проверки прав текущего владельца.</p><form id="project-form"><label>Проект<input name="projectId" value="default-project" required></label><label>Профиль<input name="profileId" value="vanilla" required></label><label>Канал<input name="channel" value="stable" required></label><label>Версия<input name="version" value="0.1.0" required></label><button type="submit">Создать проект</button></form>
-<h2>Migration Center · 0.33.5</h2>
+<h2>Migration Center · 0.33.6</h2>
 <p>Проверка и сохранение целевой конфигурации Never. Это ещё не импорт Gravit и не разрешение на cutover.</p>
 <form id="migration-create"><label>ID проекта<input name="projectId" required maxlength="128" value="default-project"></label><label>Ключ повторного выполнения<input name="idempotencyKey" required minlength="8" maxlength="128" placeholder="change-request-2026-001"></label><button type="submit">Создать migration run</button></form>
 <form id="migration-select"><label>Migration run ID<input id="migration-run-id" required></label><button type="submit">Показать</button></form>
@@ -19,6 +19,11 @@
 <select name="format"><option value="">Без FileAuth (SQL only)</option><option>sha256-hex</option><option>sha256-base64url</option><option>md5-hex</option><option>sha1-hex</option><option>sha512-hex</option><option>double-sha256-hex</option><option>double-sha256-binary-hex</option><option>phpass</option><option>bcrypt</option><option>argon2id</option></select></label>
 <label>Подтвердить ID запуска для импорта<input name="confirmRun" autocomplete="off" placeholder="Точный Migration run ID"></label>
 <button id="migration-preview-credentials" type="button">Проверка авторизации (dry-run)</button><button id="migration-import-credentials" type="button">Импортировать новые учётные записи</button></form>
+<fieldset><legend>Security &amp; Trust Reset (MIG06)</legend>
+<button id="migration-preview-security" type="button">Проверить security reset</button><button id="migration-verify-security" type="button">Проверить применённый reset</button>
+<label>Подтвердить точный ID запуска<input id="migration-security-run" autocomplete="off" placeholder="Migration run ID"></label>
+<label><input id="migration-security-keys" type="checkbox"> Новые независимые JWT и Ed25519 ключи Never provisioned, не унаследованы от Gravit</label>
+<button id="migration-activate-security" type="button">Отозвать старое доверие</button></fieldset>
 <p>Сначала выполните dry-run. Импорт не обновляет пароли существующих пользователей, не переносит токены или права и не разрешает cutover.</p>
 <p>Экспорт содержит исходные конфигурации и может включать пароли/ключи. Сохраняйте его в защищённом каталоге.</p>
 <pre id="migration-report"></pre>

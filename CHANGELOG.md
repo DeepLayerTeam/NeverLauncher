@@ -1,3 +1,11 @@
+## [0.33.6] - 2026-10-27
+
+### Security & Trust Migration (MIG06)
+- PostgreSQL transactional security reset for MIG05-imported users with target UUID verification and durable per-run receipt; preview rolls back, replay never re-revokes newly enrolled Never devices.
+- Revokes active sessions through the existing PostgreSQL cascade (refresh families, Minecraft sessions, joins and ServerBridge tickets), device trust/attestation, outstanding enrollment challenges, TPM and measured-boot evidence. Existing Never accounts matched by MIG04 are not modified.
+- Rejects default/development signers during reset: explicit Never JWT key set and configured Ed25519 manifest signing seed are mandatory. Operator must acknowledge independent provisioning; never imports Gravit private keys or trust anchors.
+- New CLI/Admin operations for preview, explicit apply and durable verification, plus 0600 exclusive local key generation; integration and unit tests. This **does not** perform production cutover or certify independently provisioned infrastructure keys.
+
 ## [0.33.5] - 2026-10-27
 ### Added
 - MIG05 executable transactional PostgreSQL account import from immutable MIG03/MIG04 Gravit ZIP snapshots; preserves supported FileAuthSystem and normalized SQL password verifiers and Minecraft UUIDs.

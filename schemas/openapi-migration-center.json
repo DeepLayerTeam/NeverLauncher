@@ -1315,6 +1315,186 @@
           }
         }
       }
+    },
+    "/api/v1/admin/migration-runs/{runId}/security": {
+      "get": {
+        "operationId": "migration0336_security_get",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Read and revalidate a committed security reset",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationSecurityReport0336"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "No committed security reset"
+          },
+          "409": {
+            "description": "Source/identity signer state conflict"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/security/preview": {
+      "post": {
+        "operationId": "migration0336_security_preview",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Dry-run security revocation with full transactional preconditions",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationSecurityReport0336"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "No committed security reset"
+          },
+          "409": {
+            "description": "Source/identity signer state conflict"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/security/activate": {
+      "post": {
+        "operationId": "migration0336_security_activate",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Commit all revocations, audit and durable receipt atomically",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationSecurityReport0336"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "No committed security reset"
+          },
+          "409": {
+            "description": "Source/identity signer state conflict"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
     }
   },
   "schemas": {
@@ -1774,6 +1954,83 @@
               }
             }
           }
+        }
+      }
+    },
+    "MigrationSecurityReport0336": {
+      "type": "object",
+      "required": [
+        "format",
+        "runId",
+        "importedAccounts",
+        "sessionsRevoked",
+        "devicesRevoked",
+        "activeJwtKid",
+        "manifestPublicSha256",
+        "verified",
+        "readyForCutover",
+        "requiresLogin",
+        "requiresDeviceEnrollment",
+        "requiresGuardAttestation"
+      ],
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "importedAccounts": {
+          "type": "integer"
+        },
+        "existingNeverUntouched": {
+          "type": "integer"
+        },
+        "manualResets": {
+          "type": "integer"
+        },
+        "sessionsRevoked": {
+          "type": "integer"
+        },
+        "devicesRevoked": {
+          "type": "integer"
+        },
+        "challengesConsumed": {
+          "type": "integer"
+        },
+        "hardwareEvidenceDeleted": {
+          "type": "integer"
+        },
+        "measuredBootEvidenceDeleted": {
+          "type": "integer"
+        },
+        "activeJwtKid": {
+          "type": "string"
+        },
+        "manifestPublicSha256": {
+          "type": "string"
+        },
+        "viewedAt": {
+          "type": "string"
+        },
+        "appliedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "verified": {
+          "type": "boolean"
+        },
+        "readyForCutover": {
+          "type": "boolean"
+        },
+        "requiresLogin": {
+          "type": "boolean"
+        },
+        "requiresDeviceEnrollment": {
+          "type": "boolean"
+        },
+        "requiresGuardAttestation": {
+          "type": "boolean"
         }
       }
     }

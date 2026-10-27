@@ -143,3 +143,25 @@ for(const action of ['preview','import']){
   }catch(err){message(err.message,true)}finally{button.disabled=false}
  });
 }
+
+// MIG06: server derives subjects strictly from the durable auth receipt;
+// the browser must never send old tokens, imported keys or device fingerprints.
+for(const action of ['preview','activate','verify']){
+ byId('migration-'+action+'-security').addEventListener('click',async event=>{
+  const id=migrationId();if(!id){message('Укажите migration run ID',true);return}
+  if(action==='activate'&&(!byId('migration-security-keys').checked||byId('migration-security-run').value.trim()!==id)){
+    message('Подтвердите новые независимые ключи и точный run ID',true);return;
+  }
+  const button=event.currentTarget;button.disabled=true;
+  try {
+   const headers={Authorization:`Bearer ${token}`};
+   if(action==='activate'){headers['X-Migration-Trust-Confirm']=id;headers['X-Migration-Fresh-Keys-Confirmed']='true'}
+   const path=`/api/v1/admin/migration-runs/${encodeURIComponent(id)}/security`+(action==='verify'?'':'/'+action);
+   const response=await fetch(path,{method:action==='verify'?'GET':'POST',headers,cache:'no-store',redirect:'error',credentials:'same-origin'});
+   const payload=await response.json();if(!response.ok)throw new Error(payload?.error?.message||`HTTP ${response.status}`);
+   byId('migration-report').textContent=JSON.stringify({security:payload.data},null,2);
+   message(action==='activate'?'Security reset committed; new device enrollment required':'Security report received');
+   if(action==='activate'){byId('migration-security-keys').checked=false;byId('migration-security-run').value=''}
+  }catch(err){message(err.message,true)}finally{button.disabled=false}
+ });
+}

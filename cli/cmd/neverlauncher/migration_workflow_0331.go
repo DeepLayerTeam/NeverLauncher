@@ -17,9 +17,12 @@ import (
 // the database checkpoint and lease, not the CLI process, own progress.
 func handleMigrationWorkflow0331(args []string) error {
 	if len(args) < 1 {
-		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials")
+		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|generate-never-keys")
 	}
 	command := args[0]
+	if command == "generate-never-keys" {
+		return generateNeverMigrationKeys0336(flagValue(args, "--output", ""))
+	}
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	token := backendToken(args)
 	if backend == "" || token == "" {
@@ -46,12 +49,23 @@ func handleMigrationWorkflow0331(args []string) error {
 			return errors.New("list requires --project")
 		}
 		path = base + "?projectId=" + url.QueryEscape(project)
-	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities", "credentials", "preview-credentials", "import-credentials":
+	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities", "credentials", "preview-credentials", "import-credentials", "security", "preview-security", "activate-security":
 		id := strings.TrimSpace(flagValue(args, "--run", ""))
 		if id == "" {
 			return fmt.Errorf("%s requires --run", command)
 		}
 		path = base + "/" + url.PathEscape(id)
+		if command == "security" || command == "preview-security" || command == "activate-security" {
+			path += "/security"
+			if command == "preview-security" || command == "activate-security" {
+				if command == "preview-security" {
+					path += "/preview"
+				} else {
+					path += "/activate"
+				}
+				return postMigrationSecurity0336(path, token, id, out, command == "activate-security", flagValue(args, "--confirm", ""))
+			}
+		}
 		if command == "credentials" || command == "preview-credentials" || command == "import-credentials" {
 			path += "/credentials"
 			if command == "preview-credentials" || command == "import-credentials" {
@@ -107,7 +121,7 @@ func handleMigrationWorkflow0331(args []string) error {
 	if err != nil {
 		return err
 	}
-	if command == "identities" || command == "verify-identities" || command == "credentials" {
+	if command == "identities" || command == "verify-identities" || command == "credentials" || command == "security" {
 		return writePrivateIdentityReport0334(out, result)
 	}
 	return writeOrPrintJSON(out, result)
