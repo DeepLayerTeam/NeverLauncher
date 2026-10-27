@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -383,6 +384,14 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 	manifest.Files = manifest.Files[:0]
 	for _, file := range lookup.Files {
 		manifest.Files = append(manifest.Files, model.ManifestFile{Path: file.Path, Size: file.Size, SHA256: file.SHA256, URL: file.URL, Required: file.Required, Executable: file.Executable, TargetOS: append([]string(nil), file.TargetOS...), Mirrors: append([]string(nil), file.Mirrors...), Ownership: file.Ownership})
+	}
+	if guard, ok := s.Repo.(interface {
+		VerifyMigrationContentBeforeSign0337(context.Context, string, string, model.Manifest) error
+	}); ok {
+		if e := guard.VerifyMigrationContentBeforeSign0337(r.Context(), lookup.Release.ProjectID, lookup.Release.ID, manifest); e != nil {
+			writeError(w, http.StatusConflict, "migrated content is not verified for signing: "+e.Error())
+			return
+		}
 	}
 	if err := validateCompatibilityManifest(manifest); err != nil {
 		writeError(w, http.StatusConflict, err.Error())

@@ -165,3 +165,41 @@ for(const action of ['preview','activate','verify']){
   }catch(err){message(err.message,true)}finally{button.disabled=false}
  });
 }
+
+// MIG07: no source ZIP or sensitive file bytes are persisted in the browser.
+let migrationContentPreview337=null;
+for(const action of ['preview','status','import','optionals']) {
+ byId('migration-content-'+action).addEventListener('click',async ev=>{
+  const id=migrationId(),file=byId('migration-assess').querySelector('[name=source]').files[0];
+  if(!id || (action!=='status'&&action!=='optionals'&&!file)){message('Выберите run и исходный ZIP',true);return}
+  const pp=byId('migration-content-profile-path').value.trim();
+  if(!pp){message('Укажите путь профиля в ZIP',true);return}
+  if((action==='import'||action==='optionals') && byId('migration-content-run').value.trim()!==id){message('Введите точный run ID',true);return}
+  if(action==='import' && !migrationContentPreview337?.ready){message('Сначала выполните успешный dry-run',true);return}
+  const btn=ev.currentTarget;btn.disabled=true;
+  try{
+   let path=`/api/v1/admin/migration-runs/${encodeURIComponent(id)}/content`;
+   let method='POST',body,headers={Authorization:`Bearer ${token}`};
+   if(action==='status'){method='GET';path+='?profilePath='+encodeURIComponent(pp)}
+   else if(action==='optionals'){path+='/apply-optionals?profilePath='+encodeURIComponent(pp);headers['X-Migration-Content-Confirm']=id}
+   else {
+    path+='/'+action;body=file;headers['Content-Type']='application/zip';
+    for(const [name,value] of Object.entries({
+     'X-Gravit-Profile-Path':pp,'X-Never-Profile-ID':byId('migration-content-profile-id').value.trim(),
+     'X-Never-Profile-Name':byId('migration-content-name').value.trim(),
+     'X-Never-Loader':byId('migration-content-loader').value,
+     'X-Never-Channel':byId('migration-content-channel').value.trim(),
+     'X-Never-Version':byId('migration-content-version').value.trim(),
+    })) headers[name]=value;
+    if(action==='import')headers['X-Migration-Content-Confirm']=id;
+   }
+   const res=await fetch(path,{method,headers,body,cache:'no-store',redirect:'error',credentials:'same-origin'});
+   const value=await res.json();
+   byId('migration-report').textContent=JSON.stringify({content:value.data??value},null,2);
+   if(!res.ok) throw new Error(value?.error?.message||`HTTP ${res.status}`);
+   if(action==='preview') migrationContentPreview337=value.data;
+   if(action==='import') migrationContentPreview337=null;
+   message(action==='import'?'Содержимое перенесено в Build Workspace; требуется сборка, проверка и подпись':'Операция Content Migration выполнена');
+  }catch(e){message(e.message,true)}finally{btn.disabled=false}
+ });
+}

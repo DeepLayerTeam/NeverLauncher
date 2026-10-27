@@ -17,7 +17,7 @@ import (
 // the database checkpoint and lease, not the CLI process, own progress.
 func handleMigrationWorkflow0331(args []string) error {
 	if len(args) < 1 {
-		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|generate-never-keys")
+		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|content|preview-content|import-content|apply-optionals|generate-never-keys")
 	}
 	command := args[0]
 	if command == "generate-never-keys" {
@@ -49,12 +49,35 @@ func handleMigrationWorkflow0331(args []string) error {
 			return errors.New("list requires --project")
 		}
 		path = base + "?projectId=" + url.QueryEscape(project)
-	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities", "credentials", "preview-credentials", "import-credentials", "security", "preview-security", "activate-security":
+	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities", "credentials", "preview-credentials", "import-credentials", "security", "preview-security", "activate-security", "content", "preview-content", "import-content", "apply-optionals":
 		id := strings.TrimSpace(flagValue(args, "--run", ""))
 		if id == "" {
 			return fmt.Errorf("%s requires --run", command)
 		}
 		path = base + "/" + url.PathEscape(id)
+		if command == "content" || command == "preview-content" || command == "import-content" || command == "apply-optionals" {
+			path += "/content"
+			pp := flagValue(args, "--profile-path", "")
+			if pp == "" {
+				return errors.New("content requires --profile-path profiles/name.json")
+			}
+			if command == "content" {
+				path += "?profilePath=" + url.QueryEscape(pp)
+				break
+			}
+			if command == "apply-optionals" {
+				path += "/apply-optionals?profilePath=" + url.QueryEscape(pp)
+				method = "POST"
+				return migrationApplyOptionalsCLI0337(path, token, id, out)
+			}
+			apply := command == "import-content"
+			if apply {
+				path += "/import"
+			} else {
+				path += "/preview"
+			}
+			return postMigrationContent0337(path, token, flagValue(args, "--source", ""), id, pp, flagValue(args, "--profile-id", ""), flagValue(args, "--name", ""), flagValue(args, "--loader", ""), flagValue(args, "--channel", "stable"), flagValue(args, "--version", ""), out, apply)
+		}
 		if command == "security" || command == "preview-security" || command == "activate-security" {
 			path += "/security"
 			if command == "preview-security" || command == "activate-security" {

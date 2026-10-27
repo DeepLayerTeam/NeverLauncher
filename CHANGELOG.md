@@ -1,3 +1,13 @@
+## [0.33.7] - 2026-10-27
+
+### Content & Profile Migration (MIG07)
+- Verified MIG03-source ZIP ingestion for supported ClientProfile, one client tree, libraries and assets. Profile and owned Build Workspace are reserved in a single PostgreSQL transaction with deterministic idempotent identity; encrypted bytes are staged into the real Build Workspace and individually rehashed on retry.
+- OptionalFile actions are converted by the existing strict parser; unsupported behavior, missing libraries and collisions block import. Converted component catalog can be applied only to a file-matched unsigned v3 draft.
+- Package signer rejects mutated migrated bytes, ownership changes and missing/mismatched optional catalogs. Never's existing high-assurance validation/Ed25519 signing and publication remain separate required operator operations.
+- CLI, React Admin and Embedded Admin, PostgreSQL migration 0095, Go unit/race + PostgreSQL integration tests, CI and runbook. TextureProvider is handled by the existing separate offline verified importer.
+### Limitations
+- No unknown Gravit bootstrap/modules, automatic cutover or rollback. Source ZIP must use the supported per-profile path layout; individual workspace files limited to 64 MiB. Full Go 1.27.3, PostgreSQL and React builds are mandatory CI release gates, not locally certified here.
+
 ## [0.33.6] - 2026-10-27
 
 ### Security & Trust Migration (MIG06)

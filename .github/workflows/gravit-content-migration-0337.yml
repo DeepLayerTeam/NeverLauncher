@@ -1,0 +1,71 @@
+name: Gravit Content & Profile Migration 0.33.7
+on:
+  push:
+    paths:
+      - 'services/api/internal/gravitcontent/**'
+      - 'services/api/internal/repository/migration_content*'
+      - 'services/api/internal/httpapi/migration_content*'
+      - 'services/api/internal/httpapi/package_product.go'
+      - 'services/api/internal/dbmigrate/sql/0095*'
+      - 'cli/cmd/neverlauncher/migration_content*'
+      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'schemas/openapi*'
+      - '.github/workflows/gravit-content-migration-0337.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres-content:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: neverlauncher_test
+          POSTGRES_USER: neverlauncher_test
+          POSTGRES_PASSWORD: test_only_not_production
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Content source and workspace integration
+        working-directory: services/api
+        run: |
+          go test -race -count=1 ./internal/gravitcontent
+          go test -race -count=1 -timeout 5m ./internal/repository -run 'TestMigrationContentAtomicReplay0337|TestMigrationContentSigning0337'
+          go test -count=1 ./internal/httpapi -run 'TestMigrationContent0337'
+      - name: CLI regression
+        working-directory: cli
+        run: go test -race -count=1 ./cmd/neverlauncher -run 'TestMigrationContent0337|TestMigrationWorkflow0331'
+  admin-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python3 scripts/version/manage.py check
+          python3 scripts/contracts/validate-openapi.py
+          node --check services/api/internal/embeddedadmin/site/app.js
+      - name: Build admin SPA
+        working-directory: apps/admin
+        run: |
+          npm ci --ignore-scripts
+          npm run build

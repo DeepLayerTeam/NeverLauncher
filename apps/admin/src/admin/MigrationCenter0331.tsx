@@ -19,6 +19,8 @@ type Inventory0333 = {format:string; sourceSha256:string; sourceEntries:number; 
 type Identity0334 = {format:string;runId:string;sourceSha256:string;inventorySha256:string;entriesSha256:string;summary:Record<string,number>;ready:boolean;rows:{provider:string;sourceId:string;username:string;uuid:string;sourcePath:string;targetUserId?:string;status:string;reason:string}[]};
 type Credentials0335 = {format:string;runId:string;sourceSha256:string;identitySha256:string;imported:number;existingUnchanged:number;manualReset:number;complete:boolean;dryRun:boolean;rows:{provider:string;sourceId:string;username:string;uuid:string;state:string;reason?:string}[]};
 type Security0336 = {format:string;runId:string;importedAccounts:number;existingNeverUntouched:number;manualResets:number;sessionsRevoked:number;devicesRevoked:number;challengesConsumed:number;hardwareEvidenceDeleted:number;measuredBootEvidenceDeleted:number;activeJwtKid:string;manifestPublicSha256:string;appliedAt?:string;verified:boolean;readyForCutover:boolean;requiresLogin:boolean;requiresDeviceEnrollment:boolean;requiresGuardAttestation:boolean};
+type ContentPlan0337 = {format:string;sourceSha256:string;inventorySha256:string;profilePath:string;filesSha256:string;ready:boolean;blockers:string[];files:{sourcePath:string;targetPath:string;size:number;sha256:string;ownership:string}[];profile:{fields:{field:string;status:string;reason:string}[];settings:unknown};optional?:{ready:boolean;summary:Record<string,number>;fields:{field:string;status:string;reason:string}[]}};
+type ContentState0337 = {plan:ContentPlan0337;workspaceId:string;workspaceRevision:number;state:string;stagedFiles:number;totalFiles:number;complete:boolean;validation:string;buildWorkspaceUrl:string};
 type Event = { sequence: number; kind: string; step: string; revision: number; detail: unknown; createdAt: string };
 
 /** A working server-backed migration run operator. No client-side state is
@@ -41,6 +43,15 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
   const [securityPreview,setSecurityPreview]=useState<Security0336|null>(null);
   const [freshKeysConfirmed,setFreshKeysConfirmed]=useState(false);
   const [securityRunConfirm,setSecurityRunConfirm]=useState('');
+  const [contentProfilePath,setContentProfilePath] = useState('profiles/client.json');
+  const [contentProfileId,setContentProfileId] = useState('gravit-client');
+  const [contentProfileName,setContentProfileName] = useState('');
+  const [contentLoader,setContentLoader] = useState('vanilla');
+  const [contentVersion,setContentVersion] = useState('migrated-1');
+  const [contentChannel,setContentChannel] = useState('stable');
+  const [contentConfirm,setContentConfirm] = useState('');
+  const [contentPreview,setContentPreview] = useState<ContentPlan0337|null>(null);
+  const [contentState,setContentState] = useState<ContentState0337|null>(null);
   const [passwordFormat,setPasswordFormat] = useState('');
   const [confirmRun,setConfirmRun] = useState('');
   const [error, setError] = useState('');
@@ -171,6 +182,33 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
     try { const result=await requestJSON<Security0336>(backendUrl,`${base}/${encodeURIComponent(runId)}/security`,token);setSecurity(result);}
     catch(e){setError(String(e))}finally{setBusy(false)}
   }
+  async function migrationContent0337(commit:boolean) {
+    if(!runId||!source||!inventory||busy)return;
+    if(commit && (!contentPreview?.ready || contentConfirm!==runId)) {setError('Для переноса необходимо подтвердить текущий план и ID запуска');return;}
+    setBusy(true);setError('');
+    try {
+      const headers={'Content-Type':'application/zip','X-Gravit-Profile-Path':contentProfilePath,'X-Never-Profile-ID':contentProfileId,
+        'X-Never-Profile-Name':contentProfileName,'X-Never-Loader':contentLoader,'X-Never-Channel':contentChannel,'X-Never-Version':contentVersion,
+        ...(commit?{'X-Migration-Content-Confirm':runId}:{})};
+      const result=await requestJSON<ContentPlan0337|ContentState0337>(backendUrl,`${base}/${encodeURIComponent(runId)}/content/${commit?'import':'preview'}`,token,
+        {method:'POST',headers,body:source});
+      if(commit){setContentState(result as ContentState0337);setContentPreview(null);setContentConfirm('');}
+      else {setContentPreview(result as ContentPlan0337);setContentState(null);}
+    }catch(e){setError(String(e));}finally{setBusy(false);}
+  }
+  async function refreshMigrationContent0337() {
+    if(!runId||!contentProfilePath||busy)return;
+    setBusy(true);setError('');
+    try {setContentState(await requestJSON<ContentState0337>(backendUrl,`${base}/${encodeURIComponent(runId)}/content?profilePath=${encodeURIComponent(contentProfilePath)}`,token));}
+    catch(e){setError(String(e))}finally{setBusy(false)}
+  }
+  async function applyOptionals0337() {
+    if(!runId||!contentProfilePath||busy||contentConfirm!==runId)return;
+    setBusy(true);setError('');
+    try {await requestJSON<unknown>(backendUrl,`${base}/${encodeURIComponent(runId)}/content/apply-optionals?profilePath=${encodeURIComponent(contentProfilePath)}`,token,
+      {method:'POST',headers:{'X-Migration-Content-Confirm':runId}});await refresh(runId);}
+    catch(e){setError(String(e))}finally{setBusy(false)}
+  }
   async function exportSource() {
     if (!runId || !source || busy || !inventory) return;
     if (source.size < 1 || source.size > 512 * 1024 * 1024) {setError('ZIP must be 1..512 MiB');return;}
@@ -187,8 +225,8 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
       finally {URL.revokeObjectURL(url)}
     } catch(e){setError(String(e))}finally{setBusy(false)}
   }
-  return <section className="card wide" aria-label="Migration Center 0.33.6">
-    <h2>Migration Center · 0.33.6</h2>
+  return <section className="card wide" aria-label="Migration Center 0.33.7">
+    <h2>Migration Center · 0.33.7</h2>
     <p>Durable workflow для проверки целевого проекта Never и фиксации инвентаризации. Статус «prepared» означает только сохранённый baseline; совместимость Gravit анализируется отдельно по ZIP; импорт поддерживаемых учётных записей доступен отдельно. Cutover не выполняется.</p>
     <form onSubmit={e => void create(e)} className="subcard">
       <label className="field"><span>Проект назначения</span><input value={projectId} readOnly /></label>
@@ -271,6 +309,34 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
       {security && <p>Security reset: {security.verified?'проверен':'зафиксирован'} · sessions {security.sessionsRevoked} · devices {security.devicesRevoked} · challenges {security.challengesConsumed}. Требуются повторный вход, device enrollment и свежая Guard attestation.</p>}
       {credentials && <p>Зафиксированный результат: импортировано {credentials.imported}, существующих не изменено {credentials.existingUnchanged}, сброс пароля требуется {credentials.manualReset}. Это не разрешение на cutover.</p>}
       {(credentialPreview||credentials) && <details><summary>Отчёт (без секретов)</summary><pre>{JSON.stringify(credentialPreview||credentials,null,2)}</pre></details>}
+    </article>}
+    {run && <article className="subcard">
+      <h3>Content &amp; Profile Migration · MIG07</h3>
+      <p>Проверяемый перенос одного Gravit ClientProfile и содержимого updates/&lt;profile&gt;, clients/&lt;profile&gt;, libraries/, assets/ в зашифрованный Never Build Workspace. Сервер не выполняет исходные JAR и не копирует авторизацию, ключи или модули. Новый релиз подписывается только после отдельной проверки.</p>
+      <label className="field"><span>Путь профиля в ZIP</span><input value={contentProfilePath} onChange={e=>{setContentProfilePath(e.target.value);setContentPreview(null)}} /></label>
+      <label className="field"><span>ID нового профиля Never</span><input value={contentProfileId} onChange={e=>{setContentProfileId(e.target.value);setContentPreview(null)}} /></label>
+      <label className="field"><span>Название</span><input value={contentProfileName} onChange={e=>{setContentProfileName(e.target.value);setContentPreview(null)}} /></label>
+      <label className="field"><span>Загрузчик</span><select value={contentLoader} onChange={e=>{setContentLoader(e.target.value);setContentPreview(null)}}>{['vanilla','fabric','quilt','forge','neoforge'].map(x=><option key={x}>{x}</option>)}</select></label>
+      <label className="field"><span>Канал</span><input value={contentChannel} onChange={e=>{setContentChannel(e.target.value);setContentPreview(null)}} /></label>
+      <label className="field"><span>Версия нового релиза</span><input value={contentVersion} onChange={e=>{setContentVersion(e.target.value);setContentPreview(null)}} /></label>
+      <div className="buttonRow">
+        <button disabled={busy||!source||!inventory||run.status!=='prepared'} onClick={()=>void migrationContent0337(false)}>Проверить профиль и реальные файлы</button>
+        <button disabled={busy||!runId} onClick={()=>void refreshMigrationContent0337()}>Проверить сохранённое состояние</button>
+      </div>
+      {contentPreview && <>
+        <p>Профиль: {contentPreview.ready?'может быть перенесён':'заблокирован'}, файлов: {contentPreview.files.length}, optional: {contentPreview.optional?.ready?'преобразованы':contentPreview.optional?'есть блокеры':'не заданы'}.</p>
+        {contentPreview.blockers.map((x,i)=><p key={i} className="error">{x}</p>)}
+        <details><summary>План, поля и SHA-256</summary><pre>{JSON.stringify(contentPreview,null,2)}</pre></details>
+        {contentPreview.ready && <>
+          <label className="field"><span>Введите точный run ID перед переносом файлов</span><input autoComplete="off" value={contentConfirm} onChange={e=>setContentConfirm(e.target.value)} /></label>
+          <button disabled={busy||contentConfirm!==runId} onClick={()=>void migrationContent0337(true)}>Перенести реальные файлы в зашифрованный Build Workspace</button>
+        </>}
+      </>}
+      {contentState && <>
+        <p>Workspace: <code>{contentState.workspaceId}</code>; сохранено {contentState.stagedFiles}/{contentState.totalFiles} файлов; состояние: {contentState.state}.</p>
+        <p>Проверка: {contentState.validation||'требуется повторная проверка'}. Сборка и подпись выполняются через стандартные операции Build Workspace и Packages.</p>
+        {contentState.plan.optional && <button disabled={busy||contentConfirm!==runId||contentState.state!=='built'} onClick={()=>void applyOptionals0337()}>Применить проверенный optional catalog к unsigned draft</button>}
+      </>}
     </article>}
     {compatibility && <article className="subcard">
       <h3>Совместимость: {compatibility.status}</h3>

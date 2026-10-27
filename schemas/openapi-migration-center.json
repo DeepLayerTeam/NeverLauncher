@@ -1495,6 +1495,288 @@
           }
         }
       }
+    },
+    "/api/v1/admin/migration-runs/{runId}/content": {
+      "get": {
+        "operationId": "migration0337_content_status",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Return imported profile/workspace state with staged file progress",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "profilePath",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified operation result and retained migration report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Source changed, resource conflict or invalid workflow state"
+          },
+          "422": {
+            "description": "Profile or optional conversion blocked"
+          },
+          "503": {
+            "description": "PostgreSQL/workspace storage unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/content/preview": {
+      "post": {
+        "operationId": "migration0337_content_preview",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Inspect and hash-check a Gravit ClientProfile and its real client files",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified operation result and retained migration report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Source changed, resource conflict or invalid workflow state"
+          },
+          "422": {
+            "description": "Profile or optional conversion blocked"
+          },
+          "503": {
+            "description": "PostgreSQL/workspace storage unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/content/import": {
+      "post": {
+        "operationId": "migration0337_content_import",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Atomically reserve Never profile/workspace and stage verified encrypted source content",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified operation result and retained migration report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Source changed, resource conflict or invalid workflow state"
+          },
+          "422": {
+            "description": "Profile or optional conversion blocked"
+          },
+          "503": {
+            "description": "PostgreSQL/workspace storage unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "description": "Explicit run ID confirmation required; signing and publication remain separate high-assurance operations."
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/content/apply-optionals": {
+      "post": {
+        "operationId": "migration0337_content_apply_optionals",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Apply validated optional catalog to unsigned Never draft after workspace build",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "profilePath",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified operation result and retained migration report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "409": {
+            "description": "Source changed, resource conflict or invalid workflow state"
+          },
+          "422": {
+            "description": "Profile or optional conversion blocked"
+          },
+          "503": {
+            "description": "PostgreSQL/workspace storage unavailable"
+          }
+        },
+        "description": "Explicit run ID confirmation required; signing and publication remain separate high-assurance operations."
+      }
     }
   },
   "schemas": {
