@@ -1,0 +1,64 @@
+name: Gravit 0.33.2 compatibility assessment
+on:
+  push:
+    paths:
+      - 'services/api/internal/gravitdetector/**'
+      - 'services/api/internal/repository/migration_compat_0332*'
+      - 'services/api/internal/httpapi/migration_compat_0332*'
+      - 'services/api/internal/httpapi/handler.go'
+      - 'services/api/internal/dbmigrate/sql/0090_*'
+      - 'cli/cmd/neverlauncher/migration_workflow_0331.go'
+      - 'cli/cmd/neverlauncher/migration_compat_0332_test.go'
+      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - '.github/workflows/gravit-compatibility-0332.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend-and-cli:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: neverlauncher_test
+          POSTGRES_USER: neverlauncher_test
+          POSTGRES_PASSWORD: disposable_test_only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:disposable_test_only@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Gravit detector tests and SQL repository integration
+        working-directory: services/api
+        run: go test -race -count=1 -timeout 5m ./internal/gravitdetector ./internal/repository ./internal/httpapi -run 'Test.*0332|TestMigration.*0331'
+      - name: CLI compatibility upload and baseline tests
+        working-directory: cli
+        run: go test -race -count=1 ./cmd/neverlauncher -run 'TestGravitCompatibilityCLI0332|TestMigrationWorkflowCLI0331'
+      - name: Canonical API contract and version
+        run: |
+          python3 scripts/version/manage.py check
+          python3 scripts/contracts/validate-openapi.py
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - working-directory: apps/admin
+        run: npm ci --ignore-scripts
+      - working-directory: apps/admin
+        run: npm run build

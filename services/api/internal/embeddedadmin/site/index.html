@@ -7,11 +7,12 @@
 <section id="login" hidden><h2>Вход администратора</h2><form id="login-form"><label>Email<input name="email" type="email" autocomplete="username" required></label><label>Пароль<input name="password" type="password" autocomplete="current-password" required></label><label>TOTP (если требуется)<input name="totp" inputmode="numeric" autocomplete="one-time-code"></label><button type="submit">Войти</button></form></section>
 <section id="admin" hidden><h2>Состояние Backend</h2><button id="refresh" type="button">Обновить</button><button id="logout" type="button">Выйти</button><pre id="overview"></pre>
 <h2>Создание первого проекта</h2><p>Создаёт черновой релиз после проверки прав текущего владельца.</p><form id="project-form"><label>Проект<input name="projectId" value="default-project" required></label><label>Профиль<input name="profileId" value="vanilla" required></label><label>Канал<input name="channel" value="stable" required></label><label>Версия<input name="version" value="0.1.0" required></label><button type="submit">Создать проект</button></form>
-<h2>Migration Center · 0.33.1</h2>
+<h2>Migration Center · 0.33.2</h2>
 <p>Проверка и сохранение целевой конфигурации Never. Это ещё не импорт Gravit и не разрешение на cutover.</p>
 <form id="migration-create"><label>ID проекта<input name="projectId" required maxlength="128" value="default-project"></label><label>Ключ повторного выполнения<input name="idempotencyKey" required minlength="8" maxlength="128" placeholder="change-request-2026-001"></label><button type="submit">Создать migration run</button></form>
 <form id="migration-select"><label>Migration run ID<input id="migration-run-id" required></label><button type="submit">Показать</button></form>
 <div><button id="migration-execute" type="button">Выполнить следующие шаги</button><button id="migration-pause" type="button">Пауза</button><button id="migration-resume" type="button">Возобновить</button></div>
+<form id="migration-assess"><label>Gravit project ZIP (up to 64 MiB)<input name="source" type="file" accept=".zip,application/zip" required></label><label>Версия по заявлению оператора (не подтверждает подлинность)<input name="version" placeholder="5.7.12" maxlength="40"></label><button type="submit">Проверить совместимость</button></form>
 <pre id="migration-report"></pre>
 <h2>Проекты</h2><pre id="projects"></pre></section>
 <footer>Полная Admin SPA развёртывается отдельно. Здесь доступны bootstrap, вход, readiness и создание первого проекта.</footer></main><script src="/admin/app.js" defer></script></body></html>

@@ -39,7 +39,7 @@ byId('logout').addEventListener('click',async()=>{try{await api('/api/v1/admin/l
 byId('project-form').addEventListener('submit',async event=>{event.preventDefault();const submit=byId('project-form').querySelector('button');submit.disabled=true;try{const result=await api('/api/v1/install/first-project','POST',values('project-form'));message(`Черновой релиз ${result.releaseId} создан`);await dashboard()}catch(e){message(e.message,true)}finally{submit.disabled=false}});
 readiness();
 
-// 0.33.1 uses the same secured Admin API as the CLI. The operator supplies
+// 0.33.2 uses the same secured Admin API as the CLI. The operator supplies
 // the target project and sees the persisted state/events, never a fake success.
 const migrationId=()=>byId('migration-run-id').value.trim();
 async function migrationView(){
@@ -55,7 +55,7 @@ byId('migration-create').addEventListener('submit',async e=>{
  try{
   const idempotencyKey=values('migration-create').idempotencyKey;
   const result=await api('/api/v1/admin/migration-runs','POST',{projectId:values('migration-create').projectId,idempotencyKey,sourceKind:'gravit'});
-  byId('migration-run-id').value=result.id;await migrationView();message('Migration run created; source assessment is not yet supported.');
+  byId('migration-run-id').value=result.id;await migrationView();message('Migration run создан. Выполните baseline и загрузите ZIP для анализа.');
  }catch(err){message(err.message,true)}finally{button.disabled=false}
 });
 byId('migration-select').addEventListener('submit',async e=>{e.preventDefault();try{await migrationView()}catch(err){message(err.message,true)}});
@@ -67,3 +67,16 @@ for(const op of ['execute','pause','resume']){
   catch(err){message(err.message,true)}finally{e.currentTarget.disabled=false}
  });
 }
+
+byId('migration-assess').addEventListener('submit',async event=>{
+ event.preventDefault();if(!migrationId()){message('Укажите Migration run ID',true);return}
+ const form=byId('migration-assess');const file=form.querySelector('[name=source]').files[0];
+ if(!file||file.size>64*1024*1024){message('Требуется ZIP до 64 MiB',true);return}
+ const button=form.querySelector('button');button.disabled=true;
+ try{
+  const response=await fetch(`/api/v1/admin/migration-runs/${encodeURIComponent(migrationId())}/compatibility`,{
+   method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/zip','X-Gravit-Version':form.querySelector('[name=version]').value},body:file,redirect:'error',cache:'no-store',credentials:'same-origin'
+  });const payload=await response.json();if(!response.ok)throw new Error(payload?.error?.message||`HTTP ${response.status}`);
+  await migrationView();byId('migration-report').textContent=JSON.stringify({compatibility:payload.data},null,2);
+ }catch(e){message(e.message,true)}finally{button.disabled=false}
+});

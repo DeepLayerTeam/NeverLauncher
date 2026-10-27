@@ -1,3 +1,13 @@
+## [0.33.2] - 2026-10-27
+### Added
+- MIG02 operational Gravit compatibility detector: bounded, non-executing analysis of Gravit source ZIP (LaunchServer, runtime, ClientProfile, optional actions, modules, ServerWrapper config/env), with detailed recognized/manual/blocked findings.
+- Conservative version recognition for Gravit 5.7.0–5.7.12: differentiates untrusted operator claims from an embedded LaunchServer JAR manifest, blocks conflicts and out-of-range versions; does **not** assert official provenance or full migratability.
+- Transactional PostgreSQL report persistence tied to MIG01 prepared runs; same-source replay is idempotent, alternate source creates an auditable revision, secrets are never stored.
+- Authenticated Admin SPA and Embedded Admin ZIP upload, `nl migrate gravit assess|compatibility`, OpenAPI contract and native-detector/CLI/PostgreSQL CI tests.
+### Safety and remaining work
+- A compatibility report is assessment only; it never authorizes import, account transfer, identity reconciliation, production cutover or rollback. Unknown auth and optional action types block assessment. No Gravit code or JAR is executed.
+- Production GA requires pinned real upstream 5.7.x fixtures, integrated authentication and world-data rehearsal, and successful Go 1.27.3 + PostgreSQL CI; not claimed by this milestone.
+
 ## [0.33.1] - 2026-10-27
 ### Added
 - MIG01 durable PostgreSQL migration run engine: atomic claims, leases, fencing, transaction-bound checkpoints, append-only events, idempotent run creation, pause/resume and failure recovery.

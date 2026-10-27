@@ -1,17 +1,23 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
 	"net/url"
+	"os"
 	"strings"
+	"time"
 )
 
 // Command execution is synchronous. A failed CLI process may be restarted;
 // the database checkpoint and lease, not the CLI process, own progress.
 func handleMigrationWorkflow0331(args []string) error {
 	if len(args) < 1 {
-		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume")
+		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility")
 	}
 	command := args[0]
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
@@ -40,12 +46,18 @@ func handleMigrationWorkflow0331(args []string) error {
 			return errors.New("list requires --project")
 		}
 		path = base + "?projectId=" + url.QueryEscape(project)
-	case "status", "events", "execute", "pause", "resume":
+	case "status", "events", "execute", "pause", "resume", "assess", "compatibility":
 		id := strings.TrimSpace(flagValue(args, "--run", ""))
 		if id == "" {
 			return fmt.Errorf("%s requires --run", command)
 		}
 		path = base + "/" + url.PathEscape(id)
+		if command == "assess" || command == "compatibility" {
+			path += "/compatibility"
+			if command == "assess" {
+				return postGravitAssessment0332(path, token, flagValue(args, "--source", ""), flagValue(args, "--version", ""), out)
+			}
+		}
 		if command == "events" {
 			path += "/events"
 			if cursor := flagValue(args, "--after", ""); cursor != "" {
@@ -65,4 +77,65 @@ func handleMigrationWorkflow0331(args []string) error {
 		return err
 	}
 	return writeOrPrintJSON(out, result)
+}
+
+// postGravitAssessment0332 streams operator-selected bytes over a bounded HTTPS
+// request. The backend never receives a host filesystem path or raw secrets in JSON.
+func postGravitAssessment0332(endpoint, token, sourcePath, claimedVersion, out string) error {
+	if sourcePath == "" {
+		return errors.New("assess requires --source /path/to/gravit-installation.zip")
+	}
+	if len(claimedVersion) > 40 {
+		return errors.New("invalid --version")
+	}
+	info, err := os.Stat(sourcePath)
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > 64<<20 {
+		return errors.New("ZIP must be a regular file of 1..64 MiB")
+	}
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return err
+	}
+	if u.Scheme != "https" {
+		host := u.Hostname()
+		if u.Scheme != "http" || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
+			return errors.New("Gravit ZIP and admin token require HTTPS (except explicit IP loopback)")
+		}
+	}
+	source, err := os.Open(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+	req, err := http.NewRequest("POST", endpoint, source)
+	if err != nil {
+		return err
+	}
+	req.ContentLength = info.Size()
+	req.Header.Set("Content-Type", "application/zip")
+	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(token))
+	if claimedVersion != "" {
+		req.Header.Set("X-Gravit-Version", claimedVersion)
+	}
+	client := &http.Client{Timeout: 90 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	response, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	data, err := io.ReadAll(io.LimitReader(response.Body, 2<<20))
+	if err != nil {
+		return err
+	}
+	var payload map[string]any
+	if err = json.Unmarshal(data, &payload); err != nil {
+		return fmt.Errorf("compatibility endpoint returned invalid JSON (HTTP %d)", response.StatusCode)
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("compatibility assessment HTTP %d: %v", response.StatusCode, payload["error"])
+	}
+	return writeOrPrintJSON(out, payload)
 }

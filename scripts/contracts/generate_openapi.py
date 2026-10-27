@@ -9,7 +9,7 @@ ROUTES = ROOT / "services/api/internal/httpapi"
 OUT = ROOT / "schemas/openapi.yaml"
 PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 route_re = re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles/minecraft(?:/[^" ]+)?|/api/user/profile/[^" ]+|/authserver/[^" ]+|/sessionserver/session/minecraft/[^" ]+|/(?:health|ready|metrics))')
-files = [ROUTES / "handler.go"] + sorted(p for p in ROUTES.glob("routes_*.go") if "legacy" not in p.name)
+files = [ROUTES / "handler.go"] + sorted(p for p in ROUTES.glob("routes_*.go") if "legacy" not in p.name) + [ROUTES / "migration_0331.go",ROUTES / "migration_compat_0332.go"]
 routes = []
 for file in files:
     for method, path in route_re.findall(file.read_text()):
@@ -520,5 +520,10 @@ spec={
  "paths":paths,
  "components":{"securitySchemes":{"BearerAuth":{"type":"http","scheme":"bearer"},"NodeId":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Id","description":"ServerBridge node id included in the Ed25519 canonical request."},"NodeKeyFingerprint":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Key-Fingerprint","description":"Lowercase SHA-256 fingerprint of the registered raw Ed25519 public key."},"NodeTimestamp":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Timestamp","description":"Unix timestamp in seconds; must be within the ServerBridge signing window."},"NodeNonce":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Nonce","description":"Fresh unpadded base64url nonce, consumed once by PostgreSQL replay protection."},"NodeSignature":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Signature","description":"Unpadded base64url Ed25519 signature over the legacy Node-v1 domain or the Protocol v3 canonical signing domain negotiated by the bridge."},"BootstrapToken":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Bootstrap-Token"}},"schemas":schemas,"responses":{"BadRequest":{"description":"Invalid request","content":{"application/json":{"schema":ref("Error")}}},"Unauthorized":{"description":"Authentication required, node signature invalid, or signed request outside the accepted timestamp window","content":{"application/json":{"schema":ref("Error")}}},"Conflict":{"description":"The signed node request nonce or one-time join ticket has already been consumed","content":{"application/json":{"schema":ref("Error")}}},"PayloadTooLarge":{"description":"The signed request body exceeds the ServerBridge authentication limit","content":{"application/json":{"schema":ref("Error")}}},"ServiceUnavailable":{"description":"Required ServerBridge persistence or nonce replay protection is unavailable","content":{"application/json":{"schema":ref("Error")}}},"UpgradeRequired":{"description":"No compatible ServerBridge Protocol v2/v3 contract or required v3 feature set was negotiated","content":{"application/json":{"schema":ref("Error")}}}}}
 }
+# MIG01/MIG02 have explicitly typed, reviewed operations. Generate the shared
+# API normally and overlay only this small, versioned contract extension.
+migration_extension = json.loads((ROOT / "schemas/openapi-migration-center.json").read_text(encoding="utf-8"))
+spec["paths"].update(migration_extension["paths"])
+spec["components"]["schemas"].update(migration_extension["schemas"])
 OUT.write_text(json.dumps(spec,ensure_ascii=False,indent=2)+"\n")
 print(f"generated {OUT}: {len(routes)} operations")

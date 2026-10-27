@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.33.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.33.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -4536,6 +4536,627 @@
             "BearerAuth": []
           }
         ]
+      }
+    },
+    "/api/v1/admin/migration-runs": {
+      "post": {
+        "operationId": "migration0331_create",
+        "tags": [
+          "admin"
+        ],
+        "summary": "create (Never baseline, not completed Gravit migration)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persistent execution state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationRun0331"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Global settings:manage required"
+          },
+          "409": {
+            "description": "State conflict or leased by another worker"
+          },
+          "503": {
+            "description": "PostgreSQL store unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "projectId",
+                  "sourceKind",
+                  "idempotencyKey"
+                ],
+                "properties": {
+                  "projectId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "sourceKind": {
+                    "const": "gravit"
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "migration0331_list",
+        "tags": [
+          "admin"
+        ],
+        "summary": "list (Never baseline, not completed Gravit migration)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persistent execution state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MigrationRun0331"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Global settings:manage required"
+          },
+          "409": {
+            "description": "State conflict or leased by another worker"
+          },
+          "503": {
+            "description": "PostgreSQL store unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}": {
+      "get": {
+        "operationId": "migration0331_read",
+        "tags": [
+          "admin"
+        ],
+        "summary": "read (Never baseline, not completed Gravit migration)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persistent execution state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationRun0331"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Global settings:manage required"
+          },
+          "409": {
+            "description": "State conflict or leased by another worker"
+          },
+          "503": {
+            "description": "PostgreSQL store unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/compatibility": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "operationId": "migration0332_get_compatibility",
+        "summary": "Read the last stored Gravit source assessment",
+        "responses": {
+          "200": {
+            "description": "Sanitized persisted assessment, not a cutover permit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitCompatibilityReport0332"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Permission settings:manage required"
+          },
+          "404": {
+            "description": "Assessment does not exist"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "X-Gravit-Version",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 40
+            }
+          }
+        ],
+        "operationId": "migration0332_assess_compatibility",
+        "summary": "Inspect Gravit configuration ZIP, journal sanitized report",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary",
+                "maxLength": 67108864
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sanitized persisted assessment, not a cutover permit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitCompatibilityReport0332"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Permission settings:manage required"
+          },
+          "409": {
+            "description": "Source version claim conflict or migration not prepared"
+          },
+          "413": {
+            "description": "ZIP exceeds 64 MiB"
+          },
+          "415": {
+            "description": "Expected application/zip"
+          },
+          "422": {
+            "description": "Invalid or unsafe archive"
+          },
+          "503": {
+            "description": "PostgreSQL report storage unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/events": {
+      "get": {
+        "operationId": "migration0331_events",
+        "tags": [
+          "admin"
+        ],
+        "summary": "events (Never baseline, not completed Gravit migration)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persistent execution state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "sequence": {
+                            "type": "integer"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "step": {
+                            "type": "string"
+                          },
+                          "revision": {
+                            "type": "integer"
+                          },
+                          "detail": {
+                            "type": "object"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Global settings:manage required"
+          },
+          "409": {
+            "description": "State conflict or leased by another worker"
+          },
+          "503": {
+            "description": "PostgreSQL store unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/execute": {
+      "post": {
+        "operationId": "migration0331_execute",
+        "tags": [
+          "admin"
+        ],
+        "summary": "execute (Never baseline, not completed Gravit migration)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persistent execution state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationRun0331"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Global settings:manage required"
+          },
+          "409": {
+            "description": "State conflict or leased by another worker"
+          },
+          "503": {
+            "description": "PostgreSQL store unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/pause": {
+      "post": {
+        "operationId": "migration0331_pause",
+        "tags": [
+          "admin"
+        ],
+        "summary": "pause (Never baseline, not completed Gravit migration)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persistent execution state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationRun0331"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Global settings:manage required"
+          },
+          "409": {
+            "description": "State conflict or leased by another worker"
+          },
+          "503": {
+            "description": "PostgreSQL store unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/resume": {
+      "post": {
+        "operationId": "migration0331_resume",
+        "tags": [
+          "admin"
+        ],
+        "summary": "resume (Never baseline, not completed Gravit migration)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persistent execution state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationRun0331"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Global settings:manage required"
+          },
+          "409": {
+            "description": "State conflict or leased by another worker"
+          },
+          "503": {
+            "description": "PostgreSQL store unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/admin/official-provider": {
@@ -17819,485 +18440,6 @@
         ],
         "security": []
       }
-    },
-    "/api/v1/admin/migration-runs": {
-      "post": {
-        "operationId": "migration0331_create",
-        "tags": [
-          "admin"
-        ],
-        "summary": "create (Never baseline, not completed Gravit migration)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Persistent execution state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MigrationRun0331"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "description": "Global settings:manage required"
-          },
-          "409": {
-            "description": "State conflict or leased by another worker"
-          },
-          "503": {
-            "description": "PostgreSQL store unavailable"
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "projectId",
-                  "sourceKind",
-                  "idempotencyKey"
-                ],
-                "properties": {
-                  "projectId": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 128
-                  },
-                  "sourceKind": {
-                    "const": "gravit"
-                  },
-                  "idempotencyKey": {
-                    "type": "string",
-                    "minLength": 8,
-                    "maxLength": 128
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "operationId": "migration0331_list",
-        "tags": [
-          "admin"
-        ],
-        "summary": "list (Never baseline, not completed Gravit migration)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Persistent execution state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/MigrationRun0331"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "description": "Global settings:manage required"
-          },
-          "409": {
-            "description": "State conflict or leased by another worker"
-          },
-          "503": {
-            "description": "PostgreSQL store unavailable"
-          }
-        },
-        "parameters": [
-          {
-            "name": "projectId",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/migration-runs/{runId}": {
-      "get": {
-        "operationId": "migration0331_read",
-        "tags": [
-          "admin"
-        ],
-        "summary": "read (Never baseline, not completed Gravit migration)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Persistent execution state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MigrationRun0331"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "description": "Global settings:manage required"
-          },
-          "409": {
-            "description": "State conflict or leased by another worker"
-          },
-          "503": {
-            "description": "PostgreSQL store unavailable"
-          }
-        },
-        "parameters": [
-          {
-            "name": "runId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/migration-runs/{runId}/events": {
-      "get": {
-        "operationId": "migration0331_events",
-        "tags": [
-          "admin"
-        ],
-        "summary": "events (Never baseline, not completed Gravit migration)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Persistent execution state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "sequence": {
-                            "type": "integer"
-                          },
-                          "kind": {
-                            "type": "string"
-                          },
-                          "step": {
-                            "type": "string"
-                          },
-                          "revision": {
-                            "type": "integer"
-                          },
-                          "detail": {
-                            "type": "object"
-                          },
-                          "createdAt": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "description": "Global settings:manage required"
-          },
-          "409": {
-            "description": "State conflict or leased by another worker"
-          },
-          "503": {
-            "description": "PostgreSQL store unavailable"
-          }
-        },
-        "parameters": [
-          {
-            "name": "runId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "after",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "minimum": 0
-            }
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/migration-runs/{runId}/execute": {
-      "post": {
-        "operationId": "migration0331_execute",
-        "tags": [
-          "admin"
-        ],
-        "summary": "execute (Never baseline, not completed Gravit migration)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Persistent execution state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MigrationRun0331"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "description": "Global settings:manage required"
-          },
-          "409": {
-            "description": "State conflict or leased by another worker"
-          },
-          "503": {
-            "description": "PostgreSQL store unavailable"
-          }
-        },
-        "parameters": [
-          {
-            "name": "runId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "maxProperties": 0
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/migration-runs/{runId}/pause": {
-      "post": {
-        "operationId": "migration0331_pause",
-        "tags": [
-          "admin"
-        ],
-        "summary": "pause (Never baseline, not completed Gravit migration)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Persistent execution state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MigrationRun0331"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "description": "Global settings:manage required"
-          },
-          "409": {
-            "description": "State conflict or leased by another worker"
-          },
-          "503": {
-            "description": "PostgreSQL store unavailable"
-          }
-        },
-        "parameters": [
-          {
-            "name": "runId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "maxProperties": 0
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/migration-runs/{runId}/resume": {
-      "post": {
-        "operationId": "migration0331_resume",
-        "tags": [
-          "admin"
-        ],
-        "summary": "resume (Never baseline, not completed Gravit migration)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Persistent execution state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MigrationRun0331"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "description": "Global settings:manage required"
-          },
-          "409": {
-            "description": "State conflict or leased by another worker"
-          },
-          "503": {
-            "description": "PostgreSQL store unavailable"
-          }
-        },
-        "parameters": [
-          {
-            "name": "runId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "maxProperties": 0
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -21894,6 +22036,122 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "GravitCompatibilityReport0332": {
+        "type": "object",
+        "required": [
+          "format",
+          "sourceSha256",
+          "sourceEntries",
+          "versionEvidence",
+          "versionStatus",
+          "status",
+          "cutoverAllowed",
+          "components",
+          "findings",
+          "summary"
+        ],
+        "properties": {
+          "format": {
+            "const": "neverlauncher.gravit-compatibility.v1"
+          },
+          "sourceSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "sourceEntries": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "claimedVersion": {
+            "type": "string"
+          },
+          "detectedVersion": {
+            "type": "string"
+          },
+          "versionEvidence": {
+            "type": "string"
+          },
+          "versionStatus": {
+            "type": "string",
+            "enum": [
+              "recognized",
+              "unverified",
+              "unsupported",
+              "conflict"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "blocked"
+            ]
+          },
+          "cutoverAllowed": {
+            "const": false
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "path",
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "severity",
+                "component",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                },
+                "component": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "summary": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
           }
         }
       }
