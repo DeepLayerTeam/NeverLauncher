@@ -1,3 +1,14 @@
+## [0.33.3] - 2026-10-27
+### Added
+- MIG03 operational source inventory of a real bounded Gravit ZIP: streaming CRC/SHA-256 validation of every file; detailed classes for clients, assets, libraries, profiles, modules, textures, auth providers, optionals, server references and keys; malicious path/duplicate/ZIP bomb rejection.
+- Transactional, idempotent, sanitized PostgreSQL inventory snapshots tied to durable runs and pinned against compatibility source digest, with append-only event journal.
+- Fully reproducible verified ZIP export containing actual original source bytes plus canonical checksum manifest. Source ZIPs are only spooled temporarily with mode 0600; secrets never enter inventory SQL. CLI verifies downloaded archive contents before publication and refuses overwrites.
+- Admin SPA, Embedded Admin, CLI `inventory|export`, PostgreSQL migration 0091, native unit/race/SQL/CLI tests, version 0.33.3 and OpenAPI integration.
+### Limitations
+- Gravit Compatibility Detector 0.33.2 still accepts 64 MiB ZIPs, whereas the independent 0.33.3 inventory/export path accepts up to 512 MiB compressed / 2 GiB expanded / 30000 entries. Projects over the limit are not supported yet.
+- The exported ZIP may contain credentials and is not encrypted or independently signed. Store it securely. No import, player identity reconciliation, module execution or cutover is implemented by MIG03.
+- Full Go 1.27.3 Backend + live PostgreSQL and React production-build certification requires CI execution; not claimed locally.
+
 ## [0.33.2] - 2026-10-27
 ### Added
 - MIG02 operational Gravit compatibility detector: bounded, non-executing analysis of Gravit source ZIP (LaunchServer, runtime, ClientProfile, optional actions, modules, ServerWrapper config/env), with detailed recognized/manual/blocked findings.

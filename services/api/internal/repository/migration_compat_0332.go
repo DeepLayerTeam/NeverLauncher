@@ -60,6 +60,15 @@ func (r *SQLRepository) SaveMigrationCompatibility0332(ctx context.Context, runI
 	if status != "prepared" || step != "source_assessment" {
 		return gd.Report{}, mw.ErrBusy
 	}
+	// An inventoried source pins the same exact input bytes for the run.
+	var pinned string
+	pinErr := tx.QueryRowContext(ctx, `SELECT source_sha256 FROM migration_source_inventory_0333 WHERE run_id=$1`, runID).Scan(&pinned)
+	if pinErr != nil && !errors.Is(pinErr, sql.ErrNoRows) {
+		return gd.Report{}, pinErr
+	}
+	if pinErr == nil && pinned != report.SourceSHA256 {
+		return gd.Report{}, mw.ErrConflict
+	}
 	var previous string
 	err = tx.QueryRowContext(ctx, `SELECT source_sha256 FROM migration_compatibility_0332 WHERE run_id=$1`, runID).Scan(&previous)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {

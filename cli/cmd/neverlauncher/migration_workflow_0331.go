@@ -17,7 +17,7 @@ import (
 // the database checkpoint and lease, not the CLI process, own progress.
 func handleMigrationWorkflow0331(args []string) error {
 	if len(args) < 1 {
-		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility")
+		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export")
 	}
 	command := args[0]
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
@@ -46,12 +46,20 @@ func handleMigrationWorkflow0331(args []string) error {
 			return errors.New("list requires --project")
 		}
 		path = base + "?projectId=" + url.QueryEscape(project)
-	case "status", "events", "execute", "pause", "resume", "assess", "compatibility":
+	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export":
 		id := strings.TrimSpace(flagValue(args, "--run", ""))
 		if id == "" {
 			return fmt.Errorf("%s requires --run", command)
 		}
 		path = base + "/" + url.PathEscape(id)
+		if command == "inventory" || command == "export" {
+			path += "/" + command
+			source := flagValue(args, "--source", "")
+			if command == "inventory" && source == "" {
+				break
+			}
+			return postGravitInventory0333(path, token, source, out, command == "export")
+		}
 		if command == "assess" || command == "compatibility" {
 			path += "/compatibility"
 			if command == "assess" {

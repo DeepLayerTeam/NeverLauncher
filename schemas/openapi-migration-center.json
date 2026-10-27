@@ -620,6 +620,227 @@
           }
         }
       }
+    },
+    "/api/v1/admin/migration-runs/{runId}/inventory": {
+      "get": {
+        "operationId": "migration0333_get_source_inventory",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "summary": "Read saved sanitized source inventory",
+        "responses": {
+          "200": {
+            "description": "Sanitized persisted file inventory",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitSourceInventory0333"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "Run/inventory not found"
+          },
+          "409": {
+            "description": "Run not prepared or source digest incompatible"
+          },
+          "413": {
+            "description": "Source ZIP exceeds 512 MiB"
+          },
+          "415": {
+            "description": "application/zip required"
+          },
+          "422": {
+            "description": "Unsafe or corrupt source ZIP"
+          }
+        }
+      },
+      "post": {
+        "operationId": "migration0333_inventory_source",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "summary": "Inspect and hash source ZIP and durably journal inventory",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary",
+                "maxLength": 536870912
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sanitized persisted file inventory",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitSourceInventory0333"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "Run/inventory not found"
+          },
+          "409": {
+            "description": "Run not prepared or source digest incompatible"
+          },
+          "413": {
+            "description": "Source ZIP exceeds 512 MiB"
+          },
+          "415": {
+            "description": "application/zip required"
+          },
+          "422": {
+            "description": "Unsafe or corrupt source ZIP"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/export": {
+      "post": {
+        "operationId": "migration0333_export_source",
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "summary": "Export identical source file content with canonical manifest; contains credentials",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary",
+                "maxLength": 536870912
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ZIP archive; confidential source content",
+            "headers": {
+              "X-Migration-Manifest-SHA256": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              }
+            },
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "Run/inventory not found"
+          },
+          "409": {
+            "description": "Run not prepared or source digest incompatible"
+          },
+          "413": {
+            "description": "Source ZIP exceeds 512 MiB"
+          },
+          "415": {
+            "description": "application/zip required"
+          },
+          "422": {
+            "description": "Unsafe or corrupt source ZIP"
+          }
+        }
+      }
     }
   },
   "schemas": {
@@ -785,6 +1006,115 @@
           "type": "object",
           "additionalProperties": {
             "type": "integer"
+          }
+        }
+      }
+    },
+    "GravitSourceInventory0333": {
+      "type": "object",
+      "required": [
+        "sourceBytes",
+        "sourceEntries",
+        "totalBytes",
+        "sensitiveEntries",
+        "serverReferences",
+        "sourceSha256",
+        "manifestSha256",
+        "format",
+        "categories",
+        "authProviders",
+        "textureProviders",
+        "optionalActions",
+        "files"
+      ],
+      "properties": {
+        "sourceBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sourceEntries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "totalBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sensitiveEntries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serverReferences": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sourceSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "manifestSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "format": {
+          "const": "neverlauncher.gravit-source-inventory.v1"
+        },
+        "categories": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "authProviders": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "textureProviders": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "optionalActions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "files": {
+          "type": "array",
+          "maxItems": 30000,
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "kind",
+              "size",
+              "sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "size": {
+                "type": "integer"
+              },
+              "sensitive": {
+                "type": "boolean"
+              }
+            }
           }
         }
       }

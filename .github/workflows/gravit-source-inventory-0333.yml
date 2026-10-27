@@ -1,0 +1,70 @@
+name: Gravit 0.33.3 Source Inventory & Export
+on:
+  push:
+    paths:
+      - 'services/api/internal/gravitinventory/**'
+      - 'services/api/internal/repository/migration_inventory_0333*'
+      - 'services/api/internal/repository/migration_compat_0332.go'
+      - 'services/api/internal/httpapi/migration_inventory_0333.go'
+      - 'services/api/internal/httpapi/handler.go'
+      - 'services/api/internal/dbmigrate/sql/0091_*'
+      - 'cli/cmd/neverlauncher/migration_inventory_0333*'
+      - 'cli/cmd/neverlauncher/migration_workflow_0331.go'
+      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'services/api/internal/embeddedadmin/site/**'
+      - 'schemas/openapi-migration-center.json'
+      - '.github/workflows/gravit-source-inventory-0333.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend-and-cli:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: neverlauncher_test
+          POSTGRES_USER: neverlauncher_test
+          POSTGRES_PASSWORD: disposable_only_0333
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:disposable_only_0333@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Unit and race tests, native PostgreSQL integration, Backend HTTP compilation
+        working-directory: services/api
+        run: |
+          go test -race -count=1 -timeout 10m ./internal/gravitinventory
+          go test -race -count=1 -timeout 10m ./internal/repository -run 'TestMigrationInventoryTransactional0333|TestMigrationCompatibilityAssessmentTransactional0332'
+          go test -count=1 -timeout 10m ./internal/httpapi -run 'TestMigration.*0331|TestGravit.*0332'
+      - name: CLI native network and ZIP tests
+        working-directory: cli
+        run: go test -race -count=1 ./cmd/neverlauncher -run 'TestGravitSource.*0333|TestGravitCompatibilityCLI0332|TestMigrationWorkflowCLI0331'
+      - name: OpenAPI and release metadata
+        run: |
+          python3 scripts/contracts/validate-openapi.py
+          python3 scripts/version/manage.py check
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - working-directory: apps/admin
+        run: npm ci --ignore-scripts
+      - working-directory: apps/admin
+        run: npm run build

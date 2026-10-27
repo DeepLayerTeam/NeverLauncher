@@ -80,3 +80,26 @@ byId('migration-assess').addEventListener('submit',async event=>{
   await migrationView();byId('migration-report').textContent=JSON.stringify({compatibility:payload.data},null,2);
  }catch(e){message(e.message,true)}finally{button.disabled=false}
 });
+
+// 0.33.3: source files are uploaded on demand and never persisted by Backend.
+for (const action of ['inventory','export']) {
+ byId('migration-'+action).addEventListener('click',async e=>{
+  const id=migrationId(),file=byId('migration-assess').querySelector('[name=source]').files[0];
+  if(!id||!file||file.size>512*1024*1024){message('Выберите run и исходный ZIP до 512 MiB',true);return}
+  e.currentTarget.disabled=true;
+  try {
+   const response=await fetch(`/api/v1/admin/migration-runs/${encodeURIComponent(id)}/${action}`,{
+    method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/zip'},body:file,redirect:'error',cache:'no-store',credentials:'same-origin'
+   });
+   if(!response.ok){const body=await response.text();throw new Error(`HTTP ${response.status}: ${body.slice(0,240)}`)}
+   if(action==='inventory'){const result=await response.json();byId('migration-report').textContent=JSON.stringify({inventory:result.data},null,2);message('Source inventory сохранён в PostgreSQL');}
+   else {
+    if(!response.headers.get('X-Migration-Manifest-SHA256'))throw new Error('Экспорт не содержит SHA-256 манифеста');
+    const archive=await response.blob(),url=URL.createObjectURL(archive);
+    try {const a=document.createElement('a');a.href=url;a.download=`gravit-source-${id}.zip`;document.body.appendChild(a);a.click();a.remove();}
+    finally{URL.revokeObjectURL(url)}
+    message('ZIP загружен. Архив содержит потенциально секретные данные.');
+   }
+  }catch(err){message(err.message,true)}finally{e.currentTarget.disabled=false}
+ });
+}
