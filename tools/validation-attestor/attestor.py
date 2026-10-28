@@ -26,6 +26,7 @@ import urllib.request
 import urllib.parse
 from official_chain_0347 import issue_minecraft_credentials, ExternalOutage, AccountRejected
 from component_matrix_0348 import selected_components
+from diagnostics_03412 import retain as retain_redacted_diagnostics, redact as redact_diagnostics
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, Encoding, PublicFormat
@@ -541,8 +542,10 @@ def execute_run(cfg,package_id,selection=None,issued_grant=None):
         finally:
             subprocess.run([cfg.engine,'network','rm',job_network],stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL,timeout=30,check=False)
-        # Do not surface raw JVM logs in API responses; they can contain
-        # credentials or personal information. Retention/redaction is V12.
+        # Retain only redacted, bounded host-only diagnostics with a digest and
+        # expiry; never make the raw stdout available to API, CI or operator UI.
+        if cfg.diagnostics_dir:
+            retain_redacted_diagnostics(worker_log,Path(cfg.diagnostics_dir),grant['runId'],cfg.diagnostics_ttl_hours)
         check(proc.returncode==0,'pinned worker failed; no trusted evidence emitted')
         payload=verify_local_artifacts(out,grant,image_sha,cfg.source_sha,cfg.build_sha,cfg.bridge_sha)
         check(payload['authenticationMode']==cfg.auth_mode,
@@ -594,7 +597,7 @@ def execute_matrix(cfg, package_id):
                              'runId':result['runId']})
         except Exception as exc:
             outcomes.append({'targetId':ident,'preset':target['preset'],'status':'failed',
-                             'detail':str(exc)[:512]})
+                             'detail':redact_diagnostics(str(exc))[:512]})
     return {'packageId':package_id,'targetMatrixSha256':initial['targetMatrixSha256'],
             'allRequiredTargetsVerified':all(x['status']=='passed' for x in outcomes),
             'targets':outcomes,'stablePublishEligible':False}
@@ -626,6 +629,8 @@ def main():
     p.add_argument('--manifest-key',required=True)
     p.add_argument('--bridge-sha',default='0'*64)
     p.add_argument('--runtime-seconds',type=int,default=180)
+    p.add_argument('--diagnostics-dir',required=True,help='Host-only 0700 redacted worker diagnostic spool')
+    p.add_argument('--diagnostics-ttl-hours',type=int,default=168)
     p.add_argument('--engine',choices=('podman',),default='podman')
     p.add_argument('--package-id',help='One-shot attestation; omit for the mTLS service')
     p.add_argument('--listen',default='127.0.0.1:8845')
@@ -638,6 +643,7 @@ def main():
     cfg.operator_token=token_path.read_text(encoding='utf-8').strip()
     check(bool(cfg.operator_token),'missing host operator credential')
     check(15<=cfg.runtime_seconds<=3600,'invalid runtime deadline')
+    check(1<=cfg.diagnostics_ttl_hours<=720,'invalid diagnostic retention TTL')
     # A rootful Docker daemon makes its client effectively root on the host,
     # including access to the signing key. Refuse it unconditionally.
     info=subprocess.run(['podman','info','--format','{{.Host.Security.Rootless}}'],
@@ -667,7 +673,7 @@ def main():
             except ExternalOutage:
                 self.send_error(503,'inconclusive: external official provider unavailable')
             except Exception as exc:
-                self.send_error(409,str(exc)[:160])
+                self.send_error(409,redact_diagnostics(str(exc))[:160])
         def log_message(self,*args):pass
     ctx=ssl.create_default_context(ssl.Purpose.CLIENT_AUTH,cafile=cfg.client_ca)
     ctx.load_cert_chain(cfg.tls_cert,cfg.tls_key)
@@ -680,4 +686,4 @@ def main():
 if __name__=='__main__':
     try:main()
     except Exception as e:
-        print('attestor error:',str(e),file=sys.stderr);sys.exit(1)
+        print('attestor error:',redact_diagnostics(str(e)),file=sys.stderr);sys.exit(1)

@@ -131,3 +131,6 @@ A fully successful auth stage alone is insufficient: same-session Minecraft
 server join and gameplay smoke are still required. Without live credentials,
 real OCI runtime and matching Minecraft servers, **do not declare the feature
 production-certified**.
+
+
+**0.34.12 upgrade:** include the required `--diagnostics-dir` on all live attestor invocations.

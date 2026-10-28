@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ReleaseApi, type Draft, type DraftFields, type PackageInfo, type Preview, type ValidationReport } from '../api/release';
 import { JobMonitor } from './JobMonitor';
+import { ValidationHistory03412 } from './ValidationHistory03412';
 import { BuildWorkspacePanel } from './BuildWorkspacePanel';
 import { ComponentGraphEditor0248 } from './ComponentGraphEditor0248';
 
@@ -192,8 +193,9 @@ export function ReleaseWorkspace({backendUrl,token,projectId,canPrepare,canFileW
       <p><strong>Policy:</strong> {report?.effectivePolicy?.requiredLevel||policy?.requiredLevel||'не загружена'} {report?.effectivePolicy?.source==='production-runtime-gate-0.34.11'?'· обязательная доверенная runtime-сертификация':policy?.requireServerJoin?'· требуется Server Join':''}</p>
       <p><strong>Legacy runtime v1:</strong> {report?.runtime?.filter(x=>x.result==='passed').length||0} результатов · не являются сертификацией stable</p>
       <p className="muted">Legacy smoke-test и загружаемый runtime evidence v1 не дают допуска в stable. Для stable требуется отдельная доверенная ValidationEvidence v4 от независимого аттестатора с полным покрытием targets.</p>
-      <label className="field">Signed runtime evidence (JSON-файл от CI/runtime-agent)<input disabled={busy||!canPrepare||!form.packageId||!isPassed(report)} type="file" accept="application/json,.json" onChange={(e: React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(file)void submitEvidence(file);e.target.value='';}} /></label>
+      {form.channel.toLowerCase() !== 'stable' && <label className="field">Signed runtime evidence (JSON-файл от CI/runtime-agent)<input disabled={busy||!canPrepare||!form.packageId||!isPassed(report)} type="file" accept="application/json,.json" onChange={(e: React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(file)void submitEvidence(file);e.target.value='';}} /></label>}
       {report?.runtime?.length ? <ul>{report.runtime.map((r,i)=><li key={i}>{r.targetId}: {r.result} (actual client: {String(r.actualClient)}, server join: {String(r.serverJoin)})</li>)}</ul>:null}
+      {form.packageId && <ValidationHistory03412 api={api} packageId={form.packageId}/>}
       <button disabled={busy||!draft} onClick={()=>void save('channel')}>Перейти к публикации</button>
     </article>}
     {step==='channel' && <article className="subcard"><h3>5. Канал / публикация / откат</h3>
@@ -201,6 +203,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,canPrepare,canFileW
       {form.channel.toLowerCase() === 'stable' && <section aria-label="Stable runtime certification"><p><strong>Production Runtime Gate V11:</strong> {report?.effectivePolicy?.publishEligible?'Все обязательные targets подтверждены':'Публикация заблокирована до подтверждения всех обязательных targets'} · {report?.effectivePolicy?.verifiedTargets??0}/{report?.effectivePolicy?.requiredTargets??0} · policy <code>{report?.effectivePolicy?.matrixSha256||'не настроена'}</code></p>
        {Object.entries(report?.effectivePolicy?.targetBlockers??{}).length>0 && <ul>{Object.entries(report?.effectivePolicy?.targetBlockers??{}).map(([target,reason])=><li key={target}><code>{target}</code>: {reason}</li>)}</ul>}
        </section>}
+      {form.packageId && <ValidationHistory03412 api={api} packageId={form.packageId}/>}
       {report?.effectivePolicy?.blockedReason && <p role="alert">{report.effectivePolicy.blockedReason}</p>}
       <div className="buttonRow"><button disabled={busy||!canPublish||!form.packageId||dirty} onClick={()=>void validate('package-publish')}>Предпросмотр публикации</button><button disabled={busy||!canPublish||!preview?.valid||dirty||(form.channel.toLowerCase()==='stable'&&!report?.effectivePolicy?.publishEligible)} onClick={()=>void execute('package-publish')}>Опубликовать</button></div>
       {preview && <div className="releaseEffect" role="status"><strong>Серверный эффект публикации</strong>{Object.entries(preview.effect).map(([key,value])=><p key={key}>{key}: {String(value)}</p>)}</div>}

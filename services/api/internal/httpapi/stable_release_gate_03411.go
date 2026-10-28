@@ -150,6 +150,10 @@ func decodeStoredEvidence03411(raw []byte, p *validationPayload0345) error {
 func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup) (string, stableCoverage03411, error) {
 	coverage := s.evaluateStableRelease03411(ctx, lookup)
 	if !coverage.Eligible {
+		if e := s.saveValidationDecision03412(ctx, lookup.Release.ID, "", "stable-gate", "blocked",
+			"required-targets-incomplete", safeValidationDecisionDigest03412(coverage.TargetBlockers)); e != nil {
+			return "", coverage, errors.New("stable runtime gate audit unavailable")
+		}
 		return "", coverage, fmt.Errorf("stable runtime gate denied: %v", coverage.TargetBlockers)
 	}
 	issuer, ok := s.Repo.(interface {
@@ -168,5 +172,13 @@ func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup
 		PackageID: lookup.Release.ID, ProjectID: lookup.Release.ProjectID, ManifestSHA256: md,
 		ArtifactSHA256: fd, MatrixSHA256: coverage.MatrixSHA256, TargetsJSON: targetsRaw, Runs: coverage.Runs,
 	})
-	return token, coverage, e
+	if e != nil {
+		return "", coverage, e
+	}
+	// Eligibility is recorded, but a permit alone NEVER establishes a publish.
+	if e = s.saveValidationDecision03412(ctx, lookup.Release.ID, "", "stable-gate", "eligible",
+		"checked-before-commit", safeValidationDecisionDigest03412(coverage.Runs)); e != nil {
+		return "", coverage, errors.New("stable runtime gate audit unavailable")
+	}
+	return token, coverage, nil
 }

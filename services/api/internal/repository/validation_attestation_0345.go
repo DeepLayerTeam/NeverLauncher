@@ -2,9 +2,12 @@ package repository
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
@@ -26,7 +29,12 @@ func (r *MemoryRepository) SaveValidationAttestation0345(_ context.Context, v mo
 			return ErrConflict
 		}
 	}
+	v.Evidence = append(json.RawMessage(nil), v.Evidence...)
 	r.validationAttestations0345 = append(r.validationAttestations0345, v)
+	digest := sha256.Sum256(append(append([]byte(nil), v.Evidence...), []byte(v.Signature)...))
+	r.validationAttempts03412 = append(r.validationAttempts03412, model.ValidationAttempt03412{
+		ID: int64(len(r.validationAttempts03412) + 1), PackageID: v.PackageID, RunID: v.RunID,
+		Kind: "attestation", Outcome: "accepted", ReasonCode: "trusted-evidence-recorded", PayloadSHA256: hex.EncodeToString(digest[:]), CreatedAt: time.Now().UTC()})
 	return nil
 }
 func (r *MemoryRepository) ListValidationAttestations0345(_ context.Context, packageID string) ([]model.ValidationAttestation0345, error) {
@@ -36,6 +44,7 @@ func (r *MemoryRepository) ListValidationAttestations0345(_ context.Context, pac
 	for i := len(r.validationAttestations0345) - 1; i >= 0; i-- {
 		v := r.validationAttestations0345[i]
 		if v.PackageID == strings.TrimSpace(packageID) {
+			v.Evidence = append(json.RawMessage(nil), v.Evidence...)
 			out = append(out, v)
 		}
 	}
@@ -78,6 +87,7 @@ func (r *SQLRepository) ListValidationAttestations0345(ctx context.Context, pack
 		if e := rows.Scan(&v.RunID, &v.PackageID, &v.ProjectID, &v.ManifestSHA256, &v.ArtifactSHA256, &v.Evidence, &v.Signature, &v.ReceivedAt); e != nil {
 			return nil, e
 		}
+		v.Evidence = append(json.RawMessage(nil), v.Evidence...)
 		out = append(out, v)
 	}
 	return out, rows.Err()

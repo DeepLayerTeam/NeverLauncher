@@ -189,19 +189,39 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
-	dec := json.NewDecoder(r.Body)
+	incoming, readErr := io.ReadAll(r.Body)
+	if readErr != nil {
+		writeError(w, 400, "invalid or oversized validation evidence")
+		return
+	}
+	dec := json.NewDecoder(bytes.NewReader(incoming))
 	dec.DisallowUnknownFields()
 	var signed signedValidation0345
-	if e := dec.Decode(&signed); e != nil {
+	var extra any
+	decodeErr := dec.Decode(&signed)
+	if decodeErr == nil {
+		if e := dec.Decode(&extra); e != io.EOF {
+			decodeErr = errors.New("trailing evidence")
+		}
+	}
+	if decodeErr != nil {
+		if e := s.saveValidationDecision03412(r.Context(), r.PathValue("packageId"), "", "attestation", "rejected",
+			"malformed-evidence", digestValidationAttempt03412(incoming)); e != nil {
+			writeError(w, 503, "validation audit unavailable")
+			return
+		}
 		writeError(w, 400, "malformed validation evidence")
 		return
 	}
-	var extra any
-	if e := dec.Decode(&extra); e != io.EOF {
-		writeError(w, 400, "trailing validation evidence")
-		return
-	}
 	deny := func(err error) {
+		// Persist rejection using a digest and bounded reason code, never the
+		// operator's submitted JSON, account identifiers or raw diagnostics.
+		auditErr := s.saveValidationDecision03412(r.Context(), r.PathValue("packageId"), signed.Evidence.RunID,
+			"attestation", "rejected", validationDecisionReason03412(err), safeValidationDecisionDigest03412(signed))
+		if auditErr != nil {
+			writeError(w, 503, "validation audit unavailable")
+			return
+		}
 		s.Repo.AddAuditEvent(model.AuditEvent{Actor: s.adminActor(r), Action: "validation-attestation:rejected", Target: r.PathValue("packageId"), JobID: signed.Evidence.RunID, ReasonCode: "attestation-invalid-0345", CreatedAt: time.Now().UTC()})
 		writeError(w, 409, err.Error())
 	}

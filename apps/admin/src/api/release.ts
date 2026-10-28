@@ -4,6 +4,16 @@ export interface Draft { id: string; projectId: string; ownerId: string; profile
 export type DraftFields = Pick<Draft,'projectId'|'profileId'|'channel'|'version'|'minecraftVersion'|'loader'|'packageId'|'jobId'|'step'>;
 export interface PackageInfo { packageId: string; projectId: string; profileId: string; channel: string; version: string; status: string; manifestSchemaVersion?:string; minecraft?: {version:string;loader:string}; files: Array<{ path: string; size: number; sha256: string }> }
 export interface ValidationReport { integrity: null | { result: string; manifestDigest: string; artifactDigest: string; checkedAt: string }; runtime: Array<{ result: string; targetId: string; actualClient: boolean; serverJoin: boolean; finishedAt: string }>; policy: { requiredLevel: string; requireServerJoin: boolean }; effectivePolicy?: { requiredLevel: string; requireServerJoin: boolean; source: string; publishEligible?: boolean; blockedReason?: string; targetCoverage?: Record<string,boolean>; targetBlockers?: Record<string,string>; requiredTargets?:number; verifiedTargets?:number; matrixSha256?:string } }
+export interface ValidationAuditReport03412 {
+ packageId:string;
+ policy:{requiredLevel:string};
+ attempts:Array<{id:number;runId:string;kind:string;outcome:string;reasonCode:string;payloadSha256:string;createdAt:string}>;
+ hasMore:boolean;nextBefore:number;
+ runs:Array<{runId:string;receivedAt:string;stages:Record<string,{status:string;detail?:string;evidenceSha256?:string}>}>;
+ evidence:Array<{runId:string;targetId:string;schemaVersion:string;evidenceSha256:string;receivedAt:string;expiresAt:string;status:string}>;
+ coverage:{required:number;verified:number;stablePublishEligible:boolean;targetCoverage:Record<string,boolean>;targetBlockers:Record<string,string>};
+ manualCertificationAllowed:false;
+}
 export interface Preview { valid: boolean; permission: string; effect: Record<string,string> }
 export interface Operation { id: string; projectId: string; resourceId: string; status: string; kind: string }
 
@@ -25,6 +35,8 @@ export class ReleaseApi {
   componentEditorGravitPreview(id:string, expectedRevision:number, source:string) {return this.send<import('../admin/GravitOptionalImport02411').GravitOptionalResponse02411>(`/api/v1/packages/${encodeURIComponent(id)}/component-catalog/gravit-preview`,'POST',{expectedRevision,source});}
   componentEditorSave(id:string, payload: import('../admin/component-editor-model-0248').CatalogMutation0248) {return this.send<{catalog:import('../admin/component-editor-model-0248').Catalog0248; status:string;preview:import('../admin/component-editor-model-0248').CatalogPreview0248}>(`/api/v1/packages/${encodeURIComponent(id)}/component-catalog`,'PUT',payload);}
   packageAction<T>(id: string,action: 'validate'|'sign'|'stage'|'integrity-check') { return this.send<T>(`/api/v1/packages/${encodeURIComponent(id)}/${action}`,'POST'); }
+  validationRun(id:string,runId:string) {return this.get<ValidationAuditReport03412>(`/api/v1/packages/${encodeURIComponent(id)}/validation-report?runId=${encodeURIComponent(runId)}`);}
+  validationReport(id:string,before=0) {return this.get<ValidationAuditReport03412>(`/api/v1/packages/${encodeURIComponent(id)}/validation-report${before>0?`?before=${before}`:''}`);}
   validations(id: string) { return this.get<ValidationReport>(`/api/v1/packages/${encodeURIComponent(id)}/validations`); }
   policy(id: string) { return this.get<ValidationReport['policy']>(`/api/v1/projects/${encodeURIComponent(id)}/validation-policy`); }
   evidence(id: string, payload: unknown) { return this.send<Record<string,unknown>>(`/api/v1/packages/${encodeURIComponent(id)}/runtime-validations/evidence`,'POST',payload); }

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
@@ -355,15 +356,44 @@ func (s Server) stagedRunReport0342(w http.ResponseWriter, r *http.Request) {
 	}
 	var p stagedRunReport0342
 	r.Body = http.MaxBytesReader(w, r.Body, 24<<10)
-	dec := json.NewDecoder(r.Body)
+	incoming, readErr := io.ReadAll(r.Body)
+	if readErr != nil {
+		writeError(w, 400, "invalid or oversized execution report")
+		return
+	}
+	dec := json.NewDecoder(bytes.NewReader(incoming))
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(&p); err != nil {
-		writeError(w, 400, "invalid execution report: "+err.Error())
+	decodeErr := dec.Decode(&p)
+	if decodeErr == nil {
+		var extra any
+		if err := dec.Decode(&extra); err != io.EOF {
+			decodeErr = errors.New("trailing execution report")
+		}
+	}
+	if decodeErr != nil {
+		if e := s.saveValidationDecision03412(r.Context(), g.PackageID, g.RunID, "staged-report", "rejected",
+			"malformed-observation", digestValidationAttempt03412(incoming)); e != nil {
+			writeError(w, 503, "validation audit unavailable")
+			return
+		}
+		writeError(w, 400, "invalid execution report")
 		return
 	}
 	if err := validateStagedRunReport0342(g, p); err != nil {
+		// Even an invalid runner report is an attempt, never certification.
+		if s.saveValidationDecision03412(r.Context(), g.PackageID, g.RunID, "staged-report", "rejected",
+			"invalid-observation", safeValidationDecisionDigest03412(p)) != nil {
+			writeError(w, 503, "validation audit unavailable")
+			return
+		}
 		writeError(w, 409, err.Error())
 		return
+	}
+	// Observational diagnostics are untrusted. Never persist credentials,
+	// authentication headers, JVM sensitive arguments or account identifiers.
+	for name, stage := range p.Stages {
+		stage.Detail = redactValidationDetail03412(stage.Detail)
+		p.Stages[name] = stage
 	}
 	raw, _ := json.Marshal(p.Stages)
 	report := model.StagedRuntimeRun0342{RunID: g.RunID, PackageID: g.PackageID, ProjectID: g.ProjectID, ManifestSHA256: g.ManifestSHA256, ArtifactSHA256: g.ArtifactSHA256, Stages: raw, StartedAt: p.StartedAt, FinishedAt: p.FinishedAt, ReceivedAt: time.Now().UTC()}
@@ -385,5 +415,16 @@ func (s Server) stagedRunList0342(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, err.Error())
 		return
 	}
+	for i := range rows {
+		var stages map[string]stagedStep0342
+		if json.Unmarshal(rows[i].Stages, &stages) == nil {
+			for name, step := range stages {
+				step.Detail = redactValidationDetail03412(step.Detail)
+				stages[name] = step
+			}
+			rows[i].Stages, _ = json.Marshal(stages)
+		}
+	}
+	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, map[string]any{"data": map[string]any{"packageId": r.PathValue("packageId"), "runs": rows, "trustedCertification": false}})
 }

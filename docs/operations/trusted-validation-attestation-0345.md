@@ -89,3 +89,6 @@ are segregated from other services; run only one validation per attestor
 instance. Rotate compromised keys by updating the pinned public key and
 reviewing already issued attestations. Log redaction and retention are extended
 in V12. Do not publish raw logs containing player/session credentials.
+
+
+**0.34.12 upgrade:** the attestor now additionally requires `--diagnostics-dir` pointing to an owner-only 0700 persistent directory; see `validation-reports-security-03412.md`.

@@ -12,6 +12,9 @@ on:
       - 'services/api/internal/httpapi/validation_*0346*'
       - 'services/api/internal/repository/validation_*0346*'
       - 'services/api/internal/dbmigrate/sql/0104*'
+      - 'services/api/internal/dbmigrate/sql/0106*'
+      - 'services/api/internal/httpapi/*03412*'
+      - 'services/api/internal/repository/*03412*'
       - 'cli/internal/dbmigrate/sql/0104*'
       - '.github/workflows/validation-attestor-0345.yml'
   workflow_dispatch:
@@ -28,6 +31,7 @@ jobs:
         run: |
           python3 -m pip install --break-system-packages 'cryptography>=44,<47'
           python3 tools/validation-attestor/test_attestor.py
+          python3 tools/validation-attestor/test_diagnostics_03412.py
           python3 tools/validation-attestor/test_component_matrix_0348.py
           python3 tools/validation-attestor/test_official_chain_0347.py
           python3 e2e/scripts/test_staged_auth_0347.py
@@ -51,7 +55,7 @@ jobs:
       - name: Verify Backend Ed25519 pinning and immutable attestations
         run: |
           cd services/api
-          go test ./internal/httpapi ./internal/repository -run 'TestV05|TestV08|TestTrustedAttestation|TestAttestationRepositoryImmutable|TestStagedGrantRejectsStale' -count=1
+          go test ./internal/httpapi ./internal/repository -run 'TestV05|TestV08|TestV11|TestV12|TestTrustedAttestation|TestAttestationRepositoryImmutable|TestStagedGrantRejectsStale' -count=1
   # CI builds and tests NEVER hold the host attestation signing key.
   # The sealed/pinned OCI image is built and approved through a separate
   # operator-controlled pipeline; only that image digest can be attested.

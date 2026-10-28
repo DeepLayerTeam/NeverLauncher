@@ -2,13 +2,35 @@ package repository
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
+func sanitizePersistedStages03412(raw json.RawMessage) json.RawMessage {
+	var stages map[string]struct {
+		Status         string `json:"status"`
+		Detail         string `json:"detail,omitempty"`
+		EvidenceSHA256 string `json:"evidenceSha256,omitempty"`
+	}
+	if json.Unmarshal(raw, &stages) != nil {
+		return raw
+	}
+	for name, item := range stages {
+		item.Detail = model.RedactValidationDetail03412(item.Detail)
+		stages[name] = item
+	}
+	safe, err := json.Marshal(stages)
+	if err != nil {
+		return raw
+	}
+	return safe
+}
 func validStagedRun0342(v model.StagedRuntimeRun0342) error {
 	if v.RunID == "" || v.PackageID == "" || v.ProjectID == "" || len(v.ManifestSHA256) != 64 || len(v.ArtifactSHA256) != 64 || len(v.Stages) == 0 || !json.Valid(v.Stages) || v.StartedAt.IsZero() || v.FinishedAt.Before(v.StartedAt) {
 		return errors.New("invalid staged runtime report")
@@ -19,6 +41,7 @@ func (r *MemoryRepository) SaveStagedRun0342(_ context.Context, v model.StagedRu
 	if err := validStagedRun0342(v); err != nil {
 		return err
 	}
+	v.Stages = sanitizePersistedStages03412(v.Stages)
 	r.validationMu.Lock()
 	defer r.validationMu.Unlock()
 	for _, old := range r.stagedRuntimeRuns0342 {
@@ -26,7 +49,13 @@ func (r *MemoryRepository) SaveStagedRun0342(_ context.Context, v model.StagedRu
 			return ErrConflict
 		}
 	}
+	v.Stages = append(json.RawMessage(nil), v.Stages...)
 	r.stagedRuntimeRuns0342 = append(r.stagedRuntimeRuns0342, v)
+	// In-memory repository mirrors the PostgreSQL AFTER INSERT audit trigger.
+	digest := sha256.Sum256(v.Stages)
+	r.validationAttempts03412 = append(r.validationAttempts03412, model.ValidationAttempt03412{
+		ID: int64(len(r.validationAttempts03412) + 1), PackageID: v.PackageID, RunID: v.RunID,
+		Kind: "staged-report", Outcome: "recorded", ReasonCode: "untrusted-observation", PayloadSHA256: hex.EncodeToString(digest[:]), CreatedAt: time.Now().UTC()})
 	return nil
 }
 func (r *MemoryRepository) ListStagedRuns0342(_ context.Context, packageID string) ([]model.StagedRuntimeRun0342, error) {
@@ -36,6 +65,7 @@ func (r *MemoryRepository) ListStagedRuns0342(_ context.Context, packageID strin
 	for i := len(r.stagedRuntimeRuns0342) - 1; i >= 0; i-- {
 		v := r.stagedRuntimeRuns0342[i]
 		if v.PackageID == strings.TrimSpace(packageID) {
+			v.Stages = append(json.RawMessage(nil), v.Stages...)
 			out = append(out, v)
 		}
 	}
@@ -48,6 +78,7 @@ func (r *SQLRepository) SaveStagedRun0342(ctx context.Context, v model.StagedRun
 	if err := validStagedRun0342(v); err != nil {
 		return err
 	}
+	v.Stages = sanitizePersistedStages03412(v.Stages)
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -78,6 +109,7 @@ func (r *SQLRepository) ListStagedRuns0342(ctx context.Context, packageID string
 		if err := rows.Scan(&v.RunID, &v.PackageID, &v.ProjectID, &v.ManifestSHA256, &v.ArtifactSHA256, &v.Stages, &v.StartedAt, &v.FinishedAt, &v.ReceivedAt); err != nil {
 			return nil, err
 		}
+		v.Stages = append(json.RawMessage(nil), v.Stages...)
 		out = append(out, v)
 	}
 	return out, rows.Err()
