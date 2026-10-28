@@ -1,0 +1,47 @@
+name: Signed first-run 0.35.2
+on:
+  pull_request:
+    paths:
+      - 'prestarter/**'
+      - 'apps/desktop/**'
+      - 'scripts/desktop/build_signed_0352.sh'
+      - '.github/workflows/signed-first-run-0352.yml'
+  push:
+    paths:
+      - 'prestarter/**'
+      - 'apps/desktop/**'
+      - 'scripts/desktop/build_signed_0352.sh'
+      - '.github/workflows/signed-first-run-0352.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prestarter-signed-handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: prestarter/go.mod
+      - name: Prestarter acceptance and regressions
+        working-directory: prestarter
+        run: go test -run 'TestOwnerSignedFirstRun0352|TestBootstrapServerPolicy0352|TestSignedConfigCannotBeTamperedWith|TestOfflineFreshInstallAndVerifiedRecovery' -count=1 .
+  desktop-native-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native Tauri system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Desktop compile
+        working-directory: apps/desktop
+        run: npm ci --ignore-scripts && npm run build
+      - name: Native signed-envelope verification tests
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml signed_first_run_0352 -- --nocapture

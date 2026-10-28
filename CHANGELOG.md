@@ -1,3 +1,11 @@
+## [0.35.2] — Owner-signed first-run Desktop
+
+- Prestarter now hands off the exact verified signed bootstrap envelope (and verified v2 policy) to native Desktop, without trusting unsigned local preferences for backend/project/profile/channel/public key.
+- Desktop independently verifies the signed owner provisioning using a compile-time Ed25519 root; fail-closed when a signed bundle has no embedded trusted root or fails verification.
+- Integrated account → verified project/profile → runtime/Java → optional preset/server → transactional download → native post-install verification → Play first run.
+- Native completion cannot be asserted by JavaScript preferences; optional signed server auto-enter configuration is supported.
+- Preserved desktop user preferences and advanced manual binding for non-bundled operator builds.
+
 ## 0.35.1 — G/M User Journeys & Executable Acceptance (UX12 baseline)
 
 - New current G01–G35 and M01–M19 player/owner/operator journey inventory; real success/negative outcomes, operator steps, source and executable test references, preserved historical status, explicitly unverified target state. M17 remains a prohibited unsafe capability.

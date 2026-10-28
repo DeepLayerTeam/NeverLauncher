@@ -1,6 +1,6 @@
 [package]
 name = "neverlauncher-desktop"
-version = "0.35.1"
+version = "0.35.2"
 description = "Desktop-клиент NeverLauncher"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
@@ -19,6 +19,7 @@ keyring = "4.2.0"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "multipart"] }
 sha2 = "0.10"
 hex = "0.4"
+time = { version = "0.3", features = ["parsing"] }
 
 ed25519-dalek = { version = "2", features = ["rand_core", "zeroize"] }
 rand = "0.8"

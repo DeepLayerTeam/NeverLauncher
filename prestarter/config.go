@@ -63,6 +63,10 @@ type Config struct {
 	ProfileID        string            `json:"profileId"`
 	Channel          string            `json:"channel"`
 	BackendURL       string            `json:"backendUrl,omitempty"`
+	ServerID         string            `json:"serverId,omitempty"`
+	ServerHost       string            `json:"serverHost,omitempty"`
+	ServerPort       uint16            `json:"serverPort,omitempty"`
+	AutoEnter        bool              `json:"autoEnter,omitempty"`
 	ProfilePublicKey string            `json:"profilePublicKey"`
 	Manifest         Artifact          `json:"manifest"`
 	JavaManifest     Artifact          `json:"javaManifest"`
@@ -198,6 +202,27 @@ func (c Config) Validate() error {
 		u, e := url.Parse(c.BackendURL)
 		if e != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" {
 			return errors.New("backendUrl must be HTTPS without credentials or fragment")
+		}
+	}
+	if c.ServerID != "" && !validID(c.ServerID) {
+		return errors.New("invalid serverId")
+	}
+	if c.AutoEnter && (c.ServerID == "" || c.ServerHost == "" || c.ServerPort == 0) {
+		return errors.New("autoEnter needs a signed serverId, public serverHost and serverPort")
+	}
+	if c.ServerHost != "" {
+		if len(c.ServerHost) > 253 || strings.Contains(c.ServerHost, "..") || strings.HasPrefix(c.ServerHost, ".") || strings.HasSuffix(c.ServerHost, ".") {
+			return errors.New("invalid signed serverHost")
+		}
+		for _, part := range strings.Split(c.ServerHost, ".") {
+			if part == "" || len(part) > 63 || part[0] == '-' || part[len(part)-1] == '-' {
+				return errors.New("invalid signed serverHost label")
+			}
+			for _, c := range part {
+				if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-') {
+					return errors.New("invalid signed serverHost character")
+				}
+			}
 		}
 	}
 	if c.Manifest.Size > 16*1024*1024 || c.JavaManifest.Size > 8*1024*1024 {

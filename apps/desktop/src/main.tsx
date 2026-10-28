@@ -55,6 +55,8 @@ type DesktopSettings = {
   discordActionUrl?: string;
   componentPreset?: string;
   configPath?: string;
+  onboardingCompleted?: boolean;
+  onboardingBootstrapDigest?: string;
 };
 
 type CatalogRequirement = {id:string;versionRange?:string};
@@ -207,6 +209,7 @@ type DesktopReadiness = { status: string; readiness: BackendReadiness; serviceSt
 type DesktopDiagnosticsPolicy = { enabled?: boolean; version?: string; privacyMode?: string; allowedFields?: string[]; redactedFields?: string[]; status?: string };
 type DesktopBindingPolicy = { apiVersion: 'v1'; manifestVerification: 'Ed25519 pinned-key required'; runtime: 'NeverRuntime' };
 type DesktopBindingResult = { status: string; configPath: string; gameDirectory: string; message: string };
+type SignedProvisioning0352 = { backendUrl:string;projectId:string;profileId:string;channel:string;manifestUrl:string;pinnedPublicKey:string;displayName:string;digest:string;serverId:string;serverHost:string;serverPort:number;autoEnter:boolean };
 type AuthSession = { accessToken: string; refreshToken: string; sessionId: string; email: string; userId: string; expiresAt?: string };
 type AuthProvider0293 = { id: string; displayName: string; capabilities: string[]; healthy: boolean };
 type AuthRouting0293 = { defaultProvider: string; requireExplicitProvider: boolean };
@@ -324,7 +327,12 @@ function normalizedSettings(settings: DesktopSettings): DesktopSettings {
 
 function App() {
   const [settings, setSettings] = useState<DesktopSettings>(() => loadSettings());
-  const [screen, setScreen] = useState<Screen>(settings.backendUrl || settings.manifestUrl ? 'overview' : 'firstRun');
+  const [screen, setScreen] = useState<Screen>('firstRun');
+  const [signedProvisioning0352,setSignedProvisioning0352]=useState<SignedProvisioning0352|null>(null);
+  const [bootstrapError0352,setBootstrapError0352]=useState('');
+  const [firstRunStep0352,setFirstRunStep0352]=useState<'start'|'select'|'complete'>('start');
+  const [firstRunBusy0352,setFirstRunBusy0352]=useState(false);
+  const [firstRunError0352,setFirstRunError0352]=useState('');
   const [stage, setStage] = useState<Stage>('idle');
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [javaInfo, setJavaInfo] = useState<JavaInfoResult | null>(null);
@@ -383,8 +391,8 @@ function App() {
   const [diagnosticsPolicy, setDiagnosticsPolicy] = useState<DesktopDiagnosticsPolicy | null>(null);
   const [bindingPolicy, setBindingPolicy] = useState<DesktopBindingPolicy | null>(null);
   const [settingsCheck, setSettingsCheck] = useState<SettingsCheck | null>(null);
-  const [email, setEmail] = useState('admin@neverlauncher.local');
-  const [password, setPassword] = useState('admin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [authProviders0293, setAuthProviders0293] = useState<AuthProvider0293[]>([]);
   const [routing0293, setRouting0293] = useState<AuthRouting0293>({ defaultProvider: 'local', requireExplicitProvider: false });
@@ -468,22 +476,36 @@ function App() {
   }, [authSession?.sessionId, settings.backendUrl]);
 
   useEffect(() => {
-    callTauri<DesktopSettings>('load_desktop_config')
-      .then((config) => {
-        const next = normalizedSettings(config);
-        if (next.backendUrl || next.manifestUrl) setScreen('overview');
+    let disposed=false;
+    void (async()=>{
+      try{
+        const [config,provisioning]=await Promise.all([
+          callTauri<DesktopSettings>('load_desktop_config'),
+          callTauri<SignedProvisioning0352|null>('load_signed_provisioning_0352'),
+        ]);
+        if(disposed)return;
+        const next=normalizedSettings(config);
         setSettings(next);
-        setSelectedProject(next.projectId || '');
-        setSelectedProfile(next.profileId || '');
-        log(next.configPath ? `Desktop config загружен: ${next.configPath}.` : 'Desktop config загружен.');
-      })
-      .catch(() => {
-        const fallback = normalizedSettings(loadSettings());
-        setSettings(fallback);
-        setSelectedProject(fallback.projectId || '');
-        setSelectedProfile(fallback.profileId || '');
-        log('Конфигурация Tauri недоступна: localStorage fallback разрешён только для web-preview; production-сборка должна использовать конфигурацию Tauri и защищённое хранилище.');
-      });
+        setSelectedProject(next.projectId||'');setSelectedProfile(next.profileId||'');
+        setSignedProvisioning0352(provisioning);
+        setBootstrapError0352('');
+        setScreen(provisioning&&!next.onboardingCompleted?'firstRun':next.backendUrl?'overview':'firstRun');
+        log(provisioning?`Подписанный bootstrap ${provisioning.digest.slice(0,16)}… проверен native Ed25519.`:'Desktop config загружен без подписанного bundle.');
+      }catch(error){
+        if(disposed)return;
+        // A production Tauri trust error MUST NOT fall back to mutable localStorage.
+        if((window as any).__TAURI_INTERNALS__){
+          setBootstrapError0352(`Безопасная загрузка Desktop отклонена: ${String(error)}`);
+          setScreen('firstRun');setStage('failed');
+          return;
+        }
+        const fallback=normalizedSettings(loadSettings());
+        setSettings(fallback);setSelectedProject(fallback.projectId||'');
+        setSelectedProfile(fallback.profileId||'');
+        log('Только web preview: параметры восстановлены из localStorage без native trust.');
+      }
+    })();
+    return ()=>{disposed=true};
   }, []);
 
   // Explicit opt-in is enforced independently by the native process.
@@ -571,6 +593,7 @@ function App() {
   }, [backendStatus, fileSummary.broken, javaInfo, launchPlan, manifest, profiles.length, projects.length, selectedProfile, selectedProject]);
 
   function patchSettings(key: keyof DesktopSettings, value: string | number | boolean) {
+    if(signedProvisioning0352 && ['backendUrl','manifestUrl','projectId','profileId','channel','pinnedPublicKey',...(signedProvisioning0352.serverId?['serverId']:[]),...(signedProvisioning0352.autoEnter?['serverHost','serverPort','autoEnter']:[])].includes(key))return;
     if (key === 'backendUrl' && value !== settings.backendUrl) {
       officialMinecraftClient.current?.clear();
       setOfficialProfile(null);
@@ -580,6 +603,7 @@ function App() {
   }
 
   function selectProject(projectId: string) {
+    if(signedProvisioning0352 && projectId!==signedProvisioning0352.projectId)return;
     setSelectedProject(projectId);
     setSelectedProfile('');
     setProfileServers([]);
@@ -588,6 +612,7 @@ function App() {
   }
 
   function selectProfile(profileId: string) {
+    if(signedProvisioning0352 && profileId!==signedProvisioning0352.profileId)return;
     setSelectedProfile(profileId);
     const profile = profiles.find((item) => item.id === profileId);
     setManifest(null);
@@ -596,18 +621,20 @@ function App() {
   }
 
   async function persistDesktopConfig() {
-    const next = normalizedSettings({ ...settings, projectId: selectedProject, profileId: selectedProfile });
-    setSettings(next);
+    const next = normalizedSettings({ ...settings, projectId: signedProvisioning0352?.projectId||selectedProject, profileId: signedProvisioning0352?.profileId||selectedProfile });
     try {
       const result = await callTauri<DesktopBindingResult>('save_desktop_config', { config: next });
+      setSettings(next);
       log(result.message + ` (${result.configPath})`);
-    } catch {
+    } catch(error) {
+      if((window as any).__TAURI_INTERNALS__){log(`Desktop config не сохранён: ${String(error)}`);return;}
       localStorage.setItem('neverlauncher.desktop.settings', JSON.stringify(next));
-      log('Привязка Desktop сохранена во временный localStorage fallback; в production Tauri используется каталог конфигурации приложения.');
+      log('Web preview: localStorage fallback не является production configuration.');
     }
   }
 
   async function resetDesktopBinding() {
+    if(signedProvisioning0352){log('Привязка подписана владельцем; сброс вручную запрещён.');return;}
     try {
       const result = await callTauri<DesktopBindingResult>('reset_desktop_binding');
       setSettings(normalizedSettings({ ...defaultSettings, gameDirectory: result.gameDirectory }));
@@ -1906,6 +1933,87 @@ function App() {
     }
   }
 
+  // 0.35.2: every step runs existing production API/native code. A failure
+  // stops the wizard. No UI flag can substitute for native file verification.
+  async function prepareFirstRun0352(){
+    const p=signedProvisioning0352;
+    if(!p||firstRunBusy0352)return;
+    if(!authSession?.accessToken){setFirstRunError0352('Войдите в аккаунт проекта, затем продолжите подготовку.');setScreen('auth');return;}
+    setFirstRunBusy0352(true);setFirstRunError0352('');
+    try{
+      setStage('connecting');
+      await fetchBackendJson('/health');await fetchBackendJson('/ready');
+      await fetchBackendJson('/api/v1/runtime/requirements');
+      const projectPayload=await fetchBackendJson('/api/v1/projects');
+      const projectItems:BackendProject[]=projectPayload?.items||projectPayload?.data?.items||[];
+      if(!projectItems.some(item=>item.id===p.projectId))throw new Error('Подписанный проект недоступен этому аккаунту');
+      setProjects(projectItems);setSelectedProject(p.projectId);
+      setStage('profile');
+      const profilePayload=await fetchBackendJson(`/api/v1/projects/${encodeURIComponent(p.projectId)}/profiles`);
+      const profileItems:BackendProfile[]=profilePayload?.items||profilePayload?.data?.items||[];
+      if(!profileItems.some(item=>item.id===p.profileId))throw new Error('Подписанный профиль недоступен этому аккаунту');
+      setProfiles(profileItems);setSelectedProfile(p.profileId);
+      setStage('manifest');
+      const loaded=await callTauri<Manifest>('load_manifest',{url:p.manifestUrl,pinnedPublicKey:p.pinnedPublicKey});
+      if(loaded.projectId!==p.projectId||loaded.profileId!==p.profileId||loaded.channel!==p.channel)
+        throw new Error('Проверенный Manifest не соответствует подписанному профилю/каналу владельца');
+      const signature=await callTauri<{valid:boolean}>('verify_manifest_signature',{manifest:loaded,pinnedPublicKey:p.pinnedPublicKey});
+      if(!signature.valid)throw new Error('Ed25519-подпись Manifest недействительна');
+      setManifest(loaded);setLaunchPlan(null);setLaunchResult(null);
+      setStage('java');
+      const check=await callTauri<SettingsCheck>('validate_desktop_settings',{
+        gameDirectory:settings.gameDirectory,javaPath:settings.javaPath||null,memoryMb:settings.memoryMb,
+      });
+      if(!check.valid)throw new Error(`Системные требования: ${check.messages.join('; ')}`);
+      setSettingsCheck(check);
+      let java=await callTauri<JavaInfoResult>('check_java',{javaPath:settings.javaPath||null,requiredMajorVersion:loaded.runtime.java.majorVersion});
+      if(!java.compatible&& !settings.javaPath&&loaded.runtime.java.distribution.toLowerCase()!=='system'){
+        const installed=await callTauri<ManagedJavaResult>('ensure_profile_managed_java',{manifest:loaded,pinnedPublicKey:p.pinnedPublicKey});
+        java=await callTauri<JavaInfoResult>('check_java',{javaPath:installed.javaExecutable,requiredMajorVersion:loaded.runtime.java.majorVersion});
+        if(java.compatible)patchSettings('javaPath',installed.javaExecutable);
+      }
+      if(!java.compatible)throw new Error(`Java не подходит: ${java.message}`);
+      setJavaInfo(java);
+      const serversResponse=await fetchBackendJson(`/api/v1/projects/${encodeURIComponent(p.projectId)}/profiles/${encodeURIComponent(p.profileId)}/servers`);
+      const availableServers=scopedServers(serversResponse?.data??serversResponse);
+      if(p.serverId && !availableServers.some(server=>server.id===p.serverId))
+        throw new Error('Сервер из подписанного bundle недоступен или отозван');
+      setProfileServers(availableServers);
+      setStage('files');setFirstRunStep0352('select');
+      log('Профиль и требования проверены. Выберите сервер/моды и установите клиент.');
+    }catch(error){setStage('failed');setFirstRunError0352(`Подготовка отклонена: ${String(error)}`);log(`0.35.2 first run: ${String(error)}`);}
+    finally{setFirstRunBusy0352(false)}
+  }
+
+  async function installFirstRun0352(){
+    const p=signedProvisioning0352;
+    if(!p||!authSession?.accessToken||!manifest||firstRunBusy0352||transferBusy)return;
+    setFirstRunBusy0352(true);setTransferBusy(true);setFirstRunError0352('');setStage('files');
+    const selectedPreset=settings.componentPreset||'';
+    try{
+      if(manifest.projectId!==p.projectId||manifest.profileId!==p.profileId||manifest.channel!==p.channel)
+        throw new Error('Выбранный релиз не совпадает с подписанной конфигурацией');
+      const result=await callTauri<DownloadResult>('download_missing_files',{
+        manifest,root:settings.gameDirectory,pinnedPublicKey:p.pinnedPublicKey,preset:selectedPreset||null,
+      });
+      setDownload(result);
+      if(result.failed>0)throw new Error(`Не удалось скачать ${result.failed} файлов: ${(result.failedFiles||[]).slice(0,3).join(', ')}`);
+      const checked=await callTauri<FileCheckResult[]>('check_files',{manifest,root:settings.gameDirectory,preset:selectedPreset||null});
+      setFiles(checked);
+      if(!checked.length||checked.some(item=>item.status!=='ok'))throw new Error('Проверка после установки обнаружила отсутствующие/повреждённые файлы');
+      const config=normalizedSettings({...settings,projectId:p.projectId,profileId:p.profileId,
+        backendUrl:p.backendUrl,manifestUrl:p.manifestUrl,channel:p.channel,pinnedPublicKey:p.pinnedPublicKey,
+        ...(p.autoEnter?{serverId:p.serverId,serverHost:p.serverHost,serverPort:p.serverPort,autoEnter:true}:{}),
+        onboardingCompleted:false});
+      const native=await callTauri<DesktopBindingResult>('complete_first_run_0352',{config,manifest});
+      const saved=await callTauri<DesktopSettings>('load_desktop_config');
+      if(!saved.onboardingCompleted)throw new Error('Native verification не сохранила завершение');
+      setSettings(normalizedSettings(saved));setFirstRunStep0352('complete');setStage('ready');
+      log(`Установка завершена и подтверждена Native (${checked.length} файлов): ${native.message}`);
+    }catch(error){setStage('failed');setFirstRunError0352(`Установка не завершена: ${String(error)}. Используйте повторную попытку.`);log(`0.35.2 install: ${String(error)}`);}
+    finally{setFirstRunBusy0352(false);setTransferBusy(false)}
+  }
+
   async function runFullCheck() {
     await checkBackend();
     await persistDesktopConfig();
@@ -1922,7 +2030,7 @@ function App() {
   return (
     <main className="shell">
       <aside className="sidebar">
-        <div className="brand">NeverLauncher</div>
+        <div className="brand">{signedProvisioning0352?.displayName||"NeverLauncher"}</div>
         <div className="version">{DESKTOP_VERSION} · Рабочий Desktop Launcher</div>
         <nav>
           {[
@@ -1953,18 +2061,21 @@ function App() {
           <button onClick={exportDiagnostics}>Экспорт диагностики</button>
         </section>
 
-        <section className="settings compact">
+        {(!signedProvisioning0352 && !bootstrapError0352) && <section className="settings compact">
           <label>URL Backend<input value={settings.backendUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('backendUrl', event.target.value)} /></label>
           <label>Переопределение URL манифеста<input value={settings.manifestUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('manifestUrl', event.target.value)} placeholder="обычно пусто: используется /api/v1/projects/{project}/profiles/{profile}/manifest?channel=stable" /></label>
           <label>Каталог игры<input value={settings.gameDirectory} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('gameDirectory', event.target.value)} /></label>
           <label>Имя игрока<input value={settings.username} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('username', event.target.value)} /></label>
           <label>Память, МБ<input type="number" value={settings.memoryMb} min={Math.max(512, manifest?.runtime.memory?.minimumMb || 0)} max={Math.min(32768, manifest?.runtime.memory?.maximumMb || 32768)} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('memoryMb', Number(event.target.value))} /></label>
           <label>Канал<input value={settings.channel} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('channel', event.target.value)} /></label>
-        </section>
+        </section>}
 
         <React.Suspense fallback={<section className="panel">Загрузка экрана…</section>}>
-        {screen === 'firstRun' && <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} /> }
+        {screen === 'firstRun' && (bootstrapError0352 ? <section className="panel" role="alert"><h3>Проверка подписанного bundle не пройдена</h3><p>{bootstrapError0352}</p><p>Переустановите сборку владельца с корректным pinned trust root. Ручной ввод ключа в Desktop не разрешён.</p></section> : signedProvisioning0352 ?
+          <FirstRunSigned0352 provisioning={signedProvisioning0352} settings={settings} session={authSession} busy={firstRunBusy0352} transferBusy={transferBusy} step={firstRunStep0352} error={firstRunError0352} manifest={manifest} servers={profileServers} progress={downloadProgress} onLogin={()=>setScreen('auth')} onPrepare={prepareFirstRun0352} onInstall={installFirstRun0352} onPlay={launch} onServer={(id:string)=>patchSettings('serverId',id)} onPreset={(value:string)=>patchSettings('componentPreset',value)} onComponents={()=>setScreen('profile')} /> :
+          <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} />) }
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
+        {screen === 'auth' && signedProvisioning0352 && !settings.onboardingCompleted && <section className="panel"><button className="primary" onClick={()=>setScreen('firstRun')}>Вернуться к первому запуску</button></section>}
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} macOSTrust0316={macOSTrust0316} authProviders0293={authProviders0293} routing0293={routing0293} selectedAuthProvider0293={selectedAuthProvider0293} setSelectedAuthProvider0293={setSelectedAuthProvider0293} authProviderError0293={authProviderError0293} setAuthProviderError0293={setAuthProviderError0293} linkedProvider0293={linkedProvider0293} setLinkedProvider0293={setLinkedProvider0293} linkedIdentifier0293={linkedIdentifier0293} setLinkedIdentifier0293={setLinkedIdentifier0293} linkedPassword0293={linkedPassword0293} setLinkedPassword0293={setLinkedPassword0293} linkFeedback0293={linkFeedback0293} setLinkFeedback0293={setLinkFeedback0293} linkPasswordProvider0293={linkPasswordProvider0293} />}
         {screen === 'auth' && /(Win|Linux)/i.test(navigator.platform) && <section className="panel">
           <h3>Windows/Linux TPM Key Attestation (0.31.4)</h3>
@@ -2000,7 +2111,7 @@ function App() {
           </select></label><p>Official использует Mojang sessionserver; Yggdrasil — подписанный authlib-injector. Offline не позволяет входить на online-mode сервер.</p></section>
         </>}
         {screen === 'textures' && <TexturesPanel0258 backendUrl={settings.backendUrl} token={authSession?.accessToken||''} officialClient={officialMinecraftClient.current} officialProfile={officialProfile} onOfficialProfile={(p)=>{setOfficialProfile(p);if(!p)setMinecraftIdentity('local');}} identityMode={minecraftIdentity === 'official' ? 'official' : 'local'} />}
-        {screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
+        {screen === 'projects' && signedProvisioning0352 ? <section className="panel">Проект закреплён подписанным bundle: {signedProvisioning0352.projectId}</section> : screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} pinnedPublicKey={settings.pinnedPublicKey} root={settings.gameDirectory} transferBusy={transferBusy} installSelection={installComponentSelection0247} />}
         {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
         {screen === 'migration' && <PlayerMigration0339
@@ -2028,6 +2139,31 @@ function App() {
   );
 }
 
+
+function FirstRunSigned0352({provisioning:p,settings,session,busy,transferBusy,step,error,manifest,servers,progress,onLogin,onPrepare,onInstall,onPlay,onServer,onPreset,onComponents}:any){
+  const cat:ComponentCatalog|undefined=manifest?.componentCatalog;
+  const presets=cat?.presets||[];
+  return <section className="panel" aria-label="Единый первый запуск из подписанного bundle">
+    <h3>{p.displayName} — первый запуск</h3>
+    <p>Настройки проекта загружены из подписанного владельцем bundle и независимо проверены Desktop. Ввод URL и ключей не требуется.</p>
+    <p><strong>Проект:</strong> {p.projectId} · <strong>Профиль:</strong> {p.profileId} · <strong>Канал:</strong> {p.channel}</p>
+    <ol className="firstRunSteps0352"><li>Подписанный проект и профиль — проверено</li><li>Вход — {session?'выполнен':'требуется'}</li><li>Требования, Java и Manifest — {step==='start'?'ожидают проверки':'проверены'}</li><li>Выбор сервера / опциональных модов — {step==='select'?'доступен':step==='complete'?'завершён':'ожидает'}</li><li>Установка и проверка файлов — {step==='complete'?'завершена':'не подтверждена'}</li><li>Запуск Minecraft — действие игрока</li></ol>
+    {error&&<p role="alert" className="firstRunError0352">{error}</p>}
+    <div className="toolbar inline">
+      {!session&&<button className="primary" onClick={onLogin}>Войти в аккаунт</button>}
+      {session&&step==='start'&&<button className="primary" disabled={busy} onClick={onPrepare}>{busy?'Проверка требований…':'Проверить профиль и требования'}</button>}
+    </div>
+    {session&&step==='select'&&manifest&&<>
+      <h4>Сервер и компоненты сборки</h4>
+      <div className="settings"><label>Сервер<select value={settings.serverId||''} disabled={Boolean(p.serverId)} onChange={e=>onServer(e.target.value)}><option value="">Не подключаться автоматически</option>{servers.map((server:ScopedServer)=><option key={server.id} value={server.id}>{server.name}</option>)}</select></label>
+      <label>Набор опциональных модов<select value={settings.componentPreset||''} onChange={e=>onPreset(e.target.value)}><option value="">Набор по умолчанию</option>{presets.map((pr:{id:string;name:string})=><option key={pr.id} value={pr.id}>{pr.name}</option>)}</select></label></div>
+      <p>{manifest.minecraft.version} · {manifest.minecraft.loader} · {manifest.files.length} файлов. Фактические зависимости и конфликты проверит NeverRuntime перед установкой.</p>
+      <div className="toolbar inline"><button onClick={onComponents}>Подробный выбор модов</button><button className="primary" disabled={busy||transferBusy} onClick={onInstall}>{busy||transferBusy?'Установка…':'Установить и проверить файлы'}</button></div>
+      {progress&&<div role="status"><p>{progress.phase}: {progress.completed+progress.skipped} из {progress.totalFiles} файлов</p><progress max={Math.max(progress.totalFiles,1)} value={progress.completed+progress.skipped} /></div>}
+    </>}
+    {step==='complete'&&<div><h4>Клиент установлен и проверен</h4><p>Проверка подписанного Manifest и файлов завершена native runtime.</p><button className="primary" onClick={onPlay}>Играть</button></div>}
+  </section>;
+}
 
 function FirstRunPanel({ settings, patchSettings, bindingPolicy, checkBackend, loadProjects, loadProfiles, persistDesktopConfig, resetDesktopBinding, selectedProject, selectedProfile }: any) {
   return <section className="panel"><h3>Первый запуск</h3><p>NeverLauncher {DESKTOP_VERSION} требует явной привязки Desktop к Backend API и реальному проекту; запуск проходит через рабочий движок запуска и режим восстановления.</p><div className="settings"><label>URL Backend<input value={settings.backendUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('backendUrl', event.target.value)} placeholder="https://launcher.example.ru" /></label><label>ID проекта<input value={settings.projectId} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('projectId', event.target.value)} placeholder="выберите из Backend API" /></label><label>ID профиля<input value={settings.profileId} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('profileId', event.target.value)} placeholder="выберите из Backend API" /></label><label>ID ServerBridge<input value={settings.serverId ?? ''} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverId', event.target.value)} placeholder="velocity-main / purpur-main" /></label><label>Канал<input value={settings.channel} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('channel', event.target.value)} /></label></div><div className="toolbar inline"><button onClick={checkBackend}>1. Проверить Backend</button><button onClick={loadProjects}>2. Загрузить проекты</button><button onClick={() => loadProfiles(selectedProject || settings.projectId)}>3. Загрузить профили</button><button className="primary" onClick={persistDesktopConfig}>4. Сохранить привязку</button><button onClick={resetDesktopBinding}>Сбросить</button></div><pre>{JSON.stringify({ configPath: settings.configPath || 'будет создан Tauri-командой', selectedProject, selectedProfile, bindingPolicy }, null, 2)}</pre></section>;

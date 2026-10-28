@@ -6,6 +6,7 @@ mod tpm_windows_0313;
 mod discord_presence_0308;
 mod sentry_diagnostics_0309;
 mod device_keys;
+mod signed_first_run_0352;
 mod hwid_risk_0299;
 mod official_identity_0262;
 mod official_browser_0263;
@@ -395,6 +396,8 @@ struct DesktopConfig {
     discord_action_url: String,
     #[serde(default)]
     config_path: String,
+    #[serde(default)] onboarding_completed: bool,
+    #[serde(default)] onboarding_bootstrap_digest: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -436,7 +439,7 @@ fn default_screen_width_0229() -> u32 { 1280 }
 fn default_screen_height_0229() -> u32 { 720 }
 fn default_server_port_0229() -> u16 { 25565 }
 fn default_desktop_config() -> DesktopConfig {
-    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), manifest_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), trust_policy_path: String::new(), server_id: String::new(), screen_width: 1280, screen_height: 720, fullscreen: false, auto_enter: false, server_host: String::new(), server_port: 25565, offline_enabled: false, component_preset:String::new(), discord_presence_enabled: false, sentry_diagnostics_enabled: false, discord_application_id: String::new(), discord_action_url: String::new(), config_path: String::new() }
+    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), manifest_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), trust_policy_path: String::new(), server_id: String::new(), screen_width: 1280, screen_height: 720, fullscreen: false, auto_enter: false, server_host: String::new(), server_port: 25565, offline_enabled: false, component_preset:String::new(), discord_presence_enabled: false, sentry_diagnostics_enabled: false, discord_application_id: String::new(), discord_action_url: String::new(), config_path: String::new(), onboarding_completed:false, onboarding_bootstrap_digest:String::new() }
 }
 fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
     if cfg.schema_version.trim().is_empty() { cfg.schema_version = "1.0".into(); }
@@ -459,24 +462,115 @@ fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
     cfg
 }
 
+// The signed owner binding is applied in the native process on every read and
+// write. Renderer/localStorage cannot change the trusted root or route users
+// to a different backend, project, profile or signed manifest.
+fn enforce_signed_binding_0352(cfg:&mut DesktopConfig, dir:&std::path::Path)->Result<Option<signed_first_run_0352::Provisioning0352>,String>{
+    let signed=signed_first_run_0352::load(dir)?;
+    if let Some(ref p)=signed {
+        cfg.backend_url=p.backend_url.clone();
+        cfg.manifest_url=p.manifest_url.clone();
+        cfg.project_id=p.project_id.clone();
+        cfg.profile_id=p.profile_id.clone();
+        cfg.channel=p.channel.clone();
+        cfg.pinned_public_key=p.pinned_public_key.clone();
+        if !p.server_id.is_empty(){cfg.server_id=p.server_id.clone();}
+        if !p.server_host.is_empty(){cfg.server_host=p.server_host.clone();}
+        if p.server_port!=0{cfg.server_port=p.server_port;}
+        if p.auto_enter{cfg.auto_enter=true;}
+    }
+    Ok(signed)
+}
+#[tauri::command]
+async fn load_signed_provisioning_0352()->Result<Option<signed_first_run_0352::Provisioning0352>,String>{
+    signed_first_run_0352::load(&desktop_config_dir()?)
+}
 #[tauri::command]
 async fn load_desktop_config() -> Result<DesktopConfig, String> {
     let path = desktop_config_path()?;
     let mut cfg = if fs::metadata(&path).await.is_ok() { serde_json::from_slice::<DesktopConfig>(&fs::read(&path).await.map_err(|e| e.to_string())?).map_err(|e| format!("desktop config повреждён: {e}"))? } else { default_desktop_config() };
-    cfg = normalize_desktop_config(cfg); cfg.config_path = path.to_string_lossy().to_string(); Ok(cfg)
+    cfg = normalize_desktop_config(cfg);
+    let verified=enforce_signed_binding_0352(&mut cfg,&desktop_config_dir()?)?;
+    if let Some(p)=verified {
+        // Completion is valid only for the exact owner-signed bootstrap.
+        if cfg.onboarding_bootstrap_digest!=p.digest {cfg.onboarding_completed=false;}
+    }
+    cfg.config_path = path.to_string_lossy().to_string(); Ok(cfg)
 }
-#[tauri::command]
-async fn save_desktop_config(config: DesktopConfig) -> Result<DesktopBindingResult, String> {
+async fn save_desktop_config_impl_0352(config: DesktopConfig, complete_for_digest: Option<String>) -> Result<DesktopBindingResult, String> {
     let path = desktop_config_path()?; let parent = path.parent().ok_or("не удалось определить каталог desktop config")?;
     fs::create_dir_all(parent).await.map_err(|e| e.to_string())?;
     let mut cfg = normalize_desktop_config(config); cfg.schema_version = "1.0".into(); cfg.config_path = path.to_string_lossy().to_string();
-    fs::write(&path, serde_json::to_vec_pretty(&cfg).map_err(|e| e.to_string())?).await.map_err(|e| e.to_string())?;
-    Ok(DesktopBindingResult { status: "saved".into(), config_path: path.to_string_lossy().to_string(), game_directory: cfg.game_directory, message: "desktop binding сохранён; runtime выполняется NeverRuntime".into() })
+    // Renderer-supplied completion flags are NOT accepted by preference saves.
+    cfg.onboarding_completed=false;
+    let old=if let Ok(existing)=fs::read(&path).await {
+        Some(serde_json::from_slice::<DesktopConfig>(&existing).map_err(|e|format!("existing Desktop config повреждён: {e}"))?)
+    }else{None};
+    let signed=enforce_signed_binding_0352(&mut cfg,parent)?;
+    if let Some(p)=signed {
+        if let Some(ref desired)=complete_for_digest {
+            if desired!=&p.digest {return Err("Подписанный bootstrap изменился во время проверки установки".into())}
+        }
+        cfg.onboarding_completed=complete_for_digest.is_some()||old.as_ref().map(|v|v.onboarding_completed&&v.onboarding_bootstrap_digest==p.digest).unwrap_or(false);
+        cfg.onboarding_bootstrap_digest=p.digest;
+    }else{
+        cfg.onboarding_completed=false;
+        cfg.onboarding_bootstrap_digest.clear();
+    }
+    let encoded=serde_json::to_vec_pretty(&cfg).map_err(|e|e.to_string())?;
+    let temp=path.with_extension(format!("{}-{}.tmp",std::process::id(),rand::random::<u64>()));
+    let result=async {
+        use tokio::io::AsyncWriteExt;
+        let mut options=fs::OpenOptions::new();options.write(true).create_new(true);
+        #[cfg(unix)] options.mode(0o600);
+        let mut f=options.open(&temp).await.map_err(|e|e.to_string())?;
+        f.write_all(&encoded).await.map_err(|e|e.to_string())?;
+        f.sync_all().await.map_err(|e|e.to_string())?;
+        drop(f);
+        fs::rename(&temp,&path).await.map_err(|e|e.to_string())?;
+        Ok::<(),String>(())
+    }.await;
+    if result.is_err(){let _=fs::remove_file(&temp).await;}
+    result?;
+    Ok(DesktopBindingResult { status: "saved".into(), config_path: path.to_string_lossy().to_string(), game_directory: cfg.game_directory, message: "desktop binding сохранён и проверен native trust verifier".into() })
 }
 #[tauri::command]
+async fn save_desktop_config(config: DesktopConfig)->Result<DesktopBindingResult,String>{
+    save_desktop_config_impl_0352(config,None).await
+}
+
+// A completed first run is a fact established by the native verifier from
+// installed files, not a renderer-controlled `onboardingCompleted: true` flag.
+#[tauri::command]
+async fn complete_first_run_0352(config:DesktopConfig,manifest:Manifest)->Result<DesktopBindingResult,String>{
+    let signed=signed_first_run_0352::load(&desktop_config_dir()?)?
+        .ok_or("Первый запуск без подписанного bundle запрещён")?;
+    let mut cfg=normalize_desktop_config(config);
+    enforce_signed_binding_0352(&mut cfg,&desktop_config_dir()?)?;
+    if manifest.project_id!=signed.project_id||manifest.profile_id!=signed.profile_id||manifest.channel!=signed.channel{
+        return Err("Установленный профиль не соответствует подписанной конфигурации владельца".into())
+    }
+    neverruntime::verify_manifest_signature(&manifest,&signed.pinned_public_key)?;
+    let root=PathBuf::from(&cfg.game_directory);
+    if !root.is_absolute(){return Err("Каталог игры должен быть абсолютным".into())}
+    let checks=neverruntime::check_files_with_preset(&manifest,&root,
+        if cfg.component_preset.is_empty(){None}else{Some(cfg.component_preset.as_str())}).await?;
+    if checks.is_empty()||checks.iter().any(|f|f.status!="ok"){
+        return Err(format!("Установка не завершена: {} файлов отсутствуют или повреждены",
+            checks.iter().filter(|f|f.status!="ok").count()))
+    }
+    save_desktop_config_impl_0352(cfg,Some(signed.digest)).await
+}
+
+#[tauri::command]
 async fn reset_desktop_binding() -> Result<DesktopBindingResult, String> {
-    let path = desktop_config_path()?; if fs::metadata(&path).await.is_ok() { fs::remove_file(&path).await.map_err(|e| e.to_string())?; }
-    let cfg = default_desktop_config(); Ok(DesktopBindingResult { status: "reset".into(), config_path: path.to_string_lossy().to_string(), game_directory: cfg.game_directory, message: "desktop binding сброшен".into() })
+    let path=desktop_config_path()?;
+    if signed_first_run_0352::load(&desktop_config_dir()?)?.is_some(){
+        return Err("Подписанная привязка проекта управляется владельцем; сбросьте пользовательские параметры через Settings, а не bootstrap".into())
+    }
+    if fs::metadata(&path).await.is_ok(){fs::remove_file(&path).await.map_err(|e|e.to_string())?;}
+    let cfg=default_desktop_config();
+    Ok(DesktopBindingResult {status:"reset".into(),config_path:path.to_string_lossy().to_string(),game_directory:cfg.game_directory,message:"desktop binding сброшен".into()})
 }
 
 #[tauri::command]
@@ -1369,7 +1463,7 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,save_desktop_config,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
+        .invoke_handler(tauri::generate_handler![player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,load_signed_provisioning_0352,save_desktop_config,complete_first_run_0352,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }
 

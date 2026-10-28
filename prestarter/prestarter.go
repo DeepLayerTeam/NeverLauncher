@@ -460,6 +460,9 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	if e != nil {
 		return fmt.Errorf("profile installation/recovery: %w (%s)", e, result)
 	}
+	if !opts.NoDesktop && p.config.BackendURL == "" {
+		return errors.New("signed bootstrap backendUrl is required for unattended Desktop first run")
+	}
 	desktopConfigDir, e := p.ensureDesktopConfig(opts.Username, profile.Runtime.Launch.OfflineMode && opts.Offline)
 	if e != nil {
 		return e
@@ -491,12 +494,66 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	return nil
 }
 
+// Preserve the exact bytes signed by the owner: no JSON re-encoding, no
+// content rewriting, and atomic durable replacement after Prestarter verified
+// the signature under its process lock.
+func writeSignedDesktopHandoff0352(path string, raw []byte) error {
+	dir := filepath.Dir(path)
+	f, err := os.CreateTemp(dir, ".signed-bootstrap-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	if err = f.Chmod(0600); err != nil {
+		f.Close()
+		return err
+	}
+	if _, err = f.Write(raw); err != nil {
+		f.Close()
+		return err
+	}
+	if err = f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err = f.Close(); err != nil {
+		return err
+	}
+	if err = os.Rename(f.Name(), path); err != nil {
+		return err
+	}
+	return syncDir(dir)
+}
+
 // Provision first-run Desktop settings from the previously verified signed
 // bootstrap payload. Never overwrite an existing user-edited configuration.
 // Desktop receives this directory through its existing config-dir override.
 func (p *installer) ensureDesktopConfig(username string, offline bool) (string, error) {
 	dir := filepath.Join(p.store.root, "desktop-config")
 	if err := safeMkdir(dir); err != nil {
+		return "", err
+	}
+	// Pass the exact bytes already verified by Prestarter to Desktop. Native
+	// Desktop independently verifies the same signature with its compiled root
+	// and refuses unsigned changes to the owner-defined binding.
+	if err := writeSignedDesktopHandoff0352(filepath.Join(dir, "bootstrap.signed.json"), p.rawConfig); err != nil {
+		return "", err
+	}
+	if p.configTrustEpoch() > 0 {
+		policy, err := os.ReadFile(filepath.Join(p.store.root, "trust", "active-policy.json"))
+		if err != nil {
+			return "", err
+		}
+		// The policy was verified against the embedded trust root earlier in Run.
+		if _, _, err := VerifyTrustPolicy(policy, p.key, time.Now().UTC()); err != nil {
+			return "", err
+		}
+		if err := writeSignedDesktopHandoff0352(filepath.Join(dir, "trust-policy.signed.json"), policy); err != nil {
+			return "", err
+		}
+	} else if _, err := os.Lstat(filepath.Join(dir, "trust-policy.signed.json")); err == nil {
+		return "", errors.New("legacy bootstrap cannot replace delegated desktop provisioning")
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
 	path := filepath.Join(dir, "config.json")
@@ -524,8 +581,13 @@ func (p *installer) ensureDesktopConfig(username string, offline bool) (string, 
 			}
 			return ""
 		}(),
-		"serverId": "", "screenWidth": 1280, "screenHeight": 720,
-		"fullscreen": false, "autoEnter": false, "serverHost": "", "serverPort": 25565,
+		"serverId": p.config.ServerID, "screenWidth": 1280, "screenHeight": 720,
+		"fullscreen": false, "autoEnter": p.config.AutoEnter, "serverHost": p.config.ServerHost, "serverPort": func() uint16 {
+			if p.config.ServerPort == 0 {
+				return 25565
+			}
+			return p.config.ServerPort
+		}(),
 		"offlineEnabled": offline, "configPath": "",
 	}
 	encoded, err := json.MarshalIndent(config, "", "  ")
