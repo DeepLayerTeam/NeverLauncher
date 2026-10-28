@@ -20,6 +20,7 @@ import { MetricCard, TextInput } from '../components/primitives';
 import { ServerBridgeWorkspace } from './ServerBridgeWorkspace';
 import { gameCommandPermissions, type BridgeCommandType } from '../api/serverbridge';
 import { TextureManagement0259 } from './TextureManagement0259';
+import { BrandingStudio0355 } from './BrandingStudio0355';
 import { ResourceGrid } from '../components/ResourceGrid';
 import { useAdminRoute, navigate } from './routing';
 import { sections, endpointForSection } from './sections';
@@ -261,7 +262,7 @@ export function AdminApp() {
   }
 
   async function loadActive() {
-    if (!token || !mayRead || ['release-workspace','job-monitor','migration-center','backup-restore','devices','audit','config','official-provider','auth-provider-wizard'].includes(active) || (['profiles','channels','packages','releases'].includes(active) && !selectedProjectId)) { setPayload(null); return; }
+    if (!token || !mayRead || ['release-workspace','job-monitor','migration-center','backup-restore','devices','audit','config','official-provider','auth-provider-wizard','branding-studio'].includes(active) || (['profiles','channels','packages','releases'].includes(active) && !selectedProjectId)) { setPayload(null); return; }
     const result = await requestJSON<Record<string, unknown>>(backendUrl, activeEndpoint, token);
     setPayload(result);
   }
@@ -296,7 +297,7 @@ export function AdminApp() {
   useEffect(() => {
     let live = true;
     setPayload(null); setSelectedRecordId('');
-    if (!token || !mayRead || ['release-workspace','job-monitor','migration-center','backup-restore','devices','audit','config','official-provider','auth-provider-wizard'].includes(active) || (['profiles', 'channels', 'packages', 'releases'].includes(active) && !selectedProjectId)) return;
+    if (!token || !mayRead || ['release-workspace','job-monitor','migration-center','backup-restore','devices','audit','config','official-provider','auth-provider-wizard','branding-studio'].includes(active) || (['profiles', 'channels', 'packages', 'releases'].includes(active) && !selectedProjectId)) return;
     requestJSON<Record<string, unknown>>(backendUrl, activeEndpoint, token)
       .then(result => { if (live) { setPayload(result); setError(null); } })
       .catch((err: Error) => { if (live) setError(err.message); });
@@ -445,10 +446,11 @@ export function AdminApp() {
       {token && mayRead && active === 'config' && <ConfigWorkspace backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'official-provider' && <OfficialProviderWorkspace02611 backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'auth-provider-wizard' && <AuthProviderWizard02910 backendUrl={backendUrl} token={token} />}
+      {token && mayRead && active === 'branding-studio' && <BrandingStudio0355 projectId={selectedProjectId} canSign={can(identity,'release:publish',selectedProjectId)} />}
       {token && mayRead && active === 'texture-management' && <TextureManagement0259 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
       {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} allowedCommands={(Object.keys(gameCommandPermissions) as BridgeCommandType[]).filter(kind => can(identity, gameCommandPermissions[kind], selectedProjectId))} allowEnrollment={can(identity, 'settings:manage')} />}
       {token && !mayRead && <section className="card wide emptyState"><h2>Нет доступа</h2><p>Эта операция недоступна для вашей роли либо проект не выбран. Запросите необходимые полномочия у владельца.</p></section>}
-      {token && mayRead && !['extensions-manager','backend-operations','operations','release-workspace','job-monitor','migration-center','server-bridge','texture-management','backup-restore','devices','audit','config','official-provider','auth-provider-wizard'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
+      {token && mayRead && !['extensions-manager','backend-operations','operations','release-workspace','job-monitor','migration-center','server-bridge','texture-management','backup-restore','devices','audit','config','official-provider','auth-provider-wizard','branding-studio'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
 
     </section>
   </main>;

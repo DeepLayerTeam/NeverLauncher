@@ -299,3 +299,16 @@ ul { padding-left: 18px; }
 .transferFailure { border-color: #fbbf24; color: #fef3c7; }
 .transferFailure button { padding: 10px 14px; border-radius: 9px; border: 1px solid #fbbf24; background: #3f2c0f; color: #fff; }
 .transferStatus progress { accent-color: #4ade80; height: 15px; }
+/* 0.35.5: decoration comes only from Native Ed25519-verified bootstrap. */
+.shell:has(.brandIdentity0355){background:var(--brand-background,#0f172a);color:var(--brand-text,#e5e7eb)}
+.brandIdentity0355{display:flex;align-items:center;gap:12px;overflow-wrap:anywhere}
+.brandIcon0355{width:42px;height:42px;object-fit:contain;flex-shrink:0}
+.brandPublisher0355{color:var(--brand-text,#cbd5e1);opacity:.7;font-size:13px;margin:8px 0 0}
+.brandLogo0355{display:block;max-height:110px;max-width:min(100%,400px);object-fit:contain;margin:0 0 12px}
+.shell .eyebrow{color:var(--brand-accent,#22c55e)}
+.shell nav button.active{border-color:var(--brand-accent,#22c55e)}
+.shell .toolbar .primary{border-color:var(--brand-accent,#22c55e)}
+.brandNews0355{margin:16px 0;padding:18px;border:1px solid var(--brand-accent,#22c55e);border-radius:16px}
+.brandNews0355 h2{font-size:18px;margin:0 0 12px}
+.brandNewsItems0355{display:flex;gap:12px;flex-wrap:wrap}.brandNewsItems0355 a,.brandWebsite0355 a{color:var(--brand-accent,#22c55e)}
+.brandWebsite0355{margin:8px 0}

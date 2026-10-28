@@ -206,7 +206,8 @@ type DesktopReadiness = { status: string; readiness: BackendReadiness; serviceSt
 type DesktopDiagnosticsPolicy = { enabled?: boolean; version?: string; privacyMode?: string; allowedFields?: string[]; redactedFields?: string[]; status?: string };
 type DesktopBindingPolicy = { apiVersion: 'v1'; manifestVerification: 'Ed25519 pinned-key required'; runtime: 'NeverRuntime' };
 type DesktopBindingResult = { status: string; configPath: string; gameDirectory: string; message: string };
-type SignedProvisioning0352 = { backendUrl:string;projectId:string;profileId:string;channel:string;manifestUrl:string;pinnedPublicKey:string;displayName:string;digest:string;serverId:string;serverHost:string;serverPort:number;autoEnter:boolean };
+type SignedBrand0355 = { displayName:string;publisher:string;websiteUrl?:string;accentColor?:string;backgroundColor?:string;textColor?:string;logoPng?:string;iconPng?:string;splashPng?:string;locale?:'ru'|'en';news?:{title:string;url:string}[] };
+type SignedProvisioning0352 = { branding?:SignedBrand0355|null;backendUrl:string;projectId:string;profileId:string;channel:string;manifestUrl:string;pinnedPublicKey:string;displayName:string;digest:string;serverId:string;serverHost:string;serverPort:number;autoEnter:boolean };
 type AuthSession = { accessToken: string; refreshToken: string; sessionId: string; email: string; userId: string; expiresAt?: string };
 type AuthProvider0293 = { id: string; displayName: string; capabilities: string[]; healthy: boolean };
 type AuthRouting0293 = { defaultProvider: string; requireExplicitProvider: boolean };
@@ -2095,9 +2096,17 @@ function App() {
   }
 
   return (
-    <main className="shell">
+    <main className="shell" style={signedProvisioning0352?.branding?{
+      '--brand-accent':signedProvisioning0352.branding.accentColor||'#22c55e',
+      '--brand-background':signedProvisioning0352.branding.backgroundColor||'#0f172a',
+      '--brand-text':signedProvisioning0352.branding.textColor||'#e5e7eb',
+    } as React.CSSProperties:undefined}>
       <aside className="sidebar">
-        <div className="brand">{signedProvisioning0352?.displayName||"NeverLauncher"}</div>
+        <div className="brand brandIdentity0355">
+          {signedProvisioning0352?.branding?.iconPng&&<img src={`data:image/png;base64,${signedProvisioning0352.branding.iconPng}`} alt="" className="brandIcon0355"/>}
+          {signedProvisioning0352?.displayName||"NeverLauncher"}
+        </div>
+        {signedProvisioning0352?.branding?.publisher&&<p className="brandPublisher0355">{signedProvisioning0352.branding.publisher}</p>}
         <div className="version">{DESKTOP_VERSION} · Рабочий Desktop Launcher</div>
         <nav>
           {[
@@ -2108,14 +2117,23 @@ function App() {
       </aside>
 
       <section className="content">
-        <header className="hero">
+        <header className="hero brandHero0355" style={signedProvisioning0352?.branding?.splashPng?{
+          backgroundImage:`linear-gradient(rgba(15,23,42,.82),rgba(15,23,42,.88)),url(data:image/png;base64,${signedProvisioning0352.branding.splashPng})`,
+          backgroundSize:'cover',backgroundPosition:'center'}:undefined}>
           <div>
-            <p className="eyebrow">Рабочий Desktop Launcher</p>
-            <h1>Движок запуска и восстановление клиента</h1>
+            {signedProvisioning0352?.branding?.logoPng&&<img className="brandLogo0355" src={`data:image/png;base64,${signedProvisioning0352.branding.logoPng}`} alt={signedProvisioning0352.displayName}/>}
+            <p className="eyebrow">{signedProvisioning0352?.branding?.locale==='en'?'Desktop launcher':'Рабочий Desktop Launcher'}</p>
+            <h1>{signedProvisioning0352?.branding?.displayName||'Движок запуска и восстановление клиента'}</h1>
             <p>Desktop {DESKTOP_VERSION} выполняет реальную проверку файлов, восстановление повреждённых объектов, безопасную очистку, сборку плана запуска, запуск Minecraft, запись логов и историю запусков.</p>
           </div>
           <div className="statusPill">{stageLabels[stage]}</div>
         </header>
+
+        {signedProvisioning0352?.branding && (signedProvisioning0352.branding.news?.length||0)>0 && <section className="brandNews0355" aria-label={signedProvisioning0352.branding.locale==='en'?'Project news':'Новости проекта'}>
+          <h2>{signedProvisioning0352.branding.locale==='en'?'Project news':'Новости проекта'}</h2>
+          <div className="brandNewsItems0355">{signedProvisioning0352.branding.news?.map((item,index)=><a key={index} href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>)}</div>
+        </section>}
+        {signedProvisioning0352?.branding?.websiteUrl&&<p className="brandWebsite0355"><a href={signedProvisioning0352.branding.websiteUrl} target="_blank" rel="noopener noreferrer">{signedProvisioning0352.branding.locale==='en'?'Project website':'Сайт проекта'}</a></p>}
 
         <section className="toolbar">
           <button onClick={runFullCheck}>Полная проверка</button>

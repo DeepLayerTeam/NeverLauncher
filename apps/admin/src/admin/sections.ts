@@ -3,7 +3,7 @@ export type Section = { id: SectionId; title: string };
 export const sections: Section[] = [
   { id: 'dashboard', title: 'Обзор' }, { id: 'projects', title: 'Проекты' },
   { id: 'profiles', title: 'Профили' }, { id: 'channels', title: 'Каналы' },
-  { id: 'packages', title: 'Пакеты и файлы' }, { id: 'releases', title: 'Релизы' },
+  { id: 'branding-studio', title: 'Branding Studio' }, { id: 'packages', title: 'Пакеты и файлы' }, { id: 'releases', title: 'Релизы' },
   { id: 'users', title: 'Пользователи' }, { id: 'roles', title: 'Роли' },
   { id: 'operations', title: 'Операции' }, { id: 'migration-center', title: 'Migration Center' }, { id: 'backend-operations', title: 'Backend Operations' }, { id: 'release-workspace', title: 'Мастер релизов' }, { id: 'job-monitor', title: 'Монитор jobs' }, { id: 'devices', title: 'Устройства' }, { id: 'audit', title: 'Аудит' }, { id: 'config', title: 'Конфигурация' },
   { id: 'official-provider', title: 'Minecraft Provider' }, { id: 'auth-provider-wizard', title: 'Auth Provider Wizard' }, { id: 'storage', title: 'Хранилище' }, { id: 'extension-registry', title: 'NeverExtensions Registry' },
@@ -18,6 +18,7 @@ export function endpointForSection(active: SectionId, projectId: string): string
     case 'migration-center': return `/api/v1/admin/migration-runs?projectId=${encodeURIComponent(projectId)}`;
     case 'release-workspace': return '/api/v1/release-drafts';
     case 'job-monitor': return '/api/v1/operations';
+    case 'branding-studio': return '/api/v1/admin/overview';
     case 'dashboard': return '/api/v1/admin/overview';
     case 'projects': return '/api/v1/admin/overview';
     case 'profiles': return `${scoped}/profiles`;

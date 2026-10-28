@@ -34,16 +34,55 @@ struct Bootstrap {
     #[serde(default)]branding:Option<Branding>,
     #[serde(default)]installer_targets:Option<serde_json::Value>,
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all="camelCase", deny_unknown_fields)]
-struct Branding {display_name:String,publisher:String,#[serde(default)] website_url:String}
+pub struct BrandNews0355 {title:String,url:String}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all="camelCase", deny_unknown_fields)]
+pub struct Branding {display_name:String,publisher:String,#[serde(default)] website_url:String,
+    #[serde(default)] accent_color:String, #[serde(default)] background_color:String,
+    #[serde(default)] text_color:String, #[serde(default)] logo_png:String,
+    #[serde(default)] icon_png:String, #[serde(default)] splash_png:String,
+    #[serde(default)] locale:String, #[serde(default)] news:Vec<BrandNews0355>}
+fn validate_brand0355(b:&Branding)->Result<(),String>{
+    if b.display_name.is_empty()||b.display_name.len()>80||b.publisher.is_empty()||b.publisher.len()>96||
+        b.display_name.chars().chain(b.publisher.chars()).any(|c|c.is_control()) ||
+        (!b.website_url.is_empty()&&!https_url(&b.website_url)) {return Err("Недопустимое подписанное имя/сайт бренда".into())}
+    for c in [&b.accent_color,&b.background_color,&b.text_color]{
+        if !c.is_empty() && (c.len()!=7 || !c.starts_with('#')||!c[1..].bytes().all(|v|v.is_ascii_hexdigit())){
+            return Err("Неверный подписанный цвет #RRGGBB".into())
+        }
+    }
+    if !b.locale.is_empty()&&b.locale!="ru"&&b.locale!="en" {return Err("Неподдерживаемая локализация бренда".into())}
+    for (name,image) in [("logo",&b.logo_png),("icon",&b.icon_png),("splash",&b.splash_png)]{
+        if image.is_empty(){continue}
+        if image.len()>174_764{return Err("PNG превышает предел".into())}
+        let raw=STANDARD.decode(image).map_err(|_|"Некорректный PNG base64")?;
+        if raw.len()<24||raw.len()>131_072||!raw.starts_with(b"\x89PNG\r\n\x1a\n")||&raw[12..16]!=b"IHDR"{
+            return Err("Изображение должно быть встроенным PNG".into())
+        }
+        let width=u32::from_be_bytes(raw[16..20].try_into().map_err(|_|"PNG размер")?);
+        let height=u32::from_be_bytes(raw[20..24].try_into().map_err(|_|"PNG размер")?);
+        let (maxw,maxh)=if name=="splash"{(2048,1200)}else{(1024,1024)};
+        if raw[8..12]!=[0,0,0,13]||width==0||height==0||width>maxw||height>maxh{
+            return Err("PNG имеет недопустимые размеры".into())
+        }
+    }
+    if b.news.len()>5{return Err("Слишком много новостей".into())}
+    for item in &b.news{
+        if item.title.is_empty()||item.title.len()>120||item.title.chars().any(|c|c.is_control())||!https_url(&item.url){
+            return Err("Недопустимая ссылка подписанной новости".into())
+        }
+    }
+    Ok(())
+}
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all="camelCase")]
 pub struct Provisioning0352 {
     pub backend_url:String,pub project_id:String,pub profile_id:String,pub channel:String,
     pub manifest_url:String,pub pinned_public_key:String,pub display_name:String,
     pub server_id:String,pub server_host:String,pub server_port:u16,pub auto_enter:bool,
-    pub digest:String,
+    pub digest:String, pub branding:Option<Branding>,
 }
 fn safe_file(path:&Path,max:u64)->Result<Vec<u8>,String>{
     let meta=fs::symlink_metadata(path).map_err(|e|format!("{}: {e}",path.display()))?;
@@ -156,14 +195,13 @@ fn verify_signed(raw:&[u8], policy_dir:&Path, root_hex:&str, now:OffsetDateTime)
         return Err("Delegated bootstrap требует profilePublicKey=root".into())
     }
     // Config is signed by the operator; only its verified fields are authoritative.
-    let display=cfg.branding.map(|b|{
-        let _=(&b.publisher,&b.website_url);b.display_name
-    }).filter(|s|!s.is_empty()&&s.len()<=80).unwrap_or_else(||"NeverLauncher".into());
+    if let Some(ref brand)=cfg.branding {validate_brand0355(brand)?;}
+    let display=cfg.branding.as_ref().map(|b|b.display_name.clone()).unwrap_or_else(||"NeverLauncher".into());
     let _=&cfg.installer_targets;
     let digest=hex::encode(Sha256::digest(&payload));
     Ok(Provisioning0352{backend_url:cfg.backend_url,project_id:cfg.project_id,profile_id:cfg.profile_id,
         channel:cfg.channel,manifest_url:cfg.manifest["url"].as_str().unwrap_or_default().into(),
-        pinned_public_key:cfg.profile_public_key,display_name:display,digest,
+        pinned_public_key:cfg.profile_public_key,display_name:display,digest,branding:cfg.branding,
         server_id:cfg.server_id,server_host:cfg.server_host,server_port:cfg.server_port,auto_enter:cfg.auto_enter})
 }
 
@@ -192,16 +230,31 @@ mod tests {
         let key=SigningKey::from_bytes(&[42u8;32]);
         let root=hex::encode(key.verifying_key().to_bytes());
         let artifact=serde_json::json!({"url":"https://example.org/manifest.json","sha256":"ab".repeat(32),"size":120});
-        let payload=serde_json::json!({"schemaVersion":"1.0","projectId":"my-project","profileId":"fabric","channel":"stable", "backendUrl":"https://example.org", "profilePublicKey":root,"manifest":artifact,"javaManifest":artifact,"targets":[{"os":"linux","arch":"amd64","components":[]}]}).to_string();
+        let payload=serde_json::json!({"schemaVersion":"1.0","projectId":"my-project","profileId":"fabric","channel":"stable", "backendUrl":"https://example.org", "profilePublicKey":root,"branding":{"displayName":"My Server","publisher":"Operator","accentColor":"#22c55e","backgroundColor":"#0f172a","textColor":"#ffffff","locale":"ru","news":[{"title":"News","url":"https://example.org/news"}]},"manifest":artifact,"javaManifest":artifact,"targets":[{"os":"linux","arch":"amd64","components":[]}]}).to_string();
         let signature=hex::encode(key.sign(payload.as_bytes()).to_bytes());
         let env=serde_json::json!({"schemaVersion":"1.0","payload":STANDARD.encode(payload.as_bytes()),"signature":signature});
         let raw=serde_json::to_vec(&env).unwrap();
         let trusted=verify_signed(&raw,Path::new("."),&root,OffsetDateTime::now_utc()).unwrap();
         assert_eq!(trusted.project_id,"my-project");
+        assert_eq!(trusted.display_name,"My Server");
+        assert_eq!(trusted.branding.as_ref().unwrap().news.len(),1);
         let bad_key="cd".repeat(32);
         assert!(verify_signed(&raw,Path::new("."),&bad_key,OffsetDateTime::now_utc()).is_err());
         let mut broken=env.clone();broken["payload"]=serde_json::json!(STANDARD.encode(payload.replace("my-project","other-project")));
         assert!(verify_signed(&serde_json::to_vec(&broken).unwrap(),Path::new("."),&root,OffsetDateTime::now_utc()).is_err());
+    }
+    #[test]
+    fn unsafe_signed_brand_is_rejected(){
+        let mut brand=Branding{display_name:"Launcher".into(),publisher:"Publisher".into(),
+            website_url:"https://example.org".into(),accent_color:"#11aa33".into(),
+            background_color:String::new(),text_color:String::new(),logo_png:String::new(),
+            icon_png:String::new(),splash_png:String::new(),locale:"ru".into(),news:vec![]};
+        assert!(validate_brand0355(&brand).is_ok());
+        brand.accent_color="red;url(https://evil.test)".into();assert!(validate_brand0355(&brand).is_err());
+        brand.accent_color="#11aa33".into();brand.logo_png=STANDARD.encode("<svg onload='alert(1)'/>");
+        assert!(validate_brand0355(&brand).is_err());
+        brand.logo_png.clear();brand.news.push(BrandNews0355{title:"X".into(),url:"javascript:alert(1)".into()});
+        assert!(validate_brand0355(&brand).is_err());
     }
     #[test]
     fn reject_unsafe_identity_and_url(){

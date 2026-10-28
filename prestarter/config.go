@@ -48,9 +48,17 @@ type Target struct {
 // Branding and InstallerTargets are part of the *signed* payload. Never use a
 // mutable bundle header to choose display identity or installer executables.
 type Branding struct {
-	DisplayName string `json:"displayName"`
-	Publisher   string `json:"publisher"`
-	WebsiteURL  string `json:"websiteUrl,omitempty"`
+	DisplayName     string          `json:"displayName"`
+	Publisher       string          `json:"publisher"`
+	WebsiteURL      string          `json:"websiteUrl,omitempty"`
+	AccentColor     string          `json:"accentColor,omitempty"`
+	BackgroundColor string          `json:"backgroundColor,omitempty"`
+	TextColor       string          `json:"textColor,omitempty"`
+	LogoPNG         string          `json:"logoPng,omitempty"`
+	IconPNG         string          `json:"iconPng,omitempty"`
+	SplashPNG       string          `json:"splashPng,omitempty"`
+	Locale          string          `json:"locale,omitempty"`
+	News            []BrandNews0355 `json:"news,omitempty"`
 }
 type InstallerTarget struct {
 	OS         string   `json:"os"`
@@ -276,16 +284,8 @@ func (c Config) Validate() error {
 		}
 	}
 	if c.Branding != nil {
-		b := c.Branding
-		if len(b.DisplayName) < 1 || len(b.DisplayName) > 80 || len(b.Publisher) < 1 || len(b.Publisher) > 96 ||
-			strings.ContainsAny(b.DisplayName+b.Publisher, "\r\n\x00") {
-			return errors.New("invalid signed branding")
-		}
-		if b.WebsiteURL != "" {
-			u, err := url.Parse(b.WebsiteURL)
-			if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" {
-				return errors.New("branding website must be HTTPS")
-			}
+		if err := c.Branding.Validate0355(); err != nil {
+			return err
 		}
 	}
 	installerTargets := make(map[string]bool)
