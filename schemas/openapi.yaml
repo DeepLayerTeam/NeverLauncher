@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.33.10. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.33.11. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -20008,6 +20008,346 @@
           }
         }
       }
+    },
+    "/api/v1/admin/migration-runs/{runId}/cutovers": {
+      "get": {
+        "operationId": "migration03311_list_cutovers",
+        "tags": [
+          "admin"
+        ],
+        "summary": "List all cutover scopes and their real routing state (no source fencing inference)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persisted scoped cutovers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MigrationCutoverRoute03311"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "description": "Persistence unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/cutovers/stage": {
+      "post": {
+        "operationId": "migration03311_stage_cutover",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Fence concurrent Never channel publication and pin a MIG10-approved signed release (requires MFA and X-Migration-Cutover-Confirm)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Durable scoped cutover state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationCutoverRoute03311"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or missing confirmation"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Conflicting writer, missing rehearsal or changed channel revision"
+          },
+          "503": {
+            "description": "PostgreSQL or signer unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "profileId",
+                  "channel",
+                  "releaseId",
+                  "stageId",
+                  "expectedHeadRevision"
+                ],
+                "properties": {
+                  "profileId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "releaseId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "stageId": {
+                    "type": "string",
+                    "minLength": 16
+                  },
+                  "expectedHeadRevision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/cutovers/activate": {
+      "post": {
+        "operationId": "migration03311_activate_cutover",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Atomic Never channel-head CAS switch after separately operated source writer fencing (operator attestation, not automatic source verification; MFA required)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Durable scoped cutover state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationCutoverRoute03311"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or missing confirmation"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Conflicting writer, missing rehearsal or changed channel revision"
+          },
+          "503": {
+            "description": "PostgreSQL or signer unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "profileId",
+                  "channel",
+                  "expectedRevision",
+                  "sourceFenceReference",
+                  "sourceFenceEvidenceSha256",
+                  "currentSourceSnapshotSha256"
+                ],
+                "properties": {
+                  "profileId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "sourceFenceReference": {
+                    "type": "string",
+                    "minLength": 8
+                  },
+                  "sourceFenceEvidenceSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "currentSourceSnapshotSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/cutovers/cancel": {
+      "post": {
+        "operationId": "migration03311_cancel_cutover",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Cancel only unactivated staged scopes; never restore published worlds or release pointers (MFA required)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Durable scoped cutover state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationCutoverRoute03311"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or missing confirmation"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Conflicting writer, missing rehearsal or changed channel revision"
+          },
+          "503": {
+            "description": "PostgreSQL or signer unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "profileId",
+                  "channel",
+                  "expectedRevision"
+                ],
+                "properties": {
+                  "profileId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -24090,6 +24430,78 @@
           },
           "requiresGuardAttestation": {
             "type": "boolean"
+          }
+        }
+      },
+      "MigrationCutoverRoute03311": {
+        "type": "object",
+        "required": [
+          "runId",
+          "projectId",
+          "profileId",
+          "channel",
+          "stageId",
+          "releaseId",
+          "releaseVersion",
+          "targetDigest",
+          "baselineRevision",
+          "state",
+          "revision"
+        ],
+        "properties": {
+          "runId": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "profileId": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "stageId": {
+            "type": "string"
+          },
+          "releaseId": {
+            "type": "string"
+          },
+          "releaseVersion": {
+            "type": "string"
+          },
+          "targetDigest": {
+            "type": "string"
+          },
+          "baselineReleaseId": {
+            "type": "string"
+          },
+          "baselineVersion": {
+            "type": "string"
+          },
+          "baselineDigest": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "fenceReference": {
+            "type": "string"
+          },
+          "fenceEvidenceSha256": {
+            "type": "string"
+          },
+          "baselineRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "activatedRevision": {
+            "type": "integer",
+            "minimum": 1
           }
         }
       }

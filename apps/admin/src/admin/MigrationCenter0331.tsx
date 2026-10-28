@@ -23,6 +23,7 @@ type ContentPlan0337 = {format:string;sourceSha256:string;inventorySha256:string
 type ContentState0337 = {plan:ContentPlan0337;workspaceId:string;workspaceRevision:number;state:string;stagedFiles:number;totalFiles:number;complete:boolean;validation:string;buildWorkspaceUrl:string};
 type Modules0338 = {format:string;sourceSha256:string;inventorySha256:string;ready:boolean;cutoverAllowed:boolean;blockers:string[];modules:{path:string;sha256:string;name:string;implementation:string;status:string;reason:string;authHook:boolean;launchHook:boolean;sourcesPresent:boolean}[];wrappers:{path:string;mode:string;serverName?:string;legacyTokenPresent:boolean;legacyAddressPresent:boolean;replacement:string;status:string;reason:string}[]};
 type Rehearsal03310 = {format:string;runId:string;stageId:string;sourceInventorySha256:string;sourceSnapshotSha256:string;targetSnapshotSha256:string;ready:boolean;cutoverAllowed:boolean;blockers:string[];probes:{name:string;passed:boolean;uuid?:string;evidenceSha256:string}[]};
+type Cutover03311 = {runId:string;projectId:string;profileId:string;channel:string;stageId:string;releaseId:string;releaseVersion:string;targetDigest:string;baselineRevision:number;baselineReleaseId:string;baselineVersion:string;state:'staged'|'active'|'cancelled';revision:number;activatedRevision?:number;fenceReference?:string;fenceEvidenceSha256?:string};
 type Event = { sequence: number; kind: string; step: string; revision: number; detail: unknown; createdAt: string };
 
 /** A working server-backed migration run operator. No client-side state is
@@ -56,6 +57,16 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
   const [contentState,setContentState] = useState<ContentState0337|null>(null);
   const [modules0338,setModules0338]=useState<Modules0338|null>(null);
   const [rehearsal03310,setRehearsal03310]=useState<Rehearsal03310|null>(null);
+  const [cutovers03311,setCutovers03311]=useState<Cutover03311[]>([]);
+  const [cutoverProfile03311,setCutoverProfile03311]=useState('');
+  const [cutoverChannel03311,setCutoverChannel03311]=useState('stable');
+  const [cutoverRelease03311,setCutoverRelease03311]=useState('');
+  const [cutoverHeadRev03311,setCutoverHeadRev03311]=useState('0');
+  const [cutoverConfirm03311,setCutoverConfirm03311]=useState('');
+  const [cutoverFenceRef03311,setCutoverFenceRef03311]=useState('');
+  const [cutoverFenceSha03311,setCutoverFenceSha03311]=useState('');
+  const [cutoverSnapshot03311,setCutoverSnapshot03311]=useState('');
+  const [cutoverSourceStopped03311,setCutoverSourceStopped03311]=useState(false);
   const [wrapperPath0338,setWrapperPath0338]=useState('');
   const [bridgeNode0338,setBridgeNode0338]=useState('');
   const [bridgeName0338,setBridgeName0338]=useState('');
@@ -80,6 +91,7 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
     ]);
     setRun(current);
     setEvents(journal);
+    setCutovers03311(await requestJSON<Cutover03311[]>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/cutovers`,token));
     try {setInventory(await requestJSON<Inventory0333>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/inventory`,token));}
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setInventory(null); else throw e;}
     try {setIdentities(await requestJSON<Identity0334>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/identities`,token));}
@@ -94,10 +106,34 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setCompatibility(null); else throw e;}
   }, [backendUrl, token, projectId, runId]);
 
-  useEffect(() => { setRunId(''); setRun(null); setEvents([]); setRuns([]); setCompatibility(null); setInventory(null); setIdentities(null); setCredentials(null); setCredentialPreview(null); setConfirmRun(''); setError('');
+  useEffect(() => { setRunId(''); setRun(null); setEvents([]); setRuns([]); setCompatibility(null); setInventory(null); setIdentities(null); setCredentials(null); setCredentialPreview(null); setCutovers03311([]); setConfirmRun(''); setError('');
     if (projectId) void requestJSON<Run[]>(backendUrl,`${base}?projectId=${encodeURIComponent(projectId)}`,token)
       .then(setRuns).catch((e: Error) => setError(e.message));
   }, [backendUrl, token, projectId]);
+
+  async function cutoverAction03311(action:'stage'|'activate'|'cancel', route?:Cutover03311) {
+    if (!runId||busy||cutoverConfirm03311!==runId) return;
+    const scope=route??{profileId:cutoverProfile03311,channel:cutoverChannel03311};
+    let body:Record<string,unknown>={profileId:scope.profileId,channel:scope.channel};
+    if(action==='stage') {
+      const rev=Number(cutoverHeadRev03311);
+      if(!Number.isSafeInteger(rev)||rev<0||!rehearsal03310?.ready) return;
+      body={...body,releaseId:cutoverRelease03311,expectedHeadRevision:rev,stageId:rehearsal03310.stageId};
+    } else if(route) {
+      body={...body,expectedRevision:route.revision};
+      if(action==='activate'){
+        if(!cutoverSourceStopped03311)return;
+        body={...body,sourceFenceReference:cutoverFenceRef03311,sourceFenceEvidenceSha256:cutoverFenceSha03311,currentSourceSnapshotSha256:cutoverSnapshot03311};
+      }
+    } else return;
+    setBusy(true);setError('');
+    try {
+      await requestJSON(backendUrl,`${base}/${encodeURIComponent(runId)}/cutovers/${action}`,token,{
+        method:'POST',headers:{'X-Migration-Cutover-Confirm':runId,...(action==='activate'?{'X-Migration-Source-Fenced':'true'}:{})},body:JSON.stringify(body)
+      });
+      await refresh(runId);
+    } catch(e){setError(String(e));await refresh(runId).catch(()=>undefined)}finally{setBusy(false)}
+  }
 
   async function create(event: React.FormEvent) {
     event.preventDefault(); if (!projectId || key.length < 8 || busy) return;
@@ -404,6 +440,29 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
         {rehearsal03310.blockers.map((x,i)=><p key={i} className="error">{x}</p>)}
         <details><summary>SHA-256, UUID и результаты проверок</summary><pre>{JSON.stringify(rehearsal03310,null,2)}</pre></details>
       </>}
+    </article>}
+    {run && <article className="subcard">
+      <h3>Staged Cutover · MIG11</h3>
+      <p>Переключает рабочий указатель <code>channel_heads</code> на проверенный и подписанный релиз Never. Пока канал staged, PostgreSQL блокирует другие публикации. Исходный Gravit writer необходимо остановить и проверить отдельно: Never не умеет подтвердить его отключение.</p>
+      <label className="field"><span>Профиль</span><input value={cutoverProfile03311} onChange={e=>setCutoverProfile03311(e.target.value)}/></label>
+      <label className="field"><span>Канал</span><input value={cutoverChannel03311} onChange={e=>setCutoverChannel03311(e.target.value)}/></label>
+      <label className="field"><span>ID подписанного опубликованного релиза этой миграции</span><input value={cutoverRelease03311} onChange={e=>setCutoverRelease03311(e.target.value)}/></label>
+      <label className="field"><span>Текущая revision channel_head (0, если канал пуст)</span><input type="number" min="0" value={cutoverHeadRev03311} onChange={e=>setCutoverHeadRev03311(e.target.value)}/></label>
+      <label className="field"><span>Подтверждение: точный migration run ID</span><input value={cutoverConfirm03311} onChange={e=>setCutoverConfirm03311(e.target.value)}/></label>
+      <button disabled={busy||cutoverConfirm03311!==runId||!cutoverProfile03311||!cutoverRelease03311||!rehearsal03310?.ready} onClick={()=>void cutoverAction03311('stage')}>Stage: заморозить публикацию канала</button>
+      <p>Для активации сохраните независимо полученные доказательства отключения записи Gravit (операционный журнал/акт и его SHA-256). Флаг оператора не является автоматической проверкой исходного сервера.</p>
+      <label className="field"><span>Ссылка на доказательство source fence</span><input value={cutoverFenceRef03311} onChange={e=>setCutoverFenceRef03311(e.target.value)}/></label>
+      <label className="field"><span>SHA-256 доказательства</span><input value={cutoverFenceSha03311} onChange={e=>setCutoverFenceSha03311(e.target.value)}/></label>
+      <label className="field"><span>SHA-256 свежего исходного snapshot (должен совпасть с MIG10)</span><input value={cutoverSnapshot03311} onChange={e=>setCutoverSnapshot03311(e.target.value)}/></label>
+      <label className="field"><input type="checkbox" checked={cutoverSourceStopped03311} onChange={e=>setCutoverSourceStopped03311(e.target.checked)}/> Исходный writer Gravit остановлен и независимо проверен оператором</label>
+      {cutovers03311.map(route=><div key={`${route.profileId}/${route.channel}`}>
+        <p><code>{route.profileId}/{route.channel}</code> · {route.state} · rev {route.revision} · Never release <code>{route.releaseId}</code> · original head {route.baselineRevision} · active head {route.activatedRevision??'—'}</p>
+        {route.state==='staged'&&<>
+          <button disabled={busy||cutoverConfirm03311!==runId||!cutoverSourceStopped03311||!cutoverFenceRef03311||!(/^[a-f0-9]{64}$/.test(cutoverFenceSha03311))||!(/^[a-f0-9]{64}$/.test(cutoverSnapshot03311))} onClick={()=>void cutoverAction03311('activate',route)}>Activate: переключить реальный канал</button>
+          <button disabled={busy||cutoverConfirm03311!==runId} onClick={()=>void cutoverAction03311('cancel',route)}>Отменить staging без изменения релиза</button>
+        </>}
+        {route.state==='active'&&<p>Активно. Не выполнять snapshot restore: reconciliation и rollback относятся к MIG12.</p>}
+      </div>)}
     </article>}
     {compatibility && <article className="subcard">
       <h3>Совместимость: {compatibility.status}</h3>

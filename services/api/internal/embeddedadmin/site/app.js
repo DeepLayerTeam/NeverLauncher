@@ -239,3 +239,36 @@ byId('migration-rehearsal-get').addEventListener('click',async e=>{
   message(report.ready?'Проверенная репетиция прошла; cutover остаётся запрещённым':'Репетиция имеет блокировки; см. отчёт');
  }catch(err){message(err.message,true)}finally{e.currentTarget.disabled=false}
 });
+
+// MIG11: same server-side CAS and PostgreSQL trigger as React Admin and CLI.
+for(const op of ['list','stage','activate','cancel']){
+ byId('migration-cutover-'+op).addEventListener('click',async event=>{
+  const id=migrationId();if(!id){message('Укажите migration run ID',true);return}
+  const profileId=byId('migration-cutover-profile').value.trim();
+  const channel=byId('migration-cutover-channel').value.trim();
+  const confirmed=byId('migration-cutover-confirm').value.trim()===id;
+  if(op!=='list'&&!confirmed){message('Подтвердите точный run ID',true);return}
+  if(op==='activate'&&!byId('migration-cutover-source-fenced').checked){message('Сначала остановите исходный Gravit writer вне Never',true);return}
+  const route=`/api/v1/admin/migration-runs/${encodeURIComponent(id)}/cutovers`;
+  const body={profileId,channel};
+  if(op==='stage'){
+   Object.assign(body,{releaseId:byId('migration-cutover-release').value.trim(),stageId:byId('migration-cutover-stage-id').value.trim(),expectedHeadRevision:Number(byId('migration-cutover-head-revision').value)});
+  } else if(op==='activate'||op==='cancel'){
+   Object.assign(body,{expectedRevision:Number(byId('migration-cutover-revision').value)});
+   if(op==='activate')Object.assign(body,{sourceFenceReference:byId('migration-cutover-fence-ref').value.trim(),sourceFenceEvidenceSha256:byId('migration-cutover-fence-sha').value.trim(),currentSourceSnapshotSha256:byId('migration-cutover-source-sha').value.trim()});
+  }
+  event.currentTarget.disabled=true;
+  try{
+   const headers={Authorization:`Bearer ${token}`,Accept:'application/json'};
+   if(op!=='list'){
+    headers['Content-Type']='application/json';headers['X-Migration-Cutover-Confirm']=id;
+    if(op==='activate')headers['X-Migration-Source-Fenced']='true';
+   }
+   const response=await fetch(route+(op==='list'?'':'/'+op),{method:op==='list'?'GET':'POST',headers,body:op==='list'?undefined:JSON.stringify(body),cache:'no-store',credentials:'same-origin',redirect:'error'});
+   const result=await response.json();
+   byId('migration-report').textContent=JSON.stringify({cutovers:result?.data??result},null,2);
+   if(!response.ok)throw new Error(result?.error?.message||`HTTP ${response.status}`);
+   message(op==='activate'?'Never channel switched; monitor and preserve MIG12 rollback ledger':`Cutover ${op}: persisted`);
+  }catch(err){message(err.message,true)}finally{event.currentTarget.disabled=false}
+ });
+}

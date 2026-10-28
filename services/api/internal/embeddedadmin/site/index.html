@@ -7,7 +7,7 @@
 <section id="login" hidden><h2>Вход администратора</h2><form id="login-form"><label>Email<input name="email" type="email" autocomplete="username" required></label><label>Пароль<input name="password" type="password" autocomplete="current-password" required></label><label>TOTP (если требуется)<input name="totp" inputmode="numeric" autocomplete="one-time-code"></label><button type="submit">Войти</button></form></section>
 <section id="admin" hidden><h2>Состояние Backend</h2><button id="refresh" type="button">Обновить</button><button id="logout" type="button">Выйти</button><pre id="overview"></pre>
 <h2>Создание первого проекта</h2><p>Создаёт черновой релиз после проверки прав текущего владельца.</p><form id="project-form"><label>Проект<input name="projectId" value="default-project" required></label><label>Профиль<input name="profileId" value="vanilla" required></label><label>Канал<input name="channel" value="stable" required></label><label>Версия<input name="version" value="0.1.0" required></label><button type="submit">Создать проект</button></form>
-<h2>Migration Center · 0.33.10</h2>
+<h2>Migration Center · 0.33.11</h2>
 <p>Проверка и сохранение целевой конфигурации Never. Это ещё не импорт Gravit и не разрешение на cutover.</p>
 <form id="migration-create"><label>ID проекта<input name="projectId" required maxlength="128" value="default-project"></label><label>Ключ повторного выполнения<input name="idempotencyKey" required minlength="8" maxlength="128" placeholder="change-request-2026-001"></label><button type="submit">Создать migration run</button></form>
 <form id="migration-select"><label>Migration run ID<input id="migration-run-id" required></label><button type="submit">Показать</button></form>
@@ -51,6 +51,23 @@
 <fieldset><legend>Isolated Migration Rehearsal (MIG10)</legend>
 <p>Запуск только из CLI в отдельном тестовом окружении; Backend выполняет независимую проверку UUID и сохранённых MIG03–MIG08. Не является разрешением на production cutover.</p>
 <button id="migration-rehearsal-get" type="button">Проверить последний отчёт репетиции</button></fieldset>
+<fieldset><legend>Staged Cutover (MIG11)</legend>
+<p>Рабочее переключение `channel_heads`. Staging блокирует публикацию указанного профиля/канала в PostgreSQL. Остановка Gravit/world/SQL writers выполняется оператором отдельно; подтверждение и SHA не доказывают её автоматически.</p>
+<label>Профиль<input id="migration-cutover-profile" placeholder="gravit-client"></label>
+<label>Канал<input id="migration-cutover-channel" value="stable"></label>
+<label>ID подписанного опубликованного релиза MIG07<input id="migration-cutover-release"></label>
+<label>Текущая ревизия channel head<input id="migration-cutover-head-revision" type="number" min="0" value="0"></label>
+<label>Stage ID успешной репетиции MIG10<input id="migration-cutover-stage-id"></label>
+<label>Подтверждение — точный migration run ID<input id="migration-cutover-confirm" autocomplete="off"></label>
+<button id="migration-cutover-stage" type="button">Stage (заморозить публикацию)</button><button id="migration-cutover-list" type="button">Проверить состояния cutover</button>
+<p>Для activation введите ожидаемую ревизию cutover receipt (не channel head), ссылку на внешнее доказательство fencing и SHA-256 независимо полученного snapshot текущего Gravit.</p>
+<label>Cutover receipt revision<input id="migration-cutover-revision" type="number" min="1" value="1"></label>
+<label>Source fence reference<input id="migration-cutover-fence-ref"></label>
+<label>Source fence evidence SHA-256<input id="migration-cutover-fence-sha"></label>
+<label>Fresh source snapshot SHA-256<input id="migration-cutover-source-sha"></label>
+<label><input id="migration-cutover-source-fenced" type="checkbox"> Исходный Gravit writer отдельно остановлен и проверен оператором</label>
+<button id="migration-cutover-activate" type="button">Activate (MFA; переключить канал)</button><button id="migration-cutover-cancel" type="button">Отменить staging до activation</button>
+</fieldset>
 <p>Сначала выполните dry-run. Импорт не обновляет пароли существующих пользователей, не переносит токены или права и не разрешает cutover.</p>
 <p>Экспорт содержит исходные конфигурации и может включать пароли/ключи. Сохраняйте его в защищённом каталоге.</p>
 <pre id="migration-report"></pre>

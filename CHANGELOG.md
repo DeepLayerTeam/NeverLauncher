@@ -1,3 +1,12 @@
+## [0.33.11] - 2026-10-28
+
+### Staged Cutover (MIG11)
+
+- Transactional, per-project/profile/channel Never release switch through the real `channel_heads` delivery pointer, not a simulated traffic flag. PostgreSQL migration 0098 fences ordinary writes to staged scopes using a trigger and requires a matching run-scoped transaction for the activation CAS.
+- Requires a fresh successful MIG10 rehearsal, UUID checks, MIG05/MIG06/MIG08 receipts, exact MIG07 release ownership, current Never Ed25519 signer verification, fresh source snapshot digest and source-writer fencing evidence reference. Activation, revision and event journal commit atomically. Replays are idempotent.
+- CLI and React Admin support stage, activate, cancel-before-activation and audit/readback; project-level authorization and fresh MFA are enforced by Backend. Includes PostgreSQL integration/race tests, dedicated CI and operations runbook.
+- **Operational limit:** Never cannot itself stop or prove the Gravit server/database/world writers are fenced. The operator must do so independently; source fencing and source snapshot hashes are supplied as attestation, not remotely verified. MIG12 must implement reconciliation before any post-cutover rollback. Production certification and real source writer HA cutover are not claimed.
+
 ## [0.33.10] - 2026-10-28
 
 ### Isolated Migration Rehearsal (MIG10)

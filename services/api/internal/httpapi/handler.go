@@ -51,6 +51,7 @@ func (s Server) Handler() http.Handler {
 	s.registerMigrationContentRoutes0337(mux)
 	s.registerMigrationModulesRoutes0338(mux)
 	s.registerMigrationRehearsalRoutes03310(mux)
+	s.registerMigrationCutoverRoutes03311(mux)
 	handler := withSecurityHeaders(withCORS(withTrustedProxyResolution(s.withRateLimit(s.withServerBridgeHardening0149(logRequests(s.State.Maintenance.withMutationLock(s.withManagedProviders02910(mux))))), s.State.TrustedProxies), s.Config.CORSAllowedOrigins))
 	if s.Capacity != nil {
 		return s.Capacity.HTTP.Wrap(handler)
