@@ -5,6 +5,8 @@ Must run on an isolated CI host with a real GUI renderer for startup. A report
 from this script is observational, never accepted as stable certification.
 """
 import argparse
+import time
+from staged_readiness_0343 import StartupObserver, log_health
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -101,19 +103,45 @@ def run_checked(cmd, result_file, env):
     return json.loads(result_file.read_text(encoding='utf-8'))
 
 
-def run_runtime(cmd, result_file, env, deadline):
-    # Native NeverRuntime returns its structured execution result on stdout;
-    # the Go client lifecycle commands instead support --output <file>.
-    proc = subprocess.run(cmd, capture_output=True, env=env, timeout=deadline, check=False)
-    result_file.with_suffix('.log').write_bytes(proc.stderr[:2 * 1024 * 1024])
+
+def run_runtime_observed(cmd, result_file, env, deadline, observer):
+    # NeverRuntime owns the real Java/Guard lifecycle. Never pipe its JSON
+    # stdout while polling: the large bounded log tail can fill a pipe and
+    # deadlock the runtime before it exits.
+    stdout_path = result_file.with_suffix('.stdout')
+    with open(result_file.with_suffix('.log'), 'wb') as diagnostic, open(stdout_path, 'xb') as stdout_file:
+        proc = subprocess.Popen(cmd, stdout=stdout_file, stderr=diagnostic, env=env,
+                                start_new_session=True)
+        observer.root_pid = proc.pid
+        try:
+            until = time.monotonic() + deadline
+            while proc.poll() is None:
+                if time.monotonic() >= until:
+                    raise TimeoutError('NeverRuntime itself hung beyond its termination deadline')
+                observer.tick()
+                time.sleep(0.5)
+            proc.wait(timeout=10)
+        except BaseException:
+            # Never leave an orphan Minecraft/Guard process after a bad run.
+            import signal
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            proc.wait(timeout=10)
+            raise
     if proc.returncode:
-        raise RuntimeError(f'NeverRuntime launch failed rc={proc.returncode} (see {result_file.with_suffix(".log").name})')
-    if len(proc.stdout) > 4 * 1024 * 1024:
+        raise RuntimeError(f'NeverRuntime failed rc={proc.returncode}')
+    if stdout_path.stat().st_size > 4 * 1024 * 1024:
         raise RuntimeError('NeverRuntime structured output exceeded limit')
-    result = json.loads(proc.stdout)
-    if not isinstance(result, dict) or 'timed_out' not in result or 'success' not in result:
-        raise ValueError('NeverRuntime returned no valid launch result')
-    result_file.write_bytes(proc.stdout)
+    try:
+        output = stdout_path.read_bytes()
+        result = json.loads(output)
+        if not isinstance(result, dict) or not isinstance(result.get('timed_out'),bool) or not isinstance(result.get('success'),bool):
+            raise ValueError('NeverRuntime returned no valid launch result')
+        result_file.write_bytes(output)
+    finally:
+        stdout_path.unlink(missing_ok=True)
     return result
 
 
@@ -209,21 +237,42 @@ def execute(args):
         cmd = [args.runtime, 'launch', '--manifest', str(signed_manifest_path),
                '--pinned-public-key', args.pinned_public_key, '--root', str(client_dir),
                '--java', selected_java, '--max-runtime-seconds', str(args.runtime_seconds)]
-        launched = run_runtime(cmd, run_path, subprocess_env, args.runtime_seconds + 150)
-        if launched.get('exit_code') not in (None, 0):
-            raise RuntimeError('actual staged Minecraft JVM exited with failure')
-        if launched.get('timed_out') is not True and launched.get('success') is not True:
-            raise RuntimeError('actual staged Minecraft JVM failed before runtime deadline')
-        # 0.34.2 records execution, not visual menu readiness. A timeout is
-        # deliberately never converted into a successful certification.
-        report['stages'][stage_name] = {
-            'status': 'inconclusive',
-            'detail': f"actual NeverRuntime launch executed installed staged release; menu readiness not proven; timedOut={bool(launched.get('timed_out'))}; runtimeSHA256={runtime_hash}",
-            'evidenceSha256': sha_file(run_path),
+        loader = signed.get('minecraft', {}).get('loader', 'vanilla').lower()
+        observer = StartupObserver(0, client_dir, work / 'startup-diagnostics', loader, time.time(), selected_java)
+        if observer.blocked:
+            # A missing X11/OpenGL renderer is infrastructure incapability,
+            # not proof that the staged Minecraft release is incompatible.
+            readiness_file = work / 'startup-readiness.json'
+            readiness_file.write_text(json.dumps(observer.evidence(), indent=2), encoding='utf-8')
+            report['stages']['startup'] = {'status':'blocked','detail':observer.blocked,
+                                           'evidenceSha256':sha_file(readiness_file)}
+            report['stages']['loader-readiness'] = {'status':'blocked','detail':'GUI runtime did not start'}
+            raise RuntimeError('staged GUI validation blocked: ' + observer.blocked)
+        try:
+            launched = run_runtime_observed(cmd, run_path, subprocess_env, args.runtime_seconds + 150, observer)
+            status, detail = observer.conclude(launched)
+        finally:
+            readiness_file = work / 'startup-readiness.json'
+            readiness_file.write_text(json.dumps(observer.evidence(), indent=2), encoding='utf-8')
+        loader_ready, loader_detail = log_health(client_dir, observer.runtime_log, loader)
+        report['stages']['loader-readiness'] = {
+            'status': 'passed' if loader_ready else 'failed',
+            'detail': loader_detail[:2048],
+            'evidenceSha256': sha_file(readiness_file),
         }
+        report['stages'][stage_name] = {
+            'status': status,
+            'detail': (detail + '; neverruntime=' + runtime_hash + '; launch=' + sha_file(run_path))[:2048],
+            'evidenceSha256': sha_file(readiness_file),
+        }
+        if status == 'failed':
+            raise RuntimeError('staged Minecraft startup failed: ' + detail)
+        if status == 'blocked':
+            raise RuntimeError('staged Minecraft startup blocked: ' + detail)
     except Exception as exc:
         error = str(exc)
-        report['stages'][stage_name] = {'status':'failed' if stage_name in ('manifest-files','materialization','startup') else 'blocked', 'detail':error[:2048]}
+        if stage_name not in report['stages']:
+            report['stages'][stage_name] = {'status':'failed' if stage_name in ('manifest-files','materialization','startup') else 'blocked', 'detail':error[:2048]}
     finally:
         # Worker-generated signatures are not trusted for stable publication.
         report['finishedAt'] = iso()

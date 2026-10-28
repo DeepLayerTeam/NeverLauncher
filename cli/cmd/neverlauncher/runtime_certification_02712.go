@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -177,8 +176,6 @@ func certProfileID02712(plan factoryPlan0271) (string, error) {
 	return id, nil
 }
 
-var certRuntimeMarker02712 = regexp.MustCompile(`(?i)(?:LWJGL|Setting user|Loading Minecraft|OpenGL|Backend library|Launching wrapped minecraft|MinecraftForge|FabricLoader|QuiltLoader|Minecraft client initialized)`)
-
 func certValidateProbe02712(plan factoryPlan0271, profile string, probe factoryProbe02712, log []byte, maxSeconds int) error {
 	if probe.Status != "passed" || probe.MinecraftVersion != profile || probe.MainClass != plan.Launch.MainClass || probe.RequiredJavaMajor != plan.Java.Major || probe.DetectedJavaMajor != plan.Java.Major || probe.ClasspathEntries < 1 {
 		return errors.New("runtime probe does not match pinned profile, Java or classpath")
@@ -186,17 +183,10 @@ func certValidateProbe02712(plan factoryPlan0271, profile string, probe factoryP
 	if !probe.Success && !probe.TimedOut {
 		return errors.New("runtime process failed")
 	}
-	if probe.RuntimeSeconds < 0 || probe.RuntimeSeconds > int64(maxSeconds+20) {
-		return errors.New("runtime duration is implausible")
-	}
-	if probe.TimedOut && probe.RuntimeSeconds < 10 {
-		return errors.New("runtime exited/stalled before minimum launch observation")
-	}
-	index := bytes.Index(log, []byte("--- process output ---"))
-	if index < 0 || !certRuntimeMarker02712.Match(log[index+len("--- process output ---"):]) {
-		return errors.New("real Minecraft startup marker absent from process output")
-	}
-	return nil
+	// V03: v1 probes carry neither a verified window/renderer observation
+	// nor a witnessed main-menu transition. A timeout, PID and LWJGL marker
+	// are not certification. Never sign/accept a v1 startup claim as PASS.
+	return errors.New("legacy runtime certificate v1 cannot establish GUI/main-menu readiness; use staged startup observer 0.34.3")
 }
 func certHostTarget02712(target vanillaTarget) error {
 	actual := currentVanillaTarget()

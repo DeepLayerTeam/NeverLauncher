@@ -16,8 +16,8 @@ func TestRuntimeCertification02712RejectsFalseProbe(t *testing.T) {
 	plan := factoryPlan0271{MinecraftVersion: "1.21.1", Loader: "vanilla", Java: factoryJava0271{Major: 21}, Launch: factoryLaunch0271{MainClass: "net.minecraft.client.main.Main"}}
 	good := factoryProbe02712{Status: "passed", MinecraftVersion: "1.21.1", MainClass: plan.Launch.MainClass, RequiredJavaMajor: 21, DetectedJavaMajor: 21, ClasspathEntries: 3, TimedOut: true, RuntimeSeconds: 20}
 	goodLog := []byte("NeverRuntime ...\n--- process output ---\n[main/INFO] LWJGL version 3.3\n")
-	if err := certValidateProbe02712(plan, "1.21.1", good, goodLog, 30); err != nil {
-		t.Fatal(err)
+	if err := certValidateProbe02712(plan, "1.21.1", good, goodLog, 30); err == nil {
+		t.Fatal("legacy timeout/marker accepted as runtime readiness")
 	}
 	for _, tc := range []struct {
 		name   string
@@ -69,7 +69,7 @@ func TestRuntimeCertification02712SignedEndToEndMaterializerAndTamper(t *testing
 	defer server.Close()
 	tmp := t.TempDir()
 	client := filepath.Join(tmp, "client")
-	plan, err := executeFactoryBuild0271(context.Background(), factoryBuildOptions0271{Loader: "vanilla", Minecraft: "latest-release", ClientDir: client, VersionManifest: server.URL + "/manifest.json", AssetBaseURL: server.URL + "/assets", HTTPClient: server.Client(), Targets: []vanillaTarget{currentVanillaTarget()}, Workers: 2, StrictUpstream: true})
+	_, err := executeFactoryBuild0271(context.Background(), factoryBuildOptions0271{Loader: "vanilla", Minecraft: "latest-release", ClientDir: client, VersionManifest: server.URL + "/manifest.json", AssetBaseURL: server.URL + "/assets", HTTPClient: server.Client(), Targets: []vanillaTarget{currentVanillaTarget()}, Workers: 2, StrictUpstream: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,40 +109,13 @@ printf '{"status":"passed","minecraftVersion":"%s","mainClass":"net.minecraft.cl
 	if _, err = certRun02712(context.Background(), client, runtimePath, javaPath, strings.Repeat("0", 64), key, file, 20); err == nil {
 		t.Fatal("unapproved runtime executable accepted")
 	}
-	cert, err := certRun02712(context.Background(), client, runtimePath, javaPath, runtimeSHA, key, file, 20)
-	if err != nil {
-		t.Fatal(err)
+	// Even a valid owner signing key cannot turn a synthetic LWJGL marker and
+	// timeout into menu/renderer readiness. No certificate is written.
+	if _, err := certRun02712(context.Background(), client, runtimePath, javaPath, runtimeSHA, key, file, 20); err == nil {
+		t.Fatal("synthetic startup probe was certified")
 	}
-	if cert.PlanSHA256 != plan.ReproducibilitySHA256 {
-		t.Fatal("certificate not bound to lockfile")
-	}
-	if _, err = certVerify02712(client, file, pub); err != nil {
-		t.Fatal(err)
-	}
-	// Signing cannot be bypassed by simply editing status/plan digest.
-	content, _ := os.ReadFile(file)
-	tampered := strings.Replace(string(content), `"status": "certified"`, `"status": "claimed"`, 1)
-	if err := os.WriteFile(file, []byte(tampered), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = certVerify02712(client, file, pub); err == nil {
-		t.Fatal("modified signed certificate accepted")
-	}
-	if err := os.WriteFile(file, content, 0600); err != nil {
-		t.Fatal(err)
-	}
-	// No certificate may outlive evidence it references.
-	if err := os.WriteFile(filepath.Join(tmp, cert.LogFile), []byte("tampered"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = certVerify02712(client, file, pub); err == nil {
-		t.Fatal("modified runtime log accepted")
-	}
-	if err := os.WriteFile(filepath.Join(client, "versions", "fixture-1", "fixture-1.jar"), []byte("tampered"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = certVerify02712(client, file, pub); err == nil {
-		t.Fatal("modified Minecraft output accepted")
+	if _, err := os.Stat(file); !os.IsNotExist(err) {
+		t.Fatalf("legacy certification left a supposedly valid artifact: %v", err)
 	}
 }
 func TestRuntimeCertification02712HostAndPaths(t *testing.T) {

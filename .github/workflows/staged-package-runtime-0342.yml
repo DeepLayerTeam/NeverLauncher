@@ -1,4 +1,4 @@
-name: Staged package actual runtime 0.34.2
+name: Staged package actual runtime and menu readiness 0.34.3
 on:
   workflow_call:
     inputs:
@@ -8,7 +8,7 @@ on:
       runtime_seconds:
         required: false
         type: number
-        default: 45
+        default: 180
   workflow_dispatch:
     inputs:
       package_id:
@@ -16,10 +16,10 @@ on:
         required: true
         type: string
       runtime_seconds:
-        description: Time to run NeverRuntime (15..3600 seconds)
+        description: Max time for real Minecraft GUI startup (15..3600 seconds)
         required: true
         type: number
-        default: 45
+        default: 180
 permissions:
   contents: read
 jobs:
@@ -45,7 +45,11 @@ jobs:
       - name: Install graphics libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64 x11-utils mesa-utils scrot imagemagick tesseract-ocr tesseract-ocr-eng
+      - name: Reject false startup proof and verify runner operations
+        run: |
+          python3 e2e/scripts/test_staged_readiness_0343.py
+          python3 e2e/scripts/test_run_staged_package_0342.py
       - name: Build CLI and NeverRuntime executables only (never build Minecraft client)
         run: |
           cd cli && go build -o ../nl ./cmd/neverlauncher
@@ -78,4 +82,6 @@ jobs:
           path: |
             ${{ runner.temp }}/staged-execution/staged-execution.json
             ${{ runner.temp }}/staged-execution/verified.json
-            ${{ runner.temp }}/staged-execution/runtime-certificate.json
+            ${{ runner.temp }}/staged-execution/runtime-launch.json
+            ${{ runner.temp }}/staged-execution/startup-readiness.json
+            ${{ runner.temp }}/staged-execution/startup-diagnostics/menu-frame-*.png

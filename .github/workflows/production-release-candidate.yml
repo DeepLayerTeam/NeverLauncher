@@ -258,7 +258,7 @@ jobs:
     uses: ./.github/workflows/staged-package-runtime-0342.yml
     with:
       package_id: ${{ inputs.staged_package_id }}
-      runtime_seconds: 45
+      runtime_seconds: 180
     secrets: inherit
 
   release-bundle:

@@ -1029,16 +1029,18 @@ pub async fn certify_vanilla_compatibility(
     }
     let finished_at = now_unix()?;
     let runtime_seconds = finished_at.saturating_sub(started_at);
-    let passed = timed_out || success;
+    // V03: process lifetime is observational only. No menu/renderer proof is
+    // collected by this legacy entrypoint, so it must not certify startup.
+    let observed = timed_out || success;
     let message = if timed_out {
-        format!("Vanilla {version} оставался работоспособным до certification timeout {max_runtime_seconds}s")
+        format!("Vanilla {version}: timeout без подтверждения GUI/menu; startup INCONCLUSIVE")
     } else if success {
-        format!("Vanilla {version} завершился успешно")
+        format!("Vanilla {version}: JVM завершилась, GUI/menu не подтверждены")
     } else {
         format!("Vanilla {version} завершился с ошибкой до certification timeout")
     };
     Ok(VanillaCompatibilityProbeResult {
-        status: if passed { "passed".to_string() } else { "failed".to_string() },
+        status: if observed { "inconclusive".to_string() } else { "failed".to_string() },
         minecraft_version: version,
         required_java_major,
         detected_java_major: java_info.detected_major_version.unwrap_or_default(),

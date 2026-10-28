@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 import threading
 import unittest
+from unittest.mock import patch
 from importlib.machinery import SourceFileLoader
 
 MODULE = SourceFileLoader('staged0342', str(Path(__file__).with_name('run-staged-package-0342.py'))).load_module()
@@ -44,9 +45,19 @@ class StagedRunnerTests(unittest.TestCase):
     def test_native_neverruntime_stdout_is_persisted(self):
         output = Path(self.tmp.name) / 'launch.json'
         code = 'import json; print(json.dumps({"timed_out":True,"success":False,"exit_code":None}))'
-        result = MODULE.run_runtime([sys.executable, '-c', code], output, {}, 10)
+        class Observer:
+            root_pid = None
+            def tick(self): pass
+        observer = Observer()
+        result = MODULE.run_runtime_observed([sys.executable, '-c', code], output, {}, 10, observer)
         self.assertIs(result['timed_out'], True)
+        self.assertIsInstance(observer.root_pid, int)
         self.assertEqual(json.loads(output.read_text()), result)
+        # The observation itself cannot certify startup or menu readiness.
+        from staged_readiness_0343 import StartupObserver
+        with patch.dict(__import__('os').environ, {'DISPLAY':''}):
+            probe = StartupObserver(observer.root_pid, Path(self.tmp.name), Path(self.tmp.name)/'frames', 'vanilla', 0)
+        self.assertNotEqual(probe.conclude(result)[0], 'passed')
     def test_missing_and_unsafe_paths(self):
         for name in ('../evil','/absolute','a\\b','a/../b'):
             with self.assertRaises(ValueError):
