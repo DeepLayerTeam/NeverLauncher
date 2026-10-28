@@ -133,6 +133,9 @@ impl ProcessSupervisor {
         };
         if let Some(preferences) = preferences.as_ref() {
             apply_launch_preferences(manifest, root, &mut plan, preferences, credentials.as_ref())?;
+            if preferences.offline {
+                crate::offline_policy_0358::reject_offline_server_autojoin_0358(&plan)?;
+            }
         }
         let logs_dir = root.join("logs");
         tokio::fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;

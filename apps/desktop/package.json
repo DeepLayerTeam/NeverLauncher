@@ -1,6 +1,6 @@
 {
   "name": "neverlauncher-desktop",
-  "version": "0.35.7",
+  "version": "0.35.8",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,7 +16,8 @@
     "verify:assets": "node ../../scripts/desktop/prebuild_assets_03011.mjs verify --dist dist",
     "test:extension-security": "tsc src/extension_security_0356.ts --module es2020 --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/extension_security_0356.test.mjs",
     "test:downloads": "tsc src/download_experience_0354.ts --module es2020 --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/download_experience_0354.test.mjs",
-    "test:accessibility": "tsc src/desktop_accessibility_0357.ts --module es2020 --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/desktop_accessibility_0357.test.mjs"
+    "test:accessibility": "tsc src/desktop_accessibility_0357.ts --module es2020 --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/desktop_accessibility_0357.test.mjs",
+    "test:offline": "tsc src/offline_policy_0358.ts --module es2020 --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/offline_policy_0358.test.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "2.5.0",

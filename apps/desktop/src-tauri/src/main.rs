@@ -683,6 +683,82 @@ async fn build_launch_plan(manifest: Manifest, root: String, java_path: Option<S
     if let Some(p) = preferences { neverruntime::apply_launch_preferences(&manifest, &root, &mut plan, &p, None)?; }
     Ok(plan)
 }
+// 0.35.8: An offline session is a replay of an owner-provisioned installation,
+// never an entitlement, a login, or an arbitrary renderer-provided public key.
+// Native verification is repeated on every cache read and every launch.
+fn check_offline_owner_binding_0358(
+    cfg: &DesktopConfig,
+    owner: &signed_first_run_0352::Provisioning0352,
+    manifest: &Manifest,
+    root: &str,
+    key: &str,
+    require_installed: bool,
+) -> Result<(), String> {
+    if owner.project_id != manifest.project_id || owner.profile_id != manifest.profile_id ||
+        owner.channel != manifest.channel ||
+        !owner.pinned_public_key.eq_ignore_ascii_case(key) ||
+        !cfg.pinned_public_key.eq_ignore_ascii_case(key) ||
+        cfg.project_id != owner.project_id || cfg.profile_id != owner.profile_id ||
+        cfg.channel != owner.channel {
+        return Err("offline denied: project/profile/channel or pinned key does not match signed owner bundle".into());
+    }
+    if !manifest.runtime.launch.offline_mode ||
+        (manifest.schema_version != "2.0" && manifest.schema_version != "3.0") {
+        return Err("offline denied: signed game profile does not allow local offline play".into());
+    }
+    if require_installed && (!cfg.onboarding_completed || cfg.onboarding_bootstrap_digest != owner.digest) {
+        return Err("offline denied: complete the signed first-run installation online first".into());
+    }
+    let requested = PathBuf::from(root).canonicalize().map_err(|e|format!("offline game directory unavailable: {e}"))?;
+    let saved = PathBuf::from(&cfg.game_directory).canonicalize().map_err(|e|format!("offline saved game directory unavailable: {e}"))?;
+    if requested != saved {
+        return Err("offline denied: game directory differs from the installed signed profile".into());
+    }
+    Ok(())
+}
+
+async fn verified_offline_owner_0358() -> Result<(DesktopConfig, signed_first_run_0352::Provisioning0352), String> {
+    let cfg = load_desktop_config().await?;
+    let owner = signed_first_run_0352::load(&desktop_config_dir()?)?
+        .ok_or("offline denied: an owner-signed bootstrap bundle is required")?;
+    Ok((cfg, owner))
+}
+
+async fn verify_offline_files_0358(manifest: &Manifest, root: &str, key: &str, preset: &str) -> Result<(), String> {
+    let path = PathBuf::from(root);
+    let selected = if preset.is_empty() { None } else { Some(preset) };
+    neverruntime::transactional_release::ensure_active_preset(manifest, &path, key, selected).await?;
+    let checks = neverruntime::check_files_with_preset(manifest, &path, selected).await?;
+    if checks.is_empty() {return Err("offline denied: installed release has no verified managed files".into());}
+    if let Some(broken) = checks.iter().find(|f|f.status != "ok") {
+        return Err(format!("offline denied: {} ({}) is not verified; reconnect and repair the installation", broken.path, broken.status));
+    }
+    Ok(())
+}
+
+// This command performs actual native integrity verification; the renderer is
+// only allowed to display the result. No network call or token is generated.
+#[tauri::command]
+async fn prepare_offline_launch_0358(root: String, pinned_public_key: String,
+    project_id: String, profile_id: String, channel: String) -> Result<Manifest, String> {
+    let cached = load_cached_desktop_manifest(root.clone(), pinned_public_key.clone(), project_id, profile_id, channel).await?;
+    let (cfg, owner) = verified_offline_owner_0358().await?;
+    check_offline_owner_binding_0358(&cfg, &owner, &cached, &root, &pinned_public_key, true)?;
+    verify_offline_files_0358(&cached, &root, &pinned_public_key, &cfg.component_preset).await?;
+    Ok(cached)
+}
+
+fn matching_offline_release_0358(requested: &Manifest, cached: &Manifest) -> Result<(), String> {
+    // Signature verification takes place independently for both inputs.
+    if requested.project_id != cached.project_id || requested.profile_id != cached.profile_id ||
+        requested.channel != cached.channel || requested.version != cached.version ||
+        requested.signature.as_ref().map(|v|(&v.signature,&v.public_key)) !=
+            cached.signature.as_ref().map(|v|(&v.signature,&v.public_key)) {
+        return Err("offline denied: requested release differs from verified local cache".into());
+    }
+    Ok(())
+}
+
 // Cached manifests are never trusted solely because they are on disk.
 // All offline reads verify the pinned Ed25519 signature again.
 fn desktop_manifest_cache_path_0229(root: &str) -> Result<PathBuf, String> {
@@ -697,8 +773,21 @@ fn desktop_manifest_cache_path_0229(root: &str) -> Result<PathBuf, String> {
 #[tauri::command]
 async fn cache_desktop_manifest(manifest: Manifest, root: String, pinned_public_key: String) -> Result<(), String> {
     neverruntime::verify_manifest_signature(&manifest, &pinned_public_key)?;
-    // The client directory may not exist until first install.
-    fs::create_dir_all(&root).await.map_err(|e| format!("cannot create client root for cache: {e}"))?;
+    let (cfg, owner) = verified_offline_owner_0358().await?;
+    // Only an installed, verified profile that explicitly permits offline
+    // may become the cached replay release.
+    if !manifest.runtime.launch.offline_mode { return Err("offline cache disabled by signed profile policy".into()); }
+    // The owner identity is checked before touching any on-disk cache.
+    if owner.project_id != manifest.project_id || owner.profile_id != manifest.profile_id ||
+        owner.channel != manifest.channel || !owner.pinned_public_key.eq_ignore_ascii_case(&pinned_public_key) ||
+        !cfg.pinned_public_key.eq_ignore_ascii_case(&pinned_public_key) {
+        return Err("offline cache denied: owner bundle scope or pinned key mismatch".into());
+    }
+    // Do not create arbitrary directories for renderer-supplied cache targets.
+    check_offline_owner_binding_0358(&cfg, &owner, &manifest, &root, &pinned_public_key, true)?;
+    // Never overwrite the previous usable cache with an uninstalled update.
+    // Only the active, fully verified release may replace it.
+    verify_offline_files_0358(&manifest, &root, &pinned_public_key, &cfg.component_preset).await?;
     let path = desktop_manifest_cache_path_0229(&root)?;
     let dir = path.parent().ok_or("missing cache directory")?;
     fs::create_dir_all(dir).await.map_err(|e| e.to_string())?;
@@ -736,6 +825,8 @@ async fn load_cached_desktop_manifest(root: String, pinned_public_key: String, p
     if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > 16 * 1024 * 1024 { return Err("unsafe manifest cache file".into()); }
     let manifest: Manifest = serde_json::from_slice(&fs::read(&path).await.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
     neverruntime::verify_manifest_signature(&manifest, &pinned_public_key)?;
+    let (cfg, owner) = verified_offline_owner_0358().await?;
+    check_offline_owner_binding_0358(&cfg, &owner, &manifest, &root, &pinned_public_key, true)?;
     if (manifest.schema_version != "2.0" && manifest.schema_version != "3.0") || manifest.project_id != project_id || manifest.profile_id != profile_id || manifest.channel != channel || !manifest.runtime.launch.offline_mode {
         return Err("cached manifest is not authorized for this profile/channel in offline mode".into());
     }
@@ -945,6 +1036,20 @@ async fn launch_minecraft(
         manifest, auth_mode, root, java_path, username, minecraft_credentials, official_identity, pinned_public_key, preferences, component_preset,
     } = request;
     validate_launch_realm_0269(auth_mode, minecraft_credentials.as_ref(), official_identity.is_some(), preferences.as_ref())?;
+    if preferences.as_ref().is_some_and(|p|p.offline) {
+        // Check owner policy and the exact cached signed release before
+        // interacting with NeverGuard. The supervisor performs the final
+        // SHA-256 validation under its release lease immediately before spawn;
+        // do not hash the same multi-GiB client a redundant third time.
+        let cached = load_cached_desktop_manifest(root.clone(), pinned_public_key.clone(),
+            manifest.project_id.clone(), manifest.profile_id.clone(), manifest.channel.clone()).await?;
+        neverruntime::verify_manifest_signature(&manifest, &pinned_public_key)?;
+        matching_offline_release_0358(&manifest, &cached)?;
+        let (cfg, _) = verified_offline_owner_0358().await?;
+        if component_preset.as_deref().unwrap_or("") != cfg.component_preset {
+            return Err("offline denied: selected component preset differs from installed configuration".into());
+        }
+    }
     #[cfg(windows)]
     {
         let status = neverguard.ensure_started().await?;
@@ -1031,19 +1136,6 @@ async fn launch_minecraft(
     let _ = &neverguard;
 
     neverruntime::transactional_release::ensure_active_preset(&manifest, &PathBuf::from(&root), &pinned_public_key, component_preset.as_deref()).await?;
-    // Offline launch is strictly a replay of the verified on-disk release.
-    // A caller cannot turn any arbitrary signed online manifest into an
-    // offline entitlement just by setting preferences.offline = true.
-    if preferences.as_ref().map(|p| p.offline).unwrap_or(false) {
-        let cached = load_cached_desktop_manifest(
-            root.clone(), pinned_public_key.clone(), manifest.project_id.clone(),
-            manifest.profile_id.clone(), manifest.channel.clone(),
-        ).await?;
-        if cached.version != manifest.version ||
-            cached.signature.as_ref().map(|s| s.signature.as_str()) != manifest.signature.as_ref().map(|s| s.signature.as_str()) {
-            return Err("offline launch requires the exact cached signed release".into());
-        }
-    }
     // Never accept MSA tokens from JS. Only the native manager can acquire official
     // game credentials, and they are passed straight into NeverRuntime.
     if minecraft_credentials.as_ref().is_some_and(|v| v.user_type == "msa") {
@@ -1539,7 +1631,7 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,load_signed_provisioning_0352,save_desktop_config,complete_first_run_0352,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,open_external_https_0356,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,desktop_native_ui_info_0357,desktop_window_action_0357,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
+        .invoke_handler(tauri::generate_handler![player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,load_signed_provisioning_0352,save_desktop_config,complete_first_run_0352,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,prepare_offline_launch_0358,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,open_external_https_0356,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,desktop_native_ui_info_0357,desktop_window_action_0357,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }
 
@@ -1589,5 +1681,54 @@ mod desktop_window_0357_tests {
         for unsupported in ["close","open","execute","shell", "resize", "", "togglemaximized"] {
             assert!(parse_desktop_window_action_0357(unsupported).is_err());
         }
+    }
+}
+
+#[cfg(test)]
+mod offline_policy_0358_tests {
+    use super::*;
+    fn manifest() -> Manifest {
+        serde_json::from_value(serde_json::json!({
+            "schemaVersion":"2.0", "projectId":"owner", "profileId":"client", "channel":"stable",
+            "version":"release-1", "createdAt":"2026-10-28T00:00:00Z",
+            "minecraft":{"version":"1.21.1", "loader":"vanilla"},
+            "runtime":{"java":{"majorVersion":21,"distribution":"temurin"},
+                       "launch":{"offlineMode":true}},
+            "files":[],
+            "signature":{"algorithm":"ed25519","publicKey":"aa","signature":"signed","signedAt":"2026-10-28T00:00:00Z"}
+        })).unwrap()
+    }
+    #[test]
+    fn offline_requires_owner_scope_exact_release_and_completed_install() {
+        let dir=std::env::temp_dir().join(format!("nl-offline-policy-{}-{}",std::process::id(),rand::random::<u64>()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path=dir.to_string_lossy().to_string();
+        let mut cfg=default_desktop_config();
+        cfg.game_directory=path.clone();cfg.project_id="owner".into();cfg.profile_id="client".into();
+        cfg.channel="stable".into();cfg.pinned_public_key="aa".into();
+        cfg.onboarding_completed=true;cfg.onboarding_bootstrap_digest="digest".into();
+        let owner=signed_first_run_0352::Provisioning0352 {
+            backend_url:"https://example.test".into(),project_id:"owner".into(),profile_id:"client".into(),
+            channel:"stable".into(),manifest_url:"https://example.test/manifest".into(),
+            pinned_public_key:"aa".into(),display_name:"Owner".into(),server_id:String::new(),
+            server_host:String::new(),server_port:25565,auto_enter:false,digest:"digest".into(),branding:None,
+        };
+        let m=manifest();
+        assert!(check_offline_owner_binding_0358(&cfg,&owner,&m,&path,"aa",true).is_ok());
+        cfg.onboarding_completed=false;
+        assert!(check_offline_owner_binding_0358(&cfg,&owner,&m,&path,"aa",true).is_err());
+        cfg.onboarding_completed=true;
+        assert!(check_offline_owner_binding_0358(&cfg,&owner,&m,&path,"bb",true).is_err());
+        let mut changed=m.clone();changed.project_id="other".into();
+        assert!(check_offline_owner_binding_0358(&cfg,&owner,&changed,&path,"aa",true).is_err());
+        changed=m.clone();changed.channel="beta".into();
+        assert!(check_offline_owner_binding_0358(&cfg,&owner,&changed,&path,"aa",true).is_err());
+        changed=m.clone();changed.runtime.launch.offline_mode=false;
+        assert!(check_offline_owner_binding_0358(&cfg,&owner,&changed,&path,"aa",true).is_err());
+        changed=m.clone();changed.version="release-2".into();
+        assert!(matching_offline_release_0358(&m,&changed).is_err());
+        changed=m.clone();changed.signature.as_mut().unwrap().signature="tampered".into();
+        assert!(matching_offline_release_0358(&m,&changed).is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

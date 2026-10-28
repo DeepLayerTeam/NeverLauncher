@@ -1,3 +1,11 @@
+## [0.35.8] — Owner-Authorized Offline Playback & Verified Cache
+
+- Native Desktop enforces signed owner bootstrap, exact project/profile/channel, pinned Ed25519 key, completed first-run digest and saved canonical installation directory before allowing offline cache replay or game launch.
+- Offline cache is updated **only after successful installed release/preset and managed file SHA-256 verification**, including first-run install, component selection, repair and durable resume. Merely fetching a newer signed manifest cannot evict a still-active cached release.
+- Real `prepare_offline_launch_0358` command verifies the installed transactional release and component preset without contacting Backend or creating credentials; native `launch_minecraft` independently rechecks identity/cache, and NeverRuntime checks files again under a launch lease.
+- Renderer switches to offline only on native success, never retains signed online auto-enter/ServerBridge selection for offline, and displays specific recovery actions. Offline has no Microsoft entitlement, token or ServerBridge ticket; runtime rejects signed game arguments that try to auto-join a server.
+- New Desktop regression tests and negative native Rust tests, plus a 3-platform CI build/test workflow. Local native compilation, packaged Tauri and live Minecraft/ServerBridge offline E2E remain unverified.
+
 ## [0.35.6] — CSP, Sandbox, Native Bridge Revocation & Hardening
 
 - Desktop extension UI now rejects stale or malformed catalog/HTML/RPC payloads, mismatched scopes, untrusted message origins, duplicate in-flight requests and cross-generation responses.

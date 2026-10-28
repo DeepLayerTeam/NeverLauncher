@@ -2,6 +2,7 @@ pub mod attestation;
 pub mod compatibility;
 mod deterministic_launch;
 mod launch_identity_0269;
+mod offline_policy_0358;
 pub mod file_ownership;
 pub mod component_catalog_0241;
 pub mod component_actions_0245;

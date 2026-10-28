@@ -1,3 +1,4 @@
+import { offlineLaunchSettings0358, offlineSelection0358, offlineRecovery0358 } from './offline_policy_0358';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { invoke } from '@tauri-apps/api/core';
@@ -500,6 +501,7 @@ function App() {
   const officialMinecraftClient = useRef<OfficialMinecraftClient0257 | null>(null);
   const [officialProfile, setOfficialProfile] = useState<OfficialProfile0257 | null>(null);
   const [minecraftIdentity, setMinecraftIdentity] = useState<GameLaunchMode0269>(settings.offlineEnabled ? 'offline' : 'local');
+  const [offlineStatus0358, setOfflineStatus0358] = useState('');
   if (authSession?.accessToken && settings.backendUrl) {
     if (!officialMinecraftClient.current) officialMinecraftClient.current = new OfficialMinecraftClient0257(settings.backendUrl, authSession.accessToken, authSession.sessionId, callTauri);
     else officialMinecraftClient.current.rebind(settings.backendUrl, authSession.accessToken, authSession.sessionId);
@@ -1406,23 +1408,35 @@ function App() {
   }
 
   async function loadCachedOfflineManifest() {
+    setOfflineStatus0358('Проверка подписанного кеша и целостности установленной сборки…');
     try {
-      const result = await callTauri<Manifest>('load_cached_desktop_manifest', {
+      // Native verifier repeats owner binding, manifest signature, installed
+      // release/preset, and SHA-256 validation before returning anything.
+      const result = await callTauri<Manifest>('prepare_offline_launch_0358', {
         root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey,
         projectId: settings.projectId, profileId: settings.profileId, channel: settings.channel,
       });
       setManifest(result);
       setProfileServers([]);
       setLaunchPlan(null);
-      patchSettings('offlineEnabled', true);
-      log(`Offline Manifest ${result.version} проверен по pinned Ed25519 ключу.`);
-    } catch (error) { log(`Offline Manifest отклонён: ${String(error)}`); }
+      setMinecraftIdentity('offline');
+      setSettings(current => normalizedSettings({ ...current, offlineEnabled: true }));
+      setOfflineStatus0358(`Offline готов: ${result.projectId}/${result.profileId} · ${result.version}. Доступ к защищённому серверу не предоставляется.`);
+      log(`Offline: файлы установленной сборки ${result.version} проверены native SHA-256. Это не Minecraft entitlement.`);
+    } catch (error) {
+      const action=offlineRecovery0358(error);
+      setMinecraftIdentity('local');
+      setSettings(current => normalizedSettings({ ...current, offlineEnabled: false }));
+      setOfflineStatus0358(`Offline недоступен: ${String(error)}. ${action}`);
+      log(`Offline отклонён: ${String(error)}. ${action}`);
+    }
   }
 
   function currentLaunchPreferences() {
     if (!manifest) throw new Error('Manifest не загружен');
     if (!['2.0','3.0'].includes(manifest.schemaVersion)) throw new Error('Desktop launch settings require Manifest v2/v3');
-    return launchPreferences({...settings, offlineEnabled: minecraftIdentity === 'offline'}, manifest.runtime.memory, Boolean(manifest.runtime.launch?.offlineMode), profileServers, false, minecraftIdentity === 'official');
+    const effective=offlineLaunchSettings0358(settings,minecraftIdentity === 'offline');
+    return launchPreferences(effective, manifest.runtime.memory, Boolean(manifest.runtime.launch?.offlineMode), profileServers, false, minecraftIdentity === 'official');
   }
 
   async function loadManifest(projectId = selectedProject || settings.projectId, profileId = selectedProfile || settings.profileId) {
@@ -1432,6 +1446,8 @@ function App() {
       if (!url) throw new Error('сначала выберите проект и профиль');
       const result = await callTauri<Manifest>('load_manifest', { url, pinnedPublicKey: settings.pinnedPublicKey });
       setManifest(result);
+      setMinecraftIdentity('local');
+      setOfflineStatus0358('');
       // Do not erase the installed choice when a preset or component disappears.
       // The native migration preview compares this release against the verified
       // active release and requires explicit confirmation before installing.
@@ -1445,7 +1461,8 @@ function App() {
       const effectiveRoot = settings.gameDirectory.includes(result.projectId)
         ? settings.gameDirectory
         : `${settings.gameDirectory || './.neverlauncher/projects'}/${result.projectId}/${result.profileId}`;
-      void cacheSignedManifest(result, effectiveRoot).catch((error) => log(`Offline cache не сохранён: ${String(error)}`));
+      // Do not cache a merely fetched release. The active installed release
+      // must be committed and verified before replacing the offline cache.
       log(`Манифест загружен: ${result.projectId}/${result.profileId}/${result.version}.`);
       const policy = result.runtime.memory;
       const minMemory = Math.max(512, policy?.minimumMb || 512);
@@ -1597,6 +1614,9 @@ function App() {
           });
           patchSettings('componentPreset',chosen);
           setFiles(await callTauri<FileCheckResult[]>('check_files',{manifest,root:settings.gameDirectory,preset:chosen||null}));
+          if (manifest.runtime.launch?.offlineMode) {
+            await cacheSignedManifest(manifest).catch(error => log(`Offline кеш после resume не обновлён: ${String(error)}`));
+          }
         }
       }
       log(`Возобновление: скачано ${result.downloaded}, ошибок ${result.failed}.`);
@@ -1632,6 +1652,9 @@ function App() {
       if (verified.some(file => file.status !== 'ok' && file.status !== 'optional-missing')) {
         throw new Error('SHA-256 mismatch: проверка установленных файлов не пройдена');
       }
+      if (manifest.runtime.launch?.offlineMode) {
+        await cacheSignedManifest(manifest).catch(error => log(`Offline кеш после установки не обновлён: ${String(error)}`));
+      }
       log(`Загрузка подтверждена: ${result.downloaded} файлов; передано ${result.bytesDownloaded || 0} байт.`);
     } catch (error) {
       setStage('failed');
@@ -1665,6 +1688,9 @@ function App() {
         config:normalizedSettings({...settings,componentPreset:choice}),
       });
       patchSettings('componentPreset',choice);
+      if (manifest.runtime.launch?.offlineMode) {
+        await cacheSignedManifest(manifest).catch(error => log(`Offline кеш выбранных компонентов не обновлён: ${String(error)}`));
+      }
       setFiles(verified);setDownload(result);setStage('ready');
       log(`Компоненты установлены: ${result.downloaded} загружено, ${result.skipped} повторно использовано.`);
     }catch(error){setStage('failed');log(`Не удалось применить компоненты: ${String(error)}`);throw error;}
@@ -1695,6 +1721,9 @@ function App() {
       if (!recordTransferOutcome0354(result.download, pending)) return;
       if (result.status !== 'ready' || result.after.some(f => f.status !== 'ok' && f.status !== 'optional-missing')) {
         throw new Error('SHA-256 mismatch: repair did not restore all required files');
+      }
+      if (manifest.runtime.launch?.offlineMode) {
+        await cacheSignedManifest(manifest).catch(error => log(`Offline кеш после repair не обновлён: ${String(error)}`));
       }
       log(`${result.message}: восстановлено ${result.repaired}, скачано ${result.download.downloaded}, ошибок ${result.download.failed}.`);
     } catch (error) {
@@ -1964,9 +1993,10 @@ function App() {
     setStage('launching');
     try {
       const preferences = currentLaunchPreferences();
+      const offlineSelection=offlineSelection0358(minecraftIdentity,settings);
       const launchMode = resolveLaunchMode0269({
         identity: minecraftIdentity, offlineAllowed: Boolean(manifest.runtime.launch?.offlineMode),
-        autoEnter: preferences.autoEnter, serverId: settings.serverId,
+        autoEnter: preferences.autoEnter, serverId: offlineSelection.serverId,
         hasOfficialProfile: Boolean(officialProfile && officialMinecraftClient.current?.linked),
       });
       // Only cached signed Manifest v2 may be used when the backend is offline.
@@ -2032,7 +2062,13 @@ function App() {
       log(`${result.message}: PID ${result.pid ?? 'unknown'}, process ${result.id}.`);
     } catch (error) {
       setStage('failed');
-      log(`Запуск не выполнен: ${String(error)}`);
+      if (minecraftIdentity === 'offline') {
+        const recovery=offlineRecovery0358(error);
+        setOfflineStatus0358(`Offline запуск отклонён: ${String(error)}. ${recovery}`);
+        log(`Offline запуск отклонён: ${String(error)}. ${recovery}`);
+      } else {
+        log(`Запуск не выполнен: ${String(error)}`);
+      }
     }
   }
 
@@ -2146,6 +2182,14 @@ function App() {
       const saved=await callTauri<DesktopSettings>('load_desktop_config');
       if(!saved.onboardingCompleted)throw new Error('Native verification не сохранила завершение');
       setSettings(normalizedSettings(saved));setFirstRunStep0352('complete');setStage('ready');
+      if (manifest.runtime.launch?.offlineMode) {
+        try { await cacheSignedManifest(manifest,saved.gameDirectory); }
+        catch (error) {
+          const message=`Подписанный offline-кеш не сохранён после установки: ${String(error)}`;
+          setOfflineStatus0358(`${message}. ${offlineRecovery0358(error)}`);
+          log(message);
+        }
+      }
       log(`Установка завершена и подтверждена Native (${checked.length} файлов): ${native.message}`);
     }catch(error){setStage('failed');setFirstRunError0352(`Установка не завершена: ${String(error)}. Используйте повторную попытку.`);log(`0.35.2 install: ${String(error)}`);}
     finally{setFirstRunBusy0352(false);setTransferBusy(false)}
@@ -2269,8 +2313,9 @@ function App() {
           <OfficialMinecraftPanel0257 key={`${settings.backendUrl}|${authSession.sessionId}`} client={officialMinecraftClient.current} linkedProfile={officialProfile} onLinked={(p)=>{setOfficialProfile(p); if (!p) setMinecraftIdentity('local');}} />
           <section className="panel"><label>Режим запуска Minecraft <select value={minecraftIdentity} onChange={e=>{
             const mode=e.target.value as GameLaunchMode0269;
+            if(mode==='offline'){ void loadCachedOfflineManifest(); return; }
             setMinecraftIdentity(mode);
-            patchSettings('offlineEnabled', mode === 'offline');
+            patchSettings('offlineEnabled', false);
             if (mode !== 'local') patchSettings('serverId', '');
           }}>
             <option value="local">Project Yggdrasil (Never identity / ServerBridge)</option>
@@ -2297,7 +2342,7 @@ function App() {
           }}
           onAdopted={() => { log('Проверенные файлы прежней установки добавлены в content cache.'); void verifyFiles(); }}
         />}
-        {screen === 'settings' && <SettingsPanel locale0357={ui0357.locale} settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} minecraftIdentity={minecraftIdentity} setMinecraftIdentity={setMinecraftIdentity} />}
+        {screen === 'settings' && <SettingsPanel locale0357={ui0357.locale} settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} offlineStatus0358={offlineStatus0358} minecraftIdentity={minecraftIdentity} setMinecraftIdentity={setMinecraftIdentity} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
         {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}
         {screen === 'diagnostics' && <DiagnosticsPanel exportDiagnostics={exportDiagnostics} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} settingsCheck={settingsCheck} />}
@@ -2437,7 +2482,7 @@ function DownloadPanel({ locale0357, files, download, downloadProgress, transfer
   </section>;
 }
 
-function SettingsPanel({ locale0357, settings, patchSettings, validateSettings, settingsCheck, checkJavaRuntime, javaInfo, openGameDirectory, manifest, profileServers, loadProfileServers, loadCachedOfflineManifest, cacheSignedManifest, minecraftIdentity, setMinecraftIdentity }: any) {
+function SettingsPanel({ locale0357, settings, patchSettings, validateSettings, settingsCheck, checkJavaRuntime, javaInfo, openGameDirectory, manifest, profileServers, loadProfileServers, loadCachedOfflineManifest, cacheSignedManifest, offlineStatus0358, minecraftIdentity, setMinecraftIdentity }: any) {
   const t = tr0357((locale0357 || 'ru') as Locale0357);
   return <section className="panel"><h3>{t.settingsTitle}</h3>
     <div className="settings">
@@ -2449,7 +2494,7 @@ function SettingsPanel({ locale0357, settings, patchSettings, validateSettings, 
       <label className="checkSetting"><input type="checkbox" checked={settings.autoEnter} disabled={minecraftIdentity === 'offline'} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('autoEnter', e.target.checked)} /> {t.autoEnter}</label>
       <label>{t.server}<select value={settings.serverId || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => patchSettings('serverId', e.target.value)}><option value="">{t.noServer}</option>{profileServers.map((server: ScopedServer) => <option value={server.id} key={server.id}>{server.name} ({server.kind})</option>)}</select></label>
       {settings.autoEnter && <><label>{t.host}<input value={settings.serverHost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverHost', e.target.value)} placeholder="mc.example.org" /></label><label>{t.port}<input type="number" min={1} max={65535} value={settings.serverPort} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverPort', Number(e.target.value))} /></label></>}
-      <label className="checkSetting"><input type="checkbox" checked={minecraftIdentity === 'offline'} disabled={!manifest?.runtime.launch?.offlineMode} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {const offline=e.target.checked;setMinecraftIdentity(offline ? 'offline' : 'local');patchSettings('offlineEnabled',offline);if(offline)patchSettings('serverId','');}} /> {t.offline}</label>
+      <label className="checkSetting"><input type="checkbox" checked={minecraftIdentity === 'offline'} disabled={!manifest?.runtime.launch?.offlineMode} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {if(e.target.checked){void loadCachedOfflineManifest();}else{setMinecraftIdentity('local');patchSettings('offlineEnabled',false);}}} /> {t.offline}</label>
       <label className="checkSetting"><input type="checkbox" checked={Boolean(settings.sentryDiagnosticsEnabled)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('sentryDiagnosticsEnabled', e.target.checked)} /> {t.sentry}</label>
       <label className="checkSetting"><input type="checkbox" checked={Boolean(settings.discordPresenceEnabled)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordPresenceEnabled', e.target.checked)} /> {t.discord}</label>
       {settings.discordPresenceEnabled && <>
@@ -2459,6 +2504,7 @@ function SettingsPanel({ locale0357, settings, patchSettings, validateSettings, 
       <label>{t.key}<input value={settings.pinnedPublicKey} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('pinnedPublicKey', e.target.value)} /></label>
     </div>
     <div className="toolbar inline"><button onClick={validateSettings}>{t.validate}</button><button onClick={checkJavaRuntime}>{t.checkJava}</button><button onClick={openGameDirectory}>{t.openDir}</button><button onClick={() => loadProfileServers().catch(console.error)}>{t.updateServers}</button><button onClick={() => cacheSignedManifest().catch(console.error)}>{t.saveCache}</button><button onClick={loadCachedOfflineManifest}>{t.loadCache}</button></div>
+    <p role="status" aria-live="polite">{offlineStatus0358}</p>
     <p>Server browser показывает узлы ServerBridge, а не игровые DNS-адреса. Для auto-enter укажите публичный адрес выбранного сервера. Offline не выдаёт серверные сессии и требует локальный проверенный Manifest и файлы.</p>
     <pre>{settingsCheck ? JSON.stringify(settingsCheck, null, 2) : javaInfo ? JSON.stringify(javaInfo, null, 2) : 'Настройки ещё не проверены.'}</pre>
   </section>;
