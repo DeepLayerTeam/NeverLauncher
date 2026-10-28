@@ -47,7 +47,7 @@ def load_exact(path: Path):
 
 
 def verify(native_dir: Path, desktop_dir: Path, backend_file: Path, commit: str, version: str):
-    need(version == '0.35.14' and re.fullmatch('[a-f0-9]{40}',commit) is not None,
+    need(version in ('0.35.14','0.36.0') and re.fullmatch('[a-f0-9]{40}',commit) is not None,
          'RC expects exact version and complete commit SHA')
     native=[]
     desktop=[]
@@ -104,7 +104,7 @@ def main():
     a=parser.parse_args()
     a.output.unlink(missing_ok=True)
     try:
-        result=verify(a.native_dir,a.desktop_dir,a.backend,a.commit,'0.35.14')
+        result=verify(a.native_dir,a.desktop_dir,a.backend,a.commit,Path(__file__).resolve().parents[2].joinpath('VERSION').read_text().strip())
         a.output.parent.mkdir(parents=True,exist_ok=True)
         a.output.write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
     except (GateBlocked,ValueError,OSError,KeyError,TypeError) as exc:

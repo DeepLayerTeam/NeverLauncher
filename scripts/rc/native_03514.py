@@ -72,7 +72,7 @@ def check_binary(path: Path) -> Path:
 
 def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
     runtime, signer = check_binary(runtime), check_binary(signer)
-    require(re.fullmatch(r'0\.35\.14', version) is not None, 'release candidate version mismatch')
+    require(version in ('0.35.14','0.36.0'), 'release candidate version mismatch')
     require(re.fullmatch(r'[a-f0-9]{40}', commit) is not None, 'missing exact source commit')
     checkout = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True, text=True, timeout=10)
     require(checkout.returncode == 0 and checkout.stdout.strip() == commit, 'native tests do not match source checkout')

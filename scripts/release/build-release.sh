@@ -729,6 +729,22 @@ if [[ "${VERSION}" == "0.27.0" ]]; then
     --bundle "${OUT_DIR}" --receipt "${OUT_DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
 fi
 
+# 0.36.0 cannot be signed on RC/unit evidence alone. An independent operator
+# authorizes exact built executable AND installer bytes per shipping target.
+# The verified receipt enters RELEASE_MANIFEST/SHA256SUMS before signing.
+if [[ "${VERSION}" == "0.36.0" ]]; then
+  : "${NEVERLAUNCHER_GA036_EVIDENCE_DIR:?0.36.0 GA needs independently signed exact-byte operator evidence}"
+  : "${NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE:?0.36.0 GA requires an independently pinned public key}"
+  [[ -n "${SOURCE_COMMIT}" ]] || { echo "0.36.0 GA BLOCKED: missing exact source commit" >&2; exit 2; }
+  python3 "${ROOT_DIR}/scripts/ga/verified_targets_0360.py" \
+    --bundle "${OUT_DIR}" --evidence "${NEVERLAUNCHER_GA036_EVIDENCE_DIR}" \
+    --trusted-key "${NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE}" \
+    --version "${VERSION}" --commit "${SOURCE_COMMIT}" \
+    --output "${OUT_DIR}/GA_VERIFIED_TARGETS_0360.json"
+  cp -- "${NEVERLAUNCHER_GA036_EVIDENCE_DIR}/approval.json" "${OUT_DIR}/GA_TARGET_APPROVAL_0360.json"
+  cp -- "${NEVERLAUNCHER_GA036_EVIDENCE_DIR}/approval.sig" "${OUT_DIR}/GA_TARGET_APPROVAL_0360.sig"
+fi
+
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
 release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}" --trust-policy "${TRUST_POLICY}" --public-base-url "${PUBLIC_RELEASE_BASE_URL}")
 if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
@@ -783,6 +799,14 @@ log "Ed25519 release signing"
 
 log "Строгая проверка required artifacts/checksums/Ed25519 trust anchor"
 "${RELEASE_CLI}" release verify "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
+if [[ "${VERSION}" == "0.36.0" ]]; then
+  [[ -s "${OUT_DIR}/GA_VERIFIED_TARGETS_0360.json" ]] || {
+    echo "0.36.0 GA BLOCKED: missing signed target approval receipt" >&2; exit 2;
+  }
+  [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]] || {
+    echo "0.36.0 GA BLOCKED: all three protected publish certifications required" >&2; exit 2;
+  }
+fi
 if [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]]; then
   log "Publish-check Minecraft Compatibility + Device Trust Release + cross-platform Guard CI certification"
   "${RELEASE_CLI}" release publish-check "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"

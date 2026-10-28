@@ -1,3 +1,11 @@
+## [0.36.0] — Desktop & Operations GA release hardening (approval pending)
+
+- Required independent Ed25519-signed exact-byte operator authorization for all six release targets; each target must have native install, real Desktop/Minecraft/ServerBridge, rollback, security, performance, operations and OS-signature execution evidence. Missing/modified/expired approval blocks release signing.
+- Bound approval to real compiled executable/installer SHA-256 and exact commit; generated verified target receipt enters the signed release bundle, with 15 negative/positive local security tests.
+- Corrected 0.35.14 RC hardcoded version checks so native, Desktop, Backend and DR source acceptance can execute at 0.36.0 without pretending that source RC checks constitute GA.
+- Required complete Compatibility, Device Trust and Guard CI publication verification for 0.36.0; independent protected operator evidence is mandatory in the production release workflow.
+- **Status:** the source release is prepared but production GA is **BLOCKED** pending external authenticated target evidence, actual platform builds/gameplay and operational certification. No fabricated performance/HA claims.
+
 ## [0.35.14] — Real Source RC Acceptance, Native Security and Operational Release Gates
 
 - Added real cross-platform NeverRuntime signed-download/repair/tamper rejection and Desktop production build verification, with an exact-commit fail-closed RC integration workflow and authenticated Backend/PostgreSQL acceptance.

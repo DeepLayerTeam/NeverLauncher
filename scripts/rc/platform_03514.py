@@ -27,7 +27,7 @@ def sha256(path):
 
 def inspect(binary: Path, frontend: Path, commit: str) -> dict:
     version=(ROOT/'VERSION').read_text().strip()
-    if version != '0.35.14' or not re.fullmatch('[0-9a-f]{40}', commit):
+    if version not in ('0.35.14','0.36.0') or not re.fullmatch('[0-9a-f]{40}', commit):
         raise ValueError('wrong RC version or source commit')
     if not binary.is_file() or binary.is_symlink() or binary.stat().st_size < 1_000_000:
         raise ValueError('no real compiled Desktop binary')

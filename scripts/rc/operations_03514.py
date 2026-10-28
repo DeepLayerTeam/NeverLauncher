@@ -73,7 +73,7 @@ def run(source: str, target: str, env_file: Path, snapshot: Path,
         backup += ['--s3-source-bucket',s3_source]
         if s3_endpoint:backup+=['--s3-endpoint',s3_endpoint]
     b=actual(*backup)
-    if b.get('version')!='0.35.14' or b.get('sourceProject')!=source or not b.get('files'):
+    if b.get('version')!=(ROOT/'VERSION').read_text().strip() or b.get('sourceProject')!=source or not b.get('files'):
         raise OperationsBlocked('real DR backup not verified as current source snapshot')
     v=actual('verify','--snapshot',str(snapshot),*(['--network-ha'] if network_ha else []))
     if v.get('status')!='verified' or v.get('manifest',{}).get('sourceProject')!=source:
@@ -95,7 +95,7 @@ def run(source: str, target: str, env_file: Path, snapshot: Path,
     if not isinstance(r.get('rtoSeconds'),(int,float)) or r['rtoSeconds']<=0:
         raise OperationsBlocked('missing measured restore duration')
     return {'schemaVersion':'neverlauncher.rc.operations.v1','status':'recovery-exercised',
-            'version':'0.35.14','source':source,'target':target,'storage':b['storage'],
+            'version':(ROOT/'VERSION').read_text().strip(),'source':source,'target':target,'storage':b['storage'],
             'snapshotManifestSha256':hashlib.sha256((snapshot/'manifest.json').read_bytes()).hexdigest(),
             'freshSiteReady':True,'rtoSeconds':r['rtoSeconds'],
             'chaosServices':sorted(expected),'networkHA':network_ha,

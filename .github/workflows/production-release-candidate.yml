@@ -3,6 +3,10 @@ name: NeverLauncher Production Release Candidate
 on:
   workflow_dispatch:
     inputs:
+      ga036_operator_approval_run_id:
+        type: string
+        required: true
+        description: 'Independent protected GA 0.36.0 signed acceptance for exact six installed targets and artifact bytes; no unsigned RC artifact allowed'
       optional_components_ga_evidence_run_id:
         type: string
         required: false
@@ -191,7 +195,7 @@ jobs:
           test "$MACOS" = success
 
   current-source-rc-03514:
-    name: Require actual current 0.35.14 native/Desktop/Backend regression matrix
+    name: Require current 0.36.0 native/Desktop/Backend regression matrix
     needs: [base-ci]
     uses: ./.github/workflows/release-candidate-03514.yml
 
@@ -576,8 +580,30 @@ jobs:
           umask 077
           printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > /tmp/neverlauncher-single-node-ga.pub
           test -s single-node-ga-approved/SINGLE_NODE_GA_ATTESTATION.json
+      - name: Retrieve independently signed GA 0.36.0 target authorization
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-ga036-signed-${{ github.sha }}
+          run-id: ${{ inputs.ga036_operator_approval_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ga036-protected-approval
+      - name: Pin independent GA operator verification key (NOT release signing key)
+        env:
+          NL_GA036_OPERATOR_KEY: ${{ vars.NL_GA036_OPERATOR_PUBLIC_KEY_HEX }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NL_GA036_OPERATOR_KEY"
+          umask 077
+          printf '%s\n' "$NL_GA036_OPERATOR_KEY" > "$RUNNER_TEMP/nl-ga036-operator.pub"
+          test -s ga036-protected-approval/approval.json
+          test -s ga036-protected-approval/approval.sig
+          test -d ga036-protected-approval/targets
+          python3 -m pip install cryptography==46.0.4
       - name: Build and cryptographically verify complete release bundle
         env:
+          NEVERLAUNCHER_GA036_EVIDENCE_DIR: ${{ github.workspace }}/ga036-protected-approval
+          NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ga036-operator.pub
           NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/neverlauncher-release-private.pem
           NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE: /tmp/neverlauncher-release-root-public.pem
           NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE: /tmp/neverlauncher-release-trust-policy.json
@@ -605,6 +631,13 @@ jobs:
           NEVERLAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/official-minecraft-ga-0270
           NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
         run: bash scripts/release/build-release.sh
+      - name: Require exact-byte six-target signed approval inside signed release
+        run: |
+          set -euo pipefail
+          DIR="dist/release-$(cat VERSION)"
+          jq -e --arg sha "$GITHUB_SHA" '.schemaVersion == "neverlauncher.ga036.verified-targets.v1" and .status == "approved-for-release-signing" and .commit == $sha and .version == "0.36.0" and (.targets | length) == 6 and all(.targets[]; .checksPassed == 9)' "$DIR/GA_VERIFIED_TARGETS_0360.json"
+          test -s "$DIR/GA_TARGET_APPROVAL_0360.json"
+          test -s "$DIR/GA_TARGET_APPROVAL_0360.sig"
       - name: Assert required production artifacts
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"

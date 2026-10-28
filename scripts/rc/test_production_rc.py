@@ -19,6 +19,7 @@ class TestRCGate(unittest.TestCase):
         active = suites_for_version('0.35.14')
         self.assertEqual(active[-2:], RC_03514_SUITES)
         self.assertGreater(len(active), len(SUITES))
+        self.assertEqual(suites_for_version('0.36.0')[-2:], RC_03514_SUITES)
         self.assertEqual(suites_for_version('0.33.0'), SUITES)
         with self.assertRaises(GateError):
             suites_for_version('0.35.13')
