@@ -899,6 +899,50 @@ mod tests {
             id:format!("{id:032x}"),preset:Some(preset.into()),plan_sha256:Some(plan.sha256)}
     }
     #[test]
+    fn user_collision_is_preserved_only_after_explicit_verified_confirmation_0359(){
+        let root=std::env::temp_dir().join(format!("nl-conflicts-0359-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (m,key)=fixture(&root,"new",&[("mods/player.jar",b"SIGNED")]);
+        fs::create_dir_all(root.join("mods")).unwrap();
+        fs::write(root.join("mods/player.jar"),b"MY CUSTOM CONTENT").unwrap();
+        let preview=preview_player_conflicts_0359(&m,&root,&key,None).unwrap();
+        assert_eq!(preview.files.len(),1);
+        assert!(preview.archive_directory.is_none());
+        assert_eq!(fs::read(root.join("mods/player.jar")).unwrap(),b"MY CUSTOM CONTENT");
+        let mut outdated=preview.files.clone();outdated[0].sha256="0".repeat(64);
+        assert!(preserve_player_conflicts_0359(&m,&root,&key,None,&outdated).is_err());
+        assert_eq!(fs::read(root.join("mods/player.jar")).unwrap(),b"MY CUSTOM CONTENT");
+        let result=preserve_player_conflicts_0359(&m,&root,&key,None,&preview.files).unwrap();
+        let archived=PathBuf::from(result.archive_directory.unwrap());
+        assert!(!root.join("mods/player.jar").exists());
+        assert_eq!(fs::read(archived.join("mods/player.jar")).unwrap(),b"MY CUSTOM CONTENT");
+        assert!(archived.join("index.json").is_file());
+        commit(&root,Release{manifest:m.clone(),installed:vec!["mods/player.jar".into()],id:format!("{:032x}",6359),preset:None,plan_sha256:None},&key,&staged(&root,&m,&[("mods/player.jar",b"SIGNED")])).unwrap();
+        assert_eq!(fs::read(root.join("mods/player.jar")).unwrap(),b"SIGNED");
+        assert_eq!(fs::read(archived.join("mods/player.jar")).unwrap(),b"MY CUSTOM CONTENT");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn changed_files_or_symlink_collisions_fail_closed_0359(){
+        let root=std::env::temp_dir().join(format!("nl-conflict-race-0359-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (m,key)=fixture(&root,"new",&[("mods/player.jar",b"SIGNED")]);
+        fs::create_dir_all(root.join("mods")).unwrap();
+        fs::write(root.join("mods/player.jar"),b"PLAYER1").unwrap();
+        let preview=preview_player_conflicts_0359(&m,&root,&key,None).unwrap();
+        fs::write(root.join("mods/player.jar"),b"PLAYER2").unwrap();
+        assert!(preserve_player_conflicts_0359(&m,&root,&key,None,&preview.files).is_err());
+        assert_eq!(fs::read(root.join("mods/player.jar")).unwrap(),b"PLAYER2");
+        #[cfg(unix)]{
+            use std::os::unix::fs::symlink;
+            let outside=root.join("outside.txt");fs::write(&outside,b"DON'T TOUCH").unwrap();
+            fs::remove_file(root.join("mods/player.jar")).unwrap();
+            symlink(&outside,root.join("mods/player.jar")).unwrap();
+            assert!(preview_player_conflicts_0359(&m,&root,&key,None).is_err());
+            assert_eq!(fs::read(outside).unwrap(),b"DON'T TOUCH");
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
     fn active_selection_02410_is_loaded_from_verified_release_pointer_not_settings(){
         let root=std::env::temp_dir().join(format!("nl-ported-selection-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (manifest,key)=signed_optional_fixture_0246(&root);
@@ -1362,6 +1406,104 @@ pub fn check_unowned_path_0247(root:&Path,relative:&str)->Result<(),String>{
     file_ownership::ensure_no_symlinks(root,&destination)?;
     if destination.exists(){return Err(format!("user-owned file collision: {relative}"))}
     Ok(())
+}
+
+// 0.35.9: User files have never been part of signed managed ownership. Before a
+// new release claims their paths, an explicit player action may move them to a
+// durable, discoverable archive. Nothing in this flow weakens commit preflight.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerConflict0359 {
+    pub path: String,
+    pub size: u64,
+    pub sha256: String,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerConflictResult0359 {
+    pub files: Vec<PlayerConflict0359>,
+    pub archive_directory: Option<String>,
+}
+
+fn find_player_conflicts_0359(root:&Path,manifest:&Manifest,key:&str,preset:Option<&str>)->Result<Vec<PlayerConflict0359>,String>{
+    verify_manifest_signature(manifest,key)?;
+    file_ownership::validate_download_targets(manifest)?;
+    let plan=resolved_download_0246::resolve(manifest,preset)?;
+    let active=pointer(root)?.active;
+    if let Some(ref old)=active{validate_release(old,key)?;}
+    let mut files=Vec::new();
+    let mut bytes=0_u64;
+    for f in &plan.files {
+        if active.as_ref().is_some_and(|old|old.installed.contains(&f.path)){continue;}
+        let live=safe_join(root,&f.path)?;
+        file_ownership::ensure_no_symlinks(root,&live)?;
+        match fs::symlink_metadata(&live){
+            Ok(meta)=>{
+                if !meta.is_file() || meta.file_type().is_symlink(){return Err(format!("unsafe user file collision: {}",f.path))}
+                if files.len()>=4096 {return Err("too many conflicting user files".into());}
+                bytes=bytes.checked_add(meta.len()).ok_or("conflict archive size overflow")?;
+                if bytes>20*1024*1024*1024 {return Err("conflict archive exceeds 20 GiB; use manual export".into());}
+                files.push(PlayerConflict0359{path:f.path.clone(),size:meta.len(),sha256:hash(&live)?});
+            },
+            Err(e) if e.kind()==std::io::ErrorKind::NotFound=>(),
+            Err(e)=>return Err(format!("inspect user file {}: {e}",f.path)),
+        }
+    }
+    Ok(files)
+}
+
+pub fn preview_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,preset:Option<&str>)->Result<PlayerConflictResult0359,String>{
+    let _guard=lock(root)?;
+    let root=root.canonicalize().map_err(|e|e.to_string())?;
+    recover_locked(&root,key)?;
+    Ok(PlayerConflictResult0359{files:find_player_conflicts_0359(&root,manifest,key,preset)?,archive_directory:None})
+}
+
+// A caller must confirm the exact previewed path+hash set. The durable index
+// is written before the first rename, so interrupted saves remain discoverable.
+// Renames stay on the same filesystem and never overwrite existing archives.
+pub fn preserve_player_conflicts_0359(manifest:&Manifest,root:&Path,key:&str,preset:Option<&str>,expected:&[PlayerConflict0359])->Result<PlayerConflictResult0359,String>{
+    let _guard=lock(root)?;
+    let root=root.canonicalize().map_err(|e|e.to_string())?;
+    recover_locked(&root,key)?;
+    let files=find_player_conflicts_0359(&root,manifest,key,preset)?;
+    if files.len()!=expected.len()||files.iter().zip(expected).any(|(a,b)|a.path!=b.path||a.sha256!=b.sha256||a.size!=b.size){
+        return Err("user files changed since preview; refresh the conflict list before preserving".into());
+    }
+    if files.is_empty(){return Ok(PlayerConflictResult0359{files,archive_directory:None})}
+    let archive=base(&root).join("player-conflicts").join(format!("{:032x}",rand::random::<u128>()));
+    safe_dir(&root,&archive)?;
+    // Persist a complete immutable list before moving any user bytes.
+    let index=serde_json::to_vec_pretty(&serde_json::json!({
+        "schemaVersion":"1.0","projectId":&manifest.project_id,"profileId":&manifest.profile_id,
+        "channel":&manifest.channel,"release":&manifest.version,"files":&files
+    })).map_err(|e|e.to_string())?;
+    if index.len()>1024*1024{return Err("user conflict index too large".into());}
+    let index_path=archive.join("index.json");
+    let mut file=fs::OpenOptions::new().write(true).create_new(true).open(&index_path).map_err(|e|e.to_string())?;
+    file.write_all(&index).and_then(|_|file.sync_all()).map_err(|e|e.to_string())?;
+    drop(file);
+    sync_dir(&archive)?;
+    let targets:Vec<_>=files.iter().map(|f|safe_join(&root,&f.path)).collect::<Result<_,_>>()?;
+    platform_fs::preflight_targets(&root,&targets)?;
+    for conflict in &files {
+        let source=safe_join(&root,&conflict.path)?;
+        let dest=safe_join(&archive,&conflict.path)?;
+        file_ownership::ensure_no_symlinks(&root,&source)?;
+        file_ownership::ensure_no_symlinks(&root,&dest)?;
+        if !matches_digest(&source,&conflict.sha256,conflict.size){
+            return Err(format!("user file changed while preserving conflicts: {}; previous files remain in {}",conflict.path,archive.display()));
+        }
+        safe_dir(&root,dest.parent().ok_or("invalid conflict archive path")?)?;
+        if fs::symlink_metadata(&dest).is_ok(){return Err("player archive destination already exists".into())}
+        fs::rename(&source,&dest).map_err(|e|format!("preserve user file {}: {e}; previously moved files in {}",conflict.path,archive.display()))?;
+        if !matches_digest(&dest,&conflict.sha256,conflict.size){
+            return Err(format!("archived player file changed during preservation: {}; archive retained in {}",conflict.path,archive.display()));
+        }
+        if let Some(parent)=source.parent(){sync_dir(parent)?;}
+        if let Some(parent)=dest.parent(){sync_dir(parent)?;}
+    }
+    Ok(PlayerConflictResult0359{files,archive_directory:Some(archive.to_string_lossy().into_owned())})
 }
 
 /// An outer Option differentiates "no matching active release" from the

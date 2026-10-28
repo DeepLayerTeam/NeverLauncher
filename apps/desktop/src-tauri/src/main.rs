@@ -437,6 +437,7 @@ struct DesktopConfig {
     config_path: String,
     #[serde(default)] onboarding_completed: bool,
     #[serde(default)] onboarding_bootstrap_digest: String,
+    #[serde(flatten)] extra_preferences_0359: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -478,7 +479,7 @@ fn default_screen_width_0229() -> u32 { 1280 }
 fn default_screen_height_0229() -> u32 { 720 }
 fn default_server_port_0229() -> u16 { 25565 }
 fn default_desktop_config() -> DesktopConfig {
-    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), manifest_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), trust_policy_path: String::new(), server_id: String::new(), screen_width: 1280, screen_height: 720, fullscreen: false, auto_enter: false, server_host: String::new(), server_port: 25565, offline_enabled: false, component_preset:String::new(), discord_presence_enabled: false, sentry_diagnostics_enabled: false, discord_application_id: String::new(), discord_action_url: String::new(), config_path: String::new(), onboarding_completed:false, onboarding_bootstrap_digest:String::new() }
+    DesktopConfig { schema_version: "1.0".into(), backend_url: String::new(), manifest_url: String::new(), project_id: String::new(), profile_id: String::new(), channel: "stable".into(), game_directory: default_game_directory(), java_path: String::new(), username: "Player".into(), memory_mb: 4096, pinned_public_key: String::new(), trust_policy_path: String::new(), server_id: String::new(), screen_width: 1280, screen_height: 720, fullscreen: false, auto_enter: false, server_host: String::new(), server_port: 25565, offline_enabled: false, component_preset:String::new(), discord_presence_enabled: false, sentry_diagnostics_enabled: false, discord_application_id: String::new(), discord_action_url: String::new(), config_path: String::new(), onboarding_completed:false, onboarding_bootstrap_digest:String::new(),extra_preferences_0359:serde_json::Map::new() }
 }
 fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
     if cfg.schema_version.trim().is_empty() { cfg.schema_version = "1.0".into(); }
@@ -499,6 +500,41 @@ fn normalize_desktop_config(mut cfg: DesktopConfig) -> DesktopConfig {
         cfg.discord_action_url.clear();
     }
     cfg
+}
+
+fn validate_desktop_config_schema_0359(schema:&str)->Result<(),String>{
+    match schema{"1.0"|"1.1"=>Ok(()), _=>Err(format!("Desktop config version {schema} is unsupported; preferences were not overwritten"))}
+}
+async fn preserve_legacy_config_0359(path:&std::path::Path)->Result<(),String>{
+    let backup=path.with_file_name("config.pre-0359.json");
+    match fs::symlink_metadata(&backup).await {
+        Ok(meta) if meta.is_file() && !meta.file_type().is_symlink()=>return Ok(()),
+        Ok(_)=>return Err("unsafe legacy Desktop settings backup".into()),
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound=>(),
+        Err(e)=>return Err(e.to_string()),
+    }
+    let meta=fs::symlink_metadata(path).await.map_err(|e|e.to_string())?;
+    if !meta.is_file()||meta.file_type().is_symlink()||meta.len()>1024*1024 {
+        return Err("unsafe legacy Desktop settings source".into());
+    }
+    let bytes=fs::read(path).await.map_err(|e|e.to_string())?;
+    use tokio::io::AsyncWriteExt;
+    let mut options=fs::OpenOptions::new();options.write(true).create_new(true);
+    #[cfg(unix)] options.mode(0o600);
+    let mut copy=match options.open(&backup).await {
+        Ok(f)=>f,
+        Err(e) if e.kind()==std::io::ErrorKind::AlreadyExists=>{
+            let meta=fs::symlink_metadata(&backup).await.map_err(|e|e.to_string())?;
+            if !meta.is_file()||meta.file_type().is_symlink(){return Err("unsafe legacy Desktop backup collision".into());}
+            return Ok(());
+        },
+        Err(e)=>return Err(e.to_string()),
+    };
+    let result=async {copy.write_all(&bytes).await.map_err(|e|e.to_string())?;
+        copy.sync_all().await.map_err(|e|e.to_string())?;Ok::<(),String>(())}.await;
+    drop(copy);
+    if result.is_err(){let _=fs::remove_file(backup).await;}
+    result
 }
 
 // The signed owner binding is applied in the native process on every read and
@@ -527,23 +563,33 @@ async fn load_signed_provisioning_0352()->Result<Option<signed_first_run_0352::P
 #[tauri::command]
 async fn load_desktop_config() -> Result<DesktopConfig, String> {
     let path = desktop_config_path()?;
-    let mut cfg = if fs::metadata(&path).await.is_ok() { serde_json::from_slice::<DesktopConfig>(&fs::read(&path).await.map_err(|e| e.to_string())?).map_err(|e| format!("desktop config повреждён: {e}"))? } else { default_desktop_config() };
+    let config_existed=fs::symlink_metadata(&path).await.is_ok();
+    let mut cfg = if config_existed { serde_json::from_slice::<DesktopConfig>(&fs::read(&path).await.map_err(|e| e.to_string())?).map_err(|e| format!("desktop config повреждён: {e}"))? } else { default_desktop_config() };
     cfg = normalize_desktop_config(cfg);
+    validate_desktop_config_schema_0359(&cfg.schema_version)?;
     let verified=enforce_signed_binding_0352(&mut cfg,&desktop_config_dir()?)?;
     if let Some(p)=verified {
         // Completion is valid only for the exact owner-signed bootstrap.
         if cfg.onboarding_bootstrap_digest!=p.digest {cfg.onboarding_completed=false;}
+    }
+    if config_existed && cfg.schema_version=="1.0" {
+        // Migrate once after the signed binding was verified. The writer
+        // performs an atomic replacement and keeps the original exact bytes.
+        save_desktop_config_impl_0352(cfg.clone(),None).await?;
+        cfg.schema_version="1.1".into();
     }
     cfg.config_path = path.to_string_lossy().to_string(); Ok(cfg)
 }
 async fn save_desktop_config_impl_0352(config: DesktopConfig, complete_for_digest: Option<String>) -> Result<DesktopBindingResult, String> {
     let path = desktop_config_path()?; let parent = path.parent().ok_or("не удалось определить каталог desktop config")?;
     fs::create_dir_all(parent).await.map_err(|e| e.to_string())?;
-    let mut cfg = normalize_desktop_config(config); cfg.schema_version = "1.0".into(); cfg.config_path = path.to_string_lossy().to_string();
+    let mut cfg = normalize_desktop_config(config); validate_desktop_config_schema_0359(&cfg.schema_version)?; cfg.schema_version = "1.1".into(); cfg.config_path = path.to_string_lossy().to_string();
     // Renderer-supplied completion flags are NOT accepted by preference saves.
     cfg.onboarding_completed=false;
     let old=if let Ok(existing)=fs::read(&path).await {
-        Some(serde_json::from_slice::<DesktopConfig>(&existing).map_err(|e|format!("existing Desktop config повреждён: {e}"))?)
+        let stored=serde_json::from_slice::<DesktopConfig>(&existing).map_err(|e|format!("existing Desktop config повреждён: {e}"))?;
+        validate_desktop_config_schema_0359(&stored.schema_version)?;
+        Some(stored)
     }else{None};
     let signed=enforce_signed_binding_0352(&mut cfg,parent)?;
     if let Some(p)=signed {
@@ -555,6 +601,11 @@ async fn save_desktop_config_impl_0352(config: DesktopConfig, complete_for_diges
     }else{
         cfg.onboarding_completed=false;
         cfg.onboarding_bootstrap_digest.clear();
+    }
+    // Protect legacy settings before first upgrade. The original remains
+    // authoritative until the new file is flushed and atomically replaced.
+    if old.as_ref().is_some_and(|v|v.schema_version=="1.0") {
+        preserve_legacy_config_0359(&path).await?;
     }
     let encoded=serde_json::to_vec_pretty(&cfg).map_err(|e|e.to_string())?;
     let temp=path.with_extension(format!("{}-{}.tmp",std::process::id(),rand::random::<u64>()));
@@ -992,6 +1043,127 @@ struct ComponentDiff0247 {
     download_bytes_upper_bound:u64,
     total_selected_bytes:u64,
     plan_sha256:String,
+    conflicting_user_files:Vec<neverruntime::transactional_release::PlayerConflict0359>,
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all="camelCase")]
+struct ReleaseRequirements0359 {
+    installed_version: Option<String>,
+    target_version: String,
+    target_signature: String,
+    changes: Vec<String>,
+    proposed_preset: Option<String>,
+    blockers: Vec<String>,
+    requires_confirmation: bool,
+}
+
+// Compare two verified, installed/target signed releases. UI memory and
+// localStorage are never accepted as a source of installed requirements.
+#[tauri::command]
+async fn preview_release_requirements_0359(
+    manifest: Manifest,root:String,pinned_public_key:String,component_preset:Option<String>,
+) -> Result<ReleaseRequirements0359,String> {
+    tokio::task::spawn_blocking(move || {
+        neverruntime::verify_manifest_signature(&manifest,&pinned_public_key)?;
+        let target_signature=manifest.signature.as_ref().ok_or("signed manifest required")?.signature.clone();
+        let active=neverruntime::transactional_release::verified_active_selection_02410(
+            &PathBuf::from(root),&pinned_public_key)?;
+        let Some((old,preset))=active else {
+            return Ok(ReleaseRequirements0359{installed_version:None,target_version:manifest.version,target_signature:target_signature.clone(),
+                changes:Vec::new(),proposed_preset:None,blockers:Vec::new(),requires_confirmation:false});
+        };
+        if (old.project_id.as_str(),old.profile_id.as_str(),old.channel.as_str())!=
+           (manifest.project_id.as_str(),manifest.profile_id.as_str(),manifest.channel.as_str()){
+            return Err("updated manifest is not for the installed project/profile/channel".into());
+        }
+        if old.signature.as_ref().map(|s|(&s.signature,&s.public_key))==
+           manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key)){
+            return Ok(ReleaseRequirements0359{installed_version:Some(old.version),target_version:manifest.version,target_signature:target_signature.clone(),
+                changes:Vec::new(),proposed_preset:preset,blockers:Vec::new(),requires_confirmation:false});
+        }
+        let mut changes=Vec::new();
+        if old.runtime.java.major_version!=manifest.runtime.java.major_version ||
+           old.runtime.java.distribution!=manifest.runtime.java.distribution {
+            changes.push(format!("Java: {} ({}) → {} ({})",old.runtime.java.major_version,old.runtime.java.distribution,
+                manifest.runtime.java.major_version,manifest.runtime.java.distribution));
+        }
+        if (old.runtime.java.minimum_major_version,old.runtime.java.recommended_major_version,old.runtime.java.maximum_major_version)!=
+           (manifest.runtime.java.minimum_major_version,manifest.runtime.java.recommended_major_version,manifest.runtime.java.maximum_major_version){
+            changes.push(format!("Допустимые версии Java (min/recommended/max): {}/{}/{} → {}/{}/{}",
+                old.runtime.java.minimum_major_version,old.runtime.java.recommended_major_version,old.runtime.java.maximum_major_version,
+                manifest.runtime.java.minimum_major_version,manifest.runtime.java.recommended_major_version,manifest.runtime.java.maximum_major_version));
+        }
+        let a=&old.runtime.memory;let b=&manifest.runtime.memory;
+        if (a.minimum_mb,a.recommended_mb,a.maximum_mb)!=(b.minimum_mb,b.recommended_mb,b.maximum_mb){
+            changes.push(format!("RAM min/recommended/max (MiB): {}/{}/{} → {}/{}/{}",
+                a.minimum_mb,a.recommended_mb,a.maximum_mb,b.minimum_mb,b.recommended_mb,b.maximum_mb));
+        }
+        if old.minecraft.version!=manifest.minecraft.version || old.minecraft.loader!=manifest.minecraft.loader {
+            changes.push(format!("Minecraft/loader: {} {} → {} {}",old.minecraft.version,old.minecraft.loader,
+                manifest.minecraft.version,manifest.minecraft.loader));
+        }
+        let mut proposed_preset=preset.clone();
+        let mut blockers=Vec::new();
+        if old.schema_version=="3.0" && old.component_catalog.is_some() && manifest.component_catalog.is_some(){
+            let selection=neverruntime::component_selection_02410::export_from_installed_02410(&old,preset.as_deref())?;
+            let parsed=neverruntime::component_selection_02410::parse_import_02410(&selection)?;
+            let migrated=neverruntime::component_selection_02410::migrate_02410(&parsed,&manifest)?;
+            proposed_preset=migrated.choice;
+            blockers=migrated.blockers;
+            if !migrated.added_ids.is_empty(){changes.push(format!("Новые обязательные/зависимые компоненты: {}",migrated.added_ids.join(", ")));}
+            if !migrated.removed_ids.is_empty(){changes.push(format!("Удалённые из нового каталога компоненты: {}",migrated.removed_ids.join(", ")));}
+            if migrated.preset_changed{changes.push("Предыдущий preset изменился или исчез: требуется подтверждение новой конфигурации".into());}
+        } else if old.component_catalog.is_some()!=manifest.component_catalog.is_some() {
+            blockers.push("Изменился тип каталога компонентов: выберите новый preset вручную".into());
+            proposed_preset=None;
+        }
+        if !blockers.is_empty() {
+            if let Some(ref requested)=component_preset {
+                if manifest.component_catalog.is_some() {
+                    neverruntime::component_catalog_0241::preview_components_0244(&manifest,Some(requested))?;
+                    blockers.clear();
+                    proposed_preset=Some(requested.clone());
+                    changes.push(format!("Владелец изменил каталог: выбран совместимый preset вручную ({requested})"));
+                }
+            }
+        }
+        if changes.is_empty(){changes.push("Опубликован новый подписанный релиз; проверьте изменения файлов перед установкой".into());}
+        Ok(ReleaseRequirements0359{installed_version:Some(old.version),target_version:manifest.version,
+            target_signature,changes,proposed_preset,blockers,requires_confirmation:true})
+    }).await.map_err(|e|format!("requirements task failed: {e}"))?
+}
+
+async fn validate_native_conflict_scope_0359(manifest:&Manifest,root:&str,key:&str)->Result<(),String>{
+    let cfg=load_desktop_config().await?;
+    if cfg.pinned_public_key!=key || cfg.project_id!=manifest.project_id ||
+       cfg.profile_id!=manifest.profile_id || cfg.channel!=manifest.channel {
+        return Err("player conflict operation is outside the verified desktop project/profile/channel".into());
+    }
+    std::fs::create_dir_all(&cfg.game_directory).map_err(|e|format!("game directory unavailable: {e}"))?;
+    let configured=std::fs::canonicalize(&cfg.game_directory).map_err(|e|format!("game directory unavailable: {e}"))?;
+    let requested=std::fs::canonicalize(root).map_err(|e|format!("requested game directory unavailable: {e}"))?;
+    if configured!=requested {return Err("conflict operation cannot move files outside the active game directory".into());}
+    Ok(())
+}
+
+#[tauri::command]
+async fn preview_player_conflicts_0359(manifest:Manifest,root:String,pinned_public_key:String,preset:Option<String>)
+    -> Result<neverruntime::transactional_release::PlayerConflictResult0359,String> {
+    validate_native_conflict_scope_0359(&manifest,&root,&pinned_public_key).await?;
+    tokio::task::spawn_blocking(move || neverruntime::transactional_release::preview_player_conflicts_0359(
+        &manifest,&PathBuf::from(root),&pinned_public_key,preset.as_deref()))
+        .await.map_err(|e|format!("conflicts preview task failed: {e}"))?
+}
+
+#[tauri::command]
+async fn preserve_player_conflicts_0359(manifest:Manifest,root:String,pinned_public_key:String,preset:Option<String>,
+    expected:Vec<neverruntime::transactional_release::PlayerConflict0359>)
+    -> Result<neverruntime::transactional_release::PlayerConflictResult0359,String> {
+    validate_native_conflict_scope_0359(&manifest,&root,&pinned_public_key).await?;
+    tokio::task::spawn_blocking(move || neverruntime::transactional_release::preserve_player_conflicts_0359(
+        &manifest,&PathBuf::from(root),&pinned_public_key,preset.as_deref(),&expected))
+        .await.map_err(|e|format!("preserving conflicts task failed: {e}"))?
 }
 
 #[tauri::command]
@@ -1007,12 +1179,10 @@ async fn preview_component_changes_0247(
     let plan=neverruntime::resolved_download_0246::resolve(&manifest,component_preset.as_deref())?;
     let (installed_preset, installed)=neverruntime::transactional_release::installed_component_state_0247(&manifest,&root,&pinned_public_key)?;
     let old:HashSet<_>=installed.into_iter().collect();
-    // Never preview a download as "safe" when it would take ownership of
-    // an existing user file, including a file with the expected SHA-256.
-    for f in &plan.files {
-        if old.contains(&f.path){continue}
-        neverruntime::transactional_release::check_unowned_path_0247(&root,&f.path)?;
-    }
+    // Show collisions as blockers with an explicit verified preserve workflow,
+    // not as a misleading generic failed diff.
+    let conflicts=neverruntime::transactional_release::preview_player_conflicts_0359(
+        &manifest,&root,&pinned_public_key,component_preset.as_deref())?;
     let wanted:HashSet<_>=plan.files.iter().map(|f|f.path.clone()).collect();
     let added_files=plan.files.iter().filter(|f|!old.contains(&f.path)).map(|f|f.path.clone()).collect();
     let removed_files=old.iter().filter(|p|!wanted.contains(*p)).cloned().collect::<Vec<_>>();
@@ -1022,7 +1192,8 @@ async fn preview_component_changes_0247(
     let download_bytes_upper_bound=plan.files.iter().filter(|f|missing.contains(f.path.as_str())).map(|f|f.size).sum();
     let total_selected_bytes=plan.files.iter().map(|f|f.size).sum();
     Ok(ComponentDiff0247{installed_preset,added_files,removed_files,download_files,
-        download_bytes_upper_bound,total_selected_bytes,plan_sha256:plan.sha256})
+        download_bytes_upper_bound,total_selected_bytes,plan_sha256:plan.sha256,
+        conflicting_user_files:conflicts.files})
 }
 
 #[tauri::command]
@@ -1631,7 +1802,7 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,load_signed_provisioning_0352,save_desktop_config,complete_first_run_0352,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,prepare_offline_launch_0358,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,open_external_https_0356,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,desktop_native_ui_info_0357,desktop_window_action_0357,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
+        .invoke_handler(tauri::generate_handler![preview_release_requirements_0359,preview_player_conflicts_0359,preserve_player_conflicts_0359,player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,load_signed_provisioning_0352,save_desktop_config,complete_first_run_0352,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,prepare_offline_launch_0358,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,open_external_https_0356,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,desktop_native_ui_info_0357,desktop_window_action_0357,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }
 
@@ -1730,5 +1901,41 @@ mod offline_policy_0358_tests {
         changed=m.clone();changed.signature.as_mut().unwrap().signature="tampered".into();
         assert!(matching_offline_release_0358(&m,&changed).is_err());
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod desktop_settings_0359_tests {
+    use super::*;
+    #[test]
+    fn old_preferences_survive_upgrade_and_future_schema_fails_closed(){
+        let mut old=default_desktop_config();
+        old.schema_version="1.0".into();
+        old.username="Saved Player".into();
+        old.memory_mb=6144;old.component_preset="performance".into();
+        old.extra_preferences_0359.insert("customZoom".into(),serde_json::json!(125));
+        let encoded=serde_json::to_vec(&old).unwrap();
+        let mut decoded:DesktopConfig=serde_json::from_slice(&encoded).unwrap();
+        validate_desktop_config_schema_0359(&decoded.schema_version).unwrap();
+        decoded=normalize_desktop_config(decoded);
+        decoded.schema_version="1.1".into();
+        let migrated:DesktopConfig=serde_json::from_slice(&serde_json::to_vec(&decoded).unwrap()).unwrap();
+        assert_eq!(migrated.username,"Saved Player");
+        assert_eq!(migrated.memory_mb,6144);
+        assert_eq!(migrated.component_preset,"performance");
+        assert_eq!(migrated.extra_preferences_0359.get("customZoom"),Some(&serde_json::json!(125)));
+        assert!(validate_desktop_config_schema_0359("9.0").is_err());
+    }
+    #[tokio::test]
+    async fn backup_before_first_settings_upgrade_is_exact_and_non_destructive(){
+        let dir=std::env::temp_dir().join(format!("nl-settings-0359-{:x}",rand::random::<u64>()));
+        fs::create_dir_all(&dir).await.unwrap();
+        let file=dir.join("config.json");
+        let original=serde_json::to_vec(&default_desktop_config()).unwrap();
+        fs::write(&file,&original).await.unwrap();
+        preserve_legacy_config_0359(&file).await.unwrap();
+        assert_eq!(fs::read(dir.join("config.pre-0359.json")).await.unwrap(),original);
+        assert_eq!(fs::read(&file).await.unwrap(),original);
+        fs::remove_dir_all(&dir).await.unwrap();
     }
 }

@@ -6,7 +6,7 @@ type CatalogComponent=SelectableComponent0247 & {description?:string;categoryId?
 type Catalog={schemaVersion:string;revision:number;digest:string;components:CatalogComponent[];defaultPreset?:string;presets?:{id:string;name:string;description?:string;components:string[]}[];categories?:{id:string;name:string}[]};
 type Manifest={componentCatalog?:Catalog;files:{path:string;size:number}[];version:string};
 type Preview={selected:string[];unavailable:{id:string;reason:string}[];effectiveFiles:string[];reasons:{id:string;reason:string}[]};
-type Diff={installedPreset:string|null;addedFiles:string[];removedFiles:string[];downloadFiles:string[];downloadBytesUpperBound:number;totalSelectedBytes:number;planSha256:string};
+type Diff={installedPreset:string|null;addedFiles:string[];removedFiles:string[];downloadFiles:string[];downloadBytesUpperBound:number;totalSelectedBytes:number;planSha256:string;conflictingUserFiles:{path:string;size:number;sha256:string}[]};
 type Candidate={value:string;removed:string[];added:string[]};
 const formatBytes=(bytes:number)=>bytes>=1048576?`${(bytes/1048576).toFixed(2)} МиБ`:`${(bytes/1024).toFixed(1)} КиБ`;
 
@@ -127,10 +127,27 @@ export function ComponentChooser0247({manifest,componentPreset,pinnedPublicKey,r
           <ul>{preview.reasons.map(r=><li key={r.id}>{r.id}: {r.reason}</li>)}</ul>
         </details>
         {(pending.removed.length>0||diff.removedFiles.length>0)&&<p className="componentWarning0247">Внимание: подтверждение заменит предыдущий выбор и может убрать компоненты/управляемые файлы. Неизвестные пользовательские файлы не удаляются.</p>}
+        {diff.conflictingUserFiles?.length>0&&<div role="alert">
+          <p>Файлы игрока конфликтуют с выбранными модами ({diff.conflictingUserFiles.length}). Для продолжения сохраните их в отдельный архив:</p>
+          <ul>{diff.conflictingUserFiles.map(f=><li key={f.path}>{f.path} ({f.size} байт)</li>)}</ul>
+          <button disabled={installing||transferBusy} onClick={async()=>{
+            if(!pending||!diff)return;
+            setInstalling(true);setError('');
+            try{
+              await invoke('preserve_player_conflicts_0359',{
+                manifest,pinnedPublicKey,root,preset:pending.value||null,expected:diff.conflictingUserFiles,
+              });
+              const updated=await invoke<Diff>('preview_component_changes_0247',{
+                manifest,pinnedPublicKey,root,componentPreset:pending.value||null,
+              });
+              setDiff(updated);
+            }catch(e){setError(String(e));}finally{setInstalling(false);}
+          }}>Сохранить конфликтующие файлы</button>
+        </div>}
         <small>Resolved plan: {diff.planSha256}</small>
       </>}
       <div className="toolbar inline">
-        <button className="primary" disabled={working||installing||transferBusy||!preview||!diff||Boolean(error)} onClick={async()=>{
+        <button className="primary" disabled={working||installing||transferBusy||!preview||!diff||Boolean(error)||Boolean(diff?.conflictingUserFiles?.length)} onClick={async()=>{
           if(!pending||!preview||!diff)return;
           setInstalling(true);setError('');
           try{await installSelection(pending.value);setPending(null);}

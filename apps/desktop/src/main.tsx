@@ -1,4 +1,5 @@
 import { offlineLaunchSettings0358, offlineSelection0358, offlineRecovery0358 } from './offline_policy_0358';
+import { updateIdentity0359, ensureReleaseApproval0359 } from './release_update_0359';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { invoke } from '@tauri-apps/api/core';
@@ -172,6 +173,7 @@ type Manifest = {
   files: ManifestFile[];
   componentCatalog?: ComponentCatalog;
   fileRules?: { pattern: string; action: 'include' | 'exclude' | 'verify'; ownership: 'managed' | 'required' | 'optional' | 'user-owned' | 'generated' }[];
+  signature?: { signature: string; publicKey: string };
 };
 
 type ManagedJavaResult = {
@@ -193,6 +195,11 @@ type JavaInfoResult = {
 
 type FileCheckResult = { path: string; status: 'ok' | 'missing' | 'invalid' | string; message: string };
 type DownloadResult = { downloaded: number; skipped: number; failed: number; repaired?: number; bytesDownloaded?: number; cacheHits?: number; bytesReused?: number; failedFiles?: string[]; messages: string[] };
+type ReleaseRequirements0359={installedVersion:string|null;targetVersion:string;targetSignature:string;changes:string[];proposedPreset:string|null;blockers:string[];requiresConfirmation:boolean};
+type PlayerConflict0359={path:string;size:number;sha256:string};
+type PlayerConflictResult0359={files:PlayerConflict0359[];archiveDirectory:string|null};
+
+
 type PendingDownload = { operationId: string; mode: string; status: string; projectId: string; profileId: string; version: string; totalFiles: number };
 type DownloadProgress = NativeTransfer0354;
 type LaunchPlan = { javaExecutable: string; workingDirectory: string; mainClass: string; mainModule?: string; classpathEntries: string[]; modulepathEntries?: string[]; environmentAllowlist?: string[]; jvmArgs: string[]; gameArgs: string[]; commandPreview: string; deterministicSha256?: string };
@@ -315,7 +322,7 @@ function normalizedSettings(settings: DesktopSettings): DesktopSettings {
   return {
     ...defaultSettings,
     ...settings,
-    schemaVersion: '1.0',
+    schemaVersion: '1.1',
     channel: settings.channel || 'stable',
     username: settings.username || 'Player',
     memoryMb: Number(settings.memoryMb ?? 4096),
@@ -400,6 +407,10 @@ function App() {
   const [firstRunError0352,setFirstRunError0352]=useState('');
   const [stage, setStage] = useState<Stage>('idle');
   const [manifest, setManifest] = useState<Manifest | null>(null);
+  const [requirements0359,setRequirements0359]=useState<ReleaseRequirements0359|null>(null);
+  const [requirementsApproved0359,setRequirementsApproved0359]=useState('');
+  const [requirementsError0359,setRequirementsError0359]=useState('');
+
   const [javaInfo, setJavaInfo] = useState<JavaInfoResult | null>(null);
   const [files, setFiles] = useState<FileCheckResult[]>([]);
   const [download, setDownload] = useState<DownloadResult | null>(null);
@@ -1445,6 +1456,14 @@ function App() {
       const url = buildManifestUrl(projectId, profileId);
       if (!url) throw new Error('сначала выберите проект и профиль');
       const result = await callTauri<Manifest>('load_manifest', { url, pinnedPublicKey: settings.pinnedPublicKey });
+      setRequirements0359(null);setRequirementsApproved0359('');setRequirementsError0359('');
+      const actualRoot = settings.gameDirectory.includes(result.projectId)
+        ? settings.gameDirectory : `${settings.gameDirectory || './.neverlauncher/projects'}/${result.projectId}/${result.profileId}`;
+      const newRequirements=await callTauri<ReleaseRequirements0359>('preview_release_requirements_0359', {
+        manifest:result,root:actualRoot,pinnedPublicKey:settings.pinnedPublicKey,componentPreset:null,
+      });
+      setRequirements0359(newRequirements);
+      if(!newRequirements.requiresConfirmation)setRequirementsApproved0359(updateIdentity0359(result));
       setManifest(result);
       setMinecraftIdentity('local');
       setOfflineStatus0358('');
@@ -1479,7 +1498,7 @@ function App() {
         offlineEnabled: false,
       }));
     } catch (error) {
-      setStage('failed');
+      setStage('failed');setRequirementsError0359(String(error));
       log(`Манифест не загружен: ${String(error)}.`);
     }
   }
@@ -1628,8 +1647,40 @@ function App() {
     finally { setTransferBusy(false); }
   }
 
+  function ensureRequirementsApproved0359(active:Manifest) {
+    ensureReleaseApproval0359(active,requirements0359,requirementsApproved0359,requirementsError0359);
+  }
+  async function ensureNoPlayerConflicts0359(active:Manifest,preset:string){
+    const result=await callTauri<PlayerConflictResult0359>('preview_player_conflicts_0359',{
+      manifest:active,root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,preset:preset||null,
+    });
+    if(result.files.length){
+      throw new Error(`Найдены ${result.files.length} пользовательских файлов на путях новой сборки. Откройте «Загрузки» и сохраните их отдельно перед установкой.`);
+    }
+  }
+  async function recheckChosenPreset0359() {
+    if(!manifest)return;
+    try {
+      const newPreview=await callTauri<ReleaseRequirements0359>('preview_release_requirements_0359',{
+        manifest,root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,
+        componentPreset:settings.componentPreset,
+      });
+      setRequirements0359(newPreview);setRequirementsError0359('');
+    }catch(error){setRequirementsError0359(String(error));}
+  }
+  function confirmRequirements0359() {
+    if(!manifest||!requirements0359||requirements0359.blockers.length)return;
+    const proposed=requirements0359.proposedPreset;
+    if(proposed!==null && proposed!==settings.componentPreset){
+      setSettings(current=>normalizedSettings({...current,componentPreset:proposed}));
+    }
+    setRequirementsApproved0359(updateIdentity0359(manifest));
+    log(`Обновлённые требования ${requirements0359.targetVersion} приняты. Preset будет сохранён только после установки.`);
+  }
   async function downloadFiles() {
     if (!manifest || transferBusy) return;
+    try {ensureRequirementsApproved0359(manifest);await ensureNoPlayerConflicts0359(manifest,settings.componentPreset||'');}
+    catch(error){setStage('failed');setTransferFailure0354(recovery0354(error));log(String(error));return;}
     cancelledTransfer0354.current = false;
     setTransferFailure0354(null);
     setStage('files');
@@ -1652,6 +1703,13 @@ function App() {
       if (verified.some(file => file.status !== 'ok' && file.status !== 'optional-missing')) {
         throw new Error('SHA-256 mismatch: проверка установленных файлов не пройдена');
       }
+      // Persist the installed selection only after the signed release and
+      // every selected file have been verified by the native runtime.
+      await callTauri('save_installed_component_choice_0247', {
+        manifest,root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,
+        componentPreset:settings.componentPreset||'',
+        config:normalizedSettings(settings),
+      });
       if (manifest.runtime.launch?.offlineMode) {
         await cacheSignedManifest(manifest).catch(error => log(`Offline кеш после установки не обновлён: ${String(error)}`));
       }
@@ -1670,6 +1728,8 @@ function App() {
   // settings closure. Persist the choice only after transactional install.
   async function installComponentSelection0247(choice: string): Promise<void> {
     if (!manifest || transferBusy) throw new Error('Установка уже выполняется или манифест не загружен');
+    ensureRequirementsApproved0359(manifest);
+    await ensureNoPlayerConflicts0359(manifest,choice);
     setStage('files');setTransferBusy(true);setDownloadProgress(null);
     try {
       const result = await callTauri<DownloadResult>('download_missing_files', {
@@ -2283,6 +2343,7 @@ function App() {
         </section>}
 
         <React.Suspense fallback={<section className="panel" role="status">{translate0357.loading}</section>}>
+        {screen==='firstRun'&&nativeConfigLoaded0357&&signedProvisioning0352&&manifest&&firstRunStep0352==='select'&&<ConflictPreservation0359 manifest={manifest} root={settings.gameDirectory} pinnedPublicKey={settings.pinnedPublicKey} preset={settings.componentPreset||''} transferBusy={transferBusy} />}
         {screen === 'firstRun' && (!nativeConfigLoaded0357 ? <section className="panel" role="status">{ui0357.locale==='en'?'Checking native configuration…':'Проверка native-конфигурации…'}</section> : bootstrapError0352 ? <section className="panel" role="alert"><h3>{translate0357.fatal}</h3><p>{bootstrapError0352}</p><p>{translate0357.reinstall}</p></section> : signedProvisioning0352 ?
           <FirstRunSigned0352 locale0357={ui0357.locale} provisioning={signedProvisioning0352} settings={settings} session={authSession} busy={firstRunBusy0352} transferBusy={transferBusy} step={firstRunStep0352} error={firstRunError0352} manifest={manifest} servers={profileServers} progress={downloadProgress} onLogin={()=>setScreen('auth')} onPrepare={prepareFirstRun0352} onInstall={installFirstRun0352} onPlay={launch} onServer={(id:string)=>patchSettings('serverId',id)} onPreset={(value:string)=>patchSettings('componentPreset',value)} onComponents={()=>setScreen('profile')} /> :
           <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} />) }
@@ -2325,7 +2386,16 @@ function App() {
         </>}
         {screen === 'textures' && <TexturesPanel0258 backendUrl={settings.backendUrl} token={authSession?.accessToken||''} officialClient={officialMinecraftClient.current} officialProfile={officialProfile} onOfficialProfile={(p)=>{setOfficialProfile(p);if(!p)setMinecraftIdentity('local');}} identityMode={minecraftIdentity === 'official' ? 'official' : 'local'} />}
         {screen === 'projects' && signedProvisioning0352 ? <section className="panel">Проект закреплён подписанным bundle: {signedProvisioning0352.projectId}</section> : screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
+        {requirementsError0359 && <section className="panel" role="alert"><strong>Обновление заблокировано:</strong> {requirementsError0359}</section>}
+        {manifest&&requirements0359?.requiresConfirmation&&requirementsApproved0359!==updateIdentity0359(manifest)&&<section className="panel" role="alert" aria-label="Изменения требований подписанной сборки">
+          <h3>Изменились требования сборки · {requirements0359.installedVersion} → {requirements0359.targetVersion}</h3>
+          <ul>{requirements0359.changes.map(change=><li key={change}>{change}</li>)}</ul>
+          {requirements0359.blockers.length>0&&<p>Блокирующие изменения: {requirements0359.blockers.join('; ')}. Выберите совместимый preset в разделе «Опциональные моды».</p>}
+          {requirements0359.blockers.length>0&&<button disabled={transferBusy} onClick={()=>void recheckChosenPreset0359()}>Проверить выбранный preset</button>}
+          <button className="primary" disabled={requirements0359.blockers.length>0||transferBusy} onClick={confirmRequirements0359}>Принять требования и продолжить</button>
+        </section>}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} pinnedPublicKey={settings.pinnedPublicKey} root={settings.gameDirectory} transferBusy={transferBusy} installSelection={installComponentSelection0247} />}
+        {screen === 'download' && manifest && <ConflictPreservation0359 manifest={manifest} root={settings.gameDirectory} pinnedPublicKey={settings.pinnedPublicKey} preset={settings.componentPreset||''} transferBusy={transferBusy} />}
         {screen === 'download' && <DownloadPanel locale0357={ui0357.locale} files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} transferFailure={transferFailure0354} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
         {screen === 'migration' && <PlayerMigration0339
           manifest={manifest} pinnedPublicKey={settings.pinnedPublicKey}
@@ -2426,6 +2496,54 @@ function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,
       <ComponentPortability02410 manifest={manifest} root={root} pinnedPublicKey={pinnedPublicKey} transferBusy={transferBusy} installSelection={installSelection}/>
     </>}
     <pre>{manifest?JSON.stringify({projectId:manifest.projectId,profileId:manifest.profileId,version:manifest.version,files:manifest.files.length,catalogDigest:cat?.digest},null,2):'Манифест не загружен.'}</pre>
+  </section>;
+}
+
+function ConflictPreservation0359({manifest,root,pinnedPublicKey,preset,transferBusy}:
+  {manifest:Manifest;root:string;pinnedPublicKey:string;preset:string;transferBusy:boolean}){
+  const [preview,setPreview]=useState<PlayerConflictResult0359|null>(null);
+  const [error,setError]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [archive,setArchive]=useState('');
+  async function refresh(){
+    setError('');
+    const result=await callTauri<PlayerConflictResult0359>('preview_player_conflicts_0359',{
+      manifest,root,pinnedPublicKey,preset:preset||null,
+    });
+    setPreview(result);
+  }
+  useEffect(()=>{let active=true;
+    setPreview(null);setArchive('');setError('');
+    callTauri<PlayerConflictResult0359>('preview_player_conflicts_0359',{
+      manifest,root,pinnedPublicKey,preset:preset||null,
+    }).then(r=>{if(active)setPreview(r);}).catch(e=>{if(active)setError(String(e));});
+    return ()=>{active=false;};
+  },[manifest,root,pinnedPublicKey,preset]);
+  async function preserve(){
+    if(!preview?.files.length||busy||transferBusy)return;
+    setBusy(true);setError('');
+    try {
+      const result=await callTauri<PlayerConflictResult0359>('preserve_player_conflicts_0359',{
+        manifest,root,pinnedPublicKey,preset:preset||null,expected:preview.files,
+      });
+      setArchive(result.archiveDirectory||'');
+      await refresh();
+    }catch(e){setError(String(e));}
+    finally{setBusy(false);}
+  }
+  return <section className="panel" aria-label="Сохранение пользовательских файлов">
+    <h3>Пользовательские файлы при обновлении</h3>
+    {preview===null&&!error&&<p role="status">Проверка конфликтов с подписанной сборкой…</p>}
+    {preview?.files.length===0&&<p>Новый релиз не занимает пути существующих пользовательских файлов.</p>}
+    {preview&&preview.files.length>0&&<>
+      <p role="alert">Подписанный релиз использует {preview.files.length} путей с файлами игрока. Автоматическая установка заблокирована до их сохранения.</p>
+      <ul>{preview.files.map(f=><li key={f.path}>{f.path} — {f.size} байт · SHA-256 {f.sha256.slice(0,16)}…</li>)}</ul>
+      <p>После подтверждения файлы перемещаются в отдельный каталог с индексом и контрольными суммами. Они не удаляются.</p>
+      <button className="primary" disabled={transferBusy||busy} onClick={()=>void preserve()}>{busy?'Сохранение…':'Сохранить файлы отдельно'}</button>
+    </>}
+    <button disabled={transferBusy||busy} onClick={()=>void refresh().catch(e=>setError(String(e)))}>Обновить список</button>
+    {archive&&<p role="status">Файлы сохранены в {archive}. Теперь можно устанавливать обновление.</p>}
+    {error&&<p role="alert">{error}</p>}
   </section>;
 }
 

@@ -1,3 +1,11 @@
+## [0.35.9] — Desktop Settings Migration, Signed Preset Requirements and Player File Preservation
+
+- Native Desktop config schema `1.0 → 1.1` migration, exact legacy backup, retained unknown user preferences, fail-closed future versions.
+- Real installed-vs-new signed release requirements comparison (Java, RAM, Minecraft/loader, component selection); explicit signature-scoped acceptance.
+- Explicit preservation of conflicting untracked player files in a durable indexed archive before managed release installation; no implicit overwrites.
+- New UI in Downloads, first-run and optional components; native negative tests and cross-platform CI checks.
+- Source-level release only; Rust/Tauri and Minecraft platform certification pending.
+
 ## [0.35.8] — Owner-Authorized Offline Playback & Verified Cache
 
 - Native Desktop enforces signed owner bootstrap, exact project/profile/channel, pinned Ed25519 key, completed first-run digest and saved canonical installation directory before allowing offline cache replay or game launch.
