@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import './styles.css';
+import { UI_PREFERENCES_KEY0357, SCREENS0357, canNavigate0357, tr0357, shortcut0357, rovingNav0357, nextZoom0357, validateUISettings0357, type Locale0357, type Screen0357, type UISettings0357 } from './desktop_accessibility_0357';
 import PlayerMigration0339 from './PlayerMigration0339';
 import { installErrorCapture0309 } from './sentry_diagnostics_0309';
 import { loadDesktopView03011, prewarmDesktop03011 } from './startup_optimizer_03011';
@@ -27,7 +28,7 @@ const TexturesPanel0258 = React.lazy(() => loadDesktopView03011('textures'));
 const HWIDRisk0299 = React.lazy(() => loadDesktopView03011('deviceRisk'));
 
 type Stage = 'idle' | 'connecting' | 'session' | 'project' | 'profile' | 'manifest' | 'java' | 'files' | 'repair' | 'cleanup' | 'ready' | 'launching' | 'running' | 'failed';
-type Screen = 'firstRun' | 'overview' | 'auth' | 'projects' | 'profile' | 'textures' | 'download' | 'migration' | 'settings' | 'logs' | 'diagnostics' | 'extensions';
+type Screen = Screen0357;
 
 type DesktopSettings = {
   schemaVersion?: string;
@@ -328,6 +329,71 @@ function App() {
   const [screen, setScreen] = useState<Screen>('firstRun');
   const [signedProvisioning0352,setSignedProvisioning0352]=useState<SignedProvisioning0352|null>(null);
   const [bootstrapError0352,setBootstrapError0352]=useState('');
+  const [nativeConfigLoaded0357,setNativeConfigLoaded0357]=useState(false);
+  const hadStoredUI0357 = useRef<boolean>((()=>{try{return localStorage.getItem(UI_PREFERENCES_KEY0357)!==null;}catch{return false;}})());
+  const [ui0357, setUi0357] = useState<UISettings0357>(() => {
+    try {
+      const saved = localStorage.getItem(UI_PREFERENCES_KEY0357);
+      return validateUISettings0357(saved ? JSON.parse(saved) : null, navigator.language?.startsWith('en') ? 'en' : 'ru');
+    } catch { return validateUISettings0357(null); }
+  });
+  const [nativeUI0357, setNativeUI0357] = useState<{os:string;scaleFactor:number}|null>(null);
+  const contentRef0357 = useRef<HTMLElement>(null);
+  const navRef0357 = useRef<HTMLElement>(null);
+  const translate0357 = tr0357(ui0357.locale);
+  const normalActionsEnabled0357 = nativeConfigLoaded0357 && !bootstrapError0352 && (!signedProvisioning0352 || Boolean(settings.onboardingCompleted));
+  const nativeOS0357 = nativeUI0357?.os || (/Mac/i.test(navigator.platform) ? 'macos' : /Win/i.test(navigator.platform) ? 'windows' : 'linux');
+  useEffect(() => {
+    let active=true;
+    const update=()=>void callTauri<{os:string;scaleFactor:number}>('desktop_native_ui_info_0357')
+      .then(value=>{if(active)setNativeUI0357(value);}).catch(() => { /* Browser preview has no native window. */ });
+    update();
+    window.addEventListener('resize',update);
+    window.addEventListener('focus',update);
+    return ()=>{active=false;window.removeEventListener('resize',update);window.removeEventListener('focus',update);};
+  }, []);
+  useEffect(() => {
+    document.documentElement.lang = ui0357.locale;
+    document.documentElement.dataset.highContrast = String(ui0357.highContrast);
+    document.documentElement.dataset.reducedMotion = String(ui0357.reducedMotion);
+    // CSS zoom scales legacy pixel-based components as well as rem-based text.
+    document.documentElement.style.zoom = `${ui0357.zoom}%`;
+    try { localStorage.setItem(UI_PREFERENCES_KEY0357, JSON.stringify(ui0357)); } catch { /* private browsing */ }
+    return () => { document.documentElement.style.zoom = ''; };
+  }, [ui0357]);
+  useEffect(() => {
+    contentRef0357.current?.focus({preventScroll:true});
+  }, [screen]);
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => {
+      const action = shortcut0357(event,nativeOS0357);
+      if (!action) return;
+      if (action.type === 'zoom') {
+        event.preventDefault();
+        setUi0357(p => ({...p,zoom:nextZoom0357(p.zoom,action.direction)}));
+      } else if (action.type === 'focusNav') {
+        event.preventDefault();
+        if (navRef0357.current?.contains(document.activeElement)) contentRef0357.current?.focus();
+        else navRef0357.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+      } else {
+        const selected = SCREENS0357[action.index];
+        // Signed onboarding cannot be skipped with a shortcut.
+        if (!selected || !canNavigate0357(selected,nativeConfigLoaded0357,Boolean(bootstrapError0352),Boolean(signedProvisioning0352),Boolean(settings.onboardingCompleted))) return;
+        event.preventDefault();setScreen(selected);
+      }
+    };
+    document.addEventListener('keydown',listener);
+    return () => document.removeEventListener('keydown',listener);
+  }, [nativeOS0357, settings.onboardingCompleted, signedProvisioning0352, nativeConfigLoaded0357, bootstrapError0352]);
+
+  useEffect(() => {
+    if (!signedProvisioning0352?.branding?.locale) return;
+    try {
+      if (!hadStoredUI0357.current)
+        setUi0357(p => ({...p,locale:signedProvisioning0352.branding!.locale!}));
+    } catch { /* UI preference storage optional */ }
+  }, [signedProvisioning0352]);
+
   const [firstRunStep0352,setFirstRunStep0352]=useState<'start'|'select'|'complete'>('start');
   const [firstRunBusy0352,setFirstRunBusy0352]=useState(false);
   const [firstRunError0352,setFirstRunError0352]=useState('');
@@ -490,6 +556,7 @@ function App() {
         setSelectedProject(next.projectId||'');setSelectedProfile(next.profileId||'');
         setSignedProvisioning0352(provisioning);
         setBootstrapError0352('');
+        setNativeConfigLoaded0357(true);
         setScreen(provisioning&&!next.onboardingCompleted?'firstRun':next.backendUrl?'overview':'firstRun');
         log(provisioning?`Подписанный bootstrap ${provisioning.digest.slice(0,16)}… проверен native Ed25519.`:'Desktop config загружен без подписанного bundle.');
       }catch(error){
@@ -497,12 +564,14 @@ function App() {
         // A production Tauri trust error MUST NOT fall back to mutable localStorage.
         if((window as any).__TAURI_INTERNALS__){
           setBootstrapError0352(`Безопасная загрузка Desktop отклонена: ${String(error)}`);
+          setNativeConfigLoaded0357(true);
           setScreen('firstRun');setStage('failed');
           return;
         }
         const fallback=normalizedSettings(loadSettings());
         setSettings(fallback);setSelectedProject(fallback.projectId||'');
         setSelectedProfile(fallback.profileId||'');
+        setNativeConfigLoaded0357(true);
         log('Только web preview: параметры восстановлены из localStorage без native trust.');
       }
     })();
@@ -2096,6 +2165,8 @@ function App() {
   }
 
   return (
+    <>
+    <a className="skipLink0357" href="#desktop-content0357">{translate0357.skip}</a>
     <main className="shell" style={signedProvisioning0352?.branding?{
       '--brand-accent':signedProvisioning0352.branding.accentColor||'#22c55e',
       '--brand-background':signedProvisioning0352.branding.backgroundColor||'#0f172a',
@@ -2107,46 +2178,58 @@ function App() {
           {signedProvisioning0352?.displayName||"NeverLauncher"}
         </div>
         {signedProvisioning0352?.branding?.publisher&&<p className="brandPublisher0355">{signedProvisioning0352.branding.publisher}</p>}
-        <div className="version">{DESKTOP_VERSION} · Рабочий Desktop Launcher</div>
-        <nav>
-          {[
-            ['firstRun', 'Первый запуск'], ['overview', 'Обзор'], ['auth', 'Вход'], ['projects', 'Проекты'], ['profile', 'Профиль'],
-            ['download', 'Загрузка'], ['migration', 'Переход с Gravit'], ['textures', 'Скины и плащи'], ['settings', 'Настройки'], ['extensions', 'Расширения'], ['logs', 'Логи'], ['diagnostics', 'Диагностика'],
-          ].map(([id, title]) => <button key={id} className={screen === id ? 'active' : ''} onClick={() => setScreen(id as Screen)}>{title}</button>)}
+        <div className="version">{DESKTOP_VERSION} · {translate0357.desktop}</div>
+        <nav ref={navRef0357} aria-label={translate0357.nav} onKeyDown={event=>{
+          const buttons=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+          const current=buttons.indexOf(document.activeElement as HTMLButtonElement);
+          const next=rovingNav0357(event.key,Math.max(current,0),buttons.length);
+          if(next!==null){event.preventDefault();buttons[next]?.focus();}
+        }}>
+          {SCREENS0357.map((id,index) => <button key={id} disabled={!canNavigate0357(id,nativeConfigLoaded0357,Boolean(bootstrapError0352),Boolean(signedProvisioning0352),Boolean(settings.onboardingCompleted))} aria-current={screen===id?'page':undefined} className={screen === id ? 'active' : ''} onClick={() => setScreen(id)}>{translate0357.sections[index]}</button>)}
         </nav>
       </aside>
 
-      <section className="content">
+      <section className="content" id="desktop-content0357" ref={contentRef0357} tabIndex={-1} role="region" aria-label={`${translate0357.navStatus}: ${translate0357.sections[SCREENS0357.indexOf(screen)]}`}>
         <header className="hero brandHero0355" style={signedProvisioning0352?.branding?.splashPng?{
           backgroundImage:`linear-gradient(rgba(15,23,42,.82),rgba(15,23,42,.88)),url(data:image/png;base64,${signedProvisioning0352.branding.splashPng})`,
           backgroundSize:'cover',backgroundPosition:'center'}:undefined}>
           <div>
             {signedProvisioning0352?.branding?.logoPng&&<img className="brandLogo0355" src={`data:image/png;base64,${signedProvisioning0352.branding.logoPng}`} alt={signedProvisioning0352.displayName}/>}
-            <p className="eyebrow">{signedProvisioning0352?.branding?.locale==='en'?'Desktop launcher':'Рабочий Desktop Launcher'}</p>
+            <p className="eyebrow">{translate0357.desktop}</p>
             <h1>{signedProvisioning0352?.branding?.displayName||'Движок запуска и восстановление клиента'}</h1>
-            <p>Desktop {DESKTOP_VERSION} выполняет реальную проверку файлов, восстановление повреждённых объектов, безопасную очистку, сборку плана запуска, запуск Minecraft, запись логов и историю запусков.</p>
+            <p>{translate0357.subtitle}</p>
           </div>
-          <div className="statusPill">{stageLabels[stage]}</div>
+          <div className="statusPill" role="status" aria-live="polite" aria-atomic="true">{ui0357.locale==='ru'?stageLabels[stage]:({idle:'Idle',connecting:'Connecting',session:'Session',project:'Project',profile:'Profile',manifest:'Manifest',java:'Java',files:'Files',repair:'Repair',cleanup:'Cleanup',ready:'Ready',launching:'Launching',running:'Running',failed:'Error'} as Record<Stage,string>)[stage]}</div>
         </header>
 
-        {signedProvisioning0352?.branding && (signedProvisioning0352.branding.news?.length||0)>0 && <section className="brandNews0355" aria-label={signedProvisioning0352.branding.locale==='en'?'Project news':'Новости проекта'}>
-          <h2>{signedProvisioning0352.branding.locale==='en'?'Project news':'Новости проекта'}</h2>
+        {signedProvisioning0352?.branding && (signedProvisioning0352.branding.news?.length||0)>0 && <section className="brandNews0355" aria-label={translate0357.news}>
+          <h2>{translate0357.news}</h2>
           <div className="brandNewsItems0355">{signedProvisioning0352.branding.news?.map((item,index)=><a key={index} href={item.url} onClick={(e)=>{e.preventDefault();void callTauri('open_external_https_0356',{url:item.url}).catch((error)=>log(`External link: ${String(error)}`));}}>{item.title}</a>)}</div>
         </section>}
-        {signedProvisioning0352?.branding?.websiteUrl&&<p className="brandWebsite0355"><a href={signedProvisioning0352.branding.websiteUrl} onClick={(e)=>{e.preventDefault();void callTauri('open_external_https_0356',{url:signedProvisioning0352.branding!.websiteUrl}).catch((error)=>log(`External link: ${String(error)}`));}}>{signedProvisioning0352.branding.locale==='en'?'Project website':'Сайт проекта'}</a></p>}
+        {signedProvisioning0352?.branding?.websiteUrl&&<p className="brandWebsite0355"><a href={signedProvisioning0352.branding.websiteUrl} onClick={(e)=>{e.preventDefault();void callTauri('open_external_https_0356',{url:signedProvisioning0352.branding!.websiteUrl}).catch((error)=>log(`External link: ${String(error)}`));}}>{translate0357.website}</a></p>}
 
+        <section className="uiAccessibility0357" aria-label={translate0357.accessibility}>
+          <label>{translate0357.language}<select aria-label={translate0357.language} value={ui0357.locale} onChange={e=>setUi0357(p=>({...p,locale:e.target.value==='en'?'en':'ru'}))}><option value="ru">Русский</option><option value="en">English</option></select></label>
+          <label>{translate0357.zoom}<select aria-label={translate0357.zoom} value={ui0357.zoom} onChange={e=>setUi0357(p=>validateUISettings0357({...p,zoom:Number(e.target.value)},p.locale))}>{[80,90,100,110,125,150,175,200].map(value=><option key={value} value={value}>{value}%</option>)}</select></label>
+          <label className="accessibilityCheck0357"><input type="checkbox" checked={ui0357.reducedMotion} onChange={e=>setUi0357(p=>({...p,reducedMotion:e.target.checked}))}/>{translate0357.motion}</label>
+          <label className="accessibilityCheck0357"><input type="checkbox" checked={ui0357.highContrast} onChange={e=>setUi0357(p=>({...p,highContrast:e.target.checked}))}/>{translate0357.contrast}</label>
+          <div className="nativeWindow0357"><span>{translate0357.os}: {nativeOS0357} · {translate0357.nativeScale}: {nativeUI0357 ? `${Math.round(nativeUI0357.scaleFactor*100)}%` : translate0357.auto}</span>
+          <button type="button" onClick={()=>void callTauri('desktop_window_action_0357',{action:'minimize'}).catch(error=>log(String(error)))}>{translate0357.minimize}</button>
+          <button type="button" onClick={()=>void callTauri('desktop_window_action_0357',{action:'toggleMaximized'}).catch(error=>log(String(error)))}>{translate0357.maximize}</button></div>
+          <details><summary>{translate0357.shortcuts}</summary><p>{translate0357.shortcutHint}</p><p>{translate0357.languageInfo}</p></details>
+        </section>
         <section className="toolbar">
-          <button onClick={runFullCheck}>Полная проверка</button>
-          <button onClick={persistDesktopConfig}>Сохранить привязку</button>
-          <button onClick={repairClient}>Восстановить</button>
-          <button disabled={transferBusy} onClick={rollbackClientRelease}>Откатить игровой релиз</button>
-          <button onClick={cleanUnusedFiles}>Очистить лишнее</button>
-          <button onClick={buildPlan}>Собрать план запуска</button>
-          <button className="primary" disabled={transferBusy} onClick={launch}>Играть</button>
-          <button onClick={exportDiagnostics}>Экспорт диагностики</button>
+          <button disabled={!normalActionsEnabled0357} onClick={runFullCheck}>{translate0357.check}</button>
+          <button disabled={!normalActionsEnabled0357} onClick={persistDesktopConfig}>{translate0357.save}</button>
+          <button disabled={!normalActionsEnabled0357} onClick={repairClient}>{translate0357.repair}</button>
+          <button disabled={transferBusy||!normalActionsEnabled0357} onClick={rollbackClientRelease}>{translate0357.rollback}</button>
+          <button disabled={!normalActionsEnabled0357} onClick={cleanUnusedFiles}>{translate0357.clean}</button>
+          <button disabled={!normalActionsEnabled0357} onClick={buildPlan}>{translate0357.plan}</button>
+          <button className="primary" disabled={transferBusy||!normalActionsEnabled0357} onClick={launch}>{translate0357.play}</button>
+          <button disabled={!normalActionsEnabled0357} onClick={exportDiagnostics}>{translate0357.export}</button>
         </section>
 
-        {(!signedProvisioning0352 && !bootstrapError0352) && <section className="settings compact">
+        {nativeConfigLoaded0357 && (!signedProvisioning0352 && !bootstrapError0352) && <section className="settings compact">
           <label>URL Backend<input value={settings.backendUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('backendUrl', event.target.value)} /></label>
           <label>Переопределение URL манифеста<input value={settings.manifestUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('manifestUrl', event.target.value)} placeholder="обычно пусто: используется /api/v1/projects/{project}/profiles/{profile}/manifest?channel=stable" /></label>
           <label>Каталог игры<input value={settings.gameDirectory} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('gameDirectory', event.target.value)} /></label>
@@ -2155,12 +2238,12 @@ function App() {
           <label>Канал<input value={settings.channel} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('channel', event.target.value)} /></label>
         </section>}
 
-        <React.Suspense fallback={<section className="panel">Загрузка экрана…</section>}>
-        {screen === 'firstRun' && (bootstrapError0352 ? <section className="panel" role="alert"><h3>Проверка подписанного bundle не пройдена</h3><p>{bootstrapError0352}</p><p>Переустановите сборку владельца с корректным pinned trust root. Ручной ввод ключа в Desktop не разрешён.</p></section> : signedProvisioning0352 ?
-          <FirstRunSigned0352 provisioning={signedProvisioning0352} settings={settings} session={authSession} busy={firstRunBusy0352} transferBusy={transferBusy} step={firstRunStep0352} error={firstRunError0352} manifest={manifest} servers={profileServers} progress={downloadProgress} onLogin={()=>setScreen('auth')} onPrepare={prepareFirstRun0352} onInstall={installFirstRun0352} onPlay={launch} onServer={(id:string)=>patchSettings('serverId',id)} onPreset={(value:string)=>patchSettings('componentPreset',value)} onComponents={()=>setScreen('profile')} /> :
+        <React.Suspense fallback={<section className="panel" role="status">{translate0357.loading}</section>}>
+        {screen === 'firstRun' && (!nativeConfigLoaded0357 ? <section className="panel" role="status">{ui0357.locale==='en'?'Checking native configuration…':'Проверка native-конфигурации…'}</section> : bootstrapError0352 ? <section className="panel" role="alert"><h3>{translate0357.fatal}</h3><p>{bootstrapError0352}</p><p>{translate0357.reinstall}</p></section> : signedProvisioning0352 ?
+          <FirstRunSigned0352 locale0357={ui0357.locale} provisioning={signedProvisioning0352} settings={settings} session={authSession} busy={firstRunBusy0352} transferBusy={transferBusy} step={firstRunStep0352} error={firstRunError0352} manifest={manifest} servers={profileServers} progress={downloadProgress} onLogin={()=>setScreen('auth')} onPrepare={prepareFirstRun0352} onInstall={installFirstRun0352} onPlay={launch} onServer={(id:string)=>patchSettings('serverId',id)} onPreset={(value:string)=>patchSettings('componentPreset',value)} onComponents={()=>setScreen('profile')} /> :
           <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} />) }
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
-        {screen === 'auth' && signedProvisioning0352 && !settings.onboardingCompleted && <section className="panel"><button className="primary" onClick={()=>setScreen('firstRun')}>Вернуться к первому запуску</button></section>}
+        {screen === 'auth' && signedProvisioning0352 && !settings.onboardingCompleted && <section className="panel"><button className="primary" onClick={()=>setScreen('firstRun')}>{translate0357.back}</button></section>}
         {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} macOSTrust0316={macOSTrust0316} authProviders0293={authProviders0293} routing0293={routing0293} selectedAuthProvider0293={selectedAuthProvider0293} setSelectedAuthProvider0293={setSelectedAuthProvider0293} authProviderError0293={authProviderError0293} setAuthProviderError0293={setAuthProviderError0293} linkedProvider0293={linkedProvider0293} setLinkedProvider0293={setLinkedProvider0293} linkedIdentifier0293={linkedIdentifier0293} setLinkedIdentifier0293={setLinkedIdentifier0293} linkedPassword0293={linkedPassword0293} setLinkedPassword0293={setLinkedPassword0293} linkFeedback0293={linkFeedback0293} setLinkFeedback0293={setLinkFeedback0293} linkPasswordProvider0293={linkPasswordProvider0293} />}
         {screen === 'auth' && /(Win|Linux)/i.test(navigator.platform) && <section className="panel">
           <h3>Windows/Linux TPM Key Attestation (0.31.4)</h3>
@@ -2198,7 +2281,7 @@ function App() {
         {screen === 'textures' && <TexturesPanel0258 backendUrl={settings.backendUrl} token={authSession?.accessToken||''} officialClient={officialMinecraftClient.current} officialProfile={officialProfile} onOfficialProfile={(p)=>{setOfficialProfile(p);if(!p)setMinecraftIdentity('local');}} identityMode={minecraftIdentity === 'official' ? 'official' : 'local'} />}
         {screen === 'projects' && signedProvisioning0352 ? <section className="panel">Проект закреплён подписанным bundle: {signedProvisioning0352.projectId}</section> : screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} pinnedPublicKey={settings.pinnedPublicKey} root={settings.gameDirectory} transferBusy={transferBusy} installSelection={installComponentSelection0247} />}
-        {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} transferFailure={transferFailure0354} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
+        {screen === 'download' && <DownloadPanel locale0357={ui0357.locale} files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} transferFailure={transferFailure0354} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
         {screen === 'migration' && <PlayerMigration0339
           manifest={manifest} pinnedPublicKey={settings.pinnedPublicKey}
           componentPreset={settings.componentPreset || ''} transferBusy={transferBusy}
@@ -2214,39 +2297,41 @@ function App() {
           }}
           onAdopted={() => { log('Проверенные файлы прежней установки добавлены в content cache.'); void verifyFiles(); }}
         />}
-        {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} minecraftIdentity={minecraftIdentity} setMinecraftIdentity={setMinecraftIdentity} />}
+        {screen === 'settings' && <SettingsPanel locale0357={ui0357.locale} settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} minecraftIdentity={minecraftIdentity} setMinecraftIdentity={setMinecraftIdentity} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
         {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}
         {screen === 'diagnostics' && <DiagnosticsPanel exportDiagnostics={exportDiagnostics} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} settingsCheck={settingsCheck} />}
         </React.Suspense>
       </section>
     </main>
+    </>
   );
 }
 
 
-function FirstRunSigned0352({provisioning:p,settings,session,busy,transferBusy,step,error,manifest,servers,progress,onLogin,onPrepare,onInstall,onPlay,onServer,onPreset,onComponents}:any){
+function FirstRunSigned0352({locale0357,provisioning:p,settings,session,busy,transferBusy,step,error,manifest,servers,progress,onLogin,onPrepare,onInstall,onPlay,onServer,onPreset,onComponents}:any){
   const cat:ComponentCatalog|undefined=manifest?.componentCatalog;
   const presets=cat?.presets||[];
-  return <section className="panel" aria-label="Единый первый запуск из подписанного bundle">
-    <h3>{p.displayName} — первый запуск</h3>
-    <p>Настройки проекта загружены из подписанного владельцем bundle и независимо проверены Desktop. Ввод URL и ключей не требуется.</p>
-    <p><strong>Проект:</strong> {p.projectId} · <strong>Профиль:</strong> {p.profileId} · <strong>Канал:</strong> {p.channel}</p>
-    <ol className="firstRunSteps0352"><li>Подписанный проект и профиль — проверено</li><li>Вход — {session?'выполнен':'требуется'}</li><li>Требования, Java и Manifest — {step==='start'?'ожидают проверки':'проверены'}</li><li>Выбор сервера / опциональных модов — {step==='select'?'доступен':step==='complete'?'завершён':'ожидает'}</li><li>Установка и проверка файлов — {step==='complete'?'завершена':'не подтверждена'}</li><li>Запуск Minecraft — действие игрока</li></ol>
+  const t=tr0357((locale0357||'ru') as Locale0357);
+  return <section className="panel" aria-label={t.firstRun}>
+    <h3>{p.displayName} — {t.firstRun}</h3>
+    <p>{t.firstRunLead}</p>
+    <p><strong>{t.firstRunProject}:</strong> {p.projectId} · <strong>{t.firstRunProfile}:</strong> {p.profileId} · <strong>{t.firstRunChannel}:</strong> {p.channel}</p>
+    <ol className="firstRunSteps0352"><li>{t.firstRunSteps[0]}</li><li>{t.firstRunSteps[1]} — {session?t.done:t.need}</li><li>{t.firstRunSteps[2]} — {step==='start'?t.pending:t.verified}</li><li>{t.firstRunSteps[3]} — {step==='select'?t.available:step==='complete'?t.done:t.pending}</li><li>{t.firstRunSteps[4]} — {step==='complete'?t.done:t.unverified}</li><li>{t.firstRunSteps[5]}</li></ol>
     {error&&<p role="alert" className="firstRunError0352">{error}</p>}
     <div className="toolbar inline">
-      {!session&&<button className="primary" onClick={onLogin}>Войти в аккаунт</button>}
-      {session&&step==='start'&&<button className="primary" disabled={busy} onClick={onPrepare}>{busy?'Проверка требований…':'Проверить профиль и требования'}</button>}
+      {!session&&<button className="primary" onClick={onLogin}>{t.signIn}</button>}
+      {session&&step==='start'&&<button className="primary" disabled={busy} onClick={onPrepare}>{busy?t.checking:t.requirements}</button>}
     </div>
     {session&&step==='select'&&manifest&&<>
-      <h4>Сервер и компоненты сборки</h4>
-      <div className="settings"><label>Сервер<select value={settings.serverId||''} disabled={Boolean(p.serverId)} onChange={e=>onServer(e.target.value)}><option value="">Не подключаться автоматически</option>{servers.map((server:ScopedServer)=><option key={server.id} value={server.id}>{server.name}</option>)}</select></label>
-      <label>Набор опциональных модов<select value={settings.componentPreset||''} onChange={e=>onPreset(e.target.value)}><option value="">Набор по умолчанию</option>{presets.map((pr:{id:string;name:string})=><option key={pr.id} value={pr.id}>{pr.name}</option>)}</select></label></div>
+      <h4>{t.serverMods}</h4>
+      <div className="settings"><label>{t.serverLabel}<select value={settings.serverId||''} disabled={Boolean(p.serverId)} onChange={e=>onServer(e.target.value)}><option value="">{t.noAuto}</option>{servers.map((server:ScopedServer)=><option key={server.id} value={server.id}>{server.name}</option>)}</select></label>
+      <label>{t.modPreset}<select value={settings.componentPreset||''} onChange={e=>onPreset(e.target.value)}><option value="">{t.defaultPreset}</option>{presets.map((pr:{id:string;name:string})=><option key={pr.id} value={pr.id}>{pr.name}</option>)}</select></label></div>
       <p>{manifest.minecraft.version} · {manifest.minecraft.loader} · {manifest.files.length} файлов. Фактические зависимости и конфликты проверит NeverRuntime перед установкой.</p>
-      <div className="toolbar inline"><button onClick={onComponents}>Подробный выбор модов</button><button className="primary" disabled={busy||transferBusy} onClick={onInstall}>{busy||transferBusy?'Установка…':'Установить и проверить файлы'}</button></div>
+      <div className="toolbar inline"><button onClick={onComponents}>{t.detailMods}</button><button className="primary" disabled={busy||transferBusy} onClick={onInstall}>{busy||transferBusy?t.installing:t.install}</button></div>
       {progress&&<div role="status"><p>{progress.phase}: {progress.completed+progress.skipped} из {progress.totalFiles} файлов</p><progress max={Math.max(progress.totalFiles,1)} value={progress.completed+progress.skipped} /></div>}
     </>}
-    {step==='complete'&&<div><h4>Клиент установлен и проверен</h4><p>Проверка подписанного Manifest и файлов завершена native runtime.</p><button className="primary" onClick={onPlay}>Играть</button></div>}
+    {step==='complete'&&<div><h4>{t.installed}</h4><p>{t.installedDetail}</p><button className="primary" onClick={onPlay}>{t.play}</button></div>}
   </section>;
 }
 
@@ -2299,10 +2384,11 @@ function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,
   </section>;
 }
 
-function DownloadPanel({ files, download, downloadProgress, transferBusy, repairResult, cleanResult,
+function DownloadPanel({ locale0357, files, download, downloadProgress, transferBusy, repairResult, cleanResult,
   verifyFiles, downloadFiles, repairClient, rollbackClientRelease, cleanUnusedFiles, fileSummary,
   pendingJob, controlTransfer, resumeTransfer, transferFailure }: any) {
   const progress = progress0354(downloadProgress as DownloadProgress | null);
+  const t=tr0357((locale0357||'ru') as Locale0357);
   const native = downloadProgress as DownloadProgress | null;
   const handled = native ? native.completed + native.failed + native.skipped : 0;
   const total = native?.totalFiles || 0;
@@ -2310,38 +2396,38 @@ function DownloadPanel({ files, download, downloadProgress, transferBusy, repair
   const canCancel = !transferBusy || (progress?.canInterrupt ?? true);
   const retry = () => pendingJob ? resumeTransfer() : downloadFiles();
   return <section className="panel">
-    <h3>Загрузки и восстановление</h3>
-    <p>Файлы проверяются по подписанному манифесту. Сначала выполняется staging, затем проверка SHA-256 и атомарная публикация. Данные игрока сохраняются отдельно.</p>
+    <h3>{t.downloadsTitle}</h3>
+    <p>{t.downloadsLead}</p>
     <div className="toolbar inline">
-      <button disabled={transferBusy} onClick={verifyFiles}>Проверить файлы</button>
-      <button disabled={transferBusy} onClick={downloadFiles}>Скачать недостающие</button>
-      <button disabled={transferBusy} onClick={repairClient}>Восстановить повреждённое</button>
-      <button disabled={transferBusy} onClick={rollbackClientRelease}>Откатить выпуск</button>
-      <button disabled={transferBusy} onClick={cleanUnusedFiles}>Карантин лишних файлов</button>
-      {transferBusy && (progress?.canInterrupt ?? true) && <button onClick={() => controlTransfer('pause')}>Пауза</button>}
-      {(transferBusy || pendingJob) && <button disabled={!canCancel} onClick={() => controlTransfer('cancel')}>Отменить</button>}
-      {!transferBusy && pendingJob && <button onClick={resumeTransfer}>Продолжить / повторить загрузку</button>}
+      <button disabled={transferBusy} onClick={verifyFiles}>{t.verifyFiles}</button>
+      <button disabled={transferBusy} onClick={downloadFiles}>{t.downloadMissing}</button>
+      <button disabled={transferBusy} onClick={repairClient}>{t.repairFiles}</button>
+      <button disabled={transferBusy} onClick={rollbackClientRelease}>{t.rollbackFiles}</button>
+      <button disabled={transferBusy} onClick={cleanUnusedFiles}>{t.quarantine}</button>
+      {transferBusy && (progress?.canInterrupt ?? true) && <button onClick={() => controlTransfer('pause')}>{t.pause}</button>}
+      {(transferBusy || pendingJob) && <button disabled={!canCancel} onClick={() => controlTransfer('cancel')}>{t.cancel}</button>}
+      {!transferBusy && pendingJob && <button onClick={resumeTransfer}>{t.resume}</button>}
     </div>
     {pendingJob && <p role="status">Сохранённое задание: {pendingJob.projectId}/{pendingJob.profileId} · {pendingJob.status === 'paused' ? 'на паузе' : pendingJob.status === 'pending' ? 'ожидает повтора' : 'в процессе'} · {pendingJob.totalFiles} файлов.</p>}
-    {progress && <div className="transferStatus" role="status" aria-live="polite">
-      <h4>{progress.label}</h4>
-      <progress style={{width:'100%'}} max={100} value={progress.percent} aria-label="Подтверждённые байты загрузки" />
+    {progress && <div className="transferStatus">
+      <h4 role="status" aria-live="polite">{progress.label}</h4>
+      <progress style={{width:'100%'}} max={100} value={progress.percent} aria-label={t.verifiedBytes} />
       <p><strong>{progress.percent}%</strong> подтверждено по SHA-256 · {progress.verified} из {progress.expected} · обработано файлов {handled}/{total}</p>
       <div className="transferMetrics">
-        <span>Скорость: <strong>{progress.speed}</strong></span>
-        <span>Осталось: <strong>{progress.eta}</strong></span>
-        <span>Передано по сети: <strong>{progress.received}</strong></span>
-        <span>Кеш: <strong>{native?.cacheHits || 0} файлов</strong></span>
+        <span>{t.speed}: <strong>{progress.speed}</strong></span>
+        <span>{t.remaining}: <strong>{progress.eta}</strong></span>
+        <span>{t.network}: <strong>{progress.received}</strong></span>
+        <span>{t.cache}: <strong>{native?.cacheHits || 0} файлов</strong></span>
       </div>
-      {native?.currentFile && <p>Текущий файл: <code>{native.currentFile}</code></p>}
-      {native?.phase === 'publishing' && <p>Идёт переключение файлов; отмена временно недоступна, чтобы сохранить целостность установки.</p>}
+      {native?.currentFile && <p>{t.currentFile}: <code>{native.currentFile}</code></p>}
+      {native?.phase === 'publishing' && <p>{t.publishing}</p>}
     </div>}
     {failure && <div className="transferFailure" role="alert">
       <h4>{failure.title}</h4>
       <p>{failure.explanation}</p>
-      <p><strong>Рекомендуемое действие:</strong> {failure.instruction}</p>
-      {failure.action === 'retry' && <button disabled={transferBusy} onClick={retry}>Повторить</button>}
-      {failure.action === 'repair' && <button disabled={transferBusy} onClick={repairClient}>Восстановить повреждённое</button>}
+      <p><strong>{t.recommended}:</strong> {failure.instruction}</p>
+      {failure.action === 'retry' && <button disabled={transferBusy} onClick={retry}>{t.retry}</button>}
+      {failure.action === 'repair' && <button disabled={transferBusy} onClick={repairClient}>{t.repairFiles}</button>}
     </div>}
     {download && <p>Последняя операция: скачано {download.downloaded}, пропущено {download.skipped}, ошибок {download.failed}. {download.failed ? 'Требуется повтор или восстановление.' : ''}</p>}
     <p>Исправно: {fileSummary.ok}; проблем: {fileSummary.broken}; всего: {fileSummary.total}.</p>
@@ -2351,27 +2437,28 @@ function DownloadPanel({ files, download, downloadProgress, transferBusy, repair
   </section>;
 }
 
-function SettingsPanel({ settings, patchSettings, validateSettings, settingsCheck, checkJavaRuntime, javaInfo, openGameDirectory, manifest, profileServers, loadProfileServers, loadCachedOfflineManifest, cacheSignedManifest, minecraftIdentity, setMinecraftIdentity }: any) {
-  return <section className="panel"><h3>Настройки запуска</h3>
+function SettingsPanel({ locale0357, settings, patchSettings, validateSettings, settingsCheck, checkJavaRuntime, javaInfo, openGameDirectory, manifest, profileServers, loadProfileServers, loadCachedOfflineManifest, cacheSignedManifest, minecraftIdentity, setMinecraftIdentity }: any) {
+  const t = tr0357((locale0357 || 'ru') as Locale0357);
+  return <section className="panel"><h3>{t.settingsTitle}</h3>
     <div className="settings">
-      <label>Путь к Java<input value={settings.javaPath} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('javaPath', e.target.value)} placeholder="auto / managed Java" /></label>
-      <label>RAM, МБ<input type="number" min={Math.max(512, manifest?.runtime.memory?.minimumMb || 512)} max={Math.min(32768, manifest?.runtime.memory?.maximumMb || 32768)} value={settings.memoryMb} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('memoryMb', Number(e.target.value))} /></label>
-      <label>Ширина окна<input type="number" min={640} max={7680} value={settings.screenWidth} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('screenWidth', Number(e.target.value))} /></label>
-      <label>Высота окна<input type="number" min={480} max={4320} value={settings.screenHeight} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('screenHeight', Number(e.target.value))} /></label>
-      <label className="checkSetting"><input type="checkbox" checked={settings.fullscreen} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('fullscreen', e.target.checked)} /> Полный экран</label>
-      <label className="checkSetting"><input type="checkbox" checked={settings.autoEnter} disabled={minecraftIdentity === 'offline'} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('autoEnter', e.target.checked)} /> Автоматически подключаться к серверу</label>
-      <label>Сервер профиля<select value={settings.serverId || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => patchSettings('serverId', e.target.value)}><option value="">Без выбранного сервера</option>{profileServers.map((server: ScopedServer) => <option value={server.id} key={server.id}>{server.name} ({server.kind})</option>)}</select></label>
-      {settings.autoEnter && <><label>Публичный игровой адрес<input value={settings.serverHost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverHost', e.target.value)} placeholder="mc.example.org" /></label><label>Порт<input type="number" min={1} max={65535} value={settings.serverPort} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverPort', Number(e.target.value))} /></label></>}
-      <label className="checkSetting"><input type="checkbox" checked={minecraftIdentity === 'offline'} disabled={!manifest?.runtime.launch?.offlineMode} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {const offline=e.target.checked;setMinecraftIdentity(offline ? 'offline' : 'local');patchSettings('offlineEnabled',offline);if(offline)patchSettings('serverId','');}} /> Offline (только разрешённый подписанным Manifest v2)</label>
-      <label className="checkSetting"><input type="checkbox" checked={Boolean(settings.sentryDiagnosticsEnabled)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('sentryDiagnosticsEnabled', e.target.checked)} /> Отправлять обезличенные отчёты о сбоях в Sentry (по согласию)</label>
-      <label className="checkSetting"><input type="checkbox" checked={Boolean(settings.discordPresenceEnabled)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordPresenceEnabled', e.target.checked)} /> Показывать активность в Discord (опционально)</label>
+      <label>{t.java}<input value={settings.javaPath} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('javaPath', e.target.value)} placeholder="auto / managed Java" /></label>
+      <label>{t.memory}<input type="number" min={Math.max(512, manifest?.runtime.memory?.minimumMb || 512)} max={Math.min(32768, manifest?.runtime.memory?.maximumMb || 32768)} value={settings.memoryMb} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('memoryMb', Number(e.target.value))} /></label>
+      <label>{t.width}<input type="number" min={640} max={7680} value={settings.screenWidth} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('screenWidth', Number(e.target.value))} /></label>
+      <label>{t.height}<input type="number" min={480} max={4320} value={settings.screenHeight} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('screenHeight', Number(e.target.value))} /></label>
+      <label className="checkSetting"><input type="checkbox" checked={settings.fullscreen} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('fullscreen', e.target.checked)} /> {t.fullscreen}</label>
+      <label className="checkSetting"><input type="checkbox" checked={settings.autoEnter} disabled={minecraftIdentity === 'offline'} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('autoEnter', e.target.checked)} /> {t.autoEnter}</label>
+      <label>{t.server}<select value={settings.serverId || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => patchSettings('serverId', e.target.value)}><option value="">{t.noServer}</option>{profileServers.map((server: ScopedServer) => <option value={server.id} key={server.id}>{server.name} ({server.kind})</option>)}</select></label>
+      {settings.autoEnter && <><label>{t.host}<input value={settings.serverHost} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverHost', e.target.value)} placeholder="mc.example.org" /></label><label>{t.port}<input type="number" min={1} max={65535} value={settings.serverPort} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('serverPort', Number(e.target.value))} /></label></>}
+      <label className="checkSetting"><input type="checkbox" checked={minecraftIdentity === 'offline'} disabled={!manifest?.runtime.launch?.offlineMode} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {const offline=e.target.checked;setMinecraftIdentity(offline ? 'offline' : 'local');patchSettings('offlineEnabled',offline);if(offline)patchSettings('serverId','');}} /> {t.offline}</label>
+      <label className="checkSetting"><input type="checkbox" checked={Boolean(settings.sentryDiagnosticsEnabled)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('sentryDiagnosticsEnabled', e.target.checked)} /> {t.sentry}</label>
+      <label className="checkSetting"><input type="checkbox" checked={Boolean(settings.discordPresenceEnabled)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordPresenceEnabled', e.target.checked)} /> {t.discord}</label>
       {settings.discordPresenceEnabled && <>
         <label>Discord Application ID<input value={settings.discordApplicationId || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordApplicationId', e.target.value)} placeholder="123456789012345678" /></label>
         <label>Ссылка кнопки активности (HTTPS, необязательно)<input value={settings.discordActionUrl || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordActionUrl', e.target.value)} placeholder="https://example.org" /></label>
       </>}
-      <label>Закреплённый ключ Ed25519<input value={settings.pinnedPublicKey} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('pinnedPublicKey', e.target.value)} /></label>
+      <label>{t.key}<input value={settings.pinnedPublicKey} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('pinnedPublicKey', e.target.value)} /></label>
     </div>
-    <div className="toolbar inline"><button onClick={validateSettings}>Проверить настройки</button><button onClick={checkJavaRuntime}>Проверить Java</button><button onClick={openGameDirectory}>Открыть каталог клиента</button><button onClick={() => loadProfileServers().catch(console.error)}>Обновить серверы</button><button onClick={() => cacheSignedManifest().catch(console.error)}>Сохранить подписанный кеш</button><button onClick={loadCachedOfflineManifest}>Загрузить offline-кеш</button></div>
+    <div className="toolbar inline"><button onClick={validateSettings}>{t.validate}</button><button onClick={checkJavaRuntime}>{t.checkJava}</button><button onClick={openGameDirectory}>{t.openDir}</button><button onClick={() => loadProfileServers().catch(console.error)}>{t.updateServers}</button><button onClick={() => cacheSignedManifest().catch(console.error)}>{t.saveCache}</button><button onClick={loadCachedOfflineManifest}>{t.loadCache}</button></div>
     <p>Server browser показывает узлы ServerBridge, а не игровые DNS-адреса. Для auto-enter укажите публичный адрес выбранного сервера. Offline не выдаёт серверные сессии и требует локальный проверенный Manifest и файлы.</p>
     <pre>{settingsCheck ? JSON.stringify(settingsCheck, null, 2) : javaInfo ? JSON.stringify(javaInfo, null, 2) : 'Настройки ещё не проверены.'}</pre>
   </section>;
