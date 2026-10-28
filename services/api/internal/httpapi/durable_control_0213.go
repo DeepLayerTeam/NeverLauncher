@@ -294,7 +294,21 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		return model.ReleaseVersion{}, fmt.Errorf("%w: %s", errDurableAuthorizationRevoked0213, decision.ReasonCode)
 	}
 
+	// Issue a five-minute, one-use SQL permit after all authorization and
+	// integrity checks. A stale durable job never carries a reusable token.
+	stableToken := ""
+	if repository.IsStableChannel0341(lookup.Release.Channel) {
+		token, coverage, gateErr := s.issueStablePermit03411(ctx, lookup)
+		if gateErr != nil {
+			reason := "stable runtime targets missing/failed/inconclusive: " + fmt.Sprint(coverage.TargetBlockers) + ": " + gateErr.Error()
+			s.Repo.AddAuditEvent(model.AuditEvent{Actor: job.ActorID, Action: "release:publish-blocked", Target: lookup.Release.ID, JobID: job.ID, ReasonCode: "stable_runtime_targets_incomplete_03411", CreatedAt: time.Now().UTC()})
+			_, _ = cp.TerminateDurableJob(ctx, job.ID, job.LeaseToken, model.DurableJobStatusFailed, reason)
+			return model.ReleaseVersion{}, gateErr
+		}
+		stableToken = token
+	}
 	release, err := cp.CommitDurablePublish(ctx, model.DurablePublishCommit{
+		StableGateToken03411:   stableToken,
 		JobID:                  job.ID,
 		JobLeaseToken:          job.LeaseToken,
 		ScopeKey:               scopeKey,

@@ -1,3 +1,10 @@
+## 0.34.11 — Production Release Gate (V11)
+
+- API re-verifies each mandatory signed v4 ValidationEvidence against the staged snapshot, positive stages, persisted execution, pinned runner/Java/preset/Guard/adapter/server identity, trusted signature, challenge, expiry and key revocation. Missing, failed and inconclusive targets block stable.
+- Durable publish obtains a fresh one-use permit only after complete target coverage. PostgreSQL release-status/head triggers re-check backed attestation rows and integrity inside the commit, consuming the permit atomically. Manual certification flags and direct head/status writes are rejected.
+- Migration Center cutover/rollback require the same gate; rollback-as-new-release remains staged pending new validation. Dev/test policies remain independent. Admin UI reports policy fingerprint, coverage and target blockers.
+- PostgreSQL migration `0105` enforces the guard and append-only evidence. Full Go/PostgreSQL and real staged Minecraft E2E deployment verification remains mandatory; not performed in this environment.
+
 ## 0.34.10 — Cross-Platform Runtime Runners (V10)
 
 - Observed capability registry for Windows, Linux and macOS (amd64/arm64): actual Java binary/version, display availability, usable OpenGL context/renderer. Missing GUI/renderer is BLOCKED, never Minecraft FAILED.

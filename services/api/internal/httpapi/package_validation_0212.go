@@ -337,7 +337,11 @@ func (s Server) packageValidations0212(w http.ResponseWriter, r *http.Request) {
 	}
 	effective := map[string]any{"requiredLevel": policy.RequiredLevel, "requireServerJoin": policy.RequireServerJoin, "source": "project-policy"}
 	if repository.IsStableChannel0341(lookup.Release.Channel) {
-		effective = map[string]any{"requiredLevel": "trusted-runtime", "requireServerJoin": true, "source": "stable-hard-gate-0.34.1", "publishEligible": false, "blockedReason": repository.ErrStableRuntimeGate0341.Error()}
+		coverage := s.evaluateStableRelease03411(r.Context(), lookup)
+		effective = map[string]any{"requiredLevel": "trusted-runtime", "requireServerJoin": true, "source": "production-runtime-gate-0.34.11", "publishEligible": coverage.Eligible, "targetCoverage": coverage.TargetCoverage, "targetBlockers": coverage.TargetBlockers, "requiredTargets": coverage.Required, "verifiedTargets": coverage.Verified, "matrixSha256": coverage.MatrixSHA256}
+		if !coverage.Eligible {
+			effective["blockedReason"] = fmt.Sprint(coverage.TargetBlockers)
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"integrity": current, "runtime": runtime, "policy": policy, "effectivePolicy": effective}})
 }
@@ -376,14 +380,16 @@ func (s Server) validatePublishEvidence0212(r *http.Request, lookup packageLooku
 }
 
 func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup packageLookup) error {
-	// The v1 submitted runtime evidence cannot prove independently executed
-	// staged content. Keep stable CLOSED until the later trusted runner gate.
+	// Legacy v1 submissions never satisfy the trusted v4 evidence matrix.
+	// Stable always requires a fresh, complete independently verified run.
 	if repository.IsStableChannel0341(lookup.Release.Channel) {
-		s.Repo.AddAuditEvent(model.AuditEvent{
-			Actor: "runtime-gate", Action: "release:publish-blocked", Target: lookup.Release.ID,
-			ReasonCode: "stable_runtime_certification_unavailable_0341", CreatedAt: time.Now().UTC(),
-		})
-		return repository.ErrStableRuntimeGate0341
+		coverage := s.evaluateStableRelease03411(ctx, lookup)
+		if !coverage.Eligible {
+			s.Repo.AddAuditEvent(model.AuditEvent{Actor: "runtime-gate", Action: "release:publish-blocked", Target: lookup.Release.ID,
+				ReasonCode: "stable_runtime_targets_incomplete_03411", CreatedAt: time.Now().UTC()})
+			return fmt.Errorf("stable runtime gate: missing/failed/inconclusive required targets: %v", coverage.TargetBlockers)
+		}
+		return nil
 	}
 	manifestDigest, err := manifestDigest0212(lookup.Release.Manifest)
 	if err != nil {

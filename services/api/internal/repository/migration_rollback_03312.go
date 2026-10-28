@@ -213,6 +213,15 @@ func (r *SQLRepository) CommitMigrationRollback03312(ctx context.Context, run st
 			return rb.Result{}, mw.ErrConflict
 		}
 	}
+	if IsStableChannel0341(v.Channel) {
+		token := stablePermitToken03411(ctx)
+		if len(token) != 64 {
+			return rb.Result{}, ErrStableRuntimeGate0341
+		}
+		if _, e = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); e != nil {
+			return rb.Result{}, e
+		}
+	}
 	if _, e = tx.ExecContext(ctx, `SELECT set_config('never.migration_cutover_run',$1,true)`, run); e != nil {
 		return rb.Result{}, e
 	}

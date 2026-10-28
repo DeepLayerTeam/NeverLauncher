@@ -96,6 +96,16 @@ func (r *SQLRepository) RevokeValidationKey0346(ctx context.Context, id, actor, 
 	if len(id) != 64 || strings.TrimSpace(actor) == "" || strings.TrimSpace(reason) == "" {
 		return errors.New("invalid validation key revocation")
 	}
-	_, err := r.db.ExecContext(ctx, `INSERT INTO package_validation_revoked_keys_0346(fingerprint,actor,reason,revoked_at) VALUES($1,$2,$3,$4) ON CONFLICT(fingerprint) DO NOTHING`, id, actor, reason, time.Now().UTC())
-	return err
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('validation-signer:'||$1,0))`, id); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO package_validation_revoked_keys_0346(fingerprint,actor,reason,revoked_at) VALUES($1,$2,$3,$4) ON CONFLICT(fingerprint) DO NOTHING`, id, actor, reason, time.Now().UTC()); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

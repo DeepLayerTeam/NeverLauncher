@@ -3,6 +3,8 @@ package httpapi
 import (
 	"context"
 	"crypto/ed25519"
+	"fmt"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"net/http"
 	"time"
 
@@ -108,7 +110,37 @@ func (s Server) migrationCutoverActivate03311(w http.ResponseWriter, r *http.Req
 	if !ok {
 		return
 	}
-	v, e := store.ActivateMigrationCutover03311(r.Context(), id, input, key)
+	ctx := r.Context()
+	if repository.IsStableChannel0341(input.Channel) {
+		routes, routeErr := store.MigrationCutovers03311(ctx, id)
+		if routeErr != nil {
+			writeError(w, 409, "cannot read migration target: "+routeErr.Error())
+			return
+		}
+		var targetID string
+		for _, route := range routes {
+			if route.ProfileID == input.ProfileID && repository.IsStableChannel0341(route.Channel) {
+				targetID = route.ReleaseID
+				break
+			}
+		}
+		if targetID == "" {
+			writeError(w, 409, "stable cutover has no staged target release")
+			return
+		}
+		lookup, loadErr := s.lookupPackage(targetID)
+		if loadErr != nil {
+			writeError(w, 409, "stable cutover target unavailable")
+			return
+		}
+		token, coverage, gateErr := s.issueStablePermit03411(ctx, lookup)
+		if gateErr != nil {
+			writeError(w, 409, "stable cutover blocked: "+fmt.Sprint(coverage.TargetBlockers)+": "+gateErr.Error())
+			return
+		}
+		ctx = repository.WithStablePermit03411(ctx, token)
+	}
+	v, e := store.ActivateMigrationCutover03311(ctx, id, input, key)
 	if e != nil {
 		migrationHTTPError0331(w, e)
 		return

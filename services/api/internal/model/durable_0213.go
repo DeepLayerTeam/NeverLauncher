@@ -108,6 +108,7 @@ type DurablePublishPayload struct {
 }
 
 type DurablePublishCommit struct {
+	StableGateToken03411   string
 	JobID                  string
 	JobLeaseToken          string
 	ScopeKey               string

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 )
 
 const validationSchema0345 = "neverlauncher.validation-evidence.v4"
@@ -333,7 +334,8 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: s.adminActor(r), Action: "validation-attestation:recorded", Target: p.PackageID, JobID: p.RunID, ReasonCode: "trusted-runner-evidence-0345-not-stable-eligible", CreatedAt: time.Now().UTC()})
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, 201, map[string]any{"data": map[string]any{"runId": p.RunID, "attestationVerified": true, "stablePublishEligible": false, "note": "V05 applicability and release gating pending"}})
+	coverage := s.evaluateStableRelease03411(r.Context(), lookup)
+	writeJSON(w, 201, map[string]any{"data": map[string]any{"runId": p.RunID, "attestationVerified": true, "stablePublishEligible": coverage.Eligible, "targetCoverage": coverage.TargetCoverage, "targetBlockers": coverage.TargetBlockers}})
 }
 func (s Server) validationAttestationList0345(w http.ResponseWriter, r *http.Request) {
 	store, ok := s.Repo.(validationAttestationRepository0345)
@@ -381,6 +383,11 @@ func (s Server) validationAttestationList0345(w http.ResponseWriter, r *http.Req
 			}
 		}
 	}
+	if e == nil && repository.IsStableChannel0341(release.Release.Channel) {
+		effective := s.evaluateStableRelease03411(r.Context(), release)
+		coverage = effective.TargetCoverage
+		reasons = effective.TargetBlockers
+	}
 	allPassed := len(coverage) > 0
 	for _, passed := range coverage {
 		if !passed {
@@ -396,5 +403,5 @@ func (s Server) validationAttestationList0345(w http.ResponseWriter, r *http.Req
 		"targetCoverage": coverage, "targetBlockers": reasons,
 		"requiredComponentSelections":     requiredSelections,
 		"unverifiedCandidateCombinations": uncheckedCombinations,
-		"allRequiredTargetsVerified":      allPassed, "stablePublishEligible": false}})
+		"allRequiredTargetsVerified":      allPassed, "stablePublishEligible": allPassed && e == nil && repository.IsStableChannel0341(release.Release.Channel)}})
 }

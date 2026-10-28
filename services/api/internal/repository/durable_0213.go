@@ -542,7 +542,14 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 		return model.ReleaseVersion{}, err
 	}
 	if IsStableChannel0341(rel.Channel) {
-		return model.ReleaseVersion{}, ErrStableRuntimeGate0341
+		if len(commit.StableGateToken03411) != 64 {
+			return model.ReleaseVersion{}, ErrStableRuntimeGate0341
+		}
+		// SET LOCAL is limited to this transaction. PostgreSQL validates the
+		// one-use token, linked evidence and live revocation inside the head trigger.
+		if _, e := tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, commit.StableGateToken03411); e != nil {
+			return model.ReleaseVersion{}, e
+		}
 	}
 	if rel.Status == "published" {
 		return model.ReleaseVersion{}, ErrImmutable
@@ -579,10 +586,15 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 	if err := tx.QueryRowContext(ctx, `SELECT id FROM projects WHERE id=$1 FOR UPDATE`, rel.ProjectID).Scan(&projectLock); err != nil {
 		return model.ReleaseVersion{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest)
+	// A stable head must never be bootstrapped from an unvalidated legacy
+	// release. For a first stable publish the certified target is inserted
+	// below; other channels preserve their historical head recovery.
+	if !IsStableChannel0341(rel.Channel) {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest)
  SELECT $1,$2,$3,1,id,version,'' FROM release_versions WHERE project_id=$1 AND profile_id=$2 AND channel=$3 AND status='published' ORDER BY published_at DESC,id DESC LIMIT 1
  ON CONFLICT(project_id,profile_id,channel) DO NOTHING`, rel.ProjectID, rel.ProfileID, rel.Channel); err != nil {
-		return model.ReleaseVersion{}, err
+			return model.ReleaseVersion{}, err
+		}
 	}
 	var currentHead int64
 	err = tx.QueryRowContext(ctx, `SELECT revision FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3 FOR UPDATE`, rel.ProjectID, rel.ProfileID, rel.Channel).Scan(&currentHead)

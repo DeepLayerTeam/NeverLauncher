@@ -5,7 +5,10 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
+	"fmt"
+	co "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcutover"
 	rb "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrollback"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"io"
 	"net/http"
 	"time"
@@ -112,7 +115,33 @@ func (s Server) migrationRollbackCommit03312(w http.ResponseWriter, r *http.Requ
 	if !ok {
 		return
 	}
-	result, e := store.CommitMigrationRollback03312(r.Context(), id, input, key)
+	ctx := r.Context()
+	if repository.IsStableChannel0341(input.Channel) {
+		read, ok := s.Repo.(interface {
+			MigrationCutover03311(context.Context, string, string, string) (co.Route, error)
+		})
+		if !ok {
+			writeError(w, 503, "stable rollback route repository unavailable")
+			return
+		}
+		route, routeErr := read.MigrationCutover03311(ctx, id, input.ProfileID, input.Channel)
+		if routeErr != nil || route.BaselineReleaseID == "" {
+			writeError(w, 409, "stable rollback requires a certified previous release (deleting stable head is prohibited)")
+			return
+		}
+		lookup, loadErr := s.lookupPackage(route.BaselineReleaseID)
+		if loadErr != nil {
+			writeError(w, 409, "stable rollback target unavailable")
+			return
+		}
+		token, coverage, gateErr := s.issueStablePermit03411(ctx, lookup)
+		if gateErr != nil {
+			writeError(w, 409, "stable rollback blocked: "+fmt.Sprint(coverage.TargetBlockers)+": "+gateErr.Error())
+			return
+		}
+		ctx = repository.WithStablePermit03411(ctx, token)
+	}
+	result, e := store.CommitMigrationRollback03312(ctx, id, input, key)
 	if e != nil {
 		migrationHTTPError0331(w, e)
 		return

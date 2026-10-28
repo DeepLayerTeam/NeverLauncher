@@ -32,7 +32,7 @@ func TestStablePublishRejectsIntegrityAndLegacySignedEvidence0341(t *testing.T) 
 	publish := func() {
 		t.Helper()
 		rr := send(http.MethodPost, "/api/v1/packages/"+packageID+"/publish", "")
-		if rr.Code != http.StatusConflict || !strings.Contains(rr.Body.String(), "stable_runtime_gate_0341") {
+		if rr.Code != http.StatusConflict || !strings.Contains(rr.Body.String(), "stable runtime gate") {
 			t.Fatalf("stable must be blocked, got %d %s", rr.Code, rr.Body.String())
 		}
 	}
@@ -76,7 +76,7 @@ func TestStablePublishRejectsIntegrityAndLegacySignedEvidence0341(t *testing.T) 
 	}
 	publish()
 	rr = send(http.MethodGet, "/api/v1/packages/"+packageID+"/validations", "")
-	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"publishEligible":false`) || !strings.Contains(rr.Body.String(), "stable-hard-gate-0.34.1") {
+	if rr.Code != http.StatusOK || !strings.Contains(rr.Body.String(), `"publishEligible":false`) || !strings.Contains(rr.Body.String(), "production-runtime-gate-0.34.11") {
 		t.Fatalf("effective stable policy must be visible: %d %s", rr.Code, rr.Body.String())
 	}
 }
@@ -95,13 +95,13 @@ func TestStableMissingPolicyStillBlocksAndPersistsReason0341(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = srv.validatePublishEvidenceContext0213(context.Background(), packageLookup{Release: release})
-	if err != repository.ErrStableRuntimeGate0341 {
+	if err == nil || !strings.Contains(err.Error(), "stable runtime gate") {
 		t.Fatalf("missing policy bypassed stable: %v", err)
 	}
 	events := repo.ListAuditEvents()
 	found := false
 	for _, event := range events {
-		if event.Target == release.ID && event.ReasonCode == "stable_runtime_certification_unavailable_0341" && event.Action == "release:publish-blocked" {
+		if event.Target == release.ID && event.ReasonCode == "stable_runtime_targets_incomplete_03411" && event.Action == "release:publish-blocked" {
 			found = true
 		}
 	}

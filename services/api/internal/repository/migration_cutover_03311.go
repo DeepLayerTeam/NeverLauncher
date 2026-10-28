@@ -276,6 +276,17 @@ func (r *SQLRepository) ActivateMigrationCutover03311(ctx context.Context, runID
 	if current != v.BaselineRevision {
 		return co.Route{}, mw.ErrConflict
 	}
+	// The migration fence is not a runtime certification. For stable, a
+	// separately verified, one-use permit is mandatory in this transaction.
+	if IsStableChannel0341(v.Channel) {
+		token := stablePermitToken03411(ctx)
+		if len(token) != 64 {
+			return co.Route{}, ErrStableRuntimeGate0341
+		}
+		if _, e = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); e != nil {
+			return co.Route{}, e
+		}
+	}
 	// A SET LOCAL marker permits only this run's exact channel update through
 	// the DB trigger. Stale workers/ordinary publication remain fenced.
 	if _, e = tx.ExecContext(ctx, `SELECT set_config('never.migration_cutover_run',$1,true)`, runID); e != nil {
