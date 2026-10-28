@@ -57,6 +57,7 @@ jobs:
       NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
       NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/neverlauncher-rc-sqlite
       NEVERLAUNCHER_PG_TEST_DSN: postgres://neverlauncher_rc:rc-temporary-password@127.0.0.1:5432/neverlauncher_rc?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_rc:rc-temporary-password@127.0.0.1:5432/neverlauncher_rc?sslmode=disable
       NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://neverlauncher_rc:rc-temporary-password@127.0.0.1:5432/neverlauncher_rc?sslmode=disable
       NEVERLAUNCHER_GROWTH_TEST_REDIS_URL: redis://127.0.0.1:6379/0
       NEVERLAUNCHER_RC_S3_ENDPOINT: http://127.0.0.1:9000

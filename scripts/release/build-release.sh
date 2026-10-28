@@ -141,21 +141,27 @@ if [[ "${VERSION}" == "0.33.0" ]]; then
     --output "${SINGLE_NODE_GA_VERIFIED_DIR}/SINGLE_NODE_GA_CERTIFICATION.json" || exit 2
 fi
 
-# 0.35.0 never signs a GA bundle based on CI status, observational logs,
-# or an operator-supplied "certified" flag. Ask the deployed Backend again
-# for exact live signed target coverage before erasing any prior output.
+# Every release from 0.35.0 onward must recheck the real protected Backend.
+# Do NOT narrow this to one historical version: otherwise all future versions
+# silently bypass the trusted-runtime publication requirement.
 GA_RUNTIME_PREFLIGHT_FILE=""
-if [[ "${VERSION}" == "0.35.0" ]]; then
+GA_RUNTIME_GATE_REQUIRED=0
+if [[ "${VERSION}" =~ ^([0-9]+)\.([0-9]+)\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+  if (( 10#${BASH_REMATCH[1]} > 0 || 10#${BASH_REMATCH[2]} >= 35 )); then
+    GA_RUNTIME_GATE_REQUIRED=1
+  fi
+fi
+if [[ "${GA_RUNTIME_GATE_REQUIRED}" == "1" ]]; then
   [[ -n "${NL_GA_BACKEND_URL:-}" && -n "${NL_GA_PACKAGE_ID:-}" && -n "${NL_GA_OPERATOR_TOKEN:-}" ]] || {
-    echo "0.35.0 GA BLOCKED: protected Backend URL, staged package and read token required" >&2; exit 2;
+    echo "protected runtime release BLOCKED: protected Backend URL, staged package and read token required" >&2; exit 2;
   }
-  command -v git >/dev/null 2>&1 || { echo "0.35.0 GA requires git" >&2; exit 2; }
+  command -v git >/dev/null 2>&1 || { echo "protected runtime release requires git" >&2; exit 2; }
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
   [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${HEAD_COMMIT}" ]] || {
-    echo "0.35.0 GA source SHA does not match checkout" >&2; exit 2;
+    echo "protected runtime release source SHA does not match checkout" >&2; exit 2;
   }
   [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal)" ]] || {
-    echo "0.35.0 GA signing requires clean committed source" >&2; exit 2;
+    echo "protected runtime release signing requires clean committed source" >&2; exit 2;
   }
   SOURCE_COMMIT="${HEAD_COMMIT}"
   GA_RUNTIME_PREFLIGHT_FILE="$(mktemp)"
@@ -164,7 +170,7 @@ if [[ "${VERSION}" == "0.35.0" ]]; then
     --backend "${NL_GA_BACKEND_URL}" --package-id "${NL_GA_PACKAGE_ID}" \
     --source-sha "${SOURCE_COMMIT}" --version "${VERSION}" \
     --output "${GA_RUNTIME_PREFLIGHT_FILE}" || {
-      echo "0.35.0 GA BLOCKED: trusted Backend runtime evidence incomplete" >&2; exit 2;
+      echo "protected runtime release BLOCKED: trusted Backend runtime evidence incomplete" >&2; exit 2;
     }
 fi
 

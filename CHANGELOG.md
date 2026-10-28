@@ -1,3 +1,11 @@
+## [0.35.14] — Real Source RC Acceptance, Native Security and Operational Release Gates
+
+- Added real cross-platform NeverRuntime signed-download/repair/tamper rejection and Desktop production build verification, with an exact-commit fail-closed RC integration workflow and authenticated Backend/PostgreSQL acceptance.
+- Extended live PostgreSQL/Redis/S3/crash/load RC tests to 0.35.14 and required real owner publication/rollback, diagnostics consent and PostgreSQL immutable-stable regression tests; skipped or absent tests block the RC.
+- Added isolated fresh-site DR/chaos orchestration for operators with explicit approvals, no production project targeting and no invented RPO/HA metrics.
+- **Security fix:** protected live Backend runtime recheck in `build-release.sh` now applies to 0.35.0 **and every later version**, not only exact 0.35.0. Current-version GA preflight and CI version verification remain fail-closed.
+- Added negative tests, documentation and explicit limits: local tooling does not prove real game join, native packaging/notarization, full 54 G/M target acceptance or production GA.
+
 ## [0.35.13] — Owner Lifecycle Readback, Durable Operation Recovery and G/M Regression Continuity
 
 - Completed the Admin owner path around existing real Build Workspace, validation, signed package publication, durable jobs, channel-head observation, rollback and operator diagnostics. The same backend operations remain authoritative; HTTP 202 never means `published`.

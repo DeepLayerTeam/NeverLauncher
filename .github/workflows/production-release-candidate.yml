@@ -190,6 +190,71 @@ jobs:
           test "$WINDOWS" = success
           test "$MACOS" = success
 
+  current-source-rc-03514:
+    name: Require actual current 0.35.14 native/Desktop/Backend regression matrix
+    needs: [base-ci]
+    uses: ./.github/workflows/release-candidate-03514.yml
+
+  protected-isolated-dr-03514:
+    name: Require live fresh-site DR and PostgreSQL/API chaos on isolated staging
+    needs: [base-ci]
+    runs-on: [self-hosted, linux, rc-staging]
+    timeout-minutes: 150
+    environment: rc-operations
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate isolated staging configuration and real Docker access
+        env:
+          RC_DR_SOURCE: ${{ vars.NL_RC_DR_SOURCE_PROJECT }}
+          RC_DR_TARGET: ${{ vars.NL_RC_DR_TARGET_PROJECT }}
+          RC_DR_SOURCE_URL: ${{ vars.NL_RC_DR_SOURCE_READY_URL }}
+          RC_DR_TARGET_URL: ${{ vars.NL_RC_DR_TARGET_READY_URL }}
+          RC_DR_ENV_B64: ${{ secrets.NL_RC_DR_ENV_FILE_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RC_DR_ENV_B64"
+          test -n "$RC_DR_SOURCE"
+          test -n "$RC_DR_TARGET"
+          test -n "$RC_DR_SOURCE_URL"
+          test -n "$RC_DR_TARGET_URL"
+          docker compose version
+          umask 077
+          printf '%s' "$RC_DR_ENV_B64" | base64 -d > "$RUNNER_TEMP/rc-dr.env"
+          test -s "$RUNNER_TEMP/rc-dr.env"
+      - name: Real consistent backup, immutable verification, fresh restore and chaos
+        env:
+          NEVERLAUNCHER_RC_DR_ISOLATED: YES
+          RC_DR_SOURCE: ${{ vars.NL_RC_DR_SOURCE_PROJECT }}
+          RC_DR_TARGET: ${{ vars.NL_RC_DR_TARGET_PROJECT }}
+          RC_DR_SOURCE_URL: ${{ vars.NL_RC_DR_SOURCE_READY_URL }}
+          RC_DR_TARGET_URL: ${{ vars.NL_RC_DR_TARGET_READY_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/rc/operations_03514.py \
+            --source "$RC_DR_SOURCE" --target "$RC_DR_TARGET" \
+            --env-file "$RUNNER_TEMP/rc-dr.env" \
+            --snapshot "$RUNNER_TEMP/fresh-site-03514" \
+            --source-ready-url "$RC_DR_SOURCE_URL" \
+            --target-ready-url "$RC_DR_TARGET_URL" \
+            --output "$RUNNER_TEMP/rc-dr-03514.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rc03514-isolated-dr-${{ github.sha }}
+          path: ${{ runner.temp }}/rc-dr-03514.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove staging-only environment data
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/rc-dr.env"
+
   production-rc-03216:
     name: Require real live 0.32.16 security, crash, load and infrastructure tests
     needs: [base-ci]
@@ -262,7 +327,7 @@ jobs:
     secrets: inherit
 
   runtime-ga-0350:
-    name: Verify 0.35.0 all-target signed staged runtime and PostgreSQL security
+    name: Verify current-version all-target signed staged runtime and PostgreSQL security
     needs: [base-ci, staged-package-runtime-0342]
     uses: ./.github/workflows/runtime-acceptance-0350.yml
     with:
@@ -271,7 +336,7 @@ jobs:
 
   release-bundle:
     name: Release candidate bundle
-    needs: [base-ci, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
+    needs: [base-ci, production-rc-03216, current-source-rc-03514, protected-isolated-dr-03514, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
     permissions:
       contents: read
       actions: read
@@ -292,10 +357,10 @@ jobs:
         env:
           STAGED_PACKAGE: ${{ inputs.staged_package_id }}
         run: |
-          jq -e --arg pkg "$STAGED_PACKAGE" --arg sha "$GITHUB_SHA" \
+          jq -e --arg pkg "$STAGED_PACKAGE" --arg sha "$GITHUB_SHA" --arg version "$(cat VERSION)" \
             '.schemaVersion == "neverlauncher.ga-runtime-preflight.v1" and
              .status == "backend-eligible-not-published" and .packageId == $pkg and
-             .productVersion == "0.35.0" and .sourceSha == $sha and
+             .productVersion == $version and .sourceSha == $sha and
              .verifiedTargets > 0 and (.matrixSha256 | length) == 64' \
             runtime-ga-preflight/GA_RUNTIME_PREFLIGHT_0350.json >/dev/null
       - name: Install Ed25519 verification dependency

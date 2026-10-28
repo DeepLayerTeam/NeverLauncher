@@ -80,6 +80,33 @@ SUITES = (
     )),
 )
 
+# 0.35.14 executes these additional *real* Go tests before it is allowed
+# to reuse the historical crash/Redis/S3 capacity certification.
+RC_03514_SUITES = (
+    Suite('35.14-protected-release-and-operator-journey', './internal/httpapi', (
+        'TestRollbackOperationIdempotency0217',
+        'TestReleaseWorkspaceDraftOwnershipAndResume0218',
+        'TestDurablePublishRechecksAuthorizationBeforeCommit0213',
+        'TestCanonicalPackageProductUploadValidatePublish',
+        'TestSupportReportSubmitRequiresLoginAndConsent03510',
+        'TestSupportReportRejectsUnknownFields03510',
+        'TestOperatorDiagnosticsDoesNotLeakInfrastructure03510',
+        'TestProductionGateFailClosedWithoutTargets03411',
+        'TestProductionGateUnknownEvidenceFieldsRejected03411',
+    )),
+    Suite('35.14-real-postgres-stable-snapshot', './internal/repository', (
+        'TestGAStableSnapshotImmutablePostgres0350',
+        'TestStableSQLTriggersRejectAllHeadAndManualStatusWrites0341',
+    )),
+)
+
+
+def suites_for_version(version: str) -> tuple[Suite, ...]:
+    if version not in ('0.32.16', '0.33.0', '0.35.14'):
+        raise GateError('unsupported RC exact version; no implicit GA carry-forward')
+    return SUITES + (RC_03514_SUITES if version == '0.35.14' else ())
+
+
 class GateError(RuntimeError):
     pass
 
@@ -130,8 +157,9 @@ def validate_preflight(env: dict[str, str]) -> str:
 def run_gate(output: Path, env: dict[str, str]) -> None:
     root = validate_preflight(env)
     canonical = (ROOT / 'VERSION').read_text().strip()
-    if canonical not in ('0.32.16', '0.33.0'):
-        raise GateError('RC gate supports only 0.32.16 and 0.33.0 exact sources')
+    selected = suites_for_version(canonical)
+    if canonical == '0.35.14' and not env.get('NEVERLAUNCHER_TEST_POSTGRES_DSN'):
+        raise GateError('real PostgreSQL immutable-stable certification DSN required')
     git_sha = env.get('GITHUB_SHA', '')
     if git_sha:
         git = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True, text=True)
@@ -143,7 +171,7 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
     env = dict(env)
     env['TMPDIR'] = root
     receipts = []
-    for suite in SUITES:
+    for suite in selected:
         pattern = '^(' + '|'.join(map(re.escape, suite.tests)) + ')$'
         cmd = ['go', 'test', '-json', '-race', '-count=1', '-timeout=12m', '-run', pattern, suite.package]
         try:

@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from production_rc import SUITES, GateError, validate_events, validate_preflight
+from production_rc import SUITES, RC_03514_SUITES, suites_for_version, GateError, validate_events, validate_preflight
 
 
 class TestRCGate(unittest.TestCase):
@@ -14,6 +14,14 @@ class TestRCGate(unittest.TestCase):
     def events(self, omit=(), skip=(), fail=()):
         return '\n'.join(json.dumps({'Action': 'skip' if t in skip else 'fail' if t in fail else 'pass',
                                        'Test': t}) for t in self.suite.tests if t not in omit)
+
+    def test_current_version_executes_extra_protected_go_regressions(self):
+        active = suites_for_version('0.35.14')
+        self.assertEqual(active[-2:], RC_03514_SUITES)
+        self.assertGreater(len(active), len(SUITES))
+        self.assertEqual(suites_for_version('0.33.0'), SUITES)
+        with self.assertRaises(GateError):
+            suites_for_version('0.35.13')
 
     def test_complete_pass_only(self):
         evidence = validate_events(self.events(), self.suite, 0)

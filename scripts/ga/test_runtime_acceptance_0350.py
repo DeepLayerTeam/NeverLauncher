@@ -38,6 +38,17 @@ class AcceptanceTests(unittest.TestCase):
     def check(self, inputs):
         return mod.assess(*inputs, 'release-0350', '0.35.0', SHA, now=NOW)
 
+    def test_protected_runtime_gate_applies_to_all_current_future_release_versions(self):
+        for version in ('0.35.0', '0.35.14', '0.35.14-rc1', '0.36.0', '1.0.0'):
+            self.assertTrue(mod.supported_runtime_release(version))
+        for version in ('0.34.99', '0.35.014', '', 'unknown'):
+            self.assertFalse(mod.supported_runtime_release(version))
+        package, validations, report = fixture()
+        package['version'] = '0.35.14'
+        self.assertEqual(mod.assess(package, validations, report, 'release-0350', '0.35.14', SHA, now=NOW)['productVersion'], '0.35.14')
+        with self.assertRaises(mod.Blocked):
+            mod.assess(package, validations, report, 'release-0350', '0.35.0', SHA, now=NOW)
+
     def test_real_coverage_fixture(self):
         self.assertEqual(self.check(fixture())['verifiedTargets'], 2)
 

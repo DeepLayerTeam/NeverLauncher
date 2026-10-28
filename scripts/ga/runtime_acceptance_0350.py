@@ -121,6 +121,18 @@ def get_json(backend, endpoint, bearer):
     return data["data"]
 
 
+def supported_runtime_release(version: str) -> bool:
+    """The trusted runtime gate is mandatory for ALL releases after 0.35.0.
+
+    Historical fixtures remain valid for 0.35.0, while the current protected
+    evaluator must recheck the *actual* staged version and commit every time.
+    """
+    matched = re.fullmatch(
+        r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+        r"(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?", version)
+    return matched is not None and tuple(map(int, matched.groups())) >= (0, 35, 0)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--backend", required=True)
@@ -132,7 +144,7 @@ def main():
     try:
         require(ID.fullmatch(args.package_id), "invalid package ID")
         require(SOURCE.fullmatch(args.source_sha), "invalid source SHA")
-        require(args.version == "0.35.0", "wrong GA version")
+        require(supported_runtime_release(args.version), "release predates the protected runtime gate or has invalid version")
         url = urlsplit(args.backend)
         require(url.scheme == "https" and bool(url.hostname) and not url.username and not url.password and
                 not url.query and not url.fragment and not url.path.rstrip("/"), "Backend must use a HTTPS origin")
