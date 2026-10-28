@@ -1,0 +1,42 @@
+name: Download reliability 0.35.4
+on:
+  pull_request:
+    paths:
+      - 'runtime/neverruntime/**'
+      - 'apps/desktop/**'
+      - '.github/workflows/download-reliability-0354.yml'
+  push:
+    paths:
+      - 'runtime/neverruntime/**'
+      - 'apps/desktop/**'
+      - '.github/workflows/download-reliability-0354.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  download-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Real HTTP, cache, pause/resume, progress and bounded parallelism
+        run: |
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml download_scheduler -- --nocapture
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml durable_downloads -- --nocapture
+  desktop-download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Install and compile desktop
+        working-directory: apps/desktop
+        run: npm ci --ignore-scripts && npm run build
+      - name: Check download experience and safety recommendations
+        working-directory: apps/desktop
+        run: npm run test:downloads

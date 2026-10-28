@@ -7,7 +7,7 @@ use crate::{download_scheduler::{self, DownloadLimits, ProgressSink}, file_owner
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{collections::BTreeSet, fs, io::{Read, Write}, path::{Path, PathBuf}};
+use std::{collections::BTreeSet, fs, io::{Read, Write}, path::{Path, PathBuf}, sync::{Arc, Mutex}};
 use tokio::sync::watch;
 
 const MAX_STATE: u64 = 32 * 1024 * 1024;
@@ -652,7 +652,26 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     // Previously owned, unchanged files need no copy or network transfer.
     // An untracked file is never used as an implicit cache hit.
     let to_download:std::collections::HashSet<String>=selected.iter().filter(|p|!reused.contains(*p)).cloned().collect();
-    let mut result = download_scheduler::run_selected(manifest, &stage, DownloadLimits::default(), sink, operation_id, control.clone(), &to_download).await?;
+    let last_progress:Arc<Mutex<Option<crate::download_scheduler::DownloadProgress>>> = Arc::new(Mutex::new(None));
+    let relay: Option<ProgressSink> = sink.clone().map(|output| {
+        let latest = Arc::clone(&last_progress);
+        Arc::new(move |event: crate::download_scheduler::DownloadProgress| {
+            if let Ok(mut guard) = latest.lock() { *guard = Some(event.clone()); }
+            output(event);
+        }) as ProgressSink
+    });
+    let mut result = download_scheduler::run_selected(manifest, &stage, DownloadLimits::default(), relay, operation_id, control.clone(), &to_download).await?;
+    let report_phase = |phase: &str| {
+        if let (Some(output), Ok(guard)) = (&sink, last_progress.lock()) {
+            if let Some(previous) = guard.as_ref() {
+                let mut event = previous.clone();
+                event.phase = phase.to_string();
+                event.eta_seconds = None;
+                event.speed_bytes_per_second = 0;
+                output(event);
+            }
+        }
+    };
     // Distinguish byte-for-byte verified reuse from network/cache transfers.
     result.skipped += reused.len();
     for f in &plan.files {
@@ -661,6 +680,7 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
         }
     }
     if *control.borrow() != Directive::Running || result.failed != 0 { return Ok(result); }
+    report_phase("verifying");
     let mut installed = Vec::new();
     for f in &plan.files {
         if reused.contains(&f.path) {installed.push(f.path.clone());continue;}
@@ -673,17 +693,24 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
         installed.push(f.path.clone());
     }
     if *control.borrow() != Directive::Running { return Ok(result); }
+    report_phase("publishing");
     let next = Release {installed, ..desired};
     let key = key.to_owned();
     let restore_root = root.clone(); let restore_key = key.clone();
-    tokio::task::spawn_blocking(move || commit(&root, next, &key, &stage))
-        .await.map_err(|e| e.to_string())??;
+    if let Err(error) = tokio::task::spawn_blocking(move || commit(&root, next, &key, &stage))
+        .await.map_err(|e| e.to_string()).and_then(|r| r) {
+        report_phase("failed");
+        return Err(error);
+    }
     // Do not leave a newly activated release behind if the user cancelled or
     // paused after the irreversible switch phase began. Switching itself must
     // run to completion, then use the same durable rollback procedure.
     if *control.borrow() != Directive::Running && manifest.game_release_generation == 0 {
         rollback(&restore_root, &restore_key).await?;
     }
+    report_phase(match *control.borrow() {
+        Directive::Running => "completed", Directive::Paused => "paused", Directive::Cancelled => "cancelled"
+    });
     Ok(result)
 }
 

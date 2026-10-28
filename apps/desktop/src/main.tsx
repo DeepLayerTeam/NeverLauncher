@@ -12,8 +12,7 @@ import { parseChoice0247 } from './component_selection_0247';
 import { launchPreferences, scopedServers, type ScopedServer } from './desktop_experience_0229';
 import { resolveLaunchMode0269, type GameLaunchMode0269 } from './launch_modes_0269';
 import { OfficialMinecraftClient0257, type OfficialProfile0257 } from './official_minecraft_0257';
-import { navigation0353, restoreScreen0353, permittedScreen0353, chooseProject0353, chooseProfile0353, gameBaseDirectory0353, type PlayerScreen0353 } from './desktop_navigation_0353';
-import { BuildsWorkspace0353, ServersWorkspace0353, HistoryWorkspace0353 } from './DesktopWorkspace0353';
+import { progress0354, recovery0354, type NativeTransfer0354, type Recovery0354 } from './download_experience_0354';
 
 
 
@@ -28,7 +27,7 @@ const TexturesPanel0258 = React.lazy(() => loadDesktopView03011('textures'));
 const HWIDRisk0299 = React.lazy(() => loadDesktopView03011('deviceRisk'));
 
 type Stage = 'idle' | 'connecting' | 'session' | 'project' | 'profile' | 'manifest' | 'java' | 'files' | 'repair' | 'cleanup' | 'ready' | 'launching' | 'running' | 'failed';
-type Screen = PlayerScreen0353;
+type Screen = 'firstRun' | 'overview' | 'auth' | 'projects' | 'profile' | 'textures' | 'download' | 'migration' | 'settings' | 'logs' | 'diagnostics' | 'extensions';
 
 type DesktopSettings = {
   schemaVersion?: string;
@@ -193,11 +192,7 @@ type JavaInfoResult = {
 type FileCheckResult = { path: string; status: 'ok' | 'missing' | 'invalid' | string; message: string };
 type DownloadResult = { downloaded: number; skipped: number; failed: number; repaired?: number; bytesDownloaded?: number; cacheHits?: number; bytesReused?: number; failedFiles?: string[]; messages: string[] };
 type PendingDownload = { operationId: string; mode: string; status: string; projectId: string; profileId: string; version: string; totalFiles: number };
-type DownloadProgress = {
-  operationId: string; phase: string; totalFiles: number; queued: number; active: number;
-  completed: number; failed: number; skipped: number;
-  bytesExpected: number; bytesTransferred: number; cacheHits: number; bytesReused: number; currentFile?: string | null;
-};
+type DownloadProgress = NativeTransfer0354;
 type LaunchPlan = { javaExecutable: string; workingDirectory: string; mainClass: string; mainModule?: string; classpathEntries: string[]; modulepathEntries?: string[]; environmentAllowlist?: string[]; jvmArgs: string[]; gameArgs: string[]; commandPreview: string; deterministicSha256?: string };
 type ProcessStatus = { id: string; pid?: number; state: 'running' | 'stopping' | 'exited' | string; startedAt: string; finishedAt?: string; exitCode?: number; success?: boolean; logPath: string; message: string; windowsSensor?: any };
 type RepairResult = { status: string; before: FileCheckResult[]; download: DownloadResult; after: FileCheckResult[]; repaired: number; message: string };
@@ -330,10 +325,6 @@ function normalizedSettings(settings: DesktopSettings): DesktopSettings {
 function App() {
   const [settings, setSettings] = useState<DesktopSettings>(() => loadSettings());
   const [screen, setScreen] = useState<Screen>('firstRun');
-  const [desktopLoaded0353,setDesktopLoaded0353]=useState(false);
-  const baseDirectory0353=useRef('');
-  const [workspaceBusy0353,setWorkspaceBusy0353]=useState(false);
-  const [workspaceError0353,setWorkspaceError0353]=useState('');
   const [signedProvisioning0352,setSignedProvisioning0352]=useState<SignedProvisioning0352|null>(null);
   const [bootstrapError0352,setBootstrapError0352]=useState('');
   const [firstRunStep0352,setFirstRunStep0352]=useState<'start'|'select'|'complete'>('start');
@@ -346,6 +337,8 @@ function App() {
   const [download, setDownload] = useState<DownloadResult | null>(null);
   const [repairResult, setRepairResult] = useState<RepairResult | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
+  const [transferFailure0354, setTransferFailure0354] = useState<Recovery0354 | null>(null);
+  const cancelledTransfer0354 = useRef(false);
   const [transferBusy, setTransferBusy] = useState(false);
   const [pendingJob, setPendingJob] = useState<PendingDownload | null>(null);
   const recoveryAttempted = useRef(new Set<string>());
@@ -365,9 +358,10 @@ function App() {
       void callTauri<DownloadResult>('resume_download_job', { root, pinnedPublicKey: settings.pinnedPublicKey }).then((result) => {
         if (disposed) return;
         setDownload(result);
-        setPendingJob(null);
+        void callTauri<PendingDownload | null>('pending_download_job', { root, pinnedPublicKey: settings.pinnedPublicKey }).then((pending) => {
+          if (!disposed) { setPendingJob(pending); recordTransferOutcome0354(result, pending); }
+        }).catch((error) => { if (!disposed) setTransferFailure0354(recovery0354(error)); });
         log(`После перезапуска: скачано ${result.downloaded}, ошибок ${result.failed}.`);
-        void callTauri<PendingDownload | null>('pending_download_job', { root, pinnedPublicKey: settings.pinnedPublicKey }).then(setPendingJob);
       }).catch((error) => { if (!disposed) log(`Автовосстановление загрузки: ${String(error)}`); })
         .finally(() => { if (!disposed) setTransferBusy(false); });
     }).catch((error) => { if (!disposed) log(`Проверка сохранённой загрузки: ${String(error)}`); });
@@ -413,7 +407,7 @@ function App() {
     const base = settings.backendUrl.trim().replace(/\/$/, '');
     setAuthProviders0293([]);
     setAuthProviderError0293('');
-    if (!desktopLoaded0353 || !/^https?:\/\//i.test(base)) return;
+    if (!/^https?:\/\//i.test(base)) return;
     const controller = new AbortController();
     void fetch(`${base}/api/v1/auth/providers`, { signal: controller.signal })
       .then(async (response) => {
@@ -435,7 +429,7 @@ function App() {
       })
       .catch((error) => { if (active) setAuthProviderError0293(`Невозможно получить список auth providers: ${String(error)}`); });
     return () => { active = false; controller.abort(); };
-  }, [settings.backendUrl,desktopLoaded0353]);
+  }, [settings.backendUrl]);
   const officialMinecraftClient = useRef<OfficialMinecraftClient0257 | null>(null);
   const [officialProfile, setOfficialProfile] = useState<OfficialProfile0257 | null>(null);
   const [minecraftIdentity, setMinecraftIdentity] = useState<GameLaunchMode0269>(settings.offlineEnabled ? 'offline' : 'local');
@@ -491,38 +485,28 @@ function App() {
         ]);
         if(disposed)return;
         const next=normalizedSettings(config);
-        baseDirectory0353.current=gameBaseDirectory0353(next.gameDirectory,next.projectId,next.profileId);
         setSettings(next);
         setSelectedProject(next.projectId||'');setSelectedProfile(next.profileId||'');
         setSignedProvisioning0352(provisioning);
         setBootstrapError0352('');
-        setScreen(restoreScreen0353(localStorage.getItem('neverlauncher.desktop.screen.0353'),Boolean(next.backendUrl && (!provisioning||next.onboardingCompleted))));
-        setDesktopLoaded0353(true);
+        setScreen(provisioning&&!next.onboardingCompleted?'firstRun':next.backendUrl?'overview':'firstRun');
         log(provisioning?`Подписанный bootstrap ${provisioning.digest.slice(0,16)}… проверен native Ed25519.`:'Desktop config загружен без подписанного bundle.');
       }catch(error){
         if(disposed)return;
         // A production Tauri trust error MUST NOT fall back to mutable localStorage.
         if((window as any).__TAURI_INTERNALS__){
           setBootstrapError0352(`Безопасная загрузка Desktop отклонена: ${String(error)}`);
-          setScreen('firstRun');setDesktopLoaded0353(true);setStage('failed');
+          setScreen('firstRun');setStage('failed');
           return;
         }
         const fallback=normalizedSettings(loadSettings());
-        baseDirectory0353.current=gameBaseDirectory0353(fallback.gameDirectory,fallback.projectId,fallback.profileId);
         setSettings(fallback);setSelectedProject(fallback.projectId||'');
         setSelectedProfile(fallback.profileId||'');
-        setScreen(restoreScreen0353(localStorage.getItem('neverlauncher.desktop.screen.0353'),Boolean(fallback.backendUrl)));
-        setDesktopLoaded0353(true);
         log('Только web preview: параметры восстановлены из localStorage без native trust.');
       }
     })();
     return ()=>{disposed=true};
   }, []);
-
-  useEffect(() => {
-    if(desktopLoaded0353 && !bootstrapError0352 && screen!=='firstRun')
-      localStorage.setItem('neverlauncher.desktop.screen.0353',screen);
-  },[screen,desktopLoaded0353,bootstrapError0352]);
 
   // Explicit opt-in is enforced independently by the native process.
   useEffect(() => {
@@ -542,7 +526,7 @@ function App() {
     }
     const phase = stage === 'running' ? 'В игре' :
       stage === 'launching' ? 'Запуск Minecraft' :
-      screen === 'accounts' || !authSession ? 'Вход в NeverLauncher' :
+      screen === 'auth' || !authSession ? 'Вход в NeverLauncher' :
       selectedProfile ? 'Выбор / подготовка профиля' : 'Выбор проекта';
     const details = stage === 'running' ? `Minecraft · ${selectedProfile || 'Клиент'}` :
       'NeverLauncher';
@@ -561,9 +545,9 @@ function App() {
       screen, stage, selectedProfile, authSession?.sessionId]);
 
   useEffect(() => {
-    if (!desktopLoaded0353 || bootstrapError0352 || !settings.backendUrl.trim()) return;
+    if (!settings.backendUrl.trim()) return;
     void restoreSession();
-  }, [settings.backendUrl,desktopLoaded0353,bootstrapError0352]);
+  }, [settings.backendUrl]);
 
   useEffect(() => {
     if (!launchResult?.id || !['running', 'stopping'].includes(launchResult.state)) return;
@@ -641,7 +625,6 @@ function App() {
     try {
       const result = await callTauri<DesktopBindingResult>('save_desktop_config', { config: next });
       setSettings(next);
-      baseDirectory0353.current=gameBaseDirectory0353(next.gameDirectory,next.projectId,next.profileId);
       log(result.message + ` (${result.configPath})`);
     } catch(error) {
       if((window as any).__TAURI_INTERNALS__){log(`Desktop config не сохранён: ${String(error)}`);return;}
@@ -683,10 +666,10 @@ function App() {
     return `${base.replace(/\/$/, '')}${path}`;
   }
 
-  function buildManifestUrl(projectId = selectedProject, profileId = selectedProfile, channel=settings.channel) {
+  function buildManifestUrl(projectId = selectedProject, profileId = selectedProfile) {
     if (settings.manifestUrl.trim()) return settings.manifestUrl.trim();
     if (!projectId || !profileId) return '';
-    return endpoint(`/api/v1/projects/${encodeURIComponent(projectId)}/profiles/${encodeURIComponent(profileId)}/manifest?channel=${encodeURIComponent(channel || 'stable')}`);
+    return endpoint(`/api/v1/projects/${encodeURIComponent(projectId)}/profiles/${encodeURIComponent(profileId)}/manifest?channel=${encodeURIComponent(settings.channel || 'stable')}`);
   }
 
   async function fetchBackendJson(path: string, token = authSession?.accessToken): Promise<any> {
@@ -1304,10 +1287,10 @@ function App() {
     setStage('project');
     try {
       const payload = await fetchBackendJson('/api/v1/projects');
-      const items: BackendProject[] = payload?.items ?? payload?.data?.items ?? [];
+      const items: BackendProject[] = payload?.items ?? [];
       setProjects(items);
-      const nextProject = chooseProject0353('',items, selectedProject || settings.projectId,signedProvisioning0352?.projectId);
-      if (nextProject && nextProject!==selectedProject) selectProject(nextProject);
+      const nextProject = selectedProject || settings.projectId || items[0]?.id || '';
+      if (nextProject) selectProject(nextProject);
       log(`Проекты загружены: ${items.length}.`);
       return nextProject;
     } catch (error) {
@@ -1321,12 +1304,11 @@ function App() {
     setStage('profile');
     try {
       if (!projectId) throw new Error('проект не выбран');
-      const payload = await fetchBackendJson(`/api/v1/projects/${encodeURIComponent(projectId)}/profiles`);
-      const items: BackendProfile[] = payload?.items ?? payload?.data?.items ?? [];
+      const payload = await fetchBackendJson(`/api/v1/projects/${projectId}/profiles`);
+      const items: BackendProfile[] = payload?.items ?? [];
       setProfiles(items);
-      const preferred = projectId === (selectedProject||settings.projectId) ? selectedProfile || settings.profileId : '';
-      const nextProfile = chooseProfile0353('',items,preferred,signedProvisioning0352?.profileId);
-      if (nextProfile && nextProfile!==selectedProfile) selectProfile(nextProfile);
+      const nextProfile = selectedProfile || settings.profileId || items[0]?.id || '';
+      if (nextProfile) selectProfile(nextProfile);
       log(`Профили проекта ${projectId}: ${items.length}.`);
       return nextProfile;
     } catch (error) {
@@ -1344,108 +1326,6 @@ function App() {
     setSettings((current) => items.some((item) => item.id === current.serverId) ? current : { ...current, serverId: '' });
     log(`Доступные серверы профиля: ${items.length}.`);
   }
-
-  // All workspace actions operate against existing Backend v1 and native NeverRuntime.
-  // Async workspace refresh is explicitly requested or triggered on screen entry.
-  async function refreshBuilds0353(){
-    setWorkspaceBusy0353(true);setWorkspaceError0353('');
-    try {
-      const projectPayload=await fetchBackendJson('/api/v1/projects');
-      const available:BackendProject[]=projectPayload?.items??projectPayload?.data?.items??[];
-      if(!Array.isArray(available))throw new Error('Некорректный каталог проектов Backend');
-      setProjects(available);
-      const projectId=chooseProject0353('',available,selectedProject||settings.projectId,signedProvisioning0352?.projectId);
-      if(signedProvisioning0352 && !projectId)throw new Error('Закреплённый проект недоступен аккаунту');
-      if(!projectId){setProfiles([]);setSelectedProject('');setSelectedProfile('');setManifest(null);return;}
-      if(projectId!==selectedProject)selectProject(projectId);
-      const profilePayload=await fetchBackendJson(`/api/v1/projects/${encodeURIComponent(projectId)}/profiles`);
-      const availableProfiles:BackendProfile[]=profilePayload?.items??profilePayload?.data?.items??[];
-      if(!Array.isArray(availableProfiles))throw new Error('Некорректный каталог профилей Backend');
-      setProfiles(availableProfiles);
-      const preferred=projectId===(selectedProject||settings.projectId)?selectedProfile||settings.profileId:'';
-      const profileId=chooseProfile0353('',availableProfiles,preferred,signedProvisioning0352?.profileId);
-      if(signedProvisioning0352 && !profileId)throw new Error('Закреплённый профиль недоступен аккаунту');
-      if(profileId && profileId!==selectedProfile)selectProfile(profileId);
-      if(!profileId){setSelectedProfile('');setManifest(null);}
-      // Do not claim a profile is installed or verified from metadata alone.
-    }catch(error){setWorkspaceError0353(`Не удалось загрузить сборки: ${String(error)}`)}
-    finally{setWorkspaceBusy0353(false)}
-  }
-  async function chooseWorkspaceProject0353(id:string){
-    if(signedProvisioning0352 && id!==signedProvisioning0352.projectId)return;
-    selectProject(id);setProfiles([]);setWorkspaceError0353('');setWorkspaceBusy0353(true);
-    try{
-      const payload=await fetchBackendJson(`/api/v1/projects/${encodeURIComponent(id)}/profiles`);
-      const rows:BackendProfile[]=payload?.items??payload?.data?.items??[];
-      if(!Array.isArray(rows))throw new Error('Некорректный каталог профилей');
-      setProfiles(rows);
-    }catch(error){setWorkspaceError0353(`Не удалось загрузить профили: ${String(error)}`)}
-    finally{setWorkspaceBusy0353(false)}
-  }
-  async function chooseWorkspaceProfile0353(id:string){
-    if(signedProvisioning0352 && id!==signedProvisioning0352.profileId)return;
-    const profile=profiles.find(row=>row.id===id);if(!profile)return;
-    selectProfile(id);setWorkspaceError0353('');setWorkspaceBusy0353(true);
-    try{
-      const projectId=selectedProject||settings.projectId;
-      const requestedChannel=signedProvisioning0352?.channel || profile.defaultChannel || settings.channel;
-      const url=signedProvisioning0352?.manifestUrl || buildManifestUrl(projectId,id,requestedChannel);
-      const loaded=await callTauri<Manifest>('load_manifest',{url,pinnedPublicKey:settings.pinnedPublicKey});
-      if(loaded.projectId!==projectId||loaded.profileId!==id||loaded.channel!==requestedChannel)
-        throw new Error('Подписанный Manifest не соответствует выбранному проекту/профилю/каналу');
-      const base=baseDirectory0353.current||gameBaseDirectory0353(settings.gameDirectory,settings.projectId,settings.profileId);
-      if(!base)throw new Error('Каталог игры не определён');
-      const root=(Boolean(signedProvisioning0352)||(settings.projectId===projectId&&settings.profileId===id&&settings.gameDirectory!==base))
-        ?settings.gameDirectory
-        :await callTauri<string>('prepare_profile_directory',{baseDir:base,projectId,profileId:id});
-      const next=normalizedSettings({...settings,gameDirectory:root,projectId,profileId:id,channel:requestedChannel,
-        serverId:'',componentPreset:'',offlineEnabled:false});
-      // A profile is active only when the native configuration is committed.
-      const saved=await callTauri<DesktopBindingResult>('save_desktop_config',{config:next});
-      if(saved.status!=='saved')throw new Error(saved.message||'Не удалось сохранить профиль в native config');
-      const committed=normalizedSettings(await callTauri<DesktopSettings>('load_desktop_config'));
-      if(committed.projectId!==projectId||committed.profileId!==id)throw new Error('Native сохранил другой профиль');
-      baseDirectory0353.current=base;
-      setSettings(committed);setManifest(loaded);setLaunchPlan(null);setLaunchResult(null);setFiles([]);
-      void callTauri('cache_desktop_manifest',{manifest:loaded,root,pinnedPublicKey:next.pinnedPublicKey})
-        .catch(error=>log(`Offline cache: ${String(error)}`));
-      log(`Подписанная сборка ${loaded.version} проверена и сохранена Native.`);
-    }catch(error){setManifest(null);setWorkspaceError0353(`Не удалось открыть сборку: ${String(error)}`)}
-    finally{setWorkspaceBusy0353(false)}
-  }
-  async function refreshServers0353(){
-    setWorkspaceBusy0353(true);setWorkspaceError0353('');
-    try{await loadProfileServers();}
-    catch(error){setProfileServers([]);setWorkspaceError0353(`Не удалось получить серверы: ${String(error)}`)}
-    finally{setWorkspaceBusy0353(false)}
-  }
-  async function refreshHistory0353(){
-    setWorkspaceBusy0353(true);setWorkspaceError0353('');
-    try{if(!settings.gameDirectory)throw new Error('Каталог игры ещё не выбран');
-      const entries=await callTauri<LaunchHistoryEntry[]>('load_launch_history',{root:settings.gameDirectory});
-      if(!Array.isArray(entries))throw new Error('Некорректная история NeverRuntime');
-      setLaunchHistory(entries);
-    }catch(error){setWorkspaceError0353(`Не удалось получить историю: ${String(error)}`)}
-    finally{setWorkspaceBusy0353(false)}
-  }
-  // Native desktop settings are persisted only by an explicit user operation.
-  async function saveServer0353(){
-    const current=normalizedSettings({...settings,projectId:signedProvisioning0352?.projectId||selectedProject||settings.projectId,profileId:signedProvisioning0352?.profileId||selectedProfile||settings.profileId});
-    const saved=await callTauri<DesktopBindingResult>('save_desktop_config',{config:current});
-    if(saved.status!=='saved')throw new Error(saved.message||'Native не подтвердил сохранение');
-    baseDirectory0353.current=gameBaseDirectory0353(current.gameDirectory,current.projectId,current.profileId);
-    setSettings(current);log(`Выбор сервера сохранён: ${current.serverId||'без сервера'}`);
-  }
-  function navigate0353(target:PlayerScreen0353){
-    if(!desktopLoaded0353 || !permittedScreen0353(target,Boolean(signedProvisioning0352),Boolean(settings.onboardingCompleted),Boolean(bootstrapError0352)))return;
-    setWorkspaceError0353('');setScreen(target);
-  }
-  useEffect(()=>{
-    if(!desktopLoaded0353||bootstrapError0352)return;
-    if(screen==='builds')void refreshBuilds0353();
-    if(screen==='servers' && selectedProject && selectedProfile)void refreshServers0353();
-    if(screen==='history')void refreshHistory0353();
-  },[screen,desktopLoaded0353,authSession?.sessionId]);
 
   async function cacheSignedManifest(activeManifest = manifest, root = settings.gameDirectory) {
     if (!activeManifest) throw new Error('Нет подписанного манифеста для кеширования');
@@ -1475,10 +1355,10 @@ function App() {
     return launchPreferences({...settings, offlineEnabled: minecraftIdentity === 'offline'}, manifest.runtime.memory, Boolean(manifest.runtime.launch?.offlineMode), profileServers, false, minecraftIdentity === 'official');
   }
 
-  async function loadManifest(projectId = selectedProject || settings.projectId, profileId = selectedProfile || settings.profileId, channel=settings.channel) {
+  async function loadManifest(projectId = selectedProject || settings.projectId, profileId = selectedProfile || settings.profileId) {
     setStage('manifest');
     try {
-      const url = buildManifestUrl(projectId, profileId, channel);
+      const url = buildManifestUrl(projectId, profileId);
       if (!url) throw new Error('сначала выберите проект и профиль');
       const result = await callTauri<Manifest>('load_manifest', { url, pinnedPublicKey: settings.pinnedPublicKey });
       setManifest(result);
@@ -1580,20 +1460,59 @@ function App() {
     }
   }
 
+  function recordTransferOutcome0354(result: DownloadResult, pending: PendingDownload | null): boolean {
+    if (cancelledTransfer0354.current) {
+      cancelledTransfer0354.current = false;
+      setTransferFailure0354(null);
+      setStage('idle');
+      return false;
+    }
+    if (pending?.status === 'paused') {
+      setTransferFailure0354(null);
+      setStage('idle');
+      return false;
+    }
+    if (result.failed > 0 || pending?.status === 'pending') {
+      const reason = result.messages?.[0] || (result.failedFiles || [])[0] || 'download failed';
+      setTransferFailure0354(recovery0354(reason));
+      setStage('failed');
+      return false;
+    }
+    setTransferFailure0354(null);
+    setStage('ready');
+    return true;
+  }
+
   async function controlTransfer(action: 'pause' | 'cancel') {
     try {
       await callTauri('control_download_job', { root: settings.gameDirectory, action });
       log(action === 'pause' ? 'Запрошена пауза загрузки.' : 'Загрузка отменена.');
-      if (action === 'cancel') setPendingJob(null);
+      if (action === 'cancel') {
+        cancelledTransfer0354.current = true;
+        setPendingJob(null);
+        setTransferFailure0354(null);
+      } else {
+        setPendingJob(await callTauri<PendingDownload | null>('pending_download_job', {
+          root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey,
+        }));
+      }
     } catch (error) { log(`Управление загрузкой: ${String(error)}`); }
   }
 
   async function resumeTransfer() {
     if (transferBusy || !pendingJob) return;
+    cancelledTransfer0354.current = false;
+    setTransferFailure0354(null);
+    setDownloadProgress(null);
     setTransferBusy(true);
     try {
       const result = await callTauri<DownloadResult>('resume_download_job', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey });
       setDownload(result);
+      const pending = await callTauri<PendingDownload | null>('pending_download_job', {
+        root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey,
+      });
+      setPendingJob(pending);
+      if (!recordTransferOutcome0354(result, pending)) return;
       if (manifest) {
         // The durable job stores the resolved choice; after resuming, reload
         // the verified installed selection instead of using stale UI settings.
@@ -1612,12 +1531,17 @@ function App() {
       }
       log(`Возобновление: скачано ${result.downloaded}, ошибок ${result.failed}.`);
       setPendingJob(await callTauri<PendingDownload | null>('pending_download_job', { root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey }));
-    } catch (error) { log(`Не удалось возобновить: ${String(error)}`); }
+    } catch (error) {
+      setStage('failed'); setTransferFailure0354(recovery0354(error));
+      log(`Не удалось возобновить: ${String(error)}`);
+    }
     finally { setTransferBusy(false); }
   }
 
   async function downloadFiles() {
     if (!manifest || transferBusy) return;
+    cancelledTransfer0354.current = false;
+    setTransferFailure0354(null);
     setStage('files');
     setTransferBusy(true);
     setDownloadProgress(null);
@@ -1626,10 +1550,22 @@ function App() {
         manifest, root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey, preset:settings.componentPreset||null,
       });
       setDownload(result);
-      setFiles(await callTauri<FileCheckResult[]>('check_files', { manifest, root: settings.gameDirectory,preset: settings.componentPreset||null }));
-      log(`Загрузка: ${result.downloaded} файлов, ошибок ${result.failed}, передано ${result.bytesDownloaded || 0} байт.`);
+      const pending = await callTauri<PendingDownload | null>('pending_download_job', {
+        root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey,
+      });
+      setPendingJob(pending);
+      if (!recordTransferOutcome0354(result, pending)) return;
+      const verified = await callTauri<FileCheckResult[]>('check_files', {
+        manifest, root: settings.gameDirectory,preset: settings.componentPreset||null,
+      });
+      setFiles(verified);
+      if (verified.some(file => file.status !== 'ok' && file.status !== 'optional-missing')) {
+        throw new Error('SHA-256 mismatch: проверка установленных файлов не пройдена');
+      }
+      log(`Загрузка подтверждена: ${result.downloaded} файлов; передано ${result.bytesDownloaded || 0} байт.`);
     } catch (error) {
       setStage('failed');
+      setTransferFailure0354(recovery0354(error));
       log(`Загрузка не выполнена: ${String(error)}`);
     } finally {
       setTransferBusy(false);
@@ -1672,6 +1608,8 @@ function App() {
       if (!manifest) log('Восстановление невозможно без манифеста профиля.');
       return;
     }
+    cancelledTransfer0354.current = false;
+    setTransferFailure0354(null);
     setStage('repair');
     setTransferBusy(true);
     setDownloadProgress(null);
@@ -1680,9 +1618,18 @@ function App() {
       setRepairResult(result);
       setDownload(result.download);
       setFiles(result.after);
+      const pending = await callTauri<PendingDownload | null>('pending_download_job', {
+        root: settings.gameDirectory, pinnedPublicKey: settings.pinnedPublicKey,
+      });
+      setPendingJob(pending);
+      if (!recordTransferOutcome0354(result.download, pending)) return;
+      if (result.status !== 'ready' || result.after.some(f => f.status !== 'ok' && f.status !== 'optional-missing')) {
+        throw new Error('SHA-256 mismatch: repair did not restore all required files');
+      }
       log(`${result.message}: восстановлено ${result.repaired}, скачано ${result.download.downloaded}, ошибок ${result.download.failed}.`);
     } catch (error) {
       setStage('failed');
+      setTransferFailure0354(recovery0354(error));
       log(`Восстановление завершилось ошибкой: ${String(error)}`);
     } finally {
       setTransferBusy(false);
@@ -2058,7 +2005,7 @@ function App() {
   async function prepareFirstRun0352(){
     const p=signedProvisioning0352;
     if(!p||firstRunBusy0352)return;
-    if(!authSession?.accessToken){setFirstRunError0352('Войдите в аккаунт проекта, затем продолжите подготовку.');setScreen('accounts');return;}
+    if(!authSession?.accessToken){setFirstRunError0352('Войдите в аккаунт проекта, затем продолжите подготовку.');setScreen('auth');return;}
     setFirstRunBusy0352(true);setFirstRunError0352('');
     try{
       setStage('connecting');
@@ -2152,35 +2099,36 @@ function App() {
       <aside className="sidebar">
         <div className="brand">{signedProvisioning0352?.displayName||"NeverLauncher"}</div>
         <div className="version">{DESKTOP_VERSION} · Рабочий Desktop Launcher</div>
-        <nav aria-label="Основная навигация">
-          {signedProvisioning0352&&!settings.onboardingCompleted&&<button className={screen==='firstRun'?'active':''} aria-current={screen==='firstRun'?'page':undefined} onClick={()=>navigate0353('firstRun')}>Первый запуск</button>}
-          {navigation0353.map((item,index)=><React.Fragment key={item.id}>
-            {(index===0||navigation0353[index-1].group!==item.group)&&<div className="navSection0353">{item.group}</div>}
-            <button className={screen===item.id?'active':''} aria-current={screen===item.id?'page':undefined}
-              disabled={!desktopLoaded0353||!permittedScreen0353(item.id,Boolean(signedProvisioning0352),Boolean(settings.onboardingCompleted),Boolean(bootstrapError0352))}
-              onClick={()=>navigate0353(item.id)}>{item.title}</button>
-          </React.Fragment>)}
+        <nav>
+          {[
+            ['firstRun', 'Первый запуск'], ['overview', 'Обзор'], ['auth', 'Вход'], ['projects', 'Проекты'], ['profile', 'Профиль'],
+            ['download', 'Загрузка'], ['migration', 'Переход с Gravit'], ['textures', 'Скины и плащи'], ['settings', 'Настройки'], ['extensions', 'Расширения'], ['logs', 'Логи'], ['diagnostics', 'Диагностика'],
+          ].map(([id, title]) => <button key={id} className={screen === id ? 'active' : ''} onClick={() => setScreen(id as Screen)}>{title}</button>)}
         </nav>
       </aside>
 
       <section className="content">
         <header className="hero">
           <div>
-            <p className="eyebrow">NeverLauncher Desktop · {DESKTOP_VERSION}</p>
-            <h1>{screen==='overview'?'Играть':screen==='accounts'?'Аккаунты':screen==='servers'?'Серверы':screen==='builds'?'Мои сборки':screen==='optionalMods'?'Опциональные моды':screen==='history'?'История запусков':navigation0353.find(item=>item.id===screen)?.title||'Первый запуск'}</h1>
-            <p>{selectedProject||settings.projectId||'Проект не выбран'} · {selectedProfile||settings.profileId||'Профиль не выбран'} · {manifest?.version||'Подписанный релиз не загружен'}</p>
+            <p className="eyebrow">Рабочий Desktop Launcher</p>
+            <h1>Движок запуска и восстановление клиента</h1>
+            <p>Desktop {DESKTOP_VERSION} выполняет реальную проверку файлов, восстановление повреждённых объектов, безопасную очистку, сборку плана запуска, запуск Minecraft, запись логов и историю запусков.</p>
           </div>
           <div className="statusPill">{stageLabels[stage]}</div>
         </header>
 
         <section className="toolbar">
-          <button className="primary" disabled={!desktopLoaded0353||!manifest||transferBusy||Boolean(bootstrapError0352)||(Boolean(signedProvisioning0352)&&!settings.onboardingCompleted)} onClick={launch}>Играть</button>
-          <button disabled={!desktopLoaded0353||!manifest||transferBusy} onClick={()=>navigate0353('download')}>Установка / восстановление</button>
-          <button onClick={()=>navigate0353('builds')} disabled={!desktopLoaded0353||!permittedScreen0353('builds',Boolean(signedProvisioning0352),Boolean(settings.onboardingCompleted),Boolean(bootstrapError0352))}>Выбрать сборку</button>
-          <button onClick={()=>navigate0353('history')} disabled={!desktopLoaded0353||!permittedScreen0353('history',Boolean(signedProvisioning0352),Boolean(settings.onboardingCompleted),Boolean(bootstrapError0352))}>История запусков</button>
+          <button onClick={runFullCheck}>Полная проверка</button>
+          <button onClick={persistDesktopConfig}>Сохранить привязку</button>
+          <button onClick={repairClient}>Восстановить</button>
+          <button disabled={transferBusy} onClick={rollbackClientRelease}>Откатить игровой релиз</button>
+          <button onClick={cleanUnusedFiles}>Очистить лишнее</button>
+          <button onClick={buildPlan}>Собрать план запуска</button>
+          <button className="primary" disabled={transferBusy} onClick={launch}>Играть</button>
+          <button onClick={exportDiagnostics}>Экспорт диагностики</button>
         </section>
 
-        {(desktopLoaded0353 && !signedProvisioning0352 && !bootstrapError0352) && <section className="settings compact">
+        {(!signedProvisioning0352 && !bootstrapError0352) && <section className="settings compact">
           <label>URL Backend<input value={settings.backendUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('backendUrl', event.target.value)} /></label>
           <label>Переопределение URL манифеста<input value={settings.manifestUrl} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('manifestUrl', event.target.value)} placeholder="обычно пусто: используется /api/v1/projects/{project}/profiles/{profile}/manifest?channel=stable" /></label>
           <label>Каталог игры<input value={settings.gameDirectory} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('gameDirectory', event.target.value)} /></label>
@@ -2189,14 +2137,14 @@ function App() {
           <label>Канал<input value={settings.channel} onChange={(event: React.ChangeEvent<HTMLInputElement>) => patchSettings('channel', event.target.value)} /></label>
         </section>}
 
-        {!desktopLoaded0353 ? <section className="panel" role="status">Проверка конфигурации Desktop и подписанного bundle…</section> : <React.Suspense fallback={<section className="panel">Загрузка экрана…</section>}>
+        <React.Suspense fallback={<section className="panel">Загрузка экрана…</section>}>
         {screen === 'firstRun' && (bootstrapError0352 ? <section className="panel" role="alert"><h3>Проверка подписанного bundle не пройдена</h3><p>{bootstrapError0352}</p><p>Переустановите сборку владельца с корректным pinned trust root. Ручной ввод ключа в Desktop не разрешён.</p></section> : signedProvisioning0352 ?
-          <FirstRunSigned0352 provisioning={signedProvisioning0352} settings={settings} session={authSession} busy={firstRunBusy0352} transferBusy={transferBusy} step={firstRunStep0352} error={firstRunError0352} manifest={manifest} servers={profileServers} progress={downloadProgress} onLogin={()=>setScreen('accounts')} onPrepare={prepareFirstRun0352} onInstall={installFirstRun0352} onPlay={launch} onServer={(id:string)=>patchSettings('serverId',id)} onPreset={(value:string)=>patchSettings('componentPreset',value)} onComponents={()=>setScreen('optionalMods')} /> :
+          <FirstRunSigned0352 provisioning={signedProvisioning0352} settings={settings} session={authSession} busy={firstRunBusy0352} transferBusy={transferBusy} step={firstRunStep0352} error={firstRunError0352} manifest={manifest} servers={profileServers} progress={downloadProgress} onLogin={()=>setScreen('auth')} onPrepare={prepareFirstRun0352} onInstall={installFirstRun0352} onPlay={launch} onServer={(id:string)=>patchSettings('serverId',id)} onPreset={(value:string)=>patchSettings('componentPreset',value)} onComponents={()=>setScreen('profile')} /> :
           <FirstRunPanel settings={settings} patchSettings={patchSettings} bindingPolicy={bindingPolicy} checkBackend={checkBackend} loadProjects={loadProjects} loadProfiles={loadProfiles} persistDesktopConfig={persistDesktopConfig} resetDesktopBinding={resetDesktopBinding} selectedProject={selectedProject} selectedProfile={selectedProfile} />) }
         {screen === 'overview' && <Overview readiness={readiness} backendStatus={backendStatus} manifest={manifest} javaInfo={javaInfo} fileSummary={fileSummary} launchPlan={launchPlan} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} />}
-        {screen === 'accounts' && signedProvisioning0352 && !settings.onboardingCompleted && <section className="panel"><button className="primary" onClick={()=>setScreen('firstRun')}>Вернуться к первому запуску</button></section>}
-        {screen === 'accounts' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} macOSTrust0316={macOSTrust0316} authProviders0293={authProviders0293} routing0293={routing0293} selectedAuthProvider0293={selectedAuthProvider0293} setSelectedAuthProvider0293={setSelectedAuthProvider0293} authProviderError0293={authProviderError0293} setAuthProviderError0293={setAuthProviderError0293} linkedProvider0293={linkedProvider0293} setLinkedProvider0293={setLinkedProvider0293} linkedIdentifier0293={linkedIdentifier0293} setLinkedIdentifier0293={setLinkedIdentifier0293} linkedPassword0293={linkedPassword0293} setLinkedPassword0293={setLinkedPassword0293} linkFeedback0293={linkFeedback0293} setLinkFeedback0293={setLinkFeedback0293} linkPasswordProvider0293={linkPasswordProvider0293} />}
-        {screen === 'accounts' && /(Win|Linux)/i.test(navigator.platform) && <section className="panel">
+        {screen === 'auth' && signedProvisioning0352 && !settings.onboardingCompleted && <section className="panel"><button className="primary" onClick={()=>setScreen('firstRun')}>Вернуться к первому запуску</button></section>}
+        {screen === 'auth' && <AuthPanel email={email} setEmail={setEmail} password={password} setPassword={setPassword} session={authSession} deviceKey={deviceKey} deviceTrustStatus={deviceTrustStatus} managedDevices={managedDevices} checkBackend={checkBackend} loginDesktop={loginDesktop} refreshDesktopSession={refreshDesktopSession} logoutDesktop={logoutDesktop} restoreSession={restoreSession} refreshDeviceKeyStatus={refreshDeviceKeyStatus} loadManagedDevices={loadManagedDevices} renameManagedDevice={renameManagedDevice} revokeManagedDevice={revokeManagedDevice} revokeOtherManagedDevices={revokeOtherManagedDevices} replaceDesktopDeviceKey={replaceDesktopDeviceKey} macOSTrust0316={macOSTrust0316} authProviders0293={authProviders0293} routing0293={routing0293} selectedAuthProvider0293={selectedAuthProvider0293} setSelectedAuthProvider0293={setSelectedAuthProvider0293} authProviderError0293={authProviderError0293} setAuthProviderError0293={setAuthProviderError0293} linkedProvider0293={linkedProvider0293} setLinkedProvider0293={setLinkedProvider0293} linkedIdentifier0293={linkedIdentifier0293} setLinkedIdentifier0293={setLinkedIdentifier0293} linkedPassword0293={linkedPassword0293} setLinkedPassword0293={setLinkedPassword0293} linkFeedback0293={linkFeedback0293} setLinkFeedback0293={setLinkFeedback0293} linkPasswordProvider0293={linkPasswordProvider0293} />}
+        {screen === 'auth' && /(Win|Linux)/i.test(navigator.platform) && <section className="panel">
           <h3>Windows/Linux TPM Key Attestation (0.31.4)</h3>
           <p>TPM2_Certify для существующего зарегистрированного P-256 ключа. AK должен быть заранее выпущен доверенным TPM Attestation CA. Windows использует Platform Crypto Provider; Linux — предварительно provisioned persistent TPM AK handle 0x81xxxxxx. Это не проверка Guard/PCR и не античит.</p>
           <div className="settings">
@@ -2215,8 +2163,8 @@ function App() {
           <p role="status">{measuredBootStatus0315}</p>
           <small>Linux: необходимы /dev/tpmrm0, tpm2-tools 5.x и AK на TPM persistent handle. Windows: пустая auth-сессия PCP-ключа. Несовместимые TPM/AK завершаются отказом без аппаратного assurance. AK root policy задаётся оператором на Backend.</small>
         </section>}
-        {screen === 'accounts' && authSession && deviceKey?.deviceId && accessTokenDeviceId(authSession.accessToken) === deviceKey.deviceId && <HWIDRisk0299 backendUrl={settings.backendUrl} token={authSession.accessToken} deviceId={deviceKey.deviceId} />}
-        {screen === 'accounts' && authSession?.accessToken && officialMinecraftClient.current && <>
+        {screen === 'auth' && authSession && deviceKey?.deviceId && accessTokenDeviceId(authSession.accessToken) === deviceKey.deviceId && <HWIDRisk0299 backendUrl={settings.backendUrl} token={authSession.accessToken} deviceId={deviceKey.deviceId} />}
+        {screen === 'auth' && authSession?.accessToken && officialMinecraftClient.current && <>
           <OfficialMinecraftPanel0257 key={`${settings.backendUrl}|${authSession.sessionId}`} client={officialMinecraftClient.current} linkedProfile={officialProfile} onLinked={(p)=>{setOfficialProfile(p); if (!p) setMinecraftIdentity('local');}} />
           <section className="panel"><label>Режим запуска Minecraft <select value={minecraftIdentity} onChange={e=>{
             const mode=e.target.value as GameLaunchMode0269;
@@ -2230,12 +2178,9 @@ function App() {
           </select></label><p>Official использует Mojang sessionserver; Yggdrasil — подписанный authlib-injector. Offline не позволяет входить на online-mode сервер.</p></section>
         </>}
         {screen === 'textures' && <TexturesPanel0258 backendUrl={settings.backendUrl} token={authSession?.accessToken||''} officialClient={officialMinecraftClient.current} officialProfile={officialProfile} onOfficialProfile={(p)=>{setOfficialProfile(p);if(!p)setMinecraftIdentity('local');}} identityMode={minecraftIdentity === 'official' ? 'official' : 'local'} />}
-        {screen==='builds'&&<BuildsWorkspace0353 projects={projects} profiles={profiles} selectedProject={selectedProject} selectedProfile={selectedProfile} manifest={manifest} signedProject={signedProvisioning0352?.projectId||''} signedProfile={signedProvisioning0352?.profileId||''} loading={workspaceBusy0353} error={workspaceError0353} refresh={()=>void refreshBuilds0353()} chooseProject={(id)=>void chooseWorkspaceProject0353(id)} chooseProfile={(id)=>void chooseWorkspaceProfile0353(id)} showMods={()=>navigate0353('optionalMods')} showDownloads={()=>navigate0353('download')}/>}
-        {screen==='servers'&&<ServersWorkspace0353 servers={profileServers} selectedId={settings.serverId||''} signedId={signedProvisioning0352?.serverId||''} autoEnter={settings.autoEnter} serverHost={settings.serverHost} serverPort={settings.serverPort} offline={minecraftIdentity==='offline'} projectId={selectedProject||settings.projectId} profileId={selectedProfile||settings.profileId} loading={workspaceBusy0353} error={workspaceError0353} reload={()=>void refreshServers0353()} select={(id)=>patchSettings('serverId',id)} save={saveServer0353} onOpenSettings={()=>navigate0353('settings')}/>}
-        {screen==='optionalMods'&&<section className="panel"><h3>Опциональные моды</h3><p>Выбор компонентов из подписанного каталога. Проверка зависимостей, конфликтов и установка выполняются NeverRuntime.</p>
-          {!manifest?<div><p>Для выбора модов сначала откройте подписанную сборку.</p><button onClick={()=>navigate0353('builds')}>Выбрать сборку</button></div>:manifest.componentCatalog?<><ComponentChooser0247 manifest={manifest} componentPreset={settings.componentPreset||''} pinnedPublicKey={settings.pinnedPublicKey} root={settings.gameDirectory} transferBusy={transferBusy} installSelection={installComponentSelection0247} topologyLabel={(component:CatalogComponent)=>componentTopologyLabel(manifest.componentCatalog!,component)} /><ComponentPortability02410 manifest={manifest} root={settings.gameDirectory} pinnedPublicKey={settings.pinnedPublicKey} transferBusy={transferBusy} installSelection={installComponentSelection0247}/></>:<p>В этой сборке нет каталога опциональных компонентов.</p>}
-        </section>}
-        {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
+        {screen === 'projects' && signedProvisioning0352 ? <section className="panel">Проект закреплён подписанным bundle: {signedProvisioning0352.projectId}</section> : screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
+        {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} pinnedPublicKey={settings.pinnedPublicKey} root={settings.gameDirectory} transferBusy={transferBusy} installSelection={installComponentSelection0247} />}
+        {screen === 'download' && <DownloadPanel files={files} download={download} downloadProgress={downloadProgress} transferBusy={transferBusy} pendingJob={pendingJob} transferFailure={transferFailure0354} controlTransfer={controlTransfer} resumeTransfer={resumeTransfer} repairResult={repairResult} cleanResult={cleanResult} verifyFiles={verifyFiles} downloadFiles={downloadFiles} repairClient={repairClient} rollbackClientRelease={rollbackClientRelease} cleanUnusedFiles={cleanUnusedFiles} fileSummary={fileSummary} />}
         {screen === 'migration' && <PlayerMigration0339
           manifest={manifest} pinnedPublicKey={settings.pinnedPublicKey}
           componentPreset={settings.componentPreset || ''} transferBusy={transferBusy}
@@ -2251,11 +2196,11 @@ function App() {
           }}
           onAdopted={() => { log('Проверенные файлы прежней установки добавлены в content cache.'); void verifyFiles(); }}
         />}
-        {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} minecraftIdentity={minecraftIdentity} setMinecraftIdentity={setMinecraftIdentity} persistDesktopConfig={persistDesktopConfig} signedBinding={Boolean(signedProvisioning0352)} />}
+        {screen === 'settings' && <SettingsPanel settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} minecraftIdentity={minecraftIdentity} setMinecraftIdentity={setMinecraftIdentity} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
-        {screen==='history'&&<HistoryWorkspace0353 entries={launchHistory} loading={workspaceBusy0353} error={workspaceError0353} reload={()=>void refreshHistory0353()} activeProcess={launchResult} onStop={stopRuntimeProcess}/>}
+        {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}
         {screen === 'diagnostics' && <DiagnosticsPanel exportDiagnostics={exportDiagnostics} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} settingsCheck={settingsCheck} />}
-        </React.Suspense>}
+        </React.Suspense>
       </section>
     </main>
   );
@@ -2337,37 +2282,58 @@ function ProfilePanel({profiles,selectedProfile,setSelectedProfile,loadManifest,
 }
 
 function DownloadPanel({ files, download, downloadProgress, transferBusy, repairResult, cleanResult,
-  verifyFiles, downloadFiles, repairClient, rollbackClientRelease, cleanUnusedFiles, fileSummary, pendingJob, controlTransfer, resumeTransfer }: any) {
-  const progress = downloadProgress as DownloadProgress | null;
-  const handled = progress ? progress.completed + progress.failed + progress.skipped : 0;
-  const total = progress?.totalFiles || 0;
+  verifyFiles, downloadFiles, repairClient, rollbackClientRelease, cleanUnusedFiles, fileSummary,
+  pendingJob, controlTransfer, resumeTransfer, transferFailure }: any) {
+  const progress = progress0354(downloadProgress as DownloadProgress | null);
+  const native = downloadProgress as DownloadProgress | null;
+  const handled = native ? native.completed + native.failed + native.skipped : 0;
+  const total = native?.totalFiles || 0;
+  const failure = transferFailure as Recovery0354 | null;
+  const canCancel = !transferBusy || (progress?.canInterrupt ?? true);
+  const retry = () => pendingJob ? resumeTransfer() : downloadFiles();
   return <section className="panel">
-    <h3>Загрузка, восстановление и очистка</h3>
-    <p>Проверенная установка в staging с транзакционным переключением managed-файлов, журналом восстановления и откатом к last-known-good. Пользовательские данные не удаляются.</p>
+    <h3>Загрузки и восстановление</h3>
+    <p>Файлы проверяются по подписанному манифесту. Сначала выполняется staging, затем проверка SHA-256 и атомарная публикация. Данные игрока сохраняются отдельно.</p>
     <div className="toolbar inline">
       <button disabled={transferBusy} onClick={verifyFiles}>Проверить файлы</button>
       <button disabled={transferBusy} onClick={downloadFiles}>Скачать недостающие</button>
       <button disabled={transferBusy} onClick={repairClient}>Восстановить повреждённое</button>
-      <button disabled={transferBusy} onClick={rollbackClientRelease}>Откатить к last-known-good</button>
-      <button disabled={transferBusy} onClick={cleanUnusedFiles}>Переместить лишнее в карантин</button>
-      {transferBusy && <button onClick={() => controlTransfer('pause')}>Пауза</button>}
-      {(transferBusy || pendingJob) && <button onClick={() => controlTransfer('cancel')}>Отменить</button>}
-      {!transferBusy && pendingJob && <button onClick={resumeTransfer}>Продолжить сохранённую загрузку</button>}
+      <button disabled={transferBusy} onClick={rollbackClientRelease}>Откатить выпуск</button>
+      <button disabled={transferBusy} onClick={cleanUnusedFiles}>Карантин лишних файлов</button>
+      {transferBusy && (progress?.canInterrupt ?? true) && <button onClick={() => controlTransfer('pause')}>Пауза</button>}
+      {(transferBusy || pendingJob) && <button disabled={!canCancel} onClick={() => controlTransfer('cancel')}>Отменить</button>}
+      {!transferBusy && pendingJob && <button onClick={resumeTransfer}>Продолжить / повторить загрузку</button>}
     </div>
-    {pendingJob && <p>Сохранённое задание: {pendingJob.projectId}/{pendingJob.profileId} · {pendingJob.status} · {pendingJob.totalFiles} файлов.</p>}
-    {progress && <div role="status" aria-live="polite">
-      <p>Состояние: {progress.phase}; обработано {handled} из {total}; активных {progress.active}, в очереди {progress.queued}, ошибок {progress.failed}.</p>
-      <progress style={{width: '100%'}} max={Math.max(1, total)} value={handled} aria-label="Прогресс по файлам" />
-      <p>Передано по сети: {(progress.bytesTransferred / 1048576).toFixed(2)} МиБ; кеш: {progress.cacheHits ?? 0} файлов ({((progress.bytesReused ?? 0) / 1048576).toFixed(2)} МиБ); плановый размер {(progress.bytesExpected / 1048576).toFixed(2)} МиБ.</p>
-      {progress.currentFile && <p>Файл: {progress.currentFile}</p>}
+    {pendingJob && <p role="status">Сохранённое задание: {pendingJob.projectId}/{pendingJob.profileId} · {pendingJob.status === 'paused' ? 'на паузе' : pendingJob.status === 'pending' ? 'ожидает повтора' : 'в процессе'} · {pendingJob.totalFiles} файлов.</p>}
+    {progress && <div className="transferStatus" role="status" aria-live="polite">
+      <h4>{progress.label}</h4>
+      <progress style={{width:'100%'}} max={100} value={progress.percent} aria-label="Подтверждённые байты загрузки" />
+      <p><strong>{progress.percent}%</strong> подтверждено по SHA-256 · {progress.verified} из {progress.expected} · обработано файлов {handled}/{total}</p>
+      <div className="transferMetrics">
+        <span>Скорость: <strong>{progress.speed}</strong></span>
+        <span>Осталось: <strong>{progress.eta}</strong></span>
+        <span>Передано по сети: <strong>{progress.received}</strong></span>
+        <span>Кеш: <strong>{native?.cacheHits || 0} файлов</strong></span>
+      </div>
+      {native?.currentFile && <p>Текущий файл: <code>{native.currentFile}</code></p>}
+      {native?.phase === 'publishing' && <p>Идёт переключение файлов; отмена временно недоступна, чтобы сохранить целостность установки.</p>}
     </div>}
+    {failure && <div className="transferFailure" role="alert">
+      <h4>{failure.title}</h4>
+      <p>{failure.explanation}</p>
+      <p><strong>Рекомендуемое действие:</strong> {failure.instruction}</p>
+      {failure.action === 'retry' && <button disabled={transferBusy} onClick={retry}>Повторить</button>}
+      {failure.action === 'repair' && <button disabled={transferBusy} onClick={repairClient}>Восстановить повреждённое</button>}
+    </div>}
+    {download && <p>Последняя операция: скачано {download.downloaded}, пропущено {download.skipped}, ошибок {download.failed}. {download.failed ? 'Требуется повтор или восстановление.' : ''}</p>}
     <p>Исправно: {fileSummary.ok}; проблем: {fileSummary.broken}; всего: {fileSummary.total}.</p>
-    <pre>{JSON.stringify({ download, repair: repairResult ? { status: repairResult.status, repaired: repairResult.repaired, message: repairResult.message } : null,
-      cleanup: cleanResult, files: files.slice(0, 20) }, null, 2)}</pre>
+    {repairResult && <p>Восстановление: {repairResult.message}</p>}
+    {cleanResult && <details><summary>Результаты очистки</summary><pre>{JSON.stringify(cleanResult,null,2)}</pre></details>}
+    {files.some((f:FileCheckResult) => f.status !== 'ok') && <details><summary>Проблемные файлы</summary><ul>{files.filter((f:FileCheckResult) => f.status !== 'ok').slice(0,30).map((f:FileCheckResult)=><li key={f.path}>{f.path}: {f.status}</li>)}</ul></details>}
   </section>;
 }
 
-function SettingsPanel({ settings, patchSettings, validateSettings, settingsCheck, checkJavaRuntime, javaInfo, openGameDirectory, manifest, profileServers, loadProfileServers, loadCachedOfflineManifest, cacheSignedManifest, minecraftIdentity, setMinecraftIdentity, persistDesktopConfig, signedBinding }: any) {
+function SettingsPanel({ settings, patchSettings, validateSettings, settingsCheck, checkJavaRuntime, javaInfo, openGameDirectory, manifest, profileServers, loadProfileServers, loadCachedOfflineManifest, cacheSignedManifest, minecraftIdentity, setMinecraftIdentity }: any) {
   return <section className="panel"><h3>Настройки запуска</h3>
     <div className="settings">
       <label>Путь к Java<input value={settings.javaPath} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('javaPath', e.target.value)} placeholder="auto / managed Java" /></label>
@@ -2385,9 +2351,9 @@ function SettingsPanel({ settings, patchSettings, validateSettings, settingsChec
         <label>Discord Application ID<input value={settings.discordApplicationId || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordApplicationId', e.target.value)} placeholder="123456789012345678" /></label>
         <label>Ссылка кнопки активности (HTTPS, необязательно)<input value={settings.discordActionUrl || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('discordActionUrl', e.target.value)} placeholder="https://example.org" /></label>
       </>}
-      {signedBinding?<p>Ключ проверки, Backend, проект и профиль закреплены подписанным владельцем bundle.</p>:<label>Закреплённый ключ Ed25519<input value={settings.pinnedPublicKey} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('pinnedPublicKey', e.target.value)} /></label>}
+      <label>Закреплённый ключ Ed25519<input value={settings.pinnedPublicKey} onChange={(e: React.ChangeEvent<HTMLInputElement>) => patchSettings('pinnedPublicKey', e.target.value)} /></label>
     </div>
-    <div className="toolbar inline"><button className="primary" onClick={persistDesktopConfig}>Сохранить настройки</button><button onClick={validateSettings}>Проверить настройки</button><button onClick={checkJavaRuntime}>Проверить Java</button><button onClick={openGameDirectory}>Открыть каталог клиента</button><button onClick={() => loadProfileServers().catch(console.error)}>Обновить серверы</button><button onClick={() => cacheSignedManifest().catch(console.error)}>Сохранить подписанный кеш</button><button onClick={loadCachedOfflineManifest}>Загрузить offline-кеш</button></div>
+    <div className="toolbar inline"><button onClick={validateSettings}>Проверить настройки</button><button onClick={checkJavaRuntime}>Проверить Java</button><button onClick={openGameDirectory}>Открыть каталог клиента</button><button onClick={() => loadProfileServers().catch(console.error)}>Обновить серверы</button><button onClick={() => cacheSignedManifest().catch(console.error)}>Сохранить подписанный кеш</button><button onClick={loadCachedOfflineManifest}>Загрузить offline-кеш</button></div>
     <p>Server browser показывает узлы ServerBridge, а не игровые DNS-адреса. Для auto-enter укажите публичный адрес выбранного сервера. Offline не выдаёт серверные сессии и требует локальный проверенный Manifest и файлы.</p>
     <pre>{settingsCheck ? JSON.stringify(settingsCheck, null, 2) : javaInfo ? JSON.stringify(javaInfo, null, 2) : 'Настройки ещё не проверены.'}</pre>
   </section>;

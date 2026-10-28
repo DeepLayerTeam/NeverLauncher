@@ -291,41 +291,11 @@ ul { padding-left: 18px; }
 .officialAuth02610 :focus-visible {outline:2px solid #4ade80;outline-offset:3px;}
 @media (max-width:600px) {.officialAuthAccount02610 {align-items:stretch;}.officialAuthAccountActions02610 {width:100%;}.officialAuthAccountActions02610 button {flex:1;}}
 
-/* 0.35.3 — player workspace: stable navigation and actionable catalog/history. */
-.sidebar {min-width:0;}
-.sidebar nav {gap:5px;}
-.navSection0353 {font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8;margin:19px 5px 4px;font-weight:700;}
-.sidebar nav button {min-height:42px;padding:9px 13px;text-align:left;}
-.sidebar nav button:disabled {opacity:.4;cursor:not-allowed;}
-.sidebar nav button:focus-visible, .workspace0353 button:focus-visible {outline:2px solid #86efac;outline-offset:2px;}
-.workspace0353 {min-width:0;}
-.workspace0353 h4 {margin:12px 0;}
-.workspaceHead0353 {display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-.workspaceHead0353 h3 {margin:0 0 7px;}
-.workspaceHead0353 p {max-width:780px;}
-.workspace0353 button {font:inherit;border:1px solid #475569;border-radius:11px;background:#1e293b;color:#e5e7eb;padding:9px 13px;cursor:pointer;}
-.workspace0353 button:hover:not(:disabled) {border-color:#4ade80;}
-.workspace0353 button:disabled {opacity:.45;cursor:not-allowed;}
-.workspace0353 button.primary,.workspace0353 button.activeRow {border-color:#22c55e;background:rgba(22,101,52,.35);}
-.workspaceSplit0353 {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:20px;margin-top:18px;}
-.workspaceList0353 {display:grid;gap:8px;margin:12px 0;max-height:460px;overflow:auto;}
-.workspaceList0353 button {display:grid;gap:5px;justify-items:start;text-align:left;min-width:0;overflow-wrap:anywhere;}
-.workspaceList0353 small,.workspaceList0353 span {font-size:12px;color:#cbd5e1;}
-.workspaceSummary0353 {display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:20px 0;}
-.workspaceSummary0353>div {display:grid;gap:4px;padding:12px;border:1px solid #334155;border-radius:12px;min-width:0;overflow-wrap:anywhere;}
-.workspaceSummary0353 strong {font-size:17px;}
-.workspaceSummary0353 small {font-size:12px;color:#94a3b8;}
-.workspaceError0353 {border-left:3px solid #f87171;padding:9px 13px;background:rgba(127,29,29,.17);color:#fecaca!important;overflow-wrap:anywhere;}
-.workspaceLive0353 {display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0;padding:13px;border:1px solid #166534;border-radius:12px;}
-.workspaceHistory0353 {display:grid;gap:8px;margin-top:16px;}
-.workspaceHistoryItem0353 {border:1px solid #334155;border-radius:11px;overflow:hidden;}
-.workspaceHistoryItem0353>button {display:flex;align-items:center;gap:13px;width:100%;text-align:left;border:0;border-radius:0;background:#111d30;}
-.workspaceHistoryItem0353>button strong {flex:1;overflow-wrap:anywhere;}
-.workspaceHistoryItem0353 time {font-size:12px;color:#cbd5e1;}
-.workspaceOk0353 {color:#86efac;}.workspaceFailed0353 {color:#fda4af;}
-.workspaceHistoryDetails0353 {padding:14px;}
-.workspaceHistoryDetails0353 dl {display:grid;grid-template-columns:max-content minmax(0,1fr);gap:7px 15px;}
-.workspaceHistoryDetails0353 dt {color:#94a3b8;}.workspaceHistoryDetails0353 dd {margin:0;}
-.breakAnywhere0353 {overflow-wrap:anywhere;}
-@media(max-width:980px){.workspaceSplit0353 {grid-template-columns:1fr;}.sidebar nav {display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));}.navSection0353 {grid-column:1/-1;}}
-@media(max-width:600px){.workspaceHistoryItem0353>button {align-items:flex-start;flex-wrap:wrap;}.workspaceHistoryItem0353 time {width:100%;}.content {padding:16px;}.hero {padding:20px;}}
+/* 0.35.4: native verified-transfer feedback and accessible recovery. */
+.transferStatus, .transferFailure { margin-top: 18px; padding: 16px 20px; border-radius: 14px; border: 1px solid rgba(148,163,184,.3); background: rgba(15,23,42,.6); }
+.transferStatus h4, .transferFailure h4 { margin: 0 0 10px; }
+.transferMetrics { display: grid; grid-template-columns: repeat(auto-fit,minmax(175px,1fr)); gap: 12px; }
+.transferMetrics span { color: #cbd5e1; }
+.transferFailure { border-color: #fbbf24; color: #fef3c7; }
+.transferFailure button { padding: 10px 14px; border-radius: 9px; border: 1px solid #fbbf24; background: #3f2c0f; color: #fff; }
+.transferStatus progress { accent-color: #4ade80; height: 15px; }

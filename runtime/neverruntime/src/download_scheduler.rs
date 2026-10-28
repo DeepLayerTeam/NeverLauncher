@@ -49,6 +49,13 @@ pub struct DownloadProgress {
     pub bytes_expected: u64,
     /// Wire bytes consumed, including invalid responses (not verified bytes).
     pub bytes_transferred: u64,
+    /// Bytes already verified against their signed SHA-256 (network or cache).
+    pub bytes_verified: u64,
+    /// Current-window measured incoming wire bytes per second; zero while stalled.
+    pub speed_bytes_per_second: u64,
+    /// Approximate time to finish staged downloads, never a promise about commit time.
+    pub eta_seconds: Option<u64>,
+    pub elapsed_seconds: u64,
     pub cache_hits: usize,
     pub bytes_reused: u64,
     pub current_file: Option<String>,
@@ -96,6 +103,17 @@ fn priority(file: &ManifestFile) -> u8 {
     else { 2 }
 }
 
+struct TransferMetrics {
+    samples: VecDeque<(Instant, u64)>,
+    in_flight: HashMap<String, u64>,
+}
+
+fn eta_for_remaining(remaining: u64, bytes_per_second: u64) -> Option<u64> {
+    if remaining == 0 { return Some(0); }
+    if bytes_per_second == 0 { return None; }
+    Some(remaining.saturating_add(bytes_per_second - 1) / bytes_per_second)
+}
+
 struct Statistics {
     total: usize,
     skipped: AtomicUsize,
@@ -104,10 +122,14 @@ struct Statistics {
     active: AtomicUsize,
     queued: AtomicUsize,
     transferred: AtomicU64,
+    verified: AtomicU64,
+    started: Instant,
+    metrics: Mutex<TransferMetrics>,
     cache_hits: AtomicUsize,
     bytes_reused: AtomicU64,
     expected: u64,
     last_emit: Mutex<Instant>,
+    last_phase: Mutex<String>,
     operation_id: String,
     sink: Option<ProgressSink>,
 }
@@ -118,7 +140,33 @@ impl Statistics {
         // Avoid emitting one Tauri event for every small network packet.
         let Ok(mut last) = self.last_emit.try_lock() else { return };
         if !force && last.elapsed() < Duration::from_millis(100) { return }
-        *last = Instant::now();
+        let now = Instant::now();
+        *last = now;
+        if let Ok(mut latest) = self.last_phase.lock() { *latest = phase.to_string(); }
+        let transferred = self.transferred.load(Ordering::Relaxed);
+        let verified = self.verified.load(Ordering::Relaxed);
+        let (speed, in_flight) = {
+            let mut metrics = self.metrics.lock().expect("download metrics lock poisoned");
+            if metrics.samples.back().is_none_or(|(previous, _)| now.duration_since(*previous) >= Duration::from_millis(250)) {
+                metrics.samples.push_back((now, transferred));
+            }
+            while metrics.samples.front().is_some_and(|(previous, _)| now.duration_since(*previous) > Duration::from_secs(5)) {
+                metrics.samples.pop_front();
+            }
+            let speed = metrics.samples.front().and_then(|(time, bytes)| {
+                let elapsed = now.duration_since(*time).as_secs_f64();
+                (elapsed >= 0.25).then(|| ((transferred.saturating_sub(*bytes)) as f64 / elapsed) as u64)
+            }).unwrap_or(0);
+            let active = metrics.in_flight.values().copied().fold(0u64, u64::saturating_add);
+            (speed, active)
+        };
+        // Retries and mirror failover are wire bytes, not new verified progress.
+        // Active bytes count only the current attempt for each file; both values
+        // remain bounded by the signed selection's expected size.
+        let remaining = self.expected.saturating_sub(verified.saturating_add(in_flight).min(self.expected));
+        let eta = if matches!(phase, "downloading" | "retrying" | "starting") {
+            eta_for_remaining(remaining, speed)
+        } else { None };
         let snapshot = DownloadProgress {
             operation_id: self.operation_id.clone(), phase: phase.to_string(),
             total_files: self.total,
@@ -128,7 +176,11 @@ impl Statistics {
             failed: self.failed.load(Ordering::Relaxed),
             skipped: self.skipped.load(Ordering::Relaxed),
             bytes_expected: self.expected,
-            bytes_transferred: self.transferred.load(Ordering::Relaxed),
+            bytes_transferred: transferred,
+            bytes_verified: verified,
+            speed_bytes_per_second: speed,
+            eta_seconds: eta,
+            elapsed_seconds: now.duration_since(self.started).as_secs(),
             cache_hits: self.cache_hits.load(Ordering::Relaxed),
             bytes_reused: self.bytes_reused.load(Ordering::Relaxed),
             current_file: path.map(ToOwned::to_owned),
@@ -194,9 +246,17 @@ async fn fetch_one(client: &reqwest::Client, root: &Path, job: &Job, stats: &Sta
         requested.url = source.url.clone();
         for attempt in 0..network_resilience::MAX_ATTEMPTS {
             network_resilience::check(&control)?;
+            // Each retry starts with a fresh progress contribution. Never treat
+            // repeated or invalid network bytes as installed bytes.
+            stats.metrics.lock().expect("download metrics lock poisoned")
+                .in_flight.insert(job.file.path.clone(), 0);
             let outcome = crate::http_resume::download_verified_controlled(client, root, &requested,
                 &job.target, |bytes| {
                     stats.transferred.fetch_add(bytes, Ordering::Relaxed);
+                    let mut metrics = stats.metrics.lock().expect("download metrics lock poisoned");
+                    let active = metrics.in_flight.entry(job.file.path.clone()).or_insert(0);
+                    *active = active.saturating_add(bytes).min(job.file.size);
+                    drop(metrics);
                     stats.emit("downloading", Some(&job.file.path), false);
                 }, control.clone()).await;
             match outcome {
@@ -310,9 +370,12 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
         total: manifest.files.len(), skipped: AtomicUsize::new(result.skipped),
         completed: AtomicUsize::new(0), failed: AtomicUsize::new(result.failed),
         active: AtomicUsize::new(0), queued: AtomicUsize::new(jobs.len()),
-        transferred: AtomicU64::new(0), cache_hits: AtomicUsize::new(0),
+        transferred: AtomicU64::new(0), verified: AtomicU64::new(0),
+        started: Instant::now(), metrics: Mutex::new(TransferMetrics { samples: VecDeque::new(), in_flight: HashMap::new() }),
+        cache_hits: AtomicUsize::new(0),
         bytes_reused: AtomicU64::new(0), expected,
         last_emit: Mutex::new(Instant::now() - Duration::from_secs(1)),
+        last_phase: Mutex::new("starting".into()),
         operation_id, sink,
     });
     stats.emit("starting", None, true);
@@ -330,7 +393,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
         .flat_map(|job| job.sources.iter().map(|source| source.host.clone())));
     let cache = Arc::new(cache);
     let root = root.to_path_buf();
-    let mut workers: JoinSet<(String, Result<bool, String>)> = JoinSet::new();
+    let mut workers: JoinSet<(String, u64, Result<bool, String>)> = JoinSet::new();
     while !pending.is_empty() || !workers.is_empty() {
         if *control.borrow() != Directive::Running && workers.is_empty() { break; }
         while *control.borrow() == Directive::Running && workers.len() < limits.global && !pending.is_empty() {
@@ -363,7 +426,7 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
                 let _global_permit = global_permit;
                 let outcome = fetch_one(&client, &root, &job, &stats, control,
                     (local_permit, host_permit), &local_hosts, &process_hosts, &cache).await;
-                (job.file.path, outcome)
+                (job.file.path, job.file.size, outcome)
             });
         }
         if workers.is_empty() && !pending.is_empty() {
@@ -372,19 +435,36 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
             tokio::time::sleep(Duration::from_millis(20)).await;
             continue;
         }
-        if let Some(outcome) = workers.join_next().await {
+        // A stalled HTTP body must not leave an obsolete nonzero speed/ETA on
+        // screen until the read timeout. Heartbeats re-evaluate the sliding
+        // window even when none of the active workers produces bytes.
+        let outcome = tokio::time::timeout(Duration::from_secs(1), workers.join_next()).await;
+        let outcome = match outcome {
+            Ok(Some(outcome)) => outcome,
+            Ok(None) => break,
+            Err(_) => {
+                let phase = stats.last_phase.lock().map(|v| v.clone()).unwrap_or_else(|_| "downloading".into());
+                stats.emit(&phase, None, true);
+                continue;
+            }
+        };
+        {
             stats.active.fetch_sub(1, Ordering::Relaxed);
             match outcome {
-                Ok((path, Ok(_cache_hit))) => {
+                Ok((path, size, Ok(_cache_hit))) => {
+                    stats.metrics.lock().expect("download metrics lock poisoned").in_flight.remove(&path);
+                    stats.verified.fetch_add(size, Ordering::Relaxed);
                     result.downloaded += 1;
                     result.repaired += 1;
                     stats.completed.fetch_add(1, Ordering::Relaxed);
                     stats.emit("verified", Some(&path), true);
                 },
-                Ok((_path, Err(e))) if e == "download paused" || e == "download cancelled" => {
+                Ok((path, _, Err(e))) if e == "download paused" || e == "download cancelled" => {
+                    stats.metrics.lock().expect("download metrics lock poisoned").in_flight.remove(&path);
                     // The durable journal and all verified partials remain available.
                 },
-                Ok((path, Err(e))) => {
+                Ok((path, _, Err(e))) => {
+                    stats.metrics.lock().expect("download metrics lock poisoned").in_flight.remove(&path);
                     result.failed += 1;
                     result.failed_files.push(path.clone());
                     result.messages.push(e);
@@ -403,7 +483,11 @@ async fn run_with_store(manifest: &Manifest, root: &Path, limits: DownloadLimits
     result.bytes_downloaded = stats.transferred.load(Ordering::Relaxed);
     result.cache_hits = stats.cache_hits.load(Ordering::Relaxed);
     result.bytes_reused = stats.bytes_reused.load(Ordering::Relaxed);
-    stats.emit(match *control.borrow() { Directive::Running => "finished", Directive::Paused => "paused", Directive::Cancelled => "cancelled" }, None, true);
+    stats.emit(match *control.borrow() {
+        Directive::Running if result.failed > 0 => "failed",
+        Directive::Running => "staged", // The release has NOT yet been published.
+        Directive::Paused => "paused", Directive::Cancelled => "cancelled"
+    }, None, true);
     Ok(result)
 }
 
@@ -457,6 +541,45 @@ mod tests {
             }
         });
         TestHttp { base, max_active, task }
+    }
+
+    #[test]
+    fn measured_eta_cannot_claim_completion_when_rate_is_unknown() {
+        assert_eq!(eta_for_remaining(1024, 0), None);
+        assert_eq!(eta_for_remaining(1024, 512), Some(2));
+        assert_eq!(eta_for_remaining(1025, 512), Some(3));
+        assert_eq!(eta_for_remaining(0, 0), Some(0));
+        assert_eq!(eta_for_remaining(u64::MAX, 1), Some(u64::MAX));
+    }
+
+    #[test]
+    fn measured_wire_speed_and_verified_bytes_are_independent() {
+        let received = Arc::new(Mutex::new(Vec::<DownloadProgress>::new()));
+        let frames = Arc::clone(&received);
+        let sink: ProgressSink = Arc::new(move |event| frames.lock().unwrap().push(event));
+        let now = Instant::now();
+        let stats = Statistics {
+            total: 1, skipped: AtomicUsize::new(0), completed: AtomicUsize::new(0),
+            failed: AtomicUsize::new(0), active: AtomicUsize::new(1), queued: AtomicUsize::new(0),
+            transferred: AtomicU64::new(600), verified: AtomicU64::new(0),
+            started: now - Duration::from_secs(2),
+            metrics: Mutex::new(TransferMetrics {
+                samples: VecDeque::from([(now - Duration::from_secs(1), 0)]),
+                in_flight: HashMap::from([("libraries/a.jar".into(), 600)]),
+            }),
+            cache_hits: AtomicUsize::new(0), bytes_reused: AtomicU64::new(0),
+            expected: 1000, last_emit: Mutex::new(now - Duration::from_secs(1)),
+            last_phase: Mutex::new("starting".into()),
+            operation_id: "measured".into(), sink: Some(sink),
+        };
+        stats.emit("downloading", Some("libraries/a.jar"), true);
+        let observed = received.lock().unwrap();
+        let event = observed.last().unwrap();
+        assert_eq!(event.bytes_transferred, 600);
+        assert_eq!(event.bytes_verified, 0); // not signed/hash-verified yet
+        assert!(event.speed_bytes_per_second > 0);
+        assert_eq!(event.eta_seconds, Some(1));
+        assert!(event.elapsed_seconds >= 2);
     }
 
     #[test]
@@ -522,12 +645,16 @@ mod tests {
         let events = events.lock().unwrap();
         assert!(events.iter().any(|p| p.phase == "downloading"));
         let final_event = events.last().unwrap();
-        assert_eq!(final_event.phase, "finished");
+        assert_eq!(final_event.phase, "failed");
         assert_eq!(final_event.completed, 7);
         assert_eq!(final_event.failed, 1);
         assert_eq!(final_event.active, 0);
         assert_eq!(final_event.queued, 0);
         assert_eq!(final_event.bytes_transferred, result.bytes_downloaded);
+        assert_eq!(final_event.bytes_verified, (0..7).map(|i| format!("file:/{i}").len() as u64).sum::<u64>());
+        assert!(final_event.bytes_verified < final_event.bytes_expected);
+        assert_eq!(final_event.eta_seconds, None);
+        assert!(events.iter().all(|e| e.bytes_verified <= e.bytes_expected));
         drop(events);
         a.task.abort();
         b.task.abort();
