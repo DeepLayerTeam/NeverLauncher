@@ -52,10 +52,13 @@ type validationTarget0346 struct {
 }
 
 func validTarget0346(t validationTarget0346) error {
+	if !validationPreset0348.MatchString(t.Preset) {
+		return errors.New("invalid configured preset selection")
+	}
 	if t.AuthenticationMode != "official" && t.AuthenticationMode != "custom" {
 		return errors.New("required target must declare real authentication mode")
 	}
-	for _, v := range []string{t.ID, t.ProjectID, t.ProfileID, t.Channel, t.Version, t.JavaVersion, t.OS, t.Arch, t.Loader, t.GuardMode, t.ServerPluginVersion, t.Preset, t.AuthenticationMode} {
+	for _, v := range []string{t.ID, t.ProjectID, t.ProfileID, t.Channel, t.Version, t.JavaVersion, t.OS, t.Arch, t.Loader, t.GuardMode, t.ServerPluginVersion, t.AuthenticationMode} {
 		if !validationToken0345.MatchString(v) {
 			return errors.New("invalid configured target identity")
 		}
@@ -107,6 +110,9 @@ func configuredTargets0346(raw string, release model.ReleaseVersion, manifestSHA
 	}
 	if len(relevant) == 0 {
 		return nil, "", errors.New("no required runtime targets for this package/version")
+	}
+	if err := validateComponentMatrix0348(release.Manifest, relevant); err != nil {
+		return nil, "", err
 	}
 	sort.Slice(relevant, func(i, j int) bool { return relevant[i].ID < relevant[j].ID })
 	canonical, err := json.Marshal(relevant)

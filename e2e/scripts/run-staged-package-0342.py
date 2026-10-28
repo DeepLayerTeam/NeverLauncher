@@ -147,6 +147,20 @@ def run_runtime_observed(cmd, result_file, env, deadline, observer):
     return result
 
 
+def native_json(cmd, destination, env):
+    """Execute pinned NeverRuntime with bounded structured stdout; no shell."""
+    completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               env=env, timeout=5400, check=False)
+    if len(completed.stdout) > 4 * 1024 * 1024:
+        raise RuntimeError('native component verification output oversized')
+    if completed.returncode:
+        raise RuntimeError('native component verification failed (see attestor diagnostics)')
+    obj = json.loads(completed.stdout)
+    if isinstance(obj, dict) and (obj.get('success') is False or obj.get('error')):
+        raise RuntimeError('native component verification rejected selected preset')
+    destination.write_text(json.dumps(obj, sort_keys=True, indent=2), encoding='utf-8')
+    return obj
+
 def execute(args):
     if not args.backend.startswith('https://') and not args.backend.startswith(('http://127.0.0.1:', 'http://localhost:')):
         raise ValueError('staged runtime requires HTTPS (localhost HTTP is test-only)')
@@ -174,6 +188,7 @@ def execute(args):
         raise ValueError('output/payload must be new for each run')
     stage.mkdir(mode=0o700)
     client_dir = work / 'client'
+    delivery_client_dir = work / 'delivery-verified-client'
     stage_name = ''
     error = None
     server = None
@@ -209,16 +224,90 @@ def execute(args):
         report['stages'][stage_name] = {'status':'passed', 'detail': f"{len(pkg['files'])} staged files fetched and SHA-256 verified"}
         stage_name = 'materialization'
         install = work / 'install.json'
-        cmd = [args.cli, 'client', 'install', '--package', str(package_path), '--client-dir', str(client_dir),
+        cmd = [args.cli, 'client', 'install', '--package', str(package_path), '--client-dir', str(delivery_client_dir),
                '--storage-dir', str(work / 'empty-storage'), '--output', str(install)]
         installed = run_checked(cmd, install, subprocess_env)
         if installed.get('status') != 'applied-and-verified' or installed.get('packageId') != args.package_id:
             raise ValueError('updater did not verify exact package')
         verify_path = work / 'verified.json'
-        verified = run_checked([args.cli,'client','verify','--package',str(package_path),'--client-dir',str(client_dir),'--output',str(verify_path)], verify_path, subprocess_env)
+        verified = run_checked([args.cli,'client','verify','--package',str(package_path),'--client-dir',str(delivery_client_dir),'--output',str(verify_path)], verify_path, subprocess_env)
         if verified.get('status') != 'valid' or verified.get('verify',{}).get('checkedFiles') != len(pkg['files']):
             raise ValueError('installed package was not byte-identical to staged manifest')
-        report['stages'][stage_name] = {'status':'passed','detail':'normal transactional client install and verify succeeded', 'evidenceSha256':sha_file(verify_path)}
+        # Independently materialized CLI bytes become the source for native
+        # NeverRuntime's durable release transaction. This never refetches
+        # files from manifest URLs, and only selected verified bytes enter
+        # the actual Minecraft launch directory.
+        catalog = signed.get('componentCatalog')
+        selection = args.preset or ''
+        if catalog and not selection:
+            raise RuntimeError('component matrix target must choose its explicit signed preset')
+        if not catalog and selection and selection != 'default':
+            raise RuntimeError('component selection supplied for package without signed catalog')
+        native_selection = '' if catalog and selection == 'default' and not any(
+            p['id']=='default' for p in catalog.get('presets',[])) else selection
+        adopt = [args.runtime,'adopt-staged','--manifest',str(signed_manifest_path),
+                 '--pinned-public-key',args.pinned_public_key,
+                 '--source',str(delivery_client_dir),'--root',str(client_dir)]
+        if catalog and native_selection: adopt.extend(['--preset',native_selection])
+        adopted = native_json(adopt,work/'native-adoption.json',subprocess_env)
+        if adopted.get('status')!='ready' or adopted.get('networkDownloads')!=0 or \
+                not isinstance(adopted.get('importedFiles'),int) or adopted['importedFiles']<1:
+            raise RuntimeError('NeverRuntime staged adoption was not a verified offline release transaction')
+        report['stages'][stage_name] = {'status':'passed',
+            'detail':'CLI install/verify and NeverRuntime offline transactional adoption passed',
+            'evidenceSha256':sha_file(verify_path)}
+        # V08: A runtime matrix case is an actual installed selection, not an
+        # extra label on a default-preset launch. NeverRuntime's own resolver
+        # commits and verifies the selected plan before any Java process runs.
+        component_digest = ''
+        if catalog:
+            verify_component = [args.runtime, 'verify', '--manifest', str(signed_manifest_path),
+                    '--pinned-public-key', args.pinned_public_key,
+                    '--root', str(client_dir)]
+            if native_selection: verify_component.extend(['--preset',native_selection])
+            checked = native_json(verify_component, work/'component-verification.json', subprocess_env)
+            (work/'component-sync.json').write_bytes((work/'native-adoption.json').read_bytes())
+            # CLI is the normal signed catalog resolver for named presets.
+            # Custom +/- choices use NeverRuntime's signed native resolver;
+            # the Go CLI currently does not support the @custom wire syntax.
+            if not selection.startswith('@custom:v1:'):
+                pinned_file = work/'manifest-public-key.hex'
+                pinned_file.write_text(args.pinned_public_key, encoding='ascii')
+                cmd = [args.cli,'components','resolve','--manifest',str(signed_manifest_path),
+                       '--public-key',str(pinned_file),'--output',str(work/'component-plan.json'),
+                       '--os','linux','--arch','x86_64',
+                       '--java-major',str(int(signed.get('runtime',{}).get('java',{}).get('recommendedMajorVersion') or
+                                         signed.get('runtime',{}).get('java',{}).get('majorVersion') or 0)),
+                       '--minecraft',signed.get('minecraft',{}).get('version',''),
+                       '--loader',signed.get('minecraft',{}).get('loader',''),
+                       '--loader-version',signed.get('minecraft',{}).get('loaderVersion','')]
+                if native_selection: cmd.extend(['--preset',native_selection])
+                resolved = run_checked(cmd,work/'component-plan.json',subprocess_env)
+                if not resolved.get('signatureVerified') or resolved['plan']['catalogDigest'] != catalog['digest']:
+                    raise RuntimeError('component resolver did not verify signed catalog')
+                # Cross-check Go's production resolver against the native
+                # installer on actual signed bytes (platform-specific files
+                # may be deliberately excluded by native verification).
+                planned={f['path'] for f in resolved['plan']['files']}
+                native_paths={f['path'] for f in checked.get('files',[])}
+                if not native_paths<=planned:
+                    raise RuntimeError('native and Go catalog resolver disagree on installed paths')
+            if checked.get('status') != 'ready' or not checked.get('files') or any(f['status'] != 'ok' for f in checked['files']):
+                raise RuntimeError('native resolver did not verify every selected file')
+            # The selected plan digest is reproducible from the immutable
+            # manifest and the actually verified paths for this target.
+            by_path={f['path']:f['sha256'] for f in signed['files']}
+            chosen_files=sorted((f['path'],by_path[f['path']]) for f in checked['files'])
+            component_digest=hashlib.sha256(json.dumps({'catalogDigest':catalog['digest'],
+                'preset':selection,'selectedFiles':chosen_files},sort_keys=True,separators=(',',':')).encode()).hexdigest()
+            selection_report = {'schemaVersion':'neverlauncher.component-execution.v1',
+                'preset':selection,'catalogDigest':catalog['digest'],'resolvedComponentPlanSha256':component_digest,
+                'syncSha256':sha_file(work/'component-sync.json'),
+                'nativeVerifySha256':sha_file(work/'component-verification.json')}
+            (work/'component-selection.json').write_text(json.dumps(selection_report,sort_keys=True,indent=2),encoding='utf-8')
+        elif selection and selection != 'default':
+            raise RuntimeError('component selection supplied for package without signed catalog')
+
         stage_name = 'startup'
         # Run the exact installed release with NeverRuntime's ordinary signed
         # manifest/launch path. A special Client Factory certification probe
@@ -247,6 +336,7 @@ def execute(args):
         cmd = [args.runtime, 'launch', '--manifest', str(signed_manifest_path),
                '--pinned-public-key', args.pinned_public_key, '--root', str(client_dir),
                '--java', selected_java, '--max-runtime-seconds', str(args.runtime_seconds)]
+        if catalog and native_selection: cmd.extend(['--preset', native_selection])
         loader = signed.get('minecraft', {}).get('loader', 'vanilla').lower()
         observer = StartupObserver(0, client_dir, work / 'startup-diagnostics', loader, time.time(), selected_java)
         if observer.blocked:
@@ -292,13 +382,15 @@ def execute(args):
             'javaSha256': sha_file(selected_java), 'javaVersionRaw': java_version,
             'cliSha256': sha_file(args.cli), 'neverRuntimeSha256': runtime_hash,
             'installAdapterSha256': hashlib.sha256((sha_file(args.cli)+runtime_hash).encode()).hexdigest(),
-            'resolvedPlanSha256': hashlib.sha256(json.dumps({'minecraft':signed.get('minecraft'),
+            'resolvedPlanSha256': hashlib.sha256(json.dumps(dict({'minecraft':signed.get('minecraft'),
                 'runtime':signed.get('runtime'), 'fileHashes':sorted((f['path'],f['sha256']) for f in pkg['files'])},
+                **({'componentSelection': selection, 'componentPlanSha256':component_digest,
+                    'componentCatalogDigest':catalog['digest']} if catalog else {})),
                 sort_keys=True,separators=(',',':')).encode()).hexdigest(),
             'guardMode': str(signed.get('runtime',{}).get('guard',{}).get('mode') or 'disabled'),
             'guardPolicySha256': hashlib.sha256(json.dumps(signed.get('runtime',{}).get('guard',{}),
                 sort_keys=True,separators=(',',':')).encode()).hexdigest(),
-            'loader': loader, 'preset': str(signed.get('optionalPreset') or 'default'),
+            'loader': loader, 'preset': selection or 'default',
         }
         (work / 'execution-identity.json').write_text(json.dumps(runtime_identity,indent=2),encoding='utf-8')
 
@@ -383,6 +475,7 @@ def execute(args):
                     '--credentials-file', args.credentials_file,
                     '--matching-server-port', str(server.port),
                     '--max-runtime-seconds', str(args.gameplay_seconds)]
+        if catalog and native_selection: join_cmd.extend(['--preset', native_selection])
         launch_error = None
         try:
             gameplay_launch = run_runtime_observed(join_cmd, joining, subprocess_env,
@@ -446,6 +539,7 @@ def main():
     parser.add_argument('--java', required=True)
     parser.add_argument('--pinned-public-key', required=True)
     parser.add_argument('--runtime-seconds', type=int, default=180)
+    parser.add_argument('--preset', default='', help='Backend-required named preset or signed @custom selection')
     parser.add_argument('--auth-mode', choices=('official','custom'), default='',
                         help='Actual provider, never mock/offline certification')
     parser.add_argument('--credentials-file', default='', help='Host-injected real short-lived Minecraft credential JSON')

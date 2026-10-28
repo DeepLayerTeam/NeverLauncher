@@ -1,10 +1,13 @@
-name: V04 V06 V07 trusted attestor and real auth guards
+name: V04 V06 V07 V08 trusted attestor, live auth and optional matrix
 on:
   push:
     paths:
       - 'tools/validation-attestor/**'
       - 'e2e/scripts/**'
       - 'services/api/internal/httpapi/validation_attestation_0345*'
+      - 'services/api/internal/httpapi/validation_component_matrix_0348*'
+      - 'runtime/neverruntime/src/bin/neverruntime.rs'
+      - 'runtime/neverruntime/src/transactional_release.rs'
       - 'tools/validation-attestor/official_chain_0347.py'
       - 'services/api/internal/httpapi/validation_*0346*'
       - 'services/api/internal/repository/validation_*0346*'
@@ -25,18 +28,21 @@ jobs:
         run: |
           python3 -m pip install --break-system-packages 'cryptography>=44,<47'
           python3 tools/validation-attestor/test_attestor.py
+          python3 tools/validation-attestor/test_component_matrix_0348.py
           python3 tools/validation-attestor/test_official_chain_0347.py
           python3 e2e/scripts/test_staged_auth_0347.py
           python3 e2e/scripts/test_run_staged_package_0342.py
           python3 e2e/scripts/test_staged_readiness_0343.py
           python3 e2e/scripts/test_staged_matching_0344.py
+      - name: Test real NeverRuntime offline import, digest enforcement, and rollback paths
+        run: cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib offline_staged_adoption
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
       - name: Verify Backend Ed25519 pinning and immutable attestations
         run: |
           cd services/api
-          go test ./internal/httpapi ./internal/repository -run 'TestV05|TestTrustedAttestation|TestAttestationRepositoryImmutable|TestStagedGrantRejectsStale' -count=1
+          go test ./internal/httpapi ./internal/repository -run 'TestV05|TestV08|TestTrustedAttestation|TestAttestationRepositoryImmutable|TestStagedGrantRejectsStale' -count=1
   # CI builds and tests NEVER hold the host attestation signing key.
   # The sealed/pinned OCI image is built and approved through a separate
   # operator-controlled pipeline; only that image digest can be attested.

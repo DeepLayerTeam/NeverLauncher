@@ -75,6 +75,9 @@ var mandatoryStages0345 = []string{"manifest-files", "materialization", "startup
 var stageArtifacts0345 = map[string]string{"materialization": "verified.json", "startup": "startup-readiness.json", "loader-readiness": "startup-readiness.json", "authentication": "authentication.json", "server-readiness": "server-readiness.json", "matching-server": "gameplay-smoke.json", "gameplay-smoke": "gameplay-smoke.json"}
 
 func validatePayload0345(p validationPayload0345) error {
+	if !validationPreset0348.MatchString(p.Preset) {
+		return errors.New("invalid signed preset selection")
+	}
 	if p.SchemaVersion != validationSchema0345 {
 		return errors.New("invalid evidence schema")
 	}
@@ -86,7 +89,7 @@ func validatePayload0345(p validationPayload0345) error {
 	if !(validationHex0345.MatchString(p.SourceSHA) || (len(p.SourceSHA) == 40 && regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(p.SourceSHA))) {
 		return errors.New("invalid source SHA")
 	}
-	for _, v := range []string{p.RunID, p.PackageID, p.JavaVersion, p.OS, p.Arch, p.Loader, p.GuardMode, p.ServerPluginVersion, p.Preset, p.Audience, p.Purpose, p.TargetID, p.PackageVersion, p.AuthenticationMode} {
+	for _, v := range []string{p.RunID, p.PackageID, p.JavaVersion, p.OS, p.Arch, p.Loader, p.GuardMode, p.ServerPluginVersion, p.Audience, p.Purpose, p.TargetID, p.PackageVersion, p.AuthenticationMode} {
 		if !validationToken0345.MatchString(v) {
 			return errors.New("invalid signed execution identity")
 		}
@@ -384,5 +387,14 @@ func (s Server) validationAttestationList0345(w http.ResponseWriter, r *http.Req
 			allPassed = false
 		}
 	}
-	writeJSON(w, 200, map[string]any{"data": map[string]any{"attestations": rows, "targetCoverage": coverage, "targetBlockers": reasons, "allRequiredTargetsVerified": allPassed, "stablePublishEligible": false}})
+	var requiredSelections []string
+	uncheckedCombinations := 0
+	if e == nil {
+		requiredSelections, uncheckedCombinations, _ = RequiredMatrixSelections0348(release.Release.Manifest.ComponentCatalog)
+	}
+	writeJSON(w, 200, map[string]any{"data": map[string]any{"attestations": rows,
+		"targetCoverage": coverage, "targetBlockers": reasons,
+		"requiredComponentSelections":     requiredSelections,
+		"unverifiedCandidateCombinations": uncheckedCombinations,
+		"allRequiredTargetsVerified":      allPassed, "stablePublishEligible": false}})
 }

@@ -30,6 +30,7 @@ def fixture(work):
     for folder in ('payload','client'):
         p=work/folder/artifact['path'];p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
     dump(work/'verified.json',{'status':'valid'})
+    dump(work/'native-adoption.json',{'status':'ready','networkDownloads':0,'importedFiles':1,'planSha256':'0'*64})
     for i in (1,2):
         p=work/'startup-diagnostics'/f'menu-frame-{i}.png'
         p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(bytes([i])*4096)
@@ -114,6 +115,12 @@ class TrustBoundaryTests(unittest.TestCase):
             self.assertEqual(payload['stages']['gameplay-smoke'],'passed')
             self.assertEqual(payload['serverBridgeSha256'],'0'*64)
             self.assertEqual(payload['javaVersion'],'21.0.7')
+            adoption=work/'native-adoption.json'
+            adoption.write_text(json.dumps({'status':'ready','networkDownloads':1,
+                                           'importedFiles':1,'planSha256':'0'*64}))
+            with self.assertRaisesRegex(ValueError,'without network downloads'):
+                a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)
+            dump(adoption,{'status':'ready','networkDownloads':0,'importedFiles':1,'planSha256':'0'*64})
             (work/'client'/'mods'/'example.jar').write_bytes(b'poison')
             with self.assertRaisesRegex(ValueError,'installed client bytes'):
                 a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)

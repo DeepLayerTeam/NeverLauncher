@@ -33,6 +33,7 @@ async fn run() -> Result<serde_json::Value, String> {
         "verify" => command_verify(rest).await,
         "sync" => command_sync(rest).await,
         "sync-local" => command_sync_local(rest).await,
+        "adopt-staged" => command_adopt_staged(rest).await,
         "rollback-release" => command_rollback_release(rest).await,
         "recover-release" => command_recover_release(rest).await,
         "launch" => command_launch(rest).await,
@@ -43,7 +44,7 @@ async fn run() -> Result<serde_json::Value, String> {
         "help" | "--help" | "-h" => Ok(json!({
             "status": "ready",
             "version": env!("CARGO_PKG_VERSION"),
-            "commands": ["verify", "sync", "sync-local", "rollback-release", "recover-release", "launch", "plan", "compatibility", "certify-vanilla", "java ensure"]
+            "commands": ["verify", "sync", "sync-local", "adopt-staged", "rollback-release", "recover-release", "launch", "plan", "compatibility", "certify-vanilla", "java ensure"]
         })),
         other => Err(format!("неизвестная команда: {other}")),
     }
@@ -108,6 +109,18 @@ async fn command_sync_local(args: &[String]) -> Result<serde_json::Value, String
         "projectId": manifest.project_id, "profileId": manifest.profile_id, "version": manifest.version}}))
 }
 
+async fn command_adopt_staged(args: &[String]) -> Result<serde_json::Value, String> {
+    let manifest=read_manifest_required(args)?;
+    let pinned=required_flag(args,"--pinned-public-key")?;
+    let source=PathBuf::from(required_flag(args,"--source")?);
+    let root=PathBuf::from(required_flag(args,"--root")?);
+    let preset=optional_flag(args,"--preset");
+    let (imported,digest)=neverruntime::transactional_release::adopt_verified_staged(
+        &manifest,&source,&root,&pinned,preset).await?;
+    Ok(json!({"status":"ready","importedFiles":imported,"networkDownloads":0,
+             "planSha256":digest}))
+}
+
 async fn command_rollback_release(args: &[String]) -> Result<serde_json::Value, String> {
     let root = PathBuf::from(required_flag(args, "--root")?);
     let key = required_flag(args, "--pinned-public-key")?;
@@ -131,6 +144,12 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
     let server_port = optional_flag(args, "--matching-server-port")
         .map(|value| value.parse::<u16>().map_err(|_| "invalid matching server port".to_string()))
         .transpose()?;
+    // Runtime validation must execute exactly the installed signed preset,
+    // not whichever selection a previous launch happened to leave active.
+    if let Some(preset) = optional_flag(args, "--preset") {
+        neverruntime::transactional_release::ensure_active_preset(
+            &manifest, &root, &pinned, Some(&preset)).await?;
+    }
     // Credentials arrive only through a rootless-container read-only 0600
     // secret file; command line arguments never carry the token.
     let creds = if let Some(path) = optional_flag(args, "--credentials-file") {

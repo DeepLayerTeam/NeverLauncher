@@ -25,6 +25,7 @@ import ssl
 import urllib.request
 import urllib.parse
 from official_chain_0347 import issue_minecraft_credentials, ExternalOutage, AccountRejected
+from component_matrix_0348 import selected_components
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, Encoding, PublicFormat
@@ -36,12 +37,12 @@ REQUIRED = ('manifest-files','materialization','startup','loader-readiness',
             'authentication','server-readiness','matching-server','gameplay-smoke')
 FILES = ('staged-execution.json','verified.json','startup-readiness.json',
          'server-readiness.json','gameplay-smoke.json','authentication.json','runtime-launch.json',
-         'runtime-gameplay-launch.json','execution-identity.json')
+         'runtime-gameplay-launch.json','execution-identity.json','native-adoption.json')
 STAGE_ARTIFACT = {'materialization':'verified.json','startup':'startup-readiness.json',
                   'loader-readiness':'startup-readiness.json','authentication':'authentication.json','server-readiness':'server-readiness.json',
                   'matching-server':'gameplay-smoke.json','gameplay-smoke':'gameplay-smoke.json'}
 HEX64 = re.compile(r'^[a-f0-9]{64}$')
-TOKEN = re.compile(r'^[a-zA-Z0-9_.:/@+\-]{1,160}$')
+TOKEN = re.compile(r'^[a-zA-Z0-9_.:/@+,\-]{1,160}$')
 
 def sha(p):
     h=hashlib.sha256()
@@ -88,6 +89,49 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
           signed_manifest['version']==snapshot['version'], 'materialized release identity mismatch')
     signed_files={f['path']:f for f in signed_manifest['files']}
     check(len(signed_files)==len(snapshot['files']) and bool(signed_files), 'missing or duplicated signed staged files')
+    native_adoption=read_json(work/'native-adoption.json')
+    check(native_adoption.get('status')=='ready' and native_adoption.get('networkDownloads')==0 and
+          isinstance(native_adoption.get('importedFiles'),int) and native_adoption['importedFiles']>0 and
+          HEX64.fullmatch(native_adoption.get('planSha256','')),
+          'native transaction must adopt exact staged bytes without network downloads')
+    catalog=signed_manifest.get('componentCatalog')
+    if catalog:
+        selection=read_json(work/'component-selection.json')
+        check(selection['schemaVersion']=='neverlauncher.component-execution.v1' and
+              selection['preset']==identity['preset'] and
+              selection['catalogDigest']==catalog['digest'], 'selected catalog/preset not bound to run')
+        selected_ids,selected_paths=selected_components(signed_manifest,selection['preset'])
+        native=read_json(work/'component-verification.json')
+        sync=read_json(work/'component-sync.json')
+        check(native.get('status')=='ready' and sync==native_adoption and sync.get('status')=='ready',
+              'native selected install was not committed and verified')
+        check(selection['syncSha256']==sha(work/'component-sync.json') and
+              selection['nativeVerifySha256']==sha(work/'component-verification.json'),
+              'native component verifier artifacts were tampered')
+        observed={f['path'] for f in native.get('files',[]) if f.get('status')=='ok'}
+        check(observed<=selected_paths and bool(observed), 'native verifier checked files outside selected preset')
+        # For every optional JAR, presence must equal signed membership. A
+        # default install leaving unselected mods in mods/ would be a FAIL.
+        all_optional={f for c in catalog['components'] for f in c['files']}
+        for name in all_optional:
+            if name not in selected_paths:
+                check(not (work/'client'/name).exists() and not (work/'client'/name).is_symlink(),
+                      'unselected optional component remains physically installed: '+name)
+        listed=sorted((f['path'],signed_files[f['path']]['sha256']) for f in native['files'] if f['status']=='ok')
+        calculated_component_digest=hashlib.sha256(json.dumps({'catalogDigest':catalog['digest'],
+            'preset':selection['preset'],'selectedFiles':listed},sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        check(selection['resolvedComponentPlanSha256']==calculated_component_digest,
+              'signed component resolved plan does not match native verified paths')
+        hashes['component-selection.json']=sha(work/'component-selection.json')
+        hashes['component-verification.json']=sha(work/'component-verification.json')
+        hashes['component-sync.json']=sha(work/'component-sync.json')
+        extra={'componentSelection':selection['preset'],
+               'componentPlanSha256':selection['resolvedComponentPlanSha256'],
+               'componentCatalogDigest':catalog['digest']}
+    else:
+        check(identity['preset']=='default','unsigned component selection claimed')
+        selected_paths={f['path'] for f in signed_manifest['files']}
+        extra={}
     for entry in snapshot['files']:
         name=entry['path']
         check(isinstance(name,str) and name and not name.startswith('/') and
@@ -95,15 +139,16 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
               'unsafe staged file path')
         check(name in signed_files and entry['sha256']==signed_files[name]['sha256'] and
               entry['size']==signed_files[name]['size'], 'staged file diverges from signed manifest')
-        for folder in (work/'payload',work/'client'):
+        folders=(work/'payload',work/'client') if name in selected_paths else (work/'payload',)
+        for folder in folders:
             full=folder/name
             check(full.is_file() and not full.is_symlink() and
                   full.resolve().is_relative_to(folder.resolve()) and
                   full.stat().st_size==entry['size'] and sha(full)==entry['sha256'],
                   'downloaded or installed client bytes are not signed staged bytes: '+name)
-    recomputed=hashlib.sha256(json.dumps({'minecraft':signed_manifest.get('minecraft'),
+    recomputed=hashlib.sha256(json.dumps(dict({'minecraft':signed_manifest.get('minecraft'),
         'runtime':signed_manifest.get('runtime'),
-        'fileHashes':sorted((f['path'],f['sha256']) for f in snapshot['files'])},
+        'fileHashes':sorted((f['path'],f['sha256']) for f in snapshot['files'])},**extra),
         sort_keys=True,separators=(',',':')).encode()).hexdigest()
     check(identity['resolvedPlanSha256']==recomputed, 'runtime plan digest not bound to signed staged contents')
     guard=signed_manifest.get('runtime',{}).get('guard',{})
@@ -112,8 +157,8 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
           identity['guardMode']==str(guard.get('mode') or 'disabled'), 'Guard policy mismatch')
     check(identity['loader']==signed_manifest.get('minecraft',{}).get('loader','vanilla').lower(),
           'loader mismatch against signed manifest')
-    check(identity['preset']==str(signed_manifest.get('optionalPreset') or 'default'),
-          'preset mismatch against signed manifest')
+    check(identity['preset']==(selection['preset'] if catalog else 'default'),
+          'actual preset mismatch against signed component selection')
     install=read_json(work/'verified.json')
     check(install['status']=='valid','client verify did not pass')
     startup=read_json(work/'startup-readiness.json')
@@ -257,7 +302,7 @@ def sign_evidence(payload,key_path):
     # The byte order of the following dictionary is the Go struct field order.
     return {'evidence':payload,'signature':base64.urlsafe_b64encode(private.sign(DOMAIN+canonical(payload))).decode().rstrip('=')}
 
-def execute_run(cfg,package_id):
+def execute_run(cfg,package_id,selection=None,issued_grant=None):
     check(re.fullmatch(r'[A-Za-z0-9_\-]{1,128}',package_id),'invalid package identifier')
     check(platform.system()=='Linux' and platform.machine() in ('x86_64','AMD64'),
           'this pinned runner is limited to Linux amd64; other targets require their own build')
@@ -280,7 +325,7 @@ def execute_run(cfg,package_id):
           labels.get('io.neverlauncher.validation.build-sha256')==cfg.build_sha,
           'pinned image build provenance labels do not match operator-approved release')
     # Do not accept a user-chosen executable, runtime, image, Docker flags or signing key.
-    grant=request_json(cfg.backend,'/api/v1/packages/'+package_id+'/staged-runs',cfg.operator_token,{})
+    grant=issued_grant if issued_grant is not None else request_json(cfg.backend,'/api/v1/packages/'+package_id+'/staged-runs',cfg.operator_token,{})
     check(grant['packageId']==package_id and grant['attested'] is False,'backend issued wrong staged snapshot')
     with tempfile.TemporaryDirectory(prefix='neverlauncher-attestor-') as tmp:
         root=Path(tmp)
@@ -338,6 +383,11 @@ def execute_run(cfg,package_id):
             args[args.index(cfg.image):args.index(cfg.image)] = [
                 '--mount',f'type=bind,src={path},dst={inside},readonly']
             args.extend([argument,inside])
+        if selection is not None:
+            check(selection['authenticationMode']==cfg.auth_mode and
+                  selection['preset'] in {target['preset'] for target in grant['requiredTargets']},
+                  'target not permitted by backend-issued runtime matrix')
+            args.extend(['--preset',selection['preset']])
         args.extend(['--auth-mode',cfg.auth_mode])
         mount_identity(str(official_credentials) if cfg.auth_mode=='official' else cfg.credentials_file,
                        '/run/auth/credentials.json','--credentials-file',True)
@@ -362,6 +412,9 @@ def execute_run(cfg,package_id):
         payload=verify_local_artifacts(out,grant,image_sha,cfg.source_sha,cfg.build_sha,cfg.bridge_sha)
         check(payload['authenticationMode']==cfg.auth_mode,
               'worker returned a different real authentication provider than the host selected')
+        if selection is not None:
+            check(payload['targetId']==selection['id'] and payload['preset']==selection['preset'],
+                  'worker executed a different runtime matrix target')
         signed=sign_evidence(payload,cfg.signing_key)
         # No signature is ever exposed to an OCI container or a user-supplied
         # report. Only the backend receives signed evidence via scoped API.
@@ -369,6 +422,47 @@ def execute_run(cfg,package_id):
                             cfg.operator_token,signed)
         return {'runId':grant['runId'],'attestationVerified':result['attestationVerified'],
                 'stablePublishEligible':False}
+
+def execute_matrix(cfg, package_id):
+    """Execute every required target on its OWN fresh staged grant and OCI job.
+
+    A failed case remains failed. A passing default cannot be substituted for a
+    missing preset. Unsupported OS/arch targets remain incomplete until a
+    real matching worker executes them; no synthetic pass is emitted.
+    """
+    initial=request_json(cfg.backend,'/api/v1/packages/'+package_id+'/staged-runs',cfg.operator_token,{})
+    targets=initial.get('requiredTargets',[])
+    check(bool(targets) and len(targets)<=128,'backend did not provide required runtime targets')
+    outcomes=[]
+    seen=set()
+    for index,target in enumerate(targets):
+        ident=target['id']
+        check(ident not in seen,'duplicate required target ID')
+        seen.add(ident)
+        if target['os']!='linux' or target['arch'] not in ('amd64','x86_64'):
+            outcomes.append({'targetId':ident,'preset':target['preset'],'status':'blocked',
+                             'detail':'target needs an independent matching OS/arch trusted runner'})
+            continue
+        if target['authenticationMode']!=cfg.auth_mode:
+            outcomes.append({'targetId':ident,'preset':target['preset'],'status':'blocked',
+                             'detail':'target needs its own live authentication provider runner'})
+            continue
+        try:
+            # A separate grant/challenge/workdir prevents one successful run
+            # from being replayed for two target IDs or two different presets.
+            grant=initial if index==0 else request_json(
+                cfg.backend,'/api/v1/packages/'+package_id+'/staged-runs',cfg.operator_token,{})
+            check(grant['targetMatrixSha256']==initial['targetMatrixSha256'],
+                  'required matrix changed while running; restart entire matrix')
+            result=execute_run(cfg,package_id,target,grant)
+            outcomes.append({'targetId':ident,'preset':target['preset'],'status':'passed',
+                             'runId':result['runId']})
+        except Exception as exc:
+            outcomes.append({'targetId':ident,'preset':target['preset'],'status':'failed',
+                             'detail':str(exc)[:512]})
+    return {'packageId':package_id,'targetMatrixSha256':initial['targetMatrixSha256'],
+            'allRequiredTargetsVerified':all(x['status']=='passed' for x in outcomes),
+            'targets':outcomes,'stablePublishEligible':False}
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
@@ -411,7 +505,10 @@ def main():
     check(info.returncode==0 and info.stdout.strip()==b'true',
           'host-side attestor requires configured rootless Podman')
     if cfg.package_id:
-        print(json.dumps(execute_run(cfg,cfg.package_id)));return
+        outcome=execute_matrix(cfg,cfg.package_id)
+        print(json.dumps(outcome))
+        if not outcome['allRequiredTargetsVerified']: raise RuntimeError('runtime matrix incomplete')
+        return
     check(cfg.tls_cert and cfg.tls_key and cfg.client_ca,'service requires mTLS server+client certificates')
     lock=threading.Lock()
     class Handler(BaseHTTPRequestHandler):
@@ -422,9 +519,9 @@ def main():
                 body=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
                 check(set(body)=={'packageId'},'only packageId is accepted')
                 if not lock.acquire(blocking=False): self.send_error(429,'attestor busy');return
-                try: result=execute_run(cfg,body['packageId'])
+                try: result=execute_matrix(cfg,body['packageId'])
                 finally:lock.release()
-                raw=json.dumps(result).encode();self.send_response(201)
+                raw=json.dumps(result).encode();self.send_response(201 if result['allRequiredTargetsVerified'] else 409)
                 self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(raw)))
                 self.end_headers();self.wfile.write(raw)
             except ExternalOutage:

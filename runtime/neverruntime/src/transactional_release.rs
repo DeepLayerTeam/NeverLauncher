@@ -687,6 +687,64 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     Ok(result)
 }
 
+
+/// Adopt only byte-verified files from an independently materialized staged
+/// package. This uses the ordinary durable release commit but NEVER contacts
+/// manifest file URLs. It is the staged-E2E bridge from client install to the
+/// selected native runtime plan, not a general untracked-file takeover API.
+pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
+    key:&str, preset:Option<String>) -> Result<(usize,String),String> {
+    verify_manifest_signature(manifest,key)?;
+    file_ownership::validate_download_targets(manifest)?;
+    let plan=resolved_download_0246::resolve(manifest,preset.as_deref())?;
+    if plan.files.is_empty() {return Err("staged selection has no installable files".into())}
+    let source=source.canonicalize().map_err(|e|format!("verified source unavailable: {e}"))?;
+    fs::create_dir_all(root).map_err(|e|format!("create runtime root: {e}"))?;
+    let root=root.canonicalize().map_err(|e|format!("runtime root unavailable: {e}"))?;
+    if root.starts_with(&source) || source.starts_with(&root) {
+        return Err("source and transactional runtime root must be disjoint".into());
+    }
+    recover(&root,key).await?;
+    release_generations::check(&root,manifest)?;
+    crate::trust_policy::check(&root,manifest,key)?;
+    if pointer(&root)?.active.is_some() {
+        return Err("offline staged adoption requires a new, empty runtime release root".into());
+    }
+    // The exclusive switch lock is held during commit; neither an untracked
+    // live file nor a changed staged file can be silently adopted.
+    let id=format!("{:032x}",rand::random::<u128>());
+    let stage=base(&root).join("work").join(&id).join("files");
+    safe_dir(&root,&stage)?;
+    for f in &plan.files {
+        let input=safe_join(&source,&f.path)?;
+        file_ownership::ensure_no_symlinks(&source,&input)?;
+        if !matches_digest(&input,&f.sha256,f.size) {
+            return Err(format!("offline staged source digest mismatch: {}",f.path));
+        }
+        let live=safe_join(&root,&f.path)?;
+        file_ownership::ensure_no_symlinks(&root,&live)?;
+        if fs::symlink_metadata(&live).is_ok() {
+            return Err(format!("untracked runtime file conflicts with selected signed path: {}",f.path));
+        }
+        let output=safe_join(&stage,&f.path)?;
+        if let Some(parent)=output.parent() {safe_dir(&root,parent)?;}
+        file_ownership::ensure_no_symlinks(&root,&output)?;
+        fs::copy(&input,&output).map_err(|e|format!("offline stage {}: {e}",f.path))?;
+        if !matches_digest(&output,&f.sha256,f.size) {
+            return Err(format!("offline staging changed signed bytes: {}",f.path));
+        }
+    }
+    let count=plan.files.len();
+    let digest=plan.sha256.clone();
+    let desired=Release{manifest:manifest.clone(),
+        installed:plan.files.iter().map(|f|f.path.clone()).collect(),
+        id,preset,plan_sha256:Some(digest.clone())};
+    let key=key.to_owned();
+    tokio::task::spawn_blocking(move ||commit(&root,desired,&key,&stage))
+        .await.map_err(|e|e.to_string())??;
+    Ok((count,digest))
+}
+
 /// Explicit rollback of the most recently committed release. It restores only
 /// registered managed paths; non-managed player files are never enumerated.
 pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
@@ -754,6 +812,37 @@ mod tests {
         }
         assert_eq!(manifest.files.len(), bytes.len());
         dir
+    }
+    #[tokio::test]
+    async fn offline_staged_adoption_commits_exact_verified_bytes_without_network() {
+        let parent=std::env::temp_dir().join(format!("nl-offline-0348-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let root=parent.join("runtime");
+        let source=parent.join("downloaded-and-cli-verified");
+        let (manifest,key)=fixture(&root,"0.34.8",&[("mods/a.jar",b"SIGNED_A"),("mods/b.jar",b"SIGNED_B")]);
+        fs::create_dir_all(source.join("mods")).unwrap();
+        fs::write(source.join("mods/a.jar"),b"SIGNED_A").unwrap();
+        fs::write(source.join("mods/b.jar"),b"SIGNED_B").unwrap();
+        let (count,plan)=adopt_verified_staged(&manifest,&source,&root,&key,None).await.unwrap();
+        assert_eq!(count,2);
+        assert_eq!(plan.len(),64);
+        assert_eq!(fs::read(root.join("mods/a.jar")).unwrap(),b"SIGNED_A");
+        ensure_active_preset(&manifest,&root,&key,None).await.unwrap();
+        assert!(adopt_verified_staged(&manifest,&source,&root,&key,None).await.is_err());
+        let _=fs::remove_dir_all(parent);
+    }
+    #[tokio::test]
+    async fn offline_staged_adoption_rejects_corrupted_source_without_publishing() {
+        let parent=std::env::temp_dir().join(format!("nl-offline-bad-0348-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let root=parent.join("runtime");
+        let source=parent.join("verified-download");
+        let (manifest,key)=fixture(&root,"0.34.8",&[("mods/a.jar",b"SIGNED")]);
+        fs::create_dir_all(source.join("mods")).unwrap();
+        fs::write(source.join("mods/a.jar"),b"CORRUPTED").unwrap();
+        let error=adopt_verified_staged(&manifest,&source,&root,&key,None).await.unwrap_err();
+        assert!(error.contains("digest mismatch"),"{error}");
+        assert!(pointer(&root).unwrap().active.is_none());
+        assert!(!root.join("mods/a.jar").exists());
+        let _=fs::remove_dir_all(parent);
     }
     fn signed_optional_fixture_0246(root:&Path)->(Manifest,String){
         let mut m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
