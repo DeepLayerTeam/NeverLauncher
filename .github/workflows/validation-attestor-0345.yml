@@ -1,10 +1,11 @@
-name: V04 V06 trusted attestor verification 0.34.5
+name: V04 V06 V07 trusted attestor and real auth guards
 on:
   push:
     paths:
       - 'tools/validation-attestor/**'
       - 'e2e/scripts/**'
       - 'services/api/internal/httpapi/validation_attestation_0345*'
+      - 'tools/validation-attestor/official_chain_0347.py'
       - 'services/api/internal/httpapi/validation_*0346*'
       - 'services/api/internal/repository/validation_*0346*'
       - 'services/api/internal/dbmigrate/sql/0104*'
@@ -24,6 +25,8 @@ jobs:
         run: |
           python3 -m pip install --break-system-packages 'cryptography>=44,<47'
           python3 tools/validation-attestor/test_attestor.py
+          python3 tools/validation-attestor/test_official_chain_0347.py
+          python3 e2e/scripts/test_staged_auth_0347.py
           python3 e2e/scripts/test_run_staged_package_0342.py
           python3 e2e/scripts/test_staged_readiness_0343.py
           python3 e2e/scripts/test_staged_matching_0344.py

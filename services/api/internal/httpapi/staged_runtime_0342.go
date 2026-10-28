@@ -330,7 +330,7 @@ func validateStagedRunReport0342(g stagedGrant0342, p stagedRunReport0342) error
 		return errors.New("missing or excessive stages")
 	}
 	for k, v := range p.Stages {
-		if k != "manifest-files" && k != "materialization" && k != "startup" && k != "loader-readiness" && k != "server-readiness" && k != "matching-server" && k != "gameplay-smoke" {
+		if k != "manifest-files" && k != "materialization" && k != "startup" && k != "loader-readiness" && k != "authentication" && k != "server-readiness" && k != "matching-server" && k != "gameplay-smoke" {
 			return errors.New("invalid execution stage")
 		}
 		if v.Status != "passed" && v.Status != "failed" && v.Status != "blocked" && v.Status != "inconclusive" {

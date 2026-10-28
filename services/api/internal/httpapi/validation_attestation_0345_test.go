@@ -29,12 +29,12 @@ func validValidationFixture0345(t *testing.T) (signedValidation0345, ed25519.Pri
 		ResolvedPlanSHA256: strings.Repeat("c", 64), SourceSHA: strings.Repeat("d", 40), BuildSHA: strings.Repeat("e", 64),
 		RunnerImageSHA256: strings.Repeat("f", 64), JavaSHA256: strings.Repeat("1", 64), JavaVersion: "21.0.7", OS: "linux", Arch: "amd64",
 		Loader: "vanilla", InstallAdapterSHA256: strings.Repeat("2", 64), GuardMode: "disabled",
-		GuardPolicySHA256: strings.Repeat("3", 64), ServerBridgeSHA256: strings.Repeat("0", 64), ServerPluginVersion: "none", Preset: "default",
+		GuardPolicySHA256: strings.Repeat("3", 64), ServerBridgeSHA256: strings.Repeat("0", 64), ServerPluginVersion: "none", Preset: "default", AuthenticationMode: "official",
 		Stages: map[string]string{}, ArtifactHashes: map[string]string{}, StartedAt: start, FinishedAt: end}
 	for _, stage := range mandatoryStages0345 {
 		p.Stages[stage] = "passed"
 	}
-	for _, name := range []string{"staged-execution.json", "verified.json", "startup-readiness.json", "server-readiness.json", "gameplay-smoke.json", "runtime-launch.json", "runtime-gameplay-launch.json", "execution-identity.json"} {
+	for _, name := range []string{"staged-execution.json", "verified.json", "startup-readiness.json", "server-readiness.json", "gameplay-smoke.json", "authentication.json", "runtime-launch.json", "runtime-gameplay-launch.json", "execution-identity.json"} {
 		p.ArtifactHashes[name] = strings.Repeat("8", 64)
 	}
 	fingerprint := sha256.Sum256(key)

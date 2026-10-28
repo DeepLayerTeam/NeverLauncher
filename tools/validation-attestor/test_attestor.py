@@ -40,7 +40,9 @@ def fixture(work):
     for fname,bb in [('world-before.png',b'a'),('world-after.png',b'b')]:
         pp=work/'gameplay-diagnostics'/fname;pp.parent.mkdir(parents=True,exist_ok=True);pp.write_bytes(bb*4096)
     dump(work/'server-readiness.json',{'runId':run,'minecraftVersion':'1.21.1','loader':'vanilla',
-         'loaderVersion':'','bridgeRequired':False,'startup':'passed'})
+         'loaderVersion':'','bridgeRequired':False,'onlineMode':True,'startup':'passed'})
+    (work/'matching-server').mkdir(parents=True,exist_ok=True)
+    (work/'matching-server'/'server.properties').write_text('server-ip=127.0.0.1\nonline-mode=true\n')
     dump(work/'gameplay-smoke.json',{'runId':run,'minecraftVersion':'1.21.1','loader':'vanilla',
          'loaderVersion':'','serverBridgeVersion':'','status':'passed','failure':'',
          'serverJoinAndOnline':True,'clientConnectionLogObserved':True,'clientInputSent':True,
@@ -48,6 +50,10 @@ def fixture(work):
          'ticksBefore':100,'ticksAfter':110,
          'frameBeforeSha256':a.sha(work/'gameplay-diagnostics'/'world-before.png'),
          'frameAfterSha256':a.sha(work/'gameplay-diagnostics'/'world-after.png')})
+    dump(work/'authentication.json', {'mode':'official','provider':'live','status':'passed',
+         'runId':run,'manifestSha256':m,'artifactSha256':b,
+         'providerJoin':'passed','providerHasJoined':'passed','profileSha256':'f'*64,
+         'serverOnlineModeRequired':True})
     for fname in ('runtime-launch.json','runtime-gameplay-launch.json'):
         dump(work/fname,{'success':True,'timed_out':True})
     resolution=hashlib.sha256(json.dumps({'minecraft':signed['minecraft'],
@@ -71,7 +77,7 @@ def fixture(work):
         'os':'linux','arch':'amd64','loader':'vanilla',
         'installAdapterSha256':hashlib.sha256((cli+rt).encode()).hexdigest(),
         'guardMode':'disabled','guardPolicySha256':hashlib.sha256(b'{}').hexdigest(),
-        'serverBridgeSha256':'0'*64,'serverPluginVersion':'none','preset':'default'}]
+        'serverBridgeSha256':'0'*64,'serverPluginVersion':'none','preset':'default','authenticationMode':'official'}]
     dump(work/'staged-execution.json',{'schemaVersion':'neverlauncher.staged-runtime-run.v1',
         **issued,'startedAt':(now-timedelta(minutes=3)).isoformat().replace('+00:00','Z'),
         'finishedAt':now.isoformat().replace('+00:00','Z'),'stages':stages})
@@ -124,6 +130,24 @@ class TrustBoundaryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'movement or game ticks'):
                 a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)
 
+    def test_v07_rejects_mock_provider_even_when_report_and_digest_are_rewritten(self):
+        with tempfile.TemporaryDirectory() as d:
+            work=Path(d);issued=fixture(work)
+            auth=a.read_json(work/'authentication.json');auth['provider']='mock'
+            dump(work/'authentication.json',auth)
+            report=a.read_json(work/'staged-execution.json')
+            report['stages']['authentication']['evidenceSha256']=a.sha(work/'authentication.json')
+            dump(work/'staged-execution.json',report)
+            with self.assertRaisesRegex(ValueError,'real provider authentication'):
+                a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)
+
+    def test_v07_rejects_offline_server_claiming_official_auth(self):
+        with tempfile.TemporaryDirectory() as d:
+            work=Path(d);issued=fixture(work)
+            (work/'matching-server'/'server.properties').write_text('server-ip=127.0.0.1\nonline-mode=false\n')
+            with self.assertRaisesRegex(ValueError,'online-mode policy'):
+                a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)
+
     def test_v05_rejects_wrong_preset_java_server_even_with_valid_artifacts(self):
         with tempfile.TemporaryDirectory() as d:
             work=Path(d); issued=fixture(work)
@@ -157,6 +181,6 @@ class TrustBoundaryTests(unittest.TestCase):
 
     def test_signed_payload_fixed_canonical_order(self):
         self.assertEqual(a.canonical({'a':'A','b':{'x':'X','y':'Y'}}),b'{"a":"A","b":{"x":"X","y":"Y"}}')
-        self.assertEqual(len(a.REQUIRED),7)
+        self.assertEqual(len(a.REQUIRED),8)
 
 if __name__=='__main__':unittest.main()

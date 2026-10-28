@@ -1081,6 +1081,17 @@ pub async fn launch_with_timeout_matching(
     max_runtime_seconds: Option<u64>,
     matching_server: Option<u16>,
 ) -> Result<LaunchResult, String> {
+    launch_with_timeout_matching_authenticated(manifest, root, java_path, username, pinned_public_key,
+        max_runtime_seconds, matching_server, None).await
+}
+
+/// Authenticated staged validation uses the exact same guarded Java runtime and
+/// immutable release installation as the normal launcher. No extra downloader.
+pub async fn launch_with_timeout_matching_authenticated(
+    manifest: &Manifest, root: &Path, java_path: Option<String>,
+    username: Option<String>, pinned_public_key: &str, max_runtime_seconds: Option<u64>,
+    matching_server: Option<u16>, credentials: Option<MinecraftLaunchCredentials>,
+) -> Result<LaunchResult, String> {
     verify_manifest_signature(manifest, pinned_public_key)?;
     fs::create_dir_all(root).await.map_err(|err| format!("не удалось создать рабочий каталог: {err}"))?;
     let _client_release_lease = transactional_release::acquire_launch_lease(manifest, root, pinned_public_key).await?;
@@ -1088,14 +1099,18 @@ pub async fn launch_with_timeout_matching(
     if checks.iter().any(|item| item.status != "ok") {
         return Err("launch заблокирован: client files не прошли integrity check".to_string());
     }
-    let mut plan = create_launch_plan(manifest, root, java_path, username).await?;
+    let mut plan = if let Some(ref credentials) = credentials {
+        create_launch_plan_with_credentials(manifest, root, java_path, Some(credentials.username.clone()), Some(credentials)).await?
+    } else {
+        create_launch_plan(manifest, root, java_path, username).await?
+    };
     if let Some(port) = matching_server {
         if port == 0 { return Err("matching server port cannot be zero".into()); }
         let preferences = LaunchPreferences {
             auto_enter: true, server_host: Some("127.0.0.1".into()),
             server_port: Some(port), ..Default::default()
         };
-        apply_launch_preferences(manifest, root, &mut plan, &preferences, None)?;
+        apply_launch_preferences(manifest, root, &mut plan, &preferences, credentials.as_ref())?;
     }
     let logs_dir = root.join("logs");
     fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;

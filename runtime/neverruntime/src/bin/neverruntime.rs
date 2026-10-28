@@ -1,6 +1,6 @@
 use neverruntime::{
-    build_launch_plan, certify_vanilla_compatibility, check_files, check_files_with_preset, download_missing_files_with_preset, ensure_managed_java, ensure_managed_java_from_distribution, launch_with_timeout, launch_with_timeout_matching, load_manifest,
-    resolve_compatibility, verify_manifest_signature, CompatibilityContext, Manifest,
+    build_launch_plan, certify_vanilla_compatibility, check_files, check_files_with_preset, download_missing_files_with_preset, ensure_managed_java, ensure_managed_java_from_distribution, launch_with_timeout, launch_with_timeout_matching, launch_with_timeout_matching_authenticated, load_manifest,
+    resolve_compatibility, verify_manifest_signature, CompatibilityContext, Manifest, MinecraftLaunchCredentials,
 };
 use serde_json::json;
 use std::{collections::HashMap, env, path::{Path, PathBuf}, process::ExitCode};
@@ -131,16 +131,36 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
     let server_port = optional_flag(args, "--matching-server-port")
         .map(|value| value.parse::<u16>().map_err(|_| "invalid matching server port".to_string()))
         .transpose()?;
-    let result = launch_with_timeout_matching(
-        &manifest,
-        &root,
-        optional_flag(args, "--java"),
-        optional_flag(args, "--username"),
-        &pinned,
-        max_runtime_seconds,
-        server_port,
-    )
-    .await?;
+    // Credentials arrive only through a rootless-container read-only 0600
+    // secret file; command line arguments never carry the token.
+    let creds = if let Some(path) = optional_flag(args, "--credentials-file") {
+        let path = PathBuf::from(path);
+        let meta = std::fs::symlink_metadata(&path).map_err(|_| "authentication credential file unavailable")?;
+        if !meta.file_type().is_file() || meta.len() > 16 * 1024 {
+            return Err("invalid authentication credential file".into());
+        }
+        #[cfg(unix)] {
+            use std::os::unix::fs::PermissionsExt;
+            if meta.permissions().mode() & 0o077 != 0 {
+                return Err("authentication credential file must be 0600".into());
+            }
+        }
+        let raw = std::fs::read(&path).map_err(|_| "credential file unreadable")?;
+        Some(serde_json::from_slice::<MinecraftLaunchCredentials>(&raw)
+             .map_err(|_| "invalid Minecraft credential identity")?)
+    } else { None };
+    if creds.is_some() && server_port.is_none() {
+        return Err("authenticated validation requires a matching server".into());
+    }
+    let mut result = launch_with_timeout_matching_authenticated(
+        &manifest, &root, optional_flag(args, "--java"), optional_flag(args, "--username"),
+        &pinned, max_runtime_seconds, server_port, creds.clone(),
+    ).await?;
+    // Never disclose an account token in diagnostic output/structured JSON.
+    if let Some(c) = creds {
+        result.stdout = result.stdout.replace(&c.access_token, "[REDACTED]");
+        result.stderr = result.stderr.replace(&c.access_token, "[REDACTED]");
+    }
     serde_json::to_value(result).map_err(|err| err.to_string())
 }
 

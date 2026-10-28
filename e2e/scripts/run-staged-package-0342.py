@@ -8,6 +8,7 @@ import argparse
 import time
 from staged_readiness_0343 import StartupObserver, log_health
 from staged_matching_0344 import MatchingServer, GameplayObserver
+from staged_auth_0347 import run_probe, ProviderUnavailable, ProviderRejected, ProviderMisconfigured
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -310,30 +311,76 @@ def execute(args):
         loader_version = mc.get('loaderVersion', '')
         if not minecraft or not loader or loader not in ('vanilla','fabric','quilt','forge','neoforge'):
             raise ValueError('unknown signed Minecraft version or loader')
+        # Provider identity is validated using real signed-account credentials,
+        # never offline identity or a mock. Transport failure is INCONCLUSIVE.
+        stage_name = 'authentication'
+        if not args.auth_mode or not args.credentials_file:
+            report['stages'][stage_name] = {'status':'blocked',
+                'detail':'V07 live provider credentials not supplied; offline gameplay is not authentication certification'}
+            raise RuntimeError('live provider authentication required for staged certification')
+        if args.auth_mode=='official' and runtime_identity['guardMode']!='disabled':
+            report['stages'][stage_name]={'status':'blocked',
+                'detail':'official Guard-enabled target requires additional real Guard-policy proof'}
+            raise RuntimeError('official Guard target cannot certify without independent policy proof')
+        if args.auth_mode=='custom' and not args.server_bundle:
+            report['stages'][stage_name]={'status':'blocked',
+                'detail':'custom authentication requires actual matching ServerBridge bundle'}
+            raise RuntimeError('custom provider cannot use vanilla offline matching server')
+        if args.auth_mode=='custom' and not args.guard_denied_credentials_file:
+            report['stages'][stage_name]={'status':'blocked',
+                'detail':'custom auth requires live device/Guard trust-denied test identity'}
+            raise RuntimeError('device/Guard trust cannot be certified without a negative live session')
+        try:
+            auth_result, live_credential = run_probe(args.auth_mode,args.credentials_file,args.negative_credentials_file,args.backend)
+            if args.auth_mode=='custom':
+                from staged_auth_0347 import guard_denial_probe
+                guard_result=guard_denial_probe(live_credential,args.guard_denied_credentials_file)
+                auth_result.update(guard_result)
+            if args.auth_mode=='custom':
+                auth_result['deviceTrust']='positive-join-and-live-trust-denial'
+                auth_result['guardPolicySha256']=runtime_identity['guardPolicySha256']
+            else:
+                auth_result['deviceTrust']='not-applicable-official-provider'
+                auth_result['guardPolicySha256']=runtime_identity['guardPolicySha256']
+            auth_result.update({'runId':run_id,'provider':'live','status':'passed',
+                                'manifestSha256':report['manifestSha256'],
+                                'artifactSha256':report['artifactSha256']})
+            auth_path=work/'authentication.json'
+            auth_path.write_text(json.dumps(auth_result,sort_keys=True,indent=2),encoding='utf-8')
+            report['stages'][stage_name]={'status':'passed','detail':'live provider join/hasJoined and policy checks verified',
+                                          'evidenceSha256':sha_file(auth_path)}
+        except ProviderUnavailable:
+            report['stages'][stage_name]={'status':'inconclusive',
+                'detail':'external authentication provider unavailable (not a successful certification)'}
+            raise RuntimeError('external authentication provider inconclusive')
+        except ProviderRejected:
+            report['stages'][stage_name]={'status':'failed',
+                'detail':'real provider or trust policy rejected required authentication proof'}
+            raise
+        except ProviderMisconfigured:
+            report['stages'][stage_name]={'status':'blocked','detail':'live provider prerequisites or policy test account missing'}
+            raise
         stage_name = 'server-readiness'
-        if not signed.get('runtime', {}).get('launch', {}).get('offlineMode', False):
-            report['stages']['server-readiness'] = {'status':'blocked',
-                'detail':'authenticated Minecraft login requires real-provider V07 credentials; offline mock cannot certify gameplay'}
-            raise RuntimeError('real authenticated test session unavailable for matching-server execution')
         server = MatchingServer(work, selected_java, args.cli, minecraft, loader, loader_version,
                                 args.server_bundle, args.server_sha256, args.bridge_path,
-                                args.bridge_sha256, args.server_entry, args.bridge_version)
+                                args.bridge_sha256, args.server_entry, args.bridge_version, online_mode=args.auth_mode=='official')
         server.prepare()
         server.start(args.server_startup_seconds)
         server_report = work / 'server-readiness.json'
         server_report.write_text(json.dumps({'runId':run_id,'serverArtifactSha256':server.artifact_sha,
             'minecraftVersion':minecraft,'loader':loader,'loaderVersion':loader_version,
-            'bridgeRequired':server.requires_bridge,'startup':'passed'},indent=2),encoding='utf-8')
+            'bridgeRequired':server.requires_bridge,'onlineMode':server.online_mode,'startup':'passed'},indent=2),encoding='utf-8')
         report['stages'][stage_name] = {'status':'passed', 'detail':'exact matching server/version, loader and required bridge booted; RCON world clock available',
                                         'evidenceSha256':sha_file(server_report)}
         stage_name = 'matching-server'
-        username = 'NL_Cert_Client'
+        username = live_credential['username']
         game = GameplayObserver(server, client_dir, selected_java, loader, username,
                                 work / 'gameplay-diagnostics', run_id, time.time())
         joining = work / 'runtime-gameplay-launch.json'
         join_cmd = [args.runtime, 'launch', '--manifest', str(signed_manifest_path),
                     '--pinned-public-key', args.pinned_public_key, '--root', str(client_dir),
                     '--java', selected_java, '--username', username,
+                    '--credentials-file', args.credentials_file,
                     '--matching-server-port', str(server.port),
                     '--max-runtime-seconds', str(args.gameplay_seconds)]
         launch_error = None
@@ -399,6 +446,11 @@ def main():
     parser.add_argument('--java', required=True)
     parser.add_argument('--pinned-public-key', required=True)
     parser.add_argument('--runtime-seconds', type=int, default=180)
+    parser.add_argument('--auth-mode', choices=('official','custom'), default='',
+                        help='Actual provider, never mock/offline certification')
+    parser.add_argument('--credentials-file', default='', help='Host-injected real short-lived Minecraft credential JSON')
+    parser.add_argument('--negative-credentials-file', default='', help='Separate revocable custom-auth test session')
+    parser.add_argument('--guard-denied-credentials-file', default='', help='Separate live trust-denied test identity')
     parser.add_argument('--server-bundle', default='', help='Pinned server ZIP containing matching loader runtime; Vanilla can use official verified server download')
     parser.add_argument('--server-sha256', default='', help='Operator-pinned SHA-256 for full server distribution')
     parser.add_argument('--server-entry', default='', help='Launcher at bundle root: server.jar or run.sh')

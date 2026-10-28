@@ -24,20 +24,21 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import ssl
 import urllib.request
 import urllib.parse
+from official_chain_0347 import issue_minecraft_credentials, ExternalOutage, AccountRejected
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, Encoding, PublicFormat
 
-SCHEMA = 'neverlauncher.validation-evidence.v3'
-EVIDENCE_FIELDS = ('schemaVersion', 'runNonce', 'audience', 'purpose', 'targetId', 'targetMatrixSha256', 'signerKeyId', 'packageVersion', 'runId', 'packageId', 'manifestSha256', 'artifactSha256', 'resolvedPlanSha256', 'sourceSha', 'buildSha', 'runnerImageSha256', 'javaSha256', 'javaVersion', 'os', 'arch', 'loader', 'installAdapterSha256', 'guardMode', 'guardPolicySha256', 'serverBridgeSha256', 'serverPluginVersion', 'preset', 'stages', 'artifactHashes', 'startedAt', 'finishedAt', 'issuedAt', 'expiresAt')
-DOMAIN = b'NeverLauncher/validation-evidence/v3\x00'
+SCHEMA = 'neverlauncher.validation-evidence.v4'
+EVIDENCE_FIELDS = ('schemaVersion', 'runNonce', 'audience', 'purpose', 'targetId', 'targetMatrixSha256', 'signerKeyId', 'packageVersion', 'runId', 'packageId', 'manifestSha256', 'artifactSha256', 'resolvedPlanSha256', 'sourceSha', 'buildSha', 'runnerImageSha256', 'javaSha256', 'javaVersion', 'os', 'arch', 'loader', 'installAdapterSha256', 'guardMode', 'guardPolicySha256', 'serverBridgeSha256', 'serverPluginVersion', 'preset', 'authenticationMode', 'stages', 'artifactHashes', 'startedAt', 'finishedAt', 'issuedAt', 'expiresAt')
+DOMAIN = b'NeverLauncher/validation-evidence/v4\x00'
 REQUIRED = ('manifest-files','materialization','startup','loader-readiness',
-            'server-readiness','matching-server','gameplay-smoke')
+            'authentication','server-readiness','matching-server','gameplay-smoke')
 FILES = ('staged-execution.json','verified.json','startup-readiness.json',
-         'server-readiness.json','gameplay-smoke.json','runtime-launch.json',
+         'server-readiness.json','gameplay-smoke.json','authentication.json','runtime-launch.json',
          'runtime-gameplay-launch.json','execution-identity.json')
 STAGE_ARTIFACT = {'materialization':'verified.json','startup':'startup-readiness.json',
-                  'loader-readiness':'startup-readiness.json','server-readiness':'server-readiness.json',
+                  'loader-readiness':'startup-readiness.json','authentication':'authentication.json','server-readiness':'server-readiness.json',
                   'matching-server':'gameplay-smoke.json','gameplay-smoke':'gameplay-smoke.json'}
 HEX64 = re.compile(r'^[a-f0-9]{64}$')
 TOKEN = re.compile(r'^[a-zA-Z0-9_.:/@+\-]{1,160}$')
@@ -127,8 +128,42 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
               len(sample['menuControls'])>=2 and sample['pid']==startup['windowPid'] and
               sample['width']>=640 and sample['height']>=400, 'menu frame not bound to Java window')
         hashes['menu-frame-'+str(i)+'.png']=sha(f)
+    authentication=read_json(work/'authentication.json')
+    mode=authentication.get('mode')
+    check(mode in ('official','custom') and authentication.get('provider')=='live' and
+          authentication.get('status')=='passed' and
+          authentication.get('runId')==issued['runId'] and
+          authentication.get('manifestSha256')==issued['manifestSha256'] and
+          authentication.get('artifactSha256')==issued['artifactSha256'] and
+          authentication.get('providerJoin')=='passed' and
+          authentication.get('providerHasJoined')=='passed' and
+          HEX64.fullmatch(authentication.get('profileSha256','')),
+          'real provider authentication missing or mock not accepted')
+    if mode=='custom':
+        check(authentication.get('replayDenied') is True and
+              authentication.get('revokedSessionDenied') is True and
+              authentication.get('deviceTrust')=='positive-join-and-live-trust-denial' and
+              authentication.get('guardPolicySha256')==identity['guardPolicySha256'],
+              'custom Yggdrasil revocation/replay/device policy not verified')
+        check(authentication.get('negativeDeviceTrustJoinDenied') is True,
+              'device trust policy must reject a real negatively provisioned test session')
+        if identity['guardMode']!='disabled':
+            check(authentication.get('negativeGuardJoinDenied') is True,
+                  'Guard-enabled runtime requires real Guard-specific denial')
+    else:
+        check(authentication.get('serverOnlineModeRequired') is True and identity['guardMode']=='disabled',
+              'official Minecraft requires online-mode and disabled Guard until a live Guard policy proof exists')
     server=read_json(work/'server-readiness.json')
     game=read_json(work/'gameplay-smoke.json')
+    props=work/'matching-server'/'server.properties'
+    check(props.is_file() and not props.is_symlink(), 'matching server properties missing')
+    server_properties=dict(line.split('=',1) for line in props.read_text().splitlines() if '=' in line and not line.startswith('#'))
+    expected_online=(mode=='official')
+    check(server.get('onlineMode') is expected_online and
+          server_properties.get('online-mode')==str(expected_online).lower() and
+          server_properties.get('server-ip')=='127.0.0.1',
+          'Minecraft server online-mode policy does not match real provider')
+    hashes['server.properties']=sha(props)
     check(server['runId']==issued['runId'] and game['runId']==issued['runId'], 'gameplay/server run ID mismatch')
     check(server['startup']=='passed' and server['minecraftVersion']==game['minecraftVersion'] and
           server['loader']==game['loader'] and server['loaderVersion']==game['loaderVersion'],
@@ -150,6 +185,8 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
     check(identity['loader']==server['loader'] and TOKEN.fullmatch(identity['preset']) and
           TOKEN.fullmatch(identity['guardMode']), 'signed loader/preset/guard mismatch')
     check(HEX64.fullmatch(bridge_sha), 'bridge digest must be pinned (zero digest for Vanilla)')
+    if mode=='custom':
+        check(server['bridgeRequired'], 'custom Yggdrasil matching server must run verified ServerBridge')
     if server['bridgeRequired']:
         check(bridge_sha!='0'*64 and server['bridgeRequired'] and game['serverBridgeVersion'],
               'ServerBridge required but unverified')
@@ -169,7 +206,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
     # IMPORTANT: order must match Go validationPayload0345 field order.
     evidence={
         'schemaVersion':SCHEMA,'runNonce':issued['nonce'],
-        'audience':'neverlauncher-api/validation-evidence/0.34.6',
+        'audience':'neverlauncher-api/validation-evidence/0.34.7',
         'purpose':'staged-package-runtime-verification',
         'targetId':'', 'targetMatrixSha256':issued['targetMatrixSha256'],
         'signerKeyId':'0'*64,'packageVersion':signed_manifest['version'],
@@ -182,7 +219,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         'installAdapterSha256':identity['installAdapterSha256'],
         'guardMode':identity['guardMode'],'guardPolicySha256':identity['guardPolicySha256'],
         'serverBridgeSha256':bridge_sha,'serverPluginVersion':game['serverBridgeVersion'] or 'none',
-        'preset':identity['preset'],'stages':{k:stages[k]['status'] for k in sorted(stages)},
+        'preset':identity['preset'],'authenticationMode':mode,'stages':{k:stages[k]['status'] for k in sorted(stages)},
         'artifactHashes':{k:hashes[k] for k in sorted(hashes)},
         'startedAt':report['startedAt'],'finishedAt':report['finishedAt'],
         'issuedAt':issued['issuedAt'], 'expiresAt':(datetime.fromisoformat(issued['issuedAt'].replace('Z','+00:00')) + __import__('datetime').timedelta(hours=24)).isoformat().replace('+00:00','Z')}
@@ -191,13 +228,13 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
     fields=('packageVersion','manifestSha256','artifactSha256','resolvedPlanSha256',
             'sourceSha','buildSha','javaSha256','javaVersion','os','arch','loader',
             'installAdapterSha256','guardMode','guardPolicySha256',
-            'serverBridgeSha256','serverPluginVersion','preset')
+            'serverBridgeSha256','serverPluginVersion','preset','authenticationMode')
     applicable=[t for t in issued['requiredTargets'] if all(t.get('version' if k=='packageVersion' else k)==evidence.get(k) for k in fields)]
     check(len(applicable)==1,'no unique configured target matches exact Java/preset/server/build/runtime identity')
     evidence['targetId']=applicable[0]['id']
     check(HEX64.fullmatch(evidence['runNonce']) and HEX64.fullmatch(evidence['targetMatrixSha256']),
           'missing backend issued run nonce or target matrix')
-    for val in ('runId','packageId','targetId','packageVersion','javaVersion','os','arch','loader','guardMode','serverPluginVersion','preset','audience','purpose'):
+    for val in ('runId','packageId','targetId','packageVersion','javaVersion','os','arch','loader','guardMode','serverPluginVersion','preset','authenticationMode','audience','purpose'):
         check(TOKEN.fullmatch(evidence[val]),'unsafe/noncanonical signed value: '+val)
     return evidence
 
@@ -249,6 +286,11 @@ def execute_run(cfg,package_id):
         root=Path(tmp)
         inp=root/'input';out=root/'output';inp.mkdir(mode=0o700);out.mkdir(mode=0o700)
         grant_path=inp/'grant.json';grant_path.write_text(json.dumps(grant),encoding='utf-8');grant_path.chmod(0o600)
+        official_credentials = inp/'official-credentials.json'
+        if cfg.auth_mode=='official':
+            check(cfg.official_client_id and cfg.official_refresh_token_file,
+                  'official provider requires authorized test account and host-only refresh token')
+            issue_minecraft_credentials(cfg.official_client_id,cfg.official_refresh_token_file,official_credentials)
         if cfg.server_bundle_file:
             check(cfg.server_sha and HEX64.fullmatch(cfg.server_sha) and sha(cfg.server_bundle_file)==cfg.server_sha,
                   'server bundle digest does not match operator pin')
@@ -280,6 +322,28 @@ def execute_run(cfg,package_id):
             args += ['--server-bundle','/run/server/bundle.zip','--server-sha256',cfg.server_sha,
                      '--server-entry',cfg.server_entry,'--bridge-path',cfg.bridge_path,
                      '--bridge-sha256',cfg.bridge_sha,'--bridge-version',cfg.bridge_version]
+        check(cfg.auth_mode in ('official','custom'), 'live V07 provider mode must be explicit')
+        def mount_identity(hostfile,inside,argument,required):
+            if not hostfile:
+                check(not required,'required live test identity unavailable')
+                return
+            supplied=Path(hostfile)
+            check(not supplied.is_symlink(), 'symlink credential file not allowed')
+            path=supplied.resolve(strict=True)
+            stat=path.stat()
+            check(path.is_file() and not path.is_symlink() and
+                  stat.st_mode & 0o077 == 0 and stat.st_size <= 16384,
+                  'test-account credential file must be a regular owner-only file')
+            # Mounted directly, never copied into generic work/output artifacts.
+            args[args.index(cfg.image):args.index(cfg.image)] = [
+                '--mount',f'type=bind,src={path},dst={inside},readonly']
+            args.extend([argument,inside])
+        args.extend(['--auth-mode',cfg.auth_mode])
+        mount_identity(str(official_credentials) if cfg.auth_mode=='official' else cfg.credentials_file,
+                       '/run/auth/credentials.json','--credentials-file',True)
+        mount_identity(cfg.negative_credentials_file,'/run/auth/negative.json','--negative-credentials-file',cfg.auth_mode=='custom')
+        mount_identity(cfg.guard_denied_credentials_file,'/run/auth/guard-denied.json',
+                       '--guard-denied-credentials-file',cfg.auth_mode=='custom')
         worker_log=root/'worker-redacted-pending.log'
         try:
             with open(worker_log,'wb') as log:
@@ -296,6 +360,8 @@ def execute_run(cfg,package_id):
         # credentials or personal information. Retention/redaction is V12.
         check(proc.returncode==0,'pinned worker failed; no trusted evidence emitted')
         payload=verify_local_artifacts(out,grant,image_sha,cfg.source_sha,cfg.build_sha,cfg.bridge_sha)
+        check(payload['authenticationMode']==cfg.auth_mode,
+              'worker returned a different real authentication provider than the host selected')
         signed=sign_evidence(payload,cfg.signing_key)
         # No signature is ever exposed to an OCI container or a user-supplied
         # report. Only the backend receives signed evidence via scoped API.
@@ -310,6 +376,12 @@ def main():
     p.add_argument('--operator-token-file',required=True,help='0600 host-only credential file; never enters worker')
     p.add_argument('--signing-key',required=True,help='Host-only Ed25519 PKCS8 PEM, permission 0600')
     p.add_argument('--image',required=True,help='Trusted fully pinned image name@sha256:...')
+    p.add_argument('--auth-mode',choices=('official','custom'),required=True)
+    p.add_argument('--credentials-file',default='',help='Custom-Yggdrasil test-session JSON only')
+    p.add_argument('--official-client-id',default='',help='Dedicated Microsoft public-client app ID')
+    p.add_argument('--official-refresh-token-file',default='',help='Host-only authorized test account refresh token, 0600')
+    p.add_argument('--negative-credentials-file',default='',help='Separate live session for custom revocation')
+    p.add_argument('--guard-denied-credentials-file',default='',help='Real live policy-denied session')
     p.add_argument('--server-bundle-file',default='',help='Host-pinned complete matching server ZIP')
     p.add_argument('--server-sha',default='')
     p.add_argument('--server-entry',default='')
@@ -355,6 +427,8 @@ def main():
                 raw=json.dumps(result).encode();self.send_response(201)
                 self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(raw)))
                 self.end_headers();self.wfile.write(raw)
+            except ExternalOutage:
+                self.send_error(503,'inconclusive: external official provider unavailable')
             except Exception as exc:
                 self.send_error(409,str(exc)[:160])
         def log_message(self,*args):pass

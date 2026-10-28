@@ -1,3 +1,5 @@
+> **0.34.7 compatibility:** V07 requires ValidationEvidence v4 and the explicit `authenticationMode` target field. The v3 procedure below is historical; follow [live-authentication-0347.md](live-authentication-0347.md) for new trusted runs. Older evidence never satisfies the new required authentication stage.
+
 # 0.34.5 — Real staged execution with independently signed ValidationEvidence
 
 ## Trust boundary

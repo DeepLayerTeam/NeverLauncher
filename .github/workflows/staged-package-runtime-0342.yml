@@ -1,6 +1,6 @@
 # OBSERVATIONAL ONLY. Do not publish, sign or promote this CI output as
 # ValidationEvidence. A trusted, independent 0.34.5 host attestor is required.
-name: Staged package exact matching server and gameplay 0.34.4
+name: Staged package, live auth and matching gameplay (observation only)
 on:
   workflow_call:
     inputs:
@@ -53,6 +53,7 @@ jobs:
           python3 e2e/scripts/test_staged_readiness_0343.py
           python3 e2e/scripts/test_run_staged_package_0342.py
           python3 e2e/scripts/test_staged_matching_0344.py
+          python3 e2e/scripts/test_staged_auth_0347.py
       - name: Build CLI and NeverRuntime executables only (never build Minecraft client)
         run: |
           cd cli && go build -o ../nl ./cmd/neverlauncher
@@ -71,10 +72,31 @@ jobs:
           BRIDGE_PATH: ${{ vars.NL_MATCHING_BRIDGE_PATH }}
           BRIDGE_SHA256: ${{ vars.NL_MATCHING_BRIDGE_SHA256 }}
           BRIDGE_VERSION: ${{ vars.NL_MATCHING_BRIDGE_VERSION }}
+          AUTH_MODE: ${{ vars.NL_VALIDATION_AUTH_MODE }}
+          AUTH_CREDENTIAL: ${{ secrets.NL_VALIDATION_TEST_CREDENTIALS_JSON }}
+          AUTH_NEGATIVE: ${{ secrets.NL_VALIDATION_NEGATIVE_CREDENTIALS_JSON }}
+          AUTH_GUARD_DENIED: ${{ secrets.NL_VALIDATION_GUARD_DENIED_CREDENTIALS_JSON }}
         run: |
           set -euo pipefail
           test -n "$STAGED_BACKEND" && test -n "$STAGED_OPERATOR" && test -n "$STAGED_PACKAGE_ID" && test -n "$STAGED_MANIFEST_KEY"
           export LIBGL_ALWAYS_SOFTWARE=1
+          # Diagnostic-only CI: short-lived staging test credentials; the
+          # independent attestor performs the trusted official OAuth chain.
+          [[ "$AUTH_MODE" == official || "$AUTH_MODE" == custom ]] || { echo 'real V07 provider mode missing' >&2; exit 2; }
+          [[ -n "$AUTH_CREDENTIAL" ]] || { echo 'live staging credential missing; mock prohibited' >&2; exit 2; }
+          umask 077
+          AUTH_DIR="$(mktemp -d "$RUNNER_TEMP/nl-auth.XXXXXXXX")"
+          trap 'rm -rf "$AUTH_DIR"' EXIT
+          printf '%s' "$AUTH_CREDENTIAL" > "$AUTH_DIR/credentials.json"
+          NEGATIVE_ARG=()
+          GUARD_ARG=()
+          if [[ "$AUTH_MODE" == custom ]]; then
+            [[ -n "$AUTH_NEGATIVE" && -n "$AUTH_GUARD_DENIED" ]] || { echo 'custom auth negative sessions missing' >&2; exit 2; }
+            printf '%s' "$AUTH_NEGATIVE" > "$AUTH_DIR/negative.json"
+            printf '%s' "$AUTH_GUARD_DENIED" > "$AUTH_DIR/guard-denied.json"
+            NEGATIVE_ARG=(--negative-credentials-file "$AUTH_DIR/negative.json")
+            GUARD_ARG=(--guard-denied-credentials-file "$AUTH_DIR/guard-denied.json")
+          fi
           # Non-Vanilla servers must use an externally provisioned complete,
           # pinned server distribution. Never materialize a substitute client.
           SERVER_BUNDLE=""
@@ -93,6 +115,8 @@ jobs:
               --cli "$GITHUB_WORKSPACE/nl" \
               --runtime "$GITHUB_WORKSPACE/runtime/neverruntime/target/release/neverruntime" \
               --java auto --pinned-public-key "$STAGED_MANIFEST_KEY" --runtime-seconds "$STAGED_DURATION" \
+              --auth-mode "$AUTH_MODE" --credentials-file "$AUTH_DIR/credentials.json" \
+              "${NEGATIVE_ARG[@]}" "${GUARD_ARG[@]}" \
               --server-bundle "$SERVER_BUNDLE" --server-sha256 "$SERVER_BUNDLE_SHA256" \
               --server-entry "$SERVER_ENTRY" --bridge-path "$BRIDGE_PATH" --bridge-sha256 "$BRIDGE_SHA256" --bridge-version "$BRIDGE_VERSION"
       - name: Upload redacted observational evidence (no grant or private key)
@@ -107,6 +131,7 @@ jobs:
             ${{ runner.temp }}/staged-execution/runtime-launch.json
             ${{ runner.temp }}/staged-execution/startup-readiness.json
             ${{ runner.temp }}/staged-execution/startup-diagnostics/menu-frame-*.png
+            ${{ runner.temp }}/staged-execution/authentication.json
             ${{ runner.temp }}/staged-execution/server-readiness.json
             ${{ runner.temp }}/staged-execution/matching-server.log
             ${{ runner.temp }}/staged-execution/gameplay-smoke.json

@@ -12,7 +12,7 @@ import (
 )
 
 func testTarget0346(p validationPayload0345) validationTarget0346 {
-	return validationTarget0346{ID: p.TargetID, ProjectID: "project-1", ProfileID: "profile-1", Channel: "stable", Version: p.PackageVersion, ManifestSHA256: p.ManifestSHA256, ArtifactSHA256: p.ArtifactSHA256, ResolvedPlanSHA256: p.ResolvedPlanSHA256, SourceSHA: p.SourceSHA, BuildSHA: p.BuildSHA, JavaSHA256: p.JavaSHA256, JavaVersion: p.JavaVersion, OS: p.OS, Arch: p.Arch, Loader: p.Loader, InstallAdapterSHA256: p.InstallAdapterSHA256, GuardMode: p.GuardMode, GuardPolicySHA256: p.GuardPolicySHA256, ServerBridgeSHA256: p.ServerBridgeSHA256, ServerPluginVersion: p.ServerPluginVersion, Preset: p.Preset}
+	return validationTarget0346{ID: p.TargetID, ProjectID: "project-1", ProfileID: "profile-1", Channel: "stable", Version: p.PackageVersion, ManifestSHA256: p.ManifestSHA256, ArtifactSHA256: p.ArtifactSHA256, ResolvedPlanSHA256: p.ResolvedPlanSHA256, SourceSHA: p.SourceSHA, BuildSHA: p.BuildSHA, JavaSHA256: p.JavaSHA256, JavaVersion: p.JavaVersion, OS: p.OS, Arch: p.Arch, Loader: p.Loader, InstallAdapterSHA256: p.InstallAdapterSHA256, GuardMode: p.GuardMode, GuardPolicySHA256: p.GuardPolicySHA256, ServerBridgeSHA256: p.ServerBridgeSHA256, ServerPluginVersion: p.ServerPluginVersion, Preset: p.Preset, AuthenticationMode: p.AuthenticationMode}
 }
 func TestV05ExactSignedTargetApplicability0346(t *testing.T) {
 	signed, priv, pub := validValidationFixture0345(t)
@@ -31,6 +31,7 @@ func TestV05ExactSignedTargetApplicability0346(t *testing.T) {
 		"java-version":    func(p *validationPayload0345) { p.JavaVersion = "17.0.9" },
 		"preset":          func(p *validationPayload0345) { p.Preset = "optional" },
 		"server-plugin":   func(p *validationPayload0345) { p.ServerPluginVersion = "other" },
+		"auth-mode":       func(p *validationPayload0345) { p.AuthenticationMode = "custom" },
 		"adapter":         func(p *validationPayload0345) { p.InstallAdapterSHA256 = strings.Repeat("9", 64) },
 		"guard-policy":    func(p *validationPayload0345) { p.GuardPolicySHA256 = strings.Repeat("f", 64) },
 		"resolved-plan":   func(p *validationPayload0345) { p.ResolvedPlanSHA256 = strings.Repeat("a", 64) },

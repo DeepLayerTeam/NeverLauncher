@@ -17,8 +17,8 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-const validationSchema0345 = "neverlauncher.validation-evidence.v3"
-const validationDomain0345 = "NeverLauncher/validation-evidence/v3\x00"
+const validationSchema0345 = "neverlauncher.validation-evidence.v4"
+const validationDomain0345 = "NeverLauncher/validation-evidence/v4\x00"
 
 // The order of these fields is part of the signed canonical JSON serialization.
 // All scalar metadata must be ASCII with no HTML metacharacters; JSON maps sort
@@ -51,6 +51,7 @@ type validationPayload0345 struct {
 	ServerBridgeSHA256   string            `json:"serverBridgeSha256"`
 	ServerPluginVersion  string            `json:"serverPluginVersion"`
 	Preset               string            `json:"preset"`
+	AuthenticationMode   string            `json:"authenticationMode"`
 	Stages               map[string]string `json:"stages"`
 	ArtifactHashes       map[string]string `json:"artifactHashes"`
 	StartedAt            string            `json:"startedAt"`
@@ -70,8 +71,8 @@ type validationAttestationRepository0345 interface {
 
 var validationHex0345 = regexp.MustCompile(`^[0-9a-f]{64}$`)
 var validationToken0345 = regexp.MustCompile(`^[a-zA-Z0-9_.:/@+\-]{1,160}$`)
-var mandatoryStages0345 = []string{"manifest-files", "materialization", "startup", "loader-readiness", "server-readiness", "matching-server", "gameplay-smoke"}
-var stageArtifacts0345 = map[string]string{"materialization": "verified.json", "startup": "startup-readiness.json", "loader-readiness": "startup-readiness.json", "server-readiness": "server-readiness.json", "matching-server": "gameplay-smoke.json", "gameplay-smoke": "gameplay-smoke.json"}
+var mandatoryStages0345 = []string{"manifest-files", "materialization", "startup", "loader-readiness", "authentication", "server-readiness", "matching-server", "gameplay-smoke"}
+var stageArtifacts0345 = map[string]string{"materialization": "verified.json", "startup": "startup-readiness.json", "loader-readiness": "startup-readiness.json", "authentication": "authentication.json", "server-readiness": "server-readiness.json", "matching-server": "gameplay-smoke.json", "gameplay-smoke": "gameplay-smoke.json"}
 
 func validatePayload0345(p validationPayload0345) error {
 	if p.SchemaVersion != validationSchema0345 {
@@ -85,10 +86,13 @@ func validatePayload0345(p validationPayload0345) error {
 	if !(validationHex0345.MatchString(p.SourceSHA) || (len(p.SourceSHA) == 40 && regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(p.SourceSHA))) {
 		return errors.New("invalid source SHA")
 	}
-	for _, v := range []string{p.RunID, p.PackageID, p.JavaVersion, p.OS, p.Arch, p.Loader, p.GuardMode, p.ServerPluginVersion, p.Preset, p.Audience, p.Purpose, p.TargetID, p.PackageVersion} {
+	for _, v := range []string{p.RunID, p.PackageID, p.JavaVersion, p.OS, p.Arch, p.Loader, p.GuardMode, p.ServerPluginVersion, p.Preset, p.Audience, p.Purpose, p.TargetID, p.PackageVersion, p.AuthenticationMode} {
 		if !validationToken0345.MatchString(v) {
 			return errors.New("invalid signed execution identity")
 		}
+	}
+	if p.AuthenticationMode != "official" && p.AuthenticationMode != "custom" {
+		return errors.New("unsupported real authentication target")
 	}
 	if len(p.Stages) != len(mandatoryStages0345) {
 		return errors.New("incomplete runtime stage matrix")
@@ -106,7 +110,7 @@ func validatePayload0345(p validationPayload0345) error {
 			return errors.New("invalid artifact hash")
 		}
 	}
-	for _, name := range []string{"staged-execution.json", "verified.json", "startup-readiness.json", "server-readiness.json", "gameplay-smoke.json", "runtime-launch.json", "runtime-gameplay-launch.json", "execution-identity.json"} {
+	for _, name := range []string{"staged-execution.json", "verified.json", "startup-readiness.json", "server-readiness.json", "gameplay-smoke.json", "authentication.json", "runtime-launch.json", "runtime-gameplay-launch.json", "execution-identity.json"} {
 		if !validationHex0345.MatchString(p.ArtifactHashes[name]) {
 			return fmt.Errorf("required artifact missing: %s", name)
 		}

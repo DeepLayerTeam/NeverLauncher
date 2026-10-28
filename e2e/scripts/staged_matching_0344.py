@@ -191,7 +191,7 @@ def changed_position(a, b):
 
 
 class MatchingServer:
-    def __init__(self, work, java, cli, minecraft, loader, loader_version, bundle='', bundle_sha='', bridge_path='', bridge_sha='', server_entry='', bridge_version=''):
+    def __init__(self, work, java, cli, minecraft, loader, loader_version, bundle='', bundle_sha='', bridge_path='', bridge_sha='', server_entry='', bridge_version='', online_mode=False):
         self.work = Path(work)
         self.root = self.work / 'matching-server'
         self.java = str(java)
@@ -204,6 +204,7 @@ class MatchingServer:
         self.bridge_path = bridge_path
         self.bridge_sha = bridge_sha
         self.bridge_version = bridge_version
+        self.online_mode = bool(online_mode)
         self.server_entry = server_entry
         self.process = None
         self.log_stream = None
@@ -270,7 +271,7 @@ class MatchingServer:
         # Dedicated, ephemeral loopback-only offline integration server. This
         # does NOT certify official login, custom auth or a production Guard policy.
         props = {'server-ip':'127.0.0.1', 'server-port':str(self.port),
-                 'online-mode':'false','enforce-secure-profile':'false','white-list':'false',
+                 'online-mode':'true' if self.online_mode else 'false','enforce-secure-profile':'false','white-list':'false',
                  'enable-rcon':'true','rcon.port':str(self.rcon_port),
                  'rcon.password':self.rcon_password,'spawn-protection':'0',
                  'view-distance':'3','simulation-distance':'3','generate-structures':'false',

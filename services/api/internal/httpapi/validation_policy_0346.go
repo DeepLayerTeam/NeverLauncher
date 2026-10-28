@@ -18,7 +18,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-const validationAudience0346 = "neverlauncher-api/validation-evidence/0.34.6"
+const validationAudience0346 = "neverlauncher-api/validation-evidence/0.34.7"
 const validationPurpose0346 = "staged-package-runtime-verification"
 
 // This is a pinned, operator-managed set of REQUIRED execution targets. There
@@ -48,10 +48,14 @@ type validationTarget0346 struct {
 	ServerBridgeSHA256   string `json:"serverBridgeSha256"`
 	ServerPluginVersion  string `json:"serverPluginVersion"`
 	Preset               string `json:"preset"`
+	AuthenticationMode   string `json:"authenticationMode"`
 }
 
 func validTarget0346(t validationTarget0346) error {
-	for _, v := range []string{t.ID, t.ProjectID, t.ProfileID, t.Channel, t.Version, t.JavaVersion, t.OS, t.Arch, t.Loader, t.GuardMode, t.ServerPluginVersion, t.Preset} {
+	if t.AuthenticationMode != "official" && t.AuthenticationMode != "custom" {
+		return errors.New("required target must declare real authentication mode")
+	}
+	for _, v := range []string{t.ID, t.ProjectID, t.ProfileID, t.Channel, t.Version, t.JavaVersion, t.OS, t.Arch, t.Loader, t.GuardMode, t.ServerPluginVersion, t.Preset, t.AuthenticationMode} {
 		if !validationToken0345.MatchString(v) {
 			return errors.New("invalid configured target identity")
 		}
@@ -113,7 +117,7 @@ func configuredTargets0346(raw string, release model.ReleaseVersion, manifestSHA
 	return relevant, hex.EncodeToString(digest[:]), nil
 }
 func matchingTarget0346(p validationPayload0345, t validationTarget0346) bool {
-	return p.TargetID == t.ID && p.PackageVersion == t.Version && p.ManifestSHA256 == t.ManifestSHA256 && p.ArtifactSHA256 == t.ArtifactSHA256 && p.ResolvedPlanSHA256 == t.ResolvedPlanSHA256 && p.SourceSHA == t.SourceSHA && p.BuildSHA == t.BuildSHA && p.JavaSHA256 == t.JavaSHA256 && p.JavaVersion == t.JavaVersion && p.OS == t.OS && p.Arch == t.Arch && p.Loader == t.Loader && p.InstallAdapterSHA256 == t.InstallAdapterSHA256 && p.GuardMode == t.GuardMode && p.GuardPolicySHA256 == t.GuardPolicySHA256 && p.ServerBridgeSHA256 == t.ServerBridgeSHA256 && p.ServerPluginVersion == t.ServerPluginVersion && p.Preset == t.Preset
+	return p.TargetID == t.ID && p.PackageVersion == t.Version && p.ManifestSHA256 == t.ManifestSHA256 && p.ArtifactSHA256 == t.ArtifactSHA256 && p.ResolvedPlanSHA256 == t.ResolvedPlanSHA256 && p.SourceSHA == t.SourceSHA && p.BuildSHA == t.BuildSHA && p.JavaSHA256 == t.JavaSHA256 && p.JavaVersion == t.JavaVersion && p.OS == t.OS && p.Arch == t.Arch && p.Loader == t.Loader && p.InstallAdapterSHA256 == t.InstallAdapterSHA256 && p.GuardMode == t.GuardMode && p.GuardPolicySHA256 == t.GuardPolicySHA256 && p.ServerBridgeSHA256 == t.ServerBridgeSHA256 && p.ServerPluginVersion == t.ServerPluginVersion && p.Preset == t.Preset && p.AuthenticationMode == t.AuthenticationMode
 }
 func validationKeyFingerprint0346(key string) (string, error) {
 	decoded, err := base64.RawURLEncoding.DecodeString(key)
