@@ -23,6 +23,7 @@ type stableCoverage03411 struct {
 	Required       int                    `json:"required"`
 	Verified       int                    `json:"verified"`
 	MatrixSHA256   string                 `json:"matrixSha256,omitempty"`
+	SourceSHA      string                 `json:"sourceSha,omitempty"`
 	TargetCoverage map[string]bool        `json:"targetCoverage"`
 	TargetBlockers map[string]string      `json:"targetBlockers"`
 	Runs           map[string]string      `json:"-"`
@@ -48,6 +49,14 @@ func (s Server) evaluateStableRelease03411(ctx context.Context, lookup packageLo
 	if e != nil {
 		return block("required target policy: " + e.Error())
 	}
+	// A release may have platform-specific build digests, but every target
+	// must originate from one exact source revision. Mixed-source evidence
+	// cannot certify a single staged release (including promotion/rollback).
+	source, consistent := stableSourceConsistency0350(targets)
+	if !consistent {
+		return block("required targets use different source revisions")
+	}
+	c.SourceSHA = source
 	c.Targets = targets
 	c.MatrixSHA256 = matrix
 	c.Required = len(targets)
@@ -181,4 +190,21 @@ func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup
 		return "", coverage, errors.New("stable runtime gate audit unavailable")
 	}
 	return token, coverage, nil
+}
+
+// All targets of one release must be built from the same source revision.
+func stableSourceConsistency0350(targets []validationTarget0346) (string, bool) {
+	if len(targets) == 0 {
+		return "", false
+	}
+	source := targets[0].SourceSHA
+	if source == "" {
+		return "", false
+	}
+	for _, target := range targets[1:] {
+		if target.SourceSHA != source {
+			return "", false
+		}
+	}
+	return source, true
 }

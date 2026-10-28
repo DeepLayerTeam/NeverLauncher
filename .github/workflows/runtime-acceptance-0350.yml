@@ -1,0 +1,83 @@
+name: NeverLauncher 0.35.0 trusted runtime GA acceptance
+on:
+  workflow_call:
+    inputs:
+      package_id:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      package_id:
+        description: Exact immutable, signed, integrity-passed stable staged package
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: nl-ga-0350-${{ inputs.package_id }}
+  cancel-in-progress: false
+jobs:
+  security-regression:
+    name: Real PostgreSQL stable-snapshot and forged-evidence rejection
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: never_ga_test
+          POSTGRES_PASSWORD: never_ga_test_ci_only
+          POSTGRES_DB: never_ga_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U never_ga_test -d never_ga_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://never_ga_test:never_ga_test_ci_only@127.0.0.1:5432/never_ga_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Verify migration, transaction and adversarial guards in PostgreSQL
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          go test -count=1 -timeout 30m ./internal/dbmigrate ./internal/repository ./internal/httpapi \
+            -run 'TestV11|TestV12|TestGA|TestGASource|TestStableSQL|TestStableRuntime|TestProductionGate|TestTrustedAttestation|TestV05|TestV08'
+      - name: Reject incomplete, stale, forged or mocked GA coverage
+        run: python3 scripts/ga/test_runtime_acceptance_0350.py
+  live-backend-acceptance:
+    # The protected environment authorizes only a read-only Backend API token.
+    # Neither the attestation signing key nor production release key is present.
+    # The actual stable commit still re-evaluates evidence in PostgreSQL.
+    name: Require actual independently signed all-target live evidence
+    needs: [security-regression]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: runtime-validation-ga
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check protected Backend evaluator and exact source revision
+        env:
+          NL_GA_OPERATOR_TOKEN: ${{ secrets.NL_GA_OPERATOR_TOKEN }}
+          NL_GA_BACKEND_URL: ${{ vars.NL_GA_BACKEND_URL }}
+          STAGED_PACKAGE: ${{ inputs.package_id }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 scripts/ga/runtime_acceptance_0350.py \
+            --backend "$NL_GA_BACKEND_URL" --package-id "$STAGED_PACKAGE" \
+            --version "$(cat VERSION)" --source-sha "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/GA_RUNTIME_PREFLIGHT_0350.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ga-runtime-preflight-0350-${{ github.sha }}
+          path: ${{ runner.temp }}/GA_RUNTIME_PREFLIGHT_0350.json
+          retention-days: 30
+          if-no-files-found: error

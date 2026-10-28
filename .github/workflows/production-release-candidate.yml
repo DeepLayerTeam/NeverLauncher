@@ -261,9 +261,17 @@ jobs:
       runtime_seconds: 180
     secrets: inherit
 
+  runtime-ga-0350:
+    name: Verify 0.35.0 all-target signed staged runtime and PostgreSQL security
+    needs: [base-ci, staged-package-runtime-0342]
+    uses: ./.github/workflows/runtime-acceptance-0350.yml
+    with:
+      package_id: ${{ inputs.staged_package_id }}
+    secrets: inherit
+
   release-bundle:
     name: Release candidate bundle
-    needs: [base-ci, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
+    needs: [base-ci, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
     permissions:
       contents: read
       actions: read
@@ -275,6 +283,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Fetch exact-commit runtime GA preflight
+        uses: actions/download-artifact@v4
+        with:
+          name: ga-runtime-preflight-0350-${{ github.sha }}
+          path: runtime-ga-preflight
+      - name: Require backend live eligible snapshot for exact staged package
+        env:
+          STAGED_PACKAGE: ${{ inputs.staged_package_id }}
+        run: |
+          jq -e --arg pkg "$STAGED_PACKAGE" --arg sha "$GITHUB_SHA" \
+            '.schemaVersion == "neverlauncher.ga-runtime-preflight.v1" and
+             .status == "backend-eligible-not-published" and .packageId == $pkg and
+             .productVersion == "0.35.0" and .sourceSha == $sha and
+             .verifiedTargets > 0 and (.matrixSha256 | length) == 64' \
+            runtime-ga-preflight/GA_RUNTIME_PREFLIGHT_0350.json >/dev/null
       - name: Install Ed25519 verification dependency
         run: python3 -m pip install 'cryptography>=43,<47'
       - name: Download independently signed live official Minecraft GA evidence
@@ -507,6 +530,9 @@ jobs:
           NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts
           NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE: ${{ github.workspace }}/windows-adversarial-certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.json
           NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
+          NL_GA_OPERATOR_TOKEN: ${{ secrets.NL_GA_OPERATOR_TOKEN }}
+          NL_GA_BACKEND_URL: ${{ vars.NL_GA_BACKEND_URL }}
+          NL_GA_PACKAGE_ID: ${{ inputs.staged_package_id }}
           NEVERLAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR: ${{ github.workspace }}/single-node-ga-approved
           NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE: /tmp/neverlauncher-single-node-ga.pub
           NEVERLAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/optional-components-ga-0250

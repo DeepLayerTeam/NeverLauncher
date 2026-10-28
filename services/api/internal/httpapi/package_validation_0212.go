@@ -338,7 +338,7 @@ func (s Server) packageValidations0212(w http.ResponseWriter, r *http.Request) {
 	effective := map[string]any{"requiredLevel": policy.RequiredLevel, "requireServerJoin": policy.RequireServerJoin, "source": "project-policy"}
 	if repository.IsStableChannel0341(lookup.Release.Channel) {
 		coverage := s.evaluateStableRelease03411(r.Context(), lookup)
-		effective = map[string]any{"requiredLevel": "trusted-runtime", "requireServerJoin": true, "source": "production-runtime-gate-0.34.11", "publishEligible": coverage.Eligible, "targetCoverage": coverage.TargetCoverage, "targetBlockers": coverage.TargetBlockers, "requiredTargets": coverage.Required, "verifiedTargets": coverage.Verified, "matrixSha256": coverage.MatrixSHA256}
+		effective = map[string]any{"requiredLevel": "trusted-runtime", "requireServerJoin": true, "source": "production-runtime-gate-0.34.11", "publishEligible": coverage.Eligible, "targetCoverage": coverage.TargetCoverage, "targetBlockers": coverage.TargetBlockers, "requiredTargets": coverage.Required, "verifiedTargets": coverage.Verified, "matrixSha256": coverage.MatrixSHA256, "sourceSha": coverage.SourceSHA}
 		if !coverage.Eligible {
 			effective["blockedReason"] = fmt.Sprint(coverage.TargetBlockers)
 		}

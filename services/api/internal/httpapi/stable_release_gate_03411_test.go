@@ -61,3 +61,33 @@ func TestProductionGateUnknownEvidenceFieldsRejected03411(t *testing.T) {
 		t.Fatal("manual certified flag must not be admitted to signed evidence")
 	}
 }
+
+func TestGASourceConsistency0350(t *testing.T) {
+	signed, _, _ := validValidationFixture0345(t)
+	p := signed.Evidence
+	release := model.ReleaseVersion{ID: p.PackageID, ProjectID: "project-1", ProfileID: "profile-1", Channel: "stable", Version: p.PackageVersion}
+	a := testTarget0346(p)
+	b := a
+	b.ID = "different-source"
+	b.SourceSHA = strings.Repeat("b", 40)
+	raw, err := json.Marshal([]validationTarget0346{a, b})
+	if err != nil {
+		t.Fatal(err)
+	}
+	targets, _, err := configuredTargets0346(string(raw), release, p.ManifestSHA256, p.ArtifactSHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if targets[0].SourceSHA == targets[1].SourceSHA {
+		t.Fatal("fixture source revisions identical")
+	}
+	if _, ok := stableSourceConsistency0350(targets); ok {
+		t.Fatal("different source commits accepted")
+	}
+	if got, ok := stableSourceConsistency0350(targets[:1]); !ok || got != targets[0].SourceSHA {
+		t.Fatal("same source target rejected")
+	}
+	if _, ok := stableSourceConsistency0350(nil); ok {
+		t.Fatal("empty source matrix allowed")
+	}
+}

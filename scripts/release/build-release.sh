@@ -141,8 +141,38 @@ if [[ "${VERSION}" == "0.33.0" ]]; then
     --output "${SINGLE_NODE_GA_VERIFIED_DIR}/SINGLE_NODE_GA_CERTIFICATION.json" || exit 2
 fi
 
+# 0.35.0 never signs a GA bundle based on CI status, observational logs,
+# or an operator-supplied "certified" flag. Ask the deployed Backend again
+# for exact live signed target coverage before erasing any prior output.
+GA_RUNTIME_PREFLIGHT_FILE=""
+if [[ "${VERSION}" == "0.35.0" ]]; then
+  [[ -n "${NL_GA_BACKEND_URL:-}" && -n "${NL_GA_PACKAGE_ID:-}" && -n "${NL_GA_OPERATOR_TOKEN:-}" ]] || {
+    echo "0.35.0 GA BLOCKED: protected Backend URL, staged package and read token required" >&2; exit 2;
+  }
+  command -v git >/dev/null 2>&1 || { echo "0.35.0 GA requires git" >&2; exit 2; }
+  HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
+  [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${HEAD_COMMIT}" ]] || {
+    echo "0.35.0 GA source SHA does not match checkout" >&2; exit 2;
+  }
+  [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal)" ]] || {
+    echo "0.35.0 GA signing requires clean committed source" >&2; exit 2;
+  }
+  SOURCE_COMMIT="${HEAD_COMMIT}"
+  GA_RUNTIME_PREFLIGHT_FILE="$(mktemp)"
+  trap 'rm -f -- "${GA_RUNTIME_PREFLIGHT_FILE}"' EXIT
+  python3 "${ROOT_DIR}/scripts/ga/runtime_acceptance_0350.py" \
+    --backend "${NL_GA_BACKEND_URL}" --package-id "${NL_GA_PACKAGE_ID}" \
+    --source-sha "${SOURCE_COMMIT}" --version "${VERSION}" \
+    --output "${GA_RUNTIME_PREFLIGHT_FILE}" || {
+      echo "0.35.0 GA BLOCKED: trusted Backend runtime evidence incomplete" >&2; exit 2;
+    }
+fi
+
 rm -rf "${OUT_DIR}" "${WORK_DIR}"
 mkdir -p "${OUT_DIR}" "${WORK_DIR}"
+if [[ -n "${GA_RUNTIME_PREFLIGHT_FILE}" ]]; then
+  cp -- "${GA_RUNTIME_PREFLIGHT_FILE}" "${OUT_DIR}/GA_RUNTIME_PREFLIGHT_0350.json"
+fi
 if [[ "${VERSION}" == "0.33.0" ]]; then
   for name in SINGLE_NODE_GA_ATTESTATION.json SINGLE_NODE_GA_ATTESTATION.sig SINGLE_NODE_GA_RC.json SINGLE_NODE_GA_CERTIFICATION.json; do
     if [[ "${name}" == "SINGLE_NODE_GA_CERTIFICATION.json" ]]; then
