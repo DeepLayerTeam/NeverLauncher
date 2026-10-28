@@ -25,6 +25,8 @@ type Modules0338 = {format:string;sourceSha256:string;inventorySha256:string;rea
 type Rehearsal03310 = {format:string;runId:string;stageId:string;sourceInventorySha256:string;sourceSnapshotSha256:string;targetSnapshotSha256:string;ready:boolean;cutoverAllowed:boolean;blockers:string[];probes:{name:string;passed:boolean;uuid?:string;evidenceSha256:string}[]};
 type Cutover03311 = {runId:string;projectId:string;profileId:string;channel:string;stageId:string;releaseId:string;releaseVersion:string;targetDigest:string;baselineRevision:number;baselineReleaseId:string;baselineVersion:string;state:'staged'|'active'|'cancelled'|'rolled_back';revision:number;activatedRevision?:number;fenceReference?:string;fenceEvidenceSha256?:string};
 type Rollback03312 = {format:string;runId:string;profileId:string;channel:string;state:string;routeRevision:number;planSha256:string;ready:boolean;blockers:string[];currentSnapshotSha256:string;mode:string;reconciledSourceSha256?:string};
+type MigrationReport03313 = {format:string;runId:string;projectId:string;status:string;reportSha256:string;counts:Record<string,number>;blockers:string[];evidence:{stage:string;state:string;sha256?:string;details?:string}[];items:{kind:string;source:string;target?:string;status:string;sha256?:string;reason?:string}[];identities:{provider:string;sourceId:string;username:string;uuid:string;targetUserId:string;status:string}[];operatorDecisions:{sequence:number;kind:string;revision:number}[]};
+type ReportReview03313 = {status:string;reviewedBy:string;reviewedAt:string;evidenceSHA256?:string;evidenceSha256:string;report:MigrationReport03313};
 type Event = { sequence: number; kind: string; step: string; revision: number; detail: unknown; createdAt: string };
 
 /** A working server-backed migration run operator. No client-side state is
@@ -35,6 +37,11 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
   const [runId, setRunId] = useState('');
   const [run, setRun] = useState<Run | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
+  const [report03313,setReport03313]=useState<MigrationReport03313|null>(null);
+  const [review03313,setReview03313]=useState<ReportReview03313|null>(null);
+  const [reportRef03313,setReportRef03313]=useState('');
+  const [reportEvidence03313,setReportEvidence03313]=useState('');
+  const [reportConfirm03313,setReportConfirm03313]=useState('');
   const [busy, setBusy] = useState(false);
   const [source, setSource] = useState<File | null>(null);
   const [claimedVersion, setClaimedVersion] = useState('');
@@ -100,6 +107,7 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
     ]);
     setRun(current);
     setEvents(journal);
+    setReport03313(null); setReview03313(null);
     setCutovers03311(await requestJSON<Cutover03311[]>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/cutovers`,token));
     try {setInventory(await requestJSON<Inventory0333>(backendUrl,`${base}/${encodeURIComponent(selectedId)}/inventory`,token));}
     catch (e) {if (e instanceof Error && 'status' in e && (e as {status?:number}).status === 404) setInventory(null); else throw e;}
@@ -120,6 +128,25 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
       .then(setRuns).catch((e: Error) => setError(e.message));
   }, [backendUrl, token, projectId]);
 
+  async function reportAction03313(action:'generate'|'review'|'status') {
+    if(!runId||busy)return;
+    setBusy(true);setError('');
+    const path=`${base}/${encodeURIComponent(runId)}/report`;
+    try {
+      if(action==='generate')setReport03313(await requestJSON<MigrationReport03313>(backendUrl,path,token));
+      if(action==='status')setReview03313(await requestJSON<ReportReview03313>(backendUrl,path+'/review',token));
+      if(action==='review') {
+        if(reportConfirm03313!==runId||!report03313||report03313.blockers.length||report03313.status!=='review_required')return;
+        const reviewed=await requestJSON<ReportReview03313>(backendUrl,path+'/review',token,{method:'POST',headers:{'X-Migration-RC-Confirm':runId},body:JSON.stringify({reportSha256:report03313.reportSha256,evidenceSha256:reportEvidence03313,evidenceReference:reportRef03313})});
+        setReview03313(reviewed);
+      }
+    }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
+  }
+  function downloadReport03313(){
+    if(!report03313)return;
+    const blob=new Blob([JSON.stringify(report03313,null,2)+'\n'],{type:'application/json'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`migration-report-${runId}.json`;a.click();URL.revokeObjectURL(url);
+  }
   async function cutoverAction03311(action:'stage'|'activate'|'cancel', route?:Cutover03311) {
     if (!runId||busy||cutoverConfirm03311!==runId) return;
     const scope=route??{profileId:cutoverProfile03311,channel:cutoverChannel03311};
@@ -508,6 +535,26 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
         </div>}
         {route.state==='rolled_back'&&<p>Never channel head возвращён. Gravit не перезапущен; проверьте состояние игроков и завершите внешнее переключение отдельно.</p>}
       </div>)}
+    </article>}
+    {run && <article className="subcard">
+      <h3>Reports &amp; Certification RC · MIG13</h3>
+      <p>Отчёт формируется из реальных MIG03–MIG12 receipts. Статус blocked запрещает утверждение; review_required означает только необходимость независимой проверки, а не production GA.</p>
+      <button disabled={busy} onClick={()=>void reportAction03313('generate')}>Сформировать проверяемый отчёт</button>
+      <button disabled={busy} onClick={()=>void reportAction03313('status')}>Прочитать зафиксированный RC review</button>
+      {report03313&&<>
+        <p>Статус: <strong>{report03313.status}</strong> · SHA-256: <code>{report03313.reportSha256}</code></p>
+        <p>Transferred {report03313.counts.transferred}, transformed {report03313.counts.transformed}, manual {report03313.counts.manual}, blocked {report03313.counts.blocked}. UUID: {report03313.identities.length}, решений: {report03313.operatorDecisions.length}.</p>
+        {report03313.blockers.map((x,i)=><p key={i} className="error">{x}</p>)}
+        <button onClick={downloadReport03313}>Сохранить JSON-отчёт</button>
+        <details><summary>Доказательства и контрольные суммы</summary><pre>{JSON.stringify(report03313.evidence,null,2)}</pre></details>
+        <details><summary>Перенесено, преобразовано, вручную, заблокировано</summary><pre>{JSON.stringify(report03313.items,null,2)}</pre></details>
+        <details><summary>Source ID → UUID → Never user ID</summary><pre>{JSON.stringify(report03313.identities,null,2)}</pre></details>
+        <label className="field"><span>Ссылка на независимые CI/E2E доказательства</span><input value={reportRef03313} onChange={e=>setReportRef03313(e.target.value)}/></label>
+        <label className="field"><span>SHA-256 доказательств</span><input value={reportEvidence03313} onChange={e=>setReportEvidence03313(e.target.value)}/></label>
+        <label className="field"><span>Подтвердите точный run ID (MFA)</span><input value={reportConfirm03313} onChange={e=>setReportConfirm03313(e.target.value)}/></label>
+        <button disabled={busy||report03313.status!=='review_required'||report03313.blockers.length>0||reportConfirm03313!==runId||!(/^[a-f0-9]{64}$/.test(reportEvidence03313))||reportRef03313.length<8} onClick={()=>void reportAction03313('review')}>Зафиксировать неизменяемый RC review (не GA)</button>
+      </>}
+      {review03313&&<p>Зафиксировано: {review03313.status} · {review03313.reviewedBy} · {review03313.reviewedAt} · SHA-256 отчёта: <code>{review03313.report.reportSha256}</code>.</p>}
     </article>}
     {compatibility && <article className="subcard">
       <h3>Совместимость: {compatibility.status}</h3>

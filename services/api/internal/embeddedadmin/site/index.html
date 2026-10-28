@@ -7,7 +7,7 @@
 <section id="login" hidden><h2>Вход администратора</h2><form id="login-form"><label>Email<input name="email" type="email" autocomplete="username" required></label><label>Пароль<input name="password" type="password" autocomplete="current-password" required></label><label>TOTP (если требуется)<input name="totp" inputmode="numeric" autocomplete="one-time-code"></label><button type="submit">Войти</button></form></section>
 <section id="admin" hidden><h2>Состояние Backend</h2><button id="refresh" type="button">Обновить</button><button id="logout" type="button">Выйти</button><pre id="overview"></pre>
 <h2>Создание первого проекта</h2><p>Создаёт черновой релиз после проверки прав текущего владельца.</p><form id="project-form"><label>Проект<input name="projectId" value="default-project" required></label><label>Профиль<input name="profileId" value="vanilla" required></label><label>Канал<input name="channel" value="stable" required></label><label>Версия<input name="version" value="0.1.0" required></label><button type="submit">Создать проект</button></form>
-<h2>Migration Center · 0.33.11</h2>
+<h2>Migration Center · 0.33.13</h2>
 <p>Проверка и сохранение целевой конфигурации Never. Это ещё не импорт Gravit и не разрешение на cutover.</p>
 <form id="migration-create"><label>ID проекта<input name="projectId" required maxlength="128" value="default-project"></label><label>Ключ повторного выполнения<input name="idempotencyKey" required minlength="8" maxlength="128" placeholder="change-request-2026-001"></label><button type="submit">Создать migration run</button></form>
 <form id="migration-select"><label>Migration run ID<input id="migration-run-id" required></label><button type="submit">Показать</button></form>
@@ -81,6 +81,16 @@
 <button id="migration-rollback-plan" type="button">Проверить rollback (MFA)</button>
 <button id="migration-rollback-commit" type="button">Commit rollback (MFA)</button>
 <button id="migration-rollback-status" type="button">Проверить сохранённый план</button>
+</fieldset>
+<fieldset><legend>Reports &amp; Certification RC (MIG13)</legend>
+<p>Отчёт из PostgreSQL MIG03–MIG12 с SHA-256, картой UUID и перечислением blockers. Reviewing не является GA или доказательством production-совместимости.</p>
+<button id="migration-rc-report" type="button">Сформировать текущий отчёт</button>
+<button id="migration-rc-status" type="button">Прочитать сохранённый review</button>
+<label>SHA-256 текущего отчёта<input id="migration-rc-report-sha" readonly></label>
+<label>Ссылка на независимые CI/E2E доказательства<input id="migration-rc-reference"></label>
+<label>SHA-256 независимых доказательств<input id="migration-rc-evidence-sha"></label>
+<label>Подтвердить точный run ID (MFA)<input id="migration-rc-confirm" autocomplete="off"></label>
+<button id="migration-rc-review" type="button">Зафиксировать RC review (НЕ GA)</button>
 </fieldset>
 <p>Сначала выполните dry-run. Импорт не обновляет пароли существующих пользователей, не переносит токены или права и не разрешает cutover.</p>
 <p>Экспорт содержит исходные конфигурации и может включать пароли/ключи. Сохраняйте его в защищённом каталоге.</p>

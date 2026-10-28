@@ -1,3 +1,12 @@
+## [0.33.13] - 2026-10-28
+
+### Reports & Certification RC (MIG13)
+
+- Real PostgreSQL-backed report from MIG02–MIG12 receipts, current UUID mapping, Build Workspace and channel heads. Deterministic SHA-256, per-object transferred/transformed/manual/blocked classification, missing-evidence blockers and sanitized operator audit sequence.
+- Read-only repeatable-read report generation, verified canonical digest, immutable SHA-256-pinned MFA operator review with serializable race checks and idempotent retry. RC review never implies GA certification or grants cutover.
+- `nl migrate gravit report|report-review|report-review-status`, React Admin and Embedded Admin UI, PostgreSQL migration 0100, OpenAPI (430 operations), race/DB/CLI tests, CI and runbook.
+- **Limit:** real isolated Minecraft Gravit migration E2E, externally verified source fencing, independently signed installer evidence and full GA certification remain pending and are not fabricated by CI or operator-supplied digest fields.
+
 ## [0.33.12] - 2026-10-28
 
 ### Operational Rollback (MIG12)

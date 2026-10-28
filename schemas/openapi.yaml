@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.33.12. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.33.13. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -19136,186 +19136,6 @@
         "security": []
       }
     },
-    "/api/v1/admin/migration-runs/{runId}/security": {
-      "get": {
-        "operationId": "migration0336_security_get",
-        "tags": [
-          "admin"
-        ],
-        "summary": "Read and revalidate a committed security reset",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "runId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MigrationSecurityReport0336"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "description": "settings:manage required"
-          },
-          "404": {
-            "description": "No committed security reset"
-          },
-          "409": {
-            "description": "Source/identity signer state conflict"
-          },
-          "503": {
-            "description": "PostgreSQL unavailable"
-          }
-        }
-      }
-    },
-    "/api/v1/admin/migration-runs/{runId}/security/preview": {
-      "post": {
-        "operationId": "migration0336_security_preview",
-        "tags": [
-          "admin"
-        ],
-        "summary": "Dry-run security revocation with full transactional preconditions",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "runId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MigrationSecurityReport0336"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "description": "settings:manage required"
-          },
-          "404": {
-            "description": "No committed security reset"
-          },
-          "409": {
-            "description": "Source/identity signer state conflict"
-          },
-          "503": {
-            "description": "PostgreSQL unavailable"
-          }
-        }
-      }
-    },
-    "/api/v1/admin/migration-runs/{runId}/security/activate": {
-      "post": {
-        "operationId": "migration0336_security_activate",
-        "tags": [
-          "admin"
-        ],
-        "summary": "Commit all revocations, audit and durable receipt atomically",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "runId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MigrationSecurityReport0336"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "description": "settings:manage required"
-          },
-          "404": {
-            "description": "No committed security reset"
-          },
-          "409": {
-            "description": "Source/identity signer state conflict"
-          },
-          "503": {
-            "description": "PostgreSQL unavailable"
-          }
-        }
-      }
-    },
     "/api/v1/admin/migration-runs/{runId}/content": {
       "get": {
         "operationId": "migration0337_content_status",
@@ -19385,13 +19205,13 @@
         }
       }
     },
-    "/api/v1/admin/migration-runs/{runId}/content/preview": {
+    "/api/v1/admin/migration-runs/{runId}/content/apply-optionals": {
       "post": {
-        "operationId": "migration0337_content_preview",
+        "operationId": "migration0337_content_apply_optionals",
         "tags": [
           "admin"
         ],
-        "summary": "Inspect and hash-check a Gravit ClientProfile and its real client files",
+        "summary": "Apply validated optional catalog to unsigned Never draft after workspace build",
         "security": [
           {
             "BearerAuth": []
@@ -19405,6 +19225,15 @@
             "schema": {
               "type": "string",
               "minLength": 1
+            }
+          },
+          {
+            "name": "profilePath",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
             }
           }
         ],
@@ -19443,17 +19272,7 @@
             "description": "PostgreSQL/workspace storage unavailable"
           }
         },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/zip": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            }
-          }
-        }
+        "description": "Explicit run ID confirmation required; signing and publication remain separate high-assurance operations."
       }
     },
     "/api/v1/admin/migration-runs/{runId}/content/import": {
@@ -19528,13 +19347,13 @@
         "description": "Explicit run ID confirmation required; signing and publication remain separate high-assurance operations."
       }
     },
-    "/api/v1/admin/migration-runs/{runId}/content/apply-optionals": {
+    "/api/v1/admin/migration-runs/{runId}/content/preview": {
       "post": {
-        "operationId": "migration0337_content_apply_optionals",
+        "operationId": "migration0337_content_preview",
         "tags": [
           "admin"
         ],
-        "summary": "Apply validated optional catalog to unsigned Never draft after workspace build",
+        "summary": "Inspect and hash-check a Gravit ClientProfile and its real client files",
         "security": [
           {
             "BearerAuth": []
@@ -19548,15 +19367,6 @@
             "schema": {
               "type": "string",
               "minLength": 1
-            }
-          },
-          {
-            "name": "profilePath",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "maxLength": 1024
             }
           }
         ],
@@ -19595,7 +19405,357 @@
             "description": "PostgreSQL/workspace storage unavailable"
           }
         },
-        "description": "Explicit run ID confirmation required; signing and publication remain separate high-assurance operations."
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/cutovers": {
+      "get": {
+        "operationId": "migration03311_list_cutovers",
+        "tags": [
+          "admin"
+        ],
+        "summary": "List all cutover scopes and their real routing state (no source fencing inference)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Persisted scoped cutovers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MigrationCutoverRoute03311"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "description": "Persistence unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/cutovers/activate": {
+      "post": {
+        "operationId": "migration03311_activate_cutover",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Atomic Never channel-head CAS switch after separately operated source writer fencing (operator attestation, not automatic source verification; MFA required)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Durable scoped cutover state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationCutoverRoute03311"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or missing confirmation"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Conflicting writer, missing rehearsal or changed channel revision"
+          },
+          "503": {
+            "description": "PostgreSQL or signer unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "profileId",
+                  "channel",
+                  "expectedRevision",
+                  "sourceFenceReference",
+                  "sourceFenceEvidenceSha256",
+                  "currentSourceSnapshotSha256"
+                ],
+                "properties": {
+                  "profileId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "sourceFenceReference": {
+                    "type": "string",
+                    "minLength": 8
+                  },
+                  "sourceFenceEvidenceSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "currentSourceSnapshotSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/cutovers/cancel": {
+      "post": {
+        "operationId": "migration03311_cancel_cutover",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Cancel only unactivated staged scopes; never restore published worlds or release pointers (MFA required)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Durable scoped cutover state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationCutoverRoute03311"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or missing confirmation"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Conflicting writer, missing rehearsal or changed channel revision"
+          },
+          "503": {
+            "description": "PostgreSQL or signer unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "profileId",
+                  "channel",
+                  "expectedRevision"
+                ],
+                "properties": {
+                  "profileId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/cutovers/stage": {
+      "post": {
+        "operationId": "migration03311_stage_cutover",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Fence concurrent Never channel publication and pin a MIG10-approved signed release (requires MFA and X-Migration-Cutover-Confirm)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Durable scoped cutover state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationCutoverRoute03311"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or missing confirmation"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Conflicting writer, missing rehearsal or changed channel revision"
+          },
+          "503": {
+            "description": "PostgreSQL or signer unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "profileId",
+                  "channel",
+                  "releaseId",
+                  "stageId",
+                  "expectedHeadRevision"
+                ],
+                "properties": {
+                  "profileId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "releaseId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "stageId": {
+                    "type": "string",
+                    "minLength": 16
+                  },
+                  "expectedHeadRevision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/admin/migration-runs/{runId}/modules": {
@@ -20009,13 +20169,13 @@
         }
       }
     },
-    "/api/v1/admin/migration-runs/{runId}/cutovers": {
+    "/api/v1/admin/migration-runs/{runId}/report": {
       "get": {
-        "operationId": "migration03311_list_cutovers",
+        "operationId": "migration03313_report",
         "tags": [
           "admin"
         ],
-        "summary": "List all cutover scopes and their real routing state (no source fencing inference)",
+        "summary": "Regenerate and hash Migration Center evidence from committed PostgreSQL receipts",
         "security": [
           {
             "BearerAuth": []
@@ -20023,18 +20183,17 @@
         ],
         "parameters": [
           {
-            "in": "path",
             "name": "runId",
+            "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Persisted scoped cutovers",
+            "description": "Sanitized migration report or reviewed receipt",
             "content": {
               "application/json": {
                 "schema": {
@@ -20044,10 +20203,8 @@
                   ],
                   "properties": {
                     "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/MigrationCutoverRoute03311"
-                      }
+                      "type": "object",
+                      "description": "Server-generated report with SHA-256 and blockers"
                     }
                   }
                 }
@@ -20057,19 +20214,28 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Unknown run or not reviewed"
+          },
+          "409": {
+            "description": "Digest or readiness conflict"
+          },
           "503": {
-            "description": "Persistence unavailable"
+            "description": "Store unavailable"
           }
         }
       }
     },
-    "/api/v1/admin/migration-runs/{runId}/cutovers/stage": {
-      "post": {
-        "operationId": "migration03311_stage_cutover",
+    "/api/v1/admin/migration-runs/{runId}/report/review": {
+      "get": {
+        "operationId": "migration03313_review_get",
         "tags": [
           "admin"
         ],
-        "summary": "Fence concurrent Never channel publication and pin a MIG10-approved signed release (requires MFA and X-Migration-Cutover-Confirm)",
+        "summary": "Read immutable RC review (not GA certificate)",
         "security": [
           {
             "BearerAuth": []
@@ -20077,18 +20243,17 @@
         ],
         "parameters": [
           {
-            "in": "path",
             "name": "runId",
+            "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Durable scoped cutover state",
+            "description": "Sanitized migration report or reviewed receipt",
             "content": {
               "application/json": {
                 "schema": {
@@ -20098,24 +20263,94 @@
                   ],
                   "properties": {
                     "data": {
-                      "$ref": "#/components/schemas/MigrationCutoverRoute03311"
+                      "type": "object",
+                      "description": "Server-generated report with SHA-256 and blockers"
                     }
                   }
                 }
               }
             }
           },
-          "400": {
-            "description": "Invalid request or missing confirmation"
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Unknown run or not reviewed"
+          },
+          "409": {
+            "description": "Digest or readiness conflict"
+          },
+          "503": {
+            "description": "Store unavailable"
+          }
+        }
+      },
+      "post": {
+        "operationId": "migration03313_review",
+        "tags": [
+          "admin"
+        ],
+        "summary": "MFA-gated, fail-closed immutable operator review (not GA)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Migration-RC-Confirm",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized migration report or reviewed receipt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "description": "Server-generated report with SHA-256 and blockers"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Unknown run or not reviewed"
+          },
           "409": {
-            "description": "Conflicting writer, missing rehearsal or changed channel revision"
+            "description": "Digest or readiness conflict"
           },
           "503": {
-            "description": "PostgreSQL or signer unavailable"
+            "description": "Store unavailable"
           }
         },
         "requestBody": {
@@ -20126,333 +20361,27 @@
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
-                  "profileId",
-                  "channel",
-                  "releaseId",
-                  "stageId",
-                  "expectedHeadRevision"
+                  "reportSha256",
+                  "evidenceSha256",
+                  "evidenceReference"
                 ],
                 "properties": {
-                  "profileId": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "channel": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "releaseId": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "stageId": {
-                    "type": "string",
-                    "minLength": 16
-                  },
-                  "expectedHeadRevision": {
-                    "type": "integer",
-                    "minimum": 0
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/migration-runs/{runId}/cutovers/activate": {
-      "post": {
-        "operationId": "migration03311_activate_cutover",
-        "tags": [
-          "admin"
-        ],
-        "summary": "Atomic Never channel-head CAS switch after separately operated source writer fencing (operator attestation, not automatic source verification; MFA required)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "runId",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Durable scoped cutover state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MigrationCutoverRoute03311"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request or missing confirmation"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "409": {
-            "description": "Conflicting writer, missing rehearsal or changed channel revision"
-          },
-          "503": {
-            "description": "PostgreSQL or signer unavailable"
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "profileId",
-                  "channel",
-                  "expectedRevision",
-                  "sourceFenceReference",
-                  "sourceFenceEvidenceSha256",
-                  "currentSourceSnapshotSha256"
-                ],
-                "properties": {
-                  "profileId": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "channel": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "expectedRevision": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "sourceFenceReference": {
-                    "type": "string",
-                    "minLength": 8
-                  },
-                  "sourceFenceEvidenceSha256": {
+                  "reportSha256": {
                     "type": "string",
                     "pattern": "^[a-f0-9]{64}$"
-                  },
-                  "currentSourceSnapshotSha256": {
-                    "type": "string",
-                    "pattern": "^[a-f0-9]{64}$"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/migration-runs/{runId}/cutovers/cancel": {
-      "post": {
-        "operationId": "migration03311_cancel_cutover",
-        "tags": [
-          "admin"
-        ],
-        "summary": "Cancel only unactivated staged scopes; never restore published worlds or release pointers (MFA required)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "runId",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Durable scoped cutover state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MigrationCutoverRoute03311"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request or missing confirmation"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "409": {
-            "description": "Conflicting writer, missing rehearsal or changed channel revision"
-          },
-          "503": {
-            "description": "PostgreSQL or signer unavailable"
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "profileId",
-                  "channel",
-                  "expectedRevision"
-                ],
-                "properties": {
-                  "profileId": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "channel": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "expectedRevision": {
-                    "type": "integer",
-                    "minimum": 1
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/migration-runs/{runId}/rollbacks/plan": {
-      "post": {
-        "operationId": "migration03312_rollback_plan",
-        "tags": [
-          "admin"
-        ],
-        "summary": "Compare a fresh fenced-live snapshot with MIG10; reject all unreconciled changes",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "runId",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "profileId",
-                  "channel",
-                  "expectedRevision",
-                  "current",
-                  "evidenceReference",
-                  "evidenceSha256"
-                ],
-                "properties": {
-                  "profileId": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "channel": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "expectedRevision": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "current": {
-                    "$ref": "#/components/schemas/MigrationRollbackSnapshot03312"
-                  },
-                  "evidenceReference": {
-                    "type": "string",
-                    "minLength": 1
                   },
                   "evidenceSha256": {
                     "type": "string",
                     "pattern": "^[a-f0-9]{64}$"
                   },
-                  "reconciledSource": {
-                    "$ref": "#/components/schemas/MigrationRollbackSnapshot03312"
-                  },
-                  "reconciliationEvidenceSha256": {
+                  "evidenceReference": {
                     "type": "string",
-                    "pattern": "^[a-f0-9]{64}$"
+                    "minLength": 8,
+                    "maxLength": 256
                   }
                 }
               }
             }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Reconciled durable rollback state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/MigrationRollbackResult03312"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid evidence or missing external fencing confirmation"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "409": {
-            "description": "Changed world/user data, revision race, or stale plan"
-          },
-          "503": {
-            "description": "PostgreSQL unavailable"
           }
         }
       }
@@ -20575,6 +20504,114 @@
         }
       }
     },
+    "/api/v1/admin/migration-runs/{runId}/rollbacks/plan": {
+      "post": {
+        "operationId": "migration03312_rollback_plan",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Compare a fresh fenced-live snapshot with MIG10; reject all unreconciled changes",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "profileId",
+                  "channel",
+                  "expectedRevision",
+                  "current",
+                  "evidenceReference",
+                  "evidenceSha256"
+                ],
+                "properties": {
+                  "profileId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "current": {
+                    "$ref": "#/components/schemas/MigrationRollbackSnapshot03312"
+                  },
+                  "evidenceReference": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "evidenceSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "reconciledSource": {
+                    "$ref": "#/components/schemas/MigrationRollbackSnapshot03312"
+                  },
+                  "reconciliationEvidenceSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reconciled durable rollback state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationRollbackResult03312"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid evidence or missing external fencing confirmation"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Changed world/user data, revision race, or stale plan"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
+    },
     "/api/v1/admin/migration-runs/{runId}/rollbacks/{profile}/{channel}": {
       "get": {
         "operationId": "migration03312_rollback_read",
@@ -20643,6 +20680,186 @@
           },
           "409": {
             "description": "Changed world/user data, revision race, or stale plan"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/security": {
+      "get": {
+        "operationId": "migration0336_security_get",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Read and revalidate a committed security reset",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationSecurityReport0336"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "No committed security reset"
+          },
+          "409": {
+            "description": "Source/identity signer state conflict"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/security/activate": {
+      "post": {
+        "operationId": "migration0336_security_activate",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Commit all revocations, audit and durable receipt atomically",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationSecurityReport0336"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "No committed security reset"
+          },
+          "409": {
+            "description": "Source/identity signer state conflict"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/security/preview": {
+      "post": {
+        "operationId": "migration0336_security_preview",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Dry-run security revocation with full transactional preconditions",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sanitized durable security reset report; no secrets or old trust anchors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationSecurityReport0336"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "settings:manage required"
+          },
+          "404": {
+            "description": "No committed security reset"
+          },
+          "409": {
+            "description": "Source/identity signer state conflict"
           },
           "503": {
             "description": "PostgreSQL unavailable"

@@ -304,3 +304,26 @@ for(const operation of ['plan','commit','status']){
   }catch(err){message(err.message,true)}finally{event.currentTarget.disabled=false}
  });
 }
+
+// MIG13 is generated from the authoritative database, not a browser-supplied
+// report. Review is an immutable operator acknowledgment, NOT GA certification.
+for(const action of ['report','status','review']){
+ byId('migration-rc-'+action).addEventListener('click',async event=>{
+  const run=migrationId();if(!run){message('Укажите run ID',true);return}
+  const path=`/api/v1/admin/migration-runs/${encodeURIComponent(run)}/report`;
+  const review=action==='review', status=action==='status';
+  if(review && byId('migration-rc-confirm').value.trim()!==run){message('Нужен точный run ID',true);return}
+  const body=review?{reportSha256:byId('migration-rc-report-sha').value.trim(),evidenceSha256:byId('migration-rc-evidence-sha').value.trim(),evidenceReference:byId('migration-rc-reference').value.trim()}:null;
+  event.currentTarget.disabled=true;
+  try{
+   const headers={Authorization:`Bearer ${token}`,Accept:'application/json'};
+   if(review){headers['Content-Type']='application/json';headers['X-Migration-RC-Confirm']=run}
+   const response=await fetch(path+(review||status?'/review':''),{method:review?'POST':'GET',headers,body:review?JSON.stringify(body):undefined,cache:'no-store',credentials:'same-origin',redirect:'error'});
+   const result=await response.json();if(!response.ok)throw new Error(result?.error?.message||`HTTP ${response.status}`);
+   const data=result?.data??result;
+   if(!review&&!status&&data.reportSha256)byId('migration-rc-report-sha').value=data.reportSha256;
+   byId('migration-report').textContent=JSON.stringify({certification:data},null,2);
+   message(data.status==='blocked'?'Certification blocked; examine actual evidence':`RC ${data.status}; GA certificate NOT issued`);
+  }catch(err){message(err.message,true)}finally{event.currentTarget.disabled=false}
+ });
+}
