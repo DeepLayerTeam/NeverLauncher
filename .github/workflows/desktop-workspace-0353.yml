@@ -1,0 +1,40 @@
+name: Desktop player workspace 0.35.3
+on:
+  push:
+    paths:
+      - 'apps/desktop/**'
+      - '.github/workflows/desktop-workspace-0353.yml'
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - '.github/workflows/desktop-workspace-0353.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  player-workspace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: apps/desktop
+      - name: Build actual React renderer bundle and type-check all TSX
+        working-directory: apps/desktop
+        run: npm run build
+      - name: Execute player workspace and navigation interactions
+        working-directory: apps/desktop
+        run: npm run test:workspace
+      - name: Existing launch, component, textures, official account regressions
+        working-directory: apps/desktop
+        run: |
+          npm run test:components
+          npm run test:launch-modes
+          npm run test:auth-experience
+          npm run test:textures
+          npm run test:sentry

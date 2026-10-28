@@ -1,3 +1,12 @@
+## [0.35.3] — Player Workspace & Finished Desktop Navigation
+
+- Replaced technical sidebar with player-oriented Accounts, Servers, Builds, Optional Mods, Textures, Downloads and Launch History; signed first-run and diagnostics remain accessible where appropriate.
+- Production build selection now fetches Backend project/profile catalogs, verifies owner-pinned Ed25519 manifests with native NeverRuntime, isolates game directories via native prepare_profile_directory and commits selections via native save_desktop_config before displaying a verified active build.
+- Active profile ServerBridge browser, explicit persisted server selection, unsigned/signed binding constraints, and clear separation between node IDs and public Minecraft addresses.
+- Working optional mod chooser/portability and existing skin/cape UX moved to direct navigation; structured native launch history with status filters, details and stop action.
+- Screen restore only after native Desktop config/signature verification; pre-verification authentication requests and navigation blocked; offline/ServerBridge restrictions preserved.
+- Added 0.35.3 workspace interaction tests, existing regression coverage and a CI job that performs the actual React production compile. Local full TSX/Tauri build remains unverified when npm dependency cache is incomplete.
+
 ## [0.35.2] — Owner-signed first-run Desktop
 
 - Prestarter now hands off the exact verified signed bootstrap envelope (and verified v2 policy) to native Desktop, without trusting unsigned local preferences for backend/project/profile/channel/public key.
