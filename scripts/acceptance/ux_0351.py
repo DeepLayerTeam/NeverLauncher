@@ -57,7 +57,9 @@ def load_inventory():
     data = json.loads((ROOT / CATALOG).read_text(encoding='utf-8'))
     require(data.get('schemaVersion') == 'neverlauncher.user-journeys.v1', 'wrong catalog format')
     require(data.get('productVersion') == '0.35.1', 'wrong catalog version')
-    require((ROOT/'VERSION').read_text().strip() == '0.35.1', 'VERSION is not 0.35.1')
+    current = (ROOT/'VERSION').read_text().strip()
+    require(all(p.isdecimal() for p in current.split('.')) and len(current.split('.')) == 3, 'invalid product VERSION')
+    require(tuple(map(int,current.split('.'))) >= (0,35,1), 'product predates the G/M acceptance baseline')
     journeys = data.get('journeys')
     require(isinstance(journeys, list) and [x.get('id') for x in journeys] == IDS,
             'required ordered unique G01-G35 + M01-M19 coverage missing')
@@ -170,7 +172,7 @@ def execute(journeys, ids, timeout, report):
         status='local-regression-passed' if statuses and all(s=='passed' for s in statuses) else ('failed' if 'failed' in statuses else 'blocked')
         outcome.append({'id':j['id'],'status':status,'userJourneyVerified':False,
                         'localTests':len(statuses),'reason':'Real GUI/target operations require independent execution.'})
-    document={'schemaVersion':'neverlauncher.user-acceptance-result.v1', 'version':'0.35.1',
+    document={'schemaVersion':'neverlauncher.user-acceptance-result.v1', 'version':(ROOT/'VERSION').read_text().strip(),
               'createdAt':datetime.now(timezone.utc).isoformat(),
               'catalogSha256':hashlib.sha256((ROOT/CATALOG).read_bytes()).hexdigest(),
               'targetVerified':False,'realMinecraftCertification':False,
@@ -192,7 +194,7 @@ def main(argv=None):
         journeys=load_inventory()
         if args.command=='audit':
             counts=Counter(x['acceptanceScope'] for x in journeys)
-            print(f'0.35.1 AUDIT PASS: {len(journeys)} G/M journeys, UX01-UX12 mapped, all probe files exist')
+            print(f"{(ROOT/'VERSION').read_text().strip()} AUDIT PASS: {len(journeys)} G/M journeys, UX01-UX12 mapped, all probe files exist")
             print('Scopes:',dict(counts),'| not-run:',len(journeys),'| target verified: 0')
             return 0
         require(args.report is not None, 'run requires --report')

@@ -1,3 +1,12 @@
+## [0.35.13] — Owner Lifecycle Readback, Durable Operation Recovery and G/M Regression Continuity
+
+- Completed the Admin owner path around existing real Build Workspace, validation, signed package publication, durable jobs, channel-head observation, rollback and operator diagnostics. The same backend operations remain authoritative; HTTP 202 never means `published`.
+- Publish/rollback now bind an explicit preview to the project/profile/channel and pre-operation channel-head revision. They persist an exact idempotency intent before network I/O. On lost acknowledgement, the owner can replay *only* the saved request/key, not accidentally create a second rollback. Project/account-scoped saved intent contains no credentials.
+- Job observation cross-checks project/kind/resource with the live Backend, then verifies `succeeded` against the real channel head; rollback also checks that the newly published release matches the durable job's `result.packageId`. A stable rollback staged pending trusted runtime validation is clearly distinguished from a published rollback.
+- Legacy direct Admin publish button redirects to Release Workspace. The owner can view current channel-head state, navigate to job/audit/ServerBridge/diagnostics and explicitly resolve a stored operation.
+- Repaired the 0.35.1 G01–G35/M01–M19 acceptance runner's hardcoded `VERSION=0.35.1` check: historic catalog and `not-run` target evidence remain immutable, while local regressions run against later source versions. No unexecuted G/M or full owner/real Minecraft E2E is marked verified.
+- Added negative/execution tests, targeted native Backend regression workflow and a disposable authenticated owner/player HTTP journey in CI. Local Admin unit tests and G/M inventory passed; full React build, Go 1.27.3, real deployment and Minecraft/ServerBridge attestation must still run externally.
+
 ## [0.35.12] — Isolated Chaos, Full-State Snapshot and Fresh-Site DR
 
 - Added a runnable Docker Compose DR tool: quiesced PostgreSQL custom dump, filesystem/factory/coordinator/backups volumes and optional Redis AOF state, plus a separately provisioned S3 mirror with object hashes.

@@ -337,7 +337,7 @@ export function AdminApp() {
 
   const packagePanel = token && (active === 'packages' || active === 'releases') && (canPrepare || canPublish || canFileWrite) ? <section className="card wide">
     <h2>Конвейер пакетов и релизов {TOOL_VERSION}</h2>
-    <p className="muted">Создание пакета, multipart-загрузка в хранилище, проверка SHA-256 и публикация манифеста в релизный канал.</p>
+    <p className="muted">Создание пакета, загрузка и проверка SHA-256. Публикация и откат выполняются через мастер с preview, durable job и подтверждённым channel head.</p>
     <div className="formGrid">
       <article className="subcard">
         <h3>Пакет</h3>
@@ -346,7 +346,7 @@ export function AdminApp() {
         <TextInput label="Канал" value={packageForm.channel} onChange={(channel) => setPackageForm({ ...packageForm, channel })} />
         <TextInput label="Версия" value={packageForm.version} onChange={(version) => setPackageForm({ ...packageForm, version })} />
         <TextInput label="ID пакета" value={packageForm.packageId} onChange={(packageId) => setPackageForm({ ...packageForm, packageId })} />
-        <div className="buttonRow"><button disabled={!canPrepare || !selectedProjectId || !packageForm.profileId.trim() || !packageForm.version.trim()} onClick={() => runAction('Создание пакета', createPackage).catch((err) => setError(err.message))}>Создать пакет</button><button disabled={!canPrepare || !packageForm.packageId} onClick={() => runAction('Проверка пакета', () => requestJSON(backendUrl, `/api/v1/packages/${encodeURIComponent(packageForm.packageId)}/validate`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Проверить</button><button disabled={!canPrepare || !packageForm.packageId} onClick={() => runAction('Integrity check пакета', () => requestJSON(backendUrl, `/api/v1/packages/${encodeURIComponent(packageForm.packageId)}/integrity-check`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Integrity check</button><button disabled={!canPublish || !packageForm.packageId} onClick={() => runAction('Публикация пакета', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(selectedProjectId)}/versions/${encodeURIComponent(packageForm.packageId)}/publish`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Опубликовать</button></div>
+        <div className="buttonRow"><button disabled={!canPrepare || !selectedProjectId || !packageForm.profileId.trim() || !packageForm.version.trim()} onClick={() => runAction('Создание пакета', createPackage).catch((err) => setError(err.message))}>Создать пакет</button><button disabled={!canPrepare || !packageForm.packageId} onClick={() => runAction('Проверка пакета', () => requestJSON(backendUrl, `/api/v1/packages/${encodeURIComponent(packageForm.packageId)}/validate`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Проверить</button><button disabled={!canPrepare || !packageForm.packageId} onClick={() => runAction('Integrity check пакета', () => requestJSON(backendUrl, `/api/v1/packages/${encodeURIComponent(packageForm.packageId)}/integrity-check`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Integrity check</button><button disabled={!canPublish || !selectedProjectId} onClick={() => navigate('release-workspace')}>Открыть мастер публикации и отката</button></div>
       </article>
       <article className="subcard">
         <h3>Файл</h3>
@@ -438,7 +438,7 @@ export function AdminApp() {
       {token && identity && <BackendNoticeInbox0289 backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'backend-operations' && <BackendOperations0289 backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'operations' && <OperationsWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
-      {token && mayRead && active === 'release-workspace' && <ReleaseWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPrepare={canPrepare} canFileWrite={canFileWrite} canPublish={canPublish} />}
+      {token && mayRead && active === 'release-workspace' && <ReleaseWorkspace key={`${backendUrl}:${sessionId}:${selectedProjectId}`} backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPrepare={canPrepare} canFileWrite={canFileWrite} canPublish={canPublish} />}
       {token && mayRead && active === 'migration-center' && <MigrationCenter0331 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
       {token && mayRead && active === 'job-monitor' && <JobMonitor backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
       {token && mayRead && active === 'backup-restore' && <BackupWorkspace backendUrl={backendUrl} token={token} canRestore={can(identity, 'settings:manage') && can(identity, 'storage:manage')} />}

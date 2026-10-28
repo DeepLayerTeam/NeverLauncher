@@ -14,7 +14,7 @@ from urllib.request import Request, build_opener, HTTPHandler, HTTPRedirectHandl
 from urllib.error import HTTPError, URLError
 from uuid import uuid4
 
-from ux_0351 import atomic_report, AuditError, require
+from ux_0351 import atomic_report, AuditError, require, ROOT
 
 MAX_BODY = 2 * 1024 * 1024
 
@@ -58,7 +58,7 @@ def run(base, email, password):
     def record(key): checks.append(key)
 
     _,health=api.request('GET','/health')
-    require('0.35.1' in json.dumps(health), 'wrong backend version')
+    require((ROOT/'VERSION').read_text().strip() in json.dumps(health), 'wrong backend version')
     record('real-backend-health-0351')
 
     api.request('POST','/api/v1/admin/projects',payload={'id':'denied'},expected=(401,403))
@@ -123,7 +123,7 @@ def run(base, email, password):
     api.request('GET','/api/v1/auth/accounts',token=new_access,expected=(401,403))
     record('refresh-rotation-and-logout-revocation')
     return {'schemaVersion':'neverlauncher.owner-player-http-acceptance.v1',
-            'version':'0.35.1','status':'local-loopback-passed',
+            'version':(ROOT/'VERSION').read_text().strip(),'status':'local-loopback-passed',
             'checks':checks,'scenarioIds':['G01','G07','G22','G32','G34'],
             'projectId':project,'realBackend':True,'realMinecraftCertification':False,
             'nativeDesktopVerified':False,'stablePublicationVerified':False}

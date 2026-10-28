@@ -1,0 +1,69 @@
+name: NeverLauncher 0.35.13 Owner Lifecycle and G-M Acceptance
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'VERSION'
+      - 'apps/admin/**'
+      - 'scripts/acceptance/**'
+      - 'services/api/internal/httpapi/**'
+      - '.github/workflows/owner-lifecycle-03513.yml'
+  push:
+    paths:
+      - 'VERSION'
+      - 'apps/admin/**'
+      - 'scripts/acceptance/**'
+      - 'services/api/internal/httpapi/**'
+      - '.github/workflows/owner-lifecycle-03513.yml'
+permissions:
+  contents: read
+jobs:
+  owner-ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: Execute release lifecycle against authenticated API request logic
+        working-directory: apps/admin
+        run: |
+          node --experimental-strip-types --test tests/owner-lifecycle-03513.test.mjs tests/release-workspace.test.mjs tests/everyday-lifecycle.test.mjs
+      - name: Install exact Admin dependencies, typecheck and build production UI
+        working-directory: apps/admin
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          npm test
+      - name: Verify 54 G/M references remain executable for current VERSION
+        run: |
+          python3 scripts/acceptance/ux_0351.py audit
+          python3 -m unittest discover -s scripts/acceptance -p 'test_*.py' -v
+          python3 scripts/version/manage.py check
+  real-backend-owner-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Run genuine package -> signed release -> rollback/API gate regression
+        working-directory: services/api
+        run: |
+          go test -tags neverlauncher_nopgx -count=1 -timeout=15m ./internal/httpapi -run 'TestRollbackOperationIdempotency0217|TestCanonicalPackageProductUploadValidatePublish|TestReleaseWorkspaceDraftOwnershipAndResume0218|TestDurablePublishRechecksAuthorizationBeforeCommit0213'
+          go build -tags neverlauncher_nopgx ./cmd/neverlauncher-api
+      - name: Run disposable authenticated owner and player HTTP journey
+        run: |
+          bash scripts/acceptance/run_owner_player_0351.sh "$RUNNER_TEMP/03513-owner-player.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: owner-player-http-03513-${{ github.sha }}
+          path: ${{ runner.temp }}/03513-owner-player.json
+          retention-days: 14
+          if-no-files-found: warn
