@@ -1,0 +1,45 @@
+name: NeverLauncher 0.35.12 DR Security and Recovery Regression
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/operations/**'
+      - 'services/api/internal/httpapi/operations_backup.go'
+      - 'services/api/internal/httpapi/operations_backup_test.go'
+      - '.github/workflows/chaos-dr-03512.yml'
+  pull_request:
+    paths:
+      - 'scripts/operations/**'
+      - 'services/api/internal/httpapi/operations_backup.go'
+      - 'services/api/internal/httpapi/operations_backup_test.go'
+      - '.github/workflows/chaos-dr-03512.yml'
+permissions:
+  contents: read
+jobs:
+  dr-runner-security:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Execute negative security and archive-integrity tests
+        run: python -m unittest discover -s scripts/operations -p 'test_dr_03512.py' -v
+      - name: Verify runner CLI and source syntax
+        run: |
+          python -m py_compile scripts/operations/dr_03512.py
+          python scripts/operations/dr_03512.py --help
+  api-storage-restore:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Check Go syntax and actual backup/restore regression
+        working-directory: services/api
+        run: |
+          test -z "$(gofmt -l internal/httpapi/operations_backup.go)"
+          go test -count=1 -timeout=8m ./internal/httpapi -run 'TestCanonicalOperationsBackupFlow|TestBackupRestoreRestoresStorageObject'
+          go build ./cmd/neverlauncher-api

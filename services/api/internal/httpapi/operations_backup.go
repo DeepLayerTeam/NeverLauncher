@@ -411,6 +411,28 @@ func (s Server) restoreStorageObjectsSequential880(root string) (int, error) {
 		if closeErr != nil {
 			return closeErr
 		}
+		// S3 writes can succeed at the HTTP layer while an object is still
+		// inaccessible or corrupted. Verify the exact data after upload.
+		wantSHA, wantSize, hashErr := hashFile880(path)
+		if hashErr != nil {
+			return hashErr
+		}
+		got, size, openErr := s.Storage.Open(projectID, versionID, relativePath)
+		if openErr != nil {
+			return fmt.Errorf("restored storage object not readable: %w", openErr)
+		}
+		h := sha256.New()
+		actualSize, readErr := io.Copy(h, got)
+		closeReadErr := got.Close()
+		if readErr != nil {
+			return readErr
+		}
+		if closeReadErr != nil {
+			return closeReadErr
+		}
+		if actualSize != wantSize || (size >= 0 && size != wantSize) || !strings.EqualFold(hex.EncodeToString(h.Sum(nil)), wantSHA) {
+			return fmt.Errorf("restored storage object checksum mismatch: %s", rel)
+		}
 		count++
 		return nil
 	})
@@ -869,6 +891,11 @@ func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string,
 	defer gz.Close()
 	tr := tar.NewReader(gz)
 	actual := map[string]operationsBackupFile880{}
+	// Bound decompression before writing to disk. Large production archives are
+	// supported, but malformed tar headers cannot exhaust the restore host.
+	const maxUncompressedBackup880 int64 = 256 << 30
+	const maxBackupMembers880 = 200000
+	var unpackedBytes int64
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
@@ -877,6 +904,10 @@ func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string,
 		if err != nil {
 			return fail(err)
 		}
+		if len(actual) >= maxBackupMembers880 || hdr.Size < 0 || hdr.Size > maxUncompressedBackup880-unpackedBytes {
+			return fail(errors.New("backup archive превышает допустимые размеры"))
+		}
+		unpackedBytes += hdr.Size
 		if hdr.Typeflag != tar.TypeReg && hdr.Typeflag != tar.TypeRegA {
 			return fail(fmt.Errorf("backup archive содержит неподдерживаемый тип %d для %s", hdr.Typeflag, hdr.Name))
 		}

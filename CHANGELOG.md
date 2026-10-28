@@ -1,3 +1,11 @@
+## [0.35.12] — Isolated Chaos, Full-State Snapshot and Fresh-Site DR
+
+- Added a runnable Docker Compose DR tool: quiesced PostgreSQL custom dump, filesystem/factory/coordinator/backups volumes and optional Redis AOF state, plus a separately provisioned S3 mirror with object hashes.
+- Added fail-closed SHA-256 archive verification, traversal-safe tar checks, restore only to a new empty project, with separately approved production maintenance/fresh-site options, PostgreSQL transactional restore, S3 empty-target enforcement and readback of every restored object.
+- Added real component fault-injection actions for PostgreSQL, Redis (network-ha), and API process, measuring `/ready` failure/recovery times.
+- Hardened Go backup extraction against oversized decompression and S3 restore against silent object corruption.
+- Added negative security tests, CI compilation/test workflow and documented exact execution/DR evidence boundaries. Local Docker/Go 1.27.3/S3 platform results remain unverified, so no HA/RPO/RTO or full disaster-recovery certification is claimed.
+
 ## [0.35.11] — Measured Runtime, Desktop Startup, CPU/RAM and Backend Latency
 
 - Added a real process benchmark harness invoking compiled NeverRuntime against a locally signed certification manifest, including 10,000 physical files with native SHA-256 verification and measured CPU/RAM usage.
