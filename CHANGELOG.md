@@ -1,3 +1,13 @@
+## [0.33.12] - 2026-10-28
+
+### Operational Rollback (MIG12)
+
+- Safe, transactional rollback of the real Never `channel_heads` release pointer (and delete when the channel did not exist before cutover), with old Never Ed25519 signer verification, CAS, journal, saved immutable plan and idempotent replay.
+- MIG11 channel writer guard now blocks ordinary INSERT/UPDATE/DELETE while cutover is staged **or active**. Atomic rollback retains the original activation metadata and a completed receipt.
+- Strict re-evaluation of live production world/UUID/inventory/permissions/economy/skin/loader/optional snapshots against MIG10; post-switch changes require an independently merged Gravit snapshot with complete semantic parity, or rollback is blocked. A fresh second snapshot and both writers' independent fencing acknowledgements are required before commit.
+- CLI `rollback-plan`, `rollback-commit`, `rollback-status`, MFA Admin and Embedded Admin; PostgreSQL migration `0099`, integration tests, dedicated CI and operations runbook.
+- **Explicit limit:** no automatic backup restoration, world/SQL data merge, remote Gravit stop/resume or provable external fencing. Unreconciled post-cutover changes require external/manual reconciliation. Full backend/PostgreSQL/game E2E certification remains separate.
+
 ## [0.33.11] - 2026-10-28
 
 ### Staged Cutover (MIG11)

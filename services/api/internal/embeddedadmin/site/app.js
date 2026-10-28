@@ -272,3 +272,35 @@ for(const op of ['list','stage','activate','cancel']){
   }catch(err){message(err.message,true)}finally{event.currentTarget.disabled=false}
  });
 }
+
+// MIG12: operator-supplied exported snapshot is checked on Backend against
+// MIG10. Never/UI cannot attest the external source/game writer state.
+for(const operation of ['plan','commit','status']){
+ byId('migration-rollback-'+operation).addEventListener('click',async event=>{
+  const run=migrationId();const confirmed=byId('migration-cutover-confirm').value.trim();
+  const profile=byId('migration-cutover-profile').value.trim(),channel=byId('migration-cutover-channel').value.trim();
+  if(!run||!profile||!channel||(operation!=='status'&&(run!==confirmed||!byId('migration-rollback-never-fenced').checked))){message('Укажите run/profile/channel, подтвердите run и остановку Never writers',true);return}
+  if(operation==='commit'&&!byId('migration-rollback-source-fenced').checked){message('Gravit writer необходимо отдельно остановить',true);return}
+  const rev=Number(byId('migration-cutover-revision').value);
+  let data={profileId:profile,channel,expectedRevision:rev};
+  if(operation!=='status'){
+   try{data.current=JSON.parse(byId('migration-rollback-snapshot').value)}catch{message('Требуется свежий snapshot JSON',true);return}
+   const reconciled=byId('migration-rollback-source-snapshot').value.trim();
+   if(reconciled){try{data.reconciledSource=JSON.parse(reconciled)}catch{message('Некорректный Gravit reconciliation JSON',true);return}data.reconciliationEvidenceSha256=byId('migration-rollback-reconciliation-sha').value.trim()}
+   if(operation==='plan') Object.assign(data,{evidenceReference:byId('migration-rollback-evidence-ref').value.trim(),evidenceSha256:byId('migration-rollback-evidence-sha').value.trim()});
+   else Object.assign(data,{planSha256:byId('migration-rollback-plan-sha').value.trim(),sourceWriterFenced:true,neverWriterFenced:true,currentEvidenceSha256:byId('migration-rollback-evidence-sha').value.trim()});
+  }
+  const root=`/api/v1/admin/migration-runs/${encodeURIComponent(run)}/rollbacks`;
+  const url=operation==='status'?`${root}/${encodeURIComponent(profile)}/${encodeURIComponent(channel)}`:`${root}/${operation}`;
+  event.currentTarget.disabled=true;
+  try{
+   const headers={Authorization:`Bearer ${token}`,Accept:'application/json'};
+   if(operation!=='status'){headers['Content-Type']='application/json';headers['X-Migration-Rollback-Confirm']=run;headers['X-Never-Writer-Fenced']='true';if(operation==='commit')headers['X-Migration-Source-Fenced']='true'}
+   const response=await fetch(url,{method:operation==='status'?'GET':'POST',headers,body:operation==='status'?undefined:JSON.stringify(data),cache:'no-store',credentials:'same-origin',redirect:'error'});
+   const json=await response.json();if(!response.ok)throw new Error(json?.error?.message||`HTTP ${response.status}`);
+   const result=json?.data??json;byId('migration-report').textContent=JSON.stringify({rollback:result},null,2);
+   if(result?.planSha256)byId('migration-rollback-plan-sha').value=result.planSha256;
+   message(result?.ready?`Rollback ${result.state}; исходный writer НЕ перезапущен`:`Rollback blocked: ${(result?.blockers||[]).join('; ')}`);
+  }catch(err){message(err.message,true)}finally{event.currentTarget.disabled=false}
+ });
+}

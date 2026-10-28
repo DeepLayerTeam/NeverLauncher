@@ -23,7 +23,8 @@ type ContentPlan0337 = {format:string;sourceSha256:string;inventorySha256:string
 type ContentState0337 = {plan:ContentPlan0337;workspaceId:string;workspaceRevision:number;state:string;stagedFiles:number;totalFiles:number;complete:boolean;validation:string;buildWorkspaceUrl:string};
 type Modules0338 = {format:string;sourceSha256:string;inventorySha256:string;ready:boolean;cutoverAllowed:boolean;blockers:string[];modules:{path:string;sha256:string;name:string;implementation:string;status:string;reason:string;authHook:boolean;launchHook:boolean;sourcesPresent:boolean}[];wrappers:{path:string;mode:string;serverName?:string;legacyTokenPresent:boolean;legacyAddressPresent:boolean;replacement:string;status:string;reason:string}[]};
 type Rehearsal03310 = {format:string;runId:string;stageId:string;sourceInventorySha256:string;sourceSnapshotSha256:string;targetSnapshotSha256:string;ready:boolean;cutoverAllowed:boolean;blockers:string[];probes:{name:string;passed:boolean;uuid?:string;evidenceSha256:string}[]};
-type Cutover03311 = {runId:string;projectId:string;profileId:string;channel:string;stageId:string;releaseId:string;releaseVersion:string;targetDigest:string;baselineRevision:number;baselineReleaseId:string;baselineVersion:string;state:'staged'|'active'|'cancelled';revision:number;activatedRevision?:number;fenceReference?:string;fenceEvidenceSha256?:string};
+type Cutover03311 = {runId:string;projectId:string;profileId:string;channel:string;stageId:string;releaseId:string;releaseVersion:string;targetDigest:string;baselineRevision:number;baselineReleaseId:string;baselineVersion:string;state:'staged'|'active'|'cancelled'|'rolled_back';revision:number;activatedRevision?:number;fenceReference?:string;fenceEvidenceSha256?:string};
+type Rollback03312 = {format:string;runId:string;profileId:string;channel:string;state:string;routeRevision:number;planSha256:string;ready:boolean;blockers:string[];currentSnapshotSha256:string;mode:string;reconciledSourceSha256?:string};
 type Event = { sequence: number; kind: string; step: string; revision: number; detail: unknown; createdAt: string };
 
 /** A working server-backed migration run operator. No client-side state is
@@ -58,6 +59,14 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
   const [modules0338,setModules0338]=useState<Modules0338|null>(null);
   const [rehearsal03310,setRehearsal03310]=useState<Rehearsal03310|null>(null);
   const [cutovers03311,setCutovers03311]=useState<Cutover03311[]>([]);
+  const [rollbackSnapshot03312,setRollbackSnapshot03312]=useState('');
+  const [rollbackSourceSnapshot03312,setRollbackSourceSnapshot03312]=useState('');
+  const [rollbackReconcileHash03312,setRollbackReconcileHash03312]=useState('');
+  const [rollbackRef03312,setRollbackRef03312]=useState('');
+  const [rollbackHash03312,setRollbackHash03312]=useState('');
+  const [rollbackNeverFenced03312,setRollbackNeverFenced03312]=useState(false);
+  const [rollbackSourceFenced03312,setRollbackSourceFenced03312]=useState(false);
+  const [rollbackPlan03312,setRollbackPlan03312]=useState<Rollback03312|null>(null);
   const [cutoverProfile03311,setCutoverProfile03311]=useState('');
   const [cutoverChannel03311,setCutoverChannel03311]=useState('stable');
   const [cutoverRelease03311,setCutoverRelease03311]=useState('');
@@ -133,6 +142,28 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
       });
       await refresh(runId);
     } catch(e){setError(String(e));await refresh(runId).catch(()=>undefined)}finally{setBusy(false)}
+  }
+
+  async function rollbackAction03312(action:'plan'|'commit',route:Cutover03311) {
+    if (!runId||busy||cutoverConfirm03311!==runId||!rollbackNeverFenced03312||route.state!=='active')return;
+    if(action==='commit'&&(!rollbackSourceFenced03312||!rollbackPlan03312?.ready||rollbackPlan03312.routeRevision!==route.revision))return;
+    let current:unknown;
+    try {current=JSON.parse(rollbackSnapshot03312);}catch{setError('Введите JSON актуального snapshot с отдельно остановленного Never/игрового сервера');return;}
+    let body:Record<string,unknown>={profileId:route.profileId,channel:route.channel,expectedRevision:route.revision,current};
+    if(rollbackSourceSnapshot03312.trim()) {
+      try {body={...body,reconciledSource:JSON.parse(rollbackSourceSnapshot03312),reconciliationEvidenceSha256:rollbackReconcileHash03312};}
+      catch{setError('Неверный JSON snapshot согласованного Gravit');return;}
+    }
+    if(action==='plan') body={...body,evidenceReference:rollbackRef03312,evidenceSha256:rollbackHash03312};
+    else body={...body,planSha256:rollbackPlan03312?.planSha256,sourceWriterFenced:true,neverWriterFenced:true,currentEvidenceSha256:rollbackHash03312};
+    setBusy(true);setError('');
+    try {
+      const result=await requestJSON<Rollback03312>(backendUrl,`${base}/${encodeURIComponent(runId)}/rollbacks/${action}`,token,{
+        method:'POST',headers:{'X-Migration-Rollback-Confirm':runId,'X-Never-Writer-Fenced':'true',...(action==='commit'?{'X-Migration-Source-Fenced':'true'}:{})},body:JSON.stringify(body)
+      });
+      setRollbackPlan03312(result);
+      await refresh(runId);
+    }catch(e){setError(String(e));await refresh(runId).catch(()=>undefined)}finally{setBusy(false)}
   }
 
   async function create(event: React.FormEvent) {
@@ -461,7 +492,21 @@ export function MigrationCenter0331({backendUrl, token, projectId}: {backendUrl:
           <button disabled={busy||cutoverConfirm03311!==runId||!cutoverSourceStopped03311||!cutoverFenceRef03311||!(/^[a-f0-9]{64}$/.test(cutoverFenceSha03311))||!(/^[a-f0-9]{64}$/.test(cutoverSnapshot03311))} onClick={()=>void cutoverAction03311('activate',route)}>Activate: переключить реальный канал</button>
           <button disabled={busy||cutoverConfirm03311!==runId} onClick={()=>void cutoverAction03311('cancel',route)}>Отменить staging без изменения релиза</button>
         </>}
-        {route.state==='active'&&<p>Активно. Не выполнять snapshot restore: reconciliation и rollback относятся к MIG12.</p>}
+        {route.state==='active'&&<div>
+          <h4>Operational Rollback · MIG12</h4>
+          <p>Только безопасное обратное переключение Never. Перед планом остановите запись Never и обоих игровых серверов вне панели; подготовьте JSON свежего snapshot мира, UUID, инвентаря, прав и экономики. При изменениях данных требуется внешняя сверка/перенос новых записей в Gravit: укажите также новый снимок согласованного Gravit и SHA-256 доказательства. Несовпадающие данные блокируют возврат. Снимки никогда не восстанавливаются поверх изменившихся миров.</p>
+          <label className="field"><span>Актуальный snapshot JSON из независимо остановленного окружения</span><textarea rows={7} value={rollbackSnapshot03312} onChange={e=>setRollbackSnapshot03312(e.target.value)}/></label>
+          <label className="field"><span>Опционально: JSON снимка Gravit после внешней сверки новых записей</span><textarea rows={5} value={rollbackSourceSnapshot03312} onChange={e=>setRollbackSourceSnapshot03312(e.target.value)}/></label>
+          <label className="field"><span>SHA-256 доказательства переноса новых записей в Gravit</span><input value={rollbackReconcileHash03312} onChange={e=>setRollbackReconcileHash03312(e.target.value)}/></label>
+          <label className="field"><span>Ссылка на внешнее доказательство целостности/остановки</span><input value={rollbackRef03312} onChange={e=>setRollbackRef03312(e.target.value)}/></label>
+          <label className="field"><span>SHA-256 доказательства свежего снимка</span><input value={rollbackHash03312} onChange={e=>setRollbackHash03312(e.target.value)}/></label>
+          <label className="field"><input type="checkbox" checked={rollbackNeverFenced03312} onChange={e=>setRollbackNeverFenced03312(e.target.checked)}/> Never и игровые writers остановлены оператором</label>
+          <label className="field"><input type="checkbox" checked={rollbackSourceFenced03312} onChange={e=>setRollbackSourceFenced03312(e.target.checked)}/> Исходный Gravit writer остаётся независимо остановленным</label>
+          <button disabled={busy||cutoverConfirm03311!==runId||!rollbackNeverFenced03312||!(/^[a-f0-9]{64}$/.test(rollbackHash03312))} onClick={()=>void rollbackAction03312('plan',route)}>Plan: сверить изменения с MIG10</button>
+          <button disabled={busy||!rollbackPlan03312?.ready||rollbackPlan03312.routeRevision!==route.revision||!rollbackSourceFenced03312||!rollbackNeverFenced03312} onClick={()=>void rollbackAction03312('commit',route)}>Commit: вернуть прежний Never channel head (MFA)</button>
+          {rollbackPlan03312&&rollbackPlan03312.profileId===route.profileId&&rollbackPlan03312.channel===route.channel&&<p>План: {rollbackPlan03312.state} ({rollbackPlan03312.mode}), {rollbackPlan03312.ready?'сверка пройдена':'ЗАБЛОКИРОВАНО'}; SHA-256: <code>{rollbackPlan03312.planSha256}</code>; причины: {rollbackPlan03312.blockers.join('; ')||'нет'}</p>}
+        </div>}
+        {route.state==='rolled_back'&&<p>Never channel head возвращён. Gravit не перезапущен; проверьте состояние игроков и завершите внешнее переключение отдельно.</p>}
       </div>)}
     </article>}
     {compatibility && <article className="subcard">

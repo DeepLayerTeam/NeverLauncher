@@ -2528,6 +2528,307 @@
           }
         }
       }
+    },
+    "/api/v1/admin/migration-runs/{runId}/rollbacks/plan": {
+      "post": {
+        "operationId": "migration03312_rollback_plan",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Compare a fresh fenced-live snapshot with MIG10; reject all unreconciled changes",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "profileId",
+                  "channel",
+                  "expectedRevision",
+                  "current",
+                  "evidenceReference",
+                  "evidenceSha256"
+                ],
+                "properties": {
+                  "profileId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "current": {
+                    "$ref": "#/components/schemas/MigrationRollbackSnapshot03312"
+                  },
+                  "evidenceReference": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "evidenceSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "reconciledSource": {
+                    "$ref": "#/components/schemas/MigrationRollbackSnapshot03312"
+                  },
+                  "reconciliationEvidenceSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reconciled durable rollback state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationRollbackResult03312"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid evidence or missing external fencing confirmation"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Changed world/user data, revision race, or stale plan"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/rollbacks/commit": {
+      "post": {
+        "operationId": "migration03312_rollback_commit",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Atomic CAS restore of Never release pointer; never overwrites worlds or restarts Gravit",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "profileId",
+                  "channel",
+                  "expectedRevision",
+                  "current",
+                  "planSha256",
+                  "sourceWriterFenced",
+                  "neverWriterFenced",
+                  "currentEvidenceSha256"
+                ],
+                "properties": {
+                  "profileId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channel": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "current": {
+                    "$ref": "#/components/schemas/MigrationRollbackSnapshot03312"
+                  },
+                  "planSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "sourceWriterFenced": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "neverWriterFenced": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "currentEvidenceSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "reconciledSource": {
+                    "$ref": "#/components/schemas/MigrationRollbackSnapshot03312"
+                  },
+                  "reconciliationEvidenceSha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reconciled durable rollback state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationRollbackResult03312"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid evidence or missing external fencing confirmation"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Changed world/user data, revision race, or stale plan"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/rollbacks/{profile}/{channel}": {
+      "get": {
+        "operationId": "migration03312_rollback_read",
+        "tags": [
+          "admin"
+        ],
+        "summary": "Read durable rollback plan and result",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "runId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "in": "path",
+            "name": "profile",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reconciled durable rollback state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MigrationRollbackResult03312"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid evidence or missing external fencing confirmation"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Changed world/user data, revision race, or stale plan"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        }
+      }
     }
   },
   "schemas": {
@@ -3136,6 +3437,170 @@
         "activatedRevision": {
           "type": "integer",
           "minimum": 1
+        }
+      }
+    },
+    "MigrationRollbackResult03312": {
+      "type": "object",
+      "required": [
+        "format",
+        "runId",
+        "profileId",
+        "channel",
+        "state",
+        "routeRevision",
+        "currentSnapshotSha256",
+        "baselineSnapshotSha256",
+        "evidenceReference",
+        "evidenceSha256",
+        "planSha256",
+        "blockers",
+        "ready",
+        "mode"
+      ],
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": [
+            "never/gravit-rollback/v1"
+          ]
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "channel": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "evaluated",
+            "planned",
+            "completed"
+          ]
+        },
+        "routeRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "currentSnapshotSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "baselineSnapshotSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "evidenceReference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidenceSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "planSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "unchanged",
+            "reconciled"
+          ]
+        },
+        "reconciledSourceSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "reconciliationEvidenceSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "MigrationRollbackSnapshot03312": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "worldSha256",
+        "loader",
+        "optionalPresetSha256",
+        "players"
+      ],
+      "properties": {
+        "worldSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "loader": {
+          "type": "string",
+          "minLength": 1
+        },
+        "optionalPresetSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "players": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceId",
+              "uuid",
+              "inventorySha256",
+              "permissionsSha256",
+              "economy",
+              "skinSha256",
+              "admin"
+            ],
+            "properties": {
+              "sourceId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uuid": {
+                "type": "string",
+                "minLength": 1
+              },
+              "inventorySha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "permissionsSha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "economy": {
+                "type": "string",
+                "minLength": 1
+              },
+              "skinSha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "admin": {
+                "type": "boolean"
+              }
+            }
+          }
         }
       }
     }

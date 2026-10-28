@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -17,6 +18,7 @@ import (
 
 	co "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcutover"
 	gr "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrehearsal"
+	rb "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrollback"
 	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
@@ -49,6 +51,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 				t.Log("cleanup", e)
 			}
 		}
+		clean(`DELETE FROM migration_rollbacks_03312 WHERE run_id=$1`, runID)
 		clean(`DELETE FROM migration_cutovers_03311 WHERE run_id=$1`, runID)
 		clean(`DELETE FROM channel_heads WHERE project_id=$1`, project)
 		clean(`DELETE FROM migration_rehearsals_03310 WHERE run_id=$1`, runID)
@@ -111,8 +114,14 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	m.Signature = &model.SignatureInfo{Algorithm: "Ed25519", PublicKey: hex.EncodeToString(pub), Signature: hex.EncodeToString(ed25519.Sign(priv, bare))}
 	raw, _ := json.Marshal(m)
 	q(`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($1,$2,$3,$4,$5,'published',$6::jsonb)`, targetID, project, profile, channel, m.Version, string(raw))
-	q(`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status) VALUES($1,$2,$3,$4,'old','published')`, oldID, project, profile, channel)
-	q(`INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest) VALUES($1,$2,$3,8,$4,'old','old-digest')`, project, profile, channel, oldID)
+	oldManifest := model.Manifest{SchemaVersion: "1.0", ProjectID: project, ProfileID: profile, Channel: channel, Version: "old", Files: []model.ManifestFile{}}
+	oldUnsigned, _ := json.Marshal(oldManifest)
+	oldManifest.Signature = &model.SignatureInfo{Algorithm: "Ed25519", PublicKey: hex.EncodeToString(pub), Signature: hex.EncodeToString(ed25519.Sign(priv, oldUnsigned))}
+	oldRaw, _ := json.Marshal(oldManifest)
+	oldHash := sha256.Sum256(oldRaw)
+	oldDigest := hex.EncodeToString(oldHash[:])
+	q(`INSERT INTO release_versions(id,project_id,profile_id,channel,version,status,manifest) VALUES($1,$2,$3,$4,'old','published',$5::jsonb)`, oldID, project, profile, channel, string(oldRaw))
+	q(`INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest) VALUES($1,$2,$3,8,$4,'old',$5)`, project, profile, channel, oldID, oldDigest)
 	stage := co.Stage{ProfileID: profile, Channel: channel, ReleaseID: targetID, StageID: rep.StageID, ExpectedHeadRevision: 8}
 	if _, e = r.StageMigrationCutover03311(ctx, runID, co.Stage{ProfileID: profile, Channel: channel, ReleaseID: targetID, StageID: rep.StageID, ExpectedHeadRevision: 7}, pub); !errors.Is(e, mw.ErrConflict) {
 		t.Fatalf("stale head accepted: %v", e)
@@ -148,5 +157,54 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	}
 	if _, e = r.CancelMigrationCutover03311(ctx, runID, profile, channel, active.Revision); !errors.Is(e, mw.ErrConflict) {
 		t.Fatalf("post-cutover cancel accepted: %v", e)
+	}
+	// MIG12 must fence the *active* route as well (and guard DELETE).
+	if _, e = r.db.ExecContext(ctx, `UPDATE channel_heads SET version='unapproved' WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel); e == nil {
+		t.Fatal("active head accepted another publisher")
+	}
+	if _, e = r.db.ExecContext(ctx, `DELETE FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel); e == nil {
+		t.Fatal("active head delete bypassed guard")
+	}
+	planInput := rb.PlanInput{ProfileID: profile, Channel: channel, ExpectedRevision: active.Revision, Current: rep.Target, EvidenceReference: "runbooks/frozen-export-0001", EvidenceSHA256: hash}
+	mutated := planInput
+	mutated.Current.Players = append([]gr.Player(nil), rep.Target.Players...)
+	mutated.Current.Players[0].Economy = "101"
+	blocked, e := r.PlanMigrationRollback03312(ctx, runID, mutated)
+	if e != nil || blocked.Ready || len(blocked.Blockers) == 0 {
+		t.Fatalf("changed player data accepted: %+v %v", blocked, e)
+	}
+	plan, e := r.PlanMigrationRollback03312(ctx, runID, planInput)
+	if e != nil || !plan.Ready || plan.State != "planned" {
+		t.Fatalf("plan: %+v %v", plan, e)
+	}
+	againPlan, e := r.PlanMigrationRollback03312(ctx, runID, planInput)
+	if e != nil || againPlan.PlanSHA256 != plan.PlanSHA256 {
+		t.Fatalf("idempotent plan: %+v %v", againPlan, e)
+	}
+	commit := rb.CommitInput{ProfileID: profile, Channel: channel, ExpectedRevision: active.Revision, PlanSHA256: plan.PlanSHA256, Current: rep.Target, CurrentEvidenceSHA256: hash}
+	if _, e = r.CommitMigrationRollback03312(ctx, runID, commit, pub); e == nil {
+		t.Fatal("unfenced commit accepted")
+	}
+	commit.SourceWriterFenced = true
+	commit.NeverWriterFenced = true
+	changed := commit
+	changed.Current.Players = append([]gr.Player(nil), commit.Current.Players...)
+	changed.Current.Players[0].Economy = "999"
+	if _, e = r.CommitMigrationRollback03312(ctx, runID, changed, pub); !errors.Is(e, mw.ErrConflict) {
+		t.Fatalf("changed snapshot allowed: %v", e)
+	}
+	result, e := r.CommitMigrationRollback03312(ctx, runID, commit, pub)
+	if e != nil || result.State != "completed" {
+		t.Fatalf("commit: %+v %v", result, e)
+	}
+	replay, e := r.CommitMigrationRollback03312(ctx, runID, commit, pub)
+	if e != nil || replay.PlanSHA256 != result.PlanSHA256 {
+		t.Fatalf("commit replay: %+v %v", replay, e)
+	}
+	if e = r.db.QueryRowContext(ctx, `SELECT release_id,revision FROM channel_heads WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel).Scan(&head, &rev); e != nil || head != oldID || rev != 10 {
+		t.Fatalf("rollback head incorrect: %s %d %v", head, rev, e)
+	}
+	if _, e = r.ActivateMigrationCutover03311(ctx, runID, activation, pub); !errors.Is(e, mw.ErrConflict) {
+		t.Fatalf("reactivation after rollback allowed: %v", e)
 	}
 }

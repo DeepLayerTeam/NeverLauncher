@@ -68,6 +68,20 @@
 <label><input id="migration-cutover-source-fenced" type="checkbox"> Исходный Gravit writer отдельно остановлен и проверен оператором</label>
 <button id="migration-cutover-activate" type="button">Activate (MFA; переключить канал)</button><button id="migration-cutover-cancel" type="button">Отменить staging до activation</button>
 </fieldset>
+<fieldset><legend>Operational Rollback (MIG12)</legend>
+<p>Безопасный rollback возвращает только канал Never при совпадении мира, инвентаря, экономики, прав и UUID с MIG10. Snapshot экспортируйте из отдельно остановленного игрового сервера. Изменённые данные блокируют автоматический откат.</p>
+<label>Fresh snapshot JSON<textarea id="migration-rollback-snapshot" rows="7"></textarea></label>
+<label>Опционально JSON сверенного Gravit snapshot после внешнего переноса новых записей<textarea id="migration-rollback-source-snapshot" rows="5"></textarea></label>
+<label>SHA-256 доказательства переноса новых данных в Gravit<input id="migration-rollback-reconciliation-sha"></label>
+<label>Ссылка на доказательство<input id="migration-rollback-evidence-ref"></label>
+<label>SHA-256 доказательства актуального snapshot<input id="migration-rollback-evidence-sha"></label>
+<label>SHA-256 ранее сформированного плана<input id="migration-rollback-plan-sha"></label>
+<label><input id="migration-rollback-never-fenced" type="checkbox"> Never/game writers остановлены и проверены отдельно</label>
+<label><input id="migration-rollback-source-fenced" type="checkbox"> Gravit writer продолжает быть остановленным</label>
+<button id="migration-rollback-plan" type="button">Проверить rollback (MFA)</button>
+<button id="migration-rollback-commit" type="button">Commit rollback (MFA)</button>
+<button id="migration-rollback-status" type="button">Проверить сохранённый план</button>
+</fieldset>
 <p>Сначала выполните dry-run. Импорт не обновляет пароли существующих пользователей, не переносит токены или права и не разрешает cutover.</p>
 <p>Экспорт содержит исходные конфигурации и может включать пароли/ключи. Сохраняйте его в защищённом каталоге.</p>
 <pre id="migration-report"></pre>

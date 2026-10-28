@@ -1,0 +1,64 @@
+name: Gravit Operational Rollback 0.33.12
+on:
+  push:
+    paths:
+      - 'services/api/internal/gravitrollback/**'
+      - 'services/api/internal/repository/migration_rollback_03312.go'
+      - 'services/api/internal/repository/migration_cutover_03311_integration_test.go'
+      - 'services/api/internal/httpapi/migration_rollback_03312.go'
+      - 'services/api/internal/dbmigrate/sql/0099*'
+      - 'cli/cmd/neverlauncher/migration_rollback*'
+      - 'apps/admin/src/admin/MigrationCenter0331.tsx'
+      - 'schemas/openapi*'
+      - '.github/workflows/gravit-operational-rollback-03312.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  operational-rollback:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: neverlauncher_test
+          POSTGRES_USER: neverlauncher_test
+          POSTGRES_PASSWORD: test_only_not_production
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U neverlauncher_test -d neverlauncher_test'
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Full migration API build and unit/race tests
+        working-directory: services/api
+        run: |
+          go test -race -count=1 ./internal/gravitrollback ./internal/gravitrehearsal
+          go test -run '^$' ./internal/httpapi
+          go test -race -count=1 ./internal/repository -run '^TestMigrationCutoverPostgres03311$'
+      - name: CLI tests and compilation
+        working-directory: cli
+        run: go test -race -count=1 ./cmd/neverlauncher -run 'TestRollbackCLIRequiresWriterFences03312|TestMigrationCutover03311'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: Admin production build
+        working-directory: apps/admin
+        run: |
+          npm ci
+          npm run build
+      - name: OpenAPI and version consistency
+        run: |
+          python3 scripts/version/manage.py check
+          python3 scripts/contracts/validate-openapi.py

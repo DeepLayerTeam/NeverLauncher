@@ -17,11 +17,14 @@ import (
 // the database checkpoint and lease, not the CLI process, own progress.
 func handleMigrationWorkflow0331(args []string) error {
 	if len(args) < 1 {
-		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|content|preview-content|import-content|apply-optionals|modules|analyze-modules|enroll-serverbridge|rehearse|cutover-list|cutover-stage|cutover-activate|cutover-cancel|generate-never-keys")
+		return errors.New("migrate gravit requires create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|identities|map-identities|verify-identities|credentials|preview-credentials|import-credentials|security|preview-security|activate-security|content|preview-content|import-content|apply-optionals|modules|analyze-modules|enroll-serverbridge|rehearse|cutover-list|cutover-stage|cutover-activate|cutover-cancel|rollback-plan|rollback-commit|rollback-status|generate-never-keys")
 	}
 	command := args[0]
 	if command == "rehearse" {
 		return handleMigrationRehearsal03310(args[1:])
+	}
+	if strings.HasPrefix(command, "rollback-") {
+		return handleMigrationRollback03312(args)
 	}
 	if strings.HasPrefix(command, "cutover-") {
 		return handleMigrationCutover03311(args)
