@@ -1,0 +1,95 @@
+name: NeverLauncher 0.35.11 Real Performance Regression
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/performance/**'
+      - 'apps/desktop/src-tauri/src/main.rs'
+      - 'apps/desktop/src/main.tsx'
+      - 'runtime/neverruntime/**'
+      - '.github/workflows/performance-03511.yml'
+  pull_request:
+    paths:
+      - 'scripts/performance/**'
+      - 'apps/desktop/src-tauri/src/main.rs'
+      - 'apps/desktop/src/main.tsx'
+      - 'runtime/neverruntime/**'
+      - '.github/workflows/performance-03511.yml'
+permissions:
+  contents: read
+jobs:
+  measurement-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install psutil==7.2.2
+      - run: python -m unittest discover -s scripts/performance -p 'test_*.py' -v
+  native-runtime-smoke:
+    needs: measurement-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install psutil==7.2.2
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile actual NeverRuntime and signed certification fixture
+        run: cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime --example cert_sign_fixture
+      - name: Real 10k-file verification and 32/64 MiB native HTTP downloads
+        shell: bash
+        run: |
+          ext=''
+          if [[ '${{ runner.os }}' == 'Windows' ]]; then ext='.exe'; fi
+          python scripts/performance/benchmark_03511.py \
+            --runtime "runtime/neverruntime/target/release/neverruntime${ext}" \
+            --signer "runtime/neverruntime/target/release/examples/cert_sign_fixture${ext}" \
+            --verify-files 10000 --download-mib 32 64 --repetitions 3 \
+            --output performance-native-${{ runner.os }}.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-native-${{ runner.os }}
+          path: performance-native-${{ runner.os }}.json
+          if-no-files-found: ignore
+  native-desktop-startup:
+    needs: measurement-tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install psutil==7.2.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Linux native dependencies and headless display
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev libxdo-dev libssl-dev librsvg2-dev libgtk-3-dev xvfb dbus-x11 build-essential
+      - name: Build real Desktop frontend
+        working-directory: apps/desktop
+        run: npm ci && npm run build
+      - name: Build real Desktop native binary
+        run: cargo build --release --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - name: Measure first and subsequent process launches under Xvfb
+        run: dbus-run-session -- xvfb-run -a python scripts/performance/benchmark_03511.py --desktop apps/desktop/src-tauri/target/release/neverlauncher-desktop --download-mib --repetitions 3 --output performance-desktop-linux.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-desktop-linux
+          path: performance-desktop-linux.json
+          if-no-files-found: ignore

@@ -334,6 +334,18 @@ function normalizedSettings(settings: DesktopSettings): DesktopSettings {
 }
 
 function App() {
+  // Native benchmark marker: the UI has reached its first painted React frame.
+  // No external timers or telemetry run in ordinary production sessions:
+  // the native command becomes a no-op unless the process opts into benchmarking.
+  useEffect(() => {
+    let alive = true;
+    const outer = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (alive) void invoke('benchmark_ui_ready_03511').catch(() => {});
+      });
+    });
+    return () => { alive = false; cancelAnimationFrame(outer); };
+  }, []);
   const [settings, setSettings] = useState<DesktopSettings>(() => loadSettings());
   const [screen, setScreen] = useState<Screen>('firstRun');
   const [signedProvisioning0352,setSignedProvisioning0352]=useState<SignedProvisioning0352|null>(null);

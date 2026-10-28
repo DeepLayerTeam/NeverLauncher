@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.35.10. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.35.11. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -12859,6 +12859,49 @@
         "security": []
       }
     },
+    "/api/v1/diagnostics/reports": {
+      "post": {
+        "operationId": "post_diagnostics_reports",
+        "tags": [
+          "operations"
+        ],
+        "summary": "POST /api/v1/diagnostics/reports",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeFormObject"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/diagnostics/validate": {
       "post": {
         "operationId": "post_diagnostics_validate",
@@ -15515,6 +15558,36 @@
           "operations"
         ],
         "summary": "GET /api/v1/operations/storage/consistency",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/operations/support-reports": {
+      "get": {
+        "operationId": "get_operations_support_reports",
+        "tags": [
+          "operations"
+        ],
+        "summary": "GET /api/v1/operations/support-reports",
         "responses": {
           "200": {
             "description": "Success",

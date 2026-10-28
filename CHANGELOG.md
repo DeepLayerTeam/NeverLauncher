@@ -1,3 +1,11 @@
+## [0.35.11] — Measured Runtime, Desktop Startup, CPU/RAM and Backend Latency
+
+- Added a real process benchmark harness invoking compiled NeverRuntime against a locally signed certification manifest, including 10,000 physical files with native SHA-256 verification and measured CPU/RAM usage.
+- Implemented bounded-memory HTTP Range server for native download and warm-update measurements at 1/10 GiB, with independent file hashing and actual wire-byte accounting; large tests require explicit consent and sufficient disk space.
+- Added native Tauri timestamp marker for first React paint after two animation frames, allowing first-process and subsequent-process start measurements without modifying privileged Desktop capabilities or enabling telemetry for players.
+- Added read-only bounded-concurrency HTTP latency measurements with p50/p95/p99 and optional live Backend process sampling; reports retain executable hashes and stand metadata, do not invent baseline comparisons.
+- Added cross-platform native smoke workflow and Linux Desktop startup workflow. Full large-network workload, full native compile and real packaged Desktop/Backend latency measurement must be executed on suitable test hardware before production performance claims.
+
 ## [0.35.10] — Player & Operator Diagnostics, Explicit Consent, Support Inbox
 
 - Replaced unsafe substring-based diagnostics export with a native one-time reviewed report. No raw player logs, URLs, paths or credentials are retained; only bounded, allowlisted event category counts and platform/status metadata are included.
