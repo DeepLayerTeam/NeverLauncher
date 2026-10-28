@@ -22,7 +22,7 @@ hex = "0.4"
 time = { version = "0.3", features = ["parsing"] }
 
 ed25519-dalek = { version = "2", features = ["rand_core", "zeroize"] }
-rand = "0.8"
+rand = "0.10"
 base64 = "0.22"
 zeroize = "1"
 
