@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -22,7 +24,7 @@ func validValidationFixture0345(t *testing.T) (signedValidation0345, ed25519.Pri
 	}
 	start := time.Now().UTC().Add(-time.Minute).Format(time.RFC3339Nano)
 	end := time.Now().UTC().Format(time.RFC3339Nano)
-	p := validationPayload0345{SchemaVersion: validationSchema0345, RunID: "run_0345", PackageID: "pkg0345",
+	p := validationPayload0345{SchemaVersion: validationSchema0345, RunNonce: strings.Repeat("7", 64), Audience: validationAudience0346, Purpose: validationPurpose0346, TargetID: "linux-default", TargetMatrixSHA256: strings.Repeat("6", 64), PackageVersion: "0.34.6", IssuedAt: time.Now().UTC().Add(-3 * time.Minute).Format(time.RFC3339Nano), ExpiresAt: time.Now().UTC().Add(23 * time.Hour).Format(time.RFC3339Nano), RunID: "run_0345", PackageID: "pkg0345",
 		ManifestSHA256: strings.Repeat("a", 64), ArtifactSHA256: strings.Repeat("b", 64),
 		ResolvedPlanSHA256: strings.Repeat("c", 64), SourceSHA: strings.Repeat("d", 40), BuildSHA: strings.Repeat("e", 64),
 		RunnerImageSHA256: strings.Repeat("f", 64), JavaSHA256: strings.Repeat("1", 64), JavaVersion: "21.0.7", OS: "linux", Arch: "amd64",
@@ -35,6 +37,8 @@ func validValidationFixture0345(t *testing.T) (signedValidation0345, ed25519.Pri
 	for _, name := range []string{"staged-execution.json", "verified.json", "startup-readiness.json", "server-readiness.json", "gameplay-smoke.json", "runtime-launch.json", "runtime-gameplay-launch.json", "execution-identity.json"} {
 		p.ArtifactHashes[name] = strings.Repeat("8", 64)
 	}
+	fingerprint := sha256.Sum256(key)
+	p.SignerKeyID = hex.EncodeToString(fingerprint[:])
 	signed := signedValidation0345{Evidence: p}
 	signFixture0345(t, &signed, private)
 	return signed, private, base64.RawURLEncoding.EncodeToString(key)

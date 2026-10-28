@@ -33,6 +33,7 @@ type stagedGrant0342 struct {
 	ManifestSHA256 string `json:"manifestSha256"`
 	ArtifactSHA256 string `json:"artifactSha256"`
 	RunID          string `json:"runId"`
+	Nonce          string `json:"nonce,omitempty"`
 	ExpiresAt      int64  `json:"expiresAt"`
 }
 
@@ -98,7 +99,7 @@ func (s Server) parseGrant0342(token string) (stagedGrant0342, error) {
 	if e = json.Unmarshal(raw, &g); e != nil {
 		return g, e
 	}
-	if g.Schema != stagedGrantSchema0342 || g.RunID == "" || g.PackageID == "" || g.ProjectID == "" || len(g.ManifestSHA256) != 64 || len(g.ArtifactSHA256) != 64 || g.ExpiresAt <= time.Now().UTC().Unix() || g.ExpiresAt > time.Now().UTC().Add(2*time.Hour).Unix()+60 {
+	if g.Schema != stagedGrantSchema0342 || g.RunID == "" || (g.Nonce != "" && (len(g.Nonce) != 64 || !hexSHA0342(g.Nonce))) || g.PackageID == "" || g.ProjectID == "" || len(g.ManifestSHA256) != 64 || len(g.ArtifactSHA256) != 64 || g.ExpiresAt <= time.Now().UTC().Unix() || g.ExpiresAt > time.Now().UTC().Add(2*time.Hour).Unix()+60 {
 		return g, errors.New("staging grant expired or invalid")
 	}
 	return g, nil
@@ -192,7 +193,36 @@ func (s Server) stagedRunIssue0342(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, "secure run ID unavailable")
 		return
 	}
-	grant := stagedGrant0342{Schema: stagedGrantSchema0342, PackageID: lookup.Release.ID, ProjectID: lookup.Release.ProjectID, ManifestSHA256: md, ArtifactSHA256: fd, RunID: hex.EncodeToString(nonce[:]), ExpiresAt: time.Now().UTC().Add(90 * time.Minute).Unix()}
+	// Persist a separate one-time challenge BEFORE a worker can report a run.
+	// A plain staged run can remain diagnostic without target configuration, but
+	// it cannot produce a trusted attestation while the policy is unconfigured.
+	targetHash := strings.Repeat("0", 64)
+	var targets []validationTarget0346
+	if strings.TrimSpace(s.Config.ValidationRequiredTargetsJSON0346) != "" {
+		var pe error
+		targets, targetHash, pe = configuredTargets0346(s.Config.ValidationRequiredTargetsJSON0346, lookup.Release, md, fd)
+		if pe != nil {
+			writeError(w, 409, "runtime target policy rejected: "+pe.Error())
+			return
+		}
+	}
+	var challengeNonce [32]byte
+	if _, e = rand.Read(challengeNonce[:]); e != nil {
+		writeError(w, 503, "challenge nonce unavailable")
+		return
+	}
+	issuedAt := time.Now().UTC().Truncate(time.Microsecond)
+	grant := stagedGrant0342{Schema: stagedGrantSchema0342, PackageID: lookup.Release.ID, ProjectID: lookup.Release.ProjectID, ManifestSHA256: md, ArtifactSHA256: fd, RunID: hex.EncodeToString(nonce[:]), Nonce: hex.EncodeToString(challengeNonce[:]), ExpiresAt: time.Now().UTC().Add(90 * time.Minute).Unix()}
+	freshStore, available := s.Repo.(validationFreshnessStore0346)
+	if !available {
+		writeError(w, 503, "validation challenge persistence unavailable")
+		return
+	}
+	challenge := model.ValidationChallenge0346{RunID: grant.RunID, Nonce: grant.Nonce, PackageID: grant.PackageID, ProjectID: grant.ProjectID, ManifestSHA256: md, ArtifactSHA256: fd, TargetMatrixSHA256: targetHash, IssuedAt: issuedAt, ExpiresAt: time.Unix(grant.ExpiresAt, 0).UTC()}
+	if e = freshStore.SaveValidationChallenge0346(r.Context(), challenge); e != nil {
+		writeError(w, 503, "cannot persist validation challenge")
+		return
+	}
 	token, e := s.issueGrant0342(grant)
 	if e != nil {
 		writeError(w, 503, e.Error())
@@ -200,7 +230,7 @@ func (s Server) stagedRunIssue0342(w http.ResponseWriter, r *http.Request) {
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: s.adminActor(r), Action: "staged-runtime:grant-issued", Target: grant.PackageID, JobID: grant.RunID, CreatedAt: time.Now().UTC()})
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, 201, map[string]any{"data": map[string]any{"schemaVersion": stagedGrantSchema0342, "token": token, "runId": grant.RunID, "expiresAt": time.Unix(grant.ExpiresAt, 0).UTC(), "packageId": grant.PackageID, "manifestSha256": md, "artifactSha256": fd, "snapshotPath": "/api/v1/staged-runs/" + grant.PackageID + "/snapshot", "attested": false}})
+	writeJSON(w, 201, map[string]any{"data": map[string]any{"schemaVersion": stagedGrantSchema0342, "token": token, "runId": grant.RunID, "nonce": grant.Nonce, "issuedAt": issuedAt, "targetMatrixSha256": targetHash, "requiredTargets": targets, "expiresAt": time.Unix(grant.ExpiresAt, 0).UTC(), "packageId": grant.PackageID, "manifestSha256": md, "artifactSha256": fd, "snapshotPath": "/api/v1/staged-runs/" + grant.PackageID + "/snapshot", "attested": false}})
 }
 func (s Server) stagedRunDownloadManifest0342(w http.ResponseWriter, r *http.Request) {
 	g, lookup, ok := s.authorizeStaged0342(w, r)

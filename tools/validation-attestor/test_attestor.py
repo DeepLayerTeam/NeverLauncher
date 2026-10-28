@@ -62,7 +62,16 @@ def fixture(work):
     stages={name:{'status':'passed'} for name in a.REQUIRED}
     for name,file in a.STAGE_ARTIFACT.items():stages[name]['evidenceSha256']=a.sha(work/file)
     now=datetime.now(timezone.utc)
-    issued={'runId':run,'packageId':package,'manifestSha256':m,'artifactSha256':b}
+    issued={'runId':run,'packageId':package,'manifestSha256':m,'artifactSha256':b,
+            'nonce':'7'*64,'targetMatrixSha256':'6'*64,
+            'issuedAt':(now-timedelta(minutes=4)).isoformat().replace('+00:00','Z')}
+    issued['requiredTargets']=[{'id':'linux-default','version':'1.0.0',
+        'manifestSha256':m,'artifactSha256':b,'resolvedPlanSha256':resolution,
+        'sourceSha':'f'*40,'buildSha':'2'*64,'javaSha256':'3'*64,'javaVersion':'21.0.7',
+        'os':'linux','arch':'amd64','loader':'vanilla',
+        'installAdapterSha256':hashlib.sha256((cli+rt).encode()).hexdigest(),
+        'guardMode':'disabled','guardPolicySha256':hashlib.sha256(b'{}').hexdigest(),
+        'serverBridgeSha256':'0'*64,'serverPluginVersion':'none','preset':'default'}]
     dump(work/'staged-execution.json',{'schemaVersion':'neverlauncher.staged-runtime-run.v1',
         **issued,'startedAt':(now-timedelta(minutes=3)).isoformat().replace('+00:00','Z'),
         'finishedAt':now.isoformat().replace('+00:00','Z'),'stages':stages})
@@ -75,13 +84,15 @@ class TrustBoundaryTests(unittest.TestCase):
             priv=Ed25519PrivateKey.generate()
             key.write_bytes(priv.private_bytes(Encoding.PEM,PrivateFormat.PKCS8,NoEncryption()))
             key.chmod(0o600)
-            payload={'schemaVersion':a.SCHEMA,'runId':'real-run'}
+            payload={k:'placeholder' for k in a.EVIDENCE_FIELDS}
+            payload['schemaVersion']=a.SCHEMA;payload['runId']='real-run'
+            payload['stages']={};payload['artifactHashes']={}
             signed=a.sign_evidence(payload,key)
             import base64
             signature=base64.urlsafe_b64decode(signed['signature']+'==')
-            priv.public_key().verify(signature,a.DOMAIN+a.canonical(payload))
-            with self.assertRaises(Exception):priv.public_key().verify(signature,a.canonical(payload))
-            payload['runId']='modified-run'
+            priv.public_key().verify(signature,a.DOMAIN+a.canonical(signed['evidence']))
+            with self.assertRaises(Exception):priv.public_key().verify(signature,a.canonical(signed['evidence']))
+            payload=dict(signed['evidence']);payload['runId']='modified-run'
             with self.assertRaises(Exception):priv.public_key().verify(signature,a.DOMAIN+a.canonical(payload))
             key.chmod(0o644)
             with self.assertRaisesRegex(ValueError,'owner-only'):a.sign_evidence(payload,key)
@@ -112,6 +123,37 @@ class TrustBoundaryTests(unittest.TestCase):
             dump(work/'staged-execution.json',report)
             with self.assertRaisesRegex(ValueError,'movement or game ticks'):
                 a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)
+
+    def test_v05_rejects_wrong_preset_java_server_even_with_valid_artifacts(self):
+        with tempfile.TemporaryDirectory() as d:
+            work=Path(d); issued=fixture(work)
+            self.assertEqual(a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)['targetId'],'linux-default')
+            for field,wrong in [('preset','another'),('javaSha256','9'*64),('serverPluginVersion','wrong'),('sourceSha','9'*40)]:
+                forged=json.loads(json.dumps(issued))
+                forged['requiredTargets'][0][field]=wrong
+                with self.assertRaisesRegex(ValueError,'no unique configured target'):
+                    a.verify_local_artifacts(work,forged,'1'*64,'f'*40,'2'*64,'0'*64)
+
+    def test_v05_attestation_signed_fields_and_key_fingerprint(self):
+        with tempfile.TemporaryDirectory() as d:
+            work=Path(d);issued=fixture(work)
+            key=work/'key.pem';priv=Ed25519PrivateKey.generate()
+            key.write_bytes(priv.private_bytes(Encoding.PEM,PrivateFormat.PKCS8,NoEncryption()));key.chmod(0o600)
+            payload=a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)
+            signed=a.sign_evidence(payload,key)
+            self.assertEqual(tuple(signed['evidence']),a.EVIDENCE_FIELDS)
+            self.assertEqual(len(signed['evidence']['signerKeyId']),64)
+            mutated=json.loads(json.dumps(signed['evidence']));mutated['runNonce']='0'*64
+            from cryptography.exceptions import InvalidSignature
+            with self.assertRaises(InvalidSignature):
+                priv.public_key().verify(__import__('base64').urlsafe_b64decode(signed['signature']+'=='),a.DOMAIN+a.canonical(mutated))
+
+    def test_python_canonical_order_agrees_with_go_signed_struct(self):
+        source=(Path(__file__).resolve().parents[2]/'services/api/internal/httpapi/validation_attestation_0345.go').read_text()
+        import re
+        structure=source.split('type validationPayload0345 struct {',1)[1].split('}',1)[0]
+        fields=tuple(re.findall(r'`json:"([a-zA-Z0-9]+)"`',structure))
+        self.assertEqual(fields,a.EVIDENCE_FIELDS)
 
     def test_signed_payload_fixed_canonical_order(self):
         self.assertEqual(a.canonical({'a':'A','b':{'x':'X','y':'Y'}}),b'{"a":"A","b":{"x":"X","y":"Y"}}')

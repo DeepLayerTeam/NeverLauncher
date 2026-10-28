@@ -17,14 +17,21 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-const validationSchema0345 = "neverlauncher.validation-evidence.v2"
-const validationDomain0345 = "NeverLauncher/validation-evidence/v2\x00"
+const validationSchema0345 = "neverlauncher.validation-evidence.v3"
+const validationDomain0345 = "NeverLauncher/validation-evidence/v3\x00"
 
 // The order of these fields is part of the signed canonical JSON serialization.
 // All scalar metadata must be ASCII with no HTML metacharacters; JSON maps sort
 // their keys in Go and in the attestor's canonical implementation.
 type validationPayload0345 struct {
 	SchemaVersion        string            `json:"schemaVersion"`
+	RunNonce             string            `json:"runNonce"`
+	Audience             string            `json:"audience"`
+	Purpose              string            `json:"purpose"`
+	TargetID             string            `json:"targetId"`
+	TargetMatrixSHA256   string            `json:"targetMatrixSha256"`
+	SignerKeyID          string            `json:"signerKeyId"`
+	PackageVersion       string            `json:"packageVersion"`
 	RunID                string            `json:"runId"`
 	PackageID            string            `json:"packageId"`
 	ManifestSHA256       string            `json:"manifestSha256"`
@@ -48,6 +55,8 @@ type validationPayload0345 struct {
 	ArtifactHashes       map[string]string `json:"artifactHashes"`
 	StartedAt            string            `json:"startedAt"`
 	FinishedAt           string            `json:"finishedAt"`
+	IssuedAt             string            `json:"issuedAt"`
+	ExpiresAt            string            `json:"expiresAt"`
 }
 type signedValidation0345 struct {
 	Evidence  validationPayload0345 `json:"evidence"`
@@ -68,7 +77,7 @@ func validatePayload0345(p validationPayload0345) error {
 	if p.SchemaVersion != validationSchema0345 {
 		return errors.New("invalid evidence schema")
 	}
-	for _, v := range []string{p.ManifestSHA256, p.ArtifactSHA256, p.ResolvedPlanSHA256, p.BuildSHA, p.RunnerImageSHA256, p.JavaSHA256, p.InstallAdapterSHA256, p.GuardPolicySHA256, p.ServerBridgeSHA256} {
+	for _, v := range []string{p.ManifestSHA256, p.ArtifactSHA256, p.ResolvedPlanSHA256, p.BuildSHA, p.RunnerImageSHA256, p.JavaSHA256, p.InstallAdapterSHA256, p.GuardPolicySHA256, p.ServerBridgeSHA256, p.RunNonce, p.TargetMatrixSHA256, p.SignerKeyID} {
 		if !validationHex0345.MatchString(v) {
 			return errors.New("invalid signed digest")
 		}
@@ -76,7 +85,7 @@ func validatePayload0345(p validationPayload0345) error {
 	if !(validationHex0345.MatchString(p.SourceSHA) || (len(p.SourceSHA) == 40 && regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(p.SourceSHA))) {
 		return errors.New("invalid source SHA")
 	}
-	for _, v := range []string{p.RunID, p.PackageID, p.JavaVersion, p.OS, p.Arch, p.Loader, p.GuardMode, p.ServerPluginVersion, p.Preset} {
+	for _, v := range []string{p.RunID, p.PackageID, p.JavaVersion, p.OS, p.Arch, p.Loader, p.GuardMode, p.ServerPluginVersion, p.Preset, p.Audience, p.Purpose, p.TargetID, p.PackageVersion} {
 		if !validationToken0345.MatchString(v) {
 			return errors.New("invalid signed execution identity")
 		}
@@ -119,6 +128,10 @@ func verifyValidation0345(p signedValidation0345, publicKey string) error {
 	}
 	if e = validatePayload0345(p.Evidence); e != nil {
 		return e
+	}
+	fingerprint, e := validationKeyFingerprint0346(publicKey)
+	if e != nil || fingerprint != p.Evidence.SignerKeyID {
+		return errors.New("attestation key fingerprint mismatch")
 	}
 	signature, e := base64.RawURLEncoding.DecodeString(p.Signature)
 	if e != nil || len(signature) != ed25519.SignatureSize {
@@ -189,6 +202,20 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		return
 	}
 	p := signed.Evidence
+	fingerprint, e := validationKeyFingerprint0346(s.Config.ValidationAttestationPublicKey0345)
+	if e != nil || fingerprint != p.SignerKeyID {
+		deny(errors.New("untrusted signing key ID"))
+		return
+	}
+	freshStore, ok := s.Repo.(validationFreshnessStore0346)
+	if !ok {
+		writeError(w, 503, "validation freshness store unavailable")
+		return
+	}
+	if e = validateFreshness0346(r.Context(), freshStore, p, time.Now().UTC(), true); e != nil {
+		deny(e)
+		return
+	}
 	if !validationHex0345.MatchString(s.Config.ValidationTrustedRunnerImageSHA2560345) || p.RunnerImageSHA256 != s.Config.ValidationTrustedRunnerImageSHA2560345 {
 		deny(errors.New("untrusted or unconfigured pinned runner image"))
 		return
@@ -200,6 +227,26 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 	lookup, e := s.lookupPackage(p.PackageID)
 	if e != nil {
 		deny(errors.New("attestation package missing"))
+		return
+	}
+	if lookup.Release.Version != p.PackageVersion {
+		deny(errors.New("attestation release version mismatch"))
+		return
+	}
+	targets, matrixSHA, policyErr := configuredTargets0346(s.Config.ValidationRequiredTargetsJSON0346, lookup.Release, p.ManifestSHA256, p.ArtifactSHA256)
+	if policyErr != nil || matrixSHA != p.TargetMatrixSHA256 {
+		deny(errors.New("attestation no longer matches required target policy"))
+		return
+	}
+	targetMatched := false
+	for _, target := range targets {
+		if matchingTarget0346(p, target) {
+			targetMatched = true
+			break
+		}
+	}
+	if !targetMatched {
+		deny(errors.New("attestation Java/preset/loader/server/adapter or build target mismatch"))
 		return
 	}
 	if lookup.Release.Status != "integrity-passed" {
@@ -259,6 +306,18 @@ func (s Server) validationAttestationPost0345(w http.ResponseWriter, r *http.Req
 		deny(errors.New("no persisted execution run for attestation"))
 		return
 	}
+	// Re-evaluate current target policy and key revocation after the expensive
+	// run/storage checks, immediately before immutable evidence insertion. This
+	// does not permit stable promotion: the database stable trigger stays active.
+	if e = validateFreshness0346(r.Context(), freshStore, p, time.Now().UTC(), true); e != nil {
+		deny(e)
+		return
+	}
+	finalTargets, finalMatrix, finalErr := configuredTargets0346(s.Config.ValidationRequiredTargetsJSON0346, lookup.Release, md, fd)
+	if finalErr != nil || finalMatrix != p.TargetMatrixSHA256 || len(finalTargets) != len(targets) {
+		deny(errors.New("target policy changed during attestation"))
+		return
+	}
 	raw, _ := json.Marshal(p)
 	record := model.ValidationAttestation0345{RunID: p.RunID, PackageID: p.PackageID, ProjectID: lookup.Release.ProjectID, ManifestSHA256: md, ArtifactSHA256: fd, Evidence: raw, Signature: signed.Signature, ReceivedAt: time.Now().UTC()}
 	if e = store.SaveValidationAttestation0345(r.Context(), record); e != nil {
@@ -280,5 +339,46 @@ func (s Server) validationAttestationList0345(w http.ResponseWriter, r *http.Req
 		writeError(w, 500, e.Error())
 		return
 	}
-	writeJSON(w, 200, map[string]any{"data": map[string]any{"attestations": rows, "stablePublishEligible": false}})
+	coverage := map[string]bool{}
+	reasons := map[string]string{}
+	release, e := s.lookupPackage(r.PathValue("packageId"))
+	if e == nil {
+		md, em := manifestDigest0212(release.Release.Manifest)
+		fd, ef := artifactDigest0212(release.Files)
+		if em == nil && ef == nil {
+			targets, matrix, policyErr := configuredTargets0346(s.Config.ValidationRequiredTargetsJSON0346, release.Release, md, fd)
+			if policyErr == nil {
+				for _, target := range targets {
+					coverage[target.ID] = false
+					reasons[target.ID] = "missing fresh matching signed attestation"
+				}
+				freshStore, ok := s.Repo.(validationFreshnessStore0346)
+				for _, v := range rows {
+					var p validationPayload0345
+					if !ok || json.Unmarshal(v.Evidence, &p) != nil || p.TargetMatrixSHA256 != matrix || v.ManifestSHA256 != md || v.ArtifactSHA256 != fd {
+						continue
+					}
+					signed := signedValidation0345{Evidence: p, Signature: v.Signature}
+					if verifyValidation0345(signed, s.Config.ValidationAttestationPublicKey0345) != nil || validateFreshness0346(r.Context(), freshStore, p, time.Now().UTC(), false) != nil {
+						continue
+					}
+					for _, target := range targets {
+						if matchingTarget0346(p, target) {
+							coverage[target.ID] = true
+							delete(reasons, target.ID)
+						}
+					}
+				}
+			} else {
+				reasons["policy"] = policyErr.Error()
+			}
+		}
+	}
+	allPassed := len(coverage) > 0
+	for _, passed := range coverage {
+		if !passed {
+			allPassed = false
+		}
+	}
+	writeJSON(w, 200, map[string]any{"data": map[string]any{"attestations": rows, "targetCoverage": coverage, "targetBlockers": reasons, "allRequiredTargetsVerified": allPassed, "stablePublishEligible": false}})
 }

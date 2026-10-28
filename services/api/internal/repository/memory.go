@@ -191,6 +191,8 @@ type MemoryRepository struct {
 	runtimeValidations             []model.RuntimeValidationResult
 	stagedRuntimeRuns0342          []model.StagedRuntimeRun0342
 	validationAttestations0345     []model.ValidationAttestation0345
+	validationChallenges0346       map[string]model.ValidationChallenge0346
+	validationRevocations0346      map[string]bool
 	validationPolicies             map[string]model.ProjectValidationPolicy
 	files                          []model.FileObject
 	users                          []model.User

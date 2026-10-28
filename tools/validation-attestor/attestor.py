@@ -26,10 +26,11 @@ import urllib.request
 import urllib.parse
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from cryptography.hazmat.primitives.serialization import load_pem_private_key, Encoding, PublicFormat
 
-SCHEMA = 'neverlauncher.validation-evidence.v2'
-DOMAIN = b'NeverLauncher/validation-evidence/v2\x00'
+SCHEMA = 'neverlauncher.validation-evidence.v3'
+EVIDENCE_FIELDS = ('schemaVersion', 'runNonce', 'audience', 'purpose', 'targetId', 'targetMatrixSha256', 'signerKeyId', 'packageVersion', 'runId', 'packageId', 'manifestSha256', 'artifactSha256', 'resolvedPlanSha256', 'sourceSha', 'buildSha', 'runnerImageSha256', 'javaSha256', 'javaVersion', 'os', 'arch', 'loader', 'installAdapterSha256', 'guardMode', 'guardPolicySha256', 'serverBridgeSha256', 'serverPluginVersion', 'preset', 'stages', 'artifactHashes', 'startedAt', 'finishedAt', 'issuedAt', 'expiresAt')
+DOMAIN = b'NeverLauncher/validation-evidence/v3\x00'
 REQUIRED = ('manifest-files','materialization','startup','loader-readiness',
             'server-readiness','matching-server','gameplay-smoke')
 FILES = ('staged-execution.json','verified.json','startup-readiness.json',
@@ -167,7 +168,12 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
           finished<=datetime.now(timezone.utc), 'invalid execution time bounds')
     # IMPORTANT: order must match Go validationPayload0345 field order.
     evidence={
-        'schemaVersion':SCHEMA,'runId':report['runId'],'packageId':report['packageId'],
+        'schemaVersion':SCHEMA,'runNonce':issued['nonce'],
+        'audience':'neverlauncher-api/validation-evidence/0.34.6',
+        'purpose':'staged-package-runtime-verification',
+        'targetId':'', 'targetMatrixSha256':issued['targetMatrixSha256'],
+        'signerKeyId':'0'*64,'packageVersion':signed_manifest['version'],
+        'runId':report['runId'],'packageId':report['packageId'],
         'manifestSha256':report['manifestSha256'],'artifactSha256':report['artifactSha256'],
         'resolvedPlanSha256':identity['resolvedPlanSha256'],'sourceSha':source_sha,
         'buildSha':build_sha,'runnerImageSha256':image_sha,
@@ -178,8 +184,20 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         'serverBridgeSha256':bridge_sha,'serverPluginVersion':game['serverBridgeVersion'] or 'none',
         'preset':identity['preset'],'stages':{k:stages[k]['status'] for k in sorted(stages)},
         'artifactHashes':{k:hashes[k] for k in sorted(hashes)},
-        'startedAt':report['startedAt'],'finishedAt':report['finishedAt']}
-    for val in ('runId','packageId','javaVersion','os','arch','loader','guardMode','serverPluginVersion','preset'):
+        'startedAt':report['startedAt'],'finishedAt':report['finishedAt'],
+        'issuedAt':issued['issuedAt'], 'expiresAt':(datetime.fromisoformat(issued['issuedAt'].replace('Z','+00:00')) + __import__('datetime').timedelta(hours=24)).isoformat().replace('+00:00','Z')}
+    # The target matrix is issued by the Backend, not selected by CI or the
+    # worker. Require an EXACT identity match; no wildcard or fallback target.
+    fields=('packageVersion','manifestSha256','artifactSha256','resolvedPlanSha256',
+            'sourceSha','buildSha','javaSha256','javaVersion','os','arch','loader',
+            'installAdapterSha256','guardMode','guardPolicySha256',
+            'serverBridgeSha256','serverPluginVersion','preset')
+    applicable=[t for t in issued['requiredTargets'] if all(t.get('version' if k=='packageVersion' else k)==evidence.get(k) for k in fields)]
+    check(len(applicable)==1,'no unique configured target matches exact Java/preset/server/build/runtime identity')
+    evidence['targetId']=applicable[0]['id']
+    check(HEX64.fullmatch(evidence['runNonce']) and HEX64.fullmatch(evidence['targetMatrixSha256']),
+          'missing backend issued run nonce or target matrix')
+    for val in ('runId','packageId','targetId','packageVersion','javaVersion','os','arch','loader','guardMode','serverPluginVersion','preset','audience','purpose'):
         check(TOKEN.fullmatch(evidence[val]),'unsafe/noncanonical signed value: '+val)
     return evidence
 
@@ -196,6 +214,10 @@ def sign_evidence(payload,key_path):
     check(p.stat().st_mode & 0o077 == 0,'attestation private key must be owner-only')
     private=load_pem_private_key(p.read_bytes(),password=None)
     check(isinstance(private,Ed25519PrivateKey),'Ed25519 attestation key required')
+    payload=dict(payload)
+    payload['signerKeyId']=hashlib.sha256(private.public_key().public_bytes(Encoding.Raw,PublicFormat.Raw)).hexdigest()
+    payload={key:payload[key] for key in EVIDENCE_FIELDS}
+    # The byte order of the following dictionary is the Go struct field order.
     return {'evidence':payload,'signature':base64.urlsafe_b64encode(private.sign(DOMAIN+canonical(payload))).decode().rstrip('=')}
 
 def execute_run(cfg,package_id):

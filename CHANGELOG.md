@@ -1,3 +1,9 @@
+## 0.34.6 — Evidence Freshness & Invalidation (V05)
+
+- One-time persistent attestation challenges, V3 domain-separated evidence, purpose/audience/nonce/freshness validation.
+- Operator-pinned required target policy for exact Java, preset, adapter, Guard, source/build and matching server identity; all targets share one immutable staged snapshot.
+- Durable emergency signing-key revocation, live applicability reporting and signature re-verification. Stable publishing remains deliberately blocked until V11.
+
 ## 0.34.5 — Signed ValidationEvidence & Runner Trust (V04/V06)
 
 - Host-side independent Ed25519 attestor executes an immutable, operator-pinned OCI image via rootless Podman, using only a short-lived staged grant; release-signing and attestation keys remain separate.

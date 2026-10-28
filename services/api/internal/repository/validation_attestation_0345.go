@@ -67,7 +67,7 @@ func (r *SQLRepository) ListValidationAttestations0345(ctx context.Context, pack
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	rows, e := r.db.QueryContext(ctx, `SELECT run_id,package_id,project_id,manifest_sha256,artifact_sha256,evidence,signature,received_at FROM package_validation_attestations_0345 WHERE package_id=$1 ORDER BY received_at DESC LIMIT 100`, strings.TrimSpace(packageID))
+	rows, e := r.db.QueryContext(ctx, `SELECT run_id,package_id,project_id,manifest_sha256,artifact_sha256,evidence,signature,received_at FROM package_validation_attestations_0345 WHERE package_id=$1 ORDER BY received_at DESC LIMIT 1024`, strings.TrimSpace(packageID))
 	if e != nil {
 		return nil, e
 	}

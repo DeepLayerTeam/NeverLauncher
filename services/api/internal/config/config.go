@@ -83,6 +83,7 @@ type Config struct {
 	AuthTokenSecret                              string
 	ValidationAttestationPublicKey0345           string
 	ValidationTrustedRunnerImageSHA2560345       string
+	ValidationRequiredTargetsJSON0346            string
 	AuthTokenTTLHours                            int
 	AuthTokenIssuer                              string
 	AuthTokenAudience                            string
@@ -280,6 +281,7 @@ func Load() Config {
 		Environment:                                  environment,
 		ValidationAttestationPublicKey0345:           env("NEVERLAUNCHER_VALIDATION_ATTESTATION_PUBLIC_KEY", ""),
 		ValidationTrustedRunnerImageSHA2560345:       env("NEVERLAUNCHER_VALIDATION_RUNNER_IMAGE_SHA256", ""),
+		ValidationRequiredTargetsJSON0346:            env("NEVERLAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON", ""),
 		AuthTokenSecret:                              env("NEVERLAUNCHER_AUTH_TOKEN_SECRET", env("NEVERLAUNCHER_TOKEN_SECRET", env("NEVERLAUNCHER_JWT_SECRET", "dev-only-change-me"))),
 		AuthTokenTTLHours:                            envInt("NEVERLAUNCHER_AUTH_TOKEN_TTL_HOURS", 12),
 		AuthTokenIssuer:                              env("NEVERLAUNCHER_AUTH_TOKEN_ISSUER", strings.TrimRight(publicURL, "/")),

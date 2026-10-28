@@ -5,6 +5,10 @@ on:
       - 'tools/validation-attestor/**'
       - 'e2e/scripts/**'
       - 'services/api/internal/httpapi/validation_attestation_0345*'
+      - 'services/api/internal/httpapi/validation_*0346*'
+      - 'services/api/internal/repository/validation_*0346*'
+      - 'services/api/internal/dbmigrate/sql/0104*'
+      - 'cli/internal/dbmigrate/sql/0104*'
       - '.github/workflows/validation-attestor-0345.yml'
   workflow_dispatch:
 permissions:
@@ -29,7 +33,7 @@ jobs:
       - name: Verify Backend Ed25519 pinning and immutable attestations
         run: |
           cd services/api
-          go test ./internal/httpapi -run 'TestTrustedAttestation|TestAttestationRepositoryImmutable|TestStagedGrantRejectsStale' -count=1
+          go test ./internal/httpapi ./internal/repository -run 'TestV05|TestTrustedAttestation|TestAttestationRepositoryImmutable|TestStagedGrantRejectsStale' -count=1
   # CI builds and tests NEVER hold the host attestation signing key.
   # The sealed/pinned OCI image is built and approved through a separate
   # operator-controlled pipeline; only that image digest can be attested.

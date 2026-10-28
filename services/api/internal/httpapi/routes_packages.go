@@ -158,6 +158,7 @@ func (s Server) registerPackageRoutesV1(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/packages/{packageId}/stage", s.requirePackagePermission("release:prepare", s.packageStage))
 	mux.Handle("POST /api/v1/packages/{packageId}/integrity-check", s.requirePackagePermission("release:prepare", s.packageIntegrityCheck0212))
 	mux.Handle("POST /api/v1/packages/{packageId}/staged-runs", s.requirePackagePermission("release:prepare", s.stagedRunIssue0342))
+	mux.Handle("POST /api/v1/admin/validation-attestation/keys/revoke", s.requireFreshAuth117("settings:manage", "mfa", 5*time.Minute, s.validationKeyRevoke0346))
 	mux.Handle("POST /api/v1/packages/{packageId}/validation-attestations", s.requirePackagePermission("release:prepare", s.validationAttestationPost0345))
 	mux.Handle("GET /api/v1/packages/{packageId}/validation-attestations", s.requirePackagePermission("project:read", s.validationAttestationList0345))
 	mux.Handle("GET /api/v1/packages/{packageId}/staged-runs", s.requirePackagePermission("project:read", s.stagedRunList0342))
