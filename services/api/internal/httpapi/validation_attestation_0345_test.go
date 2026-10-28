@@ -34,7 +34,7 @@ func validValidationFixture0345(t *testing.T) (signedValidation0345, ed25519.Pri
 	for _, stage := range mandatoryStages0345 {
 		p.Stages[stage] = "passed"
 	}
-	for _, name := range []string{"staged-execution.json", "verified.json", "startup-readiness.json", "server-readiness.json", "gameplay-smoke.json", "authentication.json", "runtime-launch.json", "runtime-gameplay-launch.json", "execution-identity.json"} {
+	for _, name := range []string{"staged-execution.json", "verified.json", "startup-readiness.json", "server-readiness.json", "gameplay-smoke.json", "authentication.json", "runtime-launch.json", "runtime-gameplay-launch.json", "execution-identity.json", "update-recovery.json"} {
 		p.ArtifactHashes[name] = strings.Repeat("8", 64)
 	}
 	fingerprint := sha256.Sum256(key)
@@ -82,6 +82,29 @@ func TestTrustedAttestationSignatures0345(t *testing.T) {
 		t.Fatal("missing gameplay accepted with valid signature")
 	}
 }
+func TestV09UpdateRecoveryCannotBeOmittedOrFaked0349(t *testing.T) {
+	signed, priv, pub := validValidationFixture0345(t)
+	if err := verifyValidation0345(signed, pub); err != nil {
+		t.Fatal(err)
+	}
+	delete(signed.Evidence.Stages, "update-recovery")
+	signFixture0345(t, &signed, priv)
+	if err := verifyValidation0345(signed, pub); err == nil {
+		t.Fatal("missing lifecycle evidence accepted")
+	}
+	signed.Evidence.Stages["update-recovery"] = "failed"
+	signFixture0345(t, &signed, priv)
+	if err := verifyValidation0345(signed, pub); err == nil {
+		t.Fatal("failed real updater accepted")
+	}
+	signed.Evidence.Stages["update-recovery"] = "passed"
+	delete(signed.Evidence.ArtifactHashes, "update-recovery.json")
+	signFixture0345(t, &signed, priv)
+	if err := verifyValidation0345(signed, pub); err == nil {
+		t.Fatal("missing updater artifact accepted")
+	}
+}
+
 func TestTrustedAttestationMatchesPersistedRun0345(t *testing.T) {
 	signed, _, _ := validValidationFixture0345(t)
 	stageRecord := map[string]stagedStep0342{}

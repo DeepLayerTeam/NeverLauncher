@@ -66,6 +66,47 @@ def fixture(work):
         'installAdapterSha256':hashlib.sha256((cli+rt).encode()).hexdigest(),
         'resolvedPlanSha256':resolution,'guardPolicySha256':hashlib.sha256(b'{}').hexdigest(),
         'guardMode':'disabled','loader':'vanilla','preset':'default'})
+    # V09 fixture: independently verifiable previous package and recorded CLI
+    # transaction outputs. Real updater coverage is exercised in the CLI tests.
+    prev={'packageId':'prev-package','version':'0.9.0','projectId':'project',
+          'profileId':'profile','files':[artifact]}
+    previous_signed={'version':'0.9.0','signature':{'publicKey':'a'*64},'files':[artifact]}
+    signed['signature']={'publicKey':'a'*64}
+    pkg.update({'packageId':package,'profileId':'profile'})
+    signed['profileId']='profile'
+    dump(work/'payload'/'staged-package-description.json',pkg)
+    dump(work/'payload'/'signed-release-manifest.json',signed)
+    lifecycle=work/'lifecycle-validation'
+    dump(lifecycle/'previous-source'/'staged-package-description.json',prev)
+    dump(lifecycle/'previous-source'/'signed-release-manifest.json',previous_signed)
+    for sub in ('previous-source','installation'):
+        f=lifecycle/sub/artifact['path'];f.parent.mkdir(parents=True,exist_ok=True);f.write_bytes(data)
+    for name,status in (('prior-install','applied-and-verified'),('update','applied-and-verified'),
+                        ('repaired','repaired-and-verified'),('rollback','rolled-back')):
+        dump(lifecycle/(name+'.json'),{'status':status,'restoredSnapshot':'snapshot-1'})
+    for phase in ('staging','committing'):
+        for name in ('prior','retry'):
+            dump(lifecycle/('interrupted-'+phase)/(name+'.json'),{'status':'applied-and-verified'})
+    download_path=lifecycle/'interrupted-download.bin';download_path.write_bytes(data)
+    for name,key in (('rollback-launch','3'*64),('java-replacement-launch','4'*64),('managed-java-repair-launch','5'*64)):
+        dump(lifecycle/(name+'.json'),{'status':'passed','javaSha256':key,
+            'menuSamples':[{'sha256':str(i)*64,'menuControls':['singleplayer','multiplayer']} for i in (1,2)]})
+    file_map={artifact['path']:artifact['sha256']}
+    checks={name:'passed' for name in ('cleanPreviousInstall','failedUpdateLeavesPrevious',
+            'upgrade','corruptCacheRejected','repair','javaReplacementLaunch','managedJavaRepairAndLaunch','rollbackAndLaunch')}
+    checks['interruptedDownload']={'interruptedRejected':True,'partialRemoved':True,
+         'retryVerified':True,'artifactSha256':a.sha(download_path)}
+    for phase in ('staging','committing'):
+        checks['interruptedTransaction-'+phase]={'phase':phase,'killedUpdater':True,
+             'recovery':'passed','previousRestored':True,'retryVerified':True,'currentPackageId':package}
+    dump(work/'update-recovery.json',{'schemaVersion':'neverlauncher.lifecycle-validation.v1',
+       'status':'passed','currentPackageId':package,'currentVersion':'1.0.0',
+       'previousPackageId':'prev-package','previousVersion':'0.9.0',
+       'previousArchiveSha256':'a'*64,'rollbackSnapshot':'snapshot-1',
+       'javaOriginalSha256':'3'*64,'javaReplacementSha256':'4'*64,
+       'managedJava':{'manifestSha256':'a'*64,'archiveSha256':'b'*64,'javaSha256':'5'*64,'majorVersion':21,'reinstalled':True},
+       'checks':checks,'files':file_map,
+       'filesSha256':hashlib.sha256(json.dumps(file_map,sort_keys=True,separators=(',',':')).encode()).hexdigest()})
     stages={name:{'status':'passed'} for name in a.REQUIRED}
     for name,file in a.STAGE_ARTIFACT.items():stages[name]['evidenceSha256']=a.sha(work/file)
     now=datetime.now(timezone.utc)
@@ -155,6 +196,26 @@ class TrustBoundaryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'online-mode policy'):
                 a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)
 
+    def test_v09_rejects_forged_repair_and_incomplete_interruption(self):
+        with tempfile.TemporaryDirectory() as d:
+            work=Path(d);issued=fixture(work)
+            self.assertEqual(a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)['targetId'],'linux-default')
+            proof=a.read_json(work/'update-recovery.json')
+            proof['checks']['interruptedTransaction-committing']['killedUpdater']=False
+            dump(work/'update-recovery.json',proof)
+            report=a.read_json(work/'staged-execution.json')
+            report['stages']['update-recovery']['evidenceSha256']=a.sha(work/'update-recovery.json')
+            dump(work/'staged-execution.json',report)
+            with self.assertRaisesRegex(ValueError,'crashed updater phase'):
+                a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)
+
+    def test_v09_rejects_tampered_previous_release_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            work=Path(d);issued=fixture(work)
+            (work/'lifecycle-validation'/'installation'/'mods'/'example.jar').write_bytes(b'bad')
+            with self.assertRaisesRegex(ValueError,'rollback did not restore signed previous bytes'):
+                a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)
+
     def test_v05_rejects_wrong_preset_java_server_even_with_valid_artifacts(self):
         with tempfile.TemporaryDirectory() as d:
             work=Path(d); issued=fixture(work)
@@ -188,6 +249,6 @@ class TrustBoundaryTests(unittest.TestCase):
 
     def test_signed_payload_fixed_canonical_order(self):
         self.assertEqual(a.canonical({'a':'A','b':{'x':'X','y':'Y'}}),b'{"a":"A","b":{"x":"X","y":"Y"}}')
-        self.assertEqual(len(a.REQUIRED),8)
+        self.assertEqual(len(a.REQUIRED),9)
 
 if __name__=='__main__':unittest.main()

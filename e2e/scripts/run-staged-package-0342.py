@@ -9,6 +9,7 @@ import time
 from staged_readiness_0343 import StartupObserver, log_health
 from staged_matching_0344 import MatchingServer, GameplayObserver
 from staged_auth_0347 import run_probe, ProviderUnavailable, ProviderRejected, ProviderMisconfigured
+from staged_lifecycle_0349 import run_lifecycle
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -503,10 +504,19 @@ def execute(args):
             'evidenceSha256':proof_hash}
         if launch_error or game.status != 'passed':
             raise RuntimeError('actual staged client gameplay failed: ' + (launch_error or game.failure or getattr(game,'last_error','missing required positive signals')))
+        stage_name = 'update-recovery'
+        if not args.previous_bundle or not args.previous_sha256 or not args.replacement_java or not args.managed_java_manifest or not args.managed_java_sha256:
+            report['stages'][stage_name]={'status':'blocked',
+                'detail':'V09 requires host-pinned prior release, different Java, and signed distribution-managed Java recovery'}
+            raise RuntimeError('V09 baseline or Java replacement missing; runtime certification blocked')
+        lifecycle_path = run_lifecycle(args,work,pkg,signed,download_exact,selected_java,subprocess_env)
+        report['stages'][stage_name]={'status':'passed',
+            'detail':'production install/update/repair/recover/rollback plus both real JVM menu launches verified',
+            'evidenceSha256':sha_file(lifecycle_path)}
     except Exception as exc:
         error = str(exc)
         if stage_name not in report['stages']:
-            report['stages'][stage_name] = {'status':'failed' if stage_name in ('manifest-files','materialization','startup','server-readiness','matching-server','gameplay-smoke') else 'blocked', 'detail':error[:2048]}
+            report['stages'][stage_name] = {'status':'failed' if stage_name in ('manifest-files','materialization','startup','server-readiness','matching-server','gameplay-smoke','update-recovery') else 'blocked', 'detail':error[:2048]}
     finally:
         if server is not None:
             server.close()
@@ -545,6 +555,11 @@ def main():
     parser.add_argument('--credentials-file', default='', help='Host-injected real short-lived Minecraft credential JSON')
     parser.add_argument('--negative-credentials-file', default='', help='Separate revocable custom-auth test session')
     parser.add_argument('--guard-denied-credentials-file', default='', help='Separate live trust-denied test identity')
+    parser.add_argument('--previous-bundle', default='', help='Host-pinned ZIP of real previous signed release including exact staged files')
+    parser.add_argument('--previous-sha256', default='', help='SHA-256 of host-approved previous release ZIP')
+    parser.add_argument('--replacement-java', default='', help='Different actual Java binary, same required major, for lifecycle launch')
+    parser.add_argument('--managed-java-manifest', default='', help='Approved local pinned Managed JRE distribution manifest and its archive')
+    parser.add_argument('--managed-java-sha256', default='', help='SHA-256 of pinned Managed JRE distribution manifest')
     parser.add_argument('--server-bundle', default='', help='Pinned server ZIP containing matching loader runtime; Vanilla can use official verified server download')
     parser.add_argument('--server-sha256', default='', help='Operator-pinned SHA-256 for full server distribution')
     parser.add_argument('--server-entry', default='', help='Launcher at bundle root: server.jar or run.sh')

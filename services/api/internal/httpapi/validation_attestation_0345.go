@@ -71,8 +71,8 @@ type validationAttestationRepository0345 interface {
 
 var validationHex0345 = regexp.MustCompile(`^[0-9a-f]{64}$`)
 var validationToken0345 = regexp.MustCompile(`^[a-zA-Z0-9_.:/@+\-]{1,160}$`)
-var mandatoryStages0345 = []string{"manifest-files", "materialization", "startup", "loader-readiness", "authentication", "server-readiness", "matching-server", "gameplay-smoke"}
-var stageArtifacts0345 = map[string]string{"materialization": "verified.json", "startup": "startup-readiness.json", "loader-readiness": "startup-readiness.json", "authentication": "authentication.json", "server-readiness": "server-readiness.json", "matching-server": "gameplay-smoke.json", "gameplay-smoke": "gameplay-smoke.json"}
+var mandatoryStages0345 = []string{"manifest-files", "materialization", "startup", "loader-readiness", "authentication", "server-readiness", "matching-server", "gameplay-smoke", "update-recovery"}
+var stageArtifacts0345 = map[string]string{"materialization": "verified.json", "startup": "startup-readiness.json", "loader-readiness": "startup-readiness.json", "authentication": "authentication.json", "server-readiness": "server-readiness.json", "matching-server": "gameplay-smoke.json", "gameplay-smoke": "gameplay-smoke.json", "update-recovery": "update-recovery.json"}
 
 func validatePayload0345(p validationPayload0345) error {
 	if !validationPreset0348.MatchString(p.Preset) {
@@ -113,7 +113,7 @@ func validatePayload0345(p validationPayload0345) error {
 			return errors.New("invalid artifact hash")
 		}
 	}
-	for _, name := range []string{"staged-execution.json", "verified.json", "startup-readiness.json", "server-readiness.json", "gameplay-smoke.json", "authentication.json", "runtime-launch.json", "runtime-gameplay-launch.json", "execution-identity.json"} {
+	for _, name := range []string{"staged-execution.json", "verified.json", "startup-readiness.json", "server-readiness.json", "gameplay-smoke.json", "authentication.json", "runtime-launch.json", "runtime-gameplay-launch.json", "execution-identity.json", "update-recovery.json"} {
 		if !validationHex0345.MatchString(p.ArtifactHashes[name]) {
 			return fmt.Errorf("required artifact missing: %s", name)
 		}

@@ -34,13 +34,14 @@ SCHEMA = 'neverlauncher.validation-evidence.v4'
 EVIDENCE_FIELDS = ('schemaVersion', 'runNonce', 'audience', 'purpose', 'targetId', 'targetMatrixSha256', 'signerKeyId', 'packageVersion', 'runId', 'packageId', 'manifestSha256', 'artifactSha256', 'resolvedPlanSha256', 'sourceSha', 'buildSha', 'runnerImageSha256', 'javaSha256', 'javaVersion', 'os', 'arch', 'loader', 'installAdapterSha256', 'guardMode', 'guardPolicySha256', 'serverBridgeSha256', 'serverPluginVersion', 'preset', 'authenticationMode', 'stages', 'artifactHashes', 'startedAt', 'finishedAt', 'issuedAt', 'expiresAt')
 DOMAIN = b'NeverLauncher/validation-evidence/v4\x00'
 REQUIRED = ('manifest-files','materialization','startup','loader-readiness',
-            'authentication','server-readiness','matching-server','gameplay-smoke')
+            'authentication','server-readiness','matching-server','gameplay-smoke','update-recovery')
 FILES = ('staged-execution.json','verified.json','startup-readiness.json',
          'server-readiness.json','gameplay-smoke.json','authentication.json','runtime-launch.json',
-         'runtime-gameplay-launch.json','execution-identity.json','native-adoption.json')
+         'runtime-gameplay-launch.json','execution-identity.json','native-adoption.json','update-recovery.json')
 STAGE_ARTIFACT = {'materialization':'verified.json','startup':'startup-readiness.json',
                   'loader-readiness':'startup-readiness.json','authentication':'authentication.json','server-readiness':'server-readiness.json',
-                  'matching-server':'gameplay-smoke.json','gameplay-smoke':'gameplay-smoke.json'}
+                  'matching-server':'gameplay-smoke.json','gameplay-smoke':'gameplay-smoke.json',
+                  'update-recovery':'update-recovery.json'}
 HEX64 = re.compile(r'^[a-f0-9]{64}$')
 TOKEN = re.compile(r'^[a-zA-Z0-9_.:/@+,\-]{1,160}$')
 
@@ -59,6 +60,103 @@ def check(expr, message):
 
 def canonical(obj):
     return json.dumps(obj, ensure_ascii=False, separators=(',',':')).encode('utf-8')
+
+def verify_lifecycle_0349(work, current_pkg, signed_manifest, identity):
+    """Independently check actual release bytes and native lifecycle diagnostics.
+
+    Never trust a worker-supplied list of PASS assertions on its own.
+    """
+    proof=read_json(work/'update-recovery.json')
+    root=work/'lifecycle-validation'
+    prior=read_json(root/'previous-source'/'staged-package-description.json')
+    prior_signed=read_json(root/'previous-source'/'signed-release-manifest.json')
+    check(proof['schemaVersion']=='neverlauncher.lifecycle-validation.v1' and proof['status']=='passed',
+          'V09 lifecycle incomplete')
+    check(proof['currentPackageId']==current_pkg['packageId'] and
+          proof['currentVersion']==current_pkg['version'] and
+          proof['previousPackageId']==prior['packageId'] and
+          proof['previousVersion']==prior['version'] and
+          prior['packageId']!=current_pkg['packageId'] and
+          prior['version']!=current_pkg['version'], 'V09 same-release or cross-package rollback')
+    check(prior['projectId']==current_pkg['projectId'] and
+          prior['profileId']==current_pkg['profileId'] and
+          prior_signed['version']==prior['version'] and
+          prior_signed['signature']['publicKey']==signed_manifest['signature']['publicKey'],
+          'V09 prior release is not same identity / signed by pinned key')
+    check(HEX64.fullmatch(proof['previousArchiveSha256']) and
+          HEX64.fullmatch(proof['javaOriginalSha256']) and
+          HEX64.fullmatch(proof['javaReplacementSha256']) and
+          proof['javaOriginalSha256']!=proof['javaReplacementSha256'] and
+          identity['javaSha256']==proof['javaOriginalSha256'],
+          'V09 Java replacement was not executed with independent binary')
+    required=('cleanPreviousInstall','failedUpdateLeavesPrevious','upgrade',
+              'corruptCacheRejected','repair','javaReplacementLaunch','managedJavaRepairAndLaunch','rollbackAndLaunch')
+    check(all(proof['checks'].get(key)=='passed' for key in required),
+          'V09 required lifecycle transaction did not pass')
+    for phase in ('staging','committing'):
+        p=proof['checks'].get('interruptedTransaction-'+phase,{})
+        check(p.get('phase')==phase and p.get('killedUpdater') is True and
+              p.get('recovery')=='passed' and p.get('previousRestored') is True and
+              p.get('retryVerified') is True and p.get('currentPackageId')==current_pkg['packageId'],
+              'V09 crashed updater phase was not recovered: '+phase)
+        case=root/('interrupted-'+phase)
+        check(read_json(case/'prior.json').get('status')=='applied-and-verified' and
+              read_json(case/'retry.json').get('status')=='applied-and-verified',
+              'V09 interrupted updater did not complete production CLI retry')
+    download=proof['checks'].get('interruptedDownload',{})
+    check(download.get('interruptedRejected') is True and
+          download.get('partialRemoved') is True and download.get('retryVerified') is True,
+          'V09 interrupted downloader accepted corrupt bytes')
+    check(sha(root/'interrupted-download.bin')==download['artifactSha256'],
+          'V09 download retry bytes mismatch')
+    check(read_json(root/'prior-install.json')['status']=='applied-and-verified' and
+          read_json(root/'update.json')['status']=='applied-and-verified' and
+          read_json(root/'repaired.json')['status']=='repaired-and-verified' and
+          read_json(root/'rollback.json')['status']=='rolled-back' and
+          read_json(root/'rollback.json')['restoredSnapshot']==proof['rollbackSnapshot'],
+          'V09 production CLI transactions not observed')
+    check(read_json(root/'java-replacement-launch.json')['status']=='passed' and
+          read_json(root/'rollback-launch.json')['status']=='passed' and
+          read_json(root/'java-replacement-launch.json')['javaSha256']==proof['javaReplacementSha256'] and
+          read_json(root/'rollback-launch.json')['javaSha256']==proof.get('previousJavaSha256',proof['javaOriginalSha256']),
+          'V09 actual JVM replacement or rollback startup not confirmed')
+    manager=proof.get('managedJava',{})
+    check(manager.get('reinstalled') is True and manager.get('majorVersion') in (8,16,17,21,25) and
+          HEX64.fullmatch(manager.get('manifestSha256','')) and
+          HEX64.fullmatch(manager.get('archiveSha256','')) and
+          HEX64.fullmatch(manager.get('javaSha256','')) and
+          read_json(root/'managed-java-repair-launch.json').get('status')=='passed' and
+          read_json(root/'managed-java-repair-launch.json').get('javaSha256')==manager['javaSha256'],
+          'V09 pinned Managed Java repair/replacement and real launch missing')
+    for name in ('java-replacement-launch.json','rollback-launch.json','managed-java-repair-launch.json'):
+        samples=read_json(root/name).get('menuSamples',[])
+        check(len(samples)==2 and samples[0]['sha256']!=samples[1]['sha256'] and
+              all(len(x.get('menuControls',[]))>=2 for x in samples),
+              'V09 real menu/window observation missing: '+name)
+    signed_files={f['path']:f for f in prior_signed['files']}
+    check(len(signed_files)==len(prior['files']) and bool(signed_files),
+          'V09 previous release signed file count mismatch')
+    actual={}
+    for item in prior['files']:
+        rel=item['path']
+        check(isinstance(rel,str) and rel and not rel.startswith('/') and
+              '\\' not in rel and all(bit not in ('','.', '..') for bit in rel.split('/')),
+              'V09 unsafe previous release path')
+        check(rel in signed_files and signed_files[rel]['sha256']==item['sha256'] and
+              signed_files[rel]['size']==item['size'], 'V09 previous release manifest mismatch')
+        for directory in (root/'previous-source',root/'installation'):
+            f=directory/rel
+            check(f.is_file() and not f.is_symlink() and f.stat().st_size==item['size'] and
+                  sha(f)==item['sha256'], 'V09 rollback did not restore signed previous bytes: '+rel)
+        actual[rel]=item['sha256']
+    check(proof['files']==actual and
+          hashlib.sha256(json.dumps(actual,sort_keys=True,separators=(',',':')).encode()).hexdigest()==proof['filesSha256'],
+          'V09 final rollback files digest inconsistent')
+    return {'lifecycle-report.json':sha(work/'update-recovery.json'),
+            'previous-release-manifest.json':sha(root/'previous-source'/'signed-release-manifest.json'),
+            'rollback-launch.json':sha(root/'rollback-launch.json'),
+            'java-replacement-launch.json':sha(root/'java-replacement-launch.json'),
+            'managed-java-repair-launch.json':sha(root/'managed-java-repair-launch.json')}
 
 def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridge_sha):
     """Only run after a trusted, pinned OCI container has exited successfully."""
@@ -159,6 +257,7 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
           'loader mismatch against signed manifest')
     check(identity['preset']==(selection['preset'] if catalog else 'default'),
           'actual preset mismatch against signed component selection')
+    hashes.update(verify_lifecycle_0349(work,snapshot,signed_manifest,identity))
     install=read_json(work/'verified.json')
     check(install['status']=='valid','client verify did not pass')
     startup=read_json(work/'startup-readiness.json')
@@ -361,6 +460,30 @@ def execute_run(cfg,package_id,selection=None,issued_grant=None):
               '--cli','/opt/neverlauncher','--runtime','/opt/neverruntime',
               '--java','auto','--pinned-public-key',cfg.manifest_key,
               '--runtime-seconds',str(cfg.runtime_seconds)]
+        check(not Path(cfg.previous_bundle_file).is_symlink(),'symlink prior-release bundle forbidden')
+        prior_bundle=Path(cfg.previous_bundle_file).resolve(strict=True)
+        check(prior_bundle.is_file() and not prior_bundle.is_symlink() and
+              HEX64.fullmatch(cfg.previous_sha) and sha(prior_bundle)==cfg.previous_sha,
+              'host-pinned prior release is missing or tampered')
+        replacement_home=Path(cfg.replacement_java_home).resolve(strict=True)
+        replacement_binary=replacement_home/'bin'/'java'
+        check(replacement_binary.is_file() and replacement_binary.stat().st_mode & 0o111,
+              'host-approved Java replacement missing')
+        args[args.index(cfg.image):args.index(cfg.image)]=[
+            '--mount',f'type=bind,src={prior_bundle},dst=/run/previous/release.zip,readonly',
+            '--mount',f'type=bind,src={replacement_home},dst=/run/replacement-java,readonly']
+        managed_manifest=Path(cfg.managed_java_manifest_file)
+        check(not managed_manifest.is_symlink() and managed_manifest.is_file() and
+              HEX64.fullmatch(cfg.managed_java_sha) and sha(managed_manifest)==cfg.managed_java_sha,
+              'host-approved Managed Java manifest missing or not pinned')
+        managed_dir=managed_manifest.resolve(strict=True).parent
+        args[args.index(cfg.image):args.index(cfg.image)]=[
+            '--mount',f'type=bind,src={managed_dir},dst=/run/managed-java,readonly']
+        args.extend(['--previous-bundle','/run/previous/release.zip',
+                     '--previous-sha256',cfg.previous_sha,
+                     '--replacement-java','/run/replacement-java/bin/java',
+                     '--managed-java-manifest','/run/managed-java/'+managed_manifest.name,
+                     '--managed-java-sha256',cfg.managed_java_sha])
         if cfg.server_bundle_file:
             args[args.index(cfg.image):args.index(cfg.image)]=['--mount',
                 f'type=bind,src={Path(cfg.server_bundle_file).resolve()},dst=/run/server/bundle.zip,readonly']
@@ -476,6 +599,11 @@ def main():
     p.add_argument('--official-refresh-token-file',default='',help='Host-only authorized test account refresh token, 0600')
     p.add_argument('--negative-credentials-file',default='',help='Separate live session for custom revocation')
     p.add_argument('--guard-denied-credentials-file',default='',help='Real live policy-denied session')
+    p.add_argument('--previous-bundle-file',required=True,help='Host-approved actual previous signed release ZIP')
+    p.add_argument('--previous-sha',required=True,help='SHA-256 of prior-release bundle')
+    p.add_argument('--replacement-java-home',required=True,help='Host-approved different JDK/JRE directory')
+    p.add_argument('--managed-java-manifest-file',required=True,help='Pinned production Temurin distribution manifest; archive in same directory')
+    p.add_argument('--managed-java-sha',required=True,help='SHA-256 of pinned Managed JRE manifest')
     p.add_argument('--server-bundle-file',default='',help='Host-pinned complete matching server ZIP')
     p.add_argument('--server-sha',default='')
     p.add_argument('--server-entry',default='')

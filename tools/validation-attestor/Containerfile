@@ -29,6 +29,7 @@ COPY e2e/scripts/run-staged-package-0342.py /opt/staged/run-staged-package-0342.
 COPY e2e/scripts/staged_readiness_0343.py /opt/staged/staged_readiness_0343.py
 COPY e2e/scripts/staged_auth_0347.py /opt/staged/staged_auth_0347.py
 COPY e2e/scripts/staged_matching_0344.py /opt/staged/staged_matching_0344.py
+COPY e2e/scripts/staged_lifecycle_0349.py /opt/staged/staged_lifecycle_0349.py
 ENV JAVA_HOME_21_X64=/opt/java/openjdk \
     XDG_CACHE_HOME=/tmp/nl-cache HOME=/tmp \
     LIBGL_ALWAYS_SOFTWARE=1 PYTHONDONTWRITEBYTECODE=1

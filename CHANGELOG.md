@@ -1,3 +1,10 @@
+## 0.34.9 — Update, Recovery & Rollback (V09)
+
+- The staged Minecraft E2E now runs the production transactional CLI against a **host-pinned previous signed release**, then upgrades to the exact staged package, corrupts installed files and preferred cache, executes repair, and rolls back via the actual snapshot. Both the updated client on alternate Java and restored previous client must reach a positively verified Minecraft menu.
+- Fault injection terminates the actual updater process during observed `staging` and `committing` journal phases and uses public `update recover` to restore the exact prior bytes before retry. HTTP interruption tests use the real staged downloader and compare retried byte hashes. Missing observations never become PASS.
+- Separate `update-recovery` stage, on-disk diagnostics, independent host-side verification, mandatory Backend evidence, fail-closed prior-release/Java inputs, and executable real-CLI regression tests.
+- Stable is still blocked. Full live Minecraft E2E, pinned Managed Java distribution-manager replacement execution and Backend Go 1.27.3 tests are not validated in the local build environment.
+
 ## 0.34.6 — Evidence Freshness & Invalidation (V05)
 
 - One-time persistent attestation challenges, V3 domain-separated evidence, purpose/audience/nonce/freshness validation.

@@ -54,6 +54,7 @@ jobs:
           python3 e2e/scripts/test_run_staged_package_0342.py
           python3 e2e/scripts/test_staged_matching_0344.py
           python3 e2e/scripts/test_staged_auth_0347.py
+          python3 e2e/scripts/test_staged_lifecycle_0349.py
       - name: Build CLI and NeverRuntime executables only (never build Minecraft client)
         run: |
           cd cli && go build -o ../nl ./cmd/neverlauncher
@@ -66,6 +67,12 @@ jobs:
           STAGED_PACKAGE_ID: ${{ inputs.package_id }}
           STAGED_DURATION: ${{ inputs.runtime_seconds }}
           STAGED_MANIFEST_KEY: ${{ vars.NL_STAGED_MANIFEST_PUBLIC_KEY }}
+          PREVIOUS_BUNDLE_URL: ${{ vars.NL_VALIDATION_PREVIOUS_BUNDLE_URL }}
+          PREVIOUS_BUNDLE_SHA256: ${{ vars.NL_VALIDATION_PREVIOUS_BUNDLE_SHA256 }}
+          REPLACEMENT_JAVA: ${{ vars.NL_VALIDATION_REPLACEMENT_JAVA }}
+          MANAGED_JRE_BUNDLE_URL: ${{ vars.NL_VALIDATION_MANAGED_JRE_BUNDLE_URL }}
+          MANAGED_JRE_BUNDLE_SHA256: ${{ vars.NL_VALIDATION_MANAGED_JRE_BUNDLE_SHA256 }}
+          MANAGED_JRE_MANIFEST_SHA256: ${{ vars.NL_VALIDATION_MANAGED_JRE_MANIFEST_SHA256 }}
           SERVER_BUNDLE_URL: ${{ vars.NL_MATCHING_SERVER_BUNDLE_URL }}
           SERVER_BUNDLE_SHA256: ${{ vars.NL_MATCHING_SERVER_BUNDLE_SHA256 }}
           SERVER_ENTRY: ${{ vars.NL_MATCHING_SERVER_ENTRY }}
@@ -97,6 +104,26 @@ jobs:
             NEGATIVE_ARG=(--negative-credentials-file "$AUTH_DIR/negative.json")
             GUARD_ARG=(--guard-denied-credentials-file "$AUTH_DIR/guard-denied.json")
           fi
+          # Previous release must be an approved, independently signed and
+          # immutable bundle. A current-only install cannot pass V09.
+          [[ "$PREVIOUS_BUNDLE_URL" == https://* ]] || { echo 'V09 prior signed release HTTPS URL missing' >&2; exit 2; }
+          [[ "$PREVIOUS_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'V09 prior release SHA256 missing' >&2; exit 2; }
+          [[ -n "$REPLACEMENT_JAVA" && -x "$REPLACEMENT_JAVA" ]] || { echo 'V09 distinct Java binary missing' >&2; exit 2; }
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+            --max-time 600 --output "$RUNNER_TEMP/previous-signed-release.zip" "$PREVIOUS_BUNDLE_URL"
+          echo "$PREVIOUS_BUNDLE_SHA256  $RUNNER_TEMP/previous-signed-release.zip" | sha256sum -c - >/dev/null
+          # The same production NeverRuntime Managed Java installer must
+          # quarantine/reinstall an intentionally corrupted signed Java binary.
+          [[ "$MANAGED_JRE_BUNDLE_URL" == https://* ]] || { echo 'V09 pinned Managed JRE bundle URL missing' >&2; exit 2; }
+          [[ "$MANAGED_JRE_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'V09 Managed JRE bundle SHA256 missing' >&2; exit 2; }
+          [[ "$MANAGED_JRE_MANIFEST_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'V09 Managed JRE manifest SHA256 missing' >&2; exit 2; }
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+            --max-time 600 --output "$RUNNER_TEMP/managed-jre-bundle.zip" "$MANAGED_JRE_BUNDLE_URL"
+          echo "$MANAGED_JRE_BUNDLE_SHA256  $RUNNER_TEMP/managed-jre-bundle.zip" | sha256sum -c - >/dev/null
+          mkdir -m 0700 "$RUNNER_TEMP/managed-jre-bundle"
+          unzip -q "$RUNNER_TEMP/managed-jre-bundle.zip" -d "$RUNNER_TEMP/managed-jre-bundle"
+          test -f "$RUNNER_TEMP/managed-jre-bundle/MANAGED_JRE_MANIFEST.json" || exit 2
+          echo "$MANAGED_JRE_MANIFEST_SHA256  $RUNNER_TEMP/managed-jre-bundle/MANAGED_JRE_MANIFEST.json" | sha256sum -c - >/dev/null
           # Non-Vanilla servers must use an externally provisioned complete,
           # pinned server distribution. Never materialize a substitute client.
           SERVER_BUNDLE=""
@@ -116,6 +143,10 @@ jobs:
               --runtime "$GITHUB_WORKSPACE/runtime/neverruntime/target/release/neverruntime" \
               --java auto --pinned-public-key "$STAGED_MANIFEST_KEY" --runtime-seconds "$STAGED_DURATION" \
               --auth-mode "$AUTH_MODE" --credentials-file "$AUTH_DIR/credentials.json" \
+              --previous-bundle "$RUNNER_TEMP/previous-signed-release.zip" \
+              --previous-sha256 "$PREVIOUS_BUNDLE_SHA256" --replacement-java "$REPLACEMENT_JAVA" \
+              --managed-java-manifest "$RUNNER_TEMP/managed-jre-bundle/MANAGED_JRE_MANIFEST.json" \
+              --managed-java-sha256 "$MANAGED_JRE_MANIFEST_SHA256" \
               "${NEGATIVE_ARG[@]}" "${GUARD_ARG[@]}" \
               --server-bundle "$SERVER_BUNDLE" --server-sha256 "$SERVER_BUNDLE_SHA256" \
               --server-entry "$SERVER_ENTRY" --bridge-path "$BRIDGE_PATH" --bridge-sha256 "$BRIDGE_SHA256" --bridge-version "$BRIDGE_VERSION"
@@ -137,3 +168,7 @@ jobs:
             ${{ runner.temp }}/staged-execution/gameplay-smoke.json
             ${{ runner.temp }}/staged-execution/gameplay-diagnostics/world-*.png
             ${{ runner.temp }}/staged-execution/runtime-gameplay-launch.json
+            ${{ runner.temp }}/staged-execution/update-recovery.json
+            ${{ runner.temp }}/staged-execution/lifecycle-validation/rollback-launch.json
+            ${{ runner.temp }}/staged-execution/lifecycle-validation/java-replacement-launch.json
+            ${{ runner.temp }}/staged-execution/lifecycle-validation/managed-java-repair-launch.json
