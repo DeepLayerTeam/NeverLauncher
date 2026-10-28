@@ -7,6 +7,7 @@ from this script is observational, never accepted as stable certification.
 import argparse
 import time
 from staged_readiness_0343 import StartupObserver, log_health
+from staged_matching_0344 import MatchingServer, GameplayObserver
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -167,6 +168,7 @@ def execute(args):
     client_dir = work / 'client'
     stage_name = ''
     error = None
+    server = None
     subprocess_env = {k:v for k,v in os.environ.items() if not any(s in k.upper() for s in ('TOKEN','SECRET','PASSWORD','PRIVATE_KEY','CREDENTIAL'))}
     try:
         stage_name = 'manifest-files'
@@ -269,11 +271,78 @@ def execute(args):
             raise RuntimeError('staged Minecraft startup failed: ' + detail)
         if status == 'blocked':
             raise RuntimeError('staged Minecraft startup blocked: ' + detail)
+        if not loader_ready:
+            raise RuntimeError('staged loader readiness failed: ' + loader_detail)
+
+        # A second ordinary NeverRuntime launch auto-enters the real matching
+        # server; the first launch above independently proves the main menu.
+        # A server distribution is pinned as a whole, not substituted with an
+        # unrelated Vanilla server when the signed client uses a mod loader.
+        mc = signed.get('minecraft', {})
+        minecraft = mc.get('version', '')
+        loader_version = mc.get('loaderVersion', '')
+        if not minecraft or not loader or loader not in ('vanilla','fabric','quilt','forge','neoforge'):
+            raise ValueError('unknown signed Minecraft version or loader')
+        stage_name = 'server-readiness'
+        if not signed.get('runtime', {}).get('launch', {}).get('offlineMode', False):
+            report['stages']['server-readiness'] = {'status':'blocked',
+                'detail':'authenticated Minecraft login requires real-provider V07 credentials; offline mock cannot certify gameplay'}
+            raise RuntimeError('real authenticated test session unavailable for matching-server execution')
+        server = MatchingServer(work, selected_java, args.cli, minecraft, loader, loader_version,
+                                args.server_bundle, args.server_sha256, args.bridge_path,
+                                args.bridge_sha256, args.server_entry, args.bridge_version)
+        server.prepare()
+        server.start(args.server_startup_seconds)
+        server_report = work / 'server-readiness.json'
+        server_report.write_text(json.dumps({'runId':run_id,'serverArtifactSha256':server.artifact_sha,
+            'minecraftVersion':minecraft,'loader':loader,'loaderVersion':loader_version,
+            'bridgeRequired':server.requires_bridge,'startup':'passed'},indent=2),encoding='utf-8')
+        report['stages'][stage_name] = {'status':'passed', 'detail':'exact matching server/version, loader and required bridge booted; RCON world clock available',
+                                        'evidenceSha256':sha_file(server_report)}
+        stage_name = 'matching-server'
+        username = 'NL_Cert_Client'
+        game = GameplayObserver(server, client_dir, selected_java, loader, username,
+                                work / 'gameplay-diagnostics', run_id, time.time())
+        joining = work / 'runtime-gameplay-launch.json'
+        join_cmd = [args.runtime, 'launch', '--manifest', str(signed_manifest_path),
+                    '--pinned-public-key', args.pinned_public_key, '--root', str(client_dir),
+                    '--java', selected_java, '--username', username,
+                    '--matching-server-port', str(server.port),
+                    '--max-runtime-seconds', str(args.gameplay_seconds)]
+        launch_error = None
+        try:
+            gameplay_launch = run_runtime_observed(join_cmd, joining, subprocess_env,
+                                                  args.gameplay_seconds + 150, game)
+            if not gameplay_launch.get('timed_out') and not gameplay_launch.get('success'):
+                raise RuntimeError('Minecraft JVM exited unsuccessfully after matching-server launch')
+        except Exception as exc:
+            launch_error = str(exc)
+        game_proof = work / 'gameplay-smoke.json'
+        game_proof.write_text(json.dumps(game.evidence(), indent=2), encoding='utf-8')
+        proof_hash = sha_file(game_proof)
+        from staged_matching_0344 import CRASH
+        if (server.process.poll() is not None or game.failure or
+                CRASH.search(server.log_text()) or not log_health(client_dir, None, loader)[0]):
+            game.status = 'failed'
+            game.failure = game.failure or 'client/server crashed or loader readiness lost after join'
+        joined = game.joined and game.client_log_seen and game.window_pid is not None and not game.failure
+        report['stages']['matching-server'] = {'status':'passed' if joined else 'failed',
+            'detail':'matching server confirms login and player online; client log and PID-bound GUI observed' if joined else
+                     ('matching client/server join not established: ' + (launch_error or game.failure or getattr(game,'last_error','no positive join evidence')))[:2048],
+            'evidenceSha256':proof_hash}
+        report['stages']['gameplay-smoke'] = {'status':'passed' if game.status == 'passed' and not launch_error else 'failed',
+            'detail':'real GUI movement changed server-side position; world rendered and game ticks advanced' if game.status == 'passed' and not launch_error else
+                     ('real gameplay state not confirmed: ' + (launch_error or game.failure or getattr(game,'last_error','no positive gameplay proof')))[:2048],
+            'evidenceSha256':proof_hash}
+        if launch_error or game.status != 'passed':
+            raise RuntimeError('actual staged client gameplay failed: ' + (launch_error or game.failure or getattr(game,'last_error','missing required positive signals')))
     except Exception as exc:
         error = str(exc)
         if stage_name not in report['stages']:
-            report['stages'][stage_name] = {'status':'failed' if stage_name in ('manifest-files','materialization','startup') else 'blocked', 'detail':error[:2048]}
+            report['stages'][stage_name] = {'status':'failed' if stage_name in ('manifest-files','materialization','startup','server-readiness','matching-server','gameplay-smoke') else 'blocked', 'detail':error[:2048]}
     finally:
+        if server is not None:
+            server.close()
         # Worker-generated signatures are not trusted for stable publication.
         report['finishedAt'] = iso()
         report_path = work / 'staged-execution.json'
@@ -301,10 +370,20 @@ def main():
     parser.add_argument('--runtime', required=True)
     parser.add_argument('--java', required=True)
     parser.add_argument('--pinned-public-key', required=True)
-    parser.add_argument('--runtime-seconds', type=int, default=45)
+    parser.add_argument('--runtime-seconds', type=int, default=180)
+    parser.add_argument('--server-bundle', default='', help='Pinned server ZIP containing matching loader runtime; Vanilla can use official verified server download')
+    parser.add_argument('--server-sha256', default='', help='Operator-pinned SHA-256 for full server distribution')
+    parser.add_argument('--server-entry', default='', help='Launcher at bundle root: server.jar or run.sh')
+    parser.add_argument('--bridge-path', default='', help='Required ServerBridge mod/plugin path inside pinned server bundle')
+    parser.add_argument('--bridge-sha256', default='', help='Operator-pinned SHA-256 of the real bridge mod/plugin')
+    parser.add_argument('--bridge-version', default='', help='Operator-pinned ServerBridge version observed in the actual server log')
+    parser.add_argument('--server-startup-seconds', type=int, default=180)
+    parser.add_argument('--gameplay-seconds', type=int, default=120)
     args = parser.parse_args()
     if not 15 <= args.runtime_seconds <= 3600:
         parser.error('runtime seconds must be 15..3600')
+    if not 30 <= args.gameplay_seconds <= 1200 or not 30 <= args.server_startup_seconds <= 600:
+        parser.error('gameplay must be 30..1200s and server startup 30..600s')
     try:
         execute(args)
     except Exception as exc:

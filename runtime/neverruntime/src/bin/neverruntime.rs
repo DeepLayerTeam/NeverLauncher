@@ -1,5 +1,5 @@
 use neverruntime::{
-    build_launch_plan, certify_vanilla_compatibility, check_files, check_files_with_preset, download_missing_files_with_preset, ensure_managed_java, ensure_managed_java_from_distribution, launch_with_timeout, load_manifest,
+    build_launch_plan, certify_vanilla_compatibility, check_files, check_files_with_preset, download_missing_files_with_preset, ensure_managed_java, ensure_managed_java_from_distribution, launch_with_timeout, launch_with_timeout_matching, load_manifest,
     resolve_compatibility, verify_manifest_signature, CompatibilityContext, Manifest,
 };
 use serde_json::json;
@@ -128,13 +128,17 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
     let max_runtime_seconds = optional_flag(args, "--max-runtime-seconds")
         .map(|value| value.parse::<u64>().map_err(|_| "--max-runtime-seconds должен быть целым числом секунд".to_string()))
         .transpose()?;
-    let result = launch_with_timeout(
+    let server_port = optional_flag(args, "--matching-server-port")
+        .map(|value| value.parse::<u16>().map_err(|_| "invalid matching server port".to_string()))
+        .transpose()?;
+    let result = launch_with_timeout_matching(
         &manifest,
         &root,
         optional_flag(args, "--java"),
         optional_flag(args, "--username"),
         &pinned,
         max_runtime_seconds,
+        server_port,
     )
     .await?;
     serde_json::to_value(result).map_err(|err| err.to_string())

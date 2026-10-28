@@ -1,4 +1,4 @@
-name: Staged package actual runtime and menu readiness 0.34.3
+name: Staged package exact matching server and gameplay 0.34.4
 on:
   workflow_call:
     inputs:
@@ -45,11 +45,12 @@ jobs:
       - name: Install graphics libraries
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64 x11-utils mesa-utils scrot imagemagick tesseract-ocr tesseract-ocr-eng
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64 x11-utils mesa-utils scrot imagemagick tesseract-ocr tesseract-ocr-eng xdotool
       - name: Reject false startup proof and verify runner operations
         run: |
           python3 e2e/scripts/test_staged_readiness_0343.py
           python3 e2e/scripts/test_run_staged_package_0342.py
+          python3 e2e/scripts/test_staged_matching_0344.py
       - name: Build CLI and NeverRuntime executables only (never build Minecraft client)
         run: |
           cd cli && go build -o ../nl ./cmd/neverlauncher
@@ -62,17 +63,36 @@ jobs:
           STAGED_PACKAGE_ID: ${{ inputs.package_id }}
           STAGED_DURATION: ${{ inputs.runtime_seconds }}
           STAGED_MANIFEST_KEY: ${{ vars.NL_STAGED_MANIFEST_PUBLIC_KEY }}
+          SERVER_BUNDLE_URL: ${{ vars.NL_MATCHING_SERVER_BUNDLE_URL }}
+          SERVER_BUNDLE_SHA256: ${{ vars.NL_MATCHING_SERVER_BUNDLE_SHA256 }}
+          SERVER_ENTRY: ${{ vars.NL_MATCHING_SERVER_ENTRY }}
+          BRIDGE_PATH: ${{ vars.NL_MATCHING_BRIDGE_PATH }}
+          BRIDGE_SHA256: ${{ vars.NL_MATCHING_BRIDGE_SHA256 }}
+          BRIDGE_VERSION: ${{ vars.NL_MATCHING_BRIDGE_VERSION }}
         run: |
           set -euo pipefail
           test -n "$STAGED_BACKEND" && test -n "$STAGED_OPERATOR" && test -n "$STAGED_PACKAGE_ID" && test -n "$STAGED_MANIFEST_KEY"
           export LIBGL_ALWAYS_SOFTWARE=1
+          # Non-Vanilla servers must use an externally provisioned complete,
+          # pinned server distribution. Never materialize a substitute client.
+          SERVER_BUNDLE=""
+          if [[ -n "$SERVER_BUNDLE_URL" ]]; then
+            [[ "$SERVER_BUNDLE_URL" == https://* ]] || { echo 'server bundle URL requires HTTPS' >&2; exit 1; }
+            [[ "$SERVER_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'server bundle SHA-256 is missing' >&2; exit 1; }
+            SERVER_BUNDLE="$RUNNER_TEMP/staged-matching-server.zip"
+            curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+              --max-time 300 --output "$SERVER_BUNDLE" "$SERVER_BUNDLE_URL"
+            echo "$SERVER_BUNDLE_SHA256  $SERVER_BUNDLE" | sha256sum -c - >/dev/null
+          fi
           xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
             python3 e2e/scripts/run-staged-package-0342.py \
               --backend "$STAGED_BACKEND" --admin-token "$STAGED_OPERATOR" \
               --package-id "$STAGED_PACKAGE_ID" --output "$RUNNER_TEMP/staged-execution" \
               --cli "$GITHUB_WORKSPACE/nl" \
               --runtime "$GITHUB_WORKSPACE/runtime/neverruntime/target/release/neverruntime" \
-              --java auto --pinned-public-key "$STAGED_MANIFEST_KEY" --runtime-seconds "$STAGED_DURATION"
+              --java auto --pinned-public-key "$STAGED_MANIFEST_KEY" --runtime-seconds "$STAGED_DURATION" \
+              --server-bundle "$SERVER_BUNDLE" --server-sha256 "$SERVER_BUNDLE_SHA256" \
+              --server-entry "$SERVER_ENTRY" --bridge-path "$BRIDGE_PATH" --bridge-sha256 "$BRIDGE_SHA256" --bridge-version "$BRIDGE_VERSION"
       - name: Upload redacted observational evidence (no grant or private key)
         if: always()
         uses: actions/upload-artifact@v4
@@ -85,3 +105,8 @@ jobs:
             ${{ runner.temp }}/staged-execution/runtime-launch.json
             ${{ runner.temp }}/staged-execution/startup-readiness.json
             ${{ runner.temp }}/staged-execution/startup-diagnostics/menu-frame-*.png
+            ${{ runner.temp }}/staged-execution/server-readiness.json
+            ${{ runner.temp }}/staged-execution/matching-server.log
+            ${{ runner.temp }}/staged-execution/gameplay-smoke.json
+            ${{ runner.temp }}/staged-execution/gameplay-diagnostics/world-*.png
+            ${{ runner.temp }}/staged-execution/runtime-gameplay-launch.json

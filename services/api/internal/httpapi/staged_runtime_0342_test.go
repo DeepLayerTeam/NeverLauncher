@@ -125,3 +125,36 @@ func TestStagedGrantRejectsStaleAndCrossSnapshot0342(t *testing.T) {
 		t.Fatal("other server secret accepted")
 	}
 }
+
+// The new matching-server and gameplay stages are persisted as observations,
+// not upgraded to trusted release certification by the reporting endpoint.
+func TestMatchingStagedReportObservations0344(t *testing.T) {
+	now := time.Now().UTC()
+	grant := stagedGrant0342{Schema: stagedGrantSchema0342, PackageID: "pkg", RunID: "run-0344",
+		ManifestSHA256: strings.Repeat("a", 64), ArtifactSHA256: strings.Repeat("b", 64),
+		ExpiresAt: now.Add(time.Hour).Unix()}
+	report := stagedRunReport0342{Schema: stagedRunSchema0342, PackageID: grant.PackageID,
+		RunID: grant.RunID, ManifestSHA256: grant.ManifestSHA256, ArtifactSHA256: grant.ArtifactSHA256,
+		StartedAt: now.Add(-time.Minute), FinishedAt: now,
+		Stages: map[string]stagedStep0342{
+			"manifest-files":   {Status: "passed"},
+			"materialization":  {Status: "passed"},
+			"startup":          {Status: "passed"},
+			"loader-readiness": {Status: "passed"},
+			"server-readiness": {Status: "passed"},
+			"matching-server":  {Status: "passed", EvidenceSHA256: strings.Repeat("c", 64)},
+			"gameplay-smoke":   {Status: "failed", Detail: "game ticks advanced but player did not move"},
+		}}
+	if err := validateStagedRunReport0342(grant, report); err != nil {
+		t.Fatalf("legitimate observed stages rejected: %v", err)
+	}
+	report.Stages["gameplay-smoke"] = stagedStep0342{Status: "passed", EvidenceSHA256: "forged"}
+	if err := validateStagedRunReport0342(grant, report); err == nil {
+		t.Fatal("unhashed gameplay evidence accepted")
+	}
+	delete(report.Stages, "gameplay-smoke")
+	report.Stages["certified"] = stagedStep0342{Status: "passed"}
+	if err := validateStagedRunReport0342(grant, report); err == nil {
+		t.Fatal("arbitrary certification status accepted")
+	}
+}
