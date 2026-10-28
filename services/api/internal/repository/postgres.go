@@ -1099,6 +1099,9 @@ func (r *SQLRepository) PublishVersionWithManifest(projectID, profileID, channel
 }
 
 func (r *SQLRepository) PublishVersionWithManifestCAS(projectID, profileID, channel, version string, manifest model.Manifest, expected int64) (model.ReleaseVersion, error) {
+	if IsStableChannel0341(channel) {
+		return model.ReleaseVersion{}, ErrStableRuntimeGate0341
+	}
 
 	if err := r.check(); err != nil {
 		return model.ReleaseVersion{}, err
@@ -1201,6 +1204,21 @@ func (r *SQLRepository) UpdateVersionStatus(projectID, versionID, status string)
 	status = strings.TrimSpace(status)
 	if status == "" {
 		return model.ReleaseVersion{}, errors.New("status обязателен")
+	}
+	// Never expose a direct admin/status bypass for the publish transaction.
+	if strings.EqualFold(status, "published") {
+		var channel string
+		err := r.db.QueryRow(`SELECT channel FROM release_versions WHERE project_id=$1 AND id=$2`, projectID, versionID).Scan(&channel)
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.ReleaseVersion{}, ErrNotFound
+		}
+		if err != nil {
+			return model.ReleaseVersion{}, err
+		}
+		if IsStableChannel0341(channel) {
+			return model.ReleaseVersion{}, ErrStableRuntimeGate0341
+		}
+		return model.ReleaseVersion{}, ErrConflict
 	}
 	res, err := r.db.Exec(`UPDATE release_versions SET status=$1, updated_at=now() WHERE project_id=$2 AND id=$3 AND status <> 'published'`, status, projectID, versionID)
 	if err != nil {

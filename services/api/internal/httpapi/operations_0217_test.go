@@ -22,7 +22,7 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	// Construct a real published source package with integrity evidence.
-	req := httptest.NewRequest("POST", "/api/v1/packages", strings.NewReader(`{"projectId":"demo-project","profileId":"vanilla","channel":"stable","version":"0.21.7-idem"}`))
+	req := httptest.NewRequest("POST", "/api/v1/packages", strings.NewReader(`{"projectId":"demo-project","profileId":"vanilla","channel":"dev","version":"0.21.7-idem"}`))
 	auth(req)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -75,7 +75,7 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 	}
 	var jobID string
 	for i := 0; i < 3; i++ {
-		req = httptest.NewRequest("POST", "/api/v1/channels/stable/rollback", strings.NewReader(rollbackBody))
+		req = httptest.NewRequest("POST", "/api/v1/channels/dev/rollback", strings.NewReader(rollbackBody))
 		auth(req)
 		req.Header.Set("Idempotency-Key", "same-rollback-request")
 		rr = httptest.NewRecorder()
@@ -104,7 +104,7 @@ func TestRollbackOperationIdempotency0217(t *testing.T) {
 	if first.Data.Status != "rolled-back-as-new-validated-immutable-release" || jobID == "" {
 		t.Fatalf("rollback not published: %+v correlation=%s", first, jobID)
 	}
-	req = httptest.NewRequest("POST", "/api/v1/channels/stable/rollback", strings.NewReader(`{"projectId":"demo-project","profileId":"fabric","toVersion":"0.21.7-idem"}`))
+	req = httptest.NewRequest("POST", "/api/v1/channels/dev/rollback", strings.NewReader(`{"projectId":"demo-project","profileId":"fabric","toVersion":"0.21.7-idem"}`))
 	auth(req)
 	req.Header.Set("Idempotency-Key", "same-rollback-request")
 	rr = httptest.NewRecorder()

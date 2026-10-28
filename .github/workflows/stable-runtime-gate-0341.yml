@@ -1,0 +1,56 @@
+name: Stable runtime gate 0.34.1 regression
+
+on:
+  pull_request:
+    paths:
+      - 'services/api/internal/httpapi/**'
+      - 'services/api/internal/repository/**'
+      - 'services/api/internal/dbmigrate/**'
+      - 'cli/internal/dbmigrate/sql/0101_stable_runtime_gate_0341.sql'
+      - 'apps/admin/**'
+      - '.github/workflows/stable-runtime-gate-0341.yml'
+  push:
+    tags: ['v0.34.1', '0.34.1']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stable-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: never_test
+          POSTGRES_PASSWORD: never_test
+          POSTGRES_DB: never_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U never_test -d never_test"
+          --health-interval 10s --health-timeout 5s --health-retries 8
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://never_test:never_test@localhost:5432/never_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Verify backend runtime-gate, durable publish and migration guards
+        working-directory: services/api
+        run: |
+          go test -count=1 -timeout 25m ./internal/repository ./internal/httpapi ./internal/dbmigrate \
+            -run 'TestStable.*0341|TestRuntimePolicyRequiresSignedExactManifestEvidence0212|TestCanonicalPackageProductUploadValidatePublish|TestRollbackOperationIdempotency0217|TestMigrationCutoverPostgres03311|TestEvaluateAppliedSealedCatalog'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: Typecheck production Admin gate UI
+        working-directory: apps/admin
+        run: |
+          npm ci --ignore-scripts
+          npm run build

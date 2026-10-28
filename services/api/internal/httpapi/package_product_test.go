@@ -19,7 +19,7 @@ func TestCanonicalPackageProductUploadValidatePublish(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/packages", strings.NewReader(`{"projectId":"demo-project","profileId":"vanilla","channel":"stable","version":"8.4.0-test"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/packages", strings.NewReader(`{"projectId":"demo-project","profileId":"vanilla","channel":"dev","version":"8.4.0-test"}`))
 	authJSON(req)
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -80,7 +80,7 @@ func TestCanonicalPackageProductUploadValidatePublish(t *testing.T) {
 		}
 	}
 
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/demo-project/profiles/vanilla/manifest?channel=stable", nil)
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/projects/demo-project/profiles/vanilla/manifest?channel=dev", nil)
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "mods/example.jar") {
@@ -94,7 +94,7 @@ func TestPublishedPackageIsImmutable(t *testing.T) {
 	token, _ = registerTestPasskey117(t, handler, token)
 	auth := func(req *http.Request) { req.Header.Set("Authorization", "Bearer "+token) }
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/packages", strings.NewReader(`{"projectId":"demo-project","profileId":"vanilla","channel":"stable","version":"immutable-v4-test"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/packages", strings.NewReader(`{"projectId":"demo-project","profileId":"vanilla","channel":"dev","version":"immutable-v4-test"}`))
 	req.Header.Set("Content-Type", "application/json")
 	auth(req)
 	res := httptest.NewRecorder()
@@ -152,7 +152,7 @@ func TestPublishedPackageIsImmutable(t *testing.T) {
 	}
 
 	rollbackBody := strings.NewReader(`{"projectId":"demo-project","profileId":"vanilla","toVersion":"immutable-v4-test"}`)
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/channels/stable/rollback", rollbackBody)
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/channels/dev/rollback", rollbackBody)
 	req.Header.Set("Content-Type", "application/json")
 	auth(req)
 	res = httptest.NewRecorder()

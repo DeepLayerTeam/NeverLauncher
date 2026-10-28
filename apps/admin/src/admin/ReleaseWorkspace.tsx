@@ -189,8 +189,8 @@ export function ReleaseWorkspace({backendUrl,token,projectId,canPrepare,canFileW
         <button disabled={!form.packageId||busy} onClick={()=>void loadChecks(form.packageId).catch(e=>setError(printable(e)))}>Обновить результаты</button>
       </div>
       <p><strong>Integrity:</strong> {report?.integrity?.result||'не выполнено'} · Manifest: <code>{report?.integrity?.manifestDigest||'—'}</code></p>
-      <p><strong>Policy:</strong> {policy?.requiredLevel||'не загружена'} {policy?.requireServerJoin?'· требуется Server Join':''}</p>
-      <p><strong>Runtime:</strong> {report?.runtime?.filter(x=>x.result==='passed').length||0} подтверждённых запусков</p>
+      <p><strong>Policy:</strong> {report?.effectivePolicy?.requiredLevel||policy?.requiredLevel||'не загружена'} {report?.effectivePolicy?.source==='stable-hard-gate-0.34.1'?'· stable hard gate (не переопределяется)':policy?.requireServerJoin?'· требуется Server Join':''}</p>
+      <p><strong>Legacy runtime v1:</strong> {report?.runtime?.filter(x=>x.result==='passed').length||0} результатов · не являются сертификацией stable</p>
       <p className="muted">Legacy smoke-test не запускает Minecraft; его результат не считается runtime evidence. Загрузите подписанный CI/runtime-agent документ с результатом фактического запуска.</p>
       <label className="field">Signed runtime evidence (JSON-файл от CI/runtime-agent)<input disabled={busy||!canPrepare||!form.packageId||!isPassed(report)} type="file" accept="application/json,.json" onChange={(e: React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(file)void submitEvidence(file);e.target.value='';}} /></label>
       {report?.runtime?.length ? <ul>{report.runtime.map((r,i)=><li key={i}>{r.targetId}: {r.result} (actual client: {String(r.actualClient)}, server join: {String(r.serverJoin)})</li>)}</ul>:null}
@@ -198,11 +198,13 @@ export function ReleaseWorkspace({backendUrl,token,projectId,canPrepare,canFileW
     </article>}
     {step==='channel' && <article className="subcard"><h3>5. Канал / публикация / откат</h3>
       <p>Публикация допускается только после проверки подписи, целостности и выполнения validation policy на Backend.</p>
-      <div className="buttonRow"><button disabled={busy||!canPublish||!form.packageId||dirty} onClick={()=>void validate('package-publish')}>Предпросмотр публикации</button><button disabled={busy||!canPublish||!preview?.valid||dirty} onClick={()=>void execute('package-publish')}>Опубликовать</button></div>
+      {form.channel.toLowerCase() === 'stable' && <p role="alert">Stable runtime gate 0.34.1: публикация и rollback заблокированы до внедрения проверяемого запуска staged-клиента и сервера. Integrity PASS и загруженное runtime evidence v1 не снимают блокировку. Причина сохраняется в аудите Backend.</p>}
+      {report?.effectivePolicy?.blockedReason && <p role="alert">{report.effectivePolicy.blockedReason}</p>}
+      <div className="buttonRow"><button disabled={busy||!canPublish||!form.packageId||dirty} onClick={()=>void validate('package-publish')}>Предпросмотр публикации</button><button disabled={busy||!canPublish||!preview?.valid||dirty||form.channel.toLowerCase()==='stable'} onClick={()=>void execute('package-publish')}>Опубликовать</button></div>
       {preview && <div className="releaseEffect" role="status"><strong>Серверный эффект публикации</strong>{Object.entries(preview.effect).map(([key,value])=><p key={key}>{key}: {String(value)}</p>)}</div>}
       <hr/><h3>Rollback опубликованного релиза</h3>
       <label className="field">Целевая опубликованная версия<select value={targetVersion} onChange={(e: React.ChangeEvent<HTMLSelectElement>)=>{setTargetVersion(e.target.value);setRollbackPreview(null);}}><option value="">Выберите версию</option>{rollbackTargets.map(x=><option key={x.id} value={x.version}>{x.version}</option>)}</select></label>
-      <div className="buttonRow"><button disabled={busy||!canPublish||!targetVersion||dirty} onClick={()=>void validate('channel-rollback')}>Предпросмотр отката</button><button disabled={busy||!canPublish||!rollbackPreview?.valid||dirty} onClick={()=>void execute('channel-rollback')}>Выполнить откат</button><button disabled={busy} onClick={()=>void api.releases(projectId).then(r=>setReleases(r.items??[])).catch(e=>setError(printable(e)))}>Обновить релизы</button></div>
+      <div className="buttonRow"><button disabled={busy||!canPublish||!targetVersion||dirty} onClick={()=>void validate('channel-rollback')}>Предпросмотр отката</button><button disabled={busy||!canPublish||!rollbackPreview?.valid||dirty||form.channel.toLowerCase()==='stable'} onClick={()=>void execute('channel-rollback')}>Выполнить откат</button><button disabled={busy} onClick={()=>void api.releases(projectId).then(r=>setReleases(r.items??[])).catch(e=>setError(printable(e)))}>Обновить релизы</button></div>
       {rollbackPreview && <div className="releaseEffect" role="status"><strong>Серверный эффект отката</strong>{Object.entries(rollbackPreview.effect).map(([key,value])=><p key={key}>{key}: {String(value)}</p>)}</div>}
     </article>}
     {notice && <p role="status" className="success">{notice}</p>}

@@ -50,11 +50,15 @@ func testRuntimeValidationServer0212(t *testing.T) (http.Handler, ed25519.Privat
 }
 
 func createStagedIntegrityPackage0212(t *testing.T, handler http.Handler, token, version string) (string, string) {
+	return createStagedIntegrityPackageInChannel0341(t, handler, token, version, "stable")
+}
+
+func createStagedIntegrityPackageInChannel0341(t *testing.T, handler http.Handler, token, version, channel string) (string, string) {
 	t.Helper()
 	auth := func(req *http.Request) {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/packages", strings.NewReader(`{"projectId":"demo-project","profileId":"vanilla","channel":"stable","version":"`+version+`"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/packages", strings.NewReader(`{"projectId":"demo-project","profileId":"vanilla","channel":"`+channel+`","version":"`+version+`"}`))
 	req.Header.Set("Content-Type", "application/json")
 	auth(req)
 	res := httptest.NewRecorder()
@@ -149,7 +153,7 @@ func TestRuntimePolicyRequiresSignedExactManifestEvidence0212(t *testing.T) {
 	handler, privateKey := testRuntimeValidationServer0212(t)
 	token := loginAdmin(t, handler)
 	token, _ = registerTestPasskey117(t, handler, token)
-	packageID, manifestDigest := createStagedIntegrityPackage0212(t, handler, token, "0.21.2-runtime-policy")
+	packageID, manifestDigest := createStagedIntegrityPackageInChannel0341(t, handler, token, "0.21.2-runtime-policy", "dev")
 
 	policyReq := httptest.NewRequest(http.MethodPut, "/api/v1/projects/demo-project/validation-policy", strings.NewReader(`{"requiredLevel":"runtime","requireServerJoin":true}`))
 	policyReq.Header.Set("Authorization", "Bearer "+token)

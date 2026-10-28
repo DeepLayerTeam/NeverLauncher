@@ -248,6 +248,9 @@ func (r *MemoryRepository) CommitDurablePublish(_ context.Context, commit model.
 		return model.ReleaseVersion{}, ErrNotFound
 	}
 	rel := r.releases[idx]
+	if IsStableChannel0341(rel.Channel) {
+		return model.ReleaseVersion{}, ErrStableRuntimeGate0341
+	}
 	if rel.Status == "published" {
 		return model.ReleaseVersion{}, ErrImmutable
 	}

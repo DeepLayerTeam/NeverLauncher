@@ -335,7 +335,11 @@ func (s Server) packageValidations0212(w http.ResponseWriter, r *http.Request) {
 	if integrityErr == nil {
 		current = integrity
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"integrity": current, "runtime": runtime, "policy": policy}})
+	effective := map[string]any{"requiredLevel": policy.RequiredLevel, "requireServerJoin": policy.RequireServerJoin, "source": "project-policy"}
+	if repository.IsStableChannel0341(lookup.Release.Channel) {
+		effective = map[string]any{"requiredLevel": "trusted-runtime", "requireServerJoin": true, "source": "stable-hard-gate-0.34.1", "publishEligible": false, "blockedReason": repository.ErrStableRuntimeGate0341.Error()}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"integrity": current, "runtime": runtime, "policy": policy, "effectivePolicy": effective}})
 }
 
 func (s Server) projectValidationPolicyGet0212(w http.ResponseWriter, r *http.Request) {
@@ -372,6 +376,15 @@ func (s Server) validatePublishEvidence0212(r *http.Request, lookup packageLooku
 }
 
 func (s Server) validatePublishEvidenceContext0213(ctx context.Context, lookup packageLookup) error {
+	// The v1 submitted runtime evidence cannot prove independently executed
+	// staged content. Keep stable CLOSED until the later trusted runner gate.
+	if repository.IsStableChannel0341(lookup.Release.Channel) {
+		s.Repo.AddAuditEvent(model.AuditEvent{
+			Actor: "runtime-gate", Action: "release:publish-blocked", Target: lookup.Release.ID,
+			ReasonCode: "stable_runtime_certification_unavailable_0341", CreatedAt: time.Now().UTC(),
+		})
+		return repository.ErrStableRuntimeGate0341
+	}
 	manifestDigest, err := manifestDigest0212(lookup.Release.Manifest)
 	if err != nil {
 		return err

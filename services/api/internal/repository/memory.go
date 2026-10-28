@@ -19,6 +19,14 @@ var ErrNotFound = errors.New("запись не найдена")
 var ErrImmutable = errors.New("published release immutable")
 var ErrConflict = errors.New("repository conflict")
 
+// ErrStableRuntimeGate0341 is a non-overridable release protection boundary.
+// 0.34.1 has no attested runtime executor; signed legacy JSON is not sufficient.
+var ErrStableRuntimeGate0341 = errors.New("stable_runtime_gate_0341: trusted staged-client/server execution is not yet available; stable publication denied")
+
+func IsStableChannel0341(channel string) bool {
+	return strings.EqualFold(strings.TrimSpace(channel), "stable")
+}
+
 // DeviceKeyReplacementRepository реализуют репозитории, способные атомарно заменить
 // идентичность доверенного устройства вместе с текущей привязкой сеанса авторизации
 // и каскадом отзыва. PostgreSQL поддерживает это непосредственно; репозиторий
@@ -932,6 +940,9 @@ func (r *MemoryRepository) PublishVersionWithManifest(projectID, profileID, chan
 }
 
 func (r *MemoryRepository) PublishVersionWithManifestCAS(projectID, profileID, channel, version string, manifest model.Manifest, expected int64) (model.ReleaseVersion, error) {
+	if IsStableChannel0341(channel) {
+		return model.ReleaseVersion{}, ErrStableRuntimeGate0341
+	}
 	r.durableMu.Lock()
 	defer r.durableMu.Unlock()
 	if r.channelHeads[headKey0228(projectID, profileID, channel)].Revision != expected {
@@ -1045,8 +1056,15 @@ func (r *MemoryRepository) UpdateVersionStatus(projectID, versionID, status stri
 	if status == "" {
 		return model.ReleaseVersion{}, errors.New("status обязателен")
 	}
+	// Status mutation is not a substitute for the transactional publish path.
 	for i := range r.releases {
 		if r.releases[i].ProjectID == projectID && r.releases[i].ID == versionID {
+			if strings.EqualFold(status, "published") {
+				if IsStableChannel0341(r.releases[i].Channel) {
+					return model.ReleaseVersion{}, ErrStableRuntimeGate0341
+				}
+				return model.ReleaseVersion{}, ErrConflict
+			}
 			if r.releases[i].Status == "published" {
 				return model.ReleaseVersion{}, ErrImmutable
 			}

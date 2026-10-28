@@ -9,14 +9,14 @@ import (
 
 func TestPublishedReleaseImmutableAtRepositoryLayer(t *testing.T) {
 	repo := NewMemoryRepository("https://launcher.example")
-	release, err := repo.CreateVersion("demo-project", "vanilla", "stable", "immutable-repo-v4")
+	release, err := repo.CreateVersion("demo-project", "vanilla", "dev", "immutable-repo-v4")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err = repo.AddFile(model.FileObject{ProjectID: "demo-project", VersionID: release.ID, Path: "mods/a.jar", Size: 1, SHA256: "00", Required: true}); err != nil {
 		t.Fatal(err)
 	}
-	release, err = repo.PublishVersionWithManifest("demo-project", "vanilla", "stable", "immutable-repo-v4", release.Manifest)
+	release, err = repo.PublishVersionWithManifest("demo-project", "vanilla", "dev", "immutable-repo-v4", release.Manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestPublishedReleaseImmutableAtRepositoryLayer(t *testing.T) {
 	if _, err = repo.AddFile(model.FileObject{ProjectID: "demo-project", VersionID: release.ID, Path: "mods/b.jar", Size: 1, SHA256: "11", Required: true}); !errors.Is(err, ErrImmutable) {
 		t.Fatalf("file mutation err=%v", err)
 	}
-	if _, err = repo.PublishVersionWithManifest("demo-project", "vanilla", "stable", "immutable-repo-v4", release.Manifest); !errors.Is(err, ErrImmutable) {
+	if _, err = repo.PublishVersionWithManifest("demo-project", "vanilla", "dev", "immutable-repo-v4", release.Manifest); !errors.Is(err, ErrImmutable) {
 		t.Fatalf("republish err=%v", err)
 	}
 }

@@ -541,6 +541,9 @@ func (r *SQLRepository) CommitDurablePublish(ctx context.Context, commit model.D
 	if err != nil {
 		return model.ReleaseVersion{}, err
 	}
+	if IsStableChannel0341(rel.Channel) {
+		return model.ReleaseVersion{}, ErrStableRuntimeGate0341
+	}
 	if rel.Status == "published" {
 		return model.ReleaseVersion{}, ErrImmutable
 	}

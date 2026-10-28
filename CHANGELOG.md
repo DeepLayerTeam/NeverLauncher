@@ -1,3 +1,13 @@
+## [0.34.1] - 2026-10-28
+
+### Stable Release Protection — V11, first phase
+
+- The API refuses all new stable publication, regardless of project `requiredLevel=integrity`, missing policy or legacy `neverlauncher/runtime-validation/v1` JSON signed by a configured key. Legacy v1 is *not* trusted independent client/server execution.
+- Durable publish workers recheck the gate; rejected attempts persist a structured `release:publish-blocked` audit event with reason code `stable_runtime_certification_unavailable_0341` and job rejection details. Rollback is staged without stable activation, with the blocking reason.
+- PostgreSQL migration `0101_stable_runtime_gate_0341` rejects new stable `published` status and **all** stable `channel_heads` writes, including direct repository writes, migration cutover, rollback and arbitrary SQL edits. Existing stable heads continue to serve existing releases. API and CLI embed the guard.
+- Dev/test keep their configured project-level `integrity` or `runtime` policy independently of the hard stable gate. Admin displays effective stable policy and prevents unfulfillable stable actions in the UI.
+- Stable remains closed in 0.34.1: future V01–V12 must introduce independently attested package-specific execution before it can reopen. This release does not claim game client/server certification.
+
 ## [0.34.0] - 2026-10-28
 
 ### Migration Center GA verification and release gates (MIG01–MIG13)

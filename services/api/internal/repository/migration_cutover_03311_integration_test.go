@@ -37,7 +37,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	}
 	project := fmt.Sprintf("mig03311-%d", time.Now().UnixNano())
 	const profile = "client"
-	const channel = "stable"
+	const channel = "dev"
 	const player = "12345678-1234-1234-1234-123456789abc"
 	user := project + "-player"
 	wsID := project + "-ws"

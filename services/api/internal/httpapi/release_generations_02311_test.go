@@ -11,7 +11,7 @@ import (
 func TestServerGenerationsAndAuthorizedGameRollback02311(t *testing.T) {
 	repo := repository.NewMemoryRepository("http://127.0.0.1")
 	srv := Server{Repo: repo}
-	old, err := repo.CreateVersion("demo-project", "vanilla", "stable", "v-old")
+	old, err := repo.CreateVersion("demo-project", "vanilla", "dev", "v-old")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,7 +21,7 @@ func TestServerGenerationsAndAuthorizedGameRollback02311(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	old, err = repo.UpdateVersionStatus(old.ProjectID, old.ID, "published")
+	old, err = repo.PublishVersionWithManifestCAS(old.ProjectID, old.ProfileID, old.Channel, old.Version, old.Manifest, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

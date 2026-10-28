@@ -3,7 +3,7 @@ import { requestJSON } from './client.ts';
 export interface Draft { id: string; projectId: string; ownerId: string; profileId: string; channel: string; version: string; minecraftVersion: string; loader: string; packageId: string; jobId: string; step: string; revision: number; createdAt: string; updatedAt: string }
 export type DraftFields = Pick<Draft,'projectId'|'profileId'|'channel'|'version'|'minecraftVersion'|'loader'|'packageId'|'jobId'|'step'>;
 export interface PackageInfo { packageId: string; projectId: string; profileId: string; channel: string; version: string; status: string; manifestSchemaVersion?:string; minecraft?: {version:string;loader:string}; files: Array<{ path: string; size: number; sha256: string }> }
-export interface ValidationReport { integrity: null | { result: string; manifestDigest: string; artifactDigest: string; checkedAt: string }; runtime: Array<{ result: string; targetId: string; actualClient: boolean; serverJoin: boolean; finishedAt: string }>; policy: { requiredLevel: string; requireServerJoin: boolean } }
+export interface ValidationReport { integrity: null | { result: string; manifestDigest: string; artifactDigest: string; checkedAt: string }; runtime: Array<{ result: string; targetId: string; actualClient: boolean; serverJoin: boolean; finishedAt: string }>; policy: { requiredLevel: string; requireServerJoin: boolean }; effectivePolicy?: { requiredLevel: string; requireServerJoin: boolean; source: string; publishEligible?: boolean; blockedReason?: string } }
 export interface Preview { valid: boolean; permission: string; effect: Record<string,string> }
 export interface Operation { id: string; projectId: string; resourceId: string; status: string; kind: string }
 
