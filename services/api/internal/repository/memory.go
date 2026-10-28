@@ -190,6 +190,7 @@ type MemoryRepository struct {
 	integrityChecks                []model.IntegrityCheckResult
 	runtimeValidations             []model.RuntimeValidationResult
 	stagedRuntimeRuns0342          []model.StagedRuntimeRun0342
+	validationAttestations0345     []model.ValidationAttestation0345
 	validationPolicies             map[string]model.ProjectValidationPolicy
 	files                          []model.FileObject
 	users                          []model.User

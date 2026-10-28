@@ -1,0 +1,35 @@
+name: V04 V06 trusted attestor verification 0.34.5
+on:
+  push:
+    paths:
+      - 'tools/validation-attestor/**'
+      - 'e2e/scripts/**'
+      - 'services/api/internal/httpapi/validation_attestation_0345*'
+      - '.github/workflows/validation-attestor-0345.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Exercise independent attestor, tamper and gameplay checks
+        run: |
+          python3 -m pip install --break-system-packages 'cryptography>=44,<47'
+          python3 tools/validation-attestor/test_attestor.py
+          python3 e2e/scripts/test_run_staged_package_0342.py
+          python3 e2e/scripts/test_staged_readiness_0343.py
+          python3 e2e/scripts/test_staged_matching_0344.py
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Verify Backend Ed25519 pinning and immutable attestations
+        run: |
+          cd services/api
+          go test ./internal/httpapi -run 'TestTrustedAttestation|TestAttestationRepositoryImmutable|TestStagedGrantRejectsStale' -count=1
+  # CI builds and tests NEVER hold the host attestation signing key.
+  # The sealed/pinned OCI image is built and approved through a separate
+  # operator-controlled pipeline; only that image digest can be attested.

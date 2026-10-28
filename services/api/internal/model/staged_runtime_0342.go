@@ -18,3 +18,16 @@ type StagedRuntimeRun0342 struct {
 	FinishedAt     time.Time       `json:"finishedAt"`
 	ReceivedAt     time.Time       `json:"receivedAt"`
 }
+
+// ValidationAttestation0345 is an immutable result issued by an independent
+// trusted execution attestor; it is NOT stable certification until V05/V11 GA.
+type ValidationAttestation0345 struct {
+	RunID          string          `json:"runId"`
+	PackageID      string          `json:"packageId"`
+	ProjectID      string          `json:"projectId"`
+	ManifestSHA256 string          `json:"manifestSha256"`
+	ArtifactSHA256 string          `json:"artifactSha256"`
+	Evidence       json.RawMessage `json:"evidence"`
+	Signature      string          `json:"signature"`
+	ReceivedAt     time.Time       `json:"receivedAt"`
+}

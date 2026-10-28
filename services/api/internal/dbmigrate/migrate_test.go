@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0102_staged_runtime_execution_0342" {
+	if st.Current != "0103_trusted_validation_attestation_0345" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }

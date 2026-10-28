@@ -1,0 +1,34 @@
+# Image is built on the OPERATOR'S trusted build system and pushed to a private
+# registry. The attestation host only executes its immutable @sha256 digest.
+FROM golang:1.27.3 AS cli
+WORKDIR /build
+COPY cli/ ./cli/
+RUN cd cli && CGO_ENABLED=0 go build -trimpath -o /build/neverlauncher ./cmd/neverlauncher
+
+FROM rust:1.91 AS runtime
+WORKDIR /build
+COPY runtime/neverruntime/ ./runtime/neverruntime/
+RUN cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime --bin neverguard
+
+FROM eclipse-temurin:21-jre-noble
+ARG SOURCE_SHA
+ARG BUILD_SHA
+LABEL org.opencontainers.image.revision="${SOURCE_SHA}" \
+      io.neverlauncher.validation.build-sha256="${BUILD_SHA}"
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 ca-certificates xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 \
+    libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 \
+    libxinerama1 libasound2t64 x11-utils mesa-utils scrot imagemagick \
+    tesseract-ocr tesseract-ocr-eng xdotool unzip curl && \
+    rm -rf /var/lib/apt/lists/*
+COPY --from=cli /build/neverlauncher /opt/neverlauncher
+COPY --from=runtime /build/runtime/neverruntime/target/release/neverruntime /opt/neverruntime
+COPY --from=runtime /build/runtime/neverruntime/target/release/neverguard /opt/neverguard
+COPY e2e/scripts/run-staged-package-0342.py /opt/staged/run-staged-package-0342.py
+COPY e2e/scripts/staged_readiness_0343.py /opt/staged/staged_readiness_0343.py
+COPY e2e/scripts/staged_matching_0344.py /opt/staged/staged_matching_0344.py
+ENV JAVA_HOME_21_X64=/opt/java/openjdk \
+    XDG_CACHE_HOME=/tmp/nl-cache HOME=/tmp \
+    LIBGL_ALWAYS_SOFTWARE=1 PYTHONDONTWRITEBYTECODE=1
+ENTRYPOINT ["/usr/bin/xvfb-run", "-a", "-s", "-screen 0 1280x720x24 +extension GLX +render -noreset", "/usr/bin/python3", "/opt/staged/run-staged-package-0342.py"]

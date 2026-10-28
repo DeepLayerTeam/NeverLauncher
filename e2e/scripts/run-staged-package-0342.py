@@ -151,7 +151,14 @@ def execute(args):
         raise ValueError('staged runtime requires HTTPS (localhost HTTP is test-only)')
     if not args.package_id or '/' in args.package_id:
         raise ValueError('invalid package ID')
-    grant_data = request_json(args.backend, '/api/v1/packages/' + urllib.parse.quote(args.package_id) + '/staged-runs', args.admin_token, {})['data']
+    if args.grant_file:
+        grant_data = json.loads(Path(args.grant_file).read_text(encoding='utf-8'))
+        if grant_data.get('packageId') != args.package_id:
+            raise ValueError('pre-issued grant bound to different staged package')
+    else:
+        if not args.admin_token:
+            raise ValueError('operator token required outside trusted attestation executor')
+        grant_data = request_json(args.backend, '/api/v1/packages/' + urllib.parse.quote(args.package_id) + '/staged-runs', args.admin_token, {})['data']
     grant = grant_data['token']
     run_id = grant_data['runId']
     # Not printed or written to report/logs: a grant can fetch staged bytes.
@@ -274,6 +281,26 @@ def execute(args):
         if not loader_ready:
             raise RuntimeError('staged loader readiness failed: ' + loader_detail)
 
+        java_version_result = subprocess.run([selected_java, '-version'], stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, env=subprocess_env, timeout=12, check=False)
+        if java_version_result.returncode or not java_version_result.stdout:
+            raise RuntimeError('selected Java version cannot be verified')
+        java_version = java_version_result.stdout.decode('utf-8',errors='replace').splitlines()[0]
+        # Execution identity is checked by the independent attestor, not signed by the worker.
+        runtime_identity = {
+            'javaSha256': sha_file(selected_java), 'javaVersionRaw': java_version,
+            'cliSha256': sha_file(args.cli), 'neverRuntimeSha256': runtime_hash,
+            'installAdapterSha256': hashlib.sha256((sha_file(args.cli)+runtime_hash).encode()).hexdigest(),
+            'resolvedPlanSha256': hashlib.sha256(json.dumps({'minecraft':signed.get('minecraft'),
+                'runtime':signed.get('runtime'), 'fileHashes':sorted((f['path'],f['sha256']) for f in pkg['files'])},
+                sort_keys=True,separators=(',',':')).encode()).hexdigest(),
+            'guardMode': str(signed.get('runtime',{}).get('guard',{}).get('mode') or 'disabled'),
+            'guardPolicySha256': hashlib.sha256(json.dumps(signed.get('runtime',{}).get('guard',{}),
+                sort_keys=True,separators=(',',':')).encode()).hexdigest(),
+            'loader': loader, 'preset': str(signed.get('optionalPreset') or 'default'),
+        }
+        (work / 'execution-identity.json').write_text(json.dumps(runtime_identity,indent=2),encoding='utf-8')
+
         # A second ordinary NeverRuntime launch auto-enters the real matching
         # server; the first launch above independently proves the main menu.
         # A server distribution is pinned as a whole, not substituted with an
@@ -363,7 +390,8 @@ def execute(args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--backend', required=True)
-    parser.add_argument('--admin-token', required=True)
+    parser.add_argument('--admin-token', default='')
+    parser.add_argument('--grant-file', default='', help='Limited staged grant injected by trusted host; not operator admin credentials')
     parser.add_argument('--package-id', required=True)
     parser.add_argument('--output', required=True)
     parser.add_argument('--cli', required=True)

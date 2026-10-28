@@ -1,3 +1,5 @@
+# OBSERVATIONAL ONLY. Do not publish, sign or promote this CI output as
+# ValidationEvidence. A trusted, independent 0.34.5 host attestor is required.
 name: Staged package exact matching server and gameplay 0.34.4
 on:
   workflow_call:

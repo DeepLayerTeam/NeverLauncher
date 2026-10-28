@@ -1,3 +1,11 @@
+## 0.34.5 — Signed ValidationEvidence & Runner Trust (V04/V06)
+
+- Host-side independent Ed25519 attestor executes an immutable, operator-pinned OCI image via rootless Podman, using only a short-lived staged grant; release-signing and attestation keys remain separate.
+- Exact staged downloads, client installation, menu/loader, matching server and gameplay output are independently re-hashed and checked by the host before attestation signing. No CI-generated arbitrary JSON can be signed by the service.
+- Backend verifies the domain-separated signature, trusted attestor public key and pinned runner-image SHA-256, matches immutable staged manifest, current integrity proof and recorded per-stage digests, then persists one immutable evidence record per run.
+- No direct stable publish path is enabled; V05 applicability and complete production release certification remain pending.
+- Production deployment requires a rootless attestor host, signed/pinned runner image, Java/ServerBridge targets, GUI renderer, network ACL and separate attestor key; no full real-world Minecraft E2E was run in the build environment.
+
 ## 0.34.2 — Real staged runtime execution (V01/V02)
 
 - Time-limited, snapshot-bound runner grants and authenticated staged file delivery.
