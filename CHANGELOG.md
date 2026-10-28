@@ -1,3 +1,10 @@
+## 0.35.1 — G/M User Journeys & Executable Acceptance (UX12 baseline)
+
+- New current G01–G35 and M01–M19 player/owner/operator journey inventory; real success/negative outcomes, operator steps, source and executable test references, preserved historical status, explicitly unverified target state. M17 remains a prohibited unsafe capability.
+- Executable Python audit validates all 54 required IDs, source and probe paths, UX01–UX12 mappings and rejects unsupported completion claims. Local runner executes existing Node/Go test packages without shell injection, writes atomic redacted result receipts and never upgrades local passes to GUI/GA certification.
+- Disposable, real Backend owner/player acceptance runs authenticated project/profile/channel CRUD, player catalog readback, unpublished file denial, audit access control and refresh/logout revocation; safe loopback-only and explicit ephemeral-server acknowledgment.
+- Dedicated CI for inventory, Desktop regression/optional components and real Backend lifecycle, plus reproducible runbook and honest local evidence report. No real Minecraft/ServerBridge/GA acceptance claimed. 0.35.0 stable release guard unchanged.
+
 ## 0.34.11 — Production Release Gate (V11)
 
 - API re-verifies each mandatory signed v4 ValidationEvidence against the staged snapshot, positive stages, persisted execution, pinned runner/Java/preset/Guard/adapter/server identity, trusted signature, challenge, expiry and key revocation. Missing, failed and inconclusive targets block stable.

@@ -1,0 +1,70 @@
+name: NeverLauncher 0.35.1 functional user acceptance
+on:
+  push:
+    paths:
+      - 'VERSION'
+      - 'compatibility/gravit/**'
+      - 'scripts/acceptance/**'
+      - 'apps/desktop/**'
+      - 'services/api/**'
+      - '.github/workflows/user-acceptance-0351.yml'
+  pull_request:
+    paths:
+      - 'VERSION'
+      - 'compatibility/gravit/**'
+      - 'scripts/acceptance/**'
+      - 'apps/desktop/**'
+      - 'services/api/**'
+      - '.github/workflows/user-acceptance-0351.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inventory-and-desktop-regressions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate actual 54 G/M journeys and refusal paths
+        run: |
+          python3 scripts/acceptance/ux_0351.py audit
+          python3 scripts/acceptance/test_ux_0351.py -q
+          python3 scripts/acceptance/test_owner_player_api_0351.py -q
+      - name: Compile real optional-mod domain code and run its existing tests
+        run: |
+          cd apps/desktop
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run test:components
+      - name: Execute existing Desktop regression tests, retain local-only evidence
+        run: |
+          python3 scripts/acceptance/ux_0351.py run --ids M04,M07,G31 \
+            --report "$RUNNER_TEMP/0351-desktop-local.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: user-acceptance-0351-desktop-${{ github.sha }}
+          path: ${{ runner.temp }}/0351-desktop-local.json
+          retention-days: 14
+          if-no-files-found: warn
+  real-disposable-backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Execute actual owner and player CRUD/auth HTTP lifecycle
+        run: |
+          bash scripts/acceptance/run_owner_player_0351.sh "$RUNNER_TEMP/0351-owner-player.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: user-acceptance-0351-backend-${{ github.sha }}
+          path: ${{ runner.temp }}/0351-owner-player.json
+          retention-days: 14
+          if-no-files-found: warn

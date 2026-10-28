@@ -1,0 +1,1143 @@
+{
+  "schemaVersion": "neverlauncher.user-journeys.v1",
+  "productVersion": "0.35.1",
+  "baseline": {
+    "G": "compatibility/gravit/authorization-coverage-0211.json",
+    "M": "compatibility/gravit/module-parity-0310.json"
+  },
+  "policy": {
+    "notRun": "No acceptance execution claimed by catalog",
+    "local": "Unit or loopback checks cannot attest Desktop/Minecraft/server or platform target",
+    "target": "Only explicit real target-run evidence permits verified outcome",
+    "M17": "Required forbidden functionality; negative enforcement constitutes acceptance, never claim parity"
+  },
+  "journeys": [
+    {
+      "id": "G01",
+      "name": "Authentication and current-user permissions",
+      "actor": "player",
+      "entry": "Desktop / Accounts",
+      "action": "Sign in and read the current identity and permissions",
+      "success": "Current account matches authorized session",
+      "negative": "Missing or revoked token cannot read protected accounts",
+      "operatorStep": "none",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/authorization/service.go",
+        "services/api/internal/httpapi/auth.go"
+      ],
+      "testRefs": [
+        "services/api/internal/authorization/service_test.go",
+        "services/api/internal/httpapi/authorization_0211_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G02",
+      "name": "Extensible authentication providers",
+      "actor": "owner",
+      "entry": "Admin / Authentication providers",
+      "action": "Configure an allowed provider and complete provider login",
+      "success": "The provider resolves a permitted account",
+      "negative": "Disabled or unknown provider cannot authenticate",
+      "operatorStep": "advanced: provision provider credentials",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/federation/core.go"
+      ],
+      "testRefs": [
+        "services/api/internal/federation/core_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G03",
+      "name": "SQL-backed authentication identity",
+      "actor": "owner",
+      "entry": "Admin / Local or SQL authentication",
+      "action": "Import or configure SQL identity and sign in",
+      "success": "Password verification yields the expected UUID",
+      "negative": "Invalid or incompatible hash is rejected",
+      "operatorStep": "advanced: provision database",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/sqlconnector/connector.go",
+        "services/api/internal/repository/postgres.go"
+      ],
+      "testRefs": [
+        "services/api/internal/sqlconnector/connector_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G04",
+      "name": "Federated/OpenID identity resolution",
+      "actor": "player",
+      "entry": "Desktop / Federated sign-in",
+      "action": "Finish the OIDC authorization flow",
+      "success": "Identity resolves to an allowed account",
+      "negative": "Invalid issuer, nonce or state cannot sign in",
+      "operatorStep": "advanced: provide a live IdP",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/oidcconnector/connector.go",
+        "services/api/internal/httpapi/oidc_flow_115.go"
+      ],
+      "testRefs": [
+        "services/api/internal/oidcconnector/connector_test.go",
+        "services/api/internal/httpapi/oidc_flow_115_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G05",
+      "name": "Microsoft authentication compatibility",
+      "actor": "player",
+      "entry": "Desktop / Microsoft account",
+      "action": "Sign in with a legitimately entitled Minecraft account",
+      "success": "Official profile and entitlement are checked",
+      "negative": "Missing entitlement never grants online join",
+      "operatorStep": "advanced: provide a live account",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "services/api/internal/microsoftconnector/connector.go",
+        "services/api/internal/httpapi/microsoft_flow_116.go"
+      ],
+      "testRefs": [
+        "services/api/internal/microsoftconnector/connector_test.go",
+        "services/api/internal/httpapi/microsoft_flow_116_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G06",
+      "name": "GameProfile UUID identity",
+      "actor": "player",
+      "entry": "Desktop / Account profile",
+      "action": "Select a game identity after sign-in",
+      "success": "Correct Minecraft UUID is bound to the session",
+      "negative": "Forged UUID cannot replace verified identity",
+      "operatorStep": "none",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/minecraft_auth_119.go",
+        "services/api/internal/repository/postgres.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/minecraft_auth_119_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G07",
+      "name": "Client profile lifecycle",
+      "actor": "owner",
+      "entry": "Admin / Profiles",
+      "action": "Create a profile and load it in Desktop",
+      "success": "Player can select the intended profile",
+      "negative": "Unknown profile cannot provide a manifest",
+      "operatorStep": "none",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/routes_projects.go",
+        "services/api/internal/httpapi/admin_crud.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/server_integration_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G08",
+      "name": "Optional file/view semantics",
+      "actor": "player",
+      "entry": "Desktop / Optional mods",
+      "action": "Choose optional file groups and preview included files",
+      "success": "Only selected and required files are installed",
+      "negative": "Unavailable optional view cannot silently install",
+      "operatorStep": "none",
+      "legacyStatus": "gap",
+      "implementationRefs": [],
+      "testRefs": [
+        "services/api/internal/httpapi/gravit_optional_02411_test.go",
+        "apps/desktop/tests/component_selection_0247.test.mjs"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G09",
+      "name": "Optional dependency/conflict semantics",
+      "actor": "player",
+      "entry": "Desktop / Optional mods",
+      "action": "Change selection with dependencies and conflicts",
+      "success": "Selection has valid dependency closure",
+      "negative": "Conflicting components are refused",
+      "operatorStep": "none",
+      "legacyStatus": "gap",
+      "implementationRefs": [],
+      "testRefs": [
+        "apps/desktop/tests/component_selection_0247.test.mjs",
+        "services/api/internal/httpapi/component_editor_0248_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G10",
+      "name": "Client package synchronization",
+      "actor": "player",
+      "entry": "Desktop / Downloads",
+      "action": "Install an issued client package",
+      "success": "Installed file digests match signed release",
+      "negative": "Staged or unsigned package cannot be served",
+      "operatorStep": "none",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/package_product.go",
+        "services/api/internal/httpapi/version_manifest.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/package_product_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G11",
+      "name": "Hashed file/directory integrity",
+      "actor": "player",
+      "entry": "Desktop / Repair",
+      "action": "Corrupt one managed file and repair it",
+      "success": "On-disk digest returns to signed value",
+      "negative": "Directory traversal and hash mismatch block",
+      "operatorStep": "none",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/package_product.go",
+        "services/api/internal/httpapi/manifest_signing_v1.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/compatibility_manifest_test.go",
+        "services/api/internal/httpapi/manifest_signing_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G12",
+      "name": "Manifest and artifact signing",
+      "actor": "owner",
+      "entry": "Admin / Release workspace",
+      "action": "Sign and validate a release manifest",
+      "success": "Installed Desktop accepts trusted signature",
+      "negative": "Changed payload or unknown key is refused",
+      "operatorStep": "advanced: configure release signing",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/manifest_signing_v1.go",
+        "cli/cmd/neverlauncher/release_commands.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/manifest_signing_test.go",
+        "cli/cmd/neverlauncher/release_verification_v2_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G13",
+      "name": "Launch arguments and Java selection",
+      "actor": "player",
+      "entry": "Desktop / Launch settings",
+      "action": "Select supported Java and run the selected loader",
+      "success": "Actual game launch includes correct arguments",
+      "negative": "Unsupported major or invalid path is rejected",
+      "operatorStep": "none",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/loader_runtime.go",
+        "cli/cmd/neverlauncher/vanilla_runtime.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/loader_runtime_test.go",
+        "cli/cmd/neverlauncher/vanilla_runtime_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G14",
+      "name": "Managed JRE delivery",
+      "actor": "player",
+      "entry": "Desktop / Java runtime",
+      "action": "Request missing Managed JRE for the profile",
+      "success": "A hash-checked Java runtime becomes ready",
+      "negative": "Corrupted JRE download is not activated",
+      "operatorStep": "none",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/managed_jre_delivery.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/managed_jre_delivery_test.go",
+        "cli/cmd/neverlauncher/managed_java_ii_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G15",
+      "name": "Loader compatibility",
+      "actor": "player",
+      "entry": "Desktop / Loader selection",
+      "action": "Install and start a supported loader",
+      "success": "Real Forge/Fabric/NeoForge/Quilt instance starts",
+      "negative": "Wrong loader version fails without ready state",
+      "operatorStep": "advanced: native Minecraft environment",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/loader_runtime.go",
+        "cli/cmd/neverlauncher/forge_runtime.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/loader_ga_test.go",
+        "cli/cmd/neverlauncher/loader_runtime_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G16",
+      "name": "Vanilla compatibility",
+      "actor": "player",
+      "entry": "Desktop / Vanilla launch",
+      "action": "Install and launch vanilla Minecraft",
+      "success": "Real Minecraft menu renders and can be used",
+      "negative": "Missing assets or invalid game jar block launch",
+      "operatorStep": "advanced: native Minecraft environment",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/vanilla_runtime.go",
+        "cli/cmd/neverlauncher/compatibility_release.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/vanilla_runtime_test.go",
+        "cli/cmd/neverlauncher/compatibility_release_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G17",
+      "name": "ServerWrapper integration",
+      "actor": "operator",
+      "entry": "Admin / Server nodes",
+      "action": "Enroll and observe a ServerBridge node",
+      "success": "Signed active heartbeat identifies a node",
+      "negative": "Untrusted node cannot register as ready",
+      "operatorStep": "advanced: provision server",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/server_bridge.go",
+        "services/api/internal/httpapi/server_bridge_identity_0142.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/server_bridge_test.go",
+        "services/api/internal/httpapi/server_bridge_identity_0142_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G18",
+      "name": "Server authentication bridge",
+      "actor": "player",
+      "entry": "Desktop / Protected server",
+      "action": "Join via issued ServerBridge ticket",
+      "success": "Matching server consumes one authorized ticket",
+      "negative": "Replay or wrong identity cannot join",
+      "operatorStep": "advanced: provision server",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/minecraft_serverbridge_trust_0127.go",
+        "services/api/internal/httpapi/server_bridge_join_tickets_0143.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/minecraft_serverbridge_trust_0127_test.go",
+        "services/api/internal/httpapi/server_bridge_join_tickets_0143_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G19",
+      "name": "Remote server control",
+      "actor": "owner",
+      "entry": "Admin / Server control",
+      "action": "Execute an authorized supported server command",
+      "success": "Target server acknowledges the operation",
+      "negative": "Insufficient role or stale node is refused",
+      "operatorStep": "advanced: provision server",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/server_bridge_control_0195.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/server_bridge_control_0195_test.go",
+        "services/api/internal/repository/server_bridge_control_0195_integration_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G20",
+      "name": "WebSocket/event control plane",
+      "actor": "operator",
+      "entry": "Admin / Events",
+      "action": "Observe server events after node action",
+      "success": "Durable event is visible to authorized operator",
+      "negative": "Disconnected/replayed event cannot create false state",
+      "operatorStep": "advanced: provision server",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/server_bridge_events_0194.go",
+        "services/api/internal/repository/extension_events_0206.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/server_bridge_events_0194_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G21",
+      "name": "Skin/cape texture delivery",
+      "actor": "player",
+      "entry": "Desktop / Textures",
+      "action": "Upload/select supported skin or cape and fetch it",
+      "success": "Verified player texture is served",
+      "negative": "Cross-account ownership and malformed image refused",
+      "operatorStep": "none",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "services/api/internal/httpapi/server_bridge.go",
+        "services/api/internal/httpapi/server_bridge_persistence_v2.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/server_bridge_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G22",
+      "name": "Storage/download delivery",
+      "actor": "player",
+      "entry": "Desktop / Downloads",
+      "action": "Fetch a public published file and check digest",
+      "success": "Only published release file is retrievable",
+      "negative": "Draft and workspace blobs return not found",
+      "operatorStep": "none",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/storage/storage.go",
+        "services/api/internal/storage/local.go",
+        "services/api/internal/storage/s3.go"
+      ],
+      "testRefs": [
+        "services/api/internal/storage/local_test.go",
+        "services/api/internal/storage/s3_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G23",
+      "name": "Mirror/download helper behavior",
+      "actor": "owner",
+      "entry": "CLI / Mirror helper",
+      "action": "Mirror and validate a supported release asset",
+      "success": "Downloaded object equals expected digest",
+      "negative": "Untrusted mirror response is rejected",
+      "operatorStep": "advanced: configure mirror",
+      "legacyStatus": "gap",
+      "implementationRefs": [],
+      "testRefs": [
+        "cli/cmd/neverlauncher/mirror_helper_parity_0274_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G24",
+      "name": "Installer/profile conversion",
+      "actor": "owner",
+      "entry": "Admin / Import tools",
+      "action": "Convert a supported installer/profile",
+      "success": "Converted profile is reviewable before publication",
+      "negative": "Unknown component or unsafe path blocks",
+      "operatorStep": "advanced: provide genuine source package",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "services/api/internal/httpapi/installation.go",
+        "services/api/internal/httpapi/admin_handlers.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/server_integration_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G25",
+      "name": "Launcher self-update",
+      "actor": "player",
+      "entry": "Desktop / Update",
+      "action": "Apply a signed launcher update and restart",
+      "success": "Activated version equals signed target and can roll back",
+      "negative": "Interrupted activation preserves previous version",
+      "operatorStep": "advanced: native installer",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/component_update.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/component_update_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G26",
+      "name": "Module/extension lifecycle",
+      "actor": "owner",
+      "entry": "Admin / Extensions",
+      "action": "Install, update and disable allowed extension",
+      "success": "State and enabled capabilities persist",
+      "negative": "Unauthorized extension is rejected",
+      "operatorStep": "none",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/extensionlifecycle/lifecycle_0204.go",
+        "services/api/internal/httpapi/extensions_0201.go"
+      ],
+      "testRefs": [
+        "services/api/internal/extensionlifecycle/lifecycle_0204_test.go",
+        "services/api/internal/httpapi/extensions_0201_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G27",
+      "name": "Backend extension execution",
+      "actor": "operator",
+      "entry": "Backend / Extensions host",
+      "action": "Run an allowed extension action",
+      "success": "Sandboxed host applies declared permission only",
+      "negative": "Unlisted capability and resource abuse fail",
+      "operatorStep": "advanced: extension test host",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/extensionhost/host_0205.go"
+      ],
+      "testRefs": [
+        "services/api/internal/extensionhost/host_0205_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G28",
+      "name": "HWID/device binding",
+      "actor": "player",
+      "entry": "Desktop / Device trust",
+      "action": "Register current device and inspect account binding",
+      "success": "Real verified device evidence is persisted",
+      "negative": "Changed hardware proof or revocation fails closed",
+      "operatorStep": "advanced: device key platform",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/device_trust_0121.go",
+        "services/api/internal/httpapi/device_attestation_0124.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/device_trust_0121_test.go",
+        "services/api/internal/httpapi/device_attestation_0124_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G29",
+      "name": "Guard attestation",
+      "actor": "player",
+      "entry": "Desktop / Protected launch",
+      "action": "Launch through NeverGuard attestation",
+      "success": "Server confirms fresh trust before protected join",
+      "negative": "Forged/stale Guard report is denied",
+      "operatorStep": "advanced: real Guard target",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/guard_attestation_v2_01810.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/guard_attestation_v2_01810_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G30",
+      "name": "Prestarter boundary",
+      "actor": "player",
+      "entry": "Signed Prestarter installer",
+      "action": "Open preconfigured signed installer and bootstrap",
+      "success": "Correct pinned backend and project are installed",
+      "negative": "Modified bootstrap config cannot be used",
+      "operatorStep": "advanced: native installer",
+      "legacyStatus": "gap",
+      "implementationRefs": [],
+      "testRefs": [
+        "prestarter/prestarter_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G31",
+      "name": "Desktop/runtime integration",
+      "actor": "player",
+      "entry": "Desktop / Launch",
+      "action": "Perform account to profile to actual game launch",
+      "success": "Minecraft starts and profile state matches selected server",
+      "negative": "UI cannot report running without native process",
+      "operatorStep": "advanced: real GUI client",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "apps/desktop/src-tauri/src/main.rs",
+        "apps/desktop/src/main.tsx",
+        "apps/desktop/src/main.tsx"
+      ],
+      "testRefs": [
+        "e2e/scripts/run-minecraft-e2e.sh",
+        "apps/desktop/tests/desktop_experience_0229.test.mjs"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G32",
+      "name": "Admin control surface",
+      "actor": "owner",
+      "entry": "Admin / Project control",
+      "action": "Create project/profile/channel and read public catalog",
+      "success": "Admin writes and player reads match",
+      "negative": "Unauthenticated write cannot change project",
+      "operatorStep": "none",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "apps/admin/src/main.tsx",
+        "services/api/internal/httpapi/admin_handlers.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/authorization_0211_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G33",
+      "name": "CLI control surface",
+      "actor": "operator",
+      "entry": "CLI / Management",
+      "action": "Run a supported CLI operation with auth",
+      "success": "Actual backend state changes or validated response",
+      "negative": "Missing permissions prevent privileged CLI action",
+      "operatorStep": "advanced: CLI setup",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/main.go",
+        "cli/cmd/neverlauncher/package_commands.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/compatibility_release_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G34",
+      "name": "Audit/observability",
+      "actor": "operator",
+      "entry": "Admin / Audit and diagnostics",
+      "action": "Perform operation then inspect its audit event",
+      "success": "Event references affected actor and resource",
+      "negative": "Unauthorized operator cannot read sensitive audit",
+      "operatorStep": "none",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "services/api/internal/httpapi/operations_handlers.go",
+        "services/api/internal/repository/postgres.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/security_hardening_test.go"
+      ],
+      "acceptanceScope": "local-plus-target",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "G35",
+      "name": "Release certification",
+      "actor": "owner",
+      "entry": "Admin / Validation and release",
+      "action": "Validate staged package and request channel release",
+      "success": "Only genuinely certified target advances stable",
+      "negative": "Missing real target evidence blocks stable",
+      "operatorStep": "advanced: real Minecraft GA environment",
+      "legacyStatus": "implemented",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/release_commands.go",
+        "cli/cmd/neverlauncher/compatibility_release.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/compatibility_release_test.go",
+        "cli/cmd/neverlauncher/compatibility_release_certificate_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Historical code-level coverage is not a user journey acceptance result."
+    },
+    {
+      "id": "M01",
+      "name": "AdditionalHash",
+      "actor": "owner",
+      "entry": "Admin / Identity migration",
+      "action": "Import an allowed legacy password verifier",
+      "success": "Login rehash preserves the same identity",
+      "negative": "Unknown hash format requires reset",
+      "operatorStep": "advanced: legacy account fixture",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "services/api/internal/sqlconnector/password_gravit_0294.go"
+      ],
+      "testRefs": [
+        "services/api/internal/sqlconnector/legacy_gravit_0294_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "No proof for every upstream AdditionalHash algorithm or stored credential format."
+    },
+    {
+      "id": "M02",
+      "name": "DiscordGame",
+      "actor": "player",
+      "entry": "Desktop / Discord presence",
+      "action": "Opt in to Discord activity while playing",
+      "success": "Activity updates without blocking game",
+      "negative": "IPC unavailable never blocks launch",
+      "operatorStep": "advanced: Discord running",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "cli/internal/discordrpc/client.go",
+        "cli/cmd/neverlauncher/lan_discord_0308.go"
+      ],
+      "testRefs": [
+        "cli/internal/discordrpc/client_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Live Discord client acceptance, Social SDK lobby/peer features and cross-platform IPC are not certified."
+    },
+    {
+      "id": "M03",
+      "name": "FileAuthSystem",
+      "actor": "owner",
+      "entry": "Admin / FileAuth import",
+      "action": "Import FileAuth database through supported migration",
+      "success": "Imported UUID and credential semantics are retained",
+      "negative": "Malformed or duplicate legacy record is rejected",
+      "operatorStep": "advanced: legacy account fixture",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "services/api/internal/fileauth/database_0295.go",
+        "services/api/internal/repository/local_auth_0295.go"
+      ],
+      "testRefs": [
+        "services/api/internal/fileauth/database_0295_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "One-time import, not a live file-based authentication provider."
+    },
+    {
+      "id": "M04",
+      "name": "FxRuntimeOptimizer",
+      "actor": "player",
+      "entry": "Desktop / Startup",
+      "action": "Cold and warm start the Desktop",
+      "success": "Measured startup reports reproducible runtime result",
+      "negative": "Missing actual timed samples cannot claim speedup",
+      "operatorStep": "advanced: benchmark machine",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "apps/desktop/src/startup_optimizer_03011.ts",
+        "scripts/desktop/prebuild_assets_03011.mjs"
+      ],
+      "testRefs": [
+        "scripts/desktop/prebuild_assets_03011.test.mjs",
+        "scripts/desktop/startup_prewarmer_03011.test.mjs"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "No JavaFX CSS to BSS conversion. Real cold-start benchmark and native platform E2E are not attested."
+    },
+    {
+      "id": "M05",
+      "name": "GenerateCertificate",
+      "actor": "owner",
+      "entry": "CLI / Certificate tools",
+      "action": "Generate or validate a supported release certificate",
+      "success": "Certificate binds trusted release identity",
+      "negative": "Invalid signer cannot grant release permission",
+      "operatorStep": "advanced: release signing keys",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/compatibility_release_certificate.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/compatibility_release_certificate_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "No full Gravit certificate generation workflow equivalence test."
+    },
+    {
+      "id": "M06",
+      "name": "LauncherGuard",
+      "actor": "player",
+      "entry": "Desktop / NeverGuard",
+      "action": "Enter a protected game with Guard enabled",
+      "success": "Actual trusted attestation is accepted",
+      "negative": "Guard bypass attempt denied",
+      "operatorStep": "advanced: real Guard target",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "services/api/internal/httpapi/guard_attestation_v2_01810.go"
+      ],
+      "testRefs": [
+        "services/api/internal/httpapi/guard_attestation_v2_01810_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Does not certify every LauncherGuard platform and bypass-resistance scenario."
+    },
+    {
+      "id": "M07",
+      "name": "LauncherStartScreen",
+      "actor": "player",
+      "entry": "Desktop / Welcome screen",
+      "action": "Launch Desktop and complete first UI journey",
+      "success": "Navigable player screens lead to game",
+      "negative": "Invalid first-run configuration is explained",
+      "operatorStep": "advanced: native UI",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "apps/desktop/src/main.tsx",
+        "apps/desktop/src/desktop_experience_0229.ts"
+      ],
+      "testRefs": [
+        "apps/desktop/tests/desktop_experience_0229.test.mjs"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "JavaFX API hooks are not supported; visual startup/login/launch E2E needs verification."
+    },
+    {
+      "id": "M08",
+      "name": "MirrorHelper",
+      "actor": "operator",
+      "entry": "CLI / MirrorHelper",
+      "action": "Execute verified mirror/mod-helper workflow",
+      "success": "Hashed files match expected assets",
+      "negative": "Unverified remote payload is refused",
+      "operatorStep": "advanced: mirror fixture",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/mirror_helper_parity_0274.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/mirror_helper_parity_0274_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "No exhaustive command-by-command upstream verification across all loader versions."
+    },
+    {
+      "id": "M09",
+      "name": "MojangSupport",
+      "actor": "player",
+      "entry": "Desktop / Official Minecraft",
+      "action": "Authenticate with Microsoft and launch owned Minecraft",
+      "success": "Entitlement matches game identity",
+      "negative": "Account without entitlement cannot claim ownership",
+      "operatorStep": "advanced: live official account",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "apps/desktop/src/official_minecraft_0257.ts",
+        "cli/cmd/neverlauncher/official_ga_release_0270.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/official_ga_release_0270_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Real account live-service and JVM launch are not attested by the local test alone."
+    },
+    {
+      "id": "M10",
+      "name": "OpenSSLSignCode",
+      "actor": "owner",
+      "entry": "CLI / Windows code signing",
+      "action": "Verify Windows package authenticode chain",
+      "success": "Published binary is trusted by target Windows",
+      "negative": "Invalid signature or mismatched binary refused",
+      "operatorStep": "advanced: Windows signing service",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/windows_signing.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/windows_signing_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "No OpenSSLSignCode-specific command/format parity."
+    },
+    {
+      "id": "M11",
+      "name": "Prestarter",
+      "actor": "player",
+      "entry": "Native Prestarter",
+      "action": "Install from authentic signed Prestarter config",
+      "success": "Installed runtime matches signed bundle",
+      "negative": "Tampered Prestarter configuration blocks",
+      "operatorStep": "advanced: native installer",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "prestarter/prestarter.go"
+      ],
+      "testRefs": [
+        "prestarter/prestarter_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Native bootstrap not Java Prestarter module; platform coverage requires independent execution."
+    },
+    {
+      "id": "M12",
+      "name": "RemoteControl",
+      "actor": "operator",
+      "entry": "Admin / Server control",
+      "action": "Perform scoped ServerBridge remote command",
+      "success": "Authorized live node executes and acknowledges",
+      "negative": "Unauthorized or replayed command denied",
+      "operatorStep": "advanced: live ServerBridge",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/serverbridge_host_remote_0284.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/serverbridge_host_remote_0284_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "No generic reflection into Java LaunchServer internals."
+    },
+    {
+      "id": "M13",
+      "name": "SentryProGuardUpload",
+      "actor": "operator",
+      "entry": "Diagnostics / Upload symbols",
+      "action": "Upload Sentry mapping with opted-in service credentials",
+      "success": "Sentry returns actual upload receipt",
+      "negative": "Missing credentials never count as success",
+      "operatorStep": "advanced: Sentry test account",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "scripts/diagnostics/upload_release_0309.py"
+      ],
+      "testRefs": [
+        "scripts/diagnostics/uploader_03011.test.mjs"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Production Sentry Cloud credentials and successful real mapping upload are not tested."
+    },
+    {
+      "id": "M14",
+      "name": "Sentry launcher module",
+      "actor": "player",
+      "entry": "Desktop / Diagnostics",
+      "action": "Opt in/out of desktop crash reporting",
+      "success": "Preference persisted and observed on live client",
+      "negative": "Opted-out client sends no events",
+      "operatorStep": "advanced: network sink",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "apps/desktop/src/sentry_diagnostics_0309.ts",
+        "sdk/java/core/src/main/java/ru/neverlauncher/sdk/core/SentryDiagnostics.java"
+      ],
+      "testRefs": [
+        "scripts/desktop/desktop_diagnostics_03011.test.mjs"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Production Rust desktop E2E, consent persistence and cloud receipt require verification."
+    },
+    {
+      "id": "M15",
+      "name": "Sentry server module",
+      "actor": "operator",
+      "entry": "Backend / Diagnostics",
+      "action": "Trigger sanitized server error on opt-in deployment",
+      "success": "Sentry receives non-secret event",
+      "negative": "Credentials or token cannot be disclosed",
+      "operatorStep": "advanced: network sink",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "services/api/internal/sentrydiag/sentry.go"
+      ],
+      "testRefs": [
+        "services/api/internal/sentrydiag/sentry_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Production Go backend full integration and live Sentry receipt are not attested."
+    },
+    {
+      "id": "M16",
+      "name": "SystemdNotifier",
+      "actor": "operator",
+      "entry": "Host / systemd unit",
+      "action": "Install and restart managed service",
+      "success": "Real systemd confirms readiness and recovery",
+      "negative": "Failed service never reported ready",
+      "operatorStep": "advanced: Linux systemd host",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "cli/cmd/neverlauncher/serverbridge_host_systemd_linux_02811.go"
+      ],
+      "testRefs": [
+        "cli/cmd/neverlauncher/serverbridge_host_systemd_linux_02811_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Systemd service support is host-scoped; no generic LaunchServer Java module."
+    },
+    {
+      "id": "M17",
+      "name": "UnsafeCommandPack",
+      "actor": "operator",
+      "entry": "Extension security boundary",
+      "action": "Attempt upstream unsafe arbitrary command/classloader access",
+      "success": "Unsafe capability remains intentionally unsupported",
+      "negative": "Arbitrary code or secret access must be refused",
+      "operatorStep": "prohibited: unsafe upstream behavior",
+      "legacyStatus": "blocked",
+      "implementationRefs": [
+        "cli/internal/devtools/jar.go",
+        "cli/internal/devtools/auth.go"
+      ],
+      "testRefs": [
+        "cli/internal/devtools/devtools_test.go"
+      ],
+      "acceptanceScope": "security-exclusion",
+      "verification": "not-run",
+      "limitations": "Intentional policy exception: unsafe classloader access to production LaunchServer or auth credentials is not implemented; full equivalence intentionally impossible."
+    },
+    {
+      "id": "M18",
+      "name": "mDNSClientside",
+      "actor": "player",
+      "entry": "Desktop / LAN discovery",
+      "action": "Find local server over mDNS with player UI",
+      "success": "Eligible LAN service is listed",
+      "negative": "Spoofed or unavailable LAN service not trusted",
+      "operatorStep": "advanced: multicast network",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "cli/internal/lanmdns/discovery.go"
+      ],
+      "testRefs": [
+        "cli/internal/lanmdns/discovery_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "IPv6, conflict handling and native desktop LAN UI are not certified."
+    },
+    {
+      "id": "M19",
+      "name": "mDNSServerside",
+      "actor": "operator",
+      "entry": "Server / LAN advertisement",
+      "action": "Advertise ServerBridge LAN endpoint by DNS-SD",
+      "success": "Real client resolves advertised node",
+      "negative": "Name collisions and segmented LAN fail safely",
+      "operatorStep": "advanced: multicast network",
+      "legacyStatus": "partial",
+      "implementationRefs": [
+        "cli/internal/lanmdns/dns.go",
+        "cli/internal/lanmdns/discovery.go"
+      ],
+      "testRefs": [
+        "cli/internal/lanmdns/discovery_test.go"
+      ],
+      "acceptanceScope": "target-required",
+      "verification": "not-run",
+      "limitations": "Remote DNS-SD environments and multicast network segmentation are not certified."
+    }
+  ]
+}
