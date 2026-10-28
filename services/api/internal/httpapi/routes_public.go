@@ -8,6 +8,7 @@ func (s Server) registerPublicRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/server-bridge/matrix", s.serverBridgePublicMatrix0149)
 	mux.HandleFunc("GET /api/v1/server-bridge/capabilities", s.serverBridgeCapabilities0191)
 	mux.HandleFunc("GET /api/v1/diagnostics/policy", s.diagnosticsPolicy)
+	mux.Handle("POST /api/v1/diagnostics/reports", s.requireAuthenticated(s.playerSupportSubmit03510))
 	mux.HandleFunc("POST /api/v1/diagnostics/validate", s.diagnosticsValidate)
 	mux.HandleFunc("GET /api/v1/runtime/requirements", s.runtimeRequirements)
 	mux.HandleFunc("GET /api/v1/loaders", s.loaders)

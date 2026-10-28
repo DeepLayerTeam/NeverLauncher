@@ -8,6 +8,7 @@ import './styles.css';
 import { UI_PREFERENCES_KEY0357, SCREENS0357, canNavigate0357, tr0357, shortcut0357, rovingNav0357, nextZoom0357, validateUISettings0357, type Locale0357, type Screen0357, type UISettings0357 } from './desktop_accessibility_0357';
 import PlayerMigration0339 from './PlayerMigration0339';
 import { installErrorCapture0309 } from './sentry_diagnostics_0309';
+import { ensureReviewedDiagnostic03510, type PlayerDiagnosticPreview03510 } from './diagnostics_support_03510';
 import { loadDesktopView03011, prewarmDesktop03011 } from './startup_optimizer_03011';
 
 
@@ -459,6 +460,10 @@ function App() {
   const [launchHistory, setLaunchHistory] = useState<LaunchHistoryEntry[]>([]);
   const [launchPlan, setLaunchPlan] = useState<LaunchPlan | null>(null);
   const [launchResult, setLaunchResult] = useState<ProcessStatus | null>(null);
+  const [diagnosticPreview03510, setDiagnosticPreview03510] = useState<PlayerDiagnosticPreview03510 | null>(null);
+  const [diagnosticConsent03510, setDiagnosticConsent03510] = useState(false);
+  const [diagnosticStatus03510, setDiagnosticStatus03510] = useState('');
+  const [diagnosticBusy03510, setDiagnosticBusy03510] = useState(false);
   const [logs, setLogs] = useState<string[]>([`NeverLauncher Desktop ${DESKTOP_VERSION}: product-клиент ожидает first-run подключение к Backend API.`]);
   const [backendStatus, setBackendStatus] = useState<string>('не проверен');
   const [projects, setProjects] = useState<BackendProject[]>([]);
@@ -2141,20 +2146,45 @@ function App() {
     } catch (error) { log(`Runtime process не остановлен: ${String(error)}`); }
   }
 
-  async function exportDiagnostics() {
+  async function previewDiagnostics03510() {
+    setDiagnosticBusy03510(true); setDiagnosticStatus03510('');
+    setDiagnosticConsent03510(false); setDiagnosticPreview03510(null);
     try {
-      const result = await callTauri<DiagnosticsExport>('export_diagnostics_bundle', {
-        root: settings.gameDirectory,
-        launcherVersion: DESKTOP_VERSION,
-        backendUrl: settings.backendUrl,
-        stage,
-        logs,
+      const preview = await callTauri<PlayerDiagnosticPreview03510>('preview_diagnostics_bundle_03510', { stage, logs });
+      setDiagnosticPreview03510(preview);
+      setDiagnosticStatus03510('Состав пакета проверен нативным процессом. Просмотрите поля перед экспортом или отправкой.');
+    } catch (e) { setDiagnosticStatus03510(`Предпросмотр не выполнен: ${String(e)}`); }
+    finally { setDiagnosticBusy03510(false); }
+  }
+  async function exportDiagnostics03510() {
+    if (!diagnosticPreview03510) return;
+    setDiagnosticBusy03510(true);
+    try {
+      const result = await callTauri<DiagnosticsExport>('export_diagnostics_bundle_03510', { reviewToken:diagnosticPreview03510.reviewToken });
+      setDiagnosticStatus03510(`${result.message}: ${result.path}`);
+      setDiagnosticPreview03510(null); setDiagnosticConsent03510(false);
+    } catch (e) {setDiagnosticStatus03510(`Экспорт не выполнен: ${String(e)}`);}
+    finally {setDiagnosticBusy03510(false);}
+  }
+  async function submitDiagnostics03510() {
+    setDiagnosticBusy03510(true);
+    try {
+      const report=ensureReviewedDiagnostic03510(diagnosticPreview03510,diagnosticConsent03510,authSession?.accessToken);
+      const destination=new URL(endpoint('/api/v1/diagnostics/reports'));
+      if (destination.protocol!=='https:' && !(destination.protocol==='http:' && ['localhost','127.0.0.1','[::1]'].includes(destination.hostname))) {
+        throw new Error('Для отправки отчёта требуется HTTPS Backend (HTTP допустим только для localhost).');
+      }
+      const response=await fetch(destination.toString(),{
+        method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${authSession!.accessToken}`},
+        body:JSON.stringify({consent:true,report})
       });
-      log(result.message);
-      await refreshLaunchHistory();
-    } catch (error) {
-      log(`Диагностика не экспортирована: ${String(error)}`);
-    }
+      const payload=await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(`Backend HTTP ${response.status}`);
+      if (!/^[a-f0-9]{32}$/.test(String(payload.id||''))) throw new Error('Backend не подтвердил идентификатор отчёта. Проверьте поддержку перед повтором.');
+      setDiagnosticStatus03510(`Отчёт принят поддержкой. ID: ${payload.id}`);
+      setDiagnosticConsent03510(false);setDiagnosticPreview03510(null);
+    } catch (e) {setDiagnosticStatus03510(`Отправка не выполнена: ${String(e)}. При сетевом сбое уточните получение у поддержки перед повтором.`);}
+    finally {setDiagnosticBusy03510(false);}
   }
 
   async function openGameDirectory() {
@@ -2330,7 +2360,7 @@ function App() {
           <button disabled={!normalActionsEnabled0357} onClick={cleanUnusedFiles}>{translate0357.clean}</button>
           <button disabled={!normalActionsEnabled0357} onClick={buildPlan}>{translate0357.plan}</button>
           <button className="primary" disabled={transferBusy||!normalActionsEnabled0357} onClick={launch}>{translate0357.play}</button>
-          <button disabled={!normalActionsEnabled0357} onClick={exportDiagnostics}>{translate0357.export}</button>
+          <button disabled={!normalActionsEnabled0357} onClick={()=>{setScreen('diagnostics');void previewDiagnostics03510();}}>Предпросмотр диагностики</button>
         </section>
 
         {nativeConfigLoaded0357 && (!signedProvisioning0352 && !bootstrapError0352) && <section className="settings compact">
@@ -2415,7 +2445,7 @@ function App() {
         {screen === 'settings' && <SettingsPanel locale0357={ui0357.locale} settings={settings} patchSettings={patchSettings} validateSettings={validateSettings} settingsCheck={settingsCheck} checkJavaRuntime={checkJavaRuntime} javaInfo={javaInfo} openGameDirectory={openGameDirectory} manifest={manifest} profileServers={profileServers} loadProfileServers={loadProfileServers} loadCachedOfflineManifest={loadCachedOfflineManifest} cacheSignedManifest={cacheSignedManifest} offlineStatus0358={offlineStatus0358} minecraftIdentity={minecraftIdentity} setMinecraftIdentity={setMinecraftIdentity} />}
         {screen === 'extensions' && <DesktopExtensions0209 backendUrl={settings.backendUrl} token={authSession?.accessToken ?? ''} projectId={selectedProject || settings.projectId} gameDirectory={settings.gameDirectory} log={log} />}
         {screen === 'logs' && <LogsPanel logs={logs} launchPlan={launchPlan} launchResult={launchResult} launchHistory={launchHistory} refreshLaunchHistory={refreshLaunchHistory} stopRuntimeProcess={stopRuntimeProcess} />}
-        {screen === 'diagnostics' && <DiagnosticsPanel exportDiagnostics={exportDiagnostics} readinessContract={readinessContract} diagnosticsPolicy={diagnosticsPolicy} settingsCheck={settingsCheck} />}
+        {screen === 'diagnostics' && <DiagnosticsPanel previewDiagnostics={previewDiagnostics03510} exportDiagnostics={exportDiagnostics03510} submitDiagnostics={submitDiagnostics03510} preview={diagnosticPreview03510} consent={diagnosticConsent03510} setConsent={setDiagnosticConsent03510} busy={diagnosticBusy03510} status={diagnosticStatus03510} signedIn={!!authSession?.accessToken} />}
         </React.Suspense>
       </section>
     </main>
@@ -2632,8 +2662,21 @@ function LogsPanel({ logs, launchPlan, launchResult, launchHistory, refreshLaunc
   return <section className="grid two"><article className="panel"><h3>План запуска</h3><pre>{launchPlan?.commandPreview ?? 'План запуска ещё не собран.'}</pre>{launchPlan?.deterministicSha256 && <small>Resolved plan SHA-256: <code>{launchPlan.deterministicSha256}</code></small>}</article><article className="panel"><h3>Результат запуска</h3><p>{launchResult?.message ?? 'Запуск ещё не выполнялся.'}</p><small>{launchResult?.logPath ?? 'Лог появится после запуска.'}</small><div className="toolbar inline"><button onClick={refreshLaunchHistory}>Обновить историю запусков</button>{launchResult && ['running', 'stopping'].includes(launchResult.state) && <button onClick={stopRuntimeProcess}>Остановить процесс</button>}</div></article><article className="panel"><h3>История запусков</h3><pre>{JSON.stringify(launchHistory, null, 2)}</pre></article><article className="panel wide"><h3>Журнал лаунчера</h3><ul>{logs.map((entry: string) => <li key={entry}>{entry}</li>)}</ul></article></section>;
 }
 
-function DiagnosticsPanel({ exportDiagnostics, readinessContract, diagnosticsPolicy, settingsCheck }: any) {
-  return <section className="panel"><h3>Диагностика</h3><p>Экспортирует локальный диагностический пакет без токенов и серверных секретов. Политика берётся из <code>/api/v1/diagnostics/policy</code>.</p><div className="toolbar inline"><button onClick={exportDiagnostics}>Экспортировать диагностический пакет</button></div><pre>{JSON.stringify({ readinessContract, diagnosticsPolicy, settingsCheck }, null, 2)}</pre></section>;
+function DiagnosticsPanel({ previewDiagnostics, exportDiagnostics, submitDiagnostics, preview, consent, setConsent, busy, status, signedIn }: any) {
+  return <section className="panel" aria-label="Диагностика и поддержка">
+    <h3>Диагностика и поддержка</h3>
+    <p>Нативный процесс преобразует журналы в категории событий. Исходные тексты журналов, токены, пути, имена пользователей и URL не входят в пакет. Никакой отчёт не отправляется автоматически.</p>
+    <button disabled={busy} onClick={previewDiagnostics}>Сформировать предпросмотр</button>
+    {preview && <>
+      <h4>Состав пакета перед отправкой</h4>
+      <pre aria-label="Предпросмотр обезличенного отчёта">{JSON.stringify(preview.report,null,2)}</pre>
+      <div className="toolbar inline"><button disabled={busy} onClick={exportDiagnostics}>Сохранить пакет локально</button></div>
+      <label className="checkSetting"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} /> Я проверил(а) указанные поля и разрешаю отправить именно этот отчёт в поддержку владельца проекта.</label>
+      <button disabled={busy||!signedIn||!consent} onClick={submitDiagnostics}>Отправить в поддержку</button>
+      {!signedIn && <p>Для отправки войдите в аккаунт. Локальный экспорт доступен без входа.</p>}
+    </>}
+    {status && <p role="status" aria-live="polite">{status}</p>}
+  </section>;
 }
 
 // The idle prewarm is not part of the critical authentication/render path.

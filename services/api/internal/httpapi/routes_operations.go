@@ -24,6 +24,7 @@ func (s Server) registerOperationsRoutesV1(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/operations/backups/{backupId}/restore-dry-run", s.requirePermission("storage:manage", s.operationsBackupRestoreDryRun))
 	mux.Handle("POST /api/v1/operations/backups/{backupId}/restore", s.requireFreshAuth117("settings:manage", "phishing-resistant", 5*time.Minute, s.operationsBackupRestore))
 	mux.Handle("GET /api/v1/operations/diagnostics-bundle", s.requirePermission("diagnostics:read", s.operationsDiagnosticsBundle))
+	mux.Handle("GET /api/v1/operations/support-reports", s.requirePermission("diagnostics:read", s.operatorSupportList03510))
 	mux.Handle("GET /api/v1/operations/storage/audit", s.requirePermission("storage:manage", s.operationsStorageAudit))
 	mux.Handle("GET /api/v1/operations/storage/consistency", s.requirePermission("storage:manage", s.operationsStorageConsistency))
 	mux.Handle("GET /api/v1/operations/migrations/status", s.requirePermission("settings:manage", s.operationsMigrationsStatus))

@@ -1,3 +1,12 @@
+## [0.35.10] — Player & Operator Diagnostics, Explicit Consent, Support Inbox
+
+- Replaced unsafe substring-based diagnostics export with a native one-time reviewed report. No raw player logs, URLs, paths or credentials are retained; only bounded, allowlisted event category counts and platform/status metadata are included.
+- Export is native, atomic and private in the app-owned config directory. Previewed payload is preserved unchanged, bound to an expiring one-time review token and never accepts a renderer-selected export path.
+- Player may manually save or, after authenticated explicit consent, submit a report to Backend. Support ingestion rejects free-form fields and unknown event categories, bounds payload size and stores under a private operator directory.
+- Admin Diagnostics has an operator export, support inbox, detail view and local download; access requires `diagnostics:read`.
+- Operator diagnostics exclude local paths, infrastructure URLs, database DSNs and raw health exception messages.
+- Rust/Go/Node negative tests and CI workflow added. Full native/Backend E2E certification not claimed without platform toolchains and live tests.
+
 ## [0.35.9] — Desktop Settings Migration, Signed Preset Requirements and Player File Preservation
 
 - Native Desktop config schema `1.0 → 1.1` migration, exact legacy backup, retained unknown user preferences, fail-closed future versions.

@@ -568,35 +568,28 @@ func (s Server) auditExportPayload880() map[string]any {
 	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "createdAt": time.Now().UTC().Format(time.RFC3339), "mode": "append-only-hash-chain", "events": chain, "headHash": prev, "count": len(chain)}
 }
 
+// Operator export is an allowlisted health snapshot; no infrastructure path,
+// host, URL, DSN, credentials, raw error or personal identifier leaves the API.
 func (s Server) diagnosticsBundlePayload880() map[string]any {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	checks := map[string]string{"storage": "ok", "repository": "not_applicable"}
 	if err := s.Storage.Health(ctx); err != nil {
-		checks["storage"] = err.Error()
+		checks["storage"] = "unavailable"
 	}
 	if checker, ok := s.Repo.(interface{ Health(context.Context) error }); ok {
 		if err := checker.Health(ctx); err != nil {
-			checks["repository"] = err.Error()
+			checks["repository"] = "unavailable"
 		} else {
 			checks["repository"] = "ok"
 		}
 	}
 	return map[string]any{
-		"schemaVersion": apiContractVersion,
-		"toolVersion":   s.Version,
-		"createdAt":     time.Now().UTC().Format(time.RFC3339),
-		"redacted":      true,
-		"config":        s.redactedConfigPayload880(),
-		"checks":        checks,
-		"counts": map[string]int{
-			"projects":        len(s.Repo.ListProjects()),
-			"users":           len(s.Repo.ListUsers()),
-			"roles":           len(s.Repo.ListRoles()),
-			"auditEvents":     len(s.Repo.ListAuditEvents()),
-			"telemetryEvents": len(s.Repo.ListTelemetryEvents()),
-			"crashReports":    len(s.Repo.ListCrashReports()),
-		},
+		"schemaVersion": "1.1", "toolVersion": s.Version,
+		"createdAt": time.Now().UTC().Format(time.RFC3339), "redacted": true,
+		"config":             map[string]any{"repositoryDriver": s.Config.RepositoryDriver, "storageDriver": s.Storage.Driver(), "metricsEnabled": s.Config.MetricsEnabled},
+		"checks":             checks,
+		"counts":             map[string]int{"projects": len(s.Repo.ListProjects()), "users": len(s.Repo.ListUsers()), "roles": len(s.Repo.ListRoles()), "auditEvents": len(s.Repo.ListAuditEvents()), "telemetryEvents": len(s.Repo.ListTelemetryEvents()), "crashReports": len(s.Repo.ListCrashReports())},
 		"recommendedActions": []string{"проверить последний backup через restore-dry-run", "проверить /ready перед релизом", "экспортировать audit hash chain перед крупной миграцией"},
 	}
 }
