@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { identity0356, validExtension0356, verifiedEntrypoint0356, validRPC0356, authorizedBridge0356 } from './extension_security_0356';
 
 const DESKTOP_EXTENSION_PROTOCOL = 'neverextensions.desktop-rpc.v1';
 const EXTENSION_API_VERSION = '1.0';
@@ -47,8 +48,11 @@ export function DesktopExtensions0209({ backendUrl, token, projectId, gameDirect
   const [error, setError] = useState<string>('');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const inflight = useRef(0);
+  const pendingIds = useRef(new Set<string>());
+  const loadedIdentity = useRef('');
+  const requestGeneration = useRef(0);
 
-  const current = useMemo(() => items.find((item) => item.extensionId === selected), [items, selected]);
+  const current = useMemo(() => items.find((item) => identity0356(item) === selected), [items, selected]);
   const pages = current?.desktop.pages ?? [];
   const navigation = [...(current?.desktop.navigation ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id.localeCompare(b.id));
   const actions = (current?.desktop.actions ?? []).filter((action) => action.pageId === pageId);
@@ -69,11 +73,15 @@ export function DesktopExtensions0209({ backendUrl, token, projectId, gameDirect
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
       if (payload?.data?.protocol !== DESKTOP_EXTENSION_PROTOCOL || payload?.data?.extensionApiVersion !== EXTENSION_API_VERSION) throw new Error('Desktop extension catalog protocol/API mismatch');
-      const next = (payload?.data?.items ?? []) as DesktopExtensionCatalogItem[];
+      if (!Array.isArray(payload?.data?.items) || payload.data.items.length>128) throw new Error('Invalid Desktop extension catalog');
+      const next = (payload.data.items as unknown[]).filter((x):x is DesktopExtensionCatalogItem => validExtension0356(x,projectId));
       setItems(next);
+      if (selected && !next.some(x=>identity0356(x)===selected)) {
+        loadedIdentity.current=''; setHtml('');
+      }
       if (!next.length) { setSelected(''); setPageId(''); setHtml(''); return; }
-      const keep = next.find((item) => item.extensionId === selected) ?? next[0];
-      setSelected(keep.extensionId);
+      const keep = next.find((item) => identity0356(item) === selected) ?? next[0];
+      setSelected(identity0356(keep));
       const firstPage = keep.desktop.pages?.find((p) => p.id === pageId) ?? keep.desktop.pages?.[0];
       setPageId(firstPage?.id ?? '');
     } catch (e) {
@@ -84,64 +92,94 @@ export function DesktopExtensions0209({ backendUrl, token, projectId, gameDirect
   }
 
   async function loadEntrypoint(item: DesktopExtensionCatalogItem) {
+    const generation=++requestGeneration.current;
+    loadedIdentity.current='';
+    setHtml('');
+    pendingIds.current.clear();
     setError('');
     try {
       const response = await authorized(`/api/v1/desktop/extensions/${encodeURIComponent(item.extensionId)}/ui?${queryFor(item)}`);
       const payload = await response.json() as EntrypointResponse & { error?: { message?: string } };
       if (!response.ok) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
-      if (payload.data?.protocol !== DESKTOP_EXTENSION_PROTOCOL || payload.data.extensionApiVersion !== EXTENSION_API_VERSION || typeof payload.data.html !== 'string') throw new Error('Desktop extension protocol/API mismatch');
-      setHtml(payload.data.html);
+      const next = verifiedEntrypoint0356(payload.data,item);
+      if (generation!==requestGeneration.current)return;
+      loadedIdentity.current=identity0356(item);
+      setHtml(next);
     } catch (e) {
-      const message = String(e);
-      setHtml('');
-      setError(message);
+      if (generation!==requestGeneration.current)return;
+      setHtml(''); loadedIdentity.current='';
+      const message = String(e); setError(message);
       log(`Desktop extension ${item.extensionId}: ${message}`);
     }
   }
 
-  useEffect(() => { if (token && backendUrl) void refresh(); else { setItems([]); setHtml(''); } }, [backendUrl, token]);
-  useEffect(() => { if (current) void loadEntrypoint(current); }, [current?.extensionId, current?.generation, current?.scope, current?.scopeId]);
+  useEffect(() => {
+    ++requestGeneration.current; loadedIdentity.current=''; pendingIds.current.clear(); setHtml('');
+    if(token && backendUrl) void refresh(); else setItems([]);
+    return () => { ++requestGeneration.current; loadedIdentity.current=''; pendingIds.current.clear(); };
+  }, [backendUrl, token, projectId]);
+  useEffect(() => {
+    if(current) void loadEntrypoint(current);
+    return () => { ++requestGeneration.current; loadedIdentity.current=''; pendingIds.current.clear(); };
+  }, [current?.extensionId, current?.version, current?.generation, current?.scope, current?.scopeId]);
 
   useEffect(() => {
     const listener = async (event: MessageEvent) => {
       const frame = iframeRef.current?.contentWindow;
-      if (!frame || event.source !== frame || !current) return;
-      const message = event.data as RPCRequest;
-      if (!message || message.protocol !== DESKTOP_EXTENSION_PROTOCOL || message.type !== 'rpc.request' || typeof message.id !== 'string' || typeof message.method !== 'string') return;
-      if (message.id.length > 160 || message.method.length > 64 || inflight.current >= MAX_INFLIGHT) {
-        frame.postMessage({ protocol: DESKTOP_EXTENSION_PROTOCOL, type: 'rpc.response', id: message.id || 'invalid', error: 'RPC limit exceeded' } satisfies RPCResponse, '*');
+      // sandbox="allow-scripts" (without allow-same-origin) guarantees an opaque
+      // origin. Do not process messages from descendants or navigated HTTPS pages.
+      if (!frame || event.source!==frame || event.origin!=='null' || !current ||
+          loadedIdentity.current!==identity0356(current)) return;
+      const message = event.data;
+      if(!validRPC0356(message))return;
+      const identity=identity0356(current);
+      if(inflight.current>=MAX_INFLIGHT||pendingIds.current.has(message.id)) {
+        frame.postMessage({protocol:DESKTOP_EXTENSION_PROTOCOL,type:'rpc.response',id:message.id,error:'RPC concurrency or duplicate ID rejected'} satisfies RPCResponse,'*');
         return;
       }
-      inflight.current += 1;
-      let result: unknown;
-      let rpcError = '';
+      inflight.current+=1;pendingIds.current.add(message.id);
+      const respond = (result:unknown,rpcError:string) => {
+        if(iframeRef.current?.contentWindow!==frame || loadedIdentity.current!==identity)return;
+        frame.postMessage({protocol:DESKTOP_EXTENSION_PROTOCOL,type:'rpc.response',id:message.id,...(rpcError?{error:rpcError}:{result})} satisfies RPCResponse,'*');
+      };
+      let result:unknown;let rpcError='';
       try {
-        if (message.method === 'tauri.platform') {
-          if (!current.bridgeAllowed) throw new Error('desktop:bridge is not granted');
-          result = await invoke('desktop_extension_platform_info');
-        } else if (message.method === 'tauri.openGameDirectory') {
-          if (!current.bridgeAllowed) throw new Error('desktop:bridge is not granted');
-          if (!gameDirectory.trim()) throw new Error('game directory is not configured');
-          result = await invoke('open_game_directory', { root: gameDirectory });
-        } else {
-          const response = await authorized(`/api/v1/desktop/extensions/${encodeURIComponent(current.extensionId)}/rpc?${queryFor(current)}`, {
-            method: 'POST',
-            body: JSON.stringify({ protocol: DESKTOP_EXTENSION_PROTOCOL, id: message.id, method: message.method, params: message.params ?? {} }),
+        // Never trust a catalog's old bridgeAllowed flag as authorization.
+        // The existing Backend RPC enforces the current install, verified
+        // device, permissions, scope, version and generation for every action.
+        if(message.method==='tauri.platform'||message.method==='tauri.openGameDirectory') {
+          if(!current.bridgeAllowed)throw new Error('desktop:bridge is not granted');
+          const response=await authorized(`/api/v1/desktop/extensions/${encodeURIComponent(current.extensionId)}/rpc?${queryFor(current)}`, {
+            method:'POST',body:JSON.stringify({protocol:DESKTOP_EXTENSION_PROTOCOL,id:message.id,method:'bridge.authorize',
+              params:{action:message.method,version:current.version,generation:current.generation}}),
           });
-          const payload = await response.json();
-          if (!response.ok) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
-          const rpc = payload?.data;
-          if (rpc?.protocol !== DESKTOP_EXTENSION_PROTOCOL || rpc?.id !== message.id) throw new Error('Desktop RPC response mismatch');
-          if (rpc.error) throw new Error(rpc.error);
-          result = rpc.result;
+          const payload=await response.json();
+          if(!response.ok||payload?.data?.protocol!==DESKTOP_EXTENSION_PROTOCOL||payload?.data?.id!==message.id||payload?.data?.error||
+             !authorizedBridge0356(payload?.data?.result,current,message.method))throw new Error('Desktop bridge authorization denied or stale');
+          if(loadedIdentity.current!==identity)throw new Error('Extension view changed');
+          if(message.method==='tauri.platform') result=await invoke('desktop_extension_platform_info');
+          else {
+            if(!gameDirectory.trim())throw new Error('Game directory not configured');
+            result=await invoke('open_game_directory',{root:gameDirectory});
+          }
+        } else {
+          const response=await authorized(`/api/v1/desktop/extensions/${encodeURIComponent(current.extensionId)}/rpc?${queryFor(current)}`, {
+            method:'POST',body:JSON.stringify({protocol:DESKTOP_EXTENSION_PROTOCOL,id:message.id,method:message.method,params:message.params??{}}),
+          });
+          const payload=await response.json();
+          if(!response.ok)throw new Error(payload?.error?.message||`HTTP ${response.status}`);
+          const rpc=payload?.data;
+          if(rpc?.protocol!==DESKTOP_EXTENSION_PROTOCOL||rpc?.id!==message.id)throw new Error('Desktop RPC response mismatch');
+          if(rpc.error)throw new Error(String(rpc.error));
+          result=rpc.result;
         }
-      } catch (e) { rpcError = String(e); }
-      finally { inflight.current -= 1; }
-      frame.postMessage({ protocol: DESKTOP_EXTENSION_PROTOCOL, type: 'rpc.response', id: message.id, ...(rpcError ? { error: rpcError } : { result }) } satisfies RPCResponse, '*');
+      }catch(e){rpcError=String(e);}
+      finally{inflight.current=Math.max(0,inflight.current-1);pendingIds.current.delete(message.id);}
+      respond(result,rpcError);
     };
-    window.addEventListener('message', listener);
-    return () => window.removeEventListener('message', listener);
-  }, [current, backendUrl, token, gameDirectory]);
+    window.addEventListener('message',listener);
+    return()=>window.removeEventListener('message',listener);
+  },[current,backendUrl,token,gameDirectory]);
 
   function notifyContext() {
     const frame = iframeRef.current?.contentWindow;
@@ -161,12 +199,12 @@ export function DesktopExtensions0209({ backendUrl, token, projectId, gameDirect
     {error && <pre>{error}</pre>}
     {!items.length ? <p>Нет доступных enabled Desktop extensions.</p> : <div className="desktopExtensionsLayout">
       <aside className="desktopExtensionNav">
-        {items.map((item) => <button key={`${item.scope}:${item.scopeId ?? ''}:${item.extensionId}`} className={selected === item.extensionId ? 'active' : ''} onClick={() => { setSelected(item.extensionId); setPageId(item.desktop.pages?.[0]?.id ?? ''); }}>{item.name}<small>{item.version} · {item.scope}{item.scopeId ? `/${item.scopeId}` : ''}</small></button>)}
+        {items.map((item) => <button key={`${item.scope}:${item.scopeId ?? ''}:${item.extensionId}`} className={selected === identity0356(item) ? 'active' : ''} onClick={() => { setSelected(identity0356(item)); setPageId(item.desktop.pages?.[0]?.id ?? ''); }}>{item.name}<small>{item.version} · {item.scope}{item.scopeId ? `/${item.scopeId}` : ''}</small></button>)}
         {current && navigation.map((entry) => <button key={entry.id} className={pageId === entry.pageId ? 'active sub' : 'sub'} onClick={() => setPageId(entry.pageId)}>{entry.label}</button>)}
       </aside>
       <div className="desktopExtensionSurface">
         <div className="desktopExtensionToolbar"><strong>{pages.find((p) => p.id === pageId)?.title ?? current?.name}</strong><span>{current?.bridgeAllowed ? 'Tauri bridge granted' : 'sandbox only'}</span>{actions.map((action) => <button key={action.id} onClick={() => triggerAction(action)}>{action.label}</button>)}</div>
-        {html ? <iframe ref={iframeRef} title={`${current?.name ?? 'Extension'}:${pageId}`} sandbox="allow-scripts" srcDoc={html} onLoad={notifyContext} /> : <div className="desktopExtensionEmpty">Extension UI unavailable.</div>}
+        {html && current && loadedIdentity.current===identity0356(current) ? <iframe key={identity0356(current)} ref={iframeRef} title={`${current?.name ?? 'Extension'}:${pageId}`} sandbox="allow-scripts" srcDoc={html} onLoad={notifyContext} /> : <div className="desktopExtensionEmpty">Extension UI unavailable.</div>}
       </div>
     </div>}
   </section>;

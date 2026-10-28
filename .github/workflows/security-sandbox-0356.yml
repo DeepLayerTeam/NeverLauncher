@@ -1,0 +1,51 @@
+name: 0.35.6 Sandbox, CSP and bridge hardening
+on:
+  push:
+    paths:
+      - 'apps/desktop/**'
+      - 'services/api/internal/httpapi/extension_*'
+      - '.github/workflows/security-sandbox-0356.yml'
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - 'services/api/internal/httpapi/extension_*'
+      - '.github/workflows/security-sandbox-0356.yml'
+permissions:
+  contents: read
+jobs:
+  renderer-and-policy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - run: npm ci
+        working-directory: apps/desktop
+      - run: npm run test:extension-security
+        working-directory: apps/desktop
+      - run: node --test tests/security_policy_0356.test.mjs
+        working-directory: apps/desktop
+      - run: npm run build
+        working-directory: apps/desktop
+  server-capability-revocation:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Execute real HTTP capability authorization, revocation and CSP tests
+        working-directory: services/api
+        run: go test ./internal/httpapi -run 'TestDesktopBridgeRevocationAndGeneration0356|TestExtensionHTMLCSPPrecedesUntrustedMarkup0356|TestDesktopEntrypointServedFromEnabledGrantedInstall0209' -count=1
+  native-validation:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml external_https_security_0356_tests -- --nocapture
+      - run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml

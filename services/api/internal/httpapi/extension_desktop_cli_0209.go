@@ -286,6 +286,30 @@ func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) 
 		s.audit(r, claims.Email, "extension:desktop-rpc:"+req.Method, install.ExtensionID+":"+install.Scope+":"+install.ScopeID)
 	}
 	switch req.Method {
+	case "bridge.authorize":
+		// Unlike the catalog's UI hint, this is checked for every native action.
+		// Revocation, disabling the extension or replacing its version fails closed.
+		var p struct {
+			Version    string `json:"version"`
+			Generation int64  `json:"generation"`
+			Action     string `json:"action"`
+		}
+		if json.Unmarshal(req.Params, &p) != nil || p.Version != install.CurrentVersion || p.Generation != install.Generation ||
+			(p.Action != "tauri.platform" && p.Action != "tauri.openGameDirectory") {
+			respond(nil, errors.New("stale or invalid desktop bridge request"))
+			return
+		}
+		projectID := ""
+		if install.Scope == "project" {
+			projectID = install.ScopeID
+		}
+		if e := allow("desktop:bridge", projectID); e != nil {
+			respond(nil, e)
+			return
+		}
+		audit()
+		respond(map[string]any{"authorized": true, "extensionId": install.ExtensionID, "version": install.CurrentVersion,
+			"generation": install.Generation, "action": p.Action}, nil)
 	case "context.get":
 		respond(map[string]any{"extensionId": install.ExtensionID, "version": install.CurrentVersion, "extensionApiVersion": extensioncontract.ExtensionAPIVersion, "scope": install.Scope, "scopeId": install.ScopeID, "generation": install.Generation, "actor": map[string]any{"id": claims.Sub, "email": claims.Email}, "deviceVerified": true}, nil)
 	case "project.get":

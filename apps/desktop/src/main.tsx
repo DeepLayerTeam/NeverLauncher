@@ -2131,9 +2131,9 @@ function App() {
 
         {signedProvisioning0352?.branding && (signedProvisioning0352.branding.news?.length||0)>0 && <section className="brandNews0355" aria-label={signedProvisioning0352.branding.locale==='en'?'Project news':'Новости проекта'}>
           <h2>{signedProvisioning0352.branding.locale==='en'?'Project news':'Новости проекта'}</h2>
-          <div className="brandNewsItems0355">{signedProvisioning0352.branding.news?.map((item,index)=><a key={index} href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>)}</div>
+          <div className="brandNewsItems0355">{signedProvisioning0352.branding.news?.map((item,index)=><a key={index} href={item.url} onClick={(e)=>{e.preventDefault();void callTauri('open_external_https_0356',{url:item.url}).catch((error)=>log(`External link: ${String(error)}`));}}>{item.title}</a>)}</div>
         </section>}
-        {signedProvisioning0352?.branding?.websiteUrl&&<p className="brandWebsite0355"><a href={signedProvisioning0352.branding.websiteUrl} target="_blank" rel="noopener noreferrer">{signedProvisioning0352.branding.locale==='en'?'Project website':'Сайт проекта'}</a></p>}
+        {signedProvisioning0352?.branding?.websiteUrl&&<p className="brandWebsite0355"><a href={signedProvisioning0352.branding.websiteUrl} onClick={(e)=>{e.preventDefault();void callTauri('open_external_https_0356',{url:signedProvisioning0352.branding!.websiteUrl}).catch((error)=>log(`External link: ${String(error)}`));}}>{signedProvisioning0352.branding.locale==='en'?'Project website':'Сайт проекта'}</a></p>}
 
         <section className="toolbar">
           <button onClick={runFullCheck}>Полная проверка</button>

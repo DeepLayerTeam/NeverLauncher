@@ -1,4 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
+import {invoke} from '@tauri-apps/api/core';
 import {OfficialMinecraftClient0257, type OfficialProfile0257} from './official_minecraft_0257';
 import {AuthenticationExperience02610, initialAuthenticationState02610, type AuthenticationState02610} from './official_auth_experience_02610';
 
@@ -88,7 +89,7 @@ export function OfficialMinecraftPanel0257({client,linkedProfile,onLinked}:Props
           {!state.device ? <p role="status">Запрашиваем код у Microsoft…</p> : <>
             <p>Откройте Microsoft и введите код:</p>
             <div className="officialAuthDevice02610"><code aria-label="Код входа">{state.device.userCode}</code><button type="button" onClick={()=>{if(state.device && navigator.clipboard)void navigator.clipboard.writeText(state.device.userCode).catch(()=>{});}}>Копировать код</button></div>
-            <a href={state.device.verificationUri} target="_blank" rel="noopener noreferrer">Открыть страницу входа Microsoft</a>
+            <a href={state.device.verificationUri} onClick={(event)=>{event.preventDefault();void invoke('open_external_https_0356',{url:state.device!.verificationUri}).catch(()=>{});}}>Открыть страницу входа Microsoft</a>
             <p role="status">Проверка автоматическая · осталось {formatTime(remaining)}. Не закрывайте лаунчер.</p>
           </>}
         </>}

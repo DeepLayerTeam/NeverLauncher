@@ -1,3 +1,11 @@
+## [0.35.6] — CSP, Sandbox, Native Bridge Revocation & Hardening
+
+- Desktop extension UI now rejects stale or malformed catalog/HTML/RPC payloads, mismatched scopes, untrusted message origins, duplicate in-flight requests and cross-generation responses.
+- Existing Backend RPC rechecks live `desktop:bridge` grants, verified device session, extension version and install generation before any extension-initiated native call; revocation denies new calls.
+- Main Tauri local-only capability restricts core API to event listening; production and dev CSP separated, main JS stays `script-src 'self'`, prototype freezing enabled.
+- Extension CSP injected ahead of all third-party markup. External branding/Microsoft URLs open via restricted native HTTPS system-browser command. Native game-folder opener is limited to the saved canonical root.
+- Node/Go/Rust regression tests and CI added. Native/Backend compilation and real sandbox UI E2E remain unverified locally; inherited `srcDoc` CSP is a known blocker for inline extension scripts and cannot be treated as a complete interactive plugin GA.
+
 ## [0.35.3] — Player Workspace & Finished Desktop Navigation
 
 - Replaced technical sidebar with player-oriented Accounts, Servers, Builds, Optional Mods, Textures, Downloads and Launch History; signed first-run and diagnostics remain accessible where appropriate.

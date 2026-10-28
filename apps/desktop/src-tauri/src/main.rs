@@ -1355,11 +1355,48 @@ async fn export_diagnostics_bundle(root: String, launcher_version: String, backe
     Ok(DiagnosticsExportResult { path: path.to_string_lossy().to_string(), message: format!("diagnostic bundle сохранён: {}", path.display()) })
 }
 
+// Untrusted URLs never navigate the privileged Tauri WebView. Only an explicit
+// player click may open a well-formed HTTPS link in the *system* browser.
+fn validate_external_https_0356(raw: &str) -> Result<reqwest::Url, String> {
+    if raw.len() > 2048 || raw.bytes().any(|b| b.is_ascii_control() || b == b'\\') || !raw.starts_with("https://") {
+        return Err("Only HTTPS external links are permitted".into());
+    }
+    let url = reqwest::Url::parse(raw).map_err(|_| "Invalid external URL")?;
+    if url.scheme() != "https" || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() {
+        return Err("Unsafe external URL".into());
+    }
+    Ok(url)
+}
+
+#[tauri::command]
+async fn open_external_https_0356(url: String) -> Result<(), String> {
+    let url = validate_external_https_0356(&url)?;
+    let mut cmd;
+    #[cfg(windows)] { cmd = Command::new("rundll32"); cmd.arg("url.dll,FileProtocolHandler").arg(url.as_str()); }
+    #[cfg(target_os = "macos")] { cmd = Command::new("open"); cmd.arg(url.as_str()); }
+    #[cfg(target_os = "linux")] { cmd = Command::new("xdg-open"); cmd.arg(url.as_str()); }
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))] { return Err("Unsupported OS".into()); }
+    let mut child = cmd.kill_on_drop(false).spawn().map_err(|_| "Could not open system browser".to_string())?;
+    tokio::spawn(async move { let _ = child.wait().await; });
+    Ok(())
+}
+
 #[tauri::command]
 async fn open_game_directory(root: String) -> Result<String, String> {
-    let root = PathBuf::from(root); fs::create_dir_all(&root).await.map_err(|e| e.to_string())?;
-    let mut command = if cfg!(target_os="windows") { let mut c=Command::new("explorer"); c.arg(&root); c } else if cfg!(target_os="macos") { let mut c=Command::new("open"); c.arg(&root); c } else { let mut c=Command::new("xdg-open"); c.arg(&root); c };
-    command.spawn().map_err(|e| format!("не удалось открыть каталог клиента: {e}"))?; Ok(root.to_string_lossy().to_string())
+    // Extensions may request only the active player's configured game root.
+    // Never turn their relative/arbitrary path into an OS explorer invocation.
+    let configured = load_desktop_config().await?;
+    let allowed = PathBuf::from(configured.game_directory.trim());
+    if !allowed.is_absolute() || !PathBuf::from(root.trim()).is_absolute() {
+        return Err("Game directory must be an absolute configured path".into());
+    }
+    fs::create_dir_all(&allowed).await.map_err(|e| format!("Could not prepare game directory: {e}"))?;
+    let safe = fs::canonicalize(&allowed).await.map_err(|e| e.to_string())?;
+    let requested = fs::canonicalize(root.trim()).await.map_err(|_| "Game directory does not exist")?;
+    if requested != safe || !safe.is_dir() { return Err("Path is not the active configured game directory".into()); }
+    let mut command = if cfg!(target_os="windows") { let mut c=Command::new("explorer"); c.arg(&safe); c } else if cfg!(target_os="macos") { let mut c=Command::new("open"); c.arg(&safe); c } else { let mut c=Command::new("xdg-open"); c.arg(&safe); c };
+    command.spawn().map_err(|e| format!("Could not open game directory: {e}"))?;
+    Ok(safe.to_string_lossy().to_string())
 }
 
 // Startup is fail-closed: do not initialize Guard or the launcher UI with a
@@ -1463,7 +1500,7 @@ fn main() {
         .manage(ProcessSupervisor::new())
         .manage(NeverGuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,load_signed_provisioning_0352,save_desktop_config,complete_first_run_0352,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
+        .invoke_handler(tauri::generate_handler![player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,load_signed_provisioning_0352,save_desktop_config,complete_first_run_0352,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,verify_manifest_signature,check_files,validate_desktop_settings,export_diagnostics_bundle,open_game_directory,open_external_https_0356,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }
 
@@ -1484,5 +1521,21 @@ mod launch_realm_0269_tests {
         assert!(validate_launch_realm_0269(LaunchRealm0269::Official,None,true,Some(&online)).is_ok());
         assert!(validate_launch_realm_0269(LaunchRealm0269::Offline,None,false,Some(&offline)).is_ok());
         assert!(validate_launch_realm_0269(LaunchRealm0269::Offline,Some(&local),false,Some(&offline)).is_err());
+    }
+}
+
+#[cfg(test)]
+mod external_https_security_0356_tests {
+    use super::validate_external_https_0356;
+    #[test]
+    fn only_https_absolute_browser_urls() {
+        for ok in ["https://example.com/help", "https://example.com:443/news?a=b"] {
+            assert!(validate_external_https_0356(ok).is_ok(),"{ok}");
+        }
+        for bad in ["http://example.com", "file:///etc/passwd", "javascript:alert(1)",
+            "https://user:password@example.com/", "https://example.com/#secret",
+            "https://example.com\\@evil.test", "https://example.com\nfoo"] {
+            assert!(validate_external_https_0356(bad).is_err(),"{bad}");
+        }
     }
 }

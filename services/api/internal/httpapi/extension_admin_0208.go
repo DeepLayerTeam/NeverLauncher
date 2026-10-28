@@ -205,11 +205,10 @@ func safeAdminEntrypoint0208(root, entry string) (string, error) {
 }
 
 func hardenAdminHTML0208(raw string) string {
-	csp := `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; media-src data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">`
-	lower := strings.ToLower(raw)
-	if idx := strings.Index(lower, "<head>"); idx >= 0 {
-		return raw[:idx+6] + csp + raw[idx+6:]
-	}
+	// The sandboxed frame has an opaque origin, but its inline scripts need a
+	// narrow CSP. Put CSP before every byte of untrusted markup. Looking for
+	// <head> is unsafe: malformed HTML may execute scripts before that tag.
+	const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; media-src data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'">`
 	return "<!doctype html><html><head>" + csp + "</head><body>" + raw + "</body></html>"
 }
 
