@@ -171,6 +171,18 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
     hashes={name:sha(work/name) for name in FILES}
     for stage,name in STAGE_ARTIFACT.items():
         check(stages[stage].get('evidenceSha256')==hashes[name], 'stage evidence does not match raw artifact: '+stage)
+    # The job's actual display, renderer and OS are part of the verified
+    # observations. A headless/materialization-only job must NEVER be signed
+    # as a positive Minecraft runtime run.
+    host=read_json(work/'host-capabilities.json')
+    check(host.get('schemaVersion')=='neverlauncher.runner-capabilities.v1' and
+          host.get('status')=='ready' and host.get('gui') is True and
+          host.get('mode')=='gui' and host.get('os')=='linux' and
+          host.get('arch')=='amd64' and
+          isinstance(host.get('renderer'),dict) and
+          bool(host['renderer'].get('renderer')) and bool(host['renderer'].get('version')),
+          'V10 positive OpenGL GUI capability not established on trusted Linux/amd64 worker')
+    hashes['host-capabilities.json']=sha(work/'host-capabilities.json')
     identity=read_json(work/'execution-identity.json')
     check(HEX64.fullmatch(identity['javaSha256']) and HEX64.fullmatch(identity['neverRuntimeSha256']) and
           HEX64.fullmatch(identity['cliSha256']), 'unbound Java or binary hashes')

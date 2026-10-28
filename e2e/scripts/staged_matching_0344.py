@@ -15,6 +15,7 @@ import re
 import secrets
 import shutil
 import socket
+import sys
 import stat
 import struct
 import subprocess
@@ -250,7 +251,7 @@ class MatchingServer:
             if file_sha256(self.root / 'server.jar') != installed.get('sha256'):
                 raise RuntimeError('downloaded Mojang server JAR changed after verification')
             self.artifact_sha = installed['sha256']
-        entry = self.server_entry or ('run.sh' if self.loader in ('forge', 'neoforge') else 'server.jar')
+        entry = self.server_entry or (('run.bat' if sys.platform=='win32' else 'run.sh') if self.loader in ('forge', 'neoforge') else 'server.jar')
         if not entry or '/' in entry or '\\' in entry or entry in ('.', '..'):
             raise ValueError('server executable must be a file at bundle root')
         if not (self.root / entry).is_file() or (self.root / entry).is_symlink():
@@ -282,12 +283,18 @@ class MatchingServer:
         return self
 
     def start(self, timeout=180):
-        command_line = (['bash', self.entry, 'nogui'] if self.entry.endswith('.sh') else
+        if sys.platform=='win32' and self.entry.endswith('.sh'):
+            raise RuntimeError('Windows matching server cannot execute POSIX run.sh; use pinned run.bat')
+        if sys.platform!='win32' and self.entry.endswith('.bat'):
+            raise RuntimeError('POSIX matching server cannot execute Windows run.bat')
+        command_line = (['cmd.exe','/d','/c',self.entry,'nogui'] if self.entry.endswith('.bat') else
+                        ['bash',self.entry,'nogui'] if self.entry.endswith('.sh') else
                         [self.java, '-Xms256M', '-Xmx1536M', '-jar', self.entry, 'nogui'])
         self.log_stream = open(self.log_file, 'xb')
+        from process_group_03410 import group_flags
         self.process = subprocess.Popen(command_line, cwd=self.root, stdin=subprocess.DEVNULL,
                                         stdout=self.log_stream, stderr=subprocess.STDOUT,
-                                        start_new_session=True)
+                                        **group_flags())
         limit = time.monotonic() + timeout
         while time.monotonic() < limit:
             if self.process.poll() is not None:
@@ -322,13 +329,15 @@ class MatchingServer:
         if self.process:
             if self.process.poll() is None:
                 try:
-                    os.killpg(self.process.pid, signal.SIGTERM)
+                    from process_group_03410 import stop_tree
+                    stop_tree(self.process)
                 except ProcessLookupError:
                     pass
                 try:
                     self.process.wait(timeout=10)
                 except subprocess.TimeoutExpired:
-                    os.killpg(self.process.pid, signal.SIGKILL)
+                    from process_group_03410 import kill_tree
+                    kill_tree(self.process)
                     self.process.wait(timeout=10)
         if self.log_stream:
             self.log_stream.close()
@@ -361,10 +370,14 @@ class GameplayObserver:
         self.window_pid = None
         self.client_log_seen = False
         self.status = 'pending'
+        self.blocked = ''
 
     def screenshot(self, wid, name):
         path = self.output / name
         path.unlink(missing_ok=True)
+        if sys.platform in ('win32','darwin'):
+            from native_window_03410 import screenshot_world
+            return screenshot_world(wid,path)
         command(['scrot', '--window', wid, '--silent', str(path)], 10)
         values = command(['identify', '-format', '%w %h %[entropy]', str(path)], 7).split()
         if len(values) != 3 or int(values[0]) < 640 or int(values[1]) < 400 or float(values[2]) < .12:
@@ -417,14 +430,17 @@ class GameplayObserver:
                 self.position_before = parse_position(self.server.rcon.query(f'data get entity {self.username} Pos'))
                 self.ticks_before = parse_gametime(self.server.rcon.query('time query gametime'))
                 self.first_frame = self.screenshot(wid, 'world-before.png')
-                command(['xdotool', 'windowfocus', '--sync', wid], 5)
-                # Real game keyboard input; server console movement / teleport
-                # never counts as a client action. Ensure the key is released.
-                command(['xdotool', 'keydown', '--clearmodifiers', 'w'], 5)
-                try:
-                    time.sleep(2)
-                finally:
-                    command(['xdotool', 'keyup', 'w'], 5)
+                if sys.platform in ('win32','darwin'):
+                    from native_window_03410 import move_forward
+                    move_forward(wid,2)
+                else:
+                    command(['xdotool', 'windowfocus', '--sync', wid], 5)
+                    # Actual window input, never server-side teleport.
+                    command(['xdotool', 'keydown', '--clearmodifiers', 'w'], 5)
+                    try:
+                        time.sleep(2)
+                    finally:
+                        command(['xdotool', 'keyup', 'w'], 5)
                 self.action_time = time.monotonic()
                 self.action_sent = True
                 return
@@ -442,6 +458,11 @@ class GameplayObserver:
             else:
                 self.status = 'passed'
         except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired, ConnectionError) as exc:
+            from native_window_03410 import GUIUnavailable
+            if isinstance(exc,GUIUnavailable):
+                self.blocked=str(exc)[:240]
+                self.status='blocked'
+                return
             # A missing positive signal is not PASS; retry short-lived RCON/GUI
             # contention, but retain why a completed attempt was inconclusive.
             self.last_error = str(exc)[:240]
@@ -457,4 +478,5 @@ class GameplayObserver:
                 'ticksBefore':self.ticks_before,'ticksAfter':self.ticks_after,
                 'positionBefore':self.position_before,'positionAfter':self.position_after,
                 'frameBeforeSha256':self.first_frame,'frameAfterSha256':self.last_frame,
-                'status':self.status,'failure':self.failure or getattr(self,'last_error','')}
+                'status':self.status,'blocked':self.blocked,
+                'failure':self.failure or getattr(self,'last_error','')}

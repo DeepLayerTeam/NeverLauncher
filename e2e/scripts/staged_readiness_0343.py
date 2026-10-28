@@ -63,6 +63,9 @@ def is_descendant(pid, ancestor):
 
 
 def find_window(root_pid, java_binary=None):
+    if sys.platform in ('win32', 'darwin'):
+        from native_window_03410 import find_window as native_find_window
+        return native_find_window(root_pid, java_binary)
     listing = command(['xwininfo', '-root', '-tree'], 5)
     for wid, name in WINDOW.findall(listing):
         if not re.search(r'(?i)minecraft', name):
@@ -113,6 +116,9 @@ def log_health(client_dir, runtime_log, loader):
 
 
 def capture_menu(wid, destination):
+    if sys.platform in ('win32', 'darwin'):
+        from native_window_03410 import capture_menu as native_capture_menu
+        return native_capture_menu(wid,destination,MENU)
     # Capture the specific PID-verified window, not the screen or an unrelated app.
     # scrot uses X11 directly; unlike some ImageMagick builds it does not
     # depend on an optional X11 delegate for taking screenshots.
@@ -157,22 +163,12 @@ class StartupObserver:
         self.last_change_monotonic = None
         self.window_last_seen_monotonic = None
         self.evidence_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-        if sys.platform != 'linux' or not os.environ.get('DISPLAY'):
-            self.blocked = 'Linux X11 display/renderer probe unavailable on this runner'
-        else:
-            for dependency in ('xwininfo','xprop','scrot','identify','tesseract','glxinfo'):
-                try:
-                    command(['which',dependency],3)
-                except (RuntimeError,subprocess.TimeoutExpired,OSError):
-                    self.blocked = 'GUI probe dependency unavailable: ' + dependency
-                    break
-            if not self.blocked:
-                try:
-                    glx = command(['glxinfo','-B'],10)
-                    if not re.search(r'OpenGL (?:renderer|vendor) string:', glx) or not re.search(r'OpenGL version string:', glx):
-                        self.blocked = 'X11 display has no usable OpenGL renderer'
-                except (RuntimeError,subprocess.TimeoutExpired,OSError):
-                    self.blocked = 'X11 display OpenGL renderer unavailable'
+        # V10: probe real host capabilities, including a fresh OpenGL context
+        # on native Windows/macOS (not a caller-supplied "hasGPU" assertion).
+        from runtime_capabilities_03410 import evaluate
+        caps=evaluate('gui',java_binary)
+        if caps['status']!='ready':
+            self.blocked='; '.join(caps['blockers']) or 'GUI capability probe blocked'
 
     def tick(self):
         if self.blocked or self.failure or time.monotonic() - self.last_probe < 2:
@@ -216,7 +212,13 @@ class StartupObserver:
                 self.samples.append(sample)
             else:
                 path.unlink(missing_ok=True)
-        except (RuntimeError,OSError,ValueError,subprocess.TimeoutExpired) as exc:
+        except Exception as exc:
+            from native_window_03410 import GUIUnavailable
+            if isinstance(exc,GUIUnavailable):
+                self.blocked=str(exc)[:240]
+                return
+            if not isinstance(exc,(RuntimeError,OSError,ValueError,subprocess.TimeoutExpired)):
+                raise
             # Failure to obtain a window is not proof of Minecraft incompatibility.
             self.last_diagnostic = str(exc)[:240]
 

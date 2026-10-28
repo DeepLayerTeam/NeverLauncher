@@ -16,6 +16,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import subprocess
+import shutil
 import sys
 import tempfile
 import urllib.error
@@ -111,10 +112,11 @@ def run_runtime_observed(cmd, result_file, env, deadline, observer):
     # NeverRuntime owns the real Java/Guard lifecycle. Never pipe its JSON
     # stdout while polling: the large bounded log tail can fill a pipe and
     # deadlock the runtime before it exits.
+    from process_group_03410 import group_flags, kill_tree
     stdout_path = result_file.with_suffix('.stdout')
     with open(result_file.with_suffix('.log'), 'wb') as diagnostic, open(stdout_path, 'xb') as stdout_file:
         proc = subprocess.Popen(cmd, stdout=stdout_file, stderr=diagnostic, env=env,
-                                start_new_session=True)
+                                **group_flags())
         observer.root_pid = proc.pid
         try:
             until = time.monotonic() + deadline
@@ -126,11 +128,7 @@ def run_runtime_observed(cmd, result_file, env, deadline, observer):
             proc.wait(timeout=10)
         except BaseException:
             # Never leave an orphan Minecraft/Guard process after a bad run.
-            import signal
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            kill_tree(proc)
             proc.wait(timeout=10)
             raise
     if proc.returncode:
@@ -167,6 +165,13 @@ def execute(args):
         raise ValueError('staged runtime requires HTTPS (localhost HTTP is test-only)')
     if not args.package_id or '/' in args.package_id:
         raise ValueError('invalid package ID')
+    if args.admin_token_file:
+        token_file=Path(args.admin_token_file)
+        if not token_file.is_file() or token_file.is_symlink():
+            raise ValueError('operator token file unavailable')
+        if os.name!='nt' and token_file.stat().st_mode & 0o077:
+            raise ValueError('operator token file must be owner-only')
+        args.admin_token=token_file.read_text(encoding='utf-8').strip()
     if args.grant_file:
         grant_data = json.loads(Path(args.grant_file).read_text(encoding='utf-8'))
         if grant_data.get('packageId') != args.package_id:
@@ -184,6 +189,12 @@ def execute(args):
               'startedAt': iso(), 'stages': {}}
     work = Path(args.output).resolve()
     work.mkdir(parents=True, exist_ok=True)
+    from runtime_capabilities_03410 import evaluate, host_identity
+    host_java=args.java if args.java!='auto' else (shutil.which('java') or '')
+    host=evaluate('headless',host_java)
+    (work/'host-capabilities.json').write_text(json.dumps(host,indent=2),encoding='utf-8')
+    if host['status']!='ready':
+        raise RuntimeError('blocked: host capabilities unavailable: '+'; '.join(host['blockers']))
     stage = work / 'payload'
     if stage.exists():
         raise ValueError('output/payload must be new for each run')
@@ -276,7 +287,8 @@ def execute(args):
                 pinned_file.write_text(args.pinned_public_key, encoding='ascii')
                 cmd = [args.cli,'components','resolve','--manifest',str(signed_manifest_path),
                        '--public-key',str(pinned_file),'--output',str(work/'component-plan.json'),
-                       '--os','linux','--arch','x86_64',
+                       '--os',host_identity()['os'],
+                       '--arch','aarch64' if host_identity()['arch']=='arm64' else 'x86_64',
                        '--java-major',str(int(signed.get('runtime',{}).get('java',{}).get('recommendedMajorVersion') or
                                          signed.get('runtime',{}).get('java',{}).get('majorVersion') or 0)),
                        '--minecraft',signed.get('minecraft',{}).get('version',''),
@@ -309,6 +321,17 @@ def execute(args):
         elif selection and selection != 'default':
             raise RuntimeError('component selection supplied for package without signed catalog')
 
+        if args.execution_mode=='headless':
+            report['stages']['materialization']={'status':'passed',
+                'detail':'Production CLI installed and verified every staged file by SHA-256',
+                'evidenceSha256':sha_file(verify_path)}
+            # Headless proves package delivery and materialization ONLY. Never
+            # represent a headless environment as a failed Minecraft client.
+            for name in ('startup','loader-readiness','authentication','server-readiness',
+                         'matching-server','gameplay-smoke','update-recovery'):
+                report['stages'][name]={'status':'blocked',
+                    'detail':'GUI/runtime target not executed by headless worker'}
+            raise RuntimeError('blocked: headless runner completed manifest/files and materialization only')
         stage_name = 'startup'
         # Run the exact installed release with NeverRuntime's ordinary signed
         # manifest/launch path. A special Client Factory certification probe
@@ -322,10 +345,14 @@ def execute(args):
         if required_major not in (8, 16, 17, 21, 25):
             raise RuntimeError(f'unsupported pinned release Java major {required_major}')
         if args.java == 'auto':
-            home = os.environ.get(f'JAVA_HOME_{required_major}_X64', '')
+            from runtime_capabilities_03410 import host_identity
+            arch=host_identity()['arch']
+            envarch='ARM64' if arch=='arm64' else 'X64'
+            home = os.environ.get(f'JAVA_HOME_{required_major}_{envarch}', '')
             if not home:
                 raise RuntimeError(f'Java {required_major} is not installed on this runner')
-            selected_java = str((Path(home) / 'bin' / 'java').resolve())
+            java_name = 'java.exe' if sys.platform=='win32' else 'java'
+            selected_java = str((Path(home) / 'bin' / java_name).resolve())
         else:
             selected_java = str(Path(args.java).resolve())
         if not Path(selected_java).is_file():
@@ -339,6 +366,8 @@ def execute(args):
                '--java', selected_java, '--max-runtime-seconds', str(args.runtime_seconds)]
         if catalog and native_selection: cmd.extend(['--preset', native_selection])
         loader = signed.get('minecraft', {}).get('loader', 'vanilla').lower()
+        gui_host=evaluate('gui',selected_java)
+        (work/'host-capabilities.json').write_text(json.dumps(gui_host,indent=2),encoding='utf-8')
         observer = StartupObserver(0, client_dir, work / 'startup-diagnostics', loader, time.time(), selected_java)
         if observer.blocked:
             # A missing X11/OpenGL renderer is infrastructure incapability,
@@ -494,11 +523,11 @@ def execute(args):
             game.status = 'failed'
             game.failure = game.failure or 'client/server crashed or loader readiness lost after join'
         joined = game.joined and game.client_log_seen and game.window_pid is not None and not game.failure
-        report['stages']['matching-server'] = {'status':'passed' if joined else 'failed',
+        report['stages']['matching-server'] = {'status':'blocked' if game.blocked else ('passed' if joined else 'failed'),
             'detail':'matching server confirms login and player online; client log and PID-bound GUI observed' if joined else
                      ('matching client/server join not established: ' + (launch_error or game.failure or getattr(game,'last_error','no positive join evidence')))[:2048],
             'evidenceSha256':proof_hash}
-        report['stages']['gameplay-smoke'] = {'status':'passed' if game.status == 'passed' and not launch_error else 'failed',
+        report['stages']['gameplay-smoke'] = {'status':'blocked' if game.blocked else ('passed' if game.status == 'passed' and not launch_error else 'failed'),
             'detail':'real GUI movement changed server-side position; world rendered and game ticks advanced' if game.status == 'passed' and not launch_error else
                      ('real gameplay state not confirmed: ' + (launch_error or game.failure or getattr(game,'last_error','no positive gameplay proof')))[:2048],
             'evidenceSha256':proof_hash}
@@ -541,12 +570,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--backend', required=True)
     parser.add_argument('--admin-token', default='')
+    parser.add_argument('--admin-token-file', default='', help='Owner-only operator token file (avoid process-argument secrets)')
     parser.add_argument('--grant-file', default='', help='Limited staged grant injected by trusted host; not operator admin credentials')
     parser.add_argument('--package-id', required=True)
     parser.add_argument('--output', required=True)
     parser.add_argument('--cli', required=True)
     parser.add_argument('--runtime', required=True)
     parser.add_argument('--java', required=True)
+    parser.add_argument('--execution-mode', choices=('headless','gui'), default='gui')
     parser.add_argument('--pinned-public-key', required=True)
     parser.add_argument('--runtime-seconds', type=int, default=180)
     parser.add_argument('--preset', default='', help='Backend-required named preset or signed @custom selection')

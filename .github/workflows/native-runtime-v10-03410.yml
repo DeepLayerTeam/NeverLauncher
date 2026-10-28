@@ -1,0 +1,144 @@
+# Observational cross-platform execution. NEVER holds an attestation signing key.
+name: V10 native staged runtime (Windows Linux macOS)
+on:
+  workflow_dispatch:
+    inputs:
+      package_id:
+        description: Immutable staged package ID
+        required: true
+        type: string
+      os:
+        description: OS of dedicated self-hosted worker
+        required: true
+        type: choice
+        options: [linux, windows, macos]
+      arch:
+        description: Architecture of dedicated self-hosted worker
+        required: true
+        type: choice
+        options: [amd64, arm64]
+      mode:
+        description: Headless = signed-byte installation only, GUI = complete real scenario
+        required: true
+        type: choice
+        options: [headless, gui]
+permissions:
+  contents: read
+jobs:
+  native-observation:
+    # Explicit capability labels; a generic hosted VM is not assumed GUI-capable.
+    runs-on: ${{ fromJSON(format('["self-hosted","nl-validation","nl-{0}","nl-{1}","nl-{2}"]', inputs.os, inputs.arch, inputs.mode)) }}
+    timeout-minutes: 180
+    environment: runtime-validation-staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install native GUI probe dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'psutil>=6,<9' 'Pillow>=11,<13' 'glfw>=2.7,<3' 'PyOpenGL>=3.1,<4' 'pynput>=1.7,<2'
+          if [[ '${{ inputs.os }}' == macos ]]; then python -m pip install 'pyobjc-framework-Quartz>=10,<14'; fi
+          # Linux GUI runners require pre-provisioned xwininfo, xprop,
+          # scrot, identify, tesseract, glxinfo, xdotool and a working DISPLAY.
+          python e2e/scripts/test_runtime_capabilities_03410.py
+          python e2e/scripts/test_staged_readiness_0343.py
+          python e2e/scripts/test_staged_matching_0344.py
+      - name: Build production CLI and NeverRuntime (not the game)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/nl-v10-tools"
+          SUFFIX=''; [[ '${{ inputs.os }}' == windows ]] && SUFFIX='.exe'
+          (cd cli && go build -o "$RUNNER_TEMP/nl-v10-tools/neverlauncher${SUFFIX}" ./cmd/neverlauncher)
+          cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
+          cp "runtime/neverruntime/target/release/neverruntime${SUFFIX}" "$RUNNER_TEMP/nl-v10-tools/neverruntime${SUFFIX}"
+      - name: Execute real staged package and export only redacted observations
+        shell: bash
+        env:
+          BACKEND: ${{ vars.NL_STAGED_BACKEND_URL }}
+          OPERATOR: ${{ secrets.NL_STAGED_RUNNER_OPERATOR_TOKEN }}
+          PACKAGE: ${{ inputs.package_id }}
+          MANIFEST_KEY: ${{ vars.NL_STAGED_MANIFEST_PUBLIC_KEY }}
+          AUTH_MODE: ${{ vars.NL_VALIDATION_AUTH_MODE }}
+          AUTH_CREDENTIAL: ${{ secrets.NL_VALIDATION_TEST_CREDENTIALS_JSON }}
+          AUTH_NEGATIVE: ${{ secrets.NL_VALIDATION_NEGATIVE_CREDENTIALS_JSON }}
+          AUTH_GUARD_DENIED: ${{ secrets.NL_VALIDATION_GUARD_DENIED_CREDENTIALS_JSON }}
+          PREVIOUS_URL: ${{ vars.NL_VALIDATION_PREVIOUS_BUNDLE_URL }}
+          PREVIOUS_SHA: ${{ vars.NL_VALIDATION_PREVIOUS_BUNDLE_SHA256 }}
+          MANAGED_JRE_MANIFEST: ${{ vars.NL_VALIDATION_MANAGED_JRE_MANIFEST_PATH }}
+          MANAGED_JRE_SHA: ${{ vars.NL_VALIDATION_MANAGED_JRE_MANIFEST_SHA256 }}
+          REPLACEMENT_JAVA: ${{ vars.NL_VALIDATION_REPLACEMENT_JAVA }}
+          SERVER_BUNDLE: ${{ vars.NL_MATCHING_SERVER_BUNDLE_PATH }}
+          SERVER_SHA: ${{ vars.NL_MATCHING_SERVER_BUNDLE_SHA256 }}
+          SERVER_ENTRY: ${{ vars.NL_MATCHING_SERVER_ENTRY }}
+          BRIDGE_PATH: ${{ vars.NL_MATCHING_BRIDGE_PATH }}
+          BRIDGE_SHA: ${{ vars.NL_MATCHING_BRIDGE_SHA256 }}
+          BRIDGE_VERSION: ${{ vars.NL_MATCHING_BRIDGE_VERSION }}
+        run: |
+          set -euo pipefail
+          umask 077
+          AUTH_DIR="$(mktemp -d)"
+          trap 'rm -rf "$AUTH_DIR"' EXIT
+          printf '%s' "$OPERATOR" > "$AUTH_DIR/operator"
+          printf '%s' "$AUTH_CREDENTIAL" > "$AUTH_DIR/credentials.json"
+          printf '%s' "$AUTH_NEGATIVE" > "$AUTH_DIR/negative.json"
+          printf '%s' "$AUTH_GUARD_DENIED" > "$AUTH_DIR/guard.json"
+          mkdir -p "$RUNNER_TEMP/nl-v10-reports"
+          SUFFIX=''; [[ '${{ inputs.os }}' == windows ]] && SUFFIX='.exe'
+          ARGS=(--backend "$BACKEND" --admin-token-file "$AUTH_DIR/operator" --package-id "$PACKAGE"
+            --cli "$RUNNER_TEMP/nl-v10-tools/neverlauncher${SUFFIX}"
+            --runtime "$RUNNER_TEMP/nl-v10-tools/neverruntime${SUFFIX}" --java auto
+            --pinned-public-key "$MANIFEST_KEY")
+          if [[ '${{ inputs.mode }}' == gui ]]; then
+            ARGS+=(--auth-mode "$AUTH_MODE" --credentials-file "$AUTH_DIR/credentials.json"
+              --previous-bundle "$RUNNER_TEMP/previous-release.zip" --previous-sha256 "$PREVIOUS_SHA"
+              --replacement-java "$REPLACEMENT_JAVA" --managed-java-manifest "$MANAGED_JRE_MANIFEST"
+              --managed-java-sha256 "$MANAGED_JRE_SHA" --server-bundle "$SERVER_BUNDLE"
+              --server-sha256 "$SERVER_SHA" --server-entry "$SERVER_ENTRY"
+              --bridge-path "$BRIDGE_PATH" --bridge-sha256 "$BRIDGE_SHA" --bridge-version "$BRIDGE_VERSION")
+            if [[ "$AUTH_MODE" == custom ]]; then
+              ARGS+=(--negative-credentials-file "$AUTH_DIR/negative.json"
+                --guard-denied-credentials-file "$AUTH_DIR/guard.json")
+            fi
+            [[ "$PREVIOUS_URL" == https://* && "$PREVIOUS_SHA" =~ ^[[:xdigit:]]{64}$ ]] || { echo 'BLOCKED: pinned previous release missing'; exit 3; }
+            curl --fail --location --proto '=https' --proto-redir '=https' --max-time 600 \
+              --output "$RUNNER_TEMP/previous-release.zip" "$PREVIOUS_URL"
+            echo "$PREVIOUS_SHA  $RUNNER_TEMP/previous-release.zip" | sha256sum -c -
+          fi
+          set +e
+          python e2e/scripts/run_native_validation_03410.py --mode '${{ inputs.mode }}' \
+            --report-dir "$RUNNER_TEMP/nl-v10-reports" -- "${ARGS[@]}"
+          RESULT=$?
+          set -e
+          if [[ "$RESULT" -eq 3 ]]; then
+            echo 'V10 target BLOCKED / INCONCLUSIVE, not a Minecraft compatibility failure' >> "$GITHUB_STEP_SUMMARY"
+            exit 3
+          elif [[ "$RESULT" -eq 0 ]]; then
+            echo 'V10 observational execution complete; NOT trusted certification' >> "$GITHUB_STEP_SUMMARY"
+          else
+            exit "$RESULT"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v10-native-${{ inputs.os }}-${{ inputs.arch }}-${{ inputs.mode }}-${{ github.run_id }}
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/nl-v10-reports/*.json
+      - name: Clean artifacts on persistent worker
+        if: always()
+        shell: bash
+        run: |
+          rm -rf "$RUNNER_TEMP/nl-v10-tools" "$RUNNER_TEMP/nl-v10-reports" "$RUNNER_TEMP/previous-release.zip"

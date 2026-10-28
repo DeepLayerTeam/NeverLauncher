@@ -1,3 +1,11 @@
+## 0.34.10 — Cross-Platform Runtime Runners (V10)
+
+- Observed capability registry for Windows, Linux and macOS (amd64/arm64): actual Java binary/version, display availability, usable OpenGL context/renderer. Missing GUI/renderer is BLOCKED, never Minecraft FAILED.
+- Native Windows/macOS game-window PID/process-tree verification, screen capture, visible menu OCR and real keyboard gameplay input; Linux/X11 retains existing verified path. Missing Screen Recording/Accessibility grants prevents positive validation.
+- Headless staged runner downloads and installs signed bytes through the normal CLI but explicitly blocks startup/gameplay and cannot sign a complete runtime target. Independent attestor verifies GUI capability evidence before Ed25519 signing.
+- Per-job temporary directories, portable process-tree termination (including interrupted updater), bounded execution, redacted observational exports, and opt-in self-hosted Windows/Linux/macOS native CI.
+- Stable remains blocked; native self-hosted runners must actually execute full Minecraft/Java/ServerBridge matrix to establish platform compatibility. Cross-platform observational CI output cannot substitute for independent attestation.
+
 ## 0.34.9 — Update, Recovery & Rollback (V09)
 
 - The staged Minecraft E2E now runs the production transactional CLI against a **host-pinned previous signed release**, then upgrades to the exact staged package, corrupts installed files and preferred cache, executes repair, and rolls back via the actual snapshot. Both the updated client on alternate Java and restored previous client must reach a positively verified Minecraft menu.

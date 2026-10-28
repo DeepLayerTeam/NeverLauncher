@@ -13,6 +13,9 @@ from pathlib import Path
 import re
 import shutil
 import signal
+import sys
+from runtime_capabilities_03410 import host_identity
+from process_group_03410 import group_flags, kill_tree
 import socket
 import subprocess
 import threading
@@ -184,7 +187,7 @@ def run_game_launch(runtime, manifest, pinned_key, root, java, loader, preset, o
     require(not observer.blocked,'GUI runner incapable of validating lifecycle launch: '+str(observer.blocked))
     # Same implementation as V03, using a file for stdout to prevent deadlock.
     with open(output.with_suffix('.stdout'),'wb') as stdout,open(output.with_suffix('.stderr'),'wb') as stderr:
-        proc=_subprocess.Popen(cmd,stdout=stdout,stderr=stderr,env=env,start_new_session=True)
+        proc=_subprocess.Popen(cmd,stdout=stdout,stderr=stderr,env=env,**group_flags())
         observer.root_pid=proc.pid
         try:
             deadline=_time.monotonic()+max_seconds+150
@@ -193,7 +196,7 @@ def run_game_launch(runtime, manifest, pinned_key, root, java, loader, preset, o
                 observer.tick();_time.sleep(.5)
         finally:
             if proc.poll() is None:
-                os.killpg(proc.pid,signal.SIGKILL)
+                kill_tree(proc)
             proc.wait(timeout=20)
     raw=output.with_suffix('.stdout').read_bytes()
     require(len(raw)<=4<<20,'lifecycle JVM stdout oversized')
@@ -360,9 +363,10 @@ def run_lifecycle(args, work, current_pkg, signed, download_exact, current_java,
         return int(j.get('recommendedMajorVersion') or j.get('majorVersion') or 0)
     prior_java=current_java
     if major_version(prior_manifest)!=major_version(signed):
-        home=env.get(f'JAVA_HOME_{major_version(prior_manifest)}_X64','')
+        envarch='ARM64' if host_identity()['arch']=='arm64' else 'X64'
+        home=env.get(f'JAVA_HOME_{major_version(prior_manifest)}_{envarch}','')
         require(bool(home),'previous signed release Java major not installed on runner')
-        prior_java=str((Path(home)/'bin'/'java').resolve())
+        prior_java=str((Path(home)/'bin'/('java.exe' if sys.platform=='win32' else 'java')).resolve())
         require(Path(prior_java).is_file(),'previous release Java executable missing')
     run_game_launch(args.runtime,previous/'signed-release-manifest.json',args.pinned_public_key,
                     prior_game,prior_java,prior_manifest['minecraft']['loader'].lower(),'',
@@ -391,7 +395,7 @@ def interrupt_and_recover(cli, prior_path, current_path, source_root, parent, en
     verify_exact(live,prior_pkg)
     cmd=[cli,'client','update','--package',str(current_path),*opts,'--output',str(case/'update.json')]
     p=subprocess.Popen(cmd,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,env=env,
-                       start_new_session=True)
+                       **group_flags())
     matched=False
     try:
         cutoff=time.monotonic()+120
@@ -400,7 +404,7 @@ def interrupt_and_recover(cli, prior_path, current_path, source_root, parent, en
                 try:phase=json.loads(j.read_text()).get('phase')
                 except (OSError,ValueError):continue
                 if phase==target_phase:
-                    try:os.killpg(p.pid,signal.SIGKILL)
+                    try:kill_tree(p)
                     except ProcessLookupError:pass
                     matched=True
                     break
@@ -408,7 +412,7 @@ def interrupt_and_recover(cli, prior_path, current_path, source_root, parent, en
             time.sleep(.001)
     finally:
         if p.poll() is None:
-            try:os.killpg(p.pid,signal.SIGKILL)
+            try:kill_tree(p)
             except ProcessLookupError:pass
         p.wait(timeout=10)
     require(matched and p.returncode != 0,'real updater '+target_phase+' interruption not observed; cannot certify')

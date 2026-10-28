@@ -23,7 +23,7 @@ class ReadinessTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def observer(self, loader='fabric'):
-        with patch.dict(os.environ, {'DISPLAY':':99'}), patch('staged_readiness_0343.command',side_effect=lambda args, timeout=7: 'OpenGL renderer string: llvmpipe\nOpenGL version string: 4.5' if args[0]=='glxinfo' else '/usr/bin/tool'):
+        with patch('runtime_capabilities_03410.evaluate',return_value={'status':'ready','blockers':[]}):
             return StartupObserver(100,self.root,self.root/'proof',loader,time.time()-2)
 
     def test_fabric_loader_matches_real_log(self):
@@ -95,6 +95,7 @@ class ReadinessTests(unittest.TestCase):
         obs.last_change_monotonic=time.monotonic()
         self.assertEqual(obs.conclude({'timed_out':False,'success':False,'exit_code':1})[0],'failed')
 
+    @unittest.skipUnless(sys.platform=='linux','X11-specific regression')
     def test_actual_x11_window_must_belong_to_child(self):
         fake_tree='0x12 "Minecraft 1.21" ("minecraft" "Minecraft")\n'
         with patch('staged_readiness_0343.command',side_effect=[fake_tree, '_NET_WM_PID(CARDINAL) = 5']), \
@@ -106,6 +107,7 @@ class ReadinessTests(unittest.TestCase):
         self.assertTrue(is_descendant(os.getpid(),os.getpid()))
         self.assertFalse(is_descendant(1,os.getpid()))
 
+    @unittest.skipUnless(sys.platform=='linux','X11-specific regression')
     def test_menu_recognition_from_actual_pixels_not_log(self):
         def sample_command(argv, timeout=7):
             if argv[0] == 'scrot':

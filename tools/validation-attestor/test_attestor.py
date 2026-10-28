@@ -30,6 +30,9 @@ def fixture(work):
     for folder in ('payload','client'):
         p=work/folder/artifact['path'];p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
     dump(work/'verified.json',{'status':'valid'})
+    dump(work/'host-capabilities.json',{'schemaVersion':'neverlauncher.runner-capabilities.v1',
+         'status':'ready','os':'linux','arch':'amd64','mode':'gui','gui':True,'display':True,
+         'renderer':{'renderer':'llvmpipe','version':'4.5'}})
     dump(work/'native-adoption.json',{'status':'ready','networkDownloads':0,'importedFiles':1,'planSha256':'0'*64})
     for i in (1,2):
         p=work/'startup-diagnostics'/f'menu-frame-{i}.png'
@@ -126,6 +129,16 @@ def fixture(work):
     return issued
 
 class TrustBoundaryTests(unittest.TestCase):
+    def test_v10_headless_or_missing_renderer_cannot_be_signed(self):
+        with tempfile.TemporaryDirectory() as d:
+            work=Path(d);issued=fixture(work)
+            cap=json.loads((work/'host-capabilities.json').read_text())
+            for bad in ({**cap,'gui':False,'mode':'headless'},
+                        {**cap,'renderer':None}, {**cap,'status':'blocked'}):
+                dump(work/'host-capabilities.json',bad)
+                with self.assertRaisesRegex(ValueError,'OpenGL GUI capability'):
+                    a.verify_local_artifacts(work,issued,'1'*64,'f'*40,'2'*64,'0'*64)
+
     def test_signing_key_stays_host_only_and_signature_domain_separated(self):
         with tempfile.TemporaryDirectory() as d:
             key=Path(d)/'key.pem'

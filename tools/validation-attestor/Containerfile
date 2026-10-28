@@ -27,6 +27,9 @@ COPY --from=runtime /build/runtime/neverruntime/target/release/neverruntime /opt
 COPY --from=runtime /build/runtime/neverruntime/target/release/neverguard /opt/neverguard
 COPY e2e/scripts/run-staged-package-0342.py /opt/staged/run-staged-package-0342.py
 COPY e2e/scripts/staged_readiness_0343.py /opt/staged/staged_readiness_0343.py
+COPY e2e/scripts/runtime_capabilities_03410.py /opt/staged/runtime_capabilities_03410.py
+COPY e2e/scripts/native_window_03410.py /opt/staged/native_window_03410.py
+COPY e2e/scripts/process_group_03410.py /opt/staged/process_group_03410.py
 COPY e2e/scripts/staged_auth_0347.py /opt/staged/staged_auth_0347.py
 COPY e2e/scripts/staged_matching_0344.py /opt/staged/staged_matching_0344.py
 COPY e2e/scripts/staged_lifecycle_0349.py /opt/staged/staged_lifecycle_0349.py
