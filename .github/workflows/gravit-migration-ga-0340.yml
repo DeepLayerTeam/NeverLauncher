@@ -1,0 +1,172 @@
+name: Migration Center 0.34.0 GA execution gate
+
+on:
+  pull_request:
+    paths:
+      - 'tools/migration-ga/**'
+      - 'services/api/internal/gravitreport/**'
+      - 'services/api/internal/repository/migration_*'
+      - 'services/api/internal/httpapi/migration_*'
+      - 'services/api/internal/dbmigrate/sql/00[89]*'
+      - 'services/api/internal/dbmigrate/sql/010*'
+      - 'apps/admin/**'
+      - 'apps/desktop/**'
+      - '.github/workflows/gravit-migration-ga-0340.yml'
+  push:
+    tags: ['v0.34.0', '0.34.0']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate-api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: neverlauncher_test
+          POSTGRES_USER: neverlauncher_test
+          POSTGRES_PASSWORD: test_only_not_production
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U neverlauncher_test -d neverlauncher_test'
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Full Backend build
+        working-directory: services/api
+        run: go build ./...
+      - name: MIG01–MIG13 Go tests, including PostgreSQL
+        working-directory: services/api
+        run: |
+          go test -race -count=1 ./internal/migrationworkflow ./internal/gravitdetector ./internal/gravitinventory ./internal/gravitcredentials ./internal/gravitcontent ./internal/gravitmodules ./internal/gravitrehearsal ./internal/gravitcutover ./internal/gravitrollback ./internal/gravitreport
+          go test -count=1 ./internal/repository -run 'TestMigration.*(033|Postgres)'
+          go test -run '^$' ./internal/httpapi
+      - name: CLI build and tests
+        working-directory: cli
+        run: |
+          go build ./cmd/neverlauncher
+          go test -count=1 ./cmd/neverlauncher -run 'TestMigration.*033'
+      - name: Schema, OpenAPI and version
+        run: |
+          python3 scripts/contracts/validate-openapi.py
+          python3 scripts/version/manage.py check
+      - name: Executable GA checker and signature/tamper tests
+        working-directory: tools/migration-ga
+        run: |
+          go test -race -count=1 ./...
+          go vet ./...
+          go build ./...
+
+  admin:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - name: Admin tests and production build
+        working-directory: apps/admin
+        run: |
+          npm ci
+          npm test
+          npm run build
+
+  desktop:
+    # Package/install testing across all supported OS is distinct from the
+    # signed *real user transition* checks required below.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Tauri Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - name: Desktop production assets
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npm run build
+      - name: Desktop Rust tests and compile
+        working-directory: apps/desktop/src-tauri
+        run: |
+          cargo test --locked
+          cargo check --locked
+
+  isolated-gravit-e2e:
+    # This job MUST NOT be replaced with fixtures that simply return passed.
+    # Real Gravit 5.7.x projects, Minecraft worlds/servers and all three
+    # Desktop platforms are provided by a segregated operator-owned runner.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    needs: [migrate-api, admin, desktop]
+    runs-on: [self-hosted, linux, x64, migration-ga-isolated]
+    environment: migration-ga-certification
+    timeout-minutes: 180
+    env:
+      NEVERLAUNCHER_MIGRATION_GA_TOKEN: ${{ secrets.MIGRATION_GA_ADMIN_TOKEN }}
+      MIGRATION_GA_PLAN_B64: ${{ secrets.MIGRATION_GA_PLAN_B64 }}
+      MIGRATION_GA_SIGNING_KEY_B64: ${{ secrets.MIGRATION_GA_SIGNING_KEY_B64 }}
+      MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64: ${{ secrets.MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Require actual test environment, private key and scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$NEVERLAUNCHER_MIGRATION_GA_TOKEN"
+          test -n "$MIGRATION_GA_PLAN_B64"
+          test -n "$MIGRATION_GA_SIGNING_KEY_B64"
+          test -n "$MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64"
+          umask 077
+          mkdir -p "$RUNNER_TEMP/migration-ga"
+          printf '%s' "$MIGRATION_GA_PLAN_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/plan.json"
+          printf '%s' "$MIGRATION_GA_SIGNING_KEY_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/signer.pem"
+          printf '%s' "$MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/trusted.pem"
+          # Plan's signingKey points to the independent secret installed above;
+          # sourceArchive and all real test programs must exist on this runner.
+      - name: Execute all live MIG01–MIG13 acceptance cases and sign receipts
+        shell: bash
+        run: |
+          set -euo pipefail
+          go -C tools/migration-ga run . certify --plan "$RUNNER_TEMP/migration-ga/plan.json" --output "$RUNNER_TEMP/migration-ga/certificate.json"
+          go -C tools/migration-ga run . verify --certificate "$RUNNER_TEMP/migration-ga/certificate.json" --public-key "$RUNNER_TEMP/migration-ga/trusted.pem"
+      - name: Preserve signed proof for independent release approval
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-ga-0340-signed-evidence
+          path: ${{ runner.temp }}/migration-ga/certificate.json
+          retention-days: 90
+          if-no-files-found: error
+      - name: Remove temporary signing material
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/migration-ga/signer.pem" "$RUNNER_TEMP/migration-ga/plan.json"

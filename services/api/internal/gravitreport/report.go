@@ -164,22 +164,33 @@ func Finalize(v Report) (Report, error) {
 		return a.Provider+"\x00"+a.SourceID < b.Provider+"\x00"+b.SourceID
 	})
 	required := []string{"compatibility", "inventory", "identity", "authentication", "security", "content", "modules", "rehearsal", "cutover", "rollback"}
-	stages := map[string]bool{}
+	stages := map[string]string{}
 	for _, ev := range v.Evidence {
-		if ev.Stage == "" || stages[ev.Stage] {
-			return Report{}, errors.New("duplicate/invalid evidence stage")
+		if ev.Stage == "" {
+			return Report{}, errors.New("invalid evidence stage")
 		}
-		stages[ev.Stage] = true
+		if _, ok := stages[ev.Stage]; ok {
+			return Report{}, errors.New("duplicate evidence stage")
+		}
+		// Never interpret a new/unrecognized state as a successful check.
+		switch ev.State {
+		case "verified", "missing", "blocked", "manual":
+		default:
+			return Report{}, fmt.Errorf("unknown evidence state %q", ev.State)
+		}
+		stages[ev.Stage] = ev.State
 		if ev.SHA256 != "" && !validDigest(ev.SHA256) {
 			return Report{}, errors.New("invalid evidence checksum")
 		}
-		if ev.State == "missing" || ev.State == "blocked" {
+		if ev.State == "missing" || ev.State == "blocked" ||
+			(ev.State == "manual" && (ev.Stage == "cutover" || ev.Stage == "rollback" ||
+				len(ev.Stage) > len("cutover_scope:") && ev.Stage[:len("cutover_scope:")] == "cutover_scope:")) {
 			v.Blockers = append(v.Blockers, ev.Stage+": "+ev.State+" "+ev.Details)
 		}
 	}
 	for _, stage := range required {
-		if !stages[stage] {
-			v.Blockers = append(v.Blockers, stage+": no recorded evidence")
+		if stages[stage] != "verified" {
+			v.Blockers = append(v.Blockers, stage+": required stage not verified")
 		}
 	}
 	if !validDigest(v.SourceSHA256) || !validDigest(v.InventorySHA256) {

@@ -1,3 +1,14 @@
+## [0.34.0] - 2026-10-28
+
+### Migration Center GA verification and release gates (MIG01–MIG13)
+
+- Shipped a standalone, executable GA acceptance tool (`tools/migration-ga`) that retrieves the authoritative MIG13 report and immutable operator review, recomputes its SHA-256, checks identity resolution and active Never cutover, and binds the exact MIG03 source ZIP and independently SHA-256-pinned Gravit 5.7.x LaunchServer JAR binary and version to the active signed release digest.
+- The tool runs all 13 mandatory independent acceptance checks as real subprocesses with timeouts, bounded output, fresh hash-verified evidence, complete UUID parity and world/plugin checks. Failure, missing evidence, changed backend report or missing review emits no GA success bundle.
+- On complete success, generates an Ed25519-signed, replay-resistant, owner-only evidence certificate with a separately trusted offline verification command. It cannot silently overwrite an existing certificate. The checks and their underlying evidence must still be independently audited.
+- Hardened MIG13 reporting: a manually staged/cancelled cutover, unresolved required stages or an unrecognized evidence status now block RC readiness instead of being treated as verified.
+- Added full GA CI with Backend/PostgreSQL, Admin, Desktop Rust builds across Linux/Windows/macOS, executable verifier tests and an explicitly required independent isolated Gravit/Minecraft E2E runner. Version and OpenAPI metadata aligned to 0.34.0.
+- **GA certification is conditional on successful actual CI and real, isolated Gravit/Minecraft E2E with external source writer fencing. Those tests have not been executed in this offline build environment. No production compatibility or safe cutover claim is made solely by the version bump or by simulated unit tests.**
+
 ## [0.33.13] - 2026-10-28
 
 ### Reports & Certification RC (MIG13)

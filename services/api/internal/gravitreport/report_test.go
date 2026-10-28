@@ -73,3 +73,37 @@ func TestDuplicateInvalidEvidence(t *testing.T) {
 		t.Fatal("invalid hash accepted")
 	}
 }
+
+func TestManualCutoverCannotBeReviewed0340(t *testing.T) {
+	a := baseline()
+	for _, stage := range []string{"compatibility", "inventory", "identity", "authentication", "security", "content", "modules", "rehearsal", "cutover", "rollback"} {
+		state := "verified"
+		if stage == "cutover" {
+			state = "manual"
+		}
+		a.Evidence = append(a.Evidence, Evidence{Stage: stage, State: state})
+	}
+	r, e := Finalize(a)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if r.Status != "blocked" || !strings.Contains(strings.Join(r.Blockers, ";"), "cutover: required stage not verified") {
+		t.Fatalf("unsafe RC review: %+v", r)
+	}
+	a.Evidence[len(a.Evidence)-2].State = "verified"
+	a.Evidence = append(a.Evidence, Evidence{Stage: "cutover_scope:default/stable", State: "manual", Details: "staged"})
+	r, e = Finalize(a)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if r.Status != "blocked" {
+		t.Fatal("staged channel passed review")
+	}
+}
+func TestUnknownEvidenceStateBlocks0340(t *testing.T) {
+	a := baseline()
+	a.Evidence = []Evidence{{Stage: "cutover", State: "fully_compatible"}}
+	if _, e := Finalize(a); e == nil {
+		t.Fatal("unknown status accepted")
+	}
+}
