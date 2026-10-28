@@ -7,10 +7,14 @@ on:
       - 'services/api/internal/repository/**'
       - 'services/api/internal/dbmigrate/**'
       - 'cli/internal/dbmigrate/sql/0101_stable_runtime_gate_0341.sql'
+      - 'cli/internal/dbmigrate/sql/0102_staged_runtime_execution_0342.sql'
+      - 'e2e/scripts/run-staged-package-0342.py'
+      - 'e2e/scripts/test_run_staged_package_0342.py'
+      - '.github/workflows/staged-package-runtime-0342.yml'
       - 'apps/admin/**'
       - '.github/workflows/stable-runtime-gate-0341.yml'
   push:
-    tags: ['v0.34.1', '0.34.1']
+    tags: ['v0.34.1', '0.34.1', 'v0.34.2', '0.34.2']
   workflow_dispatch:
 
 permissions:
@@ -43,7 +47,7 @@ jobs:
         working-directory: services/api
         run: |
           go test -count=1 -timeout 25m ./internal/repository ./internal/httpapi ./internal/dbmigrate \
-            -run 'TestStable.*0341|TestRuntimePolicyRequiresSignedExactManifestEvidence0212|TestCanonicalPackageProductUploadValidatePublish|TestRollbackOperationIdempotency0217|TestMigrationCutoverPostgres03311|TestEvaluateAppliedSealedCatalog'
+            -run 'TestStaged.*0342|TestStable.*0341|TestRuntimePolicyRequiresSignedExactManifestEvidence0212|TestCanonicalPackageProductUploadValidatePublish|TestRollbackOperationIdempotency0217|TestMigrationCutoverPostgres03311|TestEvaluateAppliedSealedCatalog'
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -54,3 +58,5 @@ jobs:
         run: |
           npm ci --ignore-scripts
           npm run build
+      - name: Staged download integrity negative tests
+        run: python3 -m unittest e2e/scripts/test_run_staged_package_0342.py -v

@@ -1,0 +1,81 @@
+name: Staged package actual runtime 0.34.2
+on:
+  workflow_call:
+    inputs:
+      package_id:
+        required: true
+        type: string
+      runtime_seconds:
+        required: false
+        type: number
+        default: 45
+  workflow_dispatch:
+    inputs:
+      package_id:
+        description: Existing signed, staged and integrity-passed backend package ID
+        required: true
+        type: string
+      runtime_seconds:
+        description: Time to run NeverRuntime (15..3600 seconds)
+        required: true
+        type: number
+        default: 45
+permissions:
+  contents: read
+jobs:
+  actual-staged-package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    environment: runtime-validation-staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+      - name: Install graphics libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
+      - name: Build CLI and NeverRuntime executables only (never build Minecraft client)
+        run: |
+          cd cli && go build -o ../nl ./cmd/neverlauncher
+          cd ..
+          cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
+      - name: Execute exact staged contents via transactional installer and NeverRuntime
+        env:
+          STAGED_BACKEND: ${{ vars.NL_STAGED_BACKEND_URL }}
+          STAGED_OPERATOR: ${{ secrets.NL_STAGED_RUNNER_OPERATOR_TOKEN }}
+          STAGED_PACKAGE_ID: ${{ inputs.package_id }}
+          STAGED_DURATION: ${{ inputs.runtime_seconds }}
+          STAGED_MANIFEST_KEY: ${{ vars.NL_STAGED_MANIFEST_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$STAGED_BACKEND" && test -n "$STAGED_OPERATOR" && test -n "$STAGED_PACKAGE_ID" && test -n "$STAGED_MANIFEST_KEY"
+          export LIBGL_ALWAYS_SOFTWARE=1
+          xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
+            python3 e2e/scripts/run-staged-package-0342.py \
+              --backend "$STAGED_BACKEND" --admin-token "$STAGED_OPERATOR" \
+              --package-id "$STAGED_PACKAGE_ID" --output "$RUNNER_TEMP/staged-execution" \
+              --cli "$GITHUB_WORKSPACE/nl" \
+              --runtime "$GITHUB_WORKSPACE/runtime/neverruntime/target/release/neverruntime" \
+              --java auto --pinned-public-key "$STAGED_MANIFEST_KEY" --runtime-seconds "$STAGED_DURATION"
+      - name: Upload redacted observational evidence (no grant or private key)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staged-runtime-${{ github.run_id }}
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/staged-execution/staged-execution.json
+            ${{ runner.temp }}/staged-execution/verified.json
+            ${{ runner.temp }}/staged-execution/runtime-certificate.json

@@ -7,6 +7,10 @@ on:
         type: string
         required: false
         description: 'Only for historical 0.25.0 GA: approved six signed Optional Components attestations'
+      staged_package_id:
+        type: string
+        required: true
+        description: 'Exact signed staged backend package ID for real runtime materialization/launch (0.34.2)'
       client_factory_ga_evidence_run_id:
         type: string
         required: true
@@ -248,9 +252,18 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+  staged-package-runtime-0342:
+    name: Exact staged package actual runtime (V01/V02)
+    needs: [base-ci]
+    uses: ./.github/workflows/staged-package-runtime-0342.yml
+    with:
+      package_id: ${{ inputs.staged_package_id }}
+      runtime_seconds: 45
+    secrets: inherit
+
   release-bundle:
     name: Release candidate bundle
-    needs: [base-ci, production-rc-03216, single-node-ga-0330, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
+    needs: [base-ci, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
     permissions:
       contents: read
       actions: read

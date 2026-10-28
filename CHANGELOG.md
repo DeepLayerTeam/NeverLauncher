@@ -1,3 +1,10 @@
+## 0.34.2 — Real staged runtime execution (V01/V02)
+
+- Time-limited, snapshot-bound runner grants and authenticated staged file delivery.
+- Real byte-for-byte staged downloads, transactional client install, verification, NeverRuntime startup attempts.
+- Durable per-stage observational reports (PostgreSQL and memory), with no stable certification bypass.
+- Staged storage no longer accessible via anonymous public file route.
+
 ## [0.34.1] - 2026-10-28
 
 ### Stable Release Protection — V11, first phase

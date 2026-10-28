@@ -87,6 +87,25 @@ func (s Server) file(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "file not found")
 		return
 	}
+	// A staged package is not public content. Previously the generic file
+	// route bypassed staging permissions by accepting a storage key directly.
+	// Only published release identities may use the public delivery route.
+	published := false
+	releases, releaseErr := s.Repo.ListVersions(r.PathValue("projectId"))
+	if releaseErr != nil {
+		writeError(w, http.StatusNotFound, "file not found")
+		return
+	}
+	for _, release := range releases {
+		if release.ID == r.PathValue("version") && release.Status == "published" {
+			published = true
+			break
+		}
+	}
+	if !published {
+		writeError(w, http.StatusNotFound, "file not found")
+		return
+	}
 	reader, size, err := s.Storage.Open(r.PathValue("projectId"), r.PathValue("version"), r.PathValue("path"))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) || strings.Contains(strings.ToLower(err.Error()), "не найден") {

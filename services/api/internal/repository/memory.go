@@ -189,6 +189,7 @@ type MemoryRepository struct {
 	releases                       []model.ReleaseVersion
 	integrityChecks                []model.IntegrityCheckResult
 	runtimeValidations             []model.RuntimeValidationResult
+	stagedRuntimeRuns0342          []model.StagedRuntimeRun0342
 	validationPolicies             map[string]model.ProjectValidationPolicy
 	files                          []model.FileObject
 	users                          []model.User
