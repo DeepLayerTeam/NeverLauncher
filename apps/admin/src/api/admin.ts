@@ -7,7 +7,7 @@ export interface Project {
 }
 export interface Profile {
   id: string; projectId: string; name: string; description: string;
-  loader: string; preset: string; isDefault: boolean;
+  loader: string; loaderVersion?:string; minecraftVersion?:string; javaMajor?:number; revision?:number; digest?:string; preset: string; isDefault: boolean;
 }
 export interface Channel { id: string; projectId: string; name: string; description: string; protected: boolean }
 export interface Release { id: string; projectId: string; profileId: string; channel: string; version: string; status: string; publishedAt?: string }

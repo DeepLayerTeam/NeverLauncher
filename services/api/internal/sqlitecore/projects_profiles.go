@@ -98,12 +98,12 @@ func (r *Repository) SaveProject(ctx context.Context, p model.Project, actor str
 	return r.GetProject(ctx, p.ID)
 }
 
-const profileFields = "id,project_id,name,description,loader,preset,is_default,created_at,updated_at,revision,digest"
+const profileFields = "id,project_id,name,description,loader,preset,is_default,minecraft_version,loader_version,java_major,created_at,updated_at,revision,digest"
 
 func scanProfile(s interface{ Scan(...any) error }) (model.Profile, error) {
 	var p model.Profile
 	var created, updated int64
-	err := s.Scan(&p.ID, &p.ProjectID, &p.Name, &p.Description, &p.Loader, &p.Preset, &p.IsDefault, &created, &updated, &p.Revision, &p.Digest)
+	err := s.Scan(&p.ID, &p.ProjectID, &p.Name, &p.Description, &p.Loader, &p.Preset, &p.IsDefault, &p.MinecraftVersion, &p.LoaderVersion, &p.JavaMajor, &created, &updated, &p.Revision, &p.Digest)
 	if err != nil {
 		return p, err
 	}
@@ -170,7 +170,7 @@ func (r *Repository) SaveProfile(ctx context.Context, p model.Profile, actor str
 			p.Revision = 1
 			p.CreatedAt = ts(now)
 			p.UpdatedAt = ts(now)
-			_, e = q.ExecContext(ctx, `INSERT INTO profiles(project_id,id,name,description,loader,preset,is_default,revision,digest,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, p.ProjectID, p.ID, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, p.Revision, p.Digest, now, now)
+			_, e = q.ExecContext(ctx, `INSERT INTO profiles(project_id,id,name,description,loader,preset,is_default,revision,digest,created_at,updated_at,minecraft_version,loader_version,java_major) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, p.ProjectID, p.ID, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, p.Revision, p.Digest, now, now, p.MinecraftVersion, p.LoaderVersion, p.JavaMajor)
 			if e != nil {
 				return conflict(e)
 			}
@@ -186,7 +186,7 @@ func (r *Repository) SaveProfile(ctx context.Context, p model.Profile, actor str
 			p.Revision = existing.Revision + 1
 			p.CreatedAt = existing.CreatedAt
 			p.UpdatedAt = ts(now)
-			result, e := q.ExecContext(ctx, `UPDATE profiles SET name=?,description=?,loader=?,preset=?,is_default=?,revision=?,digest=?,updated_at=? WHERE project_id=? AND id=? AND revision=?`, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, p.Revision, p.Digest, now, p.ProjectID, p.ID, existing.Revision)
+			result, e := q.ExecContext(ctx, `UPDATE profiles SET name=?,description=?,loader=?,preset=?,is_default=?,revision=?,digest=?,updated_at=?,minecraft_version=?,loader_version=?,java_major=? WHERE project_id=? AND id=? AND revision=?`, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, p.Revision, p.Digest, now, p.MinecraftVersion, p.LoaderVersion, p.JavaMajor, p.ProjectID, p.ID, existing.Revision)
 			if e != nil {
 				return e
 			}

@@ -17,8 +17,6 @@ func (r *MemoryRepository) CreateProfileExclusive0225(p model.Profile) (model.Pr
 	}
 	p.ID = strings.TrimSpace(p.ID)
 	p.Name = strings.TrimSpace(p.Name)
-	// Imported/cloned/preset profiles may not seize the project default.
-	p.IsDefault = false
 	var err error
 	if p, err = model.NormalizeProfileV2(p); err != nil {
 		return model.Profile{}, err
@@ -49,8 +47,6 @@ func (r *SQLRepository) CreateProfileExclusive0225(p model.Profile) (model.Profi
 	}
 	p.ID = strings.TrimSpace(p.ID)
 	p.Name = strings.TrimSpace(p.Name)
-	// Imported/cloned/preset profiles may not seize the project default.
-	p.IsDefault = false
 	var err error
 	if p, err = model.NormalizeProfileV2(p); err != nil {
 		return model.Profile{}, err
@@ -64,9 +60,9 @@ func (r *SQLRepository) CreateProfileExclusive0225(p model.Profile) (model.Profi
 	}
 	defer tx.Rollback()
 	now := time.Now().UTC()
-	res, err := tx.Exec(`INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest)
-        VALUES($1,$2,$3,$4,$5,$6,false,$7,$7,'2.0',1,$8) ON CONFLICT (project_id,id) DO NOTHING`,
-		p.ID, p.ProjectID, p.Name, p.Description, p.Loader, p.Preset, now, p.Digest)
+	res, err := tx.Exec(`INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest,minecraft_version,loader_version,java_major)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8,'2.0',1,$9,$10,$11,$12) ON CONFLICT (project_id,id) DO NOTHING`,
+		p.ID, p.ProjectID, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, now, p.Digest, p.MinecraftVersion, p.LoaderVersion, p.JavaMajor)
 	if err != nil {
 		return model.Profile{}, err
 	}

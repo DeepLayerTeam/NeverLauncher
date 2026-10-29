@@ -150,9 +150,11 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	profiles, _ := s.Repo.ListProfiles(req.ProjectID)
+	var selectedProfile model.Profile
 	profileExists := false
 	for _, profile := range profiles {
 		if profile.ID == req.ProfileID {
+			selectedProfile = profile
 			profileExists = true
 			break
 		}
@@ -163,6 +165,13 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 		}
 		if _, err := s.Repo.SaveProfile(model.Profile{ID: req.ProfileID, ProjectID: req.ProjectID, Name: req.ProfileID, Loader: firstNonEmpty(req.Loader, "vanilla")}); err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+	if profileExists && selectedProfile.MinecraftVersion != "" {
+		game := model.MinecraftInfo{Version: req.MinecraftVersion, Loader: req.Loader, LoaderVersion: selectedProfile.LoaderVersion}
+		if err := model.ValidateProfileLaunch0382(model.ProfileSpecOf(selectedProfile), game, 0, false); err != nil {
+			writeError(w, 409, err.Error())
 			return
 		}
 	}
@@ -202,6 +211,10 @@ func (s Server) packageCreate(w http.ResponseWriter, r *http.Request) {
 		}
 		if strings.TrimSpace(req.Loader) != "" {
 			manifest.Minecraft.Loader = strings.TrimSpace(req.Loader)
+		}
+		if selectedProfile.MinecraftVersion != "" {
+			manifest.Minecraft.LoaderVersion = selectedProfile.LoaderVersion
+			manifest.Runtime.Java.MajorVersion = selectedProfile.JavaMajor
 		}
 		release, err = s.Repo.UpdateVersionManifest(release.ProjectID, release.ID, manifest)
 		if err != nil {

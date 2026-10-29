@@ -16,18 +16,21 @@ type Project struct {
 
 // Profile описывает клиентский профиль проекта.
 type Profile struct {
-	SchemaVersion string    `json:"schemaVersion,omitempty"`
-	Revision      int64     `json:"revision,omitempty"`
-	Digest        string    `json:"digest,omitempty"`
-	ID            string    `json:"id"`
-	ProjectID     string    `json:"projectId"`
-	Name          string    `json:"name"`
-	Description   string    `json:"description"`
-	Loader        string    `json:"loader"`
-	Preset        string    `json:"preset"`
-	IsDefault     bool      `json:"isDefault"`
-	CreatedAt     time.Time `json:"createdAt"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+	SchemaVersion    string    `json:"schemaVersion,omitempty"`
+	Revision         int64     `json:"revision,omitempty"`
+	Digest           string    `json:"digest,omitempty"`
+	ID               string    `json:"id"`
+	ProjectID        string    `json:"projectId"`
+	Name             string    `json:"name"`
+	Description      string    `json:"description"`
+	Loader           string    `json:"loader"`
+	MinecraftVersion string    `json:"minecraftVersion,omitempty"`
+	LoaderVersion    string    `json:"loaderVersion,omitempty"`
+	JavaMajor        int       `json:"javaMajor,omitempty"`
+	Preset           string    `json:"preset"`
+	IsDefault        bool      `json:"isDefault"`
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
 }
 
 // ReleaseChannel описывает канал релиза: dev, beta или stable.

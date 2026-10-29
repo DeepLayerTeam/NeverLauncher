@@ -15,13 +15,14 @@ type Wrapped<T>={data:T;error?:{message?:string}};
 const message=(e:unknown)=>e instanceof Error?e.message:String(e);
 function managedPath(p:string){return !/^(saves|screenshots|resourcepacks|shaderpacks|config|logs|crash-reports|diagnostics|\.neverlauncher)(\/|$)/i.test(p)&& !/^(options\.txt|optionsof\.txt|servers\.dat|usercache\.json)$/i.test(p)}
 
-export function BuildWorkspacePanel({base,token,projectId,profileId,channel,version,minecraftVersion,loader,canFileWrite,onBuilt,releases}: {
- base:string;token:string;projectId:string;profileId:string;channel:string;version:string;minecraftVersion:string;loader:string;
+export function BuildWorkspacePanel({base,token,projectId,profileId,channel,version,minecraftVersion,loader,loaderVersion='',javaMajor:profileJavaMajor=17,profileMinecraftConfigured=false,canFileWrite,onBuilt,releases}: {
+ base:string;token:string;projectId:string;profileId:string;channel:string;version:string;minecraftVersion:string;loader:string;loaderVersion?:string;javaMajor?:number;profileMinecraftConfigured?:boolean;
  canFileWrite:boolean;onBuilt:(id:string)=>Promise<void>;releases:Array<{id:string;version:string;profileId:string;channel:string;status:string}>;
 }){
  const [items,setItems]=useState<BuildWorkspace[]>([]);
  const [workspace,setWorkspace]=useState<BuildWorkspace|null>(null);
- const [javaMajor,setJavaMajor]=useState(17);
+ const [javaMajor,setJavaMajor]=useState(profileJavaMajor);
+ useEffect(()=>{setJavaMajor(profileJavaMajor)},[profileJavaMajor,profileId]);
  const [ram,setRam]=useState(4096);
  const [settingsJSON,setSettingsJSON]=useState('');
  const [selected,setSelected]=useState<string[]>([]);
@@ -50,7 +51,7 @@ export function BuildWorkspacePanel({base,token,projectId,profileId,channel,vers
  async function run<T>(fn:()=>Promise<T>):Promise<T|undefined>{if(busy)return;setBusy(true);setError('');try{return await fn()}catch(e){setError(message(e));return undefined}finally{setBusy(false)}}
  async function create(){
    await run(async()=>{
-     const settings:Settings=settingsJSON.trim()?JSON.parse(settingsJSON) as Settings:{minecraft:{version:minecraftVersion,loader},runtime:{java:{majorVersion:javaMajor,distribution:'any'},memory:{minimumMb:512,recommendedMb:ram,maximumMb:Math.max(ram,8192)}}};
+     const settings:Settings=settingsJSON.trim()?JSON.parse(settingsJSON) as Settings:{minecraft:{version:minecraftVersion,loader,...(loaderVersion?{loaderVersion}:{})},runtime:{java:{majorVersion:javaMajor,distribution:'any'},memory:{minimumMb:512,recommendedMb:ram,maximumMb:Math.max(ram,8192)}}};
      if(!settings.minecraft?.version||!settings.runtime?.java?.majorVersion)throw new Error('Укажите Minecraft и Java в параметрах сборки');
      const ws=await api<BuildWorkspace>('/api/v1/build-workspaces','POST',{projectId,profileId,channel,version,settings});load(ws);await refresh();
    });
@@ -88,14 +89,14 @@ export function BuildWorkspacePanel({base,token,projectId,profileId,channel,vers
    <h4>Build Workspace · 0.22.6</h4>
    <p className="muted">Импорт папки → сканирование SHA-256 → сравнение → stage → проверка → сборка реального пакета. Файлы пользователя не импортируются.</p>
    {!workspace&&<>
-     <label className="field">Java major <input type="number" min={8} max={255} value={javaMajor} onChange={e=>setJavaMajor(Number(e.target.value))}/></label>
+     <label className="field">Java major <input type="number" min={8} max={255} disabled={!!profileMinecraftConfigured} value={javaMajor} onChange={e=>setJavaMajor(Number(e.target.value))}/></label>
      <label className="field">RAM recommended (MB) <input type="number" min={512} max={131072} value={ram} onChange={e=>setRam(Number(e.target.value))}/></label>
      <label className="field">Дополнительные настройки сборки (JSON, необязательно)<textarea rows={3} value={settingsJSON} onChange={e=>setSettingsJSON(e.target.value)} placeholder="minecraft, runtime, fileRules, toolVersions"/></label>
      <button disabled={busy||!version||!profileId||!minecraftVersion} onClick={()=>void create()}>Создать workspace</button>
      {items.length>0&&<><h5>Продолжить workspace</h5><ul>{items.map(x=><li key={x.id}><button disabled={busy} onClick={()=>load(x)}>{x.id} · {x.state} · r{x.revision}</button></li>)}</ul></>}
    </>}
    {workspace&&<>
-     <ClientFactoryBuilder02710 backend={base} token={token} workspaceId={workspace.id} minecraft={workspace.settings.minecraft.version} loader={workspace.settings.minecraft.loader} canBuild={canFileWrite && workspace.state!=='built'} />
+     <ClientFactoryBuilder02710 backend={base} token={token} workspaceId={workspace.id} minecraft={workspace.settings.minecraft.version} loader={workspace.settings.minecraft.loader} initialLoaderVersion={workspace.settings.minecraft.loaderVersion||loaderVersion} canBuild={canFileWrite && workspace.state!=='built'} />
      <p>Workspace: <code>{workspace.id}</code> · {workspace.state} · revision {workspace.revision} · Profile revision {workspace.profileRevision}</p>
      <div className="buttonRow"><button disabled={busy} onClick={()=>{setWorkspace(null);void refresh()}}>Другой workspace</button><button disabled={busy} onClick={()=>void scanFiles()}>Scan / SHA-256</button></div>
      {workspace.state!=='built'&&<label className="field">Импорт каталога Minecraft (включая вложенные папки)

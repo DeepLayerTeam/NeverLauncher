@@ -44,7 +44,7 @@ export class ReleaseApi {
   operation(id:string) { return this.get<Operation>(`/api/v1/operations/${encodeURIComponent(id)}`); }
   validateOperation(req: Record<string,unknown>) { return this.send<Preview>('/api/v1/operations/validate','POST',req); }
   executeOperation(req: Record<string,unknown>) { return this.send<Operation>('/api/v1/operations/execute','POST',req); }
-  profiles(id: string) { return this.get<{items: Array<{id:string;name:string;loader:string}>}>(`/api/v1/projects/${encodeURIComponent(id)}/profiles`); }
+  profiles(id: string) { return this.get<{items: Array<{id:string;name:string;loader:string;minecraftVersion?:string;loaderVersion?:string;javaMajor?:number}>}>(`/api/v1/projects/${encodeURIComponent(id)}/profiles`); }
   releases(id: string) { return this.get<{items: Array<{id:string;version:string;profileId:string;channel:string;status:string}>}>(`/api/v1/projects/${encodeURIComponent(id)}/versions`); }
   async upload(id: string, file: File, path: string, ownership: "required"|"managed"|"optional" = "required") {
     const data = new FormData();data.append('path',path);data.append('file',file);data.append('ownership',ownership);

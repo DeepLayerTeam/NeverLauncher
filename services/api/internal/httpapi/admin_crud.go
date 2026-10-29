@@ -22,13 +22,32 @@ type adminProjectCRUDRequest struct {
 }
 
 type adminProfileCRUDRequest struct {
-	ID               string `json:"id"`
-	Name             string `json:"name"`
-	Description      string `json:"description"`
-	Loader           string `json:"loader"`
-	Preset           string `json:"preset"`
-	IsDefault        bool   `json:"isDefault"`
-	ExpectedRevision *int64 `json:"expectedRevision,omitempty"`
+	ID               string  `json:"id"`
+	Name             string  `json:"name"`
+	Description      *string `json:"description,omitempty"`
+	Loader           string  `json:"loader"`
+	MinecraftVersion *string `json:"minecraftVersion,omitempty"`
+	LoaderVersion    *string `json:"loaderVersion,omitempty"`
+	JavaMajor        *int    `json:"javaMajor,omitempty"`
+	Preset           *string `json:"preset,omitempty"`
+	IsDefault        *bool   `json:"isDefault,omitempty"`
+	ExpectedRevision *int64  `json:"expectedRevision,omitempty"`
+}
+
+func optionalProfileString0382(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
+}
+func optionalProfileBool0382(v *bool) bool {
+	return v != nil && *v
+}
+func optionalProfileInt0382(v *int) int {
+	if v == nil {
+		return 0
+	}
+	return *v
 }
 
 type adminChannelCRUDRequest struct {
@@ -141,8 +160,17 @@ func (s Server) adminProfileCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
-	profile := model.Profile{ID: req.ID, ProjectID: projectID, Name: req.Name, Description: req.Description, Loader: firstNonEmpty(req.Loader, "vanilla"), Preset: req.Preset, IsDefault: req.IsDefault}
-	saved, err := s.Repo.SaveProfile(profile)
+	profile := model.Profile{ID: req.ID, ProjectID: projectID, Name: req.Name, Description: optionalProfileString0382(req.Description), Loader: firstNonEmpty(req.Loader, "vanilla"), MinecraftVersion: optionalProfileString0382(req.MinecraftVersion), LoaderVersion: optionalProfileString0382(req.LoaderVersion), JavaMajor: optionalProfileInt0382(req.JavaMajor), Preset: optionalProfileString0382(req.Preset), IsDefault: optionalProfileBool0382(req.IsDefault)}
+	creator, ok := s.Repo.(profileCreator0225)
+	if !ok {
+		writeError(w, http.StatusServiceUnavailable, "exclusive profile creation unavailable")
+		return
+	}
+	saved, err := creator.CreateProfileExclusive0225(profile)
+	if errors.Is(err, repository.ErrConflict) {
+		writeError(w, http.StatusConflict, "profile already exists")
+		return
+	}
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -180,19 +208,34 @@ func (s Server) adminProfileUpdate(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(req.Name) != "" {
 		profile.Name = strings.TrimSpace(req.Name)
 	}
-	if req.Description != "" {
-		profile.Description = req.Description
+	if req.Description != nil {
+		profile.Description = *req.Description
 	}
 	if req.Loader != "" {
 		profile.Loader = req.Loader
 	}
-	if req.Preset != "" {
-		profile.Preset = req.Preset
+	if req.MinecraftVersion != nil {
+		profile.MinecraftVersion = *req.MinecraftVersion
 	}
-	profile.IsDefault = req.IsDefault
+	if req.LoaderVersion != nil {
+		profile.LoaderVersion = *req.LoaderVersion
+	}
+	if req.JavaMajor != nil {
+		profile.JavaMajor = *req.JavaMajor
+	}
+	if req.Preset != nil {
+		profile.Preset = *req.Preset
+	}
+	if req.IsDefault != nil {
+		profile.IsDefault = *req.IsDefault
+	}
 	if req.ExpectedRevision != nil && *req.ExpectedRevision != profile.Revision {
 		writeError(w, http.StatusConflict, "profile revision conflict")
 		return
+	}
+	profile.Revision = 0
+	if req.ExpectedRevision != nil {
+		profile.Revision = *req.ExpectedRevision
 	}
 	saved, err := s.Repo.SaveProfile(profile)
 	if err != nil {

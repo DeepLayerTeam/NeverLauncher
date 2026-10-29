@@ -21,7 +21,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
   const [draft,setDraft] = useState<Draft|null>(null);
   const [form,setForm] = useState<DraftFields>(empty(projectId,initialProfileId,initialChannel||'stable'));
   const [step,setStep] = useState<Step>('project');
-  const [profiles,setProfiles] = useState<Array<{id:string;name:string;loader:string}>>([]);
+  const [profiles,setProfiles] = useState<Array<{id:string;name:string;loader:string;minecraftVersion?:string;loaderVersion?:string;javaMajor?:number}>>([]);
   const [releases,setReleases] = useState<Array<{id:string;version:string;profileId:string;channel:string;status:string}>>([]);
   const [channelHead,setChannelHead] = useState<ChannelHead|null>(null);
   const [channelHeadError,setChannelHeadError] = useState('');
@@ -59,14 +59,14 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
     if (!projectId || !canPrepare) return;
     Promise.all([api.drafts(projectId),api.profiles(projectId),api.releases(projectId),api.policy(projectId)])
       .then(([ds,ps,vs,p])=>{if(live){setDrafts(ds.items??[]);setProfiles(ps.items??[]);setReleases(vs.items??[]);setPolicy(p);
-        setForm(current=>current.packageId||current.jobId ? current : {...current,profileId:ps.items?.some(x=>x.id===initialProfileId)?initialProfileId:current.profileId,channel:initialChannel||current.channel});}})
+        setForm(current=>current.packageId||current.jobId ? current : {...current,profileId:ps.items?.some(x=>x.id===initialProfileId)?initialProfileId:current.profileId,channel:initialChannel||current.channel, ...(ps.items?.find(x=>x.id===initialProfileId)?.minecraftVersion?{minecraftVersion:ps.items.find(x=>x.id===initialProfileId)!.minecraftVersion!,loader:ps.items.find(x=>x.id===initialProfileId)!.loader}:{})});}})
       .catch(e=>{if(live)setError(printable(e));});
     return ()=>{live=false};
   },[api,projectId,canPrepare,recoveryKey]);
   // Keep a fresh, unsaved draft aligned with the owner's explicit navigation.
   useEffect(()=>{
     if (!draft && !dirty && !pending && !form.packageId)
-      setForm(current=>({...current,profileId:profiles.some(p=>p.id===initialProfileId)?initialProfileId:current.profileId,channel:initialChannel||current.channel}));
+      setForm(current=>({...current,profileId:profiles.some(p=>p.id===initialProfileId)?initialProfileId:current.profileId,channel:initialChannel||current.channel,...(profiles.find(p=>p.id===initialProfileId)?.minecraftVersion?{minecraftVersion:profiles.find(p=>p.id===initialProfileId)!.minecraftVersion!,loader:profiles.find(p=>p.id===initialProfileId)!.loader}:{})}));
   },[initialProfileId,initialChannel,profiles]);
   function edit(key:keyof DraftFields,value:string) {
     if (form.packageId && ['profileId','channel','version','loader','minecraftVersion'].includes(key)) { setError('Поля сборки закреплены за созданным пакетом. Для изменения создайте новый черновик.');return; }
@@ -248,9 +248,10 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
     </article><article className="subcard"><h3>Этапы выпуска</h3><nav className="releaseSteps" aria-label="Этапы выпуска">{steps.map(item=><button key={item.id} type="button" aria-current={step===item.id?'step':undefined} onClick={()=>{setStep(item.id);setPreview(null);setRollbackPreview(null);setPlanned(null);}}>{item.title}</button>)}</nav><p>{dirty?'Есть несохранённые изменения.':'Данные синхронизированы с последним сохранением.'}</p></article></div>
     {step==='project' && <article className="subcard"><h3>1. Проект</h3><p>Выбранный проект: <strong>{projectId}</strong>. Переключение выполняется в верхней панели Admin. Черновики доступны только своему владельцу с правом release:prepare.</p><button disabled={busy||!projectId||!canPrepare} onClick={()=>void save('profile')}>Сохранить и перейти к профилю</button></article>}
     {step==='profile' && <article className="subcard"><h3>2. Профиль / загрузчик / Minecraft</h3>
-      <label className="field">Профиль<select disabled={!!form.packageId} value={form.profileId} onChange={(e: React.ChangeEvent<HTMLSelectElement>)=>{const found=profiles.find(p=>p.id===e.target.value);setForm(v=>({...v,profileId:e.target.value,loader:found?.loader||v.loader}));setDirty(true);}}><option value="">Выберите профиль</option>{profiles.map(p=><option key={p.id} value={p.id}>{p.name||p.id} ({p.id})</option>)}</select></label>
-      <label className="field">Загрузчик<select disabled={!!form.packageId} value={form.loader} onChange={(e: React.ChangeEvent<HTMLSelectElement>)=>edit('loader',e.target.value)}>{['vanilla','fabric','quilt','forge','neoforge'].map(x=><option key={x} value={x}>{x}</option>)}</select></label>
-      <label className="field">Версия Minecraft<input disabled={!!form.packageId} placeholder="1.21.1" value={form.minecraftVersion} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>edit('minecraftVersion',e.target.value)} /></label>
+      <label className="field">Профиль<select disabled={!!form.packageId} value={form.profileId} onChange={(e: React.ChangeEvent<HTMLSelectElement>)=>{const found=profiles.find(p=>p.id===e.target.value);setForm(v=>({...v,profileId:e.target.value,loader:found?.loader||v.loader,minecraftVersion:found?.minecraftVersion||''}));setDirty(true);}}><option value="">Выберите профиль</option>{profiles.map(p=><option key={p.id} value={p.id}>{p.name||p.id} ({p.id})</option>)}</select></label>
+      <label className="field">Загрузчик<select disabled={!!form.packageId||!!profiles.find(p=>p.id===form.profileId)?.minecraftVersion} value={form.loader} onChange={(e: React.ChangeEvent<HTMLSelectElement>)=>edit('loader',e.target.value)}>{['vanilla','fabric','quilt','forge','neoforge'].map(x=><option key={x} value={x}>{x}</option>)}</select></label>
+      <label className="field">Версия Minecraft<input disabled={!!form.packageId||!!profiles.find(p=>p.id===form.profileId)?.minecraftVersion} placeholder="1.21.1" value={form.minecraftVersion} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>edit('minecraftVersion',e.target.value)} /></label>
+      {profiles.find(p=>p.id===form.profileId)?.minecraftVersion && <p className="muted" role="status">Профиль закрепляет Minecraft {profiles.find(p=>p.id===form.profileId)?.minecraftVersion}, загрузчик {profiles.find(p=>p.id===form.profileId)?.loader} {profiles.find(p=>p.id===form.profileId)?.loaderVersion||''} и Java {profiles.find(p=>p.id===form.profileId)?.javaMajor}. Для изменения сначала сохраните новую ревизию профиля через Admin.</p>}
       <label className="field">Версия сборки<input disabled={!!form.packageId} placeholder="1.0.0" value={form.version} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>edit('version',e.target.value)} /></label>
       <label className="field">Канал<input disabled={!!form.packageId} value={form.channel} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>edit('channel',e.target.value)} /></label>
       <div className="buttonRow"><button disabled={busy||!canPrepare||!form.profileId||!form.minecraftVersion||!form.version||!form.channel} onClick={()=>void save('build')}>Сохранить и перейти к сборке</button></div>
@@ -260,7 +261,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
       {draft && !dirty && !form.packageId && <BuildWorkspacePanel
         base={backendUrl} token={token} projectId={projectId} profileId={form.profileId}
         channel={form.channel} version={form.version} minecraftVersion={form.minecraftVersion}
-        loader={form.loader} canFileWrite={canFileWrite} releases={releases}
+        loader={form.loader} loaderVersion={profiles.find(p=>p.id===form.profileId)?.loaderVersion||''} javaMajor={profiles.find(p=>p.id===form.profileId)?.javaMajor||17} profileMinecraftConfigured={!!profiles.find(p=>p.id===form.profileId)?.minecraftVersion} canFileWrite={canFileWrite} releases={releases}
         onBuilt={async id=>{
           const next=await api.save({...draft,...form,packageId:id,step:'build'});
           setDraft(next);setForm(v=>({...v,packageId:id}));setDirty(false);

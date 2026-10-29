@@ -157,7 +157,7 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.desc
 
 func scanProfile0221(scanner interface{ Scan(...any) error }) (model.Profile, error) {
 	var p model.Profile
-	if err := scanner.Scan(&p.ID, &p.ProjectID, &p.Name, &p.Description, &p.Loader, &p.Preset, &p.IsDefault, &p.CreatedAt, &p.UpdatedAt, &p.SchemaVersion, &p.Revision, &p.Digest); err != nil {
+	if err := scanner.Scan(&p.ID, &p.ProjectID, &p.Name, &p.Description, &p.Loader, &p.Preset, &p.IsDefault, &p.MinecraftVersion, &p.LoaderVersion, &p.JavaMajor, &p.CreatedAt, &p.UpdatedAt, &p.SchemaVersion, &p.Revision, &p.Digest); err != nil {
 		return p, err
 	}
 	if p.SchemaVersion != model.ProfileSchemaV2 || p.Revision < 1 || p.Digest != model.ProfileDigest(model.ProfileSpecOf(p)) {
@@ -166,7 +166,7 @@ func scanProfile0221(scanner interface{ Scan(...any) error }) (model.Profile, er
 	return p, nil
 }
 
-const profileColumns0221 = "id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest"
+const profileColumns0221 = "id,project_id,name,description,loader,preset,is_default,minecraft_version,loader_version,java_major,created_at,updated_at,schema_version,revision,digest"
 
 func (r *SQLRepository) ListProfiles(projectID string) ([]model.Profile, error) {
 	if err := r.check(); err != nil {
@@ -212,8 +212,8 @@ func (r *SQLRepository) SaveProfile(p model.Profile) (model.Profile, error) {
 	// INSERT initially serializes concurrent first-writers on the unique index.
 	// No overwriting on conflict; a subsequent SELECT FOR UPDATE handles updates.
 	now := time.Now().UTC()
-	res, err := tx.Exec(`INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest)
- VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8,'2.0',1,$9) ON CONFLICT (project_id,id) DO NOTHING`, p.ID, p.ProjectID, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, now, p.Digest)
+	res, err := tx.Exec(`INSERT INTO profiles(id,project_id,name,description,loader,preset,is_default,created_at,updated_at,schema_version,revision,digest,minecraft_version,loader_version,java_major)
+ VALUES($1,$2,$3,$4,$5,$6,$7,$8,$8,'2.0',1,$9,$10,$11,$12) ON CONFLICT (project_id,id) DO NOTHING`, p.ID, p.ProjectID, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, now, p.Digest, p.MinecraftVersion, p.LoaderVersion, p.JavaMajor)
 	if err != nil {
 		return model.Profile{}, err
 	}
@@ -239,8 +239,8 @@ func (r *SQLRepository) SaveProfile(p model.Profile) (model.Profile, error) {
 			p.Revision = actual.Revision + 1
 			p.CreatedAt = actual.CreatedAt
 			p.UpdatedAt = now
-			if _, err = tx.Exec(`UPDATE profiles SET name=$3,description=$4,loader=$5,preset=$6,is_default=$7,updated_at=$8,revision=$9,digest=$10
-     WHERE project_id=$1 AND id=$2`, p.ProjectID, p.ID, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, now, p.Revision, p.Digest); err != nil {
+			if _, err = tx.Exec(`UPDATE profiles SET name=$3,description=$4,loader=$5,preset=$6,is_default=$7,updated_at=$8,revision=$9,digest=$10,minecraft_version=$11,loader_version=$12,java_major=$13
+     WHERE project_id=$1 AND id=$2`, p.ProjectID, p.ID, p.Name, p.Description, p.Loader, p.Preset, p.IsDefault, now, p.Revision, p.Digest, p.MinecraftVersion, p.LoaderVersion, p.JavaMajor); err != nil {
 				return model.Profile{}, err
 			}
 			actual = p

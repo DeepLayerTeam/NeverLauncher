@@ -14,13 +14,16 @@ const ManifestSchemaV2 = "2.0"
 // ProfileSpec is the immutable launch-profile metadata covered by a revision digest.
 // User-facing/volatile createdAt and updatedAt are intentionally excluded.
 type ProfileSpec struct {
-	ProjectID   string `json:"projectId"`
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Loader      string `json:"loader"`
-	Preset      string `json:"preset"`
-	IsDefault   bool   `json:"isDefault"`
+	ProjectID        string `json:"projectId"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Description      string `json:"description"`
+	Loader           string `json:"loader"`
+	MinecraftVersion string `json:"minecraftVersion,omitempty"`
+	LoaderVersion    string `json:"loaderVersion,omitempty"`
+	JavaMajor        int    `json:"javaMajor,omitempty"`
+	Preset           string `json:"preset"`
+	IsDefault        bool   `json:"isDefault"`
 }
 
 // ProfileSnapshot is copied into a new v2 release when it is created.
@@ -33,13 +36,18 @@ type ProfileSnapshot struct {
 }
 
 func ProfileSpecOf(p Profile) ProfileSpec {
-	return ProfileSpec{ProjectID: p.ProjectID, ID: p.ID, Name: p.Name, Description: p.Description, Loader: p.Loader, Preset: p.Preset, IsDefault: p.IsDefault}
+	return ProfileSpec{ProjectID: p.ProjectID, ID: p.ID, Name: p.Name, Description: p.Description, Loader: p.Loader, MinecraftVersion: p.MinecraftVersion, LoaderVersion: p.LoaderVersion, JavaMajor: p.JavaMajor, Preset: p.Preset, IsDefault: p.IsDefault}
 }
 
 // ProfileDigest has the same binary representation in Go and PostgreSQL migration 0056.
 // NUL separators make combinations of fields unambiguous; NUL is not valid in PostgreSQL text.
 func ProfileDigest(s ProfileSpec) string {
 	fields := []string{s.ProjectID, s.ID, s.Name, s.Description, s.Loader, s.Preset, fmt.Sprint(s.IsDefault)}
+	// Existing v2 profile/release digests remain byte-for-byte stable. Only
+	// explicitly configured launch metadata extends the domain.
+	if s.MinecraftVersion != "" || s.LoaderVersion != "" || s.JavaMajor != 0 {
+		fields = append(fields, "launch-0382", s.MinecraftVersion, s.LoaderVersion, fmt.Sprint(s.JavaMajor))
+	}
 	digest := sha256.Sum256([]byte(strings.Join(fields, "\x00")))
 	return hex.EncodeToString(digest[:])
 }
@@ -109,7 +117,27 @@ func NormalizeProfileV2(p Profile) (Profile, error) {
 	if p.ProjectID == "" || p.ID == "" || p.Name == "" {
 		return Profile{}, errors.New("profile projectId, id and name required")
 	}
-	for _, v := range []string{p.ProjectID, p.ID, p.Name, p.Description, p.Loader, p.Preset} {
+	if p.MinecraftVersion != "" || p.LoaderVersion != "" || p.JavaMajor != 0 {
+		switch p.Loader {
+		case "vanilla", "fabric", "quilt", "forge", "neoforge":
+		default:
+			return Profile{}, errors.New("unsupported Minecraft loader")
+		}
+		if p.MinecraftVersion == "" || p.JavaMajor < 8 || p.JavaMajor > 255 {
+			return Profile{}, errors.New("configured profile requires Minecraft version and Java major between 8 and 255")
+		}
+		if len(p.MinecraftVersion) > 64 || len(p.LoaderVersion) > 128 ||
+			strings.ContainsAny(p.MinecraftVersion, " /\\\t\n\r") || strings.ContainsAny(p.LoaderVersion, " /\\\t\n\r") {
+			return Profile{}, errors.New("invalid Minecraft or loader version")
+		}
+		if p.Loader != "vanilla" && p.LoaderVersion == "" {
+			return Profile{}, errors.New("configured modded profile requires exact loader version")
+		}
+		if p.Loader == "vanilla" && p.LoaderVersion != "" {
+			return Profile{}, errors.New("Vanilla profile cannot declare loader version")
+		}
+	}
+	for _, v := range []string{p.ProjectID, p.ID, p.Name, p.Description, p.Loader, p.Preset, p.MinecraftVersion, p.LoaderVersion} {
 		if strings.ContainsRune(v, '\x00') {
 			return Profile{}, errors.New("profile fields cannot contain NUL")
 		}

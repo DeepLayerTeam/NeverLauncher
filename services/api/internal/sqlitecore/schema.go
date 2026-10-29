@@ -25,7 +25,7 @@ var (
 	ErrImmutable = errors.New("sqlite core: immutable published release or history")
 )
 
-const SchemaVersion = 326
+const SchemaVersion = 327
 
 type Repository struct{ store *sqlitedurable.Store }
 
@@ -79,7 +79,7 @@ func (r *Repository) ensureMigrationBackup(ctx context.Context, path string) err
 		return nil
 	}
 	// Do not perform backups for unsupported/future versions or migrate them.
-	if old != 322 && old != 323 && old != 324 && old != 325 {
+	if old != 322 && old != 323 && old != 324 && old != 325 && old != 326 {
 		return fmt.Errorf("SQLite schema %d unsupported; refusing migration", old)
 	}
 	abs, err := filepath.Abs(path)
@@ -126,7 +126,7 @@ func (r *Repository) migrate(ctx context.Context) error {
 		if err := q.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 			return err
 		}
-		if version != 0 && version != 322 && version != 323 && version != 324 && version != 325 && version != SchemaVersion {
+		if version != 0 && version != 322 && version != 323 && version != 324 && version != 325 && version != 326 && version != SchemaVersion {
 			return fmt.Errorf("sqlite core schema %d incompatible with %d", version, SchemaVersion)
 		}
 		if version == 0 {
@@ -148,26 +148,39 @@ func (r *Repository) migrate(ctx context.Context) error {
 				}
 			}
 		}
-		if version != 324 && version != 325 && version != SchemaVersion {
+		if version != 324 && version != 325 && version != 326 && version != SchemaVersion {
 			for _, stmt := range joinDDL {
 				if _, err := q.ExecContext(ctx, stmt); err != nil {
 					return fmt.Errorf("sqlite replay/join migration 324: %w", err)
 				}
 			}
 		}
-		if version != 325 && version != SchemaVersion {
+		if version != 325 && version != 326 && version != SchemaVersion {
 			for _, stmt := range durableDDL {
 				if _, err := q.ExecContext(ctx, stmt); err != nil {
 					return fmt.Errorf("sqlite durable migration 325: %w", err)
 				}
 			}
 		}
-		if version != SchemaVersion {
+		if version != 326 && version != SchemaVersion {
 			for _, stmt := range fullStateDDL {
 				if _, err := q.ExecContext(ctx, stmt); err != nil {
 					return fmt.Errorf("sqlite full durable migration 326: %w", err)
 				}
 			}
+		}
+		if version > 0 && version < SchemaVersion {
+			for _, stmt := range []string{
+				"ALTER TABLE profiles ADD COLUMN minecraft_version TEXT NOT NULL DEFAULT ''",
+				"ALTER TABLE profiles ADD COLUMN loader_version TEXT NOT NULL DEFAULT ''",
+				"ALTER TABLE profiles ADD COLUMN java_major INTEGER NOT NULL DEFAULT 0",
+			} {
+				if _, err := q.ExecContext(ctx, stmt); err != nil {
+					return fmt.Errorf("sqlite profile migration 327: %w", err)
+				}
+			}
+		}
+		if version != SchemaVersion {
 			if _, err := q.ExecContext(ctx, fmt.Sprintf("PRAGMA user_version=%d", SchemaVersion)); err != nil {
 				return err
 			}
@@ -333,7 +346,7 @@ var builtInRoles = []roleSeed{
 
 var ddl = []string{
 	`CREATE TABLE projects (id TEXT PRIMARY KEY NOT NULL CHECK(length(id)>0), name TEXT NOT NULL CHECK(length(name)>0), description TEXT NOT NULL DEFAULT '', homepage TEXT NOT NULL DEFAULT '', repository TEXT NOT NULL DEFAULT '', default_channel TEXT NOT NULL DEFAULT 'stable', created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)`,
-	`CREATE TABLE profiles (project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT, id TEXT NOT NULL, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', loader TEXT NOT NULL, preset TEXT NOT NULL DEFAULT '', is_default INTEGER NOT NULL CHECK(is_default IN(0,1)), revision INTEGER NOT NULL CHECK(revision>=1), digest TEXT NOT NULL CHECK(length(digest)=64), created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(project_id,id)) WITHOUT ROWID`,
+	`CREATE TABLE profiles (project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE RESTRICT, id TEXT NOT NULL, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', loader TEXT NOT NULL, preset TEXT NOT NULL DEFAULT '', is_default INTEGER NOT NULL CHECK(is_default IN(0,1)), minecraft_version TEXT NOT NULL DEFAULT '', loader_version TEXT NOT NULL DEFAULT '', java_major INTEGER NOT NULL DEFAULT 0, revision INTEGER NOT NULL CHECK(revision>=1), digest TEXT NOT NULL CHECK(length(digest)=64), created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(project_id,id)) WITHOUT ROWID`,
 	`CREATE TABLE profile_revisions (project_id TEXT NOT NULL, profile_id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>=1), digest TEXT NOT NULL, schema_version TEXT NOT NULL CHECK(schema_version='2.0'), spec TEXT NOT NULL CHECK(json_valid(spec)), created_at INTEGER NOT NULL, PRIMARY KEY(project_id,profile_id,revision), FOREIGN KEY(project_id,profile_id) REFERENCES profiles(project_id,id) ON DELETE RESTRICT) WITHOUT ROWID`,
 	`CREATE TRIGGER profile_revisions_no_update BEFORE UPDATE ON profile_revisions BEGIN SELECT RAISE(ABORT,'immutable profile history'); END`,
 	`CREATE TRIGGER profile_revisions_no_delete BEFORE DELETE ON profile_revisions BEGIN SELECT RAISE(ABORT,'immutable profile history'); END`,

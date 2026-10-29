@@ -130,6 +130,14 @@ func (s Server) workspaceCreate0226(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "workspace loader must match the pinned client profile")
 		return
 	}
+	if snapshot.Spec.MinecraftVersion != "" && req.Settings.Minecraft.LoaderVersion != snapshot.Spec.LoaderVersion {
+		writeError(w, 409, "profile launch mismatch: exact loaderVersion required")
+		return
+	}
+	if err := model.ValidateProfileLaunch0382(snapshot.Spec, req.Settings.Minecraft, req.Settings.Runtime.Java.MajorVersion, true); err != nil {
+		writeError(w, 409, err.Error())
+		return
+	}
 	if req.Settings.Runtime.Java.MajorVersion <= 0 {
 		writeError(w, 400, "explicit runtime.java.majorVersion required")
 		return

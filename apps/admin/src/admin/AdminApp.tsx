@@ -6,6 +6,7 @@ import { BackendOperations0289 } from './BackendOperations0289';
 import { BackendNoticeInbox0289 } from './BackendNoticeInbox0289';
 import { ReleaseWorkspace } from './ReleaseWorkspace';
 import { ProfileManagementWorkspace } from './ProfileManagementWorkspace';
+import { ProfileEditor0382 } from './ProfileEditor0382';
 import { JobMonitor } from './JobMonitor';
 import { MigrationCenter0331 } from './MigrationCenter0331';
 import { BackupWorkspace } from './BackupWorkspace';
@@ -36,7 +37,6 @@ type TrustedDeviceView = { id: string; userId: string; name: string; status: str
 
 
 type ProjectForm = { id: string; name: string; description: string; homepage: string; repository: string; defaultChannel: string };
-type ProfileForm = { projectId: string; id: string; name: string; description: string; loader: string; preset: string; isDefault: boolean };
 type ChannelForm = { projectId: string; id: string; name: string; description: string; protected: boolean };
 type UserForm = { id: string; email: string; displayName: string; roleId: string; password: string };
 type PackageForm = { projectId: string; profileId: string; channel: string; version: string; packageId: string; path: string; sha256: string };
@@ -66,7 +66,6 @@ export function AdminApp() {
   const [devices, setDevices] = useState<TrustedDeviceView[]>([]);
 
   const [projectForm, setProjectForm] = useState<ProjectForm>({ id: '', name: '', description: '', homepage: '', repository: '', defaultChannel: 'stable' });
-  const [profileForm, setProfileForm] = useState<ProfileForm>({ projectId: '', id: '', name: '', description: '', loader: 'vanilla', preset: 'recommended', isDefault: false });
   const [channelForm, setChannelForm] = useState<ChannelForm>({ projectId: '', id: '', name: '', description: '', protected: false });
   const [userForm, setUserForm] = useState<UserForm>({ id: '', email: '', displayName: '', roleId: 'viewer', password: '' });
   const [packageForm, setPackageForm] = useState<PackageForm>({ projectId: '', profileId: '', channel: 'stable', version: '', packageId: '', path: '', sha256: '' });
@@ -110,7 +109,7 @@ export function AdminApp() {
       if (id) chooseProject(id);
       setProjectForm({ id, name: String(row.name ?? ''), description: String(row.description ?? ''), homepage: String(row.homepage ?? ''), repository: String(row.repository ?? ''), defaultChannel: String(row.defaultChannel ?? 'stable') });
     } else if (active === 'profiles') {
-      setProfileForm({ projectId: selectedProjectId, id, name: String(row.name ?? ''), description: String(row.description ?? ''), loader: String(row.loader ?? 'vanilla'), preset: String(row.preset ?? ''), isDefault: row.isDefault === true });
+      // The profile editor is driven by the selected Backend profile, not local copies.
     } else if (active === 'channels') {
       setChannelForm({ projectId: selectedProjectId, id, name: String(row.name ?? ''), description: String(row.description ?? ''), protected: row.protected === true });
     } else if (active === 'users') {
@@ -131,7 +130,6 @@ export function AdminApp() {
       route.projectId, route.profileId, route.channelId, active]);
   useEffect(() => {
     if (!selectedProjectId) return;
-    setProfileForm(f => ({ ...f, projectId: selectedProjectId, id: '', name: '' }));
     setChannelForm(f => ({ ...f, projectId: selectedProjectId, id: '', name: '' }));
     setPackageForm(f => ({ ...f, projectId: selectedProjectId, profileId: '', packageId: '', version: '' }));
   }, [selectedProjectId]);
@@ -159,11 +157,6 @@ export function AdminApp() {
   useEffect(() => {
     const rawItems = payload?.items;
     const rows = Array.isArray(rawItems) ? rawItems : [];
-    if (active === 'profiles' && selectedProfileId) {
-      const item = rows.find((x: unknown) => x && typeof x === 'object' && (x as {id?:string}).id === selectedProfileId) as Record<string,unknown>|undefined;
-      if (item && (!item.projectId || item.projectId === selectedProjectId))
-        setProfileForm({projectId:selectedProjectId,id:selectedProfileId,name:String(item.name??''),description:String(item.description??''),loader:String(item.loader??'vanilla'),preset:String(item.preset??''),isDefault:item.isDefault===true});
-    }
     if (active === 'channels' && selectedChannelId) {
       const item = rows.find((x: unknown) => x && typeof x === 'object' && (x as {id?:string}).id === selectedChannelId) as Record<string,unknown>|undefined;
       if (item && (!item.projectId || item.projectId === selectedProjectId))
@@ -449,18 +442,11 @@ export function AdminApp() {
         <TextInput label="Канал по умолчанию" value={projectForm.defaultChannel} onChange={(defaultChannel) => setProjectForm({ ...projectForm, defaultChannel })} />
         <div className="buttonRow"><button disabled={!can(identity, 'project:write') || !projectForm.id.trim() || !projectForm.name.trim()} onClick={() => createProject().catch((err: Error) => setError(err.message))}>Создать</button><button disabled={!canProjectWrite || !projectForm.id || projectForm.id !== selectedProjectId} onClick={() => runAction('Обновление проекта', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(projectForm.id)}`, token, { method: 'PATCH', body: JSON.stringify(projectForm) })).catch((err) => setError(err.message))}>Обновить</button></div>
       </article>}
-      {active === 'profiles' && canProjectWrite && <article className="subcard">
-        <h3>Профиль</h3>
-        <TextInput label="ID проекта" value={selectedProjectId} readOnly onChange={() => undefined} />
-        <TextInput label="ID" value={profileForm.id} onChange={(id) => setProfileForm({ ...profileForm, id })} />
-        <TextInput label="Название" value={profileForm.name} onChange={(name) => setProfileForm({ ...profileForm, name })} />
-        <TextInput label="Описание" value={profileForm.description} onChange={(description) => setProfileForm({ ...profileForm, description })} />
-        <TextInput label="Загрузчик" value={profileForm.loader} onChange={(loader) => setProfileForm({ ...profileForm, loader })} />
-        <TextInput label="Предустановка" value={profileForm.preset} onChange={(preset) => setProfileForm({ ...profileForm, preset })} />
-        <label className="check"><input type="checkbox" checked={profileForm.isDefault} onChange={(event) => setProfileForm({ ...profileForm, isDefault: event.target.checked })} /> Профиль по умолчанию</label>
-        <div className="buttonRow"><button disabled={!profileForm.id.trim() || !profileForm.name.trim() || !selectedProjectId} onClick={() => runAction('Создание профиля', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(selectedProjectId)}/profiles`, token, { method: 'POST', body: JSON.stringify(profileForm) })).catch((err) => setError(err.message))}>Создать</button><button disabled={!profileForm.id || !selectedProjectId} onClick={() => runAction('Обновление профиля', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(selectedProjectId)}/profiles/${encodeURIComponent(profileForm.id)}`, token, { method: 'PATCH', body: JSON.stringify(profileForm) })).catch((err) => setError(err.message))}>Обновить</button></div>
-      </article>}
-      {active === 'profiles' && canProjectWrite && <ProfileManagementWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} sourceProfileId={selectedProfileId || selectedRecordId} onChanged={async () => { await loadDashboard(); await loadActive(); }} />}
+      {active === 'profiles' && canProjectWrite && <ProfileEditor0382 backendUrl={backendUrl} token={token} projectId={selectedProjectId}
+        selectedProfile={(dashboard?.profiles??[]).find(p=>p.projectId===selectedProjectId && p.id===selectedProfileId)}
+        onChanged={async()=>{await loadDashboard();await loadActive();}}
+        onCreated={id=>navigate('profiles',{projectId:selectedProjectId,profileId:id})} />}
+      {active === 'profiles' && canProjectWrite && <ProfileManagementWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} sourceProfileId={selectedProfileId || selectedRecordId} onCreated={id=>navigate('profiles',{projectId:selectedProjectId,profileId:id})} onChanged={async () => { await loadDashboard(); await loadActive(); }} />}
       {active === 'channels' && canProjectWrite && <article className="subcard">
         <h3>Канал</h3>
         <TextInput label="ID проекта" value={selectedProjectId} readOnly onChange={() => undefined} />

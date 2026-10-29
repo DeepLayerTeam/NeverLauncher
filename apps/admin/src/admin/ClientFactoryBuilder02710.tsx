@@ -13,13 +13,13 @@ const readableError=(e:unknown)=>e instanceof Error?e.message:String(e);
 const key=(workspace:string)=>`neverlauncher.clientfactory.${workspace}`;
 const targets=['windows/x86_64','windows/x86','linux/x86_64','linux/aarch64','darwin/x86_64','darwin/aarch64'];
 
-export function ClientFactoryBuilder02710({backend,token,workspaceId,minecraft,loader,canBuild}: {
- backend:string;token:string;workspaceId:string;minecraft:string;loader:string;canBuild:boolean;
+export function ClientFactoryBuilder02710({backend,token,workspaceId,minecraft,loader,initialLoaderVersion='',canBuild}: {
+ backend:string;token:string;workspaceId:string;minecraft:string;loader:string;initialLoaderVersion?:string;canBuild:boolean;
 }) {
  const endpoint=useMemo(()=>`${backend.replace(/\/$/,'')}/api/v1/build-workspaces/${encodeURIComponent(workspaceId)}/factory/jobs`,[backend,workspaceId]);
  const [source,setSource]=useState<'version'|'modpack'>('version');
  const [modpack,setModpack]=useState<File|null>(null);
- const [configuration,setConfiguration]=useState<Config>({minecraft,loader:(loader||'vanilla') as Loader,loaderVersion:'',target:'windows/x86_64'});
+ const [configuration,setConfiguration]=useState<Config>({minecraft,loader:(loader||'vanilla') as Loader,loaderVersion:initialLoaderVersion,target:'windows/x86_64'});
  const [jobs,setJobs]=useState<Job[]>([]);
  const [current,setCurrent]=useState<string>('');
  const [detail,setDetail]=useState<Detail|null>(null);

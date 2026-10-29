@@ -41,7 +41,7 @@ func CreateFromSnapshot0225(source ProfileSnapshot, projectID, newID, newName st
 		return Profile{}, errors.New("invalid destination profile name or description length")
 	}
 	p := Profile{ProjectID: projectID, ID: newID, Name: newName, Description: source.Spec.Description,
-		Loader: source.Spec.Loader, Preset: source.Spec.Preset, IsDefault: false}
+		Loader: source.Spec.Loader, MinecraftVersion: source.Spec.MinecraftVersion, LoaderVersion: source.Spec.LoaderVersion, JavaMajor: source.Spec.JavaMajor, Preset: source.Spec.Preset, IsDefault: false}
 	return NormalizeProfileV2(p)
 }
 
@@ -83,6 +83,9 @@ func DiffProfile0225(from, to ProfileSnapshot) (ProfileDifference0225, error) {
 	compare("name", from.Spec.Name, to.Spec.Name)
 	compare("description", from.Spec.Description, to.Spec.Description)
 	compare("loader", from.Spec.Loader, to.Spec.Loader)
+	compare("minecraftVersion", from.Spec.MinecraftVersion, to.Spec.MinecraftVersion)
+	compare("loaderVersion", from.Spec.LoaderVersion, to.Spec.LoaderVersion)
+	compare("javaMajor", from.Spec.JavaMajor, to.Spec.JavaMajor)
 	compare("preset", from.Spec.Preset, to.Spec.Preset)
 	compare("isDefault", from.Spec.IsDefault, to.Spec.IsDefault)
 	out.Equal = len(out.Changes) == 0
