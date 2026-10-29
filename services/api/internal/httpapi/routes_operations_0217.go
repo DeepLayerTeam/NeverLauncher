@@ -118,6 +118,9 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 		if lookup.Release.Status == "published" {
 			return spec, nil, nil, repository.ErrImmutable
 		}
+		if readiness := s.evaluatePublishReadiness0385(ctx, lookup); !readiness.Eligible {
+			return spec, nil, nil, publishBlocked0385{Blockers: readiness.Blockers}
+		}
 		if err = s.verifyManifestSignature(lookup.Release.Manifest); err != nil {
 			return spec, nil, nil, err
 		}
@@ -211,6 +214,11 @@ func (s Server) operationValidate0217(w http.ResponseWriter, r *http.Request) {
 // Operation errors have stable machine codes and recovery advice shared by Admin/CLI.
 func writeOperationError0217(w http.ResponseWriter, err error) {
 	code, status, advice := "validation-failed", http.StatusBadRequest, "Correct the invalid fields and validate again"
+	var refused publishBlocked0385
+	if errors.As(err, &refused) {
+		writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "publish-blocked", "reasonCode": "publish-blocked", "message": err.Error(), "action": "Review blockers, repair package and repeat preview", "blockers": refused.Blockers}})
+		return
+	}
 	switch {
 	case errors.Is(err, repository.ErrNotFound):
 		status = http.StatusNotFound

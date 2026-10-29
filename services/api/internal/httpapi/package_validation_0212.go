@@ -106,8 +106,16 @@ func (s Server) runPackageIntegrityCheck0212(r *http.Request, lookup packageLook
 	}
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
 	filesOK := checksPassed0212(checks)
-	sigOK := s.verifyManifestSignature(lookup.Release.Manifest) == nil
-	compatOK := validateCompatibilityManifest(lookup.Release.Manifest) == nil
+	signatureErr := s.verifyManifestSignature(lookup.Release.Manifest)
+	compatErr := validateCompatibilityManifest(lookup.Release.Manifest)
+	sigOK := signatureErr == nil
+	compatOK := compatErr == nil
+	if signatureErr != nil {
+		checks = append(checks, map[string]any{"id": "manifest.signature", "status": "failed", "reasonCode": "manifest-signature-invalid", "message": signatureErr.Error()})
+	}
+	if compatErr != nil {
+		checks = append(checks, map[string]any{"id": "manifest.compatibility", "status": "failed", "reasonCode": "manifest-compatibility-invalid", "message": compatErr.Error()})
+	}
 	passed := filesOK && sigOK && compatOK
 	result := model.IntegrityCheckResult{ID: fmt.Sprintf("int-%d", time.Now().UTC().UnixNano()), PackageID: lookup.Release.ID, ProjectID: lookup.Release.ProjectID, ManifestDigest: manifestDigest, ArtifactDigest: artifactDigest, SignatureVerified: sigOK, StorageVerified: filesOK, FilesVerified: filesOK, CompatibilityVerified: compatOK, Result: "failed", Checks: checks, CheckedAt: time.Now().UTC()}
 	if passed {
@@ -160,7 +168,11 @@ func (s Server) packageIntegrityCheck0212(w http.ResponseWriter, r *http.Request
 	if result.Result != "passed" {
 		code = http.StatusConflict
 	}
-	writeJSON(w, code, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": lookup.Release.ID, "version": lookup.Release.Version, "status": "integrity-" + result.Result, "validationKind": "integrity", "runtimeExecuted": false, "runtimeStatus": "not-checked", "checks": result.Checks, "result": result}})
+	response := map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": lookup.Release.ID, "version": lookup.Release.Version, "status": "integrity-" + result.Result, "validationKind": "integrity", "runtimeExecuted": false, "runtimeStatus": "not-checked", "checks": result.Checks, "result": result}}
+	if result.Result != "passed" {
+		response["error"] = map[string]any{"code": "integrity-check-failed", "reasonCode": "integrity-check-failed", "message": "integrity check failed; inspect the exact rejected files and manifest", "blockers": fileCheckBlockers0385(result.Checks)}
+	}
+	writeJSON(w, code, response)
 }
 
 func (s Server) packageSmoke(w http.ResponseWriter, r *http.Request) {
@@ -343,7 +355,7 @@ func (s Server) packageValidations0212(w http.ResponseWriter, r *http.Request) {
 			effective["blockedReason"] = fmt.Sprint(coverage.TargetBlockers)
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"integrity": current, "runtime": runtime, "policy": policy, "effectivePolicy": effective}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"integrity": current, "runtime": runtime, "policy": policy, "effectivePolicy": effective, "publishReadiness": s.evaluatePublishReadiness0385(r.Context(), lookup)}})
 }
 
 func (s Server) projectValidationPolicyGet0212(w http.ResponseWriter, r *http.Request) {

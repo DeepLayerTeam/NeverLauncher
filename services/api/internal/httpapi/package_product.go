@@ -355,18 +355,18 @@ func (s Server) packageValidate(w http.ResponseWriter, r *http.Request) {
 	}
 	s.audit(r, s.adminActor(r), "package:validate", lookup.Release.ID)
 	s.packageEvent0206(r, "package.validated", status, lookup.Release)
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": lookup.Release.ID, "status": status, "files": len(lookup.Files), "checks": checks}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "packageId": lookup.Release.ID, "status": status, "files": len(lookup.Files), "checks": checks, "blockers": fileCheckBlockers0385(checks)}})
 }
 
 func (s Server) validatePackageFiles(release model.ReleaseVersion, files []model.FileObject) []map[string]any {
 	checks := make([]map[string]any, 0, len(files)+1)
 	if len(files) == 0 {
-		return []map[string]any{{"id": "files.present", "status": "failed", "message": "package не содержит файлов"}}
+		return []map[string]any{{"id": "files.present", "status": "failed", "reasonCode": "package-files-empty", "message": "package не содержит файлов"}}
 	}
 	for _, file := range files {
 		reader, size, err := s.Storage.Open(release.ProjectID, release.ID, file.Path)
 		if err != nil {
-			checks = append(checks, map[string]any{"id": file.Path, "status": "failed", "message": err.Error()})
+			checks = append(checks, map[string]any{"id": file.Path, "status": "failed", "reasonCode": "file-unavailable", "message": err.Error()})
 			continue
 		}
 		h := sha256.New()
@@ -379,7 +379,7 @@ func (s Server) validatePackageFiles(release model.ReleaseVersion, files []model
 			status = "failed"
 			message = fmt.Sprintf("size/hash mismatch: size=%d expectedSize=%d sha=%s expectedSHA=%s copyErr=%v", size, file.Size, actual, file.SHA256, copyErr)
 		}
-		checks = append(checks, map[string]any{"id": file.Path, "status": status, "message": message, "size": size, "sha256": actual})
+		checks = append(checks, map[string]any{"id": file.Path, "status": status, "reasonCode": map[bool]string{true: "file-integrity-mismatch", false: ""}[status != "ok"], "message": message, "size": size, "sha256": actual})
 	}
 	sort.Slice(checks, func(i, j int) bool { return fmt.Sprint(checks[i]["id"]) < fmt.Sprint(checks[j]["id"]) })
 	return checks
@@ -411,7 +411,7 @@ func (s Server) packageSign(w http.ResponseWriter, r *http.Request) {
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
 	for _, check := range checks {
 		if check["status"] != "ok" {
-			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "package validation failed", "checks": checks}})
+			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "file-validation-failed", "reasonCode": "file-validation-failed", "message": "package validation failed", "checks": checks, "blockers": fileCheckBlockers0385(checks)}})
 			return
 		}
 	}
@@ -481,7 +481,7 @@ func (s Server) packageStage(w http.ResponseWriter, r *http.Request) {
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
 	for _, check := range checks {
 		if check["status"] != "ok" {
-			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "package validation failed", "checks": checks}})
+			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "file-validation-failed", "reasonCode": "file-validation-failed", "message": "package validation failed", "checks": checks, "blockers": fileCheckBlockers0385(checks)}})
 			return
 		}
 	}
@@ -506,11 +506,11 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.validatePublishEvidence0212(r, lookup); err != nil {
-		writeError(w, http.StatusConflict, err.Error())
+		s.writePublishRefusal0385(w, r, lookup, err.Error())
 		return
 	}
 	if err := s.verifyManifestSignature(lookup.Release.Manifest); err != nil {
-		writeError(w, http.StatusConflict, "publish требует криптографически проверенный Ed25519 manifest: "+err.Error())
+		s.writePublishRefusal0385(w, r, lookup, "publish требует криптографически проверенный Ed25519 manifest: "+err.Error())
 		return
 	}
 	if err := validateCompatibilityManifest(lookup.Release.Manifest); err != nil {
@@ -520,7 +520,7 @@ func (s Server) packagePublishProduct(w http.ResponseWriter, r *http.Request) {
 	checks := s.validatePackageFiles(lookup.Release, lookup.Files)
 	for _, check := range checks {
 		if check["status"] != "ok" {
-			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"message": "package validation failed", "checks": checks}})
+			writeJSON(w, http.StatusConflict, map[string]any{"apiVersion": apiContractVersion, "error": map[string]any{"code": "file-validation-failed", "reasonCode": "file-validation-failed", "message": "package validation failed", "checks": checks, "blockers": fileCheckBlockers0385(checks)}})
 			return
 		}
 	}

@@ -115,7 +115,7 @@ export function BuildWorkspacePanel({base,token,projectId,profileId,channel,vers
  const shown=workspace?.files.filter(f=>f.path.toLocaleLowerCase().includes(filter.toLocaleLowerCase()))??[];
  const counts=comparison?diffCounts0384(comparison.items):{};
  return <article className="subcard">
-   <h4>Build Workspace · 0.38.4</h4>
+   <h4>Build Workspace · {__NEVERLAUNCHER_VERSION__}</h4>
    <p className="muted">Каталог или отдельные файлы → SHA-256 → сравнение → выбор stage → validate → проверка материализованного пакета. Публикация и подпись остаются в Release Workspace.</p>
    {!workspace&&<>
      <label className="field">Java major <input type="number" min={8} max={255} disabled={!!profileMinecraftConfigured} value={javaMajor} onChange={e=>setJavaMajor(Number(e.target.value))}/></label>

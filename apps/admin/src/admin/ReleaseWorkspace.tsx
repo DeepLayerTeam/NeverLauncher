@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { prepareOwnerOperation, observeOwnerOperation, readOwnerPending, saveOwnerPending, clearOwnerPending, recoveryStorageKey, type OwnerIntent, type OwnerPending, type OwnerCheck, type ChannelHead, openStagedRollback } from './owner-lifecycle-03513.ts';
 import { auditHref, recoveryAdvice } from './lifecycle.ts';
-import { ReleaseApi, type Draft, type DraftFields, type PackageInfo, type Preview, type ValidationReport } from '../api/release';
+import { ReleaseApi, type Draft, type DraftFields, type PackageInfo, type Preview, type ValidationReport, type PublishBlocker0385 } from '../api/release';
+import { ApiError } from '../api/client';
+import { PublishReadiness0385 } from './PublishReadiness0385';
 import { JobMonitor } from './JobMonitor';
 import { ValidationHistory03412 } from './ValidationHistory03412';
 import { BuildWorkspacePanel } from './BuildWorkspacePanel';
@@ -27,6 +29,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
   const [channelHeadError,setChannelHeadError] = useState('');
   const [packageInfo,setPackageInfo] = useState<PackageInfo|null>(null);
   const [report,setReport] = useState<ValidationReport|null>(null);
+  const [refusal,setRefusal] = useState<PublishBlocker0385[]>([]);
   const [policy,setPolicy] = useState<ValidationReport['policy']|null>(null);
   const [preview,setPreview] = useState<Preview|null>(null);
   const [rollbackPreview,setRollbackPreview] = useState<Preview|null>(null);
@@ -49,13 +52,13 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
   const refreshDrafts = useCallback(async () => { const items = await api.drafts(projectId); setDrafts(items.items ?? []); },[api,projectId]);
   const loadChecks = useCallback(async (id:string) => {
     const [info,checks] = await Promise.all([api.package(id),api.validations(id)]);
-    setPackageInfo(info);setReport(checks);
+    setPackageInfo(info);setReport(checks);setRefusal([]);
   },[api]);
   useEffect(() => {
     let live=true;
     const recovered=readOwnerPending(sessionStorage,recoveryKey,projectId);
     setPending(recovered);setCheck(null);setPlanned(null);
-    setDraft(null);setForm(empty(projectId,initialProfileId,initialChannel||'stable'));setDrafts([]);setStep('project');setPackageInfo(null);setReport(null);setPreview(null);setRollbackPreview(null);setMonitorId(recovered?.jobId||'');setDirty(false);
+    setDraft(null);setForm(empty(projectId,initialProfileId,initialChannel||'stable'));setDrafts([]);setStep('project');setPackageInfo(null);setReport(null);setRefusal([]);setPreview(null);setRollbackPreview(null);setMonitorId(recovered?.jobId||'');setDirty(false);
     if (!projectId || !canPrepare) return;
     Promise.all([api.drafts(projectId),api.profiles(projectId),api.releases(projectId),api.policy(projectId)])
       .then(([ds,ps,vs,p])=>{if(live){setDrafts(ds.items??[]);setProfiles(ps.items??[]);setReleases(vs.items??[]);setPolicy(p);
@@ -74,9 +77,9 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
   }
   async function perform<T>(action:()=>Promise<T>,success:string):Promise<T|undefined> {
     if (operationLock.current || busy) return;
-    operationLock.current=true;setBusy(true);setError('');setNotice('');
+    operationLock.current=true;setBusy(true);setError('');setNotice('');setRefusal([]);
     try { const result=await action();setNotice(success);return result; }
-    catch(e){setError(printable(e));return undefined;}
+    catch(e){if(e instanceof ApiError && e.blockers.length)setRefusal(e.blockers);setError(printable(e));return undefined;}
     finally{operationLock.current=false;setBusy(false)}
   }
   function loadDraft(d:Draft){
@@ -85,7 +88,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
     setStep(steps.some(s=>s.id===d.step)?d.step as Step:'project');setMonitorId(pending?.jobId||d.jobId);
     if(d.packageId && !d.jobId && !pending?.jobId)void api.linkedJob(d.id).then(job=>setMonitorId(job.id)).catch(()=>undefined);
     setDirty(false);setPreview(null);setRollbackPreview(null);setPlanned(null);
-    setPackageInfo(null);setReport(null);setTargetVersion('');
+    setPackageInfo(null);setReport(null);setRefusal([]);setTargetVersion('');
     if(d.packageId) void loadChecks(d.packageId).catch(e=>setError(printable(e)));
   }
   async function save(nextStep?:Step): Promise<Draft|undefined> {
@@ -121,7 +124,16 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
   async function packageAction(action:'validate'|'sign'|'stage'|'integrity-check'){
     if(!form.packageId)return;
     if(action==='sign' && catalogBlocking){setError('Необходимо сохранить изменения каталога и пройти проверку Backend до подписи.');return}
-    await perform(async()=>{const result=await api.packageAction<Record<string,unknown>>(form.packageId,action);await loadChecks(form.packageId);return result;},`${action}: ответ Backend получен.`);
+    setPlanned(null);setPreview(null);setRollbackPreview(null);
+    await perform(async()=>{
+      const result=await api.packageAction<{status?:string;checks?:Array<{id:string;status:string;reasonCode?:string;message:string}>;blockers?:PublishBlocker0385[]}>(form.packageId,action);
+      await loadChecks(form.packageId);
+      if(action==='validate' && result.status!=='valid') {
+        const blockers=result.blockers??result.checks?.filter(x=>x.status!=='ok').map(x=>({reasonCode:x.reasonCode||'file-validation-failed',resource:x.id,message:x.message,action:'Исправьте файл и повторите Validate.'}))??[];
+        throw new ApiError(409,'Validate завершился отказом. Исправьте перечисленные ошибки.', 'file-validation-failed',blockers);
+      }
+      return result;
+    },`${action}: проверка Backend успешно завершена.`);
   }
   async function submitEvidence(file:File){
     if(!form.packageId)return;
@@ -296,6 +308,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
       <p className="muted">Legacy smoke-test и загружаемый runtime evidence v1 не дают допуска в stable. Для stable требуется отдельная доверенная ValidationEvidence v4 от независимого аттестатора с полным покрытием targets.</p>
       {form.channel.toLowerCase() !== 'stable' && <label className="field">Signed runtime evidence (JSON-файл от CI/runtime-agent)<input disabled={busy||!canPrepare||!form.packageId||!isPassed(report)} type="file" accept="application/json,.json" onChange={(e: React.ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(file)void submitEvidence(file);e.target.value='';}} /></label>}
       {report?.runtime?.length ? <ul>{report.runtime.map((r,i)=><li key={i}>{r.targetId}: {r.result} (actual client: {String(r.actualClient)}, server join: {String(r.serverJoin)})</li>)}</ul>:null}
+      {form.packageId && <PublishReadiness0385 readiness={report?.publishReadiness} refusal={refusal} disabled={busy} refresh={()=>void loadChecks(form.packageId).catch(e=>setError(printable(e)))}/>}
       {form.packageId && <ValidationHistory03412 api={api} packageId={form.packageId}/>}
       <button disabled={busy||!draft} onClick={()=>void save('channel')}>Перейти к публикации</button>
     </article>}
@@ -305,9 +318,10 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
       {form.channel.toLowerCase() === 'stable' && <section aria-label="Stable runtime certification"><p><strong>Production Runtime Gate V11:</strong> {report?.effectivePolicy?.publishEligible?'Все обязательные targets подтверждены':'Публикация заблокирована до подтверждения всех обязательных targets'} · {report?.effectivePolicy?.verifiedTargets??0}/{report?.effectivePolicy?.requiredTargets??0} · policy <code>{report?.effectivePolicy?.matrixSha256||'не настроена'}</code></p>
        {Object.entries(report?.effectivePolicy?.targetBlockers??{}).length>0 && <ul>{Object.entries(report?.effectivePolicy?.targetBlockers??{}).map(([target,reason])=><li key={target}><code>{target}</code>: {reason}</li>)}</ul>}
        </section>}
+      {form.packageId && <PublishReadiness0385 readiness={report?.publishReadiness} refusal={refusal} disabled={busy} refresh={()=>void loadChecks(form.packageId).catch(e=>setError(printable(e)))}/>}
       {form.packageId && <ValidationHistory03412 api={api} packageId={form.packageId}/>}
       {report?.effectivePolicy?.blockedReason && <p role="alert">{report.effectivePolicy.blockedReason}</p>}
-      <div className="buttonRow"><button disabled={busy||!!pending||!canPublish||!form.packageId||dirty} onClick={()=>void validate('package-publish')}>Предпросмотр публикации</button><button disabled={busy||!!pending||!canPublish||!planned||planned.pending.intent.kind!=='package-publish'||!preview?.valid||dirty||(form.channel.toLowerCase()==='stable'&&!report?.effectivePolicy?.publishEligible)} onClick={()=>void execute('package-publish')}>Опубликовать</button></div>
+      <div className="buttonRow"><button disabled={busy||!!pending||!canPublish||!form.packageId||dirty} onClick={()=>void validate('package-publish')}>Предпросмотр публикации</button><button disabled={busy||!!pending||!canPublish||!planned||planned.pending.intent.kind!=='package-publish'||!preview?.valid||dirty||report?.publishReadiness?.eligible!==true||(form.channel.toLowerCase()==='stable'&&!report?.effectivePolicy?.publishEligible)} onClick={()=>void execute('package-publish')}>Опубликовать</button></div>
       {preview && <div className="releaseEffect" role="status"><strong>Серверный эффект публикации</strong>{Object.entries(preview.effect).map(([key,value])=><p key={key}>{key}: {String(value)}</p>)}</div>}
       <hr/><h3>Rollback опубликованного релиза</h3>
       <label className="field">Целевая опубликованная версия<select value={targetVersion} onChange={(e: React.ChangeEvent<HTMLSelectElement>)=>{setTargetVersion(e.target.value);setRollbackPreview(null);setPlanned(null);}}><option value="">Выберите версию</option>{rollbackTargets.map(x=><option key={x.id} value={x.version}>{x.version}</option>)}</select></label>

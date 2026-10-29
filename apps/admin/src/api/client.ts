@@ -1,11 +1,11 @@
 /** HTTP contract shared by Admin screens. Authorization decisions remain server-side. */
-export interface ApiFailure { code?: number | string; message?: string; reasonCode?: string }
+export interface ApiFailure { code?: number | string; message?: string; reasonCode?: string; blockers?: Array<{reasonCode:string;resource:string;message:string;action:string}> }
 export type ApiEnvelope<T> = T | { data: T; error?: ApiFailure };
 export type Collection<T> = { items: T[]; count?: number; total?: number; nextCursor?: string };
 
 export class ApiError extends Error {
-  readonly status: number; readonly reasonCode?: string;
-  constructor(status: number, message: string, reasonCode?: string) { super(message); this.name = 'ApiError'; this.status = status; this.reasonCode = reasonCode; }
+  readonly status: number; readonly reasonCode?: string; readonly blockers: NonNullable<ApiFailure['blockers']>;
+  constructor(status: number, message: string, reasonCode?: string, blockers: NonNullable<ApiFailure['blockers']> = []) { super(message); this.name = 'ApiError'; this.status = status; this.reasonCode = reasonCode; this.blockers = blockers; }
 }
 
 /** A mutation may have reached Backend even if its HTTP response was lost.
@@ -41,7 +41,7 @@ export async function requestJSON<T>(backendUrl: string, path: string, token?: s
   }
   if (!response.ok) {
     const failure = (payload && typeof payload === 'object' && 'error' in payload ? (payload as { error: ApiFailure }).error : undefined);
-    throw new ApiError(response.status, failure?.message || `${response.status} ${response.statusText}`, failure?.reasonCode);
+    throw new ApiError(response.status, failure?.message || `${response.status} ${response.statusText}`, failure?.reasonCode, Array.isArray(failure?.blockers) ? failure.blockers : []);
   }
   if (payload && typeof payload === 'object' && 'data' in payload) return (payload as { data: T }).data;
   return payload as T;
