@@ -91,6 +91,21 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 			return fmt.Errorf("refusing GA release signature: %w", err)
 		}
 	}
+	if rehearsalRequired0365(bundleVersion) {
+		manifestRaw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
+		if err != nil {
+			return err
+		}
+		var manifest struct {
+			SourceCommit string `json:"sourceCommit"`
+		}
+		if err := json.Unmarshal(manifestRaw, &manifest); err != nil {
+			return err
+		}
+		if err := verifyRehearsal0365(dir, bundleVersion, manifest.SourceCommit); err != nil {
+			return fmt.Errorf("refusing GA release signature without valid production rehearsal: %w", err)
+		}
+	}
 	if bundleVersion, err := releaseBundleVersion(dir); err == nil && releaseVerificationV2Required0158(bundleVersion) {
 		return signReleaseBundleV20158(dir, privateKey)
 	}

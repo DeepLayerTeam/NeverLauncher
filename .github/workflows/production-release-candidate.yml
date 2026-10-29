@@ -703,6 +703,27 @@ jobs:
           NEVERLAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/official-minecraft-ga-0270
           NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
         run: bash scripts/release/build-release.sh
+      - name: Require current source production package rehearsal and publication dry-run
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(cat VERSION)"
+          if [[ "$(python3 scripts/release/release_policy.py requires-rehearsal --version "$VERSION")" == '1' ]]; then
+            DIR="dist/release-${VERSION}"
+            test -s "$DIR/RELEASE_REHEARSAL_0365.json"
+            test -s "dist/.release-${VERSION}/PUBLICATION_DRY_RUN_0365.json"
+            jq -e --arg version "$VERSION" --arg commit "$GITHUB_SHA" \
+              '.schemaVersion == "neverlauncher.release.publication-dry-run.v1" and .status == "passed" and .published == false and .version == $version and .commit == $commit and .runId == env.GITHUB_RUN_ID and .runAttempt == env.GITHUB_RUN_ATTEMPT and .filesCopied > 20' \
+              "dist/.release-${VERSION}/PUBLICATION_DRY_RUN_0365.json" >/dev/null
+          fi
+      - name: Upload independent publication dry-run result
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-publication-dry-run-${{ github.sha }}
+          path: dist/.release-*/PUBLICATION_DRY_RUN_0365.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Require exact-byte six-target signed approval inside signed release
         shell: bash
         run: |

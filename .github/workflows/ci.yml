@@ -1228,13 +1228,14 @@ jobs:
           python3 scripts/release/test_certification_run_0362.py
           python3 -m unittest discover -s scripts/ci -p 'test_*.py' -v
           python3 scripts/release/test_fetch_exact_certifications.py
+          python3 -m unittest discover -s scripts/release -p 'test_rehearsal_0365.py' -v
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: cli/go.sum
       - name: Verify CLI cannot sign 0.36.1 or later without new operator approval
         working-directory: cli
-        run: go test ./cmd/neverlauncher -run '^TestGA0361' -count=1 -timeout=2m
+        run: go test ./cmd/neverlauncher -run '^(TestGA0361|TestRehearsal0365)' -count=1 -timeout=2m
 
   required-ci:
     name: REQUIRED CI — all jobs SUCCESS for exact commit

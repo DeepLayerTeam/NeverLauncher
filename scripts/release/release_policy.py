@@ -71,14 +71,21 @@ def legacy_profiles_supported(version: str) -> bool:
     return number >= (0, 23, 0)
 
 
+def requires_rehearsal(version: str) -> bool:
+    number, prerelease = parsed(version)
+    return prerelease is None and number >= (0, 36, 5)
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('action', choices=('ga-mode', 'rc-extended', 'rc-supported'))
+    p.add_argument('action', choices=('ga-mode', 'rc-extended', 'rc-supported', 'requires-rehearsal'))
     p.add_argument('--version', required=True)
     args = p.parse_args()
     try:
         result = policy(args.version).ga_mode if args.action == 'ga-mode' else ('1' if
-            (rc_extended(args.version) if args.action == 'rc-extended' else rc_supported(args.version)) else '0')
+            (rc_extended(args.version) if args.action == 'rc-extended' else
+             rc_supported(args.version) if args.action == 'rc-supported' else
+             requires_rehearsal(args.version)) else '0')
     except ValueError as exc:
         p.error(str(exc))
     print(result)

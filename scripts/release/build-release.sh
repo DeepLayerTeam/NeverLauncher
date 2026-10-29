@@ -783,6 +783,17 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
   cp -- "${GA_TARGET_EVIDENCE_DIR}/approval.sig" "${OUT_DIR}/${GA_SIGNATURE}"
 fi
 
+# 0.36.5+: inspect six actual signed/native packages and their inner payload
+# against independently approved exact bytes BEFORE calculating SHA256SUMS.
+# This receipt is included in the signed release boundary, never added later.
+if python3 "${ROOT_DIR}/scripts/release/release_policy.py" requires-rehearsal --version "${VERSION}" | grep -qx '1'; then
+  log "Репетиция конечной упаковки и проверка подписанных точных байтов"
+  python3 "${ROOT_DIR}/scripts/release/rehearsal_0365.py" certify \
+    --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \
+    --trusted-key "${GA_TARGET_TRUSTED_KEY}" --commit "${SOURCE_COMMIT}" \
+    --version "${VERSION}" --output "${OUT_DIR}/RELEASE_REHEARSAL_0365.json"
+fi
+
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
 release_build_args=(release build --version "${VERSION}" --out "${OUT_DIR}" --source-root "${ROOT_DIR}" --trust-policy "${TRUST_POLICY}" --public-base-url "${PUBLIC_RELEASE_BASE_URL}")
 if [[ -n "${COMPATIBILITY_MATRIX}" ]]; then
@@ -848,6 +859,16 @@ fi
 if [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]]; then
   log "Publish-check Minecraft Compatibility + Device Trust Release + cross-platform Guard CI certification"
   "${RELEASE_CLI}" release publish-check "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
+  if python3 "${ROOT_DIR}/scripts/release/release_policy.py" requires-rehearsal --version "${VERSION}" | grep -qx '1'; then
+    log "Публикационный dry-run: физическое копирование релиза, повторная проверка подписи и publish-check"
+    python3 "${ROOT_DIR}/scripts/release/rehearsal_0365.py" dry-run \
+      --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \
+      --trusted-key "${GA_TARGET_TRUSTED_KEY}" --commit "${SOURCE_COMMIT}" \
+      --version "${VERSION}" --cli "${RELEASE_CLI}" --public-key "${PUBLIC_KEY}" \
+      --trust-policy "${TRUST_POLICY}" --trust-state "${TRUST_STATE}" \
+      --stage "${WORK_DIR}/publication-dry-run" \
+      --output "${WORK_DIR}/PUBLICATION_DRY_RUN_0365.json"
+  fi
 elif [[ -n "${COMPATIBILITY_MATRIX}" || -n "${DEVICE_TRUST_MATRIX}" || -n "${GUARD_CI_MATRIX}" ]]; then
   log "Передан неполный certification set: официальный publish-check ${VERSION} требует Compatibility, Device Trust и Guard CI evidence"
 else

@@ -83,6 +83,21 @@ func handleRelease(args []string) error {
 			if err != nil {
 				return err
 			}
+			if rehearsalRequired0365(manifestVersion) {
+				raw, err := os.ReadFile(filepath.Join(args[1], "RELEASE_MANIFEST.json"))
+				if err != nil {
+					return err
+				}
+				var manifest struct {
+					SourceCommit string `json:"sourceCommit"`
+				}
+				if err := json.Unmarshal(raw, &manifest); err != nil {
+					return err
+				}
+				if err := verifyRehearsal0365(args[1], manifestVersion, manifest.SourceCommit); err != nil {
+					return fmt.Errorf("release rehearsal gate: %w", err)
+				}
+			}
 			if compatibilityCertificationRequired(manifestVersion) {
 				if err := verifyCompatibilityCertificationInBundle(args[1], manifestVersion); err != nil {
 					return fmt.Errorf("Minecraft compatibility certification: %w", err)
@@ -1259,6 +1274,9 @@ func releaseArtifacts(ver string) []string {
 	}
 	if gaTargetsRequired0361(ver) {
 		artifacts = append(artifacts, "GA_VERIFIED_TARGETS.json", "GA_TARGET_APPROVAL.json", "GA_TARGET_APPROVAL.sig")
+	}
+	if rehearsalRequired0365(ver) {
+		artifacts = append(artifacts, rehearsalReceipt0365)
 	}
 	if linuxProductionRequired0153(ver) {
 		artifacts = append(artifacts, linuxProductionArtifacts0153(ver)...)
