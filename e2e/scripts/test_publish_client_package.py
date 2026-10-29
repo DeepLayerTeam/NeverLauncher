@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -145,6 +146,37 @@ class UploadRecoveryTests(unittest.TestCase):
         self.assertEqual(client._request("POST", "/api/v1/admin/projects/p/versions/v/files", b"body", {})[0], 201)
         self.assertIsNone(client.conn)
         conn.close.assert_called_once()
+
+
+class WebAuthnReplayProtectionTests(unittest.TestCase):
+    def test_sign_count_survives_second_production_publish_process(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            counter = Path(tmp) / "passkey-counter.json"
+            first = module.APIClient("http://127.0.0.1:8080", "first")
+            first.use_passkey_counter_file(counter)
+            first.passkey_sign_count = 4
+            first.persist_passkey_counter()
+            second = module.APIClient("http://127.0.0.1:8080", "second")
+            second.use_passkey_counter_file(counter)
+            self.assertEqual(second.passkey_sign_count, 4)
+            with self.assertRaisesRegex(RuntimeError, "monotonically"):
+                second.passkey_step_up(Path(tmp)/"helper", Path(tmp)/"state", sign_count=3)
+            second.passkey_sign_count = 5
+            second.persist_passkey_counter()
+            self.assertEqual(module.APIClient("http://127.0.0.1:8080", "third").passkey_sign_count, 0)
+            self.assertEqual(json.loads(counter.read_text())["signCount"], 5)
+
+    def test_corrupt_or_symlinked_counter_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            counter = Path(tmp) / "passkey-counter.json"
+            counter.write_text('{"signCount":-1}')
+            with self.assertRaisesRegex(RuntimeError, "invalid saved"):
+                module.APIClient("http://127.0.0.1:8080", "token").use_passkey_counter_file(counter)
+            counter.write_text('{"signCount":1}')
+            link = Path(tmp) / "linked-counter.json"
+            link.symlink_to(counter.name)
+            with self.assertRaisesRegex(RuntimeError, "symlink"):
+                module.APIClient("http://127.0.0.1:8080", "token").use_passkey_counter_file(link)
 
 
 class PasskeyStepUpTests(unittest.TestCase):

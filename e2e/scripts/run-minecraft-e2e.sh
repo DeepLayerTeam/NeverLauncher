@@ -753,8 +753,12 @@ python3 "$ROOT/e2e/scripts/publish-client-package.py" \
   --quick-play "127.0.0.1:25571" \
   --webauthn-helper "$WEBAUTHN" \
   --webauthn-state "$PASSKEY_STATE" \
+  --passkey-counter-file "$RUNTIME_DIR/publish-passkey-sign-count.json" \
+  --refreshed-token-output "$RUNTIME_DIR/auth-token-after-base.private" \
   --output "$RUNTIME_DIR/published-client-package.json" \
   > "$RUNTIME_DIR/published-client-package.stdout.json"
+ACCESS_TOKEN="$(cat "$RUNTIME_DIR/auth-token-after-base.private")"
+rm -f "$RUNTIME_DIR/auth-token-after-base.private"
 MANIFEST_URL="$(jq -er '.manifestUrl' "$RUNTIME_DIR/published-client-package.json")"
 curl -fsS "$MANIFEST_URL" > "$RUNTIME_DIR/manifest.json"
 jq -e --arg key "$PINNED_PUBLIC_KEY" --arg version "$RELEASE_VERSION" --arg mc "$MINECRAFT_VERSION" --arg loader "$LOADER" --arg resolved "$RESOLVED_LOADER_VERSION" \
@@ -885,6 +889,99 @@ jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | 
 jq -e '.timedOut == true or .success == true' "$RUNTIME_DIR/runtime-launch-minecraft.json" >/dev/null
 wait_log paper "neverlauncher.join.allowed username=$PLAYER_USERNAME"
 wait_log paper "$PLAYER_USERNAME joined the game"
+
+# Since 0.36.4 the real player cycle must include a second, distinct signed
+# server release AND actual Go transactional update/rollback + JVM joins.
+# Other compatibility runs keep their own smaller scope; the full CI E2E
+# cannot mark itself passed without this path.
+if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head -1)" == "0.36.4" ]]; then
+  printf '[e2e] execute genuine 0.36.4 production client lifecycle on Mojang files\n'
+  cycle_args=(--root "$ROOT" --work "$RUNTIME_DIR" --package "$CLIENT_PACKAGE" --cli "$RUNTIME_DIR/nl" --version "$VERSION" --profile "$PROFILE_ID")
+  python3 "$ROOT/e2e/scripts/game_cycle_0364.py" prepare "${cycle_args[@]}" \
+    --source "$RUNTIME_DIR/materialized-client" --release "$RELEASE_VERSION"
+  python3 "$ROOT/e2e/scripts/publish-client-package.py" \
+    --api "$API" --token "$ACCESS_TOKEN" \
+    --package "$RUNTIME_DIR/cycle-package-update.json" \
+    --client-dir "$RUNTIME_DIR/materialized-client" \
+    --quick-play "127.0.0.1:25571" \
+    --webauthn-helper "$WEBAUTHN" --webauthn-state "$PASSKEY_STATE" \
+    --passkey-counter-file "$RUNTIME_DIR/publish-passkey-sign-count.json" \
+    --refreshed-token-output "$RUNTIME_DIR/auth-token-after-update.private" \
+    --output "$RUNTIME_DIR/cycle-published-update.json" \
+    > "$RUNTIME_DIR/cycle-published-update.stdout.json"
+  ACCESS_TOKEN="$(cat "$RUNTIME_DIR/auth-token-after-update.private")"
+  rm -f "$RUNTIME_DIR/auth-token-after-update.private"
+  UPDATE_URL="$(jq -er '.manifestUrl' "$RUNTIME_DIR/cycle-published-update.json")"
+  curl -fsS "$UPDATE_URL" > "$RUNTIME_DIR/cycle-manifest-update.json"
+  jq -e --arg version "${RELEASE_VERSION}-update" --arg key "$PINNED_PUBLIC_KEY" \
+    '.version == $version and .signature.algorithm == "Ed25519" and .signature.publicKey == $key' \
+    "$RUNTIME_DIR/cycle-manifest-update.json" >/dev/null
+  (
+    cd "$ROOT"
+    cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- verify \
+      --manifest "$RUNTIME_DIR/cycle-manifest-update.json" \
+      --pinned-public-key "$PINNED_PUBLIC_KEY" > "$RUNTIME_DIR/cycle-runtime-verify-update.json"
+  )
+  jq -e '.status == "ready" and .signature.valid == true' "$RUNTIME_DIR/cycle-runtime-verify-update.json" >/dev/null
+  # These preferences are written outside the managed package by the player;
+  # the transactional rollback must leave them intact.
+  cp "$RUNTIME_DIR/client/options.txt" "$RUNTIME_DIR/cycle-client/options.txt"
+  cycle_join_counts() {
+    local kind="$1" log
+    log="$(compose logs --no-color paper 2>&1)"
+    if [[ "$kind" == allowed ]]; then
+      grep -Fc "neverlauncher.join.allowed username=$PLAYER_USERNAME" <<< "$log" || true
+    else
+      grep -Fc "$PLAYER_USERNAME joined the game" <<< "$log" || true
+    fi
+  }
+  cycle_launch_and_join() {
+    local stage="$1" manifest="$2" before_allowed before_joined after_allowed after_joined
+    before_allowed="$(cycle_join_counts allowed)"
+    before_joined="$(cycle_join_counts joined)"
+    json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$(build_join_body paper-e2e-p3)" \
+      > "$RUNTIME_DIR/cycle-ticket-${stage}.json"
+    jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | startswith("jt_"))' \
+      "$RUNTIME_DIR/cycle-ticket-${stage}.json" >/dev/null
+    (
+      cd "$ROOT"
+      export LIBGL_ALWAYS_SOFTWARE=1
+      export NEVERLAUNCHER_RESOLUTION_WIDTH=854
+      export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
+      xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
+        cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- launch \
+          --manifest "$manifest" --pinned-public-key "$PINNED_PUBLIC_KEY" \
+          --root "$RUNTIME_DIR/cycle-client" --java "$JAVA_BIN" \
+          --username "$PLAYER_USERNAME" \
+          --max-runtime-seconds "${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-90}" \
+          > "$RUNTIME_DIR/cycle-runtime-launch-${stage}.json"
+    )
+    jq -e '.success == true or .timedOut == true' "$RUNTIME_DIR/cycle-runtime-launch-${stage}.json" >/dev/null
+    test -s "$RUNTIME_DIR/cycle-client/logs/latest.log" || {
+      echo "[e2e] actual Minecraft JVM latest.log missing after $stage" >&2; exit 2;
+    }
+    cp "$RUNTIME_DIR/cycle-client/logs/latest.log" "$RUNTIME_DIR/cycle-game-${stage}.log"
+    compose logs --no-color paper > "$RUNTIME_DIR/cycle-join-${stage}.log" 2>&1
+    after_allowed="$(cycle_join_counts allowed)"
+    after_joined="$(cycle_join_counts joined)"
+    (( after_allowed > before_allowed && after_joined > before_joined )) || {
+      echo "[e2e] no new genuine ServerBridge/Paper JVM join after $stage" >&2
+      exit 2
+    }
+    jq -n --argjson a "$before_allowed" --argjson b "$after_allowed" \
+      --argjson c "$before_joined" --argjson d "$after_joined" \
+      '{allowedBefore:$a,allowedAfter:$b,joinedBefore:$c,joinedAfter:$d}' \
+      > "$RUNTIME_DIR/cycle-join-${stage}.json"
+  }
+  cycle_launch_and_join update "$RUNTIME_DIR/cycle-manifest-update.json"
+  python3 "$ROOT/e2e/scripts/game_cycle_0364.py" rollback "${cycle_args[@]}"
+  cycle_launch_and_join rollback "$RUNTIME_DIR/manifest.json"
+  python3 "$ROOT/e2e/scripts/game_cycle_0364.py" finalize \
+    --root "$ROOT" --work "$RUNTIME_DIR" --version "$VERSION" \
+    --profile "$PROFILE_ID" --player "$PLAYER_USERNAME" \
+    --java "$JAVA_BIN" --runtime "$ROOT/runtime/neverruntime/target/debug/neverruntime" \
+    --bridge "$ROOT/artifacts/plugins/neverlauncher-paper-bridge-${VERSION}.jar"
+fi
 
 printf '[e2e] revoke launcher session and verify subsequent joins are denied\n'
 json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" '{"serverId":"paper-e2e-p3","reason":"e2e-revoke"}' > "$RUNTIME_DIR/revoke-paper-real-client.json"
@@ -1056,6 +1153,16 @@ jq -n \
   --arg loaderNative "$LOADER_NATIVE_HEALTH" \
   '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed",loaderNativeE2E:(if $loader == "vanilla" then "not-applicable" else "passed" end),loaderResolution:{lockSha256:$resolutionLockSha256,reproducibilitySha256:$resolutionReproSha256,sourceSha256:$resolutionSourceSha256,pinned:($loader != "vanilla")}},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge,loaderNative:$loaderNative},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,loaderNativeServer:($loader == "vanilla" or $loaderNative == "healthy"),loaderNativeClientJoin:($loader == "vanilla" or $loaderNative == "healthy"),loaderVersionMatched:($loader == "vanilla" or $loaderNative == "healthy"),bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true,foliaPinnedBuildDependency:true,bytesocksPinnedBuildDependency:true},evidence:(["folia-runtime.json","spark-paper-build.json","bytesocks-build.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"] + (if $loader == "vanilla" then [] else ["loader-native-server.json","loader-native-client.json","loader-native-server.log","loader-native-server-artifacts.txt","loader-native-server-process.txt","health-loader-native.json"] end))}' \
   > "$RUNTIME_DIR/result.json"
+if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head -1)" == "0.36.4" ]]; then
+  jq -e --arg version "$VERSION" --arg sha "$GITHUB_SHA" \
+    '.status == "passed" and .version == $version and .sourceCommit == $sha and
+     .checks.productionGoTransactionalUpdate == true and
+     .checks.updateMinecraftJVMJoin == true and .checks.productionGoTransactionalRollback == true and
+     .checks.rollbackMinecraftJVMJoin == true' "$RUNTIME_DIR/game-cycle-0364-result.json" >/dev/null
+  jq -c '.checks.realGameUpdateRollback=true | .evidence += ["game-cycle-0364-result.json"]' \
+    "$RUNTIME_DIR/result.json" > "$RUNTIME_DIR/result-0364-tmp.json"
+  mv "$RUNTIME_DIR/result-0364-tmp.json" "$RUNTIME_DIR/result.json"
+fi
 if [[ "$MODE" == "full" && "$(printf '%s\n' '0.29.0' "$VERSION" | sort -V | head -1)" == "0.29.0" ]]; then
   python3 "$ROOT/scripts/ga/verify_server_control_0290.py" \
     --e2e-dir "$RUNTIME_DIR" --version "$VERSION" --source-commit "${GITHUB_SHA:-}"

@@ -959,6 +959,11 @@ jobs:
           NEVERLAUNCHER_DEVICE_TRUST_COMMIT: ${{ github.sha }}
           NEVERLAUNCHER_DEVICE_TRUST_RUN_ID: ${{ github.run_id }}
         run: bash e2e/scripts/run-device-trust-e2e.sh
+      - name: Test fail-closed real-game lifecycle evidence and publisher counters
+        run: |
+          python3 -m unittest discover -s e2e/scripts -p 'test_game_cycle_0364.py' -v
+          python3 -m unittest discover -s e2e/scripts -p 'test_publish_client_package.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_verify_game_cycle_0364.py' -v
       - name: Materialize -> publish -> sync -> launch actual Minecraft -> join -> revoke -> deny
         run: bash e2e/scripts/run-minecraft-e2e.sh
       - name: Require real Paper world backup/restore evidence for 0.29.0
@@ -974,6 +979,12 @@ jobs:
           for service in velocity bungeecord waterfall spigot paper purpur folia fabric forge neoforge; do
             jq -e '.Status == "healthy" and .FailingStreak == 0 and (.Log | length) > 0 and .Log[-1].ExitCode == 0' "e2e/runtime/health-${service}.json" >/dev/null
           done
+      - name: Require independent real-Minecraft update and rollback verification
+        run: |
+          python3 scripts/ga/verify_game_cycle_0364.py \
+            --e2e-dir e2e/runtime --version "$(cat VERSION)" \
+            --source-commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
       - name: Upload E2E evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -989,6 +1000,10 @@ jobs:
             e2e/runtime/runtime-verify.json
             e2e/runtime/runtime-sync.json
             e2e/runtime/runtime-launch-minecraft.json
+            e2e/runtime/game-cycle-0364-*.json
+            e2e/runtime/cycle-*.json
+            e2e/runtime/cycle-join-*.log
+            e2e/runtime/cycle-game-*.log
             e2e/runtime/health-*.json
             e2e/runtime/folia-runtime.json
             e2e/runtime/spark-paper-build.json

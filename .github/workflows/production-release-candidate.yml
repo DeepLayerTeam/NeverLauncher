@@ -79,6 +79,10 @@ jobs:
           python3 scripts/ga/verify_server_control_0290.py \
             --e2e-dir real-minecraft-e2e/runtime \
             --version "$(cat VERSION)" --source-commit "$GITHUB_SHA"
+          python3 scripts/ga/verify_game_cycle_0364.py \
+            --e2e-dir real-minecraft-e2e/runtime \
+            --version "$(cat VERSION)" --source-commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
 
   windows-production-signed:
     name: Authenticode Windows x64 + ARM64 production delivery

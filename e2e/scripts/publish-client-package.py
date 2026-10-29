@@ -43,7 +43,37 @@ class APIClient:
         self.passkey_helper: Path | None = None
         self.passkey_state: Path | None = None
         self.passkey_sign_count = 0
+        self.passkey_counter_file: Path | None = None
         self.passkey_refreshed_at = 0.0
+
+    def use_passkey_counter_file(self, path: Path) -> None:
+        """Persist test WebAuthn signCount across real publish invocations.
+
+        The authenticator credential is shared by consecutive E2E releases. A
+        reset to 1 on the next process is a replay, not a fresh step-up.
+        """
+        if path.is_symlink():
+            raise RuntimeError("refusing symlinked passkey counter file")
+        if path.exists():
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            count = payload.get("signCount") if isinstance(payload, dict) else None
+            if type(count) is not int or not 0 <= count < 2**32:
+                raise RuntimeError("invalid saved WebAuthn signCount")
+            self.passkey_sign_count = count
+        self.passkey_counter_file = path
+
+    def persist_passkey_counter(self) -> None:
+        if getattr(self, "passkey_counter_file", None) is None:
+            return
+        path = self.passkey_counter_file
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(path.name + ".tmp")
+        with open(tmp, "x", encoding="utf-8") as f:
+            json.dump({"signCount": self.passkey_sign_count}, f)
+            f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
 
     def _connect(self) -> http.client.HTTPConnection:
         if self.conn is None:
@@ -194,6 +224,7 @@ class APIClient:
             raise RuntimeError("passkey step-up did not produce phishing-resistant access token")
         self.token = token
         self.passkey_sign_count = sign_count
+        self.persist_passkey_counter()
         self.passkey_refreshed_at = time.monotonic()
 
     def upload(self, path: str, local_file: Path, expected_sha256: str, expected_size: int, executable: bool, target_os: list[str]) -> object:
@@ -265,6 +296,8 @@ def main() -> int:
     parser.add_argument("--quick-play", default="")
     parser.add_argument("--webauthn-helper", type=Path)
     parser.add_argument("--webauthn-state", type=Path)
+    parser.add_argument("--passkey-counter-file", type=Path)
+    parser.add_argument("--refreshed-token-output", type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
 
@@ -289,6 +322,8 @@ def main() -> int:
     channel = str(manifest["channel"])
     version = str(manifest["version"])
     client = APIClient(args.api, args.token)
+    if args.passkey_counter_file:
+        client.use_passkey_counter_file(args.passkey_counter_file)
 
     created = client.json("POST", f"/api/v1/admin/projects/{quote(project, safe='')}/versions", {
         "profileId": profile,
@@ -362,6 +397,19 @@ def main() -> int:
         "manifestUrl": manifest_url,
         "release": published,
     }
+    if args.refreshed_token_output:
+        # The E2E orchestrator must not reuse a token that expired during a
+        # multi-GB upload. Never put the renewed bearer in JSON certificates.
+        token_path = args.refreshed_token_output
+        token_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        fd = os.open(token_path, flags, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as private:
+            private.write(client.token + "\n")
+            private.flush()
+            os.fsync(private.fileno())
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n")
     print(json.dumps(result, ensure_ascii=False))
