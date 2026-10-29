@@ -310,7 +310,7 @@ export function AdminApp() {
     // A logout must not leave pending player/server mutations for another
     // principal using the same browser profile.
     for (const key of Object.keys(sessionStorage)) {
-      if (key.startsWith('neverlauncher.bridge.pending.') || key.startsWith('neverlauncher.bridge.monitor.')) sessionStorage.removeItem(key);
+      if (key.startsWith('neverlauncher.bridge.pending.') || key.startsWith('neverlauncher.bridge.monitor.') || key.startsWith('neverlauncher.owner.0388.bridge.')) sessionStorage.removeItem(key);
     }
     setToken(''); setRefreshToken(''); setSessionId(''); setDashboard(null); setIdentity(null); setPayload(null); setSessions([]); setDevices([]); setMessage('Сессия завершена.');
   }
@@ -582,8 +582,8 @@ export function AdminApp() {
       {mayRead && packagePanel}
       {token && identity && <BackendNoticeInbox0289 backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'backend-operations' && <BackendOperations0289 backendUrl={backendUrl} token={token} />}
-      {token && mayRead && active === 'operations' && <OperationsWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
-      {token && mayRead && active === 'release-workspace' && <ReleaseWorkspace key={`${backendUrl}:${sessionId}:${selectedProjectId}`} backendUrl={backendUrl} token={token} projectId={selectedProjectId} initialProfileId={selectedProfileId} initialChannel={selectedChannelId} canPrepare={canPrepare} canFileWrite={canFileWrite} canPublish={canPublish} />}
+      {token && mayRead && active === 'operations' && <OperationsWorkspace backendUrl={backendUrl} token={token} userId={identity?.user.id||''} projectId={selectedProjectId} canPublish={canPublish} />}
+      {token && mayRead && active === 'release-workspace' && <ReleaseWorkspace key={`${backendUrl}:${identity?.user.id}:${selectedProjectId}`} backendUrl={backendUrl} token={token} userId={identity?.user.id||''} projectId={selectedProjectId} initialProfileId={selectedProfileId} initialChannel={selectedChannelId} canPrepare={canPrepare} canFileWrite={canFileWrite} canPublish={canPublish} />}
       {token && mayRead && active === 'migration-center' && <MigrationCenter0331 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
       {token && mayRead && active === 'job-monitor' && <JobMonitor backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
       {token && mayRead && active === 'backup-restore' && <BackupWorkspace backendUrl={backendUrl} token={token} canRestore={can(identity, 'settings:manage') && can(identity, 'storage:manage')} />}
@@ -595,7 +595,7 @@ export function AdminApp() {
       {token && mayRead && active === 'diagnostics' && <SupportDiagnostics03510 backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'branding-studio' && <BrandingStudio0355 projectId={selectedProjectId} canSign={can(identity,'release:publish',selectedProjectId)} />}
       {token && mayRead && active === 'texture-management' && <TextureManagement0259 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
-      {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} selectedServerId={selectedServerId} selectedProfileId={selectedProfileId} selectedChannelId={selectedChannelId} onSelectServer={chooseServer} allowedCommands={(Object.keys(gameCommandPermissions) as BridgeCommandType[]).filter(kind => can(identity, gameCommandPermissions[kind], selectedProjectId))} allowEnrollment={can(identity, 'settings:manage')} />}
+      {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} userId={identity?.user.id||''} projectId={selectedProjectId} selectedServerId={selectedServerId} selectedProfileId={selectedProfileId} selectedChannelId={selectedChannelId} onSelectServer={chooseServer} allowedCommands={(Object.keys(gameCommandPermissions) as BridgeCommandType[]).filter(kind => can(identity, gameCommandPermissions[kind], selectedProjectId))} allowEnrollment={can(identity, 'settings:manage')} />}
       {token && !mayRead && <section className="card wide emptyState"><h2>Нет доступа</h2><p>Эта операция недоступна для вашей роли либо проект не выбран. Запросите необходимые полномочия у владельца.</p></section>}
       {token && mayRead && !['extensions-manager','backend-operations','operations','release-workspace','job-monitor','migration-center','server-bridge','texture-management','backup-restore','devices','audit','config','official-provider','auth-provider-wizard','branding-studio','diagnostics'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={active === 'profiles' ? selectedProfileId : active === 'channels' ? selectedChannelId : selectedRecordId} onSelect={selectRecord} />}</section>}
 

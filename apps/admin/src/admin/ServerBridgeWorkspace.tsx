@@ -4,10 +4,11 @@ import { ResourceGrid } from '../components/ResourceGrid';
 import { MetricCard } from '../components/primitives';
 import { adminHref } from './route-links-0381';
 import { nodeState0383 } from './server-selection-0383';
+import { durableOwnerKey } from './owner-recovery-0388';
 import { ServerBridgeClient, buildControlPayload, canControlNode, commandLifecycle, telemetryState,
   supportsControlCapability, networkStateFresh, parseCapacityDraft, parseBridgeEnrollment, type BridgeCommandRequest, type BridgeCommandType, type BridgeOverview, type ServerBridgeCommand, type ServerBridgeNode } from '../api/serverbridge';
 
-type Props = { backendUrl: string; token: string; projectId: string; selectedServerId?: string; selectedProfileId?: string; selectedChannelId?: string; onSelectServer?: (id: string) => void; allowedCommands: BridgeCommandType[]; allowEnrollment: boolean };
+type Props = { backendUrl: string; token: string; projectId: string; userId: string; selectedServerId?: string; selectedProfileId?: string; selectedChannelId?: string; onSelectServer?: (id: string) => void; allowedCommands: BridgeCommandType[]; allowEnrollment: boolean };
 const actions: Array<{ type: BridgeCommandType; label: string; confirm?: boolean }> = [
   { type: 'player.kick', label: 'Отключить игрока', confirm: true },
   { type: 'message.broadcast', label: 'Сообщение всем игрокам' },
@@ -19,11 +20,10 @@ const actions: Array<{ type: BridgeCommandType; label: string; confirm?: boolean
   { type: 'server.shutdown', label: 'Остановить сервер', confirm: true }, { type: 'server.console', label: 'Разрешённая консольная команда', confirm: true },
 ];
 const initialFields = { username: '', message: '', reason: '', enabled: true, command: '' };
-const pendingStorageKey = (projectId: string, backendUrl: string, sessionId: string) =>
-  `neverlauncher.bridge.pending.${encodeURIComponent(backendUrl)}.${encodeURIComponent(sessionId)}.${encodeURIComponent(projectId)}`;
-const monitorStorageKey = (projectId: string, backendUrl: string, sessionId: string) =>
-  `neverlauncher.bridge.monitor.${encodeURIComponent(backendUrl)}.${encodeURIComponent(sessionId)}.${encodeURIComponent(projectId)}`;
-const currentSession = () => sessionStorage.getItem('neverlauncher.admin.sessionId') || 'unknown-session';
+// Session storage avoids persisting potentially sensitive console payloads on disk.
+// Verified actor ID, not rotating session ID, is the scope across login refresh.
+const pendingStorageKey = (projectId:string, backendUrl:string, userId:string) => durableOwnerKey(backendUrl,userId,projectId,'bridge')+'.pending';
+const monitorStorageKey = (projectId:string, backendUrl:string, userId:string) => durableOwnerKey(backendUrl,userId,projectId,'bridge')+'.monitor';
 const timeLabel = (iso?: string) => {
   const time = Date.parse(iso ?? '');
   return Number.isFinite(time) ? new Date(time).toLocaleString() : 'неизвестно';
@@ -39,15 +39,16 @@ const showProblem = (error: unknown) => {
   }
   return error instanceof Error ? error.message : 'Неизвестная ошибка';
 };
-const readPending = (projectId: string, backendUrl: string): BridgeCommandRequest | null => {
+const readPending = (projectId: string, backendUrl: string, userId: string): BridgeCommandRequest | null => {
+  if (!projectId || !userId) return null;
   try {
-    const data = JSON.parse(sessionStorage.getItem(pendingStorageKey(projectId, backendUrl, currentSession())) ?? 'null');
+    const data = JSON.parse(sessionStorage.getItem(pendingStorageKey(projectId, backendUrl, userId)) ?? 'null');
     if (typeof data?.serverId === 'string' && typeof data?.idempotencyKey === 'string' && typeof data?.type === 'string' && data.payload && typeof data.payload === 'object') return data as BridgeCommandRequest;
   } catch { /* stale browser state */ }
   return null;
 };
 
-export function ServerBridgeWorkspace({ backendUrl, token, projectId, selectedServerId = '', selectedProfileId = '', selectedChannelId = '', onSelectServer, allowedCommands, allowEnrollment }: Props) {
+export function ServerBridgeWorkspace({ backendUrl, token, projectId, userId, selectedServerId = '', selectedProfileId = '', selectedChannelId = '', onSelectServer, allowedCommands, allowEnrollment }: Props) {
   const canCommand = (kind: BridgeCommandType) => allowedCommands.includes(kind);
   const canControl = allowedCommands.length > 0;
   const canConsole = canCommand('server.console');
@@ -72,7 +73,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, selectedSe
     const possible = actions.filter(a => allowedCommands.includes(a.type) && (!current || supportsControlCapability(current, a.type)));
     if (!possible.some(a => a.type === kind) && possible.length > 0) setKind(possible[0].type);
   }, [kind, allowedCommands.join('|'), overview, selectedServer]);
-  const [pending, setPending] = useState<BridgeCommandRequest | null>(() => readPending(projectId, backendUrl));
+  const [pending, setPending] = useState<BridgeCommandRequest | null>(() => readPending(projectId, backendUrl, userId));
   // A ref closes the double-click window before React commits busy=true.
   const submitInFlight = useRef(false);
   const [clock, setClock] = useState(Date.now());
@@ -86,8 +87,8 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, selectedSe
   useEffect(() => { setCapacityDraft(network?.operatorCapacityMax == null ? '' : String(network.operatorCapacityMax)); }, [selectedServer, network?.operatorCapacityRevision]);
 
 
-  useEffect(() => { setOverview(null); setSelectedServer(selectedServerId); setSelectedCommand(null); setError(''); setPending(readPending(projectId, backendUrl));
-    const persisted = sessionStorage.getItem(monitorStorageKey(projectId, backendUrl, currentSession()));
+  useEffect(() => { setOverview(null); setSelectedServer(selectedServerId); setSelectedCommand(null); setError(''); setPending(readPending(projectId, backendUrl, userId));
+    const persisted = sessionStorage.getItem(monitorStorageKey(projectId, backendUrl, userId));
     if (persisted) {
       try {
         const { serverId, commandId } = JSON.parse(persisted);
@@ -95,7 +96,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, selectedSe
           void api.command(serverId, commandId).then(c => {setSelectedServer(serverId);setSelectedCommand(c);setLastCommandReadAt(Date.now());}).catch(() => undefined);
       } catch { /* outdated monitor entry */ }
     }
-  }, [api, backendUrl, token, projectId]);
+  }, [api, backendUrl, token, projectId, userId]);
   useEffect(() => { setSelectedServer(selectedServerId); setSelectedCommand(null); }, [selectedServerId]);
   useEffect(() => {
     if (!projectId || !token) return;
@@ -132,8 +133,8 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, selectedSe
 
   function persistPending(next: BridgeCommandRequest | null) {
     setPending(next);
-    if (next) sessionStorage.setItem(pendingStorageKey(projectId, backendUrl, currentSession()), JSON.stringify(next));
-    else sessionStorage.removeItem(pendingStorageKey(projectId, backendUrl, currentSession()));
+    if (next) sessionStorage.setItem(pendingStorageKey(projectId, backendUrl, userId), JSON.stringify(next));
+    else sessionStorage.removeItem(pendingStorageKey(projectId, backendUrl, userId));
   }
   async function submit(existing?: BridgeCommandRequest) {
     if (submitInFlight.current || busy) return;
@@ -142,7 +143,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, selectedSe
     if (!node || !canControl || !canCommand(existing?.type ?? kind) || !supportsControlCapability(node, existing?.type ?? kind, clock) ||
         lastReadAt === null || clock - lastReadAt >= 45_000 ||
         (existing?.type === 'server.console' || (!existing && kind === 'server.console')) && !canConsole) return;
-    const unresolved = readPending(projectId, backendUrl);
+    const unresolved = readPending(projectId, backendUrl, userId);
     if (!existing && unresolved) { setPending(unresolved); setError('Сначала восстановите ранее отправленную команду.'); return; }
     setError(''); setMessage('');
     let request: BridgeCommandRequest;
@@ -161,7 +162,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, selectedSe
     try {
       const response = await api.send(request);
       if (!response.command?.id) throw new Error('Backend не вернул ID управляющей команды');
-      sessionStorage.setItem(monitorStorageKey(projectId, backendUrl, currentSession()), JSON.stringify({serverId: response.command.serverId, commandId: response.command.id}));
+      sessionStorage.setItem(monitorStorageKey(projectId, backendUrl, userId), JSON.stringify({serverId: response.command.serverId, commandId: response.command.id}));
       setSelectedCommand(response.command); setLastCommandReadAt(Date.now());
       setMessage(response.idempotentReplay ? 'Повтор запроса: возвращена ранее сохранённая команда.' : 'Команда поставлена в очередь. Ожидаем подтверждение от Bridge.');
       persistPending(null);

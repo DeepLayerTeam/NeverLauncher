@@ -69,6 +69,12 @@ def path_parameters(path):
         out.append({"name":"unsigned","in":"query","required":False,"schema":{"type":"boolean","default":True}})
     if path == "/api/v1/session/has-joined":
         out += [{"name":"username","in":"query","required":False,"schema":{"type":"string"}},{"name":"serverId","in":"query","required":False,"schema":{"type":"string"}}]
+    if path == "/api/v1/operations/recover":
+        out += [
+          {"name":"projectId","in":"query","required":True,"schema":{"type":"string","minLength":1,"maxLength":128}},
+          {"name":"kind","in":"query","required":True,"schema":{"type":"string","enum":["package-publish","channel-rollback"]}},
+          {"name":"idempotencyKey","in":"query","required":True,"description":"Original key; lookup never retries a mutation and is restricted to the original actor and current project permission.","schema":{"type":"string","minLength":8,"maxLength":240}},
+        ]
     if path == "/api/v1/server-bridge/capabilities":
         out += [
           {"name":"protocols","in":"query","required":False,"description":"Comma-separated protocol versions offered by the bridge, highest preference first.","schema":{"type":"string","example":"3,2"}},

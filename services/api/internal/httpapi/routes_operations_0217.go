@@ -77,6 +77,7 @@ func (s Server) registerOperationRoutes0217(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/projects/{projectId}/profiles/{profileId}/channels/{channel}/head", s.requireAuthenticated(s.channelHeadGet0228))
 	mux.Handle("GET /api/v1/operations", s.requireAuthenticated(s.operationRegistryGet0217))
 	mux.Handle("GET /api/v1/operations/jobs", s.requireAuthenticated(s.operationList02110))
+	mux.Handle("GET /api/v1/operations/recover", s.requireAuthenticated(s.operationRecover0388))
 	mux.Handle("POST /api/v1/operations/validate", s.requireAuthenticated(s.operationValidate0217))
 	mux.Handle("POST /api/v1/operations/execute", s.requireAuthenticated(s.operationExecute0217))
 	mux.Handle("GET /api/v1/operations/{operationId}", s.requireAuthenticated(s.operationStatus0217))
@@ -408,6 +409,47 @@ func (s Server) readVisibleOperation0217(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("X-Correlation-ID", job.ID)
 	return job, true
 }
+
+// A lost execute response must be recoverable after login/session rotation
+// without reissuing the mutation or requiring a new MFA assertion for a READ.
+// The journal is actor-scoped; current project permission is checked again.
+func (s Server) operationRecover0388(w http.ResponseWriter, r *http.Request) {
+	claims, err := s.adminClaims(r)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	projectID := r.URL.Query().Get("projectId")
+	kind := r.URL.Query().Get("kind")
+	key := r.URL.Query().Get("idempotencyKey")
+	if projectID == "" || len(projectID) > 128 || (kind != "package-publish" && kind != durableRollbackKind0217) || len(key) < 8 || len(key) > 240 {
+		writeError(w, http.StatusBadRequest, "projectId, valid kind and idempotencyKey (8..240) required")
+		return
+	}
+	journal, ok := s.Repo.(repository.OperationJournal)
+	if !ok {
+		writeError(w, http.StatusServiceUnavailable, "durable operation journal unavailable")
+		return
+	}
+	job, err := journal.FindOperationByKey(r.Context(), kind, claims.Sub, key)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "operation not found")
+			return
+		}
+		writeError(w, http.StatusServiceUnavailable, "operation journal unavailable")
+		return
+	}
+	if job.ProjectID != projectID || job.Kind != kind || job.ActorID != claims.Sub ||
+		!s.authorizeClaims(r, claims, "project:read", projectID, "project", projectID).Allowed {
+		writeError(w, http.StatusNotFound, "operation not found")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Correlation-ID", job.ID)
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": publicOperation0217(job)})
+}
+
 func (s Server) operationStatus0217(w http.ResponseWriter, r *http.Request) {
 	job, ok := s.readVisibleOperation0217(w, r)
 	if !ok {

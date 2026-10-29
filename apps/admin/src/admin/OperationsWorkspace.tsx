@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { requestJSON } from '../api/client';
 import { TextInput } from '../components/primitives';
+import { ReleaseApi } from '../api/release';
+import { durableOwnerKey } from './owner-recovery-0388';
 
 type Kind = 'channel-rollback' | 'package-publish';
 type Job = { id: string; kind: Kind; status: string; lastError?: string; result?: Record<string, unknown>; attemptCount: number; maxAttempts: number; createdAt: string; completedAt?: string };
@@ -8,18 +10,20 @@ type Attempt = { attempt: number; status: string; startedAt: string; finishedAt?
 type Validation = { valid: boolean; permission: string; effect: Record<string, string> };
 type OperationIntent = { kind: Kind; projectId: string; resourceId?: string; profileId: string; channel: string; toVersion: string; idempotencyKey: string };
 type Recoverable = { intent: OperationIntent; jobId?: string };
-// Storage is scoped by session AND backend; no bearer tokens are persisted here.
-const recoveryKey = (base: string, project: string) => `neverlauncher.operation.recovery.${encodeURIComponent(base)}.${encodeURIComponent(sessionStorage.getItem('neverlauncher.admin.sessionId') || 'unknown-session')}.${encodeURIComponent(project)}`;
-function readRecovery(base: string, project: string): Recoverable | null {
+// No credentials are stored; use the verified account identity, not a rotating session.
+const recoveryKey = (base:string, project:string, userId:string) => durableOwnerKey(base,userId,project,'operations');
+function readRecovery(base:string,project:string,userId:string): Recoverable|null {
+  if(!userId || !project) return null;
   try {
-    const value = JSON.parse(sessionStorage.getItem(recoveryKey(base, project)) || 'null');
-    if (value?.intent?.projectId === project && value.intent.idempotencyKey && ['package-publish','channel-rollback'].includes(value.intent.kind)) return value as Recoverable;
-  } catch { /* corrupt/old browser state must never be replayed automatically */ }
+    const value:Recoverable|null=JSON.parse(localStorage.getItem(recoveryKey(base,project,userId))||'null');
+    if(value?.intent?.projectId===project && value.intent.idempotencyKey?.length>=8 &&
+      ['package-publish','channel-rollback'].includes(value.intent.kind) &&
+      (!value.jobId || typeof value.jobId==='string'))return value;
+  }catch{/* Untrusted browser state is not executable */}
   return null;
 }
 
-
-export function OperationsWorkspace({ backendUrl, token, projectId, canPublish }: { backendUrl: string; token: string; projectId: string; canPublish: boolean }) {
+export function OperationsWorkspace({ backendUrl, token, projectId, canPublish, userId }: { backendUrl: string; token: string; projectId: string; canPublish: boolean; userId: string }) {
   const [kind, setKind] = useState<Kind>('channel-rollback');
   const [profileId, setProfileId] = useState('vanilla');
   const [channel, setChannel] = useState('stable');
@@ -33,11 +37,11 @@ export function OperationsWorkspace({ backendUrl, token, projectId, canPublish }
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
-  const [recoverable, setRecoverable] = useState<Recoverable | null>(() => readRecovery(backendUrl, projectId));
+  const [recoverable, setRecoverable] = useState<Recoverable | null>(() => readRecovery(backendUrl, projectId, userId));
   const persist = (value: Recoverable | null) => {
     setRecoverable(value);
-    if (value) sessionStorage.setItem(recoveryKey(backendUrl, projectId), JSON.stringify(value));
-    else sessionStorage.removeItem(recoveryKey(backendUrl, projectId));
+    if (value) localStorage.setItem(recoveryKey(backendUrl, projectId, userId), JSON.stringify(value));
+    else localStorage.removeItem(recoveryKey(backendUrl, projectId, userId));
   };
   const resetPreview = () => { setValidation(null); setIdempotencyKey(crypto.randomUUID()); };
 
@@ -51,11 +55,11 @@ export function OperationsWorkspace({ backendUrl, token, projectId, canPublish }
   }
   useEffect(() => {
     setJob(null); setJobId(''); setAttempts([]); setValidation(null);
-    const saved = readRecovery(backendUrl, projectId);
+    const saved = readRecovery(backendUrl, projectId, userId);
     setRecoverable(saved);
     setIdempotencyKey(saved?.intent.idempotencyKey || crypto.randomUUID());
     if (saved?.jobId) setJobId(saved.jobId);
-  }, [projectId, backendUrl, token]);
+  }, [projectId, backendUrl, token, userId]);
   useEffect(() => {
     if (!jobId || ['succeeded', 'failed', 'dead', 'revoked'].includes(job?.status ?? '')) return;
     let active = true;
@@ -71,8 +75,19 @@ export function OperationsWorkspace({ backendUrl, token, projectId, canPublish }
     if (action === 'execute' && !recovery && !window.confirm(`Подтвердить ${kind} в проекте ${projectId}?\n${Object.entries(validation?.effect ?? {}).map(([k,v]) => `${k}: ${v}`).join('\n')}`)) return;
     inFlight.current = true; setBusy(true); setError('');
     const intent = recovery ? recoverable!.intent : request;
-    if (action === 'execute' && !recovery) persist({ intent }); // Before transport, including an ACK loss.
     try {
+    if (action === 'execute' && !recovery) {
+      if (readRecovery(backendUrl,projectId,userId)) {setError('Другая вкладка сохранила незавершённую операцию. Обновите страницу, чтобы восстановить исходный job.');inFlight.current=false;setBusy(false);return;}
+      persist({ intent }); // Before transport, including an ACK loss.
+    }
+      if(recovery) {
+        const existing=await new ReleaseApi(backendUrl,token).recoverOperation(intent.projectId,intent.kind,intent.idempotencyKey);
+        if(existing.projectId!==intent.projectId || existing.kind!==intent.kind ||
+          existing.resourceId!==(intent.kind==='package-publish'?intent.resourceId:intent.channel) ||
+          (recoverable?.jobId && recoverable.jobId!==existing.id))throw Error('Журнал вернул чужую операцию');
+        persist({intent,jobId:existing.id});setJobId(existing.id);await refresh(existing.id);
+        return;
+      }
       const data = await requestJSON<Validation | Job>(backendUrl, `/api/v1/operations/${action}`, token, { method: 'POST', body: JSON.stringify(intent) });
       if (action === 'validate') setValidation(data as Validation);
       else {
@@ -84,6 +99,36 @@ export function OperationsWorkspace({ backendUrl, token, projectId, canPublish }
     } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
     finally { inFlight.current = false; setBusy(false); }
   }
+  async function retryOriginalIntent(){
+    if(!recoverable || recoverable.jobId || !canPublish || busy)return;
+    if(!window.confirm('Серверный журнал пока не содержит этот job. Повторить строго сохранённый запрос с исходным idempotency key? Потребуется действующая MFA.'))return;
+    inFlight.current=true;setBusy(true);setError('');
+    try{
+      const api=new ReleaseApi(backendUrl,token);
+      const {intent}=recoverable;
+      let existing;
+      try{existing=await api.recoverOperation(intent.projectId,intent.kind,intent.idempotencyKey)}
+      catch(e){if(!(typeof e==='object' && e!==null && 'status' in e && e.status===404))throw e;}
+      const next=existing??await api.executeOperation(intent);
+      if(!next.id || next.projectId!==intent.projectId || next.kind!==intent.kind ||
+          next.resourceId!==(intent.kind==='package-publish'?intent.resourceId:intent.channel))throw Error('Неверный ответ журнала операций');
+      persist({intent,jobId:next.id});setJobId(next.id);await refresh(next.id);
+    }catch(e){setError(e instanceof Error?e.message:String(e))}
+    finally{inFlight.current=false;setBusy(false)}
+  }
+  // Read-only check after login or refresh. A missing record does not create a job.
+  useEffect(()=>{
+    if(!recoverable || recoverable.jobId || !token)return;
+    let live=true;
+    const {intent}=recoverable;
+    void new ReleaseApi(backendUrl,token).recoverOperation(intent.projectId,intent.kind,intent.idempotencyKey).then(existing=>{
+      if(!live)return;
+      if(existing.projectId!==intent.projectId || existing.kind!==intent.kind ||
+        existing.resourceId!==(intent.kind==='package-publish'?intent.resourceId:intent.channel))throw Error('Журнал вернул чужое задание');
+      persist({intent,jobId:existing.id});setJobId(existing.id);
+    }).catch(e=>{if(live && e?.status!==404)setError(String(e?.message||e))});
+    return ()=>{live=false};
+  },[recoverable?.intent.idempotencyKey,recoverable?.jobId,token,backendUrl,userId,projectId]);
   async function modifyJob(action: 'cancel' | 'retry') {
     if (!job || !window.confirm(`${action} для операции ${job.id}?`)) return;
     setBusy(true); setError('');
@@ -106,7 +151,7 @@ export function OperationsWorkspace({ backendUrl, token, projectId, canPublish }
         <TextInput label="Версия для отката" value={toVersion} onChange={v => { setToVersion(v); resetPreview(); }} />
       </> : <TextInput label="ID пакета" value={packageId} onChange={v => { setPackageId(v); resetPreview(); }} />}
       <TextInput label="Idempotency key (повтор использует тот же job)" value={idempotencyKey} onChange={v => { setIdempotencyKey(v); setValidation(null); }} />
-      {recoverable && <div className="subcard" role="alert"><p><strong>Есть сохранённая операция с неизвестным или уже принятым результатом.</strong> Повтор допустим только с исходным ключом. После перезагрузки не создавайте новую операцию без проверки job и аудита.</p><p>Ключ: <code>{recoverable.intent.idempotencyKey}</code>{recoverable.jobId ? <> · Job: <code>{recoverable.jobId}</code></> : null}</p><div className="buttonRow"><button disabled={busy || !canPublish} onClick={() => void perform('execute', true)}>Восстановить по исходному ключу</button><button disabled={busy} onClick={() => { if (window.confirm('Вы проверили результат в job и аудите? Новый ключ может создать повторный rollback. Сбросить восстановление?')) { persist(null); setValidation(null); setIdempotencyKey(crypto.randomUUID()); } }}>После проверки начать новую операцию</button></div></div>}
+      {recoverable && <div className="subcard" role="alert"><p><strong>Есть сохранённая операция с неизвестным или уже принятым результатом.</strong> Повтор допустим только с исходным ключом. После перезагрузки не создавайте новую операцию без проверки job и аудита.</p><p>Ключ: <code>{recoverable.intent.idempotencyKey}</code>{recoverable.jobId ? <> · Job: <code>{recoverable.jobId}</code></> : null}</p><div className="buttonRow"><button disabled={busy} onClick={() => void perform('execute', true)}>Найти исходный job (без повторного исполнения)</button><button disabled={busy||!job||!['succeeded','failed','dead','revoked','cancelled'].includes(job.status)} onClick={() => { if (window.confirm('Вы проверили результат в job и аудите? Новый ключ может создать повторный rollback. Сбросить восстановление?')) { persist(null); setValidation(null); setIdempotencyKey(crypto.randomUUID()); } }}>После проверки начать новую операцию</button>{!recoverable.jobId && <button disabled={busy||!canPublish} onClick={() => void retryOriginalIntent()}>Повторить исходный запрос (после проверки)</button>}</div></div>}
       <div className="buttonRow"><button disabled={busy || !!recoverable || !canPublish || !projectId} onClick={() => void perform('validate')}>Проверить эффект</button><button disabled={busy || !!recoverable || !canPublish || !validation?.valid} onClick={() => void perform('execute')}>Выполнить</button></div>
       {validation && <div className="subcard"><p><strong>Проверка пройдена</strong> · {validation.permission}</p>{Object.entries(validation.effect).map(([key,value]) => <p key={key}><strong>{key}:</strong> {value}</p>)}</div>}
     </article>

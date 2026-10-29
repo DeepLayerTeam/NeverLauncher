@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { prepareOwnerOperation, observeOwnerOperation, readOwnerPending, saveOwnerPending, clearOwnerPending, recoveryStorageKey, type OwnerIntent, type OwnerPending, type OwnerCheck, type ChannelHead, openStagedRollback } from './owner-lifecycle-03513.ts';
+import { prepareOwnerOperation, observeOwnerOperation, readOwnerPending, saveOwnerPending, clearOwnerPending, type OwnerIntent, type OwnerPending, type OwnerCheck, type ChannelHead, openStagedRollback } from './owner-lifecycle-03513.ts';
 import { auditHref, recoveryAdvice } from './lifecycle.ts';
 import { ReleaseApi, type Draft, type DraftFields, type PackageInfo, type Preview, type ValidationReport, type PublishBlocker0385, type ReleaseVersion0386 } from '../api/release';
 import { ApiError } from '../api/client';
@@ -9,6 +9,7 @@ import { ValidationHistory03412 } from './ValidationHistory03412';
 import { BuildWorkspacePanel } from './BuildWorkspacePanel';
 import { ComponentGraphEditor0248 } from './ComponentGraphEditor0248';
 import { channelHistory0386 } from './release-history-0386';
+import { durableOwnerKey, findOriginalOwnerJob } from './owner-recovery-0388.ts';
 
 type Step = 'project'|'profile'|'build'|'verify'|'channel';
 const steps: Array<{id: Step; title:string}> = [
@@ -18,7 +19,7 @@ const empty = (projectId:string, profileId = '', channel = 'stable'): DraftField
 const printable = (e:unknown) => e instanceof Error ? e.message : String(e);
 const isPassed = (v: ValidationReport | null) => v?.integrity?.result === 'passed';
 
-export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId='',initialChannel='',canPrepare,canFileWrite,canPublish}: {backendUrl:string;token:string;projectId:string;initialProfileId?:string;initialChannel?:string;canPrepare:boolean;canFileWrite:boolean;canPublish:boolean}) {
+export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId='',initialChannel='',canPrepare,canFileWrite,canPublish,userId}: {backendUrl:string;token:string;projectId:string;initialProfileId?:string;initialChannel?:string;canPrepare:boolean;canFileWrite:boolean;canPublish:boolean;userId:string}) {
   const api = useMemo(() => new ReleaseApi(backendUrl,token),[backendUrl,token]);
   const [drafts,setDrafts] = useState<Draft[]>([]);
   const [draft,setDraft] = useState<Draft|null>(null);
@@ -35,7 +36,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
   const [preview,setPreview] = useState<Preview|null>(null);
   const [rollbackPreview,setRollbackPreview] = useState<Preview|null>(null);
   const [planned,setPlanned] = useState<{pending:OwnerPending;preview:Preview}|null>(null);
-  const recoveryKey = useMemo(() => recoveryStorageKey(backendUrl,projectId,sessionStorage.getItem('neverlauncher.admin.sessionId')||'unknown-session'),[backendUrl,projectId,token]);
+  const recoveryKey = useMemo(() => durableOwnerKey(backendUrl,userId,projectId),[backendUrl,userId,projectId]);
   const [pending,setPending] = useState<OwnerPending|null>(null);
   const [check,setCheck] = useState<OwnerCheck|null>(null);
   const [targetVersion,setTargetVersion] = useState('');
@@ -57,7 +58,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
   },[api]);
   useEffect(() => {
     let live=true;
-    const recovered=readOwnerPending(sessionStorage,recoveryKey,projectId);
+    const recovered=readOwnerPending(localStorage,recoveryKey,projectId);
     setPending(recovered);setCheck(null);setPlanned(null);
     setDraft(null);setForm(empty(projectId,initialProfileId,initialChannel||'stable'));setDrafts([]);setStep('project');setPackageInfo(null);setReport(null);setRefusal([]);setPreview(null);setRollbackPreview(null);setMonitorId(recovered?.jobId||'');setDirty(false);
     if (!projectId || !canPrepare) return;
@@ -172,13 +173,17 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
       const latest=await api.channelHead(exact.intent.projectId,exact.intent.profileId,exact.intent.channel);
       if(latest.revision!==exact.before.revision || latest.releaseId!==exact.before.releaseId)
         throw Error('Канал изменился после preview. Обновите и повторите проверку.');
+      // Another tab may already have sent a mutation while this preview was open.
+      // Never overwrite its recovery key with a second operation.
+      if(readOwnerPending(localStorage,recoveryKey,projectId))
+        throw Error('В другой вкладке есть незавершённая операция. Обновите страницу и восстановите исходный job.');
       // BEFORE network I/O. An ACK loss must not produce a second operation.
-      saveOwnerPending(sessionStorage,recoveryKey,exact);setPending(exact);
+      saveOwnerPending(localStorage,recoveryKey,exact);setPending(exact);
       const accepted=await api.executeOperation(exact.intent);
       if(accepted.projectId!==projectId || accepted.kind!==kind || !accepted.id)
         throw Error('Backend вернул несоответствующий job; проверьте журнал по idempotency key.');
       const recorded={...exact,jobId:accepted.id};
-      saveOwnerPending(sessionStorage,recoveryKey,recorded);setPending(recorded);setMonitorId(accepted.id);
+      saveOwnerPending(localStorage,recoveryKey,recorded);setPending(recorded);setMonitorId(accepted.id);
       return accepted;
     },'Операция поставлена в очередь. Ожидайте исполнения и проверки channel head.');
     setPlanned(null);setPreview(null);setRollbackPreview(null);
@@ -190,17 +195,42 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
   }
   async function recoverOperation(){
     if(!pending || busy)return;
-    const recorded=await perform(async()=>{
-      // User-triggered replay with EXACT same key and payload, never a new key.
-      const accepted=await api.executeOperation(pending.intent);
-      if(!accepted.id || accepted.projectId!==pending.intent.projectId || accepted.kind!==pending.intent.kind)
-        throw Error('Ответ Backend не совпадает с исходной операцией');
-      const next={...pending,jobId:accepted.id};
-      saveOwnerPending(sessionStorage,recoveryKey,next);setPending(next);setMonitorId(accepted.id);
-      return accepted;
-    },'Получен идентификатор исходного durable job. Публикация ещё не подтверждена.');
-    return recorded;
+    await perform(async()=>{
+      const existing=await findOriginalOwnerJob(api,pending);
+      if (!existing) {
+        throw Error('Backend не нашёл исходный job. Сохранённый ключ не изменён; повтор отправки требует свежего MFA и отдельного подтверждения.');
+      }
+      const next={...pending,jobId:existing.id};
+      saveOwnerPending(localStorage,recoveryKey,next);setPending(next);setMonitorId(existing.id);
+      return existing;
+    },'Результат найден в серверном журнале. Перепубликация не выполнялась.');
   }
+  async function retryUnacknowledged(){
+    if(!pending || pending.jobId || busy || !canPublish)return;
+    if(!window.confirm('Исходное задание не обнаружено. Повторить ТОЧНО тот же запрос и ключ? Это требует действующего MFA.'))return;
+    await perform(async()=>{
+      // Check again before a replay; no new key or payload is ever generated.
+      const found=await findOriginalOwnerJob(api,pending);
+      const accepted=found??await api.executeOperation(pending.intent);
+      if(!accepted.id || accepted.projectId!==pending.intent.projectId || accepted.kind!==pending.intent.kind ||
+          accepted.resourceId!==(pending.intent.kind==='package-publish'?pending.intent.resourceId:pending.intent.channel))
+        throw Error('Backend вернул несоответствующий job');
+      const next={...pending,jobId:accepted.id};
+      saveOwnerPending(localStorage,recoveryKey,next);setPending(next);setMonitorId(accepted.id);
+      return accepted;
+    },'Исходный durable job найден или принят. Выполнение ещё не подтверждено.');
+  }
+  useEffect(()=>{
+    if(!pending || pending.jobId)return;
+    let live=true;
+    // Read-only reconciliation is safe after authentication/session rotation.
+    void findOriginalOwnerJob(api,pending).then(job=>{
+      if(!live || !job)return;
+      const next={...pending,jobId:job.id};
+      saveOwnerPending(localStorage,recoveryKey,next);setPending(next);setMonitorId(job.id);
+    }).catch(e=>{if(live)setError(`Не удалось восстановить job: ${printable(e)}`)});
+    return ()=>{live=false};
+  },[api,pending?.intent.idempotencyKey,pending?.jobId,recoveryKey]);
   useEffect(()=>{
     if(!pending?.jobId)return;
     let live=true;
@@ -233,7 +263,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
   function acknowledgeOperation(){
     if(!pending || !check || !['confirmed','failed','staged','unconfirmed'].includes(check.phase))return;
     if((check.phase==='unconfirmed' || check.phase==='staged') && !window.confirm('Канал не подтверждён или откат только подготовлен. Вы проверили журнал и дальнейшие действия?'))return;
-    clearOwnerPending(sessionStorage,recoveryKey);setPending(null);setCheck(null);setPlanned(null);
+    clearOwnerPending(localStorage,recoveryKey);setPending(null);setCheck(null);setPlanned(null);
   }
   useEffect(()=>{
     let live=true;setChannelHead(null);setChannelHeadError('');
@@ -345,7 +375,8 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
       {check?.job.lastError && <p role="alert">{check.job.lastError} · {recoveryAdvice(check.job.lastError)}</p>}
       <div className="buttonRow">
         {check?.phase==='staged' && <button disabled={busy||!canPrepare} onClick={()=>void continueStagedRollback()}>Открыть подготовленный rollback для сертификации</button>}
-        {!pending.jobId && <button disabled={busy||!canPublish} onClick={()=>void recoverOperation()}>Восстановить по исходному ключу</button>}
+        {!pending.jobId && <button disabled={busy} onClick={()=>void recoverOperation()}>Найти исходный job (без повтора)</button>}
+        {!pending.jobId && <button disabled={busy||!canPublish} onClick={()=>void retryUnacknowledged()}>Повторить исходный запрос с тем же ключом</button>}
         {pending.jobId && <a href={`#/job-monitor?job=${encodeURIComponent(pending.jobId)}`}>Открыть durable job</a>}
         {pending.jobId && <a href={auditHref(pending.jobId)}>Аудит операции</a>}
         <button disabled={busy||!check||check.phase==='waiting'} onClick={acknowledgeOperation}>Закрыть после проверки</button>

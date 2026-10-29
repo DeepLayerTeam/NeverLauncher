@@ -45,6 +45,7 @@ export class ReleaseApi {
   evidence(id: string, payload: unknown) { return this.send<Record<string,unknown>>(`/api/v1/packages/${encodeURIComponent(id)}/runtime-validations/evidence`,'POST',payload); }
   channelHead(projectId: string, profileId: string, channel: string) { return this.get<import('../admin/owner-lifecycle-03513.ts').ChannelHead>(`/api/v1/projects/${encodeURIComponent(projectId)}/profiles/${encodeURIComponent(profileId)}/channels/${encodeURIComponent(channel)}/head`); }
   operation(id:string) { return this.get<Operation>(`/api/v1/operations/${encodeURIComponent(id)}`); }
+  recoverOperation(projectId:string,kind:string,idempotencyKey:string) { return this.get<Operation>(`/api/v1/operations/recover?projectId=${encodeURIComponent(projectId)}&kind=${encodeURIComponent(kind)}&idempotencyKey=${encodeURIComponent(idempotencyKey)}`); }
   validateOperation(req: Record<string,unknown>) { return this.send<Preview>('/api/v1/operations/validate','POST',req); }
   executeOperation(req: Record<string,unknown>) { return this.send<Operation>('/api/v1/operations/execute','POST',req); }
   profiles(id: string) { return this.get<{items: Array<{id:string;name:string;loader:string;minecraftVersion?:string;loaderVersion?:string;javaMajor?:number}>}>(`/api/v1/projects/${encodeURIComponent(id)}/profiles`); }
