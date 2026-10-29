@@ -51,6 +51,7 @@ func TestProjectAuthorization0211IsScopedAndLive(t *testing.T) {
 		t.Fatalf("create project-b returned %d: %s", res.Code, res.Body.String())
 	}
 
+	admin, _ = registerTestPasskey117(t, handler, admin)
 	res = request0211(t, handler, http.MethodPost, "/api/v1/admin/users", admin,
 		`{"email":"operator0211@example.test","displayName":"Scoped Operator","roleId":"player","password":"operator-password-0211","projectRoles":{"demo-project":"operator"}}`)
 	if res.Code != http.StatusCreated {
@@ -97,7 +98,6 @@ func TestProjectAuthorization0211IsScopedAndLive(t *testing.T) {
 
 	// Отзыв членства действует и на ранее выданный токен. Управление
 	// пользователями само по себе требует свежий устойчивый к фишингу сеанс.
-	admin, _ = registerTestPasskey117(t, handler, admin)
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/users/"+created.ID, admin,
 		`{"projectRoles":{}}`)
 	if res.Code != http.StatusOK {
@@ -113,6 +113,7 @@ func TestGlobalRoleRevocation0211AppliesToExistingToken(t *testing.T) {
 	handler := testServer(t)
 	admin := loginAdmin(t, handler)
 
+	admin, _ = registerTestPasskey117(t, handler, admin)
 	res := request0211(t, handler, http.MethodPost, "/api/v1/admin/users", admin,
 		`{"email":"global0211@example.test","displayName":"Temporary Admin","roleId":"admin","password":"temporary-admin-0211","projectRoles":{}}`)
 	if res.Code != http.StatusCreated {
@@ -131,7 +132,6 @@ func TestGlobalRoleRevocation0211AppliesToExistingToken(t *testing.T) {
 		t.Fatalf("global admin permission before revoke returned %d: %s", res.Code, res.Body.String())
 	}
 
-	admin, _ = registerTestPasskey117(t, handler, admin)
 	res = request0211(t, handler, http.MethodPatch, "/api/v1/admin/users/"+created.ID, admin, `{"roleId":"player"}`)
 	if res.Code != http.StatusOK {
 		t.Fatalf("global role revoke returned %d: %s", res.Code, res.Body.String())

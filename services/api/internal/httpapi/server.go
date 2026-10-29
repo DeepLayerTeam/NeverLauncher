@@ -71,11 +71,12 @@ type loginRequest struct {
 }
 
 type userWriteRequest struct {
-	Email        string            `json:"email"`
-	DisplayName  string            `json:"displayName"`
-	RoleID       string            `json:"roleId"`
-	Password     string            `json:"password"`
-	ProjectRoles map[string]string `json:"projectRoles"`
+	Email                string            `json:"email"`
+	DisplayName          string            `json:"displayName"`
+	RoleID               string            `json:"roleId"`
+	Password             string            `json:"password"`
+	ProjectRoles         map[string]string `json:"projectRoles"`
+	ExpectedProjectRoles map[string]string `json:"expectedProjectRoles,omitempty"`
 }
 
 type passwordResetRequest struct {

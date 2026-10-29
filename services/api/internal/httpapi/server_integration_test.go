@@ -206,6 +206,7 @@ func TestAdminUsersSessionsAndRBAC(t *testing.T) {
 		t.Fatalf("/admin/me вернул неожиданный ответ: %d %s", res.Code, res.Body.String())
 	}
 
+	token, _ = registerTestPasskey117(t, handler, token)
 	body := strings.NewReader(`{"email":"dev@example.ru","displayName":"Разработчик","roleId":"developer","password":"password-123","projectRoles":{"demo-project":"developer"}}`)
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/admin/users", body)
 	req.Header.Set("Authorization", "Bearer "+token)

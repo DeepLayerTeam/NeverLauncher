@@ -7,6 +7,7 @@ import { BackendNoticeInbox0289 } from './BackendNoticeInbox0289';
 import { ReleaseWorkspace } from './ReleaseWorkspace';
 import { ProfileManagementWorkspace } from './ProfileManagementWorkspace';
 import { ProfileEditor0382 } from './ProfileEditor0382';
+import { ProjectAccessWorkspace0387 } from './ProjectAccessWorkspace0387';
 import { JobMonitor } from './JobMonitor';
 import { MigrationCenter0331 } from './MigrationCenter0331';
 import { BackupWorkspace } from './BackupWorkspace';
@@ -518,8 +519,9 @@ export function AdminApp() {
         <label className="check"><input type="checkbox" checked={channelForm.protected} onChange={(event) => setChannelForm({ ...channelForm, protected: event.target.checked })} /> Защищённый канал</label>
         <div className="buttonRow"><button disabled={!channelForm.id.trim() || !channelForm.name.trim() || !selectedProjectId} onClick={() => runAction('Создание канала', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(selectedProjectId)}/channels`, token, { method: 'POST', body: JSON.stringify(channelForm) })).catch((err) => setError(err.message))}>Создать</button><button disabled={!channelForm.id || !selectedProjectId} onClick={() => runAction('Обновление канала', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(selectedProjectId)}/channels/${encodeURIComponent(channelForm.id)}`, token, { method: 'PATCH', body: JSON.stringify(channelForm) })).catch((err) => setError(err.message))}>Обновить</button></div>
       </article>}
+      {active === 'users' && mayManageUsers && <ProjectAccessWorkspace0387 backendUrl={backendUrl} token={token} projectId={selectedProjectId} onStepUp={stepUpPasskey} onChanged={async()=>{await loadDashboard();await loadActive();}} />}
       {active === 'users' && mayManageUsers && <article className="subcard">
-        <h3>Пользователь</h3>
+        <h3>Учётная запись (глобальные настройки)</h3>
         <TextInput label="ID для изменения" value={userForm.id} onChange={(id) => setUserForm({ ...userForm, id })} />
         <TextInput label="Электронная почта" value={userForm.email} onChange={(email) => setUserForm({ ...userForm, email })} />
         <TextInput label="Отображаемое имя" value={userForm.displayName} onChange={(displayName) => setUserForm({ ...userForm, displayName })} />

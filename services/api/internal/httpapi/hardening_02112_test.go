@@ -18,6 +18,7 @@ func TestHardening02112NegativeRBAC(t *testing.T) {
 	if made.Code != http.StatusCreated {
 		t.Fatalf("project: %d %s", made.Code, made.Body.String())
 	}
+	admin, _ = registerTestPasskey117(t, h, admin)
 	made = request0211(t, h, http.MethodPost, "/api/v1/admin/users", admin, `{"email":"hardening-operator@example.test","displayName":"Operator","roleId":"player","password":"hardening-password","projectRoles":{"demo-project":"operator"}}`)
 	if made.Code != http.StatusCreated {
 		t.Fatalf("user: %d %s", made.Code, made.Body.String())

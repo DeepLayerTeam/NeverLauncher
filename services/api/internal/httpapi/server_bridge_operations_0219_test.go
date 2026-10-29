@@ -23,6 +23,7 @@ func TestServerBridgeOperations0219ProjectIsolation(t *testing.T) {
 	if res := registerTestBridgeNode0142(t, h, owner, "bridge-away-0219", "Away", "paper", "bridge-other-0219", "", b); res.Code != http.StatusCreated {
 		t.Fatalf("register away: %d %s", res.Code, res.Body.String())
 	}
+	owner, _ = registerTestPasskey117(t, h, owner)
 	user := request0211(t, h, http.MethodPost, "/api/v1/admin/users", owner, `{"email":"bridge-operator-0219@example.test","displayName":"Bridge Operator","roleId":"player","password":"bridge-password-0219","projectRoles":{"demo-project":"operator"}}`)
 	if user.Code != http.StatusCreated {
 		t.Fatalf("create operator: %d %s", user.Code, user.Body.String())

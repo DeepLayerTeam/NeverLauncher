@@ -168,6 +168,49 @@ func (s Server) adminLogout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "logged-out", "sessionId": claims.SessionID, "message": "серверная сессия отозвана; удалите access/refresh token на клиенте"})
 }
 
+// validateProjectMemberships0387 prevents a project role from referencing an
+// unknown tenant, an unknown role or a wildcard project. Both SQL and SQLite
+// repositories are protected by the same HTTP boundary.
+func (s Server) validateProjectMemberships0387(roles map[string]string) error {
+	available := map[string]bool{}
+	for _, role := range s.Repo.ListRoles() {
+		available[role.ID] = true
+	}
+	for projectID, roleID := range roles {
+		if projectID == "" || strings.TrimSpace(projectID) != projectID || projectID == "*" || roleID == "" || strings.TrimSpace(roleID) != roleID {
+			return fmt.Errorf("недопустимая привязка проекта и роли")
+		}
+		if _, err := s.Repo.GetProject(projectID); err != nil {
+			return fmt.Errorf("проект %q не существует", projectID)
+		}
+		if !available[roleID] {
+			return fmt.Errorf("роль %q не существует", roleID)
+		}
+	}
+	return nil
+}
+
+// Log membership changes individually, to retain who granted or revoked
+// access even if a later update changes the same user's membership map.
+func (s Server) auditProjectRoleChanges0387(r *http.Request, userID string, before, after map[string]string) {
+	for projectID, oldRole := range before {
+		nextRole, exists := after[projectID]
+		if exists && nextRole == oldRole {
+			continue
+		}
+		action := "user:project-role:changed"
+		if !exists {
+			action = "user:project-role:revoked"
+		}
+		s.audit(r, s.adminActor(r), action, userID+":"+projectID+":"+oldRole+"->"+nextRole)
+	}
+	for projectID, nextRole := range after {
+		if _, exists := before[projectID]; !exists {
+			s.audit(r, s.adminActor(r), "user:project-role:granted", userID+":"+projectID+":"+nextRole)
+		}
+	}
+}
+
 func (s Server) adminUserCreate(w http.ResponseWriter, r *http.Request) {
 	var req userWriteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -179,6 +222,22 @@ func (s Server) adminUserCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "email, roleId и password обязательны")
 		return
 	}
+	if len(req.Password) < 12 {
+		writeError(w, http.StatusBadRequest, "пароль должен быть не короче 12 символов")
+		return
+	}
+	if err := s.validateProjectMemberships0387(req.ProjectRoles); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	// A global users:manage token without recent passkey authentication may
+	// provision a basic player/viewer, but may not mint privileged accounts or
+	// assign project access. No alternate create path may bypass the step-up.
+	if len(req.ProjectRoles) > 0 || (req.RoleID != "player" && req.RoleID != "viewer") {
+		if !s.freshAuthAllowed117(w, r, "phishing-resistant", 5*time.Minute) {
+			return
+		}
+	}
 	user := model.User{Email: req.Email, DisplayName: req.DisplayName, RoleID: req.RoleID, Status: "active", ProjectRoles: req.ProjectRoles, PasswordHash: hashPassword(req.Password), PasswordUpdatedAt: time.Now().UTC()}
 	saved, err := s.Repo.SaveUser(user)
 	if err != nil {
@@ -186,6 +245,7 @@ func (s Server) adminUserCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, s.adminActor(r), "user:create", saved.ID)
+	s.auditProjectRoleChanges0387(r, saved.ID, nil, saved.ProjectRoles)
 	writeJSON(w, http.StatusCreated, saved)
 }
 
@@ -215,6 +275,14 @@ func (s Server) adminUserUpdate(w http.ResponseWriter, r *http.Request) {
 		user.RoleID = req.RoleID
 	}
 	if req.ProjectRoles != nil {
+		if req.ExpectedProjectRoles != nil && !maps.Equal(previousProjectRoles, req.ExpectedProjectRoles) {
+			writeError(w, http.StatusConflict, "project role assignments were changed by another administrator; reload user before retry")
+			return
+		}
+		if err := s.validateProjectMemberships0387(req.ProjectRoles); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		user.ProjectRoles = req.ProjectRoles
 	}
 	saved, err := s.Repo.SaveUser(user)
@@ -229,6 +297,9 @@ func (s Server) adminUserUpdate(w http.ResponseWriter, r *http.Request) {
 		_ = s.flushPersistenceState950("user-permissions-revoked")
 	}
 	s.audit(r, s.adminActor(r), "user:update", saved.ID)
+	if !maps.Equal(previousProjectRoles, saved.ProjectRoles) {
+		s.auditProjectRoleChanges0387(r, saved.ID, previousProjectRoles, saved.ProjectRoles)
+	}
 	writeJSON(w, http.StatusOK, saved)
 }
 
