@@ -10332,18 +10332,23 @@
           "evidence": "return repository.NewSQLRepository(cfg.SQLDriver, cfg.DatabaseDSN, cfg.PublicURL)"
         },
         {
+          "category": "storage-configuration-read",
+          "line": 450,
+          "evidence": "r, err := repository.OpenSQLiteHTTPRepository0372(context.Background(), cfg.DatabaseDSN, cfg.PublicURL)"
+        },
+        {
           "category": "postgresql-config-or-literal",
-          "line": 450,
+          "line": 456,
           "evidence": "log.Fatalf(\"неизвестный NEVERLAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён\", cfg.RepositoryDriver)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 450,
+          "line": 456,
           "evidence": "log.Fatalf(\"неизвестный NEVERLAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён\", cfg.RepositoryDriver)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 494,
+          "line": 500,
           "evidence": "opt := capacity.Options{Mode: mode, Driver: cfg.RepositoryDriver, DatabaseDSN: cfg.DatabaseDSN, CoordinatorPath: cfg.SQLiteCoordinatorPath, BackupPath: cfg.BackupRoot}"
         }
       ]

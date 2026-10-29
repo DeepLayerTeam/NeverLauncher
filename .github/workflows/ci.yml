@@ -1288,6 +1288,15 @@ jobs:
           go mod verify
           test -z "$(gofmt -l internal/storageparity internal/repository/postgres.go)"
           go test -race -count=1 -timeout=20m -v ./internal/storageparity
+      - name: Verify durable SQLite HTTP repository and restart behavior
+        working-directory: services/api
+        env:
+          TMPDIR: ${{ runner.temp }}/storage-parity-0371
+        run: |
+          set -euo pipefail
+          test -z "$(gofmt -l internal/repository/sqlite_http*_0372.go)"
+          go test -race -count=1 -timeout=10m -run '^TestSQLiteHTTP' ./internal/repository
+          go test -race -count=1 -timeout=10m -run '^TestSQLiteHTTPRepositoryBootstrap0372$' ./cmd/neverlauncher-api
 
   required-ci:
     name: REQUIRED CI — all jobs SUCCESS for exact commit

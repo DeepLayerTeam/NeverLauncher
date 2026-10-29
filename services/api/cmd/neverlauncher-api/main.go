@@ -446,6 +446,12 @@ func newRepository(cfg config.Config) repository.Repository {
 		return repository.NewMemoryRepository(cfg.PublicURL)
 	case "postgres", "postgresql", "sql":
 		return repository.NewSQLRepository(cfg.SQLDriver, cfg.DatabaseDSN, cfg.PublicURL)
+	case "sqlite":
+		r, err := repository.OpenSQLiteHTTPRepository0372(context.Background(), cfg.DatabaseDSN, cfg.PublicURL)
+		if err != nil {
+			log.Fatalf("sqlite HTTP repository: %v", err)
+		}
+		return r
 	default:
 		log.Fatalf("неизвестный NEVERLAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён", cfg.RepositoryDriver)
 		return nil
