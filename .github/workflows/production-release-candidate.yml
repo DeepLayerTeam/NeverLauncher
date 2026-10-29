@@ -823,3 +823,40 @@ jobs:
           test -s "${DIR}/BRIDGE_RELEASE_ALLOWLIST.json"
           test -s "${DIR}/BRIDGE_PLUGIN_MANIFEST.json"
 
+
+  required-production-ci:
+    name: REQUIRED production pipeline — no skipped, cancelled or absent jobs
+    if: ${{ always() }}
+    needs: [validate-release-ref, base-ci, auth-platform-protection-ga, server-control-ga, windows-production-signed, macos-production-notarized, admin-ga-certification, profile-ga-certification, certify-platform-signing, current-source-rc-03514, protected-isolated-dr-03514, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, release-bundle]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Require every production dependency to succeed on same SHA
+        env:
+          CI_NEEDS_JSON: ${{ toJSON(needs) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$CI_NEEDS_JSON" > "$RUNNER_TEMP/required-production-needs.json"
+          python3 scripts/ci/required_jobs_0363.py \
+            --workflow .github/workflows/production-release-candidate.yml \
+            --gate required-production-ci \
+            --needs-json "$RUNNER_TEMP/required-production-needs.json" \
+            --source-sha "$GITHUB_SHA" --version-file VERSION --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" --output required-production-evidence.json
+      - name: Publish required production status
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-required-production-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: required-production-evidence.json
+          if-no-files-found: error
+          retention-days: 90
