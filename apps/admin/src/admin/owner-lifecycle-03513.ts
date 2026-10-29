@@ -75,10 +75,13 @@ export async function observeOwnerOperation(api: ReleaseApi, pending: OwnerPendi
   const head = await api.channelHead(pending.intent.projectId, pending.intent.profileId, pending.intent.channel);
   if (!validHead(head) || head.projectId !== pending.intent.projectId || head.profileId !== pending.intent.profileId || head.channel !== pending.intent.channel)
     throw Error('Невозможно подтвердить состояние канала');
-  const advanced = head.revision > pending.before.revision && !!head.releaseId && head.releaseId !== pending.before.releaseId;
+  // A succeeded job is insufficient evidence if another release has since
+  // advanced the channel, or the job response belongs to a different package.
+  const committedRevision = head.revision === pending.before.revision + 1;
   const matches = pending.intent.kind === 'package-publish'
-    ? advanced && head.releaseId === pending.intent.resourceId
-    : advanced && job.result?.status === 'rolled-back-as-new-validated-immutable-release' &&
+    ? committedRevision && job.result?.status === 'published' && job.result?.releaseId === pending.intent.resourceId &&
+      head.releaseId === pending.intent.resourceId
+    : committedRevision && job.result?.status === 'rolled-back-as-new-validated-immutable-release' &&
       typeof job.result?.packageId === 'string' && head.releaseId === job.result.packageId; // Rollback creates a NEW release.
   return {phase: matches ? 'confirmed' : 'unconfirmed',job,head,
     message: matches ? `Канал ${head.channel} подтверждён: ревизия ${head.revision}, релиз ${head.version || head.releaseId}.`

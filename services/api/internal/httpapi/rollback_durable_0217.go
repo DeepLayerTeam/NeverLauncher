@@ -20,7 +20,7 @@ func rollbackVersion0217(p rollbackPayload0217, jobID string) string {
 	return p.ToVersion + "-rollback-" + strings.TrimPrefix(jobID, "job_")
 }
 func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p rollbackPayload0217) (model.ReleaseVersion, model.IntegrityCheckResult, error) {
-	if p.ProjectID != job.ProjectID || p.Channel != job.ResourceID || p.TargetID == "" || p.TargetManifestDigest == "" || p.TargetArtifactDigest == "" {
+	if p.ProjectID != job.ProjectID || p.Channel != job.ResourceID || p.TargetID == "" || p.TargetManifestDigest == "" || p.TargetArtifactDigest == "" || p.ExpectedHeadRevision == nil {
 		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("rollback payload binding mismatch")
 	}
 	if err := s.workerAuthorized0217(ctx, job); err != nil {
@@ -35,6 +35,17 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 	defer unlockChannel()
 	version := rollbackVersion0217(p, job.ID)
 	releaseID := p.ProjectID + "-" + p.ProfileID + "-" + version
+	// Refuse stale rollback before allocating/copying an immutable release.
+	// A recovered worker may observe its OWN release already committed; allow
+	// this one exact idempotent state, never an unrelated subsequent head.
+	head, err := s.channelHead0228(ctx, p.ProjectID, p.ProfileID, p.Channel)
+	if err != nil {
+		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, err
+	}
+	alreadyCommitted := head.Revision == *p.ExpectedHeadRevision+1 && head.ReleaseID == releaseID
+	if head.Revision != *p.ExpectedHeadRevision && !alreadyCommitted {
+		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, repository.ErrConflict
+	}
 	unlockPackage, err := s.lockPackageMutation(ctx, "package:"+releaseID)
 	if err != nil {
 		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, err
@@ -73,7 +84,13 @@ func (s Server) stageRollback0217(ctx context.Context, job model.DurableJob, p r
 		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, errors.New("rollback source files drift")
 	}
 	if created != nil && created.Status == "published" {
+		if !alreadyCommitted {
+			return model.ReleaseVersion{}, model.IntegrityCheckResult{}, repository.ErrConflict
+		}
 		return *created, model.IntegrityCheckResult{}, nil
+	}
+	if alreadyCommitted {
+		return model.ReleaseVersion{}, model.IntegrityCheckResult{}, repository.ErrConflict
 	}
 	if created == nil {
 		newRelease, err := s.Repo.CreateVersion(p.ProjectID, p.ProfileID, p.Channel, version)
@@ -265,7 +282,7 @@ func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableCon
 	if err != nil {
 		return nil, err
 	}
-	raw, _ := json.Marshal(model.DurablePublishPayload{PackageID: release.ID, ExpectedManifestDigest: md, ExpectedArtifactDigest: fd, ExpectedStatus: release.Status})
+	raw, _ := json.Marshal(model.DurablePublishPayload{PackageID: release.ID, ExpectedManifestDigest: md, ExpectedArtifactDigest: fd, ExpectedStatus: release.Status, ExpectedHeadRevision: p.ExpectedHeadRevision})
 	publishJob, _, err := cp.EnqueueDurableJob(ctx, model.DurableJob{Kind: durablePublishJobKind0213, ActorType: "user", ActorID: job.ActorID, Action: "release:publish", ProjectID: p.ProjectID, ResourceType: "package", ResourceID: release.ID, IdempotencyKey: "rollback-publish:" + job.ID, Payload: raw, MaxAttempts: 8}, 30*24*time.Hour)
 	if err != nil {
 		_, _ = cp.FailDurableJob(ctx, job.ID, job.LeaseToken, err.Error(), 2*time.Second)
@@ -293,6 +310,15 @@ func (s Server) runRollbackJob0217(ctx context.Context, cp repository.DurableCon
 	release, err = s.lookupRollbackRelease0217(release.ID)
 	if err != nil {
 		return nil, err
+	}
+	// The nested job can succeed while another release advances the channel.
+	// Do not report a successful rollback unless the head still identifies us.
+	actualHead, err := s.channelHead0228(ctx, p.ProjectID, p.ProfileID, p.Channel)
+	if err != nil {
+		return nil, err
+	}
+	if actualHead.ReleaseID != release.ID || actualHead.Revision != *p.ExpectedHeadRevision+1 {
+		return nil, fmt.Errorf("rollback channel head is not the committed release: %w", repository.ErrConflict)
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{Actor: job.ActorID, Action: "channel:rollback", Target: job.ID + ":" + release.ID, JobID: job.ID, CorrelationID: job.ID, ReasonCode: "executed", CreatedAt: time.Now().UTC()})
 	return map[string]any{"status": "rolled-back-as-new-validated-immutable-release", "projectId": p.ProjectID, "profileId": p.ProfileID, "channel": p.Channel, "targetVersion": p.ToVersion, "rollbackVersion": release.Version, "packageId": release.ID, "release": release, "jobId": publishJob.ID}, nil

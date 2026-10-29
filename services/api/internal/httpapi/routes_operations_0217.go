@@ -50,6 +50,8 @@ type rollbackPayload0217 struct {
 	TargetID             string `json:"targetId"`
 	TargetManifestDigest string `json:"targetManifestDigest"`
 	TargetArtifactDigest string `json:"targetArtifactDigest"`
+	// Frozen at enqueue time; every worker/retry must target this exact head.
+	ExpectedHeadRevision *int64 `json:"expectedHeadRevision"`
 }
 
 func readOperationRequest0217(r *http.Request) (operationRequest0217, error) {
@@ -90,7 +92,7 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 	if !ok {
 		return spec, nil, nil, errors.New("unsupported operation kind")
 	}
-	if req.ProfileID == "" {
+	if req.Kind == durableRollbackKind0217 && req.ProfileID == "" {
 		req.ProfileID = "vanilla"
 	}
 	if req.ProjectID == "" {
@@ -114,6 +116,11 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 		}
 		if lookup.Release.ProjectID != req.ProjectID {
 			return spec, nil, nil, repository.ErrNotFound
+		}
+		// A preview must never validate one channel while the durable job
+		// publishes to another channel stored on the package.
+		if (req.ProfileID != "" && lookup.Release.ProfileID != req.ProfileID) || (req.Channel != "" && lookup.Release.Channel != req.Channel) {
+			return spec, nil, nil, fmt.Errorf("package profile/channel differs from requested channel: %w", repository.ErrConflict)
 		}
 		if lookup.Release.Status == "published" {
 			return spec, nil, nil, repository.ErrImmutable
@@ -188,7 +195,12 @@ func (s Server) validateOperation0217(ctx context.Context, r *http.Request, clai
 	if err != nil {
 		return spec, nil, nil, err
 	}
-	payload := rollbackPayload0217{ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: req.Channel, ToVersion: req.ToVersion, TargetID: target.ID, TargetManifestDigest: md, TargetArtifactDigest: fd}
+	head, err := s.channelHead0228(ctx, req.ProjectID, req.ProfileID, req.Channel)
+	if err != nil {
+		return spec, nil, nil, err
+	}
+	expectedHead := head.Revision
+	payload := rollbackPayload0217{ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: req.Channel, ToVersion: req.ToVersion, TargetID: target.ID, TargetManifestDigest: md, TargetArtifactDigest: fd, ExpectedHeadRevision: &expectedHead}
 	raw, _ := json.Marshal(payload)
 	return spec, raw, map[string]any{"targetPackageId": target.ID, "targetVersion": target.Version, "projectId": req.ProjectID, "channel": req.Channel, "effect": "create one new signed immutable release from target, validate integrity, then publish subject to project policy"}, nil
 }
@@ -282,7 +294,7 @@ func (s Server) enqueueOperation0217(r *http.Request, claims authClaims, req ope
 				}
 				if req.Kind == durableRollbackKind0217 {
 					var payload rollbackPayload0217
-					if json.Unmarshal(existing.Payload, &payload) != nil || payload.ToVersion != req.ToVersion || payload.ProfileID != firstNonEmpty(req.ProfileID, "vanilla") {
+					if json.Unmarshal(existing.Payload, &payload) != nil || payload.ToVersion != req.ToVersion || payload.ProfileID != firstNonEmpty(req.ProfileID, "vanilla") || payload.Channel != req.Channel {
 						return model.DurableJob{}, false, repository.ErrConflict
 					}
 				}

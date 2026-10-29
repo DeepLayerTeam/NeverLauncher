@@ -16,6 +16,7 @@ export interface ValidationAuditReport03412 {
  coverage:{required:number;verified:number;stablePublishEligible:boolean;targetCoverage:Record<string,boolean>;targetBlockers:Record<string,string>};
  manualCertificationAllowed:false;
 }
+export interface ReleaseVersion0386 { id:string; version:string; profileId:string; channel:string; status:string; publishedAt?:string; manifest?:{rollbackSource?:{version?:string}} }
 export interface Preview { valid: boolean; permission: string; effect: Record<string,string> }
 export interface Operation { id: string; projectId: string; resourceId: string; status: string; kind: string; lastError?: string; result?: Record<string,unknown> }
 
@@ -47,7 +48,7 @@ export class ReleaseApi {
   validateOperation(req: Record<string,unknown>) { return this.send<Preview>('/api/v1/operations/validate','POST',req); }
   executeOperation(req: Record<string,unknown>) { return this.send<Operation>('/api/v1/operations/execute','POST',req); }
   profiles(id: string) { return this.get<{items: Array<{id:string;name:string;loader:string;minecraftVersion?:string;loaderVersion?:string;javaMajor?:number}>}>(`/api/v1/projects/${encodeURIComponent(id)}/profiles`); }
-  releases(id: string) { return this.get<{items: Array<{id:string;version:string;profileId:string;channel:string;status:string}>}>(`/api/v1/projects/${encodeURIComponent(id)}/versions`); }
+  releases(id: string) { return this.get<{items: ReleaseVersion0386[]}>(`/api/v1/projects/${encodeURIComponent(id)}/versions`); }
   async upload(id: string, file: File, path: string, ownership: "required"|"managed"|"optional" = "required") {
     const data = new FormData();data.append('path',path);data.append('file',file);data.append('ownership',ownership);
     return this.sendForm(`/api/v1/packages/${encodeURIComponent(id)}/files`,data);

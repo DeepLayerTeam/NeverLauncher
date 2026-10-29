@@ -58,7 +58,7 @@ test('pending/failed jobs cannot be presented as published',async()=>{
 });
 test('successful publish requires the ACTUAL channel head at expected package',async()=>{
  for(const [head,phase] of [[before,'unconfirmed'],[{...after,releaseId:'other-pkg'},'unconfirmed'],[after,'confirmed']]){
-  await scripted({'/api/v1/operations/job-1':{id:'job-1',projectId:'owner',kind:'package-publish',resourceId:'pkg-1',status:'succeeded'},'/api/v1/projects/owner/profiles/fabric/channels/stable/head':head},async()=>{
+  await scripted({'/api/v1/operations/job-1':{id:'job-1',projectId:'owner',kind:'package-publish',resourceId:'pkg-1',status:'succeeded',result:{status:'published',releaseId:'pkg-1'}},'/api/v1/projects/owner/profiles/fabric/channels/stable/head':head},async()=>{
     assert.equal((await observeOwnerOperation(new ReleaseApi('https://api.example','t'),pending)).phase,phase);
   });
  }

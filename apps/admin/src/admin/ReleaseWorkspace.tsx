@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { prepareOwnerOperation, observeOwnerOperation, readOwnerPending, saveOwnerPending, clearOwnerPending, recoveryStorageKey, type OwnerIntent, type OwnerPending, type OwnerCheck, type ChannelHead, openStagedRollback } from './owner-lifecycle-03513.ts';
 import { auditHref, recoveryAdvice } from './lifecycle.ts';
-import { ReleaseApi, type Draft, type DraftFields, type PackageInfo, type Preview, type ValidationReport, type PublishBlocker0385 } from '../api/release';
+import { ReleaseApi, type Draft, type DraftFields, type PackageInfo, type Preview, type ValidationReport, type PublishBlocker0385, type ReleaseVersion0386 } from '../api/release';
 import { ApiError } from '../api/client';
 import { PublishReadiness0385 } from './PublishReadiness0385';
 import { JobMonitor } from './JobMonitor';
 import { ValidationHistory03412 } from './ValidationHistory03412';
 import { BuildWorkspacePanel } from './BuildWorkspacePanel';
 import { ComponentGraphEditor0248 } from './ComponentGraphEditor0248';
+import { channelHistory0386 } from './release-history-0386';
 
 type Step = 'project'|'profile'|'build'|'verify'|'channel';
 const steps: Array<{id: Step; title:string}> = [
@@ -24,7 +25,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
   const [form,setForm] = useState<DraftFields>(empty(projectId,initialProfileId,initialChannel||'stable'));
   const [step,setStep] = useState<Step>('project');
   const [profiles,setProfiles] = useState<Array<{id:string;name:string;loader:string;minecraftVersion?:string;loaderVersion?:string;javaMajor?:number}>>([]);
-  const [releases,setReleases] = useState<Array<{id:string;version:string;profileId:string;channel:string;status:string}>>([]);
+  const [releases,setReleases] = useState<ReleaseVersion0386[]>([]);
   const [channelHead,setChannelHead] = useState<ChannelHead|null>(null);
   const [channelHeadError,setChannelHeadError] = useState('');
   const [packageInfo,setPackageInfo] = useState<PackageInfo|null>(null);
@@ -246,7 +247,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
     try{setChannelHead(await api.channelHead(projectId,form.profileId,form.channel));setChannelHeadError('')}
     catch(e){setChannelHead(null);setChannelHeadError(printable(e))}
   }
-  const rollbackTargets=releases.filter(v=>v.status==='published' && v.profileId===form.profileId && v.channel===form.channel && v.id!==channelHead?.releaseId);
+  const {history:channelReleases,rollbackTargets,trustedHead}=channelHistory0386(releases,projectId,form.profileId,form.channel,channelHead,channelHeadError);
   return <section className="card wide releaseWorkspace">
     <h2>Release Workspace · {__NEVERLAUNCHER_VERSION__}</h2>
     <p className="muted">Мастер: проект → профиль и загрузчик → сборка → проверка → канал. Черновики хранятся на Backend с проверкой версии при сохранении.</p>
@@ -314,7 +315,7 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
     </article>}
     {step==='channel' && <article className="subcard"><h3>5. Канал / публикация / откат</h3>
       <p>Публикация допускается только после проверки подписи, целостности и выполнения validation policy на Backend.</p>
-      <div role="status"><strong>Фактический channel head:</strong> {channelHead ? <>r{channelHead.revision} · <code>{channelHead.releaseId||'пустой канал'}</code> · {channelHead.version||'—'}</> : 'ещё не получен'} <button disabled={busy||!form.profileId} onClick={()=>void refreshChannel()}>Обновить</button>{channelHeadError && <p role="alert">Не удалось прочитать channel head: {channelHeadError}</p>}</div>
+      <div role="status"><strong>Фактический channel head:</strong> {trustedHead ? <>r{trustedHead.revision} · <code>{trustedHead.releaseId||'пустой канал'}</code> · {trustedHead.version||'—'}</> : 'ещё не получен'} <button disabled={busy||!form.profileId} onClick={()=>void refreshChannel()}>Обновить</button>{channelHeadError && <p role="alert">Не удалось прочитать channel head: {channelHeadError}</p>}</div>
       {form.channel.toLowerCase() === 'stable' && <section aria-label="Stable runtime certification"><p><strong>Production Runtime Gate V11:</strong> {report?.effectivePolicy?.publishEligible?'Все обязательные targets подтверждены':'Публикация заблокирована до подтверждения всех обязательных targets'} · {report?.effectivePolicy?.verifiedTargets??0}/{report?.effectivePolicy?.requiredTargets??0} · policy <code>{report?.effectivePolicy?.matrixSha256||'не настроена'}</code></p>
        {Object.entries(report?.effectivePolicy?.targetBlockers??{}).length>0 && <ul>{Object.entries(report?.effectivePolicy?.targetBlockers??{}).map(([target,reason])=><li key={target}><code>{target}</code>: {reason}</li>)}</ul>}
        </section>}
@@ -323,9 +324,15 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
       {report?.effectivePolicy?.blockedReason && <p role="alert">{report.effectivePolicy.blockedReason}</p>}
       <div className="buttonRow"><button disabled={busy||!!pending||!canPublish||!form.packageId||dirty} onClick={()=>void validate('package-publish')}>Предпросмотр публикации</button><button disabled={busy||!!pending||!canPublish||!planned||planned.pending.intent.kind!=='package-publish'||!preview?.valid||dirty||report?.publishReadiness?.eligible!==true||(form.channel.toLowerCase()==='stable'&&!report?.effectivePolicy?.publishEligible)} onClick={()=>void execute('package-publish')}>Опубликовать</button></div>
       {preview && <div className="releaseEffect" role="status"><strong>Серверный эффект публикации</strong>{Object.entries(preview.effect).map(([key,value])=><p key={key}>{key}: {String(value)}</p>)}</div>}
+      <hr/><h3>История публикаций канала</h3>
+      <p className="muted">Источник — сохранённые релизы Backend; активным считается только точный releaseId из channel head. Неактивные выпуски сохраняются в истории.</p>
+      <div className="tableScroll"><table className="table resourceTable"><thead><tr><th>Версия</th><th>Дата публикации</th><th>Состояние</th><th>Источник отката</th></tr></thead><tbody>
+        {channelReleases.map(item=><tr key={item.id}><td><code>{item.version}</code><br/><small>{item.id}</small></td><td>{item.publishedAt&&!Number.isNaN(Date.parse(item.publishedAt))?new Date(item.publishedAt).toLocaleString():'—'}</td><td>{trustedHead&&trustedHead.releaseId===item.id?'Активный (подтверждён head)':'Исторический'}</td><td>{item.manifest?.rollbackSource?.version||'—'}</td></tr>)}
+        {!channelReleases.length&&<tr><td colSpan={4}>Для профиля и канала опубликованных релизов нет.</td></tr>}
+      </tbody></table></div>
       <hr/><h3>Rollback опубликованного релиза</h3>
       <label className="field">Целевая опубликованная версия<select value={targetVersion} onChange={(e: React.ChangeEvent<HTMLSelectElement>)=>{setTargetVersion(e.target.value);setRollbackPreview(null);setPlanned(null);}}><option value="">Выберите версию</option>{rollbackTargets.map(x=><option key={x.id} value={x.version}>{x.version}</option>)}</select></label>
-      <div className="buttonRow"><button disabled={busy||!!pending||!canPublish||!targetVersion||dirty} onClick={()=>void validate('channel-rollback')}>Предпросмотр отката</button><button disabled={busy||!!pending||!canPublish||!planned||planned.pending.intent.kind!=='channel-rollback'||!rollbackPreview?.valid||dirty} onClick={()=>void execute('channel-rollback')}>Выполнить откат</button><button disabled={busy} onClick={()=>void api.releases(projectId).then(r=>setReleases(r.items??[])).catch(e=>setError(printable(e)))}>Обновить релизы</button></div>
+      <div className="buttonRow"><button disabled={busy||!!pending||!canPublish||!targetVersion||dirty||!trustedHead} onClick={()=>void validate('channel-rollback')}>Предпросмотр отката</button><button disabled={busy||!!pending||!canPublish||!planned||planned.pending.intent.kind!=='channel-rollback'||!rollbackPreview?.valid||dirty} onClick={()=>void execute('channel-rollback')}>Выполнить откат</button><button disabled={busy} onClick={()=>void api.releases(projectId).then(r=>setReleases(r.items??[])).catch(e=>setError(printable(e)))}>Обновить релизы</button></div>
       {rollbackPreview && <div className="releaseEffect" role="status"><strong>Серверный эффект отката</strong>{Object.entries(rollbackPreview.effect).map(([key,value])=><p key={key}>{key}: {String(value)}</p>)}</div>}
     </article>}
     {pending && <article className="subcard" role="status" aria-label="Контроль результата владельца">
@@ -333,6 +340,8 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
       <p>Тип: <strong>{pending.intent.kind}</strong> · профиль <code>{pending.intent.profileId}</code> · канал <code>{pending.intent.channel}</code>.</p>
       <p>Idempotency key: <code>{pending.intent.idempotencyKey}</code> · job: <code>{pending.jobId||'ответ потерян / неизвестен'}</code></p>
       <p>{check?.message||'Проверка durable job и channel head ещё не завершена. Не создавайте повторную операцию.'}</p>
+      {check?.phase==='confirmed'&&<p className="success" role="status">Подтверждено Backend: channel head обновлён до ревизии {check.head?.revision}, активный пакет <code>{check.head?.releaseId}</code>.</p>}
+      {check?.phase==='unconfirmed'&&<p className="error" role="alert">Нет подтверждения изменения канала: успешный job недостаточен. Проверьте конкурирующие публикации.</p>}
       {check?.job.lastError && <p role="alert">{check.job.lastError} · {recoveryAdvice(check.job.lastError)}</p>}
       <div className="buttonRow">
         {check?.phase==='staged' && <button disabled={busy||!canPrepare} onClick={()=>void continueStagedRollback()}>Открыть подготовленный rollback для сертификации</button>}
