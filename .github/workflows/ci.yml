@@ -1359,7 +1359,7 @@ jobs:
           python3 -m py_compile scripts/install/minimal-install.py
 
   minimal-live-e2e-0378:
-    name: REQUIRED live minimal SQLite process, crash and restore 0.37.8
+    name: REQUIRED live minimal SQLite process, crash and restore (current version)
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -1380,6 +1380,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s scripts/acceptance -p 'test_minimal_live_e2e_0378.py' -v
+          python3 -m unittest discover -s scripts/acceptance -p 'test_final_bundle_e2e_0380.py' -v
           python3 -m unittest discover -s scripts/install -p 'test_minimal_backup.py' -v
           python3 -m unittest discover -s scripts/install -p 'test_minimal_install.py' -v
       - name: Build real Backend and verify local filesystem
@@ -1394,7 +1395,7 @@ jobs:
           esac
           cd services/api
           go mod verify
-          go build -trimpath -ldflags "-X main.version=0.37.8 -X main.commit=${GITHUB_SHA}" \
+          go build -trimpath -ldflags "-X main.version=$(cat ../../VERSION) -X main.commit=${GITHUB_SHA}" \
             -o "$RUNNER_TEMP/nl-live-api-0378" ./cmd/neverlauncher-api
       - name: Create isolated test-only configuration policies (no signing evidence)
         shell: bash
@@ -1425,6 +1426,7 @@ jobs:
             --guard-policy "$RUNNER_TEMP/nl-0378-policies/guard.json" \
             --bridge-policy "$RUNNER_TEMP/nl-0378-policies/bridge.json" \
             --work-root "$RUNNER_TEMP/nl-live-0378" \
+            --expected-version "$(cat VERSION)" \
             --report "$RUNNER_TEMP/nl-live-evidence-0378.json"
           python3 - "$RUNNER_TEMP/nl-live-evidence-0378.json" "$GITHUB_SHA" <<'PYCODE'
           import json,sys

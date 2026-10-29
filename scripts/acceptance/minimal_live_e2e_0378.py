@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""0.37.8 minimal acceptance: real Go API process, real SQLite and HTTP.
+"""Minimal acceptance: real Go API process, real SQLite and HTTP.
 
 No mocked server or evidence. Runs a clean install, auth, durable mutation,
 SIGTERM restart, SIGKILL restart, offline backup, verified restore and corruption
@@ -32,6 +32,7 @@ import time
 
 HERE = Path(__file__).resolve().parent
 INSTALLER = HERE.parent / 'install' / 'minimal-install.py'
+PRODUCT_VERSION = (HERE.parents[1] / "VERSION").read_text(encoding="utf-8").strip()
 
 
 class AcceptanceFailure(RuntimeError):
@@ -97,8 +98,9 @@ def expect(port, method, path, code, payload=None, headers=None):
 
 
 class RealAPI:
-    def __init__(self, binary: Path, envfile: Path, port: int, logdir: Path):
+    def __init__(self, binary: Path, envfile: Path, port: int, logdir: Path, expected_version: str = PRODUCT_VERSION):
         self.binary, self.envfile, self.port, self.logdir = binary, envfile, port, logdir
+        self.expected_version = expected_version
         self.proc = None
         self.loghandle = None
 
@@ -126,7 +128,7 @@ class RealAPI:
                     status, doc = request(self.port, 'GET', '/ready', timeout=2)
                     if status == 200 and doc.get('status') == 'ready' and doc.get('repository') == 'sqlite':
                         health = expect(self.port, 'GET', '/health', 200)
-                        require(health.get('version') == '0.37.8', 'running API has wrong product version')
+                        require(health.get('version') == self.expected_version, 'running API has wrong product version')
                         expected_commit = os.environ.get('GITHUB_SHA', '')
                         if expected_commit:
                             require(health.get('sourceCommit') == expected_commit,
@@ -192,7 +194,7 @@ def verify_project(port, identifier, token=None):
         require(isinstance(sessions, dict), 'sessions endpoint returned invalid result')
 
 
-def run_acceptance(binary: Path, guard: Path, bridge: Path, work: Path, report):
+def run_acceptance(binary: Path, guard: Path, bridge: Path, work: Path, report, expected_version: str = PRODUCT_VERSION):
     require(binary.is_absolute() and binary.is_file() and os.access(binary, os.X_OK), 'missing executable real API binary')
     require(not binary.stat().st_mode & 0o022, 'insecure API binary permissions')
     require(guard.is_file() and bridge.is_file(), 'actual Guard/Bridge policy files required')
@@ -203,8 +205,8 @@ def run_acceptance(binary: Path, guard: Path, bridge: Path, work: Path, report):
     port = port_choice()
     root, restored = work / 'original', work / 'restored'
     envfile = root / 'config/backend.env'
-    api = RealAPI(binary, envfile, port, work)
-    rest = RealAPI(binary, restored / 'config/backend.env', port, work)
+    api = RealAPI(binary, envfile, port, work, expected_version)
+    rest = RealAPI(binary, restored / 'config/backend.env', port, work, expected_version)
     email = 'operator-0378@localhost.invalid'
     password = secrets.token_urlsafe(34)
     project = 'e2e0378-' + secrets.token_hex(6)
@@ -254,7 +256,7 @@ def run_acceptance(binary: Path, guard: Path, bridge: Path, work: Path, report):
             require(p.returncode != 0, 'online backup incorrectly accepted a running API')
         step(report, 'active_writer_fencing_backup', reject_online_backup)
         def reject_second_writer():
-            contender = RealAPI(binary, envfile, port, work)
+            contender = RealAPI(binary, envfile, port, work, expected_version)
             try:
                 contender.start(expect_failure=True)
                 verify_project(port, project)
@@ -328,7 +330,7 @@ def run_acceptance(binary: Path, guard: Path, bridge: Path, work: Path, report):
                              ('0' * 64,))
                 require(conn.total_changes == 1, 'HTTP SQLite state row missing')
                 conn.commit()
-            bad = RealAPI(binary, corrupt_root / 'config/backend.env', port, work)
+            bad = RealAPI(binary, corrupt_root / 'config/backend.env', port, work, expected_version)
             try:
                 bad.start(expect_failure=True)
             finally:
@@ -359,13 +361,15 @@ def main(argv=None):
     parser.add_argument('--bridge-policy', type=Path, required=True)
     parser.add_argument('--work-root', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
+    parser.add_argument('--expected-version', default=PRODUCT_VERSION)
     args = parser.parse_args(argv)
-    report = {'schemaVersion': 1, 'productVersion': '0.37.8', 'status': 'blocked',
+    report = {'schemaVersion': 1, 'productVersion': args.expected_version, 'status': 'blocked',
               'startedAt': datetime.now(timezone.utc).isoformat(), 'checks': []}
     code = 1
     try:
+        require(args.expected_version == PRODUCT_VERSION, 'E2E version differs from checked-out VERSION')
         run_acceptance(args.binary.resolve(), args.guard_policy.resolve(), args.bridge_policy.resolve(),
-                       args.work_root.absolute(), report)
+                       args.work_root.absolute(), report, args.expected_version)
         require(len(report['checks']) >= 20, 'insufficient actual E2E evidence')
         report['status'] = 'passed'
         code = 0

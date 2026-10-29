@@ -708,6 +708,53 @@ jobs:
           NEVERLAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/official-minecraft-ga-0270
           NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
         run: bash scripts/release/build-release.sh
+      # Run the real minimal deployment against the exact Linux x64 API inside
+      # the final, independently signed bundle. No rebuild or mock server here.
+      # This is in addition to six-platform independent GA evidence and base CI.
+      - name: Required final-bundle SQLite install, crash, restart and restore E2E 0.38.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          DIR="dist/release-${VERSION}"
+          test -s "$DIR/SHA256SUMS.sig"
+          test -s "$DIR/neverlauncher-api-linux-x64"
+          # Downloaded build artifacts may lose executable mode. chmod changes
+          # file metadata, not the independently approved artifact bytes.
+          chmod u+x "$DIR/neverlauncher-api-linux-x64"
+          mkdir -p "$RUNNER_TEMP/nl-final-e2e-0380" "$RUNNER_TEMP/nl-final-e2e-policies"
+          python3 - <<'PYCODE'
+          import hashlib,json,os,pathlib
+          folder=pathlib.Path(os.environ['RUNNER_TEMP'])/'nl-final-e2e-policies'
+          # These are validation configuration, never operator signing evidence.
+          fixture=hashlib.sha256(b'NeverLauncher E2E NON-RELEASE fixture no signing').hexdigest()
+          guard={'schemaVersion':'2.0','releases':{'0.1.0':{'protocolVersion':4,
+            'platforms':{'linux':{'signingMode':'integrity-only','artifacts':[
+              {'guardSha256':fixture,'launcherSha256':fixture}]}}}}}
+          bridge={'0.1.0':{'velocitySha256':[fixture],
+            'paperSha256':[fixture],'purpurSha256':[fixture]}}
+          for filename,document in [('guard.json',guard),('bridge.json',bridge)]:
+              file=folder/filename
+              fd=os.open(file,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+              with os.fdopen(fd,'w') as f: json.dump(document,f)
+          PYCODE
+          python3 scripts/acceptance/final_bundle_e2e_0380.py \
+            --bundle "$DIR" --version "$VERSION" --commit "$GITHUB_SHA" \
+            --guard-policy "$RUNNER_TEMP/nl-final-e2e-policies/guard.json" \
+            --bridge-policy "$RUNNER_TEMP/nl-final-e2e-policies/bridge.json" \
+            --work-root "$RUNNER_TEMP/nl-final-e2e-0380" \
+            --report "$RUNNER_TEMP/nl-final-bundle-e2e-0380.json"
+      - name: Preserve exact-final-binary live E2E evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-final-bundle-e2e-0380-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/nl-final-bundle-e2e-0380.json
+            ${{ runner.temp }}/nl-final-bundle-e2e-0380-live.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Require current source production package rehearsal and publication dry-run
         shell: bash
         run: |
