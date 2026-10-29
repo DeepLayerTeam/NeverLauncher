@@ -222,7 +222,13 @@ func (r *MemoryRepository) ReleaseDurableScopeLease(_ context.Context, scopeKey,
 	return nil
 }
 
-func (r *MemoryRepository) CommitDurablePublish(_ context.Context, commit model.DurablePublishCommit) (model.ReleaseVersion, error) {
+func (r *MemoryRepository) CommitDurablePublish(ctx context.Context, commit model.DurablePublishCommit) (model.ReleaseVersion, error) {
+	return r.commitDurablePublish0213(ctx, commit, false)
+}
+
+// Only the SQLite implementation calls this with a true verified grant; the
+// exported memory route deliberately never has permission to publish stable.
+func (r *MemoryRepository) commitDurablePublish0213(_ context.Context, commit model.DurablePublishCommit, verifiedStable bool) (model.ReleaseVersion, error) {
 	r.durableMu.Lock()
 	defer r.durableMu.Unlock()
 	job, ok := r.durableJobs[commit.JobID]
@@ -248,7 +254,7 @@ func (r *MemoryRepository) CommitDurablePublish(_ context.Context, commit model.
 		return model.ReleaseVersion{}, ErrNotFound
 	}
 	rel := r.releases[idx]
-	if IsStableChannel0341(rel.Channel) {
+	if IsStableChannel0341(rel.Channel) && !verifiedStable {
 		return model.ReleaseVersion{}, ErrStableRuntimeGate0341
 	}
 	if rel.Status == "published" {

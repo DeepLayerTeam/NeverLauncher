@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
@@ -20,10 +21,9 @@ import (
 // new state and its integrity digest commit atomically. This design is intended
 // for a small, single-node installation, not network HA or large data sets.
 //
-// Security-critical stable publication remains denied until an equivalent
-// attestation/permit store is completed; it cannot be enabled by configuration.
-// The deployment single-node gate remains closed until related auth stores,
-// coordination, and installation are independently verified.
+// Stable publication uses SQLite-bound, signed attestation verification and
+// one-use transactional permits (0.37.4), while the deployment single-node
+// gate remains closed pending installation and recovery acceptance (0.37.5+).
 type SQLiteHTTPRepository0372 struct {
 	mu        sync.Mutex
 	store     *sqlitedurable.Store
@@ -74,7 +74,18 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 			return e
 		}
 		_, e = q.ExecContext(ctx, sqliteRuntimeDDL0373)
-		return e
+		if e != nil {
+			return e
+		}
+		for _, stmt := range strings.Split(sqliteStablePermitDDL0374, ";") {
+			if strings.TrimSpace(stmt) == "" {
+				continue
+			}
+			if _, e = q.ExecContext(ctx, stmt); e != nil {
+				return e
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("sqlite HTTP schema: %w", err)

@@ -445,21 +445,8 @@ func (r *SQLiteHTTPRepository0372) ReleaseDurableScopeLease(arg0 context.Context
 	return
 }
 
-func (r *SQLiteHTTPRepository0372) CommitDurablePublish(arg0 context.Context, commit model.DurablePublishCommit) (out0 model.ReleaseVersion, out1 error) {
-	r.mu.Lock()
-	auditStart := len(r.mem.audit)
-	defer r.unlockAndPublishAudit0372(auditStart)
-	if r.failed != nil {
-		panic(r.failed)
-	}
-	out0, out1 = r.mem.CommitDurablePublish(arg0, commit)
-	if e := r.persist(context.Background()); e != nil {
-		r.failed = e
-		out1 = e
-	}
-	return
-}
-
+// CommitDurablePublish is implemented in sqlite_http_stable_0374.go. The
+// release, channel head, durable job, outbox and one-use grant share one WAL commit.
 func (r *SQLiteHTTPRepository0372) ClaimOutboxEvents(arg0 context.Context, worker string, limit int, ttl time.Duration) (out0 []model.DurableOutboxEvent, out1 error) {
 	r.mu.Lock()
 	auditStart := len(r.mem.audit)

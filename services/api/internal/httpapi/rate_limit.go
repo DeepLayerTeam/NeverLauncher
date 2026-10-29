@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,19 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 	}
 	s.TrustedProxies = trusted
 	s.ServerBridgeHARequired = cfg.ServerBridgeHARequired
+	// A SQLite HTTP repository must never silently use an in-memory or Redis
+	// coordinator: fencing, rate limits and command leases must survive restart.
+	if strings.EqualFold(strings.TrimSpace(cfg.RepositoryDriver), "sqlite") {
+		if strings.TrimSpace(cfg.SQLiteCoordinatorPath) == "" {
+			return fmt.Errorf("SQLite HTTP backend requires durable SQLite coordinator path")
+		}
+		if filepath.Clean(cfg.SQLiteCoordinatorPath) == filepath.Clean(cfg.DatabaseDSN) {
+			return fmt.Errorf("SQLite repository and coordinator require distinct lockable files")
+		}
+		if cfg.RateLimitEnabled && !cfg.RateLimitFailClosed {
+			return fmt.Errorf("SQLite backend rate limiting must fail closed")
+		}
+	}
 	s.ServerBridgeReplicaID = strings.TrimSpace(cfg.ServerBridgeReplicaID)
 	if s.ServerBridgeReplicaID == "" {
 		hostname, _ := os.Hostname()

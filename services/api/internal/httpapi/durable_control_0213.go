@@ -294,7 +294,7 @@ func (s Server) executeDurablePublishJob0213(ctx context.Context, cp repository.
 		return model.ReleaseVersion{}, fmt.Errorf("%w: %s", errDurableAuthorizationRevoked0213, decision.ReasonCode)
 	}
 
-	// Issue a five-minute, one-use SQL permit after all authorization and
+	// Issue a five-minute, one-use durable permit after all authorization and
 	// integrity checks. A stale durable job never carries a reusable token.
 	stableToken := ""
 	if repository.IsStableChannel0341(lookup.Release.Channel) {

@@ -98,13 +98,13 @@ func Detect(cfg config.Config) (Plan, error) {
 			problems = append(problems, "development is not a selectable production topology")
 		}
 	case SingleNode:
-		// The CLI's SQLite Core is not the HTTP Repository implementation.
-		// Advertising a working SQLite-only API would silently discard durable
-		// auth/ServerBridge state. This gate remains until the full adapter is wired.
+		// HTTP repository, auth/runtime stores and transactional stable admission
+		// exist, but the installation wizard, recovery and bidirectional migration
+		// remain unverified. Keep production minimal fail-closed until 0.37.5+ acceptance.
 		if !sqliteRepo {
 			problems = append(problems, "single-node requires a SQLite HTTP repository, not a PostgreSQL repository with SQLite coordinator")
 		}
-		problems = append(problems, "SQLite-only HTTP repository is not implemented: refuse single-node startup until DEP01 repository parity is integrated")
+		problems = append(problems, "SQLite single-node production installation remains blocked pending installation, backup/restore and migration acceptance")
 	case Standard, NetworkHA:
 		if !postgres {
 			problems = append(problems, "standard/network-ha require PostgreSQL HTTP repository")

@@ -169,7 +169,7 @@ func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup
 		IssueStableRuntimePermit03411(context.Context, repository.StableRuntimePermit03411) (string, error)
 	})
 	if !ok {
-		return "", coverage, errors.New("stable SQL permit issuer unavailable")
+		return "", coverage, errors.New("stable durable permit issuer unavailable")
 	}
 	md, _ := manifestDigest0212(lookup.Release.Manifest)
 	fd, _ := artifactDigest0212(lookup.Files)
@@ -179,7 +179,7 @@ func (s Server) issueStablePermit03411(ctx context.Context, lookup packageLookup
 	}
 	token, e := issuer.IssueStableRuntimePermit03411(ctx, repository.StableRuntimePermit03411{
 		PackageID: lookup.Release.ID, ProjectID: lookup.Release.ProjectID, ManifestSHA256: md,
-		ArtifactSHA256: fd, MatrixSHA256: coverage.MatrixSHA256, TargetsJSON: targetsRaw, Runs: coverage.Runs,
+		ArtifactSHA256: fd, MatrixSHA256: coverage.MatrixSHA256, TargetsJSON: targetsRaw, Runs: coverage.Runs, TrustedAttestorKey0374: s.Config.ValidationAttestationPublicKey0345,
 	})
 	if e != nil {
 		return "", coverage, e

@@ -17538,7 +17538,22 @@
       "findings": [
         {
           "category": "storage-configuration-read",
-          "line": 37,
+          "line": 28,
+          "evidence": "if strings.EqualFold(strings.TrimSpace(cfg.RepositoryDriver), \"sqlite\") {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 29,
+          "evidence": "if strings.TrimSpace(cfg.SQLiteCoordinatorPath) == \"\" {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 32,
+          "evidence": "if filepath.Clean(cfg.SQLiteCoordinatorPath) == filepath.Clean(cfg.DatabaseDSN) {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 51,
           "evidence": "if path := strings.TrimSpace(cfg.SQLiteCoordinatorPath); path != \"\" {"
         }
       ]
@@ -17880,6 +17895,16 @@
           "category": "postgresql-config-or-literal",
           "line": 397,
           "evidence": "return map[string]any{\"active\": active, \"revokedOrExpired\": total - active, \"total\": total, \"backend\": \"postgres-session-management-2.0\", \"sourceOfTruth\": \"PostgreSQL\", \"reuseDetec"
+        }
+      ]
+    },
+    {
+      "path": "services/api/internal/httpapi/sqlite_coordinator_0374_test.go",
+      "findings": [
+        {
+          "category": "storage-configuration-read",
+          "line": 18,
+          "evidence": "cfg.SQLiteCoordinatorPath = cfg.DatabaseDSN"
         }
       ]
     },
@@ -23963,12 +23988,12 @@
       "findings": [
         {
           "category": "postgresql-config-or-literal",
-          "line": 61,
+          "line": 63,
           "evidence": "_, e = r.db.ExecContext(ctx, `INSERT INTO stable_runtime_permits_03411(token_sha256,package_id,project_id,manifest_sha256,artifact_sha256,matrix_sha256,targets,runs,issued_at,expir"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 61,
+          "line": 63,
           "evidence": "_, e = r.db.ExecContext(ctx, `INSERT INTO stable_runtime_permits_03411(token_sha256,package_id,project_id,manifest_sha256,artifact_sha256,matrix_sha256,targets,runs,issued_at,expir"
         }
       ]

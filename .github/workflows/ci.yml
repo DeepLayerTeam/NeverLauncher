@@ -1308,6 +1308,19 @@ jobs:
           go test -race -count=1 -timeout=12m -run '^TestSQLiteRuntime.*0373$' ./internal/httpapi
           go vet ./internal/httpapi ./internal/repository
 
+      - name: Verify SQLite stable publication 0.37.4 and local coordinator (real WAL)
+        working-directory: services/api
+        env:
+          TMPDIR: ${{ runner.temp }}/storage-parity-0371
+          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+        run: |
+          set -euo pipefail
+          test -z "$(gofmt -l internal/repository/sqlite_http_stable_0374*.go internal/httpapi/rate_limit.go)"
+          go test -race -count=1 -timeout=15m -run '^TestSQLiteStablePublish.*0374$' ./internal/repository
+          go test -race -count=1 -timeout=12m -run '^(TestRateLimitAtomicAndRestart|TestLeaseFencingAndRestart|TestProductionRCConcurrentRateLimitStress)$' ./internal/sqlitecoord
+          go test -race -count=1 -timeout=5m -run '^TestSQLiteCoordinatorFailClosed0374$' ./internal/httpapi
+          go vet ./internal/repository ./internal/sqlitecoord ./internal/httpapi
+
   required-ci:
     name: REQUIRED CI — all jobs SUCCESS for exact commit
     if: ${{ always() }}
