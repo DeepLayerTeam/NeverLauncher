@@ -1358,10 +1358,95 @@ jobs:
           python3 -m unittest discover -s scripts/install -p 'test_minimal_install.py' -v
           python3 -m py_compile scripts/install/minimal-install.py
 
+  minimal-live-e2e-0378:
+    name: REQUIRED live minimal SQLite process, crash and restore 0.37.8
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Runner tests (not live E2E evidence)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s scripts/acceptance -p 'test_minimal_live_e2e_0378.py' -v
+          python3 -m unittest discover -s scripts/install -p 'test_minimal_backup.py' -v
+          python3 -m unittest discover -s scripts/install -p 'test_minimal_install.py' -v
+      - name: Build real Backend and verify local filesystem
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/nl-live-0378" "$RUNNER_TEMP/nl-0378-policies"
+          case "$(stat -f -c '%T' "$RUNNER_TEMP/nl-live-0378")" in
+            ext2/ext3|ext4|xfs|btrfs) ;;
+            *) echo 'BLOCKED: unsupported SQLite filesystem' >&2; exit 1 ;;
+          esac
+          cd services/api
+          go mod verify
+          go build -trimpath -ldflags "-X main.version=0.37.8 -X main.commit=${GITHUB_SHA}" \
+            -o "$RUNNER_TEMP/nl-live-api-0378" ./cmd/neverlauncher-api
+      - name: Create isolated test-only configuration policies (no signing evidence)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYCODE'
+          import hashlib,json,os,pathlib
+          directory=pathlib.Path(os.environ['RUNNER_TEMP'])/'nl-0378-policies'
+          fingerprint=hashlib.sha256(b'NeverLauncher E2E NON-RELEASE fixture no signing').hexdigest()
+          guard={'schemaVersion':'2.0','releases':{'0.1.0':{'protocolVersion':4,
+            'platforms':{'linux':{'signingMode':'integrity-only','artifacts':[
+              {'guardSha256':fingerprint,'launcherSha256':fingerprint}]}}}}}
+          bridge={'0.1.0':{'velocitySha256':[fingerprint],
+            'paperSha256':[fingerprint],'purpurSha256':[fingerprint]}}
+          for name,document in [('guard.json',guard),('bridge.json',bridge)]:
+              path=directory/name
+              fd=os.open(path,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+              with os.fdopen(fd,'w') as stream: json.dump(document,stream)
+          PYCODE
+      - name: Real API install, HTTP, SIGTERM, SIGKILL, backup, restore, corruption refusal
+        shell: bash
+        env:
+          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+        run: |
+          set -euo pipefail
+          python3 scripts/acceptance/minimal_live_e2e_0378.py \
+            --binary "$RUNNER_TEMP/nl-live-api-0378" \
+            --guard-policy "$RUNNER_TEMP/nl-0378-policies/guard.json" \
+            --bridge-policy "$RUNNER_TEMP/nl-0378-policies/bridge.json" \
+            --work-root "$RUNNER_TEMP/nl-live-0378" \
+            --report "$RUNNER_TEMP/nl-live-evidence-0378.json"
+          python3 - "$RUNNER_TEMP/nl-live-evidence-0378.json" "$GITHUB_SHA" <<'PYCODE'
+          import json,sys
+          report=json.load(open(sys.argv[1]))
+          assert report['status']=='passed',report['status']
+          assert report['sourceCommit']==sys.argv[2]
+          assert len(report['checks'])>=20
+          assert all(row['status']=='passed' for row in report['checks'])
+          PYCODE
+      - name: Publish machine evidence (fail closed if missing)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: minimal-live-e2e-0378-${{ github.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/nl-live-evidence-0378.json
+          if-no-files-found: error
+          retention-days: 30
+
   required-ci:
     name: REQUIRED CI — all jobs SUCCESS for exact commit
     if: ${{ always() }}
-    needs: [storage-parity-0371, go-contracts, web, rust-desktop, linux-production, neverguard-windows, neverguard-macos, macos-production, guard-certification, bridge, containers, managed-jre-production, production-e2e, neverguard-windows-adversarial, neverguard-windows-adversarial-certificate, release-ga-policy]
+    needs: [minimal-live-e2e-0378, storage-parity-0371, go-contracts, web, rust-desktop, linux-production, neverguard-windows, neverguard-macos, macos-production, guard-certification, bridge, containers, managed-jre-production, production-e2e, neverguard-windows-adversarial, neverguard-windows-adversarial-certificate, release-ga-policy]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
