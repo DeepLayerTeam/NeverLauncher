@@ -70,6 +70,10 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 	r.mem.validationPolicies = make(map[string]model.ProjectValidationPolicy)
 	err = store.Write(ctx, func(q sqlitedurable.Executor) error {
 		_, e := q.ExecContext(ctx, sqliteHTTPDDL0372)
+		if e != nil {
+			return e
+		}
+		_, e = q.ExecContext(ctx, sqliteRuntimeDDL0373)
 		return e
 	})
 	if err != nil {
@@ -99,6 +103,9 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 		var state sqliteHTTPState0372
 		if err = json.Unmarshal(raw, &state); err != nil {
 			return nil, fmt.Errorf("corrupt SQLite HTTP state: %w", err)
+		}
+		if !validPrivateSQLite0373(state) {
+			return nil, errors.New("invalid SQLite private state alignment")
 		}
 		restoreSQLiteHTTP0372(r.mem, state)
 	}

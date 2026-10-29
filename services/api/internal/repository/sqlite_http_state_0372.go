@@ -9,6 +9,7 @@ import (
 )
 
 type sqliteHTTPState0372 struct {
+	Private0373                    sqliteHTTPPrivate0373                    `json:"private0373"`
 	ManagedProviders               map[string]ManagedProviderHead02910      `json:"managedProviders"`
 	HwidObservations               map[string]HWIDObservation0299           `json:"hwidObservations"`
 	HwidAppeals                    map[string]HWIDAppeal0299                `json:"hwidAppeals"`
@@ -80,7 +81,7 @@ type sqliteHTTPState0372 struct {
 }
 
 func snapshotSQLiteHTTP0372(r *MemoryRepository) sqliteHTTPState0372 {
-	return sqliteHTTPState0372{
+	out := sqliteHTTPState0372{
 		ManagedProviders:               r.managedProviders,
 		HwidObservations:               r.hwidObservations,
 		HwidAppeals:                    r.hwidAppeals,
@@ -150,6 +151,8 @@ func snapshotSQLiteHTTP0372(r *MemoryRepository) sqliteHTTPState0372 {
 		NextExtensionDeliveryID:        r.nextExtensionDeliveryID,
 		NextExtensionDeadLetterID:      r.nextExtensionDeadLetterID,
 	}
+	out.Private0373 = snapshotPrivateSQLite0373(r)
+	return out
 }
 
 func restoreSQLiteHTTP0372(r *MemoryRepository, s sqliteHTTPState0372) {
@@ -221,4 +224,5 @@ func restoreSQLiteHTTP0372(r *MemoryRepository, s sqliteHTTPState0372) {
 	r.nextExtensionSubscriptionID = s.NextExtensionSubscriptionID
 	r.nextExtensionDeliveryID = s.NextExtensionDeliveryID
 	r.nextExtensionDeadLetterID = s.NextExtensionDeadLetterID
+	restorePrivateSQLite0373(r, s.Private0373)
 }

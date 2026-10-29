@@ -10308,47 +10308,52 @@
         },
         {
           "category": "storage-configuration-read",
-          "line": 406,
+          "line": 257,
+          "evidence": "if strings.EqualFold(cfg.RepositoryDriver, \"sqlite\") {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 411,
           "evidence": "cfg.RepositoryDriver+\"(\"+cfg.SQLDriver+\")\","
         },
         {
           "category": "storage-configuration-read",
-          "line": 444,
+          "line": 449,
           "evidence": "switch strings.ToLower(strings.TrimSpace(cfg.RepositoryDriver)) {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 447,
+          "line": 452,
           "evidence": "case \"postgres\", \"postgresql\", \"sql\":"
         },
         {
           "category": "postgres-repository-construction",
-          "line": 448,
+          "line": 453,
           "evidence": "return repository.NewSQLRepository(cfg.SQLDriver, cfg.DatabaseDSN, cfg.PublicURL)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 448,
+          "line": 453,
           "evidence": "return repository.NewSQLRepository(cfg.SQLDriver, cfg.DatabaseDSN, cfg.PublicURL)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 450,
+          "line": 455,
           "evidence": "r, err := repository.OpenSQLiteHTTPRepository0372(context.Background(), cfg.DatabaseDSN, cfg.PublicURL)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 456,
+          "line": 461,
           "evidence": "log.Fatalf(\"неизвестный NEVERLAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён\", cfg.RepositoryDriver)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 456,
+          "line": 461,
           "evidence": "log.Fatalf(\"неизвестный NEVERLAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён\", cfg.RepositoryDriver)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 500,
+          "line": 505,
           "evidence": "opt := capacity.Options{Mode: mode, Driver: cfg.RepositoryDriver, DatabaseDSN: cfg.DatabaseDSN, CoordinatorPath: cfg.SQLiteCoordinatorPath, BackupPath: cfg.BackupRoot}"
         }
       ]
@@ -16499,7 +16504,7 @@
         {
           "category": "storage-configuration-read",
           "line": 31,
-          "evidence": "if isMemoryRepository950(cfg.RepositoryDriver) {"
+          "evidence": "if isMemoryRepository950(cfg.RepositoryDriver) || strings.EqualFold(cfg.RepositoryDriver, \"sqlite\") {"
         },
         {
           "category": "storage-configuration-read",
@@ -17354,7 +17359,7 @@
         {
           "category": "storage-configuration-read",
           "line": 69,
-          "evidence": "if isMemoryRepository950(cfg.RepositoryDriver) {"
+          "evidence": "if isMemoryRepository950(cfg.RepositoryDriver) || strings.EqualFold(cfg.RepositoryDriver, \"sqlite\") {"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -17372,138 +17377,158 @@
           "evidence": "if isMemoryRepository950(s.Config.RepositoryDriver) {"
         },
         {
-          "category": "postgresql-config-or-literal",
-          "line": 133,
-          "evidence": "store := persistenceSQL950{driverName: firstNonEmpty(s.Config.SQLDriver, \"pgx\"), dsn: s.Config.DatabaseDSN}"
-        },
-        {
           "category": "storage-configuration-read",
-          "line": 133,
-          "evidence": "store := persistenceSQL950{driverName: firstNonEmpty(s.Config.SQLDriver, \"pgx\"), dsn: s.Config.DatabaseDSN}"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 135,
-          "evidence": "add(\"postgres-ddl\", \"failed\", err.Error())"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 137,
-          "evidence": "add(\"postgres-write\", \"failed\", err.Error())"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 139,
-          "evidence": "add(\"postgres-read\", \"failed\", fmt.Sprintf(\"ok=%v err=%v\", ok, err))"
+          "line": 130,
+          "evidence": "} else if strings.EqualFold(s.Config.RepositoryDriver, \"sqlite\") {"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 141,
+          "evidence": "store := persistenceSQL950{driverName: firstNonEmpty(s.Config.SQLDriver, \"pgx\"), dsn: s.Config.DatabaseDSN}"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 141,
+          "evidence": "store := persistenceSQL950{driverName: firstNonEmpty(s.Config.SQLDriver, \"pgx\"), dsn: s.Config.DatabaseDSN}"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 143,
+          "evidence": "add(\"postgres-ddl\", \"failed\", err.Error())"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 145,
+          "evidence": "add(\"postgres-write\", \"failed\", err.Error())"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 147,
+          "evidence": "add(\"postgres-read\", \"failed\", fmt.Sprintf(\"ok=%v err=%v\", ok, err))"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 149,
           "evidence": "add(\"postgres-ddl-write-read\", \"ok\", \"snapshot persisted and loaded\")"
         },
         {
           "category": "storage-configuration-read",
-          "line": 151,
+          "line": 159,
           "evidence": "if isMemoryRepository950(s.Config.RepositoryDriver) {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 162,
-          "evidence": "\"release\": \"NeverLauncher 0.10.0 Persisted PostgreSQL State\","
+          "line": 166,
+          "evidence": "persistenceMode := \"postgres-backed-security-serverbridge-state\""
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 163,
-          "evidence": "\"mode\": \"postgres-backed-security-serverbridge-state\","
-        },
-        {
-          "category": "storage-configuration-read",
           "line": 167,
-          "evidence": "\"driver\": s.Config.RepositoryDriver,"
+          "evidence": "persistenceRelease := \"NeverLauncher 0.10.0 Persisted PostgreSQL State\""
         },
         {
           "category": "storage-configuration-read",
           "line": 168,
+          "evidence": "if strings.EqualFold(s.Config.RepositoryDriver, \"sqlite\") {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 181,
+          "evidence": "\"driver\": s.Config.RepositoryDriver,"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 182,
           "evidence": "\"sqlDriver\": s.Config.SQLDriver,"
         },
         {
           "category": "storage-configuration-read",
-          "line": 169,
+          "line": 183,
           "evidence": "\"databaseDsn\": redactDSN950(s.Config.DatabaseDSN),"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 174,
+          "line": 188,
           "evidence": "\"PostgreSQL DDL for security users, normalized auth sessions/token families/MFA, bridge servers, join sessions, textures and audit\","
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 175,
+          "line": 189,
           "evidence": "\"normalized PostgreSQL auth core is source of truth for sessions and MFA in 0.11.1\","
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 177,
+          "line": 191,
           "evidence": "\"startup migration from latest PostgreSQL persistence snapshot into normalized auth tables\","
         },
         {
           "category": "storage-configuration-read",
-          "line": 194,
+          "line": 206,
+          "evidence": "if strings.EqualFold(s.Config.RepositoryDriver, \"sqlite\") {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 216,
           "evidence": "{\"id\": \"production-memory-gate\", \"status\": boolStatus950(!(isProduction950(s.Config.Environment) \u0026\u0026 isMemoryRepository950(s.Config.RepositoryDriver)))},"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 198,
+          "line": 220,
           "evidence": "{\"id\": \"postgres-ddl\", \"status\": \"available\"},"
         },
         {
           "category": "storage-configuration-read",
-          "line": 205,
-          "evidence": "if isMemoryRepository950(s.Config.RepositoryDriver) {"
+          "line": 222,
+          "evidence": "if strings.EqualFold(s.Config.RepositoryDriver, \"sqlite\") {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 230,
+          "evidence": "if isMemoryRepository950(s.Config.RepositoryDriver) || strings.EqualFold(s.Config.RepositoryDriver, \"sqlite\") {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 210,
+          "line": 235,
           "evidence": "store := persistenceSQL950{driverName: firstNonEmpty(s.Config.SQLDriver, \"pgx\"), dsn: s.Config.DatabaseDSN}"
         },
         {
           "category": "storage-configuration-read",
-          "line": 210,
+          "line": 235,
           "evidence": "store := persistenceSQL950{driverName: firstNonEmpty(s.Config.SQLDriver, \"pgx\"), dsn: s.Config.DatabaseDSN}"
         },
         {
           "category": "database-sql-handle",
-          "line": 218,
+          "line": 243,
           "evidence": "func (p persistenceSQL950) open() (*sql.DB, error) {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 224,
+          "line": 249,
           "evidence": "driver = \"pgx\""
         },
         {
           "category": "direct-sql-open",
-          "line": 226,
+          "line": 251,
           "evidence": "return sql.Open(driver, p.dsn)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 256,
+          "line": 281,
           "evidence": "_, err = db.ExecContext(ctx, `INSERT INTO neverlauncher_persistence_snapshots_950 (kind, schema_version, payload, created_at) VALUES ($1,$2,$3,$4)`, kind, persistenceSchema950, str"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 267,
+          "line": 292,
           "evidence": "err = db.QueryRowContext(ctx, `SELECT payload::text FROM neverlauncher_persistence_snapshots_950 WHERE kind = $1 ORDER BY created_at DESC, id DESC LIMIT 1`, kind).Scan(\u0026raw)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 283,
+          "line": 308,
           "evidence": "`CREATE TABLE IF NOT EXISTS neverlauncher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, payload JSONB NOT NULL, created_at "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 283,
+          "line": 308,
           "evidence": "`CREATE TABLE IF NOT EXISTS neverlauncher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, payload JSONB NOT NULL, created_at "
         }
       ]
@@ -17523,12 +17548,12 @@
       "findings": [
         {
           "category": "postgresql-config-or-literal",
-          "line": 641,
+          "line": 640,
           "evidence": "return map[string]any{\"backend\": \"postgres-auth-core-0.11.1\", \"status\": \"unavailable\", \"error\": err.Error()}"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 669,
+          "line": 668,
           "evidence": "backend = \"postgres-auth-core-0.11.1\""
         }
       ]
@@ -17638,22 +17663,22 @@
       "findings": [
         {
           "category": "postgresql-config-or-literal",
-          "line": 500,
+          "line": 499,
           "evidence": "base[\"implemented\"] = []string{\"PostgreSQL source of truth\", \"ServerBridge 3 GA Protocol v3 frozen with v2 compatibility/deprecation\", \"capability negotiation\", \"protocol feature f"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 503,
+          "line": 502,
           "evidence": "base[\"productFlow\"] = []string{\"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL\", \"Desktop/player logs in and binds a verified trusted device\", \"D"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 507,
+          "line": 506,
           "evidence": "base[\"checks\"] = []map[string]string{{\"id\": \"protocol-v3\", \"status\": \"implemented\"}, {\"id\": \"protocol-v2-compatibility-deprecated\", \"status\": \"implemented\"}, {\"id\": \"capability-neg"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 907,
+          "line": 906,
           "evidence": "return map[string]any{\"protocolVersion\": serverBridgeProtocolCurrent, \"supportedProtocolVersions\": serverBridgeSupportedProtocols0191, \"sourceOfTruth\": \"postgresql\", \"status\": \"una"
         }
       ]
@@ -17863,102 +17888,102 @@
       "findings": [
         {
           "category": "database-sql-handle",
-          "line": 70,
+          "line": 69,
           "evidence": "type passkeyPostgres117 struct{ db *sql.DB }"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 296,
+          "line": 295,
           "evidence": "_, err = p.db.ExecContext(ctx, `INSERT INTO webauthn_challenges(id,token_hash,user_id,purpose,challenge,metadata,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6::jsonb,now(),now()+"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 296,
+          "line": 295,
           "evidence": "_, err = p.db.ExecContext(ctx, `INSERT INTO webauthn_challenges(id,token_hash,user_id,purpose,challenge,metadata,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6::jsonb,now(),now()+"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 310,
+          "line": 309,
           "evidence": "err = tx.QueryRowContext(ctx, `SELECT id,user_id,purpose,challenge,metadata,created_at,expires_at FROM webauthn_challenges WHERE token_hash=$1 AND purpose=$2 AND used_at IS NULL AN"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 317,
+          "line": 316,
           "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE webauthn_challenges SET used_at=$2 WHERE id=$1`, rec.ID, rec.UsedAt); err != nil {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 337,
+          "line": 336,
           "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO webauthn_credentials(id,user_id,credential_id,user_handle,public_key_cose,algorithm,sign_count,aaguid,transports,friendly_name,backup_e"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 337,
+          "line": 336,
           "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO webauthn_credentials(id,user_id,credential_id,user_handle,public_key_cose,algorithm,sign_count,aaguid,transports,friendly_name,backup_e"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 340,
+          "line": 339,
           "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO mfa_methods(id,user_id,method_type,status,created_at,updated_at) VALUES($1,$2,'passkey','enabled',now(),now()) ON CONFLICT(user_id,meth"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 370,
+          "line": 369,
           "evidence": "return p.scanCredential(p.db.QueryRowContext(ctx, passkeySelect117+` WHERE credential_id=$1 AND status='active'`, raw))"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 375,
+          "line": 374,
           "evidence": "rows, err := p.db.QueryContext(ctx, passkeySelect117+` WHERE user_id=$1 AND status='active' ORDER BY created_at`, userID)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 392,
+          "line": 391,
           "evidence": "res, err := p.db.ExecContext(ctx, `UPDATE webauthn_credentials SET sign_count=GREATEST(sign_count,$3),backed_up=$4,last_used_at=now(),updated_at=now() WHERE id=$1 AND user_id=$2 AN"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 405,
+          "line": 404,
           "evidence": "res, err := p.db.ExecContext(ctx, `UPDATE webauthn_credentials SET friendly_name=$3,updated_at=now() WHERE id=$1 AND user_id=$2 AND status='active'`, id, userID, name)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 423,
+          "line": 422,
           "evidence": "res, err := tx.ExecContext(ctx, `UPDATE webauthn_credentials SET status='revoked',updated_at=now() WHERE id=$1 AND user_id=$2 AND status='active'`, id, userID)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 432,
+          "line": 431,
           "evidence": "if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM webauthn_credentials WHERE user_id=$1 AND status='active'`, userID).Scan(\u0026remaining); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 437,
+          "line": 436,
           "evidence": "if _, err := tx.ExecContext(ctx, `UPDATE mfa_methods SET status='disabled',updated_at=now() WHERE id=$1 AND user_id=$2`, methodID, userID); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 440,
+          "line": 439,
           "evidence": "if _, err := tx.ExecContext(ctx, `UPDATE recovery_codes SET status='revoked' WHERE user_id=$1 AND method_id=$2 AND status='active'`, userID, methodID); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 450,
+          "line": 449,
           "evidence": "err := p.db.QueryRowContext(ctx, `SELECT requirement FROM mfa_policies WHERE user_id=$1`, userID).Scan(\u0026v)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 459,
+          "line": 458,
           "evidence": "_, err := p.db.ExecContext(ctx, `INSERT INTO mfa_policies(user_id,requirement,updated_at) VALUES($1,$2,now()) ON CONFLICT(user_id) DO UPDATE SET requirement=EXCLUDED.requirement,up"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 478,
+          "line": 477,
           "evidence": "return map[string]any{\"backend\": \"postgres-webauthn-0.11.7\", \"status\": \"unavailable\", \"error\": err.Error()}"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 480,
+          "line": 479,
           "evidence": "return map[string]any{\"backend\": \"postgres-webauthn-0.11.7\", \"activePasskeys\": credentials, \"activeChallenges\": challenges, \"enforcedPolicies\": policies}"
         }
       ]

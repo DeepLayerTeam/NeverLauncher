@@ -28,7 +28,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 	if state == nil || state.AuthSessions == nil || state.Security == nil || state.Passkeys == nil {
 		return errors.New("auth core runtime state не инициализирован")
 	}
-	if isMemoryRepository950(cfg.RepositoryDriver) {
+	if isMemoryRepository950(cfg.RepositoryDriver) || strings.EqualFold(cfg.RepositoryDriver, "sqlite") {
 		return nil
 	}
 	driver := strings.TrimSpace(cfg.SQLDriver)

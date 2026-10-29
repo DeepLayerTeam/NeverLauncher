@@ -1297,6 +1297,16 @@ jobs:
           test -z "$(gofmt -l internal/repository/sqlite_http*_0372.go)"
           go test -race -count=1 -timeout=10m -run '^TestSQLiteHTTP' ./internal/repository
           go test -race -count=1 -timeout=10m -run '^TestSQLiteHTTPRepositoryBootstrap0372$' ./cmd/neverlauncher-api
+      - name: Verify SQLite 0.37.3 auth, passkeys, sessions and Bridge durability
+        working-directory: services/api
+        env:
+          TMPDIR: ${{ runner.temp }}/storage-parity-0371
+        run: |
+          set -euo pipefail
+          test -z "$(gofmt -l internal/httpapi/sqlite_runtime_0373*.go internal/repository/sqlite_http_runtime_0373*.go)"
+          go test -race -count=1 -timeout=10m -run '^TestSQLiteHTTPDevicesJobsExtensionsRestart0373$' ./internal/repository
+          go test -race -count=1 -timeout=12m -run '^TestSQLiteRuntime.*0373$' ./internal/httpapi
+          go vet ./internal/httpapi ./internal/repository
 
   required-ci:
     name: REQUIRED CI — all jobs SUCCESS for exact commit

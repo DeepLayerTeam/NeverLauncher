@@ -254,6 +254,11 @@ func main() {
 	if err := httpapi.ConfigureAuthCore111(cfg, state); err != nil {
 		log.Fatal(err)
 	}
+	if strings.EqualFold(cfg.RepositoryDriver, "sqlite") {
+		if err := httpapi.ConfigureSQLiteRuntime0373(context.Background(), state, repo, cfg.AuthTokenSecret); err != nil {
+			log.Fatalf("SQLite runtime storage: %v", err)
+		}
+	}
 	if err := httpapi.BootstrapPersistence950(cfg, state); err != nil {
 		if strings.EqualFold(cfg.Environment, "production") || strings.EqualFold(cfg.Environment, "prod") {
 			log.Fatal(err)

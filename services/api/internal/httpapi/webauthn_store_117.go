@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -59,7 +58,7 @@ type webauthnChallenge117 struct {
 }
 
 type passkeyStore117 struct {
-	mu              sync.Mutex
+	mu              sqliteRuntimeMutex0373
 	credentials     map[string]passkeyCredential117 // id
 	credentialIndex map[string]string               // Идентификатор учётных данных в base64 → id.
 	challenges      map[string]webauthnChallenge117 // Хеш токена.

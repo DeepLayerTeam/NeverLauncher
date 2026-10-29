@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
@@ -31,7 +30,7 @@ const (
 )
 
 type securityHardeningStore struct {
-	mu             sync.Mutex
+	mu             sqliteRuntimeMutex0373
 	mfa            map[string]mfaRecord
 	failedLogins   map[string]loginFailureRecord
 	passwordResets map[string]oneTimeSecurityToken

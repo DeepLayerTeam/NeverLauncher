@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
@@ -81,7 +80,7 @@ type refreshFamilyRecord111 struct {
 }
 
 type authSessionStore struct {
-	mu         sync.Mutex
+	mu         sqliteRuntimeMutex0373
 	sessions   map[string]authSessionRecord
 	tokens     map[string]refreshTokenRecord111 // ключ: SHA-256(refresh token)
 	families   map[string]refreshFamilyRecord111

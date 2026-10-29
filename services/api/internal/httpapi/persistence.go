@@ -66,7 +66,7 @@ func ValidatePersistenceConfig950(cfg config.Config) error {
 }
 
 func BootstrapPersistence950(cfg config.Config, state *RuntimeState) error {
-	if isMemoryRepository950(cfg.RepositoryDriver) {
+	if isMemoryRepository950(cfg.RepositoryDriver) || strings.EqualFold(cfg.RepositoryDriver, "sqlite") {
 		return nil
 	}
 	store := persistenceSQL950{driverName: firstNonEmpty(cfg.SQLDriver, "pgx"), dsn: cfg.DatabaseDSN}
@@ -127,6 +127,14 @@ func (s Server) persistenceSmoke(w http.ResponseWriter, r *http.Request) {
 		} else {
 			add("repository", "ok", "memory repository accepted for dev/test smoke")
 		}
+	} else if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer cancel()
+		if err := s.Repo.Health(ctx); err != nil {
+			add("sqlite-integrity", "failed", err.Error())
+		} else {
+			add("sqlite-integrity", "ok", "SQLite WAL store and repository state verified")
+		}
 	} else {
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()
@@ -155,12 +163,18 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 			status = "dev-memory-store"
 		}
 	}
+	persistenceMode := "postgres-backed-security-serverbridge-state"
+	persistenceRelease := "NeverLauncher 0.10.0 Persisted PostgreSQL State"
+	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
+		persistenceMode = "sqlite-wal-security-serverbridge-state"
+		persistenceRelease = "NeverLauncher 0.37.3 SQLite Runtime State"
+	}
 	payload := map[string]any{
 		"schemaVersion": persistenceSchema950,
 		"toolVersion":   s.Version,
 		"kind":          kind,
-		"release":       "NeverLauncher 0.10.0 Persisted PostgreSQL State",
-		"mode":          "postgres-backed-security-serverbridge-state",
+		"release":       persistenceRelease,
+		"mode":          persistenceMode,
 		"status":        status,
 		"generatedAt":   time.Now().UTC().Format(time.RFC3339),
 		"repository": map[string]any{
@@ -189,6 +203,14 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 		},
 		"persistentState": exportPersistenceSummary950(s.State),
 	}
+	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
+		payload["implemented"] = []string{
+			"SQLite HTTP Repository 0.37.2 WAL state with private authentication and extension fields",
+			"SQLite Runtime 0.37.3 encrypted durable auth sessions, MFA, passkeys, and ServerBridge state",
+			"Persisted devices, durable jobs, extensions and trust policy in the SQLite HTTP Repository",
+			"Production SQLite-only deployment remains blocked until release admission parity is verified",
+		}
+	}
 	if kind == "readiness" {
 		payload["checks"] = []map[string]string{
 			{"id": "production-memory-gate", "status": boolStatus950(!(isProduction950(s.Config.Environment) && isMemoryRepository950(s.Config.RepositoryDriver)))},
@@ -197,12 +219,15 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 			{"id": "auth-session-state-export", "status": "ok"},
 			{"id": "postgres-ddl", "status": "available"},
 		}
+		if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
+			payload["checks"] = []map[string]string{{"id": "sqlite-wal-repository", "status": boolStatus950(s.Repo.Health(context.Background()) == nil)}}
+		}
 	}
 	return payload
 }
 
 func (s Server) flushPersistenceState950(reason string) error {
-	if isMemoryRepository950(s.Config.RepositoryDriver) {
+	if isMemoryRepository950(s.Config.RepositoryDriver) || strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

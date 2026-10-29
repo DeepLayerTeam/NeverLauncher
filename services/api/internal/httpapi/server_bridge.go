@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
@@ -105,7 +104,7 @@ type bridgeTextureRecord struct {
 }
 
 type serverBridgeStore struct {
-	mu                 sync.Mutex
+	mu                 sqliteRuntimeMutex0373
 	servers            map[string]bridgeServerRecord
 	joins              map[string]bridgeJoinRecord
 	textures           map[string]bridgeTextureRecord
