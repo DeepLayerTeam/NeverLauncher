@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 # A failed preflight must never leave a previous green GA certificate behind.
-rm -f dist/ga-certification/admin-0220.json
+rm -f dist/ga-certification/admin-0220.json dist/ga-certification/owner-cycle-0390.json
 RELEASE_VERSION="$(< VERSION)"
 python3 scripts/release/release_policy.py ga-mode --version "$RELEASE_VERSION" >/dev/null || exit 2
 
@@ -33,6 +33,7 @@ identity(sys.argv[1], sys.argv[2], root=pathlib.Path.cwd())
 PYRUN
 rm -f dist/ga-certification/admin-0220.json
 python3 scripts/release/check-admin-ga-0220.py
+python3 -m unittest scripts/release/test_owner_cycle_0390.py -v
 (
   cd apps/admin
   npm ci --no-audit --no-fund
@@ -54,6 +55,21 @@ python3 scripts/release/check-admin-ga-0220.py
 # Covers live pgx migration, CAS, durable/ServerBridge enqueue, lease and signed ACK.
 bash e2e/scripts/run-admin-hardening-02112-e2e.sh
 python3 e2e/scripts/admin-hardening-02112-browser.py
+# Since 0.39.0 the REAL browser owner-cycle is mandatory, not a manifest receipt.
+if python3 - "$RELEASE_VERSION" <<'PYVERSION'
+import sys
+raise SystemExit(0 if tuple(map(int,sys.argv[1].split('-',1)[0].split('+',1)[0].split('.')[:3])) >= (0,39,0) else 1)
+PYVERSION
+then
+  python3 e2e/scripts/owner-cycle-0390-browser.py
+  python3 - "$RELEASE_VERSION" "$COMMIT" <<'PYOWNER'
+import importlib.util,json,sys,pathlib
+p=pathlib.Path('e2e/scripts/owner-cycle-0390-browser.py')
+s=importlib.util.spec_from_file_location('owner0390',p);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
+r=pathlib.Path('dist/ga-certification/owner-cycle-0390.json')
+m.verify_receipt(json.loads(r.read_text()),version=sys.argv[1],commit=sys.argv[2])
+PYOWNER
+fi
 python3 e2e/scripts/admin-ga-0220-serverbridge.py
 
 # Emit evidence only AFTER all processes return success; an incomplete run has no PASS file.
@@ -72,9 +88,12 @@ payload = {
     'checks': ['openapi', 'version', 'repository-policy', 'migration-parity', 'sdk-reproducibility',
                'admin-node-tests', 'vite-production-build', 'api-go-race', 'api-go-vet',
                'api-production-build', 'cli-go-race', 'cli-go-vet', 'cli-production-build',
-               'postgresql-serverbridge-integration', 'live-playwright-rbac-two-tabs-recovery', 'live-serverbridge-v3-save-drain-ack'],
+               'postgresql-serverbridge-integration', 'live-playwright-rbac-two-tabs-recovery', 'live-serverbridge-v3-save-drain-ack'] +
+              (['live-playwright-owner-cycle-0390'] if tuple(map(int,(root / 'VERSION').read_text().strip().split('-',1)[0].split('+',1)[0].split('.')[:3])) >= (0,39,0) else []),
     'adminBundle': {str(p.relative_to(root / 'apps/admin/dist')): hash_of(p) for p in assets},
     'openapiSha256': hash_of(root / 'schemas/openapi.yaml'),
+    **({'ownerCycleReceiptSha256': hash_of(root / 'dist/ga-certification/owner-cycle-0390.json')} if
+       tuple(map(int,(root / 'VERSION').read_text().strip().split('-',1)[0].split('+',1)[0].split('.')[:3])) >= (0,39,0) else {}),
     'certificationRun': identity((root / 'VERSION').read_text().strip(), sys.argv[1], root=root),
 }
 result = root / 'dist/ga-certification/admin-0220.json'

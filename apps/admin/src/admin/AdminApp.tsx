@@ -5,6 +5,7 @@ import { OperationsWorkspace } from './OperationsWorkspace';
 import { BackendOperations0289 } from './BackendOperations0289';
 import { BackendNoticeInbox0289 } from './BackendNoticeInbox0289';
 import { ReleaseWorkspace } from './ReleaseWorkspace';
+import { requireValidatedPackage0390, type PackageValidation0390 } from './package-validation-0390';
 import { ProfileManagementWorkspace } from './ProfileManagementWorkspace';
 import { ProfileEditor0382 } from './ProfileEditor0382';
 import { ProjectAccessWorkspace0387 } from './ProjectAccessWorkspace0387';
@@ -475,7 +476,7 @@ export function AdminApp() {
         <TextInput label="Канал" value={packageForm.channel} onChange={(channel) => setPackageForm({ ...packageForm, channel })} />
         <TextInput label="Версия" value={packageForm.version} onChange={(version) => setPackageForm({ ...packageForm, version })} />
         <TextInput label="ID пакета" value={packageForm.packageId} onChange={(packageId) => setPackageForm({ ...packageForm, packageId })} />
-        <div className="buttonRow"><button disabled={!canPrepare || !selectedProjectId || !packageForm.profileId.trim() || !packageForm.version.trim()} onClick={() => runAction('Создание пакета', createPackage).catch((err) => setError(err.message))}>Создать пакет</button><button disabled={!canPrepare || !packageForm.packageId} onClick={() => runAction('Проверка пакета', () => requestJSON(backendUrl, `/api/v1/packages/${encodeURIComponent(packageForm.packageId)}/validate`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Проверить</button><button disabled={!canPrepare || !packageForm.packageId} onClick={() => runAction('Integrity check пакета', () => requestJSON(backendUrl, `/api/v1/packages/${encodeURIComponent(packageForm.packageId)}/integrity-check`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Integrity check</button><button disabled={!canPublish || !selectedProjectId} onClick={() => navigate('release-workspace')}>Открыть мастер публикации и отката</button></div>
+        <div className="buttonRow"><button disabled={!canPrepare || !selectedProjectId || !packageForm.profileId.trim() || !packageForm.version.trim()} onClick={() => runAction('Создание пакета', createPackage).catch((err) => setError(err.message))}>Создать пакет</button><button disabled={!canPrepare || !packageForm.packageId} onClick={() => runAction('Проверка пакета', async () => requireValidatedPackage0390(await requestJSON<PackageValidation0390>(backendUrl, `/api/v1/packages/${encodeURIComponent(packageForm.packageId)}/validate`, token, { method: 'POST' }))).catch((err) => setError(err.message))}>Проверить</button><button disabled={!canPrepare || !packageForm.packageId} onClick={() => runAction('Integrity check пакета', () => requestJSON(backendUrl, `/api/v1/packages/${encodeURIComponent(packageForm.packageId)}/integrity-check`, token, { method: 'POST' })).catch((err) => setError(err.message))}>Integrity check</button><button disabled={!canPublish || !selectedProjectId} onClick={() => navigate('release-workspace')}>Открыть мастер публикации и отката</button></div>
       </article>
       <article className="subcard">
         <h3>Файл</h3>

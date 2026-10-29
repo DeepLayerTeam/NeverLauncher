@@ -180,7 +180,8 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
       // BEFORE network I/O. An ACK loss must not produce a second operation.
       saveOwnerPending(localStorage,recoveryKey,exact);setPending(exact);
       const accepted=await api.executeOperation(exact.intent);
-      if(accepted.projectId!==projectId || accepted.kind!==kind || !accepted.id)
+      if(accepted.projectId!==projectId || accepted.kind!==kind || !accepted.id ||
+          accepted.resourceId !== (kind==='package-publish'?exact.intent.resourceId:exact.intent.channel))
         throw Error('Backend вернул несоответствующий job; проверьте журнал по idempotency key.');
       const recorded={...exact,jobId:accepted.id};
       saveOwnerPending(localStorage,recoveryKey,recorded);setPending(recorded);setMonitorId(accepted.id);

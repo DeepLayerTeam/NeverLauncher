@@ -63,7 +63,8 @@ export async function prepareOwnerOperation(api: ReleaseApi, intent: OwnerIntent
 export async function observeOwnerOperation(api: ReleaseApi, pending: OwnerPending): Promise<OwnerCheck> {
   const job = await api.operation(pending.jobId || '');
   if (job.projectId !== pending.intent.projectId || job.kind !== pending.intent.kind ||
-      (pending.intent.kind === 'package-publish' && job.resourceId !== pending.intent.resourceId))
+      job.resourceId !== (pending.intent.kind === 'package-publish' ? pending.intent.resourceId : pending.intent.channel) ||
+      (pending.jobId && job.id !== pending.jobId))
     throw Error('Job не соответствует выбранной операции/проекту');
   if (['failed','dead','revoked','cancelled'].includes(job.status)) {
     return { phase: 'failed', job, message: `Job ${job.id}: ${job.status}. Проверьте причину и журнал перед повтором.` };

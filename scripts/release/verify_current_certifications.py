@@ -67,7 +67,8 @@ def check_common(report: dict, version: str, commit: str):
 def check_admin(report: dict, version: str, commit: str):
     check_common(report, version, commit)
     checks = report.get('checks')
-    if not isinstance(checks, list) or len(checks) != len(ADMIN_CHECKS) or set(checks) != ADMIN_CHECKS:
+    required = ADMIN_CHECKS | ({'live-playwright-owner-cycle-0390'} if tuple(map(int, version.split('-', 1)[0].split('+', 1)[0].split('.')[:3])) >= (0,39,0) else set())
+    if not isinstance(checks, list) or len(checks) != len(required) or set(checks) != required:
         raise CertificationBlocked('Admin GA did not execute every mandatory live and build check')
     bundle = report.get('adminBundle')
     if not isinstance(bundle, dict) or 'index.html' not in bundle or len(bundle) < 2:
@@ -77,6 +78,8 @@ def check_admin(report: dict, version: str, commit: str):
         raise CertificationBlocked('Admin GA bundle fingerprints malformed')
     if not re.fullmatch('[a-f0-9]{64}', str(report.get('openapiSha256', ''))):
         raise CertificationBlocked('Admin OpenAPI fingerprint missing')
+    if tuple(map(int, version.split('-', 1)[0].split('+', 1)[0].split('.')[:3])) >= (0,39,0) and not re.fullmatch('[a-f0-9]{64}', str(report.get('ownerCycleReceiptSha256', ''))):
+        raise CertificationBlocked('Owner 0.39.0 live browser E2E receipt fingerprint missing')
 
 
 def check_profiles(report: dict, version: str, commit: str):
