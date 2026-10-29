@@ -23,7 +23,8 @@ import { TextureManagement0259 } from './TextureManagement0259';
 import { BrandingStudio0355 } from './BrandingStudio0355';
 import { SupportDiagnostics03510 } from './SupportDiagnostics03510';
 import { ResourceGrid } from '../components/ResourceGrid';
-import { useAdminRoute, navigate } from './routing';
+import { useAdminRoute, navigate, replaceAdminRoute, adminHref } from './routing';
+import { contextStorageKey, readSavedContext, saveContext, resolveProjectContext } from './project-context-0381';
 import { sections, endpointForSection } from './sections';
 import { can, canSeeSection, type AdminIdentity } from './permissions';
 import { createPasskeyCredential, getPasskeyAssertion, type PublicKeyCredentialRequestOptionsJSON, type PublicKeyCredentialCreationOptionsJSON, type PasskeyBegin, type PasskeySessionResponse } from './passkeys';
@@ -51,11 +52,12 @@ export function AdminApp() {
   const [totp, setTotp] = useState('');
   const [recoveryCode, setRecoveryCode] = useState('');
   const [mfaPolicy, setMfaPolicy] = useState<'optional' | 'required' | 'phishing-resistant'>('optional');
-  const active = useAdminRoute();
+  const route = useAdminRoute();
+  const active = route.section;
   const [identity, setIdentity] = useState<AdminIdentity | null>(null);
-  const [projectId, setProjectId] = useState(sessionStorage.getItem('neverlauncher.admin.projectId') || '');
   const [selectedRecordId, setSelectedRecordId] = useState('');
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [dashboardScope, setDashboardScope] = useState('');
   const [payload, setPayload] = useState<Record<string, unknown> | null>(null);
   const [status, setStatus] = useState('offline');
   const [message, setMessage] = useState<string | null>(null);
@@ -70,7 +72,18 @@ export function AdminApp() {
   const [packageForm, setPackageForm] = useState<PackageForm>({ projectId: '', profileId: '', channel: 'stable', version: '', packageId: '', path: '', sha256: '' });
   const [packageFile, setPackageFile] = useState<File | null>(null);
   const availableProjects = dashboard?.projects ?? [];
-  const selectedProjectId = availableProjects.some(p => p.id === projectId) ? projectId : String(availableProjects[0]?.id ?? '');
+  // IDs from URL and localStorage are preferences, not authorization. Overview is
+  // access-filtered by the Backend and is the only source for resolving them.
+  const ownerStorageKey = identity ? contextStorageKey(backendUrl, identity.user.id) : '';
+  const savedContext = ownerStorageKey ? readSavedContext(localStorage, ownerStorageKey) : {projectId:'',profileId:'',channelId:''};
+  const ownerContext = resolveProjectContext(route, savedContext, {
+    projects: availableProjects,
+    profiles: dashboard?.profiles ?? [],
+    channels: dashboard?.channels ?? [],
+  });
+  const selectedProjectId = ownerContext.projectId;
+  const selectedProfileId = dashboardScope === selectedProjectId ? ownerContext.profileId : '';
+  const selectedChannelId = dashboardScope === selectedProjectId ? ownerContext.channelId : '';
   const activeEndpoint = endpointForSection(active, selectedProjectId);
   const mayRead = canSeeSection(identity, active, selectedProjectId);
   const canProjectWrite = can(identity, 'project:write', selectedProjectId);
@@ -82,13 +95,17 @@ export function AdminApp() {
     channels: dashboard?.channels?.length ?? 0, auditEvents: dashboard?.audit?.length ?? 0 };
   function chooseProject(id: string) {
     if (!availableProjects.some(p => p.id === id)) return;
-    setProjectId(id);
+    navigate(active, {projectId:id, profileId:'', channelId:''});
     setSelectedRecordId('');
     setPayload(null);
   }
   function selectRecord(row: Record<string, unknown>) {
     const id = String(row.id ?? '');
     setSelectedRecordId(id);
+    if (active === 'profiles' && id) navigate(active, {profileId:id});
+    if (active === 'channels' && id) navigate(active, {channelId:id});
+    if ((active === 'packages' || active === 'releases') && typeof row.profileId === 'string' && row.profileId)
+      navigate(active, {profileId:row.profileId, ...(typeof row.channel === 'string' ? {channelId:row.channel} : {})});
     if (active === 'projects') {
       if (id) chooseProject(id);
       setProjectForm({ id, name: String(row.name ?? ''), description: String(row.description ?? ''), homepage: String(row.homepage ?? ''), repository: String(row.repository ?? ''), defaultChannel: String(row.defaultChannel ?? 'stable') });
@@ -103,13 +120,56 @@ export function AdminApp() {
     }
   }
 
-  useEffect(() => { if (selectedProjectId) sessionStorage.setItem('neverlauncher.admin.projectId', selectedProjectId); }, [selectedProjectId]);
+  // Canonicalize only after the authenticated access-filtered overview arrives.
+  // A removed project/profile/channel cannot survive as a live selection.
+  useEffect(() => {
+    if (!ownerStorageKey || !dashboard || (ownerContext.projectId && dashboardScope !== ownerContext.projectId)) return;
+    saveContext(localStorage, ownerStorageKey, ownerContext);
+    if (route.projectId !== ownerContext.projectId || (route.profileId || '') !== ownerContext.profileId || (route.channelId || '') !== ownerContext.channelId)
+      replaceAdminRoute(active, ownerContext);
+  }, [ownerStorageKey, dashboard, dashboardScope, ownerContext.projectId, ownerContext.profileId, ownerContext.channelId,
+      route.projectId, route.profileId, route.channelId, active]);
   useEffect(() => {
     if (!selectedProjectId) return;
     setProfileForm(f => ({ ...f, projectId: selectedProjectId, id: '', name: '' }));
     setChannelForm(f => ({ ...f, projectId: selectedProjectId, id: '', name: '' }));
     setPackageForm(f => ({ ...f, projectId: selectedProjectId, profileId: '', packageId: '', version: '' }));
   }, [selectedProjectId]);
+
+  // The simple package form and the Release Workspace consume the same
+  // validated selection. Moving between tabs must not force manual ID entry.
+  useEffect(() => {
+    if (!selectedProjectId || dashboardScope !== selectedProjectId) return;
+    setPackageForm(current => {
+      const channel = selectedChannelId || 'stable';
+      const matches = current.projectId === selectedProjectId && current.profileId === selectedProfileId && current.channel === channel;
+      return matches ? current : {...current,projectId:selectedProjectId,profileId:selectedProfileId,channel,
+        packageId:'',version:'',path:'',sha256:''};
+    });
+  }, [selectedProjectId, dashboardScope, selectedProfileId, selectedChannelId]);
+
+  // Restored deep-links select their resource without requiring a second click.
+  useEffect(() => {
+    if (active === 'profiles') setSelectedRecordId(selectedProfileId);
+    else if (active === 'channels') setSelectedRecordId(selectedChannelId);
+  }, [active, selectedProfileId, selectedChannelId]);
+
+  // A deep-link selection also opens the corresponding editable form after
+  // the authenticated resource list has finished loading.
+  useEffect(() => {
+    const rawItems = payload?.items;
+    const rows = Array.isArray(rawItems) ? rawItems : [];
+    if (active === 'profiles' && selectedProfileId) {
+      const item = rows.find((x: unknown) => x && typeof x === 'object' && (x as {id?:string}).id === selectedProfileId) as Record<string,unknown>|undefined;
+      if (item && (!item.projectId || item.projectId === selectedProjectId))
+        setProfileForm({projectId:selectedProjectId,id:selectedProfileId,name:String(item.name??''),description:String(item.description??''),loader:String(item.loader??'vanilla'),preset:String(item.preset??''),isDefault:item.isDefault===true});
+    }
+    if (active === 'channels' && selectedChannelId) {
+      const item = rows.find((x: unknown) => x && typeof x === 'object' && (x as {id?:string}).id === selectedChannelId) as Record<string,unknown>|undefined;
+      if (item && (!item.projectId || item.projectId === selectedProjectId))
+        setChannelForm({projectId:selectedProjectId,id:selectedChannelId,name:String(item.name??''),description:String(item.description??''),protected:item.protected===true});
+    }
+  }, [active,selectedProjectId,selectedProfileId,selectedChannelId,payload]);
 
   useEffect(() => { localStorage.setItem('neverlauncher.backendUrl', backendUrl); }, [backendUrl]);
   useEffect(() => { token ? sessionStorage.setItem('neverlauncher.admin.token', token) : sessionStorage.removeItem('neverlauncher.admin.token'); }, [token]);
@@ -259,7 +319,7 @@ export function AdminApp() {
       if (err instanceof ApiError && err.status === 403) return { projects: [], profiles: [], channels: [], versions: [], files: [], users: [], audit: [] };
       throw err;
     });
-    setIdentity(user); setDashboard(dash); setStatus('online');
+    setIdentity(user); setDashboardScope(selectedProjectId || dash.projects?.[0]?.id || ''); setDashboard(dash); setStatus('online');
   }
 
   async function loadActive() {
@@ -273,15 +333,16 @@ export function AdminApp() {
     setDashboard(null); setIdentity(null); setPayload(null);
     if (!token) { setStatus('offline'); return; }
     const api = new AdminApi(backendUrl, token);
+    const requestedProjectId = selectedProjectId;
     api.me().then(async user => {
-      const dash = await api.overview().catch((err: unknown) => {
+      const dash = await api.overview(requestedProjectId || undefined).catch((err: unknown) => {
         if (err instanceof ApiError && err.status === 403) return { projects: [], profiles: [], channels: [], versions: [], files: [], users: [], audit: [] };
         throw err;
       });
       return [user, dash] as const;
     }).then(([user, dash]) => {
       if (!live) return;
-      setIdentity(user); setDashboard(dash); setStatus('online'); setError(null);
+      setIdentity(user); setDashboardScope(requestedProjectId || dash.projects?.[0]?.id || ''); setDashboard(dash); setStatus('online'); setError(null);
     }).catch((err: Error) => { if (live) { setError(err.message); setStatus('offline'); } });
     return () => { live = false; };
   }, [backendUrl, token]);
@@ -290,14 +351,14 @@ export function AdminApp() {
     if (!token || !identity || !selectedProjectId) return;
     let live = true;
     new AdminApi(backendUrl, token).overview(selectedProjectId)
-      .then(data => { if (live) setDashboard(data); })
+      .then(data => { if (live) { setDashboardScope(selectedProjectId); setDashboard(data); } })
       .catch((err: Error) => { if (live) setError(err.message); });
     return () => { live = false; };
   }, [backendUrl, token, identity, selectedProjectId]);
 
   useEffect(() => {
     let live = true;
-    setPayload(null); setSelectedRecordId('');
+    setPayload(null); setSelectedRecordId(active === 'profiles' ? selectedProfileId : active === 'channels' ? selectedChannelId : '');
     if (!token || !mayRead || ['release-workspace','job-monitor','migration-center','backup-restore','devices','audit','config','official-provider','auth-provider-wizard','branding-studio','diagnostics'].includes(active) || (['profiles', 'channels', 'packages', 'releases'].includes(active) && !selectedProjectId)) return;
     requestJSON<Record<string, unknown>>(backendUrl, activeEndpoint, token)
       .then(result => { if (live) { setPayload(result); setError(null); } })
@@ -312,6 +373,23 @@ export function AdminApp() {
     setPayload(result as Record<string, unknown>);
     await loadDashboard().catch(() => undefined);
     await loadActive().catch(() => undefined);
+  }
+
+  async function createProject() {
+    setError(null); setMessage(null);
+    const id = projectForm.id.trim();
+    if (!id || !projectForm.name.trim()) throw new Error('Укажите ID и название проекта.');
+    const result = await requestJSON(backendUrl, '/api/v1/admin/projects', token,
+      {method:'POST',body:JSON.stringify(projectForm)});
+    // The new project must be present in an authenticated overview before it
+    // can become the active scope. Never mark a failed refresh as success.
+    const overview = await new AdminApi(backendUrl, token).overview(id);
+    if (!overview.projects?.some(p => p.id === id)) throw new Error('Проект создан, но недоступен текущему пользователю. Проверьте права и обновите список.');
+    setDashboardScope(id); setDashboard(overview);
+    setSelectedRecordId(id);
+    navigate('projects', {projectId:id,profileId:'',channelId:''});
+    setMessage(`Проект ${id} создан и выбран. Можно перейти к профилям, серверам и сборкам.`);
+    return result;
   }
 
   async function createPackage() {
@@ -369,7 +447,7 @@ export function AdminApp() {
         <TextInput label="Домашняя страница" value={projectForm.homepage} onChange={(homepage) => setProjectForm({ ...projectForm, homepage })} />
         <TextInput label="Репозиторий" value={projectForm.repository} onChange={(repository) => setProjectForm({ ...projectForm, repository })} />
         <TextInput label="Канал по умолчанию" value={projectForm.defaultChannel} onChange={(defaultChannel) => setProjectForm({ ...projectForm, defaultChannel })} />
-        <div className="buttonRow"><button disabled={!can(identity, 'project:write') || !projectForm.id.trim() || !projectForm.name.trim()} onClick={() => runAction('Создание проекта', () => requestJSON(backendUrl, '/api/v1/admin/projects', token, { method: 'POST', body: JSON.stringify(projectForm) })).catch((err) => setError(err.message))}>Создать</button><button disabled={!canProjectWrite || !projectForm.id || projectForm.id !== selectedProjectId} onClick={() => runAction('Обновление проекта', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(projectForm.id)}`, token, { method: 'PATCH', body: JSON.stringify(projectForm) })).catch((err) => setError(err.message))}>Обновить</button></div>
+        <div className="buttonRow"><button disabled={!can(identity, 'project:write') || !projectForm.id.trim() || !projectForm.name.trim()} onClick={() => createProject().catch((err: Error) => setError(err.message))}>Создать</button><button disabled={!canProjectWrite || !projectForm.id || projectForm.id !== selectedProjectId} onClick={() => runAction('Обновление проекта', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(projectForm.id)}`, token, { method: 'PATCH', body: JSON.stringify(projectForm) })).catch((err) => setError(err.message))}>Обновить</button></div>
       </article>}
       {active === 'profiles' && canProjectWrite && <article className="subcard">
         <h3>Профиль</h3>
@@ -382,7 +460,7 @@ export function AdminApp() {
         <label className="check"><input type="checkbox" checked={profileForm.isDefault} onChange={(event) => setProfileForm({ ...profileForm, isDefault: event.target.checked })} /> Профиль по умолчанию</label>
         <div className="buttonRow"><button disabled={!profileForm.id.trim() || !profileForm.name.trim() || !selectedProjectId} onClick={() => runAction('Создание профиля', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(selectedProjectId)}/profiles`, token, { method: 'POST', body: JSON.stringify(profileForm) })).catch((err) => setError(err.message))}>Создать</button><button disabled={!profileForm.id || !selectedProjectId} onClick={() => runAction('Обновление профиля', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(selectedProjectId)}/profiles/${encodeURIComponent(profileForm.id)}`, token, { method: 'PATCH', body: JSON.stringify(profileForm) })).catch((err) => setError(err.message))}>Обновить</button></div>
       </article>}
-      {active === 'profiles' && canProjectWrite && <ProfileManagementWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} sourceProfileId={selectedRecordId} onChanged={async () => { await loadDashboard(); await loadActive(); }} />}
+      {active === 'profiles' && canProjectWrite && <ProfileManagementWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} sourceProfileId={selectedProfileId || selectedRecordId} onChanged={async () => { await loadDashboard(); await loadActive(); }} />}
       {active === 'channels' && canProjectWrite && <article className="subcard">
         <h3>Канал</h3>
         <TextInput label="ID проекта" value={selectedProjectId} readOnly onChange={() => undefined} />
@@ -420,7 +498,19 @@ export function AdminApp() {
       </header>
       <section className="card wide">
         <label className="field"><span>URL Backend</span><input value={backendUrl} onChange={(event) => { setToken(''); setRefreshToken(''); setSessionId(''); setIdentity(null); setBackendUrl(event.target.value); }} /></label>
-        {token && identity && <div className="projectContext"><label>Текущий проект<select aria-label="Текущий проект" disabled={availableProjects.length === 0} value={selectedProjectId} onChange={event => chooseProject(event.target.value)}>{availableProjects.map(p => <option key={String(p.id)} value={String(p.id)}>{String(p.name ?? p.id)}</option>)}</select></label><span className="muted">{identity.user.displayName || identity.user.email} · {identity.user.roleId} · {selectedProjectId || 'Нет доступных проектов'}</span></div>}
+        {token && identity && <div className="projectContext"><label>Текущий проект<select aria-label="Текущий проект" disabled={availableProjects.length === 0} value={selectedProjectId} onChange={event => chooseProject(event.target.value)}><option value="" disabled>Выберите проект</option>{availableProjects.map(p => <option key={String(p.id)} value={String(p.id)}>{String(p.name ?? p.id)}</option>)}</select></label><span className="muted">{identity.user.displayName || identity.user.email} · {identity.user.roleId} · {selectedProjectId || 'Нет доступных проектов'}</span></div>}
+        {token && identity && selectedProjectId && <nav className="ownerNavigation0381" aria-label="Ресурсы выбранного проекта">
+          <span className="ownerNavigationTitle0381">Проект: <strong>{availableProjects.find(p => p.id === selectedProjectId)?.name || selectedProjectId}</strong></span>
+          <label>Профиль<select aria-label="Контекстный профиль" value={selectedProfileId} onChange={e => navigate(active, {profileId:e.target.value})}>
+            <option value="">Все профили</option>{(dashboard?.profiles ?? []).filter(p => p.projectId === selectedProjectId).map(p => <option key={p.id} value={p.id}>{p.name || p.id}</option>)}
+          </select></label>
+          <label>Канал<select aria-label="Контекстный канал" value={selectedChannelId} onChange={e => navigate(active, {channelId:e.target.value})}>
+            <option value="">Все каналы</option>{(dashboard?.channels ?? []).filter(c => c.projectId === selectedProjectId).map(c => <option key={c.id} value={c.id}>{c.name || c.id}</option>)}
+          </select></label>
+          <div className="ownerResourceLinks0381">
+            {(['projects','profiles','server-bridge','channels','packages','release-workspace','releases','job-monitor'] as const).filter(id => canSeeSection(identity,id,selectedProjectId)).map(id => <a key={id} href={adminHref(id,ownerContext)} aria-current={active === id ? 'page' : undefined}>{sections.find(s => s.id === id)?.title}</a>)}
+          </div>
+        </nav>}
         <details className="advanced"><summary>API и технические сведения</summary><code>{activeEndpoint}</code></details>
         {!token && <div className="loginRow"><label className="field">Email администратора<input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="почта администратора" type="email" autoComplete="username" /></label><label className="field">Пароль<input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="пароль" type="password" autoComplete="current-password" /></label><label className="field">TOTP (необязательно)<input value={totp} onChange={(event) => setTotp(event.target.value)} placeholder="TOTP (необязательно)" inputMode="numeric" autoComplete="one-time-code" /></label><label className="field">Код восстановления (необязательно)<input value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} placeholder="код восстановления (необязательно)" /></label><button onClick={() => login().catch((err: Error) => setError(err.message))}>{token ? 'Войти заново' : 'Войти'}</button><button onClick={() => passwordlessPasskeyLogin().catch((err: Error) => setError(err.message))}>Войти по passkey</button></div>}
         {token && <details className="advanced"><summary>Безопасность сессии и passkeys</summary><div className="passkeyRow"><button onClick={() => refreshSession().catch((err: Error) => setError(err.message))}>Обновить сессию</button><button onClick={() => logout().catch((err: Error) => setError(err.message))}>Выйти</button><button onClick={() => registerPasskey().catch((err: Error) => setError(err.message))}>Добавить passkey</button><button onClick={() => stepUpPasskey().catch((err: Error) => setError(err.message))}>Подтвердить passkey</button><select aria-label="MFA policy" value={mfaPolicy} onChange={(event) => setMfaPolicy(event.target.value as typeof mfaPolicy)}><option value="optional">MFA optional</option><option value="required">MFA required</option><option value="phishing-resistant">Phishing-resistant</option></select><button onClick={() => saveMfaPolicy().catch((err: Error) => setError(err.message))}>Сохранить MFA policy</button></div></details>}
@@ -438,7 +528,7 @@ export function AdminApp() {
       {token && identity && <BackendNoticeInbox0289 backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'backend-operations' && <BackendOperations0289 backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'operations' && <OperationsWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
-      {token && mayRead && active === 'release-workspace' && <ReleaseWorkspace key={`${backendUrl}:${sessionId}:${selectedProjectId}`} backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPrepare={canPrepare} canFileWrite={canFileWrite} canPublish={canPublish} />}
+      {token && mayRead && active === 'release-workspace' && <ReleaseWorkspace key={`${backendUrl}:${sessionId}:${selectedProjectId}`} backendUrl={backendUrl} token={token} projectId={selectedProjectId} initialProfileId={selectedProfileId} initialChannel={selectedChannelId} canPrepare={canPrepare} canFileWrite={canFileWrite} canPublish={canPublish} />}
       {token && mayRead && active === 'migration-center' && <MigrationCenter0331 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
       {token && mayRead && active === 'job-monitor' && <JobMonitor backendUrl={backendUrl} token={token} projectId={selectedProjectId} canPublish={canPublish} />}
       {token && mayRead && active === 'backup-restore' && <BackupWorkspace backendUrl={backendUrl} token={token} canRestore={can(identity, 'settings:manage') && can(identity, 'storage:manage')} />}
@@ -452,7 +542,7 @@ export function AdminApp() {
       {token && mayRead && active === 'texture-management' && <TextureManagement0259 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
       {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} allowedCommands={(Object.keys(gameCommandPermissions) as BridgeCommandType[]).filter(kind => can(identity, gameCommandPermissions[kind], selectedProjectId))} allowEnrollment={can(identity, 'settings:manage')} />}
       {token && !mayRead && <section className="card wide emptyState"><h2>Нет доступа</h2><p>Эта операция недоступна для вашей роли либо проект не выбран. Запросите необходимые полномочия у владельца.</p></section>}
-      {token && mayRead && !['extensions-manager','backend-operations','operations','release-workspace','job-monitor','migration-center','server-bridge','texture-management','backup-restore','devices','audit','config','official-provider','auth-provider-wizard','branding-studio','diagnostics'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={selectedRecordId} onSelect={selectRecord} />}</section>}
+      {token && mayRead && !['extensions-manager','backend-operations','operations','release-workspace','job-monitor','migration-center','server-bridge','texture-management','backup-restore','devices','audit','config','official-provider','auth-provider-wizard','branding-studio','diagnostics'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={active === 'profiles' ? selectedProfileId : active === 'channels' ? selectedChannelId : selectedRecordId} onSelect={selectRecord} />}</section>}
 
     </section>
   </main>;

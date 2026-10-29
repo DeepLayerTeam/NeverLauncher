@@ -11,15 +11,15 @@ type Step = 'project'|'profile'|'build'|'verify'|'channel';
 const steps: Array<{id: Step; title:string}> = [
   {id:'project',title:'Проект'}, {id:'profile',title:'Профиль и загрузчик'}, {id:'build',title:'Сборка и файлы'}, {id:'verify',title:'Проверка и подпись'}, {id:'channel',title:'Публикация и откат'},
 ];
-const empty = (projectId:string): DraftFields => ({projectId,profileId:'',channel:'stable',version:'',minecraftVersion:'',loader:'vanilla',packageId:'',jobId:'',step:'project'});
+const empty = (projectId:string, profileId = '', channel = 'stable'): DraftFields => ({projectId,profileId,channel,version:'',minecraftVersion:'',loader:'vanilla',packageId:'',jobId:'',step:'project'});
 const printable = (e:unknown) => e instanceof Error ? e.message : String(e);
 const isPassed = (v: ValidationReport | null) => v?.integrity?.result === 'passed';
 
-export function ReleaseWorkspace({backendUrl,token,projectId,canPrepare,canFileWrite,canPublish}: {backendUrl:string;token:string;projectId:string;canPrepare:boolean;canFileWrite:boolean;canPublish:boolean}) {
+export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId='',initialChannel='',canPrepare,canFileWrite,canPublish}: {backendUrl:string;token:string;projectId:string;initialProfileId?:string;initialChannel?:string;canPrepare:boolean;canFileWrite:boolean;canPublish:boolean}) {
   const api = useMemo(() => new ReleaseApi(backendUrl,token),[backendUrl,token]);
   const [drafts,setDrafts] = useState<Draft[]>([]);
   const [draft,setDraft] = useState<Draft|null>(null);
-  const [form,setForm] = useState<DraftFields>(empty(projectId));
+  const [form,setForm] = useState<DraftFields>(empty(projectId,initialProfileId,initialChannel||'stable'));
   const [step,setStep] = useState<Step>('project');
   const [profiles,setProfiles] = useState<Array<{id:string;name:string;loader:string}>>([]);
   const [releases,setReleases] = useState<Array<{id:string;version:string;profileId:string;channel:string;status:string}>>([]);
@@ -55,13 +55,19 @@ export function ReleaseWorkspace({backendUrl,token,projectId,canPrepare,canFileW
     let live=true;
     const recovered=readOwnerPending(sessionStorage,recoveryKey,projectId);
     setPending(recovered);setCheck(null);setPlanned(null);
-    setDraft(null);setForm(empty(projectId));setDrafts([]);setStep('project');setPackageInfo(null);setReport(null);setPreview(null);setRollbackPreview(null);setMonitorId(recovered?.jobId||'');setDirty(false);
+    setDraft(null);setForm(empty(projectId,initialProfileId,initialChannel||'stable'));setDrafts([]);setStep('project');setPackageInfo(null);setReport(null);setPreview(null);setRollbackPreview(null);setMonitorId(recovered?.jobId||'');setDirty(false);
     if (!projectId || !canPrepare) return;
     Promise.all([api.drafts(projectId),api.profiles(projectId),api.releases(projectId),api.policy(projectId)])
-      .then(([ds,ps,vs,p])=>{if(live){setDrafts(ds.items??[]);setProfiles(ps.items??[]);setReleases(vs.items??[]);setPolicy(p);}})
+      .then(([ds,ps,vs,p])=>{if(live){setDrafts(ds.items??[]);setProfiles(ps.items??[]);setReleases(vs.items??[]);setPolicy(p);
+        setForm(current=>current.packageId||current.jobId ? current : {...current,profileId:ps.items?.some(x=>x.id===initialProfileId)?initialProfileId:current.profileId,channel:initialChannel||current.channel});}})
       .catch(e=>{if(live)setError(printable(e));});
     return ()=>{live=false};
   },[api,projectId,canPrepare,recoveryKey]);
+  // Keep a fresh, unsaved draft aligned with the owner's explicit navigation.
+  useEffect(()=>{
+    if (!draft && !dirty && !pending && !form.packageId)
+      setForm(current=>({...current,profileId:profiles.some(p=>p.id===initialProfileId)?initialProfileId:current.profileId,channel:initialChannel||current.channel}));
+  },[initialProfileId,initialChannel,profiles]);
   function edit(key:keyof DraftFields,value:string) {
     if (form.packageId && ['profileId','channel','version','loader','minecraftVersion'].includes(key)) { setError('Поля сборки закреплены за созданным пакетом. Для изменения создайте новый черновик.');return; }
     setForm(v=>({...v,[key]:value}));setDirty(true);setPreview(null);setRollbackPreview(null);setPlanned(null);setError('');

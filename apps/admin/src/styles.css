@@ -175,3 +175,14 @@ code { color: #bfdbfe; }
 .brandPreviewMain0355{padding:25px;background-size:cover;background-position:center}.brandPreviewLogo0355{max-height:75px;max-width:210px;object-fit:contain}
 .brandPreviewMain0355 h2{margin:10px 0}.brandPreviewMain0355 button{border:0;font-weight:bold}.brandPreviewMain0355 p{overflow-wrap:anywhere}
 @media(max-width:700px){.brandPreview0355{grid-template-columns:1fr}}
+
+/* 0.38.1: authenticated project/resource context and direct navigation. */
+.ownerNavigation0381 { display:grid;gap:12px;padding:14px;margin-top:14px;border:1px solid #334155;border-radius:12px;background:#101a2b; }
+.ownerNavigationTitle0381 { overflow-wrap:anywhere; }
+.ownerNavigation0381 label { display:grid;gap:5px;min-width:0;font-size:.9rem;color:#cbd5e1; }
+.ownerNavigation0381 select { width:100%;padding:9px;border:1px solid #475569;border-radius:8px;color:#f8fafc;background:#020617; }
+.ownerResourceLinks0381 { display:flex;flex-wrap:wrap;gap:8px; }
+.ownerResourceLinks0381 a { display:inline-block;border:1px solid #475569;border-radius:8px;padding:7px 11px;text-decoration:none;color:#cbd5e1;background:#1e293b; }
+.ownerResourceLinks0381 a[aria-current="page"] { border-color:#60a5fa;color:white;background:#1d4ed8; }
+.ownerResourceLinks0381 a:focus-visible { outline:3px solid #93c5fd;outline-offset:2px; }
+@media(min-width:760px){.ownerNavigation0381{grid-template-columns:1fr 1fr}.ownerNavigationTitle0381,.ownerResourceLinks0381{grid-column:1/-1}}

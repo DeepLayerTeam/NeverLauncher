@@ -4,10 +4,10 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { requestJSON, ApiError } from '../src/api/client.ts';
 import { canSeeSection } from '../src/admin/permissions.ts';
-import { readFileSync } from 'node:fs';
+import { routeIds } from '../src/admin/route-links-0381.ts';
 
 test('Admin textures are hidden from operators without global settings:manage',() => {
-  assert.match(readFileSync(new URL('../src/admin/routing.ts',import.meta.url),'utf8'), /'texture-management'/);
+  assert.ok(routeIds.includes('texture-management'));
   const operator={permissions:[],projectPermissions:{demo:['project:read','project:write']}};
   assert.equal(canSeeSection(operator,'texture-management','demo'),false);
   assert.equal(canSeeSection({...operator,permissions:['settings:manage']},'texture-management','demo'),true);
