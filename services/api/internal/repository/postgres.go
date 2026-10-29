@@ -1933,3 +1933,15 @@ func (r *SQLRepository) ConsumeMinecraftJoin(username, serverID, expectedSession
 	}
 	return item, err
 }
+
+// Close releases the underlying connection pool. Operators and integration
+// tests must close repository instances rather than leaking PostgreSQL sessions.
+func (r *SQLRepository) Close() error {
+	if r == nil {
+		return nil
+	}
+	if r.db != nil {
+		return r.db.Close()
+	}
+	return r.initErr
+}

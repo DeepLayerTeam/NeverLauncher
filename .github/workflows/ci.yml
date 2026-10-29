@@ -720,7 +720,7 @@ jobs:
 
   production-e2e:
     name: PostgreSQL + Redis + actual Minecraft Client E2E
-    needs: [go-contracts, web, rust-desktop, bridge, containers, linux-production, macos-production, neverguard-windows, neverguard-macos, guard-certification, managed-jre-production]
+    needs: [storage-parity-0371, go-contracts, web, rust-desktop, bridge, containers, linux-production, macos-production, neverguard-windows, neverguard-macos, guard-certification, managed-jre-production]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -1238,10 +1238,61 @@ jobs:
         working-directory: cli
         run: go test ./cmd/neverlauncher -run '^(TestGA0361|TestRehearsal0365)' -count=1 -timeout=2m
 
+  storage-parity-0371:
+    name: Storage inventory and real SQLite/PostgreSQL parity 0.37.1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: neverlauncher_storage_parity
+          POSTGRES_USER: neverlauncher_parity
+          POSTGRES_PASSWORD: parity-ephemeral-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U neverlauncher_parity -d neverlauncher_storage_parity"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Verify complete source-derived dependency inventory
+        run: |
+          set -euo pipefail
+          GO111MODULE=off go test ./scripts/storageparity -count=1
+          GO111MODULE=off go run ./scripts/storageparity -root . -check
+      - name: Verify supported SQLite filesystem (no in-memory fallback)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/storage-parity-0371"
+          chmod 0700 "$RUNNER_TEMP/storage-parity-0371"
+          case "$(stat -f -c '%T' "$RUNNER_TEMP/storage-parity-0371")" in
+            ext2/ext3|ext4|xfs|btrfs) ;;
+            *) echo 'Storage parity requires ext4/xfs/btrfs; BLOCKED' >&2; exit 1 ;;
+          esac
+      - name: Run identical real-database contracts against both backends
+        working-directory: services/api
+        env:
+          NEVERLAUNCHER_PARITY_POSTGRES_DSN: postgres://neverlauncher_parity:parity-ephemeral-only@127.0.0.1:5432/neverlauncher_storage_parity?sslmode=disable
+          NEVERLAUNCHER_STORAGE_PARITY_REQUIRED: '1'
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/storage-parity-0371
+        run: |
+          set -euo pipefail
+          go mod verify
+          test -z "$(gofmt -l internal/storageparity internal/repository/postgres.go)"
+          go test -race -count=1 -timeout=20m -v ./internal/storageparity
+
   required-ci:
     name: REQUIRED CI — all jobs SUCCESS for exact commit
     if: ${{ always() }}
-    needs: [go-contracts, web, rust-desktop, linux-production, neverguard-windows, neverguard-macos, macos-production, guard-certification, bridge, containers, managed-jre-production, production-e2e, neverguard-windows-adversarial, neverguard-windows-adversarial-certificate, release-ga-policy]
+    needs: [storage-parity-0371, go-contracts, web, rust-desktop, linux-production, neverguard-windows, neverguard-macos, macos-production, guard-certification, bridge, containers, managed-jre-production, production-e2e, neverguard-windows-adversarial, neverguard-windows-adversarial-certificate, release-ga-policy]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
