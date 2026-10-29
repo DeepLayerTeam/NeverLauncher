@@ -1,4 +1,4 @@
-name: SQLite to PostgreSQL verified staging transfer 0.32.11
+name: SQLite/PostgreSQL verified bidirectional offline transfer 0.37.7
 on:
   push:
     paths:
@@ -58,7 +58,7 @@ jobs:
           go mod verify
           test -z "$(gofmt -l internal/sqlitepg cmd/neverlauncher-sqlite)"
           go vet ./internal/sqlitepg ./cmd/neverlauncher-sqlite
-      - name: Native SQLite to PostgreSQL roundtrip and negative tests
+      - name: Native SQLite/PostgreSQL bidirectional transfer, minimal bundle and negative tests
         shell: bash
         run: |
           set -euo pipefail
@@ -78,6 +78,15 @@ jobs:
           assert r['sqliteSchema']==326
           assert r['readyForBackendCutover'] is False
           assert len(r['tables']) >= 30
+          PY
+          "$RUNNER_TEMP/nl-sqlite" postgres-to-sqlite --backup "$TMPDIR/cli/exported.db" --ack-no-backend-cutover > "$TMPDIR/reverse.json"
+          cmp "$TMPDIR/cli/backup.db" "$TMPDIR/cli/exported.db"
+          "$RUNNER_TEMP/nl-sqlite" backup-verify --backup "$TMPDIR/cli/exported.db"
+          python3 - "$TMPDIR/reverse.json" <<'PY'
+          import json,sys
+          r=json.load(open(sys.argv[1]))
+          assert r['readyForBackendCutover'] is False
+          assert r['sqliteSchema']==326
           PY
           if "$RUNNER_TEMP/nl-sqlite" sqlite-to-postgres --backup "$TMPDIR/cli/backup.db" --ack-staging-only; then
              echo 'ERROR: existing staging schema was overwritten'; exit 1

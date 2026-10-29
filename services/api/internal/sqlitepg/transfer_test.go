@@ -182,6 +182,49 @@ func TestPGStagingMigration(t *testing.T) {
 	if _, err = p.Exec(ctx, "DELETE FROM "+qualified("refresh_tokens")+" WHERE token_hash=$1", hash); err == nil {
 		t.Fatal("immutable PG import allowed revocation deletion")
 	}
+	if _, err = p.Exec(ctx, "TRUNCATE "+qualified("refresh_tokens")); err == nil {
+		t.Fatal("immutable PG import allowed TRUNCATE, bypassing revocation preservation")
+	}
+	// A complete physical reverse transfer, not just a manifest copy, must
+	// reproduce all SQLite bytes, schema objects, and user data.
+	exported := filepath.Join(dir, "exported.db")
+	reverse, err := Export(ctx, dsn, exported)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reverse.ReadyForBackendCutover || reverse.SnapshotSHA256 != result.SnapshotSHA256 || reverse.TotalRows != result.TotalRows {
+		t.Fatalf("reverse transfer receipt differs: %+v", reverse)
+	}
+	exportedManifest, err := sqlitedurable.VerifyBackup(ctx, exported)
+	if err != nil || exportedManifest.SHA256 != result.SnapshotSHA256 {
+		t.Fatalf("exported SQLite invalid: %+v %v", exportedManifest, err)
+	}
+	originalBytes, err := os.ReadFile(backup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	exportedBytes, err := os.ReadFile(exported)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(originalBytes, exportedBytes) {
+		t.Fatal("PostgreSQL -> SQLite backup bytes differ")
+	}
+	if _, err = Export(ctx, dsn, exported); err == nil {
+		t.Fatal("reverse migration overwrote existing backup")
+	}
+	// Real SQLite Core operations still work after a reverse import.
+	restored := filepath.Join(dir, "restored.db")
+	if _, err = sqlitedurable.RestoreBackup(ctx, exported, restored, false); err != nil {
+		t.Fatal(err)
+	}
+	opened, err := sqlitecore.OpenExisting(ctx, sqlitedurable.Options{Path: restored})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = opened.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if _, err = Import(ctx, backup, dsn); err == nil {
 		t.Fatal("rerun overwrote existing import")
 	}
@@ -196,5 +239,15 @@ func TestPGStagingMigration(t *testing.T) {
 	_ = f.Close()
 	if _, err = sqlitedurable.VerifyBackup(ctx, backup); err == nil {
 		t.Fatal("modified backup accepted")
+	}
+}
+
+func TestReverseTransferMissingReceiptFailsClosed(t *testing.T) {
+	ctx := context.Background()
+	if _, err := Export(ctx, "", filepath.Join(t.TempDir(), "db.sqlite")); err == nil {
+		t.Fatal("empty PostgreSQL DSN accepted")
+	}
+	if _, err := Export(ctx, "nonempty", ""); err == nil {
+		t.Fatal("empty destination accepted")
 	}
 }

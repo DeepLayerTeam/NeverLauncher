@@ -980,6 +980,16 @@
           "category": "postgresql-config-or-literal",
           "line": 1289,
           "evidence": "test -z \"$(gofmt -l internal/storageparity internal/repository/postgres.go)\""
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 1336,
+          "evidence": "- name: Verify SQLite/PostgreSQL bidirectional transfer of Core and full minimal bundle (0.37.7)"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 1340,
+          "evidence": "NEVERLAUNCHER_PG_TEST_DSN: postgres://neverlauncher_parity:parity-ephemeral-only@127.0.0.1:5432/neverlauncher_storage_parity?sslmode=disable"
         }
       ]
     },
@@ -1749,7 +1759,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 1,
-          "evidence": "name: SQLite to PostgreSQL verified staging transfer 0.32.11"
+          "evidence": "name: SQLite/PostgreSQL verified bidirectional offline transfer 0.37.7"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1779,7 +1789,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 61,
-          "evidence": "- name: Native SQLite to PostgreSQL roundtrip and negative tests"
+          "evidence": "- name: Native SQLite/PostgreSQL bidirectional transfer, minimal bundle and negative tests"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1789,6 +1799,11 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 82,
+          "evidence": "\"$RUNNER_TEMP/nl-sqlite\" postgres-to-sqlite --backup \"$TMPDIR/cli/exported.db\" --ack-no-backend-cutover \u003e \"$TMPDIR/reverse.json\""
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 91,
           "evidence": "if \"$RUNNER_TEMP/nl-sqlite\" sqlite-to-postgres --backup \"$TMPDIR/cli/backup.db\" --ack-staging-only; then"
         }
       ]
@@ -9028,13 +9043,33 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 136,
+          "line": 137,
           "evidence": "if values.get('NEVERLAUNCHER_REPOSITORY_DRIVER') != 'sqlite' or values.get('NEVERLAUNCHER_DEPLOYMENT_MODE') != 'single-node':"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 164,
+          "line": 187,
           "evidence": "# No inherited external Redis/PostgreSQL settings may change the selected topology."
+        }
+      ]
+    },
+    {
+      "path": "scripts/install/minimal_backup.py",
+      "findings": [
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 30,
+          "evidence": "'NEVERLAUNCHER_DATABASE_DSN': 'db/http.sqlite',"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 110,
+          "evidence": "values.get('NEVERLAUNCHER_REPOSITORY_DRIVER') == 'sqlite' and"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 380,
+          "evidence": "require(values.get('NEVERLAUNCHER_REPOSITORY_DRIVER') == 'sqlite' and"
         }
       ]
     },
@@ -9105,6 +9140,21 @@
           "category": "postgresql-config-or-literal",
           "line": 61,
           "evidence": "{\"id\": \"postgres.password\", \"status\": \"${POSTGRES_PASSWORD_SET}\", \"message\": \"replace default POSTGRES_PASSWORD before production\"},"
+        }
+      ]
+    },
+    {
+      "path": "scripts/install/test_minimal_backup.py",
+      "findings": [
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 42,
+          "evidence": "NEVERLAUNCHER_REPOSITORY_DRIVER='sqlite',"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 133,
+          "evidence": "self.assertEqual(backup.read_install(dest)['NEVERLAUNCHER_DATABASE_DSN'], str(dest/'db/http.sqlite'))"
         }
       ]
     },
@@ -10399,7 +10449,72 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 20,
+          "evidence": "if len(args) \u003e 0 \u0026\u0026 (args[0] == \"minimal-to-postgres\" || args[0] == \"postgres-to-minimal\") {"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 23,
+          "evidence": "if len(args) \u003e 0 \u0026\u0026 args[0] == \"postgres-to-sqlite\" {"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 26,
           "evidence": "if len(args) \u003e 0 \u0026\u0026 args[0] == \"sqlite-to-postgres\" {"
+        }
+      ]
+    },
+    {
+      "path": "services/api/cmd/neverlauncher-sqlite/minimal_pg_0377.go",
+      "findings": [
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 17,
+          "evidence": "env := flags.String(\"dsn-env\", \"NEVERLAUNCHER_POSTGRES_DSN\", \"PostgreSQL DSN environment variable\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 19,
+          "evidence": "acknowledge := flags.Bool(\"ack-no-backend-cutover\", false, \"confirm this is verified offline data transfer, not an operational PostgreSQL backend cutover\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 29,
+          "evidence": "fmt.Fprintln(os.Stderr, \"PostgreSQL DSN environment variable is empty\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 36,
+          "evidence": "if command == \"minimal-to-postgres\" {"
+        }
+      ]
+    },
+    {
+      "path": "services/api/cmd/neverlauncher-sqlite/postgres_export_0377.go",
+      "findings": [
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 16,
+          "evidence": "flags := flag.NewFlagSet(\"postgres-to-sqlite\", flag.ContinueOnError)"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 18,
+          "evidence": "env := flags.String(\"dsn-env\", \"NEVERLAUNCHER_POSTGRES_DSN\", \"environment variable with PostgreSQL DSN\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 20,
+          "evidence": "acknowledge := flags.Bool(\"ack-no-backend-cutover\", false, \"understand that exported data are a verified offline snapshot, not live PostgreSQL-\u003eSQLite backend cutover\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 30,
+          "evidence": "fmt.Fprintln(os.Stderr, \"PostgreSQL DSN environment variable is empty\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 37,
+          "evidence": "fmt.Fprintf(os.Stderr, \"PostgreSQL -\u003e SQLite verified export failed: %v\\n\", err)"
         }
       ]
     },
@@ -25864,97 +25979,317 @@
       ]
     },
     {
+      "path": "services/api/internal/sqlitepg/export_0377.go",
+      "findings": [
+        {
+          "category": "postgres-driver-import",
+          "line": 19,
+          "evidence": "\"github.com/jackc/pgx/v5\""
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 19,
+          "evidence": "\"github.com/jackc/pgx/v5\""
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 30,
+          "evidence": "return out, errors.New(\"PostgreSQL DSN and target SQLite backup required\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 52,
+          "evidence": "return out, fmt.Errorf(\"connect PostgreSQL (%T; DSN redacted)\", err)"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 74,
+          "evidence": "return out, errors.New(\"unsupported, incomplete or inconsistent PostgreSQL transfer receipt\")"
+        },
+        {
+          "category": "direct-sql-open",
+          "line": 116,
+          "evidence": "src, err := sql.Open(\"sqlite\", \"file:\"+tmp+\"?mode=ro\u0026_pragma=foreign_keys(1)\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 126,
+          "evidence": "err = errors.New(\"PostgreSQL table set differs from original SQLite snapshot\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 136,
+          "evidence": "return out, fmt.Errorf(\"PostgreSQL table parity: %w\", err)"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 193,
+          "evidence": "err = errors.New(\"invalid or missing PostgreSQL snapshot chunk\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 224,
+          "evidence": "return errors.New(\"PostgreSQL snapshot length or SHA mismatch\")"
+        }
+      ]
+    },
+    {
+      "path": "services/api/internal/sqlitepg/minimal_bundle_0377.go",
+      "findings": [
+        {
+          "category": "postgres-driver-import",
+          "line": 19,
+          "evidence": "\"github.com/jackc/pgx/v5\""
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 19,
+          "evidence": "\"github.com/jackc/pgx/v5\""
+        },
+        {
+          "category": "direct-sql-open",
+          "line": 108,
+          "evidence": "db, err := sql.Open(\"sqlite\", (\u0026url.URL{Scheme: \"file\", Path: p}).String()+\"?mode=ro\u0026immutable=1\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 264,
+          "evidence": "return report, errors.New(\"PostgreSQL DSN required\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 274,
+          "evidence": "return report, fmt.Errorf(\"connect PostgreSQL (%T; DSN redacted)\", err)"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 282,
+          "evidence": "if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(377, 1)`); err != nil {"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 286,
+          "evidence": "if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname=$1)`, MinimalBundleSchema0377).Scan(\u0026exists); err != nil {"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 290,
+          "evidence": "return report, errors.New(\"minimal PostgreSQL transfer exists; refusing overwrite\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 296,
+          "evidence": "`CREATE TABLE ` + minimalRef0377(\"receipt\") + ` (id TEXT PRIMARY KEY, manifest JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 296,
+          "evidence": "`CREATE TABLE ` + minimalRef0377(\"receipt\") + ` (id TEXT PRIMARY KEY, manifest JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 305,
+          "evidence": "if _, err = tx.Exec(ctx, `INSERT INTO `+minimalRef0377(\"receipt\")+` (id,manifest) VALUES($1,$2)`, report.ManifestSHA256, string(raw)); err != nil {"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 309,
+          "evidence": "if _, err = tx.Exec(ctx, `INSERT INTO `+minimalRef0377(\"files\")+` (path,kind,mode,bytes,sha256) VALUES($1,$2,$3,$4,$5)`, f.Path, f.Kind, int32(f.Mode), f.Bytes, f.SHA256); err != n"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 331,
+          "evidence": "if _, err = tx.Exec(ctx, `INSERT INTO `+minimalRef0377(\"chunks\")+` (path,ordinal,sha256,payload) VALUES($1,$2,$3,$4)`, f.Path, ordinal, hex.EncodeToString(sum[:]), part); err != ni"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 344,
+          "evidence": "return report, fmt.Errorf(\"file changed during PostgreSQL transfer: %s\", f.Path)"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 376,
+          "evidence": "return report, fmt.Errorf(\"PostgreSQL commit outcome needs reconciliation: %w\", err)"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 386,
+          "evidence": "return report, errors.New(\"PostgreSQL DSN and target required\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 406,
+          "evidence": "return report, fmt.Errorf(\"connect PostgreSQL (%T; DSN redacted)\", e)"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 459,
+          "evidence": "if err = tx.QueryRow(ctx, `SELECT path,kind,mode,bytes,sha256 FROM `+minimalRef0377(\"files\")+` WHERE path=$1`, f.Path).Scan(\u0026saved.Path, \u0026saved.Kind, \u0026mode, \u0026saved.Bytes, \u0026saved.SH"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 467,
+          "evidence": "return report, fmt.Errorf(\"PostgreSQL file metadata differs from manifest: %s\", f.Path)"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 474,
+          "evidence": "rows, e := tx.Query(ctx, `SELECT ordinal,sha256,payload FROM `+minimalRef0377(\"chunks\")+` WHERE path=$1 ORDER BY ordinal`, f.Path)"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 490,
+          "evidence": "err = errors.New(\"missing/corrupt PostgreSQL bundle chunk\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 513,
+          "evidence": "err = errors.New(\"PostgreSQL bundle file hash or size mismatch\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 538,
+          "evidence": "return report, fmt.Errorf(\"transfer published but PostgreSQL read commit uncertain; verify destination: %w\", err)"
+        }
+      ]
+    },
+    {
+      "path": "services/api/internal/sqlitepg/minimal_bundle_0377_test.go",
+      "findings": [
+        {
+          "category": "postgres-driver-import",
+          "line": 15,
+          "evidence": "\"github.com/jackc/pgx/v5\""
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 15,
+          "evidence": "\"github.com/jackc/pgx/v5\""
+        },
+        {
+          "category": "direct-sql-open",
+          "line": 43,
+          "evidence": "db, err := sql.Open(\"sqlite\", p)"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 61,
+          "evidence": "for name, data := range map[string][]byte{\"config/backend.env\": []byte(\"NEVERLAUNCHER_REPOSITORY_DRIVER=sqlite\\nNEVERLAUNCHER_DEPLOYMENT_MODE=single-node\\n\"), \"storage/client.bin\":"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 89,
+          "evidence": "dsn := os.Getenv(\"NEVERLAUNCHER_PG_TEST_DSN\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 91,
+          "evidence": "t.Skip(\"isolated PostgreSQL service required\")"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 100,
+          "evidence": "if err = pg.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname=$1)`, MinimalBundleSchema0377).Scan(\u0026exists); err != nil {"
+        }
+      ]
+    },
+    {
       "path": "services/api/internal/sqlitepg/transfer.go",
       "findings": [
         {
           "category": "postgres-driver-import",
-          "line": 24,
+          "line": 25,
           "evidence": "\"github.com/jackc/pgx/v5\""
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 24,
+          "line": 25,
           "evidence": "\"github.com/jackc/pgx/v5\""
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 28,
-          "evidence": "const importVersion = \"neverlauncher-sqlite-to-postgresql-v1\""
+          "line": 29,
+          "evidence": "const importVersion = \"neverlauncher-sqlite-to-postgresql-v2\""
         },
         {
           "category": "database-sql-handle",
-          "line": 80,
+          "line": 82,
           "evidence": "func columns(ctx context.Context, db *sql.DB, table string) ([]column, error) {"
         },
         {
           "category": "database-sql-handle",
-          "line": 113,
+          "line": 115,
           "evidence": "func tables(ctx context.Context, db *sql.DB) ([]tableInfo, error) {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 280,
+          "line": 282,
           "evidence": "return report, errors.New(\"PostgreSQL DSN is required\")"
         },
         {
           "category": "direct-sql-open",
-          "line": 308,
+          "line": 310,
           "evidence": "src, err := sql.Open(\"sqlite\", dsn)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 338,
+          "line": 340,
           "evidence": "return report, fmt.Errorf(\"PostgreSQL connection failed (%T; credentials redacted)\", err)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 347,
+          "line": 349,
           "evidence": "if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(32011, 326)`); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 351,
+          "line": 353,
           "evidence": "if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname=$1)`, Schema).Scan(\u0026exists); err != nil {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 410,
-          "evidence": "_, err = tx.Exec(ctx, `CREATE TABLE `+qualified(\"migration_receipt\")+` (id TEXT PRIMARY KEY, report JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`)"
+          "line": 416,
+          "evidence": "_, err = tx.Exec(ctx, `CREATE TABLE `+qualified(\"migration_receipt\")+` (id TEXT PRIMARY KEY, report JSONB NOT NULL, backup_manifest JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 410,
-          "evidence": "_, err = tx.Exec(ctx, `CREATE TABLE `+qualified(\"migration_receipt\")+` (id TEXT PRIMARY KEY, report JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`)"
+          "line": 416,
+          "evidence": "_, err = tx.Exec(ctx, `CREATE TABLE `+qualified(\"migration_receipt\")+` (id TEXT PRIMARY KEY, report JSONB NOT NULL, backup_manifest JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL "
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 414,
-          "evidence": "_, err = tx.Exec(ctx, `INSERT INTO `+qualified(\"migration_receipt\")+`(id,report) VALUES ($1,$2)`, manifest.SHA256, string(reportJSON))"
+          "line": 424,
+          "evidence": "_, err = tx.Exec(ctx, `INSERT INTO `+qualified(\"migration_receipt\")+`(id,report,backup_manifest) VALUES ($1,$2,$3)`, manifest.SHA256, string(reportJSON), string(manifestJSON))"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 435,
+          "line": 440,
           "evidence": "return report, fmt.Errorf(\"PostgreSQL commit outcome must be reconciled before retry: %w\", err)"
         },
         {
           "category": "database-sql-handle",
-          "line": 440,
+          "line": 445,
           "evidence": "func copyAndVerify(ctx context.Context, db *sql.DB, tx pgx.Tx, t tableInfo) (TableResult, error) {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 465,
+          "line": 470,
           "evidence": "return errors.New(\"PostgreSQL COPY wrote fewer rows\")"
         },
         {
           "category": "database-sql-handle",
-          "line": 584,
+          "line": 589,
           "evidence": "func addUniqueIndexes(ctx context.Context, src *sql.DB, tx pgx.Tx, ts []tableInfo) error {"
         },
         {
           "category": "database-sql-handle",
-          "line": 645,
+          "line": 650,
           "evidence": "func addForeignKeys(ctx context.Context, src *sql.DB, tx pgx.Tx, ts []tableInfo) error {"
+        },
+        {
+          "category": "postgresql-sql-dialect",
+          "line": 727,
+          "evidence": "if _, err := tx.Exec(ctx, `INSERT INTO `+qualified(\"migration_snapshot_chunks\")+` (ordinal,sha256,payload) VALUES ($1,$2,$3)`, seq, hex.EncodeToString(sum[:]), part); err != nil {"
         }
       ]
     },
@@ -26020,6 +26355,16 @@
           "category": "postgresql-sql-dialect",
           "line": 182,
           "evidence": "if _, err = p.Exec(ctx, \"DELETE FROM \"+qualified(\"refresh_tokens\")+\" WHERE token_hash=$1\", hash); err == nil {"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 211,
+          "evidence": "t.Fatal(\"PostgreSQL -\u003e SQLite backup bytes differ\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 248,
+          "evidence": "t.Fatal(\"empty PostgreSQL DSN accepted\")"
         }
       ]
     },

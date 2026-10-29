@@ -1333,6 +1333,17 @@ jobs:
           go test -race -count=1 -timeout=8m -run '^TestMinimalDeployment0375$' ./internal/deployment
           go test -race -count=1 -timeout=5m -run '^TestProductionMinimalSQLiteAccepted0375$' ./internal/config
           go vet ./internal/repository ./internal/deployment ./internal/httpapi ./internal/config
+      - name: Verify SQLite/PostgreSQL bidirectional transfer of Core and full minimal bundle (0.37.7)
+        working-directory: services/api
+        env:
+          TMPDIR: ${{ runner.temp }}/storage-parity-0371
+          NEVERLAUNCHER_PG_TEST_DSN: postgres://neverlauncher_parity:parity-ephemeral-only@127.0.0.1:5432/neverlauncher_storage_parity?sslmode=disable
+        run: |
+          set -euo pipefail
+          test -z "$(gofmt -l internal/sqlitepg cmd/neverlauncher-sqlite)"
+          go test -race -count=1 -timeout=25m ./internal/sqlitepg ./cmd/neverlauncher-sqlite
+          go vet ./internal/sqlitepg ./cmd/neverlauncher-sqlite
+          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite-0377" ./cmd/neverlauncher-sqlite
       - name: Verify minimal offline SQLite plus project files backup and restore (0.37.6)
         shell: bash
         run: |

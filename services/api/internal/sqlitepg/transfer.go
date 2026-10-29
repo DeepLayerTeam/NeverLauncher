@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -25,8 +26,9 @@ import (
 )
 
 const Schema = "neverlauncher_sqlite_import_03211"
-const importVersion = "neverlauncher-sqlite-to-postgresql-v1"
+const importVersion = "neverlauncher-sqlite-to-postgresql-v2"
 const batchSize = 256
+const snapshotChunkSize = 256 * 1024
 
 type TableResult struct {
 	Name   string `json:"name"`
@@ -387,6 +389,12 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 			return report, err
 		}
 	}
+	// Save the exact verified SQLite snapshot alongside the relational mirror.
+	// A reverse transfer can reproduce SQLite schema, indexes, triggers, values,
+	// and binary state without lossy SQL type/DDL translations.
+	if err = storeSnapshot(ctx, tx, backupPath, manifest); err != nil {
+		return report, fmt.Errorf("store SQLite snapshot: %w", err)
+	}
 	// The import schema is deliberately append/UPDATE/DELETE protected. Live
 	// code must never start serving auth from this compatibility mirror.
 	_, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(Schema)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'NeverLauncher verified import is immutable'; END $$`)
@@ -394,33 +402,30 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 		return report, err
 	}
 	for _, t := range tableDefs {
-		_, err = tx.Exec(ctx, `CREATE TRIGGER nl_reject_mutation BEFORE INSERT OR UPDATE OR DELETE ON `+qualified(t.Name)+` FOR EACH ROW EXECUTE FUNCTION `+quoted(Schema)+`.reject_mutation()`)
-		if err != nil {
+		if err = protectTable(ctx, tx, t.Name); err != nil {
 			return report, err
-			_, err = tx.Exec(ctx, `CREATE TRIGGER nl_reject_truncate BEFORE TRUNCATE ON `+qualified(t.Name)+` FOR EACH STATEMENT EXECUTE FUNCTION `+quoted(Schema)+`.reject_mutation()`)
-			if err != nil {
-				return report, err
-			}
 		}
+	}
+	if err = protectTable(ctx, tx, "migration_snapshot_chunks"); err != nil {
+		return report, err
 	}
 	reportJSON, err := json.Marshal(report)
 	if err != nil {
 		return report, err
 	}
-	_, err = tx.Exec(ctx, `CREATE TABLE `+qualified("migration_receipt")+` (id TEXT PRIMARY KEY, report JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`)
+	_, err = tx.Exec(ctx, `CREATE TABLE `+qualified("migration_receipt")+` (id TEXT PRIMARY KEY, report JSONB NOT NULL, backup_manifest JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`)
 	if err != nil {
 		return report, err
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO `+qualified("migration_receipt")+`(id,report) VALUES ($1,$2)`, manifest.SHA256, string(reportJSON))
+	manifestJSON, err := json.Marshal(manifest)
 	if err != nil {
 		return report, err
 	}
-	_, err = tx.Exec(ctx, `CREATE TRIGGER nl_reject_mutation BEFORE INSERT OR UPDATE OR DELETE ON `+qualified("migration_receipt")+` FOR EACH ROW EXECUTE FUNCTION `+quoted(Schema)+`.reject_mutation()`)
+	_, err = tx.Exec(ctx, `INSERT INTO `+qualified("migration_receipt")+`(id,report,backup_manifest) VALUES ($1,$2,$3)`, manifest.SHA256, string(reportJSON), string(manifestJSON))
 	if err != nil {
 		return report, err
 	}
-	_, err = tx.Exec(ctx, `CREATE TRIGGER nl_reject_truncate BEFORE TRUNCATE ON `+qualified("migration_receipt")+` FOR EACH STATEMENT EXECUTE FUNCTION `+quoted(Schema)+`.reject_mutation()`)
-	if err != nil {
+	if err = protectTable(ctx, tx, "migration_receipt"); err != nil {
 		return report, err
 	}
 	// Recheck backup bytes and SQLite logical constraints before commit.
@@ -681,6 +686,54 @@ func addForeignKeys(ctx context.Context, src *sql.DB, tx pgx.Tx, ts []tableInfo)
 				return fmt.Errorf("%s FK %d: %w", t.Name, k.id, e)
 			}
 		}
+	}
+	return nil
+}
+
+// protectTable rejects every data-changing DML operation, including TRUNCATE.
+// The earlier 0.32.11 implementation mistakenly placed the truncate trigger
+// inside an unreachable error branch; that made TRUNCATE a possible bypass.
+func protectTable(ctx context.Context, tx pgx.Tx, table string) error {
+	if _, err := tx.Exec(ctx, `CREATE TRIGGER nl_reject_mutation BEFORE INSERT OR UPDATE OR DELETE ON `+qualified(table)+` FOR EACH ROW EXECUTE FUNCTION `+quoted(Schema)+`.reject_mutation()`); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx, `CREATE TRIGGER nl_reject_truncate BEFORE TRUNCATE ON `+qualified(table)+` FOR EACH STATEMENT EXECUTE FUNCTION `+quoted(Schema)+`.reject_mutation()`)
+	return err
+}
+
+func storeSnapshot(ctx context.Context, tx pgx.Tx, path string, manifest sqlitedurable.BackupManifest) error {
+	if _, err := tx.Exec(ctx, `CREATE TABLE `+qualified("migration_snapshot_chunks")+` (ordinal BIGINT PRIMARY KEY, sha256 TEXT NOT NULL, payload BYTEA NOT NULL)`); err != nil {
+		return err
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	total := int64(0)
+	digest := sha256.New()
+	buffer := make([]byte, snapshotChunkSize)
+	for seq := int64(0); ; seq++ {
+		n, e := io.ReadFull(file, buffer)
+		if e != nil && e != io.EOF && e != io.ErrUnexpectedEOF {
+			return e
+		}
+		if n == 0 {
+			break
+		}
+		part := append([]byte(nil), buffer[:n]...)
+		_, _ = digest.Write(part)
+		sum := sha256.Sum256(part)
+		if _, err := tx.Exec(ctx, `INSERT INTO `+qualified("migration_snapshot_chunks")+` (ordinal,sha256,payload) VALUES ($1,$2,$3)`, seq, hex.EncodeToString(sum[:]), part); err != nil {
+			return err
+		}
+		total += int64(n)
+		if e == io.EOF || e == io.ErrUnexpectedEOF {
+			break
+		}
+	}
+	if total != manifest.Bytes || hex.EncodeToString(digest.Sum(nil)) != manifest.SHA256 {
+		return errors.New("source SQLite snapshot changed while transferring")
 	}
 	return nil
 }
