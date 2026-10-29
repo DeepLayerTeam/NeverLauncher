@@ -1333,6 +1333,13 @@ jobs:
           go test -race -count=1 -timeout=8m -run '^TestMinimalDeployment0375$' ./internal/deployment
           go test -race -count=1 -timeout=5m -run '^TestProductionMinimalSQLiteAccepted0375$' ./internal/config
           go vet ./internal/repository ./internal/deployment ./internal/httpapi ./internal/config
+      - name: Verify minimal offline SQLite plus project files backup and restore (0.37.6)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/install/minimal_backup.py scripts/install/minimal-install.py
+          python3 -m unittest discover -s scripts/install -p 'test_minimal_backup.py' -v
+
       - name: Validate executable native installer (0.37.5)
         shell: bash
         run: |

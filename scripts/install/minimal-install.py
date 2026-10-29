@@ -71,7 +71,7 @@ def generate(root: Path, public: str, binary: Path, guard: Path, bridge: Path, l
         owned_directory(root)
     else:
         owned_directory(root)
-    for part in ('config', 'db', 'storage', 'backups', 'extensions'):
+    for part in ('config', 'db', 'storage', 'backups', 'extensions', 'factory'):
         owned_directory(root / part)
     config = {
         'NEVERLAUNCHER_ENV': 'production',
@@ -85,6 +85,7 @@ def generate(root: Path, public: str, binary: Path, guard: Path, bridge: Path, l
         'NEVERLAUNCHER_STORAGE_LOCAL_PATH': str(root/'storage'),
         'NEVERLAUNCHER_BACKUP_ROOT': str(root/'backups'),
         'NEVERLAUNCHER_EXTENSION_ROOT': str(root/'extensions'),
+        'NEVERLAUNCHER_FACTORY_ROOT': str(root/'factory'),
         'NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED': 'false',
         'NEVERLAUNCHER_RATE_LIMIT_ENABLED': 'true',
         'NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED': 'true',
@@ -152,7 +153,29 @@ def main(argv=None):
         p = sub.add_parser(name, help='verify deployment configuration' if name=='check' else 'run API in foreground')
         p.add_argument('--env-file', type=Path, required=True)
         p.add_argument('--binary', type=Path, required=True)
+    # Coherent offline maintenance. Use the same installer entrypoint, but run
+    # the isolated backup engine rather than loading API secrets into an env.
+    b = sub.add_parser('backup', help='offline consistent SQLite + files snapshot')
+    b.add_argument('--root', type=Path, required=True)
+    b.add_argument('--destination', type=Path)
+    v = sub.add_parser('backup-verify', help='validate all snapshot bytes and SQLite integrity')
+    v.add_argument('--bundle', type=Path, required=True)
+    r = sub.add_parser('restore', help='restore to a new, empty installation root')
+    r.add_argument('--bundle', type=Path, required=True)
+    r.add_argument('--target-root', type=Path, required=True)
     args = parser.parse_args(argv)
+    if args.command in ('backup', 'backup-verify', 'restore'):
+        operation = 'verify' if args.command == 'backup-verify' else args.command
+        command = [sys.executable, str(Path(__file__).with_name('minimal_backup.py')), operation]
+        if operation == 'backup':
+            command.extend(['--root', str(args.root)])
+            if args.destination is not None:
+                command.extend(['--destination', str(args.destination)])
+        else:
+            command.extend(['--bundle', str(args.bundle)])
+            if operation == 'restore':
+                command.extend(['--target-root', str(args.target_root)])
+        return subprocess.run(command, check=False).returncode
     if args.command == 'init':
         result = generate(args.root,args.public_url,args.binary,args.guard_policy,args.bridge_policy,args.listen)
         print(f'Created private minimal install: {result}')
