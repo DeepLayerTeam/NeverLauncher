@@ -27,6 +27,11 @@ on:
         type: string
         required: true
         description: 'Independently signed LIVE SQLite-only installed GA attestation, exact 0.33.0 commit'
+      publish_release:
+        type: boolean
+        required: true
+        default: false
+        description: 'Explicit opt-in to publish after all signed GA and production CI gates pass'
       official_minecraft_ga_evidence_run_id:
         type: string
         required: true
@@ -848,6 +853,20 @@ jobs:
           test -s "${DIR}/BRIDGE_RELEASE_ALLOWLIST.json"
           test -s "${DIR}/BRIDGE_PLUGIN_MANIFEST.json"
 
+      - name: Resolve immutable final release directory
+        id: final-release
+        shell: bash
+        run: |
+          echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
+      - name: Upload immutable signed GA release for post-gate publication
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-final-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist/release-${{ steps.final-release.outputs.version }}/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
 
   required-production-ci:
     name: REQUIRED production pipeline — no skipped, cancelled or absent jobs
@@ -883,5 +902,80 @@ jobs:
         with:
           name: neverlauncher-required-production-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: required-production-evidence.json
+          if-no-files-found: error
+          retention-days: 90
+
+  publish-release:
+    name: Publish exact signed GA bundle only after required production CI
+    if: ${{ inputs.publish_release == true }}
+    needs: [required-production-ci]
+    runs-on: ubuntu-24.04
+    environment: production-release
+    timeout-minutes: 180
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install independent GA signature verifier
+        run: python3 -m pip install cryptography==46.0.4
+      - uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-final-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: signed-release
+      - uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-required-production-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: required-production
+      - uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-publication-dry-run-${{ github.sha }}
+          path: publication-dry-run
+      - name: Load pinned verification identities without access to private signing keys
+        shell: bash
+        env:
+          TRUSTED_GA_PUBLIC_KEY: ${{ vars.NL_GA_OPERATOR_PUBLIC_KEY_HEX }}
+          RELEASE_ROOT_PUBLIC_KEY: ${{ secrets.NL_PRODUCTION_RELEASE_ROOT_PUBLIC_KEY_PEM }}
+          RELEASE_TRUST_POLICY: ${{ secrets.NL_PRODUCTION_RELEASE_TRUST_POLICY_JSON }}
+        run: |
+          set -euo pipefail
+          [[ "$TRUSTED_GA_PUBLIC_KEY" =~ ^[0-9a-fA-F]{64}$ ]]
+          test -n "$RELEASE_ROOT_PUBLIC_KEY"
+          test -n "$RELEASE_TRUST_POLICY"
+          umask 077
+          printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > "$RUNNER_TEMP/ga-operator.pub"
+          printf '%s\n' "$RELEASE_ROOT_PUBLIC_KEY" > "$RUNNER_TEMP/release-root.pub"
+          printf '%s\n' "$RELEASE_TRUST_POLICY" > "$RUNNER_TEMP/trust-policy.json"
+      - name: Re-verify signatures, exact bytes, all GA targets and same-run CI before publication
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(cat VERSION)"
+          CLI="$PWD/signed-release/neverlauncher-cli-linux-x64"
+          test -s "$CLI"
+          python3 scripts/release/publish_0370.py publish \
+            --bundle signed-release \
+            --ci required-production/required-production-evidence.json \
+            --dryrun publication-dry-run/PUBLICATION_DRY_RUN_0365.json \
+            --version "$VERSION" --commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --ga-key "$RUNNER_TEMP/ga-operator.pub" \
+            --release-key "$RUNNER_TEMP/release-root.pub" \
+            --trust-policy "$RUNNER_TEMP/trust-policy.json" \
+            --trust-state "$RUNNER_TEMP/trust-state.json" \
+            --cli "$CLI" --repository "$GITHUB_REPOSITORY" \
+            --output "$RUNNER_TEMP/PUBLICATION_0370.json"
+      - name: Record verified GitHub publication
+        uses: actions/upload-artifact@v4
+        with:
+          name: neverlauncher-publication-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/PUBLICATION_0370.json
           if-no-files-found: error
           retention-days: 90

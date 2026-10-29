@@ -1,6 +1,6 @@
 # Дорожная карта NeverLauncher
 
-План текущего состояния исходников `0.29.0` (ServerWrapper/RemoteControl и Network Panel, **GA-сертификация ещё требуется**). Это направления работы, **не обещание сроков, версий и завершённой реализации**. Приоритеты меняются по результатам тестов и feedback.
+План развития после `0.37.0`: релизный pipeline доведён до защищённой автоматической публикации GitHub Releases; **фактическая шести-платформенная GA-сертификация и публикация требуют успешного запуска защищённых workflows на реальном SHA**. Это направления работы, **не обещание сроков, версий и завершённой реализации**. Приоритеты меняются по результатам тестов и feedback.
 
 | Приоритет | Направление | Критерий готовности |
 | --- | --- | --- |
@@ -16,6 +16,8 @@
 
 ## Порядок выпуска
 
-Исправление → unit/contract tests → integration/e2e → платформенная матрица → точный commit SHA → `scripts/release/preflight.sh` → подписанная поставка. Ни один пройденный smoke-тест сам по себе не разрешает production release.
+Исправление → unit/contract tests → integration/E2E → матрицы шести платформ → точный commit SHA → независимое GA-разрешение → exact-byte rehearsal → `RELEASE_MANIFEST.json` + подпись → `release publish-check` → проверяемый dry-run → `required-production-ci` → проверка повторно загруженных GitHub Release assets → публичная публикация. Ни один пройденный smoke-тест сам по себе не разрешает production release.
 
 Открытые задачи отслеживайте через [GitHub Issues](https://github.com/DeepLayerTeam/NeverLauncher/issues); возможности реального клиента описаны в [COMPATIBILITY.md](COMPATIBILITY.md).
+
+Документированный процесс и порядок безопасного запуска: [Production Release 0.37.0](docs/releases/0.37.0-production-publication.md).

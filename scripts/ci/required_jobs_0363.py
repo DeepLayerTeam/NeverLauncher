@@ -54,6 +54,11 @@ def declared_jobs(workflow: str) -> set[str]:
     return jobs
 
 
+def version_at_least_0370(version: str) -> bool:
+    match = re.fullmatch(r'(\d+)\.(\d+)\.(\d+)',version)
+    return match is not None and tuple(map(int,match.groups())) >= (0,37,0)
+
+
 def verify(
     *, workflow: str, gate: str, needs: object, source_sha: str,
     checked_out_sha: str, run_id: str, run_attempt: str, version: str,
@@ -69,7 +74,15 @@ def verify(
     if not isinstance(needs, dict):
         raise GateFailure("GitHub needs context is missing or not an object")
     all_jobs = declared_jobs(workflow)
-    expected = all_jobs - {gate}
+    # A publication job runs *after* the aggregate gate and must not be counted
+    # as a prerequisite. Do not allow arbitrary exclusions: only the single
+    # publication job in the production workflow is a legitimate successor.
+    downstream = set()
+    if gate == 'required-production-ci' and version_at_least_0370(version):
+        downstream = {'publish-release'}
+        if not downstream <= all_jobs:
+            raise GateFailure('missing mandatory post-gate publication job')
+    expected = all_jobs - {gate} - downstream
     if gate not in all_jobs or not expected:
         raise GateFailure("gate job missing or required job set empty")
     actual = set(needs)

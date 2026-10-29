@@ -117,7 +117,12 @@ class RequiredJobsTests(unittest.TestCase):
                 needs_match = re.search(r"(?m)^    needs:\s*\[([^\]]+)\]", body)
                 self.assertIsNotNone(needs_match)
                 needs = {v.strip() for v in needs_match.group(1).split(",")}
-                self.assertEqual(needs, jobs - {gate})
+                post_gate = {"publish-release"} if name == "production-release-candidate.yml" else set()
+                self.assertEqual(needs, jobs - {gate} - post_gate)
+                if post_gate:
+                    self.assertIn("needs: [required-production-ci]", txt)
+                    self.assertIn("if: ${{ inputs.publish_release == true }}", txt)
+
 
 
 if __name__ == "__main__":
