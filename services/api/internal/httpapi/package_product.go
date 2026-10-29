@@ -233,7 +233,16 @@ func (s Server) packageGet(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "package не найден")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": s.packagePayload(lookup.Release, lookup.Files, lookup.Release.Status)})
+	payload := s.packagePayload(lookup.Release, lookup.Files, lookup.Release.Status)
+	if locator, ok := s.Repo.(repository.BuildPackageLocator0384); ok {
+		immutable, verifyErr := locator.MaterializedBuildForPackage0384(r.Context(), lookup.Release.ID)
+		if verifyErr != nil {
+			writeError(w, http.StatusServiceUnavailable, "cannot verify build package immutability")
+			return
+		}
+		payload["immutableBuild"] = immutable
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": payload})
 }
 
 func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
@@ -247,6 +256,19 @@ func (s Server) packageUploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer unlock()
+	// A package produced by the Build Workspace is sealed to its pinned,
+	// hashed source set. The legacy direct upload path must not mutate it.
+	if locator, ok := s.Repo.(repository.BuildPackageLocator0384); ok {
+		immutable, lookupErr := locator.MaterializedBuildForPackage0384(r.Context(), lookup.Release.ID)
+		if lookupErr != nil {
+			writeError(w, http.StatusServiceUnavailable, "cannot verify build package immutability")
+			return
+		}
+		if immutable {
+			writeError(w, http.StatusConflict, "materialized build package files are immutable; create a new version")
+			return
+		}
+	}
 	if lookup.Release.Status == "published" {
 		writeError(w, http.StatusConflict, "published release immutable; создайте новую версию")
 		return

@@ -269,10 +269,11 @@ export function ReleaseWorkspace({backendUrl,token,projectId,initialProfileId=''
         }}/>}
       <button disabled={busy||!draft||dirty||!canPrepare||!!form.packageId||!form.profileId||!form.version||!form.minecraftVersion} onClick={()=>void createPackage()}>Создать пакет на Backend</button>
       {form.packageId && <><p>Статус: <strong>{packageInfo?.status||'загрузка...'}</strong></p>
-        <label className="field">Файл<input type="file" onChange={(e: React.ChangeEvent<HTMLInputElement>)=>{setUploadFile(e.target.files?.[0]||null);setUploadPath(e.target.files?.[0]?.name||'');}} /></label>
+        {packageInfo?.immutableBuild && <p role="status">Пакет создан из Build Workspace: состав файлов зафиксирован. Для изменения создайте новую версию.</p>}
+        <label className="field">Файл<input disabled={packageInfo?.immutableBuild} type="file" onChange={(e: React.ChangeEvent<HTMLInputElement>)=>{setUploadFile(e.target.files?.[0]||null);setUploadPath(e.target.files?.[0]?.name||'');}} /></label>
         <label className="field">Путь внутри сборки<input value={uploadPath} onChange={(e: React.ChangeEvent<HTMLInputElement>)=>setUploadPath(e.target.value)} placeholder="mods/example.jar" /></label>
         <label className="field">Ownership файла<select value={uploadOwnership} onChange={e=>setUploadOwnership(e.target.value as typeof uploadOwnership)}><option value="required">required</option><option value="managed">managed</option><option value="optional">optional (для каталога компонентов)</option></select></label>
-        <button disabled={busy||!canFileWrite||!uploadFile||packageInfo?.status==='published'} onClick={()=>void upload()}>Загрузить с проверкой SHA-256</button>
+        <button disabled={busy||!canFileWrite||!uploadFile||packageInfo?.status==='published'||packageInfo?.immutableBuild} onClick={()=>void upload()}>Загрузить с проверкой SHA-256</button>
         <h4>Файлы пакета</h4><ul>{(packageInfo?.files||[]).map(f=><li key={f.path}><code>{f.path}</code> ({f.size} байт) — {f.sha256.slice(0,16)}…</li>)}</ul>
         {!packageInfo?.files?.length&&<p className="muted">Файлы не загружены.</p>}
         {packageInfo?.manifestSchemaVersion==='3.0'&&<ComponentGraphEditor0248 key={`${form.packageId}-${catalogRefresh}`} api={api} packageId={form.packageId} canEdit={canPrepare} onChange={setCatalogBlocking}/>}

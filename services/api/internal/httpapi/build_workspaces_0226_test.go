@@ -67,6 +67,24 @@ func TestBuildWorkspaceDirectoryStageAndMaterialize0226(t *testing.T) {
 	upload("mods/client.jar", "jar-test", ws.Data.Revision, 201)
 	upload("assets/indexes/demo.json", "{}", ws.Data.Revision, 201)
 	upload("mods/stale.jar", "old", 1, 409) // CAS stale write cannot overwrite
+	// Delete is a real revision-checked metadata mutation, not a UI-only toggle.
+	rr = call("DELETE", "/api/v1/build-workspaces/"+id+"/files", []byte(`{"revision":1,"path":"mods/client.jar"}`), "application/json")
+	if rr.Code != 409 {
+		t.Fatalf("stale remove: %d %s", rr.Code, rr.Body.String())
+	}
+	rr = call("DELETE", "/api/v1/build-workspaces/"+id+"/files", []byte(`{"revision":`+strconv.FormatInt(ws.Data.Revision, 10)+`,"path":"mods/missing.jar"}`), "application/json")
+	if rr.Code != 404 {
+		t.Fatalf("missing remove: %d %s", rr.Code, rr.Body.String())
+	}
+	rr = call("DELETE", "/api/v1/build-workspaces/"+id+"/files", []byte(`{"revision":`+strconv.FormatInt(ws.Data.Revision, 10)+`,"path":"mods/client.jar"}`), "application/json")
+	if rr.Code != 200 {
+		t.Fatalf("remove imported file: %d %s", rr.Code, rr.Body.String())
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &ws); err != nil {
+		t.Fatal(err)
+	}
+	upload("mods/client.jar", "jar-fixed", ws.Data.Revision, 201)
+
 	rr = call("GET", "/api/v1/build-workspaces/"+id+"/scan", nil, "")
 	if rr.Code != 200 || !strings.Contains(rr.Body.String(), `"status":"passed"`) {
 		t.Fatalf("scan %d %s", rr.Code, rr.Body.String())
@@ -111,11 +129,20 @@ func TestBuildWorkspaceDirectoryStageAndMaterialize0226(t *testing.T) {
 	if rr.Code != 404 {
 		t.Fatalf("workspace source publicly served: %d %s", rr.Code, rr.Body.String())
 	}
+	rr = call("DELETE", "/api/v1/build-workspaces/"+id+"/files", []byte(`{"revision":`+strconv.FormatInt(ws.Data.Revision, 10)+`,"path":"mods/client.jar"}`), "application/json")
+	if rr.Code != 409 {
+		t.Fatalf("built package must be immutable: %d %s", rr.Code, rr.Body.String())
+	}
+	rr = call("POST", "/api/v1/packages/"+ws.Data.PackageID+"/files", nil, "")
+	if rr.Code != 409 || !strings.Contains(rr.Body.String(), "immutable") {
+		t.Fatalf("direct upload changed built package: %d %s", rr.Code, rr.Body.String())
+	}
+
 	if ws.Data.PackageID == "" || ws.Data.BuildDigest != validation.Data.BuildDigest {
 		t.Fatalf("build state %#v", ws.Data)
 	}
 	rr = call("GET", "/api/v1/packages/"+ws.Data.PackageID, nil, "")
-	if rr.Code != 200 || !strings.Contains(rr.Body.String(), "mods/client.jar") {
+	if rr.Code != 200 || !strings.Contains(rr.Body.String(), "mods/client.jar") || !strings.Contains(rr.Body.String(), `"immutableBuild":true`) {
 		t.Fatalf("package %d %s", rr.Code, rr.Body.String())
 	}
 	rr = call("GET", "/api/v1/build-workspaces/"+id, nil, "")

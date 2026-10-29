@@ -390,6 +390,66 @@ func (s Server) workspaceUpload0226(w http.ResponseWriter, r *http.Request) {
 	s.audit(r, ws.OwnerID, "build-workspace:import", ws.ID+":"+file.Path)
 	writeJSON(w, 201, map[string]any{"apiVersion": apiContractVersion, "data": saved})
 }
+
+// workspaceRemoveFile0384 removes an incorrectly imported logical file before
+// a package is materialized. The content-addressed encrypted blob is retained
+// for deferred garbage collection: another path may share the same digest.
+// The workspace revision prevents a stale browser from removing newer input.
+func (s Server) workspaceRemoveFile0384(w http.ResponseWriter, r *http.Request) {
+	store, ws, ok := s.ownedWorkspace0226(w, r, "file:write")
+	if !ok {
+		return
+	}
+	unlock, err := s.lockPackageMutation(r.Context(), "build-workspace:"+ws.ID)
+	if err != nil {
+		writeError(w, 409, err.Error())
+		return
+	}
+	defer unlock()
+	ws, err = store.GetBuildWorkspace(r.Context(), ws.ID)
+	if err != nil {
+		writeError(w, 409, err.Error())
+		return
+	}
+	if ws.State == "built" || ws.PackageID != "" {
+		writeError(w, 409, "workspace is locked to a release package; source files and staging are immutable")
+		return
+	}
+	var req struct {
+		Revision int64  `json:"revision"`
+		Path     string `json:"path"`
+	}
+	if err = readJSON0226(w, r, 4096, &req); err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	if req.Revision != ws.Revision {
+		writeError(w, 409, "workspace revision conflict")
+		return
+	}
+	index := -1
+	for i, f := range ws.Files {
+		if f.Path == req.Path {
+			index = i
+			break
+		}
+	}
+	if index < 0 {
+		writeError(w, 404, "workspace file not found")
+		return
+	}
+	ws.Files = append(ws.Files[:index], ws.Files[index+1:]...)
+	ws.State = "importing"
+	ws.BuildDigest = ""
+	saved, err := store.SaveBuildWorkspace(r.Context(), ws)
+	if err != nil {
+		writeError(w, 409, err.Error())
+		return
+	}
+	s.audit(r, ws.OwnerID, "build-workspace:remove", ws.ID+":"+req.Path)
+	writeJSON(w, 200, map[string]any{"apiVersion": apiContractVersion, "data": saved})
+}
+
 func (s Server) workspaceVerifyFile0226(ws repository.BuildWorkspace, file repository.BuildFile) error {
 	_, err := s.readWorkspaceSource0226(ws, file)
 	return err

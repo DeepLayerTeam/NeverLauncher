@@ -98,6 +98,15 @@ func (r *SQLiteHTTPRepository0372) CreateBuildWorkspace(arg0 context.Context, w 
 	return
 }
 
+func (r *SQLiteHTTPRepository0372) MaterializedBuildForPackage0384(ctx context.Context, packageID string) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.failed != nil {
+		return false, r.failed
+	}
+	return r.mem.MaterializedBuildForPackage0384(ctx, packageID)
+}
+
 func (r *SQLiteHTTPRepository0372) GetBuildWorkspace(arg0 context.Context, id string) (out0 BuildWorkspace, out1 error) {
 	r.mu.Lock()
 	auditStart := len(r.mem.audit)

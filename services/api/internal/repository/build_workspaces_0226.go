@@ -61,6 +61,33 @@ type BuildWorkspaceStore interface {
 	SaveBuildWorkspace(context.Context, BuildWorkspace) (BuildWorkspace, error)
 }
 
+// BuildPackageLocator0384 prevents a materialized workspace package from being
+// changed through the older direct file-upload API. Signing and publication
+// remain separate release operations.
+type BuildPackageLocator0384 interface {
+	MaterializedBuildForPackage0384(context.Context, string) (bool, error)
+}
+
+func (r *MemoryRepository) MaterializedBuildForPackage0384(_ context.Context, packageID string) (bool, error) {
+	r.buildMu.Lock()
+	defer r.buildMu.Unlock()
+	for _, ws := range r.buildWorkspaces {
+		if ws.PackageID == packageID && ws.State == "built" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (r *SQLRepository) MaterializedBuildForPackage0384(ctx context.Context, packageID string) (bool, error) {
+	if err := r.check(); err != nil {
+		return false, err
+	}
+	var exists bool
+	err := r.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM build_workspaces_0226 WHERE data->>'packageId'=$1 AND data->>'state'='built')`, packageID).Scan(&exists)
+	return exists, err
+}
+
 func validWorkspace0226(w BuildWorkspace) error {
 	for _, id := range []string{w.ID, w.ProjectID, w.OwnerID, w.ProfileID, w.Channel, w.Version} {
 		if id == "" || len(id) > 128 || strings.ContainsAny(id, "\x00\r\n") {
