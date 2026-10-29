@@ -350,11 +350,13 @@ func ValidateCatalogRules0243(cat ComponentCatalog0241) error {
 			return err
 		}
 	}
-	if cat.SchemaVersion == ComponentCatalogSchema0244 || cat.SchemaVersion == ComponentCatalogSchema0245 {
-		return nil
-	}
-	if _, err := resolveCatalogGraph0243(cat, ""); err != nil {
-		return err
+	// Conditions may filter implicit defaults differently on each player's OS,
+	// but a named preset always selects all its roots explicitly. A signed preset
+	// containing incompatible dependencies cannot become valid on another host.
+	if cat.SchemaVersion != ComponentCatalogSchema0244 && cat.SchemaVersion != ComponentCatalogSchema0245 {
+		if _, err := resolveCatalogGraph0243(cat, ""); err != nil {
+			return err
+		}
 	}
 	for _, p := range cat.Presets {
 		if _, err := resolveCatalogGraph0243(cat, p.ID); err != nil {

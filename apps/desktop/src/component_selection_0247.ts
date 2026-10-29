@@ -1,12 +1,13 @@
-/** User selections reference only component IDs from a signed catalog.
- * They are deliberately NOT a rewritten manifest or an unsigned actions list.
- * Native NeverRuntime remains the sole authority for resolving the final plan.
+/** Player choices only reference identifiers from a signed catalog. NeverRuntime
+ * verifies the signature, resolves the final graph and is authoritative for IO.
  */
 export const CUSTOM_PREFIX_0247 = '@custom:v1:';
 export type ComponentChoice0247 = {base: string; overrides: Map<string, boolean>};
 export type SelectableComponent0247 = {
-  id:string; name:string; required?:boolean; visible?:boolean; limited?:boolean;
-  dependencies?:{id:string;versionRange?:string}[]; conflicts?:{id:string;versionRange?:string}[]; exclusiveGroup?:string;
+  id:string; name:string; version?:string; required?:boolean; visible?:boolean; limited?:boolean;
+  dependencies?:{id:string;versionRange?:string}[];
+  conflicts?:{id:string;versionRange?:string}[];
+  exclusiveGroup?:string;
 };
 const idPattern = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 export function parseChoice0247(encoded:string):ComponentChoice0247 {
@@ -36,50 +37,118 @@ export function encodeChoice0247(choice:ComponentChoice0247):string {
   if(encoded.length>8192)throw new Error('Слишком много выбранных компонентов');
   return encoded;
 }
-/** Propose an edit, including safe removal of *current* dependents/conflicts.
- * This is UI assistance only; native validates all transitive constraints.
+
+// Same supported SemVer range operators as the native catalog graph (v3-v5).
+// A malformed range must not be silently treated as "no conflict" by the UI.
+type Version = {numbers:bigint[];pre:string[]};
+const versionPattern=/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/;
+const max64=(1n<<64n)-1n;
+function semver(value:string):Version {
+  if(value.length>128)throw new Error(`Некорректная версия компонента: ${value}`);
+  const match=versionPattern.exec(value);
+  if(!match||[match[4],match[5]].filter(Boolean).some(s=>s!.split('.').some(p=>!p||!/^[0-9A-Za-z-]+$/.test(p)))||
+    (match?.[4]?.split('.').some(p=>/^\d+$/.test(p)&&p.length>1&&p[0]==='0')))
+    throw new Error(`Некорректная версия компонента: ${value}`);
+  const numbers=match.slice(1,4).map(x=>BigInt(x));
+  if(numbers.some(x=>x>max64))throw new Error(`Версия выходит за допустимый диапазон: ${value}`);
+  return {numbers,pre:match[4]?.split('.')||[]};
+}
+function compare(a:Version,b:Version):number {
+  for(let i=0;i<3;i++){if(a.numbers[i]!==b.numbers[i])return a.numbers[i]<b.numbers[i]?-1:1;}
+  if(!a.pre.length)return b.pre.length?1:0;
+  if(!b.pre.length)return -1;
+  for(let i=0;i<Math.min(a.pre.length,b.pre.length);i++){
+    const x=a.pre[i],y=b.pre[i],xn=/^\d+$/.test(x),yn=/^\d+$/.test(y);
+    if(xn&&yn){const xv=BigInt(x),yv=BigInt(y);if(xv!==yv)return xv<yv?-1:1;}
+    else if(xn!==yn)return xn?-1:1;
+    else if(x!==y)return x<y?-1:1;
+  }
+  return Math.sign(a.pre.length-b.pre.length);
+}
+export function matchesVersion0247(actual:string,range:string):boolean {
+  // Native validates the version even for wildcard constraints.
+  const version=semver(actual);
+  if(!range.trim()||range.trim()==='*')return true;
+  if(range.length>256)throw new Error('Слишком длинный диапазон версий');
+  return range.split('||').some(branch=>{
+    const tokens=branch.trim().split(/\s+/);
+    if(!branch.trim()||tokens.length>16)throw new Error(`Некорректный диапазон: ${range}`);
+    return tokens.every(token=>{
+      if(token==='*')return true;
+      const match=/^(>=|<=|>|<|=|\^|~)?(.+)$/.exec(token);
+      if(!match)throw new Error(`Некорректное условие: ${token}`);
+      const op=match[1]||'=',base=semver(match[2]),cmp=compare(version,base);
+      if(op==='=')return cmp===0;
+      if(op==='>')return cmp>0;
+      if(op==='>=')return cmp>=0;
+      if(op==='<')return cmp<0;
+      if(op==='<=')return cmp<=0;
+      const upper=[...base.numbers];
+      if(op==='~'){upper[1]++;upper[2]=0n;}
+      else if(upper[0]>0n){upper[0]++;upper[1]=0n;upper[2]=0n;}
+      else if(upper[1]>0n){upper[1]++;upper[2]=0n;}
+      else upper[2]++;
+      if(upper.some(n=>n>max64))throw new Error(`Переполнение диапазона: ${range}`);
+      return cmp>=0&&compare(version,{numbers:upper,pre:[]})<0;
+    });
+  });
+}
+
+/** Create a workable candidate before native preview. On enable, the requested
+ * component and its entire dependency closure have priority over existing
+ * incompatible components. Their dependents are also removed. Never silently
+ * evict a required component or a dependency of the requested component.
  */
 export function proposeChoice0247(
   encoded:string, components:SelectableComponent0247[], active:string[], id:string, enable:boolean,
 ):{choice:string;removed:string[];added:string[]} {
   const byID=new Map(components.map(c=>[c.id,c]));
+  if(byID.size!==components.length)throw new Error('Повторный ID компонента');
   const target=byID.get(id);
   if(!target||target.required||target.limited||target.visible===false)throw new Error('Этот компонент нельзя изменять вручную');
-  const current=new Set(active), next=new Set(current);
+  const current=new Set(active),next=new Set(current);
+  const protectedIDs=new Set<string>();
   if(enable){
-    next.add(id);
-    // Include required transitive dependencies before analyzing exclusions.
-    const seen=new Set<string>();
-    const include=(key:string)=>{
-      if(seen.has(key))return;
-      seen.add(key);
-      for(const dep of byID.get(key)?.dependencies||[]){
-        if(!byID.has(dep.id))throw new Error(`Неизвестная зависимость ${dep.id}`);
-        next.add(dep.id);include(dep.id);
+    const walk=(key:string)=>{
+      if(protectedIDs.has(key))return;
+      const component=byID.get(key);
+      if(!component)throw new Error(`Неизвестная зависимость: ${key}`);
+      protectedIDs.add(key);next.add(key);
+      for(const dep of component.dependencies||[]){
+        const other=byID.get(dep.id);
+        if(!other)throw new Error(`Для ${key} отсутствует зависимость ${dep.id}`);
+        if(dep.versionRange&&dep.versionRange!=='*'&&!matchesVersion0247(other.version||'',dep.versionRange))
+          throw new Error(`${key} требует ${dep.id} ${dep.versionRange}; доступна ${other.version||'неизвестная версия'}`);
+        walk(dep.id);
       }
     };
-    include(id);
+    walk(id);
   }else next.delete(id);
+
+  const conflicts=(a:SelectableComponent0247,b:SelectableComponent0247)=>
+    Boolean(a.exclusiveGroup&&a.exclusiveGroup===b.exclusiveGroup)||
+    Boolean(a.conflicts?.some(r=>r.id===b.id&&(!r.versionRange||r.versionRange==='*'||matchesVersion0247(b.version||'',r.versionRange))))||
+    Boolean(b.conflicts?.some(r=>r.id===a.id&&(!r.versionRange||r.versionRange==='*'||matchesVersion0247(a.version||'',r.versionRange))));
   if(enable){
-    // A signed conflict is directional; either component may declare it.
-    const enabledNow=new Set([...next].filter(x=>!current.has(x)));
-    for(const c of components){
-      if(!next.has(c.id)||enabledNow.has(c.id))continue;
-      const incompatible=[...enabledNow].some(enabledID=>{
-        const enabledComponent=byID.get(enabledID);
-        return Boolean(enabledComponent?.exclusiveGroup&&enabledComponent.exclusiveGroup===c.exclusiveGroup)||
-          Boolean(enabledComponent?.conflicts?.some(x=>x.id===c.id&&(!x.versionRange||x.versionRange==='*')))||
-          Boolean(c.conflicts?.some(x=>x.id===enabledID&&(!x.versionRange||x.versionRange==='*')));
-      });
-      if(incompatible)next.delete(c.id);
+    // Check every pair, not merely the directly clicked component. An added
+    // transitive dependency may itself conflict with an existing mod.
+    for(const requested of components.filter(c=>protectedIDs.has(c.id))){
+      for(const other of components){
+        if(!next.has(other.id)||requested.id===other.id||!conflicts(requested,other))continue;
+        if(protectedIDs.has(other.id))throw new Error(`Несовместимые зависимости: ${requested.name} и ${other.name}`);
+        if(other.required)throw new Error(`Конфликт с обязательным компонентом: ${other.name}`);
+        next.delete(other.id);
+      }
     }
   }
-  // If a component becomes unavailable, remove its selected dependents as well.
+  // Removing a dependency must also remove every selected dependent, including
+  // dependents introduced by a signed preset. This is transitive and stable.
   let changed=true;
   while(changed){
     changed=false;
     for(const c of components){
-      if(!next.has(c.id)||!c.dependencies?.some(dep=>!next.has(dep.id)&&current.has(dep.id)))continue;
+      if(!next.has(c.id)||!c.dependencies?.some(dep=>!next.has(dep.id)))continue;
+      if(c.required||protectedIDs.has(c.id))throw new Error(`Невозможно отключить зависимость обязательного компонента ${c.name}`);
       next.delete(c.id);changed=true;
     }
   }
@@ -89,7 +158,8 @@ export function proposeChoice0247(
   const result=parseChoice0247(encoded);
   for(const name of removed)result.overrides.set(name,false);
   for(const name of added){
-    // Dependencies are resolved by native, including hidden signed components.
+    // Native expands dependencies, even hidden ones. Remove stale explicit
+    // exclusions rather than granting unrelated user-selected roots.
     if(name===id)result.overrides.set(name,true);
     else result.overrides.delete(name);
   }

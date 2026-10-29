@@ -386,10 +386,11 @@ fn validate_rules_v3(cat:&ComponentCatalog)->Result<(),String>{
     }
     let mut state=HashMap::new();let mut stack=Vec::new();
     for c in &cat.components{visit(c.id.as_str(),&items,&mut state,&mut stack)?}
-    if cat.schema_version!="4.0" && cat.schema_version!="5.0" {
-      resolve_graph_v3(cat,"")?;
-      for p in &cat.presets{resolve_graph_v3(cat,&p.id).map_err(|e|format!("preset {} invalid: {e}",p.id))?;}
-    }
+    // An implicit default may be filtered by the player's platform. Explicit
+    // named presets are never filtered and must be structurally satisfiable on
+    // every target before an owner can sign and publish their manifest.
+    if cat.schema_version!="4.0" && cat.schema_version!="5.0" {resolve_graph_v3(cat,"")?;}
+    for p in &cat.presets{resolve_graph_v3(cat,&p.id).map_err(|e|format!("preset {} invalid: {e}",p.id))?;}
     Ok(())
 }
 // v0.24.7: an installation choice is an untrusted list of signed component IDs,
@@ -591,6 +592,15 @@ mod tests{
   let mut exclusive=cat.clone();
   exclusive.components[2].exclusive_group="performance-engine".into();
   assert!(resolve_graph_v3(&exclusive,"@custom:v1:quality:").unwrap_err().contains("exclusive_group"));
+ }
+ #[test] fn conditional_named_presets_reject_incompatible_components_0391(){
+  let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
+  let mut cat=m.component_catalog.unwrap();
+  cat.components[2].exclusive_group="performance-engine".into();
+  cat.components[1].exclusive_group="performance-engine".into();
+  assert!(validate_topology(&cat).unwrap_err().contains("exclusive_group"));
+  cat.schema_version="4.0".into();
+  assert!(validate_topology(&cat).unwrap_err().contains("exclusive_group"));
  }
  #[test] fn signed_go_conditions_fixture_0244(){
   let manifest:crate::Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_0244_go_signed.json")).unwrap();

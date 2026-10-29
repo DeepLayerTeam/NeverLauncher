@@ -117,3 +117,26 @@ func TestConditionalVersionRanges0244(t *testing.T) {
 		t.Fatal("snapshot incorrectly matched semver condition")
 	}
 }
+
+// Named presets are explicit roots, unlike implicit defaults. Reject an
+// impossible preset during publishing rather than letting every player discover
+// the problem only after choosing it in Desktop.
+func TestConditionalCatalogRejectsConflictingNamedPreset0391(t *testing.T) {
+	for _, schema := range []string{"4.0", "5.0"} {
+		t.Run(schema, func(t *testing.T) {
+			m := dependencyFixture0243()
+			m.ComponentCatalog.Components[2].ExclusiveGroup = "performance-engine"
+			var cat ComponentCatalog0241
+			if schema == "4.0" {
+				cat = NewComponentCatalog0244(*m.ComponentCatalog, 7)
+			} else {
+				cat = NewComponentCatalog0245(*m.ComponentCatalog, 7)
+			}
+			m.ComponentCatalog = &cat
+			err := ValidateManifestSchema(m)
+			if err == nil || !strings.Contains(err.Error(), "exclusive_group") {
+				t.Fatalf("invalid signed preset published: %v", err)
+			}
+		})
+	}
+}
