@@ -4,6 +4,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
+# A failed preflight must never leave a previous green GA certificate behind.
+rm -f dist/ga-certification/admin-0220.json
 RELEASE_VERSION="$(< VERSION)"
 python3 scripts/release/release_policy.py ga-mode --version "$RELEASE_VERSION" >/dev/null || exit 2
 
@@ -23,6 +25,13 @@ for cmd in go node npm python3 docker; do
   command -v "$cmd" >/dev/null || { echo "missing certification tool: $cmd" >&2; exit 2; }
 done
 
+python3 - "$RELEASE_VERSION" "$COMMIT" <<'PYRUN'
+import pathlib, sys
+sys.path.insert(0, 'scripts/release')
+from certification_run import identity
+identity(sys.argv[1], sys.argv[2], root=pathlib.Path.cwd())
+PYRUN
+rm -f dist/ga-certification/admin-0220.json
 python3 scripts/release/check-admin-ga-0220.py
 (
   cd apps/admin
@@ -51,6 +60,8 @@ python3 e2e/scripts/admin-ga-0220-serverbridge.py
 mkdir -p dist/ga-certification
 python3 - "$COMMIT" <<'PY'
 import hashlib, json, pathlib, sys
+sys.path.insert(0, 'scripts/release')
+from certification_run import identity
 root = pathlib.Path.cwd()
 assets = sorted(p for p in (root / 'apps/admin/dist').rglob('*') if p.is_file())
 if not assets or not (root / 'apps/admin/dist/index.html').is_file():
@@ -64,6 +75,7 @@ payload = {
                'postgresql-serverbridge-integration', 'live-playwright-rbac-two-tabs-recovery', 'live-serverbridge-v3-save-drain-ack'],
     'adminBundle': {str(p.relative_to(root / 'apps/admin/dist')): hash_of(p) for p in assets},
     'openapiSha256': hash_of(root / 'schemas/openapi.yaml'),
+    'certificationRun': identity((root / 'VERSION').read_text().strip(), sys.argv[1], root=root),
 }
 result = root / 'dist/ga-certification/admin-0220.json'
 result.write_text(json.dumps(payload, indent=2, sort_keys=True)+'\n')

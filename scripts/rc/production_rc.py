@@ -20,6 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'release'))
 from release_policy import rc_supported, rc_extended
+from certification_run import identity
 
 ROOT = Path(__file__).resolve().parents[2]
 API = ROOT / 'services/api'
@@ -161,6 +162,7 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
     root = validate_preflight(env)
     canonical = (ROOT / 'VERSION').read_text().strip()
     selected = suites_for_version(canonical)
+    current_run = identity(canonical, env.get('GITHUB_SHA', ''), env, root=ROOT)
     if rc_extended(canonical) and not env.get('NEVERLAUNCHER_TEST_POSTGRES_DSN'):
         raise GateError('real PostgreSQL immutable-stable certification DSN required')
     git_sha = env.get('GITHUB_SHA', '')
@@ -185,7 +187,7 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
         print(f'{suite.name}: {receipts[-1]["count"]} real tests passed', flush=True)
     receipt = {
         'format': 'neverlauncher-03216-rc-test-evidence-v1',
-        'version': canonical, 'commit': git_sha or None,
+        'version': canonical, 'commit': git_sha or None, 'certificationRun': current_run,
         'sqlite_root': root, 'toolchain': version.stdout.strip(),
         'suites': receipts,
         'disclaimer': 'Tests are required but not proof of multi-host HA or complete product GA certification.',
@@ -205,9 +207,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
+    args.output.unlink(missing_ok=True)
     try:
         run_gate(args.output, dict(os.environ))
-    except (GateError, OSError) as exc:
+    except (GateError, OSError, ValueError) as exc:
         print(f'RC BLOCKED: {exc}', file=sys.stderr)
         return 2
     print('RC tests passed; remaining GA gates are still required.')

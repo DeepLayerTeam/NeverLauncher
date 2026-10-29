@@ -19,6 +19,8 @@ import sys
 from urllib.parse import urlsplit
 
 ROOT=Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'release'))
+from certification_run import identity
 DR=ROOT/'scripts/operations/dr_03512.py'
 PROJECT=re.compile(r'nl-dr-[a-z0-9][a-z0-9-]{0,35}\Z')
 
@@ -120,6 +122,7 @@ def main():
     try:
         receipt=run(args.source,args.target,args.env_file,args.snapshot,args.source_ready_url,
                     args.target_ready_url,args.network_ha,args.s3_source_bucket,args.s3_target_bucket,args.s3_endpoint)
+        receipt['certificationRun'] = identity((ROOT/'VERSION').read_text().strip(), os.environ.get('GITHUB_SHA',''), root=ROOT)
         args.output.parent.mkdir(parents=True,exist_ok=True)
         args.output.write_text(json.dumps(receipt,indent=2,sort_keys=True)+'\n')
     except (OperationsBlocked,ValueError,OSError,KeyError) as exc:

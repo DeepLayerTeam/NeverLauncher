@@ -15,6 +15,8 @@ from urllib.error import HTTPError, URLError
 from uuid import uuid4
 
 from ux_0351 import atomic_report, AuditError, require, ROOT
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'release'))
+from certification_run import identity
 
 MAX_BODY = 2 * 1024 * 1024
 
@@ -126,7 +128,8 @@ def run(base, email, password):
             'version':(ROOT/'VERSION').read_text().strip(),'status':'local-loopback-passed',
             'checks':checks,'scenarioIds':['G01','G07','G22','G32','G34'],
             'projectId':project,'realBackend':True,'realMinecraftCertification':False,
-            'nativeDesktopVerified':False,'stablePublicationVerified':False}
+            'nativeDesktopVerified':False,'stablePublicationVerified':False,
+            'certificationRun':identity((ROOT/'VERSION').read_text().strip(),os.environ.get('GITHUB_SHA',''),root=ROOT)}
 
 
 def main():
@@ -136,6 +139,7 @@ def main():
                    help='acknowledge this will mutate a disposable local Backend')
     p.add_argument('--output',required=True,type=Path)
     args=p.parse_args()
+    args.output.unlink(missing_ok=True)
     try:
         url=urlsplit(args.backend)
         require(args.isolated_test_instance, 'requires explicit isolated test instance acknowledgment')

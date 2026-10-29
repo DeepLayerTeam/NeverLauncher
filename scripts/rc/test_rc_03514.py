@@ -114,6 +114,40 @@ class VerificationTests(unittest.TestCase):
             self.assertEqual(result['status'],'rc-source-checks-passed')
             self.assertFalse(result['operatorSigned'])
 
+    def test_0362_requires_fresh_current_run_on_all_native_desktop_and_backend_receipts(self):
+        from datetime import datetime, timezone
+        from unittest.mock import patch
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'release'))
+        from certification_run import identity, CertificationBlocked
+        sha = COMMIT
+        env = {'GITHUB_SHA': sha, 'GITHUB_REPOSITORY': 'DeepLayerTeam/NeverLauncher',
+               'GITHUB_RUN_ID': '777', 'GITHUB_RUN_ATTEMPT': '3'}
+        with tempfile.TemporaryDirectory() as tmp, patch.dict('os.environ', env, clear=True):
+            n, d, b = fixtures(Path(tmp))
+            evidence = identity('0.36.2', sha, env)
+            for root in (n, d):
+                for file in root.glob('*.json'):
+                    doc = json.loads(file.read_text())
+                    doc['version'] = '0.36.2'
+                    doc['certificationRun'] = dict(evidence)
+                    file.write_text(json.dumps(doc))
+            backend = json.loads(b.read_text())
+            backend['version'] = '0.36.2'
+            backend['certificationRun'] = dict(evidence)
+            b.write_text(json.dumps(backend))
+            receipt = verify(n, d, b, sha, '0.36.2')
+            self.assertEqual(receipt['certificationRun']['runAttempt'], 3)
+            old = json.loads((n / 'linux.json').read_text())
+            old['certificationRun']['runAttempt'] = 2
+            (n / 'linux.json').write_text(json.dumps(old))
+            with self.assertRaises(CertificationBlocked):
+                verify(n, d, b, sha, '0.36.2')
+            (n / 'linux.json').write_text(json.dumps(dict(old, certificationRun=evidence)))
+            backend.pop('certificationRun')
+            b.write_text(json.dumps(backend))
+            with self.assertRaises(CertificationBlocked):
+                verify(n, d, b, sha, '0.36.2')
+
     def deny(self, change):
         with tempfile.TemporaryDirectory() as tmp:
             n,d,b=fixtures(Path(tmp))

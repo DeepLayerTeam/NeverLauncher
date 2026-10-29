@@ -16,6 +16,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'release'))
 from release_policy import rc_extended
+from certification_run import identity, CertificationBlocked
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -54,7 +55,8 @@ def inspect(binary: Path, frontend: Path, commit: str) -> dict:
             'frontendAssets':len(files),'frontendSha256':hashlib.sha256(
                 ''.join(path.relative_to(frontend).as_posix()+':'+sha256(path)+'\n' for path in files).encode()).hexdigest(),
             'scope':'actual native and production renderer build; does not attest GUI gameplay',
-            'timestampUtc':datetime.now(timezone.utc).isoformat()}
+            'timestampUtc':datetime.now(timezone.utc).isoformat(),
+            'certificationRun':identity(version, commit, root=ROOT)}
 
 
 def main():

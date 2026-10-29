@@ -18,6 +18,7 @@ import subprocess
 import sys
 
 from release_policy import legacy_profiles_supported
+from certification_run import identity
 
 ROOT = Path(__file__).resolve().parents[2]
 CASES = (
@@ -55,18 +56,28 @@ CASES = (
 
 def validate_test_events(output: str, required: tuple[str, ...]) -> None:
     terminal: dict[str, str] = {}
+    problems = []
     for line in output.splitlines():
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
-        test = event.get("Test")
-        action = event.get("Action")
-        if test in required and action in {"pass", "fail", "skip"}:
+        if not isinstance(event, dict):
+            continue
+        test = event.get('Test')
+        action = event.get('Action')
+        if action == 'fail':
+            problems.append(f'{test or "package"}:fail')
+        if action == 'skip':
+            problems.append(f'{test or "package"}:skip')
+        if test in required and action in {'pass', 'fail', 'skip'}:
+            if test in terminal:
+                problems.append(f'{test}:duplicate result')
             terminal[test] = action
-    not_passed = {name: terminal.get(name, "missing") for name in required if terminal.get(name) != "pass"}
-    if not_passed:
-        raise ValueError("mandatory tests missing, failed or skipped: " + json.dumps(not_passed, sort_keys=True))
+    not_passed = {name: terminal.get(name, 'missing') for name in required if terminal.get(name) != 'pass'}
+    if not_passed or problems:
+        raise ValueError('mandatory tests missing, failed, skipped or duplicate: ' +
+                         json.dumps({'notPassed': not_passed, 'problems': problems[:16]}, sort_keys=True))
 
 
 def run_suite(name: str, directory: str, package: str, tests: tuple[str, ...]) -> dict:
@@ -84,20 +95,27 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="dist/ga-certification/profiles-0230.json")
     args = parser.parse_args()
+    # Invalidate the old success before preflight as well as before test execution.
+    initial_output = Path(args.output)
+    if not initial_output.is_absolute():
+        initial_output = ROOT / initial_output
+    initial_output.unlink(missing_ok=True)
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     sha = os.environ.get("GITHUB_SHA", os.environ.get("NEVERLAUNCHER_SOURCE_COMMIT", ""))
     if not legacy_profiles_supported(version) or not re.fullmatch(r"[a-fA-F0-9]{40}", sha):
         print("Profile GA requires supported release version and exact 40-digit source SHA", file=sys.stderr)
         return 2
+    expected_run = identity(version, sha, root=ROOT)
     if not os.getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN"):
         print("GA certification requires NEVERLAUNCHER_TEST_POSTGRES_DSN (real PostgreSQL)", file=sys.stderr)
         return 2
     report = {"schemaVersion": "1", "productVersion": version, "commit": sha.lower(),
               "generatedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
-              "status": "failed", "suites": []}
+              "status": "failed", "suites": [], 'certificationRun': expected_run}
     output = Path(args.output)
     if not output.is_absolute():
         output = ROOT / output
+    output.unlink(missing_ok=True)
     for name, directory, package, tests in CASES:
         try:
             print("[profiles-ga]", name, flush=True)

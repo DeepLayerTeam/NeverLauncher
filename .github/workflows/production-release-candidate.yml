@@ -307,6 +307,9 @@ jobs:
             --jq '{sha:.head_sha,result:.conclusion,event:.event}' > "$RUNNER_TEMP/ga-run.json"
           jq -e --arg sha "$GITHUB_SHA" '.sha == $sha and .result == "success" and .event == "workflow_dispatch"' \
             "$RUNNER_TEMP/ga-run.json" >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$EVIDENCE_RUN_ID" > "$RUNNER_TEMP/ga-external-run.json"
+          python3 scripts/release/check_protected_run.py --json "$RUNNER_TEMP/ga-external-run.json" \
+            --version "$(cat VERSION)" --commit "$GITHUB_SHA"
           test -n "$TRUSTED_GA_PUBLIC_KEY"
           umask 077
           printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > "$RUNNER_TEMP/ga-trust.pub"
@@ -373,6 +376,16 @@ jobs:
             runtime-ga-preflight/GA_RUNTIME_PREFLIGHT_0350.json >/dev/null
       - name: Install Ed25519 verification dependency
         run: python3 -m pip install 'cryptography>=43,<47'
+      - name: Require fresh independent official Minecraft GA run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVIDENCE_RUN_ID: ${{ inputs.official_minecraft_ga_evidence_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$EVIDENCE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$EVIDENCE_RUN_ID" > "$RUNNER_TEMP/official-ga-run.json"
+          python3 scripts/release/check_protected_run.py --json "$RUNNER_TEMP/official-ga-run.json" \
+            --version "$(cat VERSION)" --commit "$GITHUB_SHA"
       - name: Download independently signed live official Minecraft GA evidence
         uses: actions/download-artifact@v4
         with:
@@ -407,6 +420,11 @@ jobs:
           [[ "$GA_RUN_ID" =~ ^[0-9]+$ ]]
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GA_RUN_ID"             --jq '{commit:.head_sha,conclusion:.conclusion,event:.event,path:.path}' > "$RUNNER_TEMP/client-factory-run.json"
           jq -e --arg commit "$GITHUB_SHA"             '.commit == $commit and .conclusion == "success" and .event == "workflow_dispatch" and (.path | endswith(".github/workflows/client-factory-ga-0280.yml"))'             "$RUNNER_TEMP/client-factory-run.json" >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GA_RUN_ID" > "$RUNNER_TEMP/client-factory-run-full.json"
+      - name: Require fresh independent Client Factory GA execution
+        run: |
+          python3 scripts/release/check_protected_run.py --json "$RUNNER_TEMP/client-factory-run-full.json" \
+            --version "$(cat VERSION)" --commit "$GITHUB_SHA" --workflow client-factory-ga-0280.yml
       - name: Retrieve Client Factory protected GA evidence
         uses: actions/download-artifact@v4
         with:
@@ -446,6 +464,12 @@ jobs:
               ([.suites[] | select(.status != "passed")] | length) == 0 and
               ([.suites[] | .tests | length] | min) > 0' \
             profile-ga-certification/profiles-0230.json >/dev/null
+      - name: Reject historical or partial active GA reports from another run/attempt
+        run: |
+          python3 scripts/release/verify_current_certifications.py \
+            --admin admin-ga-certification/admin-0220.json \
+            --profiles profile-ga-certification/profiles-0230.json \
+            --version "$(cat VERSION)" --commit "$GITHUB_SHA"
       - name: Download certified Linux Guard artifacts
         uses: actions/download-artifact@v4
         with:
@@ -580,6 +604,9 @@ jobs:
           TRUSTED_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY }}
         run: |
           set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$EVIDENCE_RUN_ID" > "$RUNNER_TEMP/ga-external-run.json"
+          python3 scripts/release/check_protected_run.py --json "$RUNNER_TEMP/ga-external-run.json" \
+            --version "$(cat VERSION)" --commit "$GITHUB_SHA"
           test -n "$TRUSTED_GA_PUBLIC_KEY"
           umask 077
           printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > /tmp/neverlauncher-single-node-ga.pub

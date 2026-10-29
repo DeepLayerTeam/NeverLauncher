@@ -25,3 +25,13 @@ for bad in (event("TestA", "skip"), event("TestOther", "pass"), event("TestA", "
     else:
         raise AssertionError("unsafe GA evidence accepted")
 print("GA evidence validation: PASS (skipped/missing/failed tests rejected)")
+
+# A later PASS must never erase a prior FAIL or SKIP for the same test.
+for bad in (event('TestA', 'fail')+'\n'+event('TestA','pass'),
+            event('TestA','skip')+'\n'+event('TestA','pass')):
+    try:
+        mod.validate_test_events(bad, ('TestA',))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('GA accepted a skipped/failed preceding test')

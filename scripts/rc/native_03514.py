@@ -22,6 +22,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'release'))
 from release_policy import rc_extended
+from certification_run import identity, CertificationBlocked
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts' / 'performance'))
@@ -142,7 +143,8 @@ def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
                     'signedFixtureSha256': hash_file(manifest), 'fixtureBytes': size,
                     'checks': checks,
                     'certificationScope': 'real native signed sync, verify, repair, rejection only; not Minecraft/GUI E2E',
-                    'timestampUtc': datetime.now(timezone.utc).isoformat()}
+                    'timestampUtc': datetime.now(timezone.utc).isoformat(),
+                    'certificationRun': identity(version, commit, root=ROOT)}
 
 
 def main() -> int:
@@ -156,7 +158,7 @@ def main() -> int:
     args.output.unlink(missing_ok=True)  # stale PASSED artifact must not survive a failed rerun
     try:
         result = execute(args.runtime, args.signer, version, args.commit)
-    except (RCBlocked, ValueError, OSError, RuntimeError) as exc:
+    except (RCBlocked, ValueError, OSError, RuntimeError, CertificationBlocked) as exc:
         print('Native RC blocked: ' + str(exc), file=sys.stderr)
         return 3
     args.output.parent.mkdir(parents=True, exist_ok=True)

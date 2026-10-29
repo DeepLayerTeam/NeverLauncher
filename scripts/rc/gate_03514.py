@@ -24,6 +24,7 @@ REQUIRED_NATIVE={
 }
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'release'))
 from release_policy import rc_extended
+from certification_run import verify as verify_run, identity
 
 PLATFORMS={'linux','windows','darwin'}
 
@@ -67,6 +68,7 @@ def verify(native_dir: Path, desktop_dir: Path, backend_file: Path, commit: str,
              'missing native executable/fixture fingerprints')
         need('not Minecraft/GUI E2E' in nr.get('certificationScope',''),
              'native test must not claim live game certification')
+        verify_run(nr, version, commit)
         native.append({'os':system,'runtimeSha256':nr['runtimeSha256'],'checks':len(nr['checks'])})
         dr=load_exact(desktop_dir/(system+'.json'))
         need(dr.get('schemaVersion')=='neverlauncher.rc.desktop-build.v1' and dr.get('version')==version
@@ -77,6 +79,7 @@ def verify(native_dir: Path, desktop_dir: Path, backend_file: Path, commit: str,
              and isinstance(dr.get('binarySizeBytes'),int) and dr['binarySizeBytes']>1_000_000
              and isinstance(dr.get('frontendAssets'),int) and dr['frontendAssets']>=2,
              'missing actual compiled Desktop bundle')
+        verify_run(dr, version, commit)
         desktop.append({'os':system,'binarySha256':dr['binarySha256'],'frontendSha256':dr['frontendSha256']})
     backend=load_exact(backend_file)
     need(backend.get('schemaVersion')=='neverlauncher.owner-player-http-acceptance.v1'
@@ -90,7 +93,8 @@ def verify(native_dir: Path, desktop_dir: Path, backend_file: Path, commit: str,
          and 'unpublished-or-workspace-content-not-served' in checks
          and 'unauthenticated-admin-mutation-denied' in checks,
          'Backend acceptance lacked security negative checks')
-    return {'schemaVersion':'neverlauncher.rc.verification.v1','version':version,'commit':commit,
+    verify_run(backend, version, commit)
+    return {'certificationRun':identity(version, commit), 'schemaVersion':'neverlauncher.rc.verification.v1','version':version,'commit':commit,
             'status':'rc-source-checks-passed','native':native,'desktop':desktop,
             'backendChecks':len(checks),'realMinecraftCertified':False,
             'fullDisasterRecoveryCertified':False,'operatorSigned':False,

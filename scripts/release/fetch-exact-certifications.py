@@ -8,6 +8,7 @@ release assembly. It never falls back to a previous successful run.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone, timedelta
 import io
 import json
 from pathlib import Path
@@ -17,6 +18,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
+
+from certification_run import required as fresh_required
 
 API_ROOT = "https://api.github.com"
 API_VERSION = "2022-11-28"
@@ -195,6 +198,20 @@ def fetch_matrix(api: GitHubAPI, *, repository: str, commit: str, version: str, 
         return False
     if conclusion != "success":
         raise RuntimeError(f"{label} exact-commit workflow run {run_id} concluded {conclusion!r}, refusing release fallback")
+    if fresh_required(version):
+        # Exact SHA alone is not freshness: the newest completed execution may
+        # have occurred weeks earlier. Only a newly executed run is usable.
+        started = str(run.get('run_started_at', ''))
+        try:
+            stamp = datetime.fromisoformat(started.replace('Z', '+00:00'))
+            attempt = run.get('run_attempt')
+            if not started.endswith('Z') or type(attempt) is not int or attempt < 1:
+                raise ValueError('missing run attempt or UTC start time')
+        except (ValueError, TypeError) as exc:
+            raise RuntimeError(f'{label} run lacks fresh execution provenance') from exc
+        delta = datetime.now(timezone.utc) - stamp
+        if not timedelta(0) <= delta <= timedelta(hours=24):
+            raise RuntimeError(f'{label} exact-commit workflow run is historical; rerun verification for this release')
 
     repo = urllib.parse.quote(repository, safe="/")
     artifacts_doc = api.json(f"/repos/{repo}/actions/runs/{run_id}/artifacts?per_page=100")
