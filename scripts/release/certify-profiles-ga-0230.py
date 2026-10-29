@@ -17,6 +17,8 @@ import re
 import subprocess
 import sys
 
+from release_policy import legacy_profiles_supported
+
 ROOT = Path(__file__).resolve().parents[2]
 CASES = (
     ("profile-v2-gravit-and-file-rules", "services/api", "./internal/model", (
@@ -84,8 +86,8 @@ def main() -> int:
     args = parser.parse_args()
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     sha = os.environ.get("GITHUB_SHA", os.environ.get("NEVERLAUNCHER_SOURCE_COMMIT", ""))
-    if version != "0.23.0" or not re.fullmatch(r"[a-fA-F0-9]{40}", sha):
-        print("GA certification requires VERSION=0.23.0 and exact 40-digit source SHA", file=sys.stderr)
+    if not legacy_profiles_supported(version) or not re.fullmatch(r"[a-fA-F0-9]{40}", sha):
+        print("Profile GA requires supported release version and exact 40-digit source SHA", file=sys.stderr)
         return 2
     if not os.getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN"):
         print("GA certification requires NEVERLAUNCHER_TEST_POSTGRES_DSN (real PostgreSQL)", file=sys.stderr)

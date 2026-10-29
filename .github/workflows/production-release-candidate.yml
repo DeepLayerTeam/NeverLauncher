@@ -3,10 +3,14 @@ name: NeverLauncher Production Release Candidate
 on:
   workflow_dispatch:
     inputs:
+      ga_operator_approval_run_id:
+        type: string
+        required: false
+        description: 'Independently signed current-version six-target exact-byte GA approval (required for 0.36.1+)'
       ga036_operator_approval_run_id:
         type: string
-        required: true
-        description: 'Independent protected GA 0.36.0 signed acceptance for exact six installed targets and artifact bytes; no unsigned RC artifact allowed'
+        required: false
+        description: 'Historical 0.36.0-only independently signed exact-byte GA approval'
       optional_components_ga_evidence_run_id:
         type: string
         required: false
@@ -195,7 +199,7 @@ jobs:
           test "$MACOS" = success
 
   current-source-rc-03514:
-    name: Require current 0.36.0 native/Desktop/Backend regression matrix
+    name: Require current-version native/Desktop/Backend regression matrix
     needs: [base-ci]
     uses: ./.github/workflows/release-candidate-03514.yml
 
@@ -580,30 +584,67 @@ jobs:
           umask 077
           printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > /tmp/neverlauncher-single-node-ga.pub
           test -s single-node-ga-approved/SINGLE_NODE_GA_ATTESTATION.json
-      - name: Retrieve independently signed GA 0.36.0 target authorization
+      - name: Resolve mandatory independently trusted GA policy
+        id: release-policy
+        shell: bash
+        env:
+          NEW_RUN: ${{ inputs.ga_operator_approval_run_id }}
+          HISTORIC_RUN: ${{ inputs.ga036_operator_approval_run_id }}
+        run: |
+          set -euo pipefail
+          MODE="$(python3 scripts/release/release_policy.py ga-mode --version "$(cat VERSION)")"
+          echo "mode=${MODE}" >> "$GITHUB_OUTPUT"
+          case "$MODE" in
+            signed-ga-v2) test -n "$NEW_RUN"; test -z "$HISTORIC_RUN" ;;
+            legacy-ga036) test -n "$HISTORIC_RUN"; test -z "$NEW_RUN" ;;
+            *) echo 'production release cannot bypass independently signed target policy' >&2; exit 2 ;;
+          esac
+      - name: Download current-release independently signed GA authorization
+        if: steps.release-policy.outputs.mode == 'signed-ga-v2'
+        uses: actions/download-artifact@v4
+        with:
+          name: neverlauncher-ga-signed-${{ github.sha }}
+          run-id: ${{ inputs.ga_operator_approval_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ga-protected-approval
+      - name: Download historical 0.36.0 independently signed GA authorization
+        if: steps.release-policy.outputs.mode == 'legacy-ga036'
         uses: actions/download-artifact@v4
         with:
           name: neverlauncher-ga036-signed-${{ github.sha }}
           run-id: ${{ inputs.ga036_operator_approval_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ga036-protected-approval
+          path: ga-protected-approval
       - name: Pin independent GA operator verification key (NOT release signing key)
         env:
-          NL_GA036_OPERATOR_KEY: ${{ vars.NL_GA036_OPERATOR_PUBLIC_KEY_HEX }}
+          GA_MODE: ${{ steps.release-policy.outputs.mode }}
+          HISTORIC_KEY: ${{ vars.NL_GA036_OPERATOR_PUBLIC_KEY_HEX }}
+          CURRENT_KEY: ${{ vars.NL_GA_OPERATOR_PUBLIC_KEY_HEX }}
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$NL_GA036_OPERATOR_KEY"
+          if [[ "$GA_MODE" == 'legacy-ga036' ]]; then
+            KEY="$HISTORIC_KEY"
+          else
+            KEY="$CURRENT_KEY"
+          fi
+          [[ "$KEY" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'missing independently pinned 32-byte Ed25519 operator key' >&2; exit 2; }
           umask 077
-          printf '%s\n' "$NL_GA036_OPERATOR_KEY" > "$RUNNER_TEMP/nl-ga036-operator.pub"
-          test -s ga036-protected-approval/approval.json
-          test -s ga036-protected-approval/approval.sig
-          test -d ga036-protected-approval/targets
+          printf '%s\n' "$KEY" > "$RUNNER_TEMP/nl-ga-operator.pub"
+          test -s ga-protected-approval/approval.json
+          test -s ga-protected-approval/approval.sig
+          test -d ga-protected-approval/targets
           python3 -m pip install cryptography==46.0.4
+          python3 scripts/ga/verified_targets.py \
+            --preflight --evidence ga-protected-approval \
+            --trusted-key "$RUNNER_TEMP/nl-ga-operator.pub" \
+            --version "$(cat VERSION)" --commit "$GITHUB_SHA"
       - name: Build and cryptographically verify complete release bundle
         env:
-          NEVERLAUNCHER_GA036_EVIDENCE_DIR: ${{ github.workspace }}/ga036-protected-approval
-          NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ga036-operator.pub
+          NEVERLAUNCHER_GA036_EVIDENCE_DIR: ${{ github.workspace }}/ga-protected-approval
+          NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ga-operator.pub
+          NEVERLAUNCHER_GA_EVIDENCE_DIR: ${{ github.workspace }}/ga-protected-approval
+          NEVERLAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ga-operator.pub
           NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/neverlauncher-release-private.pem
           NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE: /tmp/neverlauncher-release-root-public.pem
           NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE: /tmp/neverlauncher-release-trust-policy.json
@@ -632,12 +673,29 @@ jobs:
           NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
         run: bash scripts/release/build-release.sh
       - name: Require exact-byte six-target signed approval inside signed release
+        shell: bash
         run: |
           set -euo pipefail
-          DIR="dist/release-$(cat VERSION)"
-          jq -e --arg sha "$GITHUB_SHA" '.schemaVersion == "neverlauncher.ga036.verified-targets.v1" and .status == "approved-for-release-signing" and .commit == $sha and .version == "0.36.0" and (.targets | length) == 6 and all(.targets[]; .checksPassed == 9)' "$DIR/GA_VERIFIED_TARGETS_0360.json"
-          test -s "$DIR/GA_TARGET_APPROVAL_0360.json"
-          test -s "$DIR/GA_TARGET_APPROVAL_0360.sig"
+          VERSION="$(cat VERSION)"
+          DIR="dist/release-${VERSION}"
+          MODE="$(python3 scripts/release/release_policy.py ga-mode --version "$VERSION")"
+          if [[ "$MODE" == 'legacy-ga036' ]]; then
+            RECEIPT=GA_VERIFIED_TARGETS_0360.json
+            APPROVAL=GA_TARGET_APPROVAL_0360.json
+            SIG=GA_TARGET_APPROVAL_0360.sig
+            SCHEMA=neverlauncher.ga036.verified-targets.v1
+          elif [[ "$MODE" == 'signed-ga-v2' ]]; then
+            RECEIPT=GA_VERIFIED_TARGETS.json
+            APPROVAL=GA_TARGET_APPROVAL.json
+            SIG=GA_TARGET_APPROVAL.sig
+            SCHEMA=neverlauncher.ga.verified-targets.v2
+          else
+            echo 'missing mandatory signed GA policy' >&2; exit 2
+          fi
+          jq -e --arg sha "$GITHUB_SHA" --arg version "$VERSION" --arg schema "$SCHEMA" \
+            '.schemaVersion == $schema and .status == "approved-for-release-signing" and .commit == $sha and .version == $version and (.targets | length) == 6 and all(.targets[]; .checksPassed == 9)' "$DIR/$RECEIPT"
+          test -s "$DIR/$APPROVAL"
+          test -s "$DIR/$SIG"
       - name: Assert required production artifacts
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"

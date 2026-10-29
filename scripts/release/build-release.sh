@@ -111,6 +111,39 @@ if [[ "${VERSION}" == "0.31.0" ]]; then
     --signature "${NEVERLAUNCHER_JAVA_GA_APPROVAL_SIGNATURE_FILE}" >/dev/null || exit 2
 fi
 
+# Trusted release policy is compiled into scripts/release/release_policy.py, not
+# read from unsigned build outputs. Check independent operator signature and
+# exact source identity BEFORE expensive staging or modification of output.
+GA_TARGET_MODE="$(python3 "${ROOT_DIR}/scripts/release/release_policy.py" ga-mode --version "${VERSION}")"
+GA_TARGET_EVIDENCE_DIR=""
+GA_TARGET_TRUSTED_KEY=""
+if [[ "${GA_TARGET_MODE}" == "legacy-ga036" ]]; then
+  GA_TARGET_EVIDENCE_DIR="${NEVERLAUNCHER_GA036_EVIDENCE_DIR:-}"
+  GA_TARGET_TRUSTED_KEY="${NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE:-}"
+elif [[ "${GA_TARGET_MODE}" == "signed-ga-v2" ]]; then
+  GA_TARGET_EVIDENCE_DIR="${NEVERLAUNCHER_GA_EVIDENCE_DIR:-}"
+  GA_TARGET_TRUSTED_KEY="${NEVERLAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE:-}"
+fi
+if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
+  [[ -n "${GA_TARGET_EVIDENCE_DIR}" && -n "${GA_TARGET_TRUSTED_KEY}" ]] || {
+    echo "${VERSION} GA BLOCKED: independent signed target evidence and pinned operator public key required" >&2
+    exit 2
+  }
+  command -v git >/dev/null 2>&1 || { echo "GA requires git" >&2; exit 2; }
+  GA_TARGET_HEAD="$(git -C "${ROOT_DIR}" rev-parse --verify HEAD)" || exit 2
+  [[ -z "${SOURCE_COMMIT}" || "${SOURCE_COMMIT}" == "${GA_TARGET_HEAD}" ]] || {
+    echo "${VERSION} GA BLOCKED: source SHA differs from git HEAD" >&2; exit 2;
+  }
+  SOURCE_COMMIT="${GA_TARGET_HEAD}"
+  [[ -z "$(git -C "${ROOT_DIR}" status --porcelain --untracked-files=normal -- ':!dist')" ]] || {
+    echo "${VERSION} GA BLOCKED: source checkout is not clean" >&2; exit 2;
+  }
+  python3 "${ROOT_DIR}/scripts/ga/verified_targets.py" \
+    --preflight --evidence "${GA_TARGET_EVIDENCE_DIR}" \
+    --trusted-key "${GA_TARGET_TRUSTED_KEY}" --commit "${SOURCE_COMMIT}" \
+    --version "${VERSION}"
+fi
+
 # NeverLauncher 0.33.0 must not be shipped as GA based on an RC test receipt,
 # a PostgreSQL+SQLite coordinator, or a self-attestation. Verify an independent
 # operator-signed, actual SQLite-only HTTP deployment report BEFORE touching
@@ -729,20 +762,25 @@ if [[ "${VERSION}" == "0.27.0" ]]; then
     --bundle "${OUT_DIR}" --receipt "${OUT_DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
 fi
 
-# 0.36.0 cannot be signed on RC/unit evidence alone. An independent operator
-# authorizes exact built executable AND installer bytes per shipping target.
-# The verified receipt enters RELEASE_MANIFEST/SHA256SUMS before signing.
-if [[ "${VERSION}" == "0.36.0" ]]; then
-  : "${NEVERLAUNCHER_GA036_EVIDENCE_DIR:?0.36.0 GA needs independently signed exact-byte operator evidence}"
-  : "${NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE:?0.36.0 GA requires an independently pinned public key}"
-  [[ -n "${SOURCE_COMMIT}" ]] || { echo "0.36.0 GA BLOCKED: missing exact source commit" >&2; exit 2; }
-  python3 "${ROOT_DIR}/scripts/ga/verified_targets_0360.py" \
-    --bundle "${OUT_DIR}" --evidence "${NEVERLAUNCHER_GA036_EVIDENCE_DIR}" \
-    --trusted-key "${NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE}" \
+# Final authorization is over the ACTUAL staged installer and executable bytes.
+# A preflight receipt is never enough; verification here runs after packaging.
+if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
+  if [[ "${GA_TARGET_MODE}" == "legacy-ga036" ]]; then
+    GA_RECEIPT="GA_VERIFIED_TARGETS_0360.json"
+    GA_APPROVAL="GA_TARGET_APPROVAL_0360.json"
+    GA_SIGNATURE="GA_TARGET_APPROVAL_0360.sig"
+  else
+    GA_RECEIPT="GA_VERIFIED_TARGETS.json"
+    GA_APPROVAL="GA_TARGET_APPROVAL.json"
+    GA_SIGNATURE="GA_TARGET_APPROVAL.sig"
+  fi
+  python3 "${ROOT_DIR}/scripts/ga/verified_targets.py" \
+    --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \
+    --trusted-key "${GA_TARGET_TRUSTED_KEY}" \
     --version "${VERSION}" --commit "${SOURCE_COMMIT}" \
-    --output "${OUT_DIR}/GA_VERIFIED_TARGETS_0360.json"
-  cp -- "${NEVERLAUNCHER_GA036_EVIDENCE_DIR}/approval.json" "${OUT_DIR}/GA_TARGET_APPROVAL_0360.json"
-  cp -- "${NEVERLAUNCHER_GA036_EVIDENCE_DIR}/approval.sig" "${OUT_DIR}/GA_TARGET_APPROVAL_0360.sig"
+    --output "${OUT_DIR}/${GA_RECEIPT}"
+  cp -- "${GA_TARGET_EVIDENCE_DIR}/approval.json" "${OUT_DIR}/${GA_APPROVAL}"
+  cp -- "${GA_TARGET_EVIDENCE_DIR}/approval.sig" "${OUT_DIR}/${GA_SIGNATURE}"
 fi
 
 log "Генерация RELEASE_MANIFEST/SHA256SUMS/SBOM/PROVENANCE"
@@ -799,12 +837,12 @@ log "Ed25519 release signing"
 
 log "Строгая проверка required artifacts/checksums/Ed25519 trust anchor"
 "${RELEASE_CLI}" release verify "${OUT_DIR}" --public-key "${PUBLIC_KEY}" --trust-state "${TRUST_STATE}" --trust-policy "${TRUST_POLICY}"
-if [[ "${VERSION}" == "0.36.0" ]]; then
-  [[ -s "${OUT_DIR}/GA_VERIFIED_TARGETS_0360.json" ]] || {
-    echo "0.36.0 GA BLOCKED: missing signed target approval receipt" >&2; exit 2;
+if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
+  [[ -s "${OUT_DIR}/${GA_RECEIPT}" && -s "${OUT_DIR}/${GA_APPROVAL}" && -s "${OUT_DIR}/${GA_SIGNATURE}" ]] || {
+    echo "${VERSION} GA BLOCKED: missing independently verified exact-byte approval" >&2; exit 2;
   }
   [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]] || {
-    echo "0.36.0 GA BLOCKED: all three protected publish certifications required" >&2; exit 2;
+    echo "${VERSION} GA BLOCKED: all three protected publish certifications required" >&2; exit 2;
   }
 fi
 if [[ -n "${COMPATIBILITY_MATRIX}" && -n "${DEVICE_TRUST_MATRIX}" && -n "${GUARD_CI_MATRIX}" ]]; then

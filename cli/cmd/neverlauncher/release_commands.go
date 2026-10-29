@@ -659,10 +659,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		return fmt.Errorf("official Minecraft 0.27 GA gate: %w", err)
 	}
 	if singleNodeGARequired0330(ver) {
-        if err := verifySingleNodeGATestedArtifacts0330(out); err != nil {
-            return fmt.Errorf("0.33.0 tested release binary binding: %w", err)
-        }
-    }
+		if err := verifySingleNodeGATestedArtifacts0330(out); err != nil {
+			return fmt.Errorf("0.33.0 tested release binary binding: %w", err)
+		}
+	}
 	if err := writeReleaseBOM03214(out, sourceRoot, ver); err != nil {
 		return fmt.Errorf("Release BOM: %w", err)
 	}
@@ -676,6 +676,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	if singleNodeGARequired0330(ver) {
 		requiredFiles = append(requiredFiles, singleNodeGAFiles0330...)
 		checks = append(checks, "independent-ed25519-single-node-ga-exact-commit")
+	}
+	if gaTargetsRequired0361(ver) {
+		requiredFiles = append(requiredFiles, "GA_VERIFIED_TARGETS.json", "GA_TARGET_APPROVAL.json", "GA_TARGET_APPROVAL.sig")
+		checks = append(checks, "independent-ed25519-exact-byte-six-target-ga")
 	}
 	if ver == "0.27.0" {
 		requiredFiles = append(requiredFiles, officialGACertification0270)
@@ -1252,6 +1256,9 @@ func releaseArtifacts(ver string) []string {
 	}
 	if singleNodeGARequired0330(ver) {
 		artifacts = append(artifacts, singleNodeGAFiles0330...)
+	}
+	if gaTargetsRequired0361(ver) {
+		artifacts = append(artifacts, "GA_VERIFIED_TARGETS.json", "GA_TARGET_APPROVAL.json", "GA_TARGET_APPROVAL.sig")
 	}
 	if linuxProductionRequired0153(ver) {
 		artifacts = append(artifacts, linuxProductionArtifacts0153(ver)...)

@@ -1,4 +1,4 @@
-name: NeverLauncher 0.35.14 / 0.36.0 native source RC acceptance
+name: NeverLauncher current-version native source RC acceptance
 on:
   workflow_call:
   workflow_dispatch:

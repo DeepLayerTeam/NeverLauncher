@@ -12,6 +12,8 @@ from pathlib import Path
 import subprocess
 import sys
 
+from release_policy import legacy_admin_supported
+
 ROOT = Path(__file__).resolve().parents[2]
 SDK_GENERATED = (
     "sdk/backend/go/types_generated.go", "sdk/cli/go/types_generated.go",
@@ -35,8 +37,8 @@ def digest(path: Path) -> str:
 
 def audit() -> None:
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-    if version != "0.22.0":
-        raise RuntimeError(f"GA audit requires 0.22.0, got {version}")
+    if not legacy_admin_supported(version):
+        raise RuntimeError(f"Admin GA audit requires version >=0.22.0, got {version}")
     run(sys.executable, "scripts/version/manage.py", "check")
     run(sys.executable, "scripts/contracts/validate-openapi.py")
     run(sys.executable, "scripts/smoke/offline/repository-policy.py")

@@ -101,6 +101,19 @@ class VerificationTests(unittest.TestCase):
             self.assertEqual(result['status'],'rc-source-checks-passed')
             self.assertFalse(result['realMinecraftCertified'])
 
+    def test_0361_same_real_source_rc_checks_without_ga_claim(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            n,d,b=fixtures(Path(tmp))
+            for root in (n,d):
+                for file in root.glob('*.json'):
+                    obj=json.loads(file.read_text());obj['version']='0.36.1'
+                    file.write_text(json.dumps(obj))
+            obj=json.loads(b.read_text());obj['version']='0.36.1'
+            b.write_text(json.dumps(obj))
+            result=verify(n,d,b,COMMIT,'0.36.1')
+            self.assertEqual(result['status'],'rc-source-checks-passed')
+            self.assertFalse(result['operatorSigned'])
+
     def deny(self, change):
         with tempfile.TemporaryDirectory() as tmp:
             n,d,b=fixtures(Path(tmp))

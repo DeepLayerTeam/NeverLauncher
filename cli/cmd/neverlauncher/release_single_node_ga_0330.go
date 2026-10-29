@@ -25,7 +25,7 @@ var singleNodeGAFiles0330 = []string{
 
 func singleNodeGARequired0330(v string) bool {
 	triple, ok := parseVersionTriple0158(v)
-	return ok && compareVersionTriple0158(triple, [3]int{0, 33, 0}) >= 0
+	return ok && compareVersionTriple0158(triple, [3]int{0, 33, 0}) == 0
 }
 
 func singleNodeReadBounded0330(dir, name string) ([]byte, error) {

@@ -1191,3 +1191,30 @@ jobs:
             guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.md
           if-no-files-found: error
           retention-days: 30
+
+  release-ga-policy:
+    name: Fail-closed versioned GA and historical signing regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install independent Ed25519 verifier dependency
+        run: python3 -m pip install cryptography==46.0.4
+      - name: Verify historic 0.36.0 and current/future exact-byte signed gates
+        run: |
+          python3 scripts/version/manage.py check
+          python3 -m unittest discover -s scripts/ga -p 'test_verified_targets*.py' -v
+          python3 -m unittest discover -s scripts/rc -p 'test_*.py' -v
+          python3 scripts/release/test_certify_profiles_ga_0230.py
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - name: Verify CLI cannot sign 0.36.1 or later without new operator approval
+        working-directory: cli
+        run: go test ./cmd/neverlauncher -run '^TestGA0361' -count=1 -timeout=2m

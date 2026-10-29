@@ -18,6 +18,9 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'release'))
+from release_policy import rc_supported, rc_extended
+
 ROOT = Path(__file__).resolve().parents[2]
 API = ROOT / 'services/api'
 REQUIRED_ENV = (
@@ -102,9 +105,9 @@ RC_03514_SUITES = (
 
 
 def suites_for_version(version: str) -> tuple[Suite, ...]:
-    if version not in ('0.32.16', '0.33.0', '0.35.14', '0.36.0'):
+    if not rc_supported(version):
         raise GateError('unsupported RC exact version; no implicit GA carry-forward')
-    return SUITES + (RC_03514_SUITES if version in ('0.35.14','0.36.0') else ())
+    return SUITES + (RC_03514_SUITES if rc_extended(version) else ())
 
 
 class GateError(RuntimeError):
@@ -158,7 +161,7 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
     root = validate_preflight(env)
     canonical = (ROOT / 'VERSION').read_text().strip()
     selected = suites_for_version(canonical)
-    if canonical in ('0.35.14','0.36.0') and not env.get('NEVERLAUNCHER_TEST_POSTGRES_DSN'):
+    if rc_extended(canonical) and not env.get('NEVERLAUNCHER_TEST_POSTGRES_DSN'):
         raise GateError('real PostgreSQL immutable-stable certification DSN required')
     git_sha = env.get('GITHUB_SHA', '')
     if git_sha:

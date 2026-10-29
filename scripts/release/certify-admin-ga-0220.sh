@@ -4,7 +4,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
-[[ "$(< VERSION)" == "0.22.0" ]] || { echo 'GA certification requires VERSION=0.22.0' >&2; exit 2; }
+RELEASE_VERSION="$(< VERSION)"
+python3 scripts/release/release_policy.py ga-mode --version "$RELEASE_VERSION" >/dev/null || exit 2
 
 : "${NEVERLAUNCHER_GA_SOURCE_SHA:?set the exact candidate commit SHA}"
 [[ "$NEVERLAUNCHER_GA_SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo 'invalid release commit SHA' >&2; exit 2; }
@@ -33,7 +34,7 @@ python3 scripts/release/check-admin-ga-0220.py
   cd services/api
   go test -race -count=1 ./...
   go vet ./...
-  go build -trimpath -ldflags="-X main.version=0.22.0 -X main.commit=${COMMIT}" -o /tmp/neverlauncher-ga-api ./cmd/neverlauncher-api
+  go build -trimpath -ldflags="-X main.version=${RELEASE_VERSION} -X main.commit=${COMMIT}" -o /tmp/neverlauncher-ga-api ./cmd/neverlauncher-api
 )
 (
   cd cli
@@ -56,7 +57,7 @@ if not assets or not (root / 'apps/admin/dist/index.html').is_file():
     raise SystemExit('Vite did not produce a deployable Admin bundle')
 hash_of = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
 payload = {
-    'status': 'passed', 'productVersion': '0.22.0', 'commit': sys.argv[1],
+    'status': 'passed', 'productVersion': (root / 'VERSION').read_text().strip(), 'commit': sys.argv[1],
     'checks': ['openapi', 'version', 'repository-policy', 'migration-parity', 'sdk-reproducibility',
                'admin-node-tests', 'vite-production-build', 'api-go-race', 'api-go-vet',
                'api-production-build', 'cli-go-race', 'cli-go-vet', 'cli-production-build',

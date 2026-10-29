@@ -22,6 +22,9 @@ REQUIRED_NATIVE={
     'wrong-trust-root-denied',
     'modified-signed-manifest-denied',
 }
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'release'))
+from release_policy import rc_extended
+
 PLATFORMS={'linux','windows','darwin'}
 
 class GateBlocked(RuntimeError):
@@ -47,7 +50,7 @@ def load_exact(path: Path):
 
 
 def verify(native_dir: Path, desktop_dir: Path, backend_file: Path, commit: str, version: str):
-    need(version in ('0.35.14','0.36.0') and re.fullmatch('[a-f0-9]{40}',commit) is not None,
+    need(rc_extended(version) and re.fullmatch('[a-f0-9]{40}',commit) is not None,
          'RC expects exact version and complete commit SHA')
     native=[]
     desktop=[]

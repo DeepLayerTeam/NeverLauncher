@@ -20,6 +20,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'release'))
+from release_policy import rc_extended
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts' / 'performance'))
 from benchmark_03511 import (RepeatingRangeServer, file_entry, hash_file, isolated_env,
@@ -72,7 +75,7 @@ def check_binary(path: Path) -> Path:
 
 def execute(runtime: Path, signer: Path, version: str, commit: str) -> dict:
     runtime, signer = check_binary(runtime), check_binary(signer)
-    require(version in ('0.35.14','0.36.0'), 'release candidate version mismatch')
+    require(rc_extended(version), 'release candidate version mismatch')
     require(re.fullmatch(r'[a-f0-9]{40}', commit) is not None, 'missing exact source commit')
     checkout = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True, text=True, timeout=10)
     require(checkout.returncode == 0 and checkout.stdout.strip() == commit, 'native tests do not match source checkout')
