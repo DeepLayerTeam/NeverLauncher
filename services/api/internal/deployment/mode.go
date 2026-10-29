@@ -98,13 +98,39 @@ func Detect(cfg config.Config) (Plan, error) {
 			problems = append(problems, "development is not a selectable production topology")
 		}
 	case SingleNode:
-		// HTTP repository, auth/runtime stores and transactional stable admission
-		// exist, but the installation wizard, recovery and bidirectional migration
-		// remain unverified. Keep production minimal fail-closed until 0.37.5+ acceptance.
 		if !sqliteRepo {
-			problems = append(problems, "single-node requires a SQLite HTTP repository, not a PostgreSQL repository with SQLite coordinator")
+			problems = append(problems, "single-node requires SQLite HTTP repository")
 		}
-		problems = append(problems, "SQLite single-node production installation remains blocked pending installation, backup/restore and migration acceptance")
+		if p.Storage != "local" {
+			problems = append(problems, "single-node requires local object storage")
+		}
+		if cfg.ServerBridgeHARequired {
+			problems = append(problems, "single-node cannot provide distributed ServerBridge HA")
+		}
+		if strings.TrimSpace(cfg.RedisURL) != "" {
+			problems = append(problems, "single-node must not configure Redis; local SQLite coordination only")
+		}
+		for label, path := range map[string]string{"repository": cfg.DatabaseDSN, "coordinator": cfg.SQLiteCoordinatorPath, "storage": cfg.StorageLocalPath} {
+			if strings.TrimSpace(path) == "" || (config.IsProductionEnvironment(cfg.Environment) && (!filepath.IsAbs(path) || filepath.Clean(path) != path)) {
+				problems = append(problems, "single-node "+label+" requires an absolute clean persistent path")
+			}
+		}
+		if filepath.Clean(cfg.DatabaseDSN) == filepath.Clean(cfg.SQLiteCoordinatorPath) {
+			problems = append(problems, "repository and coordinator must use different SQLite files")
+		}
+		if cfg.RateLimitEnabled == false || !cfg.RateLimitFailClosed || cfg.RateLimitGlobalPerMinute <= 0 || cfg.RateLimitAuthPerMinute <= 0 || cfg.RateLimitServerBridgePerMinute <= 0 {
+			problems = append(problems, "single-node requires enabled fail-closed rate limiting with positive budgets")
+		}
+		p.Coordinator = "sqlite"
+		p.SingleInstance = true
+		p.requireLocalFS = true
+		p.Limitations = append(p.Limitations, "one Linux API process only; no distributed HA", "SQLite-to-PostgreSQL migration requires a separate verified procedure")
+		// The storage root is the canonical ownership anchor across deployments.
+		p.LockPath = filepath.Join(cfg.StorageLocalPath, ".neverlauncher-api.owner.lock")
+		if lock := strings.TrimSpace(cfg.DeploymentLockPath); lock != "" && filepath.Clean(lock) != filepath.Clean(p.LockPath) {
+			problems = append(problems, "single-node owner lock cannot be overridden")
+		}
+		p.Reasons = append(p.Reasons, "exclusive local process owner; durable SQLite HTTP repository and coordinator")
 	case Standard, NetworkHA:
 		if !postgres {
 			problems = append(problems, "standard/network-ha require PostgreSQL HTTP repository")

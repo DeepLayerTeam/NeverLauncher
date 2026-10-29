@@ -60,7 +60,7 @@ func ValidatePersistenceConfig950(cfg config.Config) error {
 		return nil
 	}
 	if isProduction950(cfg.Environment) && isMemoryRepository950(cfg.RepositoryDriver) {
-		return errors.New("production mode требует NEVERLAUNCHER_REPOSITORY_DRIVER=postgres: memory repository запрещён для 0.10.0 persistence")
+		return errors.New("production forbids in-memory repository: use PostgreSQL or SQLite single-node")
 	}
 	return nil
 }

@@ -37,7 +37,18 @@ func isProdP0(env string) bool {
 	return strings.EqualFold(strings.TrimSpace(env), "production") || strings.EqualFold(strings.TrimSpace(env), "prod")
 }
 
-func InitializeInstallationSecurityP0(cfg config.Config) error {
+func InitializeInstallationSecurityP0(cfg config.Config, backend any) error {
+	if strings.EqualFold(cfg.RepositoryDriver, "sqlite") {
+		store, ok := backend.(interface {
+			InitializeMinimalInstallation0375(context.Context, string, bool) error
+		})
+		if !ok {
+			return errors.New("SQLite repository missing minimal installation store")
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		return store.InitializeMinimalInstallation0375(ctx, cfg.BootstrapToken, isProdP0(cfg.Environment))
+	}
 	if isMemoryRepository950(cfg.RepositoryDriver) {
 		return nil
 	}
@@ -82,6 +93,16 @@ func loadInstallationStateP0(ctx context.Context, db *sql.DB) (installationState
 }
 
 func (s Server) installationStateP0(ctx context.Context) (installationStateP0, error) {
+	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
+		store, ok := any(s.Repo).(interface {
+			MinimalInstallationStatus0375(context.Context) (string, bool, bool, error)
+		})
+		if !ok {
+			return installationStateP0{}, errors.New("missing SQLite installation reader")
+		}
+		hash, used, completed, err := store.MinimalInstallationStatus0375(ctx)
+		return installationStateP0{TokenHash: hash, TokenUsedAt: sql.NullTime{Valid: used}, Completed: completed, CompletedAt: sql.NullTime{Valid: completed}}, err
+	}
 	if isMemoryRepository950(s.Config.RepositoryDriver) {
 		devInstallationP0.Lock()
 		defer devInstallationP0.Unlock()
@@ -101,6 +122,9 @@ func (s Server) installationStateP0(ctx context.Context) (installationStateP0, e
 }
 
 func (s Server) consumeBootstrapTokenP0(ctx context.Context, token string) error {
+	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
+		return errors.New("SQLite bootstrap token must be consumed atomically with first administrator")
+	}
 	token = strings.TrimSpace(token)
 	if token == "" {
 		return errors.New("bootstrap token required")
@@ -140,6 +164,13 @@ func (s Server) consumeBootstrapTokenP0(ctx context.Context, token string) error
 }
 
 func (s Server) completeInstallationP0(ctx context.Context) error {
+	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
+		store, ok := any(s.Repo).(interface{ CompleteMinimalInstallation0375(context.Context) error })
+		if !ok {
+			return errors.New("missing SQLite installation writer")
+		}
+		return store.CompleteMinimalInstallation0375(ctx)
+	}
 	if isMemoryRepository950(s.Config.RepositoryDriver) {
 		devInstallationP0.Lock()
 		defer devInstallationP0.Unlock()
@@ -189,6 +220,16 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 	userID := "admin-" + strings.NewReplacer("@", "-", ".", "-", "+", "-").Replace(strings.ToLower(email))
 	now := time.Now().UTC()
 	user := model.User{ID: userID, Email: email, DisplayName: firstNonEmpty(displayName, "Administrator"), RoleID: "owner", Status: "active", ProjectRoles: map[string]string{}, PasswordHash: hashPassword(password), PasswordUpdatedAt: now, CreatedAt: now, UpdatedAt: now}
+	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
+		store, ok := any(s.Repo).(interface {
+			BootstrapMinimalAdmin0375(context.Context, model.User, model.AuthIdentity, string, string) (model.User, error)
+		})
+		if !ok {
+			return model.User{}, errors.New("SQLite repository missing atomic installation bootstrap")
+		}
+		identity := model.AuthIdentity{ID: "identity-local-" + user.ID, UserID: user.ID, Provider: "local", Issuer: "neverlauncher", Subject: user.ID, Email: user.Email, Username: user.Email, DisplayName: user.DisplayName, CreatedAt: now, UpdatedAt: now}
+		return store.BootstrapMinimalAdmin0375(ctx, user, identity, token, firstNonEmpty(actor, "installer"))
+	}
 	if isMemoryRepository950(s.Config.RepositoryDriver) {
 		if len(s.Repo.ListUsers()) > 0 {
 			return model.User{}, errors.New("bootstrap admin is disabled after the first user exists")

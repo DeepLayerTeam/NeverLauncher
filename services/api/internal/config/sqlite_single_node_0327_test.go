@@ -35,3 +35,27 @@ func TestSingleNodeSQLiteProductionPolicy0327(t *testing.T) {
 		t.Fatal("relative SQLite path must be rejected")
 	}
 }
+
+func TestProductionMinimalSQLiteAccepted0375(t *testing.T) {
+	cfg := Config{
+		Environment: "production", DeploymentMode: "single-node", RepositoryDriver: "sqlite",
+		DatabaseDSN: "/var/lib/neverlauncher/db/http.sqlite", SQLiteCoordinatorPath: "/var/lib/neverlauncher/db/coord.sqlite",
+		PublicURL: "https://api.example.com", AuthTokenSecret: "0123456789abcdef0123456789abcdef",
+		StorageDriver: "local", StorageLocalPath: "/var/lib/neverlauncher/storage", BackupRoot: "/var/lib/neverlauncher/backups", ExtensionRoot: "/var/lib/neverlauncher/extensions", ExtensionBackupRetention: 10,
+		CORSAllowedOrigins: []string{"https://launcher.example.com"}, WebAuthnRPID: "example.com", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://launcher.example.com"},
+		GuardReleaseAllowlistJSON: testGuardAllowlist0134, BridgeReleaseAllowlistJSON: testBridgeAllowlist0135,
+		RateLimitEnabled: true, RateLimitFailClosed: true, RateLimitGlobalPerMinute: 1200, RateLimitAuthPerMinute: 20, RateLimitServerBridgePerMinute: 6000,
+	}
+	if err := ValidateProduction(cfg); err != nil {
+		t.Fatalf("production minimal must accept verified SQLite-only topology: %v", err)
+	}
+	cfg.RedisURL = "redis://127.0.0.1:6379"
+	if err := ValidateProduction(cfg); err == nil {
+		t.Fatal("minimal must reject Redis")
+	}
+	cfg.RedisURL = ""
+	cfg.DeploymentMode = "auto"
+	if err := ValidateProduction(cfg); err == nil {
+		t.Fatal("implicit SQLite production selection must fail")
+	}
+}

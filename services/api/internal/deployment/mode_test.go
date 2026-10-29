@@ -44,7 +44,7 @@ func TestExplicitModeRejectsUnsafeCombinations(t *testing.T) {
 	}{
 		{"unsupported", func(c *config.Config) { c.DeploymentMode = "bogus" }, "unsupported"},
 		{"not-standalone", func(c *config.Config) { c.DeploymentMode = "single-node" }, "SQLite HTTP repository"},
-		{"sqlite-only-not-wired", func(c *config.Config) { c.RepositoryDriver = "sqlite" }, "not implemented"},
+		{"sqlite-requires-persistent-path", func(c *config.Config) { c.RepositoryDriver = "sqlite" }, "absolute clean persistent path"},
 		{"mixed-HA", func(c *config.Config) { c.ServerBridgeHARequired = true }, "distributed HA"},
 		{"network-requires-s3", func(c *config.Config) { c.DeploymentMode = "network-ha" }, "shared S3"},
 		{"network-requires-redis", func(c *config.Config) {

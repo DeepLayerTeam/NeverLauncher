@@ -22,8 +22,8 @@ import (
 // for a small, single-node installation, not network HA or large data sets.
 //
 // Stable publication uses SQLite-bound, signed attestation verification and
-// one-use transactional permits (0.37.4), while the deployment single-node
-// gate remains closed pending installation and recovery acceptance (0.37.5+).
+// one-use transactional permits (0.37.4), while the 0.37.5 minimal deployment accepts one local Linux instance;
+// online backup and bidirectional migration remain separate milestones.
 type SQLiteHTTPRepository0372 struct {
 	mu        sync.Mutex
 	store     *sqlitedurable.Store

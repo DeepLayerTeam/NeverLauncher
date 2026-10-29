@@ -28,11 +28,25 @@ type installFirstProjectRequest struct {
 
 func (s Server) installWizard(w http.ResponseWriter, r *http.Request) {
 	profile := queryDefault(r, "profile", "single-server-local")
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": installWizardAPI(s.Version, profile)})
+	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
+		profile = "minimal-sqlite"
+	}
+	data := installWizardAPI(s.Version, profile)
+	if profile == "minimal-sqlite" {
+		data["mode"] = "single-node"
+		data["steps"] = []map[string]any{
+			{"id": "environment", "required": []string{"NEVERLAUNCHER_REPOSITORY_DRIVER=sqlite", "NEVERLAUNCHER_DATABASE_DSN", "NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH"}},
+			{"id": "storage", "required": []string{"local"}},
+			{"id": "bootstrap-admin", "endpoint": "POST /api/v1/install/bootstrap-admin"},
+			{"id": "first-project", "endpoint": "POST /api/v1/install/first-project"},
+			{"id": "readiness", "endpoint": "GET /api/v1/install/readiness"},
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": data})
 }
 
 func (s Server) installProfiles(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "profiles": []map[string]any{{"id": "single-server-local", "storage": "local", "components": []string{"api", "admin", "desktop", "postgres"}}, {"id": "single-server-s3", "storage": "s3", "components": []string{"api", "admin", "desktop", "postgres", "s3"}}, {"id": "development", "storage": "local", "components": []string{"api", "admin", "desktop"}}}}})
+	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"schemaVersion": apiContractVersion, "toolVersion": s.Version, "profiles": []map[string]any{{"id": "minimal-sqlite", "storage": "local", "components": []string{"api", "admin", "desktop", "sqlite"}}, {"id": "single-server-local", "storage": "local", "components": []string{"api", "admin", "desktop", "postgres"}}, {"id": "single-server-s3", "storage": "s3", "components": []string{"api", "admin", "desktop", "postgres", "s3"}}, {"id": "development", "storage": "local", "components": []string{"api", "admin", "desktop"}}}}})
 }
 
 func (s Server) installReadiness(w http.ResponseWriter, r *http.Request) {

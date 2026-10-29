@@ -200,7 +200,7 @@ func Load() Config {
 	environment := env("NEVERLAUNCHER_ENV", "dev")
 	redisAddr := normalizeRedisAddr(env("NEVERLAUNCHER_REDIS_ADDR", env("NEVERLAUNCHER_REDIS_URL", "localhost:6379")))
 	redisURL := env("NEVERLAUNCHER_REDIS_URL", "")
-	if redisURL == "" {
+	if redisURL == "" && !strings.EqualFold(strings.TrimSpace(env("NEVERLAUNCHER_REPOSITORY_DRIVER", "postgres")), "sqlite") {
 		redisURL = "redis://" + redisAddr + "/0"
 	}
 	production := IsProductionEnvironment(environment)
@@ -341,14 +341,31 @@ func ValidateProduction(cfg Config) error {
 		return nil
 	}
 	problems := make([]string, 0)
-	if strings.ToLower(strings.TrimSpace(cfg.RepositoryDriver)) != "postgres" && strings.ToLower(strings.TrimSpace(cfg.RepositoryDriver)) != "postgresql" && strings.ToLower(strings.TrimSpace(cfg.RepositoryDriver)) != "sql" {
-		problems = append(problems, "production требует PostgreSQL repository")
-	}
-	if !strings.EqualFold(strings.TrimSpace(cfg.SQLDriver), "pgx") {
-		problems = append(problems, "production требует NEVERLAUNCHER_SQL_DRIVER=pgx")
-	}
-	if strings.TrimSpace(cfg.DatabaseDSN) == "" {
-		problems = append(problems, "NEVERLAUNCHER_DATABASE_DSN обязателен")
+	driver := strings.ToLower(strings.TrimSpace(cfg.RepositoryDriver))
+	sqliteMinimal := driver == "sqlite" && strings.EqualFold(strings.TrimSpace(cfg.DeploymentMode), "single-node")
+	if sqliteMinimal {
+		if cfg.StorageDriver != "local" || strings.TrimSpace(cfg.DatabaseDSN) == "" || !filepath.IsAbs(cfg.DatabaseDSN) || filepath.Clean(cfg.DatabaseDSN) != cfg.DatabaseDSN {
+			problems = append(problems, "SQLite minimal requires local storage and absolute clean database path")
+		}
+		if strings.TrimSpace(cfg.SQLiteCoordinatorPath) == "" || !filepath.IsAbs(cfg.SQLiteCoordinatorPath) || filepath.Clean(cfg.SQLiteCoordinatorPath) != cfg.SQLiteCoordinatorPath {
+			problems = append(problems, "SQLite minimal requires absolute clean coordinator path")
+		}
+		if strings.TrimSpace(cfg.DatabaseDSN) == strings.TrimSpace(cfg.SQLiteCoordinatorPath) {
+			problems = append(problems, "SQLite repository and coordinator cannot share a file")
+		}
+		if cfg.ServerBridgeHARequired || strings.TrimSpace(cfg.RedisURL) != "" {
+			problems = append(problems, "SQLite minimal forbids ServerBridge HA and Redis")
+		}
+	} else {
+		if driver != "postgres" && driver != "postgresql" && driver != "sql" {
+			problems = append(problems, "production requires PostgreSQL or explicit SQLite single-node repository")
+		}
+		if !strings.EqualFold(strings.TrimSpace(cfg.SQLDriver), "pgx") {
+			problems = append(problems, "production PostgreSQL requires pgx driver")
+		}
+		if strings.TrimSpace(cfg.DatabaseDSN) == "" {
+			problems = append(problems, "NEVERLAUNCHER_DATABASE_DSN is required")
+		}
 	}
 	secret := strings.TrimSpace(cfg.AuthTokenSecret)
 	if len(secret) < 32 || secret == "dev-only-change-me" || strings.Contains(strings.ToUpper(secret), "CHANGE_ME") {

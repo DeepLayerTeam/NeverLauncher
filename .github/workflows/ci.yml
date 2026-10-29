@@ -1321,6 +1321,25 @@ jobs:
           go test -race -count=1 -timeout=5m -run '^TestSQLiteCoordinatorFailClosed0374$' ./internal/httpapi
           go vet ./internal/repository ./internal/sqlitecoord ./internal/httpapi
 
+      - name: Verify native SQLite minimal installation, bootstrap and process fencing (0.37.5)
+        working-directory: services/api
+        env:
+          TMPDIR: ${{ runner.temp }}/storage-parity-0371
+          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+        run: |
+          set -euo pipefail
+          test -z "$(gofmt -l internal/repository/sqlite_http_install_0375*.go internal/deployment/minimal_0375*.go)"
+          go test -race -count=1 -timeout=8m -run '^TestMinimalInstallationSQLite0375$' ./internal/repository
+          go test -race -count=1 -timeout=8m -run '^TestMinimalDeployment0375$' ./internal/deployment
+          go test -race -count=1 -timeout=5m -run '^TestProductionMinimalSQLiteAccepted0375$' ./internal/config
+          go vet ./internal/repository ./internal/deployment ./internal/httpapi ./internal/config
+      - name: Validate executable native installer (0.37.5)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s scripts/install -p 'test_minimal_install.py' -v
+          python3 -m py_compile scripts/install/minimal-install.py
+
   required-ci:
     name: REQUIRED CI — all jobs SUCCESS for exact commit
     if: ${{ always() }}

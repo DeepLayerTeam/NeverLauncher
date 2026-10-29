@@ -9014,6 +9014,31 @@
       ]
     },
     {
+      "path": "scripts/install/minimal-install.py",
+      "findings": [
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 81,
+          "evidence": "'NEVERLAUNCHER_REPOSITORY_DRIVER': 'sqlite',"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 82,
+          "evidence": "'NEVERLAUNCHER_DATABASE_DSN': str(root/'db'/'http.sqlite'),"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 136,
+          "evidence": "if values.get('NEVERLAUNCHER_REPOSITORY_DRIVER') != 'sqlite' or values.get('NEVERLAUNCHER_DEPLOYMENT_MODE') != 'single-node':"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 164,
+          "evidence": "# No inherited external Redis/PostgreSQL settings may change the selected topology."
+        }
+      ]
+    },
+    {
       "path": "scripts/install/production-deploy.py",
       "findings": [
         {
@@ -9080,6 +9105,16 @@
           "category": "postgresql-config-or-literal",
           "line": 61,
           "evidence": "{\"id\": \"postgres.password\", \"status\": \"${POSTGRES_PASSWORD_SET}\", \"message\": \"replace default POSTGRES_PASSWORD before production\"},"
+        }
+      ]
+    },
+    {
+      "path": "scripts/install/test_minimal_install.py",
+      "findings": [
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 29,
+          "evidence": "self.assertEqual(env['NEVERLAUNCHER_REPOSITORY_DRIVER'], 'sqlite')"
         }
       ]
     },
@@ -10298,62 +10333,62 @@
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 238,
+          "line": 241,
           "evidence": "lifecycle, err := httpapi.NewBackendLifecycle0289(os.Getenv(\"NEVERLAUNCHER_BACKEND_SUPERVISED_RESTART\") == \"true\" \u0026\u0026 (strings.EqualFold(cfg.RepositoryDriver, \"postgres\") || strings"
         },
         {
           "category": "storage-configuration-read",
-          "line": 238,
+          "line": 241,
           "evidence": "lifecycle, err := httpapi.NewBackendLifecycle0289(os.Getenv(\"NEVERLAUNCHER_BACKEND_SUPERVISED_RESTART\") == \"true\" \u0026\u0026 (strings.EqualFold(cfg.RepositoryDriver, \"postgres\") || strings"
         },
         {
           "category": "storage-configuration-read",
-          "line": 257,
+          "line": 260,
           "evidence": "if strings.EqualFold(cfg.RepositoryDriver, \"sqlite\") {"
         },
         {
           "category": "storage-configuration-read",
-          "line": 411,
+          "line": 414,
           "evidence": "cfg.RepositoryDriver+\"(\"+cfg.SQLDriver+\")\","
         },
         {
           "category": "storage-configuration-read",
-          "line": 449,
+          "line": 452,
           "evidence": "switch strings.ToLower(strings.TrimSpace(cfg.RepositoryDriver)) {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 452,
+          "line": 455,
           "evidence": "case \"postgres\", \"postgresql\", \"sql\":"
         },
         {
           "category": "postgres-repository-construction",
-          "line": 453,
+          "line": 456,
           "evidence": "return repository.NewSQLRepository(cfg.SQLDriver, cfg.DatabaseDSN, cfg.PublicURL)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 453,
+          "line": 456,
           "evidence": "return repository.NewSQLRepository(cfg.SQLDriver, cfg.DatabaseDSN, cfg.PublicURL)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 455,
+          "line": 458,
           "evidence": "r, err := repository.OpenSQLiteHTTPRepository0372(context.Background(), cfg.DatabaseDSN, cfg.PublicURL)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 461,
+          "line": 464,
           "evidence": "log.Fatalf(\"неизвестный NEVERLAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён\", cfg.RepositoryDriver)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 461,
+          "line": 464,
           "evidence": "log.Fatalf(\"неизвестный NEVERLAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён\", cfg.RepositoryDriver)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 505,
+          "line": 508,
           "evidence": "opt := capacity.Options{Mode: mode, Driver: cfg.RepositoryDriver, DatabaseDSN: cfg.DatabaseDSN, CoordinatorPath: cfg.SQLiteCoordinatorPath, BackupPath: cfg.BackupRoot}"
         }
       ]
@@ -10508,6 +10543,11 @@
       "findings": [
         {
           "category": "postgresql-config-or-literal",
+          "line": 203,
+          "evidence": "if redisURL == \"\" \u0026\u0026 !strings.EqualFold(strings.TrimSpace(env(\"NEVERLAUNCHER_REPOSITORY_DRIVER\", \"postgres\")), \"sqlite\") {"
+        },
+        {
+          "category": "postgresql-config-or-literal",
           "line": 222,
           "evidence": "DatabaseDSN: env(\"NEVERLAUNCHER_DATABASE_DSN\", env(\"NEVERLAUNCHER_DATABASE_URL\", \"postgres://neverlauncher:neverlauncher@localhost:5432/neverlauncher?sslmode=disable\")),"
         },
@@ -10522,53 +10562,68 @@
           "evidence": "SQLDriver: env(\"NEVERLAUNCHER_SQL_DRIVER\", \"pgx\"),"
         },
         {
-          "category": "postgresql-config-or-literal",
-          "line": 344,
-          "evidence": "if strings.ToLower(strings.TrimSpace(cfg.RepositoryDriver)) != \"postgres\" \u0026\u0026 strings.ToLower(strings.TrimSpace(cfg.RepositoryDriver)) != \"postgresql\" \u0026\u0026 strings.ToLower(strings.Tri"
-        },
-        {
           "category": "storage-configuration-read",
           "line": 344,
-          "evidence": "if strings.ToLower(strings.TrimSpace(cfg.RepositoryDriver)) != \"postgres\" \u0026\u0026 strings.ToLower(strings.TrimSpace(cfg.RepositoryDriver)) != \"postgresql\" \u0026\u0026 strings.ToLower(strings.Tri"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 345,
-          "evidence": "problems = append(problems, \"production требует PostgreSQL repository\")"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 347,
-          "evidence": "if !strings.EqualFold(strings.TrimSpace(cfg.SQLDriver), \"pgx\") {"
+          "evidence": "driver := strings.ToLower(strings.TrimSpace(cfg.RepositoryDriver))"
         },
         {
           "category": "storage-configuration-read",
           "line": 347,
-          "evidence": "if !strings.EqualFold(strings.TrimSpace(cfg.SQLDriver), \"pgx\") {"
-        },
-        {
-          "category": "postgresql-config-or-literal",
-          "line": 348,
-          "evidence": "problems = append(problems, \"production требует NEVERLAUNCHER_SQL_DRIVER=pgx\")"
+          "evidence": "if cfg.StorageDriver != \"local\" || strings.TrimSpace(cfg.DatabaseDSN) == \"\" || !filepath.IsAbs(cfg.DatabaseDSN) || filepath.Clean(cfg.DatabaseDSN) != cfg.DatabaseDSN {"
         },
         {
           "category": "storage-configuration-read",
           "line": 350,
+          "evidence": "if strings.TrimSpace(cfg.SQLiteCoordinatorPath) == \"\" || !filepath.IsAbs(cfg.SQLiteCoordinatorPath) || filepath.Clean(cfg.SQLiteCoordinatorPath) != cfg.SQLiteCoordinatorPath {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 353,
+          "evidence": "if strings.TrimSpace(cfg.DatabaseDSN) == strings.TrimSpace(cfg.SQLiteCoordinatorPath) {"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 360,
+          "evidence": "if driver != \"postgres\" \u0026\u0026 driver != \"postgresql\" \u0026\u0026 driver != \"sql\" {"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 361,
+          "evidence": "problems = append(problems, \"production requires PostgreSQL or explicit SQLite single-node repository\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 363,
+          "evidence": "if !strings.EqualFold(strings.TrimSpace(cfg.SQLDriver), \"pgx\") {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 363,
+          "evidence": "if !strings.EqualFold(strings.TrimSpace(cfg.SQLDriver), \"pgx\") {"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 364,
+          "evidence": "problems = append(problems, \"production PostgreSQL requires pgx driver\")"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 366,
           "evidence": "if strings.TrimSpace(cfg.DatabaseDSN) == \"\" {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 351,
-          "evidence": "problems = append(problems, \"NEVERLAUNCHER_DATABASE_DSN обязателен\")"
+          "line": 367,
+          "evidence": "problems = append(problems, \"NEVERLAUNCHER_DATABASE_DSN is required\")"
         },
         {
           "category": "storage-configuration-read",
-          "line": 450,
+          "line": 467,
           "evidence": "singleNode := strings.TrimSpace(cfg.SQLiteCoordinatorPath) != \"\""
         },
         {
           "category": "storage-configuration-read",
-          "line": 452,
+          "line": 469,
           "evidence": "if !filepath.IsAbs(cfg.SQLiteCoordinatorPath) {"
         }
       ]
@@ -16269,6 +16324,16 @@
       ]
     },
     {
+      "path": "services/api/internal/deployment/minimal_0375_test.go",
+      "findings": [
+        {
+          "category": "storage-configuration-read",
+          "line": 43,
+          "evidence": "cfg.DatabaseDSN = cfg.SQLiteCoordinatorPath"
+        }
+      ]
+    },
+    {
       "path": "services/api/internal/deployment/mode.go",
       "findings": [
         {
@@ -16302,53 +16367,63 @@
           "evidence": "p.Reasons = append(p.Reasons, \"PostgreSQL repository; HA topology is incomplete or disabled\")"
         },
         {
-          "category": "postgresql-config-or-literal",
-          "line": 105,
-          "evidence": "problems = append(problems, \"single-node requires a SQLite HTTP repository, not a PostgreSQL repository with SQLite coordinator\")"
+          "category": "storage-configuration-read",
+          "line": 113,
+          "evidence": "for label, path := range map[string]string{\"repository\": cfg.DatabaseDSN, \"coordinator\": cfg.SQLiteCoordinatorPath, \"storage\": cfg.StorageLocalPath} {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 118,
+          "evidence": "if filepath.Clean(cfg.DatabaseDSN) == filepath.Clean(cfg.SQLiteCoordinatorPath) {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 110,
+          "line": 127,
+          "evidence": "p.Limitations = append(p.Limitations, \"one Linux API process only; no distributed HA\", \"SQLite-to-PostgreSQL migration requires a separate verified procedure\")"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 136,
           "evidence": "problems = append(problems, \"standard/network-ha require PostgreSQL HTTP repository\")"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 112,
+          "line": 138,
           "evidence": "if strings.ToLower(strings.TrimSpace(cfg.SQLDriver)) != \"pgx\" {"
         },
         {
           "category": "storage-configuration-read",
-          "line": 112,
+          "line": 138,
           "evidence": "if strings.ToLower(strings.TrimSpace(cfg.SQLDriver)) != \"pgx\" {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 113,
+          "line": 139,
           "evidence": "problems = append(problems, \"PostgreSQL requires pgx driver\")"
         },
         {
           "category": "storage-configuration-read",
-          "line": 115,
+          "line": 141,
           "evidence": "if strings.TrimSpace(cfg.DatabaseDSN) == \"\" {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 116,
+          "line": 142,
           "evidence": "problems = append(problems, \"PostgreSQL DSN is missing\")"
         },
         {
           "category": "storage-configuration-read",
-          "line": 119,
+          "line": 145,
           "evidence": "if !filepath.IsAbs(cfg.SQLiteCoordinatorPath) {"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 148,
+          "line": 174,
           "evidence": "p.Limitations = append(p.Limitations, \"one API process; not HA\", \"PostgreSQL remains required; SQLite coordinator does not replace the HTTP repository\")"
         },
         {
           "category": "storage-configuration-read",
-          "line": 158,
+          "line": 184,
           "evidence": "p.LockPath = cfg.SQLiteCoordinatorPath + \".api.owner.lock\""
         }
       ]
@@ -16374,7 +16449,7 @@
         {
           "category": "storage-configuration-read",
           "line": 47,
-          "evidence": "{\"sqlite-only-not-wired\", func(c *config.Config) { c.RepositoryDriver = \"sqlite\" }, \"not implemented\"},"
+          "evidence": "{\"sqlite-requires-persistent-path\", func(c *config.Config) { c.RepositoryDriver = \"sqlite\" }, \"absolute clean persistent path\"},"
         },
         {
           "category": "storage-configuration-read",
@@ -16882,13 +16957,23 @@
       "path": "services/api/internal/httpapi/install_handlers.go",
       "findings": [
         {
+          "category": "storage-configuration-read",
+          "line": 31,
+          "evidence": "if strings.EqualFold(s.Config.RepositoryDriver, \"sqlite\") {"
+        },
+        {
           "category": "postgresql-config-or-literal",
-          "line": 35,
+          "line": 38,
+          "evidence": "{\"id\": \"environment\", \"required\": []string{\"NEVERLAUNCHER_REPOSITORY_DRIVER=sqlite\", \"NEVERLAUNCHER_DATABASE_DSN\", \"NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH\"}},"
+        },
+        {
+          "category": "postgresql-config-or-literal",
+          "line": 49,
           "evidence": "writeJSON(w, http.StatusOK, map[string]any{\"apiVersion\": apiContractVersion, \"data\": map[string]any{\"schemaVersion\": apiContractVersion, \"toolVersion\": s.Version, \"profiles\": []map"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 142,
+          "line": 156,
           "evidence": "return map[string]any{\"schemaVersion\": apiContractVersion, \"toolVersion\": toolVersion, \"mode\": \"production\", \"profile\": profile, \"status\": \"ready\", \"steps\": []map[string]any{{\"id\":"
         }
       ]
@@ -16899,151 +16984,176 @@
         {
           "category": "storage-configuration-read",
           "line": 41,
+          "evidence": "if strings.EqualFold(cfg.RepositoryDriver, \"sqlite\") {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 52,
           "evidence": "if isMemoryRepository950(cfg.RepositoryDriver) {"
         },
         {
           "category": "direct-sql-open",
-          "line": 44,
+          "line": 55,
           "evidence": "db, err := sql.Open(firstNonEmpty(cfg.SQLDriver, \"pgx\"), cfg.DatabaseDSN)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 44,
+          "line": 55,
           "evidence": "db, err := sql.Open(firstNonEmpty(cfg.SQLDriver, \"pgx\"), cfg.DatabaseDSN)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 44,
+          "line": 55,
           "evidence": "db, err := sql.Open(firstNonEmpty(cfg.SQLDriver, \"pgx\"), cfg.DatabaseDSN)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 69,
+          "line": 80,
           "evidence": "_, err = db.ExecContext(ctx, `UPDATE neverlauncher_installation_state SET bootstrap_token_hash=$1, updated_at=now() WHERE singleton=TRUE AND bootstrap_token_hash=''`, bootstrapToke"
         },
         {
           "category": "database-sql-handle",
-          "line": 78,
+          "line": 89,
           "evidence": "func loadInstallationStateP0(ctx context.Context, db *sql.DB) (installationStateP0, error) {"
         },
         {
           "category": "storage-configuration-read",
-          "line": 85,
+          "line": 96,
+          "evidence": "if strings.EqualFold(s.Config.RepositoryDriver, \"sqlite\") {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 106,
           "evidence": "if isMemoryRepository950(s.Config.RepositoryDriver) {"
         },
         {
           "category": "direct-sql-open",
-          "line": 95,
+          "line": 116,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 95,
+          "line": 116,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 95,
+          "line": 116,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 109,
+          "line": 125,
+          "evidence": "if strings.EqualFold(s.Config.RepositoryDriver, \"sqlite\") {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 133,
           "evidence": "if isMemoryRepository950(s.Config.RepositoryDriver) {"
         },
         {
           "category": "direct-sql-open",
-          "line": 126,
+          "line": 150,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 126,
+          "line": 150,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 126,
+          "line": 150,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 131,
+          "line": 155,
           "evidence": "res, err := db.ExecContext(ctx, `UPDATE neverlauncher_installation_state SET bootstrap_token_used_at=now(), updated_at=now() WHERE singleton=TRUE AND installation_completed=FALSE A"
         },
         {
           "category": "storage-configuration-read",
-          "line": 143,
+          "line": 167,
+          "evidence": "if strings.EqualFold(s.Config.RepositoryDriver, \"sqlite\") {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 174,
           "evidence": "if isMemoryRepository950(s.Config.RepositoryDriver) {"
         },
         {
           "category": "direct-sql-open",
-          "line": 152,
+          "line": 183,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 152,
+          "line": 183,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 152,
+          "line": 183,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 192,
+          "line": 223,
+          "evidence": "if strings.EqualFold(s.Config.RepositoryDriver, \"sqlite\") {"
+        },
+        {
+          "category": "storage-configuration-read",
+          "line": 233,
           "evidence": "if isMemoryRepository950(s.Config.RepositoryDriver) {"
         },
         {
           "category": "direct-sql-open",
-          "line": 205,
+          "line": 246,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 205,
+          "line": 246,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "storage-configuration-read",
-          "line": 205,
+          "line": 246,
           "evidence": "db, err := sql.Open(firstNonEmpty(s.Config.SQLDriver, \"pgx\"), s.Config.DatabaseDSN)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 218,
+          "line": 259,
           "evidence": "if err = tx.QueryRowContext(ctx, `SELECT bootstrap_token_hash, bootstrap_token_used_at, installation_completed FROM neverlauncher_installation_state WHERE singleton=TRUE FOR UPDATE"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 236,
+          "line": 277,
           "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,password_updated_at,created_at,updated_at) VALUES($1,$2,$3,'owner',"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 236,
+          "line": 277,
           "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,password_updated_at,created_at,updated_at) VALUES($1,$2,$3,'owner',"
         },
         {
           "category": "postgresql-config-or-literal",
-          "line": 240,
+          "line": 281,
           "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 240,
+          "line": 281,
           "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 246,
+          "line": 287,
           "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE neverlauncher_installation_state SET bootstrap_token_used_at=$1, updated_at=$1 WHERE singleton=TRUE`, now); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
-          "line": 249,
+          "line": 290,
           "evidence": "if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,'install.bootstrap-admin',$3,'','0.10.0-P0',$4)`, fmt.Sprint"
         }
       ]
@@ -17354,7 +17464,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 63,
-          "evidence": "return errors.New(\"production mode требует NEVERLAUNCHER_REPOSITORY_DRIVER=postgres: memory repository запрещён для 0.10.0 persistence\")"
+          "evidence": "return errors.New(\"production forbids in-memory repository: use PostgreSQL or SQLite single-node\")"
         },
         {
           "category": "storage-configuration-read",

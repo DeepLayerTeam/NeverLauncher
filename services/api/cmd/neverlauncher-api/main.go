@@ -172,6 +172,9 @@ func main() {
 	}
 	log.Printf("deployment mode=%s repository=%s coordinator=%s storage=%s single_instance=%t reasons=%q", plan.Mode, plan.Repository, plan.Coordinator, plan.Storage, plan.SingleInstance, plan.Reasons)
 	repo := newRepository(cfg)
+	if closer, ok := repo.(interface{ Close() error }); ok {
+		defer closer.Close()
+	}
 	if migrator, ok := repo.(interface {
 		MigrationStatus(context.Context) (dbmigrate.Status, error)
 		ApplyMigrations(context.Context) (dbmigrate.Status, error)
@@ -230,7 +233,7 @@ func main() {
 		}
 	}
 
-	if err := httpapi.InitializeInstallationSecurityP0(cfg); err != nil {
+	if err := httpapi.InitializeInstallationSecurityP0(cfg, repo); err != nil {
 		log.Fatal(err)
 	}
 
