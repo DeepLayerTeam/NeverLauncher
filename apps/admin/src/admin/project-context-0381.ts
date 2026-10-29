@@ -1,13 +1,15 @@
 /** Owner navigation is a non-secret, authenticated preference, never an authority.
  * Project/profile/channel IDs must be rechecked against a fresh access-filtered
  * Admin overview before any UI uses them. The API remains the access gate. */
-export type ProjectContext = { projectId: string; profileId: string; channelId: string };
+export type ProjectContext = { projectId: string; profileId: string; channelId: string; serverId?: string };
 export const emptyProjectContext: ProjectContext = { projectId: '', profileId: '', channelId: '' };
 export type ProjectResource = { id: string; projectId?: string };
 export type ProjectCatalog = {
   projects: readonly ProjectResource[];
   profiles: readonly ProjectResource[];
   channels: readonly ProjectResource[];
+  // Omit until a real, project-scoped ServerBridge overview has arrived.
+  servers?: readonly (ProjectResource & { profileId?: string })[];
 };
 const bound = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 256 && !/[\u0000-\u001f\u007f]/.test(value);
 export function contextStorageKey(backendUrl: string, principalId: string): string {
@@ -23,6 +25,7 @@ export function readSavedContext(storage: Pick<Storage, 'getItem'>, key: string)
       projectId: bound(record.projectId) ? record.projectId : '',
       profileId: bound(record.profileId) ? record.profileId : '',
       channelId: bound(record.channelId) ? record.channelId : '',
+      ...(bound(record.serverId) ? { serverId: record.serverId } : {}),
     };
   } catch { return { ...emptyProjectContext }; }
 }
@@ -37,10 +40,18 @@ export function resolveProjectContext(url: Partial<ProjectContext>, saved: Proje
   // A saved subresource from another project must never be reused.
   const sameSavedProject = saved.projectId === projectId;
   const sameUrlProject = url.projectId === projectId;
+  const profileId = sameUrlProject ? (within(catalog.profiles, url.profileId) ? url.profileId! : '') :
+    (sameSavedProject && within(catalog.profiles, saved.profileId) ? saved.profileId : '') || '';
+  const serverCandidate = sameUrlProject ? url.serverId : (sameSavedProject ? saved.serverId : undefined);
+  // Fail closed once the scoped inventory has loaded; never accept a node from another project
+  // or a node bound to another selected profile. Until then, preserve only the navigation hint.
+  const server = serverCandidate && bound(serverCandidate) && (catalog.servers === undefined ||
+    catalog.servers.some(n => n.id === serverCandidate && n.projectId === projectId && (!profileId || !n.profileId || n.profileId === profileId)))
+      ? serverCandidate : undefined;
   return {
     projectId,
-    profileId: sameUrlProject ? (within(catalog.profiles, url.profileId) ? url.profileId! : '') :
-      (sameSavedProject && within(catalog.profiles, saved.profileId) ? saved.profileId : '') || '',
+    ...(server ? {serverId: server} : {}),
+    profileId,
     channelId: sameUrlProject ? (within(catalog.channels, url.channelId) ? url.channelId! : '') :
       (sameSavedProject && within(catalog.channels, saved.channelId) ? saved.channelId : '') || '',
   };

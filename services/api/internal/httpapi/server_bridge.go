@@ -187,6 +187,24 @@ func (s Server) serverBridgeRegister(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "некорректный JSON")
 		return
 	}
+	if strings.TrimSpace(req.ProfileID) != "" {
+		profiles, listErr := s.Repo.ListProfiles(strings.TrimSpace(req.ProjectID))
+		if listErr != nil {
+			writeError(w, http.StatusBadRequest, "проект для привязки ServerBridge не найден")
+			return
+		}
+		found := false
+		for _, profile := range profiles {
+			if profile.ID == strings.TrimSpace(req.ProfileID) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			writeError(w, http.StatusBadRequest, "профиль ServerBridge не найден в выбранном проекте")
+			return
+		}
+	}
 	server, err := s.State.ServerBridge.registerServer(req)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())

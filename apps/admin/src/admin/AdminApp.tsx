@@ -19,7 +19,8 @@ import { requestJSON, ApiError } from '../api/client';
 import { AdminApi, type AdminOverview } from '../api/admin';
 import { MetricCard, TextInput } from '../components/primitives';
 import { ServerBridgeWorkspace } from './ServerBridgeWorkspace';
-import { gameCommandPermissions, type BridgeCommandType } from '../api/serverbridge';
+import { ServerBridgeClient, gameCommandPermissions, type BridgeCommandType, type ServerBridgeNode } from '../api/serverbridge';
+import { nodeForContext0383, nodeState0383, profileNodes0383 } from './server-selection-0383';
 import { TextureManagement0259 } from './TextureManagement0259';
 import { BrandingStudio0355 } from './BrandingStudio0355';
 import { SupportDiagnostics03510 } from './SupportDiagnostics03510';
@@ -64,6 +65,8 @@ export function AdminApp() {
   const [error, setError] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionView[]>([]);
   const [devices, setDevices] = useState<TrustedDeviceView[]>([]);
+  const [bridgeInventory, setBridgeInventory] = useState<{projectId:string;nodes:ServerBridgeNode[] | null;readAt:number;error:string} | null>(null);
+  const [bridgeClock, setBridgeClock] = useState(Date.now());
 
   const [projectForm, setProjectForm] = useState<ProjectForm>({ id: '', name: '', description: '', homepage: '', repository: '', defaultChannel: 'stable' });
   const [channelForm, setChannelForm] = useState<ChannelForm>({ projectId: '', id: '', name: '', description: '', protected: false });
@@ -75,14 +78,22 @@ export function AdminApp() {
   // access-filtered by the Backend and is the only source for resolving them.
   const ownerStorageKey = identity ? contextStorageKey(backendUrl, identity.user.id) : '';
   const savedContext = ownerStorageKey ? readSavedContext(localStorage, ownerStorageKey) : {projectId:'',profileId:'',channelId:''};
+  const baseOwnerContext = resolveProjectContext(route, savedContext, {
+    projects: availableProjects, profiles: dashboard?.profiles ?? [], channels: dashboard?.channels ?? [],
+  });
+  const projectNodes = bridgeInventory?.projectId === baseOwnerContext.projectId ? bridgeInventory.nodes : null;
   const ownerContext = resolveProjectContext(route, savedContext, {
-    projects: availableProjects,
-    profiles: dashboard?.profiles ?? [],
-    channels: dashboard?.channels ?? [],
+    projects: availableProjects, profiles: dashboard?.profiles ?? [], channels: dashboard?.channels ?? [],
+    ...(projectNodes ? { servers: projectNodes } : {}),
   });
   const selectedProjectId = ownerContext.projectId;
   const selectedProfileId = dashboardScope === selectedProjectId ? ownerContext.profileId : '';
   const selectedChannelId = dashboardScope === selectedProjectId ? ownerContext.channelId : '';
+  const selectedServer = projectNodes ? nodeForContext0383(projectNodes, selectedProjectId, ownerContext.serverId) : null;
+  const selectedServerId = selectedServer?.id ?? '';
+  const bridgeInventoryFresh = !!bridgeInventory && bridgeInventory.projectId === selectedProjectId &&
+    !!bridgeInventory.nodes && bridgeClock - bridgeInventory.readAt < 45_000;
+  const selectedServerState = selectedServer ? nodeState0383(selectedServer, bridgeInventoryFresh, bridgeClock) : null;
   const activeEndpoint = endpointForSection(active, selectedProjectId);
   const mayRead = canSeeSection(identity, active, selectedProjectId);
   const canProjectWrite = can(identity, 'project:write', selectedProjectId);
@@ -94,7 +105,7 @@ export function AdminApp() {
     channels: dashboard?.channels?.length ?? 0, auditEvents: dashboard?.audit?.length ?? 0 };
   function chooseProject(id: string) {
     if (!availableProjects.some(p => p.id === id)) return;
-    navigate(active, {projectId:id, profileId:'', channelId:''});
+    navigate(active, {projectId:id, profileId:'', channelId:'', serverId:''});
     setSelectedRecordId('');
     setPayload(null);
   }
@@ -119,15 +130,61 @@ export function AdminApp() {
     }
   }
 
+  // Live Backend view. A failed request never leaves a stale success-shaped inventory.
+  useEffect(() => {
+    if (!token || !baseOwnerContext.projectId || !can(identity, 'project:read', baseOwnerContext.projectId)) {
+      setBridgeInventory(null); return;
+    }
+    const projectId = baseOwnerContext.projectId;
+    let alive = true;
+    const api = new ServerBridgeClient(backendUrl, token);
+    setBridgeInventory(null);
+    async function refresh() {
+      try {
+        const result = await api.overview(projectId);
+        if (alive) setBridgeInventory({projectId, nodes:(result.nodes ?? []).filter(n => n.projectId === projectId), readAt:Date.now(), error:''});
+      } catch (e) {
+        if (alive) setBridgeInventory({projectId, nodes:null, readAt:0, error:e instanceof Error ? e.message : String(e)});
+      }
+    }
+    void refresh();
+    const timer = window.setInterval(() => { if (!document.hidden) void refresh(); }, 15_000);
+    const clockTimer = window.setInterval(() => setBridgeClock(Date.now()), 5_000);
+    return () => {alive = false;window.clearInterval(timer);window.clearInterval(clockTimer);};
+  }, [backendUrl, token, baseOwnerContext.projectId, identity?.user.id]);
+  async function chooseServer(id: string) {
+    if (!id) {navigate(active,{serverId:''});return;}
+    if (!selectedProjectId || !can(identity,'project:read',selectedProjectId)) return;
+    let nodes = bridgeInventoryFresh ? projectNodes : null;
+    // Immediately after enrollment the parent inventory may predate the new node.
+    // Re-read the authoritative project inventory before accepting its context.
+    if (!nodes || !nodeForContext0383(nodes,selectedProjectId,id)) {
+      try {
+        const projectId=selectedProjectId;
+        const result=await new ServerBridgeClient(backendUrl,token).overview(projectId);
+        nodes=(result.nodes ?? []).filter(n=>n.projectId===projectId);
+        setBridgeInventory({projectId,nodes,readAt:Date.now(),error:''});
+      } catch (e) {
+        setError(`Не удалось подтвердить выбранный узел ServerBridge: ${e instanceof Error?e.message:String(e)}`);
+        return;
+      }
+    }
+    const server=nodeForContext0383(nodes,selectedProjectId,id);
+    if (!server) {setError('Сервер не найден в выбранном проекте.');return;}
+    const boundProfile=server.profileId && (dashboard?.profiles??[]).some(p=>p.projectId===selectedProjectId && p.id===server.profileId) ? server.profileId : '';
+    navigate(active,{serverId:server.id,profileId:boundProfile});
+  }
+
   // Canonicalize only after the authenticated access-filtered overview arrives.
   // A removed project/profile/channel cannot survive as a live selection.
   useEffect(() => {
     if (!ownerStorageKey || !dashboard || (ownerContext.projectId && dashboardScope !== ownerContext.projectId)) return;
+    if (route.serverId && !projectNodes && bridgeInventory?.projectId !== ownerContext.projectId) return;
     saveContext(localStorage, ownerStorageKey, ownerContext);
-    if (route.projectId !== ownerContext.projectId || (route.profileId || '') !== ownerContext.profileId || (route.channelId || '') !== ownerContext.channelId)
+    if (route.projectId !== ownerContext.projectId || (route.profileId || '') !== ownerContext.profileId || (route.channelId || '') !== ownerContext.channelId || (route.serverId || '') !== (ownerContext.serverId || ''))
       replaceAdminRoute(active, ownerContext);
   }, [ownerStorageKey, dashboard, dashboardScope, ownerContext.projectId, ownerContext.profileId, ownerContext.channelId,
-      route.projectId, route.profileId, route.channelId, active]);
+      ownerContext.serverId, projectNodes, bridgeInventory?.projectId, route.projectId, route.profileId, route.channelId, route.serverId, active]);
   useEffect(() => {
     if (!selectedProjectId) return;
     setChannelForm(f => ({ ...f, projectId: selectedProjectId, id: '', name: '' }));
@@ -380,7 +437,7 @@ export function AdminApp() {
     if (!overview.projects?.some(p => p.id === id)) throw new Error('Проект создан, но недоступен текущему пользователю. Проверьте права и обновите список.');
     setDashboardScope(id); setDashboard(overview);
     setSelectedRecordId(id);
-    navigate('projects', {projectId:id,profileId:'',channelId:''});
+    navigate('projects', {projectId:id,profileId:'',channelId:'',serverId:''});
     setMessage(`Проект ${id} создан и выбран. Можно перейти к профилям, серверам и сборкам.`);
     return result;
   }
@@ -442,6 +499,11 @@ export function AdminApp() {
         <TextInput label="Канал по умолчанию" value={projectForm.defaultChannel} onChange={(defaultChannel) => setProjectForm({ ...projectForm, defaultChannel })} />
         <div className="buttonRow"><button disabled={!can(identity, 'project:write') || !projectForm.id.trim() || !projectForm.name.trim()} onClick={() => createProject().catch((err: Error) => setError(err.message))}>Создать</button><button disabled={!canProjectWrite || !projectForm.id || projectForm.id !== selectedProjectId} onClick={() => runAction('Обновление проекта', () => requestJSON(backendUrl, `/api/v1/admin/projects/${encodeURIComponent(projectForm.id)}`, token, { method: 'PATCH', body: JSON.stringify(projectForm) })).catch((err) => setError(err.message))}>Обновить</button></div>
       </article>}
+      {active === 'profiles' && selectedProfileId && <article className="subcard" aria-label="Связь профиля с реальными серверами"><h3>ServerBridge для профиля {selectedProfileId}</h3>
+        {!bridgeInventoryFresh ? <p role="status">Сведения ServerBridge недоступны или устарели. Связь с сервером не подтверждена.</p> :
+          profileNodes0383(projectNodes ?? [],selectedProjectId,selectedProfileId).length === 0 ? <p>Для профиля нет зарегистрированных узлов. Регистрация выполняется в ServerBridge с profileId этого профиля.</p> :
+          <ul>{profileNodes0383(projectNodes ?? [],selectedProjectId,selectedProfileId).map(n => <li key={n.id}><button onClick={()=>{navigate('server-bridge',{serverId:n.id,profileId:n.profileId});}}>{n.name || n.id}</button> — {nodeState0383(n,true,bridgeClock).label}</li>)}</ul>}
+      </article>}
       {active === 'profiles' && canProjectWrite && <ProfileEditor0382 backendUrl={backendUrl} token={token} projectId={selectedProjectId}
         selectedProfile={(dashboard?.profiles??[]).find(p=>p.projectId===selectedProjectId && p.id===selectedProfileId)}
         onChanged={async()=>{await loadDashboard();await loadActive();}}
@@ -487,9 +549,14 @@ export function AdminApp() {
         {token && identity && <div className="projectContext"><label>Текущий проект<select aria-label="Текущий проект" disabled={availableProjects.length === 0} value={selectedProjectId} onChange={event => chooseProject(event.target.value)}><option value="" disabled>Выберите проект</option>{availableProjects.map(p => <option key={String(p.id)} value={String(p.id)}>{String(p.name ?? p.id)}</option>)}</select></label><span className="muted">{identity.user.displayName || identity.user.email} · {identity.user.roleId} · {selectedProjectId || 'Нет доступных проектов'}</span></div>}
         {token && identity && selectedProjectId && <nav className="ownerNavigation0381" aria-label="Ресурсы выбранного проекта">
           <span className="ownerNavigationTitle0381">Проект: <strong>{availableProjects.find(p => p.id === selectedProjectId)?.name || selectedProjectId}</strong></span>
-          <label>Профиль<select aria-label="Контекстный профиль" value={selectedProfileId} onChange={e => navigate(active, {profileId:e.target.value})}>
+          <label>Профиль<select aria-label="Контекстный профиль" value={selectedProfileId} onChange={e => navigate(active, {profileId:e.target.value,serverId:''})}>
             <option value="">Все профили</option>{(dashboard?.profiles ?? []).filter(p => p.projectId === selectedProjectId).map(p => <option key={p.id} value={p.id}>{p.name || p.id}</option>)}
           </select></label>
+          <label>Сервер<select aria-label="Контекстный сервер ServerBridge" disabled={!bridgeInventoryFresh} value={selectedServerId} onChange={e => chooseServer(e.target.value)}>
+            <option value="">{bridgeInventory?.error ? 'Недоступно — проверьте Backend' : !bridgeInventoryFresh ? 'Ожидание свежих данных' : 'Выберите сервер'}</option>
+            {(projectNodes ?? []).map(n => <option key={n.id} value={n.id}>{n.name || n.id} · {n.profileId || 'без профиля'} · {nodeState0383(n,bridgeInventoryFresh,bridgeClock).status}</option>)}
+          </select></label>
+          {selectedServerState && <span role="status" className={selectedServerState.status==='available'?'success':'muted'}>ServerBridge: {selectedServerState.label}; telemetry: {selectedServerState.telemetry}</span>}
           <label>Канал<select aria-label="Контекстный канал" value={selectedChannelId} onChange={e => navigate(active, {channelId:e.target.value})}>
             <option value="">Все каналы</option>{(dashboard?.channels ?? []).filter(c => c.projectId === selectedProjectId).map(c => <option key={c.id} value={c.id}>{c.name || c.id}</option>)}
           </select></label>
@@ -526,7 +593,7 @@ export function AdminApp() {
       {token && mayRead && active === 'diagnostics' && <SupportDiagnostics03510 backendUrl={backendUrl} token={token} />}
       {token && mayRead && active === 'branding-studio' && <BrandingStudio0355 projectId={selectedProjectId} canSign={can(identity,'release:publish',selectedProjectId)} />}
       {token && mayRead && active === 'texture-management' && <TextureManagement0259 backendUrl={backendUrl} token={token} projectId={selectedProjectId} />}
-      {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} allowedCommands={(Object.keys(gameCommandPermissions) as BridgeCommandType[]).filter(kind => can(identity, gameCommandPermissions[kind], selectedProjectId))} allowEnrollment={can(identity, 'settings:manage')} />}
+      {token && mayRead && active === 'server-bridge' && <ServerBridgeWorkspace backendUrl={backendUrl} token={token} projectId={selectedProjectId} selectedServerId={selectedServerId} selectedProfileId={selectedProfileId} selectedChannelId={selectedChannelId} onSelectServer={chooseServer} allowedCommands={(Object.keys(gameCommandPermissions) as BridgeCommandType[]).filter(kind => can(identity, gameCommandPermissions[kind], selectedProjectId))} allowEnrollment={can(identity, 'settings:manage')} />}
       {token && !mayRead && <section className="card wide emptyState"><h2>Нет доступа</h2><p>Эта операция недоступна для вашей роли либо проект не выбран. Запросите необходимые полномочия у владельца.</p></section>}
       {token && mayRead && !['extensions-manager','backend-operations','operations','release-workspace','job-monitor','migration-center','server-bridge','texture-management','backup-restore','devices','audit','config','official-provider','auth-provider-wizard','branding-studio','diagnostics'].includes(active) && <section className="card wide"><div className="registryHeading"><h2>{sections.find(section => section.id === active)?.title ?? active}</h2><button onClick={() => loadActive().catch((err: Error) => setError(err.message))}>Обновить данные</button></div>{active === 'dashboard' ? <ResourceGrid section={active} payload={payload} /> : <ResourceGrid section={active} payload={payload} selectedId={active === 'profiles' ? selectedProfileId : active === 'channels' ? selectedChannelId : selectedRecordId} onSelect={selectRecord} />}</section>}
 

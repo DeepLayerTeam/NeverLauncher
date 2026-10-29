@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '../api/client';
 import { ResourceGrid } from '../components/ResourceGrid';
 import { MetricCard } from '../components/primitives';
+import { adminHref } from './route-links-0381';
+import { nodeState0383 } from './server-selection-0383';
 import { ServerBridgeClient, buildControlPayload, canControlNode, commandLifecycle, telemetryState,
   supportsControlCapability, networkStateFresh, parseCapacityDraft, parseBridgeEnrollment, type BridgeCommandRequest, type BridgeCommandType, type BridgeOverview, type ServerBridgeCommand, type ServerBridgeNode } from '../api/serverbridge';
 
-type Props = { backendUrl: string; token: string; projectId: string; allowedCommands: BridgeCommandType[]; allowEnrollment: boolean };
+type Props = { backendUrl: string; token: string; projectId: string; selectedServerId?: string; selectedProfileId?: string; selectedChannelId?: string; onSelectServer?: (id: string) => void; allowedCommands: BridgeCommandType[]; allowEnrollment: boolean };
 const actions: Array<{ type: BridgeCommandType; label: string; confirm?: boolean }> = [
   { type: 'player.kick', label: 'Отключить игрока', confirm: true },
   { type: 'message.broadcast', label: 'Сообщение всем игрокам' },
@@ -45,13 +47,13 @@ const readPending = (projectId: string, backendUrl: string): BridgeCommandReques
   return null;
 };
 
-export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCommands, allowEnrollment }: Props) {
+export function ServerBridgeWorkspace({ backendUrl, token, projectId, selectedServerId = '', selectedProfileId = '', selectedChannelId = '', onSelectServer, allowedCommands, allowEnrollment }: Props) {
   const canCommand = (kind: BridgeCommandType) => allowedCommands.includes(kind);
   const canControl = allowedCommands.length > 0;
   const canConsole = canCommand('server.console');
   const api = useMemo(() => new ServerBridgeClient(backendUrl, token), [backendUrl, token]);
   const [overview, setOverview] = useState<BridgeOverview | null>(null);
-  const [selectedServer, setSelectedServer] = useState('');
+  const [selectedServer, setSelectedServer] = useState(selectedServerId);
   const [selectedCommand, setSelectedCommand] = useState<ServerBridgeCommand | null>(null);
   const [lastReadAt, setLastReadAt] = useState<number | null>(null);
   const [lastCommandReadAt, setLastCommandReadAt] = useState<number | null>(null);
@@ -84,7 +86,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
   useEffect(() => { setCapacityDraft(network?.operatorCapacityMax == null ? '' : String(network.operatorCapacityMax)); }, [selectedServer, network?.operatorCapacityRevision]);
 
 
-  useEffect(() => { setOverview(null); setSelectedServer(''); setSelectedCommand(null); setError(''); setPending(readPending(projectId, backendUrl));
+  useEffect(() => { setOverview(null); setSelectedServer(selectedServerId); setSelectedCommand(null); setError(''); setPending(readPending(projectId, backendUrl));
     const persisted = sessionStorage.getItem(monitorStorageKey(projectId, backendUrl, currentSession()));
     if (persisted) {
       try {
@@ -94,6 +96,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
       } catch { /* outdated monitor entry */ }
     }
   }, [api, backendUrl, token, projectId]);
+  useEffect(() => { setSelectedServer(selectedServerId); setSelectedCommand(null); }, [selectedServerId]);
   useEffect(() => {
     if (!projectId || !token) return;
     let alive = true;
@@ -102,13 +105,13 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
         const data = await api.overview(projectId);
         if (!alive) return;
         setOverview(data); setLastReadAt(Date.now()); setError('');
-        setSelectedServer(old => data.nodes.some(n => n.id === old) ? old : data.nodes[0]?.id ?? '');
-      } catch (e) { if (alive) setError(`Не удалось обновить сведения ServerBridge: ${showProblem(e)}. Последний снимок нельзя считать актуальным.`); }
+        setSelectedServer(old => data.nodes.some(n => n.id === old) ? old : (selectedServerId && data.nodes.some(n => n.id === selectedServerId) ? selectedServerId : ''));
+      } catch (e) { if (alive) {setOverview(null);setLastReadAt(null);setError(`Не удалось обновить сведения ServerBridge: ${showProblem(e)}. Последний снимок нельзя считать актуальным.`);} }
     };
     void refresh();
     const id = window.setInterval(() => { if (!document.hidden) void refresh(); }, 15000);
     return () => { alive = false; window.clearInterval(id); };
-  }, [api, projectId, token]);
+  }, [api, projectId, token, selectedServerId]);
   useEffect(() => { const id = window.setInterval(() => setClock(Date.now()), 1000); return () => window.clearInterval(id); }, []);
   useEffect(() => {
     if (!selectedCommand || !token) return;
@@ -179,7 +182,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
       if (result.server?.id !== request.id || result.server.keyFingerprint !== request.keyFingerprint) throw new Error('Backend вернул не ту идентичность; проверьте запись узла и аудит.');
       setEnrollmentJSON('');
       const fresh = await api.overview(projectId);
-      setOverview(fresh); setLastReadAt(Date.now()); setSelectedServer(request.id);
+      setOverview(fresh); setLastReadAt(Date.now()); setSelectedServer(request.id); onSelectServer?.(request.id);
       setMessage(`Узел ${request.id} зарегистрирован. Запустите установленный адаптер и дождитесь свежего подписанного heartbeat; регистрация не подтверждает работоспособность.`);
     } catch (e) { setError(`Enrollment: ${showProblem(e)}. При потере HTTP-ответа проверьте список узлов перед повторением.`); }
     finally { setEnrolling(false); }
@@ -207,6 +210,8 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
   const monitorFresh = lastCommandReadAt !== null && clock - lastCommandReadAt < 15_000;
   const snapshotFresh = lastReadAt !== null && clock - lastReadAt < 45_000;
   const usable = !!node && canControlNode(node, clock) && snapshotFresh;
+  const selectedNodeState = node ? nodeState0383(node,snapshotFresh,clock) : null;
+  const boundToProfile = !!node && !!node.profileId && node.profileId===selectedProfileId;
   const t = node?.telemetry;
   const tele = node ? telemetryState(node, clock) : null;
   const playerKinds = new Set<BridgeCommandType>(['player.kick','whitelist.add','whitelist.remove','ban.add','ban.remove']);
@@ -226,16 +231,25 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, allowedCom
     {overview && <div className="bridgeMetricGrid"><MetricCard label="Серверы проекта" value={nodes.length}/><MetricCard label="Активные heartbeat" value={nodes.filter(n=>n.fresh).length}/><MetricCard label="Устаревшие / нет данных" value={nodes.filter(n=>!n.fresh).length}/><MetricCard label="v3" value={nodes.filter(n=>n.protocolVersion===3).length}/><MetricCard label="Требуется миграция" value={nodes.filter(n=>n.protocolMigrationRequired).length}/><MetricCard label="Контрольные команды" value={controls.length}/></div>}
     {!overview && !error && <p role="status">Загрузка серверов…</p>}
     {overview && nodes.length === 0 && <div className="emptyState"><h3>Серверов нет</h3><p>В проекте ещё не зарегистрировано ни одного узла ServerBridge.</p></div>}
+    {selectedProfileId && <p role="status">Выбран профиль <strong>{selectedProfileId}</strong>. Узлы, привязанные к нему: {nodes.filter(n=>n.profileId===selectedProfileId).length}. Связь определяется сохранённым profileId регистрации, не выбранным в браузере каналом.</p>}
     <div className="bridgeNodeGrid">{nodes.map(n => {
       const state = telemetryState(n, clock);
       const fresh = n.fresh && Number.isFinite(Date.parse(n.lastHeartbeatAt ?? '')) && clock-Date.parse(n.lastHeartbeatAt ?? '') < 120000 && snapshotFresh;
-      return <button key={n.id} type="button" aria-pressed={n.id===selectedServer} className={`bridgeNodeButton ${n.id===selectedServer?'selected':''}`} onClick={()=>{setSelectedServer(n.id);setSelectedCommand(null);}}>
-        <strong>{n.name || n.id}</strong><span className={`badge ${fresh?'ok':'warn'}`}>{fresh?'heartbeat fresh':'heartbeat stale/unknown'}</span>
+      return <button key={n.id} type="button" aria-pressed={n.id===selectedServer} className={`bridgeNodeButton ${n.id===selectedServer?'selected':''}`} onClick={()=>{setSelectedServer(n.id);setSelectedCommand(null);onSelectServer?.(n.id);}}>
+        <strong>{n.name || n.id}</strong><span>Профиль: {n.profileId || 'не привязан'}</span><span className={`badge ${fresh?'ok':'warn'}`}>{fresh?'heartbeat fresh':'heartbeat stale/unknown'}</span>
         <span>{n.serverBrand || n.loaderName || n.kind || 'Minecraft'} · {n.minecraftVersion || 'версия неизвестна'}</span>
         <span>Players: {state.state==='fresh'?`${formatMetric(n.telemetry?.playersOnline)} / ${formatMetric(n.telemetry?.playersMax)}`:'неизвестно (telemetry stale)'}</span>
         <small>Protocol {n.protocolVersion || 'unknown'} · {state.state==='fresh'?'Telemetry fresh':state.reason}</small>
       </button>;
     })}</div>
+    {node && <div className="bridgeSection" aria-label="Контекст сервера"><h3>Профиль и канал выпуска</h3>
+      <p>Сервер зарегистрирован в проекте <strong>{node.projectId}</strong> для профиля <strong>{node.profileId || 'не задан'}</strong>. 
+      Канал <strong>{selectedChannelId || 'не выбран'}</strong> — контекст подготовки релиза, а не подтверждённая конфигурация игрового узла.</p>
+      <p role="status">{selectedNodeState?.label || 'Нет данных'}; heartbeat: {selectedNodeState?.heartbeat || 'unknown'}; telemetry: {selectedNodeState?.telemetry || 'unknown'}.</p>
+      {node.profileId && !boundToProfile && <p className="bridgeAttention">Выберите профиль узла через список серверов. Нельзя выпускать сборку для другого профиля.</p>}
+      {boundToProfile && selectedChannelId && <a href={adminHref('release-workspace',{projectId,profileId:node.profileId,channelId:selectedChannelId,serverId:node.id})}>Подготовить выпуск профиля {node.profileId} в канал {selectedChannelId}</a>}
+      {boundToProfile && !selectedChannelId && <p>Выберите существующий канал в навигации проекта для перехода в мастер релизов.</p>}
+    </div>}
     {node && <div className="bridgeColumns">
       <article className="bridgeSection"><h3>{node.name || node.id} · Runtime</h3>
         <dl className="bridgeFacts"><dt>Heartbeat</dt><dd>{timeLabel(node.lastHeartbeatAt)} · {usable?'active':'stale / unavailable'}</dd>
