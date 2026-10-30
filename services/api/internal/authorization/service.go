@@ -154,6 +154,20 @@ func ProjectActionCatalog() []string {
 // отдельного проекта. Добавление сюда глобального административного
 // права меняет безопасность и проверяется фиксированной проверкой 0.21.1.
 func IsProjectAction(action string) bool {
+	// Catalog-specific component grants belong to a project, never an instance.
+	// Only explicit, syntactically valid component.* role permissions qualify.
+	if len(action) > len("component.") && len(action) <= 128 && strings.HasPrefix(action, "component.") {
+		valid := true
+		for _, r := range action[len("component."):] {
+			if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '.' || r == '_' || r == '-' || r == ':') {
+				valid = false
+				break
+			}
+		}
+		if valid && !strings.Contains(action, "..") && !strings.Contains(action, "::") {
+			return true
+		}
+	}
 	for _, allowed := range ProjectActionCatalog() {
 		if strings.TrimSpace(action) == allowed {
 			return true

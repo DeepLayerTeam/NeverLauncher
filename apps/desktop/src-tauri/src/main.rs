@@ -644,8 +644,14 @@ async fn complete_first_run_0352(config:DesktopConfig,manifest:Manifest)->Result
     neverruntime::verify_manifest_signature(&manifest,&signed.pinned_public_key)?;
     let root=PathBuf::from(&cfg.game_directory);
     if !root.is_absolute(){return Err("Каталог игры должен быть абсолютным".into())}
-    let checks=neverruntime::check_files_with_preset(&manifest,&root,
-        if cfg.component_preset.is_empty(){None}else{Some(cfg.component_preset.as_str())}).await?;
+    // First-run verification must use the same short-lived server grant as
+    // subsequent installs. Otherwise a legitimate gated mod cannot complete
+    // onboarding, while a bypass here would silently accept a local claim.
+    let grant=component_permissions_for_manifest_0392(&manifest,&signed.pinned_public_key).await?;
+    let checks=neverruntime::component_catalog_0241::with_verified_component_scope_0392(grant,async {
+        neverruntime::check_files_with_preset(&manifest,&root,
+            if cfg.component_preset.is_empty(){None}else{Some(cfg.component_preset.as_str())}).await
+    }).await?;
     if checks.is_empty()||checks.iter().any(|f|f.status!="ok"){
         return Err(format!("Установка не завершена: {} файлов отсутствуют или повреждены",
             checks.iter().filter(|f|f.status!="ok").count()))
@@ -669,16 +675,32 @@ async fn load_manifest(url: String, pinned_public_key: String) -> Result<Manifes
 #[tauri::command]
 async fn verify_manifest_signature(manifest: Manifest, pinned_public_key: String) -> Result<SignatureCheckResult, String> { neverruntime::verify_manifest_signature(&manifest, &pinned_public_key) }
 #[tauri::command]
-async fn check_files(manifest: Manifest, root: String, preset: Option<String>) -> Result<Vec<FileCheckResult>, String> { neverruntime::check_files_with_preset(&manifest, &PathBuf::from(root), preset.as_deref()).await }
+async fn check_files(manifest: Manifest, root: String, preset: Option<String>) -> Result<Vec<FileCheckResult>, String> {
+    let cfg=load_desktop_config().await?;
+    let auth=component_permissions_for_manifest_0392(&manifest,&cfg.pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,async {
+        neverruntime::check_files_with_preset(&manifest,&PathBuf::from(root),preset.as_deref()).await
+    }).await
+}
 #[tauri::command]
-async fn download_missing_files(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<DownloadResult, String> {
+async fn download_missing_files(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<DownloadResult,String> {
+    let auth=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,
+        download_missing_files_inner_0392(app,manifest,root,pinned_public_key,preset)).await
+}
+async fn download_missing_files_inner_0392(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<DownloadResult, String> {
     let sink: neverruntime::ProgressSink = Arc::new(move |progress| {
         let _ = app.emit(neverruntime::DOWNLOAD_PROGRESS_EVENT, progress);
     });
     neverruntime::download_missing_files_with_preset(&manifest, &PathBuf::from(root), &pinned_public_key, Some(sink), preset).await
 }
 #[tauri::command]
-async fn repair_client(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<RepairResult, String> {
+async fn repair_client(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<RepairResult,String> {
+    let auth=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,
+        repair_client_inner_0392(app,manifest,root,pinned_public_key,preset)).await
+}
+async fn repair_client_inner_0392(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<RepairResult, String> {
     let sink: neverruntime::ProgressSink = Arc::new(move |progress| {
         let _ = app.emit(neverruntime::DOWNLOAD_PROGRESS_EVENT, progress);
     });
@@ -686,7 +708,13 @@ async fn repair_client(app: tauri::AppHandle, manifest: Manifest, root: String, 
 }
 #[tauri::command]
 async fn pending_download_job(root: String, pinned_public_key: String) -> Result<Option<neverruntime::durable_downloads::PendingDownload>, String> {
-    neverruntime::durable_downloads::pending(&PathBuf::from(root), &pinned_public_key).await
+    let manifest=neverruntime::durable_downloads::pending_manifest_for_permissions_0392(
+        &PathBuf::from(&root),&pinned_public_key).await?;
+    let Some(manifest)=manifest else{return Ok(None)};
+    let grant=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(grant,async {
+        neverruntime::durable_downloads::pending(&PathBuf::from(root), &pinned_public_key).await
+    }).await
 }
 #[tauri::command]
 async fn control_download_job(root: String, action: String) -> Result<(), String> {
@@ -694,10 +722,19 @@ async fn control_download_job(root: String, action: String) -> Result<(), String
 }
 #[tauri::command]
 async fn resume_download_job(app: tauri::AppHandle, root: String, pinned_public_key: String) -> Result<DownloadResult, String> {
+    // Journal bytes are user-editable: verify their signature and pinned key,
+    // fetch rights for that exact catalog, and re-verify the journal on resume.
+    // A substituted catalog will not match the scope and fails closed.
+    let manifest=neverruntime::durable_downloads::pending_manifest_for_permissions_0392(
+        &PathBuf::from(&root),&pinned_public_key).await?
+        .ok_or("no signed download job to resume")?;
+    let grant=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
     let sink: neverruntime::ProgressSink = Arc::new(move |progress| {
         let _ = app.emit(neverruntime::DOWNLOAD_PROGRESS_EVENT, progress);
     });
-    neverruntime::durable_downloads::resume(&PathBuf::from(root), &pinned_public_key, Some(sink)).await
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(grant,async {
+        neverruntime::durable_downloads::resume(&PathBuf::from(root), &pinned_public_key, Some(sink)).await
+    }).await
 }
 #[tauri::command]
 async fn rollback_client_release(root: String, pinned_public_key: String) -> Result<(), String> {
@@ -885,8 +922,85 @@ async fn load_cached_desktop_manifest(root: String, pinned_public_key: String, p
     Ok(manifest)
 }
 
+// Server grants are fetched by native Rust using the OS-vault session.
+// JavaScript does not supply an entitlement list, bearer or backend address.
+async fn component_permissions_for_manifest_0392(manifest:&Manifest,pinned:&str)
+    ->Result<neverruntime::component_catalog_0241::VerifiedComponentScope0392,String> {
+    use neverruntime::component_catalog_0241::VerifiedComponentScope0392;
+    neverruntime::verify_manifest_signature(manifest,pinned)?;
+    let catalog=manifest.component_catalog.as_ref();
+    let digest=catalog.map(|c|c.digest.clone()).unwrap_or_default();
+    let cfg=load_desktop_config().await?;
+    if cfg.project_id!=manifest.project_id || cfg.profile_id!=manifest.profile_id ||
+       cfg.channel!=manifest.channel || cfg.pinned_public_key!=pinned {
+        return Err("component permission scope differs from bound desktop profile".into());
+    }
+    let needs_grant=catalog.is_some_and(|cat|cat.components.iter().any(|c|c.conditions.as_ref().is_some_and(|v|!v.permissions.is_empty())));
+    let empty=||VerifiedComponentScope0392{project_id:manifest.project_id.clone(),profile_id:manifest.profile_id.clone(),
+       channel:manifest.channel.clone(),catalog_digest:digest.clone(),valid_until:0,permissions:Default::default()};
+    if !needs_grant {return Ok(empty());}
+    let cat=catalog.ok_or("missing conditional component catalog")?;
+    let origin=reqwest::Url::parse(&cfg.backend_url).map_err(|_|"invalid backend URL")?;
+    if origin.scheme()!="https" || origin.username()!="" || origin.password().is_some() ||
+       origin.query().is_some() || origin.fragment().is_some() || origin.host_str().is_none() {
+        return Err("component entitlement requires an HTTPS backend origin".into());
+    }
+    let session=load_auth_session(cfg.backend_url.clone()).await?.ok_or("component entitlement requires Never login")?;
+    if session.access_token.is_empty() || session.session_id.is_empty() || session.user_id.is_empty(){return Err("incomplete authenticated Never session".into())}
+    let mut url=origin.clone();
+    {let mut segments=url.path_segments_mut().map_err(|_|"invalid backend URL segments")?;
+      segments.pop_if_empty(); segments.extend(&["api","v1","projects",&manifest.project_id,"profiles",&manifest.profile_id,"component-permissions"]);}
+    url.query_pairs_mut().append_pair("channel",&manifest.channel).append_pair("catalogDigest",&cat.digest);
+    let client=reqwest::Client::builder().timeout(Duration::from_secs(10)).redirect(reqwest::redirect::Policy::none())
+         .build().map_err(|_|"component permission HTTP client unavailable")?;
+    let response=client.get(url).bearer_auth(&session.access_token).header(reqwest::header::CACHE_CONTROL,"no-store")
+          .send().await.map_err(|_|"component permission backend unavailable")?;
+    if !response.status().is_success(){return Err(format!("component authorization denied by server: {}",response.status()));}
+    if response.content_length().is_some_and(|v|v>64*1024){return Err("oversized component authorization response".into());}
+    let bytes=response.bytes().await.map_err(|_|"invalid component authorization response")?;
+    if bytes.len()>64*1024{return Err("oversized component authorization response".into())}
+    #[derive(Deserialize)]#[serde(rename_all="camelCase",deny_unknown_fields)]
+    struct Reply { project_id:String,profile_id:String,channel:String,catalog_digest:String,
+        subject:String,session_id:String,valid_until:i64,permissions:Vec<String> }
+    let granted:Reply=serde_json::from_slice(&bytes).map_err(|_|"malformed component authorization response")?;
+    let now=SystemTime::now().duration_since(UNIX_EPOCH).map_err(|_|"invalid system clock")?.as_secs() as i64;
+    if granted.project_id!=manifest.project_id || granted.profile_id!=manifest.profile_id || granted.channel!=manifest.channel ||
+       granted.catalog_digest!=cat.digest || granted.subject!=session.user_id || granted.session_id!=session.session_id ||
+       granted.valid_until<=now || granted.valid_until>now+1800 {
+        return Err("component permission response scope, session or lifetime mismatch".into());
+    }
+    let allowed_names:std::collections::HashSet<&str>=cat.components.iter().filter_map(|c|c.conditions.as_ref())
+         .flat_map(|c|c.permissions.iter().map(String::as_str)).collect();
+    let mut rights=std::collections::HashSet::new();
+    for permission in granted.permissions {
+        if !allowed_names.contains(permission.as_str())||!rights.insert(permission){
+            return Err("unexpected/duplicate component permission in response".into());
+        }
+    }
+    Ok(VerifiedComponentScope0392{project_id:manifest.project_id.clone(),profile_id:manifest.profile_id.clone(),
+         channel:manifest.channel.clone(),catalog_digest:cat.digest.clone(),valid_until:granted.valid_until,permissions:rights})
+}
+
+// Do not resolve installed gated components before requesting their rights.
+// The initial disk read verifies only the signed manifest; full installed
+// ownership, hashes and plan are verified again inside the permission scope.
+async fn installed_component_scope_0392(root:&str,pinned:&str)
+    ->Result<Option<neverruntime::component_catalog_0241::VerifiedComponentScope0392>,String>{
+    let root=PathBuf::from(root);let key=pinned.to_owned();
+    let manifest=tokio::task::spawn_blocking(move ||
+        neverruntime::transactional_release::active_manifest_for_permissions_0392(&root,&key))
+        .await.map_err(|_|"component installed scope task failed")??;
+    match manifest {Some(m)=>Ok(Some(component_permissions_for_manifest_0392(&m,pinned).await?)),None=>Ok(None)}
+}
 #[tauri::command]
-async fn preview_components_0244(
+async fn preview_components_0244(manifest: neverruntime::Manifest,
+    pinned_public_key: String,
+    component_preset: Option<String>,) -> Result<neverruntime::component_catalog_0241::ComponentSelectionPreview0244,String> {
+    let auth=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,
+        preview_components_0244_inner_0392(manifest,pinned_public_key,component_preset)).await
+}
+async fn preview_components_0244_inner_0392(
     manifest: neverruntime::Manifest,
     pinned_public_key: String,
     component_preset: Option<String>,
@@ -896,7 +1010,13 @@ async fn preview_components_0244(
 }
 
 #[tauri::command]
-async fn save_installed_component_choice_0247(
+async fn save_installed_component_choice_0247(manifest:neverruntime::Manifest,pinned_public_key:String,root:String,
+    component_preset:String,config:DesktopConfig)->Result<(),String>{
+    let auth=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,
+        save_installed_component_choice_0247_inner_0392(manifest,pinned_public_key,root,component_preset,config)).await
+}
+async fn save_installed_component_choice_0247_inner_0392(
     manifest:neverruntime::Manifest,pinned_public_key:String,root:String,
     component_preset:String,mut config:DesktopConfig,
 )->Result<(),String>{
@@ -936,7 +1056,10 @@ struct NativePlanEvidence02412 {
 }
 #[tauri::command]
 async fn attest_verified_component_plan_02412(request:NativePlanChallenge02412)->Result<NativePlanEvidence02412,String>{
-    tokio::task::spawn_blocking(move || {
+    let scope=installed_component_scope_0392(&request.root,&request.pinned_public_key).await?
+        .ok_or("no installed signed release")?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(scope, async {
+    neverruntime::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
         let NativePlanChallenge02412 {backend_url,user_id,device_id,session_id,binding_epoch,
             server_id,project_id,profile_id,channel,root,pinned_public_key,challenge_id,challenge,guard_attestation_sha256}=request;
         if [ &user_id,&device_id,&session_id,&server_id,&project_id,&profile_id,&channel,&challenge_id,&challenge ].iter()
@@ -965,6 +1088,7 @@ async fn attest_verified_component_plan_02412(request:NativePlanChallenge02412)-
             server_id,project_id,profile_id,channel,release_signature,catalog_digest,
             plan_sha256:plan.sha256,guard_attestation_sha256,signature:signer.signature})
     }).await.map_err(|e|format!("native verified plan task failed: {e}"))?
+    }).await
 }
 
 #[derive(serde::Serialize)]
@@ -973,49 +1097,64 @@ struct ActiveSelection02410 { manifest:neverruntime::Manifest, component_preset:
 
 #[tauri::command]
 async fn active_selection_02410(root:String,pinned_public_key:String)->Result<Option<ActiveSelection02410>,String>{
-    tokio::task::spawn_blocking(move || {
+    let scope=installed_component_scope_0392(&root,&pinned_public_key).await?;
+    if scope.is_none(){return Ok(None)}
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(scope.unwrap(),async {
+    neverruntime::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
         let state=neverruntime::transactional_release::verified_active_selection_02410(
             &PathBuf::from(root),&pinned_public_key)?;
         Ok(state.map(|(manifest,preset)|ActiveSelection02410{manifest,component_preset:preset.unwrap_or_default()}))
     }).await.map_err(|e|format!("read active selection task failed: {e}"))?
+    }).await
 }
 
 #[tauri::command]
 async fn export_component_selection_02410(root:String,pinned_public_key:String)->Result<String,String>{
-    tokio::task::spawn_blocking(move || {
+    let scope=installed_component_scope_0392(&root,&pinned_public_key).await?
+        .ok_or("no installed signed release to export")?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(scope,async {
+    neverruntime::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
         let (manifest,preset)=neverruntime::transactional_release::verified_active_selection_02410(
             &PathBuf::from(root),&pinned_public_key)?.ok_or("no installed signed release to export")?;
         neverruntime::component_selection_02410::export_from_installed_02410(&manifest,preset.as_deref())
     }).await.map_err(|e|format!("export selection task failed: {e}"))?
+    }).await
 }
 
 #[tauri::command]
 async fn preview_component_migration_02410(
     manifest:neverruntime::Manifest,root:String,pinned_public_key:String,
 )->Result<Option<neverruntime::component_selection_02410::SelectionMigration02410>,String>{
-    tokio::task::spawn_blocking(move || {
-        neverruntime::verify_manifest_signature(&manifest,&pinned_public_key)?;
-        let Some((source,preset))=neverruntime::transactional_release::verified_active_selection_02410(
-            &PathBuf::from(root),&pinned_public_key)? else{return Ok(None)};
-        // No migration is required when the exact signed release is active.
-        if source.signature.as_ref().map(|s|(&s.signature,&s.public_key))==
-            manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key)) {return Ok(None)}
-        if source.schema_version!="3.0" {return Ok(None)}
+    neverruntime::verify_manifest_signature(&manifest,&pinned_public_key)?;
+    let Some(previous_grant)=installed_component_scope_0392(&root,&pinned_public_key).await? else {return Ok(None)};
+    let target_pinned=pinned_public_key.clone();
+    let installed=neverruntime::component_catalog_0241::with_verified_component_scope_0392(previous_grant,async {
+        neverruntime::component_catalog_0241::spawn_blocking_with_permissions_0392(move ||
+            neverruntime::transactional_release::verified_active_selection_02410(
+                &PathBuf::from(root),&pinned_public_key))
+            .await.map_err(|e|format!("component migration read failed: {e}"))?
+    }).await?;
+    let Some((source,preset))=installed else{return Ok(None)};
+    if source.signature.as_ref().map(|s|(&s.signature,&s.public_key))==
+        manifest.signature.as_ref().map(|s|(&s.signature,&s.public_key)) {return Ok(None)}
+    if source.schema_version!="3.0" {return Ok(None)}
+    let target_grant=component_permissions_for_manifest_0392(&manifest,&target_pinned).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(target_grant,async {
         let text=neverruntime::component_selection_02410::export_from_installed_02410(&source,preset.as_deref())?;
         let selection=neverruntime::component_selection_02410::parse_import_02410(&text)?;
-        Ok(Some(neverruntime::component_selection_02410::migrate_02410(&selection,&manifest)?))
-    }).await.map_err(|e|format!("component migration task failed: {e}"))?
+        neverruntime::component_selection_02410::migrate_02410(&selection,&manifest).map(Some)
+    }).await
 }
 
 #[tauri::command]
 async fn preview_import_component_selection_02410(
     manifest:neverruntime::Manifest,pinned_public_key:String,selection_json:String,
 )->Result<neverruntime::component_selection_02410::SelectionMigration02410,String>{
-    tokio::task::spawn_blocking(move || {
-        neverruntime::verify_manifest_signature(&manifest,&pinned_public_key)?;
+    let grant=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(grant,async {
         let selection=neverruntime::component_selection_02410::parse_import_02410(&selection_json)?;
         neverruntime::component_selection_02410::migrate_02410(&selection,&manifest)
-    }).await.map_err(|e|format!("import selection task failed: {e}"))?
+    }).await
 }
 
 #[derive(serde::Serialize)]
@@ -1152,9 +1291,11 @@ async fn validate_native_conflict_scope_0359(manifest:&Manifest,root:&str,key:&s
 async fn preview_player_conflicts_0359(manifest:Manifest,root:String,pinned_public_key:String,preset:Option<String>)
     -> Result<neverruntime::transactional_release::PlayerConflictResult0359,String> {
     validate_native_conflict_scope_0359(&manifest,&root,&pinned_public_key).await?;
-    tokio::task::spawn_blocking(move || neverruntime::transactional_release::preview_player_conflicts_0359(
-        &manifest,&PathBuf::from(root),&pinned_public_key,preset.as_deref()))
-        .await.map_err(|e|format!("conflicts preview task failed: {e}"))?
+    let auth=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,async {
+        neverruntime::transactional_release::preview_player_conflicts_0359(
+        &manifest,&PathBuf::from(root),&pinned_public_key,preset.as_deref())
+    }).await
 }
 
 #[tauri::command]
@@ -1162,13 +1303,23 @@ async fn preserve_player_conflicts_0359(manifest:Manifest,root:String,pinned_pub
     expected:Vec<neverruntime::transactional_release::PlayerConflict0359>)
     -> Result<neverruntime::transactional_release::PlayerConflictResult0359,String> {
     validate_native_conflict_scope_0359(&manifest,&root,&pinned_public_key).await?;
-    tokio::task::spawn_blocking(move || neverruntime::transactional_release::preserve_player_conflicts_0359(
-        &manifest,&PathBuf::from(root),&pinned_public_key,preset.as_deref(),&expected))
-        .await.map_err(|e|format!("preserving conflicts task failed: {e}"))?
+    let auth=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,async {
+        neverruntime::transactional_release::preserve_player_conflicts_0359(
+        &manifest,&PathBuf::from(root),&pinned_public_key,preset.as_deref(),&expected)
+    }).await
 }
 
 #[tauri::command]
-async fn preview_component_changes_0247(
+async fn preview_component_changes_0247(manifest:neverruntime::Manifest,
+    pinned_public_key:String,
+    root:String,
+    component_preset:Option<String>,) -> Result<ComponentDiff0247,String> {
+    let auth=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,
+        preview_component_changes_0247_inner_0392(manifest,pinned_public_key,root,component_preset)).await
+}
+async fn preview_component_changes_0247_inner_0392(
     manifest:neverruntime::Manifest,
     pinned_public_key:String,
     root:String,
@@ -1199,6 +1350,16 @@ async fn preview_component_changes_0247(
 
 #[tauri::command]
 async fn launch_minecraft(
+    request: LaunchMinecraftRequest,
+    supervisor: tauri::State<'_, ProcessSupervisor>,
+    neverguard: tauri::State<'_, NeverGuardSupervisor>,
+    official_manager: tauri::State<'_, official_identity_0262::IdentityManager>,
+) -> Result<ProcessStatus, String> {
+    let auth=component_permissions_for_manifest_0392(&request.manifest,&request.pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,
+        launch_minecraft_inner_0392(request,supervisor,neverguard,official_manager)).await
+}
+async fn launch_minecraft_inner_0392(
     request: LaunchMinecraftRequest,
     supervisor: tauri::State<'_, ProcessSupervisor>,
     neverguard: tauri::State<'_, NeverGuardSupervisor>,

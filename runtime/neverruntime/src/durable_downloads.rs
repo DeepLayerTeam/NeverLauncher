@@ -168,6 +168,22 @@ pub async fn start_with_preset(manifest: &Manifest, root: &Path, key: &str, mode
     perform(&root, job, sink, rx).await
 }
 
+/// Read only the signed, pinned manifest for requesting a new authorization.
+/// This entry point deliberately does not resolve components before a grant
+/// is available. The normal pending/resume path rechecks the entire plan.
+pub async fn pending_manifest_for_permissions_0392(root:&Path,expected_pinned_key:&str)
+    ->Result<Option<Manifest>,String>{
+    if !fs::try_exists(root).await.map_err(|e|e.to_string())?{return Ok(None)}
+    let resolved=normalized(root).await?;
+    let Some(job)=read(&resolved).await else{return Ok(None)};
+    if expected_pinned_key.trim().is_empty()||
+       !job.pinned_public_key.eq_ignore_ascii_case(expected_pinned_key.trim()) {
+        return Err("saved download public key differs from Desktop pinned trust key".into());
+    }
+    verify_manifest_signature(&job.manifest,expected_pinned_key)?;
+    Ok(Some(job.manifest))
+}
+
 pub async fn pending(root: &Path, expected_pinned_key: &str) -> Result<Option<PendingDownload>, String> {
     if !fs::try_exists(root).await.map_err(|e| e.to_string())? { return Ok(None); }
     let root = normalized(root).await?;

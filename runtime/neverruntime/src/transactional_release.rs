@@ -302,11 +302,26 @@ fn recover_locked(root: &Path, key: &str) -> Result<(), String> {
     }
     Ok(())
 }
+/// Reads only the signed identity needed to request fresh server rights.
+/// This is NOT installed-file verification. Callers MUST subsequently run
+/// verified_active_selection under the authenticated runtime permission scope.
+pub fn active_manifest_for_permissions_0392(root:&Path,key:&str)->Result<Option<Manifest>,String>{
+    let _guard=lock(root)?;
+    let canonical=root.canonicalize().map_err(|e|e.to_string())?;
+    let stored=pointer(&canonical)?.active;
+    match stored {
+        Some(release)=>{
+            verify_manifest_signature(&release.manifest,key)?;
+            Ok(Some(release.manifest))
+        },
+        None=>Ok(None),
+    }
+}
 /// Called before ANY launch/plan and before staging another release. If a switch
 /// was interrupted, restore the complete old set before permitting game launch.
 pub async fn recover(root: &Path, key: &str) -> Result<(), String> {
     let root = root.to_path_buf(); let key = key.to_owned();
-    tokio::task::spawn_blocking(move || {
+    crate::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
         let _guard = lock(&root)?;
         let root = root.canonicalize().map_err(|e| e.to_string())?;
         recover_locked(&root, &key)
@@ -317,7 +332,7 @@ pub async fn recover(root: &Path, key: &str) -> Result<(), String> {
 pub async fn acquire_launch_lease(manifest: &Manifest, root: &Path, key: &str) -> Result<std::sync::Arc<fs::File>, String> {
     verify_manifest_signature(manifest, key)?;
     let root = root.to_path_buf(); let key = key.to_owned(); let signed = manifest.clone();
-    tokio::task::spawn_blocking(move || {
+    crate::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
         fs::create_dir_all(&root).map_err(|e| e.to_string())?;
         let root = root.canonicalize().map_err(|e| e.to_string())?;
         safe_dir(&root, &base(&root))?;
@@ -697,7 +712,7 @@ pub async fn install(manifest: &Manifest, root: &Path, key: &str,
     let next = Release {installed, ..desired};
     let key = key.to_owned();
     let restore_root = root.clone(); let restore_key = key.clone();
-    if let Err(error) = tokio::task::spawn_blocking(move || commit(&root, next, &key, &stage))
+    if let Err(error) = crate::component_catalog_0241::spawn_blocking_with_permissions_0392(move || commit(&root, next, &key, &stage))
         .await.map_err(|e| e.to_string()).and_then(|r| r) {
         report_phase("failed");
         return Err(error);
@@ -767,7 +782,7 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
         installed:plan.files.iter().map(|f|f.path.clone()).collect(),
         id,preset,plan_sha256:Some(digest.clone())};
     let key=key.to_owned();
-    tokio::task::spawn_blocking(move ||commit(&root,desired,&key,&stage))
+    crate::component_catalog_0241::spawn_blocking_with_permissions_0392(move ||commit(&root,desired,&key,&stage))
         .await.map_err(|e|e.to_string())??;
     Ok((count,digest))
 }
@@ -776,7 +791,7 @@ pub async fn adopt_verified_staged(manifest:&Manifest, source:&Path, root:&Path,
 /// registered managed paths; non-managed player files are never enumerated.
 pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
     let root = root.to_path_buf(); let key = key.to_owned();
-    tokio::task::spawn_blocking(move || {
+    crate::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
         let _guard = lock(&root)?;
         let root = root.canonicalize().map_err(|e| e.to_string())?;
         recover_locked(&root, &key)?;

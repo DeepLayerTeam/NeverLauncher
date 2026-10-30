@@ -196,6 +196,43 @@ fn validate_conditions_0244(cat:&ComponentCatalog)->Result<(),String>{
     }
     Ok(())
 }
+// Only the native authenticated backend transport may establish this per-task
+// authorization context. Never read grants from a renderer/manifest/ENV field.
+#[derive(Clone,Debug)]
+pub struct VerifiedComponentScope0392 {
+    pub project_id:String,pub profile_id:String,pub channel:String,
+    pub catalog_digest:String,pub valid_until:i64,
+    pub permissions:HashSet<String>,
+}
+tokio::task_local! {static VERIFIED_COMPONENT_SCOPE_0392: VerifiedComponentScope0392;}
+pub async fn with_verified_component_scope_0392<F:std::future::Future>(scope:VerifiedComponentScope0392, future:F)->F::Output {
+    VERIFIED_COMPONENT_SCOPE_0392.scope(scope,future).await
+}
+/// Preserve the authenticated task-local permission scope when a runtime
+/// operation moves synchronous release validation to the blocking pool.
+/// A bare spawned task cannot inherit a grant, and therefore fails closed.
+pub async fn spawn_blocking_with_permissions_0392<F,R>(job:F)->Result<R,tokio::task::JoinError>
+where F:FnOnce()->R+Send+'static,R:Send+'static {
+    let scope=VERIFIED_COMPONENT_SCOPE_0392.try_with(Clone::clone).ok();
+    let handle=tokio::runtime::Handle::current();
+    tokio::task::spawn_blocking(move || match scope {
+        Some(grant)=>handle.block_on(with_verified_component_scope_0392(grant,async move {job()})),
+        None=>job(),
+    }).await
+}
+fn verified_environment_0392(manifest:&Manifest)->ComponentEnvironment0244 {
+    let mut env=ComponentEnvironment0244::for_manifest(manifest);
+    let _=VERIFIED_COMPONENT_SCOPE_0392.try_with(|scope| {
+        if scope.project_id==manifest.project_id && scope.profile_id==manifest.profile_id &&
+           scope.channel==manifest.channel &&
+           manifest.component_catalog.as_ref().is_some_and(|c|c.digest==scope.catalog_digest) &&
+           std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok()
+              .is_some_and(|now| i64::try_from(now.as_secs()).ok().is_some_and(|now|now<scope.valid_until)) {
+            env.verified_permissions=scope.permissions.clone();
+        }
+    });
+    env
+}
 #[derive(Default)]
 pub struct ComponentEnvironment0244 {
     pub os:String,pub arch:String,pub java_major:u32,
@@ -488,7 +525,7 @@ pub struct UnavailableComponent0244 { pub id:String,pub reason:String }
 pub fn preview_components_0244(m:&Manifest,preset:Option<&str>)->Result<ComponentSelectionPreview0244,String>{
     validate(m)?;
     let cat=m.component_catalog.as_ref().ok_or("catalog is missing")?;
-    let env=ComponentEnvironment0244::for_manifest(m);
+    let env=verified_environment_0392(m);
     let wanted=preset.unwrap_or_default();
     let selected=match cat.schema_version.as_str(){
         "4.0"|"5.0"=>resolve_conditional_0244(cat,wanted,&env)?,
@@ -548,7 +585,7 @@ pub fn active_files(m:&Manifest,preset:Option<&str>)->Result<HashSet<String>,Str
     let mut selected=HashSet::new();
     if matches!(cat.schema_version.as_str(),"3.0"|"4.0"|"5.0") {
         let resolved=if cat.schema_version=="4.0"||cat.schema_version=="5.0"{
-            resolve_conditional_0244(cat,preset.unwrap_or_default(),&ComponentEnvironment0244::for_manifest(m))?
+            resolve_conditional_0244(cat,preset.unwrap_or_default(),&verified_environment_0392(m))?
         }else{resolve_graph_v3(cat,preset.unwrap_or_default())?};
         for c in &cat.components {if resolved.contains(c.id.as_str()) {active.extend(crate::component_actions_0245::effective_files(c).into_iter());}}
         return Ok(active)
@@ -622,4 +659,35 @@ mod tests{
   assert_ne!(digest_v4(cat),digest_v4(changed.component_catalog.as_ref().unwrap()));
  }
 
+}
+
+#[cfg(test)]
+mod verified_server_permissions_0392_tests {
+    use super::*;
+    #[tokio::test]
+    async fn scope_is_exact_non_leaking_and_expires() {
+        let mut m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_0244_go_signed.json")).unwrap();
+        let cat=m.component_catalog.as_mut().unwrap();
+        cat.components[1].conditions.as_mut().unwrap().permissions=vec!["component.perf".into()];
+        cat.digest=digest_v4(cat);
+        let grant=VerifiedComponentScope0392{project_id:m.project_id.clone(),profile_id:m.profile_id.clone(),
+            channel:m.channel.clone(),catalog_digest:cat.digest.clone(),valid_until:i64::MAX,
+            permissions:HashSet::from(["component.perf".into()])};
+        // A context is task-local and cannot be reused by another task.
+        assert!(verified_environment_0392(&m).verified_permissions.is_empty());
+        with_verified_component_scope_0392(grant.clone(),async {
+            assert!(verified_environment_0392(&m).verified_permissions.contains("component.perf"));
+            let another=m.clone();
+            let other_task=tokio::spawn(async move {verified_environment_0392(&another).verified_permissions.is_empty()});
+            assert!(other_task.await.unwrap());
+            let mut altered=m.clone();altered.project_id="different-project".into();
+            assert!(verified_environment_0392(&altered).verified_permissions.is_empty());
+            let mut altered=m.clone();altered.component_catalog.as_mut().unwrap().digest="b".repeat(64);
+            assert!(verified_environment_0392(&altered).verified_permissions.is_empty());
+        }).await;
+        let expired=VerifiedComponentScope0392{valid_until:1,..grant};
+        with_verified_component_scope_0392(expired,async {
+            assert!(verified_environment_0392(&m).verified_permissions.is_empty());
+        }).await;
+    }
 }

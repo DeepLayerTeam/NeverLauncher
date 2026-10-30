@@ -70,3 +70,28 @@ func TestProjectRoleCannotGrantInstanceWideAction(t *testing.T) {
 		t.Fatalf("project role granted an instance-wide action: %+v", got)
 	}
 }
+
+func TestProjectComponentRightsNeverEscapeScope0392(t *testing.T) {
+	svc := New(fakeRepo{user: model.User{ID: "u1", RoleID: "player", Status: "active", ProjectRoles: map[string]string{"p1": "mods"}},
+		roles: []model.Role{{ID: "player", Permissions: []string{"profile:download"}},
+			{ID: "mods", Permissions: []string{"component.perf", "component.highres"}}}})
+	actor := Actor{Kind: ActorUser, ID: "u1"}
+	check := func(action, project string, want bool) {
+		t.Helper()
+		result := svc.Authorize(context.Background(), actor, action,
+			Scope{Kind: ScopeProject, ProjectID: project}, Resource{Kind: "profile", ID: "profile-1", ProjectID: project})
+		if result.Allowed != want {
+			t.Errorf("action=%q scope=%q granted=%v want=%v (%s)", action, project, result.Allowed, want, result.ReasonCode)
+		}
+	}
+	check("component.perf", "p1", true)
+	check("component.highres", "p1", true)
+	check("component.notgranted", "p1", false)
+	check("component.perf", "p2", false)
+	for _, invalid := range []string{"component.", "component...x", "component.A", "component.perf::admin", "users:manage"} {
+		if invalid != "users:manage" && IsProjectAction(invalid) {
+			t.Errorf("invalid component role action accepted: %q", invalid)
+		}
+		check(invalid, "p1", false)
+	}
+}
