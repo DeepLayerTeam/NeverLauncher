@@ -21,7 +21,14 @@ class GAReleasePreflightTests(unittest.TestCase):
             result=subprocess.run(['bash',str(ROOT/'scripts/release/build-release.sh'),
                                    '0.25.0',str(output)],env=env,capture_output=True,text=True,timeout=30)
             self.assertNotEqual(result.returncode,0)
-            self.assertIn('signed evidence',result.stderr)
+            current=(ROOT/'VERSION').read_text().strip()
+            if current=='0.25.0':
+                self.assertIn('signed evidence',result.stderr)
+            else:
+                # Modern signers reject the historical version *earlier*;
+                # this is stricter than the missing-evidence check and must
+                # likewise preserve existing output without deleting it.
+                self.assertIn('VERSION='+current,result.stderr)
             self.assertEqual(sentinel.read_text(),'must not be deleted by failed verification')
 
 if __name__=='__main__':unittest.main()

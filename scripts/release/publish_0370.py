@@ -22,7 +22,7 @@ import tempfile
 from release_policy import policy, parsed
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'ga'))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'ci'))
-from verified_targets import TARGETS, CHECKS, approval_data, paths, Blocked
+from verified_targets import TARGETS, checks_for, approval_data, paths, Blocked
 from required_jobs_0363 import declared_jobs
 
 PRODUCTION_WORKFLOW = Path(__file__).resolve().parents[2]/'.github/workflows/production-release-candidate.yml'
@@ -154,8 +154,8 @@ def verify_ga(bundle: Path, public_key: Path, version: str, commit: str,
         binary, package = paths(version,target)
         require(signed_row.get('status') == 'certified' and
                 isinstance(signed_row.get('checks'), dict) and
-                set(signed_row['checks']) == set(CHECKS) and
-                certified_row.get('checksPassed') == len(CHECKS) and
+                set(signed_row['checks']) == set(checks_for(version)) and
+                certified_row.get('checksPassed') == len(checks_for(version)) and
                 rehearsed_row.get('binary') == binary and rehearsed_row.get('package') == package,
                 target+': incomplete independent GA checks')
         for field, file in [('binarySha256',binary),('packageSha256',package)]:

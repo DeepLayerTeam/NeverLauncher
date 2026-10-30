@@ -809,8 +809,9 @@ jobs:
           else
             echo 'missing mandatory signed GA policy' >&2; exit 2
           fi
-          jq -e --arg sha "$GITHUB_SHA" --arg version "$VERSION" --arg schema "$SCHEMA" \
-            '.schemaVersion == $schema and .status == "approved-for-release-signing" and .commit == $sha and .version == $version and (.targets | length) == 6 and all(.targets[]; .checksPassed == 9)' "$DIR/$RECEIPT"
+          REQUIRED_CHECKS="$(python3 -c 'import sys;sys.path.insert(0,"scripts/ga");from verified_targets import checks_for;print(len(checks_for(sys.argv[1])))' "$VERSION")"
+          jq -e --arg sha "$GITHUB_SHA" --arg version "$VERSION" --arg schema "$SCHEMA" --argjson requiredChecks "$REQUIRED_CHECKS" \
+            '.schemaVersion == $schema and .status == "approved-for-release-signing" and .commit == $sha and .version == $version and (.targets | length) == 6 and all(.targets[]; .checksPassed == $requiredChecks)' "$DIR/$RECEIPT"
           test -s "$DIR/$APPROVAL"
           test -s "$DIR/$SIG"
       - name: Assert required production artifacts

@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from verify_java_ga_0310 import verify
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'certification'))
@@ -37,17 +38,23 @@ class ReleaseApprovalTests(unittest.TestCase):
             summary=review(sorted(evidence.rglob('integration-0310.json')),SHA)
             receipt.write_text(json.dumps(summary,indent=2)+'\n')
             run('openssl','pkeyutl','-sign','-rawin','-inkey',str(priv),'-in',str(receipt),'-out',str(sig))
-            self.assertTrue(verify(evidence,SHA,pub,sig)['crossPlatformIntegrationGatesPassed'])
-            # A different commit, changed case result or signature cannot authorize GA.
-            with self.assertRaises(ValueError):verify(evidence,'e'*40,pub,sig)
-            p=evidence/'linux'/'integration-0310.json';original=p.read_text()
-            parsed=json.loads(original);parsed['results'][0]['steps'][0]['outputSha256']='0'*64
-            p.write_text(json.dumps(parsed))
-            with self.assertRaises(ValueError):verify(evidence,SHA,pub,sig)
-            p.write_text(original)
-            sig.write_bytes(b'\x00'*64)
-            with self.assertRaises(ValueError):verify(evidence,SHA,pub,sig)
-            (evidence/'windows'/'integration-0310.json').unlink()
-            with self.assertRaises(ValueError):verify(evidence,SHA,pub,sig)
+            # Historical 0.31.0 operator approval must be verified against an
+            # isolated 0.31.0 VERSION, not against the current product checkout.
+            # Never modify the real VERSION or relax production verify().
+            historical=base/'historical-root';historical.mkdir()
+            (historical/'VERSION').write_text('0.31.0\n')
+            with patch('verify_java_ga_0310.ROOT',historical):
+                self.assertTrue(verify(evidence,SHA,pub,sig)['crossPlatformIntegrationGatesPassed'])
+                # A different commit, changed case result or signature cannot authorize GA.
+                with self.assertRaises(ValueError):verify(evidence,'e'*40,pub,sig)
+                p=evidence/'linux'/'integration-0310.json';original=p.read_text()
+                parsed=json.loads(original);parsed['results'][0]['steps'][0]['outputSha256']='0'*64
+                p.write_text(json.dumps(parsed))
+                with self.assertRaises(ValueError):verify(evidence,SHA,pub,sig)
+                p.write_text(original)
+                sig.write_bytes(b'\x00'*64)
+                with self.assertRaises(ValueError):verify(evidence,SHA,pub,sig)
+                (evidence/'windows'/'integration-0310.json').unlink()
+                with self.assertRaises(ValueError):verify(evidence,SHA,pub,sig)
 
 if __name__=='__main__':unittest.main()

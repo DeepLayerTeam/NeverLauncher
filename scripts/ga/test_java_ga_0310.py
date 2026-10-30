@@ -20,11 +20,14 @@ class JavaGATests(unittest.TestCase):
                  for x in b.rglob('*') if x.is_file()}
             self.assertEqual(one,two)
             self.assertEqual(len([p for p in one if p.endswith('.jar')]),6)
+            # The public API compatibility test is historical; publication of
+            # current artifacts uses the version actually under test.
+            version=(ROOT/'VERSION').read_text().strip()
             for name in MODULES:
-                path=a/'maven'/'ru'/'neverlauncher'/name/'0.31.0'
-                self.assertTrue((path/f'{name}-0.31.0.pom').exists())
-                self.assertTrue((path/f'{name}-0.31.0-sources.jar').exists())
-                self.assertTrue((path/f'{name}-0.31.0-javadoc.jar').exists())
+                path=a/'maven'/'ru'/'neverlauncher'/name/version
+                self.assertTrue((path/f'{name}-{version}.pom').exists())
+                self.assertTrue((path/f'{name}-{version}-sources.jar').exists())
+                self.assertTrue((path/f'{name}-{version}-javadoc.jar').exists())
             with self.assertRaises(RuntimeError):
                 publish(a,build=False)
             jar=next((a/'maven').rglob('*-sources.jar'))

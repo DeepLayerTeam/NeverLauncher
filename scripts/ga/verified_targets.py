@@ -5,6 +5,9 @@ Invoked after staging REAL installers and BEFORE the existing release signer.
 An RC test receipt, unsigned CI artifact, or asserted status alone cannot authorize
 GA. Operator signature must bind actual package and executable hashes and nine
 independent live acceptance records per shipped platform/architecture.
+For 0.40.0+ the signed approval additionally binds six complete player-journey
+checks (both identity modes, component graph, textures and recovery) to the
+exact packaged client, not just the source-compiled desktop executable.
 """
 from __future__ import annotations
 
@@ -26,6 +29,76 @@ DOMAIN = policy('0.36.0').signing_domain  # exported for historical 0.36.0 reade
 TARGETS = ('windows-x64','windows-arm64','linux-x64','linux-arm64','darwin-x64','darwin-arm64')
 CHECKS = ('nativeInstall','desktopLaunch','minecraftLaunch','serverJoin',
           'releaseRollback','security','performance','operations','osSignature')
+PLAYER_CHECKS_0400 = ('componentPresetInstall', 'skinCapeGameRender',
+    'localYggdrasilJoin', 'officialOnlineModeJoin',
+    'identityNegativeAndReplay', 'playerUpdateRollback')
+PLAYER_OBSERVATIONS_0400 = {
+    'componentPresetInstall': ('dependenciesResolved', 'conflictsDenied', 'presetInstalled'),
+    'skinCapeGameRender': ('skinRendered', 'capeRendered', 'modelVerified'),
+    'localYggdrasilJoin': ('sessionJoinVerified', 'serverUUIDMatches', 'serverAccepted'),
+    'officialOnlineModeJoin': ('microsoftIdentityVerified', 'onlineModeVerified', 'serverUUIDMatches', 'serverAccepted'),
+    'identityNegativeAndReplay': ('wrongUUIDDenied', 'foreignProjectDenied', 'replayedTicketDenied', 'crossRealmDenied'),
+    'playerUpdateRollback': ('updateJVMJoin', 'rollbackJVMJoin', 'userFilesPreserved'),
+}
+
+
+def checks_for(version: str) -> tuple[str, ...]:
+    # Exact-byte, platform-specific player acceptance is a new stable-release
+    # requirement; historical signed formats remain verifiable unchanged.
+    from release_policy import parsed
+    number, _ = parsed(version)
+    return CHECKS + PLAYER_CHECKS_0400 if number >= (0, 40, 0) else CHECKS
+
+
+def verify_player_trace(trace: dict, check: str, item: dict, target: str,
+                        evidence: Path) -> None:
+    # An operator approval over a build executable alone cannot prove that
+    # the actual shipped installer completed the player cycle. Require the
+    # same real installed package and one correlated execution for every part.
+    require(set(trace) == {'schemaVersion','version','commit','target','kind',
+            'status','actualExecution','simulated','artifactSha256','executionId',
+            'packageSha256','playerCycleId','evidenceSha256'},
+            target+': incomplete final-package player trace '+check)
+    require(trace['packageSha256'] == item['packageSha256'] and
+            isinstance(trace['playerCycleId'],str) and
+            re.fullmatch(r'[a-zA-Z0-9._:-]{16,128}', trace['playerCycleId']) is not None and
+            isinstance(trace['evidenceSha256'],str) and
+            SHA.fullmatch(trace['evidenceSha256']) is not None,
+            target+': player test does not bind a real final-package run: '+check)
+    # The signed trace must reference independently stored live operator output,
+    # not merely assert success. Hash the raw evidence and process log bytes;
+    # no in-memory/generated release manifests are accepted as execution logs.
+    folder = evidence/'targets'/target/'player-0400'
+    require(folder.is_dir() and not folder.is_symlink(),
+            target+': actual player execution evidence directory missing')
+    report_path = folder/(check+'.json')
+    report = read_json(report_path)
+    require(sha(report_path) == trace['evidenceSha256'],
+            target+': signed player evidence digest mismatch: '+check)
+    require(set(report) == {'schemaVersion','version','commit','target','kind',
+                           'status','playerCycleId','binarySha256','packageSha256',
+                           'observed','runtimeLogSha256'},
+            target+': malformed actual player report: '+check)
+    for key, wanted in (('schemaVersion','neverlauncher.player.final.0400.v1'),
+                        ('version',trace['version']), ('commit',trace['commit']),
+                        ('target',target), ('kind',check), ('status','passed'),
+                        ('playerCycleId',trace['playerCycleId']),
+                        ('binarySha256',item['binarySha256']),
+                        ('packageSha256',item['packageSha256'])):
+        require(report.get(key) == wanted, target+': mismatched real execution field '+key+': '+check)
+    required = PLAYER_OBSERVATIONS_0400[check]
+    observed = report['observed']
+    require(type(observed) is dict and set(observed) == set(required) and
+            all(observed[name] is True for name in required),
+            target+': actual player result absent or negative: '+check)
+    log_path = folder/(check+'.log')
+    require(log_path.is_file() and not log_path.is_symlink() and
+            0 < log_path.stat().st_size <= 32*1024*1024 and
+            isinstance(report['runtimeLogSha256'],str) and
+            SHA.fullmatch(report['runtimeLogSha256']) is not None and
+            sha(log_path) == report['runtimeLogSha256'],
+            target+': missing, corrupted or unsigned actual runtime log: '+check)
+
 SHA = re.compile(r'[a-f0-9]{64}\Z')
 COMMIT = re.compile(r'[a-f0-9]{40}\Z')
 LIMIT = 1024 * 1024
@@ -150,7 +223,7 @@ def verify(bundle:Path, evidence:Path, public_key:Path, version:str, commit:str,
         item=next(row for row in targets if row['target']==target)
         require(set(item)=={'target','status','binarySha256','packageSha256','checks'} and
                 item['status']=='certified' and isinstance(item['checks'],dict) and
-                set(item['checks'])==set(CHECKS),target+': incomplete GA target')
+                set(item['checks'])==set(checks_for(version)),target+': incomplete GA target')
         binary_name, package_name=paths(version,target)
         binary=bundle/binary_name
         package=bundle/package_name
@@ -160,7 +233,8 @@ def verify(bundle:Path, evidence:Path, public_key:Path, version:str, commit:str,
         for field,path in (('binarySha256',binary),('packageSha256',package)):
             require(SHA.fullmatch(item[field]) is not None and sha(path)==item[field],
                     target+': signed approval does not match exact shipping bytes: '+field)
-        for check in CHECKS:
+        cycle_ids = set()
+        for check in checks_for(version):
             meta=item['checks'][check]
             require(isinstance(meta,dict) and set(meta)=={'sha256'} and
                     isinstance(meta['sha256'],str) and SHA.fullmatch(meta['sha256']) is not None,
@@ -170,9 +244,13 @@ def verify(bundle:Path, evidence:Path, public_key:Path, version:str, commit:str,
                     not trace_path.parent.is_symlink(),target+': unsafe trace directory')
             trace=read_json(trace_path)
             require(sha(trace_path)==meta['sha256'],target+': changed trace '+check)
-            require(set(trace)=={'schemaVersion','version','commit','target','kind','status',
-                                  'actualExecution','simulated','artifactSha256','executionId'},
-                    target+': invalid trace fields '+check)
+            if check in PLAYER_CHECKS_0400 and check in checks_for(version):
+                verify_player_trace(trace,check,item,target,evidence)
+                cycle_ids.add(trace['playerCycleId'])
+            else:
+                require(set(trace)=={'schemaVersion','version','commit','target','kind','status',
+                                     'actualExecution','simulated','artifactSha256','executionId'},
+                        target+': invalid trace fields '+check)
             require(trace['schemaVersion']==cfg.execution_schema and
                     trace['version']==version and trace['commit']==commit and
                     trace['target']==target and trace['kind']==check and
@@ -181,9 +259,11 @@ def verify(bundle:Path, evidence:Path, public_key:Path, version:str, commit:str,
                     isinstance(trace['executionId'],str) and
                     re.fullmatch(r'[a-zA-Z0-9._:-]{8,128}',trace['executionId']),
                     target+': test does not attest actual approved binary: '+check)
+        if PLAYER_CHECKS_0400[0] in checks_for(version):
+            require(len(cycle_ids)==1, target+': unrelated player runs cannot be combined into a pass')
         records.append({'target':target,'binary':binary_name,'binarySha256':item['binarySha256'],
                         'package':package_name,'packageSha256':item['packageSha256'],
-                        'checksPassed':len(CHECKS)})
+                        'checksPassed':len(checks_for(version))})
     return {'schemaVersion':cfg.receipt_schema,
             'version':version,'commit':commit,'status':'approved-for-release-signing',
             'approvalSha256':hashlib.sha256(raw).hexdigest(),
