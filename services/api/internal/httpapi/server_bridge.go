@@ -581,6 +581,8 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 			"POST /api/v1/server-bridge/servers/{serverId}/events",
 			"POST /api/v1/server-bridge/servers/{serverId}/control",
 			"GET /api/v1/server-bridge/servers/{serverId}/control/{commandId}",
+			"POST /api/v1/server-bridge/servers/{serverId}/host/operations",
+			"GET /api/v1/server-bridge/servers/{serverId}/host/operations/{operationId}",
 			"GET /api/v1/server-bridge/servers/{serverId}/control/poll",
 			"POST /api/v1/server-bridge/servers/{serverId}/control/ack",
 			"POST /api/v1/server-bridge/validate-join",

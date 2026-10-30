@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.41.3 — Backend ↔ RemoteControl ↔ Host Supervisor: durable real-host operations
+
+- Backend now executes real JVM lifecycle actions (`start`, `stop`, `restart`) against explicitly provisioned RemoteControl agents via pinned TLS 1.3, bearer capabilities and optional client certificates. Project-scoped game permissions cannot authorize host actions; a global `host:process` permission and fresh MFA are required.
+- Each action first commits an immutable PostgreSQL operation ID, original user/idempotency key, remote node identity, host pre-state and ServerBridge runtime baseline. A duplicate request returns the same operation without re-execution. An uncertain operation blocks new keys on that node until manual reconciliation; no backend crash or lost ACK causes automatic physical replay.
+- RemoteControl dispatches to the existing real Host Supervisor and now polls OS-verified process state before storing a `succeeded` receipt. Start requires a live JVM and supervisor, stop requires both to be gone, and restart requires a new supervisor session; timeout or unverified state remains `indeterminate`.
+- Backend correlates host receipts, observed JVM/Supervisor state, and a fresh ServerBridge heartbeat for the new runtime. If the process is running but the game agent has not reconnected, the operation stays `accepted`; GET with `refresh=1` performs read-only reconciliation. The Backend never converts an uncertain remote result to success based on PID alone.
+- Registry of operator-approved hosts in `NEVERLAUNCHER_SERVER_BRIDGE_HOST_TARGETS_FILE`. No user-supplied URL, shell commands, JVM arguments or filesystem paths are accepted by the operation API. Database migration 0111 provides durable idempotency, final receipt fencing and per-node uncertain-operation serialization (mirrored to CLI migrations).
+
+**Verification:** local stdlib-only TLS RemoteControl client tests pass. Full Go 1.27.3 Backend/CLI suite, live PostgreSQL migrations, Minecraft game-agent reconciliation and multi-host E2E have not been run in this environment. Do not claim external production certification until these pass.
+
 ## 0.41.2 — Durable ServerBridge command journal, ACK replay and no-redelivery after lease expiry
 
 - **Live agent execution:** ServerBridge now acquires an exclusive per-journal OS file lock before enabling control. Starting a second JVM/plugin instance against the same identity journal fails closed; a plugin reloaded while its former executor remains active retains the lock until process exit. An execution marker is atomically persisted and fsynced **before** invoking the platform. An interrupted `executing` record can be acknowledged as `indeterminate` and is never invoked a second time.

@@ -98,6 +98,7 @@ type Config struct {
 	BootstrapToken                               string
 	ManifestSigningPrivateKey                    string
 	RuntimeValidationKeysJSON                    string
+	ServerBridgeHostTargetsFile0413              string
 	ServerBridgeControlSigningPrivateKey         string
 	ServerBridgeControlPreviousSigningPrivateKey string
 	AuthRoutingJSON                              string
@@ -297,6 +298,7 @@ func Load() Config {
 		BootstrapToken:                               env("NEVERLAUNCHER_BOOTSTRAP_TOKEN", ""),
 		ManifestSigningPrivateKey:                    manifestSigningPrivateKey,
 		RuntimeValidationKeysJSON:                    env("NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON", ""),
+		ServerBridgeHostTargetsFile0413:              env("NEVERLAUNCHER_SERVER_BRIDGE_HOST_TARGETS_FILE", ""),
 		ServerBridgeControlSigningPrivateKey:         serverBridgeControlSigningPrivateKey,
 		ServerBridgeControlPreviousSigningPrivateKey: serverBridgeControlPreviousSigningPrivateKey,
 		AuthRoutingJSON:                              env("NEVERLAUNCHER_AUTH_ROUTING_JSON", ""),

@@ -478,7 +478,32 @@ func remoteHostStatus0284(root string) json.RawMessage {
 	b, _ := json.Marshal(result)
 	return b
 }
+func remoteObservedEffect0413(action string, before, after map[string]any) bool {
+	status, _ := after["observedStatus"].(string)
+	process, _ := after["processAlive"].(bool)
+	supervisor, _ := after["supervisorAlive"].(bool)
+	session, _ := after["sessionId"].(string)
+	oldSession, _ := before["sessionId"].(string)
+	switch action {
+	case "start":
+		return process && supervisor && status == "running"
+	case "stop":
+		return !process && !supervisor && (status == "stopped" || status == "not-started")
+	case "restart":
+		return process && supervisor && status == "running" && session != "" && session != oldSession
+	default:
+		return false
+	}
+}
+func remoteObservedState0413(root string) map[string]any {
+	var s map[string]any
+	if err := json.Unmarshal(remoteHostStatus0284(root), &s); err != nil {
+		return map[string]any{}
+	}
+	return s
+}
 func remoteHostExecute0284(root, dir, action string) (json.RawMessage, error) {
+	before := remoteObservedState0413(root)
 	output := filepath.Join(dir, ".result-"+action+"-"+fmt.Sprint(time.Now().UnixNano())+".json")
 	defer os.Remove(output)
 	args := []string{"--server-root", root, "--output", output}
@@ -496,9 +521,19 @@ func remoteHostExecute0284(root, dir, action string) (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	// The launcher provides output from the existing supervisor; only return the
-	// deliberately minimal, independently verified status to the network caller.
-	return remoteHostStatus0284(root), nil
+	// Do not confuse the CLI returning with actual JVM/process completion.
+	// The OS process identity is checked by remoteHostStatus0284 on each poll.
+	deadline := time.Now().Add(45 * time.Second)
+	for {
+		observed := remoteObservedState0413(root)
+		if remoteObservedEffect0413(action, before, observed) {
+			return remoteHostStatus0284(root), nil
+		}
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("host %s returned but OS process postcondition remains unverified", action)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 func remoteNewAgent0284(root string, identity remoteIdentity0284, sourceCIDRs []string) (*remoteAgent0284, error) {
 	sources, err := remoteParseSources0284(sourceCIDRs)

@@ -1694,7 +1694,7 @@ mod tests {
         }"#).unwrap();
         let ctx = CompatibilityContext {
             username: "Player".into(), uuid: "uuid".into(), access_token: "offline".into(), user_type: "legacy".into(),
-            launcher_name: "NeverLauncher".into(), launcher_version: "0.41.2".into(),
+            launcher_name: "NeverLauncher".into(), launcher_version: "0.41.3".into(),
             game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(),
             natives_directory: root.join("natives").to_string_lossy().to_string(), features: HashMap::new(),

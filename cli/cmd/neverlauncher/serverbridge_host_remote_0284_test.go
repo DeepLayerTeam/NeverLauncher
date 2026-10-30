@@ -338,3 +338,24 @@ func TestRemoteControlRealSupervisorStop0284(t *testing.T) {
 		t.Fatalf("unexpected runtime state: %+v", state)
 	}
 }
+
+func TestHostObservedPostconditions0413(t *testing.T) {
+	before := map[string]any{"sessionId": "session-previous", "processAlive": true, "supervisorAlive": true, "observedStatus": "running"}
+	stopped := map[string]any{"sessionId": "session-previous", "processAlive": false, "supervisorAlive": false, "observedStatus": "stopped"}
+	if !remoteObservedEffect0413("stop", before, stopped) {
+		t.Fatal("verified stop not recognized")
+	}
+	if remoteObservedEffect0413("restart", before, before) {
+		t.Fatal("unchanged session verified as restart")
+	}
+	if remoteObservedEffect0413("start", stopped, map[string]any{"processAlive": false, "supervisorAlive": true, "observedStatus": "starting"}) {
+		t.Fatal("planned JVM start verified without process")
+	}
+	running := map[string]any{"sessionId": "session-new", "processAlive": true, "supervisorAlive": true, "observedStatus": "running"}
+	if !remoteObservedEffect0413("restart", before, running) || !remoteObservedEffect0413("start", stopped, running) {
+		t.Fatal("verified JVM execution denied")
+	}
+	if remoteObservedEffect0413("stop", before, map[string]any{"sessionId": "session-previous", "processAlive": false, "supervisorAlive": true, "observedStatus": "stopped"}) {
+		t.Fatal("live supervisor ignored during shutdown")
+	}
+}
