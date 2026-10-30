@@ -28,6 +28,8 @@ import org.slf4j.Logger;
 import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
 import ru.neverlauncher.bridge.common.BridgeControlCommand;
 import ru.neverlauncher.bridge.common.BridgeControlResult;
+import ru.neverlauncher.bridge.common.KickConfirmations;
+import ru.neverlauncher.bridge.common.PlatformControlReadback;
 import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
 import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
 import ru.neverlauncher.bridge.common.BridgeTickSampler;
@@ -44,6 +46,7 @@ import java.util.function.Consumer;
 
 @Mod(NeverLauncherNeoForgeBridge.MOD_ID)
 public final class NeverLauncherNeoForgeBridge {
+    private final KickConfirmations kickConfirmations = new KickConfirmations();
     public static final String MOD_ID = "neverlauncher_serverbridge";
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final ConfigurationTask.Type JOIN_VALIDATION_TASK =
@@ -98,6 +101,7 @@ public final class NeverLauncherNeoForgeBridge {
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
+        kickConfirmations.close();
         runtime.close();
     }
 
@@ -115,6 +119,7 @@ public final class NeverLauncherNeoForgeBridge {
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() == null) return;
         var profile = event.getEntity().getGameProfile();
+        kickConfirmations.observedQuit(profile == null ? "" : profile.getName(), profile == null || profile.getId() == null ? "" : profile.getId().toString());
         runtime.publishEvent("player.quit", Map.of(
             "username", profile == null || profile.getName() == null ? "" : profile.getName(),
             "uuid", profile == null || profile.getId() == null ? "" : profile.getId().toString()
@@ -289,14 +294,20 @@ public final class NeverLauncherNeoForgeBridge {
             }, "neverlauncher-control-shutdown");
             thread.setDaemon(true);
             thread.start();
-            return BridgeControlResult.ok(Map.of("scheduled", "true", "graceMillis", "1500"));
+            return BridgeControlResult.accepted(Map.of("scheduled", "true", "graceMillis", "1500"));
         }
         CompletableFuture<BridgeControlResult> future = new CompletableFuture<>();
         server.execute(() -> {
             try { future.complete(executeControlOnServerThread(server, command)); }
             catch (Throwable t) { future.completeExceptionally(t); }
         });
-        try { return future.get(10, TimeUnit.SECONDS); }
+        try {
+            BridgeControlResult result = future.get(10, TimeUnit.SECONDS);
+            if ("player.kick".equals(command.type()) && "executed".equals(result.status()) && result.result().containsKey("uuid")) {
+                return kickConfirmations.await(result.result().get("username"), result.result().get("uuid"), 2500);
+            }
+            return result;
+        }
         catch (java.util.concurrent.TimeoutException e) { return BridgeControlResult.indeterminate("platform_control_timeout"); }
     }
 
@@ -307,8 +318,11 @@ public final class NeverLauncherNeoForgeBridge {
                 String username = safeUsername(payload.get("username"));
                 var player = server.getPlayerList().getPlayerByName(username);
                 if (player == null) return BridgeControlResult.failed("player_not_online");
-                player.connection.disconnect(Component.literal(safeLine(payload.getOrDefault("reason", "Disconnected by server operator"), 512)));
-                return BridgeControlResult.ok(Map.of("username", username));
+                String uuid = player.getGameProfile().getId().toString();
+                if (!kickConfirmations.begin(username, player.getGameProfile().getId())) return BridgeControlResult.indeterminate("player_kick_already_pending");
+                try { player.connection.disconnect(Component.literal(safeLine(payload.getOrDefault("reason", "Disconnected by server operator"), 512))); }
+                catch (RuntimeException e) { kickConfirmations.cancel(username); throw e; }
+                return BridgeControlResult.ok(Map.of("username", username, "uuid", uuid));
             }
             case "message.broadcast" -> {
                 String message = safeLine(payload.getOrDefault("message", ""), 1024);
@@ -320,19 +334,19 @@ public final class NeverLauncherNeoForgeBridge {
                 String username = safeUsername(payload.get("username"));
                 boolean add = command.type().endsWith(".add");
                 int code = executeMinecraftCommand(server, "whitelist " + (add ? "add " : "remove ") + username);
-                return code >= 0 ? BridgeControlResult.ok(Map.of("username", username, "whitelisted", Boolean.toString(add))) : BridgeControlResult.failed("platform_command_rejected");
+                return code >= 0 ? PlatformControlReadback.whitelistEntry(server, username, add) : BridgeControlResult.failed("platform_command_rejected");
             }
             case "whitelist.enable", "whitelist.disable" -> {
                 boolean enabled = command.type().endsWith(".enable");
                 int code = executeMinecraftCommand(server, "whitelist " + (enabled ? "on" : "off"));
-                return code >= 0 ? BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled))) : BridgeControlResult.failed("platform_command_rejected");
+                return code >= 0 ? PlatformControlReadback.whitelistMode(server, enabled) : BridgeControlResult.failed("platform_command_rejected");
             }
             case "ban.add", "ban.remove" -> {
                 String username = safeUsername(payload.get("username"));
                 boolean add = command.type().endsWith(".add");
                 String reason = add ? safeLine(payload.getOrDefault("reason", "Banned by server operator"), 256) : "";
                 int code = executeMinecraftCommand(server, (add ? "ban " : "pardon ") + username + (reason.isBlank() ? "" : " " + reason));
-                return code >= 0 ? BridgeControlResult.ok(Map.of("username", username, "banned", Boolean.toString(add))) : BridgeControlResult.failed("platform_command_rejected");
+                return code >= 0 ? PlatformControlReadback.banEntry(server, username, add) : BridgeControlResult.failed("platform_command_rejected");
             }
             case "server.save" -> {
                 int code = executeMinecraftCommand(server, "save-all flush");

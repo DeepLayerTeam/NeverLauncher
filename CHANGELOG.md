@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.41.6 — Verifiable Fabric/Quilt/Forge/NeoForge/Vanilla/Sponge control effects
+
+- **Four native modloader command paths:** existing real Minecraft command dispatchers now read back whitelist entries, whitelist enablement, and player ban state through supported platform methods when available. An unavailable API never fabricates `succeeded`; a mismatched postcondition fails. Native logout callbacks correlate requested kicks to the same player UUID before returning evidence to Backend.
+- **Vanilla RCON sidecar:** state-changing whitelist and ban commands issue a second read-only RCON list query and verify exact membership only with an unambiguous, complete response. Explicitly rejected RCON commands fail; queued shutdown remains `accepted`. Local TCP authentication/packet-fragmentation integration checked.
+- **Sponge:** tracked native quit confirmation, no blind `succeeded` after queued stop, partial-broadcast errors remain indeterminate, and whitelist mode is verified only after a readable state check; unsupported Sponge API operations continue to fail closed.
+- **Executable Java 21 verification:** compilation of bridge-common + Vanilla sidecar; 28 postcondition, kick and RCON parser assertions; actual localhost TCP RCON authentication/fragmentation exchange. The existing Bukkit-family 117-regression suite also passes.
+- **Verification boundary:** Gradle API artifacts and genuine modloader, Vanilla and Sponge Minecraft server JARs were not available in the isolated environment. Their live compatibility and full Backend/PostgreSQL E2E are not claimed as passed; see `docs/servers/serverbridge-modloaders-0416.md`.
+
 ## 0.41.5 — Executable Bukkit-family control and observed command outcomes
 
 - **Live platform handlers:** update the shared Bukkit-family production plugin used by Spigot, Paper, Purpur, and Folia. Whitelist enable/disable/add/remove and name bans/pardons now report `succeeded` only when actual platform readback matches the requested state. A command dispatcher returning `true` without changing the platform is `indeterminate`, not a verified success.

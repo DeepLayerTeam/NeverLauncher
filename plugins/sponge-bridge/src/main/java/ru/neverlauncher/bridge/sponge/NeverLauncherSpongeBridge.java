@@ -34,6 +34,7 @@ public final class NeverLauncherSpongeBridge {
     private final AtomicBoolean maintenance = new AtomicBoolean();
     private final AtomicBoolean draining = new AtomicBoolean();
     private final AtomicInteger online = new AtomicInteger();
+    private final KickConfirmations kickConfirmations = new KickConfirmations();
     private volatile Server server;
     private volatile BridgeConfig config;
     private volatile NeverLauncherApiClient api;
@@ -90,6 +91,7 @@ public final class NeverLauncherSpongeBridge {
     @Listener public void onDisconnect(Disconnect event) {
         online.updateAndGet(v->Math.max(0,v-1));
         Object profile = invokeNoArg(event,"profile"); if(profile instanceof Optional<?> opt) profile=opt.orElse(null);
+        kickConfirmations.observedQuit(profileString(profile,"name"), profileString(profile,"uniqueId"));
         if(api!=null) api.publishEvent("player.quit", Map.of("username", profileString(profile,"name"), "uuid", profileString(profile,"uniqueId")));
     }
 
@@ -110,10 +112,15 @@ public final class NeverLauncherSpongeBridge {
     }
 
     private BridgeControlResult executeControl(BridgeControlCommand command) throws Exception {
-        if("server.maintenance".equals(command.type())) { boolean v=Boolean.parseBoolean(command.payload().getOrDefault("enabled","false")); maintenance.set(v); route(); return BridgeControlResult.ok(Map.of("enabled",Boolean.toString(v))); }
-        if("server.drain".equals(command.type())) { boolean v=Boolean.parseBoolean(command.payload().getOrDefault("enabled","false")); draining.set(v); route(); return BridgeControlResult.ok(Map.of("enabled",Boolean.toString(v))); }
+        if("server.maintenance".equals(command.type())) { boolean v=Boolean.parseBoolean(command.payload().getOrDefault("enabled","false")); maintenance.set(v); route(); return maintenance.get()==v ? BridgeControlResult.verified(Map.of("enabled",Boolean.toString(maintenance.get()), "mode", "maintenance")) : BridgeControlResult.indeterminate("maintenance_state_not_observed"); }
+        if("server.drain".equals(command.type())) { boolean v=Boolean.parseBoolean(command.payload().getOrDefault("enabled","false")); draining.set(v); route(); return draining.get()==v ? BridgeControlResult.verified(Map.of("enabled",Boolean.toString(draining.get()), "mode", "drain")) : BridgeControlResult.indeterminate("drain_state_not_observed"); }
         Future<BridgeControlResult> f = server.scheduler().executor(container).submit(() -> executeOnServer(command));
-        try { return f.get(10,TimeUnit.SECONDS); } catch (TimeoutException e) { return BridgeControlResult.indeterminate("platform_control_timeout"); }
+        try {
+            BridgeControlResult result = f.get(10,TimeUnit.SECONDS);
+            if ("player.kick".equals(command.type()) && "executed".equals(result.status()) && result.result().containsKey("uuid"))
+                return kickConfirmations.await(result.result().get("username"), result.result().get("uuid"), 2500);
+            return result;
+        } catch (TimeoutException e) { return BridgeControlResult.indeterminate("platform_control_timeout"); }
     }
 
     private BridgeControlResult executeOnServer(BridgeControlCommand command) {
@@ -121,21 +128,41 @@ public final class NeverLauncherSpongeBridge {
         switch(command.type()) {
             case "player.kick" -> {
                 Object player=findPlayer(p.get("username")); if(player==null)return BridgeControlResult.failed("player_not_online");
-                if(!invokeComponent(player,"kick",Component.text(safe(p.getOrDefault("reason","Disconnected by server operator"),512)))) return BridgeControlResult.unsupported("sponge_kick_api_unavailable");
-                return BridgeControlResult.ok(Map.of("username",safe(p.get("username"),16)));
+                String username=safe(p.get("username"),16);
+                String uuid=profileString(player,"uniqueId");
+                boolean tracked=false;
+                try {
+                    java.util.UUID session = java.util.UUID.fromString(uuid);
+                    if (!kickConfirmations.begin(username, session)) return BridgeControlResult.indeterminate("player_kick_already_pending");
+                    tracked=true;
+                } catch (IllegalArgumentException ignored) { /* Missing Sponge profile UUID: execution cannot be verified. */ }
+                if (!invokeComponent(player,"kick",Component.text(safe(p.getOrDefault("reason","Disconnected by server operator"),512)))) {
+                    if(tracked) kickConfirmations.cancel(username);
+                    return BridgeControlResult.indeterminate("sponge_kick_dispatch_unconfirmed");
+                }
+                return BridgeControlResult.ok(tracked ? Map.of("username",username,"uuid",uuid) : Map.of("username",username));
             }
             case "message.broadcast" -> {
                 Component c=Component.text(safe(p.getOrDefault("message",""),1024));
-                Object players=invokeNoArg(server,"onlinePlayers"); if(players instanceof Iterable<?> it) for(Object pl:it) invokeComponent(pl,"sendMessage",c);
-                return BridgeControlResult.ok(Map.of("broadcast","true"));
+                Object players=invokeNoArg(server,"onlinePlayers");
+                if (!(players instanceof Iterable<?>)) return BridgeControlResult.unsupported("sponge_online_players_api_unavailable");
+                int sent=0;
+                for(Object pl:(Iterable<?>)players) {
+                    if (!invokeComponent(pl,"sendMessage",c)) return BridgeControlResult.indeterminate("sponge_partial_broadcast");
+                    sent++;
+                }
+                return BridgeControlResult.ok(Map.of("recipients",Integer.toString(sent)));
             }
             case "whitelist.enable", "whitelist.disable" -> {
                 boolean enabled=command.type().endsWith("enable");
-                try { Method m=server.getClass().getMethod("setHasWhitelist",boolean.class); m.invoke(server,enabled); return BridgeControlResult.ok(Map.of("enabled",Boolean.toString(enabled))); }
+                try { Method m=server.getClass().getMethod("setHasWhitelist",boolean.class); m.invoke(server,enabled);
+                    Object observed=invokeNoArg(server,"hasWhitelist");
+                    if (!(observed instanceof Boolean actual)) return BridgeControlResult.ok(Map.of("enabled",Boolean.toString(enabled)));
+                    return actual==enabled ? BridgeControlResult.verified(Map.of("enabled",Boolean.toString(actual))) : BridgeControlResult.failed("whitelist_mode_postcondition_mismatch"); }
                 catch(Exception e){return BridgeControlResult.unsupported("sponge_whitelist_api_unavailable");}
             }
             case "server.shutdown" -> {
-                try { server.shutdown(); return BridgeControlResult.ok(Map.of("scheduled","true")); }
+                try { server.shutdown(); return BridgeControlResult.accepted(Map.of("scheduled","true")); }
                 catch(RuntimeException e){return BridgeControlResult.failed("sponge_shutdown_failed");}
             }
             case "whitelist.add","whitelist.remove","ban.add","ban.remove","server.save","server.console" -> { return BridgeControlResult.unsupported("operation_not_exposed_by_universal_sponge_adapter"); }
@@ -156,5 +183,5 @@ public final class NeverLauncherSpongeBridge {
     private static boolean invokeComponent(Object target,String method,Component c){try{target.getClass().getMethod(method,Component.class).invoke(target,c);return true;}catch(Exception e){return false;}}
     private static String safe(String s,int max){String v=s==null?"":s.replace('\r',' ').replace('\n',' ').trim();return v.length()>max?v.substring(0,max):v;}
 
-    private void close(){ if(!stopping.compareAndSet(false,true))return; NeverLauncherApiClient current=api; if(current!=null){current.publishEvent("server.shutdown",Map.of("platform","sponge"));current.flushEventsNow();current.closeEventStreamCleanly();} workers.shutdownNow(); }
+    private void close(){ if(!stopping.compareAndSet(false,true))return; NeverLauncherApiClient current=api; if(current!=null){current.publishEvent("server.shutdown",Map.of("platform","sponge"));current.flushEventsNow();current.closeEventStreamCleanly();} kickConfirmations.close(); workers.shutdownNow(); }
 }

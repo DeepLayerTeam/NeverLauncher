@@ -90,16 +90,16 @@ public final class NeverLauncherVanillaBridge implements AutoCloseable {
         return switch (command.type()) {
             case "player.kick" -> okRcon("kick " + username(p.get("username")) + " " + text(p.getOrDefault("reason", "Disconnected by server operator"), 512));
             case "message.broadcast" -> okRcon("tellraw @a " + jsonText(text(p.getOrDefault("message", ""), 1024)));
-            case "whitelist.add" -> okRcon("whitelist add " + username(p.get("username")));
-            case "whitelist.remove" -> okRcon("whitelist remove " + username(p.get("username")));
+            case "whitelist.add" -> observedRcon("whitelist.add", username(p.get("username")), "whitelist add " + username(p.get("username")));
+            case "whitelist.remove" -> observedRcon("whitelist.remove", username(p.get("username")), "whitelist remove " + username(p.get("username")));
             case "whitelist.enable" -> okRcon("whitelist on");
             case "whitelist.disable" -> okRcon("whitelist off");
-            case "ban.add" -> okRcon("ban " + username(p.get("username")) + " " + text(p.getOrDefault("reason", "Banned by server operator"), 512));
-            case "ban.remove" -> okRcon("pardon " + username(p.get("username")));
+            case "ban.add" -> observedRcon("ban.add", username(p.get("username")), "ban " + username(p.get("username")) + " " + text(p.getOrDefault("reason", "Banned by server operator"), 512));
+            case "ban.remove" -> observedRcon("ban.remove", username(p.get("username")), "pardon " + username(p.get("username")));
             case "server.save" -> okRcon("save-all flush");
             case "server.maintenance" -> setRouteMode(true, Boolean.parseBoolean(p.getOrDefault("enabled", "false")));
             case "server.drain" -> setRouteMode(false, Boolean.parseBoolean(p.getOrDefault("enabled", "false")));
-            case "server.shutdown" -> okRcon("stop");
+            case "server.shutdown" -> { String response = rcon("stop"); yield BridgeControlResult.accepted(Map.of("response", text(response, 1024))); }
             case "server.console" -> executeAllowlistedConsole(p.get("command"));
             default -> BridgeControlResult.unsupported("unsupported_control_type");
         };
@@ -120,7 +120,18 @@ public final class NeverLauncherVanillaBridge implements AutoCloseable {
     }
     private BridgeControlResult okRcon(String command) throws Exception {
         String result = rcon(command);
+        if (VanillaRconReadback.rejected(result)) return BridgeControlResult.failed("minecraft_rcon_command_rejected");
         return BridgeControlResult.ok(Map.of("response", text(result, 1024)));
+    }
+    private BridgeControlResult observedRcon(String type, String username, String command) throws Exception {
+        String response = rcon(command);
+        if (VanillaRconReadback.rejected(response)) return BridgeControlResult.failed("minecraft_rcon_command_rejected");
+        String list = rcon(type.startsWith("whitelist.") ? "whitelist list" : "banlist players");
+        Boolean actual = VanillaRconReadback.membership(type, username, list);
+        boolean expected = type.endsWith(".add");
+        if (actual == null) return BridgeControlResult.ok(Map.of("username", username, type.startsWith("whitelist.") ? "whitelisted" : "banned", Boolean.toString(expected)));
+        if (actual != expected) return BridgeControlResult.failed("rcon_postcondition_mismatch");
+        return BridgeControlResult.verified(Map.of("username", username, type.startsWith("whitelist.") ? "whitelisted" : "banned", Boolean.toString(actual)));
     }
 
     private void heartbeatSafe() { if (!stopping.get()) api.heartbeat("vanilla", BridgeDefaults.VERSION); }
