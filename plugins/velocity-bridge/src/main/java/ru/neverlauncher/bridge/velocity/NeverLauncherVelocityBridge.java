@@ -7,6 +7,7 @@ import com.velocitypowered.api.event.connection.PreLoginEvent;
 import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.player.ServerPreConnectEvent;
+import com.velocitypowered.api.event.player.ServerConnectedEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
@@ -25,6 +26,8 @@ import ru.neverlauncher.bridge.proxy.ProxyBridgeRuntime;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.Map;
+import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 @Plugin(id = BridgeDefaults.VELOCITY_ID, name = "NeverLauncher Velocity Bridge", version = BridgeDefaults.VERSION, authors = {"SkiF4er"})
@@ -33,6 +36,10 @@ public final class NeverLauncherVelocityBridge {
     private final ProxyServer proxy;
     private volatile ProxyBridgeRuntime runtime;
     private volatile ScheduledTask telemetryTask;
+    // Hold the reservation until a real connection is observed or until the
+    // original short-lived one-time ticket has expired.
+    private record PendingTransfer(String target, long expiresAt) {}
+    private final ConcurrentHashMap<String, PendingTransfer> pendingTransfers = new ConcurrentHashMap<>();
 
     @Inject
     public NeverLauncherVelocityBridge(ProxyServer proxy) {
@@ -148,22 +155,64 @@ public final class NeverLauncherVelocityBridge {
                 event.setResult(ServerPreConnectEvent.ServerResult.denied());
                 return;
             }
-            String username = event.getPlayer().getUsername();
-            String target = event.getOriginalServer().getServerInfo().getName();
-            String source = event.getPlayer().getCurrentServer().map(connection -> connection.getServerInfo().getName()).orElse("");
-            JoinValidationResult result = current.createHandoff(username, target);
-            if (!result.allowed) {
+            // Respect a prior proxy plugin's explicit deny/redirect. The ticket
+            // must authorize the *actual* destination, not the original name.
+            var destination = event.getResult().getServer().orElse(null);
+            if (!event.getResult().isAllowed() || destination == null) {
                 event.setResult(ServerPreConnectEvent.ServerResult.denied());
-                logger.info("neverlauncher.handoff.denied username=" + username + " target=" + target + " reason=" + result.reason + " platform=velocity");
                 return;
             }
-            current.publishEvent(source.isBlank() ? "proxy.connect" : "proxy.switch", Map.of(
-                "username", username,
-                "source", source,
-                "target", target
-            ));
-            logger.info("neverlauncher.handoff.created username=" + username + " target=" + target + " source=" + current.serverId() + " platform=velocity");
+            String username = event.getPlayer().getUsername();
+            String key = username.toLowerCase(Locale.ROOT);
+            String target = destination.getServerInfo().getName();
+            long now = System.currentTimeMillis();
+            PendingTransfer reservation = new PendingTransfer(target, now + 30_000L);
+            PendingTransfer previous = pendingTransfers.putIfAbsent(key, reservation);
+            if (previous != null) {
+                if (previous.expiresAt() >= now || !pendingTransfers.replace(key, previous, reservation)) {
+                    event.setResult(ServerPreConnectEvent.ServerResult.denied());
+                    return;
+                }
+            }
+            try {
+                // The Backend reads live routing state and atomically creates the
+                // one-time handoff. No automatic retry after uncertain delivery.
+                JoinValidationResult result = current.createHandoff(username, target);
+                if (!result.allowed || runtime != current ||
+                    proxy.getServer(target).orElse(null) != destination ||
+                    pendingTransfers.get(key) != reservation) {
+                    event.setResult(ServerPreConnectEvent.ServerResult.denied());
+                    pendingTransfers.remove(key, reservation);
+                    logger.info("neverlauncher.handoff.denied username=" + username + " target=" +
+                        target + " reason=" + (result.allowed ? "topology_changed" : result.reason));
+                }
+                if (result.allowed && runtime == current &&
+                    pendingTransfers.get(key) == reservation &&
+                    proxy.getServer(target).orElse(null) == destination) {
+                    event.setResult(ServerPreConnectEvent.ServerResult.allowed(destination));
+                }
+                // Do not emit proxy.switch here. Only ServerConnectedEvent proves it.
+            } catch (RuntimeException failure) {
+                pendingTransfers.remove(key, reservation);
+                event.setResult(ServerPreConnectEvent.ServerResult.denied());
+                logger.warning("neverlauncher.handoff.failed username=" + username + " target=" + target);
+            }
         });
+    }
+
+    @Subscribe
+    public void onServerConnected(ServerConnectedEvent event) {
+        ProxyBridgeRuntime current = runtime;
+        if (current == null) return;
+        String username = event.getPlayer().getUsername();
+        String target = event.getServer().getServerInfo().getName();
+        pendingTransfers.computeIfPresent(username.toLowerCase(Locale.ROOT),
+            (key, transfer) -> transfer.target().equalsIgnoreCase(target) ? null : transfer);
+        String source = event.getPreviousServer()
+            .map(connection -> connection.getServerInfo().getName()).orElse("");
+        if (source.equalsIgnoreCase(target)) return;
+        current.publishEvent(source.isBlank() ? "proxy.connect" : "proxy.switch", Map.of(
+            "username", username, "source", source, "target", target));
     }
 
     private BridgeControlResult executeControl(BridgeControlCommand command) throws Exception {
@@ -221,6 +270,7 @@ public final class NeverLauncherVelocityBridge {
         String username = event.getPlayer().getUsername();
         current.publishEvent("player.quit", Map.of("username", username));
         current.playerDisconnected(username);
+        pendingTransfers.remove(username.toLowerCase(Locale.ROOT));
     }
 
     @Subscribe
@@ -230,6 +280,7 @@ public final class NeverLauncherVelocityBridge {
         if (task != null) task.cancel();
         ProxyBridgeRuntime current = runtime;
         runtime = null;
+        pendingTransfers.clear();
         if (current != null) current.close();
     }
 }

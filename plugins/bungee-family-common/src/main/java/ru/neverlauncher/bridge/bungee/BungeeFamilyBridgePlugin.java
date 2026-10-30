@@ -7,6 +7,7 @@ import net.md_5.bungee.api.event.PreLoginEvent;
 import net.md_5.bungee.api.event.LoginEvent;
 import net.md_5.bungee.api.event.PlayerDisconnectEvent;
 import net.md_5.bungee.api.event.ServerConnectEvent;
+import net.md_5.bungee.api.event.ServerConnectedEvent;
 import net.md_5.bungee.api.plugin.Command;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
@@ -33,7 +34,10 @@ import java.util.concurrent.TimeUnit;
 /** Общий адаптер Bungee API для артефактов BungeeCord и Waterfall. */
 public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listener {
     private final BungeeFamilyPlatform expectedPlatform;
+    // Single in-flight handoff per authenticated player, not per destination.
+    private final ConcurrentHashMap<String, Object> inFlightHandoffs = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> preparedHandoffs = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> connectedTargets = new ConcurrentHashMap<>();
     private volatile ProxyBridgeRuntime runtime;
     private volatile ScheduledTask telemetryTask;
 
@@ -92,6 +96,8 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         runtime = null;
         if (current != null) current.close();
         preparedHandoffs.clear();
+        inFlightHandoffs.clear();
+        connectedTargets.clear();
         getProxy().getPluginManager().unregisterListeners(this);
         getProxy().getPluginManager().unregisterCommands(this);
     }
@@ -185,40 +191,97 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         String username = event.getPlayer().getName();
         current.publishEvent("player.quit", Map.of("username", username));
         current.playerDisconnected(username);
+        String playerKey = username.toLowerCase(Locale.ROOT);
+        inFlightHandoffs.remove(playerKey);
+        connectedTargets.remove(playerKey);
+        preparedHandoffs.keySet().removeIf(key -> key.startsWith(playerKey + "\u0000"));
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public final void onServerConnect(ServerConnectEvent event) {
         ProxyBridgeRuntime current = runtime;
-        if (current == null || event.isCancelled() || event.getTarget() == null) return;
-        String username = event.getPlayer().getName();
-        String target = event.getTarget().getName();
-        String source = event.getPlayer().getServer() == null || event.getPlayer().getServer().getInfo() == null ? "" : event.getPlayer().getServer().getInfo().getName();
-        String key = username.toLowerCase(Locale.ROOT) + "\u0000" + target.toLowerCase(Locale.ROOT);
-        long now = System.currentTimeMillis();
-        Long preparedUntil = preparedHandoffs.remove(key);
-        if (preparedUntil != null && preparedUntil >= now) return;
-
+        if (event.isCancelled() || event.getTarget() == null) return;
+        if (current == null) { event.setCancelled(true); return; }
+        final var player = event.getPlayer();
+        final String username = player.getName();
+        final String playerKey = username.toLowerCase(Locale.ROOT);
+        final String target = event.getTarget().getName();
+        final String key = playerKey + "\u0000" + target.toLowerCase(Locale.ROOT);
+        final Long preparedUntil = preparedHandoffs.remove(key);
+        if (preparedUntil != null) {
+            // Never manufacture a second one-time handoff for a timed-out internal
+            // connect; Backend may already have committed or consumed the first.
+            if (preparedUntil < System.currentTimeMillis()) event.setCancelled(true);
+            return;
+        }
+        // Cancel the original event before asynchronous authorization. Bungee's
+        // synchronous event cannot be resumed by an HTTP callback.
         event.setCancelled(true);
-        ServerConnectEvent.Reason reason = event.getReason();
+        final Object token = new Object();
+        if (inFlightHandoffs.putIfAbsent(playerKey, token) != null) return;
+        final var serverInfo = event.getTarget();
+        final var reason = event.getReason();
         current.createHandoffAsync(username, target).whenComplete((result, error) -> {
-            JoinValidationResult finalResult = error == null && result != null
-                ? result
-                : new JoinValidationResult(false, "backend_unavailable", "{}");
-            if (!finalResult.allowed) {
-                getLogger().info("neverlauncher.handoff.denied username=" + username + " target=" + target + " reason=" + finalResult.reason + " platform=" + expectedPlatform.id());
-                event.getPlayer().disconnect(TextComponent.fromLegacyText("NeverLauncher handoff denied: " + finalResult.reason));
-                return;
+            final JoinValidationResult decision = error == null && result != null
+                ? result : new JoinValidationResult(false, "backend_unavailable", "{}");
+            // API calls and player state are consulted only on the proxy scheduler.
+            try {
+                getProxy().getScheduler().schedule(this, () -> {
+                    if (inFlightHandoffs.get(playerKey) != token) return;
+                    if (runtime != current || getProxy().getPlayer(username) != player) {
+                        inFlightHandoffs.remove(playerKey, token);
+                        return;
+                    }
+                    if (!decision.allowed) {
+                        inFlightHandoffs.remove(playerKey, token);
+                        player.sendMessage(TextComponent.fromLegacyText(
+                            "NeverLauncher handoff denied: " + decision.reason));
+                        getLogger().info("neverlauncher.handoff.denied username=" + username +
+                            " target=" + target + " reason=" + decision.reason);
+                        return;
+                    }
+                    // A backend route can disappear between ticket creation and
+                    // connect. Never silently try another server with this ticket.
+                    if (getProxy().getServerInfo(target) != serverInfo) {
+                        inFlightHandoffs.remove(playerKey, token);
+                        player.sendMessage(TextComponent.fromLegacyText("NeverLauncher target topology changed"));
+                        return;
+                    }
+                    preparedHandoffs.put(key, System.currentTimeMillis() + 30_000L);
+                    try {
+                        player.connect(serverInfo, (success, throwable) -> {
+                            preparedHandoffs.remove(key);
+                            inFlightHandoffs.remove(playerKey, token);
+                            if (!success) getLogger().warning("neverlauncher.handoff.connect-failed username=" +
+                                username + " target=" + target);
+                        }, reason);
+                    } catch (RuntimeException failure) {
+                        preparedHandoffs.remove(key);
+                        inFlightHandoffs.remove(playerKey, token);
+                        getLogger().warning("neverlauncher.handoff.connect-error target=" + target +
+                            " error=" + failure.getMessage());
+                    }
+                }, 0L, TimeUnit.MILLISECONDS);
+            } catch (RuntimeException failure) {
+                inFlightHandoffs.remove(playerKey, token);
+                getLogger().warning("neverlauncher.handoff.schedule-error target=" + target);
             }
-            preparedHandoffs.put(key, System.currentTimeMillis() + 10_000L);
-            current.publishEvent(source.isBlank() ? "proxy.connect" : "proxy.switch", Map.of("username", username, "source", source, "target", target));
-            getLogger().info("neverlauncher.handoff.created username=" + username + " target=" + target + " source=" + current.serverId() + " platform=" + expectedPlatform.id());
-            getProxy().getScheduler().schedule(this,
-                () -> event.getPlayer().connect(event.getTarget(), (success, throwable) -> {
-                    if (!success) preparedHandoffs.remove(key);
-                }, reason),
-                0L, TimeUnit.MILLISECONDS);
         });
+    }
+
+    /** Connected is emitted only when the proxy has actually established
+     * a backend connection. The HTTP handoff being accepted is not success. */
+    @EventHandler
+    public final void onServerConnected(ServerConnectedEvent event) {
+        ProxyBridgeRuntime current = runtime;
+        if (current == null || event.getServer() == null || event.getServer().getInfo() == null) return;
+        String username = event.getPlayer().getName();
+        String playerKey = username.toLowerCase(Locale.ROOT);
+        String target = event.getServer().getInfo().getName();
+        String source = connectedTargets.put(playerKey, target);
+        if (source != null && source.equalsIgnoreCase(target)) return;
+        current.publishEvent(source == null ? "proxy.connect" : "proxy.switch", Map.of(
+            "username", username, "source", source == null ? "" : source, "target", target));
     }
 
     private BridgeControlResult executeControl(BridgeControlCommand command) {

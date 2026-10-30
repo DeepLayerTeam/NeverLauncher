@@ -363,10 +363,9 @@ public final class NeverLauncherApiClient {
                 return new JoinValidationResult(false, "routing_table_unavailable", response.body() == null ? "{}" : response.body());
             }
             String raw = response.body() == null ? "" : response.body();
-            String target = targetServer == null ? "" : targetServer.trim();
-            String quoted = quote(target);
-            boolean present = raw.contains("\"nodeId\":" + quoted) || raw.contains("\"backendName\":" + quoted);
-            return new JoinValidationResult(present, present ? "route_allowed" : "target_not_routable", raw);
+            BridgeAuthResponse0287.Decision decision = BridgeAuthResponse0287.route(
+                response.statusCode(), raw, config.serverId, targetServer, Instant.now());
+            return new JoinValidationResult(decision.allowed(), decision.reason(), raw);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return new JoinValidationResult(false, "backend_interrupted", "{}");

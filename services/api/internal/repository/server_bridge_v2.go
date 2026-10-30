@@ -906,7 +906,7 @@ func isProxyBridgeKind0148(kind string) bool {
 
 func isBackendBridgeKind0148(kind string) bool {
 	switch strings.ToLower(strings.TrimSpace(kind)) {
-	case "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "forge", "neoforge":
+	case "bukkit", "spigot", "paper", "purpur", "folia", "fabric", "quilt", "forge", "neoforge", "sponge":
 		return true
 	default:
 		return false
@@ -1243,7 +1243,7 @@ COALESCE(e.created_at,GREATEST(s.created_at,t.created_at))
 FROM server_bridge_nodes_v2 s
 JOIN server_bridge_nodes_v2 t ON t.project_id=s.project_id
  AND (s.profile_id='' OR t.profile_id='' OR t.profile_id=s.profile_id)
- AND t.kind IN ('bukkit','spigot','paper','purpur','folia','fabric','forge','neoforge')
+ AND t.kind IN ('bukkit','spigot','paper','purpur','folia','fabric','quilt','forge','neoforge','sponge')
 LEFT JOIN server_bridge_topology_edges_v2 e ON e.source_node_id=s.id AND e.target_node_id=t.id
 WHERE s.kind IN ('velocity','bungeecord','waterfall')
 ORDER BY s.id,t.name,t.id

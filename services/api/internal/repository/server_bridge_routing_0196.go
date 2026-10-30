@@ -116,7 +116,7 @@ func (r *SQLRepository) ListServerBridgeAllowedBackends(ctx context.Context, sou
 	rows, err := r.db.QueryContext(ctx, `SELECT n.id,n.name,n.kind,n.project_id,n.profile_id,n.runtime_id,n.runtime_epoch,n.routing_health,n.routing_state,n.routing_players_online,CASE WHEN n.operator_capacity_max IS NULL THEN n.routing_capacity_max WHEN n.routing_capacity_max=0 THEN n.operator_capacity_max ELSE LEAST(n.routing_capacity_max,n.operator_capacity_max) END,n.routing_revision,n.routing_digest,n.routing_observed_at,n.last_heartbeat_at,
         COALESCE((SELECT count(*) FROM server_bridge_handoffs_v2 h WHERE h.target_node_id=n.id AND ((h.status='active' AND h.expires_at>$4) OR (h.status='consumed' AND h.consumed_at>$4::timestamptz-interval '30 seconds'))),0) AS reserved
         FROM server_bridge_nodes_v2 n
-        WHERE n.status='active' AND n.kind IN ('bukkit','spigot','paper','purpur','folia','fabric','forge','neoforge')
+        WHERE n.status='active' AND n.kind IN ('bukkit','spigot','paper','purpur','folia','fabric','quilt','forge','neoforge','sponge')
           AND n.project_id=$1 AND ($2='' OR n.profile_id='' OR n.profile_id=$2)
           AND n.runtime_epoch>0 AND n.runtime_id ~ '^[0-9a-f]{64}$'
           AND n.last_heartbeat_at>$3 AND n.routing_observed_at>$3

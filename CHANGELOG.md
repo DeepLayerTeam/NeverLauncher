@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.41.7 — Live Velocity/BungeeCord/Waterfall routing and verified transfers
+
+- **Real proxy transfer path:** Velocity now gates the actually selected pre-connect destination against the current registered server and a one-time Backend handoff; BungeeCord/Waterfall use native `ProxiedPlayer.connect` after asynchronous Backend authorization. A failed/denied transfer does not disconnect an already connected player.
+- **Post-connection evidence:** `proxy.connect` and `proxy.switch` are emitted only after the real platform `ServerConnectedEvent`, never merely because an authorization or handoff POST returned success.
+- **Concurrent safety and topology:** per-player handoff fencing prevents parallel requests; stale async completions cannot clear a newer reservation. Registered target replacement, maintenance/drain, missing routes, capacity exhaustion or stale heartbeat fail closed, and there is no transparent retry for uncertain one-time transfers.
+- **Actual Backend route validation:** replace unsafe JSON substring matching with the existing bounded strict parser and validate source ID, target identity, runtime epoch/revision/digest, health, route state, available slots and timestamps. The Backend still atomically re-checks routing and issues the one-time ticket in PostgreSQL.
+- **Join-capable adapters:** include Quilt and Sponge in Backend route enumeration and topology alongside the existing supported server kinds. Vanilla RCON sidecar remains non-routable because it cannot enforce target-side handoff admission.
+- **Verification:** OpenJDK 21 compiled the shipping common/Proxy runtime code and passed 83 existing/new Java assertions (including 19 new route checks). Canonical version metadata validation passed. Upstream proxy JAR build, live player migration and Go tests remain unverified in this environment (`go.mod` needs Go >=1.27.3). See `docs/servers/serverbridge-proxy-routing-0417.md`.
+
 ## 0.41.6 — Verifiable Fabric/Quilt/Forge/NeoForge/Vanilla/Sponge control effects
 
 - **Four native modloader command paths:** existing real Minecraft command dispatchers now read back whitelist entries, whitelist enablement, and player ban state through supported platform methods when available. An unavailable API never fabricates `succeeded`; a mismatched postcondition fails. Native logout callbacks correlate requested kicks to the same player UUID before returning evidence to Backend.

@@ -69,6 +69,73 @@ public final class BridgeAuthResponse0287 {
         }
     }
 
+    /** Evaluate the authenticated Backend route-list response, never JSON substrings.
+     * A route is valid for the current source, target and live runtime only.
+     * The Backend remains authoritative when the one-time handoff is created.
+     */
+    public static Decision route(int httpStatus, String body, String sourceNodeId, String requestedTarget,
+                                 Instant now) {
+        if (httpStatus < 200 || httpStatus >= 300) return Decision.deny("routing_table_unavailable");
+        if (sourceNodeId == null || sourceNodeId.isBlank() || requestedTarget == null || requestedTarget.isBlank())
+            return Decision.deny("invalid_route_request");
+        try {
+            Map<String, Object> data = object(Json.parse(body).get("data"));
+            if (!sourceNodeId.equals(text(data, "sourceNodeId")))
+                return Decision.deny("routing_source_mismatch");
+            Object rawItems = data.get("items");
+            if (!(rawItems instanceof List<?> items) || items.size() > 4096)
+                return Decision.deny("routing_table_invalid");
+            long freshness = wholeNumber(data.get("freshnessSeconds"));
+            if (freshness < 1 || freshness > 90) return Decision.deny("routing_freshness_invalid");
+            String target = requestedTarget.trim();
+            int matches = 0;
+            boolean healthy = false;
+            for (Object raw : items) {
+                Map<String, Object> item = object(raw);
+                String node = text(item, "nodeId");
+                String backend = text(item, "backendName");
+                if (!target.equalsIgnoreCase(node) && !target.equalsIgnoreCase(backend)) continue;
+                matches++;
+                if (matches > 1) return Decision.deny("ambiguous_route");
+                String runtimeId = text(item, "runtimeId");
+                String digest = text(item, "routingDigest");
+                if (!hex64(runtimeId.toLowerCase(Locale.ROOT)) || !hex64(digest.toLowerCase(Locale.ROOT)) ||
+                    wholeNumber(item.get("runtimeEpoch")) < 1 ||
+                    wholeNumber(item.get("routingRevision")) < 1) return Decision.deny("route_runtime_invalid");
+                long capacity = wholeNumber(item.get("capacityMax"));
+                long online = wholeNumber(item.get("playersOnline"));
+                long slots = wholeNumber(item.get("availableSlots"));
+                if (capacity < 0 || online < 0 || slots < 0 ||
+                    (capacity > 0 && (online >= capacity || slots <= 0)))
+                    return Decision.deny("target_capacity_unavailable");
+                Instant observed = Instant.parse(text(item, "observedAt"));
+                Instant heartbeat = Instant.parse(text(item, "lastHeartbeatAt"));
+                // At most 5 seconds of clock skew. No stale targets accepted even if
+                // an upstream replica returns a cached route after topology changes.
+                if (observed.isAfter(now.plusSeconds(5)) || heartbeat.isAfter(now.plusSeconds(5)) ||
+                    observed.isBefore(now.minusSeconds(freshness)) ||
+                    heartbeat.isBefore(now.minusSeconds(freshness)))
+                    return Decision.deny("target_route_stale");
+                healthy = "ready".equals(text(item, "state")) &&
+                    ("healthy".equals(text(item, "health")) || "degraded".equals(text(item, "health")));
+                if (!healthy) return Decision.deny("target_not_routable");
+            }
+            return matches == 1 && healthy
+                ? new Decision(true, "route_allowed", "", "")
+                : Decision.deny("target_not_routable");
+        } catch (IllegalArgumentException | DateTimeParseException | ClassCastException e) {
+            return Decision.deny("routing_table_invalid");
+        }
+    }
+
+    private static long wholeNumber(Object value) {
+        if (!(value instanceof Number number)) throw new IllegalArgumentException("integer missing");
+        double d = number.doubleValue();
+        if (!Double.isFinite(d) || d != Math.rint(d) || d > Long.MAX_VALUE || d < Long.MIN_VALUE)
+            throw new IllegalArgumentException("invalid integer");
+        return (long) d;
+    }
+
     public static boolean matchesAuthenticatedUUID(String authenticated, String expected) {
         String auth = canonicalUUID(authenticated);
         return !auth.isEmpty() && auth.equals(canonicalUUID(expected));
