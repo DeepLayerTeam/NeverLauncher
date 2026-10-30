@@ -679,6 +679,10 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			return vanillaInstallResult{}, fmt.Errorf("native staging %s: %w", key, err)
 		}
 		publishFiles := make([]vanillaDownloadedFile, 0)
+		// Two verified native archives may contain the same binary. Keep a
+		// single package entry for an identical path, while rejecting conflicting
+		// bytes instead of creating a client that cannot pass package verification.
+		publishedNative := make(map[string]vanillaDownloadedFile)
 		failed := false
 		for _, task := range nativeByTarget[key] {
 			archivePath := filepath.Join(opts.ClientDir, filepath.FromSlash(task.Path))
@@ -713,6 +717,17 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 				}
 				extracted = append(extracted, aliases...)
 			}
+			// Mojang's macOS LWJGL natives may be nested under macos/{arch}/org/lwjgl.
+			// Materialize byte-identical root aliases for java.library.path, just as
+			// the existing Windows and Linux ARM64 paths already do.
+			if target.OS == "osx" && strings.HasPrefix(task.Path, "libraries/org/lwjgl/") && (strings.Contains(task.Path, "-natives-macos") || strings.Contains(task.Path, "-natives-osx")) {
+				aliases, aliasErr := flattenLWJGLMacOSNatives(stagingDir, extracted, target.Arch)
+				if aliasErr != nil {
+					_ = os.RemoveAll(stagingDir)
+					return vanillaInstallResult{}, fmt.Errorf("LWJGL macOS aliases: %w", aliasErr)
+				}
+				extracted = append(extracted, aliases...)
+			}
 			for _, rel := range extracted {
 				full := filepath.Join(stagingDir, filepath.FromSlash(rel))
 				sum, size, err := hashFile(full)
@@ -720,7 +735,16 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 					failed = true
 					break
 				}
-				publishFiles = append(publishFiles, vanillaDownloadedFile{Path: filepath.ToSlash(filepath.Join("natives", target.OS, target.Arch, rel)), Kind: "native", Size: size, SHA256: sum, TargetOS: []string{target.OS}, Cached: false})
+				file := vanillaDownloadedFile{Path: filepath.ToSlash(filepath.Join("natives", target.OS, target.Arch, rel)), Kind: "native", Size: size, SHA256: sum, TargetOS: []string{target.OS}, Cached: false}
+				if previous, exists := publishedNative[file.Path]; exists {
+					if previous.Size != file.Size || previous.SHA256 != file.SHA256 {
+						_ = os.RemoveAll(stagingDir)
+						return vanillaInstallResult{}, fmt.Errorf("native file changed during extraction: %s", file.Path)
+					}
+					continue
+				}
+				publishedNative[file.Path] = file
+				publishFiles = append(publishFiles, file)
 			}
 			if failed {
 				break
@@ -1307,10 +1331,15 @@ func copyFileVerified(src, dst string, expectedSize int64, expectedSHA1 string) 
 	if err != nil {
 		return err
 	}
-	if _, err := io.Copy(out, in); err != nil {
+	// Hash the bytes that were actually copied: the source could change after
+	// the initial cache verification (or while being copied). Never publish a
+	// resource/virtual asset whose final bytes no longer match its Mojang hash.
+	copiedHash := sha1.New()
+	copied, copyErr := io.Copy(io.MultiWriter(out, copiedHash), in)
+	if copyErr != nil || copied != expectedSize || !strings.EqualFold(hex.EncodeToString(copiedHash.Sum(nil)), expectedSHA1) {
 		out.Close()
 		_ = os.Remove(tmp)
-		return err
+		return fmt.Errorf("source asset changed while copying: size=%d expected=%d error=%v", copied, expectedSize, copyErr)
 	}
 	if err := out.Sync(); err != nil {
 		out.Close()
@@ -1602,6 +1631,76 @@ func flattenLWJGLWindowsNatives(root string, extracted []string, arch string) ([
 		}
 		if len(data) == 0 || int64(len(data)) > maxCompatibilityNativeEntry {
 			return nil, fmt.Errorf("invalid LWJGL Windows native size: %s", base)
+		}
+		if err := writeAtomicBytes(to, data, 0o644); err != nil {
+			return nil, err
+		}
+		aliases = append(aliases, base)
+	}
+	return aliases, nil
+}
+
+// flattenLWJGLMacOSNatives exposes the exact platform native files at the
+// java.library.path root. It does not substitute x64 files on Apple Silicon.
+// Any collision fails rather than silently changing the library selected by JVM.
+func flattenLWJGLMacOSNatives(root string, extracted []string, arch string) ([]string, error) {
+	archToken := ""
+	switch arch {
+	case "x86_64":
+		archToken = "x64"
+	case "aarch64":
+		archToken = "arm64"
+	default:
+		return nil, fmt.Errorf("unsupported LWJGL macOS architecture: %s", arch)
+	}
+	prefixes := []string{"macos/" + archToken + "/org/lwjgl/", "osx/" + archToken + "/org/lwjgl/"}
+	aliases := make([]string, 0)
+	for _, rel := range extracted {
+		clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(rel)))
+		match := false
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(clean, prefix) {
+				match = true
+				break
+			}
+		}
+		if !match || !strings.HasSuffix(strings.ToLower(clean), ".dylib") {
+			continue
+		}
+		base := path.Base(clean)
+		if base == "." || base == ".." || strings.ContainsAny(base, "\\/") {
+			return nil, fmt.Errorf("invalid LWJGL macOS native name: %q", base)
+		}
+		from, err := secureClientDestination(root, clean)
+		if err != nil {
+			return nil, err
+		}
+		to, err := secureClientDestination(root, base)
+		if err != nil {
+			return nil, err
+		}
+		data, err := os.ReadFile(from)
+		if err != nil {
+			return nil, err
+		}
+		if len(data) == 0 || int64(len(data)) > maxCompatibilityNativeEntry {
+			return nil, fmt.Errorf("invalid LWJGL macOS native size: %s", base)
+		}
+		if existing, err := os.Lstat(to); err == nil {
+			if !existing.Mode().IsRegular() || existing.Size() != int64(len(data)) {
+				return nil, fmt.Errorf("LWJGL macOS native filename collision: %s", base)
+			}
+			sum, _, err := hashFile(to)
+			want := sha256.Sum256(data)
+			if err != nil || sum != hex.EncodeToString(want[:]) {
+				return nil, fmt.Errorf("LWJGL macOS native content collision: %s", base)
+			}
+			// Multiple signed archives can include the same bytes. Reuse the
+			// already extracted alias rather than rejecting a valid install.
+			aliases = append(aliases, base)
+			continue
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
 		}
 		if err := writeAtomicBytes(to, data, 0o644); err != nil {
 			return nil, err
