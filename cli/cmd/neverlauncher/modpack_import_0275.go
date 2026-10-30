@@ -720,7 +720,7 @@ func importModpackWithGates0276(ctx context.Context, archive, destination, manua
 	if api == "" {
 		api = "https://api.curseforge.com"
 	}
-	if spec.Format == "curseforge" && key == "" {
+	if spec.Format == "curseforge" && key == "" && len(spec.Files) > 0 {
 		for _, f := range spec.Files {
 			report.Missing = append(report.Missing, modpackMissing0275{Code: "api_key_required", Path: f.Source, Source: f.Source, Reason: "CurseForge API key required", ManualAction: "provide NEVERLAUNCHER_CURSEFORGE_API_KEY to resolve upstream hash; no unverified manual override is accepted"})
 		}

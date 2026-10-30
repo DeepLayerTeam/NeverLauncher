@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -32,12 +33,29 @@ type mirrorArtifact0274 struct {
 	ProjectID string `json:"projectId,omitempty"`
 	VersionID string `json:"versionId,omitempty"`
 }
+type mirrorWorkspaceLibrary0405 struct {
+	Coordinate string `json:"coordinate"`
+	URL        string `json:"url,omitempty"`
+	File       string `json:"file,omitempty"`
+	SHA256     string `json:"sha256"`
+}
+type mirrorWorkspaceAuthlibPatch0405 struct {
+	Target         string `json:"target"`
+	Patch          string `json:"patch"`
+	BaseSHA256     string `json:"baseSha256"`
+	PatchSHA256    string `json:"patchSha256"`
+	ExpectedSHA256 string `json:"expectedSha256"`
+}
 type mirrorWorkspace0274 struct {
-	SchemaVersion string               `json:"schemaVersion"`
-	Minecraft     string               `json:"minecraft"`
-	Loader        string               `json:"loader"`
-	LoaderVersion string               `json:"loaderVersion,omitempty"`
-	Mods          []mirrorArtifact0274 `json:"mods,omitempty"`
+	SchemaVersion  string                            `json:"schemaVersion"`
+	Minecraft      string                            `json:"minecraft"`
+	Loader         string                            `json:"loader"`
+	LoaderVersion  string                            `json:"loaderVersion,omitempty"`
+	Modpack        string                            `json:"modpack,omitempty"`
+	Mods           []mirrorArtifact0274              `json:"mods,omitempty"`
+	Libraries      []mirrorWorkspaceLibrary0405      `json:"libraries,omitempty"`
+	Compatibility  string                            `json:"compatibility,omitempty"`
+	AuthlibPatches []mirrorWorkspaceAuthlibPatch0405 `json:"authlibPatches,omitempty"`
 }
 type mirrorAction0274 struct {
 	Kind      string `json:"kind"`
@@ -183,7 +201,7 @@ func mirrorAddArtifacts0274(ctx context.Context, stage string, entries []mirrorA
 		if kind == "install-mods" && (!strings.HasPrefix(a.Path, "mods/") || !strings.HasSuffix(strings.ToLower(a.Path), ".jar")) {
 			return nil, fmt.Errorf("mods must have mods/*.jar path: %s", a.Path)
 		}
-		if kind == "lwjgl-download" && (!strings.HasPrefix(a.Path, "libraries/") || !strings.HasSuffix(strings.ToLower(a.Path), ".jar")) {
+		if (kind == "lwjgl-download" || kind == "library-install") && (!strings.HasPrefix(a.Path, "libraries/") || !strings.HasSuffix(strings.ToLower(a.Path), ".jar")) {
 			return nil, errors.New("LWJGL artifact must be libraries/*.jar")
 		}
 		if a.Side != "" && a.Side != "client" && a.Side != "both" {
@@ -313,7 +331,7 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 		plan.Sources = append(plan.Sources, ledgerSource)
 	}
 	for _, change := range changes {
-		if change.Kind != "install-mods" && change.Kind != "lwjgl-download" && change.Kind != "modpack-import" && change.Kind != "authlib-patch-source" && change.Kind != "compat-artifact" && change.Kind != "compat-receipt" {
+		if change.Kind != "install-mods" && change.Kind != "library-install" && change.Kind != "lwjgl-download" && change.Kind != "modpack-import" && change.Kind != "authlib-patch-source" && change.Kind != "compat-artifact" && change.Kind != "compat-receipt" {
 			continue
 		}
 		full, err := secureClientDestination(stage, change.Path)
@@ -416,7 +434,7 @@ func mirrorReadMods0274(manifest string) ([]mirrorArtifact0274, error) {
 // natives require OS-specific rules and are deliberately download-only until
 // the target-aware native resolver in 0.27.7; never place them on every OS's
 // classpath implicitly.
-func mirrorRegisterLWJGL0274(stage string, plan factoryPlan0271, coordinate, rel, source string) (mirrorAction0274, error) {
+func mirrorRegisterLibrary0405(stage string, plan factoryPlan0271, coordinate, rel, source string) (mirrorAction0274, error) {
 	if len(strings.Split(coordinate, ":")) != 3 {
 		return mirrorAction0274{}, errors.New("native/classifier LWJGL jars cannot be registered without OS target rules")
 	}
@@ -760,12 +778,45 @@ func mirrorReadWorkspace0274(path string) (mirrorWorkspace0274, error) {
 	if strings.TrimSpace(ws.Minecraft) == "" {
 		return ws, errors.New("workspace.minecraft required")
 	}
-	if len(ws.Mods) > 2000 {
-		return ws, errors.New("too many mods")
+	if len(ws.Mods) > 2000 || len(ws.Libraries) > 128 || len(ws.AuthlibPatches) > 16 {
+		return ws, errors.New("workspace exceeds artifact limits")
 	}
 	for i := range ws.Mods {
 		if ws.Mods[i].File != "" && !filepath.IsAbs(ws.Mods[i].File) {
 			ws.Mods[i].File = filepath.Join(filepath.Dir(path), ws.Mods[i].File)
+		}
+	}
+	for i := range ws.Libraries {
+		lib := &ws.Libraries[i]
+		mavenPath, err := strictMavenPath(lib.Coordinate)
+		if err != nil {
+			return ws, fmt.Errorf("workspace library %q: %w", lib.Coordinate, err)
+		}
+		if !strings.HasSuffix(strings.ToLower(mavenPath), ".jar") || strings.Count(lib.Coordinate, ":") != 2 {
+			return ws, fmt.Errorf("workspace library must be a non-classifier JAR: %s", lib.Coordinate)
+		}
+		if !isSHA256Hex0271(lib.SHA256) || (lib.URL == "") == (lib.File == "") {
+			return ws, fmt.Errorf("workspace library %s requires SHA-256 and exactly one source", lib.Coordinate)
+		}
+		if lib.File != "" && !filepath.IsAbs(lib.File) {
+			lib.File = filepath.Join(filepath.Dir(path), lib.File)
+		}
+	}
+	for i := range ws.AuthlibPatches {
+		entry := &ws.AuthlibPatches[i]
+		if !isSHA256Hex0271(entry.BaseSHA256) || !isSHA256Hex0271(entry.PatchSHA256) || !isSHA256Hex0271(entry.ExpectedSHA256) {
+			return ws, fmt.Errorf("authlib patch %d must pin base, overlay and output SHA-256", i)
+		}
+		if entry.Patch == "" {
+			return ws, fmt.Errorf("authlib patch %d has no source file", i)
+		}
+		if !filepath.IsAbs(entry.Patch) {
+			entry.Patch = filepath.Join(filepath.Dir(path), entry.Patch)
+		}
+	}
+	for _, ref := range []*string{&ws.Modpack, &ws.Compatibility} {
+		if *ref != "" && !filepath.IsAbs(*ref) {
+			*ref = filepath.Join(filepath.Dir(path), *ref)
 		}
 	}
 	return ws, nil
@@ -857,7 +908,7 @@ func handleRuntimeMirror0274(args []string) error {
 				if source == "" {
 					source = "local:sha256:" + artifact.SHA256
 				}
-				action, err := mirrorRegisterLWJGL0274(stage, plan, coord, rel, source)
+				action, err := mirrorRegisterLibrary0405(stage, plan, coord, rel, source)
 				if err != nil {
 					return nil, err
 				}
@@ -908,18 +959,35 @@ func handleRuntimeMirror0274(args []string) error {
 		if err != nil {
 			return err
 		}
+		if err := os.MkdirAll(filepath.Dir(abs), 0755); err != nil {
+			return err
+		}
 		stage, err := os.MkdirTemp(filepath.Dir(abs), ".workspace-stage-")
 		if err != nil {
 			return err
 		}
 		defer os.RemoveAll(stage)
+		targets, err := parseVanillaTargets(flagValue(flags, "--target", currentVanillaTarget().OS+"/"+currentVanillaTarget().Arch))
+		if err != nil {
+			return err
+		}
+		workers, err := strconv.Atoi(flagValue(flags, "--workers", "12"))
+		if err != nil {
+			return fmt.Errorf("invalid --workers: %w", err)
+		}
+		processorTimeout, err := time.ParseDuration(flagValue(flags, "--processor-timeout", "10m"))
+		if err != nil {
+			return fmt.Errorf("invalid --processor-timeout: %w", err)
+		}
 		options := factoryBuildOptions0271{
-			Loader: ws.Loader, Minecraft: ws.Minecraft, LoaderVersion: ws.LoaderVersion,
+			Loader: ws.Loader, Minecraft: ws.Minecraft, LoaderVersion: ws.LoaderVersion, Targets: targets,
+			Workers: workers, ProcessorTimeout: processorTimeout,
 			ClientDir: filepath.Join(stage, "client"), StrictUpstream: true, SharedCacheDir: strings.TrimSpace(flagValue(flags, "--shared-cache-dir", "")),
 			VersionManifest:       flagValue(flags, "--version-manifest", ""),
 			AssetBaseURL:          flagValue(flags, "--asset-base-url", ""),
 			LibraryBaseURL:        flagValue(flags, "--library-base-url", ""),
 			MetaBaseURL:           flagValue(flags, "--meta-base-url", ""),
+			MavenMetadataURL:      flagValue(flags, "--maven-metadata-url", ""),
 			InstallerURL:          flagValue(flags, "--installer-url", ""),
 			InstallerSHA1:         flagValue(flags, "--installer-sha1", ""),
 			InstallerSourceFile:   flagValue(flags, "--installer-file", ""),
@@ -927,13 +995,99 @@ func handleRuntimeMirror0274(args []string) error {
 			JavaExecutable:        flagValue(flags, "--java", ""),
 			ProcessorSandbox:      flagValue(flags, "--processor-sandbox", "process"),
 		}
-		_, err = executeFactoryBuild0271(context.Background(), options)
+		// A workspace can build from an exact, verified .mrpack/CurseForge
+		// archive. Verify the pack's loader before downloading anything: a
+		// workspace may never silently substitute its game or loader version.
+		if ws.Modpack != "" {
+			spec, reader, e := parseModpack0275(ws.Modpack, strings.EqualFold(flagValue(flags, "--include-optional", "false"), "true"))
+			if e != nil {
+				return e
+			}
+			_ = reader.Close()
+			if spec.Minecraft != ws.Minecraft || spec.Loader != ws.Loader || spec.LoaderVersion != ws.LoaderVersion {
+				return fmt.Errorf("modpack conflicts with workspace Minecraft/loader: pack=%s/%s/%s workspace=%s/%s/%s", spec.Minecraft, spec.Loader, spec.LoaderVersion, ws.Minecraft, ws.Loader, ws.LoaderVersion)
+			}
+			_, err = importModpackWithGates0276(context.Background(), ws.Modpack, options.ClientDir,
+				flagValue(flags, "--manual-dir", ""), flagValue(flags, "--curseforge-api", ""),
+				flagValue(flags, "--curseforge-api-key", os.Getenv("NEVERLAUNCHER_CURSEFORGE_API_KEY")),
+				strings.EqualFold(flagValue(flags, "--include-optional", "false"), "true"), options,
+				flagValue(flags, "--permissions-file", ""), flagValue(flags, "--distribution", "local"))
+		} else {
+			_, err = executeFactoryBuild0271(context.Background(), options)
+		}
 		if err != nil {
 			return err
 		}
-		if len(ws.Mods) > 0 {
+		// Apply local mods and registered Maven libraries together. The
+		// transaction fails closed on any missing or mismatched artifact.
+		if len(ws.Mods) > 0 || len(ws.Libraries) > 0 {
 			_, err = mirrorTransactional0274(context.Background(), options.ClientDir, func(root string) ([]mirrorAction0274, error) {
-				return mirrorAddArtifacts0274(context.Background(), root, ws.Mods, "install-mods")
+				changes := []mirrorAction0274{}
+				if len(ws.Mods) > 0 {
+					mods, e := mirrorAddArtifacts0274(context.Background(), root, ws.Mods, "install-mods")
+					if e != nil {
+						return nil, e
+					}
+					changes = append(changes, mods...)
+				}
+				for _, lib := range ws.Libraries {
+					mavenPath, e := strictMavenPath(lib.Coordinate)
+					if e != nil {
+						return nil, e
+					}
+					rel := "libraries/" + mavenPath
+					added, e := mirrorAddArtifacts0274(context.Background(), root, []mirrorArtifact0274{{Path: rel, URL: lib.URL, File: lib.File, SHA256: lib.SHA256}}, "library-install")
+					if e != nil {
+						return nil, e
+					}
+					changes = append(changes, added...)
+					plan, e := readFactoryPlan0271(root)
+					if e != nil {
+						return nil, e
+					}
+					source := lib.URL
+					if source == "" {
+						source = "local:sha256:" + strings.ToLower(lib.SHA256)
+					}
+					registered, e := mirrorRegisterLibrary0405(root, plan, lib.Coordinate, rel, source)
+					if e != nil {
+						return nil, e
+					}
+					changes = append(changes, registered)
+				}
+				return changes, nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		if len(ws.AuthlibPatches) > 0 {
+			_, err = mirrorTransactional0274(context.Background(), options.ClientDir, func(root string) ([]mirrorAction0274, error) {
+				changes := []mirrorAction0274{}
+				for _, patch := range ws.AuthlibPatches {
+					applied, e := mirrorPatchAuthlib0274(root, patch.Target, patch.Patch, patch.BaseSHA256, patch.PatchSHA256, patch.ExpectedSHA256)
+					if e != nil {
+						return nil, e
+					}
+					changes = append(changes, applied...)
+				}
+				return changes, nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		if ws.Compatibility != "" {
+			request, e := compatReadRequest0279(ws.Compatibility)
+			if e != nil {
+				return e
+			}
+			_, err = mirrorTransactional0274(context.Background(), options.ClientDir, func(root string) ([]mirrorAction0274, error) {
+				plan, e := readFactoryPlan0271(root)
+				if e != nil {
+					return nil, e
+				}
+				return compatApply0279(context.Background(), root, plan, request, strings.EqualFold(flagValue(flags, "--allow-auth-agent", "false"), "true"))
 			})
 			if err != nil {
 				return err

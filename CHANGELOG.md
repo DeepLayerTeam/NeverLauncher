@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.40.5 — Executable MirrorHelper workspace, modpacks, libraries and authlib
+
+- Extend the real `client-factory apply-workspace` transaction to install an exact `.mrpack`/CurseForge pack, resolve and hash its files, apply verified additional mods, download pinned Maven JARs and register them in the effective Minecraft version profile. No manual staging of factory outputs or post-build classpath editing is required.
+- Compare archive Minecraft/loader/loader-version pins against the workspace before performing network installs. Preserve the importer's source hash, optional-file, missing-artifact and redistribution-permission rules; on failure, keep the final client directory absent.
+- Apply optional pinned authlib class overlays (base, patch and resulting JAR SHA-256), and optional verified classloader/javaagent compatibility requests in the same unpublished workspace. A custom Yggdrasil agent remains disabled until `--allow-auth-agent true` is supplied explicitly.
+- Resolve local archive, compatibility request, patch, mod and library files relative to the workspace JSON; support clean installation in nested output directories and explicit `--target` platform selection. Reuse existing transaction lock, stage/verify steps and source/action receipts.
+- Allow CurseForge packs composed solely of embedded override files to install without an API key; upstream CurseForge file records still require exact authenticated metadata.
+- Add HTTP-backed full-workspace tests that import a Modrinth pack, install and register a Maven dependency, apply auth mode, verify file hashes, reject mismatching game pins and wrong mod hashes, and verify authlib patching/tamper detection. Also run an installed Maven JAR entrypoint with a real local JVM.
+
+**Verification boundary:** The workspace and existing MirrorHelper/Modpack/compatibility Go integration suites execute with local fixtures and the Go CLI builds. These checks do not represent a genuine third-party Modrinth/CurseForge service integration, an authentic Minecraft launch or cross-platform Rust Desktop certification. The acceptance goal remains open pending such tests.
+
 ## 0.40.4 — Forge/NeoForge target-specific libraries and executable processor checks
 
 - Apply Vanilla OS and architecture selection to both Forge/NeoForge installer libraries and inherited runtime libraries, honoring `allow/disallow`, `clientreq=false` and native classifier architecture. Keep unselected entries in the version profile for runtime rule evaluation; do not fetch their artifacts on incompatible systems.
