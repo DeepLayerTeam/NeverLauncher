@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.40.9 — Preserve crash-recoverable rollback across client repair
+
+- Repair of the **same signed release and component selection** no longer replaces the last-known-good checkpoint with a backup of potentially damaged pre-repair bytes. Keep the earlier verified A → B backup and advance its active release identity after a successful B → repaired B transaction.
+- Apply the same checkpoint-preservation rule during crash recovery when the repaired files and active pointer were already published but journal finalization was interrupted. A second repair retains the same earlier verified rollback target.
+- On a first-time installation or repair without a genuine predecessor, do not publish a fictitious rollback target that would remove a working client. Explicit rollback requires a previously installed release and still checks signed contents, backup integrity, anti-rollback policy and active release identity.
+- Add regression tests for update → corruption → repair → rollback, crash recovery between pointer and final journal, and first-install rollback refusal. Verify that unmanaged mods and world saves remain untouched.
+
+**Verification boundary:** This is an executable NeverRuntime transaction-path source change. The local environment has no Rust toolchain and cannot fetch it, so compilation, automated Rust test execution and actual Minecraft/Desktop kill-and-restart acceptance remain unverified. This source patch is not a certified production GA release until those tests pass.
+
 ## 0.40.8 — Verified resumable HTTP delivery, bounded ranges and cross-mirror repair
 
 - Extend the production NeverRuntime file downloader to consume valid **bounded HTTP 206 ranges** until a signed file is complete. Keep its strong `ETag` and `If-Range` validator across suffix requests without discarding already downloaded bytes or using one scheduler retry per healthy bounded response. Bound range chaining to avoid infinite/abusive server responses.

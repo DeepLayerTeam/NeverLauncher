@@ -211,6 +211,51 @@ fn verify_journal(root: &Path, j: &Journal, key: &str) -> Result<(), String> {
     }
     Ok(())
 }
+// Keep the last genuinely different, verified release available after a repair.
+// A repair replaces bytes within the SAME signed selection; its backup may
+// contain the damaged files being repaired and is not a rollback candidate.
+// The earlier A -> B checkpoint is still valid after B -> repaired B, provided
+// the previously active release is exactly the one that checkpoint installed.
+fn rollback_checkpoint(root: &Path, completed: &Journal, key: &str) -> Result<Option<Journal>, String> {
+    if completed.state != "complete" {
+        return Err("rollback checkpoint requires a completed switch".into());
+    }
+    let Some(previous) = completed.previous.as_ref() else {
+        // A clean installation has nothing to roll back to.
+        return Ok(None);
+    };
+    let same_selection = previous.manifest.signature.as_ref().map(|s| (&s.signature, &s.public_key))
+        == completed.next.manifest.signature.as_ref().map(|s| (&s.signature, &s.public_key))
+        && previous.preset == completed.next.preset
+        && previous.installed.iter().collect::<BTreeSet<_>>()
+            == completed.next.installed.iter().collect::<BTreeSet<_>>();
+    if !same_selection {
+        // A true update or preset switch: retain the verified predecessor.
+        return Ok(Some(completed.clone()));
+    }
+    let Some(mut saved) = last_known_good(root)? else { return Ok(None); };
+    verify_journal(root, &saved, key)?;
+    if saved.next.id != previous.id || saved.previous.is_none() {
+        // No matching earlier, distinct release. Never call the corrupted
+        // pre-repair bytes a last-known-good backup.
+        return Ok(None);
+    }
+    // The signed file selection is identical, so the stored A -> B backup and
+    // ownership entries still describe A -> repaired B. Only the active release
+    // identity advances; the trusted A bytes stay in the original backup.
+    saved.next = completed.next.clone();
+    saved.generation = saved.generation.max(completed.generation)
+        .checked_add(1).ok_or("release journal generation overflow")?;
+    verify_journal(root, &saved, key)?;
+    Ok(Some(saved))
+}
+fn persist_rollback_checkpoint(root: &Path, completed: &Journal, key: &str) -> Result<(), String> {
+    if let Some(checkpoint) = rollback_checkpoint(root, completed, key)? {
+        write_slot(root, "last-known-good", checkpoint.generation, &checkpoint)?;
+    }
+    Ok(())
+}
+
 fn backup_dir(root: &Path, id: &str) -> PathBuf { base(root).join("backups").join(id) }
 fn copy_durable(src: &Path, dest: &Path) -> Result<(), String> {
     if let Some(parent) = dest.parent() { fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
@@ -294,7 +339,7 @@ fn recover_locked(root: &Path, key: &str) -> Result<(), String> {
     if !roll_forward { restore(root, &j)?; }
     j.state = "complete".into();
     j.generation += 1;
-    if roll_forward { write_slot(root, "last-known-good", j.generation, &j)?; }
+    if roll_forward { persist_rollback_checkpoint(root, &j, key)?; }
     write_slot(root, "switch", j.generation, &j)?;
     if let Some(active) = pointer(root)?.active {
         validate_release(&active,key)?;
@@ -599,10 +644,11 @@ fn commit(root: &Path, next: Release, key: &str, stage: &Path) -> Result<(), Str
         if !verify_installed(root, &next)? { return Err("installed client set failed post-switch verification".into()); }
         let generation = pointer(root)?.generation + 1;
         write_slot(root, "active", generation, &Pointer { schema: SCHEMA, generation, active: Some(next.clone()) })?;
-        // The journal, including backups and previous pointer, is the LKG
-        // record. It survives a commit; explicit rollback can use it later.
+        // Persist the previous GOOD release before publishing completion.
+        // A repair must not replace a valid A -> B checkpoint with the bad
+        // pre-repair bytes of B -> B. Recovery uses exactly the same rule.
         j.state = "complete".into(); j.generation += 1;
-        write_slot(root, "last-known-good", j.generation, &j)?;
+        persist_rollback_checkpoint(root, &j, key)?;
         write_slot(root, "switch", j.generation, &j)?;
         release_generations::accept(root,&next.manifest)?;
         crate::trust_policy::accept(root,&next.manifest,key)?;
@@ -825,6 +871,9 @@ pub async fn rollback(root: &Path, key: &str) -> Result<(), String> {
         recover_locked(&root, &key)?;
         let mut j = last_known_good(&root)?.ok_or("no last-known-good client release")?;
         verify_journal(&root, &j, &key)?;
+        if j.previous.is_none() {
+            return Err("no previous working client release to roll back to".into());
+        }
         // A repair may have backed up already corrupted managed bytes to make
         // a failed repair crash-recoverable. Such bytes are *not* a usable
         // last-known-good release and must never be offered for user rollback.
@@ -1155,11 +1204,87 @@ mod tests {
         assert_eq!(fs::read(root.join("libraries/core.jar")).unwrap(),b"GOOD");
         let active=pointer(&root).unwrap().active.unwrap();
         assert_eq!(active.plan_sha256,Some(resolved_download_0246::resolve(&m,None).unwrap().sha256));
-        assert!(rollback(&root,&key).await.unwrap_err().contains("already damaged"),
-            "repair must not advertise corrupt previous bytes as last-known-good");
+        assert!(rollback(&root,&key).await.unwrap_err().contains("no last-known-good"),
+            "repair of an initial installation must not advertise corrupt bytes as last-known-good");
         assert_eq!(fs::read(root.join("libraries/core.jar")).unwrap(),b"GOOD");
         fs::remove_dir_all(root).unwrap();
     }
+    // The previous working release must remain recoverable even after a repair
+    // of the current release. Otherwise a B -> B repair overwrites the A -> B
+    // rollback checkpoint with potentially corrupted B bytes.
+    #[tokio::test]
+    async fn repair_keeps_the_previous_verified_release_for_explicit_rollback_0409() {
+        let root=std::env::temp_dir().join(format!("nl-lkg-repair-0409-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (a,key)=fixture(&root,"a",&[("mods/core.jar",b"OLD")]);
+        let (b,_)=fixture(&root,"b",&[("mods/core.jar",b"NEW"),("mods/added.jar",b"ADDED")]);
+        let first=Release{manifest:a.clone(),installed:vec!["mods/core.jar".into()],id:format!("{:032x}",401),preset:None,plan_sha256:None};
+        commit(&root,first,&key,&staged(&root,&a,&[("mods/core.jar",b"OLD")])).unwrap();
+        let second=Release{manifest:b.clone(),installed:vec!["mods/core.jar".into(),"mods/added.jar".into()],id:format!("{:032x}",402),preset:None,plan_sha256:None};
+        commit(&root,second,&key,&staged(&root,&b,&[("mods/core.jar",b"NEW"),("mods/added.jar",b"ADDED")])).unwrap();
+        let original_backup=last_known_good(&root).unwrap().unwrap().backup_id;
+        fs::create_dir_all(root.join("saves/test-world")).unwrap();
+        fs::write(root.join("saves/test-world/level.dat"),b"PLAYER_WORLD").unwrap();
+        fs::write(root.join("mods/custom.jar"),b"PLAYER_MOD").unwrap();
+        // Simulate the corruption for which the player requests repair.
+        fs::write(root.join("mods/core.jar"),b"BAD").unwrap();
+        let repaired=Release{manifest:b.clone(),installed:vec!["mods/core.jar".into(),"mods/added.jar".into()],id:format!("{:032x}",403),preset:None,plan_sha256:None};
+        commit(&root,repaired,&key,&staged(&root,&b,&[("mods/core.jar",b"NEW"),("mods/added.jar",b"ADDED")])).unwrap();
+        assert_eq!(fs::read(root.join("mods/core.jar")).unwrap(),b"NEW");
+        let checkpoint=last_known_good(&root).unwrap().unwrap();
+        assert_eq!(checkpoint.backup_id,original_backup,"repair must retain the A backup");
+        assert_eq!(checkpoint.next.id,format!("{:032x}",403));
+        // A second repair must not lose the original A checkpoint either.
+        fs::write(root.join("mods/core.jar"),b"SECOND_BAD").unwrap();
+        let second_repair=Release{manifest:b.clone(),installed:vec!["mods/core.jar".into(),"mods/added.jar".into()],id:format!("{:032x}",404),preset:None,plan_sha256:None};
+        commit(&root,second_repair,&key,&staged(&root,&b,&[("mods/core.jar",b"NEW"),("mods/added.jar",b"ADDED")])).unwrap();
+        let checkpoint=last_known_good(&root).unwrap().unwrap();
+        assert_eq!(checkpoint.backup_id,original_backup);
+        assert_eq!(checkpoint.next.id,format!("{:032x}",404));
+        rollback(&root,&key).await.unwrap();
+        assert_eq!(fs::read(root.join("mods/core.jar")).unwrap(),b"OLD");
+        assert!(!root.join("mods/added.jar").exists());
+        assert_eq!(fs::read(root.join("mods/custom.jar")).unwrap(),b"PLAYER_MOD");
+        assert_eq!(fs::read(root.join("saves/test-world/level.dat")).unwrap(),b"PLAYER_WORLD");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn crash_after_repair_pointer_recovers_the_earlier_rollback_checkpoint_0409() {
+        let root=std::env::temp_dir().join(format!("nl-lkg-crash-0409-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (a,key)=fixture(&root,"a",&[("libraries/game.jar",b"A")]);
+        let (b,_)=fixture(&root,"b",&[("libraries/game.jar",b"B")]);
+        let release=|manifest:Manifest,id:u128|Release{manifest,installed:vec!["libraries/game.jar".into()],id:format!("{id:032x}"),preset:None,plan_sha256:None};
+        commit(&root,release(a.clone(),411),&key,&staged(&root,&a,&[("libraries/game.jar",b"A")])).unwrap();
+        commit(&root,release(b.clone(),412),&key,&staged(&root,&b,&[("libraries/game.jar",b"B")])).unwrap();
+        let before_repair=last_known_good(&root).unwrap().unwrap();
+        fs::write(root.join("libraries/game.jar"),b"DAMAGED").unwrap();
+        commit(&root,release(b.clone(),413),&key,&staged(&root,&b,&[("libraries/game.jar",b"B")])).unwrap();
+        // Fault injection: commit published the repaired pointer, but power
+        // failed before the new checkpoint and complete switch were durable.
+        for slot in 0..2 { let _=fs::remove_file(state_path(&root,"last-known-good",slot)); }
+        write_slot(&root,"last-known-good",before_repair.generation,&before_repair).unwrap();
+        let mut pending=journal(&root).unwrap().unwrap();
+        pending.state="switching".into();
+        pending.generation+=1;
+        write_slot(&root,"switch",pending.generation,&pending).unwrap();
+        recover(&root,&key).await.unwrap();
+        assert_eq!(last_known_good(&root).unwrap().unwrap().next.id,format!("{:032x}",413));
+        rollback(&root,&key).await.unwrap();
+        assert_eq!(fs::read(root.join("libraries/game.jar")).unwrap(),b"A");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn initial_install_has_no_previous_release_to_roll_back_to_0409() {
+        let root=std::env::temp_dir().join(format!("nl-no-prior-0409-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (m,key)=fixture(&root,"first",&[("libraries/client.jar",b"READY")]);
+        let r=Release{manifest:m.clone(),installed:vec!["libraries/client.jar".into()],id:format!("{:032x}",419),preset:None,plan_sha256:None};
+        commit(&root,r,&key,&staged(&root,&m,&[("libraries/client.jar",b"READY")])).unwrap();
+        assert!(rollback(&root,&key).await.is_err());
+        assert_eq!(fs::read(root.join("libraries/client.jar")).unwrap(),b"READY");
+        fs::remove_dir_all(root).unwrap();
+    }
+
     #[tokio::test]
     async fn ownership_conflict_blocks_before_any_network_request_0246(){
         let root=std::env::temp_dir().join(format!("nl-preflight-0246-{}-{:x}",std::process::id(),rand::random::<u64>()));
