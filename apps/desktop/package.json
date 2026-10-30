@@ -1,6 +1,6 @@
 {
   "name": "neverlauncher-desktop",
-  "version": "0.39.6",
+  "version": "0.39.7",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "test:components": "tsc src/component_selection_0247.ts --module es2020 --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/component_selection_0247.test.mjs",
     "test:official": "tsc src/official_minecraft_0257.ts --module es2020 --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/official_minecraft_0257.test.mjs",
     "test:textures": "tsc src/texture_service_0258.ts src/official_minecraft_0257.ts --module es2020 --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/texture_service_0258.test.mjs tests/official_minecraft_0257.test.mjs",
+    "test:server-join": "tsc src/server_join_identity_0397.ts --module es2020 --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/server_join_identity_0397.test.mjs",
     "test:launch-modes": "tsc src/launch_modes_0269.ts src/desktop_experience_0229.ts --module es2020 --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/launch_modes_0269.test.mjs",
     "test:auth-experience": "tsc src/official_minecraft_0257.ts src/official_auth_experience_02610.ts --module es2020 --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/official_auth_experience_02610.test.mjs",
     "test:sentry": "tsc src/sentry_diagnostics_0309.ts --module es2020 --target es2020 --strict --skipLibCheck --lib es2020,dom --outDir build-tests && node --test tests/sentry_diagnostics_0309.test.mjs",

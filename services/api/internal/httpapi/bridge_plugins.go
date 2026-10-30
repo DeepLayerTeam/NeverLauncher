@@ -306,6 +306,10 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, err.Error(), req, bridgeJoinRecord{}))
 		return
 	}
+	if join.IdentityRealm == "official" && !(req.OnlineModeVerified || (fromHandoff && handoff.SourceOnlineModeVerified)) {
+		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "official_online_mode_required", req, join))
+		return
+	}
 	if !strings.EqualFold(req.Username, join.Username) {
 		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, "serverbridge_player_name_mismatch", req, bridgeJoinRecord{}))
 		return
@@ -390,6 +394,7 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	redemption.TrustReason = trust.Reason
 	redemption.IntegrityReason = minecraftIntegrity.Reason
 	redemption.VerifiedAt = time.Now().UTC()
+	redemption.OnlineModeVerified = req.OnlineModeVerified || (fromHandoff && handoff.SourceOnlineModeVerified)
 	if fromHandoff {
 		consumedHandoff, consumedOK := s.State.ServerBridge.consumeHandoff0148(handoff.ID, redemption)
 		if !consumedOK {

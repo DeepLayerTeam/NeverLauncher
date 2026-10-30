@@ -110,7 +110,7 @@ public final class NeverLauncherVelocityBridge {
             String ip = event.getConnection().getRemoteAddress() == null || event.getConnection().getRemoteAddress().getAddress() == null
                 ? ""
                 : event.getConnection().getRemoteAddress().getAddress().getHostAddress();
-            JoinValidationResult result = current.validateJoin(username, "", ip);
+            JoinValidationResult result = current.validateJoin(username, "", ip, proxy.getConfiguration().isOnlineMode());
             current.publishEvent("player.login", Map.of(
                 "username", username,
                 "allowed", Boolean.toString(result.allowed),

@@ -147,6 +147,12 @@ public final class NeverLauncherApiClient {
     }
 
     public JoinValidationResult validateJoin(String username, String uuid, String ip) {
+        return validateJoin(username, uuid, ip, false);
+    }
+
+    // The platform, not the player, reports whether Mojang online authentication
+    // is enforced on the connection endpoint. This field is signed by the node.
+    public JoinValidationResult validateJoin(String username, String uuid, String ip, boolean onlineModeVerified) {
         if (identity == null) {
             return new JoinValidationResult(false, "node_identity_missing", "{}");
         }
@@ -164,6 +170,7 @@ public final class NeverLauncherApiClient {
             "\"serverId\":" + quote(config.serverId) + "," +
             "\"username\":" + quote(username) + "," +
             "\"uuid\":" + quote(uuid) + "," +
+            "\"onlineModeVerified\":" + onlineModeVerified + "," +
             "\"ip\":" + quote(ip) + "," +
             "\"projectId\":" + quote(config.projectId) + "," +
             "\"profileId\":" + quote(config.profileId) + "," +

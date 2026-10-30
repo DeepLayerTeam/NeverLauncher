@@ -142,7 +142,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         // after game authentication in onAuthenticatedLogin below.
         String uuid = "";
         String ip = remoteIP(event.getConnection().getSocketAddress());
-        current.validateJoinAsync(username, uuid, ip).whenComplete((result, error) -> {
+        current.validateJoinAsync(username, uuid, ip, getProxy().getConfig().isOnlineMode()).whenComplete((result, error) -> {
             try {
                 JoinValidationResult finalResult = error == null && result != null
                     ? result

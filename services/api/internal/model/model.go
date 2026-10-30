@@ -656,6 +656,9 @@ type ServerBridgeJoinTicket struct {
 	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
 	BindingEpoch           int64     `json:"bindingEpoch"`
 	MinecraftSessionID     string    `json:"minecraftSessionId,omitempty"`
+	IdentityRealm          string    `json:"identityRealm,omitempty"`
+	OfficialProof          string    `json:"-"`
+	OnlineModeVerified     bool      `json:"onlineModeVerified,omitempty"` // Verified snapshot; never includes a bearer.
 	SessionCorrelationID   string    `json:"sessionCorrelationId,omitempty"`
 	ProtocolVersion        int       `json:"protocolVersion"`
 	IssuedIdentityEpoch    int64     `json:"issuedIdentityEpoch"`
@@ -683,6 +686,7 @@ type ServerBridgeJoinRedemption struct {
 	TrustReason          string
 	IntegrityReason      string
 	VerifiedAt           time.Time
+	OnlineModeVerified   bool
 }
 
 // ServerBridgeHandoff — краткоживущие одноразовые учётные данные для передачи от прокси к
@@ -690,45 +694,48 @@ type ServerBridgeJoinRedemption struct {
 // криптографически привязываются к обеим текущим идентичностям узлов. Проверка серверной
 // частью атомарно поглощает их, поэтому исходный токен лаунчера не используется повторно.
 type ServerBridgeHandoff struct {
-	ID                     string    `json:"id"`
-	Username               string    `json:"username"`
-	UsernameNormalized     string    `json:"-"`
-	UUID                   string    `json:"uuid"`
-	UserID                 string    `json:"userId"`
-	SessionID              string    `json:"sessionId"`
-	SourceNodeID           string    `json:"sourceNodeId"`
-	TargetNodeID           string    `json:"targetNodeId"`
-	BackendName            string    `json:"backendName,omitempty"`
-	ProjectID              string    `json:"projectId"`
-	ProfileID              string    `json:"profileId"`
-	Channel                string    `json:"channel"`
-	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
-	BindingEpoch           int64     `json:"bindingEpoch"`
-	MinecraftSessionID     string    `json:"minecraftSessionId,omitempty"`
-	SessionCorrelationID   string    `json:"sessionCorrelationId,omitempty"`
-	TransferSequence       int64     `json:"transferSequence,omitempty"`
-	SourceIdentityEpoch    int64     `json:"sourceIdentityEpoch"`
-	SourceKeyFingerprint   string    `json:"sourceKeyFingerprint"`
-	TargetIdentityEpoch    int64     `json:"targetIdentityEpoch"`
-	TargetKeyFingerprint   string    `json:"targetKeyFingerprint"`
-	ProtocolVersion        int       `json:"protocolVersion"`
-	RequireRoutingProof    bool      `json:"-"`
-	SourceRuntimeID        string    `json:"sourceRuntimeId,omitempty"`
-	SourceRuntimeEpoch     int64     `json:"sourceRuntimeEpoch,omitempty"`
-	SourceRoutingRevision  int64     `json:"sourceRoutingRevision,omitempty"`
-	SourceRoutingDigest    string    `json:"sourceRoutingDigest,omitempty"`
-	SourceRoutingSignature string    `json:"sourceRoutingSignature,omitempty"`
-	TargetRuntimeID        string    `json:"targetRuntimeId,omitempty"`
-	TargetRuntimeEpoch     int64     `json:"targetRuntimeEpoch,omitempty"`
-	TargetRoutingRevision  int64     `json:"targetRoutingRevision,omitempty"`
-	TargetRoutingDigest    string    `json:"targetRoutingDigest,omitempty"`
-	TargetRoutingSignature string    `json:"targetRoutingSignature,omitempty"`
-	Status                 string    `json:"status"`
-	CreatedAt              time.Time `json:"createdAt"`
-	ExpiresAt              time.Time `json:"expiresAt"`
-	ConsumedAt             time.Time `json:"consumedAt,omitempty"`
-	RedeemedNonceHash      string    `json:"redeemedNonceHash,omitempty"`
-	RedeemedByIP           string    `json:"redeemedByIp,omitempty"`
+	ID                       string    `json:"id"`
+	Username                 string    `json:"username"`
+	UsernameNormalized       string    `json:"-"`
+	UUID                     string    `json:"uuid"`
+	UserID                   string    `json:"userId"`
+	SessionID                string    `json:"sessionId"`
+	SourceNodeID             string    `json:"sourceNodeId"`
+	TargetNodeID             string    `json:"targetNodeId"`
+	BackendName              string    `json:"backendName,omitempty"`
+	ProjectID                string    `json:"projectId"`
+	ProfileID                string    `json:"profileId"`
+	Channel                  string    `json:"channel"`
+	TrustedDeviceID          string    `json:"trustedDeviceId,omitempty"`
+	BindingEpoch             int64     `json:"bindingEpoch"`
+	MinecraftSessionID       string    `json:"minecraftSessionId,omitempty"`
+	IdentityRealm            string    `json:"identityRealm,omitempty"`
+	OfficialProof            string    `json:"-"`
+	SourceOnlineModeVerified bool      `json:"-"`
+	SessionCorrelationID     string    `json:"sessionCorrelationId,omitempty"`
+	TransferSequence         int64     `json:"transferSequence,omitempty"`
+	SourceIdentityEpoch      int64     `json:"sourceIdentityEpoch"`
+	SourceKeyFingerprint     string    `json:"sourceKeyFingerprint"`
+	TargetIdentityEpoch      int64     `json:"targetIdentityEpoch"`
+	TargetKeyFingerprint     string    `json:"targetKeyFingerprint"`
+	ProtocolVersion          int       `json:"protocolVersion"`
+	RequireRoutingProof      bool      `json:"-"`
+	SourceRuntimeID          string    `json:"sourceRuntimeId,omitempty"`
+	SourceRuntimeEpoch       int64     `json:"sourceRuntimeEpoch,omitempty"`
+	SourceRoutingRevision    int64     `json:"sourceRoutingRevision,omitempty"`
+	SourceRoutingDigest      string    `json:"sourceRoutingDigest,omitempty"`
+	SourceRoutingSignature   string    `json:"sourceRoutingSignature,omitempty"`
+	TargetRuntimeID          string    `json:"targetRuntimeId,omitempty"`
+	TargetRuntimeEpoch       int64     `json:"targetRuntimeEpoch,omitempty"`
+	TargetRoutingRevision    int64     `json:"targetRoutingRevision,omitempty"`
+	TargetRoutingDigest      string    `json:"targetRoutingDigest,omitempty"`
+	TargetRoutingSignature   string    `json:"targetRoutingSignature,omitempty"`
+	Status                   string    `json:"status"`
+	CreatedAt                time.Time `json:"createdAt"`
+	ExpiresAt                time.Time `json:"expiresAt"`
+	ConsumedAt               time.Time `json:"consumedAt,omitempty"`
+	RedeemedNonceHash        string    `json:"redeemedNonceHash,omitempty"`
+	RedeemedByIP             string    `json:"redeemedByIp,omitempty"`
 }
 
 // ServerBridgePlayerSession — авторитетное состояние игрового сеанса на протяжении взаимодействия лаунчера, прокси и серверного

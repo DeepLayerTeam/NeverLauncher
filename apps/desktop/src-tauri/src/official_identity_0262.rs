@@ -504,7 +504,7 @@ impl IdentityManager {
     // On every asynchronous boundary match the flow nonce. Cancellation or a
     // replacement login must not resurrect an older Device Code or save its account.
     pub async fn begin(&self, backend: &str, access: &str, session: &str) -> Result<DeviceChallenge, String> {
-        let (base, id) = self.verified_scope(backend,access, session)?;
+        let (base, id) = self.verified_scope(backend,access, session).await?;
         self.pending_remove(&id)?;
         self.cancel_browser(&id)?;
         let nonce = rand::random::<u64>();
@@ -550,7 +550,7 @@ impl IdentityManager {
         }
     }
     pub async fn poll(&self, backend: &str, access: &str, session: &str) -> Result<PollResult, String> {
-        let (base, id) = self.verified_scope(backend,access, session)?;
+        let (base, id) = self.verified_scope(backend,access, session).await?;
         let (mut ticket, nonce) = {
             let mut flows = self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?;
             let flow = flows.get_mut(&id).ok_or("Нет незавершённой Microsoft-авторизации")?;
@@ -624,7 +624,7 @@ impl IdentityManager {
     /// A single native waiter owns pacing, temporary retry backoff and expiry.
     /// No browser timer can leak session tickets or generate tight poll loops.
     pub async fn wait_device(&self, backend: &str, access: &str, session: &str) -> Result<OfficialProfile, String> {
-        let (_, id) = self.verified_scope(backend,access, session)?;
+        let (_, id) = self.verified_scope(backend,access, session).await?;
         let mut cancelled = {
             let flows = self.pending.lock().map_err(|_| "Identity Manager заблокирован".to_string())?;
             flows.get(&id).ok_or("Нет незавершённой Microsoft-авторизации")?.cancel.subscribe()
@@ -678,7 +678,7 @@ impl IdentityManager {
         Ok((result, record))
     }
     pub async fn status(&self, backend: &str, access: &str, session: &str) -> Result<Option<OfficialProfile>, String> {
-        let (base, id) = self.verified_scope(backend,access, session)?;
+        let (base, id) = self.verified_scope(backend,access, session).await?;
         let _guard=self.vault_lock.lock().await;
         migrate_legacy(&id)?;
         let Some((slot, mut record)) = selected_record(&id)? else {return Ok(None)};
@@ -692,7 +692,7 @@ impl IdentityManager {
         Ok(Some(profile))
     }
     pub async fn modify(&self, backend: &str, access: &str, session: &str, operation: &str, cape_id: Option<&str>, skin: Option<(Vec<u8>, String)>) -> Result<OfficialProfile, String> {
-        let (base, id) = self.verified_scope(backend,access, session)?;
+        let (base, id) = self.verified_scope(backend,access, session).await?;
         let _guard=self.vault_lock.lock().await;
         migrate_legacy(&id)?;
         let (slot, mut record)=selected_record(&id)?.ok_or("Официальный аккаунт отсутствует")?;
@@ -720,8 +720,61 @@ impl IdentityManager {
         if !record.profile.id.eq_ignore_ascii_case(&profile.id) { return Err("Minecraft identity mismatch".into()); }
         Ok(profile)
     }
+    // Native-only official ServerBridge ticket creation. Renderer supplies scope
+    // and Guard evidence, never the official Minecraft token. Revalidate the
+    // selected account while holding the same OS-vault selection lock.
+    pub async fn prepare_server_join_0397(&self, req: OfficialServerJoinRequest0397) -> Result<OfficialServerJoinResult0397,String> {
+        let (base,id)=self.verified_scope(&req.backend_url,&req.never_token,&req.never_session_id).await?;
+        let expected=normalized_uuid(&req.expected_uuid)?;
+        if req.server_id.is_empty() || req.project_id.is_empty() || req.profile_id.is_empty() || req.channel.is_empty() {
+            return Err("ServerBridge join requires a real project, profile, channel and server".into());
+        }
+        let _guard=self.vault_lock.lock().await;
+        migrate_legacy(&id)?;
+        let (slot,mut record)=selected_record(&id)?.ok_or("Official Minecraft account not selected")?;
+        if normalized_uuid(&record.profile.id)?!=expected || record.native.is_none() {
+            return Err("Selected native Minecraft account changed; reconnect and retry".into());
+        }
+        self.native_validate(&base,&slot,&req.never_token,&mut record,false).await?;
+        if normalized_uuid(&record.profile.id)?!=expected {
+            return Err("Minecraft UUID changed before server authorization".into());
+        }
+        let official_token=Zeroizing::new(record.native.as_ref().ok_or("Minecraft account unavailable")?.minecraft_token.clone());
+        let mut url=base.clone();
+        url.set_path("/api/v1/session/join");url.set_query(None);url.set_fragment(None);
+        let body=json!({
+            "username":record.profile.name,"serverId":req.server_id,
+            "projectId":req.project_id,"profileId":req.profile_id,"channel":req.channel,
+            "officialMinecraftAccessToken":official_token.as_str(),
+            "guardAttestationTicket":req.guard_attestation_ticket,
+            "continuousGuardTicket":req.continuous_guard_ticket,
+            "planEvidence":req.plan_evidence,
+        });
+        let response=self.client.post(url).bearer_auth(&req.never_token).json(&body).send().await
+            .map_err(|_|"ServerBridge join request unavailable")?;
+        let status=response.status();
+        if !status.is_success() {return Err(format!("ServerBridge rejected official Minecraft identity (HTTP {})",status.as_u16()));}
+        if response.content_length().is_some_and(|len|len>32*1024) {
+            return Err("Invalid ServerBridge join response size".into());
+        }
+        let bytes=response.bytes().await.map_err(|_|"ServerBridge response unavailable")?;
+        if bytes.len()>32*1024 {return Err("ServerBridge join response too large".into());}
+        let payload:Value=serde_json::from_slice(&bytes).map_err(|_|"Invalid ServerBridge response")?;
+        let join=payload.pointer("/data/join").ok_or("ServerBridge join missing")?;
+        let returned_uuid=join.get("uuid").and_then(Value::as_str).ok_or("ServerBridge UUID missing")?;
+        let returned_name=join.get("username").and_then(Value::as_str).ok_or("ServerBridge name missing")?;
+        if normalized_uuid(returned_uuid)?!=expected || returned_name!=record.profile.name ||
+            join.get("identityRealm").and_then(Value::as_str)!=Some("official") ||
+            join.get("oneTime").and_then(Value::as_bool)!=Some(true) ||
+            join.get("serverId").and_then(Value::as_str)!=Some(req.server_id.as_str()) ||
+            payload.pointer("/data/status").and_then(Value::as_str)!=Some("joined") {
+            return Err("ServerBridge did not authorize the selected official identity".into());
+        }
+        Ok(OfficialServerJoinResult0397{username:record.profile.name,uuid:expected,server_id:req.server_id})
+    }
+
     pub async fn launch_credentials(&self, backend: &str, access: &str, session: &str) -> Result<MinecraftLaunchCredentials, String> {
-        let (base, id) = self.verified_scope(backend,access, session)?;
+        let (base, id) = self.verified_scope(backend,access, session).await?;
         let _guard=self.vault_lock.lock().await;
         migrate_legacy(&id)?;
         let (slot, mut record)=selected_record(&id)?.ok_or("Официальный аккаунт отсутствует")?;
@@ -817,7 +870,7 @@ impl IdentityManager {
         Ok(())
     }
     pub async fn native_begin(&self, backend: &str, access: &str, session: &str) -> Result<DeviceChallenge,String> {
-        let (base,id) = self.verified_scope(backend,access,session)?;
+        let (base,id) = self.verified_scope(backend,access,session).await?;
         self.pending_remove(&id)?;
         self.native_pending_remove(&id)?;
         self.cancel_browser(&id)?;
@@ -860,7 +913,7 @@ impl IdentityManager {
         result
     }
     pub async fn native_poll(&self, backend: &str, access: &str, session: &str) -> Result<PollResult,String> {
-        let (base,id) = self.verified_scope(backend,access,session)?;
+        let (base,id) = self.verified_scope(backend,access,session).await?;
         let (client_id,device,nonce,prior_grant) = {
             let mut flows = self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
             let flow = flows.get_mut(&id).ok_or("Нет Device Code авторизации")?;
@@ -970,7 +1023,7 @@ impl IdentityManager {
         Ok(PollResult{pending:true,profile:None,interval_seconds:Some(delay)})
     }
     pub async fn native_wait_device(&self, backend:&str,access:&str,session:&str) -> Result<OfficialProfile,String> {
-        let (_,id)=self.verified_scope(backend,access,session)?;
+        let (_,id)=self.verified_scope(backend,access,session).await?;
         let mut cancel=self.native_pending.lock().map_err(|_|"Native identity заблокирован")?
             .get(&id).ok_or("Нет Device Code авторизации")?.cancel.subscribe();
         loop {
@@ -997,7 +1050,7 @@ impl IdentityManager {
     // await the callback and complete provider exchange wholly within Rust.
     // Renderer sees only the finished profile and never code/state/verifier.
     pub async fn login_browser(&self, backend: &str, access: &str, session: &str) -> Result<OfficialProfile,String> {
-        let (base,id) = self.verified_scope(backend,access,session)?;
+        let (base,id) = self.verified_scope(backend,access,session).await?;
         let state = official_browser_0263::random_secret(32);
         self.pending_remove(&id)?;
         self.native_pending_remove(&id)?;
@@ -1053,7 +1106,7 @@ impl IdentityManager {
         Ok(())
     }
     pub async fn list_accounts(&self, backend: &str, access: &str, session: &str) -> Result<Vec<OfficialAccount0267>, String> {
-        let (_, id) = self.verified_scope(backend,access, session)?;
+        let (_, id) = self.verified_scope(backend,access, session).await?;
         let _guard = self.vault_lock.lock().await;
         migrate_legacy(&id)?;
         let dir = load_directory(&id)?;
@@ -1064,7 +1117,7 @@ impl IdentityManager {
         }).collect()
     }
     pub async fn select_account(&self, backend: &str, access: &str, session: &str, uuid: &str) -> Result<OfficialProfile,String> {
-        let (base, id) = self.verified_scope(backend,access, session)?;
+        let (base, id) = self.verified_scope(backend,access, session).await?;
         let uuid = normalized_uuid(uuid)?;
         let _guard = self.vault_lock.lock().await;
         migrate_legacy(&id)?;
@@ -1088,7 +1141,7 @@ impl IdentityManager {
         Ok(record.profile.clone())
     }
     pub async fn refresh_active(&self, backend: &str, access: &str, session: &str) -> Result<OfficialProfile,String> {
-        let (base, id)=self.verified_scope(backend,access, session)?;
+        let (base, id)=self.verified_scope(backend,access, session).await?;
         let _guard=self.vault_lock.lock().await;
         migrate_legacy(&id)?;
         let (slot,mut record)=selected_record(&id)?.ok_or("Официальный Minecraft-аккаунт не выбран")?;
@@ -1110,14 +1163,14 @@ impl IdentityManager {
     // vault association. Hold the selection lock across provider verification
     // and Backend transaction to prevent linking a just-switched account.
     pub async fn never_links_0268(&self, backend:&str, access:&str, session:&str) -> Result<Vec<NeverOfficialLink0268>,String> {
-        let (base,_)=self.verified_scope(backend,access,session)?;
+        let (base,_)=self.verified_scope(backend,access,session).await?;
         let response=self.request(&base,access,"/link",Method::GET,None,None,None).await?;
         serde_json::from_value(response.data.get("links").cloned().ok_or("Некорректный список Never links")?)
             .map_err(|_|"Некорректные записи Never identity".into())
     }
     pub async fn never_link_0268(&self, backend:&str, access:&str, session:&str, expected_uuid:&str, confirmed:bool) -> Result<NeverOfficialLink0268,String> {
         if !confirmed {return Err("Необходимо явное подтверждение привязки Never и Minecraft".into());}
-        let (base,id)=self.verified_scope(backend,access,session)?;
+        let (base,id)=self.verified_scope(backend,access,session).await?;
         let requested=normalized_uuid(expected_uuid)?;
         let _guard=self.vault_lock.lock().await;
         migrate_legacy(&id)?;
@@ -1137,13 +1190,13 @@ impl IdentityManager {
     }
     pub async fn never_unlink_0268(&self, backend:&str, access:&str, session:&str, uuid:&str, confirmed:bool) -> Result<(),String> {
         if !confirmed {return Err("Необходимо явное подтверждение отвязывания".into());}
-        let (base,_)=self.verified_scope(backend,access,session)?;
+        let (base,_)=self.verified_scope(backend,access,session).await?;
         let uuid=normalized_uuid(uuid)?;
         self.request(&base,access,&format!("/link/{uuid}"),Method::DELETE,None,None,None).await?;
         Ok(())
     }
     pub async fn disconnect(&self, backend: &str, access: &str, session: &str) -> Result<(), String> {
-        let (_, id) = self.verified_scope(backend,access, session)?;
+        let (_, id) = self.verified_scope(backend,access, session).await?;
         self.cancel(backend,session)?;
         let _guard = self.vault_lock.lock().await;
         migrate_legacy(&id)?;
@@ -1151,7 +1204,7 @@ impl IdentityManager {
         Ok(())
     }
     pub async fn disconnect_account(&self, backend: &str, access: &str, session: &str, uuid: &str) -> Result<(), String> {
-        let (_,id)=self.verified_scope(backend,access,session)?;
+        let (_,id)=self.verified_scope(backend,access,session).await?;
         self.cancel(backend,session)?;
         let _guard=self.vault_lock.lock().await;
         migrate_legacy(&id)?;
@@ -1172,7 +1225,25 @@ pub struct NeverOfficialLink0268 {
 pub struct Context { backend_url: String, never_token: String, never_session_id: String }
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase")]
-pub struct LaunchContext { pub backend_url: String, pub never_token: String, pub never_session_id: String }
+pub struct OfficialServerJoinRequest0397 {
+    backend_url:String, never_token:String, never_session_id:String,
+    expected_uuid:String, server_id:String, project_id:String,profile_id:String,
+    channel:String, guard_attestation_ticket:String,
+    continuous_guard_ticket:Option<String>, plan_evidence:Option<Value>,
+}
+#[derive(Serialize)]
+#[serde(rename_all="camelCase")]
+pub struct OfficialServerJoinResult0397 { username:String, uuid:String, server_id:String }
+
+#[tauri::command]
+pub async fn official_identity_prepare_join_0397(manager:tauri::State<'_,IdentityManager>,request:OfficialServerJoinRequest0397)
+    -> Result<OfficialServerJoinResult0397,String> {
+    manager.prepare_server_join_0397(request).await
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all="camelCase")]
+pub struct LaunchContext { pub backend_url: String, pub never_token: String, pub never_session_id: String, pub expected_uuid: String }
 
 #[tauri::command]
 pub async fn official_identity_begin_0262(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<DeviceChallenge, String> {

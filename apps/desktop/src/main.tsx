@@ -1,4 +1,5 @@
 import { offlineLaunchSettings0358, offlineSelection0358, offlineRecovery0358 } from './offline_policy_0358';
+import {assertOfficialJoin0397} from './server_join_identity_0397';
 import { approvedSelectionIdentity0393, ensureReleaseApproval0359 } from './release_update_0359';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
@@ -2080,6 +2081,24 @@ function App() {
     log(`Сессия входа ServerBridge создана: ${JSON.stringify(payload.data ?? payload)}`);
   }
 
+  async function createOfficialServerJoin0397(guardAttestationTicket: string, continuousGuardTicket?:string, guardAttestationSha256?:string) {
+    if (!authSession?.accessToken || !authSession?.sessionId || !settings.serverId || !officialProfile?.id) {
+      throw new Error('Official ServerBridge requires a selected Minecraft account and server');
+    }
+    if (!profileServers.some((server)=>server.id===settings.serverId)) {
+      throw new Error('Official ServerBridge server is outside the current project/profile');
+    }
+    const planEvidence=await createVerifiedPlanEvidence02412(guardAttestationSha256);
+    const result=await callTauri<{uuid:string;username:string;serverId:string}>('official_identity_prepare_join_0397',{
+      request:{backendUrl:settings.backendUrl,neverToken:authSession.accessToken,neverSessionId:authSession.sessionId,
+        expectedUuid:officialProfile.id, serverId:settings.serverId,projectId:settings.projectId,
+        profileId:settings.profileId,channel:settings.channel,guardAttestationTicket,
+        continuousGuardTicket:continuousGuardTicket||null,planEvidence:planEvidence||null}
+    });
+    const confirmed=assertOfficialJoin0397(result,{uuid:officialProfile.id,name:officialProfile.name,serverId:settings.serverId});
+    log(`Серверный билет official Minecraft подтверждён для ${confirmed.username} (${confirmed.uuid}); вход проверит игровой ServerBridge.`);
+  }
+
   async function launch() {
     if (!manifest) {
       log('Запуск невозможен без manifest профиля.');
@@ -2097,7 +2116,8 @@ function App() {
       // Only cached signed Manifest v2 may be used when the backend is offline.
       // Never manufacture Minecraft access tokens for offline launches.
       let minecraftCredentials: MinecraftLaunchCredentials | undefined;
-      let officialLaunchIdentity: {backendUrl:string;neverToken:string;neverSessionId:string} | undefined;
+      let officialLaunchIdentity: {backendUrl:string;neverToken:string;neverSessionId:string;expectedUuid:string} | undefined;
+      let officialGuardTicket0397: string | undefined;
       if (launchMode === 'official' && preferences.offline) {
         throw new Error('Официальный Minecraft несовместим с offline-запуском.');
       }
@@ -2106,7 +2126,8 @@ function App() {
         if (launchMode === 'official') {
           if (!officialProfile || !officialMinecraftClient.current?.linked) throw new Error('Подключите официальный Minecraft-профиль в разделе авторизации.');
           if (!authSession?.accessToken || !authSession.sessionId) throw new Error('Необходимо войти в NeverLauncher.');
-          officialLaunchIdentity = {backendUrl:settings.backendUrl,neverToken:authSession.accessToken,neverSessionId:authSession.sessionId};
+          officialLaunchIdentity = {backendUrl:settings.backendUrl,neverToken:authSession.accessToken,neverSessionId:authSession.sessionId,expectedUuid:officialProfile.id};
+          officialGuardTicket0397=guardAttestationTicket;
         } else {
           minecraftCredentials = await createMinecraftLaunchSession(guardAttestationTicket);
         }
@@ -2117,6 +2138,10 @@ function App() {
       // reject pre-join, in which case we fail closed instead of racing a join.
       if (preferences.autoEnter && minecraftCredentials && launchMode === 'local') {
         await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken);
+      }
+      if (preferences.autoEnter && launchMode === 'official' && settings.serverId) {
+        if (!officialGuardTicket0397) throw new Error('Official join requires trusted launch attestation');
+        await createOfficialServerJoin0397(officialGuardTicket0397);
       }
       const result = await callTauri<ProcessStatus>('launch_minecraft', {
         request: {
@@ -2147,6 +2172,10 @@ function App() {
       try {
         if (!preferences.offline && !preferences.autoEnter && minecraftCredentials && launchMode === 'local') {
           await createServerJoinAfterLaunch(minecraftCredentials.username, minecraftCredentials.accessToken, continuousGuardTicket, guardAttestationSha256);
+        }
+        if (!preferences.offline && !preferences.autoEnter && launchMode === 'official' && settings.serverId) {
+          if (!officialGuardTicket0397) throw new Error('Official join requires trusted launch attestation');
+          await createOfficialServerJoin0397(officialGuardTicket0397,continuousGuardTicket,guardAttestationSha256);
         }
       } catch (joinError) {
         await callTauri<ProcessStatus>('stop_runtime_process', { processId: result.id }).catch(() => undefined);

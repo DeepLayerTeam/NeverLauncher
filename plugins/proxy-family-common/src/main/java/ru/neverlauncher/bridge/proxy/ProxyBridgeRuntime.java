@@ -120,6 +120,9 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     }
 
     public JoinValidationResult validateJoin(String username, String uuid, String ip) {
+        return validateJoin(username, uuid, ip, false);
+    }
+    public JoinValidationResult validateJoin(String username, String uuid, String ip, boolean onlineModeVerified) {
         RuntimeState current = state;
         if (current == null || stopping.get()) {
             playerDisconnected(username);
@@ -129,7 +132,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
             playerDisconnected(username);
             return new JoinValidationResult(false, maintenanceMode.get() ? "server_maintenance" : "server_draining", "{}");
         }
-        JoinValidationResult result = current.api.validateJoin(username, uuid, ip);
+        JoinValidationResult result = current.api.validateJoin(username, uuid, ip, onlineModeVerified);
         String key = username == null ? "" : username.toLowerCase(Locale.ROOT);
         authenticatedIdentities.remove(key);
         if (result.allowed && !result.authorizedUUID.isBlank()) {
@@ -187,11 +190,14 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     }
 
     public CompletableFuture<JoinValidationResult> validateJoinAsync(String username, String uuid, String ip) {
+        return validateJoinAsync(username, uuid, ip, false);
+    }
+    public CompletableFuture<JoinValidationResult> validateJoinAsync(String username, String uuid, String ip, boolean onlineModeVerified) {
         if (stopping.get() || validationExecutor.isShutdown()) {
             return CompletableFuture.completedFuture(new JoinValidationResult(false, "bridge_runtime_unavailable", "{}"));
         }
         try {
-            return CompletableFuture.supplyAsync(() -> validateJoin(username, uuid, ip), validationExecutor);
+            return CompletableFuture.supplyAsync(() -> validateJoin(username, uuid, ip, onlineModeVerified), validationExecutor);
         } catch (RejectedExecutionException e) {
             logger.warning("NeverLauncher " + displayName + " Bridge join validation queue saturated; failing closed");
             return CompletableFuture.completedFuture(new JoinValidationResult(false, "bridge_overloaded", "{}"));

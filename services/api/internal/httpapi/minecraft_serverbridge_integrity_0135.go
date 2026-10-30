@@ -161,6 +161,12 @@ func minecraftIntegrityPermanentFailure0135(reason string) bool {
 }
 
 func (s Server) evaluateServerBridgeJoinIntegrity0135(join bridgeJoinRecord) (model.MinecraftSession, minecraftIntegrityDecision0135) {
+	if join.IdentityRealm == "official" {
+		return model.MinecraftSession{}, s.evaluateOfficialBridgeIntegrity0397(join)
+	}
+	if join.IdentityRealm != "" && join.IdentityRealm != "local" {
+		return model.MinecraftSession{}, minecraftIntegrityDeny0135(true, "minecraft_identity_realm_invalid", model.MinecraftSession{})
+	}
 	required, err := guardAttestationRequiredForDevice0135(s, join.UserID, join.TrustedDeviceID)
 	if err != nil {
 		return model.MinecraftSession{}, minecraftIntegrityDeny0135(true, "integrity_device_unavailable", model.MinecraftSession{})

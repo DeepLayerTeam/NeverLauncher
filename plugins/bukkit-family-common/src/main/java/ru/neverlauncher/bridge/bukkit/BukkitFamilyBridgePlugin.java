@@ -150,7 +150,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             return;
         }
         String ip = event.getAddress() == null ? "" : event.getAddress().getHostAddress();
-        JoinValidationResult result = state.api.validateJoin(event.getName(), String.valueOf(event.getUniqueId()), ip);
+        JoinValidationResult result = state.api.validateJoin(event.getName(), String.valueOf(event.getUniqueId()), ip, Bukkit.getOnlineMode());
         state.api.publishEvent("player.login", Map.of(
             "username", event.getName(),
             "uuid", String.valueOf(event.getUniqueId()),

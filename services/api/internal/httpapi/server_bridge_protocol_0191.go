@@ -89,32 +89,34 @@ type bridgeHeartbeatV3Contract0191 struct {
 }
 
 type bridgeValidateJoinV2Contract0191 struct {
-	ProtocolVersion int    `json:"protocolVersion"`
-	ServerID        string `json:"serverId"`
-	Username        string `json:"username"`
-	UUID            string `json:"uuid,omitempty"`
-	ServerHash      string `json:"serverHash,omitempty"`
-	IP              string `json:"ip,omitempty"`
-	ProjectID       string `json:"projectId"`
-	ProfileID       string `json:"profileId"`
-	Channel         string `json:"channel"`
-	PluginVersion   string `json:"pluginVersion"`
-	PluginSHA256    string `json:"pluginSha256"`
+	ProtocolVersion    int    `json:"protocolVersion"`
+	ServerID           string `json:"serverId"`
+	Username           string `json:"username"`
+	UUID               string `json:"uuid,omitempty"`
+	OnlineModeVerified bool   `json:"onlineModeVerified,omitempty"`
+	ServerHash         string `json:"serverHash,omitempty"`
+	IP                 string `json:"ip,omitempty"`
+	ProjectID          string `json:"projectId"`
+	ProfileID          string `json:"profileId"`
+	Channel            string `json:"channel"`
+	PluginVersion      string `json:"pluginVersion"`
+	PluginSHA256       string `json:"pluginSha256"`
 }
 
 type bridgeValidateJoinV3Contract0191 struct {
-	ProtocolVersion int      `json:"protocolVersion"`
-	Features        []string `json:"features"`
-	ServerID        string   `json:"serverId"`
-	Username        string   `json:"username"`
-	UUID            string   `json:"uuid,omitempty"`
-	ServerHash      string   `json:"serverHash,omitempty"`
-	IP              string   `json:"ip,omitempty"`
-	ProjectID       string   `json:"projectId"`
-	ProfileID       string   `json:"profileId"`
-	Channel         string   `json:"channel"`
-	PluginVersion   string   `json:"pluginVersion"`
-	PluginSHA256    string   `json:"pluginSha256"`
+	ProtocolVersion    int      `json:"protocolVersion"`
+	Features           []string `json:"features"`
+	ServerID           string   `json:"serverId"`
+	Username           string   `json:"username"`
+	UUID               string   `json:"uuid,omitempty"`
+	OnlineModeVerified bool     `json:"onlineModeVerified,omitempty"`
+	ServerHash         string   `json:"serverHash,omitempty"`
+	IP                 string   `json:"ip,omitempty"`
+	ProjectID          string   `json:"projectId"`
+	ProfileID          string   `json:"profileId"`
+	Channel            string   `json:"channel"`
+	PluginVersion      string   `json:"pluginVersion"`
+	PluginSHA256       string   `json:"pluginSha256"`
 }
 
 type bridgeHandoffV2Contract0191 struct {
@@ -146,18 +148,19 @@ type bridgePluginHeartbeatRequest940 struct {
 }
 
 type bridgeValidateJoinRequest940 struct {
-	ProtocolVersion int
-	Features        []string
-	ServerID        string
-	Username        string
-	UUID            string
-	ServerHash      string
-	IP              string
-	ProjectID       string
-	ProfileID       string
-	Channel         string
-	PluginVersion   string
-	PluginSHA256    string
+	ProtocolVersion    int
+	Features           []string
+	ServerID           string
+	Username           string
+	UUID               string
+	OnlineModeVerified bool
+	ServerHash         string
+	IP                 string
+	ProjectID          string
+	ProfileID          string
+	Channel            string
+	PluginVersion      string
+	PluginSHA256       string
 }
 
 type bridgeHandoffRequest0148 struct {
@@ -232,13 +235,13 @@ func decodeBridgeValidateJoin0191(r io.Reader) (bridgeValidateJoinRequest940, er
 		if err := decodeBridgeContract0191(body, &req); err != nil {
 			return bridgeValidateJoinRequest940{}, err
 		}
-		return bridgeValidateJoinRequest940{ProtocolVersion: req.ProtocolVersion, ServerID: req.ServerID, Username: req.Username, UUID: req.UUID, ServerHash: req.ServerHash, IP: req.IP, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: req.Channel, PluginVersion: req.PluginVersion, PluginSHA256: req.PluginSHA256}, nil
+		return bridgeValidateJoinRequest940{ProtocolVersion: req.ProtocolVersion, ServerID: req.ServerID, Username: req.Username, UUID: req.UUID, OnlineModeVerified: req.OnlineModeVerified, ServerHash: req.ServerHash, IP: req.IP, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: req.Channel, PluginVersion: req.PluginVersion, PluginSHA256: req.PluginSHA256}, nil
 	case serverBridgeProtocolV3:
 		var req bridgeValidateJoinV3Contract0191
 		if err := decodeBridgeContract0191(body, &req); err != nil {
 			return bridgeValidateJoinRequest940{}, err
 		}
-		return bridgeValidateJoinRequest940{ProtocolVersion: req.ProtocolVersion, Features: normalizeBridgeFeatures0191(req.Features), ServerID: req.ServerID, Username: req.Username, UUID: req.UUID, ServerHash: req.ServerHash, IP: req.IP, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: req.Channel, PluginVersion: req.PluginVersion, PluginSHA256: req.PluginSHA256}, nil
+		return bridgeValidateJoinRequest940{ProtocolVersion: req.ProtocolVersion, Features: normalizeBridgeFeatures0191(req.Features), ServerID: req.ServerID, Username: req.Username, UUID: req.UUID, OnlineModeVerified: req.OnlineModeVerified, ServerHash: req.ServerHash, IP: req.IP, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: req.Channel, PluginVersion: req.PluginVersion, PluginSHA256: req.PluginSHA256}, nil
 	default:
 		return bridgeValidateJoinRequest940{ProtocolVersion: envelope.ProtocolVersion}, nil
 	}

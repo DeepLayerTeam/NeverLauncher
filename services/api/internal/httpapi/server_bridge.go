@@ -1,11 +1,13 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/officialminecraft"
 	"net/http"
 	"sort"
 	"strings"
@@ -80,6 +82,9 @@ type bridgeJoinRecord struct {
 	TrustedDeviceID        string    `json:"trustedDeviceId,omitempty"`
 	BindingEpoch           int64     `json:"bindingEpoch"`
 	MinecraftSessionID     string    `json:"minecraftSessionId,omitempty"`
+	IdentityRealm          string    `json:"identityRealm,omitempty"`
+	OfficialProof          string    `json:"-"`
+	OnlineModeVerified     bool      `json:"onlineModeVerified,omitempty"`
 	SessionCorrelationID   string    `json:"sessionCorrelationId,omitempty"`
 	ProtocolVersion        int       `json:"protocolVersion"`
 	IssuedIdentityEpoch    int64     `json:"issuedIdentityEpoch"`
@@ -139,14 +144,18 @@ type rotateBridgeIdentityRequest struct {
 }
 
 type bridgeJoinRequest struct {
-	Username              string                     `json:"username,omitempty"`
-	ServerID              string                     `json:"serverId"`
-	ProjectID             string                     `json:"projectId"`
-	ProfileID             string                     `json:"profileId"`
-	Channel               string                     `json:"channel"`
-	MinecraftAccessToken  string                     `json:"minecraftAccessToken,omitempty"`
-	ContinuousGuardTicket string                     `json:"continuousGuardTicket,omitempty"`
-	PlanEvidence          *verifiedPlanEvidence02412 `json:"planEvidence,omitempty"`
+	Username                     string                     `json:"username,omitempty"`
+	ServerID                     string                     `json:"serverId"`
+	ProjectID                    string                     `json:"projectId"`
+	ProfileID                    string                     `json:"profileId"`
+	Channel                      string                     `json:"channel"`
+	MinecraftAccessToken         string                     `json:"minecraftAccessToken,omitempty"`
+	OfficialMinecraftAccessToken string                     `json:"officialMinecraftAccessToken,omitempty"`
+	GuardAttestationTicket       string                     `json:"guardAttestationTicket,omitempty"`
+	IdentityRealm                string                     `json:"-"`
+	OfficialProof                string                     `json:"-"`
+	ContinuousGuardTicket        string                     `json:"continuousGuardTicket,omitempty"`
+	PlanEvidence                 *verifiedPlanEvidence02412 `json:"planEvidence,omitempty"`
 }
 
 type bridgeHasJoinedRequest struct {
@@ -269,10 +278,65 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		s.writeGameplayTrustRequirement0127(w, trust)
 		return
 	}
-	minecraftSession, err := s.requireMinecraftIntegrityForBridgeSession0135(claims.Sub, claims.SessionID, trust.TrustedDeviceID, trust.BindingEpoch, req.MinecraftAccessToken)
-	if err != nil {
-		writeError(w, http.StatusPreconditionFailed, err.Error())
+	// Do not exchange a Mojang bearer for a local Yggdrasil session. The
+	// official token is validated by Minecraft Services and remains transient.
+	official := req.OfficialMinecraftAccessToken != ""
+	if official && (req.MinecraftAccessToken != "" || req.Username == "") {
+		writeError(w, http.StatusBadRequest, "mixed_or_incomplete_minecraft_identity")
 		return
+	}
+	var minecraftSession model.MinecraftSession
+	var officialProfile model.MinecraftProfile
+	if official {
+		store, ok := s.officialLinkStore0268()
+		if !ok {
+			writeError(w, http.StatusServiceUnavailable, "official identity store unavailable")
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+		verified, verifyErr := verifiedOfficialBridgeProfile0397(ctx, officialminecraft.New(), store, claims.Sub, req.Username, req.OfficialMinecraftAccessToken)
+		cancel()
+		req.OfficialMinecraftAccessToken = ""
+		if verifyErr != nil {
+			writeError(w, http.StatusForbidden, "official Minecraft identity not verified or linked")
+			return
+		}
+		officialProfile = model.MinecraftProfile{UUID: verified.ID, Name: verified.Name}
+		req.Username = verified.Name
+		req.IdentityRealm = "official"
+		required, guardErr := s.guardAttestationRequiredForSession0134(claims)
+		if guardErr != nil {
+			writeError(w, http.StatusPreconditionFailed, "NeverGuard policy unavailable")
+			return
+		}
+		var snapshot *minecraftIntegritySnapshot0135
+		if required {
+			challenge, consumeErr := s.consumeGuardLaunchTicket0134(r, claims, req.GuardAttestationTicket)
+			if consumeErr != nil {
+				writeError(w, http.StatusPreconditionFailed, "official launch attestation required")
+				return
+			}
+			value, err := snapshotFromGuardLaunchTicket0135(challenge)
+			if err != nil {
+				writeError(w, http.StatusPreconditionFailed, "official launch integrity unavailable")
+				return
+			}
+			snapshot = &value
+		}
+		proof, proofErr := officialJoinProof0397(claims.Sub, claims.SessionID, trust.TrustedDeviceID, trust.BindingEpoch, verified, snapshot, time.Now().UTC())
+		if proofErr != nil {
+			writeError(w, http.StatusPreconditionFailed, "official identity proof unavailable")
+			return
+		}
+		req.OfficialProof = proof
+	} else {
+		var sessionErr error
+		minecraftSession, sessionErr = s.requireMinecraftIntegrityForBridgeSession0135(claims.Sub, claims.SessionID, trust.TrustedDeviceID, trust.BindingEpoch, req.MinecraftAccessToken)
+		if sessionErr != nil {
+			writeError(w, http.StatusPreconditionFailed, sessionErr.Error())
+			return
+		}
+		req.IdentityRealm = "local"
 	}
 	continuousRequired, err := s.continuousGuardRequiredForJoin01810(claims.Sub, trust.TrustedDeviceID)
 	if err != nil {
@@ -290,7 +354,13 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusPreconditionFailed, "Continuous Guard Attestation v2 required: "+err.Error())
 			return
 		}
-		if err := validateContinuousGuardTicketForMinecraftSession01810(continuousTicket, minecraftSession); err != nil {
+		var bindErr error
+		if official {
+			bindErr = validateOfficialContinuousGuard0397(continuousTicket, req.OfficialProof)
+		} else {
+			bindErr = validateContinuousGuardTicketForMinecraftSession01810(continuousTicket, minecraftSession)
+		}
+		if err := bindErr; err != nil {
 			writeError(w, http.StatusPreconditionFailed, err.Error())
 			return
 		}
@@ -308,7 +378,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "пользователь не найден")
 		return
 	}
-	if minecraftSession.ID != "" {
+	if !official && minecraftSession.ID != "" {
 		profile, profileErr := s.minecraftRepo119()
 		if profileErr == nil {
 			if minecraftProfile, getErr := profile.GetMinecraftProfileByUUID(minecraftSession.ProfileUUID); getErr == nil && req.Username != "" && !strings.EqualFold(req.Username, minecraftProfile.Name) {
@@ -317,10 +387,14 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	canonical, profileErr := s.ensureMinecraftProfile119(user)
-	if profileErr != nil {
-		writeError(w, http.StatusServiceUnavailable, "Minecraft profile unavailable")
-		return
+	canonical := officialProfile
+	if !official {
+		var profileErr error
+		canonical, profileErr = s.ensureMinecraftProfile119(user)
+		if profileErr != nil {
+			writeError(w, http.StatusServiceUnavailable, "Minecraft profile unavailable")
+			return
+		}
 	}
 	if minecraftSession.ProfileUUID != "" && !strings.EqualFold(minecraftSession.ProfileUUID, canonical.UUID) {
 		writeError(w, http.StatusPreconditionFailed, "Minecraft session profile mismatch")
@@ -371,6 +445,10 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-miss"), Actor: server.ID, Action: "serverbridge:has-joined:miss", Target: username, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 		writeError(w, http.StatusNotFound, "активная join-сессия не найдена")
+		return
+	}
+	if join.IdentityRealm == "official" {
+		writeError(w, http.StatusForbidden, "official identity requires online-mode validate-join with observed UUID")
 		return
 	}
 	if err := planJoinEpochValid02412(join.CreatedAt); err != nil {
@@ -775,7 +853,7 @@ func (b *serverBridgeStore) createJoin(user model.User, canonical model.Minecraf
 	if err != nil {
 		return bridgeJoinRecord{}, err
 	}
-	join := bridgeJoinRecord{ID: ticketID, TicketVersion: serverBridgeJoinTicketVersion0143, Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, MinecraftSessionID: strings.TrimSpace(minecraftSessionID), SessionCorrelationID: correlationID, ProtocolVersion: bridgeNodeProtocolVersion0191(server.ProtocolVersion), IssuedIdentityEpoch: server.IdentityEpoch, IssuedKeyFingerprint: server.KeyFingerprint, Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
+	join := bridgeJoinRecord{IdentityRealm: firstNonEmpty(req.IdentityRealm, "local"), OfficialProof: req.OfficialProof, ID: ticketID, TicketVersion: serverBridgeJoinTicketVersion0143, Username: username, UUID: uuid, UserID: user.ID, SessionID: sessionID, ServerID: req.ServerID, ProjectID: req.ProjectID, ProfileID: req.ProfileID, Channel: firstNonEmpty(req.Channel, "stable"), AccessTokenHash: tokenHash910(accessToken), TrustedDeviceID: strings.TrimSpace(trustedDeviceID), BindingEpoch: bindingEpoch, MinecraftSessionID: strings.TrimSpace(minecraftSessionID), SessionCorrelationID: correlationID, ProtocolVersion: bridgeNodeProtocolVersion0191(server.ProtocolVersion), IssuedIdentityEpoch: server.IdentityEpoch, IssuedKeyFingerprint: server.KeyFingerprint, Status: "active", CreatedAt: now, ExpiresAt: now.Add(2 * time.Minute)}
 	if backend := b.backendV2(); backend != nil {
 		ctx, cancel := bridgeContextV2()
 		defer cancel()
@@ -946,7 +1024,7 @@ func (b *serverBridgeStore) joinKey(username, serverID string) string {
 }
 
 func sanitizeJoinRecord910(join bridgeJoinRecord) map[string]any {
-	return map[string]any{"id": join.ID, "ticketVersion": join.TicketVersion, "username": join.Username, "uuid": join.UUID, "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "sessionCorrelationId": join.SessionCorrelationID, "protocolVersion": join.ProtocolVersion, "issuedIdentityEpoch": join.IssuedIdentityEpoch, "issuedKeyFingerprint": join.IssuedKeyFingerprint, "status": join.Status, "oneTime": true, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
+	return map[string]any{"id": join.ID, "ticketVersion": join.TicketVersion, "username": join.Username, "uuid": join.UUID, "identityRealm": firstNonEmpty(join.IdentityRealm, "local"), "serverId": join.ServerID, "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "sessionCorrelationId": join.SessionCorrelationID, "protocolVersion": join.ProtocolVersion, "issuedIdentityEpoch": join.IssuedIdentityEpoch, "issuedKeyFingerprint": join.IssuedKeyFingerprint, "status": join.Status, "oneTime": true, "createdAt": join.CreatedAt, "expiresAt": join.ExpiresAt}
 }
 
 // playerUUID910 is the legacy 0.25.0 alias algorithm only; never issue this as a new Minecraft UUID.
