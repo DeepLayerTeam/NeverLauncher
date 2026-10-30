@@ -337,6 +337,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
 	server, authErr := s.authenticateBridgeNodeRequest0142(r)
 	if authErr != nil {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-denied-identity"), Actor: "server", Action: "serverbridge:has-joined:identity-denied", Target: strings.TrimSpace(r.URL.Query().Get("serverId")), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -405,7 +406,12 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	redemption.TrustReason = trust.Reason
 	redemption.IntegrityReason = integrity.Reason
 	redemption.VerifiedAt = time.Now().UTC()
-	property, propertyErr := s.textureProperty0256(s.State.ServerBridge.textureFor(join.UUID, join.Username), true)
+	texture, lookupErr := s.localTextureRecord0394(r.Context(), join.UUID, join.Username)
+	if lookupErr != nil {
+		writeError(w, http.StatusServiceUnavailable, "Yggdrasil texture database unavailable")
+		return
+	}
+	property, propertyErr := s.textureProperty0256(texture, true)
 	if propertyErr != nil {
 		writeError(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
 		return
@@ -418,6 +424,7 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	}
 	join = consumed
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-ok"), Actor: server.ID, Action: "serverbridge:has-joined:ok", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
 	writeJSON(w, http.StatusOK, map[string]any{"id": minecraftID119(join.UUID), "name": join.Username, "properties": []map[string]string{property}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": join.ProtocolVersion, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "sessionCorrelationId": join.SessionCorrelationID, "sessionLifecycle": "active", "trustIntegrityRechecked": true, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
 }
 
@@ -521,7 +528,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	case "smoke":
 		base["status"] = "checkable"
 		base["requiredCommands"] = []string{"go test -tags neverlauncher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}
-		base["checks"] = []map[string]string{{"id": "protocol-v3", "status": "implemented"}, {"id": "protocol-v2-compatibility-deprecated", "status": "implemented"}, {"id": "capability-negotiation", "status": "implemented"}, {"id": "protocol-feature-flags", "status": "implemented"}, {"id": "runtime-node-discovery", "status": "implemented"}, {"id": "runtime-ed25519-identity", "status": "implemented"}, {"id": "runtime-restart-replacement-detection", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "identity-only"}}
+		base["checks"] = []map[string]string{{"id": "protocol-v3", "status": "implemented"}, {"id": "protocol-v2-compatibility-deprecated", "status": "implemented"}, {"id": "capability-negotiation", "status": "implemented"}, {"id": "protocol-feature-flags", "status": "implemented"}, {"id": "runtime-node-discovery", "status": "implemented"}, {"id": "runtime-ed25519-identity", "status": "implemented"}, {"id": "runtime-restart-replacement-detection", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "signed-managed-png"}}
 	default:
 		base["status"] = "active"
 	}

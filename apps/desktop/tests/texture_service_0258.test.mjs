@@ -115,3 +115,35 @@ test('official skin upload crosses only native IPC; no browser bearer or game to
     assert.equal((await c.profile()).id,profile.id);
   }finally{globalThis.fetch=previousFetch;globalThis.XMLHttpRequest=previousXHR;Date.now=now;}
 });
+
+test('0.39.4: live Yggdrasil delivery verifies RSA property, UUID and actual PNG SHA-256 without player token', async t=>{
+  const {webcrypto,createHash}=await import('node:crypto');
+  const uuid='123456781234423492340123456789ab';
+  const png=Buffer.from('real-public-png-byte-stream');
+  const hash=createHash('sha256').update(png).digest('hex');
+  const pair=await webcrypto.subtle.generateKey({name:'RSASSA-PKCS1-v1_5',hash:'SHA-1',modulusLength:2048,publicExponent:new Uint8Array([1,0,1])},true,['sign','verify']);
+  const publicDER=Buffer.from(await webcrypto.subtle.exportKey('spki',pair.publicKey)).toString('base64');
+  const keyPEM=`-----BEGIN PUBLIC KEY-----\n${publicDER}\n-----END PUBLIC KEY-----`;
+  const encoded=Buffer.from(JSON.stringify({profileId:uuid,profileName:'Tester',textures:{SKIN:{url:`https://never.example/api/v1/textures/blob/${hash}`,metadata:{model:'slim'}}}})).toString('base64');
+  const signature=Buffer.from(await webcrypto.subtle.sign('RSASSA-PKCS1-v1_5',pair.privateKey,new TextEncoder().encode(encoded))).toString('base64');
+  const requests=[];
+  let corrupt='';
+  globalThis.fetch=async (url, opts={})=>{
+    requests.push({url,opts});
+    if(url==='https://never.example/')return new Response(JSON.stringify({signaturePublickey:keyPEM}),{status:200});
+    if(url.includes('sessionserver/'))return new Response(JSON.stringify({id:corrupt==='identity'?'f'.repeat(32):uuid,properties:[{name:'textures',value:encoded,signature:corrupt==='signature'?'a'.repeat(344):signature}]}),{status:200});
+    if(url.includes('/textures/blob/'))return new Response(corrupt==='bytes'?'different-image':png,{status:200,headers:{'Content-Type':'image/png'}});
+    throw Error('Unexpected URL '+url);
+  };
+  const api=new TextureServiceClient0258('https://never.example','secret-never-token');
+  await api.verifyYggdrasilDelivery('skin',uuid,hash);
+  assert.equal(requests.length,3);
+  assert.equal(requests.every(r=>r.opts.credentials==='omit' && r.opts.cache==='no-store' && !('headers' in r.opts)),true);
+  for(const variant of ['identity','signature','bytes']) {
+    corrupt=variant;
+    await assert.rejects(api.verifyYggdrasilDelivery('skin',uuid,hash),Error,variant);
+  }
+  await assert.rejects(api.verifyYggdrasilDelivery('cape',uuid,hash),/не опубликована/);
+  await assert.rejects(api.verifyYggdrasilDelivery('skin','../../bad',hash),/UUID/);
+  t.after(()=>{delete globalThis.fetch;});
+});

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"sync"
 
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/yggdrasiltexture"
 )
 
@@ -159,4 +161,47 @@ func (s Server) textureProperty0256(texture bridgeTextureRecord, signed bool) (m
 		property["signature"] = signature
 	}
 	return property, nil
+}
+
+// localTextureRecord0394 resolves *each* Yggdrasil request against the active
+// SQL texture selection. In production a transient database failure must never
+// be misrepresented as an empty (default Steve/Alex) texture profile: clients
+// cache those results and players appear to lose their skin until restart.
+// The legacy in-memory ServerBridge store remains usable in development tests.
+func (s Server) localTextureRecord0394(ctx context.Context, uuid, name string) (bridgeTextureRecord, error) {
+	if textures, ok := s.Repo.(repository.TextureRepository0251); ok {
+		selected, found, err := textures.ReadTextureProfile0251(ctx, uuid)
+		if err != nil {
+			return bridgeTextureRecord{}, err
+		}
+		if !found {
+			// A migrated Minecraft profile can predate the texture identity table.
+			// Backfill only a genuine local GameProfile, then retry once; never
+			// substitute an arbitrary caller-supplied UUID for proof of ownership.
+			if mcRepo, repoErr := s.minecraftRepo119(); repoErr == nil {
+				if profile, lookupErr := mcRepo.GetMinecraftProfileByUUID(uuid); lookupErr == nil &&
+					profile.Issuer == "neverlauncher" && profile.Realm == "local" && profile.Name == name {
+					if err := s.syncTextureIdentity0251(profile); err != nil {
+						return bridgeTextureRecord{}, err
+					}
+					selected, found, err = textures.ReadTextureProfile0251(ctx, uuid)
+					if err != nil {
+						return bridgeTextureRecord{}, err
+					}
+				}
+			}
+			if !found {
+				return bridgeTextureRecord{UUID: uuid, Username: name, Model: "classic"}, nil
+			}
+		}
+		record := bridgeTextureFromModelV2(selected)
+		record.UUID, record.Username = uuid, name // canonical local GameProfile is authoritative
+		return record, nil
+	}
+	if s.State == nil || s.State.ServerBridge == nil {
+		return bridgeTextureRecord{}, errors.New("Yggdrasil texture state unavailable")
+	}
+	record := s.State.ServerBridge.textureFor(uuid, name)
+	record.UUID, record.Username = uuid, name
+	return record, nil
 }

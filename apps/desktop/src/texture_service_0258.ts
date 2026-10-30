@@ -98,6 +98,64 @@ export class TextureServiceClient0258 {
   importURL(kind: TextureKind0258, url: string, revision: number, model: SkinModel0258, visibility: TextureVisibility0258): Promise<unknown> {
     return this.json(`/api/v1/me/textures/${kind}/import`, 'POST', {url, expectedRevision: revision, model: kind === 'cape' ? 'classic' : model, visibility});
   }
+  /** Verify the actual public Yggdrasil delivery, not the private gallery preview.
+   * The signature, canonical UUID, published digest and downloaded bytes must
+   * all match. Minecraft rendering itself still requires a live client check.
+   * Crucially, Never/Minecraft tokens are NOT sent to public Yggdrasil URLs.
+   */
+  async verifyYggdrasilDelivery(kind: TextureKind0258, profileUuid: string, digest: string, signal?: AbortSignal): Promise<void> {
+    const uuid = profileUuid.replace(/-/g, '').toLowerCase();
+    if (!/^[0-9a-f]{32}$/.test(uuid) || !/^[0-9a-f]{64}$/.test(digest)) throw new Error('Неверный Minecraft UUID или SHA-256 текстуры.');
+    const base = new URL(this.base);
+    if (!['https:', 'http:'].includes(base.protocol) || (base.protocol === 'http:' && !['localhost', '127.0.0.1', '[::1]'].includes(base.hostname))) {
+      throw new Error('Проверка Yggdrasil требует HTTPS.');
+    }
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 15_000);
+    const abort = () => ctl.abort();
+    signal?.addEventListener('abort', abort, {once: true});
+    try {
+      if (signal?.aborted) throw new DOMException('Проверка отменена', 'AbortError');
+      const get = async (path: string): Promise<Response> => {
+        const response = await fetch(new URL(path, base).href, {
+          method: 'GET', cache: 'no-store', redirect: 'error', credentials: 'omit', signal: ctl.signal,
+        });
+        if (!response.ok) throw new Error(`Yggdrasil недоступен: HTTP ${response.status}`);
+        return response;
+      };
+      const metadata = await (await get('/')).json() as {signaturePublickey?: string};
+      if (typeof metadata.signaturePublickey !== 'string') throw new Error('Yggdrasil не вернул ключ подписи.');
+      const profile = await (await get(`/sessionserver/session/minecraft/profile/${uuid}?unsigned=false`)).json() as {
+        id?: string; properties?: Array<{name: string; value: string; signature?: string}>;
+      };
+      if (profile.id?.toLowerCase() !== uuid) throw new Error('Yggdrasil вернул чужую Minecraft-идентичность.');
+      const property = profile.properties?.find(p => p.name === 'textures');
+      if (!property || !property.signature || !property.value) throw new Error('Отсутствует подписанная текстура Yggdrasil.');
+      const decode64 = (value: string): Uint8Array => Uint8Array.from(atob(value), c => c.charCodeAt(0));
+      const keyBytes = decode64(metadata.signaturePublickey.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s/g, ''));
+      const key = await crypto.subtle.importKey('spki', keyBytes.buffer as ArrayBuffer, {name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-1'}, false, ['verify']);
+      const signature = decode64(property.signature);
+      if (!await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, signature.buffer as ArrayBuffer, new TextEncoder().encode(property.value))) {
+        throw new Error('Подпись Yggdrasil не прошла проверку.');
+      }
+      const payload = JSON.parse(new TextDecoder().decode(decode64(property.value))) as {
+        profileId?: string; textures?: {SKIN?: {url?: string}; CAPE?: {url?: string}};
+      };
+      if (payload.profileId?.toLowerCase() !== uuid) throw new Error('Подписанная текстура относится к другому игроку.');
+      const url = kind === 'skin' ? payload.textures?.SKIN?.url : payload.textures?.CAPE?.url;
+      const expected = new URL(`/api/v1/textures/blob/${digest}`, base).href;
+      if (url !== expected) throw new Error('Выбранная текстура не опубликована через Yggdrasil.');
+      const blob = await get(`/api/v1/textures/blob/${digest}`);
+      if (!blob.headers.get('Content-Type')?.toLowerCase().startsWith('image/png')) throw new Error('Yggdrasil вернул не PNG.');
+      const body = await blob.arrayBuffer();
+      if (body.byteLength < 1 || body.byteLength > 4 * 1024 * 1024) throw new Error('Некорректный размер PNG.');
+      const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', body))].map(n => n.toString(16).padStart(2, '0')).join('');
+      if (hash !== digest) throw new Error('SHA-256 опубликованного PNG не совпадает с выбором игрока.');
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+    }
+  }
   /** Never cache owner-only PNG bytes or use the image endpoint as an unauthenticated <img> URL. */
   async preview(kind: TextureKind0258, digest: string, signal?: AbortSignal): Promise<string> {
     if (!/^[0-9a-f]{64}$/.test(digest)) throw new Error('Недопустимый идентификатор PNG.');

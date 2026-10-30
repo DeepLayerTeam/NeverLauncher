@@ -287,10 +287,11 @@ func minecraftProfileJSON119(profile model.MinecraftProfile, texture map[string]
 	return map[string]any{"id": minecraftID119(profile.UUID), "name": profile.Name, "properties": properties}
 }
 
-func (s Server) minecraftTexture119(profile model.MinecraftProfile) (map[string]string, error) {
-	texture := s.State.ServerBridge.textureFor(profile.UUID, profile.Name)
-	texture.UUID = profile.UUID
-	texture.Username = profile.Name // GameProfile is authoritative after rename.
+func (s Server) minecraftTexture119(ctx context.Context, profile model.MinecraftProfile) (map[string]string, error) {
+	texture, err := s.localTextureRecord0394(ctx, profile.UUID, profile.Name)
+	if err != nil {
+		return nil, err
+	}
 	return s.textureProperty0256(texture, true)
 }
 
@@ -351,11 +352,12 @@ func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Reque
 	if guardTicket.ID != "" {
 		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-launch"), Actor: user.Email, Action: "neverguard:launch-ticket:consumed", Target: guardTicket.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	}
-	property, propertyErr := s.minecraftTexture119(profile)
+	property, propertyErr := s.minecraftTexture119(r.Context(), profile)
 	if propertyErr != nil {
 		writeError(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
 		return
 	}
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
 	writeJSON(w, http.StatusCreated, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"accessToken": token, "clientToken": session.ClientToken, "expiresAt": session.ExpiresAt, "profile": minecraftProfileJSON119(profile, property), "integrity": integrityMetadataFromMinecraftSession0135(session)}})
 }
 
@@ -375,11 +377,12 @@ func (s Server) minecraftProfileCurrent119(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusInternalServerError, "не удалось получить Minecraft profile")
 		return
 	}
-	property, propertyErr := s.minecraftTexture119(profile)
+	property, propertyErr := s.minecraftTexture119(r.Context(), profile)
 	if propertyErr != nil {
 		writeError(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
 		return
 	}
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": minecraftProfileJSON119(profile, property)})
 }
 
@@ -548,6 +551,7 @@ func (s Server) yggdrasilJoin119(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
 	username := strings.TrimSpace(r.URL.Query().Get("username"))
 	serverID := strings.TrimSpace(r.URL.Query().Get("serverId"))
 	if username == "" || serverID == "" {
@@ -594,7 +598,7 @@ func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	property, propertyErr := s.minecraftTexture119(profile)
+	property, propertyErr := s.minecraftTexture119(r.Context(), profile)
 	if propertyErr != nil {
 		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
 		return
@@ -606,10 +610,12 @@ func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
 	writeJSON(w, http.StatusOK, minecraftProfileJSON119(profile, property))
 }
 
 func (s Server) yggdrasilProfile119(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
 	repo, err := s.minecraftRepo119()
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -625,14 +631,17 @@ func (s Server) yggdrasilProfile119(w http.ResponseWriter, r *http.Request) {
 		writeYggdrasilError119(w, http.StatusBadRequest, "unsigned must be true or false")
 		return
 	}
-	texture := s.State.ServerBridge.textureFor(profile.UUID, profile.Name)
-	texture.UUID = profile.UUID
-	texture.Username = profile.Name
+	texture, lookupErr := s.localTextureRecord0394(r.Context(), profile.UUID, profile.Name)
+	if lookupErr != nil {
+		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Yggdrasil texture database unavailable")
+		return
+	}
 	property, propertyErr := s.textureProperty0256(texture, unsigned == "false")
 	if propertyErr != nil {
 		writeYggdrasilError119(w, http.StatusServiceUnavailable, "Yggdrasil signing unavailable")
 		return
 	}
+	w.Header().Set("Cache-Control", "no-store, max-age=0")
 	writeJSON(w, http.StatusOK, minecraftProfileJSON119(profile, property))
 }
 func (s Server) yggdrasilProfileByName119(w http.ResponseWriter, r *http.Request) {

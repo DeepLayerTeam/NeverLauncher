@@ -168,6 +168,11 @@ export function TexturesPanel0258({backendUrl,token,officialClient,officialProfi
     await client.importURL(kind,importUrl,revision,model,visibility);
     setImportUrl('');setSelected(null);await refresh(signal);
   },'PNG импортирован безопасным серверным загрузчиком.');
+  const verifyLocalDelivery=()=>void perform(async signal=>{
+    if(!client||!identity||!assigned?.active||!assigned.blobDigest)throw new Error('Сначала выберите локальную текстуру.');
+    if(assigned.visibility!=='public')throw new Error('Для отображения другим игрокам текстура должна быть публичной.');
+    await client.verifyYggdrasilDelivery(kind,identity.profileUuid,assigned.blobDigest,signal);
+  },'Yggdrasil: подпись, профиль, адрес PNG и SHA-256 подтверждены. Для проверки отображения запустите Minecraft.');
   const selectOfficialCape=(id:string)=>void perform(async()=>{
     if(!officialClient)throw new Error('Microsoft-профиль не подключён.');
     onOfficialProfile(await officialClient.selectCape(id));
@@ -200,8 +205,10 @@ export function TexturesPanel0258({backendUrl,token,officialClient,officialProfi
           <details className="textureImport0258"><summary>Импортировать PNG по HTTPS</summary><label>Ссылка на PNG<input type="url" placeholder="https://example.org/skin.png" value={importUrl} disabled={busy} onChange={e=>setImportUrl(e.target.value)}/></label><button disabled={busy||!importUrl.trim()} onClick={importRemote}>Проверить URL и импортировать</button><small>Запрос выполняется сервером через SSRF-safe fetcher, внешняя ссылка не становится texture URL игрока.</small></details>
           <div className="textureActions0258">
             <button disabled={busy||!assigned?.active} onClick={change}>Сохранить модель / видимость</button>
+            <button type="button" disabled={busy||!assigned?.active||!assigned.blobDigest||assigned.visibility!=='public'} onClick={verifyLocalDelivery}>Проверить доставку Yggdrasil</button>
             <button className="danger" disabled={busy||!assigned?.active} onClick={reset}>Сбросить {kind==='skin'?'скин':'плащ'}</button>
           </div>
+          {assigned?.active&&assigned.visibility!=='public'&&<p role="status">Текстура не опубликована в игровом Yggdrasil: выберите «Публичная» и сохраните настройки для отображения другим игрокам.</p>}
           <p className="textureRevision0258">{assigned?.active?`Активная текстура · ревизия ${revision}`:`Не выбрано · ревизия ${revision}`}</p>
         </>}
         {realm==='official'&&<>

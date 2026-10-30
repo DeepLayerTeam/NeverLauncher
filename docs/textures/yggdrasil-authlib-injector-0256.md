@@ -37,3 +37,18 @@ curl -fsS 'https://your-api.example/sessionserver/session/minecraft/profile/LOCA
 ```
 
 For a full Minecraft compatibility certification, run a client with authlib-injector pointed at the API root and verify signed texture downloads in-game, including change of digest after replacing skin, 204 on unknown profiles, and replay rejection on hasJoined. These real-game tests have not been run in the archive authoring environment.
+
+## 0.39.4 — проверяемая доставка локальных скинов и плащей
+
+После загрузки/выбора публичного PNG, Desktop предлагает **«Проверить доставку Yggdrasil»**. Проверка выполняет настоящий запрос к опубликованному Backend: считывает `GET /`, загружает `GET /sessionserver/session/minecraft/profile/{uuid}?unsigned=false`, сверяет RSA-подпись ответа с `signaturePublickey`, канонический UUID и ожидаемый SHA-256 выбранного скина/плаща, затем получает публичный `GET /api/v1/textures/blob/{digest}` и сверяет хеш самих PNG-байтов. Minecraft/административные токены на эти три публичных запроса **не передаются**. Если текстура имеет `visibility=private` или `unlisted`, интерфейс не заявляет её публичной: переключите видимость на `public`, чтобы другие игроки могли её получить. Для отображения собственного скина в игровом мире также необходим корректный `authlib-injector` в *подписанной* сборке клиента и соответствующая настройка серверной части.
+
+Профиль Minecraft теперь каждый раз читает актуальный выбор через `TextureRepository0251`, а не через устаревший снимок ServerBridge; ошибка DB возвращает HTTP 503, а не 200 с пустой текстурой. Ответы профильного и session join API имеют `Cache-Control: no-store`; PNG по SHA-256 могут кэшироваться как неизменяемые объекты. Изменение скина, модели или плаща поэтому отражается в следующем запросе профиля без рестарта Backend. Уже запущенный Minecraft может кэшировать скин в памяти: для подтверждения нового отображения потребуется перезаход/обновление GameProfile; это свойство игрового клиента, не ошибка сервера.
+
+**Тесты в исходном проекте:**
+
+```sh
+cd apps/desktop && npm ci && npm run test:textures
+cd ../../services/api && go test ./internal/httpapi -run 'TestYggdrasilDelivery0394|TestSignedTextureProtocol0256' -count=1
+```
+
+Для живой приёмки нужны работающий HTTPS Backend с опубликованным PostgreSQL-хранилищем текстур, RSA-ключом Yggdrasil, проверенным `authlib-injector` JAR и реальный Minecraft-клиент/сервер. Тесты HTTP+WebCrypto подтверждают транспорт/подпись/хеш, но **не заменяют визуальную проверку игрового процесса**. Если Go toolchain, реальные игровые аккаунты или сервер отсутствуют, runtime/GA не может считаться завершённым.
