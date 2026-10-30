@@ -858,7 +858,44 @@ validate_join() {
     [[ "$code" == 403 ]] && jq -e '.data.allowed == false and (.data.reason == "launcher_session_or_handoff_missing_or_expired" or .data.reason == "launcher_session_missing_or_expired")' "$out" >/dev/null
   fi
 }
+# 0.39.8: real negative ServerBridge requests against the live PostgreSQL-backed
+# API, signed by the enrolled Paper node. All must be denied BEFORE the genuine
+# player ticket is redeemed; a failed check aborts the actual JVM test.
+player_negative_0398() {
+  local case_id="$1" reported_uuid="$2" reported_username="$3" reported_project="$4" reported_profile="$5" reported_channel="$6" reported_server="$7" expected_reason="$8"
+  local request="$RUNTIME_DIR/player-0398-request-${case_id}.json"
+  local response="$RUNTIME_DIR/player-0398-response-${case_id}.json"
+  local http
+  jq -cn --arg uuid "$reported_uuid" --arg username "$reported_username" \
+    --arg project "$reported_project" --arg profile "$reported_profile" \
+    --arg channel "$reported_channel" --arg server "$reported_server" \
+    --arg version "$VERSION" --arg sha "$PAPER_BRIDGE_SHA" \
+    '{protocolVersion:2,serverId:$server,username:$username,uuid:$uuid,projectId:$project,profileId:$profile,channel:$channel,pluginVersion:$version,pluginSha256:$sha}' > "$request"
+  http="$(serverbridge_node_signed_request "$PAPER_NODE_KEY" paper-e2e-p3 POST \
+    "$API/api/v1/server-bridge/validate-join" "$(cat "$request")" "$response")"
+  printf '%s\n' "$http" > "$RUNTIME_DIR/player-0398-http-${case_id}.txt"
+  [[ "$http" == 403 ]] || { echo "[player-0398] $case_id expected 403, got $http" >&2; return 1; }
+  jq -e --arg reason "$expected_reason" \
+    '.data.allowed == false and .data.reason == $reason and (.data.player == null)' \
+    "$response" >/dev/null || { echo "[player-0398] $case_id wrong denial" >&2; return 1; }
+}
+PLAYER_AUTHORIZED_UUID="$(jq -er '.data.join.uuid' "$RUNTIME_DIR/join-paper-real-client.json")"
+PLAYER_WRONG_UUID="$(python3 - "$PLAYER_AUTHORIZED_UUID" <<'PYUUID'
+import re,sys
+value=sys.argv[1].replace('-','').lower()
+if not re.fullmatch(r'[0-9a-f]{32}',value): raise SystemExit('invalid real Minecraft ticket UUID')
+print(('0' if value[0]!='0' else '1')+value[1:])
+PYUUID
+)"
+player_negative_0398 uuid-mismatch "$PLAYER_WRONG_UUID" "$PLAYER_USERNAME" e2e-project "$PROFILE_ID" stable paper-e2e-p3 serverbridge_player_uuid_mismatch
+player_negative_0398 invalid-uuid 'not-a-minecraft-uuid' "$PLAYER_USERNAME" e2e-project "$PROFILE_ID" stable paper-e2e-p3 serverbridge_player_uuid_invalid
+player_negative_0398 project-mismatch "$PLAYER_AUTHORIZED_UUID" "$PLAYER_USERNAME" foreign-project "$PROFILE_ID" stable paper-e2e-p3 project_mismatch
+player_negative_0398 profile-mismatch "$PLAYER_AUTHORIZED_UUID" "$PLAYER_USERNAME" e2e-project wrong-profile stable paper-e2e-p3 profile_mismatch
+player_negative_0398 channel-mismatch "$PLAYER_AUTHORIZED_UUID" "$PLAYER_USERNAME" e2e-project "$PROFILE_ID" beta paper-e2e-p3 channel_mismatch
+player_negative_0398 server-mismatch "$PLAYER_AUTHORIZED_UUID" "$PLAYER_USERNAME" e2e-project "$PROFILE_ID" stable velocity-e2e-p3 serverbridge_node_server_id_mismatch
+player_negative_0398 unissued-player "$PLAYER_AUTHORIZED_UUID" NotIssued0398 e2e-project "$PROFILE_ID" stable paper-e2e-p3 launcher_session_or_handoff_missing_or_expired
 validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" allow
+# The same ticket must be rejected on second redemption.
 validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
 
 consumed_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM server_bridge_join_tickets_v2 WHERE server_id='paper-e2e-p3' AND status='consumed'")"

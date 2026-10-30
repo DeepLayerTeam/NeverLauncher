@@ -32,3 +32,22 @@ func TestInvalidTicketIdentityFailsClosed(t *testing.T) {
 		}
 	}
 }
+
+func TestVerifiedOnlineModeRequiresActualUUID0398(t *testing.T) {
+	const uuid = "123e4567-e89b-42d3-a456-426614174000"
+	for _, row := range []struct {
+		observed string
+		expected error
+	}{
+		{"", ErrInvalidObservedUUID},
+		{"  ", ErrInvalidObservedUUID},
+		{"123e4567e89b42d3a456426614174000", nil},
+		{"123e4567-e89b-42d3-a456-426614174001", ErrIdentityMismatch},
+		{"invalid", ErrInvalidObservedUUID},
+	} {
+		got := ValidateVerified(row.observed, uuid)
+		if !errors.Is(got, row.expected) || (row.expected == nil && got != nil) {
+			t.Errorf("observed=%q returned %v, expected %v", row.observed, got, row.expected)
+		}
+	}
+}

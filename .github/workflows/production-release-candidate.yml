@@ -88,6 +88,10 @@ jobs:
             --e2e-dir real-minecraft-e2e/runtime \
             --version "$(cat VERSION)" --source-commit "$GITHUB_SHA" \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
+          python3 scripts/ga/verify_player_cycle_0398.py \
+            --e2e-dir real-minecraft-e2e/runtime \
+            --version "$(cat VERSION)" --source-commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
 
   windows-production-signed:
     name: Authenticode Windows x64 + ARM64 production delivery

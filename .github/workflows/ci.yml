@@ -150,6 +150,15 @@ jobs:
       - name: Desktop texture operations and official-account isolation tests
         working-directory: apps/desktop
         run: npm run test:textures
+      - name: Player 0.39.x components, official, join, update and launch regressions
+        working-directory: apps/desktop
+        run: |
+          npm run test:components
+          npm run test:official
+          npm run test:server-join
+          npm run test:auth-experience
+          npm run test:update-migration
+          npm run test:launch-modes
       - name: Type-check NeverExtensions TypeScript SDKs
         run: |
           apps/admin/node_modules/.bin/tsc --noEmit --strict --target ES2020 --module ESNext --moduleResolution Bundler --lib ES2020,DOM sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/admin/typescript/neverlauncher-admin.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/typescript/neverlauncher-desktop.ts
@@ -964,6 +973,7 @@ jobs:
           python3 -m unittest discover -s e2e/scripts -p 'test_game_cycle_0364.py' -v
           python3 -m unittest discover -s e2e/scripts -p 'test_publish_client_package.py' -v
           python3 -m unittest discover -s scripts/ga -p 'test_verify_game_cycle_0364.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_verify_player_cycle_0398.py' -v
       - name: Materialize -> publish -> sync -> launch actual Minecraft -> join -> revoke -> deny
         run: bash e2e/scripts/run-minecraft-e2e.sh
       - name: Require real Paper world backup/restore evidence for 0.29.0
@@ -985,6 +995,13 @@ jobs:
             --e2e-dir e2e/runtime --version "$(cat VERSION)" \
             --source-commit "$GITHUB_SHA" \
             --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
+      - name: Require live 0.39.8 player negative and positive E2E
+        run: |
+          python3 scripts/ga/verify_player_cycle_0398.py \
+            --e2e-dir e2e/runtime --version "$(cat VERSION)" \
+            --source-commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            > e2e/runtime/player-cycle-0398-verification.json
       - name: Upload E2E evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -1001,6 +1018,8 @@ jobs:
             e2e/runtime/runtime-sync.json
             e2e/runtime/runtime-launch-minecraft.json
             e2e/runtime/game-cycle-0364-*.json
+            e2e/runtime/player-0398-*
+            e2e/runtime/player-cycle-0398-verification.json
             e2e/runtime/cycle-*.json
             e2e/runtime/cycle-join-*.log
             e2e/runtime/cycle-game-*.log

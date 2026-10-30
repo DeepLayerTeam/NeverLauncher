@@ -60,3 +60,13 @@ func Validate(observed, authorized string) error {
 	}
 	return nil
 }
+
+// ValidateVerified is used only after a trusted Minecraft online-mode node
+// has reported that the observed profile belongs to its authenticated login.
+// Unlike the pre-login bridge path, an empty UUID cannot prove that identity.
+func ValidateVerified(observed, authorized string) error {
+	if strings.TrimSpace(observed) == "" {
+		return ErrInvalidObservedUUID
+	}
+	return Validate(observed, authorized)
+}

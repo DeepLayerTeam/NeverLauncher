@@ -301,9 +301,21 @@ func (s Server) serverBridgeValidateJoin(w http.ResponseWriter, r *http.Request)
 	// The runtime-supplied UUID is an observation, NEVER an authority.
 	// Verify it before redeeming the one-time ticket/handoff; an offline-mode
 	// UUID or a different Mojang/project UUID must not silently replace it.
-	if err := bridgeidentity.Validate(req.UUID, join.UUID); err != nil {
-		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-uuid-denied"), Actor: server.ID, Action: "serverbridge:validate-join:uuid-denied", Target: req.Username + ":" + err.Error(), IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
-		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, err.Error(), req, bridgeJoinRecord{}))
+	// Official online-mode proof is not meaningful without a UUID observed
+	// from the authenticated game handshake. A verified proxy handoff may
+	// arrive on an offline backend without its own online-mode observation;
+	// in that case the trusted source proof is checked separately below.
+	identityCheck := bridgeidentity.Validate
+	if join.IdentityRealm == "official" && req.OnlineModeVerified {
+		identityCheck = bridgeidentity.ValidateVerified
+	}
+	if err := identityCheck(req.UUID, join.UUID); err != nil {
+		reason := err.Error()
+		if join.IdentityRealm == "official" && req.OnlineModeVerified && strings.TrimSpace(req.UUID) == "" {
+			reason = "official_observed_uuid_required"
+		}
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("validate-join-uuid-denied"), Actor: server.ID, Action: "serverbridge:validate-join:uuid-denied", Target: req.Username + ":" + reason, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		writeJSON(w, http.StatusForbidden, bridgeValidateResponse940(s.Version, false, reason, req, bridgeJoinRecord{}))
 		return
 	}
 	if join.IdentityRealm == "official" && !(req.OnlineModeVerified || (fromHandoff && handoff.SourceOnlineModeVerified)) {
