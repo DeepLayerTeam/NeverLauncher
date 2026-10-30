@@ -13,6 +13,9 @@ use tokio::{fs, io::{AsyncReadExt, AsyncWriteExt}, sync::{Mutex as AsyncMutex, w
 
 const PARTIAL_SCHEMA: u32 = 1;
 const META_MAX_SIZE: u64 = 8192;
+// A CDN may cap each 206 response below the requested end. Continue fetching
+// subsequent ranges without consuming the retry budget for healthy responses.
+const MAX_RANGE_SEGMENTS: usize = 256;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -27,7 +30,7 @@ struct PartialMetadata {
 
 impl PartialMetadata {
     fn matches(&self, file: &ManifestFile) -> bool {
-        self.schema_version == PARTIAL_SCHEMA && self.url == file.url &&
+        self.schema_version == PARTIAL_SCHEMA &&
         self.expected_size == file.size &&
         self.expected_sha256.eq_ignore_ascii_case(&file.sha256) &&
         self.etag.as_deref().map_or(true, strong_etag)
@@ -134,7 +137,7 @@ async fn read_metadata(path: &Path) -> Option<PartialMetadata> {
     serde_json::from_slice(&fs::read(path).await.ok()?).ok()
 }
 
-async fn store_metadata(meta_path: &Path, data: &PartialMetadata) -> Result<(), String> {
+async fn store_metadata(root: &Path, meta_path: &Path, data: &PartialMetadata) -> Result<(), String> {
     let payload = serde_json::to_vec(data).map_err(|e| e.to_string())?;
     let name = meta_path.file_name().ok_or("invalid metadata name")?.to_string_lossy();
     let tmp = meta_path.with_file_name(format!("{name}.tmp-{:016x}", rand::random::<u64>()));
@@ -144,9 +147,10 @@ async fn store_metadata(meta_path: &Path, data: &PartialMetadata) -> Result<(), 
         file.write_all(&payload).await.map_err(|e| format!("write partial metadata: {e}"))?;
         file.sync_all().await.map_err(|e| format!("fsync partial metadata: {e}"))?;
         drop(file);
-        // Metadata does not exist after a discard; never unlink an existing
-        // validator and silently replace it while another writer is active.
-        fs::rename(&tmp, meta_path).await.map_err(|e| format!("publish partial metadata: {e}"))
+        // A mirror switch must persist the new source identity before appending.
+        // Replace atomically on Windows too; never expose a missing validator.
+        crate::platform_fs::replace_file(root, &tmp, meta_path)
+            .map_err(|e| format!("publish partial metadata: {e}"))
     }.await;
     if outcome.is_err() { let _ = fs::remove_file(&tmp).await; }
     outcome
@@ -180,11 +184,14 @@ fn request_error(path: &str, error: String) -> String {
 }
 
 async fn request_with_control(client: &reqwest::Client, url: &str,
-    range: Option<(u64, &str)>, control: &mut watch::Receiver<Directive>) -> Result<reqwest::Response, String> {
+    range: Option<(u64, Option<&str>)>, control: &mut watch::Receiver<Directive>) -> Result<reqwest::Response, String> {
     network_resilience::check(control)?;
     let mut request = client.get(url).header(ACCEPT_ENCODING, "identity");
     if let Some((start, validator)) = range {
-        request = request.header(RANGE, format!("bytes={start}-")).header(IF_RANGE, validator);
+        request = request.header(RANGE, format!("bytes={start}-"));
+        // Validators are scoped to a single origin. Across signed mirrors,
+        // Range is only a bandwidth optimization: the full digest is authority.
+        if let Some(validator) = validator { request = request.header(IF_RANGE, validator); }
     }
     let response = tokio::select! {
         result = tokio::time::timeout(network_resilience::REQUEST_TIMEOUT, request.send()) => {
@@ -216,11 +223,26 @@ pub(crate) async fn download_verified(
 
 pub(crate) async fn download_verified_controlled(
     client: &reqwest::Client, root: &Path, file: &ManifestFile, target: &Path,
-    transferred: impl Fn(u64), mut control: watch::Receiver<Directive>,
+    transferred: impl Fn(u64), control: watch::Receiver<Directive>,
 ) -> Result<(), String> {
-    network_resilience::check(&control)?;
     let lock = file_mutex(target);
     let _guard = lock.lock().await;
+    for _ in 0..MAX_RANGE_SEGMENTS {
+        if download_verified_segment(client, root, file, target, &transferred, control.clone()).await? {
+            return Ok(());
+        }
+    }
+    Err(network_resilience::transient(
+        "server supplied too many bounded HTTP ranges; partial retained", None))
+}
+
+/// A single full response or a bounded range. Returns false only when the
+/// server supplied a verified-length prefix and another range is required.
+async fn download_verified_segment(
+    client: &reqwest::Client, root: &Path, file: &ManifestFile, target: &Path,
+    transferred: impl Fn(u64), mut control: watch::Receiver<Directive>,
+) -> Result<bool, String> {
+    network_resilience::check(&control)?;
     file_ownership::ensure_no_symlinks(root, target)?;
     if let Some(parent) = target.parent() {
         fs::create_dir_all(parent).await.map_err(|e| format!("{}: mkdir: {e}", file.path))?;
@@ -236,6 +258,9 @@ pub(crate) async fn download_verified_controlled(
     let exists_part = fs::try_exists(&part).await.map_err(|e| e.to_string())?;
     let exists_meta = fs::try_exists(&meta).await.map_err(|e| e.to_string())?;
     let previous = if exists_part && exists_meta { read_metadata(&meta).await } else { None };
+    // Reuse an existing prefix on the same origin only with its strong ETag.
+    // A different signed mirror may serve the remaining suffix without an
+    // origin-specific If-Range; final SHA-256 authenticates the combined file.
     let mut resume = None;
     if let Some(state) = previous.filter(|m| m.matches(file)) {
         let len = fs::metadata(&part).await.map_err(|e| e.to_string())?.len();
@@ -243,17 +268,22 @@ pub(crate) async fn download_verified_controlled(
             let (actual_len, hash) = digest_existing(&part).await?;
             if actual_len == file.size && hex::encode(hash.finalize()).eq_ignore_ascii_case(&file.sha256) {
                 network_resilience::check(&control)?;
-                return install_verified(root, file, target, &part, &meta).await;
+                install_verified(root, file, target, &part, &meta).await?;
+                return Ok(true);
             }
         }
         if len > 0 && len < file.size {
-            if let Some(etag) = state.etag { resume = Some((len, etag)); }
+            if state.url == file.url {
+                if let Some(etag) = state.etag { resume = Some((len, Some(etag))); }
+            } else {
+                resume = Some((len, None));
+            }
         }
     }
     if resume.is_none() { discard(&part, &meta).await?; }
 
     let mut response = request_with_control(client, &file.url,
-        resume.as_ref().map(|(start, etag)| (*start, etag.as_str())), &mut control).await
+        resume.as_ref().map(|(start, etag)| (*start, etag.as_deref())), &mut control).await
         .map_err(|e| request_error(&file.path, e))?;
     let mut append = false;
     let mut prefix_len = 0u64;
@@ -264,13 +294,24 @@ pub(crate) async fn download_verified_controlled(
                 let valid = check_identity_encoding(&response)
                     .and_then(|_| expected_range(&response, *start, file.size))
                     .and_then(|length| {
-                        if response_etag(&response).as_deref() != Some(expected_etag.as_str()) {
+                        if expected_etag.as_deref().is_some_and(|expected|
+                            response_etag(&response).as_deref() != Some(expected)) {
                             return Err("206 response lacks the original strong ETag".into());
                         }
                         Ok(length)
                     });
                 match valid {
                     Ok(length) => {
+                        if expected_etag.is_none() {
+                            // Persist new mirror identity atomically before writing
+                            // any mixed-origin bytes. A later retry must not send
+                            // the former origin's validator to this mirror.
+                            store_metadata(root, &meta, &PartialMetadata {
+                                schema_version: PARTIAL_SCHEMA, url: file.url.clone(),
+                                expected_sha256: file.sha256.clone(), expected_size: file.size,
+                                etag: response_etag(&response),
+                            }).await?;
+                        }
                         append = true;
                         prefix_len = *start;
                         allowed_body_len = length;
@@ -313,7 +354,7 @@ pub(crate) async fn download_verified_controlled(
         let state = PartialMetadata { schema_version: PARTIAL_SCHEMA, url: file.url.clone(),
             expected_sha256: file.sha256.clone(), expected_size: file.size,
             etag: response_etag(&response) };
-        store_metadata(&meta, &state).await?;
+        store_metadata(root, &meta, &state).await?;
     }
 
     let mut digest = Sha256::new();
@@ -370,14 +411,23 @@ pub(crate) async fn download_verified_controlled(
         return Err(network_resilience::transient(format!("{}: truncated HTTP body ({body_len}/{allowed_body_len})", file.path), None));
     }
     if prefix_len + body_len != file.size {
-        return Err(format!("{}: server returned an incomplete Content-Range", file.path));
+        // A valid but capped 206 response is not a failure. Its strong ETag
+        // remains pinned for the next Range within this same operation.
+        return Ok(false);
     }
     if !hex::encode(digest.finalize()).eq_ignore_ascii_case(&file.sha256) {
         discard(&part, &meta).await?;
+        if append {
+            // Prefix corruption or divergent mirror bytes must never activate.
+            // Retry this source from byte zero before giving up or falling back.
+            return Err(network_resilience::transient(
+                format!("{}: resumed SHA-256 mismatch; retrying full file", file.path), None));
+        }
         return Err(format!("{}: complete SHA-256 verification failed", file.path));
     }
     network_resilience::check(&control)?;
-    install_verified(root, file, target, &part, &meta).await
+    install_verified(root, file, target, &part, &meta).await?;
+    Ok(true)
 }
 
 #[cfg(test)]
@@ -618,7 +668,7 @@ mod tests {
         let (part, meta) = partial_paths(&root, &target).unwrap();
         fs::create_dir_all(part.parent().unwrap()).await.unwrap();
         fs::write(&part, data).await.unwrap();
-        store_metadata(&meta, &PartialMetadata {
+        store_metadata(&root, &meta, &PartialMetadata {
             schema_version: PARTIAL_SCHEMA, url: f.url.clone(),
             expected_sha256: f.sha256.clone(), expected_size: f.size,
             etag: Some("\"cached\"".into()),
@@ -628,6 +678,135 @@ mod tests {
         assert_eq!(fs::read(&target).await.unwrap(), data);
         assert!(!fs::try_exists(part).await.unwrap());
         assert!(!fs::try_exists(meta).await.unwrap());
+        fs::remove_dir_all(root).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn bounded_206_ranges_continue_without_restarting_or_consuming_retry_budget() {
+        let data = b"0123456789ABCDEFGHIJ";
+        let mut middle = response("206 Partial Content", Some("\"stable\""), &data[8..14], 6);
+        middle.headers.push(("Content-Range".into(), "bytes 8-13/20".into()));
+        let mut tail = response("206 Partial Content", Some("\"stable\""), &data[14..], 6);
+        tail.headers.push(("Content-Range".into(), "bytes 14-19/20".into()));
+        let (url, history, server) = mock_http(vec![
+            response("200 OK", Some("\"stable\""), &data[..8], 20),
+            middle, tail,
+        ]).await;
+        let root = workspace().await;
+        let f = file(url, data);
+        let target = root.join(&f.path);
+        assert!(download_verified(&client(), &root, &f, &target, |_| {}).await.is_err());
+        // One invocation chains both valid bounded responses, without throwing
+        // away the first eight bytes or requiring an application-level retry.
+        download_verified(&client(), &root, &f, &target, |_| {}).await.unwrap();
+        assert_eq!(fs::read(&target).await.unwrap(), data);
+        server.await.unwrap();
+        let h = history.lock().unwrap();
+        assert_eq!(h.len(), 3);
+        assert!(h[1].to_ascii_lowercase().contains("range: bytes=8-"));
+        assert!(h[2].to_ascii_lowercase().contains("range: bytes=14-"));
+        assert!(h[2].to_ascii_lowercase().contains("if-range: \"stable\""));
+        drop(h);
+        fs::remove_dir_all(root).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn failed_primary_mirror_resumes_suffix_without_leaking_origin_etag() {
+        let data = b"0123456789ABCDEFGHIJ";
+        let (primary, primary_history, primary_server) = mock_http(vec![
+            response("200 OK", Some("\"primary\""), &data[..8], 20),
+        ]).await;
+        let mut suffix = response("206 Partial Content", Some("\"mirror\""), &data[8..], 12);
+        suffix.headers.push(("Content-Range".into(), "bytes 8-19/20".into()));
+        let (mirror, mirror_history, mirror_server) = mock_http(vec![suffix]).await;
+        let root = workspace().await;
+        let f = file(primary, data);
+        let target = root.join(&f.path);
+        fs::write(&target, b"previous client").await.unwrap();
+        assert!(download_verified(&client(), &root, &f, &target, |_| {}).await.is_err());
+        assert_eq!(fs::read(&target).await.unwrap(), b"previous client");
+        let mut alternate = f.clone();
+        alternate.url = mirror;
+        download_verified(&client(), &root, &alternate, &target, |_| {}).await.unwrap();
+        assert_eq!(fs::read(&target).await.unwrap(), data);
+        primary_server.await.unwrap();
+        mirror_server.await.unwrap();
+        assert_eq!(primary_history.lock().unwrap().len(), 1);
+        let h = mirror_history.lock().unwrap();
+        assert_eq!(h.len(), 1);
+        assert!(h[0].to_ascii_lowercase().contains("range: bytes=8-"));
+        assert!(!h[0].to_ascii_lowercase().contains("if-range:"));
+        drop(h);
+        fs::remove_dir_all(root).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn interrupted_mirror_transfer_pins_new_origin_etag_before_resuming() {
+        let data = b"0123456789ABCDEFGHIJ";
+        let (primary, _, first_server) = mock_http(vec![
+            response("200 OK", Some("\"origin-a\""), &data[..8], 20),
+        ]).await;
+        let mut interrupted = response("206 Partial Content", Some("\"origin-b\""), &data[8..13], 12);
+        interrupted.headers.push(("Content-Range".into(), "bytes 8-19/20".into()));
+        let mut finished = response("206 Partial Content", Some("\"origin-b\""), &data[13..], 7);
+        finished.headers.push(("Content-Range".into(), "bytes 13-19/20".into()));
+        let (mirror, requests, second_server) = mock_http(vec![interrupted, finished]).await;
+        let root = workspace().await;
+        let original = file(primary, data);
+        let target = root.join(&original.path);
+        assert!(download_verified(&client(), &root, &original, &target, |_| {}).await.is_err());
+        let mut fallback = original.clone();
+        fallback.url = mirror.clone();
+        assert!(download_verified(&client(), &root, &fallback, &target, |_| {}).await.is_err());
+        let (part, meta) = partial_paths(&root, &target).unwrap();
+        assert_eq!(fs::read(&part).await.unwrap(), &data[..13]);
+        let state = read_metadata(&meta).await.unwrap();
+        assert_eq!(state.url, mirror);
+        assert_eq!(state.etag.as_deref(), Some("\"origin-b\""));
+        // Fresh invocation models a restarted Desktop after another outage.
+        download_verified(&client(), &root, &fallback, &target, |_| {}).await.unwrap();
+        assert_eq!(fs::read(&target).await.unwrap(), data);
+        first_server.await.unwrap();
+        second_server.await.unwrap();
+        let h = requests.lock().unwrap();
+        assert_eq!(h.len(), 2);
+        assert!(!h[0].to_ascii_lowercase().contains("if-range:"));
+        assert!(h[1].to_ascii_lowercase().contains("range: bytes=13-"));
+        assert!(h[1].to_ascii_lowercase().contains("if-range: \"origin-b\""));
+        drop(h);
+        fs::remove_dir_all(root).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn poisoned_partial_is_discarded_and_retry_from_zero_repairs_automatically() {
+        let data = b"0123456789ABCDEFGHIJ";
+        let mut resumed = response("206 Partial Content", Some("\"stable\""), &data[8..], 12);
+        resumed.headers.push(("Content-Range".into(), "bytes 8-19/20".into()));
+        let (url, history, server) = mock_http(vec![
+            response("200 OK", Some("\"stable\""), &data[..8], 20),
+            resumed,
+            response("200 OK", Some("\"stable\""), data, 20),
+        ]).await;
+        let root = workspace().await;
+        let f = file(url, data);
+        let target = root.join(&f.path);
+        fs::write(&target, b"previous working client").await.unwrap();
+        assert!(download_verified(&client(), &root, &f, &target, |_| {}).await.is_err());
+        let (part, meta) = partial_paths(&root, &target).unwrap();
+        fs::write(&part, b"XXXXXXXX").await.unwrap();
+        let error = download_verified(&client(), &root, &f, &target, |_| {}).await.unwrap_err();
+        assert!(network_resilience::retry_delay(&error, 0).is_some());
+        assert!(!fs::try_exists(&part).await.unwrap());
+        assert!(!fs::try_exists(&meta).await.unwrap());
+        assert_eq!(fs::read(&target).await.unwrap(), b"previous working client");
+        download_verified(&client(), &root, &f, &target, |_| {}).await.unwrap();
+        assert_eq!(fs::read(&target).await.unwrap(), data);
+        server.await.unwrap();
+        let h = history.lock().unwrap();
+        assert_eq!(h.len(), 3);
+        assert!(h[1].to_ascii_lowercase().contains("range: bytes=8-"));
+        assert!(!h[2].to_ascii_lowercase().contains("range: bytes="));
+        drop(h);
         fs::remove_dir_all(root).await.unwrap();
     }
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.40.8 — Verified resumable HTTP delivery, bounded ranges and cross-mirror repair
+
+- Extend the production NeverRuntime file downloader to consume valid **bounded HTTP 206 ranges** until a signed file is complete. Keep its strong `ETag` and `If-Range` validator across suffix requests without discarding already downloaded bytes or using one scheduler retry per healthy bounded response. Bound range chaining to avoid infinite/abusive server responses.
+- Preserve an interrupted partial while switching between signed download mirrors, using `Range` without forwarding another origin's `If-Range` ETag. Every assembled file is still authenticated against its **signed full SHA-256** before installation; incomplete or corrupt files never replace a working client.
+- Atomically update persistent partial metadata to the new mirror identity/ETag before writing cross-mirror bytes, including Windows replacement semantics. A subsequent Desktop restart resumes using the new origin's ETag, not the previous origin's validator.
+- If a resumed file fails final SHA-256, discard its partial and trigger the existing bounded retry mechanism for a clean full fetch from the same source. A corrupted local prefix therefore does not require manually reinstalling the game.
+- Add local HTTP fault-injection tests for truncated bodies, short but valid 206 responses, cross-mirror suffix reuse, interrupted mirror resume after a restart and corrupted-prefix recovery with the prior client left intact.
+
+**Verification boundary:** The Rust source and executable tests are included, but Cargo/rustc are unavailable in this execution environment, so the Rust test suite, Desktop builds and real network-fault Minecraft installation have not been executed here. This version is not production-acceptance certified until those tests and a real Desktop install/update/recovery pass.
+
 ## 0.40.7 — Verified JVM execution, offline repair and clean-host Java selection
 
 - Verify managed runtimes by **executing real Java-8-compatible bytecode** with a random challenge, checking its runtime major and ensuring `java.home` belongs to the installed image. Reject wrapper scripts that merely forge `java -version` output or delegate to the machine's unrelated Java.
