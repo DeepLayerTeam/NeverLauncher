@@ -7,14 +7,15 @@ type PlanFile = {path:string;kind?:string;sha256:string;size:number};
 type Plan = {reproducibilitySha256:string;minecraftVersion:string;loader:string;loaderVersion?:string;java:{major:number};steps:Array<{id:string;adapter:string}>;sources:PlanFile[];outputs:PlanFile[];processors:unknown[]};
 type Detail = {job:Job;log:string;plan?:Plan;importReport?:unknown};
 type Difference={path:string;change:string;sha256?:string};
+type DeliveredWorkspace = {id:string;revision:number;state:string;files:Array<{path:string;sha256:string;size:number}>};
 type Envelope<T>={data:T;error?:{message:string}};
 const ended=(state:string)=>['completed','failed','cancelled','interrupted'].includes(state);
 const readableError=(e:unknown)=>e instanceof Error?e.message:String(e);
 const key=(workspace:string)=>`neverlauncher.clientfactory.${workspace}`;
 const targets=['windows/x86_64','windows/x86','linux/x86_64','linux/aarch64','darwin/x86_64','darwin/aarch64'];
 
-export function ClientFactoryBuilder02710({backend,token,workspaceId,minecraft,loader,initialLoaderVersion='',canBuild}: {
- backend:string;token:string;workspaceId:string;minecraft:string;loader:string;initialLoaderVersion?:string;canBuild:boolean;
+export function ClientFactoryBuilder02710({backend,token,workspaceId,workspaceRevision,workspaceEmpty,onDelivered,minecraft,loader,initialLoaderVersion='',canBuild}: {
+ backend:string;token:string;workspaceId:string;workspaceRevision:number;workspaceEmpty:boolean;onDelivered:(workspace:DeliveredWorkspace)=>void;minecraft:string;loader:string;initialLoaderVersion?:string;canBuild:boolean;
 }) {
  const endpoint=useMemo(()=>`${backend.replace(/\/$/,'')}/api/v1/build-workspaces/${encodeURIComponent(workspaceId)}/factory/jobs`,[backend,workspaceId]);
  const [source,setSource]=useState<'version'|'modpack'>('version');
@@ -30,6 +31,7 @@ export function ClientFactoryBuilder02710({backend,token,workspaceId,minecraft,l
  const [filter,setFilter]=useState('');
  const [busy,setBusy]=useState(false);
  const [exportBusy,setExportBusy]=useState(false);
+ const [deliveryBusy,setDeliveryBusy]=useState(false);
  const [error,setError]=useState('');
  const request=useCallback(async<T,>(url:string,method:'GET'|'POST'|'DELETE'='GET',payload?:unknown,signal?:AbortSignal):Promise<T>=>{
    const response=await fetch(url,{method,headers:{Authorization:`Bearer ${token}`,...(payload===undefined?{}:{'Content-Type':'application/json'})},body:payload===undefined?undefined:JSON.stringify(payload),cache:'no-store',signal});
@@ -94,6 +96,15 @@ export function ClientFactoryBuilder02710({backend,token,workspaceId,minecraft,l
    await act(async()=>{await request(`${endpoint}/${encodeURIComponent(current)}`,'DELETE');setDetail(null);setCurrent('');setStep('configure');await refresh()});
  }
  async function compare(){if(!current)return;await act(async()=>{const response=await request<{items:Difference[]}>(`${endpoint}/${encodeURIComponent(current)}/diff${baseJob?`?baseJob=${encodeURIComponent(baseJob)}`:''}`);setDiff(response.items)})}
+ async function deliverWorkspace(){
+   if(!current||deliveryBusy||!workspaceEmpty||detail?.job.state!=='completed')return;
+   setDeliveryBusy(true);setError('');
+   try {
+     const result=await request<DeliveredWorkspace>(`${endpoint}/${encodeURIComponent(current)}/deliver`,'POST',{revision:workspaceRevision});
+     onDelivered(result);
+   } catch(e){setError(readableError(e))}
+   finally{setDeliveryBusy(false)}
+ }
  async function exportZIP(){if(!current||exportBusy||detail?.job.state!=='completed')return;setExportBusy(true);setError('');try{
    const response=await fetch(`${endpoint}/${encodeURIComponent(current)}/export`,{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
    if(!response.ok){const data=await response.json() as Envelope<unknown>;throw new Error(data.error?.message||`HTTP ${response.status}`)}
@@ -104,7 +115,7 @@ export function ClientFactoryBuilder02710({backend,token,workspaceId,minecraft,l
  const plan=detail?.plan;
  const shownFiles=useMemo(()=>((tab==='sources'?plan?.sources:plan?.outputs)||[]).filter(f=>f.path.toLowerCase().includes(filter.toLowerCase())).slice(0,350),[tab,plan,filter]);
  return <section className="subcard clientFactory" aria-label="Client Factory Builder">
-   <header className="registryHeading"><div><h4>Client Factory · 0.28.0</h4><p className="muted">Minecraft и загрузчик → сборка → проверка SHA-256 → diff → экспорт InstallPlan и файлов.</p></div><button disabled={busy} onClick={()=>void refresh().catch(e=>setError(readableError(e)))}>Обновить задания</button></header>
+   <header className="registryHeading"><div><h4>Client Factory · {__NEVERLAUNCHER_VERSION__}</h4><p className="muted">Minecraft и загрузчик → сборка → проверка SHA-256 → diff → экспорт InstallPlan и файлов.</p></div><button disabled={busy} onClick={()=>void refresh().catch(e=>setError(readableError(e)))}>Обновить задания</button></header>
    <nav className="clientFactorySteps" aria-label="Этапы Client Factory">{(['configure','preview','run','result'] as const).map((s,i)=><button type="button" key={s} aria-current={step===s?'step':undefined} disabled={s==='result'&&!plan || s==='run'&&!current} onClick={()=>setStep(s)}>{i+1}. {({configure:'Источник',preview:'План',run:'Сборка',result:'Результат'} as const)[s]}</button>)}</nav>
    {step==='configure'&&<div className="formGrid">
       <label className="field">Источник сборки<select value={source} onChange={e=>setSource(e.target.value as 'version'|'modpack')}><option value="version">Minecraft + loader</option><option value="modpack">Modrinth / CurseForge modpack</option></select></label>
@@ -132,7 +143,8 @@ export function ClientFactoryBuilder02710({backend,token,workspaceId,minecraft,l
       {step==='run'&&<><h5>Processor / installer logs</h5><pre className="clientFactoryLog" aria-label="Журнал Client Factory">{detail.log||'Нет сообщений; проверьте состояние задания.'}</pre></>}
       {plan&&step==='result'&&<>
         <dl className="clientFactoryMeta"><dt>InstallPlan</dt><dd><code>{plan.reproducibilitySha256}</code></dd><dt>Minecraft</dt><dd>{plan.minecraftVersion}</dd><dt>Loader</dt><dd>{plan.loader} {plan.loaderVersion||''}</dd><dt>Java</dt><dd>{plan.java.major}</dd><dt>Files</dt><dd>{plan.outputs.length}</dd><dt>Processors</dt><dd>{plan.processors.length}</dd></dl>
-        <div className="buttonRow"><button disabled={exportBusy} onClick={()=>void exportZIP()}>{exportBusy?'Проверка и упаковка…':'Локальный экспорт проверенной сборки (ZIP)'}</button><button onClick={()=>{setStep('run');setTab('log')}}>Журнал</button></div>
+        <div className="buttonRow"><button disabled={!canBuild||!workspaceEmpty||deliveryBusy} onClick={()=>void deliverWorkspace()}>{deliveryBusy?'Верификация и перенос…':'Перенести сборку в Build Workspace'}</button><button disabled={exportBusy} onClick={()=>void exportZIP()}>{exportBusy?'Проверка и упаковка…':'Локальный экспорт (ZIP)'}</button><button onClick={()=>{setStep('run');setTab('log')}}>Журнал</button></div>
+        {!workspaceEmpty&&<p className="muted">Прямой перенос доступен только для пустого workspace до stage. Для нового запуска создайте пустой workspace с необходимой Java.</p>}
         <div className="buttonRow"><label className="field">Сравнение с заданием<select value={baseJob} onChange={e=>setBaseJob(e.target.value)}><option value="">Нет (все файлы как новые)</option>{jobs.filter(j=>j.state==='completed'&&j.id!==current).map(j=><option value={j.id} key={j.id}>{j.id.slice(0,8)} · {j.request.minecraft}</option>)}</select></label><button disabled={busy} onClick={()=>void compare()}>Показать diff</button></div>
         {!!diff.length&&<div className="clientFactoryFileList" aria-label="Изменённые файлы"><h5>Diff ({diff.length})</h5>{diff.slice(0,350).map(f=><div key={f.path}><code>{f.path}</code> — {f.change}</div>)}</div>}
         <div className="buttonRow">{(['files','sources','processors','log'] as const).map(name=><button type="button" aria-pressed={tab===name} key={name} onClick={()=>setTab(name)}>{({files:'Outputs',sources:'Sources',processors:'Processors',log:'Logs'} as const)[name]}</button>)}</div>
@@ -140,7 +152,7 @@ export function ClientFactoryBuilder02710({backend,token,workspaceId,minecraft,l
         {tab==='processors'&&<pre className="clientFactoryLog">{JSON.stringify(plan.processors,null,2)}</pre>}
         {tab==='log'&&<pre className="clientFactoryLog">{detail.log}</pre>}
         {detail.importReport&&<pre className="clientFactoryLog">{JSON.stringify(detail.importReport,null,2)}</pre>}
-        <p className="muted">Экспорт не публикует пакет и не удостоверяет игровой запуск. Для публикации импортируйте проверенные файлы в Build Workspace и пройдите штатные Validation, Sign, Stage и Publish.</p>
+        <p className="muted">Серверный перенос проверяет исходные байты, шифрует их и связывает runtime.launch с точным профилем загрузчика. После переноса выполните Stage → Validate → Build → Sign → Staged Run → Publish. Успешный перенос не удостоверяет реальный запуск Minecraft.</p>
       </>}
    </>}
    {error&&<p role="alert" className="error">{error}</p>}

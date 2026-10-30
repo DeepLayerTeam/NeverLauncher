@@ -14,6 +14,7 @@ func (s Server) registerPackageRoutesV1(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/build-workspaces/{workspaceId}/factory/jobs/{jobId}/cancel", s.requireAuthenticated(s.factoryCancel02710))
 	mux.Handle("GET /api/v1/build-workspaces/{workspaceId}/factory/jobs/{jobId}/diff", s.requireAuthenticated(s.factoryDiff02710))
 	mux.Handle("GET /api/v1/build-workspaces/{workspaceId}/factory/jobs/{jobId}/export", s.requireAuthenticated(s.factoryExport02710))
+	mux.Handle("POST /api/v1/build-workspaces/{workspaceId}/factory/jobs/{jobId}/deliver", s.requireAuthenticated(s.factoryDeliver0401))
 	mux.Handle("POST /api/v1/build-workspaces", s.requireAuthenticated(s.workspaceCreate0226))
 	mux.Handle("GET /api/v1/build-workspaces", s.requireAuthenticated(s.workspaceList0226))
 	mux.Handle("GET /api/v1/build-workspaces/{workspaceId}", s.requireAuthenticated(s.workspaceGet0226))

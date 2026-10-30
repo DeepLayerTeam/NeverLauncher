@@ -60,6 +60,10 @@ type factoryPlanView02710 struct {
 	Java                  struct {
 		Major int `json:"major"`
 	} `json:"java"`
+	Targets []struct {
+		OS   string `json:"os"`
+		Arch string `json:"arch"`
+	} `json:"targets"`
 	Steps []struct {
 		ID      string `json:"id"`
 		Adapter string `json:"adapter"`
@@ -76,6 +80,10 @@ type factoryPlanView02710 struct {
 		Size   int64  `json:"size"`
 	} `json:"outputs"`
 	Processors []json.RawMessage `json:"processors"`
+	Launch     struct {
+		ProfilePath string `json:"profilePath"`
+		MainClass   string `json:"mainClass"`
+	} `json:"launch"`
 }
 
 func factoryConfig02710() (string, string, error) {

@@ -141,6 +141,38 @@ func validateWorkspaceTransition0230(old, next BuildWorkspace) error {
 	return nil
 }
 
+// FactoryWorkspaceStore0401 atomically adopts verified Client Factory outputs
+// and the exact launch metadata path. Ordinary workspace writes keep immutable
+// settings; only a new, empty, unbuilt workspace can use this transition.
+type FactoryWorkspaceStore0401 interface {
+	SaveFactoryWorkspace0401(context.Context, BuildWorkspace) (BuildWorkspace, error)
+}
+
+func validateFactoryWorkspace0401(old, next BuildWorkspace) error {
+	if old.State != "importing" || len(old.Files) != 0 || old.PackageID != "" ||
+		next.State != "importing" || len(next.Files) == 0 || next.PackageID != "" {
+		return ErrConflict
+	}
+	if next.Settings.Runtime.Launch.ClasspathStrategy != "mojang" ||
+		next.Settings.Runtime.Launch.VersionMetadataPath == "" ||
+		(old.Settings.Runtime.Launch.ClasspathStrategy != "" && old.Settings.Runtime.Launch.ClasspathStrategy != "mojang") ||
+		(old.Settings.Runtime.Launch.VersionMetadataPath != "" && old.Settings.Runtime.Launch.VersionMetadataPath != next.Settings.Runtime.Launch.VersionMetadataPath) {
+		return ErrConflict
+	}
+	before := next
+	before.Settings = old.Settings
+	if err := validateWorkspaceTransition0230(old, before); err != nil {
+		return err
+	}
+	expected := old.Settings
+	expected.Runtime.Launch.ClasspathStrategy = "mojang"
+	expected.Runtime.Launch.VersionMetadataPath = next.Settings.Runtime.Launch.VersionMetadataPath
+	if !reflect.DeepEqual(next.Settings, expected) {
+		return ErrConflict
+	}
+	return nil
+}
+
 func cloneWorkspace0226(w BuildWorkspace) BuildWorkspace {
 	// JSON roundtrip produces fully independent nested slices/maps; no caller can
 	// mutate a persisted record without passing through revision-checked save.
@@ -209,6 +241,26 @@ func (r *MemoryRepository) SaveBuildWorkspace(_ context.Context, w BuildWorkspac
 	r.buildWorkspaces[w.ID] = cloneWorkspace0226(w)
 	return cloneWorkspace0226(w), nil
 }
+func (r *MemoryRepository) SaveFactoryWorkspace0401(_ context.Context, w BuildWorkspace) (BuildWorkspace, error) {
+	if err := validWorkspace0226(w); err != nil {
+		return w, err
+	}
+	r.buildMu.Lock()
+	defer r.buildMu.Unlock()
+	old, exists := r.buildWorkspaces[w.ID]
+	if !exists {
+		return w, ErrNotFound
+	}
+	if err := validateFactoryWorkspace0401(old, w); err != nil {
+		return w, err
+	}
+	w.Revision++
+	w.CreatedAt = old.CreatedAt
+	w.UpdatedAt = time.Now().UTC()
+	r.buildWorkspaces[w.ID] = cloneWorkspace0226(w)
+	return cloneWorkspace0226(w), nil
+}
+
 func (r *SQLRepository) CreateBuildWorkspace(ctx context.Context, w BuildWorkspace) (BuildWorkspace, error) {
 	if err := r.check(); err != nil {
 		return w, err
@@ -276,7 +328,15 @@ func (r *SQLRepository) ListBuildWorkspaces(ctx context.Context, projectID, owne
 	}
 	return items, rows.Err()
 }
+func (r *SQLRepository) SaveFactoryWorkspace0401(ctx context.Context, w BuildWorkspace) (BuildWorkspace, error) {
+	return r.saveBuildWorkspace0401(ctx, w, true)
+}
+
 func (r *SQLRepository) SaveBuildWorkspace(ctx context.Context, w BuildWorkspace) (BuildWorkspace, error) {
+	return r.saveBuildWorkspace0401(ctx, w, false)
+}
+
+func (r *SQLRepository) saveBuildWorkspace0401(ctx context.Context, w BuildWorkspace, factory bool) (BuildWorkspace, error) {
 	if err := r.check(); err != nil {
 		return w, err
 	}
@@ -292,8 +352,14 @@ func (r *SQLRepository) SaveBuildWorkspace(ctx context.Context, w BuildWorkspace
 	if err != nil {
 		return w, err
 	}
-	if err := validateWorkspaceTransition0230(old, w); err != nil {
-		return w, err
+	var validation error
+	if factory {
+		validation = validateFactoryWorkspace0401(old, w)
+	} else {
+		validation = validateWorkspaceTransition0230(old, w)
+	}
+	if validation != nil {
+		return w, validation
 	}
 	w.Revision++
 	w.CreatedAt = old.CreatedAt
