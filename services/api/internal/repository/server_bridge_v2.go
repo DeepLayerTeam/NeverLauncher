@@ -1378,7 +1378,7 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	}
 	// Команды управления — временное состояние доставки. Постоянные свидетельства сохраняются
 	// в audit_events; завершённые и истёкшие строки хранятся 30 дней для диагностики.
-	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_control_commands_v3 c USING (SELECT id FROM server_bridge_control_commands_v3 WHERE status IN ('succeeded','failed','unsupported','indeterminate','expired') AND updated_at <= $1::timestamptz - interval '30 days' ORDER BY updated_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE c.id=q.id`, now.UTC()); execErr != nil {
+	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_control_commands_v3 c USING (SELECT id FROM server_bridge_control_commands_v3 WHERE status IN ('accepted','executed','succeeded','failed','unsupported','indeterminate','expired') AND updated_at <= $1::timestamptz - interval '30 days' ORDER BY updated_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE c.id=q.id`, now.UTC()); execErr != nil {
 		return result, execErr
 	} else {
 		result.ControlCommandsPurged, _ = res.RowsAffected()
@@ -1614,7 +1614,7 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
-	allowed := map[string]bool{"succeeded": true, "failed": true, "unsupported": true, "indeterminate": true}
+	allowed := map[string]bool{"accepted": true, "executed": true, "succeeded": true, "failed": true, "unsupported": true, "indeterminate": true}
 	if !allowed[status] || len(strings.TrimSpace(leaseOwner)) < 16 || len(strings.TrimSpace(leaseToken)) < 16 || deliverySequence < 1 {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: invalid control result", ErrConflict)
 	}
@@ -1641,7 +1641,7 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 	if current.ServerID != serverID || current.RuntimeEpoch != runtimeEpoch || !strings.EqualFold(current.RuntimeID, runtimeID) || current.DeliverySequence != deliverySequence || current.LeaseOwner != leaseOwner || current.LeaseToken != leaseToken {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control acknowledgement lease mismatch", ErrConflict)
 	}
-	if current.Status == "succeeded" || current.Status == "failed" || current.Status == "unsupported" || current.Status == "indeterminate" {
+	if current.Status == "accepted" || current.Status == "executed" || current.Status == "succeeded" || current.Status == "failed" || current.Status == "unsupported" || current.Status == "indeterminate" {
 		if current.Status != status || !serverBridgeControlStringMapEqual0195(current.Result, result) || current.Error != failure {
 			return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: conflicting control acknowledgement", ErrConflict)
 		}

@@ -443,6 +443,46 @@ func (s Server) serverBridgeControlPoll0195(w http.ResponseWriter, r *http.Reque
 	}})
 }
 
+// classifyBridgeControlOutcome0411 enforces the difference between a platform
+// acknowledgement, an invoked operation, and an observed postcondition.
+// Old agents' "succeeded" receipts are never grandfathered into verified success.
+// A verification claim is an attestation by the enrolled game agent, NOT an
+// independent observation by the Backend. Only explicitly observable operations
+// and a result matching the original command can claim the stronger status.
+func classifyBridgeControlOutcome0411(command model.ServerBridgeControlCommand, status string, result map[string]string) string {
+	if status != "succeeded" && status != "executed" && status != "accepted" {
+		return status
+	}
+	if command.Type == "server.shutdown" {
+		return "accepted"
+	}
+	if status != "succeeded" {
+		return status
+	}
+	if result["verification"] != "platform-state-read" {
+		return "executed"
+	}
+	switch command.Type {
+	case "server.maintenance", "server.drain":
+		mode := strings.TrimPrefix(command.Type, "server.")
+		expected := strings.ToLower(command.Payload["enabled"])
+		if (expected == "true" || expected == "false") && result["enabled"] == expected && result["mode"] == mode {
+			return "succeeded"
+		}
+	case "whitelist.enable", "whitelist.disable":
+		expected := strconv.FormatBool(command.Type == "whitelist.enable")
+		if result["enabled"] == expected {
+			return "succeeded"
+		}
+	case "whitelist.add", "whitelist.remove":
+		expected := strconv.FormatBool(command.Type == "whitelist.add")
+		if command.Payload["username"] != "" && result["username"] == command.Payload["username"] && result["whitelisted"] == expected {
+			return "succeeded"
+		}
+	}
+	return "executed"
+}
+
 func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Request) {
 	node, authErr := s.authenticateBridgeNodeRequest0142(r)
 	if authErr != nil {
@@ -482,7 +522,7 @@ func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	status := strings.ToLower(strings.TrimSpace(req.Status))
-	if status != "succeeded" && status != "failed" && status != "unsupported" && status != "indeterminate" {
+	if status != "accepted" && status != "executed" && status != "succeeded" && status != "failed" && status != "unsupported" && status != "indeterminate" {
 		writeError(w, http.StatusBadRequest, "serverbridge_control_ack_status_invalid")
 		return
 	}
@@ -512,7 +552,10 @@ func (s Server) serverBridgeControlAck0195(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusConflict, "serverbridge_control_ack_lease_mismatch")
 		return
 	}
-	terminal := current.Status == "succeeded" || current.Status == "failed" || current.Status == "unsupported" || current.Status == "indeterminate"
+	// Normalize against the persisted signed command, never the claimed payload.
+	// Both the first ACK and an idempotent retry get the same classification.
+	status = classifyBridgeControlOutcome0411(current, status, result)
+	terminal := current.Status == "accepted" || current.Status == "executed" || current.Status == "succeeded" || current.Status == "failed" || current.Status == "unsupported" || current.Status == "indeterminate"
 	if !terminal {
 		if s.State.ServerBridgeHARequired && s.State.ServerBridgeCoordinator == nil {
 			writeError(w, http.StatusServiceUnavailable, "serverbridge_ha_coordinator_unavailable")
@@ -711,7 +754,7 @@ func (b *serverBridgeStore) completeControl0195(serverID string, epoch int64, ru
 	if c.ServerID != serverID || c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID) || c.DeliverySequence != deliverySequence || c.LeaseOwner != leaseOwner || c.LeaseToken != leaseToken {
 		return model.ServerBridgeControlCommand{}, repository.ErrConflict
 	}
-	if c.Status == "succeeded" || c.Status == "failed" || c.Status == "unsupported" || c.Status == "indeterminate" {
+	if c.Status == "accepted" || c.Status == "executed" || c.Status == "succeeded" || c.Status == "failed" || c.Status == "unsupported" || c.Status == "indeterminate" {
 		if c.Status != status || !serverBridgeControlStringMapEqual0195(c.Result, result) || c.Error != failure {
 			return model.ServerBridgeControlCommand{}, repository.ErrConflict
 		}

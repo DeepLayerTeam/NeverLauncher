@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.41.1 — Distinguish accepted, executed and platform-verified ServerBridge results
+
+- The live Bridge executor records `accepted` for scheduled shutdown and `executed` for completed handler/dispatcher calls without an observable effect. `succeeded` now requires an observed platform postcondition and an explicit `platform-state-read` receipt. Bukkit maintenance/drain and whitelist changes read state back after invoking the action.
+- Backend classifies every signed ACK against the original persisted command and downgrades legacy/unproven `succeeded` receipts rather than presenting optimistic ACKs as proven success. A `server.shutdown` receipt never becomes a verified stop based on scheduling alone.
+- PostgreSQL accepts the new terminal outcomes and retains the same immutable command, lease, acknowledgement replay and no-redelivery fencing. Admin distinguishes acceptance, invocation, agent-verified result and unknown outcome.
+- New regression tests cover verifier claim matching, legacy agents, shutdown receipts, terminal replay and UI states.
+
+**Verification boundary:** `succeeded` represents a postcondition checked by the enrolled game agent, not independent remote attestation from Backend. Cross-runtime live Minecraft certification, abrupt agent/backend fault testing and full package verification are still required before declaring 0.41.1 production-certified.
+
+
 ## 0.41.0 — Final package update-integrity gate and delegated delivery signatures
 
 - Close the gap between a signed, apparently valid desktop installer and a usable installed client: the existing six-target production rehearsal now verifies the **exact embedded `COMPONENT_UPDATE_MANIFEST.json`** against its shipped executables, runtime, guard, updater, package manifest and (on Windows) sensor. Validate the installed source paths, component roles, expected layout, SHA-256, byte sizes, and version/platform/architecture. Reject altered, absent, misrouted, or untracked update components before publishing.

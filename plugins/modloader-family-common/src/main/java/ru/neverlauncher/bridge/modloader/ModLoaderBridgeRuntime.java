@@ -143,13 +143,17 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
             boolean enabled = Boolean.parseBoolean(command.payload().getOrDefault("enabled", "false"));
             maintenanceMode.set(enabled);
             updateRoutingModes();
-            return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "maintenance"));
+            return maintenanceMode.get() == enabled
+                ? BridgeControlResult.verified(Map.of("enabled", Boolean.toString(maintenanceMode.get()), "mode", "maintenance"))
+                : BridgeControlResult.indeterminate("maintenance_state_not_observed");
         }
         if ("server.drain".equals(command.type())) {
             boolean enabled = Boolean.parseBoolean(command.payload().getOrDefault("enabled", "false"));
             drainMode.set(enabled);
             updateRoutingModes();
-            return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "drain"));
+            return drainMode.get() == enabled
+                ? BridgeControlResult.verified(Map.of("enabled", Boolean.toString(drainMode.get()), "mode", "drain"))
+                : BridgeControlResult.indeterminate("drain_state_not_observed");
         }
         BridgeControlExecutor executor = platformControlExecutor;
         return executor == null ? BridgeControlResult.unsupported("platform_control_unavailable") : executor.execute(command);

@@ -239,7 +239,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
             case "server.shutdown" -> {
                 String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by NeverLauncher"), 512);
                 getProxy().getScheduler().schedule(this, () -> getProxy().stop(reason), 1500L, TimeUnit.MILLISECONDS);
-                return BridgeControlResult.ok(Map.of("scheduled", "true", "graceMillis", "1500"));
+                return BridgeControlResult.accepted(Map.of("scheduled", "true", "graceMillis", "1500"));
             }
             case "server.console" -> {
                 String raw = payload.getOrDefault("command", "").trim();

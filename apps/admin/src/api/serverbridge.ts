@@ -153,13 +153,15 @@ export class ServerBridgeClient {
   }
 }
 
-export type BridgeLifecycle = 'queued' | 'dispatched' | 'delivered' | 'executed' | 'failed' | 'indeterminate';
+export type BridgeLifecycle = 'queued' | 'dispatched' | 'delivered' | 'accepted' | 'executed' | 'verified' | 'failed' | 'indeterminate';
 export function commandLifecycle(raw: string): { lifecycle: BridgeLifecycle; label: string; terminal: boolean; deliveryConfirmed: boolean } {
   switch (raw.toLowerCase()) {
     case 'pending': return { lifecycle: 'queued', label: 'В очереди (queued)', terminal: false, deliveryConfirmed: false };
     case 'leased': return { lifecycle: 'dispatched', label: 'Передано на обработку (dispatched, ACK ещё нет)', terminal: false, deliveryConfirmed: false };
     case 'delivered': return { lifecycle: 'delivered', label: 'Доставлено (ожидается исполнение)', terminal: false, deliveryConfirmed: true };
-    case 'succeeded': return { lifecycle: 'executed', label: 'Исполнено (Bridge ACK)', terminal: true, deliveryConfirmed: true };
+    case 'accepted': return { lifecycle: 'accepted', label: 'Агент принял / запланировал действие; эффект не подтверждён', terminal: true, deliveryConfirmed: true };
+    case 'executed': return { lifecycle: 'executed', label: 'Вызов на платформе выполнен; эффект не проверен', terminal: true, deliveryConfirmed: true };
+    case 'succeeded': return { lifecycle: 'verified', label: 'Результат проверен чтением состояния игрового сервера', terminal: true, deliveryConfirmed: true };
     case 'failed': return { lifecycle: 'failed', label: 'Ошибка исполнения (Bridge ACK)', terminal: true, deliveryConfirmed: true };
     case 'unsupported': return { lifecycle: 'failed', label: 'Команда не поддерживается (Bridge ACK)', terminal: true, deliveryConfirmed: true };
     case 'expired': return { lifecycle: 'indeterminate', label: 'Срок команды истёк; выполнение не подтверждено', terminal: true, deliveryConfirmed: false };

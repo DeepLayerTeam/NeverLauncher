@@ -185,7 +185,7 @@ public final class NeverLauncherVelocityBridge {
             case "server.shutdown" -> {
                 String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by NeverLauncher"), 512);
                 proxy.getScheduler().buildTask(this, () -> proxy.shutdown(Component.text(reason))).delay(1500, TimeUnit.MILLISECONDS).schedule();
-                return BridgeControlResult.ok(Map.of("scheduled", "true", "graceMillis", "1500"));
+                return BridgeControlResult.accepted(Map.of("scheduled", "true", "graceMillis", "1500"));
             }
             case "server.console" -> {
                 String raw = payload.getOrDefault("command", "").trim();

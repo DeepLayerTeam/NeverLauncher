@@ -492,20 +492,24 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             boolean enabled = Boolean.parseBoolean(payload.getOrDefault("enabled", "false"));
             maintenanceMode.set(enabled);
             updateRoutingModes();
-            return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "maintenance"));
+            return maintenanceMode.get() == enabled
+                ? BridgeControlResult.verified(Map.of("enabled", Boolean.toString(maintenanceMode.get()), "mode", "maintenance"))
+                : BridgeControlResult.indeterminate("maintenance_state_not_observed");
         }
         if ("server.drain".equals(type)) {
             boolean enabled = Boolean.parseBoolean(payload.getOrDefault("enabled", "false"));
             drainMode.set(enabled);
             updateRoutingModes();
-            return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", "drain"));
+            return drainMode.get() == enabled
+                ? BridgeControlResult.verified(Map.of("enabled", Boolean.toString(drainMode.get()), "mode", "drain"))
+                : BridgeControlResult.indeterminate("drain_state_not_observed");
         }
         if ("server.shutdown".equals(type)) {
             scheduleServerTask(() -> {
                 try { Thread.sleep(1500L); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
                 scheduleBukkitTask(Bukkit::shutdown);
             });
-            return BridgeControlResult.ok(Map.of("scheduled", "true", "graceMillis", "1500"));
+            return BridgeControlResult.accepted(Map.of("scheduled", "true", "graceMillis", "1500"));
         }
         if (adapterProfile.supports(BridgeAdapterCapability.REGION_SAFE_SCHEDULER) && "player.kick".equals(type)) {
             return executeFoliaPlayerKick(command);
@@ -546,12 +550,21 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 String username = safeUsername(payload.get("username"));
                 boolean add = type.endsWith(".add");
                 boolean ok = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "whitelist " + (add ? "add " : "remove ") + username);
-                return ok ? BridgeControlResult.ok(Map.of("username", username, "whitelisted", Boolean.toString(add))) : BridgeControlResult.failed("platform_command_rejected");
+                if (!ok) return BridgeControlResult.failed("platform_command_rejected");
+                // dispatchCommand(true) only means accepted by the command dispatcher.
+                boolean observed = Bukkit.getOfflinePlayer(username).isWhitelisted();
+                return observed == add
+                    ? BridgeControlResult.verified(Map.of("username", username, "whitelisted", Boolean.toString(observed)))
+                    : BridgeControlResult.indeterminate("whitelist_postcondition_not_observed");
             }
             case "whitelist.enable", "whitelist.disable" -> {
                 boolean enabled = type.endsWith(".enable");
                 boolean ok = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "whitelist " + (enabled ? "on" : "off"));
-                return ok ? BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled))) : BridgeControlResult.failed("platform_command_rejected");
+                if (!ok) return BridgeControlResult.failed("platform_command_rejected");
+                boolean observed = Bukkit.hasWhitelist();
+                return observed == enabled
+                    ? BridgeControlResult.verified(Map.of("enabled", Boolean.toString(observed)))
+                    : BridgeControlResult.indeterminate("whitelist_mode_postcondition_not_observed");
             }
             case "ban.add", "ban.remove" -> {
                 String username = safeUsername(payload.get("username"));

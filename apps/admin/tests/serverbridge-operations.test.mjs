@@ -19,10 +19,14 @@ test('project-scoped overview path and rights do not grant global access', () =>
 });
 
 test('control lifecycle preserves dispatch, delivery and execution distinctions', () => {
-  assert.deepEqual(['pending','leased','delivered','succeeded','failed','indeterminate'].map(x=>commandLifecycle(x).lifecycle),
-    ['queued','dispatched','delivered','executed','failed','indeterminate']);
+  assert.deepEqual(['pending','leased','delivered','accepted','executed','succeeded','failed','indeterminate'].map(x=>commandLifecycle(x).lifecycle),
+    ['queued','dispatched','delivered','accepted','executed','verified','failed','indeterminate']);
   assert.equal(commandLifecycle('leased').deliveryConfirmed,false);
   assert.equal(commandLifecycle('succeeded').terminal,true);
+  assert.equal(commandLifecycle('accepted').terminal,true);
+  assert.equal(commandLifecycle('executed').terminal,true);
+  assert.match(commandLifecycle('accepted').label, /не подтверждён/);
+  assert.match(commandLifecycle('succeeded').label, /проверен/);
   assert.equal(commandLifecycle('expired').terminal,true);
   assert.equal(commandLifecycle('indeterminate').deliveryConfirmed,false);
   assert.equal(commandLifecycle('unknown').terminal,false);

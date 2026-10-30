@@ -109,7 +109,10 @@ public final class NeverLauncherVanillaBridge implements AutoCloseable {
         if (maintenanceMode) maintenance.set(enabled); else draining.set(enabled);
         api.setRoutingModes(maintenance.get(), draining.get());
         api.heartbeat("vanilla", BridgeDefaults.VERSION);
-        return BridgeControlResult.ok(Map.of("enabled", Boolean.toString(enabled), "mode", maintenanceMode ? "maintenance" : "drain"));
+        boolean observed = maintenanceMode ? maintenance.get() : draining.get();
+        return observed == enabled
+            ? BridgeControlResult.verified(Map.of("enabled", Boolean.toString(observed), "mode", maintenanceMode ? "maintenance" : "drain"))
+            : BridgeControlResult.indeterminate("routing_mode_postcondition_not_observed");
     }
     private BridgeControlResult executeAllowlistedConsole(String command) throws Exception {
         if (!config.isConsoleCommandAllowed(command)) return BridgeControlResult.failed("console_command_not_allowlisted");
