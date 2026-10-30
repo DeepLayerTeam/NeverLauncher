@@ -150,21 +150,49 @@ export class OfficialMinecraftClient0257 {
     this.clear();
     await this.native('official_identity_disconnect_0262', {backendUrl:this.backendUrl, neverSessionId:this.neverSessionId});
   }
+  /** An official change is complete only with a matching, verified native
+   * account and the state returned by Minecraft Services. The renderer never
+   * constructs a provider request, never persists a bearer, and cannot choose
+   * a different account while the native mutation holds its vault lock. */
+  private async texture(operation:'uploadSkin'|'resetSkin'|'selectCape'|'resetCape',
+      extras:Record<string,unknown> = {}, variant?:'classic'|'slim'):Promise<OfficialProfile0257> {
+    const generation=this.generation;
+    const current=await this.profile();
+    const capeId=operation==='selectCape'?String(extras.capeId||''):'';
+    if(capeId && (!/^[a-zA-Z0-9_-]{1,128}$/.test(capeId) || !current.capes.some(c=>c.id===capeId)))
+      throw new Error('Плащ не принадлежит выбранному официальному Minecraft-аккаунту.');
+    const updated=await this.call<OfficialProfile0257>('official_identity_texture_0262',{operation,...extras});
+    if(generation!==this.generation) throw new Error('Официальный аккаунт изменился во время операции; проверьте профиль.');
+    if(!updated || updated.id.toLowerCase()!==current.id.toLowerCase())
+      throw new Error('Minecraft Services вернул другой UUID. Изменение не подтверждено.');
+    if(operation==='selectCape' && !updated.capes?.some(c=>c.id===capeId&&c.state==='ACTIVE'))
+      throw new Error('Minecraft Services не подтвердил выбранный плащ. Обновите профиль.');
+    if(operation==='resetCape' && updated.capes?.some(c=>c.state==='ACTIVE'))
+      throw new Error('Minecraft Services не подтвердил снятие плаща. Обновите профиль.');
+    if(operation==='uploadSkin' && !updated.skins?.some(s=>s.state==='ACTIVE'&&s.variant?.toLowerCase()===variant))
+      throw new Error('Minecraft Services не подтвердил модель нового скина. Обновите профиль.');
+    return updated;
+  }
   async uploadSkin(file: File, variant: 'classic'|'slim', onProgress?: (percent:number)=>void, signal?:AbortSignal): Promise<OfficialProfile0257> {
     if (signal?.aborted) throw new DOMException('Загрузка отменена.', 'AbortError');
-    if (file.size<1 || file.size>4*1024*1024 || !file.name.toLowerCase().endsWith('.png') || (file.type && file.type!=='image/png')) throw new Error('Требуется PNG не более 4 МиБ.');
+    if (file.size<33 || file.size>4*1024*1024 || !file.name.toLowerCase().endsWith('.png') || (file.type && file.type!=='image/png')) throw new Error('Требуется PNG не более 4 МиБ.');
     const buffer = new Uint8Array(await file.arrayBuffer());
     if (signal?.aborted) throw new DOMException('Загрузка отменена.', 'AbortError');
-    // The file is not an OAuth secret. Still validate bytes before crossing IPC.
-    if (buffer[0]!==137 || buffer[1]!==80 || buffer[2]!==78 || buffer[3]!==71) throw new Error('Недопустимый PNG.');
-    const result = await this.call<OfficialProfile0257>('official_identity_texture_0262', {operation:'uploadSkin',skinBytes:Array.from(buffer),variant});
-    if (signal?.aborted) throw new DOMException('Загрузка отменена.', 'AbortError');
+    const view=new DataView(buffer.buffer,buffer.byteOffset,buffer.byteLength);
+    if (buffer[0]!==137 || buffer[1]!==80 || buffer[2]!==78 || buffer[3]!==71 ||
+        buffer[4]!==13 || buffer[5]!==10 || buffer[6]!==26 || buffer[7]!==10 ||
+        view.getUint32(8)!==13 || String.fromCharCode(...buffer.slice(12,16))!=='IHDR' ||
+        view.getUint32(16)!==64 || (view.getUint32(20)!==64 && !(view.getUint32(20)===32 && variant==='classic')))
+      throw new Error('Официальный Minecraft принимает скин PNG 64×64 или Classic 64×32.');
+    // Once the native write starts, AbortSignal cannot undo a server-side
+    // change. Always return its verified result rather than claiming rollback.
+    const result = await this.texture('uploadSkin',{skinBytes:Array.from(buffer),variant},variant);
     onProgress?.(100);
     return result;
   }
-  async resetSkin():Promise<OfficialProfile0257> { return this.call('official_identity_texture_0262',{operation:'resetSkin'}); }
-  async selectCape(capeId:string):Promise<OfficialProfile0257> { return this.call('official_identity_texture_0262',{operation:'selectCape',capeId}); }
-  async resetCape():Promise<OfficialProfile0257> { return this.call('official_identity_texture_0262',{operation:'resetCape'}); }
+  async resetSkin():Promise<OfficialProfile0257> { return this.texture('resetSkin'); }
+  async selectCape(capeId:string):Promise<OfficialProfile0257> { return this.texture('selectCape',{capeId}); }
+  async resetCape():Promise<OfficialProfile0257> { return this.texture('resetCape'); }
   /** Durable Never-to-Minecraft links are verified independently by the Backend. */
   async neverLinks(): Promise<NeverOfficialLink0268[]> {
     return this.call<NeverOfficialLink0268[]>('official_identity_links_0268');

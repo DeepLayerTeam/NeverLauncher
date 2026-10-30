@@ -135,12 +135,12 @@ export function OfficialMinecraftPanel0257({client,linkedProfile,onLinked}:Props
           <select value={variant} aria-label="Модель скина" onChange={e=>setVariant(e.target.value as 'classic'|'slim')}>
             <option value="classic">Classic</option><option value="slim">Slim</option>
           </select>
-          <button disabled={busy||!skin} onClick={()=>{if(skin)call(m=>m.uploadSkin(skin,variant));}}>Загрузить скин</button>
+          <button disabled={busy||!skin} onClick={()=>{if(skin)call(async m=>{await m.uploadSkin(skin,variant);setSkin(null);});}}>Загрузить скин</button>
           <button disabled={busy} onClick={()=>call(m=>m.resetSkin())}>Сбросить скин</button>
         </div>
         <div className="toolbar inline">
           {(profile.capes||[]).map(cape=><button key={cape.id} disabled={busy||cape.state==='ACTIVE'} onClick={()=>call(m=>m.selectCape(cape.id))}>{cape.alias||cape.id}{cape.state==='ACTIVE'?' (выбран)':''}</button>)}
-          <button disabled={busy} onClick={()=>call(m=>m.resetCape())}>Снять плащ</button>
+          <button disabled={busy||!profile.capes?.some(c=>c.state==='ACTIVE')} onClick={()=>call(m=>m.resetCape())}>Снять плащ</button>
         </div>
       </div>
     </>}

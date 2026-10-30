@@ -366,3 +366,74 @@ func (c *Client) SelectCape(ctx context.Context, token, id string) (Profile, err
 func (c *Client) ResetCape(ctx context.Context, token string) error {
 	return c.request(ctx, "DELETE", c.minecraft+"/minecraft/profile/capes/active", token, "", nil, nil)
 }
+
+// ConfirmTexture0395 fetches the *actual* official profile after a successful
+// texture mutation. Minecraft Services may acknowledge a write before its
+// profile representation changes; retries are bounded and never repeat the
+// write. A different UUID is a hard identity error, not a retryable condition.
+// kind: skin-upload, skin-reset, cape-select, cape-reset.
+func (c *Client) ConfirmTexture0395(ctx context.Context, token, uuid, kind, value string) (Profile, error) {
+	if uuid == "" || token == "" {
+		return Profile{}, ErrDenied
+	}
+	for attempt := 0; attempt < 5; attempt++ {
+		profile, err := c.Profile(ctx, token)
+		if err == nil {
+			if !strings.EqualFold(profile.ID, uuid) {
+				return Profile{}, ErrDenied
+			}
+			if confirmedTexture0395(profile, kind, value) {
+				return profile, nil
+			}
+		} else if ctx.Err() != nil {
+			return Profile{}, ctx.Err()
+		} else {
+			var upstream *ServiceError
+			if errors.As(err, &upstream) && (upstream.Status == 401 || upstream.Status == 403 || upstream.Status == 404 || upstream.Status == 429) {
+				return Profile{}, err
+			}
+			if errors.Is(err, ErrUnlicensed) {
+				return Profile{}, err
+			}
+		}
+		if attempt < 4 {
+			timer := time.NewTimer(350 * time.Millisecond)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return Profile{}, ctx.Err()
+			case <-timer.C:
+			}
+		}
+	}
+	return Profile{}, errors.New("Minecraft Services has not confirmed updated texture state")
+}
+
+func confirmedTexture0395(p Profile, kind, value string) bool {
+	switch kind {
+	case "skin-upload":
+		for _, skin := range p.Skins {
+			if skin.State == "ACTIVE" && strings.EqualFold(skin.Variant, value) {
+				return true
+			}
+		}
+	case "cape-select":
+		for _, cape := range p.Capes {
+			if cape.State == "ACTIVE" && cape.ID == value {
+				return true
+			}
+		}
+	case "cape-reset":
+		for _, cape := range p.Capes {
+			if cape.State == "ACTIVE" {
+				return false
+			}
+		}
+		return true
+	case "skin-reset":
+		// A default skin after a reset is provider-dependent. Only a fresh,
+		// token-authenticated profile (checked above) is authoritative.
+		return true
+	}
+	return false
+}

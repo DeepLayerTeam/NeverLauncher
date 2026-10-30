@@ -92,25 +92,29 @@ test('official skin upload crosses only native IPC; no browser bearer or game to
   const {OfficialMinecraftClient0257}=await import('../build-tests/official_minecraft_0257.js');
   const previousFetch=globalThis.fetch, previousXHR=globalThis.XMLHttpRequest, now=Date.now;
   const profile={id:'123456781234123412341234567890ab',name:'owner',skins:[],capes:[]};
+  const updatedProfile={...profile,skins:[{id:'new',state:'ACTIVE',variant:'SLIM',url:'https://textures.minecraft.net/texture/a'}]};
   const requests=[];
   const invoke=async(command,args)=>{
     requests.push({command,args});
     if(command==='official_identity_begin_0262')return {verificationUri:'https://microsoft.com/link',userCode:'AB',intervalSeconds:5,expiresIn:300};
     if(command==='official_identity_poll_0262')return {pending:false,profile};
-    if(command==='official_identity_status_0262' || command==='official_identity_texture_0262')return profile;
+    if(command==='official_identity_status_0262')return profile;
+    if(command==='official_identity_texture_0262')return updatedProfile;
   };
   globalThis.fetch=()=>{throw Error('official renderer fetch is forbidden')};
   globalThis.XMLHttpRequest=class{constructor(){throw Error('official renderer XHR is forbidden')}};
   try{
     const c=new OfficialMinecraftClient0257('https://never.example','never-jwt','never-session',invoke);
     await c.begin();Date.now=()=>now()+10000;await c.poll();
-    const file=new File([new Uint8Array([137,80,78,71,13,10,26,10,0])],'skin.png',{type:'image/png'});
+    const bytes=Buffer.alloc(33);Buffer.from('89504e470d0a1a0a','hex').copy(bytes);
+    bytes.writeUInt32BE(13,8);bytes.write('IHDR',12);bytes.writeUInt32BE(64,16);bytes.writeUInt32BE(64,20);
+    const file=new File([bytes],'skin.png',{type:'image/png'});
     const progress=[];
     const updated=await c.uploadSkin(file,'slim',value=>progress.push(value));
     assert.equal(updated.name,'owner');assert.deepEqual(progress,[100]);
     const upload=requests.find(r=>r.command==='official_identity_texture_0262');
     assert.equal(upload.args.operation,'uploadSkin');assert.equal(upload.args.variant,'slim');
-    assert.deepEqual(upload.args.skinBytes,[137,80,78,71,13,10,26,10,0]);
+    assert.deepEqual(upload.args.skinBytes,Array.from(bytes));
     assert.equal('session' in upload.args,false);
     assert.equal((await c.profile()).id,profile.id);
   }finally{globalThis.fetch=previousFetch;globalThis.XMLHttpRequest=previousXHR;Date.now=now;}

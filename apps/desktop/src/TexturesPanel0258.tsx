@@ -110,7 +110,7 @@ export function TexturesPanel0258({backendUrl,token,officialClient,officialProfi
   async function perform(task:(signal:AbortSignal)=>Promise<void>,message:string){
     if(busy)return;
     const controller=new AbortController();operation.current=controller;setBusy(true);setError('');setStatus('');setProgress(null);
-    try {await task(controller.signal);if(!controller.signal.aborted)setStatus(message);}
+    try {await task(controller.signal);if(!controller.signal.aborted)setStatus(message);else if(realm==='official')setStatus('Операция отправлена Minecraft Services: отмена не откатывает уже выполненное изменение.');}
     catch(e){if(!controller.signal.aborted){
       setError(e instanceof Error?e.message:String(e));
       if(e instanceof TextureServiceError0258&&e.status===409)await refresh().catch(()=>undefined);
@@ -215,12 +215,12 @@ export function TexturesPanel0258({backendUrl,token,officialClient,officialProfi
           {kind==='skin'&&<><label className="textureModel0258">Модель<select disabled={busy} value={model} onChange={e=>setModel(e.target.value as SkinModel0258)}><option value="classic">Classic</option><option value="slim">Slim</option></select></label>
           <div className="textureUpload0258"><label>Официальный скин PNG<input disabled={busy} type="file" accept=".png,image/png" onChange={e=>{chooseFile(e.target.files?.[0]||null);e.currentTarget.value='';}}/></label>
           <button disabled={busy||!file} className="primary" onClick={upload}>Загрузить в Minecraft Services</button></div></>}
-          {kind==='cape'&&<div className="textureOfficialCapes0258">{officialProfile?.capes.length?officialProfile.capes.map(c=><button key={c.id} disabled={busy} className={c.state==='ACTIVE'?'active':''} onClick={()=>selectOfficialCape(c.id)}>{c.alias||c.id}{c.state==='ACTIVE'?' · выбран':''}</button>):<p>В официальном аккаунте нет доступных плащей.</p>}</div>}
-          <div className="textureActions0258"><button className="danger" disabled={busy} onClick={reset}>{kind==='skin'?'Сбросить официальный скин':'Снять официальный плащ'}</button></div>
+          {kind==='cape'&&<div className="textureOfficialCapes0258">{officialProfile?.capes.length?officialProfile.capes.map(c=><button key={c.id} disabled={busy||c.state==='ACTIVE'} className={c.state==='ACTIVE'?'active':''} onClick={()=>selectOfficialCape(c.id)}>{c.alias||c.id}{c.state==='ACTIVE'?' · выбран':''}</button>):<p>В официальном аккаунте нет доступных плащей.</p>}</div>}
+          <div className="textureActions0258"><button className="danger" disabled={busy||(kind==='cape'&&!officialCape)} onClick={reset}>{kind==='skin'?'Сбросить официальный скин':'Снять официальный плащ'}</button></div>
           <small>На Minecraft Services можно выбрать только плащи, принадлежащие этому аккаунту.</small>
         </>}
       </div>
-      <div><TexturePreview0258 skin={skinURL} cape={capeURL} model={renderModel}/>{progress!==null&&<><div className="textureProgress0258" role="progressbar" aria-label="Загрузка PNG" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div style={{width:`${progress}%`}}/></div><small role="status">Загрузка PNG: {progress}%</small></>}{busy&&<button className="textureCancel0258" onClick={()=>operation.current?.abort()}>Отменить загрузку / запрос</button>}</div></div>
+      <div><TexturePreview0258 skin={skinURL} cape={capeURL} model={renderModel}/>{progress!==null&&<><div className="textureProgress0258" role="progressbar" aria-label="Загрузка PNG" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div style={{width:`${progress}%`}}/></div><small role="status">Загрузка PNG: {progress}%</small></>}{busy&&<button className="textureCancel0258" disabled={realm==='official'} onClick={()=>operation.current?.abort()}>{realm==='official'?'Ожидаем подтверждения Minecraft Services…':'Отменить загрузку / запрос'}</button>}</div></div>
       {realm==='local'&&<>
         <div className="textureLibraryHead0258"><h4>Личная библиотека — {shown.length}</h4><small>Выбор не требует повторной загрузки PNG</small></div>
         {shown.length===0?<p>Сохранённых {kind==='skin'?'скинов':'плащей'} пока нет.</p>:<><div className="textureGallery0258">{page.map(item=><SavedCard0258 key={`${item.kind}-${item.digest}`} item={item} client={client!} busy={busy} active={Boolean(assigned?.active&&assigned.blobDigest===item.digest)} onChoose={()=>select(item)} onDelete={()=>deleteSaved(item)} onPreview={()=>{setSelected(item);setFile(null);setModel(item.model);}} />)}</div>

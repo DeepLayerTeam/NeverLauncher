@@ -58,16 +58,17 @@ test('rejects early polling before native Device Code call',async()=>{
 
 test('never forwards native account tickets or token fields to preview',async()=>{
  const calls=[];
+ const owned={...profile,capes:[{id:'cape1',state:'INACTIVE',url:'https://textures.minecraft.net/texture/a'}]};
+ const selected={...owned,capes:[{...owned.capes[0],state:'ACTIVE'}]};
  const c=new OfficialMinecraftClient0257('https://backend.example','never-platform-token','sid',async(cmd,args)=>{
    calls.push({cmd,args});
-   if(cmd==='official_identity_texture_0262')return profile;
-   if(cmd==='official_identity_cancel_0262')return;
-   return profile;
+   if(cmd==='official_identity_status_0262')return owned;
+   if(cmd==='official_identity_texture_0262')return args.operation==='selectCape'?selected:owned;
+   return owned;
  });
  await c.selectCape('cape1');await c.resetCape();await c.resetSkin();
  assert.ok(calls.filter(x=>x.cmd==='official_identity_texture_0262').every(x=>!('session' in x.args) && !('accessToken' in x.args)));
 });
-
 
 test('browser PKCE is a native-only command and returns profile metadata',async()=>{
   const calls=[];
@@ -248,4 +249,84 @@ test('0.26.8 Never identity linking uses native commands and exposes no Minecraf
  await client.unlinkFromNever(profile.id,true);
  assert.deepEqual(calls.map(x=>x.command),['official_identity_links_0268','official_identity_link_0268','official_identity_unlink_0268']);
  assert.ok(calls.every(x=>!JSON.stringify(x.args).includes('minecraftAccessToken')&&!JSON.stringify(x.args).includes('refreshToken')));
+});
+
+test('0.39.5 only owned capes reach native write, and confirmed active cape is required',async()=>{
+  const owned={...profile,capes:[{id:'owned',state:'INACTIVE',url:'https://textures.minecraft.net/texture/abc'}]};
+  const calls=[];
+  let result={...owned,capes:[{...owned.capes[0],state:'ACTIVE'}]};
+  const client=new OfficialMinecraftClient0257('https://backend.example','never-access','s1',async(cmd,args)=>{
+    calls.push({cmd,args});
+    if(cmd==='official_identity_status_0262')return owned;
+    if(cmd==='official_identity_texture_0262')return result;
+    throw Error(cmd);
+  });
+  await assert.rejects(client.selectCape('not-owned'),/не принадлежит/);
+  await assert.rejects(client.selectCape('../../other'),/не принадлежит/);
+  assert.equal(calls.some(x=>x.cmd==='official_identity_texture_0262'),false);
+  assert.equal((await client.selectCape('owned')).capes[0].state,'ACTIVE');
+  result=owned;
+  await assert.rejects(client.selectCape('owned'),/не подтвердил/);
+});
+
+test('0.39.5 native write response must retain the authenticated Minecraft UUID',async()=>{
+  const client=new OfficialMinecraftClient0257('https://backend.example','never-access','sid',async(cmd)=>
+    cmd==='official_identity_status_0262'?profile:{...profile,id:'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'});
+  await assert.rejects(client.resetSkin(),/другой UUID/);
+});
+
+test('0.39.5 does not claim a cape was removed when Minecraft still reports it active',async()=>{
+  const p={...profile,capes:[{id:'cape',state:'ACTIVE',url:''}]};
+  const client=new OfficialMinecraftClient0257('https://backend.example','never-access','sid',async()=>p);
+  await assert.rejects(client.resetCape(),/не подтвердил/);
+});
+
+test('0.39.5 changing accounts during a pending texture operation never adopts old account result',async()=>{
+  let release;
+  const pending=new Promise(resolve=>release=resolve);
+  const client=new OfficialMinecraftClient0257('https://backend.example','never-access','sid',async(cmd)=>{
+    if(cmd==='official_identity_status_0262')return profile;
+    if(cmd==='official_identity_texture_0262')return pending;
+    if(cmd==='official_identity_select_0267')return {...profile,id:'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'};
+    throw Error(cmd);
+  });
+  const attempt=client.resetSkin();
+  await new Promise(resolve=>setImmediate(resolve));
+  await client.selectAccount('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+  release(profile);
+  await assert.rejects(attempt,/аккаунт изменился/);
+});
+
+test('0.39.5 checks PNG dimensions and model before exposing bytes via native IPC',async()=>{
+  const png=(w,h)=>{
+    const bytes=Buffer.alloc(33);Buffer.from('89504e470d0a1a0a','hex').copy(bytes,0);
+    bytes.writeUInt32BE(13,8);bytes.write('IHDR',12);bytes.writeUInt32BE(w,16);bytes.writeUInt32BE(h,20);
+    return new File([bytes],'skin.png',{type:'image/png'});
+  };
+  const calls=[];
+  const ready={...profile,skins:[{id:'skin',state:'ACTIVE',url:'',variant:'SLIM'}]};
+  const client=new OfficialMinecraftClient0257('https://backend.example','never-access','sid',async(cmd,args)=>{
+    calls.push(cmd);
+    return cmd==='official_identity_status_0262'?profile:ready;
+  });
+  await assert.rejects(client.uploadSkin(png(128,128),'slim'),/64×64/);
+  await assert.rejects(client.uploadSkin(png(64,32),'slim'),/64×64/);
+  assert.equal(calls.length,0);
+  let percent=0;
+  assert.equal((await client.uploadSkin(png(64,64),'slim',p=>percent=p)).skins[0].variant,'SLIM');
+  assert.equal(percent,100);
+  assert.equal(calls.filter(c=>c==='official_identity_texture_0262').length,1);
+});
+
+test('0.39.5 abort after server write cannot falsely report that change was undone',async()=>{
+  const ctrl=new AbortController();
+  const bytes=Buffer.alloc(33);Buffer.from('89504e470d0a1a0a','hex').copy(bytes,0);
+  bytes.writeUInt32BE(13,8);bytes.write('IHDR',12);bytes.writeUInt32BE(64,16);bytes.writeUInt32BE(64,20);
+  const ready={...profile,skins:[{id:'new',state:'ACTIVE',url:'',variant:'CLASSIC'}]};
+  const client=new OfficialMinecraftClient0257('https://backend.example','never-access','sid',async(cmd)=>{
+    if(cmd==='official_identity_status_0262')return profile;
+    ctrl.abort();return ready;
+  });
+  const actual=await client.uploadSkin(new File([bytes],'skin.png',{type:'image/png'}),'classic',undefined,ctrl.signal);
+  assert.equal(actual.skins[0].id,'new');
 });

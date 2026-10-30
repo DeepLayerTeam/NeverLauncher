@@ -242,44 +242,97 @@ impl NativeProvider {
         official_verification_0266::verify_playable_profile(&profile, expected_uuid, evidence)?;
         Ok(profile)
     }
+    /// A write acknowledgement is not the final Minecraft state. Read the
+    /// authenticated profile again and confirm that the requested texture is
+    /// active before returning it to Desktop (and before updating the vault).
+    /// Provider propagation can lag briefly; retries are bounded and never
+    /// repeat the write itself.
+    async fn confirmed_texture_0395(&self, token: &str, operation: &str,
+        cape_id: Option<&str>, skin_variant: Option<&str>, uuid: &str,
+    ) -> Result<OfficialProfile,ProviderError> {
+        for attempt in 0..5 {
+            match self.profile(token).await {
+                Ok(profile) => {
+                    if !profile.id.eq_ignore_ascii_case(uuid) { return Err(ProviderError::IdentityMismatch); }
+                    if texture_applied_0395(&profile, operation, cape_id, skin_variant) { return Ok(profile); }
+                }
+                Err(ProviderError::InvalidGrant) => return Err(ProviderError::InvalidGrant),
+                Err(ProviderError::NoMinecraftJava) => return Err(ProviderError::NoMinecraftJava),
+                Err(ProviderError::Denied) => return Err(ProviderError::Denied),
+                Err(ProviderError::Throttled(_)) => return Err(ProviderError::Throttled(None)),
+                Err(error) if !error.retryable() => return Err(error),
+                Err(_) => {},
+            }
+            if attempt < 4 { tokio::time::sleep(Duration::from_millis(350)).await; }
+        }
+        Err(ProviderError::Transient)
+    }
     pub async fn texture(&self, token: &str, operation: &str, cape_id: Option<&str>, skin: Option<(Vec<u8>,String)>) -> Result<OfficialProfile,ProviderError> {
         if !valid_token(token) { return Err(ProviderError::InvalidResponse); }
-        let url = match operation {
+        // All writes use one account's token; never accept a cape merely because
+        // it was displayed earlier by the renderer.
+        let before = self.profile(token).await?;
+        let variant = skin.as_ref().map(|(_,model)| model.as_str().to_owned());
+        let path = match operation {
             "resetSkin" => "/minecraft/profile/skins/active",
             "resetCape" | "selectCape" => "/minecraft/profile/capes/active",
             "uploadSkin" => "/minecraft/profile/skins",
             _ => return Err(ProviderError::InvalidResponse),
         };
-        let base = self.minecraft.join(url).map_err(|_| ProviderError::InvalidResponse)?;
+        let base = self.minecraft.join(path).map_err(|_| ProviderError::InvalidResponse)?;
         let builder = match operation {
             "resetSkin" | "resetCape" => self.http.request(Method::DELETE,base).bearer_auth(token),
             "selectCape" => {
-                let cape = cape_id.ok_or(ProviderError::InvalidResponse)?;
-                let profile = self.profile(token).await?;
-                if !profile.capes.iter().any(|v| v.id==cape) { return Err(ProviderError::Denied); }
+                let cape = cape_id.filter(|id| !id.is_empty() && id.len() <= 128 &&
+                    id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_'))
+                    .ok_or(ProviderError::InvalidResponse)?;
+                if !before.capes.iter().any(|v| v.id == cape) { return Err(ProviderError::Denied); }
                 self.http.put(base).bearer_auth(token).json(&json!({"capeId":cape}))
             },
             "uploadSkin" => {
-                let (bytes,variant) = skin.ok_or(ProviderError::InvalidResponse)?;
-                if bytes.len()<8 || bytes.len()>4*1024*1024 || !bytes.starts_with(b"\x89PNG\r\n\x1a\n") || !matches!(variant.as_str(),"classic"|"slim") {
-                    return Err(ProviderError::InvalidResponse);
-                }
+                let (bytes, model) = skin.ok_or(ProviderError::InvalidResponse)?;
+                if !valid_official_skin_0395(&bytes,&model) { return Err(ProviderError::InvalidResponse); }
                 let part = reqwest::multipart::Part::bytes(bytes).file_name("skin.png").mime_str("image/png").map_err(|_|ProviderError::InvalidResponse)?;
-                self.http.post(base).bearer_auth(token).multipart(reqwest::multipart::Form::new().text("variant",variant).part("file",part))
+                self.http.post(base).bearer_auth(token).multipart(reqwest::multipart::Form::new().text("variant",model).part("file",part))
             },
             _ => unreachable!(),
         };
-        // DELETE endpoints may return an empty body, others return profile.
+        // Minecraft Services currently returns a profile for PUT/POST and
+        // can return 204 on DELETE. Verify its status, not a cached reply.
         if matches!(operation,"resetSkin"|"resetCape") {
             let response = builder.send().await.map_err(|_|ProviderError::Unavailable)?;
             if !response.status().is_success() { return Err(ProviderError::Transient); }
-            self.profile(token).await
         } else {
-            let result: MinecraftProfile = self.call(builder,None).await?;
-            result.checked()
+            let acknowledged: MinecraftProfile = self.call(builder,None).await?;
+            let acknowledged = acknowledged.checked()?;
+            if !acknowledged.id.eq_ignore_ascii_case(&before.id) { return Err(ProviderError::IdentityMismatch); }
         }
+        self.confirmed_texture_0395(token,operation,cape_id,variant.as_deref(),&before.id).await
     }
 }
+
+fn texture_applied_0395(profile: &OfficialProfile, operation: &str, cape_id: Option<&str>, variant: Option<&str>) -> bool {
+    match operation {
+        "selectCape" => cape_id.is_some_and(|id|profile.capes.iter().any(|cape|cape.id == id && cape.state == "ACTIVE")),
+        "resetCape" => !profile.capes.iter().any(|cape|cape.state == "ACTIVE"),
+        "uploadSkin" => variant.is_some_and(|v|profile.skins.iter().any(|skin|skin.state == "ACTIVE" && skin.variant.eq_ignore_ascii_case(v))),
+        // The official default after skin reset is provider-dependent.
+        // A successful DELETE + fresh authenticated profile is authoritative.
+        "resetSkin" => true,
+        _ => false,
+    }
+}
+
+fn valid_official_skin_0395(png: &[u8], variant: &str) -> bool {
+    if png.len() < 33 || png.len() > 4 * 1024 * 1024 ||
+        !png.starts_with(b"\x89PNG\r\n\x1a\n") || &png[12..16] != b"IHDR" ||
+        u32::from_be_bytes([png[8],png[9],png[10],png[11]]) != 13 ||
+        !matches!(variant,"classic"|"slim") {return false;}
+    let width = u32::from_be_bytes([png[16],png[17],png[18],png[19]]);
+    let height = u32::from_be_bytes([png[20],png[21],png[22],png[23]]);
+    width == 64 && (height == 64 || (height == 32 && variant == "classic"))
+}
+
 fn valid_code(code: &str) -> bool { !code.is_empty() && code.len()<=4096 && !code.bytes().any(|b| b==b'\r' || b==b'\n') }
 #[derive(Default, Deserialize)]
 struct ErrorBody { #[serde(default)] error: String, #[serde(default,rename="errorMessage")] message: String, #[serde(default,rename="XErr")] xerr: serde_json::Value }
@@ -328,6 +381,33 @@ mod tests {
         assert_eq!(classify(401,&ErrorBody{xerr:serde_json::json!(2148916238),..Default::default()},None),ProviderError::XboxFamily);
         assert!(!ProviderError::AppNotAuthorized.message().contains("very-secret"));
     }
+    #[test] fn official_texture_changes_require_observed_account_state() {
+        let id="123456781234123412341234567890ab";
+        let mut p=OfficialProfile{id:id.into(),name:"Player".into(),skins:vec![],capes:vec![
+            OfficialCape{id:"owned".into(),state:"INACTIVE".into(),url:String::new(),alias:None},
+            OfficialCape{id:"other".into(),state:"ACTIVE".into(),url:String::new(),alias:None},
+        ]};
+        assert!(!texture_applied_0395(&p,"selectCape",Some("owned"),None));
+        p.capes[0].state="ACTIVE".into();p.capes[1].state="INACTIVE".into();
+        assert!(texture_applied_0395(&p,"selectCape",Some("owned"),None));
+        assert!(!texture_applied_0395(&p,"resetCape",None,None));
+        p.capes[0].state="INACTIVE".into();
+        assert!(texture_applied_0395(&p,"resetCape",None,None));
+        p.skins.push(OfficialSkin{id:"new".into(),state:"ACTIVE".into(),url:String::new(),variant:"SLIM".into()});
+        assert!(texture_applied_0395(&p,"uploadSkin",None,Some("slim")));
+        assert!(!texture_applied_0395(&p,"uploadSkin",None,Some("classic")));
+    }
+    #[test] fn official_skin_png_geometry_is_checked_before_network_write() {
+        let mut png=vec![0u8;33]; png[..8].copy_from_slice(b"\x89PNG\r\n\x1a\n");
+        png[8..12].copy_from_slice(&13u32.to_be_bytes()); png[12..16].copy_from_slice(b"IHDR");
+        png[16..20].copy_from_slice(&64u32.to_be_bytes());png[20..24].copy_from_slice(&64u32.to_be_bytes());
+        assert!(valid_official_skin_0395(&png,"slim"));
+        png[20..24].copy_from_slice(&32u32.to_be_bytes());
+        assert!(!valid_official_skin_0395(&png,"slim"));
+        assert!(valid_official_skin_0395(&png,"classic"));
+        png[16..20].copy_from_slice(&128u32.to_be_bytes());
+        assert!(!valid_official_skin_0395(&png,"classic"));
+    }
     #[test] fn refuses_fake_credential_shapes() {
         assert!(!valid_token("")); assert!(!valid_token("abc\nBearer")); assert!(!valid_token(&"a".repeat(9000)));
         let p: MinecraftProfile=serde_json::from_str(r#"{"id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","name":"JavaName"}"#).unwrap();
@@ -372,6 +452,60 @@ mod tests {
             collected
         });
         (origin,task)
+    }
+    #[tokio::test]
+    async fn official_cape_selection_is_confirmed_after_provider_write() {
+        let (origin,task)=fixture_server(vec![
+            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player","capes":[{"id":"owned","state":"INACTIVE","url":""}]}"#),
+            ("PUT /minecraft/profile/capes/active",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player"}"#),
+            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player","capes":[{"id":"owned","state":"ACTIVE","url":""}]}"#),
+        ]).await;
+        let client=NativeProvider::fixture(&origin);
+        let profile=client.texture("minecraft-token","selectCape",Some("owned"),None).await.unwrap();
+        assert_eq!(profile.capes[0].state,"ACTIVE");
+        let calls=task.await.unwrap();
+        assert_eq!(calls.len(),3);
+        assert!(calls[1].contains("\"capeId\":\"owned\""));
+        assert!(calls.iter().all(|r|r.contains("Bearer minecraft-token")));
+    }
+    #[tokio::test]
+    async fn official_unowned_cape_is_rejected_without_write() {
+        let (origin,task)=fixture_server(vec![
+            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player","capes":[{"id":"owned","state":"ACTIVE","url":""}]}"#),
+        ]).await;
+        let client=NativeProvider::fixture(&origin);
+        assert_eq!(client.texture("minecraft-token","selectCape",Some("someone-else"),None).await.err(),Some(ProviderError::Denied));
+        assert_eq!(task.await.unwrap().len(),1);
+    }
+    #[tokio::test]
+    async fn official_upload_skin_checks_provider_reply_and_observed_variant() {
+        let (origin,task)=fixture_server(vec![
+            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player","skins":[]}"#),
+            ("POST /minecraft/profile/skins",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player"}"#),
+            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player","skins":[{"id":"new","state":"ACTIVE","variant":"SLIM","url":""}]}"#),
+        ]).await;
+        let mut png=vec![0u8;33];png[..8].copy_from_slice(b"\x89PNG\r\n\x1a\n");
+        png[8..12].copy_from_slice(&13u32.to_be_bytes());png[12..16].copy_from_slice(b"IHDR");
+        png[16..20].copy_from_slice(&64u32.to_be_bytes());png[20..24].copy_from_slice(&64u32.to_be_bytes());
+        let client=NativeProvider::fixture(&origin);
+        let profile=client.texture("minecraft-token","uploadSkin",None,Some((png,"slim".into()))).await.unwrap();
+        assert_eq!(profile.skins[0].state,"ACTIVE");
+        let calls=task.await.unwrap();
+        assert_eq!(calls.len(),3);
+        assert!(calls[1].contains("name=\"variant\""));
+        assert!(calls[1].contains("name=\"file\""));
+    }
+    #[tokio::test]
+    async fn official_reset_cape_requires_fresh_absence_of_active_cape() {
+        let (origin,task)=fixture_server(vec![
+            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player","capes":[{"id":"owned","state":"ACTIVE"}]}"#),
+            ("DELETE /minecraft/profile/capes/active",""),
+            ("GET /minecraft/profile",r#"{"id":"1234567890abcdef1234567890abcdef","name":"Player","capes":[{"id":"owned","state":"INACTIVE"}]}"#),
+        ]).await;
+        let client=NativeProvider::fixture(&origin);
+        let updated=client.texture("minecraft-token","resetCape",None,None).await.unwrap();
+        assert!(!updated.capes.iter().any(|c|c.state=="ACTIVE"));
+        assert_eq!(task.await.unwrap().len(),3);
     }
     #[tokio::test]
     async fn native_oauth_pkce_code_exchange_does_not_use_backend_tickets() {

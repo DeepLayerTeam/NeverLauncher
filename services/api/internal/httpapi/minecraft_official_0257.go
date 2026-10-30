@@ -510,6 +510,11 @@ func (s Server) officialSkinUpload0257(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 502, "Minecraft Services returned another profile")
 		return
 	}
+	profile, err = client.ConfirmTexture0395(ctx, st.MinecraftToken, st.UUID, "skin-upload", variant)
+	if err != nil {
+		officialFail0257(w, err)
+		return
+	}
 	officialWrite0257(w, 200, map[string]any{"realm": "official-minecraft", "profile": profile})
 }
 func (s Server) officialResetSkin0257(w http.ResponseWriter, r *http.Request) {
@@ -523,13 +528,9 @@ func (s Server) officialResetSkin0257(w http.ResponseWriter, r *http.Request) {
 		officialFail0257(w, err)
 		return
 	}
-	profile, err := client.Profile(ctx, st.MinecraftToken)
+	profile, err := client.ConfirmTexture0395(ctx, st.MinecraftToken, st.UUID, "skin-reset", "")
 	if err != nil {
 		officialFail0257(w, err)
-		return
-	}
-	if !strings.EqualFold(profile.ID, st.UUID) {
-		writeError(w, 403, "official Minecraft identity mismatch")
 		return
 	}
 	officialWrite0257(w, 200, map[string]any{"realm": "official-minecraft", "profile": profile})
@@ -586,6 +587,11 @@ func (s Server) officialCape0257(w http.ResponseWriter, r *http.Request) {
 			writeError(w, 502, "Minecraft Services returned another profile")
 			return
 		}
+		updated, err = client.ConfirmTexture0395(ctx, st.MinecraftToken, st.UUID, "cape-select", req.CapeID)
+		if err != nil {
+			officialFail0257(w, err)
+			return
+		}
 		officialWrite0257(w, 200, map[string]any{"realm": "official-minecraft", "profile": updated})
 		return
 	}
@@ -593,13 +599,9 @@ func (s Server) officialCape0257(w http.ResponseWriter, r *http.Request) {
 		officialFail0257(w, err)
 		return
 	}
-	updated, err := client.Profile(ctx, st.MinecraftToken)
+	updated, err := client.ConfirmTexture0395(ctx, st.MinecraftToken, st.UUID, "cape-reset", "")
 	if err != nil {
 		officialFail0257(w, err)
-		return
-	}
-	if !strings.EqualFold(updated.ID, st.UUID) {
-		writeError(w, 403, "official Minecraft identity mismatch")
 		return
 	}
 	officialWrite0257(w, 200, map[string]any{"realm": "official-minecraft", "profile": updated})
