@@ -1249,6 +1249,7 @@ jobs:
           python3 -m unittest discover -s scripts/ci -p 'test_*.py' -v
           python3 scripts/release/test_fetch_exact_certifications.py
           python3 -m unittest discover -s scripts/release -p 'test_rehearsal_0365.py' -v
+          python3 -m unittest discover -s scripts/release -p 'test_final_update_delivery_0410.py' -v
           python3 -m unittest discover -s scripts/release -p 'test_publish_0370.py' -v
       - uses: actions/setup-go@v5
         with:

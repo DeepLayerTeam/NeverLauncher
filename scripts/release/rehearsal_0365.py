@@ -7,6 +7,8 @@ validator on the copied files; neither action uploads or promotes a release.
 """
 from __future__ import annotations
 import argparse
+import base64
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -18,6 +20,8 @@ import subprocess
 import sys
 import tarfile
 import zipfile
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from cryptography.exceptions import InvalidSignature
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'ga'))
 from verified_targets import Blocked, TARGETS, paths, sha, verify, require
@@ -117,6 +121,158 @@ def unpack(path: Path) -> dict[str, bytes]:
     return result
 
 
+def verify_update_payload_0410(members: dict[str, bytes], manifest: dict,
+                               system: str, arch: str, version: str) -> None:
+    """Check that the *shipped* component updater can consume this exact installer.
+
+    A successfully signed installer with a stale component update manifest cannot
+    be repaired or rolled back safely. The outer GA signature binds the package;
+    this independently verifies the inner install/update byte graph.
+    """
+    prefix = {'windows': '', 'linux': 'neverlauncher/',
+              'darwin': 'NeverLauncher.app/'}[system]
+    manifest_member = prefix + ('Contents/Resources/' if system == 'darwin' else '') + 'COMPONENT_UPDATE_MANIFEST.json'
+    require(manifest_member in members, 'missing installed component update manifest: ' + manifest_member)
+    update_bytes = members[manifest_member]
+    update = json.loads(update_bytes, object_pairs_hook=_no_dupes)
+    require(isinstance(update, dict) and update.get('schemaVersion') == '1.0' and
+            update.get('product') == 'NeverLauncher' and
+            update.get('productVersion') == version and
+            update.get('architecture') == arch and
+            update.get('platform') == {'darwin': 'macos'}.get(system, system),
+            'installed component update manifest identity mismatch')
+    require(update.get('layout') == ('macos-app-bundle' if system == 'darwin' else 'adjacent-files'),
+            'installed component update layout mismatch')
+    expected_roles = {'desktop': 'desktop-launcher', 'guard': 'guard', 'runtime': 'runtime'}
+    if system == 'windows':
+        expected_roles['sensor'] = 'sensor'
+    expected_support = {'updater': 'cli'}
+    if system != 'darwin':
+        expected_support['package-manifest'] = 'package-manifest'
+
+    package_rows = {}
+    for row in manifest['artifacts']:
+        require(isinstance(row, dict), 'invalid installer artifact entry')
+        source = row.get('packagePath') if system == 'linux' else row.get('bundlePath') if system == 'darwin' else row.get('name')
+        require(isinstance(source, str) and source not in package_rows,
+                'duplicate or invalid installer artifact path')
+        package_rows[source] = row
+
+    def check_rows(rows: object, expected: dict[str, str], label: str) -> None:
+        require(isinstance(rows, list) and len(rows) == len(expected),
+                'missing or unexpected installed ' + label)
+        roles = set()
+        for entry in rows:
+            require(isinstance(entry, dict), 'invalid installed component entry')
+            role = entry.get('component')
+            require(isinstance(role, str) and role in expected and role not in roles,
+                    'duplicate or unexpected installed component: ' + str(role))
+            roles.add(role)
+            src = entry.get('sourcePath')
+            dest = entry.get('targetPath')
+            require(isinstance(src, str) and src and src == dest and
+                    not src.startswith('/') and '\\' not in src and
+                    all(part not in ('', '.', '..') for part in src.split('/')),
+                    'unsafe installed update path for ' + role)
+            actual_member = prefix + src
+            require(actual_member in members and isinstance(entry.get('sha256'), str) and
+                    SHA.fullmatch(entry['sha256']) is not None and
+                    type(entry.get('size')) is int and entry['size'] > 0 and
+                    entry.get('executable') is (role != 'package-manifest') and
+                    len(members[actual_member]) == entry['size'] and
+                    hashlib.sha256(members[actual_member]).hexdigest() == entry['sha256'],
+                    'installed update component bytes differ: ' + role)
+            if role == 'package-manifest':
+                expected_path = ('neverlauncher/' if system == 'linux' else '') + (
+                    'LINUX_PACKAGE_MANIFEST.json' if system == 'linux' else 'WINDOWS_PACKAGE_MANIFEST.json')
+                require(actual_member == expected_path,
+                        'component update package manifest path mismatch')
+            else:
+                matching = [row for path, row in package_rows.items()
+                            if path == actual_member and row.get('component') == expected[role]]
+                require(len(matching) == 1 and matching[0].get('sha256') == entry['sha256'] and
+                        matching[0].get('size') == entry['size'],
+                        'installer and updater component mapping differ: ' + role)
+
+    check_rows(update.get('components'), expected_roles, 'components')
+    check_rows(update.get('supportFiles'), expected_support, 'support files')
+    # Signatures are verified by the updater's pinned trust policy, not by
+    # trusting public keys transported inside the package. Require the sidecar
+    # to bind exactly the same bytes that are installed, without treating this
+    # hash consistency check as independent signature verification.
+    signature_path = prefix + ('Contents/Resources/' if system == 'darwin' else '') + 'COMPONENT_SET_SIGNATURE.json'
+    require(signature_path in members, 'missing installed component-set signature')
+    signature = json.loads(members[signature_path], object_pairs_hook=_no_dupes)
+    require(isinstance(signature, dict) and signature.get('schemaVersion') == '1.0' and
+            signature.get('algorithm') == 'ed25519' and
+            signature.get('manifestSha256') == hashlib.sha256(update_bytes).hexdigest() and
+            isinstance(signature.get('signature'), str) and
+            re.fullmatch('[a-f0-9]{128}', signature['signature']) is not None,
+            'component set signature does not bind installed update manifest')
+    v2_path = prefix + ('Contents/Resources/' if system == 'darwin' else '') + 'COMPONENT_SET_SIGNATURE_V2.json'
+    require(v2_path in members, 'missing installed delegated component-set signature')
+    v2 = json.loads(members[v2_path], object_pairs_hook=_no_dupes)
+    require(isinstance(v2, dict) and v2.get('schemaVersion') == '2.0' and
+            v2.get('algorithm') == 'ed25519' and
+            v2.get('manifestSha256') == hashlib.sha256(update_bytes).hexdigest() and
+            isinstance(v2.get('signature'), str) and
+            re.fullmatch('[a-f0-9]{128}', v2['signature']) is not None,
+            'delegated component signature does not bind installed update manifest')
+    trust_policy = prefix + ('Contents/Resources/' if system == 'darwin' else '') + 'COMPONENT_TRUST_POLICY.json'
+    require(trust_policy in members and 0 < len(members[trust_policy]) <= 128*1024,
+            'missing installed delegated component trust policy')
+    # Verify both Ed25519 signatures using trust roots provided independently
+    # by the release operator. Never take a public trust key from the ZIP.
+    component_root = os.environ.get('NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY', '').strip()
+    delegation_root = os.environ.get('NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY', '').strip()
+    require(re.fullmatch('[0-9a-fA-F]{64}', component_root) is not None and
+            re.fullmatch('[0-9a-fA-F]{64}', delegation_root) is not None,
+            'release trusted component public keys are missing')
+    try:
+        Ed25519PublicKey.from_public_bytes(bytes.fromhex(component_root)).verify(
+            bytes.fromhex(signature['signature']), update_bytes)
+        envelope = json.loads(members[trust_policy], object_pairs_hook=_no_dupes)
+        require(isinstance(envelope, dict) and envelope.get('schemaVersion') == '1.0',
+                'invalid root-signed component trust policy envelope')
+        payload = base64.b64decode(envelope['payload'], validate=True)
+        require(0 < len(payload) <= 128*1024 and
+                re.fullmatch('[0-9a-fA-F]{128}', envelope.get('rootSignature', '')) is not None,
+                'invalid component trust policy payload/signature')
+        Ed25519PublicKey.from_public_bytes(bytes.fromhex(delegation_root)).verify(
+            bytes.fromhex(envelope['rootSignature']),
+            b'NeverLauncher-Trust-Policy-v1\n' + payload)
+        delegated_policy = json.loads(payload, object_pairs_hook=_no_dupes)
+        require(isinstance(delegated_policy, dict) and
+                delegated_policy.get('schemaVersion') == '1.0' and
+                delegated_policy.get('domain') == 'neverlauncher.trust.v1' and
+                type(delegated_policy.get('epoch')) is int and delegated_policy['epoch'] > 0 and
+                v2.get('trustEpoch') == delegated_policy['epoch'] and
+                v2.get('policySha256') == hashlib.sha256(payload).hexdigest(),
+                'component trust policy epoch or identity mismatch')
+        def date(value: str) -> datetime:
+            return datetime.strptime(value, '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+        current = datetime.now(timezone.utc)
+        require(date(delegated_policy['issuedAt']) <= current < date(delegated_policy['expiresAt']),
+                'component trust policy is expired or not yet valid')
+        require(date(v2['signedAt']) <= current and
+                date(delegated_policy['issuedAt']) <= date(v2['signedAt']) < date(delegated_policy['expiresAt']),
+                'component delegated signature is not within policy validity')
+        matching = [key for key in delegated_policy.get('keys', [])
+                    if isinstance(key, dict) and key.get('id') == v2.get('keyId') and
+                    key.get('role') == 'component' and key.get('status') == 'active' and
+                    date(key['notBefore']) <= date(v2['signedAt']) and
+                    isinstance(key.get('publicKey'), str) and
+                    re.fullmatch('[a-fA-F0-9]{64}', key['publicKey']) is not None]
+        require(len(matching) == 1, 'no independently trusted active delegated component key')
+        context = ('NeverLauncher-Component-v2\n'+v2['keyId']+'\n'+
+                   str(v2['trustEpoch'])+'\n'+v2['policySha256']+'\n'+
+                   v2['manifestSha256']+'\n'+v2['signedAt']+'\n').encode()
+        Ed25519PublicKey.from_public_bytes(bytes.fromhex(matching[0]['publicKey'])).verify(
+            bytes.fromhex(v2['signature']), context + update_bytes)
+    except (InvalidSignature, ValueError, TypeError, KeyError, base64.binascii.Error) as exc:
+        raise Blocked('installed component-set cryptographic trust verification failed') from exc
+
+
 def exact_package(bundle: Path, version: str, target: str) -> dict:
     system, arch = target.split('-')
     binary_name, package_name = paths(version,target)
@@ -178,6 +334,8 @@ def exact_package(bundle: Path, version: str, target: str) -> dict:
                     re.fullmatch('[A-Z0-9]{10}',str(row.get('teamId',''))) is not None,
                     target+': native code-signing evidence missing')
     require(member in seen and len(seen) >= 4, target+': incomplete production package')
+    if tuple(int(v) for v in version.split('.')[:3]) >= (0, 41, 0):
+        verify_update_payload_0410(members, manifest, system, arch, version)
     if system in ('linux','windows'):
         require(('neverlauncher/COMPONENT_SET_SIGNATURE.json' if system=='linux' else 'COMPONENT_SET_SIGNATURE.json') in members,
                 target+': missing component set signature')

@@ -10,7 +10,7 @@ import os
 import struct
 import tarfile
 
-from component_set_sign import signed_set
+from component_set_sign import signed_set, sign_delegated_set
 from pathlib import Path
 
 MACHINES = {
@@ -141,6 +141,13 @@ def write_package(out: Path, version: str, arch: str) -> None:
         "sha256": by_component["cli"]["sha256"], "size": by_component["cli"]["size"], "executable": True,
     })
     update_manifest_bytes, component_sig = signed_set(update_manifest)
+    # The production updater verifies the delegated component signature
+    # against the pinned root-signed policy. Ship these alongside the exact
+    # update manifest, not only the historical component signature.
+    delegated_sig = None
+    delegated_policy = None
+    if tuple(int(x) for x in version.split('.')[:3]) >= (0, 41, 0):
+        delegated_sig, delegated_policy = sign_delegated_set(update_manifest_bytes)
 
     package_path = out / package_name
     tmp = package_path.with_suffix(package_path.suffix + ".tmp")
@@ -154,6 +161,9 @@ def write_package(out: Path, version: str, arch: str) -> None:
                 tf.addfile(tar_info("neverlauncher/COMPONENT_UPDATE_MANIFEST.json", len(update_manifest_bytes), 0o644), io.BytesIO(update_manifest_bytes))
                 if component_sig is not None:
                     tf.addfile(tar_info("neverlauncher/COMPONENT_SET_SIGNATURE.json", len(component_sig), 0o644), io.BytesIO(component_sig))
+                if delegated_sig is not None and delegated_policy is not None:
+                    tf.addfile(tar_info("neverlauncher/COMPONENT_SET_SIGNATURE_V2.json", len(delegated_sig), 0o644), io.BytesIO(delegated_sig))
+                    tf.addfile(tar_info("neverlauncher/COMPONENT_TRUST_POLICY.json", len(delegated_policy), 0o644), io.BytesIO(delegated_policy))
     os.replace(tmp, package_path)
     os.chmod(package_path, 0o644)
     digest, size = sha256_file(package_path)

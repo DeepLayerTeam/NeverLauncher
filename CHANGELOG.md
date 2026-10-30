@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.41.0 — Final package update-integrity gate and delegated delivery signatures
+
+- Close the gap between a signed, apparently valid desktop installer and a usable installed client: the existing six-target production rehearsal now verifies the **exact embedded `COMPONENT_UPDATE_MANIFEST.json`** against its shipped executables, runtime, guard, updater, package manifest and (on Windows) sensor. Validate the installed source paths, component roles, expected layout, SHA-256, byte sizes, and version/platform/architecture. Reject altered, absent, misrouted, or untracked update components before publishing.
+- Generate and package the **delegated Ed25519 component signature and root-signed trust policy** in both the Linux TAR and macOS app Resources, bringing these packagers in line with the existing Windows updater-signing path. The release verifier validates the historical and delegated signatures cryptographically, using externally configured public trust roots; a signature digest assertion alone is insufficient.
+- Keep independent final-package GA approvals, compatibility results and final publication dry-run mandatory. Extend the existing release CI job with executable Linux/Windows/macOS package-writer tests, signature verification with isolated ephemeral keys, and rejection tests for forged signatures, missing policy, unsafe paths and changed component bytes.
+- Synchronize all versioned package, OpenAPI and target-matrix metadata to 0.41.0; preserve existing 0.36.x signing and rehearsal behavior without migration of historical test receipts.
+
+**Verification boundary:** Local signed-package fixture tests, existing release gate regression tests, version alignment and target-schema validation pass. Genuine Windows Authenticode/macOS notarization, Rust Desktop/NeverRuntime builds, all 280 required game combinations, and complete player install → launch → update → repair → rollback against final packages could not be executed on this Linux sandbox. This patch is **not a completed production GA certification** and must not be published as such without fresh live results. In particular, final macOS code-signing may change the app executable after embedded update manifests are sealed: the release verifier deliberately blocks any resulting mismatch rather than silently accepting an updater-unusable package.
+
 ## 0.40.10 — Bind cross-platform compatibility results to delivered evidence
 
 - In the real per-target Minecraft compatibility execution path, record a SHA-256 digest for every uploaded installer, materialized client verification, Java/runtime certification, and actual-client launch report. Bind that list to the target, commit, run and platform as part of the final compatibility result.

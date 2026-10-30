@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "productVersion": "0.40.0",
+  "productVersion": "0.41.0",
   "policy": "separate-certification-required",
   "targets": [
     {

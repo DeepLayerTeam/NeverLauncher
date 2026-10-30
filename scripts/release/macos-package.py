@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from component_set_sign import signed_set
+from component_set_sign import signed_set, sign_delegated_set
 
 ARCHES = {
     "x64": {"cpu": 0x01000007, "cpuText": "CPU_TYPE_X86_64", "rustTarget": "x86_64-apple-darwin"},
@@ -163,6 +163,10 @@ def manifest_cmd(args: argparse.Namespace) -> int:
     update_manifest.write_bytes(raw)
     if signature is not None:
         (resources / "COMPONENT_SET_SIGNATURE.json").write_bytes(signature)
+    if tuple(int(x) for x in args.version.split('.')[:3]) >= (0, 41, 0) and args.trust_mode == "developer-id-notarized":
+        delegated_sig, delegated_policy = sign_delegated_set(raw)
+        (resources / "COMPONENT_SET_SIGNATURE_V2.json").write_bytes(delegated_sig)
+        (resources / "COMPONENT_TRUST_POLICY.json").write_bytes(delegated_policy)
     return 0
 
 
