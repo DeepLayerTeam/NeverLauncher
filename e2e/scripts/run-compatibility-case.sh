@@ -382,6 +382,15 @@ payload = {
     "exitCode": rc,
     "checks": checks,
     "evidence": {
+        # Bind this CI result to the exact bytes uploaded with the job. A
+        # filename/boolean alone is not proof that an installer or launch ran.
+        "sha256": {
+            name: file_sha256(
+                (out.parent / name) if name in ("platform-runtime.json", "java-runtime.json")
+                else (runtime / name)
+            )
+            for name in evidence_files + ["platform-runtime.json", "java-runtime.json"]
+        },
         "manifestLoader": manifest_loader,
         "javaRuntime": java_evidence,
         "platformRuntime": platform_evidence,

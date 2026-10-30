@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import re
 import subprocess
@@ -170,9 +171,20 @@ class MatrixToolTests(unittest.TestCase):
             result = self.passing_result(target)
             if mutate is not None:
                 mutate(target, result)
-            case = root / target["id"]
-            case.mkdir(parents=True, exist_ok=True)
-            (case / "compatibility-result.json").write_text(json.dumps(result), encoding="utf-8")
+            case = root / target["id"] / "e2e"
+            runtime = case / "runtime"
+            report = case / "compatibility-result"
+            runtime.mkdir(parents=True, exist_ok=True)
+            report.mkdir(parents=True, exist_ok=True)
+            fingerprints = {}
+            for name in result["evidence"]["files"]:
+                destination = (report if name in {"java-runtime.json", "platform-runtime.json"} else runtime) / name
+                # Bytes are materialized, not merely a claimed list of paths.
+                contents = f"{target['id']}:{name}:proof".encode()
+                destination.write_bytes(contents)
+                fingerprints[name] = hashlib.sha256(contents).hexdigest()
+            result["evidence"]["sha256"] = fingerprints
+            (report / "compatibility-result.json").write_text(json.dumps(result), encoding="utf-8")
 
     def aggregate(self, tmp: Path, doc: dict, mutate=None) -> subprocess.CompletedProcess[str]:
         targets = tmp / "targets.json"
@@ -190,6 +202,55 @@ class MatrixToolTests(unittest.TestCase):
         )
 
 
+
+    def test_04010_rejects_missing_evidence_artifact_after_successful_runner(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            doc = self.target_doc()
+            self.write_results(root / "results", doc)
+            target = next(t for t in doc["targets"] if t["required"])
+            artifact = root / "results" / target["id"] / "e2e/runtime/client-package.json"
+            artifact.unlink()
+            (root / "targets.json").write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("aggregate", "--targets", str(root / "targets.json"),
+                       "--results-root", str(root / "results"), "--output-dir", str(root / "out"),
+                       "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("missing/unsafe evidence artifact: client-package.json", proc.stderr)
+
+    def test_04010_rejects_tampered_installer_after_result_emitted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            doc = self.target_doc()
+            self.write_results(root / "results", doc)
+            target = next(t for t in doc["targets"] if t["required"] and t["loader"] == "forge")
+            artifact = root / "results" / target["id"] / "e2e/runtime/forge-install.json"
+            artifact.write_bytes(b"attacker-replaced-installer-proof")
+            (root / "targets.json").write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("aggregate", "--targets", str(root / "targets.json"),
+                       "--results-root", str(root / "results"), "--output-dir", str(root / "out"),
+                       "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("evidence artifact sha256 mismatch: forge-install.json", proc.stderr)
+
+    def test_04010_rejects_evidence_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            doc = self.target_doc()
+            self.write_results(root / "results", doc)
+            target = next(t for t in doc["targets"] if t["required"])
+            artifact = root / "results" / target["id"] / "e2e/runtime/client-package.json"
+            original = artifact.read_bytes()
+            copied = root / "elsewhere.json"
+            copied.write_bytes(original)
+            artifact.unlink()
+            artifact.symlink_to(copied)
+            (root / "targets.json").write_text(json.dumps(doc), encoding="utf-8")
+            proc = run("aggregate", "--targets", str(root / "targets.json"),
+                       "--results-root", str(root / "results"), "--output-dir", str(root / "out"),
+                       "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("missing/unsafe evidence artifact: client-package.json", proc.stderr)
 
     def test_upstream_blockers_are_explicit_and_excluded_from_ci_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

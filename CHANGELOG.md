@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.40.10 — Bind cross-platform compatibility results to delivered evidence
+
+- In the real per-target Minecraft compatibility execution path, record a SHA-256 digest for every uploaded installer, materialized client verification, Java/runtime certification, and actual-client launch report. Bind that list to the target, commit, run and platform as part of the final compatibility result.
+- The release matrix aggregator now opens the uploaded artifacts and checks their exact bytes against the runner-issued hashes, instead of accepting a list of filenames and asserted PASS flags. Missing, duplicated, replaced, symlinked, oversized and modified evidence fails certification. Preserve explicit unsupported status for the twelve upstream-unavailable targets.
+- Keep the existing genuine game and loader certification scripts in place (Vanilla/Fabric/Quilt/Forge/NeoForge, Windows/Linux/macOS x64/ARM64), including native/processor and matching-server checks. The new validation applies uniformly to all required targets without narrowing the matrix.
+- Update product and packaged Desktop/Tauri versions together to avoid shipping an installer that reports a stale version.
+- Add regression checks demonstrating that a passing matrix becomes a failed release when a previously uploaded client package or Forge installer result is deleted or modified; reject symlinks pointing outside the downloaded artifact set.
+
+**Verification boundary:** These are executable changes to the CI runner and release verification, not simulated Minecraft PASS results. The available host cannot complete all 280 genuine target runs (including six platform/architecture combinations and five major Java versions). No required target is reported as certified by this patch. Full GA acceptance remains blocked until fresh real Minecraft execution and uploaded artifact validation passes on the claimed platforms.
+
 ## 0.40.9 — Preserve crash-recoverable rollback across client repair
 
 - Repair of the **same signed release and component selection** no longer replaces the last-known-good checkpoint with a backup of potentially damaged pre-repair bytes. Keep the earlier verified A → B backup and advance its active release identity after a successful B → repaired B transaction.

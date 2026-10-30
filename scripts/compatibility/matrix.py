@@ -964,6 +964,55 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
     return errors
 
 
+# The runner uploads e2e/compatibility-result and e2e/runtime as siblings.
+# An aggregate may see an extracted artifact root or the original CI tree.
+# Never follow evidence-supplied paths: the allowlist is the exact set of
+# basenames declared by the runner and mandated by the target definition.
+EVIDENCE_HASH = re.compile(r"^[0-9a-f]{64}$")
+EVIDENCE_MAX_BYTES = 128 * 1024 * 1024
+
+
+def verify_evidence_files(result_path: Path, result: dict[str, Any]) -> list[str]:
+    evidence = result.get("evidence")
+    if not isinstance(evidence, dict):
+        return ["evidence object is missing"]
+    files = evidence.get("files")
+    hashes = evidence.get("sha256")
+    if not isinstance(files, list) or not isinstance(hashes, dict):
+        return ["evidence files and sha256 are required"]
+    if (not files or len(files) != len(set(map(str, files)))
+            or any(not isinstance(name, str) or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}", name)
+                   or name in (".", "..") for name in files)):
+        return ["invalid, duplicate or unsafe evidence filename"]
+    if set(hashes) != set(files):
+        return ["evidence sha256 does not cover exactly the submitted files"]
+    evidence_root = result_path.parent
+    if evidence_root.name == "compatibility-result":
+        runtime_root = evidence_root.parent / "runtime"
+    else:
+        runtime_root = evidence_root / "runtime"
+    errors: list[str] = []
+    for name in files:
+        digest = hashes.get(name)
+        if not isinstance(digest, str) or not EVIDENCE_HASH.fullmatch(digest):
+            errors.append(f"invalid evidence digest for {name}")
+            continue
+        base = evidence_root if name in ("java-runtime.json", "platform-runtime.json") else runtime_root
+        file = base / name
+        try:
+            if file.is_symlink() or not file.is_file():
+                errors.append(f"missing/unsafe evidence artifact: {name}")
+                continue
+            if file.stat().st_size > EVIDENCE_MAX_BYTES:
+                errors.append(f"oversized evidence artifact: {name}")
+                continue
+            if sha256_file(file) != digest:
+                errors.append(f"evidence artifact sha256 mismatch: {name}")
+        except OSError as exc:
+            errors.append(f"cannot verify evidence artifact {name}: {exc}")
+    return errors
+
+
 def render_markdown(product_version: str, targets: list[dict[str, Any]], records: dict[str, dict[str, Any]], commit: str, run_id: str, repository: str) -> str:
     lines = [
         f"# NeverLauncher {product_version} — CI Compatibility Matrix",
@@ -1053,6 +1102,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
         if product_version != targets_doc["productVersion"]:
             errors.append(f"{target_id}: productVersion expected {targets_doc['productVersion']}, got {product_version}")
         result_errors = verify_result(target, result, commit=args.commit, run_id=args.run_id)
+        result_errors.extend(verify_evidence_files(path, result))
         result = dict(result)
         if result_errors:
             errors.extend(f"{target_id}: {message}" for message in result_errors)
