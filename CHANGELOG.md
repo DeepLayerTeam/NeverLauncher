@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.40.4 — Forge/NeoForge target-specific libraries and executable processor checks
+
+- Apply Vanilla OS and architecture selection to both Forge/NeoForge installer libraries and inherited runtime libraries, honoring `allow/disallow`, `clientreq=false` and native classifier architecture. Keep unselected entries in the version profile for runtime rule evaluation; do not fetch their artifacts on incompatible systems.
+- Reject Forge/NeoForge Maven artifacts whose declared path does not match the dependency's canonical Maven coordinate, before loading a local JAR or requesting a repository object. Preserve installer-embedded and processor-generated files at their verified identities.
+- Run a local HTTP integration with **real Java 21**: execute Forge and NeoForge processor JARs through the isolated processor worker, read installer patch bytes, create output JARs checked against installer output SHA-1 and load the resulting Java entrypoint with the JVM. The base Minecraft and bootstrap main class are controlled test fixtures.
+- Retain existing installer identity checks, resolution locks, crash-recovery journals and Client Factory packaging; tests also exercise wrong-platform dependency exclusion and malicious Maven-path substitution.
+
+**Verification boundary:** Forge/NeoForge Go tests (including the JVM processor integration) and Go CLI build pass in this environment. This test demonstrates executable processor and classpath behavior with fixture data, **not** a successful authentic Forge/NeoForge launch inside the Mojang Minecraft client. Desktop/NeverRuntime Rust and all required native target combinations remain unverified; do not label this version GA-certified without their real-world results.
+
 ## 0.40.3 — Fabric/Quilt platform-aware dependency delivery and JVM classpath
 
 - Materialize only Fabric/Quilt libraries required by the selected target OS/architecture; honor Mojang allow/disallow rules, native architecture suffixes and `clientreq=false` so an unavailable Windows or server-only artifact cannot block a Linux client. Preserve the original conditional metadata for runtime resolution on the selected platform.

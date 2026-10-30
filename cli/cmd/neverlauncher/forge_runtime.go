@@ -572,7 +572,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	}
 	files = append(files, embeddedFiles...)
 
-	profileFiles, err := materializeForgeLibraries(ctx, opts.HTTPClient, opts.ClientDir, &bundle.Profile.Libraries, loader, opts.Workers, opts.StrictUpstream)
+	profileFiles, err := materializeForgeLibraries(ctx, opts.HTTPClient, opts.ClientDir, &bundle.Profile.Libraries, loader, opts.Workers, opts.StrictUpstream, opts.Targets...)
 	if err != nil {
 		return forgeMaterializeResult{}, fmt.Errorf("%s installer libraries: %w", loader, err)
 	}
@@ -593,7 +593,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		return forgeMaterializeResult{}, err
 	}
 
-	versionFiles, err := materializeForgeLibraries(ctx, opts.HTTPClient, opts.ClientDir, &bundle.Version.Libraries, loader, opts.Workers, opts.StrictUpstream)
+	versionFiles, err := materializeForgeLibraries(ctx, opts.HTTPClient, opts.ClientDir, &bundle.Version.Libraries, loader, opts.Workers, opts.StrictUpstream, opts.Targets...)
 	if err != nil {
 		return forgeMaterializeResult{}, fmt.Errorf("%s runtime libraries: %w", loader, err)
 	}
@@ -1569,9 +1569,22 @@ func copyZipEntryAtomic(entry *zip.File, dst string) error {
 	return nil
 }
 
-func materializeForgeLibraries(ctx context.Context, client *http.Client, clientDir string, libraries *[]MojangLibrary, loader string, workers int, strict bool) ([]vanillaDownloadedFile, error) {
+func materializeForgeLibraries(ctx context.Context, client *http.Client, clientDir string, libraries *[]MojangLibrary, loader string, workers int, strict bool, selectedTargets ...vanillaTarget) ([]vanillaDownloadedFile, error) {
+	if len(selectedTargets) == 0 {
+		selectedTargets = []vanillaTarget{currentVanillaTarget()}
+	}
+	for i, target := range selectedTargets {
+		normalized, err := normalizeVanillaTarget(target)
+		if err != nil {
+			return nil, fmt.Errorf("Forge library target[%d]: %w", i, err)
+		}
+		selectedTargets[i] = normalized
+	}
 	if libraries == nil || len(*libraries) == 0 {
 		return nil, nil
+	}
+	if client == nil {
+		client = secureHTTPClient()
 	}
 	tasks := []vanillaDownloadTask{}
 	type forgeLibraryDownloadIdentity struct {
@@ -1581,6 +1594,7 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 	}
 	seen := map[string]forgeLibraryDownloadIdentity{}
 	localFiles := []vanillaDownloadedFile{}
+	applicable := make(map[int]bool, len(*libraries))
 	for i := range *libraries {
 		lib := &(*libraries)[i]
 		if strings.TrimSpace(lib.Name) == "" {
@@ -1589,6 +1603,19 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		if lib.ClientReq != nil && !*lib.ClientReq {
 			continue
 		}
+		// Keep non-applicable libraries in the version profile for downstream
+		// target-specific launches; do not fetch their JARs for this build.
+		selected := false
+		for _, target := range selectedTargets {
+			if rulesAllowTarget(lib.Rules, target) && libraryArtifactAppliesToTarget(lib.Name, target) {
+				selected = true
+				break
+			}
+		}
+		if !selected {
+			continue
+		}
+		applicable[i] = true
 		// В versionInfo Forge 1.7.x могут повторяться координаты только нативных
 		// артефактов Mojang. lwjgl-platform, jinput-platform и старые мосты платформы
 		// Twitch содержат архивы с классификаторами, но не имеют обычного Maven JAR
@@ -1597,15 +1624,18 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		if isLegacyNativeClassifierContainer(*lib) {
 			continue
 		}
-		rel := strings.TrimSpace(lib.Downloads.Artifact.Path)
-		if rel == "" {
-			var err error
-			rel, err = mavenCoordinatePath(lib.Name)
-			if err != nil {
-				return nil, fmt.Errorf("library %s: %w", lib.Name, err)
-			}
+		canonical, err := mavenCoordinatePath(lib.Name)
+		if err != nil {
+			return nil, fmt.Errorf("library %s: %w", lib.Name, err)
 		}
-		rel = strings.TrimPrefix(filepath.ToSlash(rel), "libraries/")
+		rel := strings.TrimPrefix(filepath.ToSlash(strings.TrimSpace(lib.Downloads.Artifact.Path)), "libraries/")
+		if rel == "" {
+			rel = canonical
+		}
+		// Reject a different Maven artifact masquerading as the requested dependency.
+		if rel != canonical {
+			return nil, fmt.Errorf("library %s: artifact.path %q differs from Maven identity %q", lib.Name, rel, canonical)
+		}
 		if err := validateVanillaRelativePath(rel); err != nil {
 			return nil, fmt.Errorf("library %s path: %w", lib.Name, err)
 		}
@@ -1693,6 +1723,9 @@ func materializeForgeLibraries(ctx context.Context, client *http.Client, clientD
 		byPath[file.Path] = file
 	}
 	for i := range *libraries {
+		if !applicable[i] {
+			continue
+		}
 		lib := &(*libraries)[i]
 		rel := strings.TrimPrefix(filepath.ToSlash(lib.Downloads.Artifact.Path), "libraries/")
 		if rel == "" {
