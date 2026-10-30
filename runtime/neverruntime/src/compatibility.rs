@@ -269,7 +269,7 @@ struct MergedVersion {
     client_version_id: String,
     libraries: Vec<Library>,
     arguments: Arguments,
-    minecraft_arguments: String,
+    legacy_game_arguments: Vec<String>,
     java_version: Option<JavaVersion>,
     logging_client: Option<LoggingClient>,
 }
@@ -386,8 +386,8 @@ pub async fn resolve_compatibility(
         variables.insert("resolution_height".to_string(), height);
     }
 
-    let raw_game_args = if merged.arguments.game.is_empty() && !merged.minecraft_arguments.trim().is_empty() {
-        split_legacy_arguments(&merged.minecraft_arguments)?
+    let raw_game_args = if merged.arguments.game.is_empty() && !merged.legacy_game_arguments.is_empty() {
+        merged.legacy_game_arguments.clone()
     } else {
         resolve_arguments(&merged.arguments.game, &environment)?
     };
@@ -556,7 +556,10 @@ fn merge_layers(
         merged.arguments.game.extend(layer.arguments.game.clone());
         merged.arguments.jvm.extend(layer.arguments.jvm.clone());
         if !layer.minecraft_arguments.trim().is_empty() {
-            merged.minecraft_arguments = layer.minecraft_arguments.clone();
+            let child = split_legacy_arguments(&layer.minecraft_arguments)?;
+            merged.legacy_game_arguments = merge_legacy_argument_tokens(
+                &merged.legacy_game_arguments, &child,
+            );
         }
         if layer.java_version.is_some() {
             merged.java_version = layer.java_version.clone();
@@ -565,6 +568,29 @@ fn merge_layers(
             merged.logging_client = layer.logging.client.clone();
         }
     }
+    // LaunchWrapper is loaded ahead of the inherited Minecraft libraries.
+    // Its classpath must prefer child Forge JARs (including overridden Maven
+    // coordinates) before the base game dependencies. This matches the
+    // verified Client Factory legacy-launch recipe, rather than retaining a
+    // parent-first order that could load an older class of the same name.
+    if merged.main_class == "net.minecraft.launchwrapper.Launch" && layers.len() > 1 {
+        let mut seen = HashSet::new();
+        let mut preferred = Vec::new();
+        for (_, _, layer) in layers.iter().rev() {
+            for library in &layer.libraries {
+                if library.client_req == Some(false)
+                    || !rules_allow(&library.rules, environment)?
+                    || !library_artifact_matches_environment(&library.name, environment)
+                {
+                    continue;
+                }
+                if seen.insert(library_identity(&library.name)) {
+                    preferred.push(library.clone());
+                }
+            }
+        }
+        merged.libraries = preferred;
+    }
     if merged.id.trim().is_empty() {
         return Err("resolved Minecraft metadata не содержит id".to_string());
     }
@@ -572,6 +598,43 @@ fn merge_layers(
 }
 
 type ResolvedLibraries = (Vec<ResolvedLibrary>, Vec<ResolvedNative>, Vec<String>);
+
+// Preserve inherited Mojang options even when a legacy Forge profile also
+// declares identity placeholders. The child overrides only the flags it
+// explicitly specifies, and values containing spaces remain single argv items.
+fn merge_legacy_argument_tokens(parent: &[String], child: &[String]) -> Vec<String> {
+    if parent.is_empty() {
+        return child.to_vec();
+    }
+    if child.is_empty() {
+        return parent.to_vec();
+    }
+    let overridden: HashSet<&str> = child
+        .iter()
+        .filter(|arg| arg.starts_with("--") && arg.len() > 2)
+        .map(|arg| arg.split('=').next().unwrap_or(arg))
+        .collect();
+    let mut result = Vec::with_capacity(parent.len() + child.len());
+    let mut i = 0;
+    while i < parent.len() {
+        let option = &parent[i];
+        if option.starts_with("--") && option.len() > 2 {
+            let start = i;
+            i += 1;
+            while i < parent.len() && !parent[i].starts_with("--") {
+                i += 1;
+            }
+            if !overridden.contains(option.split('=').next().unwrap_or(option)) {
+                result.extend_from_slice(&parent[start..i]);
+            }
+        } else {
+            result.push(option.clone());
+            i += 1;
+        }
+    }
+    result.extend_from_slice(child);
+    result
+}
 
 fn resolve_libraries(
     libraries: &[Library],
@@ -1591,6 +1654,58 @@ mod tests {
         assert!(result.game_args.windows(2).any(|pair| pair[0] == "--assetsDir" && pair[1] == expected_assets));
         assert!(result.jvm_args.iter().any(|value| value.starts_with("-Djava.library.path=")));
         assert!(result.jvm_args.iter().any(|value| value.starts_with("-Dorg.lwjgl.librarypath=")));
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn forge_legacy_argument_inheritance_preserves_argv_boundaries() {
+        let parent = split_legacy_arguments(
+            "--username ${auth_player_name} --gameDir \"${game_directory}\" --version ${version_name} --accessToken ${auth_access_token}",
+        ).unwrap();
+        let child = split_legacy_arguments(
+            "--username ForgePlayer --tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker",
+        ).unwrap();
+        let merged = merge_legacy_argument_tokens(&parent, &child);
+        assert_eq!(merged.iter().filter(|v| v.as_str() == "--username").count(), 1);
+        assert!(merged.windows(2).any(|w| w[0] == "--username" && w[1] == "ForgePlayer"));
+        assert!(merged.windows(2).any(|w| w[0] == "--gameDir" && w[1] == "${game_directory}"));
+        assert!(merged.windows(2).any(|w| w[0] == "--accessToken" && w[1] == "${auth_access_token}"));
+        assert!(merged.windows(2).any(|w| w[0] == "--tweakClass" && w[1] == "net.minecraftforge.fml.common.launcher.FMLTweaker"));
+        let already_complete = merge_legacy_argument_tokens(&parent, &parent);
+        assert_eq!(already_complete, parent);
+    }
+
+    #[tokio::test]
+    async fn legacy_forge_child_overrides_parent_libs_and_retains_base_launch_options() {
+        let root = temp_root("legacy-forge-argv-inheritance");
+        stdfs::create_dir_all(root.join("versions/1.12.2")).unwrap();
+        stdfs::create_dir_all(root.join("versions/1.12.2-forge")).unwrap();
+        stdfs::write(root.join("versions/1.12.2/1.12.2.json"), r#"{
+          "id":"1.12.2", "mainClass":"net.minecraft.client.main.Main", "type":"release",
+          "downloads":{"client":{"url":"https://example.test/client.jar","sha1":"abc","size":2}},
+          "minecraftArguments":"--username ${auth_player_name} --gameDir ${game_directory} --accessToken ${auth_access_token} --version ${version_name}",
+          "libraries":[{"name":"example:core:1.0","downloads":{"artifact":{"path":"example/core/1.0/core-1.0.jar"}}}]
+        }"#).unwrap();
+        stdfs::write(root.join("versions/1.12.2-forge/1.12.2-forge.json"), r#"{
+          "id":"1.12.2-forge", "inheritsFrom":"1.12.2", "mainClass":"net.minecraft.launchwrapper.Launch",
+          "minecraftArguments":"--username ForgeUser --tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker",
+          "libraries":[{"name":"example:core:2.0","downloads":{"artifact":{"path":"example/core/2.0/core-2.0.jar"}}},
+                       {"name":"net.minecraftforge:forge:1.0","downloads":{"artifact":{"path":"net/minecraftforge/forge/1.0/forge-1.0.jar"}}}]
+        }"#).unwrap();
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "uuid".into(), access_token: "offline".into(), user_type: "legacy".into(),
+            launcher_name: "NeverLauncher".into(), launcher_version: "0.40.6".into(),
+            game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(),
+            natives_directory: root.join("natives").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let resolved = resolve_compatibility(&root, "1.12.2-forge", None, &ctx).await.unwrap();
+        assert_eq!(resolved.main_class, "net.minecraft.launchwrapper.Launch");
+        assert!(resolved.game_args.windows(2).any(|w| w[0] == "--gameDir" && w[1] == ctx.game_directory));
+        assert!(resolved.game_args.windows(2).any(|w| w[0] == "--username" && w[1] == "ForgeUser"));
+        assert_eq!(resolved.game_args.iter().filter(|a| a.as_str() == "--username").count(), 1);
+        assert!(resolved.classpath[0].ends_with("core-2.0.jar"));
+        assert!(!resolved.classpath.iter().any(|p| p.ends_with("core-1.0.jar")));
         let _ = stdfs::remove_dir_all(root);
     }
 

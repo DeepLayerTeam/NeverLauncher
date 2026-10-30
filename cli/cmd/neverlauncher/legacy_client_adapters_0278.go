@@ -108,6 +108,45 @@ func splitLegacyArguments0278(s string) ([]string, error) {
 	}
 	return out, nil
 }
+
+// Merge inherited legacy options at argv boundaries, not by concatenating
+// strings. Some Forge install profiles provide only --tweakClass, while others
+// repeat --username/--version without supplying every Mojang base argument.
+// A child's explicit value supersedes the parent's value for that option;
+// parent options that are not mentioned by the child must survive.
+func mergeLegacyArgumentTokens0278(parent, child []string) []string {
+	if len(parent) == 0 {
+		return append([]string(nil), child...)
+	}
+	if len(child) == 0 {
+		return append([]string(nil), parent...)
+	}
+	childOptions := make(map[string]bool)
+	for _, token := range child {
+		if strings.HasPrefix(token, "--") && len(token) > 2 {
+			childOptions[strings.SplitN(token, "=", 2)[0]] = true
+		}
+	}
+	out := make([]string, 0, len(parent)+len(child))
+	for i := 0; i < len(parent); {
+		option := parent[i]
+		if strings.HasPrefix(option, "--") && len(option) > 2 {
+			start := i
+			i++
+			for i < len(parent) && !strings.HasPrefix(parent[i], "--") {
+				i++
+			}
+			if !childOptions[strings.SplitN(option, "=", 2)[0]] {
+				out = append(out, parent[start:i]...)
+			}
+			continue
+		}
+		out = append(out, option)
+		i++
+	}
+	return append(out, child...)
+}
+
 func readLegacyProfile0278(root, rel string) (MojangVersionFile, string, error) {
 	var profile MojangVersionFile
 	if err := validateVanillaRelativePath(rel); err != nil {
@@ -172,6 +211,11 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 		return nil, errors.New("legacy parent profile has no game arguments")
 	}
 	selected := parent
+	parentArgs, err := splitLegacyArguments0278(parent.MinecraftArgs)
+	if err != nil {
+		return nil, fmt.Errorf("legacy parent arguments: %w", err)
+	}
+	gameArgs := parentArgs
 	childHash := ""
 	childRel := ""
 	if loader == "forge" {
@@ -207,17 +251,13 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 		childHash = sha256HexBytes(raw)
 		selected.MainClass = child.MainClass
 		selected.Libraries = legacyLibraryList0278(child.Libraries, parent.Libraries)
-		// A Forge profile containing only the tweak class inherits base game args.
-		if strings.Contains(child.MinecraftArgs, "${auth_player_name}") || strings.Contains(child.MinecraftArgs, "${auth_access_token}") {
-			selected.MinecraftArgs = child.MinecraftArgs
-		} else {
-			selected.MinecraftArgs = strings.TrimSpace(parent.MinecraftArgs + " " + child.MinecraftArgs)
+		childArgs, parseErr := splitLegacyArguments0278(child.MinecraftArgs)
+		if parseErr != nil {
+			return nil, fmt.Errorf("Forge legacy child arguments: %w", parseErr)
 		}
+		gameArgs = mergeLegacyArgumentTokens0278(parentArgs, childArgs)
 	}
-	args, err := splitLegacyArguments0278(selected.MinecraftArgs)
-	if err != nil {
-		return nil, err
-	}
+	args := gameArgs
 	if len(args) == 0 {
 		return nil, errors.New("legacy launch has no arguments")
 	}
@@ -427,7 +467,7 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 		"user_properties": "{}", "user_type": "legacy", "version_name": p.MinecraftVersion, "version_type": "release",
 		"game_directory": absRoot, "game_assets": gameAssets,
 		"assets_root": filepath.Join(absRoot, "assets"), "assets_index_name": p.Launch.AssetIndex,
-		"launcher_name": "NeverLauncher", "launcher_version": "0.27.9", "classpath": strings.Join(classpath, string(os.PathListSeparator)),
+		"launcher_name": "NeverLauncher", "launcher_version": version, "classpath": strings.Join(classpath, string(os.PathListSeparator)),
 		"natives_directory": natives,
 	}
 	if p.Compatibility != nil {

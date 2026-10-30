@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.40.6 — Executable legacy Forge inheritance, classpath precedence and Java launch
+
+- Correct the legacy `minecraftArguments` inheritance for Minecraft 1.7.10/1.12.2 and classic Forge LaunchWrapper. A Forge child profile that contains an identity placeholder no longer discards base `--gameDir`, `--version`, asset or access-token arguments. Child flags override only corresponding parent flags, preserving quoted argument boundaries.
+- Apply the same inherited-argument logic in **both** the Go Client Factory legacy-run path and the Rust NeverRuntime compatibility resolver, avoiding different game invocations for the same installed legacy profile.
+- In NeverRuntime, put applicable Forge child Maven libraries before inherited Minecraft libraries and honor child version overrides while retaining platform filtering. This matches the Client Factory's verified classpath and prevents the wrong version of a class loading from the parent.
+- Use the linked CLI build version in the legacy launcher variable instead of a hardcoded, outdated version string. Make the already-implemented legacy inspect/run operations discoverable in CLI help.
+- Add negative argument-inheritance tests and a JVM integration that compiles Java-8-compatible bytecode, runs a controlled LaunchWrapper entrypoint and verifies actual classpath override, identity/game flags and refusal to execute a modified JAR. The fixture tests **do not** execute authentic Forge, Mojang Minecraft or Java 8: the local Java 21 host runs bytecode compiled with `--release 8` via a version-probe shim. Java 8 runtime checking remains mandatory in production.
+
+**Verification boundary:** Go legacy tests and CLI build pass on the available Linux host. The real Minecraft 1.7.10/1.12.2 and official legacy Forge game launches, Java 8 runtime, Rust Desktop build, and Windows/macOS target runs are not certified by these tests; `0.40.6` must not be described as a completed production GA release until they pass.
+
 ## 0.40.5 — Executable MirrorHelper workspace, modpacks, libraries and authlib
 
 - Extend the real `client-factory apply-workspace` transaction to install an exact `.mrpack`/CurseForge pack, resolve and hash its files, apply verified additional mods, download pinned Maven JARs and register them in the effective Minecraft version profile. No manual staging of factory outputs or post-build classpath editing is required.

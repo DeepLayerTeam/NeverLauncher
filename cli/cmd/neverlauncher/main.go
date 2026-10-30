@@ -28,7 +28,7 @@ const helpText = `NeverLauncher CLI
   update plan|apply|components|status|recover|migrate-state|self-test|component-self-test|stabilization-self-test transactional updater core
   hashes check                    проверить SHA-256 файлов
   diagnostics collect|redact|validate|policy|bundle
-  runtime client-factory build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib|compat-inspect|compat-verify|compat-apply|trusted-install|trusted-verify|trusted-inspect|trusted-remove|inspect-modpack|import-modpack
+  runtime client-factory build|verify|inspect|install-client|install-mods|download-installer|launch-installer|workspace|apply-workspace|dedup-libraries|lwjgl-download|patch-authlib|compat-inspect|compat-verify|compat-apply|legacy-inspect|legacy-run|trusted-install|trusted-verify|trusted-inspect|trusted-remove|inspect-modpack|import-modpack
                                    reproducible Minecraft factory + verified MirrorHelper-equivalent operations
   runtime client-factory certify-keygen|certify-run|certify-verify|certify-matrix|certify-ga|ga-sign-join
                                    Ed25519 signed real Minecraft runtime E2E certification
