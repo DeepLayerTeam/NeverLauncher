@@ -49,7 +49,10 @@ func hostTakeStopRequest0282(path, session string, pid int) bool {
 	if err := readJSONFile01910(path, &request); err != nil {
 		return false
 	}
-	if request.SessionID != session || (pid > 0 && request.ProcessPID != pid) {
+	// PID 0 is an explicit stop for this supervisor session, issued while
+	// there was no child (starting or crash backoff). It remains valid if a
+	// new JVM starts between the status read and this request being consumed.
+	if request.SessionID != session || (pid > 0 && request.ProcessPID != 0 && request.ProcessPID != pid) {
 		return false
 	}
 	// Best effort removal: the request is session scoped, so a leftover cannot
@@ -60,7 +63,7 @@ func hostTakeStopRequest0282(path, session string, pid int) bool {
 
 // Poll rather than blocking in Wait so Minecraft can receive its supported
 // console 'stop' command. SIGTERM and SIGKILL are *last resort* stages only.
-func hostWaitForChild0282(pid int, stdin io.WriteCloser, wait <-chan error, requestPath, session string, timeoutSeconds int) (error, bool, string) {
+func hostWaitForChild0282(pid int, stdin io.WriteCloser, wait <-chan error, requestPath, session string, timeoutSeconds int, stopSignals <-chan os.Signal) (error, bool, string) {
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 	childIdentity := hostOwnProcessIdentity0282(pid)
@@ -68,10 +71,31 @@ func hostWaitForChild0282(pid int, stdin io.WriteCloser, wait <-chan error, requ
 	var terminate <-chan time.Time
 	stopping := false
 	method := ""
+	requestStop := func(reason string) {
+		if stopping {
+			return
+		}
+		stopping = true
+		method = reason
+		if _, err := io.WriteString(stdin, "stop\n"); err != nil {
+			// Broken stdin cannot be treated as a graceful-stop ACK. Signal the
+			// exact verified process group immediately rather than waiting.
+			if childIdentity != "" && hostIdentityMatches0282(pid, childIdentity) {
+				_ = hostTerminateProcess01910(pid)
+				method = "terminate"
+				terminate = time.After(2 * time.Second)
+			}
+		} else {
+			graceful = time.After(time.Duration(timeoutSeconds) * time.Second)
+		}
+		_ = stdin.Close()
+	}
 	for {
 		select {
 		case err := <-wait:
 			return err, stopping, method
+		case <-stopSignals:
+			requestStop("signal-console-stop")
 		case <-graceful:
 			graceful = nil
 			if childIdentity != "" && hostIdentityMatches0282(pid, childIdentity) {
@@ -86,15 +110,34 @@ func hostWaitForChild0282(pid int, stdin io.WriteCloser, wait <-chan error, requ
 				method = "kill"
 			}
 		case <-ticker.C:
-			if stopping || !hostTakeStopRequest0282(requestPath, session, pid) {
-				continue
+			if hostTakeStopRequest0282(requestPath, session, pid) {
+				requestStop("console-stop")
 			}
-			stopping = true
-			method = "console-stop"
-			_, _ = io.WriteString(stdin, "stop\n")
-			_ = stdin.Close()
-			graceful = time.After(time.Duration(timeoutSeconds) * time.Second)
 		}
+	}
+}
+
+// Backoff is interruptible by service shutdown signals. A supervisor which
+// receives SIGTERM between JVM incarnations must not start another Java child.
+func hostWaitBackoff0414(delay time.Duration, requestPath, session string, signals <-chan os.Signal) bool {
+	deadline := time.Now().Add(delay)
+	for {
+		select {
+		case <-signals:
+			return true
+		default:
+		}
+		if hostTakeStopRequest0282(requestPath, session, 0) {
+			return true
+		}
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return false
+		}
+		if remaining > 75*time.Millisecond {
+			remaining = 75 * time.Millisecond
+		}
+		time.Sleep(remaining)
 	}
 }
 

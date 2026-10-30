@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.41.4 — Verified real JVM lifecycle, supervised shutdown and crash recovery
+
+- **Real JVM startup evidence:** `nl server-bridge host start` no longer returns an optimistic `starting` acknowledgment after four seconds. It waits for the exact supervisor PID, OS-verified child PID and matching process identities; a failed, crashed, prematurely exited or unverified JVM is not reported as running. A 30-second timeout is an *unverified outcome*, not permission to retry blindly.
+- **Graceful service termination:** the real Host Supervisor captures SIGTERM/SIGINT and forwards the Minecraft `stop` command to its verified Java child's stdin. It waits for exit and escalates only to identity-checked OS termination/kill after the configured grace period. Capturing the signal also prevents an immediate supervisor exit leaving an orphaned JVM.
+- **Crash/restart stop race closed:** `host stop` now targets the active supervisor session while a crash-restarting JVM has no live PID. A PID-zero session-bound stop remains valid if the JVM is spawned concurrently; stale sessions cannot terminate a new supervisor. The restart backoff handles OS shutdown signals as well, preventing unwanted Java launches after service stop.
+- **Fail closed on process identity:** a JVM whose identity cannot be verified after spawning is terminated rather than being exposed as managed or verified. PID reuse and orphan protection remain enforced; automatic adoption of a JVM that outlived its supervisor is deliberately forbidden.
+- **Real Java 21 regression tests:** compile a runnable Java JAR using javac/jar and exercise real OS Java processes, stdout, in-game save marker, stop/restart with new supervisor session and process identity, SIGTERM, crash-once recovery, capped 3-attempt crash-loop, cancellation during restart backoff, and a built production CLI's actual `start/restart/stop` commands. No shell-based fake-Java executables in these scenarios.
+- **Verification boundary:** the host lifecycle and production CLI live-Java tests pass on Linux/OpenJDK 21. This is not full Minecraft plugin/Proxy certification, Windows/macOS runtime certification, PostgreSQL/Backend integration certification or a claim that the entire monorepo has passed its CI.
+
 ## 0.41.3 — Backend ↔ RemoteControl ↔ Host Supervisor: durable real-host operations
 
 - Backend now executes real JVM lifecycle actions (`start`, `stop`, `restart`) against explicitly provisioned RemoteControl agents via pinned TLS 1.3, bearer capabilities and optional client certificates. Project-scoped game permissions cannot authorize host actions; a global `host:process` permission and fresh MFA are required.

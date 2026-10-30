@@ -10,12 +10,14 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -560,21 +562,28 @@ func startServerBridgeHost01910(args []string) error {
 	}
 	pid := cmd.Process.Pid
 	_ = cmd.Process.Release()
-	deadline := time.Now().Add(4 * time.Second)
+	// Do not acknowledge host.start until the JVM has actually been spawned
+	// and both OS process identities have been verified. A "starting" result
+	// is not evidence that a real Java process exists.
+	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
 		state, readErr := readServerBridgeHostRuntime01910(paths["runtime"])
-		if readErr == nil && state.SupervisorPID == pid && (state.Status == "running" || state.Status == "starting" || state.Status == "restarting") {
-			return writeOrPrintJSON(flagValue(args, "--output", ""), state)
+		if readErr == nil && state.SupervisorPID == pid {
+			if state.Status == "running" && state.ProcessPID > 0 &&
+				hostIdentityMatches0282(pid, state.SupervisorIdentity) &&
+				hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
+				return writeOrPrintJSON(flagValue(args, "--output", ""), state)
+			}
+			if state.Status == "failed" || state.Status == "crashed" || state.Status == "exited" {
+				return fmt.Errorf("JVM start failed (status=%s, exitCode=%v, error=%s); inspect %s", state.Status, state.ExitCode, state.LastError, paths["supervisor"])
+			}
 		}
 		if !updaterProcessAlive0156(pid) {
-			break
+			return fmt.Errorf("ServerBridge Host supervisor pid=%d exited during JVM startup; inspect %s", pid, paths["supervisor"])
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	if !updaterProcessAlive0156(pid) {
-		return fmt.Errorf("ServerBridge Host supervisor pid=%d exited during startup; inspect %s", pid, paths["supervisor"])
-	}
-	return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "status": "starting", "supervisorPid": pid, "runtime": paths["runtime"]})
+	return fmt.Errorf("JVM start was not verified within 30 seconds; supervisor pid=%d may still be running; reconcile status before retrying", pid)
 }
 
 func runServerBridgeHostCommand01910(args []string) error {
@@ -605,6 +614,12 @@ func runServerBridgeHost01910(root string, console bool) error {
 		return err
 	}
 	defer func() { _ = releaseServerBridgeHostLock01910(paths["lock"], sessionID) }()
+	// Treat SIGTERM (systemd/container shutdown) and SIGINT as a supervised
+	// graceful stop. Without this the OS would kill the supervisor immediately,
+	// leaving the real JVM running as an orphan, with no terminal receipt.
+	stopSignals := make(chan os.Signal, 2)
+	signal.Notify(stopSignals, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(stopSignals)
 	finishService := hostServiceRun02811(paths, sessionID)
 	defer finishService()
 	_ = os.Remove(paths["stop"])
@@ -696,6 +711,21 @@ func runServerBridgeHost01910(root string, console bool) error {
 		state.Status = "running"
 		state.ProcessPID = cmd.Process.Pid
 		state.ProcessIdentity = hostOwnProcessIdentity0282(cmd.Process.Pid)
+		if state.ProcessIdentity == "" {
+			// Fail closed: never expose an unmanaged JVM or claim it is alive.
+			_ = hostKillProcess01910(cmd.Process.Pid)
+			_ = cmd.Wait()
+			_ = stdin.Close()
+			_ = stdoutFile.Close()
+			_ = stderrFile.Close()
+			_ = combinedFile.Close()
+			state.Status, state.LastError = "failed", "cannot verify newly started JVM identity"
+			state.ProcessPID = 0
+			if err := atomicWriteJSON01910(paths["runtime"], state, 0o600); err != nil {
+				return err
+			}
+			return errors.New(state.LastError)
+		}
 		state.ProcessAt = time.Now().UTC().Format(time.RFC3339Nano)
 		state.ExitCode = nil
 		state.Crashed = false
@@ -716,7 +746,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 		waitCh := make(chan error, 1)
 		go func() { waitCh <- cmd.Wait() }()
 		started := time.Now()
-		waitErr, stopped, stopMethod := hostWaitForChild0282(cmd.Process.Pid, stdin, waitCh, paths["stop"], state.SessionID, config.StopTimeoutSeconds)
+		waitErr, stopped, stopMethod := hostWaitForChild0282(cmd.Process.Pid, stdin, waitCh, paths["stop"], state.SessionID, config.StopTimeoutSeconds, stopSignals)
 		_ = stdin.Close()
 		stdoutFile.Close()
 		stderrFile.Close()
@@ -772,7 +802,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 				return err
 			}
 			backoff := hostRestartDelay0282(config.RestartBackoffMillis, len(restartEvents))
-			if hostWaitBackoff0282(backoff, paths["stop"], state.SessionID) {
+			if hostWaitBackoff0414(backoff, paths["stop"], state.SessionID, stopSignals) {
 				state.Status = "stopped"
 				state.Crashed = false
 				return atomicWriteJSON01910(paths["runtime"], state, 0o600)
@@ -913,11 +943,23 @@ func stopServerBridgeHost01910(args []string) error {
 	if err != nil {
 		return fmt.Errorf("host runtime unavailable: %w", err)
 	}
-	if state.ProcessPID <= 0 || !hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity) {
-		if state.ProcessPID > 0 && state.ProcessIdentity == "" && updaterProcessAlive0156(state.ProcessPID) {
+	processAlive := hostIdentityMatches0282(state.ProcessPID, state.ProcessIdentity)
+	supervisorAlive := hostIdentityMatches0282(state.SupervisorPID, state.SupervisorIdentity)
+	if !processAlive && state.ProcessPID > 0 {
+		if state.ProcessIdentity == "" && updaterProcessAlive0156(state.ProcessPID) {
 			return errors.New("unverified legacy game process; refusing to signal a reused PID")
 		}
+		// A supervisor may have just observed a crash and entered its bounded
+		// restart backoff. It is still responsible for shutting down cleanly.
+		if !supervisorAlive {
+			return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "status": "already-stopped", "runtime": state})
+		}
+	}
+	if !processAlive && !supervisorAlive {
 		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "status": "already-stopped", "runtime": state})
+	}
+	if !processAlive && state.Status != "starting" && state.Status != "restarting" {
+		return fmt.Errorf("supervisor still alive but JVM identity is not verified (status=%s); refusing optimistic stop", state.Status)
 	}
 	lock, err := readServerBridgeHostLock01910(paths["lock"])
 	if err != nil || lock.SessionID != state.SessionID || lock.PID != state.SupervisorPID || !hostIdentityMatches0282(lock.PID, lock.Identity) {
@@ -930,7 +972,11 @@ func stopServerBridgeHost01910(args []string) error {
 	if flagBool(args, "--dry-run", false) {
 		return writeOrPrintJSON(flagValue(args, "--output", ""), map[string]any{"schemaVersion": "1.0", "dryRun": true, "action": "stop", "pid": state.ProcessPID})
 	}
-	request := hostStopRequest0282{SessionID: state.SessionID, ProcessPID: state.ProcessPID, RequestedAt: time.Now().UTC().Format(time.RFC3339Nano)}
+	requestPID := state.ProcessPID
+	if !processAlive {
+		requestPID = 0 // scoped to restart backoff, no historical PID reused
+	}
+	request := hostStopRequest0282{SessionID: state.SessionID, ProcessPID: requestPID, RequestedAt: time.Now().UTC().Format(time.RFC3339Nano)}
 	if err := atomicWriteJSON01910(paths["stop"], request, 0o600); err != nil {
 		return err
 	}
