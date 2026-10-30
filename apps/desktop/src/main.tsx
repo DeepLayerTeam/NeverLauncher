@@ -1,5 +1,5 @@
 import { offlineLaunchSettings0358, offlineSelection0358, offlineRecovery0358 } from './offline_policy_0358';
-import { updateIdentity0359, ensureReleaseApproval0359 } from './release_update_0359';
+import { approvedSelectionIdentity0393, ensureReleaseApproval0359 } from './release_update_0359';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { invoke } from '@tauri-apps/api/core';
@@ -1480,7 +1480,7 @@ function App() {
         manifest:result,root:actualRoot,pinnedPublicKey:settings.pinnedPublicKey,componentPreset:null,
       });
       setRequirements0359(newRequirements);
-      if(!newRequirements.requiresConfirmation)setRequirementsApproved0359(updateIdentity0359(result));
+      if(!newRequirements.requiresConfirmation)setRequirementsApproved0359(approvedSelectionIdentity0393(result,settings.componentPreset||''));
       setManifest(result);
       setMinecraftIdentity('local');
       setOfflineStatus0358('');
@@ -1665,7 +1665,7 @@ function App() {
   }
 
   function ensureRequirementsApproved0359(active:Manifest) {
-    ensureReleaseApproval0359(active,requirements0359,requirementsApproved0359,requirementsError0359);
+    ensureReleaseApproval0359(active,requirements0359,requirementsApproved0359,requirementsError0359,settings.componentPreset||'');
   }
   async function ensureNoPlayerConflicts0359(active:Manifest,preset:string){
     const result=await callTauri<PlayerConflictResult0359>('preview_player_conflicts_0359',{
@@ -1682,7 +1682,7 @@ function App() {
         manifest,root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,
         componentPreset:settings.componentPreset,
       });
-      setRequirements0359(newPreview);setRequirementsError0359('');
+      setRequirements0359(newPreview);setRequirementsApproved0359('');setRequirementsError0359('');
     }catch(error){setRequirementsError0359(String(error));}
   }
   function confirmRequirements0359() {
@@ -1691,7 +1691,7 @@ function App() {
     if(proposed!==null && proposed!==settings.componentPreset){
       setSettings(current=>normalizedSettings({...current,componentPreset:proposed}));
     }
-    setRequirementsApproved0359(updateIdentity0359(manifest));
+    setRequirementsApproved0359(approvedSelectionIdentity0393(manifest,proposed ?? (settings.componentPreset||'')));
     log(`Обновлённые требования ${requirements0359.targetVersion} приняты. Preset будет сохранён только после установки.`);
   }
   async function downloadFiles() {
@@ -1745,7 +1745,25 @@ function App() {
   // settings closure. Persist the choice only after transactional install.
   async function installComponentSelection0247(choice: string): Promise<void> {
     if (!manifest || transferBusy) throw new Error('Установка уже выполняется или манифест не загружен');
-    ensureRequirementsApproved0359(manifest);
+    try {
+      ensureReleaseApproval0359(manifest,requirements0359,requirementsApproved0359,requirementsError0359,choice);
+    } catch(error) {
+      if(requirements0359?.requiresConfirmation) {
+        // The new candidate is a different signed selection. Force a new
+        // native preview and explicit user approval before any file changes.
+        try {
+          const revised=await callTauri<ReleaseRequirements0359>('preview_release_requirements_0359',{
+            manifest,root:settings.gameDirectory,pinnedPublicKey:settings.pinnedPublicKey,componentPreset:choice,
+          });
+          setRequirements0359(revised);setRequirementsApproved0359('');setRequirementsError0359('');
+          throw new Error('Выбор компонентов изменён: проверьте новое подтверждение перед установкой');
+        } catch(recheckError) {
+          if(String(recheckError).includes('Выбор компонентов изменён:'))throw recheckError;
+          setRequirementsError0359(String(recheckError));throw recheckError;
+        }
+      }
+      throw error;
+    }
     await ensureNoPlayerConflicts0359(manifest,choice);
     setStage('files');setTransferBusy(true);setDownloadProgress(null);
     try {
@@ -2429,11 +2447,11 @@ function App() {
         {screen === 'textures' && <TexturesPanel0258 backendUrl={settings.backendUrl} token={authSession?.accessToken||''} officialClient={officialMinecraftClient.current} officialProfile={officialProfile} onOfficialProfile={(p)=>{setOfficialProfile(p);if(!p)setMinecraftIdentity('local');}} identityMode={minecraftIdentity === 'official' ? 'official' : 'local'} />}
         {screen === 'projects' && signedProvisioning0352 ? <section className="panel">Проект закреплён подписанным bundle: {signedProvisioning0352.projectId}</section> : screen === 'projects' && <ProjectPanel projects={projects} selectedProject={selectedProject} setSelectedProject={selectProject} loadProjects={loadProjects} loadProfiles={loadProfiles} />}
         {requirementsError0359 && <section className="panel" role="alert"><strong>Обновление заблокировано:</strong> {requirementsError0359}</section>}
-        {manifest&&requirements0359?.requiresConfirmation&&requirementsApproved0359!==updateIdentity0359(manifest)&&<section className="panel" role="alert" aria-label="Изменения требований подписанной сборки">
+        {manifest&&requirements0359?.requiresConfirmation&&requirementsApproved0359!==approvedSelectionIdentity0393(manifest,settings.componentPreset||'')&&<section className="panel" role="alert" aria-label="Изменения требований подписанной сборки">
           <h3>Изменились требования сборки · {requirements0359.installedVersion} → {requirements0359.targetVersion}</h3>
           <ul>{requirements0359.changes.map(change=><li key={change}>{change}</li>)}</ul>
           {requirements0359.blockers.length>0&&<p>Блокирующие изменения: {requirements0359.blockers.join('; ')}. Выберите совместимый preset в разделе «Опциональные моды».</p>}
-          {requirements0359.blockers.length>0&&<button disabled={transferBusy} onClick={()=>void recheckChosenPreset0359()}>Проверить выбранный preset</button>}
+          <button disabled={transferBusy} onClick={()=>void recheckChosenPreset0359()}>Проверить выбранный preset</button>
           <button className="primary" disabled={requirements0359.blockers.length>0||transferBusy} onClick={confirmRequirements0359}>Принять требования и продолжить</button>
         </section>}
         {screen === 'profile' && <ProfilePanel profiles={profiles} selectedProfile={selectedProfile} setSelectedProfile={selectProfile} loadManifest={loadManifest} manifest={manifest} componentPreset={settings.componentPreset||""} pinnedPublicKey={settings.pinnedPublicKey} root={settings.gameDirectory} transferBusy={transferBusy} installSelection={installComponentSelection0247} />}

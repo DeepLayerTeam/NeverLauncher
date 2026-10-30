@@ -205,8 +205,15 @@ pub struct VerifiedComponentScope0392 {
     pub permissions:HashSet<String>,
 }
 tokio::task_local! {static VERIFIED_COMPONENT_SCOPE_0392: VerifiedComponentScope0392;}
+tokio::task_local! {static VERIFIED_RELEASE_SCOPES_0393: Vec<VerifiedComponentScope0392>;}
 pub async fn with_verified_component_scope_0392<F:std::future::Future>(scope:VerifiedComponentScope0392, future:F)->F::Output {
     VERIFIED_COMPONENT_SCOPE_0392.scope(scope,future).await
+}
+/// A transaction may verify TWO separately signed catalogs while switching
+/// releases. Each entitlement remains bound to its own digest, project and
+/// expiry; an entitlement for one catalog never authorizes the other.
+pub async fn with_verified_release_scopes_0393<F:std::future::Future>(scopes:Vec<VerifiedComponentScope0392>,future:F)->F::Output{
+    VERIFIED_RELEASE_SCOPES_0393.scope(scopes,future).await
 }
 /// Preserve the authenticated task-local permission scope when a runtime
 /// operation moves synchronous release validation to the blocking pool.
@@ -214,23 +221,35 @@ pub async fn with_verified_component_scope_0392<F:std::future::Future>(scope:Ver
 pub async fn spawn_blocking_with_permissions_0392<F,R>(job:F)->Result<R,tokio::task::JoinError>
 where F:FnOnce()->R+Send+'static,R:Send+'static {
     let scope=VERIFIED_COMPONENT_SCOPE_0392.try_with(Clone::clone).ok();
+    let scopes=VERIFIED_RELEASE_SCOPES_0393.try_with(Clone::clone).ok();
     let handle=tokio::runtime::Handle::current();
-    tokio::task::spawn_blocking(move || match scope {
-        Some(grant)=>handle.block_on(with_verified_component_scope_0392(grant,async move {job()})),
-        None=>job(),
+    tokio::task::spawn_blocking(move || match (scopes,scope) {
+        (Some(grants),_)=>handle.block_on(with_verified_release_scopes_0393(grants,async move {job()})),
+        (None,Some(grant))=>handle.block_on(with_verified_component_scope_0392(grant,async move {job()})),
+        (None,None)=>job(),
     }).await
 }
 fn verified_environment_0392(manifest:&Manifest)->ComponentEnvironment0244 {
     let mut env=ComponentEnvironment0244::for_manifest(manifest);
-    let _=VERIFIED_COMPONENT_SCOPE_0392.try_with(|scope| {
-        if scope.project_id==manifest.project_id && scope.profile_id==manifest.profile_id &&
-           scope.channel==manifest.channel &&
-           manifest.component_catalog.as_ref().is_some_and(|c|c.digest==scope.catalog_digest) &&
-           std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok()
-              .is_some_and(|now| i64::try_from(now.as_secs()).ok().is_some_and(|now|now<scope.valid_until)) {
-            env.verified_permissions=scope.permissions.clone();
+    let permitted=|scope:&VerifiedComponentScope0392| {
+        scope.project_id==manifest.project_id && scope.profile_id==manifest.profile_id &&
+        scope.channel==manifest.channel &&
+        manifest.component_catalog.as_ref().is_some_and(|c|c.digest==scope.catalog_digest) &&
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok()
+           .is_some_and(|now| i64::try_from(now.as_secs()).ok().is_some_and(|now|now<scope.valid_until))
+    };
+    // The multi-release context is established only by the native rollback /
+    // recovery handler, after fetching independent rights for each signed
+    // catalog. It does not union permissions from unrelated release digests.
+    if VERIFIED_RELEASE_SCOPES_0393.try_with(|scopes| {
+        if let Some(grant)=scopes.iter().find(|g|permitted(g)) {
+            env.verified_permissions=grant.permissions.clone();
         }
-    });
+    }).is_err() {
+        let _=VERIFIED_COMPONENT_SCOPE_0392.try_with(|grant| {
+            if permitted(grant){env.verified_permissions=grant.permissions.clone();}
+        });
+    }
     env
 }
 #[derive(Default)]
@@ -664,6 +683,33 @@ mod tests{
 #[cfg(test)]
 mod verified_server_permissions_0392_tests {
     use super::*;
+    #[tokio::test]
+    async fn rollback_grants_are_bound_to_each_signed_catalog_0393(){
+        let mut old:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_0244_go_signed.json")).unwrap();
+        let c=old.component_catalog.as_mut().unwrap();
+        c.components[1].conditions.as_mut().unwrap().permissions=vec!["component.old".into()];
+        c.digest=digest_v4(c);
+        let mut next=old.clone();
+        let n=next.component_catalog.as_mut().unwrap();
+        n.components[1].conditions.as_mut().unwrap().permissions=vec!["component.new".into()];
+        n.digest=digest_v4(n);
+        let make=|m:&Manifest,name:&str| VerifiedComponentScope0392{
+            project_id:m.project_id.clone(),profile_id:m.profile_id.clone(),channel:m.channel.clone(),
+            catalog_digest:m.component_catalog.as_ref().unwrap().digest.clone(),valid_until:i64::MAX,
+            permissions:HashSet::from([name.to_owned()]),
+        };
+        with_verified_release_scopes_0393(vec![make(&old,"component.old"),make(&next,"component.new")],async {
+            assert_eq!(verified_environment_0392(&old).verified_permissions,HashSet::from(["component.old".into()]));
+            assert_eq!(verified_environment_0392(&next).verified_permissions,HashSet::from(["component.new".into()]));
+            let copied=old.clone();
+            assert!(tokio::spawn(async move {verified_environment_0392(&copied).verified_permissions.is_empty()}).await.unwrap());
+            let propagated=spawn_blocking_with_permissions_0392(move ||
+                verified_environment_0392(&old).verified_permissions).await.unwrap();
+            assert_eq!(propagated,HashSet::from(["component.old".into()]));
+            let mut different=next.clone();different.project_id="foreign".into();
+            assert!(verified_environment_0392(&different).verified_permissions.is_empty());
+        }).await;
+    }
     #[tokio::test]
     async fn scope_is_exact_non_leaking_and_expires() {
         let mut m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_conditions_0244_go_signed.json")).unwrap();

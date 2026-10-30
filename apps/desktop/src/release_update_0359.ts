@@ -15,11 +15,16 @@ export function updateIdentity0359(manifest: SignedTarget0359): string {
   }
   return JSON.stringify([manifest.projectId, manifest.profileId, manifest.channel, signature]);
 }
+/** Approval includes the exact choice. A signed release may contain several
+ * independently installable plans; accepting one must not authorize another. */
+export function approvedSelectionIdentity0393(manifest:SignedTarget0359,preset:string):string {
+  return JSON.stringify([updateIdentity0359(manifest),preset]);
+}
 export function ensureReleaseApproval0359(
   manifest: SignedTarget0359, preview: RequirementPreview0359 | null,
-  approvedIdentity: string, previewError = '',
+  approvedIdentity: string, previewError = '', requestedPreset = '',
 ): void {
-  const identity = updateIdentity0359(manifest);
+  updateIdentity0359(manifest); // validate the signed target even when preview is unavailable
   if (previewError || !preview || preview.targetVersion !== manifest.version ||
       preview.targetSignature !== manifest.signature?.signature) {
     throw new Error('Невозможно подтвердить новые требования без нативной проверки установленной сборки');
@@ -27,7 +32,9 @@ export function ensureReleaseApproval0359(
   if (preview.blockers.length) {
     throw new Error(preview.blockers.join('; '));
   }
-  if (preview.requiresConfirmation && approvedIdentity !== identity) {
-    throw new Error('Изменившиеся требования Java, RAM и модов требуют явного подтверждения');
+  if (preview.requiresConfirmation &&
+      (approvedIdentity !== approvedSelectionIdentity0393(manifest,requestedPreset) ||
+       (preview.proposedPreset ?? '') !== requestedPreset)) {
+    throw new Error('Изменившиеся требования или выбор компонентов требуют явного подтверждения точного preset');
   }
 }

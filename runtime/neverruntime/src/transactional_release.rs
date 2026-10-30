@@ -302,6 +302,34 @@ fn recover_locked(root: &Path, key: &str) -> Result<(), String> {
     }
     Ok(())
 }
+/// Return only signed catalog identities to the native application, so it
+/// can fetch independent server permissions before a multi-release rollback
+/// or crash recovery. No disk operations or permission lists are accepted
+/// from the renderer. Journals/ownership are fully verified during execution.
+pub fn release_manifests_for_permissions_0393(root:&Path,key:&str,include_last_known_good:bool)->Result<Vec<Manifest>,String>{
+    let _guard=lock(root)?;
+    let root=root.canonicalize().map_err(|e|e.to_string())?;
+    let mut manifests=Vec::new();
+    let mut append=|m:&Manifest|->Result<(),String>{
+        verify_manifest_signature(m,key)?;
+        if manifests.iter().any(|x:&Manifest|x.signature.as_ref().map(|v|&v.signature)==m.signature.as_ref().map(|v|&v.signature)){
+            return Ok(());
+        }
+        manifests.push(m.clone());Ok(())
+    };
+    if let Some(active)=pointer(&root)?.active {append(&active.manifest)?;}
+    if let Some(j)=journal(&root)? {
+        append(&j.next.manifest)?;
+        if let Some(previous)=j.previous {append(&previous.manifest)?;}
+    }
+    if include_last_known_good {
+        if let Some(j)=last_known_good(&root)? {
+            append(&j.next.manifest)?;
+            if let Some(previous)=j.previous {append(&previous.manifest)?;}
+        }
+    }
+    Ok(manifests)
+}
 /// Reads only the signed identity needed to request fresh server rights.
 /// This is NOT installed-file verification. Callers MUST subsequently run
 /// verified_active_selection under the authenticated runtime permission scope.
@@ -854,6 +882,49 @@ mod tests {
         }
         assert_eq!(manifest.files.len(), bytes.len());
         dir
+    }
+    // A new signed selection may retire old optional JARs. Nothing else in
+    // mods/, config/, saves/, or player settings may be swept by the switch or
+    // its inverse, including user-added mods not mentioned by either manifest.
+    #[tokio::test]
+    async fn update_and_rollback_never_touch_untracked_player_files_0393() {
+        let root=std::env::temp_dir().join(format!("nl-player-update-0393-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (old,key)=fixture(&root,"0.39.2",&[("mods/old.jar",b"SIGNED_OLD"),("libraries/base.jar",b"BASE")]);
+        let first=Release{manifest:old.clone(),installed:old.files.iter().map(|f|f.path.clone()).collect(),
+            id:format!("{:032x}",1),preset:None,plan_sha256:None};
+        commit(&root,first,&key,&staged(&root,&old,&[("mods/old.jar",b"SIGNED_OLD"),("libraries/base.jar",b"BASE")])).unwrap();
+        let player=[("mods/my-own.jar",b"USER_MOD".as_slice()),("config/custom.toml",b"USER_CONFIG".as_slice()),
+            ("saves/world/level.dat",b"USER_WORLD".as_slice()),("options.txt",b"PLAYER_SETTINGS".as_slice())];
+        for (path,bytes) in player {let target=safe_join(&root,path).unwrap();fs::create_dir_all(target.parent().unwrap()).unwrap();fs::write(target,bytes).unwrap();}
+        let (new,_) = fixture(&root,"0.39.3",&[("mods/new.jar",b"SIGNED_NEW"),("libraries/base.jar",b"BASE")]);
+        let next=Release{manifest:new.clone(),installed:new.files.iter().map(|f|f.path.clone()).collect(),
+            id:format!("{:032x}",2),preset:None,plan_sha256:None};
+        commit(&root,next,&key,&staged(&root,&new,&[("mods/new.jar",b"SIGNED_NEW"),("libraries/base.jar",b"BASE")])).unwrap();
+        assert!(!root.join("mods/old.jar").exists());
+        assert_eq!(fs::read(root.join("mods/new.jar")).unwrap(),b"SIGNED_NEW");
+        for (path,bytes) in player {assert_eq!(fs::read(root.join(path)).unwrap(),bytes,"changed user file: {path}");}
+        rollback(&root,&key).await.unwrap();
+        assert_eq!(fs::read(root.join("mods/old.jar")).unwrap(),b"SIGNED_OLD");
+        assert!(!root.join("mods/new.jar").exists());
+        for (path,bytes) in player {assert_eq!(fs::read(root.join(path)).unwrap(),bytes,"rollback changed user file: {path}");}
+        let _=fs::remove_dir_all(&root);
+    }
+    #[test]
+    fn update_fails_closed_on_user_owned_mod_collision_0393() {
+        let root=std::env::temp_dir().join(format!("nl-player-collision-0393-{}-{:x}",std::process::id(),rand::random::<u64>()));
+        let (old,key)=fixture(&root,"0.39.2",&[("mods/old.jar",b"OLD")]);
+        let first=Release{manifest:old.clone(),installed:vec!["mods/old.jar".into()],
+            id:format!("{:032x}",3),preset:None,plan_sha256:None};
+        commit(&root,first,&key,&staged(&root,&old,&[("mods/old.jar",b"OLD")])).unwrap();
+        fs::write(root.join("mods/custom.jar"),b"PLAYER_FILE").unwrap();
+        let (new,_) = fixture(&root,"0.39.3",&[("mods/custom.jar",b"SIGNED")]);
+        let next=Release{manifest:new.clone(),installed:vec!["mods/custom.jar".into()],
+            id:format!("{:032x}",4),preset:None,plan_sha256:None};
+        let error=commit(&root,next,&key,&staged(&root,&new,&[("mods/custom.jar",b"SIGNED")])).unwrap_err();
+        assert!(error.contains("untracked user file"),"{error}");
+        assert_eq!(fs::read(root.join("mods/custom.jar")).unwrap(),b"PLAYER_FILE");
+        assert_eq!(fs::read(root.join("mods/old.jar")).unwrap(),b"OLD");
+        let _=fs::remove_dir_all(root);
     }
     #[tokio::test]
     async fn offline_staged_adoption_commits_exact_verified_bytes_without_network() {

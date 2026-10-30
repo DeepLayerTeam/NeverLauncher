@@ -684,9 +684,14 @@ async fn check_files(manifest: Manifest, root: String, preset: Option<String>) -
 }
 #[tauri::command]
 async fn download_missing_files(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<DownloadResult,String> {
-    let auth=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
-    neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,
-        download_missing_files_inner_0392(app,manifest,root,pinned_public_key,preset)).await
+    let mut grants=release_permission_scopes_0393(&root,&pinned_public_key,false).await?;
+    grants.insert(0,component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?);
+    let result=neverruntime::component_catalog_0241::with_verified_release_scopes_0393(grants,
+        download_missing_files_inner_0392(app,manifest,root.clone(),pinned_public_key.clone(),preset)).await?;
+    // The release pointer commits before Tauri responds. Persist the exact
+    // native installed selection even if the renderer never receives success.
+    if result.failed==0 {reconcile_component_preference_0393(&root,&pinned_public_key).await?;}
+    Ok(result)
 }
 async fn download_missing_files_inner_0392(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<DownloadResult, String> {
     let sink: neverruntime::ProgressSink = Arc::new(move |progress| {
@@ -696,9 +701,12 @@ async fn download_missing_files_inner_0392(app: tauri::AppHandle, manifest: Mani
 }
 #[tauri::command]
 async fn repair_client(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<RepairResult,String> {
-    let auth=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
-    neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,
-        repair_client_inner_0392(app,manifest,root,pinned_public_key,preset)).await
+    let mut grants=release_permission_scopes_0393(&root,&pinned_public_key,false).await?;
+    grants.insert(0,component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?);
+    let result=neverruntime::component_catalog_0241::with_verified_release_scopes_0393(grants,
+        repair_client_inner_0392(app,manifest,root.clone(),pinned_public_key.clone(),preset)).await?;
+    if result.status=="ready" {reconcile_component_preference_0393(&root,&pinned_public_key).await?;}
+    Ok(result)
 }
 async fn repair_client_inner_0392(app: tauri::AppHandle, manifest: Manifest, root: String, pinned_public_key: String, preset:Option<String>) -> Result<RepairResult, String> {
     let sink: neverruntime::ProgressSink = Arc::new(move |progress| {
@@ -728,21 +736,84 @@ async fn resume_download_job(app: tauri::AppHandle, root: String, pinned_public_
     let manifest=neverruntime::durable_downloads::pending_manifest_for_permissions_0392(
         &PathBuf::from(&root),&pinned_public_key).await?
         .ok_or("no signed download job to resume")?;
-    let grant=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
+    let mut grants=release_permission_scopes_0393(&root,&pinned_public_key,false).await?;
+    grants.insert(0,component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?);
     let sink: neverruntime::ProgressSink = Arc::new(move |progress| {
         let _ = app.emit(neverruntime::DOWNLOAD_PROGRESS_EVENT, progress);
     });
-    neverruntime::component_catalog_0241::with_verified_component_scope_0392(grant,async {
-        neverruntime::durable_downloads::resume(&PathBuf::from(root), &pinned_public_key, Some(sink)).await
-    }).await
+    let result=neverruntime::component_catalog_0241::with_verified_release_scopes_0393(grants,async {
+        neverruntime::durable_downloads::resume(&PathBuf::from(&root), &pinned_public_key, Some(sink)).await
+    }).await?;
+    if result.failed==0 {reconcile_component_preference_0393(&root,&pinned_public_key).await?;}
+    Ok(result)
+}
+async fn release_permission_scopes_0393(root:&str,key:&str,include_lkg:bool)->Result<Vec<neverruntime::component_catalog_0241::VerifiedComponentScope0392>,String>{
+    let root_path=PathBuf::from(root);let signed_key=key.to_owned();
+    let manifests=tokio::task::spawn_blocking(move ||
+        neverruntime::transactional_release::release_manifests_for_permissions_0393(&root_path,&signed_key,include_lkg))
+        .await.map_err(|e|format!("read signed release catalogs: {e}"))??;
+    let mut grants=Vec::with_capacity(manifests.len());
+    for manifest in manifests {
+        grants.push(component_permissions_for_manifest_0392(&manifest,key).await?);
+    }
+    Ok(grants)
+}
+// After a crash or a rollback, the native signed release pointer is the
+// authority for the selected preset. Synchronize the desktop preference even
+// if the renderer crashes before receiving the Tauri response.
+async fn reconcile_component_preference_0393(root:&str,key:&str)->Result<(),String>{
+    let scope=installed_component_scope_0392(root,key).await?;
+    let Some(scope)=scope else{return Ok(())};
+    let active=neverruntime::component_catalog_0241::with_verified_component_scope_0392(scope,async {
+        neverruntime::component_catalog_0241::spawn_blocking_with_permissions_0392({
+            let root=root.to_owned();let key=key.to_owned();
+            move || neverruntime::transactional_release::verified_active_selection_02410(&PathBuf::from(root),&key)
+        }).await.map_err(|e|format!("read restored selection: {e}"))?
+    }).await?;
+    let Some((manifest,preset))=active else{return Ok(())};
+    let mut cfg=load_desktop_config().await?;
+    if cfg.project_id!=manifest.project_id || cfg.profile_id!=manifest.profile_id || cfg.channel!=manifest.channel ||
+       cfg.pinned_public_key!=key {return Err("restored release does not match signed desktop binding".into());}
+    let saved_root=PathBuf::from(&cfg.game_directory).canonicalize().map_err(|e|e.to_string())?;
+    let actual_root=PathBuf::from(root).canonicalize().map_err(|e|e.to_string())?;
+    if saved_root!=actual_root {return Err("restored release is outside desktop game directory".into());}
+    let installed=preset.unwrap_or_default();
+    let update_offline_cache=cfg.onboarding_completed && manifest.runtime.launch.offline_mode;
+    if cfg.component_preset!=installed {
+        cfg.component_preset=installed;
+        save_desktop_config(cfg).await?;
+    }
+    // A successful rollback must not leave an offline cache pointing to the
+    // superseded release. This cache operation verifies installed bytes and
+    // the signed owner binding before atomically replacing the cached manifest.
+    if update_offline_cache {
+        let grant=component_permissions_for_manifest_0392(&manifest,key).await?;
+        neverruntime::component_catalog_0241::with_verified_component_scope_0392(grant,async {
+            cache_desktop_manifest(manifest,root.to_owned(),key.to_owned()).await
+        }).await?;
+    }
+    Ok(())
 }
 #[tauri::command]
 async fn rollback_client_release(root: String, pinned_public_key: String) -> Result<(), String> {
-    neverruntime::transactional_release::rollback(&PathBuf::from(root), &pinned_public_key).await
+    let cfg=load_desktop_config().await?;
+    if cfg.pinned_public_key!=pinned_public_key || PathBuf::from(&cfg.game_directory).canonicalize().map_err(|e|e.to_string())?!=
+        PathBuf::from(&root).canonicalize().map_err(|e|e.to_string())? {
+        return Err("rollback outside configured signed game directory".into());
+    }
+    let grants=release_permission_scopes_0393(&root,&pinned_public_key,true).await?;
+    neverruntime::component_catalog_0241::with_verified_release_scopes_0393(grants,async {
+        neverruntime::transactional_release::rollback(&PathBuf::from(&root), &pinned_public_key).await
+    }).await?;
+    reconcile_component_preference_0393(&root,&pinned_public_key).await
 }
 #[tauri::command]
 async fn recover_client_release(root: String, pinned_public_key: String) -> Result<(), String> {
-    neverruntime::transactional_release::recover(&PathBuf::from(root), &pinned_public_key).await
+    let grants=release_permission_scopes_0393(&root,&pinned_public_key,false).await?;
+    neverruntime::component_catalog_0241::with_verified_release_scopes_0393(grants,async {
+        neverruntime::transactional_release::recover(&PathBuf::from(&root), &pinned_public_key).await
+    }).await?;
+    reconcile_component_preference_0393(&root,&pinned_public_key).await
 }
 #[tauri::command]
 async fn clean_unused_files(manifest: Manifest, root: String, pinned_public_key: String) -> Result<CleanUnusedResult, String> { neverruntime::clean_unused_files(&manifest, &PathBuf::from(root), &pinned_public_key).await }
@@ -1204,11 +1275,24 @@ struct ReleaseRequirements0359 {
 async fn preview_release_requirements_0359(
     manifest: Manifest,root:String,pinned_public_key:String,component_preset:Option<String>,
 ) -> Result<ReleaseRequirements0359,String> {
-    tokio::task::spawn_blocking(move || {
-        neverruntime::verify_manifest_signature(&manifest,&pinned_public_key)?;
+    neverruntime::verify_manifest_signature(&manifest,&pinned_public_key)?;
+    // Release-to-release migration may need two DIFFERENT catalog grants. Read
+    // the verified installed plan under its own grant, then resolve the new
+    // signed target under the fresh target grant. Never reuse prior privileges.
+    let old_scope=installed_component_scope_0392(&root,&pinned_public_key).await?;
+    let active=if let Some(scope)=old_scope {
+        let existing_root=root.clone();let existing_key=pinned_public_key.clone();
+        neverruntime::component_catalog_0241::with_verified_component_scope_0392(scope,async {
+            neverruntime::component_catalog_0241::spawn_blocking_with_permissions_0392(move ||
+                neverruntime::transactional_release::verified_active_selection_02410(
+                    &PathBuf::from(existing_root),&existing_key))
+                .await.map_err(|e|format!("read previous installed selection: {e}"))?
+        }).await?
+    }else{None};
+    let target_scope=component_permissions_for_manifest_0392(&manifest,&pinned_public_key).await?;
+    neverruntime::component_catalog_0241::with_verified_component_scope_0392(target_scope,async {
+    neverruntime::component_catalog_0241::spawn_blocking_with_permissions_0392(move || {
         let target_signature=manifest.signature.as_ref().ok_or("signed manifest required")?.signature.clone();
-        let active=neverruntime::transactional_release::verified_active_selection_02410(
-            &PathBuf::from(root),&pinned_public_key)?;
         let Some((old,preset))=active else {
             return Ok(ReleaseRequirements0359{installed_version:None,target_version:manifest.version,target_signature:target_signature.clone(),
                 changes:Vec::new(),proposed_preset:None,blockers:Vec::new(),requires_confirmation:false});
@@ -1258,20 +1342,25 @@ async fn preview_release_requirements_0359(
             blockers.push("Изменился тип каталога компонентов: выберите новый preset вручную".into());
             proposed_preset=None;
         }
-        if !blockers.is_empty() {
-            if let Some(ref requested)=component_preset {
-                if manifest.component_catalog.is_some() {
-                    neverruntime::component_catalog_0241::preview_components_0244(&manifest,Some(requested))?;
-                    blockers.clear();
-                    proposed_preset=Some(requested.clone());
-                    changes.push(format!("Владелец изменил каталог: выбран совместимый preset вручную ({requested})"));
+        // A player may explicitly select a different signed plan after seeing
+        // the migration preview. Validate it instead of silently approving the
+        // automatically proposed plan. The UI approval is bound to this choice.
+        if let Some(ref requested)=component_preset {
+            if manifest.component_catalog.is_some() {
+                neverruntime::component_catalog_0241::preview_components_0244(&manifest,Some(requested))?;
+                if proposed_preset.as_deref()!=Some(requested.as_str()) {
+                    changes.push(format!("Изменён выбор компонентов: {} → {}",
+                        proposed_preset.as_deref().unwrap_or("<unavailable>"),requested));
                 }
+                blockers.clear();
+                proposed_preset=Some(requested.clone());
             }
         }
         if changes.is_empty(){changes.push("Опубликован новый подписанный релиз; проверьте изменения файлов перед установкой".into());}
         Ok(ReleaseRequirements0359{installed_version:Some(old.version),target_version:manifest.version,
             target_signature,changes,proposed_preset,blockers,requires_confirmation:true})
     }).await.map_err(|e|format!("requirements task failed: {e}"))?
+    }).await
 }
 
 async fn validate_native_conflict_scope_0359(manifest:&Manifest,root:&str,key:&str)->Result<(),String>{
