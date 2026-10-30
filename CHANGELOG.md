@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.41.2 — Durable ServerBridge command journal, ACK replay and no-redelivery after lease expiry
+
+- **Live agent execution:** ServerBridge now acquires an exclusive per-journal OS file lock before enabling control. Starting a second JVM/plugin instance against the same identity journal fails closed; a plugin reloaded while its former executor remains active retains the lock until process exit. An execution marker is atomically persisted and fsynced **before** invoking the platform. An interrupted `executing` record can be acknowledged as `indeterminate` and is never invoked a second time.
+- **Durable receipt outbox:** Record the original command ID, runtime, channel, delivery sequence and lease token with its completed result. On each control poll, retry unapplied ACKs before accepting new work. Persist the ACK confirmation together with the channel watermark; losing a Backend response now resends the same proof, **not** the game action. Legacy 0.41.1 journal entries remain readable and immutable.
+- **Safe journal retention:** No compaction deletes execution tombstones. Journal rewrites have SHA-256 integrity seals, unique temporary files, file fsync, atomic rename and POSIX parent-directory fsync; corruption or an unavailable exclusive lock prevents the control agent from starting. Owner-only permissions remain in place on supporting filesystems.
+- **Backend lease recovery:** Both PostgreSQL and in-memory implementations accept a *late durable receipt* only for the original command ID/runtime/channel/token/sequence and only when the pending `indeterminate` was synthesized from an expired/superseded lease. Genuine agent-reported `indeterminate` results and conflicting ACKs remain immutable. The expired lease is never reassigned and command attempts do not increase.
+- **Conservative handler exceptions:** If a platform handler throws or returns no result after durable admission, the agent records `indeterminate` instead of incorrectly asserting that no side effect took place.
+- Runnable Java 21 tests exercise crash markers, journal locks, ACK-loss recovery, tamper rejection, digest conflict, retention beyond the former compaction threshold and JVM-runtime change. Go regression cases cover late ACK, mismatched tokens, immutable agent uncertainty and no-redelivery.
+
+**Verification boundary:** Java 21 compilation and local WAL regression tests passed. Go 1.27.3 is required by `services/api/go.mod`, but only Go 1.23.2 is available in this execution environment; the Go tests and live PostgreSQL/Minecraft HA fault-injection certification remain unexecuted. During a full JVM restart, the old runtime's command may remain `indeterminate` by design; it is not re-executed and is not falsely claimed to have succeeded. Deploy without running mixed old/new agents against the same journal.
+
+
 ## 0.41.1 — Distinguish accepted, executed and platform-verified ServerBridge results
 
 - The live Bridge executor records `accepted` for scheduled shutdown and `executed` for completed handler/dispatcher calls without an observable effect. `succeeded` now requires an observed platform postcondition and an explicit `platform-state-read` receipt. Bukkit maintenance/drain and whitelist changes read state back after invoking the action.

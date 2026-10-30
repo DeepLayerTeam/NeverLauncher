@@ -1641,14 +1641,31 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 	if current.ServerID != serverID || current.RuntimeEpoch != runtimeEpoch || !strings.EqualFold(current.RuntimeID, runtimeID) || current.DeliverySequence != deliverySequence || current.LeaseOwner != leaseOwner || current.LeaseToken != leaseToken {
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control acknowledgement lease mismatch", ErrConflict)
 	}
+	// The agent has durably finished, but its ACK may arrive after expiry of
+	// the original lease or after read-time reconciliation. Preserve the
+	// original lease identity (checked above); NEVER grant a new execution.
+	if recoverableServerBridgeLease0412(current) {
+		if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, commandID, status, string(resultJSON), failure, now.UTC()); err != nil {
+			return model.ServerBridgeControlCommand{}, err
+		}
+		if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,$3,$4,'','ServerBridge Control API',$5) ON CONFLICT(id) DO NOTHING`, "serverbridge-control-late-receipt-"+commandID, serverID, "serverbridge:control:late-receipt:"+status, current.Type+":"+commandID, now.UTC()); err != nil {
+			return model.ServerBridgeControlCommand{}, err
+		}
+		if err = tx.Commit(); err != nil {
+			return model.ServerBridgeControlCommand{}, err
+		}
+		return scanServerBridgeControl0195(r.db.QueryRowContext(ctx, serverBridgeControlSelect0195+` WHERE id=$1`, commandID))
+	}
 	if current.Status == "accepted" || current.Status == "executed" || current.Status == "succeeded" || current.Status == "failed" || current.Status == "unsupported" || current.Status == "indeterminate" {
 		if current.Status != status || !serverBridgeControlStringMapEqual0195(current.Result, result) || current.Error != failure {
 			return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: conflicting control acknowledgement", ErrConflict)
 		}
 		return current, nil
 	}
-	if current.Status != "leased" || !current.LeaseUntil.After(now) {
-		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control command lease expired", ErrConflict)
+	// An expired lease is NOT transferable. A receipt still matching its
+	// original channel/token/sequence may commit the observed outcome.
+	if current.Status != "leased" {
+		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control command lease is not active", ErrConflict)
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, commandID, status, string(resultJSON), failure, now.UTC()); err != nil {
 		return model.ServerBridgeControlCommand{}, err

@@ -754,13 +754,19 @@ func (b *serverBridgeStore) completeControl0195(serverID string, epoch int64, ru
 	if c.ServerID != serverID || c.RuntimeEpoch != epoch || !strings.EqualFold(c.RuntimeID, runtimeID) || c.DeliverySequence != deliverySequence || c.LeaseOwner != leaseOwner || c.LeaseToken != leaseToken {
 		return model.ServerBridgeControlCommand{}, repository.ErrConflict
 	}
+	if recoverableControlLease0412(c) {
+		c.Status, c.Result, c.Error = status, result, failure
+		c.CompletedAt, c.UpdatedAt, c.LeaseUntil = now, now, time.Time{}
+		b.controlCommands[commandID] = c
+		return c, nil
+	}
 	if c.Status == "accepted" || c.Status == "executed" || c.Status == "succeeded" || c.Status == "failed" || c.Status == "unsupported" || c.Status == "indeterminate" {
 		if c.Status != status || !serverBridgeControlStringMapEqual0195(c.Result, result) || c.Error != failure {
 			return model.ServerBridgeControlCommand{}, repository.ErrConflict
 		}
 		return c, nil
 	}
-	if c.Status != "leased" || !c.LeaseUntil.After(now) {
+	if c.Status != "leased" {
 		return model.ServerBridgeControlCommand{}, repository.ErrConflict
 	}
 	c.Status = status
@@ -771,4 +777,19 @@ func (b *serverBridgeStore) completeControl0195(serverID string, epoch int64, ru
 	c.LeaseUntil = time.Time{}
 	b.controlCommands[commandID] = c
 	return c, nil
+}
+
+// In-memory mode follows the same late-receipt policy as PostgreSQL.
+// Only a synthetic lease-loss transition is reversible; an actual agent
+// indeterminate result is immutable.
+func recoverableControlLease0412(c model.ServerBridgeControlCommand) bool {
+	if c.Status != "indeterminate" || len(c.Result) != 0 || c.LeaseOwner == "" || c.LeaseToken == "" {
+		return false
+	}
+	switch c.Error {
+	case "delivered command lost lease without proof of completion",
+		"delivery belongs to a superseded runtime identity":
+		return true
+	}
+	return false
 }

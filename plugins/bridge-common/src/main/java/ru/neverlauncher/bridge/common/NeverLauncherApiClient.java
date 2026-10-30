@@ -74,6 +74,7 @@ public final class NeverLauncherApiClient {
     private final String controlChannelId;
     private final AtomicBoolean controlClosed = new AtomicBoolean(false);
     private volatile ScheduledExecutorService controlExecutor;
+    private volatile boolean controlWorkerStopped = true;
     private volatile BridgeControlExecutor controlHandler;
     private volatile BridgeProtocolNegotiation negotiation;
 
@@ -105,9 +106,15 @@ public final class NeverLauncherApiClient {
                     thread.setDaemon(true);
                     return thread;
                 });
-                this.controlJournal = new BridgeControlJournal(config.identityFile.resolveSibling("control-channel.journal"));
-                this.controlTrust = new BridgeControlTrust(config);
-                this.controlChannelId = this.controlJournal.channelId(this.runtimeIdentity.runtimeId());
+                BridgeControlJournal openedJournal = new BridgeControlJournal(config.identityFile.resolveSibling("control-channel.journal"));
+                try {
+                    this.controlTrust = new BridgeControlTrust(config);
+                    this.controlChannelId = openedJournal.channelId(this.runtimeIdentity.runtimeId());
+                } catch (IOException | RuntimeException e) {
+                    openedJournal.close();
+                    throw e;
+                }
+                this.controlJournal = openedJournal;
                 String crashedRuntime = this.eventJournal.previousUncleanRuntimeId();
                 if (!crashedRuntime.isBlank()) {
                     publishEvent("server.crash", Map.of("previousRuntimeId", crashedRuntime, "detectedBy", "journal-recovery"));
@@ -403,6 +410,7 @@ public final class NeverLauncherApiClient {
         this.controlHandler = executor;
         if (controlExecutor != null && !controlExecutor.isShutdown()) return;
         controlClosed.set(false);
+        controlWorkerStopped = false;
         controlExecutor = Executors.newSingleThreadScheduledExecutor(task -> {
             Thread thread = new Thread(task, "neverlauncher-serverbridge-control");
             thread.setDaemon(true);
@@ -417,7 +425,8 @@ public final class NeverLauncherApiClient {
         controlExecutor = null;
         if (executor != null) {
             executor.shutdownNow();
-            try { executor.awaitTermination(1500, TimeUnit.MILLISECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            try { controlWorkerStopped = executor.awaitTermination(5000, TimeUnit.MILLISECONDS); }
+            catch (InterruptedException e) { Thread.currentThread().interrupt(); controlWorkerStopped = false; }
         }
     }
 
@@ -429,6 +438,11 @@ public final class NeverLauncherApiClient {
     private void pollControlOnce() throws Exception {
         BridgeProtocolNegotiation protocol = negotiateProtocol();
         if (protocol.protocolVersion() < BridgeDefaults.PROTOCOL_VERSION || !protocol.features().contains(BridgeDefaults.FEATURE_CONTROL_API) || !protocol.features().contains(BridgeDefaults.FEATURE_HA_CONTROL_PLANE)) return;
+        // Retry durable receipts before receiving new work. Lost HTTP ACK and plugin reload
+        // must never require invoking the game command again to recover its outcome.
+        for (BridgeControlJournal.Receipt pending : controlJournal.unacknowledged(runtimeIdentity.runtimeId(), controlChannelId)) {
+            sendControlAck(pending);
+        }
         BridgeControlExecutor executor = controlHandler;
         if (executor == null) return;
         long resumeAfter = controlJournal.acknowledgedSequence();
@@ -496,9 +510,9 @@ public final class NeverLauncherApiClient {
                 result = BridgeControlResult.unsupported("adapter_capability_not_advertised");
             } else {
                 try { result = executor.execute(command); }
-                catch (Exception e) { result = BridgeControlResult.failed(e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage())); }
+                catch (Exception e) { result = BridgeControlResult.indeterminate("executor threw after execution was admitted: " + e.getClass().getSimpleName() + ": " + String.valueOf(e.getMessage())); }
             }
-            if (result == null) result = BridgeControlResult.failed("platform executor returned no result");
+            if (result == null) result = BridgeControlResult.indeterminate("platform executor returned no result after admission");
             controlJournal.complete(command, result);
         } else if ("executing".equals(state.phase())) {
             result = BridgeControlResult.indeterminate("previous bridge process/reload stopped after execution began; command was not re-executed");
@@ -507,29 +521,41 @@ public final class NeverLauncherApiClient {
             result = state.result();
             if (result == null) result = BridgeControlResult.indeterminate("control journal result unavailable");
         }
-        sendControlAck(command, result);
+        // Upgrade a legacy execution tombstone to the durable receipt format
+        // using only the original authenticated delivery. Never invoke it again.
+        controlJournal.bindLegacyReceipt(command);
+        // This receipt is already on disk; a lost ACK is retried on subsequent polls.
+        sendControlAck(new BridgeControlJournal.Receipt(command.commandId(), command.runtimeId(),
+            command.deliverySequence(), command.channelId(), command.leaseToken(), result));
     }
 
-    private void sendControlAck(BridgeControlCommand command, BridgeControlResult result) throws Exception {
+    private void sendControlAck(BridgeControlJournal.Receipt receipt) throws Exception {
+        BridgeControlResult result = receipt.result();
         String body = "{" + protocolFields(negotiateProtocol()) +
             ",\"serverId\":" + quote(config.serverId) +
             ",\"runtimeId\":" + quote(runtimeIdentity.runtimeId()) +
-            ",\"commandId\":" + quote(command.commandId()) +
-            ",\"deliverySequence\":" + command.deliverySequence() +
-            ",\"channelId\":" + quote(command.channelId()) +
-            ",\"leaseToken\":" + quote(command.leaseToken()) +
+            ",\"commandId\":" + quote(receipt.commandId()) +
+            ",\"deliverySequence\":" + receipt.sequence() +
+            ",\"channelId\":" + quote(receipt.channelId()) +
+            ",\"leaseToken\":" + quote(receipt.leaseToken()) +
             ",\"status\":" + quote(result.status()) +
             ",\"result\":" + quote(BridgeControlCommand.encodeMap(result.result())) +
             ",\"error\":" + quote(result.error()) + "}";
         HttpResponse<String> response = sendSignedWithFailover("POST", config.controlAckPath(), body);
         if (response.statusCode() < 200 || response.statusCode() >= 300) throw new IOException("control ACK rejected with HTTP " + response.statusCode());
-        controlJournal.acknowledgeSequence(command.deliverySequence());
+        controlJournal.acknowledge(receipt);
     }
 
     /** По возможности выполните окончательный сброс; при недоступности бэкенда авторитетным остаётся журнал. */
     public void closeEventStreamCleanly() {
         closeControlChannel();
         if (!eventClosed.compareAndSet(false, true)) return;
+        // If a plugin callback ignores interruption, keep ownership until JVM
+        // exit rather than letting a reloaded agent issue a concurrent command.
+        if (controlWorkerStopped) {
+            try { if (controlJournal != null) controlJournal.close(); }
+            catch (IOException e) { throw new IllegalStateException("cannot release ServerBridge control journal", e); }
+        }
         try { flushEventStream(); } catch (RuntimeException ignored) {}
         try { if (eventJournal != null) eventJournal.markClean(); } catch (IOException ignored) {}
         if (eventExecutor != null) {
