@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.40.7 — Verified JVM execution, offline repair and clean-host Java selection
+
+- Verify managed runtimes by **executing real Java-8-compatible bytecode** with a random challenge, checking its runtime major and ensuring `java.home` belongs to the installed image. Reject wrapper scripts that merely forge `java -version` output or delegate to the machine's unrelated Java.
+- Repair damaged Temurin installations from the previously SHA-256-verified local archive, including with network access disabled. Preserve the exact original release and archive checksum; do not silently switch to the host Java or an unknown vendor build.
+- After acquiring the inter-process installation lock, reclaim abandoned extraction directories from previous process crashes, without following symlinks. Give quarantined archives and runtimes collision-resistant names for consecutive repairs.
+- In Desktop, install/verify the **signed profile's managed runtime even when a compatible system Java exists**. Never save an automatically resolved Java path as a global custom override: profile changes must select and repair their own runtime.
+- Add a reproducible Java-8 bytecode probe, native JVM tests, damaged/stub runtime rejection and a Linux/macOS clean-host acceptance script using a real pinned JRE/JDK archive (including an interrupted-install repair).
+
+**Verification boundary:** The bundled Java bytecode executes on the available Java 21 host, and the shell acceptance script passes syntax checks. Rust/Tauri builds, a real fresh Temurin download/installation and Minecraft launch have not been certified in this environment, which lacks Cargo/rustc and access to a pinned official runtime archive. The release must not be represented as end-to-end production-accepted until those executions pass.
+
 ## 0.40.6 — Executable legacy Forge inheritance, classpath precedence and Java launch
 
 - Correct the legacy `minecraftArguments` inheritance for Minecraft 1.7.10/1.12.2 and classic Forge LaunchWrapper. A Forge child profile that contains an identity placeholder no longer discards base `--gameDir`, `--version`, asset or access-token arguments. Child flags override only corresponding parent flags, preserving quoted argument boundaries.

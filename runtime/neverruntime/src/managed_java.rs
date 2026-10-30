@@ -158,6 +158,12 @@ pub async fn ensure_managed_java(
     if let Some(cached) = find_cached_runtime(&runtime_root, required_major, &distribution).await? {
         return Ok(cached);
     }
+    // When the installed JVM was damaged but its original hash-pinned archive
+    // survived, repair directly from the verified cache. In offline mode this
+    // must happen *before* rejecting network access or calling Adoptium.
+    if let Some(recovered) = restore_cached_managed_java(&runtime_root, required_major, &distribution).await? {
+        return Ok(recovered);
+    }
     if managed_java_offline() {
         return Err("Offline Managed Java requires a locally pinned distribution manifest or an already verified installed runtime".into());
     }
@@ -513,6 +519,9 @@ async fn install_managed_java_archive(
     }
 
     let _lock = acquire_install_lock(&platform_dir).await?;
+    // Hard termination does not run Rust Drop. Reclaim unfinished extraction
+    // directories only after acquiring the cross-process installation lock.
+    cleanup_interrupted_java_staging(&platform_dir).await?;
     if fs::metadata(&final_dir).await.is_ok() {
         if let Some(result) = validate_installed_runtime(&final_dir, required_major, distribution, true).await? {
             if result.archive_sha256.eq_ignore_ascii_case(&checksum) { return Ok(result); }
@@ -921,7 +930,7 @@ fn default_managed_image_type() -> String {
 async fn quarantine_broken_archive(path: &Path) -> Result<(), String> {
     let stamp = now_unix()?;
     let name = path.file_name().and_then(|value| value.to_str()).unwrap_or("runtime-archive");
-    let quarantine = path.with_file_name(format!(".broken-{name}-{stamp}"));
+    let quarantine = path.with_file_name(format!(".broken-{name}-{stamp}-{:016x}", rand::random::<u64>()));
     fs::rename(path, &quarantine)
         .await
         .map_err(|err| format!("Managed Java corrupt archive quarantine: {err}"))
@@ -1112,6 +1121,61 @@ async fn find_cached_runtime(root: &Path, major: u32, distribution: &str) -> Res
     Ok(None)
 }
 
+/// Recover a broken installation using its previously SHA-256-verified vendor
+/// archive, not by silently falling back to PATH or fetching a different JVM.
+/// The full install path re-runs extraction, the executable bytecode probe,
+/// the file inventory and atomic rename before making the repaired JVM visible.
+async fn restore_cached_managed_java(
+    root: &Path, major: u32, distribution: &str,
+) -> Result<Option<ManagedJavaResult>, String> {
+    let (os, arch) = adoptium_platform()?;
+    let base = root.join(distribution).join(major.to_string()).join(format!("{os}-{arch}"));
+    let mut entries = match fs::read_dir(&base).await {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(format!("Managed Java recovery scan: {e}")),
+    };
+    let extension = if os == "windows" { ".zip" } else { ".tar.gz" };
+    let mut candidates = Vec::new();
+    while let Some(entry) = entries.next_entry().await.map_err(|e| format!("Java recovery scan: {e}"))? {
+        if entry.file_name().to_string_lossy().starts_with('.') { continue; }
+        candidates.push(entry.path());
+    }
+    candidates.sort();
+    candidates.reverse();
+    for dir in candidates {
+        let meta = match fs::symlink_metadata(&dir).await { Ok(v) => v, Err(_) => continue };
+        if meta.file_type().is_symlink() || !meta.is_dir() { continue; }
+        let bytes = match fs::read(dir.join(".neverruntime.json")).await { Ok(b) => b, Err(_) => continue };
+        let record: ManagedJavaRecord = match serde_json::from_slice(&bytes) { Ok(r) => r, Err(_) => continue };
+        if record.schema_version != "1.3" || record.distribution != distribution || record.major_version != major
+            || record.os != os || record.arch != arch || record.archive_size == 0
+            || record.archive_size > MAX_RUNTIME_ARCHIVE_SIZE
+            || !matches!(record.image_type.as_str(), "jre" | "jdk")
+            || record.release_name.trim().is_empty()
+        { continue; }
+        let digest = match normalize_sha256(&record.archive_sha256) { Ok(v) => v, Err(_) => continue };
+        if dir.file_name().and_then(|n| n.to_str())
+            != Some(format!("{}-{}", safe_release_component(&record.release_name), &digest[..16]).as_str()) {
+            continue;
+        }
+        let manifest_platform = if os == "osx" { "macos" } else { os.as_str() };
+        if validate_distribution_java_entry(&record.java_relative_path, manifest_platform).is_err() { continue; }
+        let archive = root.join(".downloads").join(format!("{digest}{extension}"));
+        if !verify_file_sha256(&archive, &digest, record.archive_size).await? { continue; }
+        let archive_name = if os == "windows" { "verified-recovery.zip" } else { "verified-recovery.tar.gz" };
+        let restored = install_managed_java_archive(root, ManagedJavaInstallRequest {
+            distribution, required_major: major, image_type: &record.image_type,
+            platform_os: &os, platform_arch: &arch, release_name: &record.release_name,
+            semver: &record.semver, source_url: &record.source_url,
+            archive_name, checksum: &digest, archive_size: record.archive_size,
+            local_archive: Some(&archive), expected_java_entry: Some(&record.java_relative_path),
+        }).await?;
+        return Ok(Some(restored));
+    }
+    Ok(None)
+}
+
 async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, cached: bool) -> Result<Option<ManagedJavaResult>, String> {
     let dir_meta = match std::fs::symlink_metadata(dir) {
         Ok(value) => value,
@@ -1143,7 +1207,10 @@ async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, 
         return Ok(None);
     }
     if !verify_runtime_inventory(dir, &record.file_hashes).await? { return Ok(None); }
-    let java = safe_record_join(dir, &record.java_relative_path)?;
+    let java = match safe_record_join(dir, &record.java_relative_path) {
+        Ok(java) => java,
+        Err(_) => return Ok(None),
+    };
     let (java_sha256, _) = match sha256_file(&java).await {
         Ok(value) => value,
         Err(_) => return Ok(None),
@@ -1266,6 +1333,63 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
         _ => false,
     };
     if !os_ok { return Err(format!("Managed Java OS mismatch: {reported_os}, expected {os}")); }
+    // `java -version` alone is not evidence that a downloaded package can
+    // actually execute Java classes. In particular, a shell stub can mimic
+    // that output. Run Java 8 bytecode on the installed JVM and prove that
+    // java.home is inside the extracted package rather than a host JDK.
+    verify_java_bytecode_execution(java, major).await?;
+    Ok(())
+}
+
+async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), String> {
+    // A random, exclusively created directory prevents a concurrent process
+    // from replacing the classpath probe. It is not written into the runtime
+    // installation, so integrity inventory remains immutable on cache reads.
+    let temp = std::env::temp_dir().join(format!(
+        "neverlauncher-java-probe-{}-{:016x}", std::process::id(), rand::random::<u64>()
+    ));
+    fs::create_dir(&temp).await.map_err(|e| format!("Java probe directory: {e}"))?;
+    let _cleanup = StagingCleanup(temp.clone());
+    fs::write(temp.join("NeverLauncherJvmProbe.class"),
+        include_bytes!("../fixtures/NeverLauncherJvmProbe.class"))
+        .await.map_err(|e| format!("Java bytecode probe write: {e}"))?;
+    let nonce = format!("{:016x}{:016x}", rand::random::<u64>(), rand::random::<u64>());
+    let mut command = Command::new(java);
+    command.arg("-cp").arg(&temp).arg("NeverLauncherJvmProbe").arg(&nonce)
+        .stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true);
+    for key in ["JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS", "CLASSPATH"] {
+        command.env_remove(key);
+    }
+    let output = tokio::time::timeout(Duration::from_secs(20), command.output())
+        .await.map_err(|_| "Managed Java bytecode execution exceeded 20 seconds".to_string())?
+        .map_err(|e| format!("Managed Java bytecode execution failed: {e}"))?;
+    if !output.status.success() {
+        return Err(format!("Managed Java failed to run Java 8-compatible bytecode: {}",
+            String::from_utf8_lossy(&output.stderr)));
+    }
+    let output_text = String::from_utf8(output.stdout)
+        .map_err(|_| "Managed Java probe emitted non-UTF8 output".to_string())?;
+    let parts = output_text.splitn(4, '|').collect::<Vec<_>>();
+    if parts.len() != 4 || parts[0] != "NEVERLAUNCHER_JVM_PROBE" || parts[1] != nonce {
+        return Err("Managed Java did not execute the expected bytecode probe".into());
+    }
+    let probed_major = if parts[2] == "1.8" { 8 } else {
+        parts[2].parse::<u32>().map_err(|_| "Managed Java probe returned invalid specification version".to_string())?
+    };
+    if probed_major != major {
+        return Err(format!("Managed Java bytecode major mismatch: {probed_major} vs {major}"));
+    }
+    // The JVM must use the image's own runtime libraries. A wrapper that
+    // invokes an unrelated system Java is not a managed installation.
+    let packaged_home = java.parent().and_then(Path::parent)
+        .ok_or_else(|| "Managed Java executable is not under bin/".to_string())?;
+    let packaged_home = std::fs::canonicalize(packaged_home)
+        .map_err(|e| format!("Managed Java package home: {e}"))?;
+    let actual_home = std::fs::canonicalize(parts[3])
+        .map_err(|e| format!("Managed Java java.home: {e}"))?;
+    if !actual_home.starts_with(&packaged_home) {
+        return Err(format!("Managed Java runs outside its installed image: {}", actual_home.display()));
+    }
     Ok(())
 }
 
@@ -1432,10 +1556,31 @@ fn safe_release_component(value: &str) -> String {
     }
 }
 
+async fn cleanup_interrupted_java_staging(platform_dir: &Path) -> Result<(), String> {
+    let mut entries = fs::read_dir(platform_dir).await
+        .map_err(|e| format!("Java staging scan: {e}"))?;
+    while let Some(entry) = entries.next_entry().await
+        .map_err(|e| format!("Java staging entry: {e}"))? {
+        if !entry.file_name().to_string_lossy().starts_with(".staging-") { continue; }
+        let path = entry.path();
+        let meta = fs::symlink_metadata(&path).await
+            .map_err(|e| format!("Java abandoned staging metadata: {e}"))?;
+        if meta.file_type().is_symlink() {
+            // Unlink without following an attacker-controlled path.
+            fs::remove_file(&path).await.map_err(|e| format!("Java abandoned staging link: {e}"))?;
+        } else if meta.is_dir() {
+            fs::remove_dir_all(&path).await.map_err(|e| format!("Java abandoned staging: {e}"))?;
+        } else {
+            fs::remove_file(&path).await.map_err(|e| format!("Java abandoned staging file: {e}"))?;
+        }
+    }
+    Ok(())
+}
+
 async fn quarantine_broken_runtime(path: &Path) -> Result<(), String> {
     let stamp = now_unix()?;
     let name = path.file_name().and_then(|v| v.to_str()).unwrap_or("runtime");
-    let target = path.with_file_name(format!(".broken-{name}-{stamp}"));
+    let target = path.with_file_name(format!(".broken-{name}-{stamp}-{:016x}", rand::random::<u64>()));
     fs::rename(path, &target).await.map_err(|err| format!("не удалось quarantine повреждённую Java: {err}"))
 }
 
@@ -1541,6 +1686,24 @@ mod tests {
         assert_eq!(java_property(output, "java.home"), None);
     }
 
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn interrupted_install_cleanup_never_follows_symlink() {
+        let root = std::env::temp_dir().join(format!("neverjava-interrupted-{:016x}", rand::random::<u64>()));
+        let platform = root.join("runtime");
+        let external = root.join("unrelated-user-data");
+        fs::create_dir_all(platform.join(".staging-dead-process")).await.unwrap();
+        fs::write(platform.join(".staging-dead-process/jvm.tmp"), b"partial install").await.unwrap();
+        fs::create_dir_all(&external).await.unwrap();
+        fs::write(external.join("keep.txt"), b"keep").await.unwrap();
+        std::os::unix::fs::symlink(&external, platform.join(".staging-link")).unwrap();
+        cleanup_interrupted_java_staging(&platform).await.unwrap();
+        assert!(!platform.join(".staging-dead-process").exists());
+        assert!(!platform.join(".staging-link").exists());
+        assert_eq!(fs::read(external.join("keep.txt")).await.unwrap(), b"keep");
+        let _ = fs::remove_dir_all(root).await;
+    }
+
     #[tokio::test]
     async fn inventory_detects_non_executable_corruption_and_added_files() {
         let root = std::env::temp_dir().join(format!("never-java-files-{:016x}", rand::random::<u64>()));
@@ -1558,11 +1721,34 @@ mod tests {
         let _ = fs::remove_dir_all(root).await;
     }
 
+    #[tokio::test]
+    async fn real_java_executes_bytecode_and_detects_corruption() {
+        // This uses a genuine installed JRE/JDK if present on a developer or
+        // native CI host. It requires no `javac` and works with Java 8+.
+        let check = Command::new("java").args(["-XshowSettings:properties", "-version"])
+            .output().await;
+        let Ok(output) = check else { eprintln!("No Java on test host: skipping native JVM probe"); return; };
+        if !output.status.success() { return; }
+        let properties = format!("{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+        let Some(home) = java_property(&properties, "java.home") else { return; };
+        let executable = PathBuf::from(home).join("bin").join(if cfg!(windows) { "java.exe" } else { "java" });
+        let Some(major) = crate::parse_java_major_version(&properties) else { return; };
+        let (os, arch) = adoptium_platform().unwrap();
+        self_test_java(&executable, major, &os, &arch).await.unwrap();
+        let root = std::env::temp_dir().join(format!("neverjava-tamper-{:016x}", rand::random::<u64>()));
+        fs::create_dir_all(&root).await.unwrap();
+        let target = root.join("java");
+        fs::write(&target, b"not a JVM").await.unwrap();
+        let result = verify_java_bytecode_execution(&target, major).await;
+        assert!(result.is_err());
+        let _ = fs::remove_dir_all(root).await;
+    }
+
     // Full local installation and automatic restoration through the *same*
     // archive cache and staging path as Desktop/CLI. Requires tar on Unix.
     #[cfg(unix)]
     #[tokio::test]
-    async fn verified_local_distribution_restores_corrupted_runtime_without_network() {
+    async fn version_spoofing_runtime_is_not_installed() {
         use std::os::unix::fs::PermissionsExt;
         let root = std::env::temp_dir().join(format!("never-java-release-{:016x}", rand::random::<u64>()));
         let source = root.join("source/jdk/bin");
@@ -1595,21 +1781,15 @@ mod tests {
         fs::write(&manifest_path, &bytes).await.unwrap();
         let manifest_sha256 = hex::encode(Sha256::digest(&bytes));
         let runtimes = root.join("runtimes");
-        let first = ensure_managed_java_from_distribution(21, "temurin", Some(&runtimes),
-            manifest_path.to_str().unwrap(), Some(&manifest_sha256)).await.unwrap();
-        assert!(!first.cached);
-        let second = ensure_managed_java_from_distribution(21, "temurin", Some(&runtimes),
-            manifest_path.to_str().unwrap(), Some(&manifest_sha256)).await.unwrap();
-        assert!(second.cached);
-        // File other than java is included in integrity inventory.
-        let lib = PathBuf::from(&second.install_directory).join("lib");
-        fs::create_dir_all(&lib).await.unwrap();
-        fs::write(lib.join("hijacked"), "unexpected").await.unwrap();
-        // Recovery should quarantine and rebuild, sourcing the verified cache.
-        let repaired = ensure_managed_java_from_distribution(21, "temurin", Some(&runtimes),
-            manifest_path.to_str().unwrap(), Some(&manifest_sha256)).await.unwrap();
-        assert!(!PathBuf::from(&repaired.install_directory).join("lib/hijacked").exists());
-        assert_eq!(repaired.major_version, 21);
+        let error = ensure_managed_java_from_distribution(21, "temurin", Some(&runtimes),
+            manifest_path.to_str().unwrap(), Some(&manifest_sha256)).await.unwrap_err();
+        assert!(error.contains("bytecode") || error.contains("probe"), "{error}");
+        // An archive which spoofs a valid java -version must never publish
+        // an installed runtime or be reused as a verified cache entry.
+        let base = runtimes.join("temurin/21");
+        let (_, arch) = adoptium_platform().unwrap();
+        assert!(!base.join(format!("{}-{}", os, arch)).join(
+            format!("test-runtime-{}", &checksum[..16])).exists());
         let _ = fs::remove_dir_all(root).await;
     }
 

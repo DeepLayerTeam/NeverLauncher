@@ -1541,12 +1541,11 @@ function App() {
       const activeManifest = manifest;
       const required = activeManifest?.runtime.java.majorVersion || 17;
       const distribution = activeManifest?.runtime.java.distribution || 'temurin';
-      let result = await callTauri<JavaInfoResult>('check_java', {
-        javaPath: settings.javaPath || null,
-        requiredMajorVersion: required,
-      });
-      if (!result.compatible && !settings.javaPath && distribution.toLowerCase() !== 'system') {
-        if (!activeManifest || !settings.pinnedPublicKey) throw new Error('Отсутствует проверенный подписанный профиль для установки Java');
+      let result: JavaInfoResult;
+      if (activeManifest && !settings.javaPath && distribution.toLowerCase() !== 'system') {
+        if (!settings.pinnedPublicKey) throw new Error('Отсутствует закреплённый ключ подписанного профиля Java');
+        // The signed distribution is authoritative: a matching system Java
+        // must not silently replace the runtime the game will actually use.
         const managed = await callTauri<ManagedJavaResult>('ensure_profile_managed_java', {
           manifest: activeManifest,
           pinnedPublicKey: settings.pinnedPublicKey,
@@ -1554,6 +1553,11 @@ function App() {
         log(managed.message);
         result = await callTauri<JavaInfoResult>('check_java', {
           javaPath: managed.javaExecutable,
+          requiredMajorVersion: required,
+        });
+      } else {
+        result = await callTauri<JavaInfoResult>('check_java', {
+          javaPath: settings.javaPath || null,
           requiredMajorVersion: required,
         });
       }
@@ -2288,11 +2292,14 @@ function App() {
       });
       if(!check.valid)throw new Error(`Системные требования: ${check.messages.join('; ')}`);
       setSettingsCheck(check);
-      let java=await callTauri<JavaInfoResult>('check_java',{javaPath:settings.javaPath||null,requiredMajorVersion:loaded.runtime.java.majorVersion});
-      if(!java.compatible&& !settings.javaPath&&loaded.runtime.java.distribution.toLowerCase()!=='system'){
+      let java:JavaInfoResult;
+      if(!settings.javaPath&&loaded.runtime.java.distribution.toLowerCase()!=='system'){
+        // Keep the managed Java path profile-scoped. Persisting it as a custom
+        // path pins a previous Java major and prevents repair on profile switch.
         const installed=await callTauri<ManagedJavaResult>('ensure_profile_managed_java',{manifest:loaded,pinnedPublicKey:p.pinnedPublicKey});
         java=await callTauri<JavaInfoResult>('check_java',{javaPath:installed.javaExecutable,requiredMajorVersion:loaded.runtime.java.majorVersion});
-        if(java.compatible)patchSettings('javaPath',installed.javaExecutable);
+      }else{
+        java=await callTauri<JavaInfoResult>('check_java',{javaPath:settings.javaPath||null,requiredMajorVersion:loaded.runtime.java.majorVersion});
       }
       if(!java.compatible)throw new Error(`Java не подходит: ${java.message}`);
       setJavaInfo(java);
