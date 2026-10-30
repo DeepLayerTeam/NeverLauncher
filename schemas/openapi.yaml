@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.39.0. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.39.6. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -17152,6 +17152,49 @@
           },
           {
             "name": "channel",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "security": []
+      }
+    },
+    "/api/v1/projects/{projectId}/profiles/{profileId}/component-permissions": {
+      "get": {
+        "operationId": "get_projects_by_projectId_profiles_by_profileId_component_permissions",
+        "tags": [
+          "projects"
+        ],
+        "summary": "GET /api/v1/projects/{projectId}/profiles/{profileId}/component-permissions",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "profileId",
             "in": "path",
             "required": true,
             "schema": {

@@ -330,3 +330,28 @@ test('0.39.5 abort after server write cannot falsely report that change was undo
   const actual=await client.uploadSkin(new File([bytes],'skin.png',{type:'image/png'}),'classic',undefined,ctrl.signal);
   assert.equal(actual.skins[0].id,'new');
 });
+
+
+test('0.39.6 vault account operations carry verified Never context instead of an unbound SID',async()=>{
+  const received=[];
+  const neverToken='never-bearer-live-0396';
+  const client=new OfficialMinecraftClient0257('https://backend.example',neverToken,'sid-0396',async(command,args)=>{
+    received.push({command,args});
+    if(command==='official_identity_accounts_0267')return [];
+    if(command==='official_identity_logout_0267')return;
+    if(command==='official_identity_status_0262')return null;
+    if(command==='official_identity_disconnect_0262')return;
+    throw Error(command);
+  });
+  assert.deepEqual(await client.accounts(),[]);
+  await client.logout(profile.id);
+  await client.disconnect();
+  const protectedCalls=received.filter(r=>['official_identity_accounts_0267','official_identity_logout_0267','official_identity_disconnect_0262'].includes(r.command));
+  assert.equal(protectedCalls.length,3);
+  for(const {args} of protectedCalls){
+    assert.deepEqual(args.context,{backendUrl:'https://backend.example',neverToken,neverSessionId:'sid-0396'});
+    assert.equal(args.neverSessionId,undefined);
+    assert.equal(args.backendUrl,undefined);
+    assert.ok(!JSON.stringify(args).includes('minecraft_token'));
+  }
+});

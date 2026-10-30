@@ -117,9 +117,7 @@ export class OfficialMinecraftClient0257 {
   }
   /** Metadata-only directory: credentials never leave the Rust OS vault. */
   async accounts(): Promise<OfficialAccount0267[]> {
-    return this.native('official_identity_accounts_0267', {
-      backendUrl: this.backendUrl, neverSessionId: this.neverSessionId
-    });
+    return this.call('official_identity_accounts_0267');
   }
   /** A selection becomes active only after Rust validates the provider profile/UUID. */
   async selectAccount(accountId: string): Promise<OfficialProfile0257> {
@@ -141,14 +139,12 @@ export class OfficialMinecraftClient0257 {
   async logout(accountId: string): Promise<OfficialProfile0257 | null> {
     ++this.generation;
     this.active = false;
-    await this.native('official_identity_logout_0267', {
-      backendUrl: this.backendUrl, neverSessionId: this.neverSessionId, accountId
-    });
+    await this.call('official_identity_logout_0267', {accountId});
     return this.restore();
   }
   async disconnect(): Promise<void> {
     this.clear();
-    await this.native('official_identity_disconnect_0262', {backendUrl:this.backendUrl, neverSessionId:this.neverSessionId});
+    await this.call('official_identity_disconnect_0262');
   }
   /** An official change is complete only with a matching, verified native
    * account and the state returned by Minecraft Services. The renderer never

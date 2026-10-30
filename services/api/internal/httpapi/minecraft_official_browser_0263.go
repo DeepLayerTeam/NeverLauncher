@@ -36,7 +36,8 @@ func validateOfficialBrowserRequest0263(v officialBrowserRequest0263) error {
 }
 
 func (s Server) officialBrowserConfig0263(w http.ResponseWriter, r *http.Request) {
-	if _, err := s.officialActor0257(r); err != nil {
+	claims, err := s.officialActor0257(r)
+	if err != nil {
 		writeError(w, 401, "authentication required")
 		return
 	}
@@ -44,7 +45,11 @@ func (s Server) officialBrowserConfig0263(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	officialWrite0257(w, 200, map[string]any{"clientId": policy.ClientID, "enabled": policy.Enabled, "browserEnabled": policy.BrowserEnabled, "deviceEnabled": policy.DeviceEnabled, "issuer": policy.Issuer})
+	// Native Desktop must prove the bearer belongs to the exact session used
+	// to address OS vault slots. Without this an arbitrary renderer-supplied
+	// session ID could read a different local user's Microsoft credentials.
+	w.Header().Set("Cache-Control", "no-store")
+	officialWrite0257(w, 200, map[string]any{"clientId": policy.ClientID, "enabled": policy.Enabled, "browserEnabled": policy.BrowserEnabled, "deviceEnabled": policy.DeviceEnabled, "issuer": policy.Issuer, "neverSessionId": claims.SessionID, "neverUserId": claims.Sub})
 }
 
 // provider is a narrow injectable seam for verifying the complete token chain
