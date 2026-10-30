@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.41.5 — Executable Bukkit-family control and observed command outcomes
+
+- **Live platform handlers:** update the shared Bukkit-family production plugin used by Spigot, Paper, Purpur, and Folia. Whitelist enable/disable/add/remove and name bans/pardons now report `succeeded` only when actual platform readback matches the requested state. A command dispatcher returning `true` without changing the platform is `indeterminate`, not a verified success.
+- **Observed player kick:** register a player UUID-specific completion waiter *before* invoking `kickPlayer`, and correlate a `PlayerQuitEvent` emitted by the game server to the original command. Folia executes the kick via the player's EntityScheduler; other Bukkit-family implementations use the main server scheduler. An absent quit, retired player, plugin shutdown or scheduling failure cannot be promoted to verified success. Timeout and duplicate concurrent kicks do not create an additional physical kick.
+- **Backend verification:** validate `player-quit-event` evidence (`username`, `uuid`, `online=false`) and `platform-state-read` for `ban.add/remove` against the original signed, persisted command. Preserve `executed` for console, broadcast and world-save dispatch: these APIs do not prove delivery to every recipient or durable on-disk persistence.
+- **Folia partial failures:** broadcast using per-player EntityScheduler; count each retirement/rejection or failed send once and return `indeterminate` on partial completion, never unconditional success. Server shutdown is queued without blocking the shared heartbeat I/O executor and remains `accepted` until the separate host lifecycle provides genuine process confirmation.
+- **Offline regression:** `python3 e2e/scripts/test-bukkit-control-0415.py` compiles the *shipping Java plugin source* against a deterministic Bukkit API simulator and exercises all four platform adapters, readback mismatches, control permissions, Folia entity retirement, delayed ACK semantics, duplicate kicks and plugin teardown (117 checks locally).
+
+**Verification boundary:** Java 21 offline command-path checks passed. No genuine Spigot/Paper/Purpur/Folia distribution JARs were available for executable live-server tests; the real game server integration, upstream API dependency build, full Go 1.27.3 Backend tests and cross-runtime PostgreSQL ACK E2E remain **unverified**. This change is production-path source code, not independently certified production release packages. Do not represent `executed` as verified effects.
+
 ## 0.41.4 — Verified real JVM lifecycle, supervised shutdown and crash recovery
 
 - **Real JVM startup evidence:** `nl server-bridge host start` no longer returns an optimistic `starting` acknowledgment after four seconds. It waits for the exact supervisor PID, OS-verified child PID and matching process identities; a failed, crashed, prematurely exited or unverified JVM is not reported as running. A 30-second timeout is an *unverified outcome*, not permission to retry blindly.

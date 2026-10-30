@@ -459,6 +459,15 @@ func classifyBridgeControlOutcome0411(command model.ServerBridgeControlCommand, 
 	if status != "succeeded" {
 		return status
 	}
+	// PlayerQuitEvent is observed by the agent's registered Bukkit/Folia event
+	// listener. It proves departure, not merely a kickPlayer() invocation.
+	if command.Type == "player.kick" && result["verification"] == "player-quit-event" {
+		if command.Payload["username"] != "" && result["username"] == command.Payload["username"] &&
+			result["online"] == "false" && result["uuid"] != "" {
+			return "succeeded"
+		}
+		return "executed"
+	}
 	if result["verification"] != "platform-state-read" {
 		return "executed"
 	}
@@ -477,6 +486,11 @@ func classifyBridgeControlOutcome0411(command model.ServerBridgeControlCommand, 
 	case "whitelist.add", "whitelist.remove":
 		expected := strconv.FormatBool(command.Type == "whitelist.add")
 		if command.Payload["username"] != "" && result["username"] == command.Payload["username"] && result["whitelisted"] == expected {
+			return "succeeded"
+		}
+	case "ban.add", "ban.remove":
+		expected := strconv.FormatBool(command.Type == "ban.add")
+		if command.Payload["username"] != "" && result["username"] == command.Payload["username"] && result["banned"] == expected {
 			return "succeeded"
 		}
 	}

@@ -34,6 +34,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -57,6 +59,9 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
     private final AtomicBoolean stopping = new AtomicBoolean(false);
     private final AtomicBoolean maintenanceMode = new AtomicBoolean(false);
     private final AtomicBoolean drainMode = new AtomicBoolean(false);
+    // An ACK of player.kick must be correlated with a real quit event, not the
+    // return from kickPlayer(). The map is scoped to this running plugin instance.
+    private final ConcurrentHashMap<UUID, CompletableFuture<BridgeControlResult>> pendingKicks = new ConcurrentHashMap<>();
     private volatile RuntimeState runtime;
     private volatile boolean lastHeartbeatOK;
     private volatile Instant lastHeartbeatAt;
@@ -71,6 +76,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
 
     @Override
     public final void onEnable() {
+        stopping.set(false);
         BukkitFamilyPlatform actual = BukkitFamilyPlatform.detect();
         if (actual != expectedPlatform) {
             getLogger().severe("NeverLauncher " + expectedPlatform.displayName() + " Bridge cannot run on detected platform " + actual.displayName() + ". Install neverlauncher-" + actual.id() + "-bridge instead.");
@@ -117,6 +123,10 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
     @Override
     public final void onDisable() {
         stopping.set(true);
+        // Never leave an outstanding command waiting on an event which can no
+        // longer be emitted by this plugin. Do not turn shutdown into success.
+        pendingKicks.forEach((uuid, pending) -> pending.complete(BridgeControlResult.indeterminate("plugin_disabled_before_kick_confirmation")));
+        pendingKicks.clear();
         RuntimeState state = runtime;
         if (state != null) {
             state.api.publishEvent("server.shutdown", Map.of("platform", expectedPlatform.id()));
@@ -173,6 +183,15 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
 
     @EventHandler
     public final void onPlayerQuit(PlayerQuitEvent event) {
+        org.bukkit.entity.Player player = event.getPlayer();
+        CompletableFuture<BridgeControlResult> pending = pendingKicks.remove(player.getUniqueId());
+        if (pending != null) {
+            // A PlayerQuitEvent is an actual observed disconnect, unlike a
+            // scheduler/dispatcher ACK. It can occur on a Folia entity thread.
+            pending.complete(new BridgeControlResult("succeeded", Map.of(
+                "verification", "player-quit-event", "username", player.getName(),
+                "uuid", player.getUniqueId().toString(), "online", "false"), ""));
+        }
         RuntimeState state = runtime;
         if (state != null) state.api.publishEvent("player.quit", Map.of("username", event.getPlayer().getName(), "uuid", String.valueOf(event.getPlayer().getUniqueId())));
     }
@@ -229,6 +248,9 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     RuntimeState next = loadRuntime();
                     runtime = next;
                     if (previous != null) previous.api.closeEventStreamCleanly();
+                    // Preserve live admission state during /nlbridge reload;
+                    // new API client must not report a false routing mode.
+                    next.api.setRoutingModes(maintenanceMode.get(), drainMode.get());
                     next.api.startControlChannel(this::executeControl);
                     next.api.publishEvent("server.ready", Map.of("platform", expectedPlatform.id(), "reason", "reload"));
                     triggerHeartbeat();
@@ -505,14 +527,22 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 : BridgeControlResult.indeterminate("drain_state_not_observed");
         }
         if ("server.shutdown".equals(type)) {
-            scheduleServerTask(() -> {
-                try { Thread.sleep(1500L); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
-                scheduleBukkitTask(Bukkit::shutdown);
-            });
+            ScheduledExecutorService executor = networkExecutor;
+            if (executor == null || executor.isShutdown() || stopping.get())
+                return BridgeControlResult.failed("shutdown_scheduler_unavailable");
+            try {
+                // Delayed enqueue must not block the heartbeat / event I/O worker.
+                executor.schedule(() -> {
+                    try { scheduleBukkitTask(Bukkit::shutdown); }
+                    catch (RuntimeException e) { getLogger().severe("Minecraft shutdown scheduling failed: " + safeError(e)); }
+                }, 1500L, TimeUnit.MILLISECONDS);
+            } catch (java.util.concurrent.RejectedExecutionException e) {
+                return BridgeControlResult.failed("shutdown_scheduler_rejected");
+            }
             return BridgeControlResult.accepted(Map.of("scheduled", "true", "graceMillis", "1500"));
         }
-        if (adapterProfile.supports(BridgeAdapterCapability.REGION_SAFE_SCHEDULER) && "player.kick".equals(type)) {
-            return executeFoliaPlayerKick(command);
+        if ("player.kick".equals(type)) {
+            return executePlayerKick(command);
         }
         if (adapterProfile.supports(BridgeAdapterCapability.REGION_SAFE_SCHEDULER) && "message.broadcast".equals(type)) {
             return executeFoliaBroadcast(command);
@@ -533,13 +563,6 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         Map<String,String> payload = command.payload();
         String type = command.type();
         switch (type) {
-            case "player.kick" -> {
-                String username = safeUsername(payload.get("username"));
-                org.bukkit.entity.Player player = Bukkit.getPlayerExact(username);
-                if (player == null) return BridgeControlResult.failed("player_not_online");
-                player.kickPlayer(safeLine(payload.getOrDefault("reason", "Disconnected by server operator"), 512));
-                return BridgeControlResult.ok(Map.of("username", username));
-            }
             case "message.broadcast" -> {
                 String message = safeLine(payload.getOrDefault("message", ""), 1024);
                 int recipients = Bukkit.getOnlinePlayers().size();
@@ -571,7 +594,14 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 String root = type.endsWith(".add") ? "ban " : "pardon ";
                 String reason = type.endsWith(".add") ? safeLine(payload.getOrDefault("reason", "Banned by server operator"), 256) : "";
                 boolean ok = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), root + username + (reason.isBlank() ? "" : " " + reason));
-                return ok ? BridgeControlResult.ok(Map.of("username", username, "banned", Boolean.toString(type.endsWith(".add")))) : BridgeControlResult.failed("platform_command_rejected");
+                if (!ok) return BridgeControlResult.failed("platform_command_rejected");
+                // The command dispatcher can be overridden by other plugins.
+                // A true return alone never proves a ban was changed.
+                boolean observed = Bukkit.getOfflinePlayer(username).isBanned();
+                boolean expected = type.endsWith(".add");
+                return observed == expected
+                    ? BridgeControlResult.verified(Map.of("username", username, "banned", Boolean.toString(observed)))
+                    : BridgeControlResult.indeterminate("ban_postcondition_not_observed");
             }
             case "server.save" -> {
                 boolean ok = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "save-all flush");
@@ -589,35 +619,104 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         }
     }
 
-    private BridgeControlResult executeFoliaPlayerKick(BridgeControlCommand command) throws Exception {
-        CompletableFuture<BridgeControlResult> future = new CompletableFuture<>();
+    private BridgeControlResult executePlayerKick(BridgeControlCommand command) throws Exception {
         String username = safeUsername(command.payload().get("username"));
         String reason = safeLine(command.payload().getOrDefault("reason", "Disconnected by server operator"), 512);
+        CompletableFuture<BridgeControlResult> confirmation = new CompletableFuture<>();
+        // All platform access is dispatched to the corresponding server scheduler.
+        // The remote control worker waits, never a Bukkit or Folia game thread.
         scheduleBukkitTask(() -> {
-            org.bukkit.entity.Player player = Bukkit.getPlayerExact(username);
-            if (player == null) { future.complete(BridgeControlResult.failed("player_not_online")); return; }
-            boolean scheduled = scheduleFoliaEntityTask(player,
-                () -> { try { player.kickPlayer(reason); future.complete(BridgeControlResult.ok(Map.of("username", username))); } catch (Throwable t) { future.completeExceptionally(t); } },
-                () -> future.complete(BridgeControlResult.failed("player_retired_before_control")));
-            if (!scheduled) future.complete(BridgeControlResult.failed("player_scheduler_rejected_control"));
+            if (confirmation.isDone() || stopping.get()) return;
+            try {
+                org.bukkit.entity.Player player = Bukkit.getPlayerExact(username);
+                if (player == null) {
+                    confirmation.complete(BridgeControlResult.failed("player_not_online"));
+                    return;
+                }
+                UUID id = player.getUniqueId();
+                CompletableFuture<BridgeControlResult> previous = pendingKicks.putIfAbsent(id, confirmation);
+                if (previous != null) {
+                    confirmation.complete(BridgeControlResult.failed("player_kick_already_in_progress"));
+                    return;
+                }
+                // Remove this waiter on timeout / failure without removing a
+                // newer waiter that may have been installed for the same player.
+                confirmation.whenComplete((result, error) -> pendingKicks.remove(id, confirmation));
+                Runnable kick = () -> {
+                    if (confirmation.isDone() || stopping.get()) return;
+                    try { player.kickPlayer(reason); }
+                    catch (Throwable error) {
+                        // The player may already have quit; do not overwrite
+                        // a confirmed PlayerQuitEvent result with an exception.
+                        confirmation.complete(BridgeControlResult.indeterminate("player_kick_invocation_failed"));
+                        getLogger().warning("NeverLauncher player kick invocation: " + safeError(error));
+                    }
+                };
+                if (adapterProfile.supports(BridgeAdapterCapability.REGION_SAFE_SCHEDULER)) {
+                    boolean scheduled = scheduleFoliaEntityTask(player, kick,
+                        () -> confirmation.complete(BridgeControlResult.indeterminate("player_retired_before_control")));
+                    if (!scheduled) confirmation.complete(BridgeControlResult.failed("player_scheduler_rejected_control"));
+                } else {
+                    kick.run();
+                }
+            } catch (Throwable error) {
+                confirmation.complete(BridgeControlResult.indeterminate("player_kick_scheduler_failed"));
+                getLogger().warning("NeverLauncher player kick scheduling: " + safeError(error));
+            }
         });
-        return awaitControlResult(future);
+        try {
+            return confirmation.get(10L, TimeUnit.SECONDS);
+        } catch (TimeoutException timeout) {
+            confirmation.complete(BridgeControlResult.indeterminate("player_quit_not_observed"));
+            return confirmation.getNow(BridgeControlResult.indeterminate("player_quit_not_observed"));
+        }
     }
 
     private BridgeControlResult executeFoliaBroadcast(BridgeControlCommand command) throws Exception {
         CompletableFuture<BridgeControlResult> future = new CompletableFuture<>();
         String message = safeLine(command.payload().getOrDefault("message", ""), 1024);
         scheduleBukkitTask(() -> {
-            java.util.List<org.bukkit.entity.Player> players = new java.util.ArrayList<>(Bukkit.getOnlinePlayers());
-            if (players.isEmpty()) { future.complete(BridgeControlResult.ok(Map.of("recipients", "0"))); return; }
-            java.util.concurrent.atomic.AtomicInteger remaining = new java.util.concurrent.atomic.AtomicInteger(players.size());
-            java.util.concurrent.atomic.AtomicInteger delivered = new java.util.concurrent.atomic.AtomicInteger();
-            Runnable finish = () -> { if (remaining.decrementAndGet() == 0) future.complete(BridgeControlResult.ok(Map.of("recipients", Integer.toString(delivered.get())))); };
-            for (org.bukkit.entity.Player player : players) {
-                boolean scheduled = scheduleFoliaEntityTask(player,
-                    () -> { try { player.sendMessage(message); delivered.incrementAndGet(); } finally { finish.run(); } },
-                    finish);
-                if (!scheduled) finish.run();
+            if (future.isDone() || stopping.get()) return;
+            try {
+                java.util.List<org.bukkit.entity.Player> players = new java.util.ArrayList<>(Bukkit.getOnlinePlayers());
+                if (players.isEmpty()) { future.complete(BridgeControlResult.ok(Map.of("recipients", "0"))); return; }
+                java.util.concurrent.atomic.AtomicInteger remaining = new java.util.concurrent.atomic.AtomicInteger(players.size());
+                java.util.concurrent.atomic.AtomicInteger delivered = new java.util.concurrent.atomic.AtomicInteger();
+                java.util.concurrent.atomic.AtomicInteger failed = new java.util.concurrent.atomic.AtomicInteger();
+                Runnable finish = () -> {
+                    if (remaining.decrementAndGet() == 0) {
+                        // A partial broadcast has unknown visible effects. It
+                        // must not be represented as a successful full delivery.
+                        future.complete(failed.get() == 0
+                            ? BridgeControlResult.ok(Map.of("recipients", Integer.toString(delivered.get())))
+                            : BridgeControlResult.indeterminate("broadcast_partial_delivery"));
+                    }
+                };
+                for (org.bukkit.entity.Player player : players) {
+                    java.util.concurrent.atomic.AtomicBoolean settled = new java.util.concurrent.atomic.AtomicBoolean();
+                    Runnable rejected = () -> {
+                        // A Folia scheduler may report false AND race with
+                        // a retired callback; count each recipient once.
+                        if (settled.compareAndSet(false, true)) {
+                            failed.incrementAndGet();
+                            finish.run();
+                        }
+                    };
+                    Runnable task = () -> {
+                        if (future.isDone() || stopping.get()) { rejected.run(); return; }
+                        try { player.sendMessage(message); delivered.incrementAndGet(); }
+                        catch (Throwable error) { failed.incrementAndGet(); }
+                        finally { if (settled.compareAndSet(false, true)) finish.run(); }
+                    };
+                    try {
+                        boolean scheduled = scheduleFoliaEntityTask(player, task, rejected);
+                        if (!scheduled) rejected.run();
+                    } catch (RuntimeException error) {
+                        rejected.run();
+                    }
+                }
+            } catch (Throwable error) {
+                future.complete(BridgeControlResult.indeterminate("broadcast_scheduler_failed"));
             }
         });
         return awaitControlResult(future);
@@ -667,11 +766,6 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Bukkit scheduler unavailable", e);
         }
-    }
-
-    private void scheduleServerTask(Runnable task) {
-        ScheduledExecutorService executor = networkExecutor;
-        if (executor != null && !executor.isShutdown()) executor.execute(task);
     }
 
     private static String safeUsername(String value) {
