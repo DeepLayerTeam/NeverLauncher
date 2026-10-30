@@ -342,7 +342,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		profile.Type = "release"
 	}
 
-	files, err := materializeLoaderLibraries(ctx, opts.HTTPClient, opts.ClientDir, &profile, opts.Workers, opts.StrictUpstream)
+	files, err := materializeLoaderLibraries(ctx, opts.HTTPClient, opts.ClientDir, &profile, opts.Workers, opts.StrictUpstream, opts.Targets...)
 	if err != nil {
 		return loaderMaterializeResult{}, err
 	}
@@ -550,28 +550,58 @@ func validateLoaderProfileID(id string) error {
 	return nil
 }
 
-func materializeLoaderLibraries(ctx context.Context, client *http.Client, clientDir string, profile *loaderVersionProfile, workers int, strict bool) ([]vanillaDownloadedFile, error) {
+// Materialize only libraries relevant to the selected operating systems and
+// architectures. Metadata for other platforms stays in the immutable profile,
+// but it must not force a Windows-only repository fetch on Linux, for example.
+func materializeLoaderLibraries(ctx context.Context, client *http.Client, clientDir string, profile *loaderVersionProfile, workers int, strict bool, selectedTargets ...vanillaTarget) ([]vanillaDownloadedFile, error) {
+	if len(selectedTargets) == 0 {
+		selectedTargets = []vanillaTarget{currentVanillaTarget()}
+	}
+	for index, target := range selectedTargets {
+		normalized, err := normalizeVanillaTarget(target)
+		if err != nil {
+			return nil, fmt.Errorf("loader target[%d]: %w", index, err)
+		}
+		selectedTargets[index] = normalized
+	}
 	if workers < 1 {
 		workers = 12
 	}
 	tasks := make([]vanillaDownloadTask, 0, len(profile.Libraries))
 	seen := map[string]string{}
 	seenURLs := map[string]string{}
+	applicable := make(map[int]bool)
 	for index := range profile.Libraries {
 		lib := &profile.Libraries[index]
 		if strings.TrimSpace(lib.Name) == "" {
 			return nil, fmt.Errorf("loader profile library[%d] не содержит name", index)
 		}
-		artifact := lib.Downloads.Artifact
-		rel := strings.TrimSpace(artifact.Path)
-		if rel == "" {
-			var err error
-			rel, err = strictMavenPath(lib.Name)
-			if err != nil {
-				return nil, fmt.Errorf("library %s: %w", lib.Name, err)
+		if lib.ClientReq != nil && !*lib.ClientReq {
+			continue
+		}
+		var targetOS []string
+		for _, target := range selectedTargets {
+			if rulesAllowTarget(lib.Rules, target) && libraryArtifactAppliesToTarget(lib.Name, target) {
+				targetOS = append(targetOS, target.OS)
 			}
 		}
+		if len(targetOS) == 0 {
+			continue
+		}
+		applicable[index] = true
+		artifact := lib.Downloads.Artifact
+		canonical, err := strictMavenPath(lib.Name)
+		if err != nil {
+			return nil, fmt.Errorf("loader library %s: %w", lib.Name, err)
+		}
+		rel := strings.TrimSpace(artifact.Path)
+		if rel == "" {
+			rel = canonical
+		}
 		rel = strings.TrimPrefix(filepath.ToSlash(rel), "libraries/")
+		if rel != canonical {
+			return nil, fmt.Errorf("loader library %s: artifact.path %q differs from Maven identity %q", lib.Name, rel, canonical)
+		}
 		if err := validateVanillaRelativePath(rel); err != nil {
 			return nil, fmt.Errorf("library %s path: %w", lib.Name, err)
 		}
@@ -612,7 +642,7 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 		} else {
 			seen[path] = expectedSHA1
 			seenURLs[path] = artifactURL
-			tasks = append(tasks, vanillaDownloadTask{Path: path, URL: artifactURL, SHA1: expectedSHA1, Size: artifact.Size, Kind: "loader-library"})
+			tasks = append(tasks, vanillaDownloadTask{Path: path, URL: artifactURL, SHA1: expectedSHA1, Size: artifact.Size, Kind: "loader-library", TargetOS: uniqueStrings(targetOS)})
 		}
 		lib.Downloads.Artifact = MojangDownload{Path: rel, URL: artifactURL, SHA1: expectedSHA1, Size: artifact.Size}
 	}
@@ -626,6 +656,9 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 		byPath[file.Path] = file
 	}
 	for index := range profile.Libraries {
+		if !applicable[index] {
+			continue
+		}
 		lib := &profile.Libraries[index]
 		rel := strings.TrimPrefix(filepath.ToSlash(lib.Downloads.Artifact.Path), "libraries/")
 		path := "libraries/" + rel
@@ -644,22 +677,30 @@ func materializeLoaderLibraries(ctx context.Context, client *http.Client, client
 }
 
 func strictMavenPath(name string) (string, error) {
-	parts := strings.Split(strings.TrimSpace(name), ":")
+	// Fabric/Quilt Maven coordinates may explicitly specify @jar. Reject
+	// non-JAR extensions: classpath entries must be loadable archives.
+	coordinate, extension, hasExtension := strings.Cut(strings.TrimSpace(name), "@")
+	if hasExtension && extension != "jar" {
+		return "", fmt.Errorf("loader Maven coordinate %q has unsupported classpath extension", name)
+	}
+	parts := strings.Split(coordinate, ":")
 	if len(parts) < 3 || len(parts) > 4 {
 		return "", fmt.Errorf("Maven coordinate %q должен иметь group:artifact:version[:classifier]", name)
 	}
-	for _, part := range parts[:3] {
-		if strings.TrimSpace(part) == "" || strings.ContainsAny(part, `/\\`) {
+	for _, part := range parts {
+		if strings.TrimSpace(part) != part || part == "" || part == "." || part == ".." || strings.ContainsAny(part, `/\:@`) {
 			return "", fmt.Errorf("Maven coordinate %q содержит недопустимую часть", name)
+		}
+	}
+	for _, group := range strings.Split(parts[0], ".") {
+		if group == "" {
+			return "", fmt.Errorf("Maven coordinate %q содержит пустую часть group", name)
 		}
 	}
 	group := strings.ReplaceAll(parts[0], ".", "/")
 	artifact, ver := parts[1], parts[2]
 	classifier := ""
 	if len(parts) == 4 {
-		if strings.TrimSpace(parts[3]) == "" || strings.ContainsAny(parts[3], `/\\`) {
-			return "", fmt.Errorf("Maven coordinate %q содержит недопустимый classifier", name)
-		}
 		classifier = "-" + parts[3]
 	}
 	return filepath.ToSlash(filepath.Join(group, artifact, ver, artifact+"-"+ver+classifier+".jar")), nil

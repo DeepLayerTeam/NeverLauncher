@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.40.3 — Fabric/Quilt platform-aware dependency delivery and JVM classpath
+
+- Materialize only Fabric/Quilt libraries required by the selected target OS/architecture; honor Mojang allow/disallow rules, native architecture suffixes and `clientreq=false` so an unavailable Windows or server-only artifact cannot block a Linux client. Preserve the original conditional metadata for runtime resolution on the selected platform.
+- Enforce an exact canonical Maven relationship between each applicable library coordinate and its `downloads.artifact.path`. Reject path drift before download and keep strict SHA-1 checks over the actual downloaded JARs. Accept explicit `@jar` coordinates but reject unsupported non-JAR classpath extensions and unsafe Maven segments.
+- Preserve verified SHA-1, size, URL and target scope for installed loader libraries in the generated inherited version profile, allowing NeverRuntime to build the correct runtime classpath.
+- Exercise **real JVM entrypoints**, compiled fixture JARs, transitive Java class loading, Fabric/Quilt profile materialization and a local HTTP Maven repository, including OS-excluded and server-only dependency cases. These tests verify executable classpath delivery, not a Mojang Minecraft gameplay session.
+
+**Verification boundary:** Targeted Go CLI integration tests, the CLI build, and local Java-21 fixture entrypoints pass on Linux. The full CLI test run reports failures in component parity, release doctor, module parity, and version-pinned BOM tests; it is not green. No authentic Mojang Minecraft client or Fabric/Quilt upstream loader was started. The Rust Desktop/NeverRuntime build and multi-OS certification remain unverified here; do not mark this patch as release-certified.
+
 ## 0.40.2 — Vanilla materialization: native libraries and asset integrity
 
 - Extract verified Vanilla native archives into isolated OS/architecture trees; publish any path shared by multiple identical native archives only once in the client package file list. Conflicting bytes are refused.
