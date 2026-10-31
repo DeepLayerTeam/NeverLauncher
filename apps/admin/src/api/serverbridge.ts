@@ -98,6 +98,17 @@ export type BridgeOverview = {
   metrics?: { nodesTotal?: number; nodesFresh?: number; nodesStale?: number; controlStatus?: Record<string, number> };
   topology?: BridgeTopologyEdge[]; network?: BridgeNetworkState[]; audit?: Array<Record<string, unknown>>;
 };
+/** Confirm routing changes against both the write receipt and a fresh Backend
+ * PostgreSQL overview. A 2xx response alone does not prove applied admission. */
+export function capacityApplied04111(serverId: string, previousRevision: number, expectedLimit: number | null,
+  receipt: { nodeId: string; operatorCapacityMax: number | null; operatorCapacityRevision: number },
+  overview: BridgeOverview): boolean {
+  const observed = (overview.network ?? []).find(item => item.nodeId === serverId);
+  return receipt.nodeId === serverId && receipt.operatorCapacityMax === expectedLimit &&
+    Number.isSafeInteger(receipt.operatorCapacityRevision) && receipt.operatorCapacityRevision > previousRevision &&
+    observed?.operatorCapacityMax === expectedLimit && observed.operatorCapacityRevision === receipt.operatorCapacityRevision;
+}
+
 export type BridgeCommandRequest = { serverId: string; type: BridgeCommandType; payload: Record<string, string>; idempotencyKey: string };
 
 export type BridgeEnrollmentRequest = {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ServerBridgeClient, gameCommandPermissions, commandLifecycle, telemetryState, canControlNode, supportsControlCapability, buildControlPayload, networkStateFresh, parseCapacityDraft } from '../src/api/serverbridge.ts';
+import { ServerBridgeClient, gameCommandPermissions, commandLifecycle, telemetryState, canControlNode, supportsControlCapability, buildControlPayload, networkStateFresh, parseCapacityDraft, capacityApplied04111 } from '../src/api/serverbridge.ts';
 import { canSeeSection, can } from '../src/admin/permissions.ts';
 import { endpointForSection } from '../src/admin/sections.ts';
 
@@ -152,4 +152,17 @@ test('0.28.8 capacity writes use exact runtime and optimistic revision', async (
     assert.equal(captured.url,'https://api.test/api/v1/server-bridge/servers/paper-one/network-capacity');
     assert.deepEqual(JSON.parse(captured.opts.body),{capacityLimit:0,runtimeId:state.runtimeId,runtimeEpoch:12,expectedRevision:5});
   } finally {globalThis.fetch=previous;}
+});
+
+
+test('0.41.11 admission requires Backend response AND independent PostgreSQL readback', () => {
+  const receipt = { nodeId: 'paper', operatorCapacityMax: 0, operatorCapacityRevision: 8 };
+  const overview = { network: [{ nodeId: 'paper', operatorCapacityMax: 0, operatorCapacityRevision: 8 }] };
+  assert.equal(capacityApplied04111('paper',7,0,receipt,overview),true);
+  assert.equal(capacityApplied04111('other',7,0,receipt,overview),false);
+  assert.equal(capacityApplied04111('paper',8,0,receipt,overview),false);
+  assert.equal(capacityApplied04111('paper',7,20,receipt,overview),false);
+  assert.equal(capacityApplied04111('paper',7,0,{...receipt,operatorCapacityRevision:0},overview),false);
+  assert.equal(capacityApplied04111('paper',7,0,receipt,{network:[]}),false);
+  assert.equal(capacityApplied04111('paper',7,0,receipt,{network:[{...overview.network[0], operatorCapacityMax:1}]}),false);
 });

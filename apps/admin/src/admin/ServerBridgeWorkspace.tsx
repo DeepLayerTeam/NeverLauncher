@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError } from '../api/client';
+import { HostOperationsWorkspace04111 } from './HostOperationsWorkspace04111';
 import { ResourceGrid } from '../components/ResourceGrid';
 import { MetricCard } from '../components/primitives';
 import { adminHref } from './route-links-0381';
 import { nodeState0383 } from './server-selection-0383';
 import { durableOwnerKey } from './owner-recovery-0388';
 import { ServerBridgeClient, buildControlPayload, canControlNode, commandLifecycle, telemetryState,
-  supportsControlCapability, networkStateFresh, parseCapacityDraft, parseBridgeEnrollment, type BridgeCommandRequest, type BridgeCommandType, type BridgeOverview, type ServerBridgeCommand, type ServerBridgeNode } from '../api/serverbridge';
+  supportsControlCapability, networkStateFresh, parseCapacityDraft, capacityApplied04111, parseBridgeEnrollment, type BridgeCommandRequest, type BridgeCommandType, type BridgeOverview, type ServerBridgeCommand, type ServerBridgeNode } from '../api/serverbridge';
 
-type Props = { backendUrl: string; token: string; projectId: string; userId: string; selectedServerId?: string; selectedProfileId?: string; selectedChannelId?: string; onSelectServer?: (id: string) => void; allowedCommands: BridgeCommandType[]; allowEnrollment: boolean };
+type Props = { backendUrl: string; token: string; projectId: string; userId: string; selectedServerId?: string; selectedProfileId?: string; selectedChannelId?: string; onSelectServer?: (id: string) => void; allowedCommands: BridgeCommandType[]; allowHostControl: boolean; allowEnrollment: boolean };
 const actions: Array<{ type: BridgeCommandType; label: string; confirm?: boolean }> = [
   { type: 'player.kick', label: 'Отключить игрока', confirm: true },
   { type: 'message.broadcast', label: 'Сообщение всем игрокам' },
@@ -48,7 +49,7 @@ const readPending = (projectId: string, backendUrl: string, userId: string): Bri
   return null;
 };
 
-export function ServerBridgeWorkspace({ backendUrl, token, projectId, userId, selectedServerId = '', selectedProfileId = '', selectedChannelId = '', onSelectServer, allowedCommands, allowEnrollment }: Props) {
+export function ServerBridgeWorkspace({ backendUrl, token, projectId, userId, selectedServerId = '', selectedProfileId = '', selectedChannelId = '', onSelectServer, allowedCommands, allowHostControl, allowEnrollment }: Props) {
   const canCommand = (kind: BridgeCommandType) => allowedCommands.includes(kind);
   const canControl = allowedCommands.length > 0;
   const canConsole = canCommand('server.console');
@@ -198,10 +199,14 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, userId, se
     if (!window.confirm(`${label} для ${node.name || node.id}?\nСуществующие соединения не отключаются. Незавершённые handoff будут отозваны.`)) return;
     setCapacityBusy(true); setError(''); setMessage('');
     try {
-      await api.setCapacity(node.id, network, limit);
+      const applied = await api.setCapacity(node.id, network, limit);
       const current = await api.overview(projectId);
       setOverview(current); setLastReadAt(Date.now());
-      setMessage('Операторский лимит применён в PostgreSQL и проверен обновлённым снимком.');
+      const observed = (current.network ?? []).find(n => n.nodeId === node.id);
+      if (!capacityApplied04111(node.id, network.operatorCapacityRevision, limit, applied, current)) {
+        throw new Error('Backend не подтвердил новую политику capacity повторным чтением. Не отправляйте её повторно без проверки ревизии.');
+      }
+      setMessage('Лимит подтверждён ответом Backend и независимым чтением PostgreSQL routing revision #' + observed.operatorCapacityRevision + '.');
     } catch (e) {
       setError(`${showProblem(e)}. Если запрос оборвался, проверьте актуальную ревизию политики перед повторной отправкой.`);
     } finally { setCapacityBusy(false); }
@@ -312,6 +317,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, userId, se
             <td>{e.targetPlayers??'—'} / {e.targetCapacity===0?'∞':e.targetCapacity??'—'}</td><td>{timeLabel(e.lastSeenAt)}</td></tr>)}</tbody></table></div>}
       </>}
     </section>
+    {node && <HostOperationsWorkspace04111 backendUrl={backendUrl} token={token} projectId={projectId} userId={userId} serverId={node.id} serverName={node.name || node.id} allowed={allowHostControl} />}
     {node && <section className="bridgeSection bridgeControls"><h3>Управление сервером и игроками</h3>
       {!canControl && <p className="bridgeAttention">Необходимы разрешения семейства <code>gameserver:*</code> для выбранного проекта.</p>}
       {!usable && <p className="bridgeAttention">Отправка отключена: heartbeat, runtime, Protocol v3 или снимок недоступны. Обновите Backend и соединение с сервером.</p>}
@@ -323,7 +329,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, userId, se
         {['player.kick','ban.add','server.maintenance','server.drain','server.shutdown'].includes(kind) && <label className="field"><span>Причина (необязательно)</span><input maxLength={1024} value={fields.reason} onChange={e=>setFields(f=>({...f,reason:e.target.value}))}/></label>}
         {(kind==='server.maintenance'||kind==='server.drain') && <label className="check"><input type="checkbox" checked={fields.enabled} onChange={e=>setFields(f=>({...f,enabled:e.target.checked}))}/><span>{fields.enabled?'Включить':'Выключить'} {kind==='server.drain'?'drain':'maintenance'}</span></label>}
         {kind==='server.console' && canConsole && <label className="field"><span>Разрешённая команда (без shell)</span><input required maxLength={512} value={fields.command} onChange={e=>setFields(f=>({...f,command:e.target.value}))} placeholder="say Плановая перезагрузка" autoComplete="off"/></label>}
-        <div className="buttonRow"><button disabled={!canCommand(kind) || !usable || !supportsControlCapability(node,kind,clock) || busy || !!pending} type="submit">{busy?'Отправка…':'Проверить эффект и отправить'}</button></div>
+        <div className="buttonRow"><button disabled={!canCommand(kind) || !usable || !supportsControlCapability(node,kind,clock) || busy || !!pending} type="submit">{busy?'Отправка…':'Отправить команду и отслеживать ACK'}</button></div>
       </form>
       {pending && <div className="bridgePending"><p className="bridgeAttention">Запрос {pending.type} для {pending.serverId} не получил подтверждённого ответа. Идемпотентный ключ сохранён в этой сессии.</p><div className="buttonRow"><button disabled={busy || selectedServer!==pending.serverId || !usable || !canCommand(pending.type) || !supportsControlCapability(node,pending.type,clock)} onClick={()=>void submit(pending)}>Повторить с тем же ключом</button><button disabled={busy} onClick={()=>{if(window.confirm('Отказаться от восстановления? При неизвестном результате создание новой команды может повторить действие.'))persistPending(null);}}>Отказаться от восстановления</button></div></div>}
       <p className="muted">Каждая команда требует собственное право gameserver:*. Backend проверяет RBAC, MFA (fresh ≤ 5 минут), runtime identity и allowlist. Право broadcast не даёт доступа к shutdown, Backend или Host. Shell-доступ не используется.</p>

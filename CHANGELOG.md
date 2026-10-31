@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.41.11 — Admin control of real Minecraft network and Host Supervisor
+
+- **Executable Admin control:** Host Supervisor start, stop and restart are now available in the project ServerBridge workspace using the existing verified Backend → PostgreSQL → pinned-TLS RemoteControl → real OS/JVM path. No browser shell, manifest-only handlers or optimistic "started" acknowledgements. Only globally authorized `host:process` operators can see the controls; Backend separately enforces that permission and fresh MFA.
+- **Durable observable results:** privileged read-only Backend endpoints fetch the live RemoteControl OS-process status and the last 25 persisted host operations. Admin distinguishes JVM-process observation, signed ServerBridge game readiness, `accepted`, `succeeded` and `indeterminate`, including automatic read-only reconciliation for a previously accepted start/restart. Unavailable host or journal is reported as unknown, not healthy.
+- **Safe intent recovery:** the original operation identity/idempotency key is saved before POST. Interrupted requests may be recovered only with that exact key; journal replay does not resend host commands. New operations are blocked while the history is unavailable/stale or a previous result is unresolved. Recovery reads are strictly non-mutating at RemoteControl.
+- **Admission readback:** the capacity editor now cross-checks the returned operator revision and the independently refreshed PostgreSQL network snapshot before reporting that a limit took effect. Existing signed in-game control ACK tracking and topology views remain wired to their real Backend APIs.
+- **Verification:** 103 Admin tests pass under Node 22's TypeScript stripping, including new host API/permission/freshness/replay tests; changed Go code is gofmt-clean and syntax-parseable. Full Admin dependency build, Go 1.27.3 test suite, live PostgreSQL/RemoteControl/JVM/Minecraft E2E remain unverified in this environment. Minecraft world-backup is still restricted to the host CLI (not the Backend-data backup screen); see `docs/admin/serverbridge-network-console-04111.md`.
+
 ## 0.41.10 — Crash-safe world backup, restore, and JVM launch fencing
 
 - **Atomic host maintenance gate (executing code):** world-backup create now owns a server-root-scoped exclusive gate before it checks the Host Supervisor, stops the real JVM, and copies the stopped world and plugin/user data. Every JVM spawn and crash-loop restart contends for this same gate; a concurrent start cannot race a confirmed-stopped snapshot. The gate uses atomic directory creation across CLI processes, not a voluntary status flag.

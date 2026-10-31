@@ -84,6 +84,33 @@ func (r *SQLRepository) GetHostOperationByKey0413(ctx context.Context, serverID,
 	}
 	return op, err
 }
+
+// ListHostOperations04111 returns the durable recent history for a single
+// authorized node. Never reconstruct operation state from Browser state or
+// audit summaries; the PostgreSQL journal is authoritative.
+func (r *SQLRepository) ListHostOperations04111(ctx context.Context, serverID string, limit int) ([]HostOperation0413, error) {
+	if err := r.check(); err != nil {
+		return nil, err
+	}
+	if limit < 1 || limit > 50 {
+		limit = 25
+	}
+	rows, err := r.db.QueryContext(ctx, hostOperationSelect0413+` WHERE server_id=$1 ORDER BY created_at DESC, id DESC LIMIT $2`, serverID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ops := make([]HostOperation0413, 0, limit)
+	for rows.Next() {
+		op, scanErr := scanHostOperation0413(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		ops = append(ops, op)
+	}
+	return ops, rows.Err()
+}
+
 func (r *SQLRepository) GetHostOperation0413(ctx context.Context, serverID, operationID string) (HostOperation0413, error) {
 	if err := r.check(); err != nil {
 		return HostOperation0413{}, err

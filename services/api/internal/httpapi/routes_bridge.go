@@ -43,6 +43,8 @@ func (s Server) registerBridgeRoutesV1(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/server-bridge/servers/{serverId}/events", s.serverBridgeEventStream0194)
 	mux.Handle("POST /api/v1/server-bridge/servers/{serverId}/control", s.requireFreshSession117("mfa", 5*time.Minute, s.serverBridgeControlCreate0195))
 	mux.Handle("POST /api/v1/server-bridge/servers/{serverId}/host/operations", s.requireFreshSession117("mfa", 5*time.Minute, s.serverBridgeHostCreate0413))
+	mux.Handle("GET /api/v1/server-bridge/servers/{serverId}/host/status", s.requireAuthenticated(s.serverBridgeHostStatus04111))
+	mux.Handle("GET /api/v1/server-bridge/servers/{serverId}/host/operations", s.requireAuthenticated(s.serverBridgeHostList04111))
 	mux.Handle("GET /api/v1/server-bridge/servers/{serverId}/host/operations/{operationId}", s.requireAuthenticated(s.serverBridgeHostGet0413))
 	mux.Handle("GET /api/v1/server-bridge/servers/{serverId}/control/{commandId}", s.requireAuthenticated(s.serverBridgeControlGet0195))
 	mux.HandleFunc("GET /api/v1/server-bridge/servers/{serverId}/control/poll", s.serverBridgeControlPoll0195)

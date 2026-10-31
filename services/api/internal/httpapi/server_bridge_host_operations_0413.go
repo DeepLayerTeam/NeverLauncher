@@ -264,3 +264,59 @@ func (s Server) serverBridgeHostGet0413(w http.ResponseWriter, r *http.Request) 
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": hostOperationOutput0413(op, node, false)})
 }
+
+// Host views are privileged, read-only and use the existing pinned TLS client.
+// Never convert an unavailable RemoteControl host into a healthy JVM.
+func (s Server) serverBridgeHostStatus04111(w http.ResponseWriter, r *http.Request) {
+	node, _, _, ok := s.hostOperationPreflight0413(w, r)
+	if !ok {
+		return
+	}
+	target, err := hostcontrol.LoadTarget(s.Config.ServerBridgeHostTargetsFile0413, node.ID)
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "host_operation_target_unavailable")
+		return
+	}
+	client, err := hostcontrol.NewClient(target)
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "host_operation_tls_or_token_unavailable")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 6*time.Second)
+	defer cancel()
+	host, err := client.Status(ctx)
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "host_operation_status_unavailable")
+		return
+	}
+	// A host's processAlive means only that the Supervisor observed its process.
+	// A signed game heartbeat is an independent, separately reported observation.
+	writeJSON(w, http.StatusOK, map[string]any{"data": map[string]any{
+		"host": host, "observedAt": time.Now().UTC(), "bridge": map[string]any{
+			"serverId": node.ID, "status": node.Status, "runtimeId": node.RuntimeID,
+			"runtimeEpoch": node.RuntimeEpoch, "lastHeartbeatAt": node.LastHeartbeatAt,
+		},
+	}})
+}
+
+func (s Server) serverBridgeHostList04111(w http.ResponseWriter, r *http.Request) {
+	node, _, rp, ok := s.hostOperationPreflight0413(w, r)
+	if !ok {
+		return
+	}
+	journal, ok := rp.(interface {
+		ListHostOperations04111(context.Context, string, int) ([]repository.HostOperation0413, error)
+	})
+	if !ok {
+		writeError(w, http.StatusServiceUnavailable, "host_operation_journal_unavailable")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 7*time.Second)
+	defer cancel()
+	ops, err := journal.ListHostOperations04111(ctx, node.ID, 25)
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "host_operation_journal_unavailable")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": map[string]any{"items": ops}})
+}
