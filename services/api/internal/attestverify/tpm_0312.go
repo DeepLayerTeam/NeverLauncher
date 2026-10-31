@@ -201,6 +201,22 @@ func parsePublic(raw []byte) ([]byte, []byte, error) {
 	copy(name[2:], h[:])
 	return name, point, nil
 }
+
+// verifyTPMClockInfo validates the signed TPMS_CLOCK_INFO (17 bytes),
+// followed by firmwareVersion (8 bytes). The TPM marks safe=0 after clock
+// uncertainty; such evidence cannot establish fresh platform assurance.
+func verifyTPMClockInfo(c *cursor) error {
+	info, err := c.take(17)
+	if err != nil {
+		return err
+	}
+	if info[16] != 1 {
+		return errors.New("TPM clock is not safe")
+	}
+	_, err = c.take(8) // firmwareVersion
+	return err
+}
+
 func parseAttest(raw []byte, expected [32]byte, name []byte) error {
 	c := cursor{b: raw}
 	inner, e := c.tpm2b(4096)
@@ -234,9 +250,9 @@ func parseAttest(raw []byte, expected [32]byte, name []byte) error {
 	if !bytes.Equal(extra, expected[:]) {
 		return errors.New("TPM attestation nonce/session/binding mismatch")
 	}
-	if _, e = t.take(17 + 8); e != nil {
+	if e = verifyTPMClockInfo(&t); e != nil {
 		return e
-	} // TPMS_CLOCK_INFO plus firmwareVersion
+	}
 	certified, e := t.tpm2b(128)
 	if e != nil {
 		return e

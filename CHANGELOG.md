@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.43.6 — TPM2 Certify, signed clock safety and session-bound PCR Quote
+
+- Enforce the TPM2 signed `TPMS_CLOCK_INFO.safe == TPM_YES` in both the real Certify and PCR Quote verifiers. A replayed or cryptographically re-signed attestation in an unsafe clock state cannot grant hardware or measured-boot assurance. Native Windows/Linux binary parsers reject the same unsafe TPM output.
+- Close a persistence race in the existing PostgreSQL evidence store: hardware Certify and measured-boot Quote records are accepted only while the real `auth_sessions` row remains active, unexpired, bound to the exact trusted device, verified and at the original binding epoch. `FOR SHARE` locks coordinate concurrent revocation, and HTTP completes recheck device/session immediately after cryptographic verification. An old epoch or revoked session cannot commit a new hardware proof.
+- Add executable tests for safe/unsafe signed TPM data and live PostgreSQL cross-connection rejection after epoch change and revocation. New CI runs the cryptographic regression suite, compiles the actual API, verifies that PostgreSQL integration tests did not skip, and compiles native Windows/Linux TPM code. Correct a stale Go 1.23 toolchain pin in the existing TPM CI to the project's `go.mod` toolchain.
+- TPM Certify proves the registered TPM-origin key under an operator-approved AK issuer; Quote proves allowed boot PCR measurements and an AK tied to that key. Neither is a NeverGuard process-integrity verdict. macOS Secure Enclave is not advertised as TPM2. Current status still requires actual hardware, issuer provisioning and six-platform release verification; simulator/unit fixtures are not hardware certification.
+
+**Verification boundary:** the Go standard-library-only `attestverify` tests ran successfully locally including the new negative cases. Full Go 1.27.3 backend, PostgreSQL and Windows/Linux native Rust builds and real TPM hardware flows must run in CI/physical test labs; no GA completion is claimed from these local tests.
+
 ## 0.43.5 — Recovery after device revocation without restoring compromised trust
 
 - A player can recover from an already revoked trusted-device identity using a fresh, independent passkey-verified session and proof of possession of a completely new device key. The passkey authentication must take place **after** revocation; an older proof cannot be reused.

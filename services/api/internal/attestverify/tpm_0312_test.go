@@ -95,7 +95,9 @@ func makeCertifyFixtureWithScheme(t *testing.T, linuxEcdsaScheme bool) (Evidence
 	body := append(be32(tpmMagic), be16(tpmCertify)...)
 	body = append(body, sized(nil)...)
 	body = append(body, sized(extra[:])...)
-	body = append(body, make([]byte, 25)...)
+	clockInfo := make([]byte, 25)
+	clockInfo[16] = 1 // TPM clockInfo.safe = TPM_YES
+	body = append(body, clockInfo...)
 	body = append(body, sized(name)...)
 	body = append(body, sized(nil)...)
 	digest := sha256.Sum256(body)

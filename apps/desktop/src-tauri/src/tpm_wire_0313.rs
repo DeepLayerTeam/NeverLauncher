@@ -121,8 +121,11 @@ pub fn parse_certify_response(resp: &[u8], extra: &[u8;32]) -> Result<(Vec<u8>,V
         return Err("not TPM_ST_ATTEST_CERTIFY".into());
     }
     let (_, signer_end) = item(att, 6, 128)?;
-    let (qualifier, _) = item(att, signer_end, 64)?;
+    let (qualifier, offset) = item(att, signer_end, 64)?;
     if qualifier.len() != 34 || qualifier[2..] != extra[..] { return Err("TPM certify challenge mismatch".into()); }
+    // TPMS_CLOCK_INFO.safe is signed by the AK. Refuse unsafe TPM state.
+    let clock=att.get(offset..offset+25).ok_or("truncated TPM Certify clock")?;
+    if clock[16]!=1 { return Err("unsafe TPM Certify clock".into()); }
     Ok((attest.to_vec(),sig.to_vec()))
 }
 
@@ -176,7 +179,8 @@ mod test_vectors {
         let extra=[21u8;32];
         let mut inner=Vec::new();inner.extend_from_slice(&0xff544347u32.to_be_bytes());
         inner.extend_from_slice(&0x8017u16.to_be_bytes());inner.extend_from_slice(&encoded(&[9;34]));
-        inner.extend_from_slice(&encoded(&extra));inner.extend_from_slice(&[0u8;25]);
+        inner.extend_from_slice(&encoded(&extra));let mut clock=[0u8;25]; clock[16]=1;
+        inner.extend_from_slice(&clock);
         inner.extend_from_slice(&encoded(&[5;34]));inner.extend_from_slice(&encoded(&[6;34]));
         let mut params=encoded(&inner);params.extend_from_slice(&0x0014u16.to_be_bytes());
         params.extend_from_slice(&0x000bu16.to_be_bytes());params.extend_from_slice(&encoded(&[8;256]));
@@ -185,6 +189,15 @@ mod test_vectors {
         let (att,sig)=parse_certify_response(&resp,&extra).unwrap();
         assert_eq!(att,encoded(&inner));assert_eq!(sig.len(),262);
         assert!(parse_certify_response(&resp,&[22;32]).is_err());
+        // The TPM clock safety bit is in the signed TPMS_CLOCK_INFO.
+        let mut unsafe_reply=resp.clone();
+        let marker=[0xff, 0x54, 0x43, 0x47];
+        let start=unsafe_reply.windows(4).position(|w|w==marker).unwrap();
+        // magic+type+qualifiedSigner(2+34)+extraData(2+32)+clockInfo.safe
+        let safe=start+6+36+34+16;
+        assert_eq!(unsafe_reply[safe],1);
+        unsafe_reply[safe]=0;
+        assert!(parse_certify_response(&unsafe_reply,&extra).is_err());
         let mut bad=resp.clone();bad[6..10].copy_from_slice(&0x98eu32.to_be_bytes());
         assert!(parse_certify_response(&bad,&extra).is_err());
         let mut short=resp;short.truncate(short.len()-1);
@@ -230,6 +243,8 @@ pub fn validate_quote_0315(att: &[u8], sig: &[u8], extra: &[u8;32], indices: &[u
     let (_,pos)=item(bytes,6,128)?;
     let (nonce,mut pos)=item(bytes,pos,64)?;
     if nonce.len()!=34 || &nonce[2..]!=extra {return Err("TPM quote nonce mismatch".into());}
+    let clock=bytes.get(pos..pos+25).ok_or("truncated TPM Quote clock")?;
+    if clock[16]!=1 { return Err("unsafe TPM Quote clock".into()); }
     pos+=25;
     if bytes.len()<pos+4 || be32(&bytes[pos..])?!=1 {return Err("exactly one PCR bank required".into());}
     pos+=4;

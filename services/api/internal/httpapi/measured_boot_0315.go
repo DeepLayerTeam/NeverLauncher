@@ -127,6 +127,15 @@ func (s Server) authMeasuredBootComplete0315(w http.ResponseWriter, r *http.Requ
 		writeError(w, 401, "TPM Quote rejected: "+err.Error())
 		return
 	}
+	// A valid Quote for a session revoked during signature verification is not usable.
+	currentSession, sessionErr := sessionBoundToDevice0124(s, claims, id)
+	currentDevice, deviceErr := s.Repo.GetTrustedDevice(claims.Sub, id)
+	if sessionErr != nil || deviceErr != nil || currentSession.ID != session.ID ||
+		currentSession.BindingEpoch != session.BindingEpoch || currentDevice.KeyFingerprint != device.KeyFingerprint ||
+		attestationEligibleDevice0124(currentDevice) != nil {
+		writeError(w, 409, "TPM Quote device/session revoked during verification")
+		return
+	}
 	saved := model.MeasuredBootEvidence0315{UserID: claims.Sub, DeviceID: id, SessionID: session.ID, BindingEpoch: session.BindingEpoch, KeyFingerprint: device.KeyFingerprint, RootID: result.RootID, RootFingerprint: result.RootFingerprint, AKFingerprint: result.AKFingerprint, PolicyID: result.PolicyID, PolicyHash: result.PolicyHash, PCRDigest: result.PCRDigest, ChallengeID: ch.ID, VerifiedAt: now, ExpiresAt: result.ExpiresAt}
 	if err = s.Repo.SaveMeasuredBoot0315(r.Context(), saved); err != nil {
 		writeError(w, 409, "cannot persist TPM Quote verification")

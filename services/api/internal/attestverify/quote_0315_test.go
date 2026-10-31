@@ -51,7 +51,9 @@ func makeQuoteFixture0315(t *testing.T) (QuoteEvidence0315, Binding, PCRPolicy03
 	body := append(be32(tpmMagic), be16(tpmQuote)...)
 	body = append(body, sized(nil)...)
 	body = append(body, sized(extra[:])...)
-	body = append(body, make([]byte, 25)...)
+	clockInfo := make([]byte, 25)
+	clockInfo[16] = 1 // TPM clockInfo.safe = TPM_YES
+	body = append(body, clockInfo...)
 	body = append(body, be32(1)...)
 	body = append(body, be16(tpmSHA256)...)
 	body = append(body, byte(3), byte(0x85), byte(0), byte(0))

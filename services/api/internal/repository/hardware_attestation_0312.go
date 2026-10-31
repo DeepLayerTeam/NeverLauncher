@@ -60,7 +60,11 @@ func (r *SQLRepository) SaveHardwareEvidence(ctx context.Context, e model.Device
 		ctx = context.Background()
 	}
 	res, err := r.db.ExecContext(ctx, `INSERT INTO device_hardware_evidence_0312(user_id,device_id,session_id,binding_epoch,key_fingerprint,root_id,root_fingerprint,ak_fingerprint,challenge_id,verified_at,expires_at)
- SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11 FROM trusted_devices WHERE id=$2 AND user_id=$1 AND status='active' AND trust_state='verified' AND key_fingerprint=$5 AND key_binding='hardware' AND key_algorithm='p256'`, e.UserID, e.DeviceID, e.SessionID, e.BindingEpoch, strings.ToLower(e.KeyFingerprint), e.RootID, strings.ToLower(e.RootFingerprint), strings.ToLower(e.AKFingerprint), e.ChallengeID, e.VerifiedAt, e.ExpiresAt)
+ SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11 FROM trusted_devices d JOIN auth_sessions a ON a.id=$3 AND a.user_id=d.user_id
+ WHERE d.id=$2 AND d.user_id=$1 AND d.status='active' AND d.trust_state='verified'
+ AND d.key_fingerprint=$5 AND d.key_binding='hardware' AND d.key_algorithm='p256'
+ AND a.status='active' AND a.expires_at>now() AND a.trusted_device_id=d.id
+ AND a.device_trust_state='verified' AND a.binding_epoch=$4 FOR SHARE OF d,a`, e.UserID, e.DeviceID, e.SessionID, e.BindingEpoch, strings.ToLower(e.KeyFingerprint), e.RootID, strings.ToLower(e.RootFingerprint), strings.ToLower(e.AKFingerprint), e.ChallengeID, e.VerifiedAt, e.ExpiresAt)
 	if err != nil {
 		return err
 	}

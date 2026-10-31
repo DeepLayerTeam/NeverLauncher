@@ -1,0 +1,101 @@
+name: TPM hardware attestation and PCR rejection 0.43.6
+on:
+  push:
+    paths:
+      - 'services/api/internal/attestverify/**'
+      - 'services/api/internal/httpapi/hardware_attestation_0312.go'
+      - 'services/api/internal/httpapi/measured_boot_0315.go'
+      - 'services/api/internal/repository/hardware_attestation_0312.go'
+      - 'services/api/internal/repository/measured_boot_0315.go'
+      - 'services/api/internal/repository/tpm_session_0436_integration_test.go'
+      - 'apps/desktop/src-tauri/src/tpm_wire_0313.rs'
+      - '.github/workflows/tpm-hardware-evidence-0436.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verified-tpm-proof-backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: launcher_tpm
+          POSTGRES_USER: launcher_tpm
+          POSTGRES_PASSWORD: integration-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U launcher_tpm -d launcher_tpm' --health-interval 5s --health-timeout 5s --health-retries 25
+    env:
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_tpm:integration-only@127.0.0.1:5432/launcher_tpm?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Compile real production backend
+        working-directory: services/api
+        run: go build ./cmd/...
+      - name: Real TPM Certify / Quote verifier and negative clock tests
+        working-directory: services/api
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test -race -count=1 -timeout=8m -v ./internal/attestverify 2>&1 | tee "$RUNNER_TEMP/tpm-verifier.log"
+          grep -q -- '--- PASS: TestCertifyUnsafeTPMClock0436' "$RUNNER_TEMP/tpm-verifier.log"
+          grep -q -- '--- PASS: TestQuoteUnsafeTPMClock0436' "$RUNNER_TEMP/tpm-verifier.log"
+          if grep -E -q -- '--- SKIP:|--- FAIL:' "$RUNNER_TEMP/tpm-verifier.log"; then exit 1; fi
+      - name: TPM hardware evidence against revoked/changed real PostgreSQL sessions
+        working-directory: services/api
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test -race -count=1 -timeout=8m -v ./internal/repository -run '^TestTPMProofCannotSurviveSessionRevocation0436$' 2>&1 | tee "$RUNNER_TEMP/tpm-postgres.log"
+          grep -q -- '--- PASS: TestTPMProofCannotSurviveSessionRevocation0436' "$RUNNER_TEMP/tpm-postgres.log"
+          if grep -E -q -- '--- SKIP:|--- FAIL:' "$RUNNER_TEMP/tpm-postgres.log"; then exit 1; fi
+      - name: Backend static analysis
+        working-directory: services/api
+        run: go vet ./internal/attestverify ./internal/repository ./internal/httpapi
+      - name: Publish actual test logs for security review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tpm-hardware-0436-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/tpm-verifier.log
+            ${{ runner.temp }}/tpm-postgres.log
+          if-no-files-found: warn
+  native-tpm-parser-windows:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: TPM binary parsing and Windows native code
+        run: |
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_wire_0313
+          cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml
+  native-tpm-parser-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev libtss2-dev tpm2-tools libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev patchelf
+      - name: TPM binary parsing and Linux native code
+        run: |
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_wire_0313
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml tpm_linux_0314
+          cargo build --manifest-path apps/desktop/src-tauri/Cargo.toml

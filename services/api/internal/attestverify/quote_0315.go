@@ -180,8 +180,8 @@ func VerifyQuote0315(e QuoteEvidence0315, b Binding, p PCRPolicy0315, policyHash
 	if !bytes.Equal(qualifier, expected[:]) {
 		return fail("quote nonce/session/epoch/policy mismatch")
 	}
-	if _, err = q.take(25); err != nil {
-		return fail("missing TPM clock/firmware")
+	if err = verifyTPMClockInfo(&q); err != nil {
+		return fail("unsafe or truncated TPM Quote clock/firmware")
 	}
 	count, err := q.u32()
 	if err != nil || count != 1 {

@@ -159,6 +159,15 @@ func (s Server) authTPMCertifyComplete0312(w http.ResponseWriter, r *http.Reques
 		writeError(w, 401, "TPM Certify rejected: "+err.Error())
 		return
 	}
+	// Cryptography may take seconds: binding/revocation is checked again before storage.
+	currentSession, sessionErr := sessionBoundToDevice0124(s, claims, id)
+	currentDevice, deviceErr := s.Repo.GetTrustedDevice(claims.Sub, id)
+	if sessionErr != nil || deviceErr != nil || currentSession.ID != session.ID ||
+		currentSession.BindingEpoch != session.BindingEpoch || currentDevice.KeyFingerprint != device.KeyFingerprint ||
+		attestationEligibleDevice0124(currentDevice) != nil {
+		writeError(w, 409, "TPM device/session revoked during verification")
+		return
+	}
 	evidence := model.DeviceHardwareEvidence{UserID: claims.Sub, DeviceID: id, SessionID: session.ID, BindingEpoch: session.BindingEpoch, KeyFingerprint: device.KeyFingerprint, RootID: result.RootID, RootFingerprint: result.RootFingerprint, AKFingerprint: result.AKFingerprint, ChallengeID: req.ChallengeID, VerifiedAt: now, ExpiresAt: result.ExpiresAt}
 	if err = s.Repo.SaveHardwareEvidence(r.Context(), evidence); err != nil {
 		writeError(w, 409, "cannot commit hardware evidence")
