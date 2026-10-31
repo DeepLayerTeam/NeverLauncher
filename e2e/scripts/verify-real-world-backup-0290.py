@@ -95,7 +95,7 @@ def main():
         extra = ['--server-root', str(root), '--backup-root', str(store)]
         created = json.loads(execute([*base, 'create', *extra, '--consistency', 'stopped'], timeout=180))
         backup_id = created['manifest']['id']
-        if created['manifest']['consistency'] != 'stopped':
+        if created['manifest']['consistency'] != 'confirmed-stopped':
             raise RuntimeError('backup claims a different consistency policy')
         execute([*base, 'verify', *extra, '--id', backup_id], timeout=180)
         execute([*base, 'restore', *extra, '--id', backup_id, '--confirm', backup_id,
@@ -108,6 +108,30 @@ def main():
                                  '--destination', str(restored)], capture_output=True, text=True, timeout=60)
         if second.returncode == 0:
             raise RuntimeError('restore unexpectedly overwrote an existing destination')
+        # Exercise real recovery, not merely restart the original unmodified
+        # Paper data. In this disposable Docker E2E environment corrupt a
+        # persisted player inventory in the *stopped* source container, then
+        # copy the independently verified recovered snapshot back into /data.
+        # NEVER use these destructive steps against a production container.
+        player_file = next(k for k in source if '/playerdata/' in k)
+        poisoned = Path(temp) / 'damaged-player.dat'
+        poisoned.write_bytes(b'NL-TEST-CORRUPTED-PLAYER-DATA')
+        execute([*compose, 'cp', str(poisoned), f'paper:/data/{player_file}'], timeout=90)
+        with tempfile.TemporaryDirectory(prefix='nl-paper-poison-') as damaged_dir:
+            damaged = Path(damaged_dir)
+            execute([*compose, 'cp', f'paper:/data/{player_file}', str(damaged / 'player.dat')], timeout=90)
+            if digest(damaged / 'player.dat') == source[player_file]:
+                raise RuntimeError('failed to corrupt stopped-container player data before restore')
+        # The isolated CLI restore is published atomically. The test then
+        # reinstates the restored snapshot on the disposable Minecraft volume.
+        execute([*compose, 'cp', f'{restored}/.', 'paper:/data/'], timeout=180)
+        with tempfile.TemporaryDirectory(prefix='nl-paper-applied-') as applied_dir:
+            applied = Path(applied_dir)
+            execute([*compose, 'cp', 'paper:/data/.', str(applied)], timeout=180)
+            if check_files(applied) != source:
+                raise RuntimeError('Paper container data differs from restored snapshot')
+        # A repeated CLI restore is already rejected above, and no automatic
+        # JVM restart happens as part of backup or isolated restore.
         # Return the *same* real Paper server to service and require a fresh
         # Docker health transition; a successful offline restore alone does not
         # demonstrate that the running network can recover after maintenance.
@@ -131,7 +155,7 @@ def main():
             'source': 'docker-compose-real-paper-after-minecraft-client-join',
             'status': 'passed', 'actualMinecraftWorld': True,
             'gracefulPaperExit': True, 'minecraftSaveFlushAcknowledged': True, 'worldBackupVerified': True,
-            'isolatedRestoreVerified': True, 'overwriteRejected': True,
+            'isolatedRestoreVerified': True, 'restoredDataAppliedToPaper': True, 'overwriteRejected': True,
             'returnedToHealthyService': True,
             'worldFileSha256': source[next(k for k in source if k.endswith('/level.dat'))],
             'playerDataFiles': sum('/playerdata/' in k for k in source),

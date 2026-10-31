@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.41.10 — Crash-safe world backup, restore, and JVM launch fencing
+
+- **Atomic host maintenance gate (executing code):** world-backup create now owns a server-root-scoped exclusive gate before it checks the Host Supervisor, stops the real JVM, and copies the stopped world and plugin/user data. Every JVM spawn and crash-loop restart contends for this same gate; a concurrent start cannot race a confirmed-stopped snapshot. The gate uses atomic directory creation across CLI processes, not a voluntary status flag.
+- **Fail-closed recovery:** interrupted backup/start processes leave a gate that blocks JVM starts and new backups. The new explicit `world-backup gate-recover --confirm stale-gate` checks the old owner's exact OS process identity, the supervisor PID, JVM process and host lock before removal. Incomplete or ambiguous metadata is never silently cleared. No backup or restore operation automatically restarts the server.
+- **Verified restore:** existing SHA-256 payload validation, append-only backup identifiers, private storage, isolated no-overwrite destination, fsync and atomic publication continue to apply. Restoration reproduces actual world, playerdata, region and plugin bytes and refuses a second restore into an existing directory; no unsafe automatic in-place overlay is performed.
+- **Real process tests:** build the actual `nl` CLI and exercise OpenJDK 21 JVM start, graceful stop, persisted binary world/UUID/plugin data, verify, isolated restore, replay rejection and absence of a second JVM launch (`scripts/test/world-backup-real-java-04110.py`). Unit tests exercise competing gates, ambiguous/crashed gate ownership and explicit recovery while offline.
+- **Live Paper E2E correction (requires Docker + actual Paper):** fixed the `confirmed-stopped` assertion and extended the disposable Paper E2E to corrupt a stopped player's data deliberately, apply the recovered bytes back to its test volume, check every source file digest, and require the restored server to become healthy. This live Paper E2E cannot run without the actual Paper container, a joined player and Docker; it is not claimed as passed in the development environment.
+
 ## 0.41.9 — Live JVM/host telemetry and fail-closed freshness
 
 - **Real runtime sampling:** signed ServerBridge heartbeat now carries the actual Java PID, process CPU time/load and OS-reported free/total host memory, when supported. Unsupported host fields are omitted (never replaced with fabricated zero values). Game-specific stale/future samples cannot report healthy ticks.

@@ -68,6 +68,12 @@ func worldBackupHandle02810(args []string) error {
 	if action == "list" {
 		return worldBackupList02810(dir, flagValue(args, "--output", ""))
 	}
+	if action == "gate-recover" {
+		if flagValue(args, "--confirm", "") != "stale-gate" {
+			return errors.New("gate-recover requires --confirm stale-gate; reconcile Host Supervisor/JVM first")
+		}
+		return worldBackupHostGateRecover04110(root)
+	}
 	if action != "create" && action != "verify" && action != "restore" {
 		return fmt.Errorf("unknown world-backup operation %q", action)
 	}
@@ -95,6 +101,15 @@ func worldBackupHandle02810(args []string) error {
 		if _, checkErr = worldBackupSources02810(root, candidates); checkErr != nil {
 			return checkErr
 		}
+		// Serialize the *entire* quiesce and copy interval against every JVM
+		// spawn (including crash-loop restarts) using an atomic host gate.
+		// The gate is acquired before observing host state so a new supervisor
+		// cannot enter after the stopped-state check.
+		releaseGate, gateErr := worldBackupHostGateAcquire04110(root, "backup")
+		if gateErr != nil {
+			return gateErr
+		}
+		defer releaseGate()
 		if err = worldBackupQuiesce02810(root, policy); err != nil {
 			return err
 		}

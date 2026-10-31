@@ -1,14 +1,16 @@
-name: Game World Backup 0.28.10
+name: Game World Backup 0.41.10
 on:
   push:
     paths:
       - 'cli/**'
       - 'scripts/test/world-backup-host-e2e-02810.py'
+      - 'scripts/test/world-backup-real-java-04110.py'
       - '.github/workflows/game-world-backup-02810.yml'
   pull_request:
     paths:
       - 'cli/**'
       - 'scripts/test/world-backup-host-e2e-02810.py'
+      - 'scripts/test/world-backup-real-java-04110.py'
       - '.github/workflows/game-world-backup-02810.yml'
 jobs:
   backup-linux:
@@ -19,6 +21,10 @@ jobs:
         with:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Host supervisor and backup regression tests
         working-directory: cli
         run: go test -race ./cmd/neverlauncher -run 'TestWorldBackup|TestServerBridgeHostStopSupervisedProcess01910' -count=1
@@ -27,6 +33,7 @@ jobs:
         run: |
           go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher
           python3 ../scripts/test/world-backup-host-e2e-02810.py --cli "$RUNNER_TEMP/nl"
+          python3 ../scripts/test/world-backup-real-java-04110.py --cli "$RUNNER_TEMP/nl"
   backup-windows:
     runs-on: windows-latest
     steps:

@@ -698,7 +698,23 @@ func runServerBridgeHost01910(root string, console bool) error {
 		combined := &hostCombinedWriter01910{w: combinedFile}
 		cmd.Stdout = &hostStreamWriter01910{raw: stdoutFile, combined: combined, label: "STDOUT", console: console, consoleWriter: os.Stdout}
 		cmd.Stderr = &hostStreamWriter01910{raw: stderrFile, combined: combined, label: "STDERR", console: console, consoleWriter: os.Stderr}
-		if err := cmd.Start(); err != nil {
+		// Never spawn a JVM while a world snapshot is being materialized.
+		// The host gate uses atomic directory creation, shared with backup;
+		// a crash leaves a fail-closed barrier requiring operator review.
+		releaseStartGate, gateErr := worldBackupHostGateAcquire04110(root, "start")
+		if gateErr != nil {
+			_ = stdin.Close()
+			_ = stdoutFile.Close()
+			_ = stderrFile.Close()
+			_ = combinedFile.Close()
+			state.Status = "failed"
+			state.LastError = "JVM start fenced by world maintenance gate: " + gateErr.Error()
+			_ = atomicWriteJSON01910(paths["runtime"], state, 0o600)
+			return errors.New(state.LastError)
+		}
+		startErr := cmd.Start()
+		releaseStartGate()
+		if startErr != nil {
 			_ = stdin.Close()
 			stdoutFile.Close()
 			stderrFile.Close()
@@ -706,7 +722,7 @@ func runServerBridgeHost01910(root string, console bool) error {
 			state.Status = "failed"
 			state.LastError = err.Error()
 			_ = atomicWriteJSON01910(paths["runtime"], state, 0o600)
-			return fmt.Errorf("start Minecraft process: %w", err)
+			return fmt.Errorf("start Minecraft process: %w", startErr)
 		}
 		state.Status = "running"
 		state.ProcessPID = cmd.Process.Pid
