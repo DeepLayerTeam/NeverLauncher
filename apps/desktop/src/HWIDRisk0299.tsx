@@ -44,9 +44,9 @@ export function HWIDRisk0299({ backendUrl, token, deviceId }: Props) {
     {status?.state === 'changed' && <div>
       <p>Окружение изменилось. Можно подтвердить новое оборудование с недавней phishing-resistant MFA либо подать обращение администратору. Старое устройство автоматически не блокируется.</p>
       <label>Причина обращения<textarea value={reason} maxLength={500} onChange={event => setReason(event.target.value)} /></label>
-      <button disabled={busy || reason.trim().length < 8} onClick={() => void run(async () => { await request('/appeals', 'POST', { reason: reason.trim() }); setReason(''); }, 'Обращение отправлено.')}>Отправить апелляцию</button>
+      <button disabled={busy || reason.trim().length < 8 || appeals.some(a => a.status === 'pending')} onClick={() => void run(async () => { await request('/appeals', 'POST', { reason: reason.trim() }); setReason(''); }, 'Обращение отправлено.')}>Отправить апелляцию</button>
     </div>}
-    {appeals.length > 0 && <div><h4>Обращения</h4>{appeals.map(a => <p key={a.id}>{a.createdAt} · {a.status} · {a.reason}</p>)}</div>}
+    {appeals.length > 0 && <div><h4>Обращения</h4>{appeals.map(a => <p key={a.id}>{a.createdAt} · {a.status} · {a.reason}{a.resolution ? ` · Решение: ${a.resolution}` : ''}</p>)}</div>}
     <p role="status">{message}</p>
   </section>;
 }

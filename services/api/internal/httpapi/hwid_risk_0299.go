@@ -113,7 +113,26 @@ func (s Server) authHWIDConfirm0299(w http.ResponseWriter, r *http.Request) {
 		writeStepUpRequired117(w, "phishing-resistant")
 		return
 	}
-	obs, err := store.ConfirmHWID0299(r.Context(), claims.Sub, deviceID, time.Now().UTC())
+	current, currentErr := store.GetHWID0299(r.Context(), claims.Sub, deviceID, time.Now().UTC())
+	if errors.Is(currentErr, repository.ErrNotFound) {
+		writeError(w, http.StatusConflict, "нет актуального изменения оборудования")
+		return
+	}
+	if currentErr != nil {
+		writeError(w, http.StatusServiceUnavailable, "не удалось проверить изменение оборудования")
+		return
+	}
+	if current.State != "changed" {
+		writeError(w, http.StatusConflict, "нет актуального изменения оборудования")
+		return
+	}
+	// A passkey used before detecting the hardware change cannot confirm it.
+	// Re-authentication must be completed after the risk event was recorded.
+	if claims.AuthTime <= current.UpdatedAt.Unix() {
+		writeStepUpRequired117(w, "phishing-resistant")
+		return
+	}
+	obs, err := store.ConfirmHWID0299(r.Context(), claims.Sub, deviceID, current.Pending, time.Now().UTC())
 	if errors.Is(err, repository.ErrNotFound) {
 		writeError(w, http.StatusConflict, "нет актуального изменения оборудования")
 		return

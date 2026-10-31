@@ -171,7 +171,10 @@ func (s Server) reconcileSessionDeviceRisk0126(r *http.Request, rec authSessionR
 				observation, hwidErr := store.GetHWID0299(r.Context(), rec.UserID, rec.TrustedDeviceID, now)
 				if hwidErr == nil && observation.State == "changed" {
 					reasons = mergeRiskReasons118(reasons, "hwid-signal-changed")
-				} else {
+				} else if hwidErr == nil && observation.State == "recognized" {
+					// Only an explicit verified re-baseline removes an existing
+					// session risk. Forget, retention expiry and store outages
+					// must not become security-policy bypasses.
 					reasons = removeRiskReasons0126(reasons, "hwid-signal-changed")
 				}
 			}

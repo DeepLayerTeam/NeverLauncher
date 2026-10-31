@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.43.3 — HWID risk: sticky hardware change, review consistency and safe re-baselining
+
+- Once an opt-in HWID continuity change is observed, replaying the old device hint no longer clears the elevated session risk. Expired/missing observations and temporary store failures do not silently clear an already recorded session risk; a verified confirmation is required. HWID remains a weak, voluntary risk signal, not a ban or hardware attestation.
+- If a second replacement signal differs from an unresolved appeal, its pending operator decision is atomically marked `superseded`. A new appeal can be filed; the stale approval cannot authorize the new candidate. Rejection also checks the current candidate. PostgreSQL and the in-memory/SQLite adapter use the same transition rule.
+- Device owners can confirm only with phishing-resistant step-up after the hardware-change event. The final repository transition checks the exact expected pending digest, preventing approval of a different candidate in a concurrent observation. Successful owner confirmation closes pending operator appeals. Ordinary repeated observations do not move the security event time.
+- Added memory and cross-replica PostgreSQL regression tests for old-signal replay, candidate drift, appeal invalidation, negative review, owner confirmation and stale confirm. Existing HWID CI runs these tests in the affected packages. Updated 0.43.3 product version metadata.
+
+**Verification boundary:** The 39 local Python security-gate regressions passed, but the installed Go 1.23.2 cannot compile this Go 1.27.3 project and the Go toolchain download is unavailable. Full backend Go tests, PostgreSQL E2E, six-platform HWID native tests and final package signing remain unverified. GA must remain blocked without current signed evidence; `VERSION` does not constitute certification.
+
+
 ## 0.43.2 — Device Trust: atomic enrollment, session binding and refresh epochs
 
 - Prevent an already device-bound session from silently enrolling or verifying another device. Standard first-time binding now uses an atomic unbound-to-bound transition in both in-memory/SQLite-session and PostgreSQL stores. Races reject the losing transition; failed registration does not leave a newly created active device credential.

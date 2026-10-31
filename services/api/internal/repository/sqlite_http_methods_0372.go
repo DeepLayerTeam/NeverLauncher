@@ -1415,14 +1415,14 @@ func (r *SQLiteHTTPRepository0372) GetHWID0299(arg0 context.Context, userID stri
 	return
 }
 
-func (r *SQLiteHTTPRepository0372) ConfirmHWID0299(arg0 context.Context, userID string, deviceID string, now time.Time) (out0 HWIDObservation0299, out1 error) {
+func (r *SQLiteHTTPRepository0372) ConfirmHWID0299(arg0 context.Context, userID string, deviceID string, expectedPending string, now time.Time) (out0 HWIDObservation0299, out1 error) {
 	r.mu.Lock()
 	auditStart := len(r.mem.audit)
 	defer r.unlockAndPublishAudit0372(auditStart)
 	if r.failed != nil {
 		panic(r.failed)
 	}
-	out0, out1 = r.mem.ConfirmHWID0299(arg0, userID, deviceID, now)
+	out0, out1 = r.mem.ConfirmHWID0299(arg0, userID, deviceID, expectedPending, now)
 	if e := r.persist(context.Background()); e != nil {
 		r.failed = e
 		out1 = e
