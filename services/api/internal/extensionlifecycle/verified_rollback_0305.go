@@ -17,18 +17,11 @@ import (
 // checkRollbackPayload0305 ensures a local Java backup still equals the original
 // immutable, signature-verified Registry artifact. Backup bytes alone are not trusted.
 func (m *Manager) checkRollbackPayload0305(ctx context.Context, scope Scope, id, version, identity, staged string, manifest model.ExtensionManifest) error {
-	java := false
-	for _, target := range manifest.Targets {
-		if isJavaTarget0305(target) {
-			java = true
-			break
-		}
-	}
-	if !java {
-		return nil
-	}
+	// Every signed target (Java, Go, UI, CLI, Desktop) must restore exactly
+	// the original package bytes, not merely a valid manifest/version. Legacy
+	// local backups without a signed identity are handled by the caller.
 	if identity == "" {
-		return errors.New("Java rollback requires the previous signed package identity")
+		return nil
 	}
 	original, err := m.Repo.GetExtensionRegistryVersion(ctx, id, version)
 	if err != nil {

@@ -32,6 +32,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/extensionlifecycle"
 	"gitflic.ru/skif4er/launcher/services/api/internal/extensionpolicy"
 	"gitflic.ru/skif4er/launcher/services/api/internal/extensionsecurity"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensiontrust"
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
@@ -490,6 +491,38 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 		return quarantineErr
 	} else if quarantined {
 		return errors.New("extension package is quarantined")
+	}
+	// A stale installation snapshot must not resurrect an instance removed or
+	// disabled after an operator's stop request. Signed production installs
+	// require a durable, current record; legacy test/local installations are
+	// still allowed only if the repository has no such record.
+	current, stateErr := s.repo.GetExtensionInstallState(ctx, key.ExtensionID, key.Scope, key.ScopeID)
+	signed := strings.HasPrefix(install.Source, "registry:") || strings.HasPrefix(install.Source, "rollback:") && install.CurrentPackageIdentity != ""
+	if stateErr == nil {
+		if !current.Enabled || current.CurrentState != model.ExtensionInstallStateEnabled ||
+			current.CurrentVersion != install.CurrentVersion || current.CurrentPackageIdentity != install.CurrentPackageIdentity ||
+			current.Generation != install.Generation {
+			return errors.New("extension host start refused: installation generation or state has changed")
+		}
+	} else if !errors.Is(stateErr, repository.ErrNotFound) {
+		return fmt.Errorf("extension host installation state: %w", stateErr)
+	} else if signed {
+		return errors.New("signed extension has no persisted installation state")
+	}
+	if signed {
+		if install.CurrentPackageIdentity == "" {
+			return errors.New("signed extension has no package identity")
+		}
+		publication, err := s.repo.GetExtensionRegistryVersion(ctx, install.ExtensionID, install.CurrentVersion)
+		if err != nil {
+			return fmt.Errorf("extension publication before JVM start: %w", err)
+		}
+		if publication.Artifact.PackageIdentity != install.CurrentPackageIdentity {
+			return errors.New("extension package identity differs from active registry publication")
+		}
+		if _, err := extensiontrust.EvaluatePublication(ctx, s.repo, publication); err != nil {
+			return fmt.Errorf("extension trust before JVM start: %w", err)
+		}
 	}
 	k := key.String()
 	manifestVersion, err := s.repo.GetExtensionVersion(ctx, install.ExtensionID, install.CurrentVersion)

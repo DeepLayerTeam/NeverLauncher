@@ -661,6 +661,41 @@ func (m *Manager) UpdateWithSandboxApproval0318(ctx context.Context, item model.
 	return m.commitWithLockfile0204(ctx, before, tr, rollbackFS)
 }
 
+// requireActiveTrust0424 re-evaluates the CURRENT installed artifact at the
+// time an operator enables it. A valid old signature is not sufficient after
+// its publisher key is revoked or its package is placed in quarantine.
+// Local legacy installations without a registry identity remain subject to
+// their explicit emergency kill-switch and the existing launch policy.
+func (m *Manager) requireActiveTrust0424(ctx context.Context, install model.ExtensionInstall) error {
+	if install.CurrentPackageIdentity != "" {
+		quarantined, err := m.Repo.IsExtensionPackageQuarantined(ctx, install.CurrentPackageIdentity)
+		if err != nil {
+			return fmt.Errorf("extension quarantine lookup: %w", err)
+		}
+		if quarantined {
+			return errors.New("installed extension package is quarantined")
+		}
+	}
+	signed := strings.HasPrefix(install.Source, "registry:") || strings.HasPrefix(install.Source, "rollback:") && install.CurrentPackageIdentity != ""
+	if !signed {
+		return nil
+	}
+	if install.CurrentPackageIdentity == "" {
+		return errors.New("signed extension installation has no package identity")
+	}
+	publication, err := m.Repo.GetExtensionRegistryVersion(ctx, install.ExtensionID, install.CurrentVersion)
+	if err != nil {
+		return fmt.Errorf("active extension registry publication: %w", err)
+	}
+	if publication.Artifact.PackageIdentity != install.CurrentPackageIdentity {
+		return errors.New("installed package identity differs from signed registry publication")
+	}
+	if _, err := extensiontrust.EvaluatePublication(ctx, m.Repo, publication); err != nil {
+		return fmt.Errorf("active extension trust rejected: %w", err)
+	}
+	return nil
+}
+
 func (m *Manager) setEnabled0204(ctx context.Context, id string, scope Scope, enabled bool) (model.ExtensionInstall, error) {
 	scope, err := normalizeScope0204(scope)
 	if err != nil {
@@ -696,6 +731,9 @@ func (m *Manager) setEnabled0204(ctx context.Context, id string, scope Scope, en
 		}
 	}
 	if enabled {
+		if err := m.requireActiveTrust0424(ctx, before); err != nil {
+			return model.ExtensionInstall{}, err
+		}
 		version, e := m.Repo.GetExtensionVersion(ctx, id, before.CurrentVersion)
 		if e != nil {
 			return model.ExtensionInstall{}, e
@@ -813,6 +851,23 @@ func (m *Manager) Rollback(ctx context.Context, id string, scope Scope) (model.E
 		}
 		if e = extensionpolicy.RequireReview(previous.Manifest, targetVersion.Manifest, ""); e != nil {
 			return model.ExtensionInstall{}, fmt.Errorf("rollback requires explicit security-policy review: %w", e)
+		}
+	}
+	// A previously signed installation cannot be downgraded to an
+	// unidentifiable backup. The trust decision also covers non-Java targets.
+	if before.CurrentPackageIdentity != "" && target.FromPackageIdentity == "" {
+		return model.ExtensionInstall{}, errors.New("cannot roll back a signed installation to an unsigned backup")
+	}
+	if target.FromPackageIdentity != "" {
+		publication, pubErr := m.Repo.GetExtensionRegistryVersion(ctx, id, target.FromVersion)
+		if pubErr != nil {
+			return model.ExtensionInstall{}, fmt.Errorf("rollback registry publication: %w", pubErr)
+		}
+		if publication.Artifact.PackageIdentity != target.FromPackageIdentity {
+			return model.ExtensionInstall{}, errors.New("rollback package identity differs from signed publication")
+		}
+		if _, pubErr = extensiontrust.EvaluatePublication(ctx, m.Repo, publication); pubErr != nil {
+			return model.ExtensionInstall{}, fmt.Errorf("rollback target trust rejected: %w", pubErr)
 		}
 	}
 	if e := m.ValidateCandidate0305(ctx, stage, targetVersion.Manifest, scope, false); e != nil {

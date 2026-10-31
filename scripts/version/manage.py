@@ -80,12 +80,12 @@ def desired_files(version: str) -> dict[Path, str]:
         result[path] = render_json(path, version)
 
     for rel in (
-        "runtime/runtime/Cargo.toml",
-        "runtime/guard-sensor/Cargo.toml",
-        "runtime/guard-memory-probe/Cargo.toml",
-        "runtime/guard-thread-probe/Cargo.toml",
-        "runtime/guard-debug-probe/Cargo.toml",
-        "runtime/guard-jvm-probe/Cargo.toml",
+        "runtime/neverruntime/Cargo.toml",
+        "runtime/neverguard-sensor/Cargo.toml",
+        "runtime/neverguard-memory-probe/Cargo.toml",
+        "runtime/neverguard-thread-probe/Cargo.toml",
+        "runtime/neverguard-debug-probe/Cargo.toml",
+        "runtime/neverguard-jvm-probe/Cargo.toml",
         "apps/desktop/src-tauri/Cargo.toml",
     ):
         path = ROOT / rel
@@ -113,7 +113,7 @@ def desired_files(version: str) -> dict[Path, str]:
 
     for rel in (
         "deploy/production/env.production.example",
-        "cli/cmd/launcher/templates/production/env.production.example",
+        "cli/cmd/neverlauncher/templates/production/env.production.example",
     ):
         path = ROOT / rel
         result[path] = replace_env_image_tag(

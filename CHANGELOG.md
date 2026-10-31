@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.42.4 — Extension lifecycle: trust revocation, quarantine and signed rollback
+
+- Emergency disable now persists the durable kill-switch **before** stopping the JVM or transitioning install state. If process termination or state persistence fails, the API reports partial failure and the persisted deny remains in effect; incident response no longer has a restart window between stop and deny.
+- Registry trust-policy and publisher-key revocation enforcement now persist emergency disables before stopping hosts. An active quarantined locally sourced artifact is disabled even when it has no matching registry publication. Revoking a publisher key no longer silently ignores quarantine persistence errors, and retries do not duplicate active quarantine entries.
+- Enabling an installed signed extension rechecks the current registry publication, artifact identity, publisher signing key and quarantine rather than trusting an old installation state. Revoked, missing, mismatched and quarantined artifacts fail closed before activation.
+- Java Extension Host admission checks current durable generation/version/identity and enabled state, then reevaluates signed publisher trust just before starting a JVM. A stale generation cannot resurrect a stopped/updated extension.
+- Signed rollback rechecks current registry trust and verifies **all** backup payloads (including Admin/Desktop/CLI/native targets), comparing extracted content against the original immutable and signed `.nlext`. A signed installation cannot roll back to an unidentified backup.
+- Disabling or uninstalling an enabled extension tolerates an already stopped Host, while unexpected stop errors remain visible. Repaired the version-manager paths to the actual `runtime/neverruntime`, `runtime/neverguard-*` and `cli/cmd/neverlauncher` directories and synchronized release metadata.
+- Added Go regression tests for quarantine on enable, publisher-key revocation, stale JVM generation, fail-closed emergency-disable partial failure and quarantine sweeps of active local installs.
+- **Verification boundary:** Go syntax parsed and formatted; canonical version metadata checks pass. Go tests and multi-process acceptance require Go 1.27.3, which cannot be fetched in this offline environment (Go 1.23.2 available), so the new Go regression tests are included but **not claimed executed**. Real PostgreSQL integration, multi-OS verified artifacts and mandatory 14-target ServerBridge E2E are not certified. Do not promote this patch as a signed production release without those gates.
+
 ## 0.42.3 — Durable Extension EventBus, hooks, RPC and runtime storage
 
 - Fixed **lost durable subscriptions on normal JVM shutdown**: `RuntimeEvents.close()` now closes local handlers without deleting the backend subscription. Added explicit `RuntimeEvents.unsubscribe(type, mode)` for intentional permanent removal; a restarted Java extension upserts/rebinds the existing subscription and consumes its pending events.

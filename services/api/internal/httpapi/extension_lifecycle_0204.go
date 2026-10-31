@@ -155,7 +155,7 @@ func (s Server) stopExtensionHostForLifecycle0205(r *http.Request, id string, sc
 	}
 	wasRunningDesired := before.CurrentState == model.ExtensionInstallStateEnabled && before.Enabled
 	if wasRunningDesired && s.ExtensionHost != nil {
-		if err := s.ExtensionHost.Stop(r.Context(), hostKeyForInstall0205(before)); err != nil {
+		if err := s.ExtensionHost.Stop(r.Context(), hostKeyForInstall0205(before)); err != nil && !errors.Is(err, extensionhost.ErrHostNotRunning) && !errors.Is(err, repository.ErrNotFound) {
 			return before, true, err
 		}
 	}

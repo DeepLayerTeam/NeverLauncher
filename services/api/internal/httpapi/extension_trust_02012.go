@@ -91,21 +91,37 @@ func (s Server) extensionPublisherKeyRevoke02012(w http.ResponseWriter, r *http.
 	// Немедленно изолируйте все опубликованные артефакты, подписанные этим
 	// ключом. Так отзыв действует даже для уже установленных точных версий.
 	versions, listErr := s.Repo.SearchExtensionRegistry(r.Context(), model.ExtensionRegistrySearch{IncludeYanked: true})
-	if listErr == nil {
+	var quarantineErr error
+	if listErr != nil {
+		quarantineErr = fmt.Errorf("list signed artifacts for quarantine: %w", listErr)
+	} else {
 		for _, item := range versions {
 			if item.PublisherID != publisher || item.Artifact.SignatureKeyFingerprint != fingerprint {
 				continue
 			}
-			id, idErr := randomID02012("q-")
-			if idErr != nil {
+			// A retry of publisher revocation must not create unbounded
+			// duplicate active quarantine records for the same package.
+			exists, lookupErr := s.Repo.IsExtensionPackageQuarantined(r.Context(), item.Artifact.PackageIdentity)
+			if lookupErr != nil {
+				quarantineErr = errors.Join(quarantineErr, lookupErr)
 				continue
 			}
-			_, _ = s.Repo.SaveExtensionQuarantine(r.Context(), model.ExtensionQuarantineEntry{ID: id, PackageIdentity: item.Artifact.PackageIdentity, ArtifactSHA256: item.Artifact.SHA256, ExtensionID: item.ExtensionID, Version: item.Version, PublisherID: item.PublisherID, KeyFingerprint: fingerprint, Reason: "publisher signing key revoked", StorageProject: item.Artifact.StorageProject, StorageVersion: item.Artifact.StorageVersion, StoragePath: item.Artifact.StoragePath})
+			if exists {
+				continue
+			}
+			id, idErr := randomID02012("q-")
+			if idErr != nil {
+				quarantineErr = errors.Join(quarantineErr, idErr)
+				continue
+			}
+			if _, qerr := s.Repo.SaveExtensionQuarantine(r.Context(), model.ExtensionQuarantineEntry{ID: id, PackageIdentity: item.Artifact.PackageIdentity, ArtifactSHA256: item.Artifact.SHA256, ExtensionID: item.ExtensionID, Version: item.Version, PublisherID: item.PublisherID, KeyFingerprint: fingerprint, Reason: "publisher signing key revoked", StorageProject: item.Artifact.StorageProject, StorageVersion: item.Artifact.StorageVersion, StoragePath: item.Artifact.StoragePath}); qerr != nil {
+				quarantineErr = errors.Join(quarantineErr, fmt.Errorf("quarantine %s@%s: %w", item.ExtensionID, item.Version, qerr))
+			}
 		}
 	}
 	blocked, sweepErr := s.enforceExtensionTrustRuntime02012(r.Context(), "publisher-key-revocation")
-	if sweepErr != nil {
-		writeError(w, 500, "key revoked but runtime enforcement failed: "+sweepErr.Error())
+	if quarantineErr != nil || sweepErr != nil {
+		writeError(w, 500, fmt.Sprintf("publisher key revoked; quarantine/enforcement incomplete: %v", errors.Join(quarantineErr, sweepErr)))
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:trust:key:revoke", publisher+"/"+fingerprint)
@@ -127,16 +143,31 @@ func (s Server) enforceExtensionTrustRuntime02012(ctx context.Context, source st
 		if !install.Enabled || install.CurrentState != model.ExtensionInstallStateEnabled || install.CurrentVersion == "" {
 			continue
 		}
-		publication, err := s.Repo.GetExtensionRegistryVersion(ctx, install.ExtensionID, install.CurrentVersion)
-		if errors.Is(err, repository.ErrNotFound) {
-			continue // Локальная или устаревшая установка: политика доверия реестра на неё не распространяется.
+		quarantined, qErr := s.Repo.IsExtensionPackageQuarantined(ctx, install.CurrentPackageIdentity)
+		if qErr != nil {
+			return blocked, qErr
 		}
-		if err != nil {
+		publication, err := s.Repo.GetExtensionRegistryVersion(ctx, install.ExtensionID, install.CurrentVersion)
+		if err != nil && !errors.Is(err, repository.ErrNotFound) {
 			return blocked, err
 		}
-		decision, trustErr := extensiontrust.EvaluatePublication(ctx, s.Repo, publication)
-		if trustErr == nil && decision.Allowed {
+		signed := strings.HasPrefix(install.Source, "registry:") || strings.HasPrefix(install.Source, "rollback:") && install.CurrentPackageIdentity != ""
+		var decision extensiontrust.Decision
+		var trustErr error
+		if err == nil {
+			if publication.Artifact.PackageIdentity != install.CurrentPackageIdentity {
+				trustErr = errors.New("installed package identity does not match registry")
+			} else {
+				decision, trustErr = extensiontrust.EvaluatePublication(ctx, s.Repo, publication)
+			}
+		} else if signed {
+			trustErr = errors.New("signed installation is missing its registry publication")
+		}
+		if !quarantined && trustErr == nil && (err != nil || decision.Allowed) {
 			continue
+		}
+		if quarantined && trustErr == nil {
+			trustErr = errors.New("installed package is quarantined")
 		}
 		reason := "extension trust rejected active installation"
 		if trustErr != nil {
@@ -145,11 +176,15 @@ func (s Server) enforceExtensionTrustRuntime02012(ctx context.Context, source st
 			reason += ": " + strings.Join(decision.Violations, "; ")
 		}
 		scope := extensionlifecycle.Scope{Scope: install.Scope, ScopeID: install.ScopeID}
-		if s.ExtensionHost != nil {
-			_ = s.ExtensionHost.Stop(ctx, extensionhostKey02012(install.ExtensionID, scope))
-		}
+		// Persist the deny decision BEFORE attempting to stop a running JVM.
+		// Recovery and concurrent starts consult this record fail-closed.
 		if _, err := s.Repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: install.ExtensionID, Scope: install.Scope, ScopeID: install.ScopeID, Reason: reason, Source: source}); err != nil {
 			return blocked, err
+		}
+		if s.ExtensionHost != nil {
+			if stopErr := s.ExtensionHost.Stop(ctx, extensionhostKey02012(install.ExtensionID, scope)); stopErr != nil && !errors.Is(stopErr, extensionhost.ErrHostNotRunning) && !errors.Is(stopErr, repository.ErrNotFound) {
+				return blocked, fmt.Errorf("extension blocked persistently but host stop failed: %w", stopErr)
+			}
 		}
 		if _, err := s.lifecycleManager0204().Disable(ctx, install.ExtensionID, scope); err != nil && !errors.Is(err, repository.ErrNotFound) {
 			return blocked, err
@@ -202,17 +237,22 @@ func (s Server) extensionEmergencyDisable02012(w http.ResponseWriter, r *http.Re
 	}
 	scope := lifecycleScopeFromRequest0204(req.Scope, req.ScopeID)
 	id := r.PathValue("extensionId")
-	if s.ExtensionHost != nil {
-		_ = s.ExtensionHost.Stop(r.Context(), extensionhostKey02012(id, scope))
-	}
-	install, err := s.lifecycleManager0204().Disable(r.Context(), id, scope)
-	if err != nil && !errors.Is(err, repository.ErrNotFound) && !strings.Contains(strings.ToLower(err.Error()), "not installed") {
-		writeLifecycleError0204(w, err)
-		return
-	}
+	// Crash-loop recovery is prohibited immediately; never leave a window
+	// where a stopped JVM can be automatically restarted before the deny is saved.
 	item, err := s.Repo.SetExtensionEmergencyDisable(r.Context(), model.ExtensionEmergencyDisable{ExtensionID: id, Scope: scope.Scope, ScopeID: scope.ScopeID, Reason: req.Reason, Source: "admin"})
 	if err != nil {
 		writeError(w, 400, err.Error())
+		return
+	}
+	if s.ExtensionHost != nil {
+		if stopErr := s.ExtensionHost.Stop(r.Context(), extensionhostKey02012(id, scope)); stopErr != nil && !errors.Is(stopErr, extensionhost.ErrHostNotRunning) && !errors.Is(stopErr, repository.ErrNotFound) {
+			writeError(w, 500, "kill-switch active but JVM stop failed: "+stopErr.Error())
+			return
+		}
+	}
+	install, err := s.lifecycleManager0204().Disable(r.Context(), id, scope)
+	if err != nil && !errors.Is(err, repository.ErrNotFound) && !strings.Contains(strings.ToLower(err.Error()), "not installed") {
+		writeError(w, 500, "kill-switch active but persistent disable failed: "+err.Error())
 		return
 	}
 	s.audit(r, s.adminActor(r), "extension:emergency:disable", item.ExtensionID+":"+item.Scope+":"+item.ScopeID)
