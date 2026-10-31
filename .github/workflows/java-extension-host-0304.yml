@@ -69,7 +69,10 @@ jobs:
         working-directory: services/api
         env:
           NEVERLAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
-        run: go test -race -count=1 -timeout 3m -run 'TestJava.*0304' ./internal/extensionhost
+        run: go test -race -count=1 -timeout 3m -run 'TestJava.*(0304|0422)'  ./internal/extensionhost
+      - name: Java recovery admission and cancelled late hello regression
+        working-directory: services/api
+        run: go test -race -count=1 -run '^TestJavaLateHelloCannotUndoOperatorStop0422$' ./internal/extensionhost
       - name: Regression of existing Go extension host
         working-directory: services/api
         run: go test -count=1 ./internal/extensionhost

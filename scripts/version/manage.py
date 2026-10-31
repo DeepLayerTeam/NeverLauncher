@@ -81,11 +81,11 @@ def desired_files(version: str) -> dict[Path, str]:
 
     for rel in (
         "runtime/neverruntime/Cargo.toml",
-        "runtime/guard-sensor/Cargo.toml",
-        "runtime/guard-memory-probe/Cargo.toml",
-        "runtime/guard-thread-probe/Cargo.toml",
-        "runtime/guard-debug-probe/Cargo.toml",
-        "runtime/guard-jvm-probe/Cargo.toml",
+        "runtime/neverguard-sensor/Cargo.toml",
+        "runtime/neverguard-memory-probe/Cargo.toml",
+        "runtime/neverguard-thread-probe/Cargo.toml",
+        "runtime/neverguard-debug-probe/Cargo.toml",
+        "runtime/neverguard-jvm-probe/Cargo.toml",
         "apps/desktop/src-tauri/Cargo.toml",
     ):
         path = ROOT / rel

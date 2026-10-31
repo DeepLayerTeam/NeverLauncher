@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.42.2 — Real Java Extension Host process recovery
+
+- Fixed the live Go Supervisor's launch path: Java discovery failures, rejected executables, pipe/setup errors and failed process starts now retire the failed host token, close its completion signal and retain an actionable `failed` status. A repaired Java runtime can be launched again without restarting Backend.
+- Fixed a process-leak race between an operator stop/disable and asynchronous JVM startup. Stop cancels the outstanding recovery epoch; an obsolete recovery attempt cannot take the process slot, and a late authenticated `hello` cannot undo an intentional stop.
+- Recovery reads the durable installation state and checks the exact generation, version and package identity before restarting a crashed JVM. Recoverable bootstrap errors are retried with bounded backoff and the existing crash-loop policy; stale or disabled packages are not automatically resurrected.
+- Made reconciliation idempotent for healthy running/starting processes, able to stop removed/disabled/old-generation processes and resume failed launches. Restart now propagates a failed Stop instead of spawning an overlapping JVM.
+- Added real JVM E2E regression tests for crash-and-restart, temporarily unavailable Java, recovery after Java returns, reconciliation, explicit-stop cancellation, and an authenticated late-hello rejection. The existing three-OS Java 17/21 CI and Linux Go Supervisor -race workflow execute these tests.
+- Repaired the canonical version manager's outdated Rust subcrate paths (guard-* → neverguard-*) and synchronized the actual release metadata and generated OpenAPI to 0.42.2.
+- **Verification boundary:** Linux/OpenJDK 21 executable JVM example (backend authenticated hello/ready/RPC/CLI/deadline), Java SDK 42+29+26 checks, Gravit adapter 10 checks, and 11 Python release-gate regressions passed. The Go 1.27.3 toolchain is not installed in this environment (Go 1.23.2 available), so the new Go Supervisor E2E/race tests are included but not claimed as locally passed. Six-OS and Minecraft/ServerBridge production release certification remain pending; required release gates are not disabled.
+
 ## 0.42.1 — Java SDK / Extension API / Host Protocol compatibility
 
 - Kept Extension API, Manifest and Host Protocol at their published versions. Java hello remains wire-compatible with 0.42.0; new SDK clients can require capabilities during real authenticated hello before extension startup. Runtime broker calls now fail locally when the capability is unavailable or the session was not negotiated.

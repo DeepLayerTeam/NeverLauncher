@@ -266,6 +266,7 @@ type Supervisor struct {
 	tokens           map[string]*processState
 	crashes          map[string][]time.Time
 	restarts         map[string]int
+	recoveryEpoch    map[string]uint64
 	listener         net.Listener
 	server           *http.Server
 	baseURL          string
@@ -298,7 +299,7 @@ func New(cfg Config, repo repository.Repository, store storage.Storage) *Supervi
 			roots, rootsErr = extensionbroker.ParseRoots(string(data))
 		}
 	}
-	return &Supervisor{sharedRoots: roots, sharedRootsErr: rootsErr, cfg: cfg, repo: repo, storage: store, processes: map[string]*processState{}, transients: map[string]map[string]*processState{}, tokens: map[string]*processState{}, crashes: map[string][]time.Time{}, restarts: map[string]int{}, security: security, callbackClient: client}
+	return &Supervisor{sharedRoots: roots, sharedRootsErr: rootsErr, cfg: cfg, repo: repo, storage: store, processes: map[string]*processState{}, transients: map[string]map[string]*processState{}, tokens: map[string]*processState{}, crashes: map[string][]time.Time{}, restarts: map[string]int{}, recoveryEpoch: map[string]uint64{}, security: security, callbackClient: client}
 }
 
 func (s *Supervisor) SetSecurity(security *extensionsecurity.Manager) {
@@ -466,7 +467,16 @@ func sanitizedEnvironment(extra map[string]string) []string {
 	return env
 }
 
+// StartInstallation launches an explicitly enabled extension.
 func (s *Supervisor) StartInstallation(ctx context.Context, install model.ExtensionInstall) error {
+	return s.startInstallation0422(ctx, install, nil)
+}
+
+var errRecoveryRevoked0422 = errors.New("extension recovery cancelled by operator")
+
+// Automatic recovery is admitted only while its original epoch is current.
+// This admission is atomic with publishing the new process slot.
+func (s *Supervisor) startInstallation0422(ctx context.Context, install model.ExtensionInstall, recoveryEpoch *uint64) error {
 	if install.CurrentState != model.ExtensionInstallStateEnabled || !install.Enabled {
 		return errors.New("extension must be persistently enabled before host start")
 	}
@@ -531,9 +541,13 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	}
 	st := &processState{key: key, install: install, manifest: manifestVersion.Manifest, permissions: permissions, token: token, callbackToken: callbackToken, instanceID: instance, entrypoint: target.Entrypoint, state: "starting", helloCh: make(chan struct{}), readyCh: make(chan struct{}), javaHost: sameHostJar0304(entrypoint), doneCh: make(chan struct{}), logs: ringLog{maxBytes: s.cfg.MaxLogBytes, maxEntries: s.cfg.MaxLogEntries}}
 	s.mu.Lock()
+	if recoveryEpoch != nil && s.recoveryEpoch[k] != *recoveryEpoch {
+		s.mu.Unlock()
+		return errRecoveryRevoked0422
+	}
 	if existing := s.processes[k]; existing != nil {
 		existing.mu.Lock()
-		active := existing.state == "starting" || existing.state == "running" || existing.state == "stopping"
+		active := existing.state == "starting" || existing.state == "running" || existing.state == "stopping" || existing.state == "failing"
 		existing.mu.Unlock()
 		if active {
 			s.mu.Unlock()
@@ -546,15 +560,13 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	baseURL := s.baseURL
 	s.mu.Unlock()
 	if baseURL == "" {
-		s.removeProcessToken(st)
-		return errors.New("extension host protocol server is not started")
+		return s.abortUnstarted0422(st, errors.New("extension host protocol server is not started"))
 	}
 	var cmd *exec.Cmd
 	if st.javaHost {
 		cmd, err = s.javaCommand0304(entrypoint, nil)
 		if err != nil {
-			s.removeProcessToken(st)
-			return err
+			return s.abortUnstarted0422(st, err)
 		}
 	} else {
 		cmd = exec.Command(entrypoint)
@@ -567,17 +579,14 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 	var isolatedHandle *extensionSandbox03111
 	if manifestVersion.Manifest.Sandbox != nil && manifestVersion.Manifest.Sandbox.Mode == "isolated" {
 		if st.javaHost {
-			s.removeProcessToken(st)
-			return errors.New("sandbox-unavailable: Java RPC callback isolation requires authenticated reverse RPC")
+			return s.abortUnstarted0422(st, errors.New("sandbox-unavailable: Java RPC callback isolation requires authenticated reverse RPC"))
 		}
 		if err := s.validateSharedRoots03110(manifestVersion.Manifest.Sandbox); err != nil {
-			s.removeProcessToken(st)
-			return err
+			return s.abortUnstarted0422(st, err)
 		}
 		isolatedHandle, err = prepareExtensionSandbox03111(payloadRoot, entrypoint, cmd, baseURL, s.server.Handler, manifestVersion.Manifest.Sandbox)
 		if err != nil {
-			s.removeProcessToken(st)
-			return fmt.Errorf("sandbox-unavailable: %w", err)
+			return s.abortUnstarted0422(st, fmt.Errorf("sandbox-unavailable: %w", err))
 		}
 		cmd = isolatedHandle.Cmd
 		st.sandbox = isolatedHandle
@@ -590,34 +599,43 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 		if isolatedHandle != nil {
 			isolatedHandle.Close()
 		}
-		s.removeProcessToken(st)
-		return err
+		return s.abortUnstarted0422(st, err)
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		if isolatedHandle != nil {
 			isolatedHandle.Close()
 		}
-		s.removeProcessToken(st)
-		return err
+		return s.abortUnstarted0422(st, err)
+	}
+	st.mu.Lock()
+	cancelled := st.expectedStop
+	st.mu.Unlock()
+	if cancelled {
+		if isolatedHandle != nil {
+			isolatedHandle.Close()
+		}
+		return s.abortUnstarted0422(st, errRecoveryRevoked0422)
 	}
 	if err := cmd.Start(); err != nil {
 		if isolatedHandle != nil {
 			isolatedHandle.Close()
 		}
-		s.removeProcessToken(st)
-		return fmt.Errorf("start backend extension: %w", err)
+		return s.abortUnstarted0422(st, fmt.Errorf("start backend extension: %w", err))
 	}
 	st.mu.Lock()
 	st.cmd = cmd
 	st.startedAt = time.Now().UTC()
 	st.processCount = 1
+	stopRequested := st.expectedStop
 	st.mu.Unlock()
+	if stopRequested {
+		_ = killProcessTree(cmd.Process)
+	}
 	if isolatedHandle != nil {
 		if err := isolatedHandle.Started(); err != nil {
 			_ = cmd.Wait() // sandbox Close() killed the entire cgroup; reap the bootstrap
-			s.removeProcessToken(st)
-			return fmt.Errorf("sandbox enforcement failed: %w", err)
+			return s.abortUnstarted0422(st, fmt.Errorf("sandbox enforcement failed: %w", err))
 		}
 		st.mu.Lock()
 		st.sandboxReady = true
@@ -637,6 +655,12 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 		}
 		return st.helloCh
 	}():
+		st.mu.Lock()
+		alive := st.state == "running" && !st.terminationInitiated
+		st.mu.Unlock()
+		if !alive {
+			return errors.New("extension exited during startup")
+		}
 		if err := s.reconcileManifestSubscriptions0206(ctx, st); err != nil {
 			s.failProcess(st, "event subscription reconcile failed: "+err.Error(), true)
 			return err
@@ -657,6 +681,25 @@ func (s *Supervisor) StartInstallation(ctx context.Context, install model.Extens
 		s.failProcess(st, "startup cancelled", true)
 		return ctx.Err()
 	}
+}
+
+// abortUnstarted0422 retires an attempted launch before a Wait goroutine exists.
+// Without this transition a failed java lookup/exec keeps the key permanently
+// in 'starting', making a repaired runtime impossible to launch without restart.
+func (s *Supervisor) abortUnstarted0422(st *processState, cause error) error {
+	st.mu.Lock()
+	if st.expectedStop {
+		st.state = "stopped"
+	} else {
+		st.state = "failed"
+	}
+	st.lastError = cause.Error()
+	st.exitedAt = time.Now().UTC()
+	close(st.doneCh)
+	st.mu.Unlock()
+	s.removeProcessToken(st)
+	s.addLog(st, "host", "error", "launch failed: "+cause.Error(), nil)
+	return cause
 }
 
 func (s *Supervisor) removeProcessToken(st *processState) {
@@ -809,6 +852,10 @@ func (s *Supervisor) waitProcess(st *processState) {
 	}
 }
 
+// registerCrashAndRestart is used for crashes *and* failed recovery launches.
+// Each attempt is bounded by CrashLimit, checks durable enabled state, and
+// verifies the failed instance still owns the slot. Stops/updates invalidate
+// scheduled retries through recoveryEpoch.
 func (s *Supervisor) registerCrashAndRestart(st *processState) {
 	k := st.key.String()
 	now := time.Now().UTC()
@@ -823,6 +870,7 @@ func (s *Supervisor) registerCrashAndRestart(st *processState) {
 	}
 	n = append(n, now)
 	s.crashes[k] = n
+	epoch := s.recoveryEpoch[k]
 	if len(n) > s.cfg.CrashLimit {
 		s.restarts[k] = len(n) - 1
 		handler := s.crashLoopHandler
@@ -845,17 +893,69 @@ func (s *Supervisor) registerCrashAndRestart(st *processState) {
 		delay = 30 * time.Second
 	}
 	go func() {
+		timer := time.NewTimer(delay)
+		defer timer.Stop()
 		select {
-		case <-time.After(delay):
+		case <-timer.C:
 		case <-s.ctx.Done():
 			return
 		}
-		fresh, err := s.repo.GetExtensionInstallState(context.Background(), st.key.ExtensionID, st.key.Scope, st.key.ScopeID)
+		s.mu.RLock()
+		current := s.processes[k] == st && s.recoveryEpoch[k] == epoch
+		s.mu.RUnlock()
+		if !current {
+			return
+		}
+		ctx, cancel := context.WithTimeout(s.ctx, s.cfg.StartupTimeout+5*time.Second)
+		defer cancel()
+		fresh, err := s.repo.GetExtensionInstallState(ctx, st.key.ExtensionID, st.key.Scope, st.key.ScopeID)
 		if err != nil || fresh.CurrentState != model.ExtensionInstallStateEnabled || !fresh.Enabled {
 			return
 		}
-		if err := s.StartInstallation(context.Background(), fresh); err != nil && !errors.Is(err, ErrNoBackendTarget) {
-			log.Printf("extension host restart failed %s: %v", st.key.ExtensionID, err)
+		// Never retry a stale package after an update/rollback.
+		if fresh.Generation != st.install.Generation || fresh.CurrentVersion != st.install.CurrentVersion || fresh.CurrentPackageIdentity != st.install.CurrentPackageIdentity {
+			return
+		}
+		s.mu.RLock()
+		current = s.processes[k] == st && s.recoveryEpoch[k] == epoch
+		s.mu.RUnlock()
+		if !current {
+			return
+		}
+		startErr := s.startInstallation0422(ctx, fresh, &epoch)
+		if startErr == nil || errors.Is(startErr, errRecoveryRevoked0422) {
+			return
+		}
+		if errors.Is(startErr, ErrNoBackendTarget) {
+			return
+		}
+		log.Printf("extension host recovery attempt failed %s: %v", st.key.ExtensionID, startErr)
+		s.mu.RLock()
+		failed := s.processes[k]
+		sameEpoch := s.recoveryEpoch[k] == epoch
+		s.mu.RUnlock()
+		if !sameEpoch || failed == nil || failed == st {
+			return
+		}
+		// A retry can fail before exec, or after an OS process was started
+		// but its ready handshake timed out. Wait for the old JVM to be reaped
+		// before scheduling another attempt so generations cannot overlap.
+		select {
+		case <-failed.doneCh:
+		case <-s.ctx.Done():
+			return
+		case <-time.After(s.cfg.StopTimeout + 2*time.Second):
+			return
+		}
+		failed.mu.Lock()
+		startupFailure := failed.state == "failed" ||
+			(failed.state == "stopped" && (strings.HasPrefix(failed.lastError, "startup hello timeout") || strings.HasPrefix(failed.lastError, "event subscription reconcile failed")))
+		failed.mu.Unlock()
+		s.mu.RLock()
+		permitted := s.processes[k] == failed && s.recoveryEpoch[k] == epoch
+		s.mu.RUnlock()
+		if startupFailure && permitted {
+			s.registerCrashAndRestart(failed)
 		}
 	}()
 }
@@ -888,6 +988,9 @@ func (s *Supervisor) failProcess(st *processState, reason string, expected bool)
 
 func (s *Supervisor) Stop(ctx context.Context, key Key) error {
 	key = key.normalized()
+	s.mu.Lock()
+	s.recoveryEpoch[key.String()]++ // cancel scheduled resurrection after an operator stop/disable
+	s.mu.Unlock()
 	if err := s.stopTransients0209(ctx, key); err != nil {
 		return err
 	}
@@ -936,7 +1039,9 @@ func (s *Supervisor) Restart(ctx context.Context, key Key) error {
 	delete(s.crashes, key.String())
 	s.restarts[key.String()] = 0
 	s.mu.Unlock()
-	_ = s.Stop(ctx, key)
+	if err := s.Stop(ctx, key); err != nil {
+		return fmt.Errorf("stop extension before restart: %w", err)
+	}
 	install, err := s.repo.GetExtensionInstallState(ctx, key.ExtensionID, key.Scope, key.ScopeID)
 	if err != nil {
 		return err
@@ -944,16 +1049,39 @@ func (s *Supervisor) Restart(ctx context.Context, key Key) error {
 	return s.StartInstallation(ctx, install)
 }
 
+// Reconcile converges persisted desired installations with live processes.
+// It is idempotent and stops obsolete/disabled generations before replacement.
 func (s *Supervisor) Reconcile(ctx context.Context) []error {
 	installs, err := s.repo.ListExtensionInstallStates(ctx, "", "")
 	if err != nil {
 		return []error{err}
 	}
+	desired := make(map[string]model.ExtensionInstall, len(installs))
+	for _, item := range installs {
+		desired[(Key{item.ExtensionID, item.Scope, item.ScopeID}).String()] = item
+	}
 	var errs []error
+	for _, status := range s.List() {
+		key := Key{status.ExtensionID, status.Scope, status.ScopeID}
+		item, exists := desired[key.String()]
+		if !exists || item.CurrentState != model.ExtensionInstallStateEnabled || !item.Enabled || status.Version != item.CurrentVersion || status.Generation != item.Generation {
+			if err := s.Stop(ctx, key); err != nil {
+				errs = append(errs, fmt.Errorf("stop %s: %w", key.ExtensionID, err))
+			}
+		}
+	}
 	for _, item := range installs {
 		if item.CurrentState != model.ExtensionInstallStateEnabled || !item.Enabled {
 			continue
 		}
+		key := Key{item.ExtensionID, item.Scope, item.ScopeID}
+		status, err := s.Get(key)
+		if err == nil && (status.State == "running" || status.State == "starting" || status.State == "stopping" || status.State == "failing") && status.Version == item.CurrentVersion && status.Generation == item.Generation {
+			continue
+		}
+		if err == nil && status.State == "crashloop" && status.Version == item.CurrentVersion && status.Generation == item.Generation {
+			continue
+		} // only operator can reset a crash loop
 		if err := s.StartInstallation(ctx, item); err != nil && !errors.Is(err, ErrNoBackendTarget) {
 			errs = append(errs, fmt.Errorf("%s/%s/%s: %w", item.Scope, item.ScopeID, item.ExtensionID, err))
 		}
@@ -1266,6 +1394,11 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st.mu.Lock()
+	if st.expectedStop || st.terminationInitiated || (st.state != "starting" && st.state != "running") {
+		st.mu.Unlock()
+		helloConflict0421(w, "HOST_INSTANCE_NOT_STARTING")
+		return
+	}
 	expectedPID := 0
 	if st.cmd != nil && st.cmd.Process != nil {
 		expectedPID = st.cmd.Process.Pid
