@@ -822,9 +822,41 @@ func mirrorReadWorkspace0274(path string) (mirrorWorkspace0274, error) {
 	return ws, nil
 }
 
+// Called with the installer cache lock held. Download to a verified sibling
+// first, so a failed repair cannot replace the previous file with untrusted bytes.
+func mirrorEnsureInstaller0427(ctx context.Context, dest string, artifact mirrorArtifact0274) error {
+	if _, err := mirrorCheckedHash0274(dest, artifact.SHA256); err == nil {
+		return nil
+	}
+	if st, err := os.Lstat(dest); err == nil {
+		if !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 {
+			return errors.New("unsafe installer cache entry")
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		return err
+	}
+	candidate, err := os.CreateTemp(filepath.Dir(dest), ".installer-repair-*")
+	if err != nil {
+		return err
+	}
+	name := candidate.Name()
+	candidate.Close()
+	os.Remove(name)
+	defer os.Remove(name)
+	if _, err := mirrorCopyVerified0274(ctx, name, artifact); err != nil {
+		return err
+	}
+	// Never unlink the old cache entry first: a failed rename must not destroy
+	// even the last (albeit corrupt) operator-visible artifact.
+	return os.Rename(name, dest)
+}
+
 func handleRuntimeMirror0274(args []string) error {
 	if len(args) == 0 {
-		return errors.New("client-factory commands: build,verify,inspect,install-client,install-mods,download-installer,launch-installer,workspace,apply-workspace,dedup-libraries,lwjgl-download,patch-authlib")
+		return errors.New("client-factory commands: build,verify,inspect,install-client,install-mods,download-installer,launch-installer,workspace,apply-workspace,dedup-libraries,lwjgl-download,patch-authlib,repair-installer")
 	}
 	command := strings.ToLower(args[0])
 	flags := args[1:]
@@ -1104,6 +1136,25 @@ func handleRuntimeMirror0274(args []string) error {
 			return err
 		}
 		return writeOrPrintJSON(output, p)
+	case "repair-installer", "repairinstaller":
+		// Explicit operator recovery of an untrusted cache file. The ordinary
+		// download command intentionally fails closed on tampered cached bytes.
+		file := flagValue(flags, "--cache-file", "")
+		sha := strings.ToLower(flagValue(flags, "--sha256", ""))
+		uri := flagValue(flags, "--url", "")
+		source := flagValue(flags, "--source-file", "")
+		if file == "" || !isSHA256Hex0271(sha) || (uri == "") == (source == "") {
+			return errors.New("repair-installer requires --cache-file, --sha256 and exactly one of --url or --source-file")
+		}
+		lock, err := acquireFactoryLock0271(file)
+		if err != nil {
+			return err
+		}
+		defer lock()
+		if err := mirrorEnsureInstaller0427(context.Background(), file, mirrorArtifact0274{URL: uri, File: source, SHA256: sha}); err != nil {
+			return err
+		}
+		return writeOrPrintJSON(output, map[string]any{"status": "repaired-and-verified", "path": file, "sha256": sha})
 	case "download-installer", "downloadinstaller":
 		loader := strings.ToLower(flagValue(flags, "--loader", ""))
 		if loader != "forge" && loader != "neoforge" {

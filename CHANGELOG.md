@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.42.7 — Executable Minecraft client-module fixes (MirrorHelper, MojangSupport, Prestarter, start UI)
+
+- **MirrorHelper:** Added an explicit `client-factory repair-installer --cache-file ... --sha256 ... --source-file|--url ...` operator command. It holds the existing cache lock, verifies all replacement bytes **before** replacing a corrupt installer, rejects symlink caches, and leaves the original on failed verification. Ordinary `download-installer` retains its fail-closed behavior on tampered cache, and duplicate Maven library coordinates remain blocked (no silent classpath mutation). The action uses actual verified file IO, not an inventory declaration.
+- **MojangSupport:** Official Minecraft API profile reads now retry bounded HTTP 429/502/503/504 responses, respect small valid `Retry-After` intervals and caller cancellation, and **never retry** state-changing Microsoft/Xbox/Minecraft POST/PUT/DELETE requests. The original identity validation and bearer-token boundaries remain in effect.
+- **Prestarter:** Headless `--no-desktop` installations (including direct signed offline Minecraft launches) no longer create or depend on Desktop-specific configuration. Signed manifest verification, Managed Java, sync, and rollback remain mandatory in headless mode.
+- **LauncherStartScreen:** The actual signed-brand Desktop home UI now shows the current preparation/Java/file/launch phase and a retry action on failure, wired to the existing full backend/runtime check; no fictitious completion percentage or unverified readiness is shown. Added isolated startup-state tests.
+- Executed local Prestarter and Minecraft HTTP-client tests, MirrorHelper cache/registration and existing workspace integration tests, and Desktop startup-state tests. Updated stale CLI paths in Client Factory CI and added the startup-state test to the Desktop CI job. Live Microsoft authorization, JVM/loader matrix, production signatures and ServerBridge acceptance remain **unverified** and block production certification.
+
+
 ## 0.42.6 — Live FileAuthSystem and AdditionalHash compatibility
 
 - Added an operational opt-in, read-only FileAuthSystem identity provider to the existing authenticated federation (password login, user lookup and Minecraft profile); it validates the real Database.json on startup and per lookup, updates on atomic file replacement, and fails closed on missing/corrupt/symlinked data. The provider never imports Gravit roles or sessions and uses the source UUID as its stable federated subject.

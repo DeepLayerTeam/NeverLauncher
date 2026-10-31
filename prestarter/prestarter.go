@@ -463,12 +463,14 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	if !opts.NoDesktop && p.config.BackendURL == "" {
 		return errors.New("signed bootstrap backendUrl is required for unattended Desktop first run")
 	}
-	desktopConfigDir, e := p.ensureDesktopConfig(opts.Username, profile.Runtime.Launch.OfflineMode && opts.Offline)
-	if e != nil {
-		return e
-	}
-	env = append(env, "NEVERLAUNCHER_CONFIG_DIR="+desktopConfigDir)
 	if !opts.NoDesktop {
+		// Headless installation and direct CLI launch must not mutate (or require)
+		// the Desktop provisioning directory.  Only a Desktop launch needs it.
+		desktopConfigDir, e := p.ensureDesktopConfig(opts.Username, profile.Runtime.Launch.OfflineMode && opts.Offline)
+		if e != nil {
+			return e
+		}
+		env = append(env, "NEVERLAUNCHER_CONFIG_DIR="+desktopConfigDir)
 		cmd := exec.Command(desktopBin)
 		cmd.Env = mergeEnv(env)
 		cmd.Dir = release

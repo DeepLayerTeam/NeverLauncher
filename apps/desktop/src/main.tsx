@@ -8,6 +8,7 @@ import {
   approvedSelectionIdentity0393,
   ensureReleaseApproval0359,
 } from "./release_update_0359";
+import { startupStatus0427 } from "./startup_screen_0427";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { invoke } from "@tauri-apps/api/core";
@@ -4837,6 +4838,19 @@ function App() {
                   )[stage]}
             </div>
           </header>
+
+          {stage !== "idle" && (
+            <section className="startupStatus0427" aria-live="polite" aria-label={ui0357.locale === "ru" ? "Запуск клиента" : "Client startup"}>
+              <span role={stage === "failed" ? "alert" : "status"}>
+                {startupStatus0427(stage, ui0357.locale).message}
+              </span>
+              {startupStatus0427(stage, ui0357.locale).failed && (
+                <button type="button" disabled={!normalActionsEnabled0357 || transferBusy} onClick={() => void runFullCheck().catch(error => log(String(error)))}>
+                  {ui0357.locale === "ru" ? "Повторить проверку" : "Retry checks"}
+                </button>
+              )}
+            </section>
+          )}
 
           {signedProvisioning0352?.branding &&
             (signedProvisioning0352.branding.news?.length || 0) > 0 && (

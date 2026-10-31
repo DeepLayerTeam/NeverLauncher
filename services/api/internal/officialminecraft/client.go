@@ -13,6 +13,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -98,9 +99,34 @@ func (c *Client) request(ctx context.Context, method, addr, bearer, contentType 
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return err
+	var resp *http.Response
+	// Only idempotent reads may be replayed. Minecraft Services occasionally
+	// rate-limits profile lookup; retrying writes or OAuth exchanges is unsafe.
+	for attempt := 0; ; attempt++ {
+		resp, err = c.http.Do(req)
+		if err != nil {
+			return err
+		}
+		if method != http.MethodGet || attempt >= 2 ||
+			(resp.StatusCode != http.StatusTooManyRequests && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable && resp.StatusCode != http.StatusGatewayTimeout) {
+			break
+		}
+		// Drain a bounded amount so the pooled connection can be reused.
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxResponse))
+		resp.Body.Close()
+		delay := time.Duration(100*(1<<attempt)) * time.Millisecond
+		if retry := resp.Header.Get("Retry-After"); retry != "" {
+			if seconds, parseErr := strconv.Atoi(retry); parseErr == nil && seconds >= 0 && seconds <= 2 {
+				delay = time.Duration(seconds) * time.Second
+			}
+		}
+		timer := time.NewTimer(delay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
 	}
 	defer resp.Body.Close()
 	b, err := io.ReadAll(io.LimitReader(resp.Body, maxResponse+1))

@@ -30,15 +30,15 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          test -z "$(gofmt -l cli/cmd/launcher/client_factory_0271*.go)"
+          test -z "$(gofmt -l cli/cmd/neverlauncher/client_factory_0271*.go)"
       - name: Real materializer fixtures and factory replay
         working-directory: cli
         shell: bash
         run: >-
-          go test ./cmd/launcher
+          go test ./cmd/neverlauncher
           -run 'TestClientFactory0271|TestInstallVanillaMaterializesVerifiedClient|TestFabricAndQuiltMaterializersProduceConsumableClientTree|TestForgeAndNeoForgeProcessorMaterializers'
           -count=1 -timeout=5m
       - name: Verify CLI build
         working-directory: cli
         shell: bash
-        run: go build ./cmd/launcher
+        run: go build ./cmd/neverlauncher

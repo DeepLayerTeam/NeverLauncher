@@ -1281,3 +1281,19 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* Signed launcher startup screen: real operation state and actionable recovery. */
+.startupStatus0427 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.75rem 0 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--brand-accent, #22c55e);
+  border-radius: 0.65rem;
+  color: var(--brand-text, inherit);
+  background: var(--brand-background, transparent);
+}
+.startupStatus0427 button { min-width: 8rem; }
