@@ -23,7 +23,7 @@ time = { version = "0.3", features = ["parsing"] }
 
 ed25519-dalek = { version = "2", features = ["rand_core", "zeroize"] }
 rand = "0.8"
-base64 = "0.22"
+base64 = "0.23"
 zeroize = "1"
 
 # Аппаратно привязанная идентификация устройства. Точная версия закреплена,
