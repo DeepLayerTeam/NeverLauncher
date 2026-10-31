@@ -292,5 +292,23 @@ class SecurityGameLifetime0438Tests(unittest.TestCase):
             self.assertIn(f"targets/{target}/security-0431/securityGuardLifetime.jsonl", new - old)
 
 
+class NativeExtensionRevocation04312Tests(unittest.TestCase):
+    def test_04312_requires_separate_native_lifetime_evidence(self):
+        from security_capabilities_0431 import checks, scenarios_for_version, expected_scope
+        self.assertNotIn("securityNativeRevocation", checks("0.43.11"))
+        self.assertIn("securityNativeRevocation", checks("0.43.12"))
+        self.assertIn("securityNativeRevocation", checks("0.44.0"))
+        self.assertEqual(expected_scope("securityNativeRevocation"), "backend-native-extension")
+        self.assertEqual(scenarios_for_version("0.43.12")["securityNativeRevocation"],
+                         ("authorizedNativeExtensionContinuesRunning", "revokedNativeExtensionTerminated"))
+
+    def test_04312_archive_requires_native_evidence_for_each_target(self):
+        old = set(evidence_files("0.43.11"))
+        new = set(evidence_files("0.43.12"))
+        for target in ("windows-x64", "windows-arm64", "linux-x64", "linux-arm64", "darwin-x64", "darwin-arm64"):
+            self.assertIn(f"targets/{target}/securityNativeRevocation.json", new - old)
+            self.assertIn(f"targets/{target}/security-0431/securityNativeRevocation.jsonl", new - old)
+
+
 if __name__ == "__main__":
     unittest.main()

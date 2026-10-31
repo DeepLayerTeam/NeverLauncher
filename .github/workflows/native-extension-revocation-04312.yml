@@ -1,0 +1,75 @@
+name: NeverLauncher 0.43.12 native extension lifetime revocation
+on:
+  push:
+    paths:
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionsecurity/**'
+      - 'services/api/internal/extensionpolicy/**'
+      - '.github/workflows/native-extension-revocation-04312.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionsecurity/**'
+      - 'services/api/internal/extensionpolicy/**'
+      - '.github/workflows/native-extension-revocation-04312.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+jobs:
+  native-process-revocation:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            os: linux
+            runner: ubuntu-24.04
+          - arch: arm64
+            os: linux
+            runner: [self-hosted, linux, ARM64, launcher-sandbox]
+          - arch: amd64
+            os: windows
+            runner: windows-2025
+          - arch: arm64
+            os: windows
+            runner: [self-hosted, windows, ARM64, launcher-appcontainer]
+          - arch: amd64
+            os: darwin
+            runner: macos-15-intel
+          - arch: arm64
+            os: darwin
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Require actual architecture and OS
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(go env GOOS)" = '${{ matrix.os }}'
+          test "$(go env GOARCH)" = '${{ matrix.arch }}'
+      - name: Revoke actual running native CLI process and broker access
+        shell: bash
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          go test -count=1 -timeout 5m -v ./internal/extensionhost \
+            -run 'TestNativeCLIRevocationStopsRunningProcess04312|TestCLIAuthorityPreflightRejectsRevocation04312|TestBrokerResponseRevocation04312'
+      - name: Existing extension host and authorization regression suite
+        shell: bash
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          go test -count=1 -timeout 8m ./internal/extensionhost ./internal/extensionpolicy ./internal/extensionsecurity
+  # Kernel isolation with native unprivileged user namespaces/cgroup, signed
+  # macOS helper and Windows AppContainer/Job is separately required by the
+  # existing platform-specific live workflows and release evidence gate.
+  # A test of the revocation *supervisor* is not itself sandbox certification.

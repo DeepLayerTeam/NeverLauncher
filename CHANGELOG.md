@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.43.12 — Native extension lifetime revocation and broker response authorization
+
+- Native/CLI extension processes are now included in the supervisor's active-instance monitor rather than only persistent backend slots. Emergency-disable, quarantine, withdrawn publisher trust, changed installation generation and revoked `cli:contribute` terminate an already running CLI process instead of waiting for its next broker request.
+- CLI execution re-checks current durable authority before process launch, after sandbox/command preparation, periodically while running, and before reporting success. Cached grants and an old enabled-install snapshot do not authorize execution after revocation. Repository failures deny rather than grant.
+- The HTTP capability broker re-checks active installation/publisher trust and the specific grant before returning successful capability data, including runtime storage, filesystem, outbound HTTP and secret-backed requests. This closes the response disclosure window when a grant is revoked during a request; in-flight side effects still require each broker's own authorization and cancellation handling.
+- Added real subprocess tests using the test binary itself (not an interpreter-dependent mock) for permission withdrawal, emergency-disable and installation disable. Dedicated six-target native CI exercises the same lifetime tests on Windows/Linux/macOS x64/ARM64, with no ARM64 emulation substitution. Platform sandbox kernel enforcement, Apple signed helper and AppContainer/Job tests retain their existing separate mandatory evidence requirements.
+
+**Verification boundary:** local environment has Go 1.23.2 while the project requires Go 1.27.3. Real Backend compilation, tests on all six native runner targets, and final signed release verification have not been completed here. This is source-code security enforcement, not a certified GA release.
+
 ## 0.43.11 — macOS signed App Sandbox single-process execution
 
 - Fixed the helper builder and CI references to the actual Swift/entitlements sources; signed builds now include a fixed code-signing identifier, Developer ID verification and Hardened Runtime validation.

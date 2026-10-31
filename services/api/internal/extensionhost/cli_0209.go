@@ -149,6 +149,11 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		permissions[p] = struct{}{}
 	}
 	st := &processState{key: Key{install.ExtensionID, install.Scope, install.ScopeID}.normalized(), install: install, manifest: ver.Manifest, permissions: permissions, token: token, callbackToken: callbackToken, instanceID: instance, entrypoint: target.Entrypoint, state: "starting", javaHost: sameHostJar0304(entrypoint), helloCh: make(chan struct{}), readyCh: make(chan struct{}), doneCh: make(chan struct{}), logs: ringLog{maxBytes: s.cfg.MaxLogBytes, maxEntries: s.cfg.MaxLogEntries}}
+	// The permission snapshot above is for reporting only. Neither an old
+	// installation generation nor a revoked CLI grant may authorize exec.
+	if err := s.enforceCLITrust04312(ctx, st); err != nil {
+		return CLIResult0209{}, fmt.Errorf("cli extension trust refused: %w", err)
+	}
 	s.mu.RLock()
 	baseURL := s.baseURL
 	s.mu.RUnlock()
@@ -187,7 +192,9 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		}
 		defer isolatedHandle.Close()
 		cmd = isolatedHandle.Cmd
+		st.mu.Lock()
 		st.sandbox = isolatedHandle
+		st.mu.Unlock()
 	} else {
 		configureProcess(cmd)
 	}
@@ -206,6 +213,18 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 		}
 		cmd.Stdout = &cliOutputWriter03113{st: st, target: stdout, policy: ver.Manifest.Sandbox, abort: abort, once: &outputBreach}
 		cmd.Stderr = &cliOutputWriter03113{st: st, target: stderr, policy: ver.Manifest.Sandbox, abort: abort, once: &outputBreach}
+	}
+	// Check durable authority a second time after package/sandbox preparation.
+	// An emergency disable, publisher-key revocation or grant withdrawal in
+	// that window must prevent execution, even if the original snapshot passed.
+	if err := s.enforceCLITrust04312(ctx, st); err != nil {
+		return CLIResult0209{}, fmt.Errorf("cli extension trust changed before exec: %w", err)
+	}
+	st.mu.Lock()
+	stopRequestedBeforeExec := st.expectedStop
+	st.mu.Unlock()
+	if stopRequestedBeforeExec {
+		return CLIResult0209{}, errors.New("cli extension stopped before exec")
 	}
 	started := time.Now().UTC()
 	if err := cmd.Start(); err != nil {
@@ -261,6 +280,17 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 	for {
 		select {
 		case waitErr := <-waitCh:
+			// A short-lived command may finish between monitor ticks. Do not
+			// report successful execution once its authority was withdrawn.
+			if err := s.enforceCLITrust04312(ctx, st); err != nil {
+				return CLIResult0209{}, fmt.Errorf("cli extension authority revoked: %w", err)
+			}
+			st.mu.Lock()
+			terminated := st.expectedStop || st.terminationInitiated
+			st.mu.Unlock()
+			if terminated {
+				return CLIResult0209{}, errors.New("cli extension terminated by supervisor")
+			}
 			code := 0
 			if cmd.ProcessState != nil {
 				code = cmd.ProcessState.ExitCode()
@@ -271,6 +301,12 @@ func (s *Supervisor) RunCLI0209(ctx context.Context, install model.ExtensionInst
 			}
 			return result, nil
 		case <-ticker.C:
+			// Do not depend on the 1-second global monitor: enforce the
+			// current grant and install generation while CLI code is executing.
+			if err := s.enforceCLITrust04312(ctx, st); err != nil {
+				_ = killProcessTree(cmd.Process)
+				return CLIResult0209{}, fmt.Errorf("cli extension authority revoked: %w", err)
+			}
 			if cmd.Process != nil {
 				if rss, count, e := processTreeUsage(cmd.Process.Pid); e == nil {
 					if s.cfg.MaxMemoryBytes > 0 && rss > s.cfg.MaxMemoryBytes {

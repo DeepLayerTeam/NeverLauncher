@@ -38,11 +38,21 @@ GAMEPLAY_SCENARIOS_0438 = {
         "healthyGuardAllowsOngoingGameplay", "lostGuardStopsOngoingGameplay"
     ),
 }
+# A successful sandbox start is not evidence that revocation terminates a
+# running extension or prevents an already in-flight broker result from being
+# delivered. Both observations must originate from native execution.
+EXTENSION_LIFETIME_SCENARIOS_04312 = {
+    "securityNativeRevocation": (
+        "authorizedNativeExtensionContinuesRunning", "revokedNativeExtensionTerminated"
+    ),
+}
 CLIENT = (frozenset(SCENARIOS) | frozenset(GAMEPLAY_SCENARIOS_0438)) - {"securityNativeSandbox"}
 
 
 def scenarios_for_version(version: str) -> dict[str, tuple[str, str]]:
     number, prerelease = parsed(version)
+    if prerelease is None and number >= (0, 43, 12):
+        return {**SCENARIOS, **GAMEPLAY_SCENARIOS_0438, **EXTENSION_LIFETIME_SCENARIOS_04312}
     if prerelease is None and number >= (0, 43, 8):
         return {**SCENARIOS, **GAMEPLAY_SCENARIOS_0438}
     return SCENARIOS

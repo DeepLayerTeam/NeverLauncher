@@ -622,7 +622,9 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 			return s.abortUnstarted0422(st, fmt.Errorf("sandbox-unavailable: %w", err))
 		}
 		cmd = isolatedHandle.Cmd
+		st.mu.Lock()
 		st.sandbox = isolatedHandle
+		st.mu.Unlock()
 	} else {
 		configureProcess(cmd)
 	}
@@ -1264,9 +1266,23 @@ func (s *Supervisor) monitorLoop() {
 }
 func (s *Supervisor) monitorOnce(now time.Time) {
 	s.mu.RLock()
-	items := make([]*processState, 0, len(s.processes))
+	// CLI/native one-shot hosts hold the same bearer and OS resources as
+	// persistent hosts. Monitor *every* live instance, not just backend slots.
+	items := make([]*processState, 0, len(s.processes)+len(s.tokens))
+	seen := make(map[*processState]bool, len(s.processes)+len(s.tokens))
+	transient := make(map[*processState]bool)
 	for _, st := range s.processes {
 		items = append(items, st)
+		seen[st] = true
+	}
+	for _, instances := range s.transients {
+		for _, st := range instances {
+			transient[st] = true
+			if !seen[st] {
+				items = append(items, st)
+				seen[st] = true
+			}
+		}
 	}
 	s.mu.RUnlock()
 	for _, st := range items {
@@ -1291,6 +1307,9 @@ func (s *Supervisor) monitorOnce(now time.Time) {
 		}
 		trustCtx, trustCancel := context.WithTimeout(trustContext, s.cfg.CapabilityTimeout)
 		trustErr := s.enforceLiveTrust04210(trustCtx, st)
+		if trustErr == nil && transient[st] {
+			trustErr = s.enforceCLITrust04312(trustCtx, st)
+		}
 		trustCancel()
 		if trustErr != nil {
 			s.denyRevokedHost04210(st, trustErr)
@@ -1907,6 +1926,18 @@ func (s *Supervisor) handleCapability(w http.ResponseWriter, r *http.Request) {
 	select {
 	case result := <-resultCh:
 		privileged := capName != "host.health" && capName != "extension.self"
+		// A capability may finish after its permission or publisher key was
+		// revoked. Never release a completed secret/data response using the
+		// pre-revocation authorization snapshot.
+		if result.err == nil {
+			if err := s.revalidateCapability04312(capCtx, st, capName, req); err != nil {
+				if privileged {
+					s.auditCapability0207(st, capName, false, "authority-revoked-before-response")
+				}
+				http.Error(w, "extension authority changed during capability request", http.StatusForbidden)
+				return
+			}
+		}
 		if result.err != nil {
 			if privileged {
 				s.auditCapability0207(st, capName, false, strconv.Itoa(result.status))
