@@ -36,7 +36,7 @@ jobs:
       LAUNCHER_PG_TEST_DSN: postgres://launcher_test:test-only-secret@127.0.0.1:5432/launcher_migration_test?sslmode=disable
       LAUNCHER_POSTGRES_DSN: postgres://launcher_test:test-only-secret@127.0.0.1:5432/launcher_migration_test?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod

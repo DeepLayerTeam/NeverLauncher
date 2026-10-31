@@ -40,7 +40,7 @@ jobs:
       LAUNCHER_GROWTH_TEST_PG_DSN: postgres://launcher_growth:growth-ci-only@127.0.0.1:5432/launcher_growth?sslmode=disable
       LAUNCHER_GROWTH_TEST_REDIS_URL: redis://127.0.0.1:6379/0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: services/api/go.mod
