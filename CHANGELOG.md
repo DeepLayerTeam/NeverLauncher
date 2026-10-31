@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.43.2 — Device Trust: atomic enrollment, session binding and refresh epochs
+
+- Prevent an already device-bound session from silently enrolling or verifying another device. Standard first-time binding now uses an atomic unbound-to-bound transition in both in-memory/SQLite-session and PostgreSQL stores. Races reject the losing transition; failed registration does not leave a newly created active device credential.
+- Preserve explicit dual-key rotation and phishing-resistant recovery. The non-SQL fallback has an independent replacement-only binding operation that checks both the previous device and the previous binding epoch before committing; the existing PostgreSQL replacement remains a single transaction.
+- Close the refresh proof/rotation race. The API verifies a bound device signature and then checks the session ID, device ID, trust state and binding epoch **under the token rotation lock/transaction**. A stale proof cannot spend the token or mint a new token for a changed binding. A final binding check prevents stale successes when a second transition occurs during response preparation.
+- Verify the stored device public-key fingerprint before a verified session-bind challenge can be completed. Added concurrent CAS, old-challenge-after-rebind, silent replacement refusal and refresh epoch regression tests.
+- Version metadata updated to `0.43.2`; existing independently signed 0.43.1+ release security gates remain mandatory. Device platform strings are advisory, not proof of native OS or hardware provenance.
+
+**Verification boundary:** Go source syntax and version metadata can be checked locally. The project requires Go 1.27.3 while this runner exposes Go 1.23.2, so full Backend Go tests, PostgreSQL integration, native Windows/macOS/ARM64 workflows and real game-to-server sessions have not been executed here. The new tests are included for CI and are not claimed to have passed; this patch is not production-certified until those checks and the existing GA gates pass.
+
 ## 0.43.1 — Fail-closed security capability certification and publication
 
 - GA release authorization now requires independent per-target Ed25519-approved evidence for six separate security capabilities: Device Trust, HWID policy, NeverGuard, key revocation, account recovery, and native extension sandbox. Each required capability has a positive and a negative observed scenario, run/attempt correlation and log hashes bound to the final client binary and package. A generic `security: passed` no longer authorizes shipping an unverified protection claim.

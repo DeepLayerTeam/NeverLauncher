@@ -287,7 +287,7 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 			}
 			return
 		}
-		if _, err = s.State.AuthSessions.bindTrustedDevice121(claims.SessionID, claims.Sub, replacement.ID, now); err != nil {
+		if _, err = s.State.AuthSessions.replaceDeviceBinding0432(claims.SessionID, claims.Sub, sessionBeforeReplace.TrustedDeviceID, sessionBeforeReplace.BindingEpoch, replacement.ID, now); err != nil {
 			_, _ = s.Repo.RevokeTrustedDevice(r.Context(), claims.Sub, replacement.ID, "replacement-bind-failed")
 			writeError(w, http.StatusConflict, "не удалось перепривязать session к replacement device")
 			return

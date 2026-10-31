@@ -41,6 +41,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
                         "refreshPayloadBinding",
                         "attestationPayloadValidation",
                         "deviceTrustRelease0130",
+                        "goDeviceBindingIntegration0432",
                     ],
                 }
             ],
@@ -67,6 +68,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
                 "refreshPayloadBinding": True,
                 "attestationPayloadValidation": True,
                 "deviceTrustRelease0130": True,
+                "goDeviceBindingIntegration0432": True,
             },
             "evidence": {
                 "files": ["native-cargo-test.txt"],
@@ -170,6 +172,27 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("commit", proc.stderr + proc.stdout)
+
+    def test_aggregate_rejects_wrong_runtime_architecture_0432(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            target_doc = self.target_doc()
+            target_doc["targets"][0]["arch"] = "arm64"
+            targets = tmp / "targets.json"
+            targets.write_text(json.dumps(target_doc), encoding="utf-8")
+            result_dir = tmp / "results" / "native-linux"
+            result_dir.mkdir(parents=True)
+            bad = self.passing_result()
+            bad["arch"] = "arm64"  # metadata matches target, actual runner does not
+            bad["runtimeArch"] = "x86_64"
+            self.write_result(result_dir, bad)
+            proc = run(
+                "aggregate", "--targets", str(targets), "--results-root", str(tmp / "results"),
+                "--output-dir", str(tmp / "out"), "--commit", "abc123", "--run-id", "77",
+                "--repository", "DeepLayerTeam/Launcher",
+            )
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("runtimeArch", proc.stderr + proc.stdout)
 
     def test_aggregate_rejects_false_required_check(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -290,6 +313,7 @@ class DeviceTrustMatrixTests(unittest.TestCase):
                             "recoveryRequiresPhishingResistantStepUp",
                             "recoveryPhishingResistantEndToEnd",
                             "deviceTrustRelease0130",
+                        "goDeviceBindingIntegration0432",
                         ]
                     ),
                 }

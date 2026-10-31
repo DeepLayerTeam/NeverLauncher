@@ -221,8 +221,10 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	session, newRefreshToken, err := s.State.AuthSessions.rotate(req.RefreshToken, r)
-	_ = s.flushPersistenceState950("auth-refresh-rotate")
+	session, newRefreshToken, err := s.State.AuthSessions.rotateExpected0432(req.RefreshToken, &preview, r)
+	if err == nil || errors.Is(err, errRefreshTokenReuseDetected) {
+		_ = s.flushPersistenceState950("auth-refresh-rotate")
+	}
 	if err != nil {
 		if errors.Is(err, errRefreshTokenReuseDetected) {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-reuse-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: "unknown", Action: "auth:refresh:reuse-detected", Target: "refresh-token-family", IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
@@ -246,6 +248,14 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	// and the final token issuance (possibly on another API replica).
 	if !s.enforceProtection0298(w, r, protection.AfterAuth, user.ID, session.ID, session.TrustedDeviceID, session.RoleID) {
 		s.State.AuthSessions.revoke(session.ID, "protection-after-refresh")
+		return
+	}
+	// A binding/epoch transition after the refresh transaction must not
+	// return a token stamped with stale device authority. That token would be
+	// rejected on its next use; fail this refresh instead of reporting success.
+	currentBinding, live := s.State.AuthSessions.get(session.ID, session.UserID)
+	if !live || !sameDeviceBinding0432(currentBinding, session) {
+		writeError(w, http.StatusUnauthorized, "device binding changed during refresh")
 		return
 	}
 	accessToken, err := s.issueAccessTokenForSession(user, session)

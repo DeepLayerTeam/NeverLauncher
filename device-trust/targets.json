@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "productVersion": "0.43.1",
+  "productVersion": "0.43.2",
   "targets": [
     {
       "id": "postgres-protocol-linux-x64",
@@ -28,11 +28,11 @@
       ]
     },
     {
-      "id": "native-linux",
+      "id": "native-linux-x64",
       "kind": "native-tests",
       "runner": "ubuntu-24.04",
       "os": "linux",
-      "arch": "runner-native",
+      "arch": "x86_64",
       "required": true,
       "requiredChecks": [
         "tauriCompile",
@@ -41,15 +41,34 @@
         "replacementPayloadValidation",
         "refreshPayloadBinding",
         "attestationPayloadValidation",
-        "deviceTrustRelease0130"
+        "deviceTrustRelease0130",
+        "goDeviceBindingIntegration0432"
       ]
     },
     {
-      "id": "native-windows",
+      "id": "native-linux-arm64",
+      "kind": "native-tests",
+      "runner": "ubuntu-24.04-arm",
+      "os": "linux",
+      "arch": "arm64",
+      "required": true,
+      "requiredChecks": [
+        "tauriCompile",
+        "deviceKeyUnitTests",
+        "generationScopedHardwareLabels",
+        "replacementPayloadValidation",
+        "refreshPayloadBinding",
+        "attestationPayloadValidation",
+        "deviceTrustRelease0130",
+        "goDeviceBindingIntegration0432"
+      ]
+    },
+    {
+      "id": "native-windows-x64",
       "kind": "native-tests",
       "runner": "windows-2022",
       "os": "windows",
-      "arch": "runner-native",
+      "arch": "x86_64",
       "required": true,
       "requiredChecks": [
         "tauriCompile",
@@ -58,15 +77,16 @@
         "replacementPayloadValidation",
         "refreshPayloadBinding",
         "attestationPayloadValidation",
-        "deviceTrustRelease0130"
+        "deviceTrustRelease0130",
+        "goDeviceBindingIntegration0432"
       ]
     },
     {
-      "id": "native-macos",
+      "id": "native-windows-arm64",
       "kind": "native-tests",
-      "runner": "macos-14",
-      "os": "macos",
-      "arch": "runner-native",
+      "runner": "windows-11-arm",
+      "os": "windows",
+      "arch": "arm64",
       "required": true,
       "requiredChecks": [
         "tauriCompile",
@@ -75,7 +95,44 @@
         "replacementPayloadValidation",
         "refreshPayloadBinding",
         "attestationPayloadValidation",
-        "deviceTrustRelease0130"
+        "deviceTrustRelease0130",
+        "goDeviceBindingIntegration0432"
+      ]
+    },
+    {
+      "id": "native-macos-x64",
+      "kind": "native-tests",
+      "runner": "macos-15-intel",
+      "os": "macos",
+      "arch": "x86_64",
+      "required": true,
+      "requiredChecks": [
+        "tauriCompile",
+        "deviceKeyUnitTests",
+        "generationScopedHardwareLabels",
+        "replacementPayloadValidation",
+        "refreshPayloadBinding",
+        "attestationPayloadValidation",
+        "deviceTrustRelease0130",
+        "goDeviceBindingIntegration0432"
+      ]
+    },
+    {
+      "id": "native-macos-arm64",
+      "kind": "native-tests",
+      "runner": "macos-14",
+      "os": "macos",
+      "arch": "arm64",
+      "required": true,
+      "requiredChecks": [
+        "tauriCompile",
+        "deviceKeyUnitTests",
+        "generationScopedHardwareLabels",
+        "replacementPayloadValidation",
+        "refreshPayloadBinding",
+        "attestationPayloadValidation",
+        "deviceTrustRelease0130",
+        "goDeviceBindingIntegration0432"
       ]
     }
   ]

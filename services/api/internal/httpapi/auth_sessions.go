@@ -171,8 +171,14 @@ func (s *authSessionStore) createWithAuth(user model.User, r *http.Request, devi
 }
 
 func (s *authSessionStore) rotate(refreshToken string, r ...*http.Request) (authSessionRecord, string, error) {
+	return s.rotateExpected0432(refreshToken, nil, r...)
+}
+
+// A caller that has checked device proof passes the exact session snapshot.
+// The condition is rechecked under the same lock that rotates the refresh token.
+func (s *authSessionStore) rotateExpected0432(refreshToken string, expected *authSessionRecord, r ...*http.Request) (authSessionRecord, string, error) {
 	if s.persistent != nil {
-		record, token, err := s.persistent.rotate(refreshToken)
+		record, token, err := s.persistent.rotateExpected0432(refreshToken, expected)
 		if err == nil && len(r) > 0 && r[0] != nil {
 			if observed, ok := s.persistent.observe118(record.ID, record.UserID, r[0]); ok {
 				record = observed
@@ -213,6 +219,9 @@ func (s *authSessionStore) rotate(refreshToken string, r ...*http.Request) (auth
 		return authSessionRecord{}, "", errRefreshTokenInvalid
 	}
 	record, ok := s.sessions[token.SessionID]
+	if ok && expected != nil && !sameDeviceBinding0432(record, *expected) {
+		return authSessionRecord{}, "", errSessionBindingChanged0432
+	}
 	if !ok || record.Status != "active" || record.ExpiresAt.Before(now) || token.ExpiresAt.Before(now) {
 		if ok {
 			record.Status = "revoked"
@@ -520,6 +529,9 @@ func (s *authSessionStore) bindTrustedDevice121(sessionID, userID, deviceID stri
 	if !ok || rec.UserID != userID || rec.Status != "active" || rec.ExpiresAt.Before(time.Now().UTC()) {
 		return authSessionRecord{}, errSessionNotFound118
 	}
+	if rec.TrustedDeviceID != "" || rec.DeviceTrustState != "unverified" || strings.TrimSpace(deviceID) == "" {
+		return authSessionRecord{}, errSessionBindingChanged0432
+	}
 	rec.TrustedDeviceID = strings.TrimSpace(deviceID)
 	rec.DeviceTrustState = "verified"
 	rec.DeviceVerifiedAt = verifiedAt.UTC()
@@ -528,6 +540,34 @@ func (s *authSessionStore) bindTrustedDevice121(sessionID, userID, deviceID stri
 	}
 	rec.BindingEpoch++
 	rec.LastSeenAt = time.Now().UTC()
+	s.sessions[sessionID] = rec
+	return sanitizeSessionRecord(rec), nil
+}
+
+// replaceDeviceBinding0432 is intentionally separate from first-time enrollment.
+// Only a verified dual-key rotation or phishing-resistant recovery may call it.
+// Comparing the pre-proof epoch under the session lock rejects concurrent rebinding.
+func (s *authSessionStore) replaceDeviceBinding0432(sessionID, userID, previousDeviceID string, previousEpoch int64, newDeviceID string, verifiedAt time.Time) (authSessionRecord, error) {
+	if s.persistent != nil {
+		return authSessionRecord{}, errSessionBindingChanged0432 // SQL replacement is handled in one repository transaction.
+	}
+	if strings.TrimSpace(newDeviceID) == "" || previousEpoch < 1 {
+		return authSessionRecord{}, errSessionBindingChanged0432
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	rec, ok := s.sessions[sessionID]
+	if !ok || rec.UserID != userID || rec.Status != "active" || !rec.ExpiresAt.After(time.Now().UTC()) || rec.TrustedDeviceID != previousDeviceID || rec.BindingEpoch != previousEpoch {
+		return authSessionRecord{}, errSessionBindingChanged0432
+	}
+	rec.TrustedDeviceID = newDeviceID
+	rec.DeviceTrustState = "verified"
+	rec.DeviceVerifiedAt = verifiedAt.UTC()
+	rec.BindingEpoch++
+	rec.LastSeenAt = time.Now().UTC()
+	// Recovery from a compromised device does not inherit old risk decisions.
+	rec.RiskReasons = removeRiskReasons0126(rec.RiskReasons, "trusted-device-missing", "trusted-device-revoked", "trusted-device-invalid", "device-attestation-stale")
+	recomputeSessionRisk0126(&rec, verifiedAt)
 	s.sessions[sessionID] = rec
 	return sanitizeSessionRecord(rec), nil
 }

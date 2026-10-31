@@ -55,9 +55,8 @@ jobs:
         with:
           python-version: '3.12'
       - uses: actions/setup-go@v5
-        if: matrix.kind == 'protocol-e2e'
         with:
-          go-version: '1.23.x'
+          go-version-file: services/api/go.mod
           cache-dependency-path: |
             services/api/go.sum
             cli/go.sum
@@ -89,6 +88,13 @@ jobs:
           LAUNCHER_DEVICE_TRUST_COMMIT: ${{ github.sha }}
           LAUNCHER_DEVICE_TRUST_RUN_ID: ${{ github.run_id }}
         run: bash e2e/scripts/run-device-trust-e2e.sh
+      - name: Run real HTTP Device Trust binding and epoch regression tests
+        if: matrix.kind == 'native-tests'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p e2e/device-trust-result
+          (cd services/api && go test -v -count=1 ./internal/httpapi -run 'TestDeviceTrust.*0432') 2>&1 | tee e2e/device-trust-result/native-go-device-binding.txt
       - name: Compile Tauri key lifecycle and run native policy tests
         if: matrix.kind == 'native-tests'
         shell: bash

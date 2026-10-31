@@ -268,22 +268,29 @@ func (p *authSessionPostgres111) bindTrustedDevice121(sessionID, userID, deviceI
 		return authSessionRecord{}, err
 	}
 	defer tx.Rollback()
-	var familyID string
-	if err := tx.QueryRowContext(ctx, `SELECT refresh_family_id FROM auth_sessions WHERE id=$1 AND user_id=$2 AND status='active' AND expires_at>now() FOR UPDATE`, sessionID, userID).Scan(&familyID); err != nil {
+	var familyID, currentDeviceID, currentTrustState string
+	if err := tx.QueryRowContext(ctx, `SELECT refresh_family_id, COALESCE(trusted_device_id,''),device_trust_state FROM auth_sessions WHERE id=$1 AND user_id=$2 AND status='active' AND expires_at>now() FOR UPDATE`, sessionID, userID).Scan(&familyID, &currentDeviceID, &currentTrustState); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return authSessionRecord{}, errSessionNotFound118
 		}
 		return authSessionRecord{}, err
 	}
-	var owner, status string
-	if err := tx.QueryRowContext(ctx, `SELECT user_id,status FROM trusted_devices WHERE id=$1 FOR SHARE`, deviceID).Scan(&owner, &status); err != nil {
+	if currentDeviceID != "" || currentTrustState != "unverified" || strings.TrimSpace(deviceID) == "" {
+		return authSessionRecord{}, errSessionBindingChanged0432
+	}
+	var owner, status, trustState string
+	if err := tx.QueryRowContext(ctx, `SELECT user_id,status,trust_state FROM trusted_devices WHERE id=$1 FOR SHARE`, deviceID).Scan(&owner, &status, &trustState); err != nil {
 		return authSessionRecord{}, err
 	}
-	if owner != userID || status != "active" {
+	if owner != userID || status != "active" || trustState != "verified" {
 		return authSessionRecord{}, errSessionNotFound118
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET trusted_device_id=$3,device_trust_state='verified',device_verified_at=$4,binding_epoch=GREATEST(binding_epoch,1)+1,last_seen_at=now() WHERE id=$1 AND user_id=$2`, sessionID, userID, deviceID, verifiedAt.UTC()); err != nil {
+	res, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET trusted_device_id=$3,device_trust_state='verified',device_verified_at=$4,binding_epoch=GREATEST(binding_epoch,1)+1,last_seen_at=now() WHERE id=$1 AND user_id=$2 AND trusted_device_id IS NULL AND device_trust_state='unverified' AND status='active'`, sessionID, userID, deviceID, verifiedAt.UTC())
+	if err != nil {
 		return authSessionRecord{}, err
+	}
+	if changed, err := res.RowsAffected(); err != nil || changed != 1 {
+		return authSessionRecord{}, errSessionBindingChanged0432
 	}
 	if err := p.insertEventTx111(ctx, tx, userID, sessionID, familyID, "trusted-device-bound", map[string]any{"deviceId": deviceID}); err != nil {
 		return authSessionRecord{}, err

@@ -12,6 +12,14 @@ import (
 )
 
 var errSessionRiskDenied0126 = errors.New("session risk policy denied request")
+var errSessionBindingChanged0432 = errors.New("device session binding changed during authenticated operation")
+
+func sameDeviceBinding0432(current, expected authSessionRecord) bool {
+	return current.ID == expected.ID && current.UserID == expected.UserID &&
+		current.TrustedDeviceID == expected.TrustedDeviceID &&
+		current.DeviceTrustState == expected.DeviceTrustState &&
+		current.BindingEpoch == expected.BindingEpoch
+}
 
 func sessionBindingClaimsMatch0126(claims authClaims, session authSessionRecord) bool {
 	epoch := session.BindingEpoch

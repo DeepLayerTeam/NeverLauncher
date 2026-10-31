@@ -28,12 +28,30 @@ def main() -> int:
     parser.add_argument("--commit", required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--log", type=Path, required=True)
+    parser.add_argument("--go-log", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     text = args.log.read_text(encoding="utf-8", errors="replace")
+    go_text = args.go_log.read_text(encoding="utf-8", errors="replace")
+    native_os = {"Darwin": "macos", "Windows": "windows", "Linux": "linux"}.get(platform.system(), "unsupported")
+    native_arch = platform.machine().lower()
+    arch_aliases = {"x86_64": {"x86_64", "amd64"}, "arm64": {"arm64", "aarch64"}}
+    if native_os != args.os or native_arch not in arch_aliases.get(args.arch, set()):
+        raise SystemExit(f"native Device Trust platform mismatch: {native_os}/{native_arch} vs {args.os}/{args.arch}")
     checks = {"tauriCompile": "test result: ok." in text}
     for check, markers in TEST_MARKERS.items():
         checks[check] = all(marker in text for marker in markers)
+    required_go_tests = [
+        "TestDeviceTrustExistingBindingCannotBeReplacedWithoutRecovery0432",
+        "TestDeviceTrustInflightProofCannotSwapAlreadyBoundSession0432",
+        "TestDeviceTrustBindingCASAndRefreshEpoch0432",
+        "TestDeviceTrustCompetingRegistrationChallengesDoNotLeaveActiveOrphans0432",
+    ]
+    checks["goDeviceBindingIntegration0432"] = (
+        all("--- PASS: " + test in go_text for test in required_go_tests)
+        and "FAIL" not in go_text
+        and "ok " in go_text
+    )
     failed = [name for name, ok in checks.items() if not ok]
     payload = {
         "schemaVersion": "1.0",
@@ -49,8 +67,11 @@ def main() -> int:
         "exitCode": 0 if not failed else 1,
         "checks": checks,
         "evidence": {
-            "files": [args.log.name],
-            "sha256": {args.log.name: hashlib.sha256(args.log.read_bytes()).hexdigest()},
+            "files": [args.log.name, args.go_log.name],
+            "sha256": {
+                args.log.name: hashlib.sha256(args.log.read_bytes()).hexdigest(),
+                args.go_log.name: hashlib.sha256(args.go_log.read_bytes()).hexdigest(),
+            },
         },
         "limitations": ["headless-ci-does-not-prove-os-secure-storage-runtime"],
         "claims": {"deviceTrustRelease": VERSION},

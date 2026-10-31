@@ -232,7 +232,7 @@ func (s Server) authDeviceRegisterBegin0121(w http.ResponseWriter, r *http.Reque
 	// Усиление 0.12.8: сеанс, уже привязанный к проверенному устройству, не может незаметно
 	// зарегистрировать второй ключ. Преемственность ключа требует ротации с доказательством старым
 	// ключом либо восстановления с новым устойчивым к фишингу подтверждением учётной записи.
-	if session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub); ok && session.TrustedDeviceID != "" && session.DeviceTrustState == "verified" {
+	if session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub); !ok || session.TrustedDeviceID != "" || session.DeviceTrustState != "unverified" {
 		writeJSON(w, http.StatusConflict, map[string]any{"error": map[string]any{"code": http.StatusConflict, "message": "сессия уже привязана к trusted device; используйте key rotation или key recovery", "rotationBegin": "/api/v1/auth/devices/key-rotation/begin", "recoveryBegin": "/api/v1/auth/devices/key-recovery/begin"}})
 		return
 	}
@@ -332,12 +332,15 @@ func (s Server) authDeviceRegisterComplete0121(w http.ResponseWriter, r *http.Re
 	}
 	device, err = s.Repo.TouchTrustedDevice(r.Context(), claims.Sub, device.ID, clientIP(r), r.UserAgent())
 	if err != nil {
+		_, _ = s.Repo.RevokeTrustedDevice(r.Context(), claims.Sub, device.ID, "registration-confirmation-failed")
 		writeError(w, http.StatusInternalServerError, "не удалось подтвердить устройство")
 		return
 	}
 	session, err := s.State.AuthSessions.bindTrustedDevice121(claims.SessionID, claims.Sub, device.ID, now)
 	if err != nil {
-		writeError(w, http.StatusConflict, "не удалось привязать устройство к текущей сессии")
+		// A concurrent binding must not leave a second active device identity.
+		_, _ = s.Repo.RevokeTrustedDevice(r.Context(), claims.Sub, device.ID, "registration-binding-conflict")
+		writeError(w, http.StatusConflict, "сессия уже привязана; используйте key rotation или recovery")
 		return
 	}
 	session, err = s.reconcileSessionDeviceRisk0126(r, session)
@@ -363,6 +366,10 @@ func (s Server) authDeviceVerifyBegin0121(w http.ResponseWriter, r *http.Request
 	claims, err := s.verifyAdminTokenFromRequest(r)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "требуется действительный Bearer-токен")
+		return
+	}
+	if session, ok := s.State.AuthSessions.get(claims.SessionID, claims.Sub); !ok || session.TrustedDeviceID != "" || session.DeviceTrustState != "unverified" {
+		writeError(w, http.StatusConflict, "сессия уже привязана; используйте key rotation или recovery")
 		return
 	}
 	deviceID := strings.TrimSpace(r.PathValue("deviceId"))
@@ -413,8 +420,8 @@ func (s Server) authDeviceVerifyComplete0121(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	pub, err := decodeDevicePublicKey0123(device.PublicKey, device.KeyAlgorithm)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "device public key повреждён")
+	if err != nil || pub.fingerprint != device.KeyFingerprint {
+		writeError(w, http.StatusInternalServerError, "device public key или fingerprint повреждён")
 		return
 	}
 	now := time.Now().UTC()

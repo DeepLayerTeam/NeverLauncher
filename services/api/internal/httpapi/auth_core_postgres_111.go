@@ -149,6 +149,10 @@ func (p *authSessionPostgres111) createWithAuth(user model.User, r *http.Request
 }
 
 func (p *authSessionPostgres111) rotate(refreshToken string) (authSessionRecord, string, error) {
+	return p.rotateExpected0432(refreshToken, nil)
+}
+
+func (p *authSessionPostgres111) rotateExpected0432(refreshToken string, expected *authSessionRecord) (authSessionRecord, string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	tx, err := p.db.BeginTx(ctx, nil)
@@ -181,6 +185,9 @@ func (p *authSessionPostgres111) rotate(refreshToken string) (authSessionRecord,
 	}
 
 	record, err := scanSession118(tx.QueryRowContext(ctx, `SELECT `+sessionColumns118+` FROM auth_sessions WHERE id=$1 FOR UPDATE`, sessionID))
+	if err == nil && expected != nil && !sameDeviceBinding0432(record, *expected) {
+		return authSessionRecord{}, "", errSessionBindingChanged0432
+	}
 	if err != nil || record.Status != "active" || record.ExpiresAt.Before(time.Now().UTC()) {
 		if err == nil {
 			now := time.Now().UTC()

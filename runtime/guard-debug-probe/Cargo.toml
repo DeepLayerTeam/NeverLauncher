@@ -1,6 +1,6 @@
 [package]
 name = "guard-debug-probe"
-version = "0.43.1"
+version = "0.43.2"
 description = "Guard Windows debugger-attach adversarial integration probe"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"

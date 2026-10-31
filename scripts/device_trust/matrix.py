@@ -46,6 +46,7 @@ KIND_MANDATORY_CHECKS = {
         "refreshPayloadBinding",
         "attestationPayloadValidation",
         "deviceTrustRelease0130",
+        "goDeviceBindingIntegration0432",
     },
 }
 
@@ -202,6 +203,10 @@ def verify_result(
     runtime_arch = str(result.get("runtimeArch", "")).strip()
     if not runtime_arch:
         errors.append("runtimeArch is missing")
+    elif target["arch"] != "runner-native":
+        architectures = {"x86_64": {"x86_64", "amd64"}, "arm64": {"arm64", "aarch64"}}
+        if runtime_arch.lower() not in architectures[target["arch"]]:
+            errors.append(f"runtimeArch {runtime_arch!r} is not target architecture {target['arch']!r}")
     checks = result.get("checks")
     if not isinstance(checks, dict):
         errors.append("checks is missing")
