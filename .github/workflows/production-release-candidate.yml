@@ -80,7 +80,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: launcher-minecraft-client-e2e-evidence
           path: real-minecraft-e2e
@@ -311,14 +311,14 @@ jobs:
         with:
           python-version: '3.12'
       - name: Fetch independent signed acceptance evidence from protected run
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-single-node-ga-0330-${{ github.sha }}
           run-id: ${{ inputs.single_node_ga_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: single-node-ga-evidence
       - name: Fetch this workflow's independently executed RC result
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-03216-rc-${{ github.sha }}
           path: live-rc-03216
@@ -387,7 +387,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Download all six real platform extension reports and certificate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: extensions-04212-certificate
           path: extension-acceptance
@@ -401,7 +401,7 @@ jobs:
           cmp extension-acceptance/extension-acceptance-certificate.json \
               "$RUNNER_TEMP/recomputed-extension-certificate.json"
       - name: Fetch exact-commit runtime GA preflight
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ga-runtime-preflight-0350-${{ github.sha }}
           path: runtime-ga-preflight
@@ -428,7 +428,7 @@ jobs:
           python3 scripts/release/check_protected_run.py --json "$RUNNER_TEMP/official-ga-run.json" \
             --version "$(cat VERSION)" --commit "$GITHUB_SHA"
       - name: Download independently signed live official Minecraft GA evidence
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: official-minecraft-ga-0270-*
           run-id: ${{ inputs.official_minecraft_ga_evidence_run_id }}
@@ -467,7 +467,7 @@ jobs:
           python3 scripts/release/check_protected_run.py --json "$RUNNER_TEMP/client-factory-run-full.json" \
             --version "$(cat VERSION)" --commit "$GITHUB_SHA" --workflow client-factory-ga-0280.yml
       - name: Retrieve Client Factory protected GA evidence
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: client-factory-ga-0280-${{ github.sha }}
           run-id: ${{ inputs.client_factory_ga_evidence_run_id }}
@@ -483,7 +483,7 @@ jobs:
           test -n "$CLIENT_FACTORY_JOIN_PUBLIC_KEY"
           python3 scripts/ga/verify_client_factory_0280.py             --evidence client-factory-ga-0280-evidence             --runtime-public-key "$CLIENT_FACTORY_RUNTIME_PUBLIC_KEY"             --join-public-key "$CLIENT_FACTORY_JOIN_PUBLIC_KEY"             --commit "$GITHUB_SHA" --version 0.28.0
       - name: Verify exact-commit Admin GA result
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-admin-ga-${{ github.sha }}
           path: admin-ga-certification
@@ -493,7 +493,7 @@ jobs:
             '.status == "passed" and .commit == $commit and .productVersion == $version and (.adminBundle | length > 0) and (.checks | index("live-playwright-rbac-two-tabs-recovery") != null) and (.checks | index("postgresql-serverbridge-integration") != null) and (.checks | index("live-serverbridge-v3-save-drain-ack") != null)' \
             admin-ga-certification/admin-0220.json >/dev/null
       - name: Download exact-commit Profile GA certification
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-profiles-ga-${{ github.sha }}
           path: profile-ga-certification
@@ -512,48 +512,48 @@ jobs:
             --profiles profile-ga-certification/profiles-0230.json \
             --version "$(cat VERSION)" --commit "$GITHUB_SHA"
       - name: Download certified Linux Guard artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-linux-guard-${{ github.sha }}
           path: guard-platform-artifacts/linux
       - name: Download native Linux x64 + ARM64 production artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: launcher-linux-production-*-${{ github.sha }}
           path: linux-production-artifacts
           merge-multiple: true
       - name: Download notarized macOS x64 + ARM64 production artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-macos-notarized-${{ github.sha }}
           path: macos-production-artifacts
       - name: Download Managed JRE six-target production assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-managed-jre-${{ github.sha }}
           path: managed-jre-artifacts
       - name: Download Authenticode Windows x64 + ARM64 production artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-windows-production-${{ github.sha }}
           path: windows-production-artifacts
       - name: Download certified Windows Guard artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-windows-guard-${{ github.sha }}
           path: guard-platform-artifacts/windows
       - name: Download certified macOS Guard artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-macos-guard-${{ github.sha }}
           path: guard-platform-artifacts/macos
       - name: Download Guard CI matrix
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-guard-ci-matrix-${{ github.run_id }}
           path: guard-certification
       - name: Download exact-commit Windows adversarial certificate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: guard-windows-adversarial-certificate-${{ github.sha }}
           path: windows-adversarial-certificate
@@ -634,7 +634,7 @@ jobs:
           cmp "$RUNNER_TEMP/extension-normalized-publisher.pem" "$RUNNER_TEMP/extension-derived-publisher.pem"
       - name: Download historical 0.25.0 Optional Components GA evidence packages
         if: inputs.optional_components_ga_evidence_run_id != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: optional-components-ga-0250-*
           run-id: ${{ inputs.optional_components_ga_evidence_run_id }}
@@ -653,7 +653,7 @@ jobs:
             mv "$source" "optional-components-ga-0250/$target"
           done
       - name: Download independently verified Single-Node GA evidence
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-single-node-ga-verified-${{ github.sha }}
           path: single-node-ga-approved
@@ -686,7 +686,7 @@ jobs:
           esac
       - name: Download current-release independently signed GA authorization
         if: steps.release-policy.outputs.mode == 'signed-ga-v2'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-ga-signed-${{ github.sha }}
           run-id: ${{ inputs.ga_operator_approval_run_id }}
@@ -694,7 +694,7 @@ jobs:
           path: ga-protected-approval
       - name: Download historical 0.36.0 independently signed GA authorization
         if: steps.release-policy.outputs.mode == 'legacy-ga036'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-ga036-signed-${{ github.sha }}
           run-id: ${{ inputs.ga036_operator_approval_run_id }}
@@ -1037,15 +1037,15 @@ jobs:
           python-version: '3.12'
       - name: Install independent GA signature verifier
         run: python3 -m pip install cryptography==46.0.4
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: launcher-final-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: signed-release
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: launcher-required-production-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: required-production
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: launcher-publication-dry-run-${{ github.sha }}
           path: publication-dry-run
