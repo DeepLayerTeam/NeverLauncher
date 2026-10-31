@@ -54,7 +54,7 @@ jobs:
         run: |
           go test -count=1 ./cmd/launcher -run '^TestMigrationReportCLI03313$'
           go build ./cmd/launcher
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm

@@ -61,7 +61,7 @@ jobs:
         run: go test -race -count=1 -timeout=5m ./internal/federation ./internal/repository
       - name: Compile full Backend
         run: go build ./cmd/...
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm

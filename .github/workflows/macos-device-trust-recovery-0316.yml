@@ -41,7 +41,7 @@ jobs:
           workspaces: apps/desktop/src-tauri
       - name: Compile and test actual native Keychain/DeviceCheck integration
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm

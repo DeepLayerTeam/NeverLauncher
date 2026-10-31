@@ -48,7 +48,7 @@ jobs:
       - name: CLI tests and compilation
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestRollbackCLIRequiresWriterFences03312|TestMigrationCutover03311'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
