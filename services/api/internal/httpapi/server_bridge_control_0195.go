@@ -109,8 +109,18 @@ func validateServerBridgeControlRequest0195(kind string, payload map[string]stri
 		if err := require("username"); err != nil {
 			return nil, err
 		}
-		if err := noExtra("username", "reason"); err != nil {
+		if err := noExtra("username", "reason", "sessionCorrelationId"); err != nil {
 			return nil, err
+		}
+		if correlation := clean["sessionCorrelationId"]; correlation != "" {
+			if len(correlation) != 64 {
+				return nil, fmt.Errorf("serverbridge_control_session_correlation_invalid")
+			}
+			for _, c := range correlation {
+				if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+					return nil, fmt.Errorf("serverbridge_control_session_correlation_invalid")
+				}
+			}
 		}
 	case "message.broadcast":
 		if err := require("message"); err != nil {

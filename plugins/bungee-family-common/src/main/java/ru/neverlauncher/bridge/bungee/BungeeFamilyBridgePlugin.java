@@ -291,6 +291,10 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                 String username = safeUsername(payload.get("username"));
                 var player = getProxy().getPlayer(username);
                 if (player == null) return BridgeControlResult.failed("player_not_online");
+                String correlation = payload.getOrDefault("sessionCorrelationId", "");
+                if (!correlation.isBlank() && (runtime == null || !runtime.matchesPlayerSession(
+                    username, player.getUniqueId() == null ? "" : player.getUniqueId().toString(), correlation)))
+                    return BridgeControlResult.failed("player_session_changed");
                 player.disconnect(TextComponent.fromLegacyText(safeLine(payload.getOrDefault("reason", "Disconnected by proxy operator"), 512)));
                 return BridgeControlResult.ok(Map.of("username", username));
             }

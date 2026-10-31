@@ -116,6 +116,12 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         if (current != null && !stopping.get()) current.api.recordPlatformTelemetry(sample);
     }
 
+    /** Fence session-bound revocation against a newer login with the same name. */
+    public boolean matchesPlayerSession(String username, String correlationId) {
+        RuntimeState current = state;
+        return current != null && !stopping.get() && current.api.matchesPlayerSession(username, correlationId);
+    }
+
     public boolean publishEvent(String type, Map<String, String> payload) {
         RuntimeState current = state;
         return current != null && !stopping.get() && current.api.publishEvent(type, payload);

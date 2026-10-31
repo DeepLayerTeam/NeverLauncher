@@ -31,6 +31,30 @@ func TestServerBridgeControlValidation0195(t *testing.T) {
 	}
 }
 
+// Session-bound kicks are delivered by Backend's revocation transaction. They
+// must remain distinct from name-only moderator kicks and cannot accept an
+// untrusted/ambiguous correlation identifier.
+func TestSessionBoundKickPayload0418(t *testing.T) {
+	correlation := "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+	payload, err := validateServerBridgeControlRequest0195("player.kick", map[string]string{
+		"username": "Steve", "reason": "NeverLauncher session invalidated", "sessionCorrelationId": correlation,
+	})
+	if err != nil || payload["sessionCorrelationId"] != correlation {
+		t.Fatalf("valid session-specific kick was rejected: %v", err)
+	}
+	for _, bad := range []string{"short", "", "A" + correlation[1:], "g" + correlation[1:], correlation + "0"} {
+		if bad == "" {
+			continue
+		} // empty is the existing explicit moderator action
+		if _, err := validateServerBridgeControlRequest0195("player.kick", map[string]string{"username": "Steve", "sessionCorrelationId": bad}); err == nil {
+			t.Fatalf("invalid session correlation accepted: %q", bad)
+		}
+	}
+	if _, err := validateServerBridgeControlRequest0195("ban.add", map[string]string{"username": "Steve", "sessionCorrelationId": correlation}); err == nil {
+		t.Fatal("session correlation must not enlarge ban payload privileges")
+	}
+}
+
 func TestServerBridgeControlSignature0195(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {

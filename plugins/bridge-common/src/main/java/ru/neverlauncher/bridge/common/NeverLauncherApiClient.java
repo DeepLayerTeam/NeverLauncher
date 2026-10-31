@@ -321,6 +321,11 @@ public final class NeverLauncherApiClient {
         return ",\"runtime\":" + runtimeIdentity.toJson();
     }
 
+    /** Used by revocation kicks: only the connection with the original proof may be disconnected. */
+    public boolean matchesPlayerSession(String username, String correlationId) {
+        return playerSessions.matches(username, correlationId);
+    }
+
     public String runtimeId() {
         return runtimeIdentity == null ? "" : runtimeIdentity.runtimeId();
     }

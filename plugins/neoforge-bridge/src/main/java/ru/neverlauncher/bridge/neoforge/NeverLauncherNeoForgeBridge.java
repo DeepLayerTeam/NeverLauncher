@@ -319,6 +319,9 @@ public final class NeverLauncherNeoForgeBridge {
                 var player = server.getPlayerList().getPlayerByName(username);
                 if (player == null) return BridgeControlResult.failed("player_not_online");
                 String uuid = player.getGameProfile().getId().toString();
+                String correlation = payload.getOrDefault("sessionCorrelationId", "");
+                if (!correlation.isBlank() && !runtime.matchesPlayerSession(username, correlation))
+                    return BridgeControlResult.failed("player_session_changed");
                 if (!kickConfirmations.begin(username, player.getGameProfile().getId())) return BridgeControlResult.indeterminate("player_kick_already_pending");
                 try { player.connection.disconnect(Component.literal(safeLine(payload.getOrDefault("reason", "Disconnected by server operator"), 512))); }
                 catch (RuntimeException e) { kickConfirmations.cancel(username); throw e; }

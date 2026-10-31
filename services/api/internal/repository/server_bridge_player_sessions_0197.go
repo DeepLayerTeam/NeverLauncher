@@ -39,7 +39,9 @@ func (r *SQLRepository) queuePlayerKickTx0197(ctx context.Context, tx *sql.Tx, c
 	if nodeID == "" || runtimeEpoch < 1 || len(runtimeID) != 64 || strings.TrimSpace(username) == "" {
 		return nil
 	}
-	payload := map[string]string{"username": strings.TrimSpace(username), "reason": strings.TrimSpace(reason)}
+	// The execution target is the *revoked session*, never a username that
+	// could have been reused by a newly authenticated connection.
+	payload := map[string]string{"username": strings.TrimSpace(username), "reason": strings.TrimSpace(reason), "sessionCorrelationId": strings.ToLower(strings.TrimSpace(correlationID))}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return err

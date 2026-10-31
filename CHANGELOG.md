@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.41.8 — End-to-end session-bound revocation and authorization fencing
+
+- **Real revocation disconnect path:** PostgreSQL now places the revoked `sessionCorrelationId` into the durable, signed `player.kick` operation. Velocity, BungeeCord/Waterfall, Bukkit/Paper/Purpur/Spigot/Folia, Fabric/Quilt/Forge/NeoForge, and Sponge compare the queued correlation against their locally authenticated current session before disconnecting. A delayed operation for a previous login cannot kick the new session merely because the player name was reused. Folia checks again inside the scheduled entity action. Vanilla RCON sidecar refuses session-targeted kick since it cannot prove the active player's session.
+- **Session checks at transfer redemption:** the PostgreSQL handoff read and atomic consume now require the owning NeverLauncher authorization session still to be active, unexpired, and bound to the original epoch. V3 handoffs reject fallback to legacy transfer semantics when runtime-bound session proof is absent; existing correlated player-session transfer fencing is retained.
+- **Operator domain checks:** the existing `game:moderate` permission enforcement, project scoping and signed control channel remain mandatory. Session-specific moderation payloads must include a valid 64-character lowercase hexadecimal correlation ID. Game, host and backend control permissions remain separate.
+- **Tests:** Java 21 tests cover 12 session replacement/revocation conditions and existing 20 authentication plus 19 control-journal checks. Targeted production common runtime, proxy runtime and Vanilla sidecar compilation completed. Full Go 1.27.3 test suite, real PostgreSQL failover, and upstream Minecraft/proxy integration still require CI/live verification; do not claim otherwise.
+
+
 ## 0.41.7 — Live Velocity/BungeeCord/Waterfall routing and verified transfers
 
 - **Real proxy transfer path:** Velocity now gates the actually selected pre-connect destination against the current registered server and a one-time Backend handoff; BungeeCord/Waterfall use native `ProxiedPlayer.connect` after asynchronous Backend authorization. A failed/denied transfer does not disconnect an already connected player.

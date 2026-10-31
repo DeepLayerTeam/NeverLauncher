@@ -622,6 +622,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
     private BridgeControlResult executePlayerKick(BridgeControlCommand command) throws Exception {
         String username = safeUsername(command.payload().get("username"));
         String reason = safeLine(command.payload().getOrDefault("reason", "Disconnected by server operator"), 512);
+        String correlation = command.payload().getOrDefault("sessionCorrelationId", "");
         CompletableFuture<BridgeControlResult> confirmation = new CompletableFuture<>();
         // All platform access is dispatched to the corresponding server scheduler.
         // The remote control worker waits, never a Bukkit or Folia game thread.
@@ -634,6 +635,11 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     return;
                 }
                 UUID id = player.getUniqueId();
+                RuntimeState live = runtime;
+                if (!correlation.isBlank() && (live == null || !live.api.matchesPlayerSession(username, correlation))) {
+                    confirmation.complete(BridgeControlResult.failed("player_session_changed"));
+                    return;
+                }
                 CompletableFuture<BridgeControlResult> previous = pendingKicks.putIfAbsent(id, confirmation);
                 if (previous != null) {
                     confirmation.complete(BridgeControlResult.failed("player_kick_already_in_progress"));
@@ -644,6 +650,13 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 confirmation.whenComplete((result, error) -> pendingKicks.remove(id, confirmation));
                 Runnable kick = () -> {
                     if (confirmation.isDone() || stopping.get()) return;
+                    RuntimeState active = runtime;
+                    if (!correlation.isBlank() && (active == null ||
+                        !active.api.matchesPlayerSession(username, correlation) ||
+                        Bukkit.getPlayerExact(username) != player)) {
+                        confirmation.complete(BridgeControlResult.failed("player_session_changed"));
+                        return;
+                    }
                     try { player.kickPlayer(reason); }
                     catch (Throwable error) {
                         // The player may already have quit; do not overwrite

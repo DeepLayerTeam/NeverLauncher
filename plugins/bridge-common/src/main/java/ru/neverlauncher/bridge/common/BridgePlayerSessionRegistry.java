@@ -24,6 +24,15 @@ public final class BridgePlayerSessionRegistry {
         return value == null ? "" : value;
     }
 
+    /** Reject a delayed disconnect when the same Minecraft name has joined with a new ticket. */
+    public boolean matches(String username, String expectedCorrelation) {
+        String player = normalizePlayer(username);
+        String correlation = normalizeCorrelation(expectedCorrelation);
+        if (player.isEmpty() || correlation.isEmpty()) return false;
+        String active = correlations.get(player);
+        return correlation.equals(active);
+    }
+
     public void clear(String username) {
         String player = normalizePlayer(username);
         if (!player.isEmpty()) correlations.remove(player);

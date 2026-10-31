@@ -88,7 +88,11 @@ public final class NeverLauncherVanillaBridge implements AutoCloseable {
     private BridgeControlResult executeControl(BridgeControlCommand command) throws Exception {
         Map<String,String> p = command.payload();
         return switch (command.type()) {
-            case "player.kick" -> okRcon("kick " + username(p.get("username")) + " " + text(p.getOrDefault("reason", "Disconnected by server operator"), 512));
+            case "player.kick" -> {
+                if (!p.getOrDefault("sessionCorrelationId", "").isBlank())
+                    yield BridgeControlResult.failed("session_specific_kick_unavailable_on_vanilla_sidecar");
+                yield okRcon("kick " + username(p.get("username")) + " " + text(p.getOrDefault("reason", "Disconnected by server operator"), 512));
+            }
             case "message.broadcast" -> okRcon("tellraw @a " + jsonText(text(p.getOrDefault("message", ""), 1024)));
             case "whitelist.add" -> observedRcon("whitelist.add", username(p.get("username")), "whitelist add " + username(p.get("username")));
             case "whitelist.remove" -> observedRcon("whitelist.remove", username(p.get("username")), "whitelist remove " + username(p.get("username")));

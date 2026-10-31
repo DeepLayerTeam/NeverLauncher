@@ -130,6 +130,9 @@ public final class NeverLauncherSpongeBridge {
                 Object player=findPlayer(p.get("username")); if(player==null)return BridgeControlResult.failed("player_not_online");
                 String username=safe(p.get("username"),16);
                 String uuid=profileString(player,"uniqueId");
+                String correlation=p.getOrDefault("sessionCorrelationId", "");
+                if (!correlation.isBlank() && (api == null || !api.matchesPlayerSession(username, correlation)))
+                    return BridgeControlResult.failed("player_session_changed");
                 boolean tracked=false;
                 try {
                     java.util.UUID session = java.util.UUID.fromString(uuid);

@@ -158,6 +158,16 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         return accepted;
     }
 
+    /** Bind a delayed operator/revocation kick to the exact active authenticated login. */
+    public boolean matchesPlayerSession(String username, String uuid, String correlationId) {
+        RuntimeState current = state;
+        if (current == null || stopping.get() || username == null ||
+            correlationId == null || correlationId.isBlank()) return false;
+        String authenticated = authenticatedIdentities.get(username.toLowerCase(Locale.ROOT));
+        return authenticated != null && BridgeAuthResponse0287.matchesAuthenticatedUUID(uuid, authenticated) &&
+            current.api.matchesPlayerSession(username, correlationId);
+    }
+
     public void playerDisconnected(String username) {
         if (username == null) return;
         String key = username.toLowerCase(Locale.ROOT);
