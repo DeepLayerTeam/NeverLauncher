@@ -329,12 +329,14 @@ def verify(
     commit: str,
     *,
     now=None,
+    run_id=None,
+    run_attempt=None,
 ):
     cfg = policy(version)
     data, raw, key_raw = approval_data(evidence, public_key, version, commit, now=now)
     # Full GA requires all signed live security evidence on the current run,
     # not merely a signature over declarations or previously approved targets.
-    verify_security(evidence, data, now=now)
+    verify_security(evidence, data, now=now, run_id=run_id, run_attempt=run_attempt)
     targets = data["targets"]
     require(
         isinstance(targets, list)

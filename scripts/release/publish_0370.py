@@ -25,9 +25,11 @@ from release_policy import policy, parsed
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ga"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ci"))
-from verified_targets import TARGETS, checks_for, approval_data, paths, Blocked
+from verified_targets import TARGETS, checks_for, approval_data, paths, Blocked, verify as verify_exact_ga
 from security_capabilities_0431 import checks as security_checks, verify_all as verify_security
 from package_security_0431 import evidence_files as security_evidence_files
+from package_full_evidence_04315 import (ARCHIVE_NAME as FULL_GA_ARCHIVE,
+                                         extract_verified as extract_full_ga)
 from required_jobs_0363 import declared_jobs
 
 PRODUCTION_WORKFLOW = (
@@ -279,6 +281,21 @@ def verify_ga(
             )
     if security_checks(version):
         verify_security_archive(bundle, approval, run_id, attempt)
+    # 0.43.15+: reconstruct the *complete* evidence tree from the bytes inside
+    # the SHA256SUMS-protected final release and independently rerun the original
+    # GA acceptance against the actual binaries/installers. Neither the unsigned
+    # receipt nor the original build runner's working directory is trusted.
+    if parsed(version)[0] >= (0, 43, 15):
+        with tempfile.TemporaryDirectory(prefix="nl-full-ga-publish-") as folder:
+            evidence = Path(folder)
+            shutil.copyfile(bundle / "GA_TARGET_APPROVAL.json", evidence / "approval.json")
+            shutil.copyfile(bundle / "GA_TARGET_APPROVAL.sig", evidence / "approval.sig")
+            extract_full_ga(bundle / FULL_GA_ARCHIVE, evidence, version)
+            actual = verify_exact_ga(
+                bundle, evidence, public_key, version, commit,
+                run_id=str(run_id), run_attempt=attempt,
+            )
+            require(actual == receipt, "GA receipt differs from independent full replay")
     return receipt["approvalSha256"]
 
 
@@ -419,6 +436,21 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
         "tag already exists or tag lookup failed",
     )
     files = verified["files"]
+    # Seal the exact verified bytes before any network write. A post-validation
+    # mutation of the original build tree must never be uploaded as GA.
+    snapshot_context = tempfile.TemporaryDirectory(prefix="nl-publish-sealed-")
+    snapshot = Path(snapshot_context.name)
+    try:
+        for name, digest in files.items():
+            source = bundle / name
+            require(source.is_file() and not source.is_symlink() and sha(source) == digest,
+                    "release file changed after GA validation: " + name)
+            shutil.copyfile(source, snapshot / name)
+            require(sha(snapshot / name) == digest and sha(source) == digest,
+                    "release bytes changed while sealing: " + name)
+    except Exception:
+        snapshot_context.cleanup()
+        raise
     args = [
         "gh",
         "release",
@@ -434,11 +466,12 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
         "--notes",
         "Verified six-platform release. GA exact-byte approvals and signed manifest are included.",
     ]
-    run(args)
     try:
-        # Upload all assets; do not promote a partial release.
+        run(args)
+        # Upload only the sealed, rehashed snapshot; do not promote a partial release.
         for name in sorted(files):
-            run(["gh", "release", "upload", tag, str(bundle / name), "--repo", repo])
+            require(sha(snapshot / name) == files[name], "sealed asset changed: " + name)
+            run(["gh", "release", "upload", tag, str(snapshot / name), "--repo", repo])
         with tempfile.TemporaryDirectory(prefix="nl-0370-roundtrip-") as tmp:
             remote = Path(tmp)
             run(
@@ -488,6 +521,8 @@ def publish(repo: str, verified: dict, bundle: Path) -> dict:
     except Exception:
         # Intentionally leave the draft for investigation, never publish partial files.
         raise
+    finally:
+        snapshot_context.cleanup()
     return {
         "schemaVersion": "launcher.release.publication.v1",
         "status": "published",

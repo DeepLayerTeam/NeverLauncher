@@ -229,6 +229,50 @@ class PublicationAcceptance(unittest.TestCase):
         self.assertEqual(commands[-1][:3], ["gh", "release", "view"])
         self.assertTrue(any(x[:3] == ["gh", "release", "edit"] for x in commands))
 
+    def test_post_validation_mutation_rejected_before_create_or_upload(self):
+        verified = self.check()
+        selected = next(name for name in verified["files"] if name.endswith(".zip"))
+        (self.bundle / selected).write_bytes(b"swapped after independent approval")
+        from subprocess import CompletedProcess
+        absent = CompletedProcess([], 1, stdout="", stderr="HTTP 404: Not Found")
+        with (
+            patch.object(p, "run") as commands,
+            patch.object(p.subprocess, "run", return_value=absent),
+        ):
+            with self.assertRaisesRegex(Blocked, "changed after GA validation"):
+                p.publish("DeepLayerTeam/Launcher", verified, self.bundle)
+            commands.assert_not_called()
+
+    def test_snapshot_is_uploaded_instead_of_mutable_original(self):
+        verified = self.check()
+        uploads = []
+
+        def fake_run(args, **kw):
+            if args[:3] == ["gh", "release", "upload"]:
+                uploaded = Path(args[4])
+                uploads.append(uploaded)
+                self.assertNotEqual(uploaded.parent, self.bundle)
+                self.assertEqual(p.sha(uploaded), verified["files"][uploaded.name])
+            if args[:3] == ["gh", "release", "download"]:
+                target = Path(args[args.index("--dir") + 1])
+                for name in verified["files"]:
+                    shutil.copyfile(self.bundle / name, target / name)
+            if args[:3] == ["gh", "release", "view"]:
+                if "tagName,isDraft,targetCommitish,assets" in args:
+                    return json.dumps({"tagName": "v" + VERSION, "isDraft": True,
+                                       "targetCommitish": COMMIT,
+                                       "assets": [{"name": n} for n in verified["files"]]})
+                return json.dumps({"tagName": "v" + VERSION, "isDraft": False})
+            return ""
+
+        from subprocess import CompletedProcess
+        absent = CompletedProcess([], 1, stdout="", stderr="HTTP 404: Not Found")
+        with patch.object(p, "run", side_effect=fake_run), patch.object(p.subprocess, "run", return_value=absent):
+            result = p.publish("DeepLayerTeam/Launcher", verified, self.bundle)
+        self.assertEqual(result["status"], "published")
+        self.assertEqual(len(uploads), len(verified["files"]))
+        self.assertFalse(uploads[0].parent.exists())
+
     def test_remote_tamper_prevents_promotion(self):
         verified = self.check()
         commands = []

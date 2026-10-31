@@ -841,6 +841,15 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
       --version "${VERSION}" --commit "${SOURCE_COMMIT}" \
       --output "${OUT_DIR}/SECURITY_CAPABILITY_EVIDENCE_0431.zip"
   fi
+  # Full replay of every signed check (including player execution logs) is
+  # mandatory from 0.43.15. This goes into the flat signed final release root.
+  if [[ "$(printf '%s\n' '0.43.15' "${VERSION}" | sort -V | head -n1)" == '0.43.15' ]]; then
+    python3 "${ROOT_DIR}/scripts/ga/package_full_evidence_04315.py" \
+      --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \
+      --trusted-key "${GA_TARGET_TRUSTED_KEY}" --version "${VERSION}" \
+      --commit "${SOURCE_COMMIT}" \
+      --output "${OUT_DIR}/GA_EXECUTION_EVIDENCE_04315.zip"
+  fi
 fi
 
 # 0.36.5+: inspect six actual signed/native packages and their inner payload

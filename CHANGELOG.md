@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.43.15 — independent Security GA replay and immutable upload snapshot
+
+- Ship the complete independently signed execution evidence from all six native targets, including per-check traces, player-cycle reports and raw runtime logs, and native security positive/negative event streams. The archive is created only after actual final-package verification and re-verified from extracted bytes before being included in SHA256SUMS and signed release metadata.
+- Publication independently reconstructs the evidence tree from `GA_EXECUTION_EVIDENCE_04315.zip`, verifies the pinned operator Ed25519 approval, all signed trace hashes and linked raw logs, and reruns the full six-platform GA verifier against **exact public package and executable bytes**. An aggregate `PASS`, stale certificate or edited receipt cannot substitute for signed evidence. Older releases retain their historical verification formats.
+- Enforce a strict archive entry allowlist, duplicate-entry refusal, regular-file requirement, per-file and aggregate decompression bounds; missing, unsigned, forged or mismatched evidence blocks publication. The existing separate security-capability ZIP and raw-evidence verification continue to apply.
+- Seal all already-validated release assets into a private temporary publication snapshot, check each source and copied SHA-256, and upload only those checked snapshots. A mutation of the staging directory between local GA validation and publication now fails before any release is created.
+- Wire real replay and mutation regression tests into required production CI and publisher workflow. Fixture tests prove verifier behavior; native gaming acceptance, independent human signoff, actual release signatures and six-platform physical-run certification must still be supplied by production infrastructure.
+
 ## 0.43.14 — native six-target positive and negative Minecraft acceptance
 
 - Existing staged runtime worker now performs two real adversarial checks after a successful Minecraft join and server-observed gameplay: modified Ed25519 manifest rejected by the production Rust Runtime, and corrupted installed required file rejected by the production Go CLI. The worker restores the file and verifies exact signed bytes again.

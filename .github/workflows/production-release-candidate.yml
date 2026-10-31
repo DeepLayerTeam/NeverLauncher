@@ -417,6 +417,10 @@ jobs:
             runtime-ga-preflight/GA_RUNTIME_PREFLIGHT_0350.json >/dev/null
       - name: Install Ed25519 verification dependency
         run: python3 -m pip install 'cryptography>=43,<47'
+      - name: Test independent full GA replay and sealed publication bytes
+        run: |
+          python3 -m unittest discover -s scripts/ga -p 'test_full_evidence_04315.py' -q
+          python3 -m unittest discover -s scripts/release -p 'test_publish_0370.py' -q
       - name: Require fresh independent official Minecraft GA run
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -857,6 +861,9 @@ jobs:
           if [[ "$SECURITY_CHECKS" != 0 ]]; then
             test -s "$DIR/SECURITY_CAPABILITY_EVIDENCE_0431.zip"
           fi
+          if [[ "$(printf '%s\n' '0.43.15' "$VERSION" | sort -V | head -n1)" == '0.43.15' ]]; then
+            test -s "$DIR/GA_EXECUTION_EVIDENCE_04315.zip"
+          fi
           test -s "$DIR/$APPROVAL"
           test -s "$DIR/$SIG"
       - name: Assert required production artifacts
@@ -1041,6 +1048,10 @@ jobs:
           python-version: '3.12'
       - name: Install independent GA signature verifier
         run: python3 -m pip install cryptography==46.0.4
+      - name: Regression-check independent replay and exact-byte publication code
+        run: |
+          python3 -m unittest discover -s scripts/ga -p 'test_full_evidence_04315.py' -q
+          python3 -m unittest discover -s scripts/release -p 'test_publish_0370.py' -q
       - uses: actions/download-artifact@v4
         with:
           name: launcher-final-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
