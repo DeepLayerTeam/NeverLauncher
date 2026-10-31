@@ -26,12 +26,12 @@ func InspectCurrent(root string) (Report, error) {
 
 // Keep the exact previous release auditable without pretending the current tree is 0.30.12.
 func InspectPrevious03012(root string) (Report, error) {
- return inspectEvidenceMatrix03012(root, PreviousMatrixPath03012, "0.30.12", "0.30.11", false)
+	return inspectEvidenceMatrix03012(root, PreviousMatrixPath03012, "0.30.12", "0.30.11", false)
 }
 func LoadPreviousMatrix03012(root string) (Matrix, error) {
- var m Matrix
- err := readJSON(filepath.Join(root, PreviousMatrixPath03012), &m)
- return m, err
+	var m Matrix
+	err := readJSON(filepath.Join(root, PreviousMatrixPath03012), &m)
+	return m, err
 }
 
 // Historical 0.30.11 evidence remains directly auditable after upgrading.
@@ -102,6 +102,71 @@ func inspectEvidenceMatrix03012(root, filename, expectedVersion, expectedBaselin
 			}
 		}
 		report.Results = append(report.Results, Result{ModuleID: mod.ID, UpstreamModule: mod.UpstreamModule, Status: mod.Status, SourceValidated: true, SourceDigests: digests, Test: TestOutcome{Status: "not-run"}, Limitations: mod.Limitations})
+	}
+	return report, nil
+}
+
+// LatestMatrixPath04211 inventories the same 19 modules using CURRENT source paths.
+// Local source/tests are evidence of implementations, not upstream parity certification.
+const LatestMatrixPath04211 = "compatibility/gravit/module-parity-04211.json"
+
+func LoadLatestMatrix04211(root string) (Matrix, error) {
+	var m Matrix
+	err := readJSON(filepath.Join(root, LatestMatrixPath04211), &m)
+	return m, err
+}
+
+func InspectLatest04211(root string) (Report, error) {
+	// The 0.30.1 historical checker refers to directories removed in modern
+	// releases. This current audit validates live files without executing the
+	// stale historical path; it still compares identities to the pinned 0.31.0
+	// upstream inventory and never promotes partial modules to verified.
+	var current, baseline Matrix
+	if err := readJSON(filepath.Join(root, LatestMatrixPath04211), &current); err != nil {
+		return Report{}, err
+	}
+	if err := readJSON(filepath.Join(root, CurrentMatrixPath), &baseline); err != nil {
+		return Report{}, err
+	}
+	version, err := os.ReadFile(filepath.Join(root, "VERSION"))
+	if err != nil {
+		return Report{}, err
+	}
+	if strings.TrimSpace(string(version)) != "0.42.11" || current.SchemaVersion != "1.0" || current.ProductVersion != "0.42.11" || current.AuditBaseline != "0.31.0" || current.Upstream != baseline.Upstream || len(current.Modules) != 19 || len(baseline.Modules) != 19 {
+		return Report{}, fmt.Errorf("0.42.11 Gravit module inventory/version mismatch")
+	}
+	report := Report{SchemaVersion: "1.0", ProductVersion: current.ProductVersion, UpstreamCommit: current.Upstream.Commit, AuditStatus: "evidence-present-not-certified", FullyCertified: false, Results: make([]Result, 0, 19)}
+	for i, mod := range current.Modules {
+		expected := fmt.Sprintf("M%02d", i+1)
+		if mod.ID != expected || mod.ID != baseline.Modules[i].ID || mod.UpstreamModule != baseline.Modules[i].UpstreamModule || strings.TrimSpace(mod.Equivalent) == "" || strings.TrimSpace(mod.Limitations) == "" || (mod.Status != "partial" && mod.Status != "blocked") || (baseline.Modules[i].Status == "blocked" && mod.Status != "blocked") {
+			return Report{}, fmt.Errorf("%s invalid identity, status or limitation", expected)
+		}
+		if mod.Status == "partial" && (len(mod.SourceRefs) == 0 || len(mod.TestRefs) == 0) {
+			return Report{}, fmt.Errorf("%s missing source or runnable tests", mod.ID)
+		}
+		seen := map[string]bool{}
+		hashes := map[string]string{}
+		for _, ref := range append(append([]string{}, mod.SourceRefs...), mod.TestRefs...) {
+			if seen[ref] {
+				return Report{}, fmt.Errorf("%s duplicate evidence %q", mod.ID, ref)
+			}
+			seen[ref] = true
+			safe, err := SafeRepoFile(root, ref)
+			if err != nil {
+				return Report{}, fmt.Errorf("%s: %w", mod.ID, err)
+			}
+			sum, err := digest(safe)
+			if err != nil {
+				return Report{}, err
+			}
+			hashes[ref] = sum
+		}
+		for _, ref := range mod.TestRefs {
+			if !strings.HasSuffix(ref, "_test.go") && !strings.HasSuffix(ref, ".test.mjs") {
+				return Report{}, fmt.Errorf("%s unexecutable test evidence: %s", mod.ID, ref)
+			}
+		}
+		report.Results = append(report.Results, Result{ModuleID: mod.ID, UpstreamModule: mod.UpstreamModule, Status: mod.Status, SourceValidated: true, SourceDigests: hashes, Test: TestOutcome{Status: "not-run"}, Limitations: mod.Limitations})
 	}
 	return report, nil
 }

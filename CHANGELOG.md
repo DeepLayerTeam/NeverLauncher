@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.42.11 — Real Gravit source-port builds, signed packages and current 19-module inventory
+
+- Added `tools/gravit-port/port.py`, compiling explicitly ported Gravit module Java 17 sources against the actual Core and Gravit Compat SDK (no upstream JAR classpath, no annotation processors), creating a working self-contained Host JAR and optionally an Ed25519-signed/verified `.nlext` through the actual CLI. Unsupported LaunchServer/JavaFX API references fail compilation; invalid manifests, reserved classes, symlinks and output overwrites fail closed. No arbitrary upstream binary-JAR execution is supported.
+- Repaired the existing source-port example's manifest handling; it now builds using the same production tool. Actual separate-JVM backend/event/storage/RPC/CLI flow passes. SDK cleans ported AutoCloseable resources after a failed initialization, and clears module lifecycle state before stop handlers run.
+- Added current `module-parity-04211.json` for exactly 19 upstream modules, with active source/test paths and updated feature limitations. The CLI auditor supports the 0.42.11 baseline, captures current file hashes, refuses unproven `verified` status and preserves the intentional M17 block. 18 modules remain partial and are **not** certified as full upstream equivalents; historical 0.30.x auditors have separate removed-path dependencies.
+- Added real compile/rejection tests and CI coverage for JVM E2E, CLI package signature/tamper rejection, and the 19-module audit. Locally executed Java tests, JVM process integration, Go CLI build, Ed25519 package sign/verify, five source-port compiler tests, and four Discord module tests. External platform/live-service/parity certification remains pending.
+
+
 ## 0.42.10 — Live extension trust enforcement, bounded capabilities and outbound network isolation
 
 - **Running extensions:** Broker permissions now revalidate durable emergency-disable, package quarantine, installation version/generation/enabled state, and signed registry publisher/key trust before privileged operations. Revoked processes are terminated without automatic restart; the Supervisor monitor also terminates idle revoked instances. A final trust check before process exec closes a previously unguarded preparation window. This does not imply that trusted Java extensions run inside an OS sandbox.

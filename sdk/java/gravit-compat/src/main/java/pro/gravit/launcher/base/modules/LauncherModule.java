@@ -27,6 +27,6 @@ public abstract class LauncherModule {
         if(initStatus!=InitStatus.CREATED)throw new IllegalStateException("already initialized");
         modulesManager=Objects.requireNonNull(manager);initStatus=InitStatus.PRE_INIT_WAIT;
         try{initStatus=InitStatus.PRE_INIT;preInitAction();initStatus=InitStatus.INIT_WAIT;initStatus=InitStatus.INIT;init(context);initStatus=InitStatus.FINISH;}
-        catch(RuntimeException|Error e){initStatus=InitStatus.CREATED;throw e;}
+        catch(RuntimeException|Error e){initStatus=InitStatus.CREATED;modulesManager=null;throw e;}
     }
 }

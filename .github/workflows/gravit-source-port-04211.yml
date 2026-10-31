@@ -1,0 +1,85 @@
+name: Gravit source-port 0.42.11 — real JVM, signed package and 19-module audit
+on:
+  push:
+    paths:
+      - 'tools/gravit-port/**'
+      - 'sdk/java/core/**'
+      - 'sdk/java/gravit-compat/**'
+      - 'examples/extensions/gravit-compat/**'
+      - 'compatibility/gravit/module-parity-04211.json'
+      - 'cli/internal/moduleparity/**'
+      - 'cli/cmd/neverlauncher/module_parity_0301.go'
+      - '.github/workflows/gravit-source-port-04211.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-source-port:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - name: Check product version and public Java compatibility
+        run: |
+          python3 scripts/version/manage.py check
+          sh sdk/java/core/build.sh test
+          sh sdk/java/gravit-compat/build.sh test
+      - name: Compile real source ports and reject unsupported calls
+        run: python3 -m unittest discover -s tools/gravit-port -p 'test_port.py' -v
+      - name: Real JVM host / events / durable storage / RPC / CLI
+        run: |
+          sh examples/extensions/gravit-compat/build.sh
+          python3 examples/extensions/gravit-compat/test-runner.py
+      - name: Build real CLI, inspect 19 modules, execute selected module tests
+        run: |
+          set -eu
+          (cd cli && go test -count=1 -run '^TestLatest04211' ./internal/moduleparity && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+          "$RUNNER_TEMP/nl" module-parity audit --root "$GITHUB_WORKSPACE" --baseline 0.42.11 --report "$RUNNER_TEMP/gravit-matrix.json"
+          "$RUNNER_TEMP/nl" module-parity audit --root "$GITHUB_WORKSPACE" --baseline 0.42.11 --module M02 --run-tests --require-tests --report "$RUNNER_TEMP/gravit-discord.json"
+      - name: Sign real source-ported .nlext and reject tampering
+        run: |
+          set -eu
+          openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/author.pem"
+          openssl pkey -in "$RUNNER_TEMP/author.pem" -pubout -out "$RUNNER_TEMP/author.pub"
+          python3 tools/gravit-port/port.py \
+            --source examples/extensions/gravit-compat/src \
+            --module-class ru.example.gravit.PortedModule \
+            --manifest examples/extensions/gravit-compat/neverlauncher-extension.json \
+            --output "$RUNNER_TEMP/gravit-port-stage" \
+            --nl "$RUNNER_TEMP/nl" \
+            --private-key "$RUNNER_TEMP/author.pem" \
+            --public-key "$RUNNER_TEMP/author.pub" \
+            --package "$RUNNER_TEMP/gravit-port.nlext"
+          "$RUNNER_TEMP/nl" extension verify "$RUNNER_TEMP/gravit-port.nlext" --public-key "$RUNNER_TEMP/author.pub"
+          python3 - "$RUNNER_TEMP/gravit-port.nlext" "$RUNNER_TEMP/tampered.nlext" <<'PY'
+          import sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as source, zipfile.ZipFile(sys.argv[2], 'w') as target:
+              for member in source.infolist():
+                  data = source.read(member.filename)
+                  if member.filename == 'payload/backend/gravit-port.jar':
+                      data = data + b'tampered'
+                  target.writestr(member, data)
+          PY
+          if "$RUNNER_TEMP/nl" extension verify "$RUNNER_TEMP/tampered.nlext" --public-key "$RUNNER_TEMP/author.pub"; then
+            echo 'SECURITY FAILURE: tampered Gravit package was accepted' >&2
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gravit-04211-evidence
+          path: |
+            ${{ runner.temp }}/gravit-matrix.json
+            ${{ runner.temp }}/gravit-discord.json
+          if-no-files-found: warn

@@ -49,7 +49,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path != "/v1/manifest":
             self.answer(404, {})
             return
-        self.answer(200, json.loads((ROOT / "launcher-extension.json").read_text()))
+        self.answer(200, json.loads((ROOT / "neverlauncher-extension.json").read_text()))
 
     def do_POST(self):
         if not self.authorized():
@@ -73,6 +73,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "instanceId": "compat-instance",
                 "heartbeatTimeoutSeconds": 6,
                 "capabilities": ["runtime.storage.get", "runtime.storage.put"],
+                "eventProtocolVersion": "1.0",
+                "events": ["release.published"],
             }
         elif self.path == "/v1/ready":
             Handler.ready += 1

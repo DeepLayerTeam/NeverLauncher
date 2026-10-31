@@ -26,12 +26,26 @@ public final class GravitCompatExtension implements Extension {
         for(String dependency:module.getModuleInfo().dependencies) {
             if(dependency==null||!dependency.isBlank())throw new UnsupportedOperationException("Gravit internal dependency requires an explicit port: "+dependency);
         }
-        module.initialize(manager,new GravitInitContext(context,manager));
-        manager.activate();
-        initialized=true;
+        // A source port can allocate resources during preInitAction()/init().
+        // If event subscriptions or a declared command are rejected by the live
+        // host, close those resources rather than leaking them until JVM exit.
+        try {
+            module.initialize(manager,new GravitInitContext(context,manager));
+            manager.activate();
+            initialized=true;
+        } catch(Exception|Error failure) {
+            if(module instanceof AutoCloseable closable) {
+                try { closable.close(); } catch(Exception cleanup) { failure.addSuppressed(cleanup); }
+            }
+            module=null;
+            initialized=false;
+            throw failure;
+        }
     }
     @Override public void stop(ExtensionContext context)throws Exception {
-        if(initialized&&module instanceof AutoCloseable closable)closable.close();
+        LauncherModule stopping=module;
+        module=null;
         initialized=false;
+        if(stopping instanceof AutoCloseable closable)closable.close();
     }
 }

@@ -4,6 +4,7 @@ on:
     paths:
       - 'sdk/java/core/**'
       - 'sdk/java/gravit-compat/**'
+      - 'tools/gravit-port/**'
       - 'examples/extensions/gravit-compat/**'
       - 'services/api/internal/extensionjava/**'
       - '.github/workflows/gravit-compat-0307.yml'
@@ -11,6 +12,7 @@ on:
     paths:
       - 'sdk/java/core/**'
       - 'sdk/java/gravit-compat/**'
+      - 'tools/gravit-port/**'
       - 'examples/extensions/gravit-compat/**'
       - 'services/api/internal/extensionjava/**'
       - '.github/workflows/gravit-compat-0307.yml'
@@ -69,7 +71,7 @@ jobs:
         shell: bash
         run: |
           set -eu
-          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
+          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/private.pem"
           openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
           "$RUNNER_TEMP/nl" extension pack examples/extensions/gravit-compat/build/package --output "$RUNNER_TEMP/gravit-port.nlext" --private-key "$RUNNER_TEMP/private.pem"

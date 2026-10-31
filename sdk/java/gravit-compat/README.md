@@ -12,7 +12,7 @@ This is a **working, deliberately limited source-port adapter** for GravitLaunch
 | `LauncherModule.EventHandler`, `registerEvent()` | Typed adapter over Go's **real** EventBus. Only whitelisted `@HostEvent` types with existing EventBus types are accepted |
 | `ReleasePublishedEvent`, `ProjectSavedEvent` | Binds respectively to `release.published`, `project.saved`, preserving event id/project/idempotency key and raw JSON payload |
 | `pro.gravit.utils.command.Command`, `CommandHandler.registerCommand()` | `invoke(String... args)` runs via Extensions authenticated RPC/CLI command registry; command names must be declared by a signed `.nlext` manifest; `CommandHandler.respond(Object)` returns bounded JSON output |
-| `AutoCloseable` module | `close` called at extension stop; all event subscriptions removed by existing RuntimeServices on exit |
+| `AutoCloseable` module | `close` called at extension stop; local callbacks are removed on exit; durable Backend subscriptions are preserved |
 
 **Not supported**: binary compatibility with unmodified upstream modules, `LaunchServer` internals, `LaunchServerInitContext`, `LaunchServerPostInitPhase`, `PreConfigPhase`, providers/registries, `ModulesConfigManager`, JavaFX UI, `Event.cancel()` and cancellation semantics, arbitrary Gravit `CommandHandler` internals, unchecked classpath dependencies. Calls to unsupported cancellation or event types are rejected, not silently accepted. Port source against this published subset, use Extensions `ExtensionContext.runtime()` for config/storage/secrets, and declare permissions/dependencies in the signed package. Gravit package names are used only for the documented subset, not to promise ABI parity across Gravit versions.
 
@@ -22,6 +22,9 @@ This is a **working, deliberately limited source-port adapter** for GravitLaunch
 sh sdk/java/gravit-compat/build.sh test
 sh examples/extensions/gravit-compat/build.sh
 python3 examples/extensions/gravit-compat/test-runner.py
+# Generic real source-port builder and signed-package workflow:
+python3 tools/gravit-port/port.py --help
+# See docs/releases/0.42.11-gravit-source-port.md for the production signing command.
 # Requires Launcher CLI and a pre-existing protected Ed25519 private key
 nl extension pack examples/extensions/gravit-compat/build/package --output /tmp/gravit-port.nlext --private-key /secure/extension-private.pem
 nl extension verify /tmp/gravit-port.nlext --public-key /secure/extension-public.pem
