@@ -1,6 +1,6 @@
 {
   "name": "neverlauncher-admin",
-  "version": "0.41.12",
+  "version": "0.41.13",
   "private": true,
   "type": "module",
   "scripts": {

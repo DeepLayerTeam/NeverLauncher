@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.41.13 — Live ServerBridge compatibility evidence and fail-closed matrix
+
+- Instrumented the **executing** full Minecraft E2E runner: after real authenticated login and revocation, Docker must report a healthy running JVM with a pinned image ID and a live Java process. Preserve native logs, client/network probes and their SHA-256 digests per runtime; refuse mismatched node IDs or missing game events.
+- Added a fail-closed compatibility verifier for actual observed runtime/proxy behavior. A paper client must join the game; ten existing upstream server/proxy cases can pass the core gate only on true JVM/game runs. `--all` intentionally refuses full certification until the four remaining targets (Bukkit-only, Quilt, Sponge, Vanilla sidecar) have equally strong real-server evidence.
+- Includes negative regression cases for missing JVM identity, altered logs, replayed/mismatched network probes, incomplete reports, and implicit client-only certification; version metadata and E2E integration are updated to 0.41.13.
+- **Validation boundary:** Java 21 and offline verifier tests can run in restricted development environments. Real Minecraft and proxy JARs, Docker and external dependencies were not available here, so no unsupported `PASS` claim is made. The full 14-target requirement remains unverified and the release gate must remain blocked until live tests pass.
+
+
 ## 0.41.12 — Host control fault fencing and read-only ACK recovery
 
 - RemoteControl enforces an OS kernel process lock across stale lease recovery to prevent competing remote listeners; unknown previous receipts block unrelated commands.

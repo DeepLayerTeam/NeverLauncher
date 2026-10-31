@@ -233,6 +233,18 @@ capture_health_evidence() {
     return 1
   }
 }
+# 0.41.13: observe the actual JVM in Docker only after allow + revoke
+# were exercised through the real game protocol. Never synthesize PASS fields.
+record_live_serverbridge_04113() {
+  local service="$1" node="$2" port="$3" cid
+  cid="$(compose ps -q "$service")"
+  [[ -n "$cid" ]] || { echo "[e2e] no live container for $service" >&2; return 1; }
+  local -a extra=()
+  [[ "$service" == "paper" ]] && extra+=(--require-real-join)
+  python3 "$ROOT/e2e/scripts/record-serverbridge-runtime-04113.py" \
+    --service "$service" --node "$node" --port "$port" --container "$cid" \
+    --player "$PLAYER_USERNAME" --version "$VERSION" --runtime "$RUNTIME_DIR" "${extra[@]}"
+}
 wait_log() {
   local service="$1" pattern="$2"
   for _ in $(seq 1 45); do
@@ -1025,6 +1037,9 @@ json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" '{"serverId":"paper-e
 validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
 python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port 25571 --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-paper-deny.txt"
 wait_log paper "neverlauncher.join.denied username=$PLAYER_USERNAME"
+if [[ "$MODE" == "full" ]]; then
+  record_live_serverbridge_04113 paper paper-e2e-p3 25571
+fi
 
 if [[ "$MODE" == "full" ]]; then
   printf '[e2e] verify zero-patch proxy -> backend one-time handoff and runtime-learned topology\n'
@@ -1103,6 +1118,7 @@ if [[ "$MODE" == "full" ]]; then
     esac
     python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" "${deny_probe_mode[@]}" > "$RUNTIME_DIR/probe-$id-deny.txt"
     wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"
+    record_live_serverbridge_04113 "$service" "$id" "$port"
   }
   flow_for_server velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" velocity 25570
 
@@ -1188,7 +1204,7 @@ jq -n \
   --arg forge "$FORGE_HEALTH" \
   --arg neoforge "$NEOFORGE_HEALTH" \
   --arg loaderNative "$LOADER_NATIVE_HEALTH" \
-  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed",loaderNativeE2E:(if $loader == "vanilla" then "not-applicable" else "passed" end),loaderResolution:{lockSha256:$resolutionLockSha256,reproducibilitySha256:$resolutionReproSha256,sourceSha256:$resolutionSourceSha256,pinned:($loader != "vanilla")}},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge,loaderNative:$loaderNative},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,loaderNativeServer:($loader == "vanilla" or $loaderNative == "healthy"),loaderNativeClientJoin:($loader == "vanilla" or $loaderNative == "healthy"),loaderVersionMatched:($loader == "vanilla" or $loaderNative == "healthy"),bukkitFamilyRuntime:true,proxyFamilyRuntime:true,fabricServerBridge:true,forgeNeoForgeServerBridge:true,sessionRevokeDeny:true,foliaPinnedRuntime:true,foliaPinnedBuildDependency:true,bytesocksPinnedBuildDependency:true},evidence:(["folia-runtime.json","spark-paper-build.json","bytesocks-build.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"] + (if $loader == "vanilla" then [] else ["loader-native-server.json","loader-native-client.json","loader-native-server.log","loader-native-server-artifacts.txt","loader-native-server-process.txt","health-loader-native.json"] end))}' \
+  '{version:$version,status:"passed",mode:$mode,minecraft:{version:$mc,loader:$loader,loaderSelector:$loaderSelector,resolvedLoaderVersion:$resolvedLoaderVersion,profileId:$profile,client:"actual-mojang-client",paperJoin:"passed",loaderNativeE2E:(if $loader == "vanilla" then "not-applicable" else "passed" end),loaderResolution:{lockSha256:$resolutionLockSha256,reproducibilitySha256:$resolutionReproSha256,sourceSha256:$resolutionSourceSha256,pinned:($loader != "vanilla")}},health:{velocity:$velocity,bungeecord:$bungeecord,waterfall:$waterfall,spigot:$spigot,paper:"healthy",purpur:$purpur,folia:$folia,fabric:$fabric,forge:$forge,neoforge:$neoforge,loaderNative:$loaderNative},checks:{packageVerified:true,signedManifest:true,cleanSync:true,actualClient:true,paperJoin:true,loaderNativeServer:($loader == "vanilla" or $loaderNative == "healthy"),loaderNativeClientJoin:($loader == "vanilla" or $loaderNative == "healthy"),loaderVersionMatched:($loader == "vanilla" or $loaderNative == "healthy"),bukkitFamilyRuntime:($mode == "full"),proxyFamilyRuntime:($mode == "full"),fabricServerBridge:($mode == "full"),forgeNeoForgeServerBridge:($mode == "full"),sessionRevokeDeny:true,foliaPinnedRuntime:($mode == "full"),foliaPinnedBuildDependency:($mode == "full"),bytesocksPinnedBuildDependency:($mode == "full")},evidence:(["folia-runtime.json","spark-paper-build.json","bytesocks-build.json","materialized-client-verify.json","published-client-package.json","manifest.json","runtime-verify.json","runtime-sync.json","runtime-launch-minecraft.json","health-paper.json","health-velocity.json","health-bungeecord.json","health-waterfall.json","health-spigot.json","health-purpur.json","health-folia.json","health-fabric.json","health-forge.json","health-neoforge.json","bridge-diagnostics.json"] + (if $loader == "vanilla" then [] else ["loader-native-server.json","loader-native-client.json","loader-native-server.log","loader-native-server-artifacts.txt","loader-native-server-process.txt","health-loader-native.json"] end))}' \
   > "$RUNTIME_DIR/result.json"
 if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head -1)" == "0.36.4" ]]; then
   jq -e --arg version "$VERSION" --arg sha "$GITHUB_SHA" \
@@ -1206,5 +1222,13 @@ if [[ "$MODE" == "full" && "$(printf '%s\n' '0.29.0' "$VERSION" | sort -V | head
   jq -c '.checks.realWorldBackupRestore=true | .evidence += ["world-backup-0290.json"]' \
     "$RUNTIME_DIR/result.json" > "$RUNTIME_DIR/result-0290-tmp.json"
   mv "$RUNTIME_DIR/result-0290-tmp.json" "$RUNTIME_DIR/result.json"
+fi
+if [[ "$MODE" == "full" ]]; then
+  python3 "$ROOT/serverbridge/live_matrix_04113.py" --scope core --root "$ROOT" \
+    --runtime "$RUNTIME_DIR" --out "$RUNTIME_DIR/live-matrix-core-04113.json" >/dev/null
+  jq -c '.checks.liveServerBridgeCore = true | .evidence += ["live-matrix-core-04113.json"]' \
+    "$RUNTIME_DIR/result.json" > "$RUNTIME_DIR/result-04113-tmp.json"
+  mv "$RUNTIME_DIR/result-04113-tmp.json" "$RUNTIME_DIR/result.json"
+  echo '[e2e] real JVM + network probes verified for 10 core targets; bukkit/quilt/sponge/vanilla are NOT certified by this suite' >&2
 fi
 printf '[e2e] PASS %s\n' "$(cat "$RUNTIME_DIR/result.json")"
