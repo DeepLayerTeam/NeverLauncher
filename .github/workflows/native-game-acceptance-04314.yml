@@ -1,0 +1,52 @@
+name: Real Minecraft positive and adversarial gameplay on six native platforms 0.43.14
+on:
+  workflow_dispatch:
+    inputs:
+      package_id:
+        description: Immutable staged and signed package to execute on all six GUI hosts
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      package_id:
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: native-game-04314-${{ inputs.package_id }}
+  cancel-in-progress: false
+jobs:
+  # Missing native GUI hardware is a BLOCKER, not a substituted x64 VM or
+  # silent exclusion from the matrix. Reusable worker already checks actual
+  # host OS/architecture and requires matching Minecraft server & live auth.
+  live-native-game:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: linux, arch: amd64}
+          - {os: linux, arch: arm64}
+          - {os: windows, arch: amd64}
+          - {os: windows, arch: arm64}
+          - {os: macos, arch: amd64}
+          - {os: macos, arch: arm64}
+    uses: ./.github/workflows/native-runtime-v10-03410.yml
+    with:
+      package_id: ${{ inputs.package_id }}
+      os: ${{ matrix.os }}
+      arch: ${{ matrix.arch }}
+      mode: gui
+    secrets: inherit
+  all-native-passed:
+    name: Six distinct native GUI executions required
+    needs: [live-native-game]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Refuse success if any target failed, skipped or was cancelled
+        env:
+          MATRIX_RESULT: ${{ needs.live-native-game.result }}
+        run: |
+          test "$MATRIX_RESULT" = success || { echo 'BLOCKED: incomplete native game matrix'; exit 1; }
+          echo 'Six native GUI workflows completed; unsigned observations still require independent attestation.'

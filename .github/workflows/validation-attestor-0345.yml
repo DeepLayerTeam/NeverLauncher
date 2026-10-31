@@ -36,6 +36,7 @@ jobs:
           python3 tools/validation-attestor/test_official_chain_0347.py
           python3 e2e/scripts/test_staged_auth_0347.py
           python3 e2e/scripts/test_run_staged_package_0342.py
+          python3 e2e/scripts/test_staged_negative_04314.py
           python3 e2e/scripts/test_staged_readiness_0343.py
           python3 e2e/scripts/test_staged_matching_0344.py
           python3 e2e/scripts/test_staged_lifecycle_0349.py

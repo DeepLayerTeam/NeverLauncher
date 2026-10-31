@@ -1,6 +1,12 @@
 # Observational cross-platform execution. NEVER holds an attestation signing key.
 name: V10 native staged runtime (Windows Linux macOS)
 on:
+  workflow_call:
+    inputs:
+      package_id: {required: true, type: string}
+      os: {required: true, type: string}
+      arch: {required: true, type: string}
+      mode: {required: true, type: string}
   workflow_dispatch:
     inputs:
       package_id:
@@ -120,6 +126,8 @@ jobs:
           fi
           set +e
           python e2e/scripts/run_native_validation_03410.py --mode '${{ inputs.mode }}' \
+            --expected-os '${{ inputs.os }}' --expected-arch '${{ inputs.arch }}' \
+            --expected-version "$(cat VERSION)" \
             --report-dir "$RUNNER_TEMP/nl-v10-reports" -- "${ARGS[@]}"
           RESULT=$?
           set -e

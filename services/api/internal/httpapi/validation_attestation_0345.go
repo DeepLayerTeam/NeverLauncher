@@ -119,6 +119,16 @@ func validatePayload0345(p validationPayload0345) error {
 			return fmt.Errorf("required artifact missing: %s", name)
 		}
 	}
+	// From 0.43.14 onward gameplay acceptance must bind the *separate*
+	// adversarial run's raw bytes to this independently signed observation.
+	// A prior nine-stage PASS cannot be replayed as a newer game certificate.
+	var major, minor, patch int
+	if count, _ := fmt.Sscanf(p.PackageVersion, "%d.%d.%d", &major, &minor, &patch); count == 3 &&
+		(major > 0 || minor > 43 || (minor == 43 && patch >= 14)) {
+		if !validationHex0345.MatchString(p.ArtifactHashes["adversarial-gameplay-04314.json"]) {
+			return errors.New("missing independently verified adversarial game artifact")
+		}
+	}
 	start, e := time.Parse(time.RFC3339Nano, p.StartedAt)
 	if e != nil {
 		return errors.New("invalid start time")

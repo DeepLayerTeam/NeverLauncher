@@ -298,6 +298,17 @@ def execute(args):
             raise ValueError("server returned different run/snapshot identity")
         pkg = snapshot["package"]
         signed = snapshot["signedManifest"]
+        if args.expected_version and pkg.get("version") != args.expected_version:
+            raise ValueError("staged package differs from exact source build version")
+        # Release workers must assert version explicitly; historical manual
+        # probes can still use this script for older staged packages.
+        import re
+        version_match = re.fullmatch(r"([0-9]+)\.([0-9]+)\.([0-9]+)(?:[-+][A-Za-z0-9.-]+)?", pkg.get("version", ""))
+        if not version_match:
+            raise ValueError("staged package has invalid version")
+        requires_exact_version = tuple(map(int, version_match.groups())) >= (0, 43, 14)
+        if requires_exact_version and not args.expected_version:
+            raise ValueError("0.43.14+ staged package requires exact expected source version")
         if (
             pkg["packageId"] != args.package_id
             or pkg["projectId"] != signed["projectId"]
@@ -957,7 +968,27 @@ def execute(args):
         except Exception as exc:
             launch_error = str(exc)
         game_proof = work / "gameplay-smoke.json"
-        game_proof.write_text(json.dumps(game.evidence(), indent=2), encoding="utf-8")
+        gameplay_evidence = game.evidence()
+        # 0.43.14: an observed successful game is necessary but not sufficient.
+        # Exercise actual release binaries against altered signed metadata and
+        # corrupted installed bytes, then restore the disposable client.
+        # Never synthesize a PASS if the negative paths are not executable.
+        if not launch_error and game.status == "passed":
+            from staged_negative_04314 import execute as adversarial_probes
+            negative = adversarial_probes(
+                args.runtime, args.cli, signed_manifest_path,
+                args.pinned_public_key, package_path, delivery_client_dir,
+                pkg["files"], work, subprocess_env,
+            )
+            negative_path = work / "adversarial-gameplay-04314.json"
+            negative_path.write_text(json.dumps(negative, sort_keys=True, indent=2), encoding="utf-8")
+            gameplay_evidence["adversarialGameplay04314"] = {
+                "status": "passed", "evidenceSha256": sha_file(negative_path),
+                "manifestTamperDenied": negative["manifestTamper"]["status"] == "denied",
+                "installedFileTamperDeniedAndRestored":
+                    negative["installedFileTamper"]["status"] == "denied-and-restored",
+            }
+        game_proof.write_text(json.dumps(gameplay_evidence, indent=2), encoding="utf-8")
         proof_hash = sha_file(game_proof)
         from staged_matching_0344 import CRASH
 
@@ -1095,6 +1126,8 @@ def main():
         help="Limited staged grant injected by trusted host; not operator admin credentials",
     )
     parser.add_argument("--package-id", required=True)
+    parser.add_argument("--expected-version", default="",
+                        help="Exact expected signed product version for native GA validation")
     parser.add_argument("--output", required=True)
     parser.add_argument("--cli", required=True)
     parser.add_argument("--runtime", required=True)

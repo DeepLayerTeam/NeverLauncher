@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.43.14 — native six-target positive and negative Minecraft acceptance
+
+- Existing staged runtime worker now performs two real adversarial checks after a successful Minecraft join and server-observed gameplay: modified Ed25519 manifest rejected by the production Rust Runtime, and corrupted installed required file rejected by the production Go CLI. The worker restores the file and verifies exact signed bytes again.
+- Independent host attestation and signed Backend evidence require the digest-bound adversarial gameplay artifact for 0.43.14 and later; missing, stale, altered or unsuccessful negative results block release. Existing nine positive gameplay stages remain mandatory.
+- Added a six-native-GUI worker matrix (Windows/Linux/macOS on x64 and ARM64) with explicit physical OS/architecture verification, no emulated ARM64 substitute and no pass from headless materialization. Incomplete jobs do not certify a release.
+- Local unit tests verify negative-probe execution and restoration, report tamper rejection, independent attestor validation, and signature requirements. Physical six-platform gameplay acceptance remains pending real dedicated runners and live test credentials; no results are fabricated.
+
+## 0.43.13 — ARM64 game-native resolution and Managed Java executable enforcement
+
+- Fixed Runtime Mojang library resolution on Windows/Linux/macOS ARM64: `downloads.artifact` with a `natives-*` Maven classifier is a native archive, **not** a Java classpath library. The artifact's upstream checksum and size are preserved in the resolved native selection. Ordinary Java libraries and older `downloads.classifiers` continue using their existing paths.
+- Reject native classifier variants for other operating systems, x64-only and unknown suffixes, instead of treating non-matching native packages as platform-independent. Added explicit regressions covering cross-OS/architecture leakage and ARM64 LWJGL artifact resolution.
+- Managed Java installation and cache validation verify the physical ELF64, PE32+ machine or Mach-O 64-bit (including selected slice of a universal binary) before running the existing Java version/class and `java.home` probes. An x64 executable on ARM64 is rejected even if it can execute under emulation. This applies before Java can be used to launch Minecraft.
+- Added a native six-target CI build/test workflow, with ARM64 runners for Windows, Linux and macOS plus x64 baselines. All platform tests and Guard/Runtime/Desktop builds must succeed; a cross-compiled binary or existing matrix declaration is not accepted as proof of native gameplay.
+
+**Verification boundary:** CLI Vanilla/LWJGL regression tests passed on Linux x64 using Go 1.23.2. Rust/Cargo is unavailable locally; the new Rust changes and real Windows/Linux/macOS ARM64 game launches require native CI and external Minecraft test environments. No certified six-platform release is claimed.
+
 ## 0.43.12 — Native extension lifetime revocation and broker response authorization
 
 - Native/CLI extension processes are now included in the supervisor's active-instance monitor rather than only persistent backend slots. Emergency-disable, quarantine, withdrawn publisher trust, changed installation generation and revoked `cli:contribute` terminate an already running CLI process instead of waiting for its next broker request.

@@ -1331,6 +1331,87 @@ async fn verify_runtime_inventory(root: &Path, expected: &BTreeMap<String, Strin
     Ok(&actual == expected)
 }
 
+// Verify the physical executable format, not only a Java-reported os.arch
+// property. This detects Rosetta / QEMU / wrong-target JREs before Minecraft
+// loads native LWJGL, JNI or loader libraries.
+fn verify_native_java_executable(java: &Path, os: &str, arch: &str) -> Result<(), String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let expected_arch = normalize_adoptium_arch(arch);
+    if expected_arch != "x86_64" && expected_arch != "aarch64" {
+        return Err(format!("unsupported native Java architecture {arch}"));
+    }
+    let mut file = std::fs::File::open(java).map_err(|e| format!("Java executable open: {e}"))?;
+    let len = file.metadata().map_err(|e| e.to_string())?.len();
+    let mut header = [0u8; 64];
+    file.read_exact(&mut header).map_err(|e| format!("Java executable header: {e}"))?;
+    let le16 = |bytes: &[u8]| u16::from_le_bytes([bytes[0], bytes[1]]);
+    let le32 = |bytes: &[u8]| u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+    let be32 = |bytes: &[u8]| u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+    let cpu_macho = if expected_arch == "aarch64" { 0x0100000c } else { 0x01000007 };
+    let valid = match normalize_adoptium_os(os).as_str() {
+        "linux" => header.starts_with(b"\x7fELF")
+            && header[4] == 2 && header[5] == 1
+            && le16(&header[18..20]) == if expected_arch == "aarch64" { 183 } else { 62 },
+        "windows" => {
+            if &header[..2] != b"MZ" { false } else {
+                let offset = le32(&header[60..64]) as u64;
+                if offset < 64 || offset.checked_add(6).is_none_or(|end| end > len) {
+                    false
+                } else {
+                    let mut pe = [0u8; 6];
+                    file.seek(SeekFrom::Start(offset)).map_err(|e| e.to_string())?;
+                    file.read_exact(&mut pe).map_err(|e| e.to_string())?;
+                    &pe[..4] == b"PE\0\0"
+                        && le16(&pe[4..6]) == if expected_arch == "aarch64" { 0xaa64 } else { 0x8664 }
+                }
+            }
+        },
+        "osx" => {
+            if header[..4] == [0xcf, 0xfa, 0xed, 0xfe] {
+                le32(&header[4..8]) == cpu_macho
+            } else if header[..4] == [0xca, 0xfe, 0xba, 0xbe]
+                || header[..4] == [0xca, 0xfe, 0xba, 0xbf] {
+                let is_fat64 = header[3] == 0xbf;
+                let count = be32(&header[4..8]) as usize;
+                let entry_len: usize = if is_fat64 { 32 } else { 20 };
+                if count == 0 || count > 32 || 8u64 + (entry_len * count) as u64 > len {
+                    false
+                } else {
+                    let mut entries = vec![0u8; count * entry_len];
+                    file.seek(SeekFrom::Start(8)).map_err(|e| e.to_string())?;
+                    file.read_exact(&mut entries).map_err(|e| e.to_string())?;
+                    let mut matched = false;
+                    for entry in entries.chunks_exact(entry_len) {
+                        if be32(&entry[..4]) != cpu_macho { continue; }
+                        let offset = if is_fat64 {
+                            u64::from_be_bytes(entry[8..16].try_into().unwrap())
+                        } else { be32(&entry[8..12]) as u64 };
+                        let size = if is_fat64 {
+                            u64::from_be_bytes(entry[16..24].try_into().unwrap())
+                        } else { be32(&entry[12..16]) as u64 };
+                        if size < 8 || offset.checked_add(size).is_none_or(|end| end > len) {
+                            continue;
+                        }
+                        let mut thin = [0u8; 8];
+                        file.seek(SeekFrom::Start(offset)).map_err(|e| e.to_string())?;
+                        file.read_exact(&mut thin).map_err(|e| e.to_string())?;
+                        if thin[..4] == [0xcf, 0xfa, 0xed, 0xfe]
+                            && le32(&thin[4..8]) == cpu_macho {
+                            matched = true;
+                            break;
+                        }
+                    }
+                    matched
+                }
+            } else { false }
+        },
+        _ => return Err(format!("unsupported native Java OS {os}")),
+    };
+    if valid { Ok(()) } else {
+        Err(format!("Managed Java executable machine mismatch: expected {os}/{expected_arch}"))
+    }
+}
+
 /// Execute the actual JVM with bounded lifetime, verifying the architecture
 /// and OS reported by the runtime, not just its java -version major.
 async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result<(), String> {
@@ -1342,6 +1423,7 @@ async fn self_test_java(java: &Path, major: u32, os: &str, arch: &str) -> Result
         use std::os::unix::fs::PermissionsExt;
         if meta.permissions().mode() & 0o111 == 0 { return Err("Managed Java executable lacks execute permission".into()); }
     }
+    verify_native_java_executable(java, os, arch)?;
     let mut command = Command::new(java);
     command.args(["-XshowSettings:properties", "-version"])
         .stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true);
@@ -1710,6 +1792,56 @@ mod tests {
         assert!(validate_https_url("http://api.adoptium.net/runtime.tar.gz").is_err());
         assert!(validate_https_url("https://user:secret@example.com/runtime.tar.gz").is_err());
         assert!(validate_https_url("https://example.com/runtime.tar.gz#fragment").is_err());
+    }
+
+    #[test]
+    fn native_managed_java_machine_checks_cover_all_arm64_targets() {
+        let root = std::env::temp_dir().join(format!("managed-native-machine-{:016x}", rand::random::<u64>()));
+        std::fs::create_dir_all(&root).unwrap();
+        let java = root.join("java");
+        let mut elf = vec![0u8; 64];
+        elf[0..6].copy_from_slice(b"\x7fELF\x02\x01");
+        elf[18..20].copy_from_slice(&183u16.to_le_bytes());
+        std::fs::write(&java, &elf).unwrap();
+        assert!(verify_native_java_executable(&java, "linux", "aarch64").is_ok());
+        assert!(verify_native_java_executable(&java, "linux", "x86_64").is_err());
+        elf[18..20].copy_from_slice(&62u16.to_le_bytes());
+        std::fs::write(&java, &elf).unwrap();
+        assert!(verify_native_java_executable(&java, "linux", "arm64").is_err());
+
+        let mut pe = vec![0u8; 256];
+        pe[0..2].copy_from_slice(b"MZ");
+        pe[60..64].copy_from_slice(&128u32.to_le_bytes());
+        pe[128..132].copy_from_slice(b"PE\0\0");
+        pe[132..134].copy_from_slice(&0xaa64u16.to_le_bytes());
+        std::fs::write(&java, &pe).unwrap();
+        assert!(verify_native_java_executable(&java, "windows", "aarch64").is_ok());
+        assert!(verify_native_java_executable(&java, "windows", "amd64").is_err());
+        pe[132..134].copy_from_slice(&0x8664u16.to_le_bytes());
+        std::fs::write(&java, &pe).unwrap();
+        assert!(verify_native_java_executable(&java, "windows", "aarch64").is_err());
+
+        let mut mach = vec![0u8; 64];
+        mach[..4].copy_from_slice(&[0xcf, 0xfa, 0xed, 0xfe]);
+        mach[4..8].copy_from_slice(&0x0100000cu32.to_le_bytes());
+        std::fs::write(&java, &mach).unwrap();
+        assert!(verify_native_java_executable(&java, "macos", "arm64").is_ok());
+        assert!(verify_native_java_executable(&java, "macos", "x64").is_err());
+
+        let mut fat = vec![0u8; 96];
+        fat[..4].copy_from_slice(&[0xca, 0xfe, 0xba, 0xbe]);
+        fat[4..8].copy_from_slice(&1u32.to_be_bytes());
+        fat[8..12].copy_from_slice(&0x0100000cu32.to_be_bytes());
+        fat[16..20].copy_from_slice(&32u32.to_be_bytes());
+        fat[20..24].copy_from_slice(&64u32.to_be_bytes());
+        fat[32..36].copy_from_slice(&[0xcf, 0xfa, 0xed, 0xfe]);
+        fat[36..40].copy_from_slice(&0x0100000cu32.to_le_bytes());
+        std::fs::write(&java, &fat).unwrap();
+        assert!(verify_native_java_executable(&java, "macos", "aarch64").is_ok());
+        fat[36..40].copy_from_slice(&0x01000007u32.to_le_bytes());
+        std::fs::write(&java, &fat).unwrap();
+        assert!(verify_native_java_executable(&java, "macos", "aarch64").is_err());
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

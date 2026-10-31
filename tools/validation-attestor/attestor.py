@@ -115,6 +115,51 @@ STAGE_ARTIFACT = {
     "gameplay-smoke": "gameplay-smoke.json",
     "update-recovery": "update-recovery.json",
 }
+def needs_adversarial_gameplay(version):
+    match = re.fullmatch(r"([0-9]+)\.([0-9]+)\.([0-9]+)(?:[-+][A-Za-z0-9.-]+)?", version)
+    check(match is not None, "invalid version for native game acceptance")
+    return tuple(map(int, match.groups())) >= (0, 43, 14)
+
+
+def verify_adversarial_gameplay_04314(work, signed_manifest, snapshot, game):
+    """Independent host: bind negative probes to staged bytes and game proof."""
+    proof = read_json(work / "adversarial-gameplay-04314.json")
+    assertion = game.get("adversarialGameplay04314")
+    check(isinstance(assertion, dict) and assertion.get("status") == "passed"
+          and assertion.get("evidenceSha256") == sha(work / "adversarial-gameplay-04314.json")
+          and assertion.get("manifestTamperDenied") is True
+          and assertion.get("installedFileTamperDeniedAndRestored") is True,
+          "0.43.14 positive gameplay has no bound negative observation")
+    manifest = proof.get("manifestTamper")
+    installed = proof.get("installedFileTamper")
+    check(proof.get("schemaVersion") == "launcher.adversarial-gameplay.04314.v1"
+          and isinstance(manifest, dict) and isinstance(installed, dict)
+          and manifest.get("status") == "denied"
+          and manifest.get("baselineVerified") is True
+          and HEX64.fullmatch(manifest.get("alteredManifestSha256", ""))
+          and installed.get("status") == "denied-and-restored",
+          "0.43.14 native Runtime/CLI rejection not observed")
+    name = installed.get("filePath")
+    required = {e["path"]: e for e in snapshot["files"] if e.get("required", True)}
+    check(isinstance(name, str) and name in required and
+          not name.startswith("/") and "\\" not in name and
+          all(part not in ("", ".", "..") for part in name.split("/")),
+          "native corruption probe did not target a required package file")
+    expected = required[name]["sha256"].lower()
+    path = work / "delivery-verified-client" / name
+    restored = work / "adversarial-restored-04314.json"
+    check(path.is_file() and not path.is_symlink()
+          and not any((work / "delivery-verified-client" / "/".join(name.split("/")[:i])).is_symlink()
+                      for i in range(1, len(name.split("/")) + 1))
+          and sha(path) == expected
+          and installed.get("baselineSha256") == expected
+          and installed.get("restoredFileSha256") == expected
+          and installed.get("restoredVerificationSha256") == sha(restored)
+          and read_json(restored).get("status") == "valid",
+          "negative test did not restore exact signed client or rerun production verifier")
+    return sha(work / "adversarial-gameplay-04314.json")
+
+
 HEX64 = re.compile(r"^[a-f0-9]{64}$")
 TOKEN = re.compile(r"^[a-zA-Z0-9_.:/@+,\-]{1,160}$")
 
@@ -647,6 +692,9 @@ def verify_local_artifacts(work, issued, image_sha, source_sha, build_sha, bridg
         and server["loaderVersion"] == game["loaderVersion"],
         "server/plugin/runtime version mismatch",
     )
+    if needs_adversarial_gameplay(signed_manifest["version"]):
+        hashes["adversarial-gameplay-04314.json"] = verify_adversarial_gameplay_04314(
+            work, signed_manifest, snapshot, game)
     check(
         game["status"] == "passed"
         and game["serverJoinAndOnline"] is True

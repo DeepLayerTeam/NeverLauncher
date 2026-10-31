@@ -654,6 +654,11 @@ fn resolve_libraries(
         // Часть старых записей Mojang — нативные контейнеры только
         // с классификаторами, например lwjgl-platform и jinput-platform.
         // Не превращайте их в обычные артефакты classpath.
+        // Modern Mojang/LWJGL metadata may publish a native classifier as
+        // downloads.artifact instead of downloads.classifiers + natives.
+        // This is a native archive, never a Java classpath entry.
+        let classified_native = library.name.split(':').nth(3)
+            .is_some_and(|value| value.to_ascii_lowercase().starts_with("natives-"));
         if let Some(artifact) = library.downloads.artifact.clone() {
             let path = if artifact.path.trim().is_empty() {
                 maven_path(&library.name)?
@@ -667,14 +672,31 @@ fn resolve_libraries(
             } else {
                 String::new()
             };
-            resolved.push(ResolvedLibrary {
-                name: library.name.clone(),
-                path: path.clone(),
-                url,
-                sha1: artifact.sha1.clone(),
-                size: artifact.size,
-            });
-            classpath.push(path);
+            if classified_native {
+                let classifier = library.name.split(':').nth(3).unwrap_or_default();
+                natives.push(ResolvedNative {
+                    name: library.name.clone(),
+                    classifier: classifier.to_string(),
+                    path,
+                    url,
+                    sha1: artifact.sha1.clone(),
+                    size: artifact.size,
+                    excludes: library.extract.exclude.clone(),
+                });
+            } else {
+                resolved.push(ResolvedLibrary {
+                    name: library.name.clone(),
+                    path: path.clone(),
+                    url,
+                    sha1: artifact.sha1.clone(),
+                    size: artifact.size,
+                });
+                classpath.push(path);
+            }
+        } else if classified_native {
+            // A classified native without an artifact descriptor is not a
+            // classpath JAR. Do not invent a file or silently omit a native.
+            return Err(format!("{}: native classifier missing downloads.artifact", library.name));
         } else if library.downloads.classifiers.is_empty() {
             // Сохраняйте совместимость со старыми локальными метаданными, появившимися
             // до объекта downloads. В строгом режиме материализатор по-прежнему отказывает
@@ -695,6 +717,7 @@ fn resolve_libraries(
             classpath.push(path);
         }
 
+        if !classified_native {
         if let Some(classifier_template) = native_classifier(library, environment) {
             let classifier = classifier_template.replace("${arch}", native_arch_token(&environment.arch));
             // Legacy Minecraft/Forge metadata predates downloads.classifiers.
@@ -748,6 +771,7 @@ fn resolve_libraries(
                 size: native.map(|value| value.size).unwrap_or_default(),
                 excludes: library.extract.exclude.clone(),
             });
+        }
         }
     }
     Ok((resolved, natives, classpath))
@@ -1272,18 +1296,30 @@ fn library_artifact_matches_environment(name: &str, environment: &CompatibilityE
     if !classifier.starts_with("natives-") {
         return true;
     }
-    let os_token = if environment.os == "osx" { "macos" } else { environment.os.as_str() };
-    let prefix = format!("natives-{os_token}");
-    let Some(suffix) = classifier.strip_prefix(&prefix) else {
-        return true;
+    // A native archive for a different OS must not enter the classpath or
+    // the extracted natives for this target. Unknown variants fail closed.
+    let prefixes: &[&str] = if environment.os == "osx" {
+        &["natives-macos", "natives-osx"]
+    } else if environment.os == "windows" {
+        &["natives-windows", "natives-win"]
+    } else if environment.os == "linux" {
+        &["natives-linux"]
+    } else {
+        return false;
     };
-    match suffix {
-        "" => environment.arch == "x86_64",
-        "-arm64" | "-aarch64" => environment.arch == "aarch64",
-        "-x86" | "-i386" | "-i686" => environment.arch == "x86",
-        "-arm32" => environment.arch == "arm",
-        _ => true,
+    for prefix in prefixes {
+        if let Some(suffix) = classifier.strip_prefix(prefix) {
+            return match suffix {
+                "" => environment.arch == "x86_64" || environment.arch == "x86",
+                "-x64" | "-x86_64" | "-amd64" => environment.arch == "x86_64",
+                "-arm64" | "-aarch64" => environment.arch == "aarch64",
+                "-x86" | "-i386" | "-i686" => environment.arch == "x86",
+                "-arm32" | "-arm" => environment.arch == "arm",
+                _ => false,
+            };
+        }
     }
+    false
 }
 
 fn normalized_current_arch() -> &'static str {
@@ -1930,6 +1966,54 @@ mod tests {
             "com.example:ordinary:1.0.0",
             &windows_arm
         ));
+    }
+
+    #[test]
+    fn arm64_native_artifact_resolves_to_natives_not_classpath() {
+        for (os, native_class) in [
+            ("linux", "natives-linux-arm64"),
+            ("windows", "natives-windows-arm64"),
+            ("osx", "natives-macos-arm64"),
+        ] {
+            let env = CompatibilityEnvironment {
+                os: os.into(), arch: "aarch64".into(),
+                os_version: String::new(), features: HashMap::new(),
+            };
+            let name = format!("org.lwjgl:lwjgl-glfw:3.4.3:{native_class}");
+            let archive_path = format!("org/lwjgl/lwjgl-glfw/3.4.3/lwjgl-glfw-3.4.3-{native_class}.jar");
+            let native: Library = serde_json::from_value(serde_json::json!({
+                "name": name,
+                "downloads": {"artifact": {"path": archive_path, "sha1":"cafe", "size":100,
+                    "url":"https://libraries.minecraft.net/native.jar"}}
+            })).unwrap();
+            let foreign: Library = serde_json::from_value(serde_json::json!({
+                "name": "org.lwjgl:lwjgl-glfw:3.4.3:natives-windows-x64",
+                "downloads": {"artifact": {"path": "wrong.jar", "sha1":"dead"}}
+            })).unwrap();
+            let (libraries, natives, classpath) = resolve_libraries(&[native, foreign], &env).unwrap();
+            assert!(libraries.is_empty(), "{os}: native JAR added to libraries");
+            assert!(classpath.is_empty(), "{os}: native JAR added to classpath");
+            assert_eq!(natives.len(), 1, "{os}: cross-architecture native leaked");
+            assert_eq!(natives[0].classifier, native_class);
+            assert_eq!(natives[0].sha1, "cafe");
+        }
+    }
+
+    #[test]
+    fn unknown_or_foreign_native_classifiers_never_enter_arm64_game() {
+        for (os, arch) in [("linux", "aarch64"), ("windows", "aarch64"), ("osx", "aarch64")] {
+            let env = CompatibilityEnvironment {
+                os: os.into(), arch: arch.into(), os_version: String::new(), features: HashMap::new(),
+            };
+            for foreign in [
+                "natives-windows", "natives-linux-x64", "natives-macos-x64",
+                "natives-linux-armv7", "natives-windows-arm32", "natives-unknown-arm64",
+            ] {
+                assert!(!library_artifact_matches_environment(
+                    &format!("org.lwjgl:lwjgl:3.4.3:{foreign}"), &env
+                ), "{os}/{arch} admitted {foreign}");
+            }
+        }
     }
 
     #[test]

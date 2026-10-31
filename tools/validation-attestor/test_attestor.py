@@ -38,7 +38,7 @@ def fixture(work):
     }
     signed = {
         "projectId": "project",
-        "version": "1.0.0",
+        "version": "0.43.13",
         "minecraft": {"loader": "vanilla", "version": "1.21.1"},
         "runtime": {"guard": {}},
         "files": [artifact],
@@ -46,7 +46,7 @@ def fixture(work):
     pkg = {
         "projectId": "project",
         "packageId": package,
-        "version": "1.0.0",
+        "version": "0.43.13",
         "files": [artifact],
     }
     dump(work / "payload" / "signed-release-manifest.json", signed)
@@ -293,7 +293,7 @@ def fixture(work):
             "schemaVersion": "launcher.lifecycle-validation.v1",
             "status": "passed",
             "currentPackageId": package,
-            "currentVersion": "1.0.0",
+            "currentVersion": "0.43.13",
             "previousPackageId": "prev-package",
             "previousVersion": "0.9.0",
             "previousArchiveSha256": "a" * 64,
@@ -330,7 +330,7 @@ def fixture(work):
     issued["requiredTargets"] = [
         {
             "id": "linux-default",
-            "version": "1.0.0",
+            "version": "0.43.13",
             "manifestSha256": m,
             "artifactSha256": b,
             "resolvedPlanSha256": resolution,
@@ -363,6 +363,50 @@ def fixture(work):
         },
     )
     return issued
+
+
+class AdversarialGame03414Tests(unittest.TestCase):
+    def test_raw_negative_observation_and_restored_exact_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            work = Path(d)
+            fixture(work)
+            pkg = json.loads((work / 'payload/staged-package-description.json').read_text())
+            game = json.loads((work / 'gameplay-smoke.json').read_text())
+            file_entry = pkg['files'][0]
+            client = work / 'delivery-verified-client' / file_entry['path']
+            client.parent.mkdir(parents=True)
+            client.write_bytes((work / 'payload' / file_entry['path']).read_bytes())
+            restored = {'status': 'valid'}
+            dump(work / 'adversarial-restored-04314.json', restored)
+            negative = {
+                'schemaVersion': 'launcher.adversarial-gameplay.04314.v1',
+                'manifestTamper': {'status': 'denied', 'baselineVerified': True,
+                                   'alteredManifestSha256': 'a' * 64},
+                'installedFileTamper': {'status': 'denied-and-restored',
+                                        'filePath': file_entry['path'],
+                                        'baselineSha256': file_entry['sha256'],
+                                        'restoredFileSha256': file_entry['sha256'],
+                                        'restoredVerificationSha256': a.sha(work / 'adversarial-restored-04314.json')},
+            }
+            dump(work / 'adversarial-gameplay-04314.json', negative)
+            game['adversarialGameplay04314'] = {
+                'status': 'passed', 'evidenceSha256': a.sha(work / 'adversarial-gameplay-04314.json'),
+                'manifestTamperDenied': True, 'installedFileTamperDeniedAndRestored': True,
+            }
+            self.assertEqual(a.verify_adversarial_gameplay_04314(work, {}, pkg, game),
+                             a.sha(work / 'adversarial-gameplay-04314.json'))
+            client.write_bytes(b'evil')
+            with self.assertRaisesRegex(ValueError, 'restore exact signed client'):
+                a.verify_adversarial_gameplay_04314(work, {}, pkg, game)
+            client.write_bytes((work / 'payload' / file_entry['path']).read_bytes())
+            game['adversarialGameplay04314']['evidenceSha256'] = 'f' * 64
+            with self.assertRaisesRegex(ValueError, 'bound negative observation'):
+                a.verify_adversarial_gameplay_04314(work, {}, pkg, game)
+
+    def test_v14_gate_does_not_apply_to_v13(self):
+        self.assertFalse(a.needs_adversarial_gameplay('0.43.13'))
+        self.assertTrue(a.needs_adversarial_gameplay('0.43.14'))
+        self.assertTrue(a.needs_adversarial_gameplay('0.44.0'))
 
 
 class TrustBoundaryTests(unittest.TestCase):

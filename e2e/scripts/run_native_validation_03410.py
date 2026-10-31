@@ -12,11 +12,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import hashlib
 from process_group_03410 import group_flags, kill_tree
+from runtime_capabilities_03410 import host_identity
 
 PUBLIC_REPORTS=('host-capabilities.json','staged-execution.json','verified.json',
                 'startup-readiness.json','server-readiness.json','gameplay-smoke.json',
-                'update-recovery.json')
+                'adversarial-gameplay-04314.json', 'update-recovery.json')
 
 
 def export_reports(work, destination):
@@ -39,17 +41,79 @@ def export_reports(work, destination):
                         and any(word in str(v.get('detail','')).lower() for word in
                                 ('renderer','display','gui','headless','java','capability'))
                         else '[redacted]'} for k,v in data.get('stages',{}).items()}
+                if name=='adversarial-gameplay-04314.json':
+                    # Export only bounded boolean outcomes/digests from the
+                    # disposable worker, never raw command output or tokens.
+                    data={k:v for k,v in data.items() if k in
+                          ('schemaVersion', 'manifestTamper', 'installedFileTamper')}
+                    manifest=data.get('manifestTamper')
+                    installed=data.get('installedFileTamper')
+                    if (set(data)!={'schemaVersion','manifestTamper','installedFileTamper'} or
+                        not isinstance(manifest,dict) or not isinstance(installed,dict) or
+                        set(manifest)!={'status','baselineVerified','alteredManifestSha256'} or
+                        set(installed)!={'status','filePath','baselineSha256','restoredFileSha256','restoredVerificationSha256'} or
+                        not isinstance(installed.get('filePath'),str) or
+                        '/' not in installed['filePath'] or len(installed['filePath'])>256 or
+                        not all(isinstance(x,str) and len(x)==64 and all(c in '0123456789abcdef' for c in x)
+                                for x in (manifest.get('alteredManifestSha256'), installed.get('baselineSha256'),
+                                          installed.get('restoredFileSha256'), installed.get('restoredVerificationSha256')))):
+                        continue
+                    # Keep exact source bytes so the hash in gameplay-smoke.json
+                    # still binds the negative observation after sanitizing.
+                    (destination/name).write_bytes(source.read_bytes())
+                    continue
                 if name=='host-capabilities.json':
                     data={k:v for k,v in data.items() if k not in ('host','user','environment')}
                 # Don't export possibly sensitive provider auth fields from any
                 # generic diagnostics: V12 handles centralized log redaction.
                 if name not in ('host-capabilities.json','staged-execution.json','verified.json',
                                 'startup-readiness.json','server-readiness.json','gameplay-smoke.json',
-                                'update-recovery.json'):
+                                'adversarial-gameplay-04314.json', 'update-recovery.json'):
                     continue
                 (destination/name).write_text(json.dumps(data,indent=2),encoding='utf-8')
             except (OSError,ValueError,TypeError):
                 continue
+
+
+def verify_game_observations_04314(destination, expected_os, expected_arch):
+    """Fail closed on incomplete native positive/negative observations.
+
+    These unsigned worker observations are NOT GA credentials. Their role is to
+    reject skipped/mismatched native jobs before independent attestation.
+    """
+    target=Path(destination)
+    def read(name):
+        path=target/name
+        if not path.is_file() or path.is_symlink() or not 0 < path.stat().st_size <= 2*1024*1024:
+            raise ValueError("native game observation missing: " + name)
+        data=json.loads(path.read_bytes())
+        if not isinstance(data,dict):
+            raise ValueError("invalid native game observation: " + name)
+        return data
+    host=read('host-capabilities.json')
+    if host.get('os') != expected_os or host.get('arch') != expected_arch or host.get('status') != 'ready':
+        raise ValueError('native host identity or capability mismatch')
+    staged=read('staged-execution.json')
+    stages=staged.get('stages')
+    mandatory=('manifest-files', 'materialization', 'startup', 'loader-readiness',
+               'authentication','server-readiness','matching-server','gameplay-smoke','update-recovery')
+    if not isinstance(stages,dict) or any(not isinstance(stages.get(s),dict) or stages[s].get('status')!='passed' for s in mandatory):
+        raise ValueError('missing positive game execution stages')
+    game=read('gameplay-smoke.json')
+    negative=read('adversarial-gameplay-04314.json')
+    proof=game.get('adversarialGameplay04314')
+    raw=(target/'adversarial-gameplay-04314.json').read_bytes()
+    if (not isinstance(proof,dict) or proof.get('status')!='passed' or
+        proof.get('evidenceSha256')!=hashlib.sha256(raw).hexdigest() or
+        proof.get('manifestTamperDenied') is not True or
+        proof.get('installedFileTamperDeniedAndRestored') is not True or
+        negative.get('schemaVersion')!='launcher.adversarial-gameplay.04314.v1' or
+        negative.get('manifestTamper',{}).get('status')!='denied' or
+        negative.get('installedFileTamper',{}).get('status')!='denied-and-restored' or
+        negative.get('installedFileTamper',{}).get('baselineSha256') !=
+        negative.get('installedFileTamper',{}).get('restoredFileSha256')):
+        raise ValueError('missing or mismatched real negative game outcomes')
+    return True
 
 
 def main():
@@ -57,7 +121,20 @@ def main():
     parser.add_argument('--mode',choices=('headless','gui'),required=True)
     parser.add_argument('--report-dir',required=True)
     parser.add_argument('--deadline-seconds',type=int,default=7200)
+    parser.add_argument('--expected-os',choices=('windows','linux','macos'))
+    parser.add_argument('--expected-arch',choices=('amd64','arm64'))
+    parser.add_argument('--expected-version',default='')
     args,remainder=parser.parse_known_args()
+    if bool(args.expected_os)!=bool(args.expected_arch):
+        parser.error('native OS and architecture must be specified together')
+    if args.expected_version.startswith('0.43.14') and not args.expected_os:
+        parser.error('0.43.14 native acceptance requires explicit OS and architecture')
+    if args.expected_os:
+        ident=host_identity()
+        if ident.get('os')!=args.expected_os or ident.get('arch')!=args.expected_arch or not ident.get('supported'):
+            parser.error('physical runner OS or architecture does not match requested native target')
+    if args.expected_version:
+        remainder += ['--expected-version', args.expected_version]
     if not 120<=args.deadline_seconds<=14400:
         parser.error('deadline must be 120..14400 seconds')
     if remainder and remainder[0]=='--':remainder=remainder[1:]
@@ -99,6 +176,12 @@ def main():
             if rc:
                 print('native runtime target not certified; see stage statuses in redacted report',file=sys.stderr)
                 return 3
+            if args.expected_version.startswith('0.43.14'):
+                try:
+                    verify_game_observations_04314(args.report_dir, args.expected_os, args.expected_arch)
+                except (ValueError, OSError, TypeError, KeyError) as exc:
+                    print('native game observation BLOCKED: ' + str(exc),file=sys.stderr)
+                    return 3
             print('native observational runtime stages completed; not signed evidence')
             return 0
     finally:
