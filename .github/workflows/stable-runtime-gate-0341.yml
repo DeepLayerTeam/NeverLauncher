@@ -48,7 +48,7 @@ jobs:
         run: |
           go test -count=1 -timeout 25m ./internal/repository ./internal/httpapi ./internal/dbmigrate \
             -run 'TestStaged.*0342|TestStable.*0341|TestRuntimePolicyRequiresSignedExactManifestEvidence0212|TestCanonicalPackageProductUploadValidatePublish|TestRollbackOperationIdempotency0217|TestMigrationCutoverPostgres03311|TestEvaluateAppliedSealedCatalog'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
