@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.42.5 — Actual Admin, Desktop and CLI extension operations
+
+- Admin Registry view now queries the running signed extension registry and installs an exact selected version in a validated global/project scope. The Manager executes the existing privileged Backend install, enable, disable, update (pinned version or channel), rollback, uninstall, Host start/stop/restart, emergency disable/clear and quarantine release operations. MFA and publisher-trust checks remain server-side; the UI does not bypass them.
+- Mutations are not reported as successful from their HTTP acknowledgement alone: lifecycle operations re-read durable installs and validate state, version and generation; emergency and quarantine changes are re-read through the active deny inventories. Failed or stale inventory reads remain visible, never silently replaced with an empty success screen.
+- Admin's sandboxed extension iframe now requires the opaque `null` origin, rejects duplicate inflight IDs and oversized RPC payloads, and ignores responses from an obsolete view generation. Both Admin and Desktop avoid cached control-plane responses.
+- Desktop catalog failures fail closed, dropping previously loaded extension UI rather than continuing to display revoked or inaccessible entries. Switching contributed pages now delivers new context and queued actions to the existing sandboxed iframe; refresh revalidates the actual entrypoint even if a version string did not change. Elevated install/delete actions are deliberately not delegated to player tokens.
+- CLI `nl extension manager` now reads the live operator inventory (JVM process, permissions, logs, install state) from the authenticated Backend. Actual dispatch is exercised with an HTTP test server. The extensions GA workflow now invokes the existing CLI command path and uses the Go toolchain declared by Backend, with Admin and Desktop UI tests mandatory before it writes GA evidence.
+- **Local verification:** 108 Admin Node tests, four Desktop extension-security tests, CLI extension tests (including a real `httptest` HTTP exchange) and canonical version metadata passed. Modified TSX parses and type-checks with temporary React/Tauri type declarations. A full npm dependency build could not run offline (Vite package missing from cache); a full Go test run timed out. No live PostgreSQL/JVM/Minecraft or six-platform production acceptance is claimed. The mandatory ServerBridge final-package gate remains applicable.
+
 ## 0.42.4 — Extension lifecycle: trust revocation, quarantine and signed rollback
 
 - Emergency disable now persists the durable kill-switch **before** stopping the JVM or transitioning install state. If process termination or state persistence fails, the API reports partial failure and the persisted deny remains in effect; incident response no longer has a restart window between stop and deny.

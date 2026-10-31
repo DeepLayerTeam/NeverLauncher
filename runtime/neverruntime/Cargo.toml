@@ -1,6 +1,6 @@
 [package]
 name = "runtime"
-version = "0.42.4"
+version = "0.42.5"
 description = "Runtime core library for Launcher"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"

@@ -98,6 +98,8 @@ export function DesktopExtensions0209({
   const pendingIds = useRef(new Set<string>());
   const loadedIdentity = useRef("");
   const requestGeneration = useRef(0);
+  const catalogGeneration = useRef(0);
+  const pendingAction = useRef<DesktopAction | null>(null);
 
   const current = useMemo(
     () => items.find((item) => identity0356(item) === selected),
@@ -125,6 +127,7 @@ export function DesktopExtensions0209({
   }
 
   async function refresh() {
+    const generation = ++catalogGeneration.current;
     setError("");
     try {
       const response = await authorized("/api/v1/desktop/extensions/catalog");
@@ -141,10 +144,16 @@ export function DesktopExtensions0209({
         payload.data.items.length > 128
       )
         throw new Error("Invalid Desktop extension catalog");
+      if (generation !== catalogGeneration.current) return;
       const next = (payload.data.items as unknown[]).filter(
         (x): x is DesktopExtensionCatalogItem =>
           validExtension0356(x, projectId),
       );
+      // A manual refresh revalidates HTML even when version/generation is unchanged.
+      if (selected && next.some(x => identity0356(x) === selected)) {
+        const same = next.find(x => identity0356(x) === selected);
+        if (same) void loadEntrypoint(same);
+      }
       setItems(next);
       if (selected && !next.some((x) => identity0356(x) === selected)) {
         loadedIdentity.current = "";
@@ -164,6 +173,14 @@ export function DesktopExtensions0209({
         keep.desktop.pages?.[0];
       setPageId(firstPage?.id ?? "");
     } catch (e) {
+      if (generation !== catalogGeneration.current) return;
+      // Old catalog may no longer be authorized after a token, project or
+      // publisher-trust change. Never retain it on network/authorization errors.
+      setItems([]);
+      setSelected("");
+      setPageId("");
+      setHtml("");
+      loadedIdentity.current = "";
       const message = String(e);
       setError(message);
       log(`Desktop Extensions catalog: ${message}`);
@@ -175,6 +192,7 @@ export function DesktopExtensions0209({
     loadedIdentity.current = "";
     setHtml("");
     pendingIds.current.clear();
+    pendingAction.current = null;
     setError("");
     try {
       const response = await authorized(
@@ -200,6 +218,7 @@ export function DesktopExtensions0209({
   }
 
   useEffect(() => {
+    ++catalogGeneration.current;
     ++requestGeneration.current;
     loadedIdentity.current = "";
     pendingIds.current.clear();
@@ -207,9 +226,11 @@ export function DesktopExtensions0209({
     if (token && backendUrl) void refresh();
     else setItems([]);
     return () => {
+      ++catalogGeneration.current;
       ++requestGeneration.current;
       loadedIdentity.current = "";
       pendingIds.current.clear();
+      pendingAction.current = null;
     };
   }, [backendUrl, token, projectId]);
   useEffect(() => {
@@ -387,18 +408,25 @@ export function DesktopExtensions0209({
       },
       "*",
     );
-  }
-  function triggerAction(action: DesktopAction) {
-    setPageId(action.pageId);
-    iframeRef.current?.contentWindow?.postMessage(
-      {
+    const action = pendingAction.current;
+    if (action && action.pageId === pageId) {
+      pendingAction.current = null;
+      frame.postMessage({
         protocol: DESKTOP_EXTENSION_PROTOCOL,
-        type: "host.action",
-        actionId: action.id,
-        pageId: action.pageId,
-      },
-      "*",
-    );
+        type: "host.action", actionId: action.id, pageId: action.pageId,
+      }, "*");
+    }
+  }
+  useEffect(() => {
+    // The iframe stays mounted while switching contributed pages, so onLoad
+    // alone cannot deliver the new page/action context.
+    if (html && current && loadedIdentity.current === identity0356(current))
+      notifyContext();
+  }, [pageId, html, selected]);
+  function triggerAction(action: DesktopAction) {
+    pendingAction.current = action;
+    setPageId(action.pageId);
+    if (action.pageId === pageId) notifyContext();
   }
 
   return (
@@ -413,7 +441,7 @@ export function DesktopExtensions0209({
         </div>
         <button onClick={() => void refresh()}>Обновить</button>
       </div>
-      {error && <pre>{error}</pre>}
+      {error && <div role="alert"><pre>{error}</pre><button onClick={() => void refresh()}>Повторить загрузку</button></div>}
       {!items.length ? (
         <p>Нет доступных enabled Desktop extensions.</p>
       ) : (
@@ -424,6 +452,7 @@ export function DesktopExtensions0209({
                 key={`${item.scope}:${item.scopeId ?? ""}:${item.extensionId}`}
                 className={selected === identity0356(item) ? "active" : ""}
                 onClick={() => {
+                  pendingAction.current = null;
                   setSelected(identity0356(item));
                   setPageId(item.desktop.pages?.[0]?.id ?? "");
                 }}
@@ -440,7 +469,7 @@ export function DesktopExtensions0209({
                 <button
                   key={entry.id}
                   className={pageId === entry.pageId ? "active sub" : "sub"}
-                  onClick={() => setPageId(entry.pageId)}
+                  onClick={() => { pendingAction.current = null; setPageId(entry.pageId); }}
                 >
                   {entry.label}
                 </button>
