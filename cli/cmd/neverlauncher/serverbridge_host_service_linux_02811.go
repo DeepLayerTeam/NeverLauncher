@@ -133,6 +133,9 @@ func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 		// Killing its entire cgroup on remote-agent reload would kill healthy
 		// game servers. The host itself is managed by its own supervisor.
 		unit = strings.Replace(unit, "KillMode=mixed", "KillMode=process", 1)
+		// The HTTPS server drains already accepted, journaled commands for up
+		// to 90s on SIGTERM; the unit must not SIGKILL it at the default 45s.
+		unit = strings.Replace(unit, "TimeoutStopSec="+strconv.Itoa(spec.StopSeconds+15)+"s", "TimeoutStopSec=105s", 1)
 	}
 	if spec.Scope == "system" {
 		if spec.User == "" || spec.User == "root" || spec.User == "0" || !hostServiceName02811.MatchString(spec.Group) {

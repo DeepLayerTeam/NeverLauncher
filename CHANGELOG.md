@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.42.8 — RemoteControl administration, systemd shutdown, TLS certificate issuance and release signing validation
+
+- Added an executable `nl server-bridge host remote tls-init` workflow that creates a new private directory containing distinct Ed25519 CA, HTTPS server and mTLS client certificates, including validated IP/DNS SANs, strict file permissions, X.509 verification, limited lifetime and non-overwrite enforcement. Sensitive CA/client keys remain operator-side and must not be deployed to the game host.
+- RemoteControl now drains accepted HTTPS requests on SIGTERM, waits for durable command receipt persistence, and reports indeterminate shutdown on timeout. The corresponding systemd remote unit uses `TimeoutStopSec=105s` to permit up to 90 seconds of graceful drain. Existing host readiness/watchdog semantics are unchanged.
+- Release signing/verification now reject signing keys located inside bundles through either direct paths or symlink aliases; malformed 64-byte Ed25519 private/public key pairs are rejected. Existing independent release and platform-signature gates are preserved.
+- Added real TLS/mTLS loopback, negative-authentication, key isolation, symlink and shutdown integration tests and fixed stale `cmd/launcher` paths in the host-systemd CI. Local Go race tests and CLI TLS lifecycle were executed on Linux; Windows/macOS runtime, real systemd install and full release sign-off remain unverified.
+
 ## 0.42.7 — Executable Minecraft client-module fixes (MirrorHelper, MojangSupport, Prestarter, start UI)
 
 - **MirrorHelper:** Added an explicit `client-factory repair-installer --cache-file ... --sha256 ... --source-file|--url ...` operator command. It holds the existing cache lock, verifies all replacement bytes **before** replacing a corrupt installer, rejects symlink caches, and leaves the original on failed verification. Ordinary `download-installer` retains its fail-closed behavior on tampered cache, and duplicate Maven library coordinates remain blocked (no silent classpath mutation). The action uses actual verified file IO, not an inventory declaration.

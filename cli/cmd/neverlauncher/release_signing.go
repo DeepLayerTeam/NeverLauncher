@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/x509"
@@ -14,6 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"gitflic.ru/skif4er/launcher/cli/internal/releasekeypaths"
 )
 
 type releaseSignatureEnvelope struct {
@@ -192,22 +195,7 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 }
 
 func ensureKeyOutsideReleaseBundle(dir, keyPath string) error {
-	bundleAbs, err := filepath.Abs(filepath.Clean(dir))
-	if err != nil {
-		return err
-	}
-	keyAbs, err := filepath.Abs(filepath.Clean(keyPath))
-	if err != nil {
-		return err
-	}
-	rel, err := filepath.Rel(bundleAbs, keyAbs)
-	if err != nil {
-		return err
-	}
-	if rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))) {
-		return errors.New("release signing/verification key должен находиться вне release bundle")
-	}
-	return nil
+	return releasekeypaths.OutsideBundle(dir, keyPath)
 }
 
 func loadEd25519PrivateKey(path string) (ed25519.PrivateKey, error) {
@@ -235,7 +223,11 @@ func loadEd25519PrivateKey(path string) (ed25519.PrivateKey, error) {
 	case ed25519.SeedSize:
 		return ed25519.NewKeyFromSeed(decoded), nil
 	case ed25519.PrivateKeySize:
-		return ed25519.PrivateKey(decoded), nil
+		canonical := ed25519.NewKeyFromSeed(decoded[:ed25519.SeedSize])
+		if !bytes.Equal(decoded, canonical) {
+			return nil, errors.New("Ed25519 private key has inconsistent public component")
+		}
+		return canonical, nil
 	default:
 		return nil, fmt.Errorf("Ed25519 private key должен иметь 32-byte seed или 64-byte private key, получено %d bytes", len(decoded))
 	}

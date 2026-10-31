@@ -1,6 +1,6 @@
 [package]
 name = "guard-thread-probe"
-version = "0.42.7"
+version = "0.42.8"
 description = "Windows-only Guard Thread Integrity adversarial integration fixture"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"

@@ -5,6 +5,7 @@ package main
 // remote caller. Its operations dispatch through the 0.28.2 Host Supervisor.
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -19,11 +20,16 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
+
+	"gitflic.ru/skif4er/launcher/cli/internal/remotetls"
 )
 
 const remoteAudience0284 = "launcher/host-remote/v1"
@@ -820,10 +826,23 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 func remoteHandle0284(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: nl server-bridge host remote init|issue|revoke|rotate-key|inspect|serve|call")
+		return errors.New("usage: nl server-bridge host remote init|tls-init|issue|revoke|rotate-key|inspect|serve|call")
 	}
 	if args[0] == "call" {
 		return remoteCall0284(args) // A remote client has no local server root.
+	}
+	if args[0] == "tls-init" {
+		// The output directory must be new; ca.key is retained only for offline
+		// issuance and must never be left in a publicly served game directory.
+		days, err := strconv.Atoi(flagValue(args, "--days", "90"))
+		if err != nil {
+			return fmt.Errorf("--days: %w", err)
+		}
+		bundle, err := remotetls.Generate(flagValue(args, "--output-dir", ""), multiFlagValues01910(args, "--host"), days)
+		if err != nil {
+			return err
+		}
+		return writeOrPrintJSON(flagValue(args, "--output", ""), bundle)
 	}
 	root, err := canonicalServerRoot0199(flagValue(args, "--server-root", "."))
 	if err != nil {
@@ -993,7 +1012,9 @@ func remoteHandle0284(args []string) error {
 		if err != nil {
 			return err
 		}
-		return server.Serve(listener)
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer cancel()
+		return remoteServeManaged0428(ctx, server, listener)
 	default:
 		return fmt.Errorf("unknown remote subcommand: %s", args[0])
 	}
@@ -1086,4 +1107,32 @@ func remoteCall0284(args []string) error {
 		return errors.New("remote response is not JSON")
 	}
 	return writeOrPrintJSON(flagValue(args, "--output", ""), json.RawMessage(content))
+}
+
+// remoteServeManaged0428 stops accepting new connections on SIGTERM while
+// allowing the durable command journal to finish and fsync receipts. A forced
+// timeout is returned as an error: an in-flight command may be indeterminate
+// and must be reconciled, never retried with a new idempotency key.
+func remoteServeManaged0428(ctx context.Context, server *http.Server, listener net.Listener) error {
+	finished := make(chan error, 1)
+	go func() { finished <- server.Serve(listener) }()
+	select {
+	case err := <-finished:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	case <-ctx.Done():
+	}
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		_ = server.Close()
+		<-finished
+		return fmt.Errorf("remote HTTPS shutdown incomplete; inspect durable command receipts before retrying: %w", err)
+	}
+	if err := <-finished; err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	return nil
 }

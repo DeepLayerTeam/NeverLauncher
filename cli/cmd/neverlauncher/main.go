@@ -47,7 +47,7 @@ const helpText = `Launcher CLI
   x <namespace> <command>            выполнить namespaced CLI extension через Extension Host Protocol
   plugin ...                      legacy compatibility alias
   server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host  Zero-Patch provisioning + host supervisor
-  server-bridge host remote init|issue|revoke|rotate-key|serve|call  HTTPS RemoteControl with scoped service tokens
+  server-bridge host remote init|tls-init|issue|revoke|rotate-key|serve|call  HTTPS RemoteControl with scoped service tokens
   server-bridge host world-backup create|verify|restore|list  Consistent Minecraft worlds/plugins/config backup
 
 Backend / production:
