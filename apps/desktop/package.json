@@ -23,7 +23,7 @@
     "test:diagnostics-support": "tsc src/diagnostics_support_03510.ts --module es2020 --target es2020 --strict --skipLibCheck --outDir build-tests && node --test tests/diagnostics_support_03510.test.mjs"
   },
   "dependencies": {
-    "@tauri-apps/api": "2.5.0",
+    "@tauri-apps/api": "2.12.4",
     "@vitejs/plugin-react": "6.0.2",
     "react": "19.2.6",
     "react-dom": "19.2.6",
