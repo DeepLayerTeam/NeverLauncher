@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.43.5 — Recovery after device revocation without restoring compromised trust
+
+- A player can recover from an already revoked trusted-device identity using a fresh, independent passkey-verified session and proof of possession of a completely new device key. The passkey authentication must take place **after** revocation; an older proof cannot be reused.
+- PostgreSQL performs the old-tombstone claim, new-key enrollment, session epoch rebind, challenge invalidation, Minecraft credential revocation and event recording in one transaction. The old key remains `revoked`; it never inherits the new key's attestation or privileges. Recovery of an already replaced identity is denied, including concurrent attempts.
+- Memory and durable SQLite device repositories claim the revoked tombstone and register the new key under a single device lock. If session binding fails, the newly issued identity is permanently revoked and the claim may be safely released for another attempt, without restoring either old or failed key.
+- Recovery cannot silently substitute a different trusted device already bound to the recovery session. Existing rotation requires proof from both keys. Device replacement no longer clears unrelated session risk policies.
+- Desktop now permits explicit selection of an unrecovered revoked device from the account's device list, even when the original local private key is unavailable. Added HTTP, memory concurrency/rollback and live PostgreSQL tests, plus a dedicated CI job with required non-skipped test results.
+
+**Verification boundary:** Go syntax, version consistency and the Device Trust matrix validation were checked locally. Full Backend Go 1.27.3 compilation, real PostgreSQL tests, Desktop build and six-platform native end-to-end acceptance require CI and are **not** claimed as completed. Existing fail-closed production release gates remain mandatory.
+
 ## 0.43.4 — Permanent revocation for device keys, Never sessions and Minecraft credentials
 
 - A revoked trusted-device identity and its public key fingerprint are immutable: in-memory/SQLite repository writes, PostgreSQL upserts, and direct SQL updates cannot reactivate a tombstone or swap an enrolled public key. Rotation and recovery retain their dedicated new-key path.

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -29,6 +30,18 @@ type deviceKeyReplacementComplete0128 struct {
 	Challenge    string `json:"challenge"`
 	OldSignature string `json:"oldSignature,omitempty"`
 	NewSignature string `json:"newSignature"`
+}
+
+// Revoked device tombstones are valid recovery sources once, but never
+// rotation sources. A replacement link is terminal and prevents replay.
+func eligibleSourceDevice0435(device model.TrustedDevice, mode string) bool {
+	if device.ReplacedByDeviceID != "" {
+		return false
+	}
+	if device.Status == "active" && device.TrustState == "verified" {
+		return true
+	}
+	return mode == "recover" && device.Status == "revoked" && device.TrustState == "revoked"
 }
 
 func deviceKeyReplacementPayload0128(mode, challenge, userID, sessionID, oldDeviceID, oldFingerprint, newDeviceID, newFingerprint, algorithm, binding, provider string, issuedAt, expiresAt time.Time) string {
@@ -112,8 +125,17 @@ func (s Server) authDeviceKeyReplacementBegin0128(w http.ResponseWriter, r *http
 		return
 	}
 	oldDevice, err := s.Repo.GetTrustedDevice(claims.Sub, oldDeviceID)
-	if err != nil || oldDevice.Status != "active" || oldDevice.TrustState != "verified" {
-		writeError(w, http.StatusNotFound, "активное исходное устройство не найдено")
+	if err != nil || !eligibleSourceDevice0435(oldDevice, mode) {
+		writeError(w, http.StatusNotFound, "исходное устройство недоступно для замены")
+		return
+	}
+	if mode == "recover" && oldDevice.Status == "revoked" && (oldDevice.RevokedAt.IsZero() || !session.AuthTime.After(oldDevice.RevokedAt)) {
+		writeStepUpRequired117(w, "phishing-resistant")
+		return
+	}
+	if mode == "recover" && ((oldDevice.Status == "revoked" && session.TrustedDeviceID != "") ||
+		(session.TrustedDeviceID != "" && session.TrustedDeviceID != oldDevice.ID)) {
+		writeError(w, http.StatusConflict, "восстановление требует независимую сессию без чужой device binding")
 		return
 	}
 	if mode == "rotate" && oldDevice.ID != session.TrustedDeviceID {
@@ -196,8 +218,8 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 		return
 	}
 	oldDevice, err := s.Repo.GetTrustedDevice(claims.Sub, oldDeviceID)
-	if err != nil || oldDevice.Status != "active" || oldDevice.TrustState != "verified" {
-		writeError(w, http.StatusNotFound, "активное исходное устройство не найдено")
+	if err != nil || !eligibleSourceDevice0435(oldDevice, mode) {
+		writeError(w, http.StatusNotFound, "исходное устройство недоступно для замены")
 		return
 	}
 	now := time.Now().UTC()
@@ -242,6 +264,15 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 		writeError(w, http.StatusUnauthorized, "replacement session больше не активна")
 		return
 	}
+	if mode == "recover" && oldDevice.Status == "revoked" && (oldDevice.RevokedAt.IsZero() || !sessionBeforeReplace.AuthTime.After(oldDevice.RevokedAt)) {
+		writeStepUpRequired117(w, "phishing-resistant")
+		return
+	}
+	if mode == "recover" && ((oldDevice.Status == "revoked" && sessionBeforeReplace.TrustedDeviceID != "") ||
+		(sessionBeforeReplace.TrustedDeviceID != "" && sessionBeforeReplace.TrustedDeviceID != oldDeviceID)) {
+		writeError(w, http.StatusConflict, "recovery session не независима от старого устройства")
+		return
+	}
 	if err := verifyDeviceSignature0123(newPub, payload, req.NewSignature); err != nil {
 		writeError(w, http.StatusUnauthorized, "новый device key не подтвердил владение")
 		return
@@ -278,7 +309,16 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 		// сначала замена, потом перепривязка текущего сеанса, затем отзыв
 		// старой идентичности. При ошибке до перепривязки замена отзывается,
 		// чтобы не оставить бесхозную активную идентичность.
-		replacement, err = s.Repo.SaveTrustedDevice(r.Context(), replacement)
+		if oldDevice.Status == "revoked" {
+			recoveryRepo, ok := s.Repo.(repository.RevokedDeviceRecoveryRepository0435)
+			if !ok {
+				writeError(w, http.StatusConflict, "backend не поддерживает безопасное восстановление отозванного устройства")
+				return
+			}
+			oldDevice, replacement, err = recoveryRepo.RecoverRevokedTrustedDeviceKey0435(r.Context(), claims.Sub, oldDeviceID, replacement, now)
+		} else {
+			replacement, err = s.Repo.SaveTrustedDevice(r.Context(), replacement)
+		}
 		if err != nil {
 			if errors.Is(err, repository.ErrConflict) {
 				writeError(w, http.StatusConflict, "replacement device key уже зарегистрирован")
@@ -288,14 +328,28 @@ func (s Server) authDeviceKeyReplacementComplete0128(w http.ResponseWriter, r *h
 			return
 		}
 		if _, err = s.State.AuthSessions.replaceDeviceBinding0432(claims.SessionID, claims.Sub, sessionBeforeReplace.TrustedDeviceID, sessionBeforeReplace.BindingEpoch, replacement.ID, now); err != nil {
-			_, _ = s.Repo.RevokeTrustedDevice(r.Context(), claims.Sub, replacement.ID, "replacement-bind-failed")
+			cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if _, revokeErr := s.Repo.RevokeTrustedDevice(cleanupCtx, claims.Sub, replacement.ID, "replacement-bind-failed"); revokeErr == nil && oldDevice.Status == "revoked" {
+				if recoveryRepo, ok := s.Repo.(repository.RevokedDeviceRecoveryRepository0435); ok {
+					if releaseErr := recoveryRepo.ReleaseFailedRevokedDeviceRecovery0435(cleanupCtx, claims.Sub, oldDeviceID, replacement.ID); releaseErr != nil {
+						log.Printf("account recovery failed to release tombstone after key revocation: %v", releaseErr)
+					}
+				}
+			}
 			writeError(w, http.StatusConflict, "не удалось перепривязать session к replacement device")
 			return
 		}
-		oldDevice.ReplacedAt = now
-		oldDevice.ReplacedByDeviceID = replacement.ID
-		oldDevice.ReplacementReason = mode
-		_, _ = s.Repo.SaveTrustedDevice(r.Context(), oldDevice)
+		if oldDevice.Status == "active" {
+			oldDevice.ReplacedAt = now
+			oldDevice.ReplacedByDeviceID = replacement.ID
+			oldDevice.ReplacementReason = mode
+			if _, err = s.Repo.SaveTrustedDevice(r.Context(), oldDevice); err != nil {
+				_, _ = s.Repo.RevokeTrustedDevice(r.Context(), claims.Sub, replacement.ID, "replacement-link-failed")
+				writeError(w, http.StatusConflict, "не удалось сохранить связь device replacement")
+				return
+			}
+		}
 		rev, revokeErr := s.Repo.RevokeTrustedDevice(r.Context(), claims.Sub, oldDeviceID, reason)
 		if revokeErr != nil {
 			writeError(w, http.StatusInternalServerError, "replacement создан, но revoke исходного device завершился ошибкой")

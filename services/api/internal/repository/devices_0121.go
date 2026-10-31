@@ -171,6 +171,84 @@ func (r *MemoryRepository) SaveTrustedDevice(ctx context.Context, device model.T
 	return device, nil
 }
 
+// RecoverRevokedTrustedDeviceKey0435 claims a previously revoked identity once.
+// The permanent tombstone is never reactivated. The new key and the link to
+// the old identity are committed together under deviceMu, preventing two
+// concurrent recovery challenges from minting two replacement identities.
+func (r *MemoryRepository) RecoverRevokedTrustedDeviceKey0435(ctx context.Context, userID, oldDeviceID string, replacement model.TrustedDevice, now time.Time) (model.TrustedDevice, model.TrustedDevice, error) {
+	if err := ctx.Err(); err != nil {
+		return model.TrustedDevice{}, model.TrustedDevice{}, err
+	}
+	var err error
+	replacement, err = normalizeTrustedDevice0121(replacement)
+	if err != nil {
+		return model.TrustedDevice{}, model.TrustedDevice{}, err
+	}
+	if replacement.UserID != userID || replacement.ID == oldDeviceID || replacement.Status != "active" || replacement.TrustState != "verified" || replacement.CreatedAt.After(now) {
+		return model.TrustedDevice{}, model.TrustedDevice{}, fmt.Errorf("%w: invalid recovered identity", ErrConflict)
+	}
+	r.deviceMu.Lock()
+	defer r.deviceMu.Unlock()
+	oldIndex := -1
+	for i, item := range r.trustedDevices {
+		if item.ID == oldDeviceID && item.UserID == userID {
+			oldIndex = i
+		}
+		if item.ID == replacement.ID || item.KeyFingerprint == replacement.KeyFingerprint {
+			return model.TrustedDevice{}, model.TrustedDevice{}, fmt.Errorf("%w: replacement device or key already registered", ErrConflict)
+		}
+	}
+	if oldIndex < 0 {
+		return model.TrustedDevice{}, model.TrustedDevice{}, ErrNotFound
+	}
+	old := r.trustedDevices[oldIndex]
+	if old.Status != "revoked" || old.TrustState != "revoked" || old.ReplacedByDeviceID != "" || old.KeyFingerprint == replacement.KeyFingerprint {
+		return model.TrustedDevice{}, model.TrustedDevice{}, fmt.Errorf("%w: old identity is not an unclaimed tombstone", ErrConflict)
+	}
+	replacement.CreatedAt = now
+	replacement.UpdatedAt = now
+	old.ReplacedAt = now
+	old.ReplacedByDeviceID = replacement.ID
+	old.ReplacementReason = "recover"
+	old.UpdatedAt = now
+	r.trustedDevices[oldIndex] = old
+	r.trustedDevices = append(r.trustedDevices, replacement)
+	return old, replacement, nil
+}
+
+// A failed session CAS must not permanently strand a recovery claim. The
+// replacement must first be permanently revoked; no active key is resurrected.
+func (r *MemoryRepository) ReleaseFailedRevokedDeviceRecovery0435(ctx context.Context, userID, oldDeviceID, replacementID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	r.deviceMu.Lock()
+	defer r.deviceMu.Unlock()
+	oldIndex, newIndex := -1, -1
+	for i, item := range r.trustedDevices {
+		if item.ID == oldDeviceID && item.UserID == userID {
+			oldIndex = i
+		}
+		if item.ID == replacementID && item.UserID == userID {
+			newIndex = i
+		}
+	}
+	if oldIndex < 0 || newIndex < 0 {
+		return ErrNotFound
+	}
+	old, newKey := r.trustedDevices[oldIndex], r.trustedDevices[newIndex]
+	if old.Status != "revoked" || old.ReplacedByDeviceID != replacementID || old.ReplacementReason != "recover" ||
+		newKey.Status != "revoked" || newKey.TrustState != "revoked" || newKey.RevokedReason != "replacement-bind-failed" {
+		return fmt.Errorf("%w: recovery claim cannot be released", ErrConflict)
+	}
+	old.ReplacedAt = time.Time{}
+	old.ReplacedByDeviceID = ""
+	old.ReplacementReason = ""
+	old.UpdatedAt = time.Now().UTC()
+	r.trustedDevices[oldIndex] = old
+	return nil
+}
+
 func (r *MemoryRepository) GetTrustedDevice(userID, deviceID string) (model.TrustedDevice, error) {
 	r.deviceMu.Lock()
 	defer r.deviceMu.Unlock()
@@ -745,7 +823,8 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 	}
 
 	var sessionUser, sessionStatus, sessionTrustedDevice, familyID string
-	if err := tx.QueryRowContext(ctx, `SELECT user_id,status,COALESCE(trusted_device_id,''),refresh_family_id FROM auth_sessions WHERE id=$1 FOR UPDATE`, currentSessionID).Scan(&sessionUser, &sessionStatus, &sessionTrustedDevice, &familyID); err != nil {
+	var sessionAuthTime time.Time
+	if err := tx.QueryRowContext(ctx, `SELECT user_id,status,COALESCE(trusted_device_id,''),refresh_family_id,auth_time FROM auth_sessions WHERE id=$1 FOR UPDATE`, currentSessionID).Scan(&sessionUser, &sessionStatus, &sessionTrustedDevice, &familyID, &sessionAuthTime); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.DeviceKeyReplacementResult{}, ErrNotFound
 		}
@@ -758,15 +837,30 @@ func (r *SQLRepository) ReplaceTrustedDeviceKey(ctx context.Context, userID, old
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: rotation session is not bound to old device", ErrConflict)
 	}
 
-	var oldOwner, oldStatus string
-	if err := tx.QueryRowContext(ctx, `SELECT user_id,status FROM trusted_devices WHERE id=$1 FOR UPDATE`, oldDeviceID).Scan(&oldOwner, &oldStatus); err != nil {
+	var oldOwner, oldStatus, oldTrustState, oldReplacement string
+	var oldRevokedAt sql.NullTime
+	if err := tx.QueryRowContext(ctx, `SELECT user_id,status,trust_state,COALESCE(replaced_by_device_id,''),revoked_at FROM trusted_devices WHERE id=$1 FOR UPDATE`, oldDeviceID).Scan(&oldOwner, &oldStatus, &oldTrustState, &oldReplacement, &oldRevokedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.DeviceKeyReplacementResult{}, ErrNotFound
 		}
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: lock old device: %w", err)
 	}
-	if oldOwner != userID || oldStatus != "active" {
-		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: old trusted device is not active", ErrConflict)
+	if oldOwner != userID || oldReplacement != "" ||
+		!(oldStatus == "active" && oldTrustState == "verified") &&
+			!(mode == "recover" && oldStatus == "revoked" && oldTrustState == "revoked") {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: old device is not eligible for replacement", ErrConflict)
+	}
+	if mode == "recover" && oldStatus == "revoked" && (!oldRevokedAt.Valid || !sessionAuthTime.After(oldRevokedAt.Time)) {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: recovery requires phishing-resistant reauthentication after revocation", ErrConflict)
+	}
+	// A previously revoked key cannot authenticate a recovery session. Its
+	// replacement must be claimed by a separate unbound, freshly stepped-up
+	// session, never a session bound to a different trusted device.
+	if mode == "recover" && oldStatus == "revoked" && sessionTrustedDevice != "" {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: revoked device recovery requires an unbound session", ErrConflict)
+	}
+	if mode == "recover" && oldStatus == "active" && sessionTrustedDevice != "" && sessionTrustedDevice != oldDeviceID {
+		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: recovery cannot replace an unrelated bound device", ErrConflict)
 	}
 
 	result := model.DeviceKeyReplacementResult{}
@@ -781,7 +875,7 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: insert replacement: %w", err)
 	}
 
-	if res, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET trusted_device_id=$3,device_trust_state='verified',device_verified_at=$4,binding_epoch=GREATEST(binding_epoch,1)+1,last_seen_at=$4,risk_state='normal',risk_reasons='[]'::jsonb,risk_score=0,risk_action='allow',risk_evaluated_at=$4,risk_updated_at=NULL WHERE id=$1 AND user_id=$2 AND status='active'`, currentSessionID, userID, replacement.ID, now); err != nil {
+	if res, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET trusted_device_id=$3,device_trust_state='verified',device_verified_at=$4,binding_epoch=GREATEST(binding_epoch,1)+1,last_seen_at=$4 WHERE id=$1 AND user_id=$2 AND status='active'`, currentSessionID, userID, replacement.ID, now); err != nil {
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: rebind current session: %w", err)
 	} else if n, rowsErr := res.RowsAffected(); rowsErr != nil {
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("replace trusted device: count rebound current session: %w", rowsErr)
@@ -789,7 +883,13 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: current session changed during replacement", ErrConflict)
 	}
 
-	row = tx.QueryRowContext(ctx, `UPDATE trusted_devices SET status='revoked',trust_state='revoked',assurance='proof-of-possession',attestation_state='revoked',revoked_at=$2,revoked_reason=$3,replaced_at=$2,replaced_by_device_id=$4,replacement_reason=$5,updated_at=$2 WHERE id=$1 AND user_id=$6 AND status='active' RETURNING `+trustedDeviceColumns0121, oldDeviceID, now, reason, replacement.ID, mode, userID)
+	// The 0.43.4 terminal-revocation trigger deliberately permits only a
+	// metadata link on an existing tombstone, never a status/key change.
+	oldUpdate := `UPDATE trusted_devices SET status='revoked',trust_state='revoked',assurance='proof-of-possession',attestation_state='revoked',revoked_at=$2,revoked_reason=$3,replaced_at=$2,replaced_by_device_id=$4,replacement_reason=$5,updated_at=$2 WHERE id=$1 AND user_id=$6 AND status='active' AND replaced_by_device_id IS NULL RETURNING ` + trustedDeviceColumns0121
+	if oldStatus == "revoked" {
+		oldUpdate = `UPDATE trusted_devices SET replaced_at=$2,replaced_by_device_id=$4,replacement_reason=$5,updated_at=$2 WHERE id=$1 AND user_id=$6 AND status='revoked' AND trust_state='revoked' AND replaced_by_device_id IS NULL RETURNING ` + trustedDeviceColumns0121
+	}
+	row = tx.QueryRowContext(ctx, oldUpdate, oldDeviceID, now, reason, replacement.ID, mode, userID)
 	result.OldDevice, err = scanTrustedDevice0121(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.DeviceKeyReplacementResult{}, fmt.Errorf("%w: old trusted device changed during replacement", ErrConflict)

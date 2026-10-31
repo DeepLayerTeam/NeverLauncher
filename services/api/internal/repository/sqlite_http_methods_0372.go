@@ -185,6 +185,41 @@ func (r *SQLiteHTTPRepository0372) SaveTrustedDevice(ctx context.Context, device
 	return
 }
 
+func (r *SQLiteHTTPRepository0372) RecoverRevokedTrustedDeviceKey0435(ctx context.Context, userID, oldDeviceID string, replacement model.TrustedDevice, now time.Time) (model.TrustedDevice, model.TrustedDevice, error) {
+	r.mu.Lock()
+	auditStart := len(r.mem.audit)
+	defer r.unlockAndPublishAudit0372(auditStart)
+	if r.failed != nil {
+		return model.TrustedDevice{}, model.TrustedDevice{}, r.failed
+	}
+	old, next, err := r.mem.RecoverRevokedTrustedDeviceKey0435(ctx, userID, oldDeviceID, replacement, now)
+	if err != nil {
+		return model.TrustedDevice{}, model.TrustedDevice{}, err
+	}
+	if err := r.persist(context.Background()); err != nil {
+		r.failed = err
+		return model.TrustedDevice{}, model.TrustedDevice{}, err
+	}
+	return old, next, nil
+}
+
+func (r *SQLiteHTTPRepository0372) ReleaseFailedRevokedDeviceRecovery0435(ctx context.Context, userID, oldDeviceID, replacementID string) error {
+	r.mu.Lock()
+	auditStart := len(r.mem.audit)
+	defer r.unlockAndPublishAudit0372(auditStart)
+	if r.failed != nil {
+		return r.failed
+	}
+	if err := r.mem.ReleaseFailedRevokedDeviceRecovery0435(ctx, userID, oldDeviceID, replacementID); err != nil {
+		return err
+	}
+	if err := r.persist(context.Background()); err != nil {
+		r.failed = err
+		return err
+	}
+	return nil
+}
+
 func (r *SQLiteHTTPRepository0372) GetTrustedDevice(userID string, deviceID string) (out0 model.TrustedDevice, out1 error) {
 	r.mu.Lock()
 	auditStart := len(r.mem.audit)

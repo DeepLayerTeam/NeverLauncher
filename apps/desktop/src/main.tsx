@@ -1290,6 +1290,7 @@ function App() {
   const [measuredBootBusy0315, setMeasuredBootBusy0315] = useState(false);
 
   const [managedDevices, setManagedDevices] = useState<ManagedDevice[]>([]);
+  const [recoveryLogin0435, setRecoveryLogin0435] = useState(false);
   // Switching Never identities invalidates any Microsoft account previously
   // linked in the running Desktop process (session tickets are SID-bound).
   useEffect(() => {
@@ -1794,6 +1795,7 @@ function App() {
 
   async function replaceDesktopDeviceKey(
     mode: "rotate" | "recover",
+    recoveryTargetDeviceId?: string,
   ): Promise<void> {
     if (!authSession?.accessToken)
       throw new Error("Требуется активная сессия.");
@@ -1802,9 +1804,10 @@ function App() {
     if (!userId) throw new Error("Не удалось определить userId.");
     let session = authSession;
     const oldDeviceId =
+      (mode === "recover" ? recoveryTargetDeviceId : undefined) ||
       accessTokenDeviceId(session.accessToken) || deviceKey?.deviceId;
     if (!oldDeviceId)
-      throw new Error("Не удалось определить исходный trusted device.");
+      throw new Error("Не выбрано исходное устройство. Обновите список и выберите отозванное устройство для восстановления.");
     if (mode === "recover") session = await passkeyStepUp(session);
 
     // A timed-out completion may already have committed on the server. Reconcile
@@ -1931,6 +1934,7 @@ function App() {
       if (committed.keyBinding === "hardware")
         session = await attestDesktopDeviceKey(session, committed);
       await loadManagedDevices(session);
+      setRecoveryLogin0435(false);
     } catch (error) {
       // Do not destroy staged identity: HTTP completion may have committed despite a lost response.
       // Retry reconciliation with the SAME staged private key after restoring connectivity.
@@ -2627,8 +2631,16 @@ function App() {
       `Вход выполнен. Серверная сессия ${next.sessionId} сохранена в системном хранилище учётных данных; refresh token не записывается в конфигурацию/localStorage.`,
     );
     try {
-      const trusted = await ensureDesktopDeviceTrust(next);
-      await loadManagedDevices(trusted);
+      if (recoveryLogin0435) {
+        // A revoked key cannot authenticate a recovery session. Preserve an
+        // unbound session so the user can select their revoked device and
+        // complete a fresh passkey-authenticated replacement instead.
+        setDeviceTrustStatus("восстановление · ожидает новый ключ");
+        await loadManagedDevices(next);
+      } else {
+        const trusted = await ensureDesktopDeviceTrust(next);
+        await loadManagedDevices(trusted);
+      }
     } catch (error) {
       setDeviceTrustStatus("ошибка");
       log(`Device Trust не активирован: ${String(error)}`);
@@ -5226,6 +5238,8 @@ function App() {
                 deviceKey={deviceKey}
                 deviceTrustStatus={deviceTrustStatus}
                 managedDevices={managedDevices}
+                recoveryLogin0435={recoveryLogin0435}
+                setRecoveryLogin0435={setRecoveryLogin0435}
                 checkBackend={checkBackend}
                 loginDesktop={loginDesktop}
                 refreshDesktopSession={refreshDesktopSession}
@@ -5976,6 +5990,8 @@ function AuthPanel({
   deviceKey,
   deviceTrustStatus,
   managedDevices,
+  recoveryLogin0435,
+  setRecoveryLogin0435,
   checkBackend,
   loginDesktop,
   refreshDesktopSession,
@@ -6068,6 +6084,14 @@ function AuthPanel({
           : "fallback при ошибке авторизации запрещён"}
         . {authProviderError0293}
       </p>
+      <label>
+        <input
+          type="checkbox"
+          checked={recoveryLogin0435}
+          onChange={(event) => setRecoveryLogin0435(event.target.checked)}
+        />
+        Войти для восстановления отозванного устройства (не привязывать текущую сессию автоматически)
+      </label>
       <div className="toolbar inline">
         <button onClick={checkBackend}>Проверить Backend</button>
         <button
@@ -6323,6 +6347,19 @@ function AuthPanel({
                   </small>
                 )}
               </div>
+              {device.status === "revoked" && !device.replacedByDeviceId && (
+                <div className="deviceActions">
+                  <button
+                    onClick={() =>
+                      replaceDesktopDeviceKey("recover", device.id).catch(
+                        (error: Error) => console.error(error),
+                      )
+                    }
+                  >
+                    Восстановить доступ с новым ключом
+                  </button>
+                </div>
+              )}
               {device.status === "active" && (
                 <div className="deviceActions">
                   <button

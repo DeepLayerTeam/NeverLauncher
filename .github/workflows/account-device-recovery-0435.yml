@@ -1,0 +1,80 @@
+name: Account and revoked-device recovery 0.43.5
+on:
+  push:
+    paths:
+      - 'services/api/internal/httpapi/device_key_recovery_0128.go'
+      - 'services/api/internal/httpapi/account_recovery_0435_test.go'
+      - 'services/api/internal/repository/devices_0121.go'
+      - 'services/api/internal/repository/memory.go'
+      - 'services/api/internal/repository/sqlite_http_methods_0372.go'
+      - 'services/api/internal/repository/account_recovery_0435_integration_test.go'
+      - 'services/api/internal/repository/account_recovery_0435_test.go'
+      - 'services/api/internal/dbmigrate/**'
+      - '.github/workflows/account-device-recovery-0435.yml'
+  pull_request:
+    paths:
+      - 'services/api/internal/httpapi/device_key_recovery_0128.go'
+      - 'services/api/internal/httpapi/account_recovery_0435_test.go'
+      - 'services/api/internal/repository/devices_0121.go'
+      - 'services/api/internal/repository/memory.go'
+      - 'services/api/internal/repository/sqlite_http_methods_0372.go'
+      - 'services/api/internal/repository/account_recovery_0435_integration_test.go'
+      - 'services/api/internal/repository/account_recovery_0435_test.go'
+      - 'services/api/internal/dbmigrate/**'
+      - '.github/workflows/account-device-recovery-0435.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: launcher_recovery
+          POSTGRES_USER: launcher_recovery
+          POSTGRES_PASSWORD: integration-only
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U launcher_recovery -d launcher_recovery' --health-interval 5s --health-timeout 5s --health-retries 25
+    env:
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_recovery:integration-only@127.0.0.1:5432/launcher_recovery?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Compile production API and run vet
+        working-directory: services/api
+        run: |
+          go build ./cmd/...
+          go vet ./internal/httpapi ./internal/repository
+      - name: Real recovery and revocation regressions (fail on missing or skipped tests)
+        working-directory: services/api
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test -race -count=1 -timeout=12m -v ./internal/httpapi -run 'TestRecovery.*0435|TestDeviceKey.*0128|TestMacOSRecovery.*0316|TestDirectDeviceRevocation.*0434' 2>&1 | tee "$RUNNER_TEMP/recovery-http.log"
+          go test -race -count=1 -timeout=12m -v ./internal/repository -run 'TestRevokedDeviceRecoveryTransactionPostgres0435|TestConcurrentRevokedRecoveryOnlyOneKeyWins0435|TestFailedSessionBindingCanRetryWithoutResurrectingKey0435|TestRevocationTerminalPostgres0434' 2>&1 | tee "$RUNNER_TEMP/recovery-postgres.log"
+          grep -q -- '--- PASS: TestRecoveryFromAlreadyRevokedDevice0435' "$RUNNER_TEMP/recovery-http.log"
+          grep -q -- '--- PASS: TestRecoveryCannotRebindUnrelatedTrustedDevice0435' "$RUNNER_TEMP/recovery-http.log"
+          grep -q -- '--- PASS: TestFailedSessionBindingCanRetryWithoutResurrectingKey0435' "$RUNNER_TEMP/recovery-postgres.log"
+          grep -q -- '--- PASS: TestConcurrentRevokedRecoveryOnlyOneKeyWins0435' "$RUNNER_TEMP/recovery-postgres.log"
+          grep -q -- '--- PASS: TestRevokedDeviceRecoveryTransactionPostgres0435' "$RUNNER_TEMP/recovery-postgres.log"
+          if grep -E -q -- '--- SKIP:|--- FAIL:' "$RUNNER_TEMP/recovery-http.log" "$RUNNER_TEMP/recovery-postgres.log"; then
+            echo 'Recovery verification was skipped or failed' >&2; exit 1
+          fi
+      - name: Upload raw recovery execution logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: account-device-recovery-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/recovery-http.log
+            ${{ runner.temp }}/recovery-postgres.log
+          if-no-files-found: error

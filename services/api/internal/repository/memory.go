@@ -31,6 +31,14 @@ func IsStableChannel0341(channel string) bool {
 // идентичность доверенного устройства вместе с текущей привязкой сеанса авторизации
 // и каскадом отзыва. PostgreSQL поддерживает это непосредственно; репозиторий
 // разработки в памяти использует транзакционный запасной механизм уровня HTTP.
+// RevokedDeviceRecoveryRepository0435 atomically claims an existing tombstone
+// and stores its new identity for memory/SQLite backends. The auth session is
+// subsequently rebound by the session CAS, or the new key is revoked.
+type RevokedDeviceRecoveryRepository0435 interface {
+	RecoverRevokedTrustedDeviceKey0435(ctx context.Context, userID, oldDeviceID string, replacement model.TrustedDevice, now time.Time) (model.TrustedDevice, model.TrustedDevice, error)
+	ReleaseFailedRevokedDeviceRecovery0435(ctx context.Context, userID, oldDeviceID, replacementID string) error
+}
+
 type DeviceKeyReplacementRepository interface {
 	ReplaceTrustedDeviceKey(ctx context.Context, userID, oldDeviceID, currentSessionID, mode, reason string, replacement model.TrustedDevice, now time.Time) (model.DeviceKeyReplacementResult, error)
 }
