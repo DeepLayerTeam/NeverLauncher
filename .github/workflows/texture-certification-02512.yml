@@ -61,7 +61,7 @@ jobs:
       TEST_PG_DSN_02511: postgres://textures:integration_only@localhost:5432/textures?sslmode=disable
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
@@ -87,7 +87,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum
@@ -148,7 +148,7 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.23.x'
           cache-dependency-path: services/api/go.sum

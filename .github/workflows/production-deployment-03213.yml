@@ -26,7 +26,7 @@ jobs:
         run: |
           python3 -m py_compile scripts/install/production-deploy.py
           python3 -m unittest discover -s scripts/install -p test_production_deploy.py -v
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: installer/go.mod
           cache-dependency-path: installer/go.mod
