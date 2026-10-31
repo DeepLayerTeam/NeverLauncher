@@ -1269,6 +1269,8 @@ jobs:
         run: |
           python3 scripts/version/manage.py check
           python3 -m unittest discover -s scripts/ga -p 'test_verified_targets*.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game_0440.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_verified_support_0440.py' -v
           python3 -m unittest discover -s scripts/ga -p 'test_player_final_0400.py' -v
           python3 -m unittest discover -s scripts/rc -p 'test_*.py' -v
           python3 scripts/release/test_certify_profiles_ga_0230.py

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.44.0 — enforce final six-platform gameplay and signed support boundaries
+
+- Fixed a production runtime acceptance regression: the native worker previously required positive+negative Minecraft observations **only for 0.43.14 exactly**. For 0.44.0 and later the same actual-launch, server-join and adversarial file/manifest tamper observations are now mandatory. No headless/emulated ARM64 pass is accepted.
+- Connected six-platform native GUI gameplay acceptance to the required production release DAG. The release bundle cannot be built or published from this workflow until all six per-target jobs succeed. The aggregate independently downloads their exact current-run reports and refuses missing targets, foreign OS/architecture, stale package ID, corrupted game evidence, missing/negative observation, or incomplete positive stages.
+- Added a machine-verifiable support-boundaries output, **only constructed after all six exact final binaries, independently signed traces and raw logs have passed GA**. The output documents exactly which per-platform capabilities are evidenced, while distinguishing HWID from hardware attestation and stating platform/sandbox/anti-cheat limitations. The publisher reconstructs and byte-compares it from the signed full-evidence archive instead of trusting a manually edited support matrix.
+- Added full regression coverage for negative native gameplay, six-host aggregate failures and support-claim forgery, invoked from mandatory CI and publication checks. These tests are deliberately synthetic; actual six-platform game runs and independent operator approval remain separate release blockers until performed by the configured native workers.
+
 ## 0.43.15 — independent Security GA replay and immutable upload snapshot
 
 - Ship the complete independently signed execution evidence from all six native targets, including per-check traces, player-cycle reports and raw runtime logs, and native security positive/negative event streams. The archive is created only after actual final-package verification and re-verified from extracted bytes before being included in SHA256SUMS and signed release metadata.

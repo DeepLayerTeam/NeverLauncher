@@ -30,6 +30,7 @@ from security_capabilities_0431 import checks as security_checks, verify_all as 
 from package_security_0431 import evidence_files as security_evidence_files
 from package_full_evidence_04315 import (ARCHIVE_NAME as FULL_GA_ARCHIVE,
                                          extract_verified as extract_full_ga)
+from verified_support_0440 import check_file as verify_support_file, NAME as SUPPORT_REPORT_0440
 from required_jobs_0363 import declared_jobs
 
 PRODUCTION_WORKFLOW = (
@@ -296,6 +297,8 @@ def verify_ga(
                 run_id=str(run_id), run_attempt=attempt,
             )
             require(actual == receipt, "GA receipt differs from independent full replay")
+            if parsed(version)[0] >= (0, 44, 0):
+                verify_support_file(bundle / SUPPORT_REPORT_0440, actual)
     return receipt["approvalSha256"]
 
 

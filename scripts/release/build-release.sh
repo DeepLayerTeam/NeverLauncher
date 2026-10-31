@@ -841,6 +841,17 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
       --version "${VERSION}" --commit "${SOURCE_COMMIT}" \
       --output "${OUT_DIR}/SECURITY_CAPABILITY_EVIDENCE_0431.zip"
   fi
+  # 0.44.0+: supported security capabilities are DERIVED from the exact
+  # independently signed final-package verification, never from manifests.
+  # This artifact is in the SHA256SUMS/Ed25519 release boundary and is
+  # recomputed during publication; missing evidence cannot list support.
+  if [[ "$(printf '%s\n' '0.44.0' "${VERSION}" | sort -V | head -n1)" == '0.44.0' ]]; then
+    python3 "${ROOT_DIR}/scripts/ga/verified_support_0440.py" \
+      --bundle "${OUT_DIR}" --evidence "${GA_TARGET_EVIDENCE_DIR}" \
+      --trusted-key "${GA_TARGET_TRUSTED_KEY}" --version "${VERSION}" \
+      --commit "${SOURCE_COMMIT}" \
+      --output "${OUT_DIR}/GA_VERIFIED_SUPPORT_0440.json"
+  fi
   # Full replay of every signed check (including player execution logs) is
   # mandatory from 0.43.15. This goes into the flat signed final release root.
   if [[ "$(printf '%s\n' '0.43.15' "${VERSION}" | sort -V | head -n1)" == '0.43.15' ]]; then

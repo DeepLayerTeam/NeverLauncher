@@ -61,6 +61,14 @@ jobs:
     needs: [validate-release-ref]
     uses: ./.github/workflows/ci.yml
 
+  native-game-acceptance:
+    name: Required six-native-platform Minecraft positive and adversarial E2E
+    needs: [staged-package-runtime-0342]
+    uses: ./.github/workflows/native-game-acceptance-04314.yml
+    with:
+      package_id: ${{ inputs.staged_package_id }}
+    secrets: inherit
+
   extensions-acceptance:
     name: Required six-target Java extensions and Gravit E2E acceptance
     needs: [validate-release-ref]
@@ -374,7 +382,7 @@ jobs:
 
   release-bundle:
     name: Release candidate bundle
-    needs: [base-ci, extensions-acceptance, production-rc-03216, current-source-rc-03514, protected-isolated-dr-03514, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
+    needs: [base-ci, extensions-acceptance, native-game-acceptance, production-rc-03216, current-source-rc-03514, protected-isolated-dr-03514, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
     permissions:
       contents: read
       actions: read
@@ -420,6 +428,8 @@ jobs:
       - name: Test independent full GA replay and sealed publication bytes
         run: |
           python3 -m unittest discover -s scripts/ga -p 'test_full_evidence_04315.py' -q
+          python3 -m unittest discover -s scripts/ga -p 'test_verified_support_0440.py' -q
+          python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game_0440.py' -q
           python3 -m unittest discover -s scripts/release -p 'test_publish_0370.py' -q
       - name: Require fresh independent official Minecraft GA run
         env:
@@ -995,7 +1005,7 @@ jobs:
   required-production-ci:
     name: REQUIRED production pipeline — no skipped, cancelled or absent jobs
     if: ${{ always() }}
-    needs: [validate-release-ref, base-ci, extensions-acceptance, auth-platform-protection-ga, server-control-ga, windows-production-signed, macos-production-notarized, admin-ga-certification, profile-ga-certification, certify-platform-signing, current-source-rc-03514, protected-isolated-dr-03514, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, release-bundle]
+    needs: [validate-release-ref, base-ci, extensions-acceptance, native-game-acceptance, auth-platform-protection-ga, server-control-ga, windows-production-signed, macos-production-notarized, admin-ga-certification, profile-ga-certification, certify-platform-signing, current-source-rc-03514, protected-isolated-dr-03514, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, release-bundle]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -1051,6 +1061,8 @@ jobs:
       - name: Regression-check independent replay and exact-byte publication code
         run: |
           python3 -m unittest discover -s scripts/ga -p 'test_full_evidence_04315.py' -q
+          python3 -m unittest discover -s scripts/ga -p 'test_verified_support_0440.py' -q
+          python3 -m unittest discover -s scripts/ga -p 'test_verify_six_native_game_0440.py' -q
           python3 -m unittest discover -s scripts/release -p 'test_publish_0370.py' -q
       - uses: actions/download-artifact@v4
         with:

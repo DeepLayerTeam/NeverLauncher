@@ -39,14 +39,38 @@ jobs:
       mode: gui
     secrets: inherit
   all-native-passed:
-    name: Six distinct native GUI executions required
+    name: Six distinct native GUI executions and their actual reports required
     needs: [live-native-game]
     if: always()
     runs-on: ubuntu-24.04
     steps:
-      - name: Refuse success if any target failed, skipped or was cancelled
+      - name: Refuse unsuccessful native GUI matrix
         env:
           MATRIX_RESULT: ${{ needs.live-native-game.result }}
         run: |
           test "$MATRIX_RESULT" = success || { echo 'BLOCKED: incomplete native game matrix'; exit 1; }
-          echo 'Six native GUI workflows completed; unsigned observations still require independent attestation.'
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: v10-native-*-gui-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-observations
+          merge-multiple: false
+      - name: Verify six matching real positive and adversarial executions
+        env:
+          PACKAGE_ID: ${{ inputs.package_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/ga/verify_six_native_game_0440.py \
+            --artifacts "$RUNNER_TEMP/native-observations" \
+            --package-id "$PACKAGE_ID" --version "$(cat VERSION)" \
+            --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
+            --output "$RUNNER_TEMP/native-game-0440.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: launcher-six-native-observations-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-game-0440.json
+          if-no-files-found: error
+          retention-days: 90

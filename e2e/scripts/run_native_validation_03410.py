@@ -13,8 +13,16 @@ import subprocess
 import sys
 import tempfile
 import hashlib
+import re
 from process_group_03410 import group_flags, kill_tree
 from runtime_capabilities_03410 import host_identity
+
+def requires_adversarial_acceptance(version: str) -> bool:
+    match = re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?', version)
+    if not match:
+        raise ValueError('invalid native validation product version')
+    return tuple(map(int, match.groups())) >= (0, 43, 14)
+
 
 PUBLIC_REPORTS=('host-capabilities.json','staged-execution.json','verified.json',
                 'startup-readiness.json','server-readiness.json','gameplay-smoke.json',
@@ -127,8 +135,8 @@ def main():
     args,remainder=parser.parse_known_args()
     if bool(args.expected_os)!=bool(args.expected_arch):
         parser.error('native OS and architecture must be specified together')
-    if args.expected_version.startswith('0.43.14') and not args.expected_os:
-        parser.error('0.43.14 native acceptance requires explicit OS and architecture')
+    if args.expected_version and requires_adversarial_acceptance(args.expected_version) and not args.expected_os:
+        parser.error('0.43.14+ native acceptance requires explicit OS and architecture')
     if args.expected_os:
         ident=host_identity()
         if ident.get('os')!=args.expected_os or ident.get('arch')!=args.expected_arch or not ident.get('supported'):
@@ -176,7 +184,7 @@ def main():
             if rc:
                 print('native runtime target not certified; see stage statuses in redacted report',file=sys.stderr)
                 return 3
-            if args.expected_version.startswith('0.43.14'):
+            if args.expected_version and requires_adversarial_acceptance(args.expected_version):
                 try:
                     verify_game_observations_04314(args.report_dir, args.expected_os, args.expected_arch)
                 except (ValueError, OSError, TypeError, KeyError) as exc:
