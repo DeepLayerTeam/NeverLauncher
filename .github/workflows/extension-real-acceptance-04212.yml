@@ -1,0 +1,117 @@
+name: Extensions 0.42.12 - real JVM and signed package acceptance
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: linux-x64, runner: ubuntu-24.04}
+          - {target: linux-arm64, runner: ubuntu-24.04-arm}
+          - {target: windows-x64, runner: windows-2022}
+          - {target: windows-arm64, runner: windows-11-arm}
+          - {target: macos-x64, runner: macos-15-intel}
+          - {target: macos-arm64, runner: macos-15}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - name: Build runnable Java extensions and source-port module
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh sdk/java/core/build.sh test
+          sh sdk/java/gravit-compat/build.sh test
+          sh examples/extensions/java-host/build.sh
+          sh examples/extensions/java-runtime/build.sh
+          sh examples/extensions/java-lifecycle/build.sh
+          sh examples/extensions/gravit-compat/build.sh
+      - name: Compile real native CLI for this target
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd cli
+          go build -o "$RUNNER_TEMP/nl${{ runner.os == 'Windows' && '.exe' || '' }}" ./cmd/neverlauncher
+      - name: Execute JVM E2E and negative signature tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 e2e/extensions/accept_04212.py \
+            --target '${{ matrix.target }}' \
+            --cli "$RUNNER_TEMP/nl${{ runner.os == 'Windows' && '.exe' || '' }}" \
+            --evidence "evidence/${{ matrix.target }}.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extensions-04212-${{ matrix.target }}
+          path: evidence/${{ matrix.target }}.json
+          if-no-files-found: warn
+  go-supervisor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+      - name: Build real Java extension host JAR
+        run: sh examples/extensions/java-host/build.sh
+      - name: Run Go supervisor, live permission revocation and real-JVM lifecycle
+        working-directory: services/api
+        env:
+          NEVERLAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
+        run: |
+          go test -race -count=1 -timeout 6m ./internal/extensionhost
+          go test -race -count=1 -timeout 4m ./internal/extensionjava ./internal/extensionlifecycle
+  certify:
+    if: always()
+    needs: [real-platform, go-supervisor]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: extensions-04212-*
+          path: evidence
+          merge-multiple: true
+      - name: Fail-closed evidence tests
+        run: python3 -m unittest discover -s e2e/extensions -p 'test_*.py' -v
+      - name: All six targets AND Go supervisor must pass
+        env:
+          GO_SUPERVISOR_RESULT: ${{ needs.go-supervisor.result }}
+          PLATFORM_RESULT: ${{ needs.real-platform.result }}
+        run: |
+          set -eu
+          test "$GO_SUPERVISOR_RESULT" = success
+          test "$PLATFORM_RESULT" = success
+          python3 e2e/extensions/aggregate_04212.py \
+            --evidence-dir evidence --commit "$GITHUB_SHA" \
+            --output extension-04212-certificate.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extensions-04212-certificate
+          path: extension-04212-certificate.json
+          if-no-files-found: warn

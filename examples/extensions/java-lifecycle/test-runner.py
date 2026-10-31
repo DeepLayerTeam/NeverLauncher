@@ -18,6 +18,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
     hello = 0
     heartbeats = 0
     expected_pid = 0
+    allow_heartbeat = True
 
     def do_POST(self):
         assert self.client_address[0] in ("127.0.0.1", "::1")
@@ -38,6 +39,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             }
         elif self.path == "/v1/heartbeat":
             Handler.heartbeats += 1
+            if not Handler.allow_heartbeat:
+                self.send_error(503)
+                return
             response = {"ok": True}
         else:
             self.send_error(404)
@@ -54,7 +58,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    assert (STAGE / "backend/bin/java-lifecycle").is_file(), "run build.sh first"
+    assert (STAGE / "backend/lib/java-lifecycle.jar").is_file(), "run build.sh first"
+    classpath = os.pathsep.join((str((STAGE / 'backend/lib/launcher-java-sdk-core.jar').resolve()),
+                                  str((STAGE / 'backend/lib/java-lifecycle.jar').resolve())))
     host = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=host.serve_forever, daemon=True)
     thread.start()
@@ -72,7 +78,7 @@ if __name__ == "__main__":
         }
     )
     proc = subprocess.Popen(
-        ["backend/bin/java-lifecycle"],
+        ["java", "-cp", classpath, "ru.launcher.sdk.core.ExtensionRunner", "backend/manifest.json", "ru.example.launcher.LifecycleExample"],
         cwd=STAGE,
         env=env,
         stdout=subprocess.PIPE,
@@ -87,17 +93,25 @@ if __name__ == "__main__":
         assert proc.poll() is None and Handler.hello == 1 and Handler.heartbeats >= 1, (
             "Java extension failed to negotiate and heartbeat"
         )
-        proc.send_signal(signal.SIGTERM)
-        out, err = proc.communicate(timeout=6)
-        assert proc.returncode in (0, 128 + signal.SIGTERM), (
-            f"Java extension exited with {proc.returncode}: {err}"
-        )
+        if os.name == 'nt':
+            # Windows TerminateProcess cannot execute a JVM shutdown hook.
+            # Exercise the same lifecycle.stop() through a failed host heartbeat.
+            Handler.allow_heartbeat = False
+            out, err = proc.communicate(timeout=12)
+            assert proc.returncode != 0, 'lost host heartbeat should fail closed'
+        else:
+            proc.send_signal(signal.SIGTERM)
+            out, err = proc.communicate(timeout=6)
+            assert proc.returncode in (0, 128 + signal.SIGTERM), (
+                f"Java extension exited with {proc.returncode}: {err}"
+            )
         assert "Java extension started" in out and "Java extension stopped" in out, (
             f"lifecycle callbacks missing: {out}"
         )
-        assert not err.strip(), f"unexpected Java extension stderr: {err}"
+        if os.name != 'nt':
+            assert not err.strip(), f"unexpected Java extension stderr: {err}"
         print(
-            "PASS: real Java subprocess hello, PID, heartbeat, SIGTERM lifecycle stop"
+            "PASS: real Java subprocess hello, PID, heartbeat, lifecycle stop"
         )
     finally:
         if proc.poll() is None:

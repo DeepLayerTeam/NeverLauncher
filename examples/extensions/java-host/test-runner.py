@@ -38,7 +38,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         with Handler.lock:
             Handler.manifests += 1
-        content = (ROOT / "launcher-extension.json").read_bytes()
+        content = (ROOT / "neverlauncher-extension.json").read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(content)))
@@ -178,6 +178,7 @@ if __name__ == "__main__":
         assert status == 504 and time.monotonic() - now < 2
         status, body, _ = rpc("health")
         assert status == 200 and body["result"]["responsive"]
+        backend_callback = Handler.callback
         cli = subprocess.run(
             ["java", "-jar", str(jar.resolve()), "status"],
             cwd=STAGE,
@@ -192,6 +193,35 @@ if __name__ == "__main__":
             "running": True,
         }, cli.stdout
         assert Handler.hellos == 2 and Handler.readies == 1 and Handler.manifests == 2
+        # CLI sessions have transient callback ports; use the live backend URL.
+        Handler.callback = backend_callback
+        # Host callback rejects unauthorized transport, unsupported protocol,
+        # undeclared RPC methods and oversized requests on the live JVM.
+        status, _, _ = rpc("health", token="revoked")
+        assert status == 401
+        status, _, _ = rpc("health", version="2.0")
+        assert status == 409
+        status, _, _ = rpc("unsafe.eval")
+        assert status == 422
+        status, _, _ = rpc("health", {"padding": "x" * (70 << 10)})
+        assert status == 413
+        # Actual JVM startup must fail closed: invalid host token or a protocol
+        # incompatible with this host must never produce an additional ready.
+        for case, changes in (
+            ("revoked-host-token", {"NEVERLAUNCHER_EXTENSION_HOST_TOKEN": "revoked"}),
+            ("unsupported-protocol", {"NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": "2.0"}),
+            ("missing-callback-token", {"NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": ""}),
+        ):
+            attempted = env(server, "backend")
+            attempted.update(changes)
+            ready_before = Handler.readies
+            result = subprocess.run(
+                ["java", "-jar", str(jar.resolve())], cwd=STAGE, env=attempted,
+                capture_output=True, text=True, timeout=12,
+            )
+            assert result.returncode != 0 and Handler.readies == ready_before, (
+                case, result.returncode, result.stderr, Handler.readies,
+            )
         print(
             "PASS: executable JVM-host JAR -> authenticated hello -> ready after start -> RPC health/command -> authorization/version/deadline -> CLI"
         )

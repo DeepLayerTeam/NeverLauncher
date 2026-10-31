@@ -10,6 +10,7 @@ import subprocess
 import threading
 import time
 import urllib.request
+import urllib.error
 
 ROOT=Path(__file__).resolve().parent
 STAGE=ROOT/'build'/'package'
@@ -55,10 +56,19 @@ def env(host,target):
     return result
 
 if __name__=='__main__':
-    assert (STAGE/'backend/bin/java-runtime').exists(), 'build.sh first'
+    assert (STAGE/'backend/lib/java-runtime.jar').is_file(), 'build.sh first'
+    classpath = os.pathsep.join((str((STAGE/'backend/lib/launcher-java-sdk-core.jar').resolve()),
+                                  str((STAGE/'backend/lib/java-runtime.jar').resolve())))
+    def java_process(target, *args):
+        command = ['java', '-cp', classpath, 'ru.launcher.sdk.core.ExtensionRunner']
+        if target == 'cli':
+            command += ['--cli', 'backend/manifest.json', 'ru.example.launcher.RuntimeExample', *args]
+        else:
+            command += ['backend/manifest.json', 'ru.example.launcher.RuntimeExample']
+        return command
     host=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
     threading.Thread(target=host.serve_forever,daemon=True).start()
-    p=subprocess.Popen(['backend/bin/java-runtime'],cwd=STAGE,env=env(host,'backend'),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    p=subprocess.Popen(java_process('backend'),cwd=STAGE,env=env(host,'backend'),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     restored=None
     try:
         deadline=time.monotonic()+10
@@ -68,7 +78,18 @@ if __name__=='__main__':
         req=urllib.request.Request(Handler.callback+'/v1/events',data=json.dumps(msg).encode(),headers={'Authorization':'Bearer real-callback-token','Content-Type':'application/json'})
         assert urllib.request.urlopen(req,timeout=3).status==200
         with Handler.lock:assert Handler.state.get(('storage','last-release'))=={'version':'42.1.0'}
-        cli=subprocess.run(['cli/bin/java-runtime','status'],cwd=STAGE,env=env(host,'cli'),capture_output=True,text=True,timeout=12)
+        # An invalid event payload must be refused by the real Java schema
+        # validator and must not overwrite the broker's previously stored value.
+        invalid=json.loads(json.dumps(msg))
+        invalid['event']['payload']={'version':42}
+        request=urllib.request.Request(Handler.callback+'/v1/events',data=json.dumps(invalid).encode(),headers={'Authorization':'Bearer real-callback-token','Content-Type':'application/json'})
+        try:
+            urllib.request.urlopen(request,timeout=3)
+            raise AssertionError('invalid event schema was accepted by Java handler')
+        except urllib.error.HTTPError as exc:
+            assert exc.code == 422, f'wrong invalid-event status: {exc.code}'
+        with Handler.lock:assert Handler.state.get(('storage','last-release'))=={'version':'42.1.0'}
+        cli=subprocess.run(java_process('cli', 'status'),cwd=STAGE,env=env(host,'cli'),capture_output=True,text=True,timeout=12)
         assert cli.returncode==0, f'CLI error {cli.stderr} stdout {cli.stdout}'
         data=json.loads(cli.stdout.strip())
         assert data['settings']=={'enabled':True} and data['lastRelease']=={'version':'42.1.0'},data
@@ -79,7 +100,7 @@ if __name__=='__main__':
         assert Handler.removed==0, 'JVM shutdown deleted a durable EventBus subscription'
         Handler.subscribed=False
         Handler.callback=None
-        restored=subprocess.Popen(['backend/bin/java-runtime'],cwd=STAGE,env=env(host,'backend'),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        restored=subprocess.Popen(java_process('backend'),cwd=STAGE,env=env(host,'backend'),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         deadline=time.monotonic()+10
         while time.monotonic()<deadline and not Handler.subscribed and restored.poll() is None:time.sleep(.05)
         assert restored.poll() is None and Handler.subscribed and Handler.callback, 'backend failed to re-register durable subscription'
@@ -90,7 +111,7 @@ if __name__=='__main__':
         req=urllib.request.Request(Handler.callback+'/v1/events',data=json.dumps(msg).encode(),headers={'Authorization':'Bearer real-callback-token','Content-Type':'application/json'})
         assert urllib.request.urlopen(req,timeout=3).status==200
         with Handler.lock:assert Handler.state.get(('storage','last-release'))=={'version':'42.3.0'}
-        second_cli=subprocess.run(['cli/bin/java-runtime','status'],cwd=STAGE,env=env(host,'cli'),capture_output=True,text=True,timeout=12)
+        second_cli=subprocess.run(java_process('cli', 'status'),cwd=STAGE,env=env(host,'cli'),capture_output=True,text=True,timeout=12)
         assert second_cli.returncode==0, f'CLI after backend restart failed: {second_cli.stderr}'
         assert json.loads(second_cli.stdout.strip())['lastRelease']=={'version':'42.3.0'}
         assert Handler.hello==4, 'each fresh JVM must authenticate with the host'

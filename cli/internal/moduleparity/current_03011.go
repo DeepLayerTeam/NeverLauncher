@@ -132,8 +132,8 @@ func InspectLatest04211(root string) (Report, error) {
 	if err != nil {
 		return Report{}, err
 	}
-	if strings.TrimSpace(string(version)) != "0.42.11" || current.SchemaVersion != "1.0" || current.ProductVersion != "0.42.11" || current.AuditBaseline != "0.31.0" || current.Upstream != baseline.Upstream || len(current.Modules) != 19 || len(baseline.Modules) != 19 {
-		return Report{}, fmt.Errorf("0.42.11 Gravit module inventory/version mismatch")
+	if (strings.TrimSpace(string(version)) != "0.42.11" && strings.TrimSpace(string(version)) != "0.42.12") || current.SchemaVersion != "1.0" || current.ProductVersion != "0.42.11" || current.AuditBaseline != "0.31.0" || current.Upstream != baseline.Upstream || len(current.Modules) != 19 || len(baseline.Modules) != 19 {
+		return Report{}, fmt.Errorf("pinned 0.42.11 Gravit module inventory/version mismatch")
 	}
 	report := Report{SchemaVersion: "1.0", ProductVersion: current.ProductVersion, UpstreamCommit: current.Upstream.Commit, AuditStatus: "evidence-present-not-certified", FullyCertified: false, Results: make([]Result, 0, 19)}
 	for i, mod := range current.Modules {

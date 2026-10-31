@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.42.12 — Real JVM extension acceptance and fail-closed platform verification
+
+- Fixed broken example build paths after Java source directory renames and restored the canonical `launcher-extension.json` inside signable output packages while continuing to read the project's `neverlauncher-extension.json` sources. Real Host/Runtime/Lifecycle and Gravit source-port JVM scenarios run again.
+- Made Java Runtime and Lifecycle E2E invoke Java directly using the native classpath separator instead of Unix-only wrapper scripts. Added negative startup/RPC/schema assertions against real JVM callbacks.
+- Added immediate live trust enforcement to direct Go→JVM RPC, including rejection and termination of an already-revoked extension before command delivery, with a Go regression test.
+- Added six-target OS/architecture CI for actual Java runtime execution, signed `.nlext`, wrong-publisher-key and tamper rejection; all six plus Go Supervisor must pass to produce an evidence certificate. Incomplete, forged or stale evidence is rejected. Added operator instructions and fixed stale CI paths.
+- Locally executed the full extension transport + signature acceptance suite on **Linux x64** only. The other five target OS/architecture runtime results, Backend Go race suite (requires Go 1.27.3), production ServerBridge/Minecraft verification and final-package signatures are **not confirmed**; this is not a certified production release.
+
+
 ## 0.42.11 — Real Gravit source-port builds, signed packages and current 19-module inventory
 
 - Added `tools/gravit-port/port.py`, compiling explicitly ported Gravit module Java 17 sources against the actual Core and Gravit Compat SDK (no upstream JAR classpath, no annotation processors), creating a working self-contained Host JAR and optionally an Ed25519-signed/verified `.nlext` through the actual CLI. Unsupported LaunchServer/JavaFX API references fail compilation; invalid manifests, reserved classes, symlinks and output overwrites fail closed. No arbitrary upstream binary-JAR execution is supported.

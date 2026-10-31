@@ -101,6 +101,20 @@ func (s *Supervisor) CallJavaRPC0304(ctx context.Context, key Key, method string
 	if !running || endpoint == "" {
 		return nil, ErrHostNotRunning
 	}
+	// A previously authorized supervisor command must not race an emergency
+	// disable, revoked publisher or replaced installation. The HTTP broker
+	// already checks live trust, but direct Go -> JVM RPC bypasses that broker.
+	if err := s.enforceLiveTrust04210(ctx, st); err != nil {
+		s.denyRevokedHost04210(st, err)
+		return nil, fmt.Errorf("Java RPC denied by current extension trust: %w", err)
+	}
+	// The process can be stopped/replaced while the durable check is running.
+	st.mu.Lock()
+	stillRunning := st.state == "running" && st.javaHost && st.callbackURL == endpoint && st.callbackToken == token
+	st.mu.Unlock()
+	if !stillRunning {
+		return nil, ErrHostNotRunning
+	}
 	return s.callJavaProcess0304(ctx, endpoint, token, method, params)
 }
 func (s *Supervisor) callJavaProcess0304(ctx context.Context, endpoint, token, method string, params json.RawMessage) (json.RawMessage, error) {

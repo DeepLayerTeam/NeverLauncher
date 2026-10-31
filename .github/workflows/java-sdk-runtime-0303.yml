@@ -45,7 +45,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/runtime-example"
-          javac --release 17 -cp sdk/java/core/build/classes -d "$RUNNER_TEMP/runtime-example" examples/extensions/java-runtime/src/ru/example/launcher/RuntimeExample.java
+          javac --release 17 -cp sdk/java/core/build/classes -d "$RUNNER_TEMP/runtime-example" examples/extensions/java-runtime/src/ru/example/neverlauncher/RuntimeExample.java
       - name: Verify actual jar artifact
         shell: bash
         run: jar tf sdk/java/core/build/launcher-java-sdk-core.jar | grep -q 'ru/launcher/sdk/core/RuntimeCallbackServer.class'
@@ -69,7 +69,7 @@ jobs:
           python3 examples/extensions/java-lifecycle/test-runner.py
       - name: Pack signed Extensions Java backend/CLI example and verify Ed25519
         run: |
-          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
+          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/extension-key.pem"
           openssl pkey -in "$RUNNER_TEMP/extension-key.pem" -pubout -out "$RUNNER_TEMP/extension-pub.pem"
           "$RUNNER_TEMP/nl" extension pack examples/extensions/java-runtime/build/package --output "$RUNNER_TEMP/java-runtime.nlext" --private-key "$RUNNER_TEMP/extension-key.pem"
