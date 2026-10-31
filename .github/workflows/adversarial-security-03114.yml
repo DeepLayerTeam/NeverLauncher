@@ -1,4 +1,4 @@
-name: NeverLauncher 0.31.14 Adversarial Security Gate
+name: Launcher 0.31.14 Adversarial Security Gate
 on:
   push:
     paths:
@@ -45,7 +45,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-03114-offline-evidence
+          name: launcher-03114-offline-evidence
           path: |
             ${{ runner.temp }}/03114-offline.json
             ${{ runner.temp }}/03114-backend-security.json
@@ -77,7 +77,7 @@ jobs:
           GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build ./internal/macossandbox ./internal/extensionhost
   live-linux-boundary:
     if: github.event_name == 'workflow_dispatch' && inputs.live_linux
-    runs-on: [self-hosted, linux, x64, neverlauncher-sandbox]
+    runs-on: [self-hosted, linux, x64, launcher-sandbox]
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -90,12 +90,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-03114-linux-live-evidence
+          name: launcher-03114-linux-live-evidence
           path: ${{ runner.temp }}/03114-linux-live.json
           if-no-files-found: error
   live-windows-boundary:
     if: github.event_name == 'workflow_dispatch' && inputs.live_windows
-    runs-on: [self-hosted, windows, x64, neverlauncher-appcontainer]
+    runs-on: [self-hosted, windows, x64, launcher-appcontainer]
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -109,6 +109,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-03114-windows-live-evidence
+          name: launcher-03114-windows-live-evidence
           path: ${{ runner.temp }}/03114-windows-live.json
           if-no-files-found: error

@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func makeGuardContinuousEvidence01810(t *testing.T) guardContinuousEvidence01810 {
@@ -86,8 +86,8 @@ func TestGuardAttestationV2EndpointIssuesOneTimeContinuousTicket01810(t *testing
 	allowlist := `{"schemaVersion":"2.0","releases":{"0.18.10":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"` + testGuardHash0134 + `","launcherSha256":"` + testLauncherHash0134 + `","requireAuthenticode":true}],"runtimeProfiles":[{"javaMajor":21,"moduleSetSha256":"` + strings.Repeat("2", 64) + `"}]}}}}}`
 	cfg := config.Config{
 		PublicURL: "https://api.example.test", Environment: "test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-guard-attestation-v2",
-		AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api",
-		WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"},
+		AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "launcher-api",
+		WebAuthnRPID: "api.example.test", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://api.example.test"},
 		GuardReleaseAllowlistJSON: allowlist,
 	}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)

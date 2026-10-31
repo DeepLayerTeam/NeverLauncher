@@ -3,7 +3,7 @@ package httpapi
 import (
 	"net/http"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensioncontract"
 )
 
 func (s Server) extensionGAStatus0210(w http.ResponseWriter, r *http.Request) {

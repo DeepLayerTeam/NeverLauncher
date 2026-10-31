@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
 )
 
 func standardConfig(t *testing.T) config.Config {
@@ -13,7 +13,7 @@ func standardConfig(t *testing.T) config.Config {
 	return config.Config{
 		Environment: "production", DeploymentMode: "auto", RepositoryDriver: "postgres", SQLDriver: "pgx",
 		DatabaseDSN: "postgres://test.invalid/db", StorageDriver: "local", StorageLocalPath: filepath.Join(t.TempDir(), "storage"),
-		SQLiteCoordinatorPath: "/var/lib/neverlauncher/coordinator.db", ServerBridgeHARequired: false,
+		SQLiteCoordinatorPath: "/var/lib/launcher/coordinator.db", ServerBridgeHARequired: false,
 		RateLimitEnabled: true, RateLimitFailClosed: true,
 		RateLimitGlobalPerMinute: 1200, RateLimitAuthPerMinute: 20, RateLimitServerBridgePerMinute: 6000,
 	}
@@ -22,7 +22,7 @@ func standardConfig(t *testing.T) config.Config {
 func TestAutoDetectStandardAndNetworkHA(t *testing.T) {
 	cfg := standardConfig(t)
 	p, err := Detect(cfg)
-	if err != nil || p.Mode != Standard || p.Coordinator != "sqlite" || !p.SingleInstance || !strings.HasSuffix(p.LockPath, ".neverlauncher-api.owner.lock") {
+	if err != nil || p.Mode != Standard || p.Coordinator != "sqlite" || !p.SingleInstance || !strings.HasSuffix(p.LockPath, ".launcher-api.owner.lock") {
 		t.Fatalf("standard plan=%+v error=%v", p, err)
 	}
 	cfg.SQLiteCoordinatorPath = ""
@@ -80,7 +80,7 @@ func TestStandardS3RequiresSharedExplicitLock(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "LOCK_PATH") {
 		t.Fatalf("must fail without lock: %v", err)
 	}
-	cfg.DeploymentLockPath = "/var/lib/neverlauncher/instance.lock"
+	cfg.DeploymentLockPath = "/var/lib/launcher/instance.lock"
 	p, err := Detect(cfg)
 	if err != nil || p.Mode != Standard || p.LockPath != cfg.DeploymentLockPath {
 		t.Fatalf("plan=%+v error=%v", p, err)

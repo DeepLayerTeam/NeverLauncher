@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/configmigration"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector/configmigration"
 	"net"
 	"net/url"
 	"os"
@@ -15,7 +15,7 @@ import (
 
 const (
 	providerVersion = "0.11.4"
-	protocolVersion = "neverlauncher-http-auth/1"
+	protocolVersion = "launcher-http-auth/1"
 )
 
 type EndpointConfig struct {

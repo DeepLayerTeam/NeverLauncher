@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // Current profile is resolved from the authenticated Never account, never from
@@ -28,7 +28,7 @@ func (s Server) ownedTextureProfile0251(r *http.Request) (model.MinecraftProfile
 	if err != nil {
 		return model.MinecraftProfile{}, model.User{}, err
 	}
-	if p.UserID != user.ID || p.Issuer != "neverlauncher" || p.Realm != "local" {
+	if p.UserID != user.ID || p.Issuer != "launcher" || p.Realm != "local" {
 		return model.MinecraftProfile{}, model.User{}, errAuthRequired
 	}
 	return p, user, nil

@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/fileauth"
-	gc "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcredentials"
-	gi "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitidentity"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
+	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcredentials"
+	gi "gitflic.ru/skif4er/launcher/services/api/internal/gravitidentity"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 func migratedUserID0335(a gi.Account) string {
@@ -214,12 +214,12 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 					return gc.Result{}, e
 				}
 				_, e = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)
-       VALUES($1,$2,'local','neverlauncher',$2,$3,$4,$4,'{}'::jsonb,now(),now())`, "identity-local-"+userID, userID, email, a.Username)
+       VALUES($1,$2,'local','launcher',$2,$3,$4,$4,'{}'::jsonb,now(),now())`, "identity-local-"+userID, userID, email, a.Username)
 				if e != nil {
 					return gc.Result{}, e
 				}
 				_, e = tx.ExecContext(ctx, `INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at)
-       VALUES($1,$2,$3,'neverlauncher','local',$2,'gravit-import-v1',now(),now())`, userID, a.UUID, a.Username)
+       VALUES($1,$2,$3,'launcher','local',$2,'gravit-import-v1',now(),now())`, userID, a.UUID, a.Username)
 				if e != nil {
 					return gc.Result{}, e
 				}

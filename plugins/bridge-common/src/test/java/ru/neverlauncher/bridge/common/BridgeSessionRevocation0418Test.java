@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 /** Executable session-fencing regression checks; no Minecraft or JUnit dependency. */
 public final class BridgeSessionRevocation0418Test {

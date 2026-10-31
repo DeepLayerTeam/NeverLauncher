@@ -9,11 +9,11 @@ import (
 	"sort"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionjava"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionresolver"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensiontrust"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionjava"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionresolver"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensiontrust"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // JavaCheck0305 is returned to operators; no secrets, tokens, or private paths appear.

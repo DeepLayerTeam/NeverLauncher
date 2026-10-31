@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 
-	gd "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitdetector"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gd "gitflic.ru/skif4er/launcher/services/api/internal/gravitdetector"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 // GetMigrationCompatibility0332 reads only the sanitized report. Credentials
@@ -37,7 +37,7 @@ func (r *SQLRepository) SaveMigrationCompatibility0332(ctx context.Context, runI
 	if err := r.check(); err != nil {
 		return gd.Report{}, err
 	}
-	if report.Format != "neverlauncher.gravit-compatibility.v1" || len(report.SourceSHA256) != 64 || report.CutoverAllowed {
+	if report.Format != "launcher.gravit-compatibility.v1" || len(report.SourceSHA256) != 64 || report.CutoverAllowed {
 		return gd.Report{}, errors.New("invalid or unsafe compatibility assessment")
 	}
 	data, err := json.Marshal(report)

@@ -35,7 +35,7 @@ jobs:
         run: go test -count=1 ./internal/httpapi ./internal/trustbaseline ./internal/attestverify
       - name: Backend full build
         working-directory: services/api
-        run: go build ./cmd/neverlauncher-api
+        run: go build ./cmd/launcher-api
       - name: Go vet
         working-directory: services/api
         run: go vet ./internal/httpapi

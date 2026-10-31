@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
+	"gitflic.ru/skif4er/launcher/services/api/internal/dbmigrate"
 )
 
 func (s Server) operationsStorageAudit(w http.ResponseWriter, r *http.Request) {

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
 )
 
 type Mode string
@@ -126,7 +126,7 @@ func Detect(cfg config.Config) (Plan, error) {
 		p.requireLocalFS = true
 		p.Limitations = append(p.Limitations, "one Linux API process only; no distributed HA", "SQLite-to-PostgreSQL migration requires a separate verified procedure")
 		// The storage root is the canonical ownership anchor across deployments.
-		p.LockPath = filepath.Join(cfg.StorageLocalPath, ".neverlauncher-api.owner.lock")
+		p.LockPath = filepath.Join(cfg.StorageLocalPath, ".launcher-api.owner.lock")
 		if lock := strings.TrimSpace(cfg.DeploymentLockPath); lock != "" && filepath.Clean(lock) != filepath.Clean(p.LockPath) {
 			problems = append(problems, "single-node owner lock cannot be overridden")
 		}
@@ -175,7 +175,7 @@ func Detect(cfg config.Config) (Plan, error) {
 			lock := strings.TrimSpace(cfg.DeploymentLockPath)
 			switch {
 			case p.Storage == "local" && strings.TrimSpace(cfg.StorageLocalPath) != "":
-				p.LockPath = filepath.Join(cfg.StorageLocalPath, ".neverlauncher-api.owner.lock")
+				p.LockPath = filepath.Join(cfg.StorageLocalPath, ".launcher-api.owner.lock")
 				p.Reasons = append(p.Reasons, "instance lock anchored to shared local storage")
 				if lock != "" && filepath.Clean(lock) != filepath.Clean(p.LockPath) {
 					problems = append(problems, "local storage lock path cannot be overridden: all instances must lock the same storage root")

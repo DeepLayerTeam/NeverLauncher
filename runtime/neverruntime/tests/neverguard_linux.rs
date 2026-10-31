@@ -1,10 +1,10 @@
 #![cfg(target_os = "linux")]
 
-use neverruntime::{GuardSupervisor, NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA};
+use runtime::{GuardSupervisor, NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA};
 use std::{os::unix::fs::PermissionsExt, path::PathBuf};
 
 fn private_runtime_dir() -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("neverlauncher-test-runtime-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("launcher-test-runtime-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("create test runtime dir");
     std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700)).expect("chmod runtime dir");

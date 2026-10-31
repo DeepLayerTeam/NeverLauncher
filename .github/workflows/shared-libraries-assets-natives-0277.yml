@@ -2,12 +2,12 @@ name: Shared Libraries Assets Natives 0.27.7
 on:
   push:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - '.github/workflows/shared-libraries-assets-natives-0277.yml'
       - 'VERSION'
   pull_request:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - '.github/workflows/shared-libraries-assets-natives-0277.yml'
       - 'VERSION'
 permissions:
@@ -28,22 +28,22 @@ jobs:
       - name: Format verification
         if: runner.os == 'Linux'
         shell: bash
-        run: test -z "$(gofmt -l cli/cmd/neverlauncher/shared_artifacts_0277*.go cli/cmd/neverlauncher/vanilla_runtime.go cli/cmd/neverlauncher/loader_runtime.go cli/cmd/neverlauncher/forge_runtime.go)"
+        run: test -z "$(gofmt -l cli/cmd/launcher/shared_artifacts_0277*.go cli/cmd/launcher/vanilla_runtime.go cli/cmd/launcher/loader_runtime.go cli/cmd/launcher/forge_runtime.go)"
       - name: Shared storage, native target and compatibility integration tests
         working-directory: cli
         shell: bash
         run: >-
-          go test ./cmd/neverlauncher
+          go test ./cmd/launcher
           -run 'TestSharedAssets0277|TestSharedArtifacts0277|TestNativeExtraction0277|TestNativeClassifier0277|TestVanillaLibraries0277|TestClientFactory0271|TestModernLoader0272|TestMirrorHelper0274|TestModpack0275|TestManualGates0276|TestForgeAndNeoForgeProcessorMaterializers'
           -count=1 -timeout=6m
       - name: Static analysis
         working-directory: cli
-        run: go vet ./cmd/neverlauncher
+        run: go vet ./cmd/launcher
       - name: CLI build
         working-directory: cli
-        run: go build ./cmd/neverlauncher
+        run: go build ./cmd/launcher
       - name: Race detector
         if: runner.os == 'Linux'
         working-directory: cli
         shell: bash
-        run: go test -race ./cmd/neverlauncher -run 'TestSharedAssets0277|TestSharedArtifacts0277|TestClientFactory0271' -count=1 -timeout=6m
+        run: go test -race ./cmd/launcher -run 'TestSharedAssets0277|TestSharedArtifacts0277|TestClientFactory0271' -count=1 -timeout=6m

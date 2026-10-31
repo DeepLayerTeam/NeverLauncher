@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/ratelimit"
+	"gitflic.ru/skif4er/launcher/services/api/internal/ratelimit"
 )
 
 func TestClientIPDoesNotTrustForwardedHeadersByDefault(t *testing.T) {

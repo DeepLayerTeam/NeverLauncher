@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 type liveTextureRepo0394 struct {
@@ -85,7 +85,7 @@ func decodeTexture0394(t *testing.T, body map[string]any) map[string]any {
 }
 
 func TestYggdrasilDelivery0394ActiveSkinCapeAndFailClosed(t *testing.T) {
-	profile := model.MinecraftProfile{UUID: "12345678-1234-4234-9234-0123456789ab", Name: "LocalPlayer", Issuer: "neverlauncher", Realm: "local"}
+	profile := model.MinecraftProfile{UUID: "12345678-1234-4234-9234-0123456789ab", Name: "LocalPlayer", Issuer: "launcher", Realm: "local"}
 	r := &liveTextureRepo0394{profile: profile, found: true}
 	r.texture = model.ServerBridgeTexture{UUID: profile.UUID, Username: profile.Name, Model: "slim", SkinURL: "https://api.example.test/api/v1/textures/blob/" + strings.Repeat("a", 64), CapeURL: "https://api.example.test/api/v1/textures/blob/" + strings.Repeat("b", 64)}
 	s := Server{Repo: r, State: NewRuntimeState(), Config: config.Config{Environment: "dev", PublicURL: "https://api.example.test"}}

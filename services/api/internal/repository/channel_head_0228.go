@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // ChannelHeadReader makes CAS revisions observable without exposing draft releases.

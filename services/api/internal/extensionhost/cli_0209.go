@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensioncontract"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionlifecycle"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionpolicy"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 const maxCLIOutput0209 = int64(2 << 20)
@@ -59,7 +59,7 @@ func (b *boundedBuffer0209) String() string {
 	defer b.mu.Unlock()
 	s := b.b.String()
 	if b.truncated {
-		s += "\n[output truncated by NeverLauncher]"
+		s += "\n[output truncated by Launcher]"
 	}
 	return s
 }

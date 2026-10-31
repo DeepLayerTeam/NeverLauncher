@@ -16,7 +16,7 @@ var version = "dev"
 
 const cliSchemaVersion = "1.0"
 
-const helpText = `NeverLauncher CLI
+const helpText = `Launcher CLI
 
 Использование:
   nl <команда> [параметры]
@@ -309,7 +309,7 @@ func run(args []string) error {
 	}
 	switch args[0] {
 	case "version":
-		fmt.Printf("NeverLauncher CLI %s\n", version)
+		fmt.Printf("Launcher CLI %s\n", version)
 		return nil
 	case "manifest":
 		return handleManifest(args[1:])
@@ -431,7 +431,7 @@ func handleManifest(args []string) error {
 		newPath := flagValue(args, "--new", "")
 		out := flagValue(args, "--output", "")
 		if oldPath == "" || newPath == "" {
-			return errors.New("использование: neverlauncher manifest diff --old old.json --new new.json [--output diff.json]")
+			return errors.New("использование: launcher manifest diff --old old.json --new new.json [--output diff.json]")
 		}
 		oldManifest, err := readManifest(oldPath)
 		if err != nil {
@@ -454,7 +454,7 @@ func handleManifest(args []string) error {
 
 func handleUpdate(args []string) error {
 	if len(args) < 1 {
-		return errors.New("использование: neverlauncher update plan|apply|components|status|recover|migrate-state|self-test|stabilization-self-test ...")
+		return errors.New("использование: launcher update plan|apply|components|status|recover|migrate-state|self-test|stabilization-self-test ...")
 	}
 	switch args[0] {
 	case "plan":
@@ -603,7 +603,7 @@ func handleUpdate(args []string) error {
 
 func handleHashes(args []string) error {
 	if len(args) < 2 || args[0] != "check" {
-		return errors.New("использование: neverlauncher hashes check manifest.json --root <каталог>")
+		return errors.New("использование: launcher hashes check manifest.json --root <каталог>")
 	}
 	manifest, err := readManifest(args[1])
 	if err != nil {
@@ -630,7 +630,7 @@ func handleDiagnostics(args []string) error {
 	}
 	switch args[0] {
 	case "collect":
-		out := flagValue(args, "--output", "neverlauncher-diagnostic-report.json")
+		out := flagValue(args, "--output", "launcher-diagnostic-report.json")
 		backendURL := flagValue(args, "--backend-url", "http://localhost:8080")
 		javaPath := flagValue(args, "--java-path", "")
 		report := DiagnosticReport{

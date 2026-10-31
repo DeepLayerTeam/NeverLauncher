@@ -1,7 +1,7 @@
 plugins { java }
 version = rootProject.file("VERSION").readText().trim()
-group = "ru.neverlauncher"
-base { archivesName.set("neverlauncher-sponge-bridge") }
+group = "ru.launcher"
+base { archivesName.set("launcher-sponge-bridge") }
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
 repositories {
     maven("https://repo.spongepowered.org/repository/maven-public/")
@@ -15,12 +15,12 @@ dependencies {
 }
 tasks.jar {
     dependsOn(bridgeRuntime.buildDependencies)
-    archiveBaseName.set("neverlauncher-sponge-bridge")
+    archiveBaseName.set("launcher-sponge-bridge")
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from({ bridgeRuntime.map { if (it.isDirectory) it else zipTree(it) } })
     manifest {
-        attributes["Implementation-Title"] = "NeverLauncher Sponge Server Bridge"
+        attributes["Implementation-Title"] = "Launcher Sponge Server Bridge"
         attributes["Implementation-Version"] = project.version.toString()
     }
 }

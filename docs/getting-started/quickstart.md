@@ -17,7 +17,7 @@ python3 scripts/contracts/validate-openapi.py
 (cd cli && go test ./... && go build ./...)
 (cd apps/admin && npm ci && npm run build)
 (cd apps/desktop && npm ci && npm run build)
-(cd runtime/neverruntime && cargo test)
+(cd runtime/runtime && cargo test)
 ```
 
 Выходные файлы от этих команд не означают готовую подписанную Desktop-поставку. Сборка, нотариализация, доставка JRE и проверка Guard выполняются отдельными release workflow.

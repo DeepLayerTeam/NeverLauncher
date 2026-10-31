@@ -1,11 +1,11 @@
 package example;
 
-import ru.neverlauncher.trusted.MinecraftHook;
+import ru.launcher.trusted.MinecraftHook;
 import java.lang.instrument.Instrumentation;
 
 public final class LoggingHook implements MinecraftHook {
     private static void write(String value) {
-        String marker=System.getProperty("neverlauncher.trusted.test.log");
+        String marker=System.getProperty("launcher.trusted.test.log");
         if (marker != null) {
             try {
                 java.nio.file.Files.write(java.nio.file.Paths.get(marker), (value+"\n").getBytes("UTF-8"),

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	rr "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitreport"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	rr "gitflic.ru/skif4er/launcher/services/api/internal/gravitreport"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 type migrationReportStore03313 interface {

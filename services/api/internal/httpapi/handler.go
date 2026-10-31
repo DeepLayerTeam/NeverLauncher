@@ -4,9 +4,9 @@ import (
 	"context"
 	"net/http"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/embeddedadmin"
+	"gitflic.ru/skif4er/launcher/services/api/internal/embeddedadmin"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
+	"gitflic.ru/skif4er/launcher/services/api/internal/authorization"
 )
 
 func (s Server) Handler() http.Handler {

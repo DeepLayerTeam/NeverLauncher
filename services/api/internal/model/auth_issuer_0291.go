@@ -17,7 +17,7 @@ func CanonicalAuthIssuer(provider, issuer string) (string, error) {
 	issuer = strings.TrimSpace(issuer)
 	if issuer == "" {
 		if provider == "local" {
-			issuer = "neverlauncher"
+			issuer = "launcher"
 		} else {
 			issuer = "provider:" + provider
 		}
@@ -25,7 +25,7 @@ func CanonicalAuthIssuer(provider, issuer string) (string, error) {
 	if len(issuer) > 2048 || strings.IndexFunc(issuer, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) >= 0 {
 		return "", errors.New("invalid auth issuer")
 	}
-	if provider == "local" && issuer != "neverlauncher" {
+	if provider == "local" && issuer != "launcher" {
 		return "", errors.New("local provider cannot change issuer")
 	}
 	return issuer, nil

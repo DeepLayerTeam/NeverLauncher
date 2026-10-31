@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 
-	gi "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitidentity"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gi "gitflic.ru/skif4er/launcher/services/api/internal/gravitidentity"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 type migrationIdentityStore0334 interface {

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 // SQLiteHTTPRepository0372 persists the complete HTTP repository domain state

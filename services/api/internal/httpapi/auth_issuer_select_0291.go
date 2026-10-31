@@ -3,8 +3,8 @@ package httpapi
 import (
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // A provider-only credential operation is ambiguous if the user linked more

@@ -3115,7 +3115,7 @@
       ],
       "properties": {
         "format": {
-          "const": "neverlauncher.gravit-compatibility.v1"
+          "const": "launcher.gravit-compatibility.v1"
         },
         "sourceSha256": {
           "type": "string",
@@ -3262,7 +3262,7 @@
           "pattern": "^[0-9a-f]{64}$"
         },
         "format": {
-          "const": "neverlauncher.gravit-source-inventory.v1"
+          "const": "launcher.gravit-source-inventory.v1"
         },
         "categories": {
           "type": "object",
@@ -3338,7 +3338,7 @@
       ],
       "properties": {
         "format": {
-          "const": "neverlauncher.gravit-identity-map.v1"
+          "const": "launcher.gravit-identity-map.v1"
         },
         "runId": {
           "type": "string"
@@ -3431,7 +3431,7 @@
       ],
       "properties": {
         "format": {
-          "const": "neverlauncher.gravit-credentials.v1"
+          "const": "launcher.gravit-credentials.v1"
         },
         "runId": {
           "type": "string"

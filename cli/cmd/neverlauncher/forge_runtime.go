@@ -267,7 +267,7 @@ func parseForgeMaterializeOptions(loader string, args []string) (forgeMaterializ
 			return forgeMaterializeOptions{}, err
 		}
 	}
-	clientDir := flagValue(args, "--client-dir", filepath.Join(".neverlauncher", loader, minecraftVersion))
+	clientDir := flagValue(args, "--client-dir", filepath.Join(".launcher", loader, minecraftVersion))
 	workers, err := strconv.Atoi(flagValue(args, "--workers", "12"))
 	if err != nil || workers < 1 || workers > 64 {
 		return forgeMaterializeOptions{}, errors.New("--workers должен быть числом от 1 до 64")
@@ -388,7 +388,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	if err := validateRemoteURL(installerURL); err != nil {
 		return forgeMaterializeResult{}, fmt.Errorf("installer URL: %w", err)
 	}
-	installerRel := filepath.ToSlash(filepath.Join(".neverlauncher", "installers", loader, sanitizeVersionToken(artifactVersion), "installer.jar"))
+	installerRel := filepath.ToSlash(filepath.Join(".launcher", "installers", loader, sanitizeVersionToken(artifactVersion), "installer.jar"))
 	installerPath, err := secureClientDestination(opts.ClientDir, installerRel)
 	if err != nil {
 		return forgeMaterializeResult{}, err
@@ -548,7 +548,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 	if err != nil {
 		return forgeMaterializeResult{}, err
 	}
-	installerDataRel := filepath.ToSlash(filepath.Join(".neverlauncher", "installers", loader, sanitizeVersionToken(artifactVersion), "data"))
+	installerDataRel := filepath.ToSlash(filepath.Join(".launcher", "installers", loader, sanitizeVersionToken(artifactVersion), "data"))
 	installerDataDir, err := secureClientDestination(opts.ClientDir, installerDataRel)
 	if err != nil {
 		return forgeMaterializeResult{}, err
@@ -661,7 +661,7 @@ func installForgeLike(ctx context.Context, opts forgeMaterializeOptions) (forgeM
 		"status": "installed-and-verified",
 	}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
-	statePath, err := secureClientDestination(opts.ClientDir, filepath.ToSlash(filepath.Join(".neverlauncher", loader+"-install.json")))
+	statePath, err := secureClientDestination(opts.ClientDir, filepath.ToSlash(filepath.Join(".launcher", loader+"-install.json")))
 	if err != nil {
 		return forgeMaterializeResult{}, err
 	}
@@ -889,7 +889,7 @@ func installForgeLegacy(
 		"status": "installed-and-verified",
 	}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
-	statePath, err := secureClientDestination(opts.ClientDir, filepath.ToSlash(filepath.Join(".neverlauncher", "forge-install.json")))
+	statePath, err := secureClientDestination(opts.ClientDir, filepath.ToSlash(filepath.Join(".launcher", "forge-install.json")))
 	if err != nil {
 		return forgeMaterializeResult{}, err
 	}
@@ -1224,7 +1224,7 @@ func forgeLikeMetadataRefreshURL(metadataURL string, attempt int) string {
 		return metadataURL
 	}
 	query := u.Query()
-	query.Set("_neverlauncher_refresh", fmt.Sprintf("%d-%d", time.Now().UnixNano(), attempt))
+	query.Set("_launcher_refresh", fmt.Sprintf("%d-%d", time.Now().UnixNano(), attempt))
 	u.RawQuery = query.Encode()
 	return u.String()
 }
@@ -2227,7 +2227,7 @@ func selectInstallerJava(explicit string, minimumMajor int) (string, error) {
 	if candidate == "" {
 		path, err := exec.LookPath("java")
 		if err != nil {
-			return "", errors.New("Forge/NeoForge installer требует Java; укажите --java или NEVERLAUNCHER_JAVA (можно использовать Managed Java из NeverRuntime)")
+			return "", errors.New("Forge/NeoForge installer требует Java; укажите --java или NEVERLAUNCHER_JAVA (можно использовать Managed Java из Runtime)")
 		}
 		candidate = path
 	}

@@ -20,13 +20,13 @@ import (
 	"sort"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitecore"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitecore"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 	"github.com/jackc/pgx/v5"
 )
 
-const Schema = "neverlauncher_sqlite_import_03211"
-const importVersion = "neverlauncher-sqlite-to-postgresql-v2"
+const Schema = "launcher_sqlite_import_03211"
+const importVersion = "launcher-sqlite-to-postgresql-v2"
 const batchSize = 256
 const snapshotChunkSize = 256 * 1024
 
@@ -397,7 +397,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 	}
 	// The import schema is deliberately append/UPDATE/DELETE protected. Live
 	// code must never start serving auth from this compatibility mirror.
-	_, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(Schema)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'NeverLauncher verified import is immutable'; END $$`)
+	_, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(Schema)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Launcher verified import is immutable'; END $$`)
 	if err != nil {
 		return report, err
 	}

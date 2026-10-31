@@ -1,4 +1,4 @@
-// Package lanmdns implements DNS-SD discovery for NeverLauncher backends without
+// Package lanmdns implements DNS-SD discovery for Launcher backends without
 // introducing a network trust anchor. All results are untrusted until TLS-pinned.
 package lanmdns
 
@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const Service = "_neverlauncher._tcp.local."
+const Service = "_launcher._tcp.local."
 const multicast = "224.0.0.251:5353"
 const maxMessage = 9000
 

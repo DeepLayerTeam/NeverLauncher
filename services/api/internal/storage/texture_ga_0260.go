@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/texturepng"
+	"gitflic.ru/skif4er/launcher/services/api/internal/texturepng"
 )
 
 // VerifyTextureGA0260 checks not only stored bytes/SHA-256, but also that the

@@ -16,8 +16,8 @@ import (
 	"time"
 )
 
-const trustPolicyDomain02312 = "neverlauncher.trust.v1"
-const trustPolicyPrefix02312 = "NeverLauncher-Trust-Policy-v1\n"
+const trustPolicyDomain02312 = "launcher.trust.v1"
+const trustPolicyPrefix02312 = "Launcher-Trust-Policy-v1\n"
 
 type TrustKey struct {
 	ID          string `json:"id"`

@@ -1,3 +1,3 @@
-module gitflic.ru/skif4er/neverlauncher/tools/migration-ga
+module gitflic.ru/skif4er/launcher/tools/migration-ga
 
 go 1.23.0

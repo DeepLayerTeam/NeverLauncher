@@ -34,7 +34,7 @@ type CapabilityError struct {
 }
 
 func (e *CapabilityError) Error() string {
-	return fmt.Sprintf("NeverLauncher capability %s failed: HTTP %d: %s", e.Capability, e.StatusCode, strings.TrimSpace(e.Body))
+	return fmt.Sprintf("Launcher capability %s failed: HTTP %d: %s", e.Capability, e.StatusCode, strings.TrimSpace(e.Body))
 }
 
 func Environment() (HostEnvironment, error) {
@@ -51,7 +51,7 @@ func Environment() (HostEnvironment, error) {
 		InstanceId:          strings.TrimSpace(os.Getenv("NEVERLAUNCHER_EXTENSION_INSTANCE_ID")),
 	}
 	if env.HostUrl == "" || env.HostToken == "" || env.ExtensionId == "" || env.InstanceId == "" || env.ExtensionApiVersion == "" {
-		return HostEnvironment{}, errors.New("NeverLauncher Extension Host environment is incomplete")
+		return HostEnvironment{}, errors.New("Launcher Extension Host environment is incomplete")
 	}
 	if env.Scope == "" {
 		env.Scope = "global"
@@ -128,7 +128,7 @@ func (c *Client) Hello(ctx context.Context, callbackURL string) (HelloResponse, 
 		return HelloResponse{}, err
 	}
 	if out.ProtocolVersion != HostProtocolVersion || out.ExtensionApiVersion != ExtensionAPIVersion || out.InstanceId != c.env.InstanceId {
-		return HelloResponse{}, errors.New("NeverLauncher Host hello identity/protocol mismatch")
+		return HelloResponse{}, errors.New("Launcher Host hello identity/protocol mismatch")
 	}
 	c.mu.Lock()
 	c.hello = out
@@ -249,7 +249,7 @@ func (c *Client) Unsubscribe(ctx context.Context, id int64) error {
 // Возвращённый URL безопасно передавать в Hello. Закройте сервер при завершении расширения.
 func (c *Client) StartCallbackServer(events EventHandler, hooks HookHandler) (*CallbackServer, error) {
 	if c.env.CallbackToken == "" {
-		return nil, errors.New("NeverLauncher callback token is missing")
+		return nil, errors.New("Launcher callback token is missing")
 	}
 	s, err := newCallbackServer(c.env.CallbackToken, events, hooks)
 	if err != nil {

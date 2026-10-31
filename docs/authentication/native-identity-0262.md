@@ -1,4 +1,4 @@
-# NeverLauncher 0.26.2: native Official Identity Manager
+# Launcher 0.26.2: native Official Identity Manager
 
 ## Operational functionality
 
@@ -16,7 +16,7 @@ and real personal Minecraft account before enabling official GA.
 
 ### Working behavior
 
-1. User authenticates to NeverLauncher (unmodified existing platform login). Renderer
+1. User authenticates to Launcher (unmodified existing platform login). Renderer
    passes its platform bearer token and Never session ID to the native manager, which
    makes Device Code and subsequent official HTTP requests.
 2. `begin` returns only Microsoft user code, verification URI, expiry, interval.
@@ -36,7 +36,7 @@ and real personal Minecraft account before enabling official GA.
    Rust. Session ticket rotation is persisted in the OS vault. Public profile metadata
    is the only data passed back to React. Upload is size-bounded (4 MiB).
 7. Native `launch_minecraft` obtains a fresh Minecraft access token from the verified
-   ticket and immediately passes it into NeverRuntime. Renderer-supplied `msa` tokens,
+   ticket and immediately passes it into Runtime. Renderer-supplied `msa` tokens,
    official+local mixed identities, and official+offline launches are rejected.
 8. `cancel` removes the native pending Device Code session; `disconnect` deletes
    the stored ticket (not a global Microsoft grant revocation).

@@ -26,7 +26,7 @@ done
 rm -rf "$RUNTIME_DIR"
 mkdir -p "$CLIENT_DIR" "$SERVER_DIR"
 NL_BIN="$RUNTIME_DIR/nl"
-NEVERRUNTIME_BIN="$ROOT/runtime/neverruntime/target/debug/neverruntime"
+NEVERRUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime"
 SERVER_PID=""
 PROXY_PID=""
 cleanup() {
@@ -44,13 +44,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '[matching-e2e] build CLI and NeverRuntime\n'
+printf '[matching-e2e] build CLI and Runtime\n'
 (
   cd "$ROOT/cli"
-  go build -o "$NL_BIN" ./cmd/neverlauncher
+  go build -o "$NL_BIN" ./cmd/launcher
 )
-cargo build --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bin neverruntime
-[[ -x "$NEVERRUNTIME_BIN" ]] || { echo "[matching-e2e] NeverRuntime binary is missing" >&2; exit 1; }
+cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
+[[ -x "$NEVERRUNTIME_BIN" ]] || { echo "[matching-e2e] Runtime binary is missing" >&2; exit 1; }
 
 printf '[matching-e2e] materialize actual Mojang client %s\n' "$MINECRAFT_VERSION"
 "$NL_BIN" runtime vanilla-package \
@@ -66,7 +66,7 @@ printf '[matching-e2e] materialize actual Mojang client %s\n' "$MINECRAFT_VERSIO
   --package "$RUNTIME_DIR/client-package.json" \
   --client-dir "$CLIENT_DIR" \
   --output "$RUNTIME_DIR/materialized-client-verify.json"
-cp "$CLIENT_DIR/.neverlauncher/vanilla-install.json" "$RUNTIME_DIR/vanilla-install.json"
+cp "$CLIENT_DIR/.launcher/vanilla-install.json" "$RUNTIME_DIR/vanilla-install.json"
 
 printf '[matching-e2e] materialize verified Mojang server.jar for the exact same version %s\n' "$MINECRAFT_VERSION"
 "$NL_BIN" runtime vanilla-server \
@@ -113,7 +113,7 @@ generate-structures=false
 level-type=flat
 enable-rcon=false
 enable-query=false
-motd=NeverLauncher Actual Client E2E II $MINECRAFT_VERSION
+motd=Launcher Actual Client E2E II $MINECRAFT_VERSION
 EOFPROPS
 # В выделенном сервере Minecraft 1.17.1 известна ошибка generator-settings
 # (MC-195468). Сначала дайте серверу создать настоящий плоский мир, затем

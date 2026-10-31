@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // OperationLister provides a project-isolated, bounded view of durable jobs.

@@ -1,6 +1,6 @@
-# NeverLauncher 0.25.5 — Texture Service API & Ownership
+# Launcher 0.25.5 — Texture Service API & Ownership
 
-The service is implemented in the existing authenticated Backend, PostgreSQL and local/S3 storage. It manages only the logged-in user's **local NeverLauncher Minecraft identity**. An official Mojang/Microsoft Minecraft identity is never modified by this API. Desktop UX, Admin grants UI and Yggdrasil/authlib-injector signing are later 0.26 milestones.
+The service is implemented in the existing authenticated Backend, PostgreSQL and local/S3 storage. It manages only the logged-in user's **local Launcher Minecraft identity**. An official Mojang/Microsoft Minecraft identity is never modified by this API. Desktop UX, Admin grants UI and Yggdrasil/authlib-injector signing are later 0.26 milestones.
 
 ## Database upgrade
 
@@ -10,7 +10,7 @@ This is a forward-only migration. Do not revise migrations 0067–0070. Keep dat
 
 ## Authenticated endpoints
 
-All endpoints require a current NeverLauncher Bearer session and resolve `minecraft_profiles.uuid` from that account. The optional `profileUuid` JSON field is an assertion checked against the authenticated UUID, **never** an owner selector. All successful mutation responses contain `apiVersion` and updated `data`, with `Cache-Control: private, no-store`.
+All endpoints require a current Launcher Bearer session and resolve `minecraft_profiles.uuid` from that account. The optional `profileUuid` JSON field is an assertion checked against the authenticated UUID, **never** an owner selector. All successful mutation responses contain `apiVersion` and updated `data`, with `Cache-Control: private, no-store`.
 
 | Method and path | Request | Result |
 | --- | --- | --- |

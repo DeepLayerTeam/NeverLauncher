@@ -18,18 +18,18 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensioncontract"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 const (
 	formatName0203        = extensioncontract.PackageFormatName
 	formatVersion0203     = extensioncontract.PackageFormatVersion
-	manifestName0203      = "neverlauncher-extension.json"
+	manifestName0203      = "launcher-extension.json"
 	checksumsName0203     = "checksums.sha256"
 	sbomName0203          = "SBOM.spdx.json"
-	descriptorName0203    = "neverlauncher-package.json"
+	descriptorName0203    = "launcher-package.json"
 	signatureName0203     = "signature.ed25519"
 	payloadPrefix0203     = "payload/"
 	maxFiles0203          = 10000
@@ -121,7 +121,7 @@ func (a *analysis0203) close() error {
 	return a.reader.Close()
 }
 
-func signingDomain0203() string { return "neverlauncher.extension-package.v1" }
+func signingDomain0203() string { return "launcher.extension-package.v1" }
 func signingMessage0203(identity string) []byte {
 	return []byte(signingDomain0203() + "\n" + identity + "\n")
 }
@@ -272,10 +272,10 @@ func validateSBOM0203(data []byte, manifest model.ExtensionManifest, canonicalDi
 	if err := strictJSON0203(data, &doc); err != nil {
 		return fmt.Errorf("decode SBOM.spdx.json: %w", err)
 	}
-	if doc.SPDXVersion != "SPDX-2.3" || doc.DataLicense != "CC0-1.0" || doc.SPDXID != "SPDXRef-DOCUMENT" || doc.Name != manifest.ID+" "+manifest.Version || doc.DocumentNamespace != "https://neverlauncher.local/spdx/extension/"+manifest.ID+"/"+manifest.Version+"/"+canonicalDigest {
+	if doc.SPDXVersion != "SPDX-2.3" || doc.DataLicense != "CC0-1.0" || doc.SPDXID != "SPDXRef-DOCUMENT" || doc.Name != manifest.ID+" "+manifest.Version || doc.DocumentNamespace != "https://launcher.local/spdx/extension/"+manifest.ID+"/"+manifest.Version+"/"+canonicalDigest {
 		return errors.New("SBOM.spdx.json document metadata does not match package")
 	}
-	if doc.CreationInfo.Created != buildTime.Format(time.RFC3339) || len(doc.CreationInfo.Creators) != 1 || !strings.HasPrefix(doc.CreationInfo.Creators[0], "Tool: NeverLauncher CLI ") {
+	if doc.CreationInfo.Created != buildTime.Format(time.RFC3339) || len(doc.CreationInfo.Creators) != 1 || !strings.HasPrefix(doc.CreationInfo.Creators[0], "Tool: Launcher CLI ") {
 		return errors.New("SBOM.spdx.json creationInfo is invalid")
 	}
 	pkgID := "SPDXRef-Package-Extension"
@@ -404,7 +404,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 		return nil, err
 	}
 	if !bytes.Equal(manifestBytes, expectedManifestBytes) {
-		return nil, errors.New("neverlauncher-extension.json inside .nlext is not canonical")
+		return nil, errors.New("launcher-extension.json inside .nlext is not canonical")
 	}
 	a.manifest, a.manifestBytes, a.canonicalDigest = normalized, manifestBytes, canonicalDigest
 	payloadFiles := make([]PackageFile, 0)
@@ -455,7 +455,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 	}
 	var descriptor Descriptor
 	if err := strictJSON0203(descriptorBytes, &descriptor); err != nil {
-		return nil, fmt.Errorf("decode neverlauncher-package.json: %w", err)
+		return nil, fmt.Errorf("decode launcher-package.json: %w", err)
 	}
 	if descriptor.Format != formatName0203 || descriptor.FormatVersion != formatVersion0203 || descriptor.BuildEpoch < 315532800 {
 		return nil, errors.New("unsupported/invalid .nlext package descriptor")
@@ -483,7 +483,7 @@ func analyze0203(packagePath string) (*analysis0203, error) {
 		return nil, err
 	}
 	if !bytes.Equal(descriptorBytes, expectedDescriptorBytes) {
-		return nil, errors.New("neverlauncher-package.json/package identity does not match .nlext content")
+		return nil, errors.New("launcher-package.json/package identity does not match .nlext content")
 	}
 	a.descriptor = descriptor
 	signatureBytes, err := readEntry0203(a.entries[signatureName0203], maxMetadata0203)

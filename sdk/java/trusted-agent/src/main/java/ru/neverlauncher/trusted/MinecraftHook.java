@@ -1,4 +1,4 @@
-package ru.neverlauncher.trusted;
+package ru.launcher.trusted;
 
 import java.lang.instrument.Instrumentation;
 

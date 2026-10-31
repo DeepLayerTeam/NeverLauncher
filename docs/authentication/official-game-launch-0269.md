@@ -1,4 +1,4 @@
-# NeverLauncher 0.26.9 — Minecraft Java online/offline launch
+# Launcher 0.26.9 — Minecraft Java online/offline launch
 
 ## Execution paths
 
@@ -11,12 +11,12 @@ credentials before starting the protected Java process.
   the native Minecraft Services client immediately before launch, then injected
   into the Minecraft Java process. The renderer receives only profile metadata.
   The launched game performs its own ordinary Mojang sessionserver `join` while
-  negotiating an `online-mode=true` server connection. NeverLauncher does not
+  negotiating an `online-mode=true` server connection. Launcher does not
   forge a serverId, call `hasJoined` on the client's behalf, or route official
   traffic through a project Yggdrasil endpoint. Java 1.21.9+ and 26.x do not
   receive the removed `--userType` argument.
 - **Project Yggdrasil:** the backend issues a project-bound Minecraft session.
-  NeverRuntime validates the realm, requires a *required, signed* `authlib-injector`
+  Runtime validates the realm, requires a *required, signed* `authlib-injector`
   JAR present in the verified installation, and installs the agent before Java
   starts. Missing, optional, duplicated, or user-owned injector artifacts stop
   the launch. ServerBridge join tickets remain project-specific and cannot be

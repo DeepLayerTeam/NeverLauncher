@@ -18,7 +18,7 @@ import (
 
 const (
 	releaseTrustPolicyFile0158 = "RELEASE_TRUST_POLICY.json"
-	releaseTrustDomain0158     = "neverlauncher.release.v2"
+	releaseTrustDomain0158     = "launcher.release.v2"
 	releaseSignatureSchema0158 = "2.0"
 )
 
@@ -154,7 +154,7 @@ func releaseSignaturePayload0158(env releaseSignatureEnvelopeV2) ([]byte, error)
 		return nil, err
 	}
 	env.Signature = sig
-	return append([]byte("NeverLauncher-Release-Verification-v2\n"), raw...), nil
+	return append([]byte("Launcher-Release-Verification-v2\n"), raw...), nil
 }
 
 func fingerprintEd255190158(pub ed25519.PublicKey) string {

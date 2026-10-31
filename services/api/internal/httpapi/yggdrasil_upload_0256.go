@@ -10,14 +10,14 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/texturepng"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/texturepng"
 )
 
 // The native authlib-injector skin upload protocol uses Minecraft access tokens,
-// not NeverLauncher admin tokens. Ownership and project permissions are checked
+// not Launcher admin tokens. Ownership and project permissions are checked
 // again in the transactional repository, independently of supplied path UUID.
 func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request) {
 	raw := strings.TrimSpace(r.Header.Get("Authorization"))
@@ -26,7 +26,7 @@ func (s Server) yggdrasilTextureWrite0256(w http.ResponseWriter, r *http.Request
 		return
 	}
 	_, profile, user, err := s.validateMinecraftToken119(strings.TrimSpace(strings.TrimPrefix(raw, "Bearer ")))
-	if err != nil || profile.Issuer != "neverlauncher" || profile.Realm != "local" ||
+	if err != nil || profile.Issuer != "launcher" || profile.Realm != "local" ||
 		minecraftID119(profile.UUID) != minecraftID119(r.PathValue("uuid")) {
 		writeYggdrasilError119(w, http.StatusUnauthorized, "Invalid token or profile")
 		return
@@ -229,7 +229,7 @@ func (s Server) yggdrasilBatchProfiles0256(w http.ResponseWriter, r *http.Reques
 		}
 		seen[lower] = true
 		profile, err := repo.GetMinecraftProfileByName(name)
-		if err == nil && profile.Issuer == "neverlauncher" && profile.Realm == "local" {
+		if err == nil && profile.Issuer == "launcher" && profile.Realm == "local" {
 			profiles = append(profiles, map[string]string{"id": minecraftID119(profile.UUID), "name": profile.Name})
 		}
 	}

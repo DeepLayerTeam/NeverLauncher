@@ -28,7 +28,7 @@ class ExactCertificationTests(unittest.TestCase):
 
     def test_matrix_validation_requires_exact_commit_run_and_pass(self) -> None:
         doc = {
-            "repository": "DeepLayerTeam/NeverLauncher",
+            "repository": "DeepLayerTeam/Launcher",
             "commit": "a" * 40,
             "productVersion": "0.16.1",
             "runId": "123",
@@ -36,18 +36,38 @@ class ExactCertificationTests(unittest.TestCase):
             "targets": [{"id": "required"}],
             "errors": [],
         }
-        mod.validate_matrix_document(doc, repository=doc["repository"], commit=doc["commit"], version="0.16.1", run_id=123, label="compatibility")
+        mod.validate_matrix_document(
+            doc,
+            repository=doc["repository"],
+            commit=doc["commit"],
+            version="0.16.1",
+            run_id=123,
+            label="compatibility",
+        )
         bad = dict(doc, commit="b" * 40)
         with self.assertRaises(RuntimeError):
-            mod.validate_matrix_document(bad, repository=doc["repository"], commit=doc["commit"], version="0.16.1", run_id=123, label="compatibility")
+            mod.validate_matrix_document(
+                bad,
+                repository=doc["repository"],
+                commit=doc["commit"],
+                version="0.16.1",
+                run_id=123,
+                label="compatibility",
+            )
         bad = dict(doc, status="failed")
         with self.assertRaises(RuntimeError):
-            mod.validate_matrix_document(bad, repository=doc["repository"], commit=doc["commit"], version="0.16.1", run_id=123, label="compatibility")
-
+            mod.validate_matrix_document(
+                bad,
+                repository=doc["repository"],
+                commit=doc["commit"],
+                version="0.16.1",
+                run_id=123,
+                label="compatibility",
+            )
 
     def test_artifact_redirect_strips_github_authorization(self) -> None:
         req = mod.urllib.request.Request(
-            "https://api.github.com/repos/DeepLayerTeam/NeverLauncher/actions/artifacts/123/zip",
+            "https://api.github.com/repos/DeepLayerTeam/Launcher/actions/artifacts/123/zip",
             headers={"Authorization": "Bearer secret", "User-Agent": mod.USER_AGENT},
         )
         redirected = mod._artifact_redirect_request(
@@ -56,21 +76,33 @@ class ExactCertificationTests(unittest.TestCase):
         )
         self.assertIsNone(redirected.get_header("Authorization"))
         self.assertEqual(redirected.get_header("User-agent"), mod.USER_AGENT)
-        self.assertEqual(redirected.full_url, "https://productionresultssa8.blob.core.windows.net/actions-results/test.zip?sig=abc")
+        self.assertEqual(
+            redirected.full_url,
+            "https://productionresultssa8.blob.core.windows.net/actions-results/test.zip?sig=abc",
+        )
 
     def test_artifact_redirect_rejects_untrusted_or_insecure_target(self) -> None:
-        req = mod.urllib.request.Request("https://api.github.com/repos/x/y/actions/artifacts/1/zip")
+        req = mod.urllib.request.Request(
+            "https://api.github.com/repos/x/y/actions/artifacts/1/zip"
+        )
         with self.assertRaises(RuntimeError):
             mod._artifact_redirect_request(req, "https://evil.example/artifact.zip")
         with self.assertRaises(RuntimeError):
-            mod._artifact_redirect_request(req, "http://productionresultssa8.blob.core.windows.net/artifact.zip")
+            mod._artifact_redirect_request(
+                req, "http://productionresultssa8.blob.core.windows.net/artifact.zip"
+            )
 
     def test_matrix_zip_accepts_single_matrix_only(self) -> None:
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("matrix.json", json.dumps({"status": "passed"}))
             zf.writestr("matrix.md", "ok")
-        self.assertEqual(json.loads(mod.matrix_from_zip(buf.getvalue(), label="compatibility"))["status"], "passed")
+        self.assertEqual(
+            json.loads(mod.matrix_from_zip(buf.getvalue(), label="compatibility"))[
+                "status"
+            ],
+            "passed",
+        )
 
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zf:

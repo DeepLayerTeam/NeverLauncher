@@ -71,7 +71,7 @@ func ConvertGravitOptionalView02411(source []byte, base ComponentCatalog0241, si
 		return GravitOptionalMigration02411{}, errors.New("Gravit optional source must be 1 byte to 1 MiB")
 	}
 	sum := sha256.Sum256(source)
-	out := GravitOptionalMigration02411{Format: "neverlauncher.gravit-optional-migration.v1", SourceSHA256: hex.EncodeToString(sum[:]), Fields: []GravitFieldResult02210{}, Summary: map[string]int{"mapped": 0, "transformed": 0, "manual": 0, "blocked": 0}}
+	out := GravitOptionalMigration02411{Format: "launcher.gravit-optional-migration.v1", SourceSHA256: hex.EncodeToString(sum[:]), Fields: []GravitFieldResult02210{}, Summary: map[string]int{"mapped": 0, "transformed": 0, "manual": 0, "blocked": 0}}
 	note := func(field, status, target, reason string) {
 		out.Fields = append(out.Fields, GravitFieldResult02210{Field: field, Status: status, Target: target, Reason: reason})
 		out.Summary[status]++

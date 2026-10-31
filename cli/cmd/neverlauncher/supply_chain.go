@@ -67,9 +67,9 @@ func dependencySBOM(sourceRoot, ver string) (map[string]any, error) {
 	}
 
 	roots := []struct{ ID, Name string }{
-		{"SPDXRef-Package-CLI", "neverlauncher-cli"}, {"SPDXRef-Package-BackendAPI", "neverlauncher-api"},
-		{"SPDXRef-Package-Admin", "neverlauncher-admin-web"}, {"SPDXRef-Package-Desktop", "neverlauncher-desktop"},
-		{"SPDXRef-Package-NeverRuntime", "neverruntime"}, {"SPDXRef-Package-Bridges", "neverlauncher-server-bridges"},
+		{"SPDXRef-Package-CLI", "launcher-cli"}, {"SPDXRef-Package-BackendAPI", "launcher-api"},
+		{"SPDXRef-Package-Admin", "launcher-admin-web"}, {"SPDXRef-Package-Desktop", "launcher-desktop"},
+		{"SPDXRef-Package-Runtime", "runtime"}, {"SPDXRef-Package-Bridges", "launcher-server-bridges"},
 	}
 	for _, root := range roots {
 		packages = append(packages, sbomPackage{SPDXID: root.ID, Name: root.Name, VersionInfo: ver, DownloadLocation: "NOASSERTION", FilesAnalyzed: false, LicenseConcluded: "Apache-2.0", LicenseDeclared: "Apache-2.0"})
@@ -93,7 +93,7 @@ func dependencySBOM(sourceRoot, ver string) (map[string]any, error) {
 			add("npm", d.Name, d.Version, d.License, d.Resolved, spec.parent)
 		}
 	}
-	for _, spec := range []struct{ path, parent string }{{"apps/desktop/src-tauri/Cargo.toml", "SPDXRef-Package-Desktop"}, {"runtime/neverruntime/Cargo.toml", "SPDXRef-Package-NeverRuntime"}} {
+	for _, spec := range []struct{ path, parent string }{{"apps/desktop/src-tauri/Cargo.toml", "SPDXRef-Package-Desktop"}, {"runtime/runtime/Cargo.toml", "SPDXRef-Package-Runtime"}} {
 		tomlPath := filepath.Join(sourceRoot, spec.path)
 		lockPath := filepath.Join(filepath.Dir(tomlPath), "Cargo.lock")
 		if _, statErr := os.Stat(lockPath); statErr == nil {
@@ -102,7 +102,7 @@ func dependencySBOM(sourceRoot, ver string) (map[string]any, error) {
 				return nil, err
 			}
 			for _, d := range deps {
-				if d[0] != "neverlauncher-desktop" && d[0] != "neverruntime" {
+				if d[0] != "launcher-desktop" && d[0] != "runtime" {
 					add("cargo", d[0], d[1], "", "", spec.parent)
 				}
 			}
@@ -141,9 +141,9 @@ func dependencySBOM(sourceRoot, ver string) (map[string]any, error) {
 		return a.SPDXElementID < b.SPDXElementID
 	})
 	return map[string]any{
-		"SPDXID": "SPDXRef-DOCUMENT", "spdxVersion": "SPDX-2.3", "dataLicense": "CC0-1.0", "name": "NeverLauncher " + ver,
-		"documentNamespace": "https://neverlauncher.local/spdx/" + strings.ReplaceAll(ver, "/", "-") + "/" + time.Now().UTC().Format("20060102T150405.000000000Z"),
-		"creationInfo":      map[string]any{"created": time.Now().UTC().Format(time.RFC3339Nano), "creators": []string{"Tool: NeverLauncher CLI " + version}},
+		"SPDXID": "SPDXRef-DOCUMENT", "spdxVersion": "SPDX-2.3", "dataLicense": "CC0-1.0", "name": "Launcher " + ver,
+		"documentNamespace": "https://launcher.local/spdx/" + strings.ReplaceAll(ver, "/", "-") + "/" + time.Now().UTC().Format("20060102T150405.000000000Z"),
+		"creationInfo":      map[string]any{"created": time.Now().UTC().Format(time.RFC3339Nano), "creators": []string{"Tool: Launcher CLI " + version}},
 		"packages":          packages, "relationships": relationships,
 		"dependencyResolution": map[string]any{"go": "go.mod direct+indirect requirements", "npm": "package-lock.json complete package graph", "cargo": "Cargo.lock complete graph when present; Cargo.toml declared dependencies otherwise", "gradle": "declared Maven coordinates in build.gradle.kts"},
 	}, nil
@@ -325,13 +325,13 @@ func slsaProvenance(sourceRoot, artifactDir, ver string, sourceCommit ...string)
 		"cli/go.mod",
 		"services/api/go.mod",
 		"apps/admin/package-lock.json", "apps/desktop/package-lock.json",
-		"apps/desktop/src-tauri/Cargo.toml", "runtime/neverruntime/Cargo.toml",
+		"apps/desktop/src-tauri/Cargo.toml", "runtime/runtime/Cargo.toml",
 		"settings.gradle.kts",
 		"plugins/bridge-common/build.gradle.kts", "plugins/proxy-family-common/build.gradle.kts", "plugins/bungee-family-common/build.gradle.kts", "plugins/bukkit-family-common/build.gradle.kts", "plugins/velocity-bridge/build.gradle.kts",
 		"plugins/bungeecord-bridge/build.gradle.kts", "plugins/waterfall-bridge/build.gradle.kts", "plugins/bukkit-bridge/build.gradle.kts", "plugins/spigot-bridge/build.gradle.kts", "plugins/paper-bridge/build.gradle.kts",
 		"plugins/purpur-bridge/build.gradle.kts", "plugins/folia-bridge/build.gradle.kts", "plugins/fabric-bridge/build.gradle.kts",
 	}
-	for _, rel := range []string{"cli/go.sum", "services/api/go.sum", "apps/desktop/src-tauri/Cargo.lock", "runtime/neverruntime/Cargo.lock"} {
+	for _, rel := range []string{"cli/go.sum", "services/api/go.sum", "apps/desktop/src-tauri/Cargo.lock", "runtime/runtime/Cargo.lock"} {
 		if st, err := os.Stat(filepath.Join(sourceRoot, rel)); err == nil && !st.IsDir() {
 			materialPaths = append(materialPaths, rel)
 		}
@@ -353,8 +353,8 @@ func slsaProvenance(sourceRoot, artifactDir, ver string, sourceCommit ...string)
 	return map[string]any{
 		"_type": "https://in-toto.io/Statement/v1", "subject": subjects, "predicateType": "https://slsa.dev/provenance/v1",
 		"predicate": map[string]any{
-			"buildDefinition": map[string]any{"buildType": "https://neverlauncher.local/build-types/production-release/v1", "externalParameters": externalParameters, "internalParameters": map[string]any{"toolVersion": version, "failClosed": true}, "resolvedDependencies": materials},
-			"runDetails":      map[string]any{"builder": map[string]any{"id": "https://neverlauncher.local/builders/cli-release/" + version}, "metadata": map[string]any{"invocationId": "release-" + ver + "-" + time.Now().UTC().Format("20060102T150405.000000000Z"), "startedOn": now, "finishedOn": now}},
+			"buildDefinition": map[string]any{"buildType": "https://launcher.local/build-types/production-release/v1", "externalParameters": externalParameters, "internalParameters": map[string]any{"toolVersion": version, "failClosed": true}, "resolvedDependencies": materials},
+			"runDetails":      map[string]any{"builder": map[string]any{"id": "https://launcher.local/builders/cli-release/" + version}, "metadata": map[string]any{"invocationId": "release-" + ver + "-" + time.Now().UTC().Format("20060102T150405.000000000Z"), "startedOn": now, "finishedOn": now}},
 		},
 	}, nil
 }
@@ -376,5 +376,5 @@ func resolveRepositoryRoot(candidate string) (string, error) {
 		}
 		start = next
 	}
-	return "", fmt.Errorf("не найден корень NeverLauncher repository от %s", candidate)
+	return "", fmt.Errorf("не найден корень Launcher repository от %s", candidate)
 }

@@ -70,7 +70,7 @@ use windows_sys::Win32::{
 
 pub const NEVERGUARD_PROTOCOL_VERSION: u32 = 4;
 #[cfg(any(windows, test))]
-const NEVERGUARD_PIPE_PREFIX: &str = r"\\.\pipe\NeverLauncher.Guard.";
+const NEVERGUARD_PIPE_PREFIX: &str = r"\\.\pipe\Launcher.Guard.";
 #[cfg(windows)]
 const BOOTSTRAP_SECRET_LEN: usize = 32;
 #[cfg(windows)]
@@ -710,10 +710,10 @@ fn sha256_file(path: &Path) -> Result<String, String> {
 #[cfg(windows)]
 fn resolve_guard_executable() -> Result<PathBuf, String> {
     let current = std::env::current_exe()
-        .map_err(|err| format!("не удалось определить путь NeverLauncher Desktop: {err}"))?;
+        .map_err(|err| format!("не удалось определить путь Launcher Desktop: {err}"))?;
     let parent = current
         .parent()
-        .ok_or_else(|| "не удалось определить каталог NeverLauncher Desktop".to_string())?;
+        .ok_or_else(|| "не удалось определить каталог Launcher Desktop".to_string())?;
     Ok(parent.join("guard.exe"))
 }
 
@@ -1716,7 +1716,7 @@ fn append_len_prefixed(out: &mut Vec<u8>, value: &[u8]) {
 #[cfg(any(windows, test))]
 fn handshake_transcript(label: &[u8], context: &HandshakeContext<'_>) -> Vec<u8> {
     let mut data = Vec::with_capacity(192);
-    data.extend_from_slice(b"NeverLauncher Guard IPC v4\0");
+    data.extend_from_slice(b"Launcher Guard IPC v4\0");
     append_len_prefixed(&mut data, label);
     append_len_prefixed(&mut data, context.endpoint.as_bytes());
     data.extend_from_slice(&context.client_pid.to_le_bytes());
@@ -1744,7 +1744,7 @@ fn derive_session_key(secret: &[u8; 32], context: &HandshakeContext<'_>) -> [u8;
 #[cfg(any(windows, test))]
 fn ready_proof(session_key: &[u8; 32], state: ReadyProofState) -> [u8; 32] {
     let mut data = Vec::with_capacity(96);
-    data.extend_from_slice(b"NeverLauncher Guard IPC ready v4\0");
+    data.extend_from_slice(b"Launcher Guard IPC ready v4\0");
     data.extend_from_slice(&state.guard_pid.to_le_bytes());
     data.extend_from_slice(&state.started_at_unix.to_le_bytes());
     data.extend_from_slice(&state.process_policy_version.to_le_bytes());
@@ -1764,7 +1764,7 @@ fn request_mac(
     payload: &str,
 ) -> [u8; 32] {
     let mut data = Vec::with_capacity(payload.len() + 112);
-    data.extend_from_slice(b"NeverLauncher Guard IPC request v4\0");
+    data.extend_from_slice(b"Launcher Guard IPC request v4\0");
     data.extend_from_slice(&sequence.to_le_bytes());
     append_len_prefixed(&mut data, request_id.as_bytes());
     append_len_prefixed(&mut data, command.as_bytes());
@@ -1781,7 +1781,7 @@ fn response_mac(
     payload: &str,
 ) -> [u8; 32] {
     let mut data = Vec::with_capacity(payload.len() + 96);
-    data.extend_from_slice(b"NeverLauncher Guard IPC response v4\0");
+    data.extend_from_slice(b"Launcher Guard IPC response v4\0");
     data.extend_from_slice(&sequence.to_le_bytes());
     append_len_prefixed(&mut data, request_id.as_bytes());
     data.push(u8::from(ok));
@@ -1792,7 +1792,7 @@ fn response_mac(
 #[cfg(any(windows, test))]
 fn integrity_session_proof(session_key: &[u8; 32], evidence_digest: &[u8; 32]) -> [u8; 32] {
     let mut data = Vec::with_capacity(80);
-    data.extend_from_slice(b"NeverLauncher Guard integrity evidence session v1\0");
+    data.extend_from_slice(b"Launcher Guard integrity evidence session v1\0");
     data.extend_from_slice(evidence_digest);
     hmac_sha256(session_key, &data)
 }
@@ -1800,7 +1800,7 @@ fn integrity_session_proof(session_key: &[u8; 32], evidence_digest: &[u8; 32]) -
 #[cfg(windows)]
 fn attestation_session_proof(session_key: &[u8; 32], attestation_digest: &[u8; 32]) -> [u8; 32] {
     let mut data = Vec::with_capacity(80);
-    data.extend_from_slice(b"NeverLauncher Guard remote attestation session v1\0");
+    data.extend_from_slice(b"Launcher Guard remote attestation session v1\0");
     data.extend_from_slice(attestation_digest);
     hmac_sha256(session_key, &data)
 }
@@ -1869,8 +1869,8 @@ mod tests {
         let secret = [7u8; 32];
         let client_nonce = [1u8; 32];
         let server_nonce = [2u8; 32];
-        let first = HandshakeContext { endpoint: r"\\.\pipe\NeverLauncher.Guard.10.aaa", client_pid: 10, guard_pid: 20, started_at_unix: 30, client_nonce: &client_nonce, server_nonce: &server_nonce };
-        let second = HandshakeContext { endpoint: r"\\.\pipe\NeverLauncher.Guard.11.aaa", client_pid: 10, guard_pid: 20, started_at_unix: 30, client_nonce: &client_nonce, server_nonce: &server_nonce };
+        let first = HandshakeContext { endpoint: r"\\.\pipe\Launcher.Guard.10.aaa", client_pid: 10, guard_pid: 20, started_at_unix: 30, client_nonce: &client_nonce, server_nonce: &server_nonce };
+        let second = HandshakeContext { endpoint: r"\\.\pipe\Launcher.Guard.11.aaa", client_pid: 10, guard_pid: 20, started_at_unix: 30, client_nonce: &client_nonce, server_nonce: &server_nonce };
         let a = handshake_proof(&secret, b"server", &first);
         let b = handshake_proof(&secret, b"server", &second);
         assert_ne!(a, b);
@@ -1881,7 +1881,7 @@ mod tests {
         let secret = [3u8; 32];
         let client_nonce = [4u8; 32];
         let server_nonce = [5u8; 32];
-        let handshake = HandshakeContext { endpoint: r"\\.\pipe\NeverLauncher.Guard.42.abcdef", client_pid: 42, guard_pid: 43, started_at_unix: 44, client_nonce: &client_nonce, server_nonce: &server_nonce };
+        let handshake = HandshakeContext { endpoint: r"\\.\pipe\Launcher.Guard.42.abcdef", client_pid: 42, guard_pid: 43, started_at_unix: 44, client_nonce: &client_nonce, server_nonce: &server_nonce };
         let session = derive_session_key(&secret, &handshake);
         let server = handshake_proof(&secret, b"server", &handshake);
         assert_ne!(session, server);
@@ -1940,8 +1940,8 @@ mod tests {
 
     #[test]
     fn endpoint_namespace_is_fail_closed() {
-        assert!(validate_pipe_endpoint(r"\\.\pipe\NeverLauncher.Guard.100.abcdef").is_ok());
+        assert!(validate_pipe_endpoint(r"\\.\pipe\Launcher.Guard.100.abcdef").is_ok());
         assert!(validate_pipe_endpoint(r"\\.\pipe\Other.100.abcdef").is_err());
-        assert!(validate_pipe_endpoint(r"\\.\pipe\NeverLauncher.Guard..\\evil").is_err());
+        assert!(validate_pipe_endpoint(r"\\.\pipe\Launcher.Guard..\\evil").is_err());
     }
 }

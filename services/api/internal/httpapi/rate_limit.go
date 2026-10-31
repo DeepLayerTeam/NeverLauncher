@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/ratelimit"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/serverbridgeha"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitecoord"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/ratelimit"
+	"gitflic.ru/skif4er/launcher/services/api/internal/serverbridgeha"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitecoord"
 )
 
 func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {

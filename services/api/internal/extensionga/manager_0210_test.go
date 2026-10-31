@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensioncontract"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func TestValidateEmptyRepository0210(t *testing.T) {

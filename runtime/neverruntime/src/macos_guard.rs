@@ -165,11 +165,11 @@ fn runtime_dir()->Result<PathBuf,String>{
     let base=std::env::temp_dir();
     let meta=std::fs::metadata(&base).map_err(|e|format!("stat macOS temp directory {} failed: {e}",base.display()))?;
     if !meta.is_dir()||meta.uid()!=uid||(meta.mode()&0o077)!=0{return Err("macOS temp runtime directory must be private and owned by current uid".into())}
-    let dir=base.join(format!("neverlauncher-{uid}"));
+    let dir=base.join(format!("launcher-{uid}"));
     std::fs::create_dir_all(&dir).map_err(|e|format!("create macOS runtime dir failed: {e}"))?;
     std::fs::set_permissions(&dir,std::fs::Permissions::from_mode(0o700)).map_err(|e|e.to_string())?;
     let dm=std::fs::metadata(&dir).map_err(|e|e.to_string())?;
-    if dm.uid()!=uid||(dm.mode()&0o077)!=0{return Err("macOS NeverLauncher runtime directory permissions are unsafe".into())}
+    if dm.uid()!=uid||(dm.mode()&0o077)!=0{return Err("macOS Launcher runtime directory permissions are unsafe".into())}
     Ok(dir)
 }
 fn make_endpoint(pid:u32)->Result<PathBuf,String>{
@@ -226,7 +226,7 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     let canonical_arch=if cfg!(target_arch="aarch64"){"arm64"}else{"x64"};
     let legacy=manifest.schema_version=="1.0"&&manifest.platform=="macos-universal"&&manifest.never_guard_protocol_version==NEVERGUARD_PROTOCOL_VERSION&&manifest.authenticated_ipc=="unix-domain-socket+0600+peer-credentials+hmac-sha256-v4"&&manifest.macos_production_hardening_version==NEVERGUARD_MACOS_HARDENING_VERSION&&manifest.developer_id_required&&manifest.notarization_required;
     let canonical=manifest.schema_version=="1.0"&&manifest.platform=="macos"&&manifest.architecture==canonical_arch&&!manifest.artifacts.is_empty();
-    if manifest.product_version!=env!("CARGO_PKG_VERSION")||manifest.bundle_identifier!="ru.skif4er.neverlauncher"||(!legacy&&!canonical){return Err("macOS package manifest identity/hardening mismatch".into())}
+    if manifest.product_version!=env!("CARGO_PKG_VERSION")||manifest.bundle_identifier!="ru.skif4er.launcher"||(!legacy&&!canonical){return Err("macOS package manifest identity/hardening mismatch".into())}
     if canonical {
         let helpers=app.join("Contents/Helpers").canonicalize().map_err(|e|format!("resolve app Helpers directory failed: {e}"))?;
         if guard_dir!=helpers{return Err("Guard must run from the signed .app/Contents/Helpers directory".into())}
@@ -241,8 +241,8 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     let mut signing_team=manifest.signing_team_id.clone();
     if canonical {
         for (component,path,expected_bundle_path) in [
-            ("desktop-launcher",desktop.as_path(),"NeverLauncher.app/Contents/MacOS/neverlauncher-desktop"),
-            ("guard",guard,"NeverLauncher.app/Contents/Helpers/guard"),
+            ("desktop-launcher",desktop.as_path(),"Launcher.app/Contents/MacOS/launcher-desktop"),
+            ("guard",guard,"Launcher.app/Contents/Helpers/guard"),
         ] {
             let artifact=manifest.artifacts.iter().find(|a|a.component==component).ok_or_else(||format!("macOS package artifact missing: {component}"))?;
             if artifact.bundle_path!=expected_bundle_path{return Err(format!("macOS package bundle path mismatch for {component}"))}
@@ -261,7 +261,7 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
         }
     }
     if signing_team.is_empty(){return Err("macOS package signing Team ID is missing".into())}
-    for (path, expected_identifier) in [(desktop.as_path(), "ru.skif4er.neverlauncher"), (guard, "ru.skif4er.neverlauncher.guard")] {
+    for (path, expected_identifier) in [(desktop.as_path(), "ru.skif4er.launcher"), (guard, "ru.skif4er.launcher.guard")] {
         let sig=verify_macos_code_signature(path)?;
         if !sig.valid||!sig.hardened_runtime||!sig.library_validation{return Err(format!("macOS Hardened Runtime verification failed: {}",path.display()))}
         if sig.team_identifier.as_deref()!=Some(signing_team.as_str()){return Err(format!("macOS signing team mismatch: {}",path.display()))}
@@ -489,8 +489,8 @@ struct HandshakeContext<'a>{endpoint:&'a str,client_pid:u32,guard_pid:u32,starte
 #[derive(Clone, Copy)]
 struct ReadyProofState{pid:u32,started:u64,policy_version:u32,policy_enforced:bool,hardening_version:u32,hardening_enforced:bool,secure_acl:bool}
 fn prefix(o:&mut Vec<u8>,v:&[u8]){o.extend_from_slice(&(v.len() as u32).to_le_bytes());o.extend_from_slice(v)}
-fn transcript(label:&[u8],c:&HandshakeContext<'_>)->Vec<u8>{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher Guard IPC v4\0");prefix(&mut d,label);prefix(&mut d,c.endpoint.as_bytes());d.extend_from_slice(&c.client_pid.to_le_bytes());d.extend_from_slice(&c.guard_pid.to_le_bytes());d.extend_from_slice(&c.started.to_le_bytes());d.extend_from_slice(c.client_nonce);d.extend_from_slice(c.server_nonce);d}
+fn transcript(label:&[u8],c:&HandshakeContext<'_>)->Vec<u8>{let mut d=Vec::new();d.extend_from_slice(b"Launcher Guard IPC v4\0");prefix(&mut d,label);prefix(&mut d,c.endpoint.as_bytes());d.extend_from_slice(&c.client_pid.to_le_bytes());d.extend_from_slice(&c.guard_pid.to_le_bytes());d.extend_from_slice(&c.started.to_le_bytes());d.extend_from_slice(c.client_nonce);d.extend_from_slice(c.server_nonce);d}
 fn hmac(key:&[u8],msg:&[u8])->[u8;32]{let mut m=Hmac::<Sha256>::new_from_slice(key).unwrap();m.update(msg);let x=m.finalize().into_bytes();let mut o=[0u8;32];o.copy_from_slice(&x);o}
 fn proof(k:&[u8;32],l:&[u8],c:&HandshakeContext<'_>)->[u8;32]{hmac(k,&transcript(l,c))}fn session_key(k:&[u8;32],c:&HandshakeContext<'_>)->[u8;32]{proof(k,b"session-key",c)}
-fn ready_proof(k:&[u8;32],s:ReadyProofState)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher Guard IPC ready v4\0");d.extend_from_slice(&s.pid.to_le_bytes());d.extend_from_slice(&s.started.to_le_bytes());d.extend_from_slice(&s.policy_version.to_le_bytes());d.push(u8::from(s.policy_enforced));d.extend_from_slice(&s.hardening_version.to_le_bytes());d.push(u8::from(s.hardening_enforced));d.push(u8::from(s.secure_acl));hmac(k,&d)}
-fn request_mac(k:&[u8;32],seq:u64,id:&str,c:&str,p:&str)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher Guard IPC request v4\0");d.extend_from_slice(&seq.to_le_bytes());prefix(&mut d,id.as_bytes());prefix(&mut d,c.as_bytes());prefix(&mut d,p.as_bytes());hmac(k,&d)}fn response_mac(k:&[u8;32],seq:u64,id:&str,ok:bool,p:&str)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher Guard IPC response v4\0");d.extend_from_slice(&seq.to_le_bytes());prefix(&mut d,id.as_bytes());d.push(u8::from(ok));prefix(&mut d,p.as_bytes());hmac(k,&d)}fn integrity_proof(k:&[u8;32],d:&[u8;32])->[u8;32]{let mut x=b"NeverLauncher Guard integrity evidence session v1\0".to_vec();x.extend_from_slice(d);hmac(k,&x)}fn attestation_proof(k:&[u8;32],d:&[u8;32])->[u8;32]{let mut x=b"NeverLauncher Guard remote attestation session v1\0".to_vec();x.extend_from_slice(d);hmac(k,&x)}fn ct_eq(a:&[u8],b:&[u8])->bool{a.len()==b.len()&&bool::from(a.ct_eq(b))}fn now_unix()->Result<u64,String>{SystemTime::now().duration_since(UNIX_EPOCH).map(|d|d.as_secs()).map_err(|e|e.to_string())}
+fn ready_proof(k:&[u8;32],s:ReadyProofState)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"Launcher Guard IPC ready v4\0");d.extend_from_slice(&s.pid.to_le_bytes());d.extend_from_slice(&s.started.to_le_bytes());d.extend_from_slice(&s.policy_version.to_le_bytes());d.push(u8::from(s.policy_enforced));d.extend_from_slice(&s.hardening_version.to_le_bytes());d.push(u8::from(s.hardening_enforced));d.push(u8::from(s.secure_acl));hmac(k,&d)}
+fn request_mac(k:&[u8;32],seq:u64,id:&str,c:&str,p:&str)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"Launcher Guard IPC request v4\0");d.extend_from_slice(&seq.to_le_bytes());prefix(&mut d,id.as_bytes());prefix(&mut d,c.as_bytes());prefix(&mut d,p.as_bytes());hmac(k,&d)}fn response_mac(k:&[u8;32],seq:u64,id:&str,ok:bool,p:&str)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"Launcher Guard IPC response v4\0");d.extend_from_slice(&seq.to_le_bytes());prefix(&mut d,id.as_bytes());d.push(u8::from(ok));prefix(&mut d,p.as_bytes());hmac(k,&d)}fn integrity_proof(k:&[u8;32],d:&[u8;32])->[u8;32]{let mut x=b"Launcher Guard integrity evidence session v1\0".to_vec();x.extend_from_slice(d);hmac(k,&x)}fn attestation_proof(k:&[u8;32],d:&[u8;32])->[u8;32]{let mut x=b"Launcher Guard remote attestation session v1\0".to_vec();x.extend_from_slice(d);hmac(k,&x)}fn ct_eq(a:&[u8],b:&[u8])->bool{a.len()==b.len()&&bool::from(a.ct_eq(b))}fn now_unix()->Result<u64,String>{SystemTime::now().duration_since(UNIX_EPOCH).map(|d|d.as_secs()).map_err(|e|e.to_string())}

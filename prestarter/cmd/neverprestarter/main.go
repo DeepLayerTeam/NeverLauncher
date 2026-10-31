@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/DeepLayerTeam/NeverLauncher/prestarter"
+	"github.com/DeepLayerTeam/Launcher/prestarter"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -54,7 +54,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "neverprestarter "+version+": "+err.Error())
 		os.Exit(1)
 	}
-	fmt.Println("NeverLauncher bootstrap complete")
+	fmt.Println("Launcher bootstrap complete")
 }
 
 func applicationRoot() (string, error) {
@@ -65,15 +65,15 @@ func applicationRoot() (string, error) {
 	switch runtime.GOOS {
 	case "windows":
 		if base := os.Getenv("LOCALAPPDATA"); filepath.IsAbs(base) {
-			return filepath.Join(base, "NeverLauncher"), nil
+			return filepath.Join(base, "Launcher"), nil
 		}
-		return filepath.Join(home, "AppData", "Local", "NeverLauncher"), nil
+		return filepath.Join(home, "AppData", "Local", "Launcher"), nil
 	case "darwin":
-		return filepath.Join(home, "Library", "Application Support", "NeverLauncher"), nil
+		return filepath.Join(home, "Library", "Application Support", "Launcher"), nil
 	default:
 		if base := os.Getenv("XDG_DATA_HOME"); filepath.IsAbs(base) {
-			return filepath.Join(base, "NeverLauncher"), nil
+			return filepath.Join(base, "Launcher"), nil
 		}
-		return filepath.Join(home, ".local", "share", "NeverLauncher"), nil
+		return filepath.Join(home, ".local", "share", "Launcher"), nil
 	}
 }

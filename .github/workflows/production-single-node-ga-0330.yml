@@ -1,16 +1,16 @@
-name: NeverLauncher 0.33.0 Single-Node GA verifier
+name: Launcher 0.33.0 Single-Node GA verifier
 on:
   push:
     paths:
       - 'scripts/ga/single_node_ga_0330.py'
       - 'scripts/ga/test_single_node_ga_0330.py'
-      - 'cli/cmd/neverlauncher/release_single_node_ga_0330.go'
+      - 'cli/cmd/launcher/release_single_node_ga_0330.go'
       - 'scripts/release/build-release.sh'
       - '.github/workflows/production-single-node-ga-0330.yml'
   pull_request:
     paths:
       - 'scripts/ga/**'
-      - 'cli/cmd/neverlauncher/release_single_node_ga_0330.go'
+      - 'cli/cmd/launcher/release_single_node_ga_0330.go'
       - '.github/workflows/production-single-node-ga-0330.yml'
   workflow_dispatch:
 permissions:

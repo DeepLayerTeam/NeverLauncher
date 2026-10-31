@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "id": "neverlauncher_quilt_bridge",
+  "id": "launcher_quilt_bridge",
   "version": "${version}",
-  "name": "NeverLauncher Quilt Server Bridge",
-  "description": "Server-only NeverLauncher ServerBridge adapter for Quilt Loader.",
+  "name": "Launcher Quilt Server Bridge",
+  "description": "Server-only Launcher ServerBridge adapter for Quilt Loader.",
   "environment": "server",
-  "entrypoints": {"main": ["ru.neverlauncher.bridge.quilt.NeverLauncherQuiltBridge"]},
-  "mixins": ["neverlauncher.quilt.mixins.json"],
+  "entrypoints": {"main": ["ru.launcher.bridge.quilt.LauncherQuiltBridge"]},
+  "mixins": ["launcher.quilt.mixins.json"],
   "depends": {
     "quilt_loader": ">=0.26.0",
     "minecraft": "~1.21.1",
     "fabric-api": "*",
     "java": ">=21"
   },
-  "custom": {"neverlauncher": {"platform": "quilt", "serverOnly": true, "clientModRequired": false, "universalAdapter": true}}
+  "custom": {"launcher": {"platform": "quilt", "serverOnly": true, "clientModRequired": false, "universalAdapter": true}}
 }

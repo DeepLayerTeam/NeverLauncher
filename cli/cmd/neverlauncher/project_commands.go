@@ -32,7 +32,7 @@ func handleProject(args []string) error {
 		return nil
 	}
 	if len(args) < 1 || args[0] != "validate" {
-		return errors.New("использование: neverlauncher project validate --target 1.0 project.json | neverlauncher project publish --project demo --channel stable")
+		return errors.New("использование: launcher project validate --target 1.0 project.json | launcher project publish --project demo --channel stable")
 	}
 	if len(args) < 2 {
 		return errors.New("project validate требует путь к project.json")
@@ -99,7 +99,7 @@ func canonicalOpenAPIErrors(data []byte) []string {
 
 func handleAPI(args []string) error {
 	if len(args) < 1 || args[0] != "compatibility-check" {
-		return errors.New("использование: neverlauncher api compatibility-check --openapi schemas/openapi.yaml --target 1.0.0")
+		return errors.New("использование: launcher api compatibility-check --openapi schemas/openapi.yaml --target 1.0.0")
 	}
 	openapiPath := flagValue(args, "--openapi", "schemas/openapi.yaml")
 	target := flagValue(args, "--target", "1.0.0")
@@ -169,7 +169,7 @@ func defaultTenantProfile() TenantProfile {
 	return TenantProfile{
 		SchemaVersion: "1.0",
 		TenantID:      "demo-tenant",
-		Name:          "Демо-проект NeverLauncher",
+		Name:          "Демо-проект Launcher",
 		OwnerEmail:    "admin@example.ru",
 		Projects:      []string{"demo-project"},
 		Storage:       TenantStorage{Driver: "local", Prefix: "tenants/demo-tenant"},
@@ -274,8 +274,8 @@ func defaultBrandingProfile() BrandingProfile {
 	return BrandingProfile{
 		SchemaVersion: "1.0",
 		ProjectID:     "demo-project",
-		ProductName:   "NeverLauncher",
-		WindowTitle:   "NeverLauncher",
+		ProductName:   "Launcher",
+		WindowTitle:   "Launcher",
 		Logo:          "assets/branding/logo.png",
 		Icon:          "assets/branding/icon.png",
 		PrimaryColor:  "#0f172a",
@@ -358,7 +358,7 @@ func handleSDK(args []string) error {
 		return handleExtensionSDK02010("init", args[1:])
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("sdk validate требует путь к каталогу расширения или neverlauncher-extension.json")
+			return errors.New("sdk validate требует путь к каталогу расширения или launcher-extension.json")
 		}
 		manifest, path, digest, err := loadCanonicalExtension0201(args[1])
 		if err != nil {
@@ -387,19 +387,19 @@ func sdkEntrypoint(target string) string {
 }
 
 func sdkReadme(target string) string {
-	return "# Расширение NeverLauncher\\n\\nЦель: " + target + "\\n\\nФайл `neverlauncher-extension.json` описывает расширение. Исходный файл entrypoint создаётся как стартовый шаблон для SDK NeverLauncher 3.7.\\n"
+	return "# Расширение Launcher\\n\\nЦель: " + target + "\\n\\nФайл `launcher-extension.json` описывает расширение. Исходный файл entrypoint создаётся как стартовый шаблон для SDK Launcher 3.7.\\n"
 }
 
 func sdkTemplate(target string) string {
 	switch target {
 	case "backend":
-		return backendTemplate02010("ru.example.neverlauncher.backend")
+		return backendTemplate02010("ru.example.launcher.backend")
 	case "cli":
 		return cliTemplate02010()
 	case "admin":
-		return uiTemplate02010("admin", "NeverLauncher Admin extension")
+		return uiTemplate02010("admin", "Launcher Admin extension")
 	case "desktop":
-		return uiTemplate02010("desktop", "NeverLauncher Desktop extension")
+		return uiTemplate02010("desktop", "Launcher Desktop extension")
 	default:
 		return ""
 	}
@@ -456,7 +456,7 @@ func handlePlugin(args []string) error {
 			printJSON(map[string]any{"valid": false, "legacy": true, "errors": errs})
 			return errors.New("legacy plugin manifest не прошёл проверку")
 		}
-		printJSON(map[string]any{"valid": true, "legacy": true, "deprecated": true, "id": manifest.ID, "target": manifest.Target, "api": manifest.API, "migration": "nl extension import-legacy <neverlauncher-plugin.json> --publisher <publisher>"})
+		printJSON(map[string]any{"valid": true, "legacy": true, "deprecated": true, "id": manifest.ID, "target": manifest.Target, "api": manifest.API, "migration": "nl extension import-legacy <launcher-plugin.json> --publisher <publisher>"})
 		return nil
 	default:
 		return fmt.Errorf("неизвестная plugin-подкоманда: %s", args[0])

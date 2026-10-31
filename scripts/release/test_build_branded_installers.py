@@ -64,7 +64,7 @@ class NativePackageTests(unittest.TestCase):
                 "arch": "amd64",
                 "components": [
                     {"name": name, **art(component, name)}
-                    for name in ("neverruntime", "desktop", "guard")
+                    for name in ("runtime", "desktop", "guard")
                 ],
             }
             config = {

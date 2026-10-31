@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	PackageFormatName         = "NeverLauncher Extension Package"
+	PackageFormatName         = "Launcher Extension Package"
 	PackageFormatVersion      = "1.0"
 	ManifestSchemaVersion     = "2.0"
 	HostProtocolVersion       = "1.0"

@@ -12,7 +12,7 @@ dependencyResolutionManagement {
         maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
     }
 }
-rootProject.name = "NeverLauncher"
+rootProject.name = "Launcher"
 include("plugins:bridge-common")
 include("plugins:proxy-family-common")
 include("plugins:bungee-family-common")

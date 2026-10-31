@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func TestMinimalInstallationSQLite0375(t *testing.T) {
@@ -26,7 +26,7 @@ func TestMinimalInstallationSQLite0375(t *testing.T) {
 	}
 	now := time.Now().UTC()
 	user := model.User{ID: "admin", Email: "admin@example.test", DisplayName: "Owner", Status: "active", RoleID: "owner", PasswordHash: "hash-not-a-real-secret", CreatedAt: now, UpdatedAt: now}
-	identity := model.AuthIdentity{ID: "identity-local-admin", UserID: "admin", Issuer: "neverlauncher", Provider: "local", Subject: "admin", Email: user.Email}
+	identity := model.AuthIdentity{ID: "identity-local-admin", UserID: "admin", Issuer: "launcher", Provider: "local", Subject: "admin", Email: user.Email}
 	if _, err = r.BootstrapMinimalAdmin0375(ctx, user, identity, "wrong", "installer"); err == nil {
 		t.Fatal("invalid token accepted")
 	}

@@ -17,8 +17,8 @@ import (
 	"strings"
 )
 
-const compatSchema0279 = "neverlauncher.authlib-classloader.v1"
-const compatReceiptPath0279 = ".neverlauncher/compatibility.json"
+const compatSchema0279 = "launcher.authlib-classloader.v1"
+const compatReceiptPath0279 = ".launcher/compatibility.json"
 
 type compatArtifact0279 struct {
 	Path   string `json:"path"`
@@ -145,17 +145,17 @@ func compatValidateLock0279(lock *compatLock0279) error {
 		return nil
 	}
 	for _, entry := range lock.Classpath {
-		if err := register(entry.Path, entry.SHA256, ".neverlauncher/compat/classpath/"); err != nil {
+		if err := register(entry.Path, entry.SHA256, ".launcher/compat/classpath/"); err != nil {
 			return err
 		}
 	}
 	for _, entry := range lock.Modulepath {
-		if err := register(entry.Path, entry.SHA256, ".neverlauncher/compat/modules/"); err != nil {
+		if err := register(entry.Path, entry.SHA256, ".launcher/compat/modules/"); err != nil {
 			return err
 		}
 	}
 	for _, entry := range lock.JavaAgents {
-		if err := register(entry.Path, entry.SHA256, ".neverlauncher/compat/agents/"); err != nil {
+		if err := register(entry.Path, entry.SHA256, ".launcher/compat/agents/"); err != nil {
 			return err
 		}
 		if strings.ContainsAny(entry.Options, "\r\n\x00") || len(entry.Options) > 2048 || strings.Contains(entry.Options, "${") {
@@ -324,7 +324,7 @@ func verifyCompat0279(root string, p factoryPlan0271) error {
 		if _, err := mirrorCheckedHash0274(full, sum); err != nil {
 			return fmt.Errorf("compatibility artifact %s: %w", rel, err)
 		}
-		return verifyCompatibilityJar0279(full, strings.HasPrefix(rel, ".neverlauncher/compat/agents/"))
+		return verifyCompatibilityJar0279(full, strings.HasPrefix(rel, ".launcher/compat/agents/"))
 	}
 	for _, a := range actual.Classpath {
 		if err := check(a.Path, a.SHA256); err != nil {
@@ -370,7 +370,7 @@ func compatApply0279(ctx context.Context, stage string, p factoryPlan0271, req c
 		}
 		_, err = mirrorCopyVerified0274(ctx, dst, mirrorArtifact0274{Path: entry.Path, File: entry.SourceFile, SHA256: result.SHA256})
 		if err == nil {
-			err = verifyCompatibilityJar0279(dst, prefix == ".neverlauncher/compat/agents/")
+			err = verifyCompatibilityJar0279(dst, prefix == ".launcher/compat/agents/")
 		}
 		if err == nil {
 			actions = append(actions, mirrorAction0274{Kind: "compat-artifact", Path: entry.Path, After: result.SHA256})
@@ -378,21 +378,21 @@ func compatApply0279(ctx context.Context, stage string, p factoryPlan0271, req c
 		return result, err
 	}
 	for _, entry := range req.Classpath {
-		installed, err := install(entry, ".neverlauncher/compat/classpath/")
+		installed, err := install(entry, ".launcher/compat/classpath/")
 		if err != nil {
 			return nil, err
 		}
 		lock.Classpath = append(lock.Classpath, installed)
 	}
 	for _, entry := range req.Modulepath {
-		installed, err := install(entry, ".neverlauncher/compat/modules/")
+		installed, err := install(entry, ".launcher/compat/modules/")
 		if err != nil {
 			return nil, err
 		}
 		lock.Modulepath = append(lock.Modulepath, installed)
 	}
 	for _, entry := range req.JavaAgents {
-		installed, err := install(compatInputArtifact0279{Path: entry.Path, SHA256: entry.SHA256, SourceFile: entry.SourceFile}, ".neverlauncher/compat/agents/")
+		installed, err := install(compatInputArtifact0279{Path: entry.Path, SHA256: entry.SHA256, SourceFile: entry.SourceFile}, ".launcher/compat/agents/")
 		if err != nil {
 			return nil, err
 		}
@@ -519,8 +519,8 @@ func attachCompatToPlan0279(root string, p *factoryPlan0271) error {
 // The verified provenance for byte-transforming the authlib archive is kept
 // separate from author-supplied patch bytes, so it can be checked at every
 // subsequent read/launch, even for builds without custom Java agents.
-const authlibProvenancePath0279 = ".neverlauncher/authlib-provenance.json"
-const authlibProvenanceSchema0279 = "neverlauncher.authlib-provenance.v1"
+const authlibProvenancePath0279 = ".launcher/authlib-provenance.json"
+const authlibProvenanceSchema0279 = "launcher.authlib-provenance.v1"
 
 type authlibChange0279 struct {
 	Rule         string `json:"rule"`
@@ -602,7 +602,7 @@ func verifyAuthlibProvenance0279(root string, p factoryPlan0271) error {
 		if item.Rule != "authlib-class-overlay.sha256.v1" || !strings.HasPrefix(item.Path, "libraries/com/mojang/authlib/") || !strings.HasSuffix(item.Path, ".jar") || !isSHA256Hex0271(item.BeforeSHA256) || !isSHA256Hex0271(item.AfterSHA256) || !isSHA256Hex0271(item.PatchSHA256) {
 			return fmt.Errorf("invalid authlib provenance entry %d", i)
 		}
-		patchRel := ".neverlauncher/compat/patches/" + item.PatchSHA256 + ".jar"
+		patchRel := ".launcher/compat/patches/" + item.PatchSHA256 + ".jar"
 		if pinned, ok := known[patchRel]; !ok || pinned.SHA256 != item.PatchSHA256 {
 			return fmt.Errorf("unlocked authlib patch bytes %s", patchRel)
 		}

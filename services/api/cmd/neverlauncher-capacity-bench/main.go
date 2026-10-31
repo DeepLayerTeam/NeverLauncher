@@ -1,4 +1,4 @@
-// neverlauncher-capacity-bench is an opt-in, bounded, read-only HTTP load probe.
+// launcher-capacity-bench is an opt-in, bounded, read-only HTTP load probe.
 // It measures only the SELECTED endpoint and is not a claim of global capacity.
 package main
 

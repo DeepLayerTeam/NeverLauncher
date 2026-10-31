@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
@@ -62,8 +62,8 @@ func TestTextureServiceOwnershipAndLifecyclePostgres0255(t *testing.T) {
 		}
 	}
 	r := &SQLRepository{db: db, publicURL: "https://launcher.example"}
-	alice := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "alice", Name: "Alice", Realm: "local", Issuer: "neverlauncher"}
-	bob := model.MinecraftProfile{UUID: "99999999-aaaa-4bbb-8ccc-dddddddddddd", UserID: "bob", Name: "Bob", Realm: "local", Issuer: "neverlauncher"}
+	alice := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "alice", Name: "Alice", Realm: "local", Issuer: "launcher"}
+	bob := model.MinecraftProfile{UUID: "99999999-aaaa-4bbb-8ccc-dddddddddddd", UserID: "bob", Name: "Bob", Realm: "local", Issuer: "launcher"}
 	sum := sha256.Sum256([]byte("normalized-mock-texture-bytes"))
 	digest := hex.EncodeToString(sum[:])
 	input := VerifiedTexture0252{Digest: digest, Size: 30, Width: 64, Height: 64, Driver: "local", ObjectKey: "texture-blobs/sha256/" + digest[:2] + "/" + digest + ".png", Kind: "skin", Model: "classic", Visibility: "public", ExpectedRevision: 0}

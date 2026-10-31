@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionsecurity"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 func TestDesktopBridgeRevocationAndGeneration0356(t *testing.T) {
@@ -45,7 +45,7 @@ func TestDesktopBridgeRevocationAndGeneration0356(t *testing.T) {
 	if _, err := repo.SaveUser(user); err != nil {
 		t.Fatal(err)
 	}
-	srv := Server{Repo: repo, State: state, ExtensionSecurity: sec, Config: config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "012345678901234567890123456789012345", AuthTokenIssuer: "https://issuer.example.test", AuthTokenAudience: "neverlauncher-api"}}
+	srv := Server{Repo: repo, State: state, ExtensionSecurity: sec, Config: config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "012345678901234567890123456789012345", AuthTokenIssuer: "https://issuer.example.test", AuthTokenAudience: "launcher-api"}}
 	login := httptest.NewRequest(http.MethodPost, "https://api.example.test/login", nil)
 	login.RemoteAddr = "203.0.113.1:12345"
 	session, _, err := state.AuthSessions.createWithAuth(user, login, "Desktop", []string{"password"}, "single-factor", time.Now().UTC(), "identity", "local")

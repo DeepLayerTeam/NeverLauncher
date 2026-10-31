@@ -1,4 +1,4 @@
-// Package installer verifies and installs offline signed NeverLauncher bundles.
+// Package installer verifies and installs offline signed Launcher bundles.
 // The trust root MUST be passed independently from the release bundle.
 package installer
 
@@ -147,7 +147,7 @@ func Verify(archive, trustKey string) (*Verified, error) {
 	if err := json.Unmarshal(raw, &manifest); err != nil {
 		return nil, err
 	}
-	if manifest.Format != "neverlauncher-offline-bundle-v1" || !validVersion(manifest.Version) || len(manifest.Files) == 0 {
+	if manifest.Format != "launcher-offline-bundle-v1" || !validVersion(manifest.Version) || len(manifest.Files) == 0 {
 		return nil, errors.New("invalid signed manifest")
 	}
 	if len(entries) != len(manifest.Files)+2 {
@@ -200,7 +200,7 @@ func (v *Verified) Install(target string) error {
 	if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 || st.Mode().Perm()&0022 != 0 {
 		return errors.New("destination parent is unsafe")
 	}
-	temp, err := os.MkdirTemp(parent, ".neverlauncher-stage-")
+	temp, err := os.MkdirTemp(parent, ".launcher-stage-")
 	if err != nil {
 		return err
 	}
@@ -291,7 +291,7 @@ func Pack(source, version, privateKey, destination string) error {
 		return err
 	}
 	var manifest Manifest
-	manifest.Format = "neverlauncher-offline-bundle-v1"
+	manifest.Format = "launcher-offline-bundle-v1"
 	manifest.Version = version
 	payload := make(map[string][]byte)
 	var total int64

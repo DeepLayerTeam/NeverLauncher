@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // Exercises the production PostgreSQL identity constraints using separate

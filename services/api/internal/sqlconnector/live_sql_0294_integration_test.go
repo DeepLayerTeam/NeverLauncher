@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 // Run against real database servers by setting the DSNs. CI runs all three.

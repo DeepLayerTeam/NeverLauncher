@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: Сообщить об уязвимости
-    url: https://github.com/DeepLayerTeam/NeverLauncher/security/advisories/new
+    url: https://github.com/DeepLayerTeam/Launcher/security/advisories/new
     about: Сообщайте о возможных уязвимостях конфиденциально, не публикуйте способы эксплуатации в открытых задачах.
   - name: Документация проекта
-    url: https://github.com/DeepLayerTeam/NeverLauncher/blob/main/docs/README.md
+    url: https://github.com/DeepLayerTeam/Launcher/blob/main/docs/README.md
     about: Перед созданием задачи ознакомьтесь с руководствами по установке, эксплуатации и разработке.
   - name: Общие обсуждения проекта
-    url: https://github.com/DeepLayerTeam/NeverLauncher/discussions
+    url: https://github.com/DeepLayerTeam/Launcher/discussions
     about: Задавайте вопросы и обсуждайте предложения, если раздел обсуждений включён.

@@ -1,5 +1,5 @@
 [package]
-name = "neverlauncher-desktop-extension-sdk"
+name = "launcher-desktop-extension-sdk"
 version = "0.21.0"
 edition = "2021"
 license = "MIT"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the checked-in OpenAPI 3.1 contract for the canonical NeverLauncher API v1."""
+"""Generate the checked-in OpenAPI 3.1 contract for the canonical Launcher API v1."""
 
 from __future__ import annotations
 import json, re
@@ -993,7 +993,7 @@ for method, path in routes:
         )
     if path == "/api/v1/session/join":
         op["description"] = (
-            "NeverLauncher 0.14.3 One-Time Join Tickets: issues a short-lived identity-bound ServerBridge authorization that can be redeemed exactly once by the active cryptographic node identity."
+            "Launcher 0.14.3 One-Time Join Tickets: issues a short-lived identity-bound ServerBridge authorization that can be redeemed exactly once by the active cryptographic node identity."
         )
     elif path == "/sessionserver/session/minecraft/hasJoined":
         op["description"] = (
@@ -1138,8 +1138,8 @@ for method, path in routes:
                             "artifact": {"type": "string", "format": "binary"},
                             "publisher": {"type": "string"},
                             "channels": {"type": "string"},
-                            "minNeverLauncher": {"type": "string"},
-                            "maxNeverLauncher": {"type": "string"},
+                            "minLauncher": {"type": "string"},
+                            "maxLauncher": {"type": "string"},
                             "os": {"type": "string"},
                             "arch": {"type": "string"},
                         },
@@ -1708,7 +1708,7 @@ schemas = {
             },
             "deviceSignature": {
                 "type": "string",
-                "description": "base64url signature by the current trusted-device key over the canonical NeverLauncher Session Device Binding v1 refresh payload",
+                "description": "base64url signature by the current trusted-device key over the canonical Launcher Session Device Binding v1 refresh payload",
             },
         },
     },
@@ -2147,7 +2147,7 @@ schemas = {
         "type": "object",
         "required": ["format", "snapshot"],
         "properties": {
-            "format": {"const": "neverlauncher.profile.v1"},
+            "format": {"const": "launcher.profile.v1"},
             "snapshot": ref("ProfileSnapshot0225"),
         },
         "additionalProperties": False,
@@ -3117,11 +3117,11 @@ schemas = {
 spec = {
     "openapi": "3.1.1",
     "info": {
-        "title": "NeverLauncher API",
+        "title": "Launcher API",
         "version": "1.0.0",
-        "description": f"Канонический production API NeverLauncher {PRODUCT_VERSION}. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт.",
+        "description": f"Канонический production API Launcher {PRODUCT_VERSION}. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт.",
     },
-    "servers": [{"url": "/", "description": "Текущий Backend NeverLauncher"}],
+    "servers": [{"url": "/", "description": "Текущий Backend Launcher"}],
     "tags": [
         {"name": x}
         for x in [
@@ -3143,37 +3143,37 @@ spec = {
             "NodeId": {
                 "type": "apiKey",
                 "in": "header",
-                "name": "X-NeverLauncher-Node-Id",
+                "name": "X-Launcher-Node-Id",
                 "description": "ServerBridge node id included in the Ed25519 canonical request.",
             },
             "NodeKeyFingerprint": {
                 "type": "apiKey",
                 "in": "header",
-                "name": "X-NeverLauncher-Node-Key-Fingerprint",
+                "name": "X-Launcher-Node-Key-Fingerprint",
                 "description": "Lowercase SHA-256 fingerprint of the registered raw Ed25519 public key.",
             },
             "NodeTimestamp": {
                 "type": "apiKey",
                 "in": "header",
-                "name": "X-NeverLauncher-Node-Timestamp",
+                "name": "X-Launcher-Node-Timestamp",
                 "description": "Unix timestamp in seconds; must be within the ServerBridge signing window.",
             },
             "NodeNonce": {
                 "type": "apiKey",
                 "in": "header",
-                "name": "X-NeverLauncher-Node-Nonce",
+                "name": "X-Launcher-Node-Nonce",
                 "description": "Fresh unpadded base64url nonce, consumed once by PostgreSQL replay protection.",
             },
             "NodeSignature": {
                 "type": "apiKey",
                 "in": "header",
-                "name": "X-NeverLauncher-Node-Signature",
+                "name": "X-Launcher-Node-Signature",
                 "description": "Unpadded base64url Ed25519 signature over the legacy Node-v1 domain or the Protocol v3 canonical signing domain negotiated by the bridge.",
             },
             "BootstrapToken": {
                 "type": "apiKey",
                 "in": "header",
-                "name": "X-NeverLauncher-Bootstrap-Token",
+                "name": "X-Launcher-Bootstrap-Token",
             },
         },
         "schemas": schemas,

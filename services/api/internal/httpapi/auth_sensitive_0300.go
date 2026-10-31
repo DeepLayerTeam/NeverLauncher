@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authrequest"
+	"gitflic.ru/skif4er/launcher/services/api/internal/authrequest"
 )
 
 // decodeSensitiveRequest0300 refuses ambiguous/oversized JSON before credential

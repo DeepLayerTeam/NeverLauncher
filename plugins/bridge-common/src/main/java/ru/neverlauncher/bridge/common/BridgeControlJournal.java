@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -222,7 +222,7 @@ final class BridgeControlJournal implements AutoCloseable {
         Path tmp = path.resolveSibling(path.getFileName() + "." + java.util.UUID.randomUUID() + ".tmp");
         try {
             try (var out = Files.newOutputStream(tmp, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
-                props.store(out, "NeverLauncher ServerBridge control journal");
+                props.store(out, "Launcher ServerBridge control journal");
             }
             setOwnerOnly(tmp);
             try (var ch = FileChannel.open(tmp, StandardOpenOption.WRITE)) { ch.force(true); }

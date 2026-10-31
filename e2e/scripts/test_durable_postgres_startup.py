@@ -57,7 +57,7 @@ class DurablePostgresStartupTests(unittest.TestCase):
             go.write_text(
                 "#!/usr/bin/env bash\n"
                 "printf '%s\\n' \"${NEVERLAUNCHER_DURABLE_DSN:-}\" "
-                "> \"$MOCK_DSN_FILE\"\n",
+                '> "$MOCK_DSN_FILE"\n',
                 encoding="utf-8",
             )
             go.chmod(0o755)
@@ -83,27 +83,29 @@ class DurablePostgresStartupTests(unittest.TestCase):
                 timeout=30,
             )
             attempts = int((path / "count").read_text())
-            dsn = (path / "dsn").read_text().strip() if (path / "dsn").is_file() else None
+            dsn = (
+                (path / "dsn").read_text().strip() if (path / "dsn").is_file() else None
+            )
             return result, attempts, dsn
 
     def test_ephemeral_published_port_is_used_for_connection(self):
         result, attempts, dsn = self.run_case()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(attempts, 1)
-        self.assertIn("@127.0.0.1:49151/neverlauncher", dsn)
+        self.assertIn("@127.0.0.1:49151/launcher", dsn)
 
     def test_explicit_port_is_preserved(self):
         result, attempts, dsn = self.run_case(explicit_port="55444")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(attempts, 1)
-        self.assertIn("@127.0.0.1:55444/neverlauncher", dsn)
+        self.assertIn("@127.0.0.1:55444/launcher", dsn)
 
     def test_transient_docker_failure_retries_and_recovers(self):
         result, attempts, dsn = self.run_case(fail_first=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(attempts, 2)
         self.assertIn("mock Docker rejected the first startup", result.stderr)
-        self.assertIn("@127.0.0.1:49151/neverlauncher", dsn)
+        self.assertIn("@127.0.0.1:49151/launcher", dsn)
 
     def test_persistent_failure_remains_fail_closed(self):
         result, attempts, dsn = self.run_case(fail_all=True)

@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -62,7 +62,7 @@ public final class ServerBridgeSecurityCertification01912Harness {
             sign(attacker, revokedRotationCanonical), sign(keyA, revokedRotationCanonical)), "retired previous key cannot authorize rotation after finalize");
         require(!trust.verifyCapabilities(BridgeProtocolSecurity.PROFILE, "0".repeat(64), keyB.publicKey, keyB.fingerprint, "", "", sign(keyB, finalizedCanonical), ""), "capability downgrade rejected");
 
-        Path bridgeArtifact = root.resolve("neverlauncher-" + target + "-bridge-0.19.12.jar");
+        Path bridgeArtifact = root.resolve("launcher-" + target + "-bridge-0.19.12.jar");
         Files.writeString(bridgeArtifact, "certified-" + target, StandardCharsets.UTF_8);
         String certifiedArtifactHash = BridgeIntegrity.sha256(bridgeArtifact);
         Files.writeString(bridgeArtifact, "tamper", StandardCharsets.UTF_8, java.nio.file.StandardOpenOption.APPEND);

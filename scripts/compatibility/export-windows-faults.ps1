@@ -10,7 +10,7 @@ if ($parent) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
 # Экспортируйте только метаданные. Не загружайте minidump WER из публичного CI: дампы содержат
 # токены аутентификации, учётные данные и другие секреты пользователя или приложения.
 $lines = [System.Collections.Generic.List[string]]::new()
-$lines.Add('NeverLauncher public-CI Windows native fault summary (no memory dumps)')
+$lines.Add('Launcher public-CI Windows native fault summary (no memory dumps)')
 try {
   $events = @(Get-WinEvent -FilterHashtable @{
       LogName = 'Application'

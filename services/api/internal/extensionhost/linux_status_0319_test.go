@@ -3,7 +3,7 @@
 package extensionhost
 
 import (
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/linuxsandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/linuxsandbox"
 
 	"testing"
 )

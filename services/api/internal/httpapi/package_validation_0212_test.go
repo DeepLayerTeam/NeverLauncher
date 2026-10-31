@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func testRuntimeValidationServer0212(t *testing.T) (http.Handler, ed25519.PrivateKey) {
@@ -41,7 +41,7 @@ func testRuntimeValidationServer0212(t *testing.T) (http.Handler, ed25519.Privat
 		AuthTokenSecret:           "test-secret-for-runtime-validation",
 		AuthTokenTTLHours:         1,
 		WebAuthnRPID:              "example.test",
-		WebAuthnRPName:            "NeverLauncher Test",
+		WebAuthnRPName:            "Launcher Test",
 		WebAuthnOrigins:           []string{"http://example.test"},
 		MetricsEnabled:            true,
 		RuntimeValidationKeysJSON: string(keys),
@@ -80,7 +80,7 @@ func createStagedIntegrityPackageInChannel0341(t *testing.T, handler http.Handle
 	writer := multipart.NewWriter(&body)
 	_ = writer.WriteField("path", "mods/honest-validation.jar")
 	part, _ := writer.CreateFormFile("file", "honest-validation.jar")
-	_, _ = part.Write([]byte("neverlauncher-0.21.2-runtime-validation"))
+	_, _ = part.Write([]byte("launcher-0.21.2-runtime-validation"))
 	_ = writer.Close()
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/packages/"+packageID+"/files", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())

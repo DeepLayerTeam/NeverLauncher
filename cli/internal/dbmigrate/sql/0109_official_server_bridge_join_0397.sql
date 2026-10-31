@@ -1,4 +1,4 @@
--- NeverLauncher 0.39.7: verified official identity is not a local Yggdrasil session.
+-- Launcher 0.39.7: verified official identity is not a local Yggdrasil session.
 -- Existing tickets remain local; a profile proof is generated only by Backend.
 ALTER TABLE server_bridge_join_tickets_v2
     ADD COLUMN IF NOT EXISTS identity_realm TEXT NOT NULL DEFAULT 'local',

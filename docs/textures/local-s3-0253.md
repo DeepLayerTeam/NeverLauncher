@@ -1,4 +1,4 @@
-# NeverLauncher 0.25.3 — Local/S3 texture storage operations
+# Launcher 0.25.3 — Local/S3 texture storage operations
 
 The 0.25.3 release adds **operational storage** to the 0.25.2 secure PNG upload pipeline.
 It is a local-project-only service and does not write or impersonate official Mojang textures.
@@ -17,8 +17,8 @@ The project-wide default limits are 20 **unique stored blobs per user** and a **
 Run from `services/api` with the same environment as the API and `NEVERLAUNCHER_DATABASE_DSN` set. Install/build with `go build -o texture-maintenance ./cmd/texture-maintenance-0253`.
 
 ```bash
-./texture-maintenance --command backup --backup /var/backups/neverlauncher/textures-2026-10-23
-./texture-maintenance --command restore --backup /var/backups/neverlauncher/textures-2026-10-23
+./texture-maintenance --command backup --backup /var/backups/launcher/textures-2026-10-23
+./texture-maintenance --command restore --backup /var/backups/launcher/textures-2026-10-23
 ./texture-maintenance --command gc --limit 100
 ```
 

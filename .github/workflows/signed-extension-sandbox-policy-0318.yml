@@ -37,4 +37,4 @@ jobs:
         run: go vet ./internal/extensionpolicy ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionupdates ./internal/extensionhost ./internal/httpapi
       - name: Full backend build
         working-directory: services/api
-        run: go build ./cmd/neverlauncher-api
+        run: go build ./cmd/launcher-api

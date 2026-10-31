@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // StageTextureUpload0253 reserves a verified-in-memory normalized PNG digest
@@ -17,7 +17,7 @@ func (r *SQLRepository) StageTextureUpload0253(ctx context.Context, profile mode
 	if err := r.check(); err != nil {
 		return err
 	}
-	if profile.Realm != "local" || profile.Issuer != "neverlauncher" || profile.UserID == "" {
+	if profile.Realm != "local" || profile.Issuer != "launcher" || profile.UserID == "" {
 		return ErrNotFound
 	}
 	if err := validateTextureSelection0251(input.Kind, input.Model, input.Visibility); err != nil {

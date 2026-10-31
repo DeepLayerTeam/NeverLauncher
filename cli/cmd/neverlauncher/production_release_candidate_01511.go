@@ -242,7 +242,7 @@ func writeProductionReleaseCandidateDocument01511(dir, ver, sourceCommit string)
 	}
 	cert := productionReleaseCandidate01511{
 		SchemaVersion: "1.0",
-		Product:       "NeverLauncher",
+		Product:       "Launcher",
 		Version:       ver,
 		Status:        "production-release-candidate",
 		SourceCommit:  commit,
@@ -281,7 +281,7 @@ func verifyProductionReleaseCandidateDocument01511(dir, ver string) (string, err
 	if err != nil {
 		return "", err
 	}
-	if cert.SchemaVersion != "1.0" || cert.Product != "NeverLauncher" || cert.Version != ver || cert.Status != "production-release-candidate" {
+	if cert.SchemaVersion != "1.0" || cert.Product != "Launcher" || cert.Version != ver || cert.Status != "production-release-candidate" {
 		return "", errors.New("production release candidate metadata mismatch")
 	}
 	if _, err := time.Parse(time.RFC3339, cert.CreatedAt); err != nil {

@@ -220,7 +220,7 @@ func Load() Config {
 		MinecraftMicrosoftClientID:                   env("NEVERLAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID", ""),
 		YggdrasilSigningKeyFile:                      env("NEVERLAUNCHER_YGGDRASIL_RSA_KEY_FILE", ""),
 		YggdrasilTextureDomains:                      envCSV("NEVERLAUNCHER_YGGDRASIL_TEXTURE_DOMAINS"),
-		DatabaseDSN:                                  env("NEVERLAUNCHER_DATABASE_DSN", env("NEVERLAUNCHER_DATABASE_URL", "postgres://neverlauncher:neverlauncher@localhost:5432/neverlauncher?sslmode=disable")),
+		DatabaseDSN:                                  env("NEVERLAUNCHER_DATABASE_DSN", env("NEVERLAUNCHER_DATABASE_URL", "postgres://launcher:launcher@localhost:5432/launcher?sslmode=disable")),
 		RepositoryDriver:                             env("NEVERLAUNCHER_REPOSITORY_DRIVER", "postgres"),
 		SQLDriver:                                    env("NEVERLAUNCHER_SQL_DRIVER", "pgx"),
 		RedisAddr:                                    redisAddr,
@@ -286,7 +286,7 @@ func Load() Config {
 		AuthTokenSecret:                              env("NEVERLAUNCHER_AUTH_TOKEN_SECRET", env("NEVERLAUNCHER_TOKEN_SECRET", env("NEVERLAUNCHER_JWT_SECRET", "dev-only-change-me"))),
 		AuthTokenTTLHours:                            envInt("NEVERLAUNCHER_AUTH_TOKEN_TTL_HOURS", 12),
 		AuthTokenIssuer:                              env("NEVERLAUNCHER_AUTH_TOKEN_ISSUER", strings.TrimRight(publicURL, "/")),
-		AuthTokenAudience:                            env("NEVERLAUNCHER_AUTH_TOKEN_AUDIENCE", "neverlauncher-api"),
+		AuthTokenAudience:                            env("NEVERLAUNCHER_AUTH_TOKEN_AUDIENCE", "launcher-api"),
 		AuthTokenActiveKID:                           env("NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID", "primary"),
 		AuthTokenKeysJSON:                            env("NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON", ""),
 		GuardReleaseAllowlistJSON:                    env("NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON", ""),
@@ -312,7 +312,7 @@ func Load() Config {
 		AuthMicrosoftProvidersJSON:                   env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON", ""),
 		AuthMicrosoftProvidersFile:                   env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE", ""),
 		WebAuthnRPID:                                 env("NEVERLAUNCHER_WEBAUTHN_RP_ID", webauthnRPID),
-		WebAuthnRPName:                               env("NEVERLAUNCHER_WEBAUTHN_RP_NAME", "NeverLauncher"),
+		WebAuthnRPName:                               env("NEVERLAUNCHER_WEBAUTHN_RP_NAME", "Launcher"),
 		WebAuthnOrigins:                              envCSVDefault("NEVERLAUNCHER_WEBAUTHN_ORIGINS", webauthnOrigin),
 	}
 }

@@ -1,4 +1,4 @@
--- NeverLauncher 0.19.5: постоянная идемпотентная очередь управления Backend -> Bridge.
+-- Launcher 0.19.5: постоянная идемпотентная очередь управления Backend -> Bridge.
 CREATE TABLE IF NOT EXISTS server_bridge_control_commands_v3 (
     id TEXT PRIMARY KEY CHECK (length(id) BETWEEN 8 AND 128),
     server_id TEXT NOT NULL REFERENCES server_bridge_nodes_v2(id) ON DELETE CASCADE,

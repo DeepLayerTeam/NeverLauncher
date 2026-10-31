@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 const maxPackageBytes = 16 << 20
@@ -188,7 +188,7 @@ func (r *Repository) SetExtensionPublisherActive(ctx context.Context, id, actor 
 }
 
 func extensionSignatureMessage(id, version, digest string) []byte {
-	return []byte("NeverLauncher/extension-package/0.32.6\n" + id + "\n" + version + "\n" + digest + "\n")
+	return []byte("Launcher/extension-package/0.32.6\n" + id + "\n" + version + "\n" + digest + "\n")
 }
 
 // PublishExtensionPackage verifies the actual persisted bytes and a trusted

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // Requires TEST_PG_DSN_02510 pointing to a disposable PostgreSQL 17+ instance.
@@ -45,7 +45,7 @@ func TestTextureGravitImportPostgres02510(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = db.ExecContext(ctx, `CREATE TABLE users(id TEXT PRIMARY KEY);
-  CREATE TABLE minecraft_profiles(uuid TEXT PRIMARY KEY,user_id TEXT UNIQUE NOT NULL REFERENCES users(id),name TEXT NOT NULL,issuer TEXT NOT NULL DEFAULT 'neverlauncher',realm TEXT NOT NULL DEFAULT 'local',subject TEXT NOT NULL DEFAULT '',identity_version TEXT NOT NULL DEFAULT 'local-v1',created_at TIMESTAMPTZ NOT NULL DEFAULT now(),updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+  CREATE TABLE minecraft_profiles(uuid TEXT PRIMARY KEY,user_id TEXT UNIQUE NOT NULL REFERENCES users(id),name TEXT NOT NULL,issuer TEXT NOT NULL DEFAULT 'launcher',realm TEXT NOT NULL DEFAULT 'local',subject TEXT NOT NULL DEFAULT '',identity_version TEXT NOT NULL DEFAULT 'local-v1',created_at TIMESTAMPTZ NOT NULL DEFAULT now(),updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
   CREATE TABLE server_bridge_textures_v2(player_uuid TEXT PRIMARY KEY,username TEXT NOT NULL,skin_url TEXT NOT NULL,cape_url TEXT NOT NULL,model TEXT NOT NULL,updated_at TIMESTAMPTZ NOT NULL);
   INSERT INTO users(id) VALUES('alice'),('bob');
   INSERT INTO minecraft_profiles(uuid,user_id,name) VALUES('11111111-2222-4333-8444-555555555555','alice','Alice'),('99999999-aaaa-4bbb-8ccc-dddddddddddd','bob','Bob');`)
@@ -62,7 +62,7 @@ func TestTextureGravitImportPostgres02510(t *testing.T) {
 		}
 	}
 	r := &SQLRepository{db: db}
-	p := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "alice", Name: "Alice", Issuer: "neverlauncher", Realm: "local"}
+	p := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "alice", Name: "Alice", Issuer: "launcher", Realm: "local"}
 	sum := sha256.Sum256([]byte("normalized test PNG bytes"))
 	digest := hex.EncodeToString(sum[:])
 	input := VerifiedTexture0252{Digest: digest, Size: 512, Width: 64, Height: 64, Driver: "local", ObjectKey: "texture-blobs/sha256/" + digest[:2] + "/" + digest + ".png", Kind: "skin", Model: "slim", Visibility: "public", Source: "managed-gravit-import", ExpectedRevision: 0, GravitSourceID: "gravit-prod", GravitRowID: "upstream-row", GravitExternalUUID: "11111111-2222-4333-8444-555555555555", GravitOriginalHash: digest}

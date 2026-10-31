@@ -2,12 +2,12 @@ name: Legacy Client Adapters 0.27.8
 on:
   push:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - '.github/workflows/legacy-client-adapters-0278.yml'
       - 'VERSION'
   pull_request:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - '.github/workflows/legacy-client-adapters-0278.yml'
       - 'VERSION'
 permissions:
@@ -28,21 +28,21 @@ jobs:
       - name: Gofmt verification
         if: runner.os == 'Linux'
         shell: bash
-        run: test -z "$(gofmt -l cli/cmd/neverlauncher/legacy_client_adapters_0278*.go cli/cmd/neverlauncher/client_factory_0271.go)"
+        run: test -z "$(gofmt -l cli/cmd/launcher/legacy_client_adapters_0278*.go cli/cmd/launcher/client_factory_0271.go)"
       - name: Legacy, factory, Forge and Vanilla integration fixtures
         working-directory: cli
         shell: bash
         run: >-
-          go test ./cmd/neverlauncher
+          go test ./cmd/launcher
           -run 'TestLegacyAdapters0278|TestClientFactory0271|TestForgeLegacy|TestInstallVanillaPre16AliasAndVirtualAssets'
           -count=1 -timeout=6m
       - name: Static analysis
         working-directory: cli
-        run: go vet ./cmd/neverlauncher
+        run: go vet ./cmd/launcher
       - name: Build CLI
         working-directory: cli
-        run: go build ./cmd/neverlauncher
+        run: go build ./cmd/launcher
       - name: Legacy factory race tests
         if: runner.os == 'Linux'
         working-directory: cli
-        run: go test -race ./cmd/neverlauncher -run 'TestLegacyAdapters0278|TestClientFactory0271' -count=1 -timeout=6m
+        run: go test -race ./cmd/launcher -run 'TestLegacyAdapters0278|TestClientFactory0271' -count=1 -timeout=6m

@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 func (r *SQLRepository) GetMigrationInventory0333(ctx context.Context, id string) (inv.Inventory, error) {

@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{fs, io::Write, path::{Path,PathBuf},time::{SystemTime,UNIX_EPOCH}};
 
-const DOMAIN: &str = "neverlauncher.trust.v1";
-const DOMAIN_SEPARATION: &[u8] = b"NeverLauncher-Trust-Policy-v1\n";
+const DOMAIN: &str = "launcher.trust.v1";
+const DOMAIN_SEPARATION: &[u8] = b"Launcher-Trust-Policy-v1\n";
 
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase", deny_unknown_fields)]
@@ -99,7 +99,7 @@ pub fn verify_manifest(manifest:&Manifest,root_key:&str,signer_hex:&str,signed_a
     }
     Err("game signer not delegated by embedded root".into())
 }
-fn dir(root:&Path)->PathBuf{root.join(".neverlauncher").join("game-trust")}
+fn dir(root:&Path)->PathBuf{root.join(".launcher").join("game-trust")}
 fn slot(root:&Path,i:usize)->PathBuf{dir(root).join(format!("epoch-{i}.json"))}
 fn floor(root:&Path)->Result<Option<Watermark>,String>{
     let mut best:Option<Watermark>=None;

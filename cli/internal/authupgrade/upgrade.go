@@ -1,5 +1,5 @@
 // Package authupgrade performs a real PostgreSQL, read-only preservation scan
-// before a NeverLauncher authentication upgrade and checks it again afterwards.
+// before a Launcher authentication upgrade and checks it again afterwards.
 // It never copies credentials, active sessions or raw account identifiers into
 // the durable checkpoint. The normal sealed migration runner performs writes.
 package authupgrade
@@ -73,7 +73,7 @@ BEGIN
  SELECT count(*) INTO bad FROM (SELECT lower(email) FROM users GROUP BY lower(email) HAVING count(*)>1) t;
  IF bad<>0 THEN RAISE EXCEPTION 'auth upgrade: duplicate account email: %',bad; END IF;
  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='auth_identities' AND column_name='issuer') THEN
-  EXECUTE 'SELECT count(*) FROM auth_identities WHERE issuer IS NULL OR issuer='''' OR issuer<>btrim(issuer) OR length(issuer)>2048 OR issuer ~ ''[[:space:][:cntrl:]]'' OR (provider=''local'' AND issuer<>''neverlauncher'')' INTO bad;
+  EXECUTE 'SELECT count(*) FROM auth_identities WHERE issuer IS NULL OR issuer='''' OR issuer<>btrim(issuer) OR length(issuer)>2048 OR issuer ~ ''[[:space:][:cntrl:]]'' OR (provider=''local'' AND issuer<>''launcher'')' INTO bad;
   IF bad<>0 THEN RAISE EXCEPTION 'auth upgrade: invalid issuer: %',bad; END IF;
   EXECUTE 'SELECT count(*) FROM (SELECT provider,issuer,subject FROM auth_identities GROUP BY provider,issuer,subject HAVING count(*)>1) t' INTO bad;
   IF bad<>0 THEN RAISE EXCEPTION 'auth upgrade: issuer-scoped subject collision: %',bad; END IF;
@@ -86,7 +86,7 @@ $nl$;
 SELECT row_to_json(v)::text FROM (
  SELECT 'meta'::text kind, 'scan-v1'::text a, ''::text b, ''::text c, ''::text d
  UNION ALL SELECT 'user'::text kind, id::text a, email::text b, coalesce(display_name,'')::text c, jsonb_build_array(role_id, md5(coalesce(password_hash,'')))::text d FROM users
- UNION ALL SELECT 'identity', i.id::text, i.user_id::text, i.provider::text, jsonb_build_array(i.subject, coalesce(to_jsonb(i)->>'issuer', CASE WHEN i.provider='local' THEN 'neverlauncher' ELSE 'provider:' || i.provider END))::text FROM auth_identities i
+ UNION ALL SELECT 'identity', i.id::text, i.user_id::text, i.provider::text, jsonb_build_array(i.subject, coalesce(to_jsonb(i)->>'issuer', CASE WHEN i.provider='local' THEN 'launcher' ELSE 'provider:' || i.provider END))::text FROM auth_identities i
  UNION ALL SELECT 'profile', p.user_id::text, p.uuid::text, p.name::text, jsonb_build_array(to_jsonb(p)->>'issuer',to_jsonb(p)->>'realm',to_jsonb(p)->>'subject',to_jsonb(p)->>'identity_version')::text FROM minecraft_profiles p
  UNION ALL SELECT 'provider', provider::text, count(*)::text, '', '' FROM auth_identities GROUP BY provider
  UNION ALL SELECT 'password', format::text, count(*)::text, '', '' FROM (

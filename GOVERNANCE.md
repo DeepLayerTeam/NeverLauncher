@@ -12,4 +12,4 @@
 
 ## Изменения контрактов
 
-Публичные API, схемы миграций, сигнатуры, протокол ServerBridge и interfaces NeverExtensions требуют описания совместимости и негативных тестов. Breaking changes не вносятся скрытно. Дополнительная информация: [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md).
+Публичные API, схемы миграций, сигнатуры, протокол ServerBridge и interfaces Extensions требуют описания совместимости и негативных тестов. Breaking changes не вносятся скрытно. Дополнительная информация: [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -15,9 +15,9 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 type databaseFake struct {
@@ -110,7 +110,7 @@ func createFixture02510(t *testing.T) (Runner, []SourceRow, *databaseFake) {
 		t.Fatal(e)
 	}
 	uuid := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-	fake := &databaseFake{profile: model.MinecraftProfile{UUID: uuid, UserID: "user", Issuer: "neverlauncher", Realm: "local"}}
+	fake := &databaseFake{profile: model.MinecraftProfile{UUID: uuid, UserID: "user", Issuer: "launcher", Realm: "local"}}
 	r := Runner{Database: fake, Source: LocalSource{Root: root}, Destination: storage.NewLocalStorage(dest), SourceID: "gravit-test"}
 	rows := []SourceRow{{ID: "row1", UserUUID: uuid, TextureType: "SKIN", FileHash: hash, Metadata: json.RawMessage(`{"model":"slim"}`)}}
 	return r, rows, fake

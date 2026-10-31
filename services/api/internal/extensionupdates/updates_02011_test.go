@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionhost"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionlifecycle"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 type fakeLifecycle02011 struct{ repo repository.Repository }
@@ -85,7 +85,7 @@ func updateFixture02011(t *testing.T) (*repository.MemoryRepository, model.Exten
 	}
 	sha := sha256.Sum256([]byte("update.test@2.0.0"))
 	hexsha := hex.EncodeToString(sha[:])
-	pubv, err := r.PublishExtensionRegistryVersion(ctx, model.ExtensionRegistryPublication{Manifest: model.ExtensionManifest{SchemaVersion: "2.0", ID: "update.test", Name: "Update Test", Version: "2.0.0", Publisher: "publisher.test", API: "3.7", Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "backend/bin/x"}}}, PublisherID: "publisher.test", Compatibility: model.ExtensionRegistryCompatibility{MinNeverLauncher: "0.20.0", MaxNeverLauncher: "0.21.99", MinAPI: "3.7", MaxAPI: "3.7"}, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: "sha256:" + hexsha, ExtensionID: "update.test", Version: "2.0.0", SHA256: hexsha, Size: 1, StorageProject: "r", StorageVersion: "v", StoragePath: "x", SignatureKeyFingerprint: fp}, Channels: []string{"stable"}})
+	pubv, err := r.PublishExtensionRegistryVersion(ctx, model.ExtensionRegistryPublication{Manifest: model.ExtensionManifest{SchemaVersion: "2.0", ID: "update.test", Name: "Update Test", Version: "2.0.0", Publisher: "publisher.test", API: "3.7", Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "backend/bin/x"}}}, PublisherID: "publisher.test", Compatibility: model.ExtensionRegistryCompatibility{MinLauncher: "0.20.0", MaxLauncher: "0.21.99", MinAPI: "3.7", MaxAPI: "3.7"}, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: "sha256:" + hexsha, ExtensionID: "update.test", Version: "2.0.0", SHA256: hexsha, Size: 1, StorageProject: "r", StorageVersion: "v", StoragePath: "x", SignatureKeyFingerprint: fp}, Channels: []string{"stable"}})
 	if err != nil {
 		t.Fatal(err)
 	}

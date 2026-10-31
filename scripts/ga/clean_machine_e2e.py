@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run a *real* clean-VM native-install -> Managed Java -> Minecraft launch.
 
-No stub runtimes or fake JVMs: the installed neverruntime binary performs
+No stub runtimes or fake JVMs: the installed runtime binary performs
 manifest signature verification, real Java provisioning, sync and game launch.
 This must run inside a disposable OS VM with a graphical session and a signed
 offline-capable Minecraft profile; not on a developer workstation.
@@ -42,7 +42,7 @@ def from_runtime(binary: Path, *args, timeout=900):
     data = checked([binary, *args], timeout=timeout)
     result = json.loads(data)
     if not isinstance(result, dict):
-        raise ValueError("NeverRuntime returned non-object JSON")
+        raise ValueError("Runtime returned non-object JSON")
     return result
 
 
@@ -60,11 +60,11 @@ def resolve_installed_runtime(root: Path):
             launcher
             / "releases"
             / release
-            / ("neverruntime.exe" if os.name == "nt" else "neverruntime")
+            / ("runtime.exe" if os.name == "nt" else "runtime")
         )
         if path.is_file() and not path.is_symlink():
             return path
-    raise RuntimeError("no native NeverRuntime in activated Prestarter release")
+    raise RuntimeError("no native Runtime in activated Prestarter release")
 
 
 def real_clean_install(
@@ -98,14 +98,14 @@ def real_clean_install(
             )
         checked(["dpkg", "--install", installer], timeout=600)
         checked(
-            ["/usr/bin/neverlauncher", "install", "--root", root, "--no-start"],
+            ["/usr/bin/launcher", "install", "--root", root, "--no-start"],
             timeout=1200,
         )
     elif osname == "Darwin":
         checked(["installer", "-pkg", installer, "-target", "/"], timeout=600)
         checked(
             [
-                "/Applications/NeverLauncher.app/Contents/MacOS/NeverLauncher",
+                "/Applications/Launcher.app/Contents/MacOS/Launcher",
                 "install",
                 "--root",
                 root,
@@ -119,7 +119,7 @@ def real_clean_install(
         # Desktop -> Guard authenticated supervisor boundary. Certification
         # MUST instead use a separate real Desktop/Guard GUI E2E on Windows.
         raise RuntimeError(
-            "Windows game-launch certification requires external Desktop/Guard GUI E2E; direct NeverRuntime launch is not a valid security test"
+            "Windows game-launch certification requires external Desktop/Guard GUI E2E; direct Runtime launch is not a valid security test"
         )
     else:
         raise RuntimeError("unsupported GA OS")
@@ -196,7 +196,7 @@ def real_clean_install(
     if not launched.get("timed_out") and not launched.get("success"):
         raise RuntimeError("Minecraft process crashed before successfully exiting")
     return {
-        "schemaVersion": "neverlauncher.ga.clean-machine.v1",
+        "schemaVersion": "launcher.ga.clean-machine.v1",
         "productVersion": "0.24.0",
         "commit": benchmark_commit,
         "status": "passed",

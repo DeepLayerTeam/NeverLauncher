@@ -20,8 +20,8 @@ import (
 
 // Runtime certification is bound to the *verified* Client Factory lock, not
 // to a mutable version selector or an assertion made by the caller. The probe
-// runs NeverRuntime against a disposable copy, leaving locked outputs intact.
-const factoryCertSchema02712 = "neverlauncher.factory.runtime-certificate.v1"
+// runs Runtime against a disposable copy, leaving locked outputs intact.
+const factoryCertSchema02712 = "launcher.factory.runtime-certificate.v1"
 
 type factoryProbe02712 struct {
 	Status            string `json:"status"`
@@ -349,7 +349,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	if !isSHA256Hex0271(expectedRuntimeSHA) || rtSHA != expectedRuntimeSHA {
-		return cert, errors.New("NeverRuntime executable does not match --runtime-sha256")
+		return cert, errors.New("Runtime executable does not match --runtime-sha256")
 	}
 	javaSHA, err := certHashFile02712(java)
 	if err != nil {
@@ -360,7 +360,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	// Copy verified immutable inputs: the game may write logs, options and caches.
-	staging, err := os.MkdirTemp("", "neverlauncher-cert-02712-")
+	staging, err := os.MkdirTemp("", "launcher-cert-02712-")
 	if err != nil {
 		return cert, err
 	}
@@ -390,11 +390,11 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 	cmd.Stdout = &boundedWriter02712{w: &stdout, max: 2 << 20}
 	cmd.Stderr = &boundedWriter02712{w: &stderr, max: 2 << 20}
 	if err = cmd.Run(); err != nil {
-		return cert, fmt.Errorf("NeverRuntime probe failed: %w: %s", err, strings.TrimSpace(stderr.String()))
+		return cert, fmt.Errorf("Runtime probe failed: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	var probe factoryProbe02712
 	if err = json.Unmarshal(stdout.Bytes(), &probe); err != nil {
-		return cert, fmt.Errorf("NeverRuntime returned invalid JSON: %w", err)
+		return cert, fmt.Errorf("Runtime returned invalid JSON: %w", err)
 	}
 	// Never trust a supplied log path: it must be a real regular file underneath the disposable root.
 	absLog, err := filepath.Abs(probe.LogPath)
@@ -425,7 +425,7 @@ func certRun02712(ctx context.Context, clientDir, runtimeName, javaName, expecte
 		return cert, err
 	}
 	if after, e := certHashFile02712(rt); e != nil || after != rtSHA {
-		return cert, errors.New("NeverRuntime executable changed during probe")
+		return cert, errors.New("Runtime executable changed during probe")
 	}
 	if after, e := certHashFile02712(java); e != nil || after != javaSHA {
 		return cert, errors.New("Java executable changed during probe")

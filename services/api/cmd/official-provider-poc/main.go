@@ -26,7 +26,7 @@ import (
 	"syscall"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/officialminecraft"
+	"gitflic.ru/skif4er/launcher/services/api/internal/officialminecraft"
 )
 
 // Overridden by -ldflags -X at production build time.
@@ -81,7 +81,7 @@ type report struct {
 }
 
 func newReport(opt options) *report {
-	return &report{Schema: "neverlauncher.official-provider-poc.v1", Version: releaseVersion, TimestampUTC: time.Now().UTC().Format(time.RFC3339Nano), ClientID: opt.ClientID, OAuthFlow: opt.Flow, Provider: "fixed_official_microsoft_xbox_minecraft_hosts", Stages: []stage{}, Result: "blocked", MinecraftServicesAccess: "not_verified", ExternalAppApproval: "requires_independent_provider_confirmation", OS: runtime.GOOS, Architecture: runtime.GOARCH, OnlineModeSession: "not_verified", ServerHandshake: "not_tested"}
+	return &report{Schema: "launcher.official-provider-poc.v1", Version: releaseVersion, TimestampUTC: time.Now().UTC().Format(time.RFC3339Nano), ClientID: opt.ClientID, OAuthFlow: opt.Flow, Provider: "fixed_official_microsoft_xbox_minecraft_hosts", Stages: []stage{}, Result: "blocked", MinecraftServicesAccess: "not_verified", ExternalAppApproval: "requires_independent_provider_confirmation", OS: runtime.GOOS, Architecture: runtime.GOARCH, OnlineModeSession: "not_verified", ServerHandshake: "not_tested"}
 }
 
 func (r *report) pass(name string) { r.Stages = append(r.Stages, stage{Name: name, Status: "passed"}) }
@@ -273,7 +273,7 @@ func deviceGrant(ctx context.Context, c providerClient, opt options, output io.W
 	}
 	fmt.Fprintln(output, "Microsoft device verification URL:", code.VerificationURI)
 	fmt.Fprintln(output, "Enter this one-time user code:", code.UserCode)
-	fmt.Fprintln(output, "Never enter your Microsoft password into NeverLauncher.")
+	fmt.Fprintln(output, "Never enter your Microsoft password into Launcher.")
 	expiry := time.NewTimer(time.Duration(code.ExpiresIn) * time.Second)
 	defer expiry.Stop()
 	interval := time.Duration(code.Interval) * time.Second

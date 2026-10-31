@@ -22,8 +22,8 @@ jobs:
           cache-dependency-path: cli/go.sum
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Build NeverRuntime for Managed Java II
-        run: cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
+      - name: Build Runtime for Managed Java II
+        run: cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
 
       - name: Managed Java II Java 8/16/17/21/25 production E2E
         shell: bash
@@ -49,7 +49,7 @@ jobs:
           set -euo pipefail
           VERSION="$(tr -d '[:space:]' < VERSION)"
           OUT="dist/managed-jre-${VERSION}"
-          (cd cli && go build -trimpath -o /tmp/nl ./cmd/neverlauncher)
+          (cd cli && go build -trimpath -o /tmp/nl ./cmd/launcher)
           /tmp/nl delivery manifest --bundle "${OUT}" --version "${VERSION}"
           /tmp/nl delivery verify-jre --bundle "${OUT}" --version "${VERSION}"
           python3 scripts/smoke/offline/managed-jre-distribution-0155.py
@@ -57,17 +57,17 @@ jobs:
       - name: Upload Managed JRE production assets
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-managed-jre-${{ github.sha }}
+          name: launcher-managed-jre-${{ github.sha }}
           path: |
             dist/managed-jre-*/MANAGED_JRE_MANIFEST.json
             dist/managed-jre-*/MANAGED_JRE_EVIDENCE.json
             dist/managed-jre-*/MANAGED_JAVA_II_EVIDENCE.json
             dist/managed-jre-*/DELIVERY_MANIFEST.json
-            dist/managed-jre-*/neverlauncher-jre-temurin21-windows-x64-*.zip
-            dist/managed-jre-*/neverlauncher-jre-temurin21-windows-arm64-*.zip
-            dist/managed-jre-*/neverlauncher-jre-temurin21-linux-x64-*.tar.gz
-            dist/managed-jre-*/neverlauncher-jre-temurin21-linux-arm64-*.tar.gz
-            dist/managed-jre-*/neverlauncher-jre-temurin21-macos-x64-*.tar.gz
-            dist/managed-jre-*/neverlauncher-jre-temurin21-macos-arm64-*.tar.gz
+            dist/managed-jre-*/launcher-jre-temurin21-windows-x64-*.zip
+            dist/managed-jre-*/launcher-jre-temurin21-windows-arm64-*.zip
+            dist/managed-jre-*/launcher-jre-temurin21-linux-x64-*.tar.gz
+            dist/managed-jre-*/launcher-jre-temurin21-linux-arm64-*.tar.gz
+            dist/managed-jre-*/launcher-jre-temurin21-macos-x64-*.tar.gz
+            dist/managed-jre-*/launcher-jre-temurin21-macos-arm64-*.tar.gz
           if-no-files-found: error
           retention-days: 30

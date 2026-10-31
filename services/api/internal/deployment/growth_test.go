@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 type fakeS3Growth struct {
@@ -37,7 +37,7 @@ func (f *fakeS3Growth) serve(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	if !strings.HasPrefix(r.URL.Path, "/growth-bucket/neverlauncher-growth-check/") {
+	if !strings.HasPrefix(r.URL.Path, "/growth-bucket/launcher-growth-check/") {
 		http.NotFound(w, r)
 		return
 	}

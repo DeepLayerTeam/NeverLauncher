@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/officialminecraft"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/officialminecraft"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // Official tickets are issued only after Minecraft Services proves the bearer

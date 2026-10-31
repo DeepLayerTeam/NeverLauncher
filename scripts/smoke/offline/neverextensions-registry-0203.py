@@ -30,8 +30,8 @@ for token in (
     "extension_registry_channels",
     "package_identity",
     "signature_key_fingerprint",
-    "neverlauncher_registry_immutable_guard_0203",
-    "neverlauncher_registry_channel_guard_0203",
+    "launcher_registry_immutable_guard_0203",
+    "launcher_registry_channel_guard_0203",
     "yank state is irreversible",
 ):
     require(token in migration, f"registry migration missing {token}")
@@ -87,7 +87,7 @@ for route in (
 ):
     require(route in routes, f"registry route missing {route}")
 
-cli = read("cli/cmd/neverlauncher/extension_registry_0203.go")
+cli = read("cli/cmd/launcher/extension_registry_0203.go")
 for token in (
     '"publishers"',
     '"publisher-add"',
@@ -114,7 +114,7 @@ for token in (
 ):
     require(token in admin, f"Admin Registry UI missing {token}")
 
-release = read("cli/cmd/neverlauncher/release_commands.go")
+release = read("cli/cmd/launcher/release_commands.go")
 for table in (
     "extension_registry_publishers",
     "extension_registry_publisher_keys",

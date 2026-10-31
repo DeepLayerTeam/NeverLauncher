@@ -1,4 +1,4 @@
-# Control Domains & RBAC — NeverLauncher 0.28.1
+# Control Domains & RBAC — Launcher 0.28.1
 
 This release changes **live authorization of ServerBridge v3 game commands**; it does not install a Host RemoteControl agent or provide Backend restart (those are later roadmap milestones).
 

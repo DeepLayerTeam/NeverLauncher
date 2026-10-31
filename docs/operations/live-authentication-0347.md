@@ -1,11 +1,11 @@
-# NeverLauncher 0.34.7 — actual V07 authentication/Guard validation
+# Launcher 0.34.7 — actual V07 authentication/Guard validation
 
 ## Scope and trust boundary
 
 The independent, rootless Podman attestation host (not build/test CI and not a
 user-submitted JSON) runs the **exact immutable staged release** and real Minecraft
-client/server. The attestation schema is `neverlauncher.validation-evidence.v4`
-(domain `NeverLauncher/validation-evidence/v4\0`); v3 signatures do not certify
+client/server. The attestation schema is `launcher.validation-evidence.v4`
+(domain `Launcher/validation-evidence/v4\0`); v3 signatures do not certify
 V07. A new mandatory `authentication` stage, its `authentication.json` SHA-256
 and the `authenticationMode` target field are verified before the host signs.
 A `passed` from the observational GitHub Actions job is not an attestation.
@@ -41,7 +41,7 @@ python3 tools/validation-attestor/attestor.py \
   --backend https://staging.example.invalid \
   --operator-token-file /secure/staged-operator-token \
   --signing-key /secure/validation-ed25519.pem \
-  --image registry.example.invalid/neverlauncher/runner@sha256:<approved-digest> \
+  --image registry.example.invalid/launcher/runner@sha256:<approved-digest> \
   --source-sha <approved-source-sha> --build-sha <approved-image-build-sha> \
   --manifest-key <pinned-manifest-public-key> \
   --auth-mode official \
@@ -57,7 +57,7 @@ The trusted host actually performs:
 2. Xbox Live user authenticate, RETAIL XSTS authorize (same XUID/UHS),
    Minecraft Services `login_with_xbox` and actual Java profile lookup.
 3. Pass the *short-lived Minecraft access token* and exact Java profile to
-   `NeverRuntime launch --credentials-file` in the isolated worker.
+   `Runtime launch --credentials-file` in the isolated worker.
 4. Worker independently checks real Mojang sessionserver `join/hasJoined` and
    launches the exact staged client against an isolated matching server using
    `online-mode=true`. The server must accept the player and real gameplay
@@ -89,7 +89,7 @@ The real Yggdrasil test performs:
 - Actual trust-denied identity whose **otherwise valid token** is refused by
   backend gameplay-trust policy at join. For Guard-enabled releases a denial
   with a specific `guard` reason is required, not just generic 403.
-- Same active identity launched through NeverRuntime with its signed required
+- Same active identity launched through Runtime with its signed required
   authlib-injector and isolated pinned modded server distribution containing a
   version/SHA-256 verified ServerBridge; gameplay and join are checked as V02.
 

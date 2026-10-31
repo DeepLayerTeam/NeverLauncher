@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "ru.neverlauncher.bridge.fabric.mixin",
+  "package": "ru.launcher.bridge.fabric.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "ServerLoginNetworkHandlerAccessor"

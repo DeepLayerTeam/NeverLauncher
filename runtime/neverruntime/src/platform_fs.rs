@@ -190,7 +190,7 @@ mod tests {
         use std::os::windows::fs::OpenOptionsExt;
         let root = std::env::temp_dir().join(format!("nl-locked-{}-{:x}", std::process::id(), rand::random::<u64>()));
         fs::create_dir_all(&root).unwrap();
-        let dest = root.join("neverruntime.exe");
+        let dest = root.join("runtime.exe");
         let next = root.join("staged.exe");
         fs::write(&dest, b"KNOWN_GOOD").unwrap();
         fs::write(&next, b"NEXT").unwrap();

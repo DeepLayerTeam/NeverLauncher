@@ -9,7 +9,7 @@ import (
 )
 
 func TestGoSignedConditionalCatalogFixture0244(t *testing.T) {
-	raw, err := os.ReadFile("../../../../runtime/neverruntime/tests/fixtures/catalog_conditions_0244_go_signed.json")
+	raw, err := os.ReadFile("../../../../runtime/runtime/tests/fixtures/catalog_conditions_0244_go_signed.json")
 	if err != nil {
 		t.Fatal(err)
 	}

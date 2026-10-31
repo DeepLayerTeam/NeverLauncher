@@ -52,7 +52,7 @@ func writeDeviceTrustEvidenceFixture(t *testing.T, dir, ver, commit string) (str
 	for _, tc := range []struct{ id, os, runtime string }{{"native-linux", "linux", "x86_64"}, {"native-windows", "windows", "x86_64"}, {"native-macos", "macos", "arm64"}} {
 		results = append(results, releaseDeviceTrustResult{SchemaVersion: "1.0", ProductVersion: ver, TargetID: tc.id, Kind: "native-tests", OS: tc.os, Arch: "runner-native", RuntimeArch: tc.runtime, Commit: commit, RunID: "13000", Status: "passed", ExitCode: 0, Checks: mkChecks(nativeChecks), EvidenceSHA256: evidence, Claims: map[string]any{"deviceTrustRelease": ver}, Limitations: []string{"headless-ci-does-not-prove-os-secure-storage-runtime"}})
 	}
-	matrix := releaseDeviceTrustMatrix{SchemaVersion: "1.0", ProductVersion: ver, GeneratedAt: "2026-09-22T00:00:00Z", Repository: "DeepLayerTeam/NeverLauncher", Commit: commit, RunID: "13000", Status: "passed", Targets: results, Errors: []string{}}
+	matrix := releaseDeviceTrustMatrix{SchemaVersion: "1.0", ProductVersion: ver, GeneratedAt: "2026-09-22T00:00:00Z", Repository: "DeepLayerTeam/Launcher", Commit: commit, RunID: "13000", Status: "passed", Targets: results, Errors: []string{}}
 	matrixRaw, err := json.MarshalIndent(matrix, "", "  ")
 	if err != nil {
 		t.Fatal(err)

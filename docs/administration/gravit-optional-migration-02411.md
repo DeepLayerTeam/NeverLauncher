@@ -1,4 +1,4 @@
-# Gravit OptionalFile / OptionalView → NeverLauncher 0.24.11
+# Gravit OptionalFile / OptionalView → Launcher 0.24.11
 
 This migration is **an executable Admin workflow**, not a direct import of
 Gravit code or unverified filesystem paths. It converts recognized

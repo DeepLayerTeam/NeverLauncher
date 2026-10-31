@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // GravitImportState02510 never performs imports for a guessed user identity.
@@ -15,12 +15,12 @@ func (r *SQLRepository) GravitImportState02510(ctx context.Context, sourceID, ro
 	if err = r.check(); err != nil {
 		return
 	}
-	if p.Realm != "local" || p.Issuer != "neverlauncher" || p.UserID == "" {
+	if p.Realm != "local" || p.Issuer != "launcher" || p.UserID == "" {
 		err = ErrNotFound
 		return
 	}
 	var verified bool
-	err = r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM minecraft_profiles WHERE uuid=$1 AND user_id=$2 AND realm='local' AND issuer='neverlauncher')`, p.UUID, p.UserID).Scan(&verified)
+	err = r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM minecraft_profiles WHERE uuid=$1 AND user_id=$2 AND realm='local' AND issuer='launcher')`, p.UUID, p.UserID).Scan(&verified)
 	if err != nil || !verified {
 		if err == nil {
 			err = ErrNotFound

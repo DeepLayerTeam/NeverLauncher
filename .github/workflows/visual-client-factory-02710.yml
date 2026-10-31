@@ -46,10 +46,10 @@ jobs:
           go-version-file: cli/go.mod
       - name: Existing Client Factory and adapters regression
         working-directory: cli
-        run: go test ./cmd/neverlauncher -run 'TestClientFactory0271|TestModernLoaderAdapters0272|TestForge.*|TestModpack.*' -count=1 -timeout=8m
+        run: go test ./cmd/launcher -run 'TestClientFactory0271|TestModernLoaderAdapters0272|TestForge.*|TestModpack.*' -count=1 -timeout=8m
       - name: Build executable used by API
         working-directory: cli
-        run: go build ./cmd/neverlauncher
+        run: go build ./cmd/launcher
   admin:
     runs-on: ubuntu-latest
     steps:
@@ -73,4 +73,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build runnable API and Client Factory CLI image
-        run: docker build -f services/api/Dockerfile -t neverlauncher-factory-ci .
+        run: docker build -f services/api/Dockerfile -t launcher-factory-ci .

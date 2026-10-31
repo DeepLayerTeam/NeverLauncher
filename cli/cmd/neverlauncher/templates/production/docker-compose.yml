@@ -3,17 +3,17 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-neverlauncher}
-      POSTGRES_USER: ${POSTGRES_USER:-neverlauncher}
+      POSTGRES_DB: ${POSTGRES_DB:-launcher}
+      POSTGRES_USER: ${POSTGRES_USER:-launcher}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
-      - neverlauncher_postgres:/var/lib/postgresql/data
+      - launcher_postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
-    networks: [neverlauncher]
+    networks: [launcher]
 
   redis:
     image: redis:7-alpine
@@ -22,13 +22,13 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     command: ["sh", "-ec", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
     volumes:
-      - neverlauncher_redis:/data
+      - launcher_redis:/data
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 10
-    networks: [neverlauncher]
+    networks: [launcher]
 
   api-volume-init:
     image: alpine:3.20
@@ -43,8 +43,8 @@ services:
         chown -R 10001:10001 /storage /backups
         chmod 0750 /storage /storage/current /backups
     volumes:
-      - neverlauncher_storage:/storage
-      - neverlauncher_backups:/backups
+      - launcher_storage:/storage
+      - launcher_backups:/backups
     security_opt: ["no-new-privileges:true"]
 
   api:
@@ -53,7 +53,7 @@ services:
       dockerfile: services/api/Dockerfile
       args:
         NEVERLAUNCHER_VERSION: ${NEVERLAUNCHER_IMAGE_TAG}
-    image: neverlauncher-api:${NEVERLAUNCHER_IMAGE_TAG:?NEVERLAUNCHER_IMAGE_TAG must be set}
+    image: launcher-api:${NEVERLAUNCHER_IMAGE_TAG:?NEVERLAUNCHER_IMAGE_TAG must be set}
     restart: unless-stopped
     depends_on:
       api-volume-init:
@@ -73,11 +73,11 @@ services:
       NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON: ${NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON:-}
       NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY: ${NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY:-}
       NEVERLAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY: ${NEVERLAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY:-}
-      NEVERLAUNCHER_DATABASE_DSN: postgres://${POSTGRES_USER:-neverlauncher}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-neverlauncher}?sslmode=disable
+      NEVERLAUNCHER_DATABASE_DSN: postgres://${POSTGRES_USER:-launcher}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-launcher}?sslmode=disable
       NEVERLAUNCHER_STORAGE_DRIVER: ${NEVERLAUNCHER_STORAGE_DRIVER:-local}
       NEVERLAUNCHER_TEXTURE_FETCH_HOST_ALLOWLIST: ${NEVERLAUNCHER_TEXTURE_FETCH_HOST_ALLOWLIST:-}
-      NEVERLAUNCHER_STORAGE_LOCAL_PATH: /var/lib/neverlauncher/storage/current
-      NEVERLAUNCHER_BACKUP_ROOT: /var/lib/neverlauncher/backups
+      NEVERLAUNCHER_STORAGE_LOCAL_PATH: /var/lib/launcher/storage/current
+      NEVERLAUNCHER_BACKUP_ROOT: /var/lib/launcher/backups
       NEVERLAUNCHER_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED: "true"
       NEVERLAUNCHER_REPLICA_ID: ${NEVERLAUNCHER_REPLICA_ID:-}
@@ -103,20 +103,20 @@ services:
       NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE: ${NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE:-}
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
       NEVERLAUNCHER_WEBAUTHN_RP_ID: ${NEVERLAUNCHER_WEBAUTHN_RP_ID:?NEVERLAUNCHER_WEBAUTHN_RP_ID is required}
-      NEVERLAUNCHER_WEBAUTHN_RP_NAME: ${NEVERLAUNCHER_WEBAUTHN_RP_NAME:-NeverLauncher}
+      NEVERLAUNCHER_WEBAUTHN_RP_NAME: ${NEVERLAUNCHER_WEBAUTHN_RP_NAME:-Launcher}
       NEVERLAUNCHER_WEBAUTHN_ORIGINS: ${NEVERLAUNCHER_WEBAUTHN_ORIGINS:?NEVERLAUNCHER_WEBAUTHN_ORIGINS is required}
       NEVERLAUNCHER_CORS_ALLOWED_ORIGINS: ${NEVERLAUNCHER_CORS_ALLOWED_ORIGINS:?NEVERLAUNCHER_CORS_ALLOWED_ORIGINS is required}
     volumes:
-      - neverlauncher_storage:/var/lib/neverlauncher/storage
-      - neverlauncher_backups:/var/lib/neverlauncher/backups
-      - neverlauncher_factory:/var/lib/neverlauncher/factory
+      - launcher_storage:/var/lib/launcher/storage
+      - launcher_backups:/var/lib/launcher/backups
+      - launcher_factory:/var/lib/launcher/factory
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/ready"]
       interval: 10s
       timeout: 5s
       retries: 15
     security_opt: ["no-new-privileges:true"]
-    networks: [neverlauncher]
+    networks: [launcher]
 
   admin:
     build:
@@ -124,7 +124,7 @@ services:
       dockerfile: apps/admin/Dockerfile
       args:
         NEVERLAUNCHER_VERSION: ${NEVERLAUNCHER_IMAGE_TAG}
-    image: neverlauncher-admin:${NEVERLAUNCHER_IMAGE_TAG:?NEVERLAUNCHER_IMAGE_TAG must be set}
+    image: launcher-admin:${NEVERLAUNCHER_IMAGE_TAG:?NEVERLAUNCHER_IMAGE_TAG must be set}
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -137,7 +137,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    networks: [neverlauncher]
+    networks: [launcher]
 
   nginx:
     image: nginx:1.27-alpine
@@ -151,24 +151,24 @@ services:
       - "${NEVERLAUNCHER_HTTP_PORT:-80}:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - neverlauncher_storage:/var/lib/neverlauncher/storage:ro
+      - launcher_storage:/var/lib/launcher/storage:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 10s
       timeout: 5s
       retries: 10
     security_opt: ["no-new-privileges:true"]
-    networks: [neverlauncher]
+    networks: [launcher]
 
 volumes:
-  neverlauncher_postgres:
-  neverlauncher_redis:
-  neverlauncher_storage:
-  neverlauncher_backups:
-  neverlauncher_factory:
+  launcher_postgres:
+  launcher_redis:
+  launcher_storage:
+  launcher_backups:
+  launcher_factory:
 
 networks:
-  neverlauncher:
+  launcher:
     driver: bridge
     ipam:
       config:

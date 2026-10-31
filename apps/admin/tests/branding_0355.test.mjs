@@ -60,7 +60,7 @@ function bootstrap(root) {
         arch: "amd64",
         components: [
           { name: "desktop", ...a },
-          { name: "neverruntime", ...a },
+          { name: "runtime", ...a },
           { name: "guard", ...a },
         ],
       },
@@ -139,7 +139,7 @@ test("delegated signed v2 -> root policy -> modified signed bootstrap remains v2
   const now = new Date();
   const policy = {
     schemaVersion: "1.0",
-    domain: "neverlauncher.trust.v1",
+    domain: "launcher.trust.v1",
     epoch: 11,
     issuedAt: new Date(now.getTime() - 60000).toISOString().slice(0, 19) + "Z",
     expiresAt:
@@ -161,15 +161,13 @@ test("delegated signed v2 -> root policy -> modified signed bootstrap remains v2
     payload: b64(policyRaw),
     rootSignature: await signed(
       root.key,
-      Buffer.concat([enc.encode("NeverLauncher-Trust-Policy-v1\n"), policyRaw]),
+      Buffer.concat([enc.encode("Launcher-Trust-Policy-v1\n"), policyRaw]),
     ),
   });
   const signedAt = now.toISOString().slice(0, 19) + "Z";
   const payload = enc.encode(JSON.stringify(bootstrap(root.public)));
   const message = Buffer.concat([
-    enc.encode(
-      `NeverLauncher-Bootstrap-v2\nowner-bootstrap\n11\n${signedAt}\n`,
-    ),
+    enc.encode(`Launcher-Bootstrap-v2\nowner-bootstrap\n11\n${signedAt}\n`),
     payload,
   ]);
   const original = JSON.stringify({

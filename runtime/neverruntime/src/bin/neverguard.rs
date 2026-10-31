@@ -1,12 +1,12 @@
 #[cfg(windows)]
-use neverruntime::{
+use runtime::{
     ensure_windows_protection_core_with_profile, protection_profile_from_environment,
     run_windows_guard_server, WindowsProtectionProfile,
 };
 #[cfg(target_os = "linux")]
-use neverruntime::{linux_policy::ensure_linux_production_hardening, run_linux_guard_server};
+use runtime::{linux_policy::ensure_linux_production_hardening, run_linux_guard_server};
 #[cfg(target_os = "macos")]
-use neverruntime::{macos_policy::ensure_macos_production_hardening, run_macos_guard_server};
+use runtime::{macos_policy::ensure_macos_production_hardening, run_macos_guard_server};
 use std::{env, process::ExitCode};
 
 fn main() -> ExitCode {

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // pendingProviderIdentity0296 pins the encrypted credential to the exact

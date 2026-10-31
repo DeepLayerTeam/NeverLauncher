@@ -30,7 +30,7 @@ func TestPolicyGateAndHostPaths0319(t *testing.T) {
 		t.Fatal(e)
 	}
 	cases := map[string]func(*Options){
-		"backend-secret-path":  func(o *Options) { o.Policy.FilesystemRead = []string{"/var/lib/neverlauncher/.env"} },
+		"backend-secret-path":  func(o *Options) { o.Policy.FilesystemRead = []string{"/var/lib/launcher/.env"} },
 		"invalid-shared-mount": func(o *Options) { o.Policy.FilesystemWrite = []string{"shared:../../etc"} },
 		"invalid-network":      func(o *Options) { o.Policy.NetworkOutbound = []string{"*.example.com:443"} },
 		"invalid-secret":       func(o *Options) { o.Policy.Secrets = []string{"../database"} },
@@ -59,7 +59,7 @@ func TestConfigFDIsSealedAndNotOnFilesystem0319(t *testing.T) {
 		t.Skipf("memfd disabled: %v", e)
 	}
 	defer f.Close()
-	if _, e := f.WriteString("neverlauncher-extension-credential"); e != nil {
+	if _, e := f.WriteString("launcher-extension-credential"); e != nil {
 		t.Fatal(e)
 	}
 	if _, e := f.Seek(0, 0); e != nil {
@@ -86,7 +86,7 @@ func TestLinuxIsolationLive0319(t *testing.T) {
 	script := `#!/bin/sh
 set -eu
 [ ! -e /etc/passwd ] || exit 70
-[ ! -e /var/lib/neverlauncher/backend-secrets ] || exit 71
+[ ! -e /var/lib/launcher/backend-secrets ] || exit 71
 [ ! -e /home ] || exit 72
 test -r /package/run
 test -w /scratch

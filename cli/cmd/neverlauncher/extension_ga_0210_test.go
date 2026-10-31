@@ -19,7 +19,7 @@ func TestExtensionUpgradeSource0210(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, "backend"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	mod := "module example.test/ext\n\ngo 1.22\n\nrequire gitflic.ru/skif4er/neverlauncher/sdk/backend/go v0.20.10\n"
+	mod := "module example.test/ext\n\ngo 1.22\n\nrequire gitflic.ru/skif4er/launcher/sdk/backend/go v0.20.10\n"
 	if err := os.WriteFile(filepath.Join(dir, "backend", "go.mod"), []byte(mod), 0o644); err != nil {
 		t.Fatal(err)
 	}

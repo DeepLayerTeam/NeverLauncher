@@ -1,5 +1,5 @@
 // Package texturegravit migrates real Gravit TextureProvider records into
-// normalized NeverLauncher texture storage. It never imports auth tokens,
+// normalized Launcher texture storage. It never imports auth tokens,
 // private URLs, remote identities, or unverified PNG bytes.
 package texturegravit
 
@@ -20,10 +20,10 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/texturepng"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/texturepng"
 )
 
 // SourceRow matches GravitLauncher/TextureProvider's PostgreSQL textures table.
@@ -205,7 +205,7 @@ func VerifySourceHash(hash string, b []byte) error {
 }
 
 func (r *Runner) Run(ctx context.Context, rows []SourceRow) (Report, error) {
-	out := Report{Format: "neverlauncher.gravit-texture-import.v1", SourceID: r.SourceID, DryRun: r.DryRun, StartedAt: time.Now().UTC(), Counts: map[string]int{}, Rows: make([]Record, 0, len(rows))}
+	out := Report{Format: "launcher.gravit-texture-import.v1", SourceID: r.SourceID, DryRun: r.DryRun, StartedAt: time.Now().UTC(), Counts: map[string]int{}, Rows: make([]Record, 0, len(rows))}
 	if !sourceIDFormat.MatchString(r.SourceID) || r.Database == nil || r.Source == nil || r.Destination == nil {
 		return out, errors.New("source ID, source reader, destination and database required")
 	}
@@ -253,7 +253,7 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 	if err != nil {
 		return fail("unmatched", errors.New("no verified local Minecraft profile for source UUID; explicit mapping required"))
 	}
-	if profile.Realm != "local" || profile.Issuer != "neverlauncher" || profile.UUID == "" || profile.UserID == "" {
+	if profile.Realm != "local" || profile.Issuer != "launcher" || profile.UUID == "" || profile.UserID == "" {
 		return fail("unmatched", errors.New("official or non-local UUID cannot be imported"))
 	}
 	if canonical, err := CanonicalUUID(profile.UUID); err != nil || canonical != target {

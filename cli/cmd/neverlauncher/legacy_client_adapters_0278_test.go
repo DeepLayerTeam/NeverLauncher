@@ -205,7 +205,7 @@ func TestLegacyAdapters0278RealJavaArgvExecutionAndGates(t *testing.T) {
 		t.Fatal(err)
 	}
 	raw, _ := json.Marshal(plan)
-	putLegacyTestFile0278(t, root, ".neverlauncher/install-plan.json", raw)
+	putLegacyTestFile0278(t, root, ".launcher/install-plan.json", raw)
 	java := filepath.Join(t.TempDir(), "java8")
 	log := filepath.Join(t.TempDir(), "java.argv")
 	javaScript := `#!/bin/sh
@@ -246,7 +246,7 @@ printf '%s\n' "$@" > "$LEGACY_CAPTURE_ARGV"
 		t.Fatal(err)
 	}
 	olderRaw, _ := json.Marshal(old)
-	putLegacyTestFile0278(t, root, ".neverlauncher/install-plan.json", olderRaw)
+	putLegacyTestFile0278(t, root, ".launcher/install-plan.json", olderRaw)
 	if err := verifyFactoryPlan0271(root, old); err != nil {
 		t.Fatalf("historical lock rejected: %v", err)
 	}

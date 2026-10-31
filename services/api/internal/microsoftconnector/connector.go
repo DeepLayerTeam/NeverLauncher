@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/oidcconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/oidcconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 type Connector struct {

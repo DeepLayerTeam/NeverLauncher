@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionlifecycle"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func TestJavaJarRejectsUnsignedExecutableSubstitution0304(t *testing.T) {
@@ -89,7 +89,7 @@ func javaHostFixture0304(t *testing.T) (*Supervisor, model.ExtensionInstall, Key
 	root := t.TempDir()
 	repo := repository.NewMemoryRepository("http://localhost")
 	id := "org.example.java-host"
-	pkg, err := os.ReadFile(filepath.Join("../../../..", "examples", "extensions", "java-host", "neverlauncher-extension.json"))
+	pkg, err := os.ReadFile(filepath.Join("../../../..", "examples", "extensions", "java-host", "launcher-extension.json"))
 	if err != nil {
 		t.Fatal(err)
 	}

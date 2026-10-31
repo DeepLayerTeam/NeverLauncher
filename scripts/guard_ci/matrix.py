@@ -30,7 +30,7 @@ COMMON_CHECKS = {
     "runtimePolicyEnforced",
     "releasePackageBuilt",
     "guardRelease0139",
-    "neverGuardRelease0140",
+    "GuardRelease0140",
 }
 OS_CHECK = {
     "linux": "linuxProductionGate",
@@ -165,24 +165,24 @@ def load_targets(path: Path) -> dict[str, Any]:
 def expected_artifact_names(os_name: str) -> dict[str, str]:
     if os_name == "linux":
         return {
-            "package": f"neverlauncher-desktop-{PRODUCT_VERSION}-linux-amd64.zip",
-            "launcher": "neverlauncher-desktop-linux-amd64",
+            "package": f"launcher-desktop-{PRODUCT_VERSION}-linux-amd64.zip",
+            "launcher": "launcher-desktop-linux-amd64",
             "guard": "guard-linux-amd64",
             "manifest": "LINUX_PACKAGE_MANIFEST.json",
             "allowlist": "GUARD_RELEASE_ALLOWLIST_LINUX.json",
         }
     if os_name == "windows":
         return {
-            "package": f"neverlauncher-desktop-{PRODUCT_VERSION}-windows-amd64.zip",
-            "launcher": "neverlauncher-desktop-windows-amd64.exe",
+            "package": f"launcher-desktop-{PRODUCT_VERSION}-windows-amd64.zip",
+            "launcher": "launcher-desktop-windows-amd64.exe",
             "guard": "guard-windows-amd64.exe",
             "manifest": "WINDOWS_PACKAGE_MANIFEST.json",
             "allowlist": "GUARD_RELEASE_ALLOWLIST_WINDOWS.json",
         }
     if os_name == "macos":
         return {
-            "package": f"neverlauncher-desktop-{PRODUCT_VERSION}-macos-universal.zip",
-            "launcher": "neverlauncher-desktop-macos-universal",
+            "package": f"launcher-desktop-{PRODUCT_VERSION}-macos-universal.zip",
+            "launcher": "launcher-desktop-macos-universal",
             "guard": "guard-macos-universal",
             "manifest": "MACOS_PACKAGE_MANIFEST.json",
             "allowlist": "GUARD_RELEASE_ALLOWLIST_MACOS.json",
@@ -201,7 +201,7 @@ def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, s
         die(
             f"package manifest platform mismatch: expected {expected_platform!r}, got {manifest.get('platform')!r}"
         )
-    if int(manifest.get("neverGuardProtocolVersion", 0)) != 4:
+    if int(manifest.get("GuardProtocolVersion", 0)) != 4:
         die("package manifest does not enforce Guard protocol v4")
     if os_name in {"linux", "windows"}:
         rows = manifest.get("artifacts")
@@ -211,7 +211,7 @@ def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, s
             str(row.get("name", "")): row for row in rows if isinstance(row, dict)
         }
         if os_name == "linux":
-            desktop = by_name.get("neverlauncher-desktop")
+            desktop = by_name.get("launcher-desktop")
             guard = by_name.get("guard")
         else:
             guard = by_name.get("guard.exe")
@@ -219,8 +219,7 @@ def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, s
                 (
                     row
                     for name, row in by_name.items()
-                    if name.startswith("neverlauncher-desktop-")
-                    and name.endswith(".exe")
+                    if name.startswith("launcher-desktop-") and name.endswith(".exe")
                 ),
                 None,
             )
@@ -509,7 +508,7 @@ def render_markdown(
     repository: str,
 ) -> str:
     lines = [
-        f"# NeverLauncher {PRODUCT_VERSION} Guard CI certification",
+        f"# Launcher {PRODUCT_VERSION} Guard CI certification",
         "",
         "| Target | Runner | Platform | Runtime arch | Status | Package SHA-256 |",
         "|---|---|---|---|---|---|",
@@ -620,7 +619,7 @@ def command_aggregate(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="NeverLauncher cross-platform Guard CI certification matrix"
+        description="Launcher cross-platform Guard CI certification matrix"
     )
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("validate")

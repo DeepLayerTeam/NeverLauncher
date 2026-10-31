@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"strings"
 
-	gi "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitidentity"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gi "gitflic.ru/skif4er/launcher/services/api/internal/gravitidentity"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 func migrationIdentityTargets0334(ctx context.Context, tx *sql.Tx) ([]gi.Target, error) {

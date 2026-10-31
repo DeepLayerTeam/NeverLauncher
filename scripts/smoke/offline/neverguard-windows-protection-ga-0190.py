@@ -13,7 +13,7 @@ def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Windows Protection GA 0.19.0 gate: {path} missing: {', '.join(missing)}"
+            f"[Launcher] Windows Protection GA 0.19.0 gate: {path} missing: {', '.join(missing)}"
         )
 
 
@@ -28,10 +28,10 @@ version = read("VERSION").strip()
 if version_tuple(version) < (0, 19, 0):
     raise SystemExit(f"Windows Protection GA gate requires >=0.19.0, got {version}")
 
-impl = read("cli/cmd/neverlauncher/windows_protection_ga_0190.go")
+impl = read("cli/cmd/launcher/windows_protection_ga_0190.go")
 require(
     impl,
-    "cli/cmd/neverlauncher/windows_protection_ga_0190.go",
+    "cli/cmd/launcher/windows_protection_ga_0190.go",
     [
         "windowsProtectionGAFile0190",
         '"WINDOWS_PROTECTION_GA_CERTIFICATE.json"',
@@ -54,10 +54,10 @@ require(
     ],
 )
 
-tests = read("cli/cmd/neverlauncher/windows_protection_ga_0190_test.go")
+tests = read("cli/cmd/launcher/windows_protection_ga_0190_test.go")
 require(
     tests,
-    "cli/cmd/neverlauncher/windows_protection_ga_0190_test.go",
+    "cli/cmd/launcher/windows_protection_ga_0190_test.go",
     [
         "TestWindowsProtectionGARequired0190",
         "TestWindowsProtectionGABoundaryBindsRCAndArtifacts0190",
@@ -65,10 +65,10 @@ require(
     ],
 )
 
-runtime = read("runtime/neverruntime/src/windows_protection.rs")
+runtime = read("runtime/runtime/src/windows_protection.rs")
 require(
     runtime,
-    "runtime/neverruntime/src/windows_protection.rs",
+    "runtime/runtime/src/windows_protection.rs",
     [
         "is_remote_attestation_eligible",
         "matches!(self, Self::Aggressive)",
@@ -98,10 +98,10 @@ require(
     ],
 )
 
-release = read("cli/cmd/neverlauncher/release_commands.go")
+release = read("cli/cmd/launcher/release_commands.go")
 require(
     release,
-    "cli/cmd/neverlauncher/release_commands.go",
+    "cli/cmd/launcher/release_commands.go",
     [
         'case "windows-protection-ga-verify":',
         "writeWindowsProtectionGA0190(out, ver)",
@@ -112,11 +112,11 @@ require(
     ],
 )
 
-candidate = read("cli/cmd/neverlauncher/production_release_candidate_01511.go")
-delivery = read("cli/cmd/neverlauncher/production_delivery_release_0160.go")
+candidate = read("cli/cmd/launcher/production_release_candidate_01511.go")
+delivery = read("cli/cmd/launcher/production_delivery_release_0160.go")
 require(
     candidate,
-    "cli/cmd/neverlauncher/production_release_candidate_01511.go",
+    "cli/cmd/launcher/production_release_candidate_01511.go",
     [
         '"windows-protection-ga-fail-closed-user-mode-boundary"',
         "verifyWindowsProtectionGA0190(dir, ver)",
@@ -124,7 +124,7 @@ require(
 )
 require(
     delivery,
-    "cli/cmd/neverlauncher/production_delivery_release_0160.go",
+    "cli/cmd/launcher/production_delivery_release_0160.go",
     [
         '"windows-protection-ga-fail-closed-user-mode-boundary"',
         "windowsProtectionGAFile0190",
@@ -161,19 +161,17 @@ for text, path in [
 ]:
     if "guard-windows-protection-ga-0190.py" not in text:
         raise SystemExit(
-            f"[NeverLauncher] Windows Protection GA 0.19.0 gate: mandatory gate not wired into {path}"
+            f"[Launcher] Windows Protection GA 0.19.0 gate: mandatory gate not wired into {path}"
         )
 if "TestWindowsProtectionGA" not in ci:
     raise SystemExit(
-        "[NeverLauncher] Windows Protection GA 0.19.0 gate: Go GA tests are not wired into CI"
+        "[Launcher] Windows Protection GA 0.19.0 gate: Go GA tests are not wired into CI"
     )
 
 for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:
     if marker in impl.lower():
         raise SystemExit(
-            f"[NeverLauncher] Windows Protection GA 0.19.0 gate: placeholder {marker!r} in implementation"
+            f"[Launcher] Windows Protection GA 0.19.0 gate: placeholder {marker!r} in implementation"
         )
 
-print(
-    f"[NeverLauncher] Guard Windows Protection GA 0.19.0 production gate: OK ({version})"
-)
+print(f"[Launcher] Guard Windows Protection GA 0.19.0 production gate: OK ({version})")

@@ -1,6 +1,6 @@
-package ru.neverlauncher.bridge.vanilla;
+package ru.launcher.bridge.vanilla;
 
-import ru.neverlauncher.bridge.common.*;
+import ru.launcher.bridge.common.*;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * LOGIN_GATE. Интеграция использует локальный RCON и ограниченное чтение хвоста latest.log
  * вместе с подписанным транспортом исполнения, управления и событий ServerBridge v3.
  */
-public final class NeverLauncherVanillaBridge implements AutoCloseable {
+public final class LauncherVanillaBridge implements AutoCloseable {
     private static final Pattern LIST = Pattern.compile("There are (\\d+) of a max of (\\d+) players online", Pattern.CASE_INSENSITIVE);
     private static final Pattern JOIN = Pattern.compile("(?:\\]: )?([A-Za-z0-9_]{1,16}) joined the game");
     private static final Pattern QUIT = Pattern.compile("(?:\\]: )?([A-Za-z0-9_]{1,16}) left the game");
@@ -33,7 +33,7 @@ public final class NeverLauncherVanillaBridge implements AutoCloseable {
     private final Path serverDir;
     private final Properties serverProperties;
     private final BridgeConfig config;
-    private final NeverLauncherApiClient api;
+    private final LauncherApiClient api;
     private final String artifactSha256;
     private final String rconHost;
     private final int rconPort;
@@ -41,16 +41,16 @@ public final class NeverLauncherVanillaBridge implements AutoCloseable {
     private volatile long logOffset;
 
     public static void main(String[] args) throws Exception {
-        NeverLauncherVanillaBridge bridge = new NeverLauncherVanillaBridge(args);
-        Runtime.getRuntime().addShutdownHook(new Thread(bridge::close, "neverlauncher-vanilla-shutdown"));
+        LauncherVanillaBridge bridge = new LauncherVanillaBridge(args);
+        Runtime.getRuntime().addShutdownHook(new Thread(bridge::close, "launcher-vanilla-shutdown"));
         bridge.start();
         new CountDownLatch(1).await();
     }
 
-    NeverLauncherVanillaBridge(String[] args) throws Exception {
+    LauncherVanillaBridge(String[] args) throws Exception {
         Map<String,String> cli = parseArgs(args);
         serverDir = Path.of(first(cli.get("server-dir"), System.getenv("NEVERLAUNCHER_VANILLA_SERVER_DIR"), ".")).toAbsolutePath().normalize();
-        Path configPath = Path.of(first(cli.get("config"), System.getenv("NEVERLAUNCHER_VANILLA_CONFIG"), serverDir.resolve("config/neverlauncher-vanilla-bridge/config.yml").toString())).toAbsolutePath().normalize();
+        Path configPath = Path.of(first(cli.get("config"), System.getenv("NEVERLAUNCHER_VANILLA_CONFIG"), serverDir.resolve("config/launcher-vanilla-bridge/config.yml").toString())).toAbsolutePath().normalize();
         config = BridgeConfig.load(configPath, "vanilla-main");
         serverProperties = loadProperties(serverDir.resolve("server.properties"));
         if (!Boolean.parseBoolean(serverProperties.getProperty("enable-rcon", "false"))) {
@@ -69,7 +69,7 @@ public final class NeverLauncherVanillaBridge implements AutoCloseable {
             List.of("heartbeat.signed", "artifact.sha256", "runtime.discovery", "runtime.ed25519-attestation", "telemetry.server-v1", "events.ordered-stream-v1", "control.secure-channel-v1", "sidecar.rcon", "sidecar.log-tail")
         );
         BridgeAdapterProfiles.rejectUncertifiedHybrid("vanilla", descriptor.serverBrand());
-        api = new NeverLauncherApiClient(config, identity, "vanilla", BridgeDefaults.VERSION, artifactSha256, descriptor);
+        api = new LauncherApiClient(config, identity, "vanilla", BridgeDefaults.VERSION, artifactSha256, descriptor);
     }
 
     void start() throws Exception {
@@ -82,7 +82,7 @@ public final class NeverLauncherVanillaBridge implements AutoCloseable {
         workers.scheduleWithFixedDelay(this::heartbeatSafe, 0, Math.max(10, config.heartbeatIntervalSeconds), TimeUnit.SECONDS);
         workers.scheduleWithFixedDelay(this::telemetrySafe, 0, Math.max(5, config.telemetrySampleIntervalSeconds), TimeUnit.SECONDS);
         Thread tail = daemon(this::tailLog, "log-tail"); tail.start();
-        System.out.println("NeverLauncher Vanilla ServerBridge " + BridgeDefaults.VERSION + " ready; serverId=" + config.serverId + "; runtimeId=" + api.runtimeId());
+        System.out.println("Launcher Vanilla ServerBridge " + BridgeDefaults.VERSION + " ready; serverId=" + config.serverId + "; runtimeId=" + api.runtimeId());
     }
 
     private BridgeControlResult executeControl(BridgeControlCommand command) throws Exception {
@@ -198,5 +198,5 @@ public final class NeverLauncherVanillaBridge implements AutoCloseable {
     private static String username(String s){String v=text(s,16);if(!v.matches("[A-Za-z0-9_]{1,16}"))throw new IllegalArgumentException("invalid_username");return v;}
     private static String text(String s,int max){String v=s==null?"":s.replace('\r',' ').replace('\n',' ').trim();return v.length()>max?v.substring(0,max):v;}
     private static String jsonText(String s){return "{\"text\":\""+text(s,1024).replace("\\","\\\\").replace("\"","\\\"")+"\"}";}
-    private static Thread daemon(Runnable r,String role){Thread t=new Thread(r,"neverlauncher-vanilla-"+role);t.setDaemon(true);return t;}
+    private static Thread daemon(Runnable r,String role){Thread t=new Thread(r,"launcher-vanilla-"+role);t.setDaemon(true);return t;}
 }

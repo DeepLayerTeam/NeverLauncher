@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
 )
 
 func TestForgeNeoForgeKinds0147(t *testing.T) {
@@ -47,10 +47,10 @@ func TestForgeNeoForgeManifest0147(t *testing.T) {
 			seen[id] = a
 		}
 	}
-	if seen["forge"]["descriptor"] != "META-INF/mods.toml" || seen["forge"]["mainClass"] != "ru.neverlauncher.bridge.forge.NeverLauncherForgeBridge" {
+	if seen["forge"]["descriptor"] != "META-INF/mods.toml" || seen["forge"]["mainClass"] != "ru.launcher.bridge.forge.LauncherForgeBridge" {
 		t.Fatalf("bad Forge manifest: %+v", seen["forge"])
 	}
-	if seen["neoforge"]["descriptor"] != "META-INF/neoforge.mods.toml" || seen["neoforge"]["mainClass"] != "ru.neverlauncher.bridge.neoforge.NeverLauncherNeoForgeBridge" {
+	if seen["neoforge"]["descriptor"] != "META-INF/neoforge.mods.toml" || seen["neoforge"]["mainClass"] != "ru.launcher.bridge.neoforge.LauncherNeoForgeBridge" {
 		t.Fatalf("bad NeoForge manifest: %+v", seen["neoforge"])
 	}
 }

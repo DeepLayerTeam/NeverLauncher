@@ -2,12 +2,12 @@ name: Client Factory 0.27.12 Runtime E2E and Certification
 on:
   push:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - 'e2e/scripts/run-client-factory-certification-02712.sh'
       - '.github/workflows/runtime-e2e-certification-02712.yml'
   pull_request:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - 'e2e/scripts/run-client-factory-certification-02712.sh'
       - '.github/workflows/runtime-e2e-certification-02712.yml'
   workflow_dispatch:
@@ -29,13 +29,13 @@ jobs:
           go-version-file: cli/go.mod
       - name: Actual materializers, signed evidence and negative cases (fixture runtime for unit tests)
         working-directory: cli
-        run: go test ./cmd/neverlauncher -run 'TestRuntimeCertification02712|TestClientFactory0271|TestAdapterLifecycle02711' -count=1 -timeout=7m
+        run: go test ./cmd/launcher -run 'TestRuntimeCertification02712|TestClientFactory0271|TestAdapterLifecycle02711' -count=1 -timeout=7m
       - name: Race detector
         working-directory: cli
-        run: go test -race ./cmd/neverlauncher -run 'TestRuntimeCertification02712' -count=1 -timeout=7m
+        run: go test -race ./cmd/launcher -run 'TestRuntimeCertification02712' -count=1 -timeout=7m
       - name: Go vet
         working-directory: cli
-        run: go vet ./cmd/neverlauncher
+        run: go vet ./cmd/launcher
   actual-gui-client:
     if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft
     needs: offline-unit-and-adversarial
@@ -65,8 +65,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
-      - name: Build real NeverRuntime
-        run: cargo build --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
+      - name: Build real Runtime
+        run: cargo build --manifest-path runtime/runtime/Cargo.toml --bin runtime
       - name: Real upstream materialization and JVM launch
         env:
           NEVERLAUNCHER_CERT_LOADER: ${{ matrix.loader }}

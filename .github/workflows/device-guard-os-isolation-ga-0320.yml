@@ -1,4 +1,4 @@
-name: NeverLauncher 0.32.0 Device Guard OS Isolation GA
+name: Launcher 0.32.0 Device Guard OS Isolation GA
 
 on:
   push:
@@ -118,7 +118,7 @@ jobs:
 
   live-linux:
     if: github.event_name == 'workflow_dispatch' && inputs.live_linux
-    runs-on: [self-hosted, linux, x64, neverlauncher-sandbox]
+    runs-on: [self-hosted, linux, x64, launcher-sandbox]
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
@@ -138,7 +138,7 @@ jobs:
 
   live-windows:
     if: github.event_name == 'workflow_dispatch' && inputs.live_windows
-    runs-on: [self-hosted, windows, x64, neverlauncher-appcontainer]
+    runs-on: [self-hosted, windows, x64, launcher-appcontainer]
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
@@ -199,6 +199,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-0320-signed-ga-verdict
+          name: launcher-0320-signed-ga-verdict
           path: dist/security-0320-GA-verdict.json
           if-no-files-found: warn

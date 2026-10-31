@@ -1,8 +1,8 @@
-# NeverLauncher 0.34.4: actual matching-server and gameplay verification
+# Launcher 0.34.4: actual matching-server and gameplay verification
 
 This implementation **executes** the exact signed staged client already installed
 by 0.34.2, not a Client Factory rebuild or an invented test package. The
-0.34.3 menu/loader startup probe runs first. A **second normal NeverRuntime
+0.34.3 menu/loader startup probe runs first. A **second normal Runtime
 launch** connects that same installation to a real local Minecraft dedicated
 server via `--matching-server-port`. The launched Java PID is observed from X11,
 not inferred from a CI-generated `joined the game` JSON field.
@@ -41,7 +41,7 @@ equivalent to real custom/official authentication validation (V07).
 1. The real dedicated server logs the exact Minecraft version, matching
    loader/version and, when required, ServerBridge identity/version; it finishes
    preparing the world and answers an authenticated RCON `time query gametime`.
-2. The real NeverRuntime client auto-enters `127.0.0.1:<ephemeral port>` using
+2. The real Runtime client auto-enters `127.0.0.1:<ephemeral port>` using
    Minecraft's ordinary `--server/--port` or `--quickPlayMultiplayer` mechanism.
    The signed manifest, materialized client files and pinned release key are
    unchanged from startup validation.
@@ -61,7 +61,7 @@ Stages in the existing PostgreSQL-backed staged-run report are `server-readiness
 `manifest-files`, `materialization`, `startup` and `loader-readiness`. Every
 stage has an independent result. Diagnostics include server boot log, immutable
 server artifact SHA, join log presence, the PID-bound world screenshots and their
-SHA-256, game tick observations, player state snapshots and the NeverRuntime
+SHA-256, game tick observations, player state snapshots and the Runtime
 launch result. The backend stores only stage summaries / SHA-256 references,
 while CI preserves detailed artifacts. Grant credentials and RCON passwords are
 excluded.

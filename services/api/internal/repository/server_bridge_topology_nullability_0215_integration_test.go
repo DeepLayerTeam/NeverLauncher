@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // Чтение топологии включает все зарегистрированные пары прокси и серверной части, в том числе

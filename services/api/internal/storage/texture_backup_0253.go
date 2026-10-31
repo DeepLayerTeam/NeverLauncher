@@ -83,7 +83,7 @@ func BackupTextures0253(ctx context.Context, store Storage, objects []TextureBac
 	if err := os.MkdirAll(filepath.Dir(dest), 0700); err != nil {
 		return err
 	}
-	stage, err := os.MkdirTemp(filepath.Dir(dest), ".neverlauncher-texture-backup-*")
+	stage, err := os.MkdirTemp(filepath.Dir(dest), ".launcher-texture-backup-*")
 	if err != nil {
 		return err
 	}

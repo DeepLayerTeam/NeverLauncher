@@ -17,15 +17,15 @@ import (
 	"sync"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 const (
-	headerKeyID       = "X-NeverLauncher-Key-Id"
-	headerTimestamp   = "X-NeverLauncher-Timestamp"
-	headerNonce       = "X-NeverLauncher-Nonce"
-	headerSignature   = "X-NeverLauncher-Signature"
-	headerConnectorID = "X-NeverLauncher-Connector-Id"
+	headerKeyID       = "X-Launcher-Key-Id"
+	headerTimestamp   = "X-Launcher-Timestamp"
+	headerNonce       = "X-Launcher-Nonce"
+	headerSignature   = "X-Launcher-Signature"
+	headerConnectorID = "X-Launcher-Connector-Id"
 )
 
 type signedClient struct {
@@ -117,7 +117,7 @@ func (c *signedClient) doJSON(ctx context.Context, method, endpoint string, payl
 	if payload != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	req.Header.Set("User-Agent", "NeverLauncher/"+providerVersion+" HTTP-Connector")
+	req.Header.Set("User-Agent", "Launcher/"+providerVersion+" HTTP-Connector")
 	req.Header.Set(headerKeyID, c.cfg.HMAC.KeyID)
 	req.Header.Set(headerTimestamp, timestamp)
 	req.Header.Set(headerNonce, nonce)

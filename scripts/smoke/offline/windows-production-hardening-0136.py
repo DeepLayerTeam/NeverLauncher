@@ -28,7 +28,7 @@ if version_tuple(version) < (0, 13, 6):
         f"Windows production hardening gate requires >=0.13.6, got {version}"
     )
 
-policy = read("runtime/neverruntime/src/windows_policy.rs")
+policy = read("runtime/runtime/src/windows_policy.rs")
 require(
     policy,
     [
@@ -50,7 +50,7 @@ require(
     "Windows process/lifetime hardening",
 )
 
-guard = read("runtime/neverruntime/src/guard_ipc.rs")
+guard = read("runtime/runtime/src/guard_ipc.rs")
 require(
     guard,
     [
@@ -72,7 +72,7 @@ require(
         "Windows package artifact SHA-256 mismatch",
         "production Windows package manifest must require Authenticode",
         "verify_windows_authenticode_trust",
-        "NeverLauncher Guard IPC ready v4",
+        "Launcher Guard IPC ready v4",
     ],
     "Guard hardened IPC/package boundary",
 )
@@ -91,7 +91,7 @@ require(
     "Desktop fail-closed production hardening",
 )
 
-binary = read("runtime/neverruntime/src/bin/guard.rs")
+binary = read("runtime/runtime/src/bin/guard.rs")
 legacy_pre_runtime = (
     "ensure_windows_production_hardening" in binary
     and "ensure_guard_process_policy" in binary
@@ -117,7 +117,7 @@ require(
         "signtool sign",
         "signtool verify",
         "Get-AuthenticodeSignature",
-        "neverGuardProtocolVersion = 4",
+        "GuardProtocolVersion = 4",
         "windows-named-pipe+current-user-system-acl+hmac-sha256-v4",
         "authenticodeRequired = $SignedProduction",
         "requireAuthenticode = $SignedProduction",
@@ -126,7 +126,7 @@ require(
     "Windows signed release pipeline",
 )
 
-integration = read("runtime/neverruntime/tests/guard_windows.rs")
+integration = read("runtime/runtime/tests/guard_windows.rs")
 require(
     integration,
     [
@@ -147,13 +147,13 @@ if "windows-production-hardening-0136.py" not in preflight:
 require(
     ci,
     [
-        "cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests",
-        "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_windows",
-        "cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings",
+        "cargo test --manifest-path runtime/runtime/Cargo.toml --lib windows_policy::tests",
+        "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_windows",
+        "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
         "build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage",
     ],
     "Windows native CI",
 )
 
 # Документация безопасности Markdown необязательна; соблюдение требований проверено выше.
-print(f"[NeverLauncher] Windows production hardening 0.13.6 gate OK: {version}")
+print(f"[Launcher] Windows production hardening 0.13.6 gate OK: {version}")

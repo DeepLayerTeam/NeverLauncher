@@ -95,16 +95,16 @@ func linuxTargetMetadata0153(arch string) (machine uint16, machineText string, e
 
 func expectedLinuxArtifacts0153(arch string) map[string]string {
 	return map[string]string{
-		"cli":              "neverlauncher-cli-linux-" + arch,
-		"api":              "neverlauncher-api-linux-" + arch,
-		"desktop-launcher": "neverlauncher-desktop-linux-" + arch,
+		"cli":              "launcher-cli-linux-" + arch,
+		"api":              "launcher-api-linux-" + arch,
+		"desktop-launcher": "launcher-desktop-linux-" + arch,
 		"guard":            "guard-linux-" + arch,
-		"runtime":          "neverruntime-linux-" + arch,
+		"runtime":          "runtime-linux-" + arch,
 	}
 }
 
 func expectedLinuxPackage0153(ver, arch string) (string, string) {
-	return "neverlauncher-linux-" + arch + "-" + ver + ".tar.gz", "LINUX_PACKAGE_MANIFEST_" + strings.ToUpper(arch) + ".json"
+	return "launcher-linux-" + arch + "-" + ver + ".tar.gz", "LINUX_PACKAGE_MANIFEST_" + strings.ToUpper(arch) + ".json"
 }
 
 func inspectLinuxELFBytes0153(data []byte) (linuxELFInfo0153, error) {
@@ -172,7 +172,7 @@ func verifyLinuxPackageManifest0153(dir, ver, arch string) (LinuxPackageManifest
 	if err != nil {
 		return LinuxPackageManifest0153{}, "", err
 	}
-	if manifest.SchemaVersion != "1.0" || manifest.Product != "NeverLauncher" || manifest.ProductVersion != ver || manifest.Platform != "linux" || manifest.Architecture != arch || manifest.ELFMachine != expectedMachine || manifest.PackageFormat != "tar.gz" || manifest.PackageArtifact != expectedPackage {
+	if manifest.SchemaVersion != "1.0" || manifest.Product != "Launcher" || manifest.ProductVersion != ver || manifest.Platform != "linux" || manifest.Architecture != arch || manifest.ELFMachine != expectedMachine || manifest.PackageFormat != "tar.gz" || manifest.PackageArtifact != expectedPackage {
 		return LinuxPackageManifest0153{}, "", fmt.Errorf("Linux %s package manifest identity/schema mismatch", arch)
 	}
 	expected := expectedLinuxArtifacts0153(arch)
@@ -189,7 +189,7 @@ func verifyLinuxPackageManifest0153(dir, ver, arch string) (LinuxPackageManifest
 			return LinuxPackageManifest0153{}, "", fmt.Errorf("Linux %s duplicate package component %s", arch, artifact.Component)
 		}
 		seen[artifact.Component] = true
-		if !strings.HasPrefix(artifact.PackagePath, "neverlauncher/") || strings.Contains(artifact.PackagePath, "..") {
+		if !strings.HasPrefix(artifact.PackagePath, "launcher/") || strings.Contains(artifact.PackagePath, "..") {
 			return LinuxPackageManifest0153{}, "", fmt.Errorf("Linux %s unsafe package path %s", arch, artifact.PackagePath)
 		}
 		path, err := safeDeliveryArtifactPath(dir, artifact.Name)
@@ -283,7 +283,7 @@ func verifyLinuxPackageArchive0153(dir, ver, arch string, manifest LinuxPackageM
 	if len(files) != expectedFileCount {
 		return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s package contains unexpected file count", arch)
 	}
-	embeddedManifest, ok := files["neverlauncher/LINUX_PACKAGE_MANIFEST.json"]
+	embeddedManifest, ok := files["launcher/LINUX_PACKAGE_MANIFEST.json"]
 	if !ok {
 		return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s package lacks embedded manifest", arch)
 	}
@@ -291,19 +291,19 @@ func verifyLinuxPackageArchive0153(dir, ver, arch string, manifest LinuxPackageM
 	if err != nil {
 		return LinuxProductionPackage0153{}, err
 	}
-	if string(embeddedManifest) != string(topLevelManifest) || modes["neverlauncher/LINUX_PACKAGE_MANIFEST.json"] != 0o644 {
+	if string(embeddedManifest) != string(topLevelManifest) || modes["launcher/LINUX_PACKAGE_MANIFEST.json"] != 0o644 {
 		return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s embedded manifest mismatch/mode", arch)
 	}
 	if componentTransactionalUpdateRequired0157(ver) {
-		updateRaw, ok := files["neverlauncher/COMPONENT_UPDATE_MANIFEST.json"]
-		if !ok || modes["neverlauncher/COMPONENT_UPDATE_MANIFEST.json"] != 0o644 {
+		updateRaw, ok := files["launcher/COMPONENT_UPDATE_MANIFEST.json"]
+		if !ok || modes["launcher/COMPONENT_UPDATE_MANIFEST.json"] != 0o644 {
 			return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s package lacks component update manifest", arch)
 		}
 		var update componentUpdateManifest0157
 		if err := json.Unmarshal(updateRaw, &update); err != nil {
 			return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s component update manifest invalid: %w", arch, err)
 		}
-		if update.SchemaVersion != "1.0" || update.Product != "NeverLauncher" || update.ProductVersion != ver || update.Platform != "linux" || update.Architecture != arch || update.Layout != "adjacent-files" || update.TrustMode != "sha256-delivery" || len(update.Components) != 3 {
+		if update.SchemaVersion != "1.0" || update.Product != "Launcher" || update.ProductVersion != ver || update.Platform != "linux" || update.Architecture != arch || update.Layout != "adjacent-files" || update.TrustMode != "sha256-delivery" || len(update.Components) != 3 {
 			return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s component update manifest identity mismatch", arch)
 		}
 		mainByComponent := map[string]LinuxPackageArtifact0153{}
@@ -314,7 +314,7 @@ func verifyLinuxPackageArchive0153(dir, ver, arch string, manifest LinuxPackageM
 		for _, row := range update.Components {
 			mainName, ok := aliases[row.Component]
 			main, exists := mainByComponent[mainName]
-			if !ok || !exists || row.SourcePath != strings.TrimPrefix(main.PackagePath, "neverlauncher/") || row.TargetPath != row.SourcePath || row.Size != main.Size || !strings.EqualFold(row.SHA256, main.SHA256) || !row.Executable {
+			if !ok || !exists || row.SourcePath != strings.TrimPrefix(main.PackagePath, "launcher/") || row.TargetPath != row.SourcePath || row.Size != main.Size || !strings.EqualFold(row.SHA256, main.SHA256) || !row.Executable {
 				return LinuxProductionPackage0153{}, fmt.Errorf("Linux %s component update binding mismatch for %s", arch, row.Component)
 			}
 		}
@@ -355,7 +355,7 @@ func buildLinuxProductionTarget0153(dir, ver, arch string) (LinuxProductionTarge
 func writeLinuxProductionEvidence0153(dir, ver string) error {
 	evidence := LinuxProductionEvidence0153{
 		SchemaVersion:  "1.0",
-		Product:        "NeverLauncher",
+		Product:        "Launcher",
 		ProductVersion: ver,
 		Platform:       "linux",
 		IntegrityMode:  "sha256+signed-release-bundle",
@@ -475,7 +475,7 @@ func verifyLinuxProductionEvidence0153(dir, ver string, bindDelivery bool) error
 	if err != nil {
 		return err
 	}
-	if evidence.SchemaVersion != "1.0" || evidence.Product != "NeverLauncher" || evidence.ProductVersion != ver || evidence.Platform != "linux" || evidence.IntegrityMode != "sha256+signed-release-bundle" {
+	if evidence.SchemaVersion != "1.0" || evidence.Product != "Launcher" || evidence.ProductVersion != ver || evidence.Platform != "linux" || evidence.IntegrityMode != "sha256+signed-release-bundle" {
 		return errors.New("Linux production evidence identity/schema mismatch")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, evidence.GeneratedAt); err != nil {

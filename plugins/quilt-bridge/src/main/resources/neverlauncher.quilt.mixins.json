@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "ru.neverlauncher.bridge.quilt.mixin",
+  "package": "ru.launcher.bridge.quilt.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": ["ServerLoginNetworkHandlerAccessor"],
   "injectors": {"defaultRequire": 1}

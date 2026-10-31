@@ -323,7 +323,7 @@ mod imp {
 
         let module_set_sha256 = module_set_sha256(&baseline);
         let mut event_chain = Sha256::new();
-        event_chain.update(b"NeverLauncher Module Guard event-chain v1\0");
+        event_chain.update(b"Launcher Module Guard event-chain v1\0");
         event_chain.update(module_set_sha256.as_bytes());
         for (base, sha256) in &baseline_hashes {
             event_chain.update(base.to_le_bytes());
@@ -1530,7 +1530,7 @@ mod imp {
             .collect::<Vec<_>>();
         records.sort_unstable();
         let mut digest = Sha256::new();
-        digest.update(b"NeverLauncher Module Guard module-set v1\0");
+        digest.update(b"Launcher Module Guard module-set v1\0");
         for record in records {
             digest.update((record.len() as u32).to_le_bytes());
             digest.update(record.as_bytes());
@@ -1540,7 +1540,7 @@ mod imp {
 
     fn advance_continuous_event_chain(previous: [u8; 32], packet: &[u8]) -> [u8; 32] {
         let mut digest = Sha256::new();
-        digest.update(b"NeverLauncher Continuous Guard sensor-event-chain v1\0");
+        digest.update(b"Launcher Continuous Guard sensor-event-chain v1\0");
         digest.update(previous);
         digest.update((packet.len() as u32).to_le_bytes());
         digest.update(packet);
@@ -1593,7 +1593,7 @@ mod imp {
 
     fn advance_event_chain(previous: [u8; 32], packet: &[u8], module_hash: &str) -> [u8; 32] {
         let mut digest = Sha256::new();
-        digest.update(b"NeverLauncher Module Guard event-chain v1\0");
+        digest.update(b"Launcher Module Guard event-chain v1\0");
         digest.update(previous);
         digest.update(packet);
         digest.update((module_hash.len() as u32).to_le_bytes());

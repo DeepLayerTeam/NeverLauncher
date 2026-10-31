@@ -98,7 +98,7 @@ func managedJREArchiveName0155(ver, platform, arch string) string {
 	if platform == "windows" {
 		ext = ".zip"
 	}
-	return fmt.Sprintf("neverlauncher-jre-temurin%d-%s-%s-%s%s", managedJREMajor0155, platform, arch, ver, ext)
+	return fmt.Sprintf("launcher-jre-temurin%d-%s-%s-%s%s", managedJREMajor0155, platform, arch, ver, ext)
 }
 
 func managedJREArtifacts0155(ver string) []string {
@@ -406,7 +406,7 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 	if err != nil {
 		return err
 	}
-	if manifest.SchemaVersion != "1.0" || manifest.Product != "NeverLauncher" || manifest.ProductVersion != ver || manifest.Distribution != "temurin" || manifest.Vendor != "Eclipse Adoptium" || manifest.MajorVersion != managedJREMajor0155 || strings.TrimSpace(manifest.GeneratedAt) == "" {
+	if manifest.SchemaVersion != "1.0" || manifest.Product != "Launcher" || manifest.ProductVersion != ver || manifest.Distribution != "temurin" || manifest.Vendor != "Eclipse Adoptium" || manifest.MajorVersion != managedJREMajor0155 || strings.TrimSpace(manifest.GeneratedAt) == "" {
 		return errors.New("Managed JRE manifest identity/schema mismatch")
 	}
 	expected := expectedManagedJRETargets0155(ver)
@@ -442,7 +442,7 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 	if err != nil {
 		return err
 	}
-	if evidence.SchemaVersion != "1.0" || evidence.Product != "NeverLauncher" || evidence.ProductVersion != ver || evidence.Distribution != "temurin" || evidence.Vendor != "Eclipse Adoptium" || evidence.IntegrityMode != "exact-vendor-archive-sha256" || evidence.Manifest != managedJREManifestFile0155 || !validDeliverySHA256(evidence.ManifestSHA256) || !strings.EqualFold(evidence.ManifestSHA256, manifestHash) || strings.TrimSpace(evidence.GeneratedAt) == "" {
+	if evidence.SchemaVersion != "1.0" || evidence.Product != "Launcher" || evidence.ProductVersion != ver || evidence.Distribution != "temurin" || evidence.Vendor != "Eclipse Adoptium" || evidence.IntegrityMode != "exact-vendor-archive-sha256" || evidence.Manifest != managedJREManifestFile0155 || !validDeliverySHA256(evidence.ManifestSHA256) || !strings.EqualFold(evidence.ManifestSHA256, manifestHash) || strings.TrimSpace(evidence.GeneratedAt) == "" {
 		return errors.New("Managed JRE evidence identity/manifest hash mismatch")
 	}
 	if len(evidence.Targets) != len(expected) {
@@ -483,7 +483,7 @@ func verifyManagedJREDistribution0155(dir, ver string, requireDeliveryBinding bo
 			if !ok || artifact.Size != size || !strings.EqualFold(artifact.SHA256, sum) {
 				return fmt.Errorf("Managed JRE artifact %s is not bound to DELIVERY_MANIFEST.json", name)
 			}
-			if strings.HasPrefix(name, "neverlauncher-jre-") && artifact.Component != "managed-jre" {
+			if strings.HasPrefix(name, "launcher-jre-") && artifact.Component != "managed-jre" {
 				return fmt.Errorf("Managed JRE artifact %s has delivery component %s", name, artifact.Component)
 			}
 		}

@@ -119,7 +119,7 @@ require(
     "audit event sink missing",
 )
 
-main = read("services/api/cmd/neverlauncher-api/main.go")
+main = read("services/api/cmd/launcher-api/main.go")
 for token in (
     "eventbus.New",
     "SetAuditEventSink",
@@ -137,7 +137,7 @@ for path in (
 ):
     require(path in routes, f"Admin event diagnostics route missing {path}")
 
-schema = read("schemas/neverlauncher-extension-events.schema.json")
+schema = read("schemas/launcher-extension-events.schema.json")
 require(
     "project.before-save" in schema
     and "serverbridge.event.received" in schema
@@ -153,7 +153,7 @@ for path in (
 ):
     require(path in openapi, f"OpenAPI missing {path}")
 
-prod = read("cli/cmd/neverlauncher/release_commands.go")
+prod = read("cli/cmd/launcher/release_commands.go")
 for table in (
     "extension_event_log",
     "extension_event_subscriptions",
@@ -164,7 +164,7 @@ for table in (
 
 for envfile in (
     "deploy/production/env.production.example",
-    "cli/cmd/neverlauncher/templates/production/env.production.example",
+    "cli/cmd/launcher/templates/production/env.production.example",
 ):
     env = read(envfile)
     for key in (

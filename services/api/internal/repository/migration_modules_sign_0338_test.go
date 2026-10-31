@@ -1,8 +1,8 @@
 package repository
 
 import (
-	gc "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcontent"
-	gm "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitmodules"
+	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcontent"
+	gm "gitflic.ru/skif4er/launcher/services/api/internal/gravitmodules"
 	"testing"
 )
 

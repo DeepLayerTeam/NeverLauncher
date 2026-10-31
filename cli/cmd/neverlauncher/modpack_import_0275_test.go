@@ -176,12 +176,12 @@ func TestModpack0275MissingOrWrongChecksumNeverPublishes(t *testing.T) {
 	}
 }
 func TestModpack0275RejectsUnsafePaths(t *testing.T) {
-	for _, bad := range []string{"../escape", "overrides/../../escape", "overrides/CON.txt", "overrides/libraries/../../evil", "overrides\\config\\win", "overrides/.neverlauncher/install-plan.json"} {
+	for _, bad := range []string{"../escape", "overrides/../../escape", "overrides/CON.txt", "overrides/libraries/../../evil", "overrides\\config\\win", "overrides/.launcher/install-plan.json"} {
 		t.Run(strings.ReplaceAll(bad, "/", "_"), func(t *testing.T) {
 			index := []byte(`{"formatVersion":1,"game":"minecraft","versionId":"a","name":"a","dependencies":{"minecraft":"1.20.1"},"files":[]}`)
 			name := bad
-			if strings.HasPrefix(name, "overrides/") && strings.HasSuffix(name, ".neverlauncher/install-plan.json") {
-				name = "overrides/.neverlauncher/install-plan.json"
+			if strings.HasPrefix(name, "overrides/") && strings.HasSuffix(name, ".launcher/install-plan.json") {
+				name = "overrides/.launcher/install-plan.json"
 			}
 			archive := packFixtureZip0275(t, map[string][]byte{"modrinth.index.json": index, name: []byte("bad")})
 			spec, z, e := parseModpack0275(archive, false)

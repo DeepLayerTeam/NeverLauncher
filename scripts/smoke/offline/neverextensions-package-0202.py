@@ -18,7 +18,7 @@ def require(condition: bool, message: str) -> None:
 
 version = tuple(int(part) for part in read("VERSION").strip().split(".")[:3])
 require(version >= (0, 20, 2), "VERSION must be >= 0.20.2")
-source = read("cli/cmd/neverlauncher/extension_package_0202.go")
+source = read("cli/cmd/launcher/extension_package_0202.go")
 for token in (
     "archive/zip",
     "checksums.sha256",
@@ -35,14 +35,12 @@ for token in (
 ):
     require(token in source, f"extension package implementation missing {token}")
 
-commands = read("cli/cmd/neverlauncher/extension_commands_0201.go")
+commands = read("cli/cmd/launcher/extension_commands_0201.go")
 for command in ('"pack"', '"sign"', '"verify"', '"inspect"'):
     require(command in commands, f"extension CLI missing {command}")
 
-package_schema = json.loads(read("schemas/neverlauncher-extension-package.schema.json"))
-signature_schema = json.loads(
-    read("schemas/neverlauncher-extension-signature.schema.json")
-)
+package_schema = json.loads(read("schemas/launcher-extension-package.schema.json"))
+signature_schema = json.loads(read("schemas/launcher-extension-signature.schema.json"))
 require(
     package_schema["properties"]["formatVersion"]["const"] == "1.0",
     "package schema formatVersion mismatch",

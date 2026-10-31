@@ -1,4 +1,4 @@
-package ru.neverlauncher.trusted;
+package ru.launcher.trusted;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

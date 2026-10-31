@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 const (
@@ -568,7 +568,7 @@ func recomputeGuardEvidenceSHA2560134(e guardIntegrityEvidence0134) (string, err
 func guardAttestationCorePayload0134(a guardRemoteAttestation0134) string {
 	if a.Schema == guardLinuxAttestationSchema0137 && a.ProcessPolicy.Linux != nil {
 		l := a.ProcessPolicy.Linux
-		return "NeverLauncher Guard Attestation Core Linux v1\n" +
+		return "Launcher Guard Attestation Core Linux v1\n" +
 			"challenge-id=" + a.ChallengeID + "\n" +
 			"challenge-sha256=" + a.ChallengeSHA256 + "\n" +
 			"evidence-id=" + a.Evidence.EvidenceID + "\n" +
@@ -591,7 +591,7 @@ func guardAttestationCorePayload0134(a guardRemoteAttestation0134) string {
 		m := a.ProcessPolicy.MacOS
 		g := a.Evidence.Guard.MacOS
 		l := a.Evidence.Launcher.MacOS
-		return "NeverLauncher Guard Attestation Core macOS v1\n" +
+		return "Launcher Guard Attestation Core macOS v1\n" +
 			"challenge-id=" + a.ChallengeID + "\n" + "challenge-sha256=" + a.ChallengeSHA256 + "\n" +
 			"evidence-id=" + a.Evidence.EvidenceID + "\n" + "evidence-sha256=" + a.Evidence.EvidenceSHA256 + "\n" +
 			"guard-sha256=" + a.Evidence.Guard.ImageSHA256 + "\n" + "launcher-sha256=" + a.Evidence.Launcher.ImageSHA256 + "\n" +
@@ -605,7 +605,7 @@ func guardAttestationCorePayload0134(a guardRemoteAttestation0134) string {
 			"parent-exit-watch=" + strconv.FormatBool(m.ParentExitWatch) + "\n" + "private-umask=" + strconv.FormatBool(m.PrivateUmask) + "\n" +
 			"collected-at=" + strconv.FormatUint(a.CollectedAtUnix, 10) + "\n"
 	}
-	return "NeverLauncher Guard Attestation Core v1\n" +
+	return "Launcher Guard Attestation Core v1\n" +
 		"challenge-id=" + a.ChallengeID + "\n" +
 		"challenge-sha256=" + a.ChallengeSHA256 + "\n" +
 		"evidence-id=" + a.Evidence.EvidenceID + "\n" +
@@ -634,7 +634,7 @@ func recomputeGuardAttestationSHA2560134(a guardRemoteAttestation0134) string {
 }
 
 func guardDeviceSigningPayload0134(challenge string, claims authClaims, device model.TrustedDevice, launcherVersion string, a guardRemoteAttestation0134, challengeExpiresAt string) string {
-	return "NeverLauncher Guard Attestation Device Binding v1\n" +
+	return "Launcher Guard Attestation Device Binding v1\n" +
 		"purpose=guard-attest\n" +
 		"challenge=" + strings.TrimSpace(challenge) + "\n" +
 		"challenge-id=" + strings.TrimSpace(a.ChallengeID) + "\n" +

@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func TestTextureStorageQuota0253(t *testing.T) {
@@ -57,7 +57,7 @@ func TestTextureStorageQuota0253(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo := &SQLRepository{db: db}
-	owner := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "owner", Name: "Steve", Realm: "local", Issuer: "neverlauncher"}
+	owner := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "owner", Name: "Steve", Realm: "local", Issuer: "launcher"}
 	makeUpload := func(content string, revision int64) VerifiedTexture0252 {
 		sha := sha256.Sum256([]byte(content))
 		digest := hex.EncodeToString(sha[:])
@@ -90,7 +90,7 @@ func TestTextureStorageQuota0253(t *testing.T) {
 		t.Fatalf("quota owner rows %d %v", ownerCount, err)
 	}
 	// A second owner gets an independent ownership/quota record for the same content.
-	other := model.MinecraftProfile{UUID: "99999999-2222-4333-8444-555555555555", UserID: "other", Name: "Alex", Realm: "local", Issuer: "neverlauncher"}
+	other := model.MinecraftProfile{UUID: "99999999-2222-4333-8444-555555555555", UserID: "other", Name: "Alex", Realm: "local", Issuer: "launcher"}
 	a.ExpectedRevision = 0
 	if err = repo.StageTextureUpload0253(ctx, other, a); err != nil {
 		t.Fatalf("second owner staging dedup: %v", err)

@@ -1,4 +1,4 @@
-# NeverLauncher 0.32.10 — DEP06 SQLite Backup & Restore
+# Launcher 0.32.10 — DEP06 SQLite Backup & Restore
 
 ## Support boundary
 
@@ -16,11 +16,11 @@ backup directory as strongly as the live DB, and encrypt copies off-host.
 ## Back up a running SQLite database
 
 ```sh
-neverlauncher-sqlite backup \
-  --db /var/lib/neverlauncher/sqlite/state.db \
-  --backup /var/lib/neverlauncher/backups/state-2026-10-27.db
-neverlauncher-sqlite backup-verify \
-  --backup /var/lib/neverlauncher/backups/state-2026-10-27.db
+launcher-sqlite backup \
+  --db /var/lib/launcher/sqlite/state.db \
+  --backup /var/lib/launcher/backups/state-2026-10-27.db
+launcher-sqlite backup-verify \
+  --backup /var/lib/launcher/backups/state-2026-10-27.db
 ```
 
 The snapshot reads committed pages from the live WAL using a **separate SQLite
@@ -35,9 +35,9 @@ modification of both the backup and its manifest.
 ## Mandatory pre-upgrade validation
 
 ```sh
-neverlauncher-sqlite pre-upgrade \
-  --db /var/lib/neverlauncher/sqlite/state.db \
-  --backup /var/lib/neverlauncher/backups/preupgrade-2026-10-27.db
+launcher-sqlite pre-upgrade \
+  --db /var/lib/launcher/sqlite/state.db \
+  --backup /var/lib/launcher/backups/preupgrade-2026-10-27.db
 ```
 
 This operation fails closed unless the backup succeeds, checksum and SQLite
@@ -56,7 +56,7 @@ that are not performed through `sqlitecore.Open`.
 
 ## Restore (offline only)
 
-Stop NeverLauncher (all processes using this DB) first. A running NeverLauncher
+Stop Launcher (all processes using this DB) first. A running Launcher
 holds an exclusive owner lock; restore refuses to proceed. SQLite `-wal`,
 `-shm` and `-journal` sidecars are **not automatically deleted**, even if they
 were left by a crash. Restart/repair and checkpoint the original DB, shut it
@@ -64,11 +64,11 @@ down cleanly, and then restore. Never discard a WAL file containing uncommitted
 recovery state as part of an automated restore.
 
 ```sh
-neverlauncher-sqlite restore \
-  --backup /var/lib/neverlauncher/backups/preupgrade-2026-10-27.db \
-  --db /var/lib/neverlauncher/sqlite/state.db --replace
-neverlauncher-sqlite core-status \
-  --db /var/lib/neverlauncher/sqlite/state.db
+launcher-sqlite restore \
+  --backup /var/lib/launcher/backups/preupgrade-2026-10-27.db \
+  --db /var/lib/launcher/sqlite/state.db --replace
+launcher-sqlite core-status \
+  --db /var/lib/launcher/sqlite/state.db
 ```
 
 `--replace` must be explicit when a target exists. Restore takes the same
@@ -77,7 +77,7 @@ private staged file with fsync, rechecks the copy and SQLite constraints,
 retains the old database as a `state.db.pre-restore-*` hardlink, and atomically
 renames the new DB into place. Keep the rollback copy until real application
 smoke tests have passed. This protocol assumes all writers observe the
-NeverLauncher owner lock; it does not forcibly terminate unrelated clients
+Launcher owner lock; it does not forcibly terminate unrelated clients
 which bypass that lock.
 
 No backup tool can guarantee preservation of writes made **after** its

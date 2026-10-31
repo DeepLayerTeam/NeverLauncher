@@ -3,14 +3,14 @@ plugins {
     id("net.neoforged.moddev") version "2.0.147"
 }
 version = rootProject.file("VERSION").readText().trim()
-group = "ru.neverlauncher"
-base { archivesName.set("neverlauncher-neoforge-bridge") }
+group = "ru.launcher"
+base { archivesName.set("launcher-neoforge-bridge") }
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
 
 neoForge {
     version = "21.1.251"
     mods {
-        create("neverlauncher_serverbridge") {
+        create("launcher_serverbridge") {
             sourceSet(sourceSets.main.get())
         }
     }
@@ -25,19 +25,19 @@ dependencies {
 
 tasks.jar {
     dependsOn(bridgeRuntime.buildDependencies)
-    archiveBaseName.set("neverlauncher-neoforge-bridge")
+    archiveBaseName.set("launcher-neoforge-bridge")
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from({
         bridgeRuntime.map { if (it.isDirectory) it else zipTree(it) }
     })
     manifest {
-        attributes["Implementation-Title"] = "NeverLauncher NeoForge Server Bridge"
+        attributes["Implementation-Title"] = "Launcher NeoForge Server Bridge"
         attributes["Implementation-Version"] = project.version.toString()
     }
 }
 
 tasks.processResources {
-    inputs.property("neverLauncherVersion", project.version.toString())
+    inputs.property("LauncherVersion", project.version.toString())
     filesMatching("META-INF/neoforge.mods.toml") { expand("version" to project.version.toString()) }
 }

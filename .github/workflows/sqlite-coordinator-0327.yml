@@ -6,7 +6,7 @@ on:
       - 'services/api/internal/sqlitedurable/**'
       - 'services/api/internal/httpapi/**'
       - 'services/api/internal/config/**'
-      - 'services/api/cmd/neverlauncher-api/**'
+      - 'services/api/cmd/launcher-api/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
       - '.github/workflows/sqlite-coordinator-0327.yml'
@@ -32,10 +32,10 @@ jobs:
           set -euo pipefail
           go mod download
           go mod verify
-          test -z "$(gofmt -l internal/sqlitecoord internal/sqlitedurable internal/config/sqlite_single_node_0327_test.go internal/httpapi/rate_limit.go internal/httpapi/runtime_state.go cmd/neverlauncher-api/main.go)"
+          test -z "$(gofmt -l internal/sqlitecoord internal/sqlitedurable internal/config/sqlite_single_node_0327_test.go internal/httpapi/rate_limit.go internal/httpapi/runtime_state.go cmd/launcher-api/main.go)"
       - name: Local filesystem and WAL integration (no skips permitted)
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/neverlauncher-coordinator-327
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-coordinator-327
           NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
@@ -43,6 +43,6 @@ jobs:
           chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
           stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
           go test -race -count=1 -timeout=15m ./internal/sqlitecoord ./internal/sqlitedurable ./internal/config
-          go vet ./internal/sqlitecoord ./internal/sqlitedurable ./internal/config ./internal/httpapi ./cmd/neverlauncher-api
+          go vet ./internal/sqlitecoord ./internal/sqlitedurable ./internal/config ./internal/httpapi ./cmd/launcher-api
       - name: Build actual API with SQLite coordinator path
-        run: go build -trimpath -o "$RUNNER_TEMP/neverlauncher-api-327" ./cmd/neverlauncher-api
+        run: go build -trimpath -o "$RUNNER_TEMP/launcher-api-327" ./cmd/launcher-api

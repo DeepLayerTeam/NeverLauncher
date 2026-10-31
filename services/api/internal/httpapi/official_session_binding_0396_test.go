@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 // A real authenticated HTTP handler must return its verified JWT SID, not
@@ -19,7 +19,7 @@ func TestOfficialBrowserConfigBindsNeverVaultSession0396(t *testing.T) {
 		PublicURL: "http://example.test", RepositoryDriver: "memory", StorageDriver: "local",
 		StorageLocalPath: t.TempDir(), BackupRoot: t.TempDir(), Environment: "test",
 		AuthTokenSecret: "test-secret-for-integration", AuthTokenTTLHours: 1,
-		WebAuthnRPID: "example.test", WebAuthnRPName: "NeverLauncher Test",
+		WebAuthnRPID: "example.test", WebAuthnRPName: "Launcher Test",
 		WebAuthnOrigins:            []string{"http://example.test"},
 		MinecraftMicrosoftClientID: "01234567-89ab-cdef-0123-456789abcdef",
 	}

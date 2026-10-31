@@ -1,7 +1,7 @@
-package ru.neverlauncher.bridge.bukkit;
+package ru.launcher.bridge.bukkit;
 
-public final class NeverLauncherBukkitBridge extends BukkitFamilyBridgePlugin {
-    public NeverLauncherBukkitBridge() {
+public final class LauncherBukkitBridge extends BukkitFamilyBridgePlugin {
+    public LauncherBukkitBridge() {
         super(BukkitFamilyPlatform.BUKKIT);
     }
 }

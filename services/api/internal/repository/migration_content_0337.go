@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	gc "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcontent"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcontent"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // EnsureMigrationContent0337 makes the profile/workspace reservation durable

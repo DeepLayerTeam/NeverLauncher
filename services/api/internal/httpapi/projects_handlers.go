@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func (s Server) projects(w http.ResponseWriter, r *http.Request) {

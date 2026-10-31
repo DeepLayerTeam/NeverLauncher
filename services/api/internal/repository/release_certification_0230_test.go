@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func certificationWorkspace0230(id string) BuildWorkspace {
@@ -28,7 +28,7 @@ func certificationWorkspace0230(id string) BuildWorkspace {
 // Package metadata must remain pinned across retries and concurrent requests.
 func TestGAWorkspaceImmutabilityAndStateMachine0230(t *testing.T) {
 	ctx := context.Background()
-	r := NewMemoryRepository("https://neverlauncher.test")
+	r := NewMemoryRepository("https://launcher.test")
 	w, err := r.CreateBuildWorkspace(ctx, certificationWorkspace0230("ga-workspace"))
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestGAWorkspaceImmutabilityAndStateMachine0230(t *testing.T) {
 }
 
 func TestGAWorkspaceParallelRevisionCAS0230(t *testing.T) {
-	r := NewMemoryRepository("https://neverlauncher.test")
+	r := NewMemoryRepository("https://launcher.test")
 	ctx := context.Background()
 	w, err := r.CreateBuildWorkspace(ctx, certificationWorkspace0230("ga-parallel"))
 	if err != nil {

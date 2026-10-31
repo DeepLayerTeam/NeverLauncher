@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // Drafts are server-owned records (never client localStorage). Only their owner

@@ -24,7 +24,7 @@ func TestNewS3StorageValidatesRequiredConfig(t *testing.T) {
 }
 
 func TestS3SaveStreamsAndSignsPayload(t *testing.T) {
-	payload := strings.Repeat("neverlauncher-stream-", 8192)
+	payload := strings.Repeat("launcher-stream-", 8192)
 	var gotBody string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPut {

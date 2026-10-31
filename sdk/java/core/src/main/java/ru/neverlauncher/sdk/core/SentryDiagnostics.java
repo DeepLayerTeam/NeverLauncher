@@ -1,4 +1,4 @@
-package ru.neverlauncher.sdk.core;
+package ru.launcher.sdk.core;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -21,7 +21,7 @@ public final class SentryDiagnostics {
         String dsn = env.get("NEVERLAUNCHER_SENTRY_JVM_DSN");
         if (dsn == null || dsn.isBlank()) return;
         Destination destination = Destination.parse(dsn);
-        String release = env.getOrDefault("NEVERLAUNCHER_SENTRY_RELEASE","neverlauncher@0.31.0");
+        String release = env.getOrDefault("NEVERLAUNCHER_SENTRY_RELEASE","launcher@0.31.0");
         if (!release.matches("[A-Za-z0-9_.@+\\-]{1,128}")) throw new IllegalArgumentException("invalid Sentry release");
         Thread.UncaughtExceptionHandler original = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((thread, failure) -> {
@@ -52,7 +52,7 @@ public final class SentryDiagnostics {
     public static void report(Throwable failure,Map<String,String> env) {
         if (!"true".equalsIgnoreCase(env.getOrDefault("NEVERLAUNCHER_SENTRY_JVM_ENABLED","false"))) return;
         String dsn=env.get("NEVERLAUNCHER_SENTRY_JVM_DSN");if(dsn==null||dsn.isBlank())return;
-        String release=env.getOrDefault("NEVERLAUNCHER_SENTRY_RELEASE","neverlauncher@0.31.0");
+        String release=env.getOrDefault("NEVERLAUNCHER_SENTRY_RELEASE","launcher@0.31.0");
         if(!release.matches("[A-Za-z0-9_.@+\\-]{1,128}"))return;
         try {send(Destination.parse(dsn),release,failure);} catch(Exception ignored) { /* fail open game / preserve original throwable */ }
     }
@@ -74,11 +74,11 @@ public final class SentryDiagnostics {
         Map<String,Object> event=new LinkedHashMap<>();
         event.put("event_id",id);event.put("timestamp",Instant.now().toString());event.put("platform","java");event.put("level","error");event.put("release",release);
         event.put("exception",Map.of("values",List.of(Map.of("type",name,"value","Hosted JVM extension failed","stacktrace",Map.of("frames",frames)))));
-        event.put("sdk",Map.of("name","neverlauncher.jvm","version","0.31.0"));
+        event.put("sdk",Map.of("name","launcher.jvm","version","0.31.0"));
         String envelope=Json.encode(Map.of("event_id",id,"dsn",dest.dsn))+"\n"+Json.encode(Map.of("type","event"))+"\n"+Json.encode(event)+"\n";
         HttpRequest request=HttpRequest.newBuilder(URI.create(dest.endpoint)).timeout(Duration.ofSeconds(3))
             .header("Content-Type","application/x-sentry-envelope")
-            .header("X-Sentry-Auth","Sentry sentry_version=7,sentry_client=neverlauncher.jvm/0.31.0,sentry_key="+dest.key)
+            .header("X-Sentry-Auth","Sentry sentry_version=7,sentry_client=launcher.jvm/0.31.0,sentry_key="+dest.key)
             .POST(HttpRequest.BodyPublishers.ofString(envelope)).build();
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build().send(request,HttpResponse.BodyHandlers.discarding());
     }

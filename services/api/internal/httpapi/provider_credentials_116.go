@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 const providerCredentialCipherVersion116 = "v1"
@@ -31,7 +31,7 @@ func (s Server) providerCredentialAEAD116() (cipher.AEAD, error) {
 	if secret == "" {
 		return nil, errors.New("auth token secret is empty")
 	}
-	key := sha256.Sum256([]byte("NeverLauncher/provider-credential/v1\x00" + secret))
+	key := sha256.Sum256([]byte("Launcher/provider-credential/v1\x00" + secret))
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (s Server) providerCredentialAEAD116() (cipher.AEAD, error) {
 }
 
 func providerCredentialAAD116(userID, identityID, provider, subject string) []byte {
-	return []byte("NeverLauncher/provider-credential/v1\x00" + strings.TrimSpace(userID) + "\x00" + strings.TrimSpace(identityID) + "\x00" + strings.ToLower(strings.TrimSpace(provider)) + "\x00" + strings.TrimSpace(subject))
+	return []byte("Launcher/provider-credential/v1\x00" + strings.TrimSpace(userID) + "\x00" + strings.TrimSpace(identityID) + "\x00" + strings.ToLower(strings.TrimSpace(provider)) + "\x00" + strings.TrimSpace(subject))
 }
 
 func (s Server) encryptProviderCredential116(userID, identityID, provider, subject, token string) (string, error) {

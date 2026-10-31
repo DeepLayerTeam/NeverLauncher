@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 // Runtime components are stored in the SAME SQLite WAL file as the HTTP

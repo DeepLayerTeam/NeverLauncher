@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // An RPC probe, memory monitor and heartbeat timeout can race. A later

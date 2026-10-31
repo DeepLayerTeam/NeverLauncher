@@ -3,8 +3,8 @@ plugins {
     id("net.minecraftforge.gradle") version "7.0.31"
 }
 version = rootProject.file("VERSION").readText().trim()
-group = "ru.neverlauncher"
-base { archivesName.set("neverlauncher-forge-bridge") }
+group = "ru.launcher"
+base { archivesName.set("launcher-forge-bridge") }
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
 
 minecraft {
@@ -28,19 +28,19 @@ dependencies {
 
 tasks.jar {
     dependsOn(bridgeRuntime.buildDependencies)
-    archiveBaseName.set("neverlauncher-forge-bridge")
+    archiveBaseName.set("launcher-forge-bridge")
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from({
         bridgeRuntime.map { if (it.isDirectory) it else zipTree(it) }
     })
     manifest {
-        attributes["Implementation-Title"] = "NeverLauncher Forge Server Bridge"
+        attributes["Implementation-Title"] = "Launcher Forge Server Bridge"
         attributes["Implementation-Version"] = project.version.toString()
     }
 }
 
 tasks.processResources {
-    inputs.property("neverLauncherVersion", project.version.toString())
+    inputs.property("LauncherVersion", project.version.toString())
     filesMatching("META-INF/mods.toml") { expand("version" to project.version.toString()) }
 }

@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -7,7 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 // Сохранено происхождение старого дайджеста для проверок совместимости 0.19.5:
-// NeverLauncher-ServerBridge-Control-Execution-v1. В Protocol v3 ниже используется v2.
+// Launcher-ServerBridge-Control-Execution-v1. В Protocol v3 ниже используется v2.
 
 public record BridgeControlCommand(
     String serverId,
@@ -59,7 +59,7 @@ public record BridgeControlCommand(
      */
     public String executionDigest() {
         String stable = String.join("\n",
-            "NeverLauncher-ServerBridge-Control-Execution-v2",
+            "Launcher-ServerBridge-Control-Execution-v2",
             b64(serverId), b64(commandId), Long.toString(identityEpoch), Long.toString(runtimeEpoch), runtimeId.toLowerCase(),
             b64(type), payloadSha256.toLowerCase());
         try {

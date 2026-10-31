@@ -15,12 +15,12 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 const (
-	serverBridgeEventSignatureScheme0194 = "NeverLauncher-ServerBridge-Event-v1"
+	serverBridgeEventSignatureScheme0194 = "Launcher-ServerBridge-Event-v1"
 	serverBridgeEventBatchMax0194        = 64
 	serverBridgeEventPayloadMax0194      = 4096
 	serverBridgeNodeEventMaxBody0194     = 512 << 10

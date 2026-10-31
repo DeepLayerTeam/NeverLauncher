@@ -4,14 +4,14 @@
 -- infer the issuer from an unverified email or the current provider configuration.
 ALTER TABLE auth_identities ADD COLUMN IF NOT EXISTS issuer TEXT;
 UPDATE auth_identities
-SET issuer = CASE WHEN provider='local' THEN 'neverlauncher' ELSE 'provider:' || provider END
+SET issuer = CASE WHEN provider='local' THEN 'launcher' ELSE 'provider:' || provider END
 WHERE issuer IS NULL;
 
 DO $$ BEGIN
     IF EXISTS (SELECT 1 FROM auth_identities WHERE issuer IS NULL OR issuer='' OR issuer<>btrim(issuer) OR char_length(issuer)>2048) THEN
         RAISE EXCEPTION '0.29.1 refused: malformed auth issuer';
     END IF;
-    IF EXISTS (SELECT 1 FROM auth_identities WHERE provider='local' AND issuer<>'neverlauncher') THEN
+    IF EXISTS (SELECT 1 FROM auth_identities WHERE provider='local' AND issuer<>'launcher') THEN
         RAISE EXCEPTION '0.29.1 refused: local issuer mismatch';
     END IF;
     IF EXISTS (SELECT 1 FROM auth_identities GROUP BY provider,issuer,subject HAVING count(*)>1) THEN
@@ -25,7 +25,7 @@ END $$;
 ALTER TABLE auth_identities ALTER COLUMN issuer SET NOT NULL;
 ALTER TABLE auth_identities ADD CONSTRAINT auth_identities_issuer_canonical_0291
     CHECK (issuer<>'' AND issuer=btrim(issuer) AND char_length(issuer)<=2048
-      AND issuer !~ '[[:space:][:cntrl:]]' AND (provider<>'local' OR issuer='neverlauncher'));
+      AND issuer !~ '[[:space:][:cntrl:]]' AND (provider<>'local' OR issuer='launcher'));
 ALTER TABLE auth_identities DROP CONSTRAINT IF EXISTS auth_identities_provider_subject_key;
 ALTER TABLE auth_identities DROP CONSTRAINT IF EXISTS auth_identities_user_id_provider_key;
 ALTER TABLE auth_identities ADD CONSTRAINT auth_identities_provider_issuer_subject_key UNIQUE(provider,issuer,subject);

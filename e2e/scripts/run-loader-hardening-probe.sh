@@ -15,13 +15,13 @@ PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 # установщика. Никогда не выполняйте её повторно на клиенте, уже проверенном и запущенном E2E.
 SOURCE_CLIENT_DIR="$RUNTIME_DIR/materialized-client"
 CLIENT_DIR="$RUNTIME_DIR/loader-hardening-client"
-LOCK="$CLIENT_DIR/.neverlauncher/${LOADER}-resolution-lock.json"
+LOCK="$CLIENT_DIR/.launcher/${LOADER}-resolution-lock.json"
 OUT_PACKAGE="$RUNTIME_DIR/loader-hardening-package.json"
 OUT_EVIDENCE="$RUNTIME_DIR/loader-hardening.json"
 
 case "$LOADER" in fabric|quilt|forge|neoforge) ;; *) echo "[loader-hardening] unsupported loader: $LOADER" >&2; exit 2 ;; esac
 [[ -x "$NL_BIN" ]] || { echo "[loader-hardening] CLI binary unavailable: $NL_BIN" >&2; exit 2; }
-[[ -f "$SOURCE_CLIENT_DIR/.neverlauncher/${LOADER}-resolution-lock.json" ]] || {
+[[ -f "$SOURCE_CLIENT_DIR/.launcher/${LOADER}-resolution-lock.json" ]] || {
   echo "[loader-hardening] initial resolution lock unavailable" >&2; exit 1;
 }
 rm -rf "$CLIENT_DIR"
@@ -33,7 +33,7 @@ cp -R "$SOURCE_CLIENT_DIR" "$CLIENT_DIR"
 # прерванный. Повтор из кеша обязан восстановить точный закреплённый установщик
 # и принять только результат с проверяемым объявленным установщиком дайджестом.
 if [[ "$LOADER" == "forge" || "$LOADER" == "neoforge" ]]; then
-  find "$CLIENT_DIR/.neverlauncher/installers/$LOADER" -type f -name installer.jar -delete 2>/dev/null || true
+  find "$CLIENT_DIR/.launcher/installers/$LOADER" -type f -name installer.jar -delete 2>/dev/null || true
   python3 - "$CLIENT_DIR" "$LOADER" "$RUNTIME_DIR/client-package.json" <<'PY'
 import json, sys
 from pathlib import Path
@@ -44,7 +44,7 @@ install_mode = str(initial.get('installMode') or '')
 legacy_without_processors = loader == 'forge' and install_mode in (
     'legacy-v1-universal', 'legacy-v2-empty-processors'
 ) and processor_count == 0
-journals = sorted((root / '.neverlauncher' / 'installers' / loader).glob('*/processor-journal.json'))
+journals = sorted((root / '.launcher' / 'installers' / loader).glob('*/processor-journal.json'))
 if not journals:
     if legacy_without_processors:
         print('legacy Forge without client processors: recovery journal is not applicable')
@@ -97,7 +97,7 @@ sha_re = re.compile(r'^[0-9a-f]{64}$')
 payload_sha = str(lock.get('payloadSha256') or '').lower()
 if not sha_re.fullmatch(payload_sha):
     raise SystemExit('resolution lock has no valid pinned payload SHA-256')
-cache_path = Path(client_dir) / '.neverlauncher' / 'loader-cache' / 'sha256' / payload_sha[:2] / (payload_sha + '.payload')
+cache_path = Path(client_dir) / '.launcher' / 'loader-cache' / 'sha256' / payload_sha[:2] / (payload_sha + '.payload')
 if not cache_path.is_file():
     raise SystemExit(f'content-addressed loader cache payload is missing: {cache_path}')
 h = hashlib.sha256(cache_path.read_bytes()).hexdigest()

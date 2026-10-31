@@ -13,9 +13,13 @@ def b64url(raw: bytes) -> str:
 
 
 def run_bytes(*args: str, input_bytes: bytes | None = None) -> bytes:
-    proc = subprocess.run(args, input=input_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.run(
+        args, input=input_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     if proc.returncode != 0:
-        raise SystemExit(f"command failed ({' '.join(args)}): {proc.stderr.decode(errors='replace').strip()}")
+        raise SystemExit(
+            f"command failed ({' '.join(args)}): {proc.stderr.decode(errors='replace').strip()}"
+        )
     return proc.stdout
 
 
@@ -29,7 +33,7 @@ def read_der_length(data: bytes, pos: int) -> tuple[int, int]:
     count = first & 0x7F
     if count == 0 or count > 4 or pos + count > len(data):
         raise ValueError("invalid DER length")
-    return int.from_bytes(data[pos:pos + count], "big"), pos + count
+    return int.from_bytes(data[pos : pos + count], "big"), pos + count
 
 
 def der_ecdsa_to_p1363(signature: bytes, width: int = 32) -> bytes:
@@ -48,7 +52,7 @@ def der_ecdsa_to_p1363(signature: bytes, width: int = 32) -> bytes:
         int_len, pos = read_der_length(signature, pos)
         if int_len == 0 or pos + int_len > len(signature):
             raise ValueError("invalid ECDSA integer length")
-        value = signature[pos:pos + int_len]
+        value = signature[pos : pos + int_len]
         pos += int_len
         while len(value) > 1 and value[0] == 0:
             value = value[1:]
@@ -81,15 +85,40 @@ def public_key(algorithm: str, key: Path) -> str:
 
 def sign(algorithm: str, key: Path, payload: Path) -> str:
     if algorithm == "ed25519":
-        raw = run_bytes("openssl", "pkeyutl", "-sign", "-rawin", "-inkey", str(key), "-in", str(payload))
+        raw = run_bytes(
+            "openssl",
+            "pkeyutl",
+            "-sign",
+            "-rawin",
+            "-inkey",
+            str(key),
+            "-in",
+            str(payload),
+        )
         if len(raw) != 64:
             raise SystemExit(f"unexpected Ed25519 signature length: {len(raw)}")
         return b64url(raw)
     if algorithm == "p256":
-        with tempfile.NamedTemporaryFile(prefix="nl-dt-", suffix=".der", delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(
+            prefix="nl-dt-", suffix=".der", delete=False
+        ) as tmp:
             tmp_path = Path(tmp.name)
         try:
-            subprocess.run(["openssl", "dgst", "-sha256", "-sign", str(key), "-out", str(tmp_path), str(payload)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            subprocess.run(
+                [
+                    "openssl",
+                    "dgst",
+                    "-sha256",
+                    "-sign",
+                    str(key),
+                    "-out",
+                    str(tmp_path),
+                    str(payload),
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+            )
             return b64url(der_ecdsa_to_p1363(tmp_path.read_bytes()))
         finally:
             tmp_path.unlink(missing_ok=True)
@@ -97,7 +126,9 @@ def sign(algorithm: str, key: Path, payload: Path) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NeverLauncher Device Trust E2E crypto helper")
+    parser = argparse.ArgumentParser(
+        description="Launcher Device Trust E2E crypto helper"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("public")
     p.add_argument("--algorithm", choices=["ed25519", "p256"], required=True)

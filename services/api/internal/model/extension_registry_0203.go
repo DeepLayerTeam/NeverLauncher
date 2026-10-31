@@ -27,8 +27,8 @@ type ExtensionRegistryPublisherKey struct {
 // ExtensionRegistryCompatibility — неизменяемые метаданные одной опубликованной
 // версии. Пустые списки ОС или архитектур означают независимость от платформы.
 type ExtensionRegistryCompatibility struct {
-	MinNeverLauncher       string   `json:"minNeverLauncher,omitempty"`
-	MaxNeverLauncher       string   `json:"maxNeverLauncher,omitempty"`
+	MinLauncher       string   `json:"minLauncher,omitempty"`
+	MaxLauncher       string   `json:"maxLauncher,omitempty"`
 	MinAPI                 string   `json:"minApi,omitempty"`
 	MaxAPI                 string   `json:"maxApi,omitempty"`
 	SupportedOS            []string `json:"supportedOs,omitempty"`

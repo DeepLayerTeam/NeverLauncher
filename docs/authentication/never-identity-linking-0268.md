@@ -1,10 +1,10 @@
-# NeverLauncher 0.26.8 — Never ↔ Official Minecraft Identity Linking
+# Launcher 0.26.8 — Never ↔ Official Minecraft Identity Linking
 
 ## Production behavior
 
 Linking is an **explicit and independent** operation; merely signing in to Microsoft or selecting a Minecraft account in the OS vault does not create a Never identity link.
 
-1. Log in to NeverLauncher recently (within 15 minutes of authentication). A verified, non-disabled Never user and valid session bearer are required.
+1. Log in to Launcher recently (within 15 minutes of authentication). A verified, non-disabled Never user and valid session bearer are required.
 2. Sign in to the *official Minecraft Java account* with the native Microsoft → Xbox → XSTS → Minecraft authentication chain. Legacy Backend tickets cannot be used to link; reauthenticate using the native flow.
 3. Select the intended account and press **Привязать к Never**. Read the displayed UUID and confirm. The UI never receives Microsoft or Minecraft tokens.
 4. Rust validates the selected UUID again with Minecraft Services while the native account selection mutex is held. Rust sends the selected Minecraft bearer to the authenticated Never Backend **only over HTTPS** (loopback HTTP is allowed during local development). It does not return that bearer to renderer.

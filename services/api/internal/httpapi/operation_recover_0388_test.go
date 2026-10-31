@@ -7,16 +7,16 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 // Read-only reconciliation after a lost response must return the original
 // durable record, never create a new job or reveal one outside its project.
 func TestRecoverOriginalOperation0388(t *testing.T) {
-	cfg := config.Config{HTTPAddr: "127.0.0.1:0", PublicURL: "http://example.test", RepositoryDriver: "memory", StorageDriver: "local", StorageLocalPath: t.TempDir(), BackupRoot: t.TempDir(), Environment: "test", AuthTokenSecret: "test-secret-for-integration", AuthTokenTTLHours: 1, WebAuthnRPID: "example.test", WebAuthnRPName: "NeverLauncher Test", WebAuthnOrigins: []string{"http://example.test"}}
+	cfg := config.Config{HTTPAddr: "127.0.0.1:0", PublicURL: "http://example.test", RepositoryDriver: "memory", StorageDriver: "local", StorageLocalPath: t.TempDir(), BackupRoot: t.TempDir(), Environment: "test", AuthTokenSecret: "test-secret-for-integration", AuthTokenTTLHours: 1, WebAuthnRPID: "example.test", WebAuthnRPName: "Launcher Test", WebAuthnOrigins: []string{"http://example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	handler := Server{Version: "0.38.8-test", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(cfg.StorageLocalPath)}.Handler()
 	token := loginAdmin(t, handler)

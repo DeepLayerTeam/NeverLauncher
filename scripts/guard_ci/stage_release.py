@@ -17,22 +17,22 @@ ROLES = ("package", "launcher", "guard", "manifest", "allowlist")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 EXPECTED_TARGETS = {
     "guard-linux-amd64": {
-        "package": f"neverlauncher-desktop-{VERSION}-linux-amd64.zip",
-        "launcher": "neverlauncher-desktop-linux-amd64",
+        "package": f"launcher-desktop-{VERSION}-linux-amd64.zip",
+        "launcher": "launcher-desktop-linux-amd64",
         "guard": "guard-linux-amd64",
         "manifest": "LINUX_PACKAGE_MANIFEST.json",
         "allowlist": "GUARD_RELEASE_ALLOWLIST_LINUX.json",
     },
     "guard-windows-amd64": {
-        "package": f"neverlauncher-desktop-{VERSION}-windows-amd64.zip",
-        "launcher": "neverlauncher-desktop-windows-amd64.exe",
+        "package": f"launcher-desktop-{VERSION}-windows-amd64.zip",
+        "launcher": "launcher-desktop-windows-amd64.exe",
         "guard": "guard-windows-amd64.exe",
         "manifest": "WINDOWS_PACKAGE_MANIFEST.json",
         "allowlist": "GUARD_RELEASE_ALLOWLIST_WINDOWS.json",
     },
     "guard-macos-universal": {
-        "package": f"neverlauncher-desktop-{VERSION}-macos-universal.zip",
-        "launcher": "neverlauncher-desktop-macos-universal",
+        "package": f"launcher-desktop-{VERSION}-macos-universal.zip",
+        "launcher": "launcher-desktop-macos-universal",
         "guard": "guard-macos-universal",
         "manifest": "MACOS_PACKAGE_MANIFEST.json",
         "allowlist": "GUARD_RELEASE_ALLOWLIST_MACOS.json",

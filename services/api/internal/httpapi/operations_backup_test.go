@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func TestCanonicalOperationsBackupFlow(t *testing.T) {
@@ -73,7 +73,7 @@ func TestBackupRestoreRestoresStorageObject(t *testing.T) {
 		AuthTokenTTLHours:  1,
 		CORSAllowedOrigins: []string{"http://example.test"},
 		WebAuthnRPID:       "example.test",
-		WebAuthnRPName:     "NeverLauncher Test",
+		WebAuthnRPName:     "Launcher Test",
 		WebAuthnOrigins:    []string{"http://example.test"},
 	}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)

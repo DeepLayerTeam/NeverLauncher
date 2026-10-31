@@ -1,4 +1,4 @@
--- NeverLauncher 0.14.6: мост Fabric Server Bridge становится полноценным типом узла Protocol v2.
+-- Launcher 0.14.6: мост Fabric Server Bridge становится полноценным типом узла Protocol v2.
 
 ALTER TABLE server_bridge_nodes_v2
     DROP CONSTRAINT IF EXISTS server_bridge_nodes_v2_kind_check;

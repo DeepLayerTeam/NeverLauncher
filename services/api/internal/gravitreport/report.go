@@ -12,7 +12,7 @@ import (
 	"sort"
 )
 
-const Format = "neverlauncher.gravit-migration-report.v1"
+const Format = "launcher.gravit-migration-report.v1"
 
 type Item struct {
 	Kind   string `json:"kind"`

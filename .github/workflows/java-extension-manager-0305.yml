@@ -6,7 +6,7 @@ on:
       - 'services/api/internal/extensionlifecycle/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/httpapi/extension_lifecycle_0204.go'
-      - 'cli/cmd/neverlauncher/extension*'
+      - 'cli/cmd/launcher/extension*'
       - 'examples/extensions/java-host/**'
       - '.github/workflows/java-extension-manager-0305.yml'
   pull_request:
@@ -15,7 +15,7 @@ on:
       - 'services/api/internal/extensionlifecycle/**'
       - 'services/api/internal/extensionhost/**'
       - 'services/api/internal/httpapi/extension_lifecycle_0204.go'
-      - 'cli/cmd/neverlauncher/extension*'
+      - 'cli/cmd/launcher/extension*'
       - 'examples/extensions/java-host/**'
       - '.github/workflows/java-extension-manager-0305.yml'
   workflow_dispatch:
@@ -54,8 +54,8 @@ jobs:
         run: go test -run '^TestDoesNotExist$' ./internal/httpapi
       - name: Test CLI diagnostics and signature verification
         run: |
-          (cd cli && go test -count=1 -run '^TestJavaManagerDiagnoseCLI0305$' ./cmd/neverlauncher)
-          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+          (cd cli && go test -count=1 -run '^TestJavaManagerDiagnoseCLI0305$' ./cmd/launcher)
+          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/private.pem"
           openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
           "$RUNNER_TEMP/nl" extension pack examples/extensions/java-host/build/package --output "$RUNNER_TEMP/test.nlext" --private-key "$RUNNER_TEMP/private.pem"

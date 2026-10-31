@@ -412,10 +412,10 @@ func ProbeDurability(ctx context.Context, opt Options) (WALStatus, error) {
 	}
 	token := hex.EncodeToString(bytes[:])
 	err = s.Write(ctx, func(q Executor) error {
-		if _, e := q.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS _neverlauncher_dep00_probe (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL)`); e != nil {
+		if _, e := q.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS _launcher_dep00_probe (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL)`); e != nil {
 			return e
 		}
-		_, e := q.ExecContext(ctx, `INSERT INTO _neverlauncher_dep00_probe(id,created_at) VALUES (?,?)`, token, time.Now().UTC().UnixNano())
+		_, e := q.ExecContext(ctx, `INSERT INTO _launcher_dep00_probe(id,created_at) VALUES (?,?)`, token, time.Now().UTC().UnixNano())
 		return e
 	})
 	if err != nil {
@@ -432,7 +432,7 @@ func ProbeDurability(ctx context.Context, opt Options) (WALStatus, error) {
 	defer s.Close()
 	err = s.Read(ctx, func(q Executor) error {
 		var id string
-		if e := q.QueryRowContext(ctx, "SELECT id FROM _neverlauncher_dep00_probe WHERE id=?", token).Scan(&id); e != nil {
+		if e := q.QueryRowContext(ctx, "SELECT id FROM _launcher_dep00_probe WHERE id=?", token).Scan(&id); e != nil {
 			return e
 		}
 		if id != token {
@@ -444,7 +444,7 @@ func ProbeDurability(ctx context.Context, opt Options) (WALStatus, error) {
 		return WALStatus{}, err
 	}
 	if err = s.Write(ctx, func(q Executor) error {
-		_, e := q.ExecContext(ctx, "DELETE FROM _neverlauncher_dep00_probe WHERE id=?", token)
+		_, e := q.ExecContext(ctx, "DELETE FROM _launcher_dep00_probe WHERE id=?", token)
 		return e
 	}); err != nil {
 		return WALStatus{}, err

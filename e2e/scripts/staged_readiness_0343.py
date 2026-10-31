@@ -1,7 +1,7 @@
-"""Real Linux/X11 Minecraft menu observation for a staged NeverRuntime process.
+"""Real Linux/X11 Minecraft menu observation for a staged Runtime process.
 
 No file supplied by the game, CI job or caller can assert PASS. The observer
-correlates the window's OS PID to the actual NeverRuntime child, captures two
+correlates the window's OS PID to the actual Runtime child, captures two
 independently rendered frames and recognizes visible menu controls. Unsupported
 hosts remain blocked (never interpreted as incompatible Minecraft builds).
 """
@@ -233,9 +233,7 @@ class StartupObserver:
         if self.blocked or self.failure or time.monotonic() - self.last_probe < 2:
             return
         self.last_probe = time.monotonic()
-        candidates = sorted(
-            (self.client_dir / "logs").glob("neverruntime-launch-*.log")
-        )
+        candidates = sorted((self.client_dir / "logs").glob("runtime-launch-*.log"))
         # Never use a stale log from a previous run to authorize readiness.
         candidates = [p for p in candidates if p.stat().st_mtime >= self.started_at - 1]
         self.runtime_log = candidates[-1] if candidates else None
@@ -328,7 +326,7 @@ class StartupObserver:
 
     def evidence(self):
         return {
-            "schemaVersion": "neverlauncher.startup-readiness.v1",
+            "schemaVersion": "launcher.startup-readiness.v1",
             "windowPid": self.window_pid,
             "loader": self.loader,
             "samples": [

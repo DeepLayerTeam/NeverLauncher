@@ -1,4 +1,4 @@
-# NeverLauncher 0.32.16 — Production RC (test gate, not GA certification)
+# Launcher 0.32.16 — Production RC (test gate, not GA certification)
 
 This release adds an executable, fail-closed test gate and fixes a real
 capacity-measurement defect. It does **not** make the SQLite-only HTTP backend
@@ -6,7 +6,7 @@ available, implement SQLite → PostgreSQL cutover, or prove multi-host HA.
 
 ## What runs
 
-`python3 scripts/rc/production_rc.py --output "$RUNNER_TEMP/neverlauncher-03216-rc.json"`
+`python3 scripts/rc/production_rc.py --output "$RUNNER_TEMP/launcher-03216-rc.json"`
 
 The gate calls **real** `go test -json -race -count=1` under Go 1.27+ on the
 pinned project dependencies. It enforces named tests for: SQLite auth, MFA,

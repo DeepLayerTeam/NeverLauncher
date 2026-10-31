@@ -7,12 +7,12 @@ dependencies {
 }
 tasks.jar {
     dependsOn(configurations.runtimeClasspath.get().buildDependencies)
-    archiveBaseName.set("neverlauncher-bungeecord-bridge")
+    archiveBaseName.set("launcher-bungeecord-bridge")
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
 }
 tasks.processResources {
-    inputs.property("neverLauncherVersion", project.version.toString())
+    inputs.property("LauncherVersion", project.version.toString())
     filesMatching("bungee.yml") { expand("version" to project.version.toString()) }
 }

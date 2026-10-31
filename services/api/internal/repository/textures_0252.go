@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // VerifiedTexture0252 is constructed only from a fully decoded and normalized
@@ -50,7 +50,7 @@ func (r *SQLRepository) UploadTexture0252(ctx context.Context, profile model.Min
 	if err := r.check(); err != nil {
 		return zero, err
 	}
-	if profile.Realm != "local" || profile.Issuer != "neverlauncher" || profile.UserID == "" {
+	if profile.Realm != "local" || profile.Issuer != "launcher" || profile.UserID == "" {
 		return zero, ErrNotFound
 	}
 	source := input.Source
@@ -264,7 +264,7 @@ func (r *SQLRepository) ReadTextureBlob0252(ctx context.Context, digest string, 
  )`
 	var err error
 	if owner {
-		if profile.Realm != "local" || profile.Issuer != "neverlauncher" {
+		if profile.Realm != "local" || profile.Issuer != "launcher" {
 			return b, false, nil
 		}
 		query = `SELECT b.digest,b.byte_size,b.storage_driver,b.object_key FROM texture_blobs b

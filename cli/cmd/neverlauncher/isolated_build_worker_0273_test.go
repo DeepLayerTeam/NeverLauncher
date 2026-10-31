@@ -144,7 +144,7 @@ func TestForgeProcessorRecovery0273QuarantinesCorruptOutputAndChangedInputs(t *t
 	}
 	root := t.TempDir()
 	java := testFakeJava(t, []byte("verified-processor-output"))
-	installer := filepath.Join(root, ".neverlauncher", "installers", "forge", "52.0.1", "installer.jar")
+	installer := filepath.Join(root, ".launcher", "installers", "forge", "52.0.1", "installer.jar")
 	processorJar := filepath.Join(root, "libraries", "com", "example", "processor", "1.0", "processor-1.0.jar")
 	for _, f := range []string{installer, processorJar} {
 		if err := os.MkdirAll(filepath.Dir(f), 0o700); err != nil {
@@ -205,7 +205,7 @@ func TestForgeProcessorRecovery0273QuarantinesCorruptOutputAndChangedInputs(t *t
 	if err != nil || journal.Entries["0"].WorkerLogPath == "" || !isSHA256Hex0271(journal.Entries["0"].InputSHA256) {
 		t.Fatalf("journal evidence missing: %+v %v", journal, err)
 	}
-	qdir := filepath.Join(root, ".neverlauncher", "quarantine")
+	qdir := filepath.Join(root, ".launcher", "quarantine")
 	found, err := os.ReadDir(qdir)
 	if err != nil || len(found) < 2 {
 		t.Fatalf("corrupt and stale outputs not quarantined: %v %v", found, err)

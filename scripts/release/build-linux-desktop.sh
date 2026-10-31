@@ -10,30 +10,30 @@ command -v cargo >/dev/null || { echo "cargo is required" >&2; exit 1; }
 command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
 
 cargo build --release --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
-cargo build --release --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bin guard
-DESKTOP_SRC="${ROOT_DIR}/apps/desktop/src-tauri/target/release/neverlauncher-desktop"
-GUARD_SRC="${ROOT_DIR}/runtime/neverruntime/target/release/guard"
+cargo build --release --manifest-path "${ROOT_DIR}/runtime/runtime/Cargo.toml" --bin guard
+DESKTOP_SRC="${ROOT_DIR}/apps/desktop/src-tauri/target/release/launcher-desktop"
+GUARD_SRC="${ROOT_DIR}/runtime/runtime/target/release/guard"
 [[ -x "${DESKTOP_SRC}" && -x "${GUARD_SRC}" ]] || { echo "Desktop/Guard release binaries missing" >&2; exit 1; }
 
 rm -rf "${PACKAGE_DIR}"
 mkdir -p "${PACKAGE_DIR}" "${OUT_DIR}"
-install -m 0755 "${DESKTOP_SRC}" "${PACKAGE_DIR}/neverlauncher-desktop"
+install -m 0755 "${DESKTOP_SRC}" "${PACKAGE_DIR}/launcher-desktop"
 install -m 0755 "${GUARD_SRC}" "${PACKAGE_DIR}/guard"
 
-DESKTOP_HASH="$(sha256sum "${PACKAGE_DIR}/neverlauncher-desktop" | awk '{print $1}')"
+DESKTOP_HASH="$(sha256sum "${PACKAGE_DIR}/launcher-desktop" | awk '{print $1}')"
 GUARD_HASH="$(sha256sum "${PACKAGE_DIR}/guard" | awk '{print $1}')"
-DESKTOP_SIZE="$(stat -c %s "${PACKAGE_DIR}/neverlauncher-desktop")"
+DESKTOP_SIZE="$(stat -c %s "${PACKAGE_DIR}/launcher-desktop")"
 GUARD_SIZE="$(stat -c %s "${PACKAGE_DIR}/guard")"
 cat > "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json" <<EOF
 {
   "schemaVersion": "1.0",
   "productVersion": "${VERSION}",
   "platform": "linux-amd64",
-  "neverGuardProtocolVersion": 4,
+  "GuardProtocolVersion": 4,
   "authenticatedIpc": "unix-domain-socket+0600+so-peercred+hmac-sha256-v4",
   "linuxProductionHardeningVersion": 1,
   "artifacts": [
-    {"name":"neverlauncher-desktop","size":${DESKTOP_SIZE},"sha256":"${DESKTOP_HASH}"},
+    {"name":"launcher-desktop","size":${DESKTOP_SIZE},"sha256":"${DESKTOP_HASH}"},
     {"name":"guard","size":${GUARD_SIZE},"sha256":"${GUARD_HASH}"}
   ]
 }
@@ -46,9 +46,9 @@ chmod 0600 "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json"
 cp "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json" "${OUT_DIR}/LINUX_PACKAGE_MANIFEST.json"
 chmod 0644 "${OUT_DIR}/LINUX_PACKAGE_MANIFEST.json"
 
-cp "${PACKAGE_DIR}/neverlauncher-desktop" "${OUT_DIR}/neverlauncher-desktop-linux-amd64"
+cp "${PACKAGE_DIR}/launcher-desktop" "${OUT_DIR}/launcher-desktop-linux-amd64"
 cp "${PACKAGE_DIR}/guard" "${OUT_DIR}/guard-linux-amd64"
-chmod 0755 "${OUT_DIR}/neverlauncher-desktop-linux-amd64" "${OUT_DIR}/guard-linux-amd64"
-python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${PACKAGE_DIR}" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-linux-amd64.zip" --prefix neverlauncher
+chmod 0755 "${OUT_DIR}/launcher-desktop-linux-amd64" "${OUT_DIR}/guard-linux-amd64"
+python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${PACKAGE_DIR}" "${OUT_DIR}/launcher-desktop-${VERSION}-linux-amd64.zip" --prefix launcher
 
 echo "${PACKAGE_DIR}"

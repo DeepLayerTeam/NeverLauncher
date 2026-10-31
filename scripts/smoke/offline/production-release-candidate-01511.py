@@ -22,60 +22,91 @@ def require(text: str, needles: list[str], label: str) -> None:
 
 
 if triple(VERSION) < (0, 15, 11):
-    raise SystemExit(f"Production Release Candidate gate requires VERSION>=0.15.11, got {VERSION}")
+    raise SystemExit(
+        f"Production Release Candidate gate requires VERSION>=0.15.11, got {VERSION}"
+    )
 
-impl = (ROOT / "cli/cmd/neverlauncher/production_release_candidate_01511.go").read_text(encoding="utf-8")
-release = (ROOT / "cli/cmd/neverlauncher/release_commands.go").read_text(encoding="utf-8")
+impl = (ROOT / "cli/cmd/launcher/production_release_candidate_01511.go").read_text(
+    encoding="utf-8"
+)
+release = (ROOT / "cli/cmd/launcher/release_commands.go").read_text(encoding="utf-8")
 build = (ROOT / "scripts/release/build-release.sh").read_text(encoding="utf-8")
-tests = (ROOT / "cli/cmd/neverlauncher/production_release_candidate_01511_test.go").read_text(encoding="utf-8")
+tests = (
+    ROOT / "cli/cmd/launcher/production_release_candidate_01511_test.go"
+).read_text(encoding="utf-8")
 
-require(impl, [
-    "PRODUCTION_RELEASE_CANDIDATE.json",
-    "production-release-candidate",
-    "exact-source-commit-cohort",
-    "productionReleaseCandidateCohortDigest01511",
-    "verifyProductionReleaseCandidatePrerequisites01511",
-    "verifyWindowsSigningEvidence0152",
-    "verifyMacOSNotarizationEvidence0154",
-    "verifyManagedJREDistribution0155",
-    "verifyPublicProductionDeliveryMatrix0159",
-    "PROVENANCE.json sourceCommit mismatch",
-], "production candidate implementation")
-require(release, [
-    'case "candidate-verify":',
-    "productionReleaseCandidateRequired01511",
-    "writeProductionReleaseCandidate01511",
-    "verifyProductionReleaseCandidate01511",
-    "production-release-candidate-exact-source-cohort",
-], "release integration")
-require(build, [
-    "PRODUCTION_RC_REQUIRED",
-    "Production Release Candidate требует полный Compatibility + Device Trust + Guard CI certification cohort",
-    "git -C \"${ROOT_DIR}\" diff --quiet HEAD --",
-    "release candidate-verify",
-    "PRODUCTION_RELEASE_CANDIDATE.json",
-], "production build integration")
-require(tests, [
-    "TestProductionReleaseCandidate01511BindsExactCohort",
-    "TestProductionReleaseCandidate01511RejectsInjectedFile",
-    "TestSLSAProvenance01511CarriesExactSourceCommit",
-    "TestNormalizeSourceCommit01511RejectsPlaceholders",
-], "production candidate tests")
+require(
+    impl,
+    [
+        "PRODUCTION_RELEASE_CANDIDATE.json",
+        "production-release-candidate",
+        "exact-source-commit-cohort",
+        "productionReleaseCandidateCohortDigest01511",
+        "verifyProductionReleaseCandidatePrerequisites01511",
+        "verifyWindowsSigningEvidence0152",
+        "verifyMacOSNotarizationEvidence0154",
+        "verifyManagedJREDistribution0155",
+        "verifyPublicProductionDeliveryMatrix0159",
+        "PROVENANCE.json sourceCommit mismatch",
+    ],
+    "production candidate implementation",
+)
+require(
+    release,
+    [
+        'case "candidate-verify":',
+        "productionReleaseCandidateRequired01511",
+        "writeProductionReleaseCandidate01511",
+        "verifyProductionReleaseCandidate01511",
+        "production-release-candidate-exact-source-cohort",
+    ],
+    "release integration",
+)
+require(
+    build,
+    [
+        "PRODUCTION_RC_REQUIRED",
+        "Production Release Candidate требует полный Compatibility + Device Trust + Guard CI certification cohort",
+        'git -C "${ROOT_DIR}" diff --quiet HEAD --',
+        "release candidate-verify",
+        "PRODUCTION_RELEASE_CANDIDATE.json",
+    ],
+    "production build integration",
+)
+require(
+    tests,
+    [
+        "TestProductionReleaseCandidate01511BindsExactCohort",
+        "TestProductionReleaseCandidate01511RejectsInjectedFile",
+        "TestSLSAProvenance01511CarriesExactSourceCommit",
+        "TestNormalizeSourceCommit01511RejectsPlaceholders",
+    ],
+    "production candidate tests",
+)
 
 layout_resolver = ROOT / "scripts/release/resolve-artifact-payload.sh"
 if not layout_resolver.is_file():
     raise SystemExit("production candidate artifact layout resolver is missing")
-require(build, [
-    "resolve-artifact-payload.sh",
-    '"neverlauncher-cli-windows-x64.exe" "Windows x64/ARM64 delivery"',
-    '"neverlauncher-cli-linux-x64" "Linux x64/ARM64 delivery"',
-    '"neverlauncher-cli-macos-x64" "macOS x64/ARM64 delivery"',
-], "production artifact layout staging")
+require(
+    build,
+    [
+        "resolve-artifact-payload.sh",
+        '"launcher-cli-windows-x64.exe" "Windows x64/ARM64 delivery"',
+        '"launcher-cli-linux-x64" "Linux x64/ARM64 delivery"',
+        '"launcher-cli-macos-x64" "macOS x64/ARM64 delivery"',
+    ],
+    "production artifact layout staging",
+)
 
 
 def bash_path(path: Path) -> str:
     value = str(path.resolve())
-    if sys.platform == "win32" and len(value) >= 3 and value[1] == ":" and value[2] in ("\\", "/"):
+    if (
+        sys.platform == "win32"
+        and len(value) >= 3
+        and value[1] == ":"
+        and value[2] in ("\\", "/")
+    ):
         return "/" + value[0].lower() + value[2:].replace("\\", "/")
     return value
 
@@ -116,20 +147,35 @@ def resolve_layout(root: Path, marker: str, *, expect_ok: bool) -> str:
             resolved = validate_native_layout(root, marker)
         except ValueError as exc:
             if expect_ok:
-                raise SystemExit(f"artifact layout resolver unexpectedly failed: {exc}") from exc
+                raise SystemExit(
+                    f"artifact layout resolver unexpectedly failed: {exc}"
+                ) from exc
             return ""
         if not expect_ok:
-            raise SystemExit(f"artifact layout resolver unexpectedly accepted unsafe layout: {root}")
+            raise SystemExit(
+                f"artifact layout resolver unexpectedly accepted unsafe layout: {root}"
+            )
         return bash_path(resolved)
     proc = subprocess.run(
-        ["bash", bash_path(layout_resolver), bash_path(root), VERSION, marker, "RC layout regression"],
+        [
+            "bash",
+            bash_path(layout_resolver),
+            bash_path(root),
+            VERSION,
+            marker,
+            "RC layout regression",
+        ],
         text=True,
         capture_output=True,
     )
     if expect_ok and proc.returncode != 0:
-        raise SystemExit(f"artifact layout resolver unexpectedly failed: {proc.stderr.strip()}")
+        raise SystemExit(
+            f"artifact layout resolver unexpectedly failed: {proc.stderr.strip()}"
+        )
     if not expect_ok and proc.returncode == 0:
-        raise SystemExit(f"artifact layout resolver unexpectedly accepted unsafe layout: {root}")
+        raise SystemExit(
+            f"artifact layout resolver unexpectedly accepted unsafe layout: {root}"
+        )
     return proc.stdout.strip()
 
 
@@ -178,8 +224,15 @@ with tempfile.TemporaryDirectory(prefix="nl-release-layout-") as td:
     resolve_layout(symlinked, "marker", expect_ok=False)
 
 subprocess.run(
-    ["go", "test", "./cmd/neverlauncher", "-run", "TestProductionReleaseCandidate|TestSLSAProvenance01511|TestNormalizeSourceCommit01511", "-count=1"],
+    [
+        "go",
+        "test",
+        "./cmd/launcher",
+        "-run",
+        "TestProductionReleaseCandidate|TestSLSAProvenance01511|TestNormalizeSourceCommit01511",
+        "-count=1",
+    ],
     cwd=ROOT / "cli",
     check=True,
 )
-print(f"NeverLauncher {VERSION} Production release candidate 0.15.11 gate: OK")
+print(f"Launcher {VERSION} Production release candidate 0.15.11 gate: OK")

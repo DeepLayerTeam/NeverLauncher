@@ -19,7 +19,7 @@ fn count(h:&mut Sha256,n:usize){h.update((n as u32).to_be_bytes())}
 fn text(h:&mut Sha256,s:&str){count(h,s.len());h.update(s.as_bytes())}
 
 pub fn digest_v5(cat:&ComponentCatalog)->String {
-    let mut h=Sha256::new();h.update(b"neverlauncher.component-catalog.v5\0");
+    let mut h=Sha256::new();h.update(b"launcher.component-catalog.v5\0");
     text(&mut h,&crate::component_catalog_0241::digest_v4(cat));
     count(&mut h,cat.components.len());
     for c in &cat.components {
@@ -42,7 +42,7 @@ fn safe_argument(t:&str,arg:&str)->bool {
         let Some(prop)=arg.strip_prefix("-D") else {return false};
         let Some((key,value))=prop.split_once('=') else {return false};
         if value.is_empty()||value.len()>128||value.bytes().any(|b|matches!(b,b'/'|b':'|b'=')) {return false}
-        if !["neverlauncher.optional.","fabric.","forge.","neoforge.","mixin."].iter().any(|p|key.starts_with(p)){return false}
+        if !["launcher.optional.","fabric.","forge.","neoforge.","mixin."].iter().any(|p|key.starts_with(p)){return false}
         return key.bytes().chain(value.bytes()).all(|b|b.is_ascii_alphanumeric()||matches!(b,b'.'|b'_'|b'-'));
     }
     if t=="ClientArgs" {

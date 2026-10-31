@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func p1CanonicalServer(t *testing.T) http.Handler {
@@ -59,7 +59,7 @@ func TestHistoricalRoutesRemainRemoved(t *testing.T) {
 
 func TestCanonicalCRUDUsesSingleContractVersion(t *testing.T) {
 	h := p1CanonicalServer(t)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/login", strings.NewReader(`{"email":"admin@neverlauncher.local","password":"admin"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/login", strings.NewReader(`{"email":"admin@launcher.local","password":"admin"}`))
 	req.Header.Set("Content-Type", "application/json")
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)

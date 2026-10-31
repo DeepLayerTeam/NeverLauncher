@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 const (
@@ -37,7 +37,7 @@ func integrityBridgeHandler0135(t *testing.T) http.Handler {
 		AuthTokenSecret:            "test-secret-for-0135-integrity",
 		AuthTokenTTLHours:          1,
 		WebAuthnRPID:               "example.test",
-		WebAuthnRPName:             "NeverLauncher Test",
+		WebAuthnRPName:             "Launcher Test",
 		WebAuthnOrigins:            []string{"http://example.test"},
 		BridgeReleaseAllowlistJSON: `{"0.13.5":{"velocitySha256":["` + bridgeVelocityHash0135 + `"],"paperSha256":["` + bridgePaperHash0135 + `"],"purpurSha256":["` + bridgePurpurHash0135 + `"]}}`,
 	}

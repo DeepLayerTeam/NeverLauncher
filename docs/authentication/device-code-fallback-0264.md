@@ -1,4 +1,4 @@
-# NeverLauncher 0.26.4 — Device Code Fallback
+# Launcher 0.26.4 — Device Code Fallback
 
 ## Operator behavior
 

@@ -1,4 +1,4 @@
-# NeverLauncher HTTP Auth Connector protocol v1
+# Launcher HTTP Auth Connector protocol v1
 
 `0.11.4` использует этот протокол как реальный remote authentication transport. Connector не принимает произвольный URL из login request: все endpoints строятся только относительно заранее проверенного `baseUrl` provider-конфигурации.
 
@@ -14,13 +14,13 @@ POST /logout
 GET  /health
 ```
 
-Все ответы, включая ошибки, имеют `Content-Type: application/json` и подписываются тем же HMAC key, который настроен в NeverLauncher. Redirects запрещены.
+Все ответы, включая ошибки, имеют `Content-Type: application/json` и подписываются тем же HMAC key, который настроен в Launcher. Redirects запрещены.
 
 Успешная identity response:
 
 ```json
 {
-  "protocolVersion": "neverlauncher-http-auth/1",
+  "protocolVersion": "launcher-http-auth/1",
   "issuer": "website-auth-prod",
   "subject": "stable-external-user-id",
   "username": "player",
@@ -41,13 +41,13 @@ GET  /health
 
 ```json
 {
-  "protocolVersion": "neverlauncher-http-auth/1",
+  "protocolVersion": "launcher-http-auth/1",
   "issuer": "website-auth-prod",
   "error": {"code": "invalid_credentials"}
 }
 ```
 
-NeverLauncher распознаёт `invalid_credentials`, `identity_disabled`, `identity_not_found` и `conflict`; `429`, timeout и `5xx` считаются временной недоступностью provider.
+Launcher распознаёт `invalid_credentials`, `identity_disabled`, `identity_not_found` и `conflict`; `429`, timeout и `5xx` считаются временной недоступностью provider.
 
 ## Request envelope
 
@@ -55,7 +55,7 @@ NeverLauncher распознаёт `invalid_credentials`, `identity_disabled`, `
 
 ```json
 {
-  "protocolVersion": "neverlauncher-http-auth/1",
+  "protocolVersion": "launcher-http-auth/1",
   "requestId": "cryptographically-random-id",
   "timestamp": "2026-09-16T09:00:00Z",
   "identifier": "player@example.com",
@@ -70,11 +70,11 @@ NeverLauncher распознаёт `invalid_credentials`, `identity_disabled`, `
 Каждый request содержит:
 
 ```text
-X-NeverLauncher-Key-Id
-X-NeverLauncher-Timestamp
-X-NeverLauncher-Nonce
-X-NeverLauncher-Signature
-X-NeverLauncher-Connector-Id
+X-Launcher-Key-Id
+X-Launcher-Timestamp
+X-Launcher-Nonce
+X-Launcher-Signature
+X-Launcher-Connector-Id
 ```
 
 Request canonical string:
@@ -87,9 +87,9 @@ NONCE\n
 HEX_SHA256(BODY)
 ```
 
-`X-NeverLauncher-Signature` равен `v1=` + lowercase hex `HMAC-SHA256(secret, canonical)`.
+`X-Launcher-Signature` равен `v1=` + lowercase hex `HMAC-SHA256(secret, canonical)`.
 
-Remote service должен вернуть тот же `X-NeverLauncher-Nonce`, свой текущий `X-NeverLauncher-Timestamp`, тот же `X-NeverLauncher-Key-Id` и signature над:
+Remote service должен вернуть тот же `X-Launcher-Nonce`, свой текущий `X-Launcher-Timestamp`, тот же `X-Launcher-Key-Id` и signature над:
 
 ```text
 RESPONSE\n
@@ -99,7 +99,7 @@ NONCE\n
 HEX_SHA256(BODY)
 ```
 
-NeverLauncher использует constant-time HMAC comparison, проверяет timestamp window и отклоняет уже использованный response nonce.
+Launcher использует constant-time HMAC comparison, проверяет timestamp window и отклоняет уже использованный response nonce.
 
 ## Network security
 
@@ -124,7 +124,7 @@ NeverLauncher использует constant-time HMAC comparison, проверя
     "issuer": "website-auth-prod",
     "hostAllowlist": ["auth.example.com"],
     "hmac": {
-      "keyId": "neverlauncher-prod",
+      "keyId": "launcher-prod",
       "secretEnv": "WEBSITE_AUTH_HTTP_HMAC_SECRET",
       "maxClockSkew": "2m"
     },

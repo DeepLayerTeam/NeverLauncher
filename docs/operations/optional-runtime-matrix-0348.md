@@ -39,7 +39,7 @@ values on the target runner and then pin them in the policy.
 The independent attestor's `execute_matrix()` obtains a fresh grant per target,
 launches the approved OCI image by immutable digest with `--preset`, and
 verifies the actual component files against the signed catalog, Native
-NeverRuntime offline transactional `adopt-staged` and `verify` output, and a newly bound resolved-plan
+Runtime offline transactional `adopt-staged` and `verify` output, and a newly bound resolved-plan
 digest. It rejects unselected optional mod files that remain in the installed
 client directory. The attestor signs successful runs only; a failed/blocked
 or provider-inconclusive run does not become certified, and the matrix result
@@ -57,4 +57,4 @@ Before accepting GA: run the V08 Go/Python tests, build the revised OCI image
 on the trusted host, pin its new digest, then execute the full matrix against
 an actual signed staged package. Tests never substitute for the latter.
 
-The staged workflow first runs the ordinary Go client install/verify into an isolated delivery folder. NeverRuntime then imports only signed selected files into a separate live client root through its durable offline release transaction. This path performs zero network downloads and rejects mismatched source bytes. The attestor verifies this import record before signing evidence.
+The staged workflow first runs the ordinary Go client install/verify into an isolated delivery folder. Runtime then imports only signed selected files into a separate live client root through its durable offline release transaction. This path performs zero network downloads and rejects mismatched source bytes. The attestor verifies this import record before signing evidence.

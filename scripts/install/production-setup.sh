@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
 ENV_FILE="${ROOT_DIR}/deploy/production/env.production.example"
-WORKSPACE="${ROOT_DIR}/.neverlauncher/production-first-run"
+WORKSPACE="${ROOT_DIR}/.launcher/production-first-run"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -74,4 +74,4 @@ cat > "${REPORT}" <<JSON
 }
 JSON
 
-echo "[NeverLauncher] production first-run report: ${REPORT}"
+echo "[Launcher] production first-run report: ${REPORT}"

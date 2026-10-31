@@ -13,12 +13,12 @@ import (
 	"strings"
 	"testing"
 
-	cm "gitflic.ru/skif4er/neverlauncher/cli/internal/componentmodel"
+	cm "gitflic.ru/skif4er/launcher/cli/internal/componentmodel"
 )
 
 func fixtureComponents0249(t *testing.T) string {
 	t.Helper()
-	return "../../../runtime/neverruntime/tests/fixtures/catalog_actions_0245_go_signed.json"
+	return "../../../runtime/runtime/tests/fixtures/catalog_actions_0245_go_signed.json"
 }
 func trustedFixtureKey0249(t *testing.T) string {
 	t.Helper()

@@ -98,7 +98,7 @@ def collect(
             "faultInjection": "passed"
             if component_doc.get("status") == "passed"
             else "missing",
-            "neverGuard": "passed" if guard_ok else "missing",
+            "Guard": "passed" if guard_ok else "missing",
             "serverBridgePolicy": "passed" if bridge_ok else "missing",
         },
         "minecraft": mc_doc,
@@ -136,7 +136,7 @@ def main():
                 "target": args.target,
                 "component": report["nativeComponents"].get("status"),
                 "minecraft": report["minecraft"].get("status"),
-                "guardLive": report["checks"]["neverGuard"],
+                "guardLive": report["checks"]["Guard"],
                 "bridgeReplay": report["checks"]["serverBridgePolicy"],
             }
         )

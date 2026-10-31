@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Minimal deterministic-shape WebAuthn test authenticator for NeverLauncher E2E.
+"""Minimal deterministic-shape WebAuthn test authenticator for Launcher E2E.
 
 This is test-only code. It generates a P-256 credential, emits a standards-shaped
 none-attestation registration response, and signs assertion ceremonies with the
 private key kept under the E2E runtime directory.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -66,15 +67,32 @@ def json_bytes(value: object) -> bytes:
 
 
 def run(*args: str, input_bytes: bytes | None = None) -> bytes:
-    proc = subprocess.run(args, input=input_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    proc = subprocess.run(
+        args,
+        input=input_bytes,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
     if proc.returncode != 0:
-        raise SystemExit(f"command failed ({proc.returncode}): {' '.join(args)}\n{proc.stderr.decode(errors='replace')}")
+        raise SystemExit(
+            f"command failed ({proc.returncode}): {' '.join(args)}\n{proc.stderr.decode(errors='replace')}"
+        )
     return proc.stdout
 
 
 def generate_p256_key(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    run("openssl", "genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-256", "-out", str(path))
+    run(
+        "openssl",
+        "genpkey",
+        "-algorithm",
+        "EC",
+        "-pkeyopt",
+        "ec_paramgen_curve:P-256",
+        "-out",
+        str(path),
+    )
     os.chmod(path, 0o600)
 
 
@@ -90,23 +108,27 @@ def p256_coordinates(key_path: Path) -> tuple[bytes, bytes]:
 def client_data(kind: str, challenge: str, origin: str) -> bytes:
     # Запрос challenge уже представлен в base64url параметрами WebAuthn.
     b64u_decode(challenge)  # Достаточно строгая проверка некорректного ввода.
-    return json_bytes({"type": kind, "challenge": challenge, "origin": origin, "crossOrigin": False})
+    return json_bytes(
+        {"type": kind, "challenge": challenge, "origin": origin, "crossOrigin": False}
+    )
 
 
 def registration_auth_data(rp_id: str, credential_id: bytes, key_path: Path) -> bytes:
     x, y = p256_coordinates(key_path)
-    cose = cbor_map([
-        (cbor_int(1), cbor_int(2)),       # kty = EC2
-        (cbor_int(3), cbor_int(-7)),      # alg = ES256
-        (cbor_int(-1), cbor_int(1)),      # crv = P-256
-        (cbor_int(-2), cbor_bytes(x)),
-        (cbor_int(-3), cbor_bytes(y)),
-    ])
+    cose = cbor_map(
+        [
+            (cbor_int(1), cbor_int(2)),  # kty = EC2
+            (cbor_int(3), cbor_int(-7)),  # alg = ES256
+            (cbor_int(-1), cbor_int(1)),  # crv = P-256
+            (cbor_int(-2), cbor_bytes(x)),
+            (cbor_int(-3), cbor_bytes(y)),
+        ]
+    )
     return (
         hashlib.sha256(rp_id.encode("utf-8")).digest()
-        + bytes([0x45])                   # UP | UV | AT
+        + bytes([0x45])  # UP | UV | AT
         + struct.pack(">I", 0)
-        + bytes(16)                       # AAGUID намеренно равен нулю для аутентификатора CI.
+        + bytes(16)  # AAGUID намеренно равен нулю для аутентификатора CI.
         + struct.pack(">H", len(credential_id))
         + credential_id
         + cose
@@ -116,7 +138,11 @@ def registration_auth_data(rp_id: str, credential_id: bytes, key_path: Path) -> 
 def assertion_auth_data(rp_id: str, sign_count: int) -> bytes:
     if sign_count < 0 or sign_count > 0xFFFFFFFF:
         raise SystemExit("sign count must fit uint32")
-    return hashlib.sha256(rp_id.encode("utf-8")).digest() + bytes([0x05]) + struct.pack(">I", sign_count)
+    return (
+        hashlib.sha256(rp_id.encode("utf-8")).digest()
+        + bytes([0x05])
+        + struct.pack(">I", sign_count)
+    )
 
 
 def command_register(args: argparse.Namespace) -> None:
@@ -129,11 +155,13 @@ def command_register(args: argparse.Namespace) -> None:
     user_handle = b64u_decode(args.user_handle)
     client = client_data("webauthn.create", args.challenge, args.origin)
     auth_data = registration_auth_data(args.rp_id, credential_id, key_path)
-    attestation = cbor_map([
-        (cbor_text("fmt"), cbor_text("none")),
-        (cbor_text("attStmt"), cbor_map([])),
-        (cbor_text("authData"), cbor_bytes(auth_data)),
-    ])
+    attestation = cbor_map(
+        [
+            (cbor_text("fmt"), cbor_text("none")),
+            (cbor_text("attStmt"), cbor_map([])),
+            (cbor_text("authData"), cbor_bytes(auth_data)),
+        ]
+    )
     state = {
         "schemaVersion": "1.0",
         "rpId": args.rp_id,
@@ -170,11 +198,13 @@ def command_assert(args: argparse.Namespace) -> None:
     client = client_data("webauthn.get", args.challenge, state["origin"])
     auth_data = assertion_auth_data(state["rpId"], args.sign_count)
     signed = auth_data + hashlib.sha256(client).digest()
-    with tempfile.NamedTemporaryFile(prefix="neverlauncher-webauthn-", delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(prefix="launcher-webauthn-", delete=False) as tmp:
         tmp.write(signed)
         payload_path = Path(tmp.name)
     try:
-        signature = run("openssl", "dgst", "-sha256", "-sign", str(key_path), str(payload_path))
+        signature = run(
+            "openssl", "dgst", "-sha256", "-sign", str(key_path), str(payload_path)
+        )
     finally:
         payload_path.unlink(missing_ok=True)
     credential_id = state["credentialId"]
@@ -206,7 +236,7 @@ def parser() -> argparse.ArgumentParser:
     reg.add_argument("--user-handle", required=True)
     reg.add_argument("--state", required=True)
     reg.add_argument("--key", required=True)
-    reg.add_argument("--friendly-name", default="NeverLauncher Device Trust E2E passkey")
+    reg.add_argument("--friendly-name", default="Launcher Device Trust E2E passkey")
     reg.set_defaults(func=command_register)
 
     assertion = sub.add_parser("assert")

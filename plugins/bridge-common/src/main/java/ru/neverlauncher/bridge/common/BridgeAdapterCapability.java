@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 /**
  * Устойчивый словарь возможностей для поверхности универсального серверного адаптера.

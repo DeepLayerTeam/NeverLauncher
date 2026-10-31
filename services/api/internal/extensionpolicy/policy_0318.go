@@ -16,10 +16,10 @@ import (
 	"strconv"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/linuxsandbox"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/macossandbox"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/windowssandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/linuxsandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/macossandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/windowssandbox"
 )
 
 var resourceName = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,63}$`)

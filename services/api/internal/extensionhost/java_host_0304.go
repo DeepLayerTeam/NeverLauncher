@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionjava"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionjava"
 )
 
 const javaRPCVersion0304 = "1.0"

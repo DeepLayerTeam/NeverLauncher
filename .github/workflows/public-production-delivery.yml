@@ -53,16 +53,16 @@ jobs:
           set -euo pipefail
           test -n "${RELEASE_ROOT_PUBLIC_KEY_BASE64:-}" || { echo "missing NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_BASE64" >&2; exit 2; }
           test -n "${RELEASE_TRUST_POLICY_BASE64:-}" || { echo "missing NEVERLAUNCHER_RELEASE_TRUST_POLICY_BASE64" >&2; exit 2; }
-          printf '%s' "$RELEASE_ROOT_PUBLIC_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/neverlauncher-release-root-public.pem"
-          printf '%s' "$RELEASE_TRUST_POLICY_BASE64" | base64 --decode > "$RUNNER_TEMP/neverlauncher-current-trust-policy.json"
-          printf 'NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE=%s\n' "$RUNNER_TEMP/neverlauncher-release-root-public.pem" >> "$GITHUB_ENV"
-          printf 'NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE=%s\n' "$RUNNER_TEMP/neverlauncher-current-trust-policy.json" >> "$GITHUB_ENV"
-          printf 'NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE=%s\n' "$RUNNER_TEMP/neverlauncher-public-e2e-trust-state.json" >> "$GITHUB_ENV"
+          printf '%s' "$RELEASE_ROOT_PUBLIC_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/launcher-release-root-public.pem"
+          printf '%s' "$RELEASE_TRUST_POLICY_BASE64" | base64 --decode > "$RUNNER_TEMP/launcher-current-trust-policy.json"
+          printf 'NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE=%s\n' "$RUNNER_TEMP/launcher-release-root-public.pem" >> "$GITHUB_ENV"
+          printf 'NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE=%s\n' "$RUNNER_TEMP/launcher-current-trust-policy.json" >> "$GITHUB_ENV"
+          printf 'NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE=%s\n' "$RUNNER_TEMP/launcher-public-e2e-trust-state.json" >> "$GITHUB_ENV"
 
       - name: Build public E2E verifier
         working-directory: cli
         shell: bash
-        run: go build -trimpath -ldflags "-s -w -X main.version=${PUBLIC_VERSION}" -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher
+        run: go build -trimpath -ldflags "-s -w -X main.version=${PUBLIC_VERSION}" -o "$RUNNER_TEMP/nl" ./cmd/launcher
 
       - name: Download and verify the public production release end-to-end
         shell: bash
@@ -98,7 +98,7 @@ jobs:
       - name: Upload public delivery E2E evidence
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-public-delivery-e2e-${{ github.sha }}
+          name: launcher-public-delivery-e2e-${{ github.sha }}
           path: dist/PUBLIC_DELIVERY_E2E_REPORT.json
           if-no-files-found: error
           retention-days: 90
@@ -107,6 +107,6 @@ jobs:
         if: always()
         shell: bash
         run: |
-          rm -f "$RUNNER_TEMP/neverlauncher-release-root-public.pem" \
-                "$RUNNER_TEMP/neverlauncher-current-trust-policy.json" \
-                "$RUNNER_TEMP/neverlauncher-public-e2e-trust-state.json"
+          rm -f "$RUNNER_TEMP/launcher-release-root-public.pem" \
+                "$RUNNER_TEMP/launcher-current-trust-policy.json" \
+                "$RUNNER_TEMP/launcher-public-e2e-trust-state.json"

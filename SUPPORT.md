@@ -1,7 +1,7 @@
 # Поддержка
 
-- **Ошибки и регрессии:** [GitHub Issues](https://github.com/DeepLayerTeam/NeverLauncher/issues) → шаблон «Сообщение об ошибке».
-- **Предложения и вопросы о проектировании:** [обсуждения GitHub](https://github.com/DeepLayerTeam/NeverLauncher/discussions), если раздел доступен.
+- **Ошибки и регрессии:** [GitHub Issues](https://github.com/DeepLayerTeam/Launcher/issues) → шаблон «Сообщение об ошибке».
+- **Предложения и вопросы о проектировании:** [обсуждения GitHub](https://github.com/DeepLayerTeam/Launcher/discussions), если раздел доступен.
 - **Проблемы в документации:** задача по шаблону «Ошибка в документации».
 - **Уязвимости:** [SECURITY.md](SECURITY.md); не раскрывайте публично подробности эксплуатации уязвимостей.
 

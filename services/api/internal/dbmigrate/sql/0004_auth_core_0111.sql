@@ -1,4 +1,4 @@
--- NeverLauncher 0.11.1: нормализованное постоянное ядро аутентификации.
+-- Launcher 0.11.1: нормализованное постоянное ядро аутентификации.
 -- PostgreSQL — источник истины для сеансов, семейств refresh-токенов и MFA.
 
 CREATE TABLE IF NOT EXISTS auth_sessions (

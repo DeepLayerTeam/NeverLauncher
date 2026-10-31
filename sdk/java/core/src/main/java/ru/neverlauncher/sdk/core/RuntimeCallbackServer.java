@@ -1,4 +1,4 @@
-package ru.neverlauncher.sdk.core;
+package ru.launcher.sdk.core;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;

@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector/conformance"
 )
 
 const fixtureSecret = "0123456789abcdef0123456789abcdef-fixture"
@@ -274,7 +274,7 @@ func TestResponseReplayAndTimestampWindowAreRejected(t *testing.T) {
 		t.Fatal(err)
 	}
 	client := newSignedClient(cfg, &http.Client{})
-	body := []byte(`{"protocolVersion":"neverlauncher-http-auth/1","issuer":"issuer","status":"ok"}`)
+	body := []byte(`{"protocolVersion":"launcher-http-auth/1","issuer":"issuer","status":"ok"}`)
 	nonce := "0123456789abcdef"
 	stamp := strconv.FormatInt(time.Now().Unix(), 10)
 	response := &http.Response{StatusCode: http.StatusOK, Header: make(http.Header)}

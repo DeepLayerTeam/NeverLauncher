@@ -27,7 +27,7 @@ for token in (
     "current_state",
     "generation",
     "extension_install_revisions",
-    "neverlauncher_extension_install_state_guard_0204",
+    "launcher_extension_install_state_guard_0204",
     "current_package_identity",
     "activated_at",
 ):
@@ -84,7 +84,7 @@ for suffix in ("/install", "/enable", "/disable", "/uninstall", "/update", "/rol
         f"lifecycle route missing {suffix}",
     )
 
-cli = read("cli/cmd/neverlauncher/extension_lifecycle_0204.go")
+cli = read("cli/cmd/launcher/extension_lifecycle_0204.go")
 for token in (
     'case "installed", "installations"',
     'case "status"',
@@ -105,7 +105,7 @@ for token in (
 ):
     require(token in admin, f"Admin lifecycle UI missing {token}")
 
-release = read("cli/cmd/neverlauncher/release_commands.go")
+release = read("cli/cmd/launcher/release_commands.go")
 require(
     "extension_install_revisions" in release,
     "productionTables missing extension_install_revisions",
@@ -121,7 +121,7 @@ for token in (
 
 for envfile in (
     "deploy/production/env.production.example",
-    "cli/cmd/neverlauncher/templates/production/env.production.example",
+    "cli/cmd/launcher/templates/production/env.production.example",
 ):
     env = read(envfile)
     require("NEVERLAUNCHER_EXTENSION_ROOT=" in env, f"{envfile} missing extension root")

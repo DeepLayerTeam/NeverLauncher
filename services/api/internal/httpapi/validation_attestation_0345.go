@@ -14,12 +14,12 @@ import (
 	"regexp"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-const validationSchema0345 = "neverlauncher.validation-evidence.v4"
-const validationDomain0345 = "NeverLauncher/validation-evidence/v4\x00"
+const validationSchema0345 = "launcher.validation-evidence.v4"
+const validationDomain0345 = "Launcher/validation-evidence/v4\x00"
 
 // The order of these fields is part of the signed canonical JSON serialization.
 // All scalar metadata must be ASCII with no HTML metacharacters; JSON maps sort

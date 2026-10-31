@@ -56,15 +56,15 @@ jobs:
           python e2e/scripts/test_runtime_capabilities_03410.py
           python e2e/scripts/test_staged_readiness_0343.py
           python e2e/scripts/test_staged_matching_0344.py
-      - name: Build production CLI and NeverRuntime (not the game)
+      - name: Build production CLI and Runtime (not the game)
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/nl-v10-tools"
           SUFFIX=''; [[ '${{ inputs.os }}' == windows ]] && SUFFIX='.exe'
-          (cd cli && go build -o "$RUNNER_TEMP/nl-v10-tools/neverlauncher${SUFFIX}" ./cmd/neverlauncher)
-          cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
-          cp "runtime/neverruntime/target/release/neverruntime${SUFFIX}" "$RUNNER_TEMP/nl-v10-tools/neverruntime${SUFFIX}"
+          (cd cli && go build -o "$RUNNER_TEMP/nl-v10-tools/launcher${SUFFIX}" ./cmd/launcher)
+          cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
+          cp "runtime/runtime/target/release/runtime${SUFFIX}" "$RUNNER_TEMP/nl-v10-tools/runtime${SUFFIX}"
       - name: Execute real staged package and export only redacted observations
         shell: bash
         env:
@@ -99,8 +99,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/nl-v10-reports"
           SUFFIX=''; [[ '${{ inputs.os }}' == windows ]] && SUFFIX='.exe'
           ARGS=(--backend "$BACKEND" --admin-token-file "$AUTH_DIR/operator" --package-id "$PACKAGE"
-            --cli "$RUNNER_TEMP/nl-v10-tools/neverlauncher${SUFFIX}"
-            --runtime "$RUNNER_TEMP/nl-v10-tools/neverruntime${SUFFIX}" --java auto
+            --cli "$RUNNER_TEMP/nl-v10-tools/launcher${SUFFIX}"
+            --runtime "$RUNNER_TEMP/nl-v10-tools/runtime${SUFFIX}" --java auto
             --pinned-public-key "$MANIFEST_KEY")
           if [[ '${{ inputs.mode }}' == gui ]]; then
             ARGS+=(--auth-mode "$AUTH_MODE" --credentials-file "$AUTH_DIR/credentials.json"

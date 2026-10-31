@@ -6,7 +6,7 @@ package main
 import (
   "context"
   "fmt"
-  extensions "gitflic.ru/skif4er/neverlauncher/sdk/cli/go"
+  extensions "gitflic.ru/skif4er/launcher/sdk/cli/go"
 )
 
 func main() {

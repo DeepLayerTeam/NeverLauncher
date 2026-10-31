@@ -4,13 +4,14 @@
 This is an offline concurrency/command regression test, NOT a substitute for real
 Paper/Purpur/Spigot/Folia server certification. Uses Java 21 with no network.
 """
+
 import pathlib
 import subprocess
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SOURCES = {
-"org/bukkit/Bukkit.java": r"""
+    "org/bukkit/Bukkit.java": r"""
 package org.bukkit;
 import java.util.*;
 import org.bukkit.command.*;
@@ -56,23 +57,23 @@ public final class Bukkit {
  }
 }
 """,
-"org/bukkit/OfflinePlayer.java": 'package org.bukkit; public class OfflinePlayer { public boolean whitelisted,banned; public boolean isWhitelisted(){return whitelisted;} public boolean isBanned(){return banned;} }',
-"org/bukkit/World.java": 'package org.bukkit; import java.util.UUID; public class World {public String getName(){return "world";} public UUID getUID(){return UUID.randomUUID();}}',
-"org/bukkit/Server.java": 'package org.bukkit; import org.bukkit.plugin.PluginManager; public class Server {public PluginManager getPluginManager(){return Bukkit.manager;}}',
-"org/bukkit/command/Command.java": 'package org.bukkit.command; public class Command {public void setExecutor(CommandExecutor e){} }',
-"org/bukkit/command/CommandSender.java": 'package org.bukkit.command; public interface CommandSender {default boolean hasPermission(String name){return true;} default void sendMessage(String msg){} }',
-"org/bukkit/command/CommandExecutor.java": 'package org.bukkit.command; public interface CommandExecutor {boolean onCommand(CommandSender s,Command c,String label,String[] args);}',
-"org/bukkit/event/Listener.java": 'package org.bukkit.event; public interface Listener {}',
-"org/bukkit/event/EventHandler.java": 'package org.bukkit.event; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target(ElementType.METHOD) public @interface EventHandler {}',
-"org/bukkit/event/player/AsyncPlayerPreLoginEvent.java": 'package org.bukkit.event.player; import java.util.UUID; import java.net.InetAddress; public class AsyncPlayerPreLoginEvent {public enum Result{KICK_OTHER} public InetAddress getAddress(){return null;} public String getName(){return "Steve";} public UUID getUniqueId(){return UUID.randomUUID();} public void disallow(Result r,String m){} }',
-"org/bukkit/event/player/PlayerJoinEvent.java": 'package org.bukkit.event.player; import org.bukkit.entity.Player; public record PlayerJoinEvent(Player getPlayer){}',
-"org/bukkit/event/player/PlayerQuitEvent.java": 'package org.bukkit.event.player; import org.bukkit.entity.Player; public record PlayerQuitEvent(Player getPlayer){}',
-"org/bukkit/event/player/PlayerKickEvent.java": 'package org.bukkit.event.player; import org.bukkit.entity.Player; public record PlayerKickEvent(Player getPlayer){public String getReason(){return "reason";}}',
-"org/bukkit/event/world/WorldLoadEvent.java": 'package org.bukkit.event.world; import org.bukkit.World; public record WorldLoadEvent(World getWorld){}',
-"org/bukkit/event/world/WorldUnloadEvent.java": 'package org.bukkit.event.world; import org.bukkit.World; public record WorldUnloadEvent(World getWorld){}',
-"org/bukkit/plugin/Plugin.java": 'package org.bukkit.plugin; public interface Plugin {}',
-"org/bukkit/plugin/PluginManager.java": 'package org.bukkit.plugin; import org.bukkit.event.Listener; public class PluginManager { public Listener listener; public void registerEvents(Listener l,Plugin p){listener=l;} public void disablePlugin(Plugin p){ } }',
-"org/bukkit/plugin/java/JavaPlugin.java": """package org.bukkit.plugin.java;
+    "org/bukkit/OfflinePlayer.java": "package org.bukkit; public class OfflinePlayer { public boolean whitelisted,banned; public boolean isWhitelisted(){return whitelisted;} public boolean isBanned(){return banned;} }",
+    "org/bukkit/World.java": 'package org.bukkit; import java.util.UUID; public class World {public String getName(){return "world";} public UUID getUID(){return UUID.randomUUID();}}',
+    "org/bukkit/Server.java": "package org.bukkit; import org.bukkit.plugin.PluginManager; public class Server {public PluginManager getPluginManager(){return Bukkit.manager;}}",
+    "org/bukkit/command/Command.java": "package org.bukkit.command; public class Command {public void setExecutor(CommandExecutor e){} }",
+    "org/bukkit/command/CommandSender.java": "package org.bukkit.command; public interface CommandSender {default boolean hasPermission(String name){return true;} default void sendMessage(String msg){} }",
+    "org/bukkit/command/CommandExecutor.java": "package org.bukkit.command; public interface CommandExecutor {boolean onCommand(CommandSender s,Command c,String label,String[] args);}",
+    "org/bukkit/event/Listener.java": "package org.bukkit.event; public interface Listener {}",
+    "org/bukkit/event/EventHandler.java": "package org.bukkit.event; import java.lang.annotation.*; @Retention(RetentionPolicy.RUNTIME) @Target(ElementType.METHOD) public @interface EventHandler {}",
+    "org/bukkit/event/player/AsyncPlayerPreLoginEvent.java": 'package org.bukkit.event.player; import java.util.UUID; import java.net.InetAddress; public class AsyncPlayerPreLoginEvent {public enum Result{KICK_OTHER} public InetAddress getAddress(){return null;} public String getName(){return "Steve";} public UUID getUniqueId(){return UUID.randomUUID();} public void disallow(Result r,String m){} }',
+    "org/bukkit/event/player/PlayerJoinEvent.java": "package org.bukkit.event.player; import org.bukkit.entity.Player; public record PlayerJoinEvent(Player getPlayer){}",
+    "org/bukkit/event/player/PlayerQuitEvent.java": "package org.bukkit.event.player; import org.bukkit.entity.Player; public record PlayerQuitEvent(Player getPlayer){}",
+    "org/bukkit/event/player/PlayerKickEvent.java": 'package org.bukkit.event.player; import org.bukkit.entity.Player; public record PlayerKickEvent(Player getPlayer){public String getReason(){return "reason";}}',
+    "org/bukkit/event/world/WorldLoadEvent.java": "package org.bukkit.event.world; import org.bukkit.World; public record WorldLoadEvent(World getWorld){}",
+    "org/bukkit/event/world/WorldUnloadEvent.java": "package org.bukkit.event.world; import org.bukkit.World; public record WorldUnloadEvent(World getWorld){}",
+    "org/bukkit/plugin/Plugin.java": "package org.bukkit.plugin; public interface Plugin {}",
+    "org/bukkit/plugin/PluginManager.java": "package org.bukkit.plugin; import org.bukkit.event.Listener; public class PluginManager { public Listener listener; public void registerEvents(Listener l,Plugin p){listener=l;} public void disablePlugin(Plugin p){ } }",
+    "org/bukkit/plugin/java/JavaPlugin.java": """package org.bukkit.plugin.java;
 import org.bukkit.*; import org.bukkit.command.*; import org.bukkit.plugin.*;
 public class JavaPlugin implements Plugin {
  public void onEnable(){} public void onDisable(){}
@@ -81,53 +82,53 @@ public class JavaPlugin implements Plugin {
  public java.util.logging.Logger getLogger(){return java.util.logging.Logger.getLogger("simulator");}
  public java.io.File getDataFolder(){return new java.io.File(System.getProperty("java.io.tmpdir"));}
 }""",
-"org/bukkit/entity/Player.java": """package org.bukkit.entity;
+    "org/bukkit/entity/Player.java": """package org.bukkit.entity;
 import java.util.UUID; import org.bukkit.Bukkit; import org.bukkit.event.player.PlayerQuitEvent;
 public class Player {
  public final String name; public UUID id=UUID.randomUUID(); public boolean emitQuit=true,failSend=false; public int kicks=0, messages=0;
  public Player(String name){this.name=name;}
  public String getName(){return name;} public UUID getUniqueId(){return id;}
- public void kickPlayer(String msg){kicks++; if(emitQuit){ Bukkit.players.remove(this); if(Bukkit.manager.listener instanceof ru.neverlauncher.bridge.bukkit.BukkitFamilyBridgePlugin l) l.onPlayerQuit(new PlayerQuitEvent(this)); }}
+ public void kickPlayer(String msg){kicks++; if(emitQuit){ Bukkit.players.remove(this); if(Bukkit.manager.listener instanceof ru.launcher.bridge.bukkit.BukkitFamilyBridgePlugin l) l.onPlayerQuit(new PlayerQuitEvent(this)); }}
  public void sendMessage(String msg){ if(failSend)throw new IllegalStateException("send failed"); messages++; }
  public org.bukkit.scheduler.EntityScheduler getScheduler(){return new org.bukkit.scheduler.EntityScheduler();}
 }""",
-"org/bukkit/scheduler/BukkitScheduler.java": """package org.bukkit.scheduler;
+    "org/bukkit/scheduler/BukkitScheduler.java": """package org.bukkit.scheduler;
 import org.bukkit.plugin.Plugin;
 public class BukkitScheduler {
  public Object runTask(Plugin p,Runnable r){r.run();return new BukkitTask();}
  public Object runTaskTimer(Plugin p,Runnable r,long first,long period){return new BukkitTask();}
 }""",
-"org/bukkit/scheduler/GlobalRegionScheduler.java": """package org.bukkit.scheduler;
+    "org/bukkit/scheduler/GlobalRegionScheduler.java": """package org.bukkit.scheduler;
 import org.bukkit.plugin.Plugin; import java.util.function.Consumer;
 public class GlobalRegionScheduler {
  public void execute(Plugin p,Runnable r){r.run();}
  public BukkitTask runAtFixedRate(Plugin p,Consumer<Object> task,long first,long period){return new BukkitTask();}
 }""",
-"org/bukkit/scheduler/EntityScheduler.java": """package org.bukkit.scheduler;
+    "org/bukkit/scheduler/EntityScheduler.java": """package org.bukkit.scheduler;
 import org.bukkit.plugin.Plugin;
 public class EntityScheduler {public static boolean retire=false; public boolean execute(Plugin p,Runnable task,Runnable retired,long delay){if(retire){retired.run();return true;} task.run();return true;}}
 """,
-"org/bukkit/scheduler/BukkitTask.java": 'package org.bukkit.scheduler; public class BukkitTask {public void cancel(){}}',
-"ru/neverlauncher/bridge/common/BridgeAdapterCapability.java": """package ru.neverlauncher.bridge.common; public enum BridgeAdapterCapability {REGION_SAFE_SCHEDULER,PAPER_API_FAMILY,TELEMETRY_BOUNDED_WORLD_COUNTERS}""",
-"ru/neverlauncher/bridge/common/BridgeAdapterProfile.java": """package ru.neverlauncher.bridge.common; public class BridgeAdapterProfile {private String id;public BridgeAdapterProfile(String id){this.id=id;} public boolean supports(BridgeAdapterCapability c){return (id.equals("folia")&&c==BridgeAdapterCapability.REGION_SAFE_SCHEDULER) || ((id.equals("paper")||id.equals("purpur")) && c!=BridgeAdapterCapability.REGION_SAFE_SCHEDULER);}}""",
-"ru/neverlauncher/bridge/common/BridgeAdapterProfiles.java": 'package ru.neverlauncher.bridge.common; public class BridgeAdapterProfiles {public static BridgeAdapterProfile require(String id){return new BridgeAdapterProfile(id);} public static void rejectUncertifiedHybrid(String id,String brand){} }',
-"ru/neverlauncher/bridge/common/BridgeControlCommand.java": 'package ru.neverlauncher.bridge.common; import java.util.Map; public record BridgeControlCommand(String type,Map<String,String> payload){}',
-"ru/neverlauncher/bridge/common/BridgeDefaults.java": 'package ru.neverlauncher.bridge.common; public class BridgeDefaults {public static final String VERSION="0.41.5";}',
-"ru/neverlauncher/bridge/common/BridgeIntegrity.java": 'package ru.neverlauncher.bridge.common; public class BridgeIntegrity {public static String artifactSha256(Class<?> c){return "a".repeat(64);} public static boolean isSha256(String h){return h != null && h.matches("[0-9a-f]{64}");}}',
-"ru/neverlauncher/bridge/common/BridgeRuntimeDescriptor.java": 'package ru.neverlauncher.bridge.common; import java.util.List; public record BridgeRuntimeDescriptor(String serverBrand){public static BridgeRuntimeDescriptor of(String a,String b,String c,String d,String e,List<String> f){return new BridgeRuntimeDescriptor(e);}}',
-"ru/neverlauncher/bridge/common/BridgePlatformTelemetry.java": 'package ru.neverlauncher.bridge.common; import java.util.List; public class BridgePlatformTelemetry { public static BridgePlatformTelemetry server(Double t,Double m,int o,int max,Integer w,Integer d,Long c,Long e,boolean b,List<String> s){return new BridgePlatformTelemetry();}}',
-"ru/neverlauncher/bridge/common/JoinValidationResult.java": 'package ru.neverlauncher.bridge.common; public class JoinValidationResult { public boolean allowed=true;public String reason=""; public String userMessage(){return "";}}',
-"ru/neverlauncher/bridge/common/NodeIdentity.java": 'package ru.neverlauncher.bridge.common; import java.nio.file.Path; public class NodeIdentity { public static NodeIdentity loadOrCreate(Path p){return new NodeIdentity();} public String fingerprint(){return "fake";}}',
-"ru/neverlauncher/bridge/common/BridgeConfig.java": """package ru.neverlauncher.bridge.common;
+    "org/bukkit/scheduler/BukkitTask.java": "package org.bukkit.scheduler; public class BukkitTask {public void cancel(){}}",
+    "ru/launcher/bridge/common/BridgeAdapterCapability.java": """package ru.launcher.bridge.common; public enum BridgeAdapterCapability {REGION_SAFE_SCHEDULER,PAPER_API_FAMILY,TELEMETRY_BOUNDED_WORLD_COUNTERS}""",
+    "ru/launcher/bridge/common/BridgeAdapterProfile.java": """package ru.launcher.bridge.common; public class BridgeAdapterProfile {private String id;public BridgeAdapterProfile(String id){this.id=id;} public boolean supports(BridgeAdapterCapability c){return (id.equals("folia")&&c==BridgeAdapterCapability.REGION_SAFE_SCHEDULER) || ((id.equals("paper")||id.equals("purpur")) && c!=BridgeAdapterCapability.REGION_SAFE_SCHEDULER);}}""",
+    "ru/launcher/bridge/common/BridgeAdapterProfiles.java": "package ru.launcher.bridge.common; public class BridgeAdapterProfiles {public static BridgeAdapterProfile require(String id){return new BridgeAdapterProfile(id);} public static void rejectUncertifiedHybrid(String id,String brand){} }",
+    "ru/launcher/bridge/common/BridgeControlCommand.java": "package ru.launcher.bridge.common; import java.util.Map; public record BridgeControlCommand(String type,Map<String,String> payload){}",
+    "ru/launcher/bridge/common/BridgeDefaults.java": 'package ru.launcher.bridge.common; public class BridgeDefaults {public static final String VERSION="0.41.5";}',
+    "ru/launcher/bridge/common/BridgeIntegrity.java": 'package ru.launcher.bridge.common; public class BridgeIntegrity {public static String artifactSha256(Class<?> c){return "a".repeat(64);} public static boolean isSha256(String h){return h != null && h.matches("[0-9a-f]{64}");}}',
+    "ru/launcher/bridge/common/BridgeRuntimeDescriptor.java": "package ru.launcher.bridge.common; import java.util.List; public record BridgeRuntimeDescriptor(String serverBrand){public static BridgeRuntimeDescriptor of(String a,String b,String c,String d,String e,List<String> f){return new BridgeRuntimeDescriptor(e);}}",
+    "ru/launcher/bridge/common/BridgePlatformTelemetry.java": "package ru.launcher.bridge.common; import java.util.List; public class BridgePlatformTelemetry { public static BridgePlatformTelemetry server(Double t,Double m,int o,int max,Integer w,Integer d,Long c,Long e,boolean b,List<String> s){return new BridgePlatformTelemetry();}}",
+    "ru/launcher/bridge/common/JoinValidationResult.java": 'package ru.launcher.bridge.common; public class JoinValidationResult { public boolean allowed=true;public String reason=""; public String userMessage(){return "";}}',
+    "ru/launcher/bridge/common/NodeIdentity.java": 'package ru.launcher.bridge.common; import java.nio.file.Path; public class NodeIdentity { public static NodeIdentity loadOrCreate(Path p){return new NodeIdentity();} public String fingerprint(){return "fake";}}',
+    "ru/launcher/bridge/common/BridgeConfig.java": """package ru.launcher.bridge.common;
 import java.nio.file.Path;
 public class BridgeConfig {public String serverId="simulation", backendUrl="local",failMode="deny",projectId="p",profileId="q",channel="stable";public boolean requireIntegrity=false,requireLauncherSession=false; public int heartbeatIntervalSeconds=30,telemetrySampleIntervalSeconds=60,telemetrySamplingBudgetMs=100;
 public Path identityFile=Path.of("/tmp/test-id");
 public static BridgeConfig load(Path path,String name){return new BridgeConfig();}
 public boolean isConsoleCommandAllowed(String cmd){return cmd.startsWith("say ");}
 }""",
-"ru/neverlauncher/bridge/common/NeverLauncherApiClient.java": """package ru.neverlauncher.bridge.common;
+    "ru/launcher/bridge/common/LauncherApiClient.java": """package ru.launcher.bridge.common;
 import java.util.Map;
-public class NeverLauncherApiClient { public NeverLauncherApiClient(BridgeConfig c,NodeIdentity i,String a,String b,String d,BridgeRuntimeDescriptor e){}
+public class LauncherApiClient { public LauncherApiClient(BridgeConfig c,NodeIdentity i,String a,String b,String d,BridgeRuntimeDescriptor e){}
 public JoinValidationResult validateJoin(String name,String id,String ip,boolean online){return new JoinValidationResult();}
 public void startControlChannel(ControlExecutor e){} public void publishEvent(String name,Map<String,String> payload){}
 public String runtimeId(){return "runtime";}
@@ -135,12 +136,12 @@ public void flushEventsNow(){} public void closeEventStreamCleanly(){} public vo
 public boolean heartbeat(String a,String b){return true;} public void recordPlatformTelemetry(BridgePlatformTelemetry m){}
 public interface ControlExecutor {BridgeControlResult execute(BridgeControlCommand c) throws Exception;}
 }""",
-"test/Control0415Harness.java": r"""
+    "test/Control0415Harness.java": r"""
 package test;
 import java.lang.reflect.*; import java.util.*;
 import org.bukkit.Bukkit; import org.bukkit.entity.Player;
-import ru.neverlauncher.bridge.bukkit.*;
-import ru.neverlauncher.bridge.common.*;
+import ru.launcher.bridge.bukkit.*;
+import ru.launcher.bridge.common.*;
 public final class Control0415Harness {
  static int assertions;
  static void check(boolean valid,String why) {assertions++;if(!valid)throw new AssertionError(why);}
@@ -156,10 +157,10 @@ public final class Control0415Harness {
   Bukkit.players.clear(); Bukkit.offline.clear(); Bukkit.whitelist=false;
   Bukkit.commandAccepted=true; Bukkit.commandHasEffect=true;
   BukkitFamilyBridgePlugin plugin=switch(brand) {
-   case "Spigot" -> new ru.neverlauncher.bridge.spigot.NeverLauncherSpigotBridge();
-   case "Paper" -> new ru.neverlauncher.bridge.paper.NeverLauncherPaperBridge();
-   case "Purpur" -> new ru.neverlauncher.bridge.purpur.NeverLauncherPurpurBridge();
-   case "Folia" -> new ru.neverlauncher.bridge.folia.NeverLauncherFoliaBridge();
+   case "Spigot" -> new ru.launcher.bridge.spigot.LauncherSpigotBridge();
+   case "Paper" -> new ru.launcher.bridge.paper.LauncherPaperBridge();
+   case "Purpur" -> new ru.launcher.bridge.purpur.LauncherPurpurBridge();
+   case "Folia" -> new ru.launcher.bridge.folia.LauncherFoliaBridge();
    default -> throw new IllegalArgumentException(brand);
   };
   plugin.onEnable(); return plugin;
@@ -234,7 +235,7 @@ public final class Control0415Harness {
 """,
 }
 
-with tempfile.TemporaryDirectory(prefix="neverlauncher-bukkit-0415-") as tmp:
+with tempfile.TemporaryDirectory(prefix="launcher-bukkit-0415-") as tmp:
     source = pathlib.Path(tmp) / "sources"
     output = pathlib.Path(tmp) / "classes"
     output.mkdir()
@@ -243,12 +244,21 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-bukkit-0415-") as tmp:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(body, encoding="utf-8")
     production = [
-        ROOT / "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeControlResult.java",
-        ROOT / "plugins/bukkit-family-common/src/main/java/ru/neverlauncher/bridge/bukkit/BukkitFamilyPlatform.java",
-        ROOT / "plugins/bukkit-family-common/src/main/java/ru/neverlauncher/bridge/bukkit/BukkitFamilyBridgePlugin.java",
+        ROOT
+        / "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeControlResult.java",
+        ROOT
+        / "plugins/bukkit-family-common/src/main/java/ru/launcher/bridge/bukkit/BukkitFamilyPlatform.java",
+        ROOT
+        / "plugins/bukkit-family-common/src/main/java/ru/launcher/bridge/bukkit/BukkitFamilyBridgePlugin.java",
     ]
     for platform in ("spigot", "paper", "purpur", "folia"):
-        production.extend((ROOT / f"plugins/{platform}-bridge/src/main/java").rglob("*.java"))
-    cmd = ["javac", "--release", "21", "-d", str(output)] + [str(p) for p in source.rglob("*.java")] + [str(p) for p in production]
+        production.extend(
+            (ROOT / f"plugins/{platform}-bridge/src/main/java").rglob("*.java")
+        )
+    cmd = (
+        ["javac", "--release", "21", "-d", str(output)]
+        + [str(p) for p in source.rglob("*.java")]
+        + [str(p) for p in production]
+    )
     subprocess.run(cmd, check=True)
     subprocess.run(["java", "-cp", str(output), "test.Control0415Harness"], check=True)

@@ -1,6 +1,6 @@
 #![cfg(target_os = "macos")]
 
-use neverruntime::{
+use runtime::{
     GuardSupervisor, NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA,
     NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA,
 };

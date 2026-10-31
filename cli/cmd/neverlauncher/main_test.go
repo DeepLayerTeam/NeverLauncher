@@ -126,11 +126,11 @@ func TestReleasePackageCreatesFiles(t *testing.T) {
 	if err := run([]string{"release", "publish-check", out, "--public-key", publicPath}); err != nil {
 		t.Fatalf("release publish-check: %v", err)
 	}
-	if err := os.Remove(filepath.Join(out, "neverruntime-linux-amd64")); err != nil {
+	if err := os.Remove(filepath.Join(out, "runtime-linux-amd64")); err != nil {
 		t.Fatal(err)
 	}
 	if err := run([]string{"release", "verify", out, "--public-key", publicPath}); err == nil {
-		t.Fatal("release verify обязан отклонять bundle без required NeverRuntime artifact")
+		t.Fatal("release verify обязан отклонять bundle без required Runtime artifact")
 	}
 }
 

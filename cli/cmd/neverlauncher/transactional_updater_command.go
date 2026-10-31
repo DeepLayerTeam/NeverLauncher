@@ -127,7 +127,7 @@ func manifestFileAppliesToCurrentOS0156(file ManifestFile) bool {
 }
 
 func runUpdaterSelfTest0156() (map[string]any, error) {
-	root, err := os.MkdirTemp("", "neverlauncher-updater-selftest-")
+	root, err := os.MkdirTemp("", "launcher-updater-selftest-")
 	if err != nil {
 		return nil, err
 	}

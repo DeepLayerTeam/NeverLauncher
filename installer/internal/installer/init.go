@@ -91,13 +91,13 @@ func Init(dest, publicURL, dsn, storageDir string) error {
 		{"NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", filepath.Join(filepath.Dir(storageDir), "coordinator", "state.db")},
 		{"NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED", "false"},
 		{"NEVERLAUNCHER_RATE_LIMIT_ENABLED", "true"}, {"NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED", "true"},
-		{"NEVERLAUNCHER_WEBAUTHN_RP_ID", parsed.Hostname()}, {"NEVERLAUNCHER_WEBAUTHN_RP_NAME", "NeverLauncher"},
+		{"NEVERLAUNCHER_WEBAUTHN_RP_ID", parsed.Hostname()}, {"NEVERLAUNCHER_WEBAUTHN_RP_NAME", "Launcher"},
 		{"NEVERLAUNCHER_WEBAUTHN_ORIGINS", publicURL}, {"NEVERLAUNCHER_CORS_ALLOWED_ORIGINS", publicURL},
 		{"NEVERLAUNCHER_BACKUP_ROOT", filepath.Join(filepath.Dir(storageDir), "backups")},
 		{"NEVERLAUNCHER_EXTENSION_ROOT", filepath.Join(filepath.Dir(storageDir), "extensions")}, {"NEVERLAUNCHER_REPOSITORY_DRIVER", "postgres"}, {"NEVERLAUNCHER_SQL_DRIVER", "pgx"}, {"NEVERLAUNCHER_DATABASE_DSN", dsn}, {"NEVERLAUNCHER_DATABASE_AUTO_MIGRATE", "true"}, {"NEVERLAUNCHER_STORAGE_DRIVER", "local"}, {"NEVERLAUNCHER_STORAGE_LOCAL_PATH", storageDir}, {"NEVERLAUNCHER_AUTH_TOKEN_SECRET", secret}, {"NEVERLAUNCHER_BOOTSTRAP_TOKEN", token}, {"NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY", signing}, {"NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY", bridge}, {"NEVERLAUNCHER_EXTENSION_SECRETS_KEY", extensions},
 	}
 	var b bytes.Buffer
-	b.WriteString("# NeverLauncher: GENERATED SECRETS. Permissions 0600. Keep in safe backup.\n# Supply verified NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON and NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON before production startup.\n")
+	b.WriteString("# Launcher: GENERATED SECRETS. Permissions 0600. Keep in safe backup.\n# Supply verified NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON and NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON before production startup.\n")
 	for _, f := range fields {
 		if !validEnvField(f[1]) {
 			return fmt.Errorf("unsafe environment value for %s", f[0])

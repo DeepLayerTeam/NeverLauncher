@@ -25,7 +25,7 @@ staged execution report says `passed`.
 4. The isolated runner gets an HMAC-bound grant (90 minutes), retrieves the
    backend-verified signed manifest and exact staged files, checks every SHA-256
    and size, then invokes normal `nl client install` and `nl client verify`.
-   Finally it uses **NeverRuntime `launch`**, the installed client root, the
+   Finally it uses **Runtime `launch`**, the installed client root, the
    same signed manifest and operator-pinned key, and selects the signed Java
    major on the GUI-capable worker. No Client Factory lock or rebuild is required.
 
@@ -51,7 +51,7 @@ or diagnostics. The result report never includes the grant or login token.
 
 ```
 python3 -m unittest e2e/scripts/test_run_staged_package_0342.py -v
-cd cli && go test ./cmd/neverlauncher -run 'TestRuntimeCertification02712|TestClientPackage|TestClientFactory0271' -count=1
+cd cli && go test ./cmd/launcher -run 'TestRuntimeCertification02712|TestClientPackage|TestClientFactory0271' -count=1
 cd ../services/api && go test ./internal/httpapi ./internal/repository ./internal/dbmigrate -run 'TestStaged.*0342|TestStable.*0341|TestEvaluateAppliedSealedCatalog' -count=1
 ```
 

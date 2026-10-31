@@ -1,99 +1,513 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NeverLauncher · Embedded Admin</title><link href="/admin/app.css" rel="stylesheet"></head>
-<body><main><header><h1>NeverLauncher</h1><p>Embedded Admin · первичная настройка и контроль проекта</p></header>
-<aside id="status" role="status" aria-live="polite">Проверка состояния…</aside>
-<section id="bootstrap" hidden><h2>Создание владельца</h2><p>Только для новой установки. Введите одноразовый bootstrap token из защищённого конфигурационного файла.</p>
-<form id="bootstrap-form"><label>Токен<input name="bootstrapToken" type="password" autocomplete="off" required minlength="32"></label><label>Email<input name="email" type="email" autocomplete="email" required></label><label>Имя<input name="displayName" required maxlength="200"></label><label>Пароль владельца<input name="password" type="password" autocomplete="new-password" minlength="12" required></label><button type="submit">Создать владельца</button></form></section>
-<section id="login" hidden><h2>Вход администратора</h2><form id="login-form"><label>Email<input name="email" type="email" autocomplete="username" required></label><label>Пароль<input name="password" type="password" autocomplete="current-password" required></label><label>TOTP (если требуется)<input name="totp" inputmode="numeric" autocomplete="one-time-code"></label><button type="submit">Войти</button></form></section>
-<section id="admin" hidden><h2>Состояние Backend</h2><button id="refresh" type="button">Обновить</button><button id="logout" type="button">Выйти</button><pre id="overview"></pre>
-<h2>Создание первого проекта</h2><p>Создаёт черновой релиз после проверки прав текущего владельца.</p><form id="project-form"><label>Проект<input name="projectId" value="default-project" required></label><label>Профиль<input name="profileId" value="vanilla" required></label><label>Канал<input name="channel" value="stable" required></label><label>Версия<input name="version" value="0.1.0" required></label><button type="submit">Создать проект</button></form>
-<h2>Migration Center · 0.33.13</h2>
-<p>Проверка и сохранение целевой конфигурации Never. Это ещё не импорт Gravit и не разрешение на cutover.</p>
-<form id="migration-create"><label>ID проекта<input name="projectId" required maxlength="128" value="default-project"></label><label>Ключ повторного выполнения<input name="idempotencyKey" required minlength="8" maxlength="128" placeholder="change-request-2026-001"></label><button type="submit">Создать migration run</button></form>
-<form id="migration-select"><label>Migration run ID<input id="migration-run-id" required></label><button type="submit">Показать</button></form>
-<div><button id="migration-execute" type="button">Выполнить следующие шаги</button><button id="migration-pause" type="button">Пауза</button><button id="migration-resume" type="button">Возобновить</button></div>
-<form id="migration-assess"><label>Gravit project ZIP (up to 64 MiB for compatibility)<input name="source" type="file" accept=".zip,application/zip" required></label><label>Версия по заявлению оператора (не подтверждает подлинность)<input name="version" placeholder="5.7.12" maxlength="40"></label><button type="submit">Проверить совместимость</button></form>
-<div><button id="migration-inventory" type="button">Сохранить инвентаризацию ZIP (до 512 MiB)</button><button id="migration-export" type="button">Экспортировать проверенный ZIP</button></div>
-<div><button id="migration-map-identities" type="button">Построить карту UUID</button><button id="migration-verify-identities" type="button">Повторная сверка UUID</button></div>
-<form id="migration-auth" autocomplete="off"><label>Парольный формат Gravit FileAuth
-<select name="format"><option value="">Без FileAuth (SQL only)</option><option>sha256-hex</option><option>sha256-base64url</option><option>md5-hex</option><option>sha1-hex</option><option>sha512-hex</option><option>double-sha256-hex</option><option>double-sha256-binary-hex</option><option>phpass</option><option>bcrypt</option><option>argon2id</option></select></label>
-<label>Подтвердить ID запуска для импорта<input name="confirmRun" autocomplete="off" placeholder="Точный Migration run ID"></label>
-<button id="migration-preview-credentials" type="button">Проверка авторизации (dry-run)</button><button id="migration-import-credentials" type="button">Импортировать новые учётные записи</button></form>
-<fieldset><legend>Security &amp; Trust Reset (MIG06)</legend>
-<button id="migration-preview-security" type="button">Проверить security reset</button><button id="migration-verify-security" type="button">Проверить применённый reset</button>
-<label>Подтвердить точный ID запуска<input id="migration-security-run" autocomplete="off" placeholder="Migration run ID"></label>
-<label><input id="migration-security-keys" type="checkbox"> Новые независимые JWT и Ed25519 ключи Never provisioned, не унаследованы от Gravit</label>
-<button id="migration-activate-security" type="button">Отозвать старое доверие</button></fieldset>
-<fieldset id="migration-content"><legend>Content &amp; Profile Migration (MIG07)</legend>
-<p>Сопоставляет реальный ClientProfile и проверенные файлы ZIP с новым Build Workspace. Не импортирует ключи, auth или неизвестные модули. Импорт можно повторять после прерывания.</p>
-<label>Путь профиля внутри ZIP<input id="migration-content-profile-path" value="profiles/client.json" required></label>
-<label>ID нового профиля<input id="migration-content-profile-id" value="gravit-client" required></label>
-<label>Название нового профиля<input id="migration-content-name" placeholder="Имя из ClientProfile"></label>
-<label>Загрузчик<select id="migration-content-loader"><option>vanilla</option><option>fabric</option><option>quilt</option><option>forge</option><option>neoforge</option></select></label>
-<label>Канал<input id="migration-content-channel" value="stable"></label>
-<label>Версия нового релиза<input id="migration-content-version" value="migrated-1"></label>
-<button id="migration-content-preview" type="button">Проверить содержимое (dry-run)</button><button id="migration-content-status" type="button">Прочитать сохранённый import</button>
-<label>Подтвердить точный run ID<input id="migration-content-run" autocomplete="off"></label>
-<button id="migration-content-import" type="button">Перенести проверенные файлы</button>
-<button id="migration-content-optionals" type="button">Применить optional catalog после сборки</button></fieldset>
-<fieldset id="migration-modules"><legend>Module &amp; ServerWrapper Migration (MIG08)</legend>
-<p>Проверка JAR без исполнения, проверка исходного ZIP по MIG03, отчёт по неизвестным модулям. Перенос старых ServerWrapper токенов запрещён.</p>
-<button id="migration-modules-analyze" type="button">Анализировать модули и ServerWrapper</button><button id="migration-modules-get" type="button">Прочитать сохранённый отчёт</button>
-<label>Исходный путь ServerWrapperConfig.json или .env<input id="migration-modules-wrapper" placeholder="server/ServerWrapperConfig.json"></label>
-<label>Новый ServerBridge Node ID<input id="migration-modules-node" placeholder="my-server"></label>
-<label>Название сервера<input id="migration-modules-name" placeholder="Minecraft Server"></label>
-<label>Тип сервера<input id="migration-modules-kind" value="paper" placeholder="paper / forge / velocity"></label>
-<label>ID профиля Never<input id="migration-modules-profile" placeholder="my-profile"></label>
-<label>НОВЫЙ Ed25519 publicKey (base64url; private key никогда не отправляется)<input id="migration-modules-public-key" autocomplete="off"></label>
-<label><input id="migration-modules-fresh" type="checkbox"> Подтверждаю, что это новый независимый Ed25519 keypair Never; старые ключи Gravit не используются</label>
-<label>Подтвердить точный run ID<input id="migration-modules-confirm" autocomplete="off"></label>
-<button id="migration-modules-enroll" type="button">Зарегистрировать новый ServerBridge node (MFA)</button></fieldset>
-<fieldset><legend>Isolated Migration Rehearsal (MIG10)</legend>
-<p>Запуск только из CLI в отдельном тестовом окружении; Backend выполняет независимую проверку UUID и сохранённых MIG03–MIG08. Не является разрешением на production cutover.</p>
-<button id="migration-rehearsal-get" type="button">Проверить последний отчёт репетиции</button></fieldset>
-<fieldset><legend>Staged Cutover (MIG11)</legend>
-<p>Рабочее переключение `channel_heads`. Staging блокирует публикацию указанного профиля/канала в PostgreSQL. Остановка Gravit/world/SQL writers выполняется оператором отдельно; подтверждение и SHA не доказывают её автоматически.</p>
-<label>Профиль<input id="migration-cutover-profile" placeholder="gravit-client"></label>
-<label>Канал<input id="migration-cutover-channel" value="stable"></label>
-<label>ID подписанного опубликованного релиза MIG07<input id="migration-cutover-release"></label>
-<label>Текущая ревизия channel head<input id="migration-cutover-head-revision" type="number" min="0" value="0"></label>
-<label>Stage ID успешной репетиции MIG10<input id="migration-cutover-stage-id"></label>
-<label>Подтверждение — точный migration run ID<input id="migration-cutover-confirm" autocomplete="off"></label>
-<button id="migration-cutover-stage" type="button">Stage (заморозить публикацию)</button><button id="migration-cutover-list" type="button">Проверить состояния cutover</button>
-<p>Для activation введите ожидаемую ревизию cutover receipt (не channel head), ссылку на внешнее доказательство fencing и SHA-256 независимо полученного snapshot текущего Gravit.</p>
-<label>Cutover receipt revision<input id="migration-cutover-revision" type="number" min="1" value="1"></label>
-<label>Source fence reference<input id="migration-cutover-fence-ref"></label>
-<label>Source fence evidence SHA-256<input id="migration-cutover-fence-sha"></label>
-<label>Fresh source snapshot SHA-256<input id="migration-cutover-source-sha"></label>
-<label><input id="migration-cutover-source-fenced" type="checkbox"> Исходный Gravit writer отдельно остановлен и проверен оператором</label>
-<button id="migration-cutover-activate" type="button">Activate (MFA; переключить канал)</button><button id="migration-cutover-cancel" type="button">Отменить staging до activation</button>
-</fieldset>
-<fieldset><legend>Operational Rollback (MIG12)</legend>
-<p>Безопасный rollback возвращает только канал Never при совпадении мира, инвентаря, экономики, прав и UUID с MIG10. Snapshot экспортируйте из отдельно остановленного игрового сервера. Изменённые данные блокируют автоматический откат.</p>
-<label>Fresh snapshot JSON<textarea id="migration-rollback-snapshot" rows="7"></textarea></label>
-<label>Опционально JSON сверенного Gravit snapshot после внешнего переноса новых записей<textarea id="migration-rollback-source-snapshot" rows="5"></textarea></label>
-<label>SHA-256 доказательства переноса новых данных в Gravit<input id="migration-rollback-reconciliation-sha"></label>
-<label>Ссылка на доказательство<input id="migration-rollback-evidence-ref"></label>
-<label>SHA-256 доказательства актуального snapshot<input id="migration-rollback-evidence-sha"></label>
-<label>SHA-256 ранее сформированного плана<input id="migration-rollback-plan-sha"></label>
-<label><input id="migration-rollback-never-fenced" type="checkbox"> Never/game writers остановлены и проверены отдельно</label>
-<label><input id="migration-rollback-source-fenced" type="checkbox"> Gravit writer продолжает быть остановленным</label>
-<button id="migration-rollback-plan" type="button">Проверить rollback (MFA)</button>
-<button id="migration-rollback-commit" type="button">Commit rollback (MFA)</button>
-<button id="migration-rollback-status" type="button">Проверить сохранённый план</button>
-</fieldset>
-<fieldset><legend>Reports &amp; Certification RC (MIG13)</legend>
-<p>Отчёт из PostgreSQL MIG03–MIG12 с SHA-256, картой UUID и перечислением blockers. Reviewing не является GA или доказательством production-совместимости.</p>
-<button id="migration-rc-report" type="button">Сформировать текущий отчёт</button>
-<button id="migration-rc-status" type="button">Прочитать сохранённый review</button>
-<label>SHA-256 текущего отчёта<input id="migration-rc-report-sha" readonly></label>
-<label>Ссылка на независимые CI/E2E доказательства<input id="migration-rc-reference"></label>
-<label>SHA-256 независимых доказательств<input id="migration-rc-evidence-sha"></label>
-<label>Подтвердить точный run ID (MFA)<input id="migration-rc-confirm" autocomplete="off"></label>
-<button id="migration-rc-review" type="button">Зафиксировать RC review (НЕ GA)</button>
-</fieldset>
-<p>Сначала выполните dry-run. Импорт не обновляет пароли существующих пользователей, не переносит токены или права и не разрешает cutover.</p>
-<p>Экспорт содержит исходные конфигурации и может включать пароли/ключи. Сохраняйте его в защищённом каталоге.</p>
-<pre id="migration-report"></pre>
-<h2>Проекты</h2><pre id="projects"></pre></section>
-<footer>Полная Admin SPA развёртывается отдельно. Здесь доступны bootstrap, вход, readiness и создание первого проекта.</footer></main><script src="/admin/app.js" defer></script></body></html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Launcher · Embedded Admin</title>
+    <link href="/admin/app.css" rel="stylesheet" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Launcher</h1>
+        <p>Embedded Admin · первичная настройка и контроль проекта</p>
+      </header>
+      <aside id="status" role="status" aria-live="polite">
+        Проверка состояния…
+      </aside>
+      <section id="bootstrap" hidden>
+        <h2>Создание владельца</h2>
+        <p>
+          Только для новой установки. Введите одноразовый bootstrap token из
+          защищённого конфигурационного файла.
+        </p>
+        <form id="bootstrap-form">
+          <label
+            >Токен<input
+              name="bootstrapToken"
+              type="password"
+              autocomplete="off"
+              required
+              minlength="32" /></label
+          ><label
+            >Email<input
+              name="email"
+              type="email"
+              autocomplete="email"
+              required /></label
+          ><label
+            >Имя<input name="displayName" required maxlength="200" /></label
+          ><label
+            >Пароль владельца<input
+              name="password"
+              type="password"
+              autocomplete="new-password"
+              minlength="12"
+              required /></label
+          ><button type="submit">Создать владельца</button>
+        </form>
+      </section>
+      <section id="login" hidden>
+        <h2>Вход администратора</h2>
+        <form id="login-form">
+          <label
+            >Email<input
+              name="email"
+              type="email"
+              autocomplete="username"
+              required /></label
+          ><label
+            >Пароль<input
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required /></label
+          ><label
+            >TOTP (если требуется)<input
+              name="totp"
+              inputmode="numeric"
+              autocomplete="one-time-code" /></label
+          ><button type="submit">Войти</button>
+        </form>
+      </section>
+      <section id="admin" hidden>
+        <h2>Состояние Backend</h2>
+        <button id="refresh" type="button">Обновить</button
+        ><button id="logout" type="button">Выйти</button>
+        <pre id="overview"></pre>
+        <h2>Создание первого проекта</h2>
+        <p>Создаёт черновой релиз после проверки прав текущего владельца.</p>
+        <form id="project-form">
+          <label
+            >Проект<input
+              name="projectId"
+              value="default-project"
+              required /></label
+          ><label
+            >Профиль<input name="profileId" value="vanilla" required /></label
+          ><label>Канал<input name="channel" value="stable" required /></label
+          ><label>Версия<input name="version" value="0.1.0" required /></label
+          ><button type="submit">Создать проект</button>
+        </form>
+        <h2>Migration Center · 0.33.13</h2>
+        <p>
+          Проверка и сохранение целевой конфигурации Never. Это ещё не импорт
+          Gravit и не разрешение на cutover.
+        </p>
+        <form id="migration-create">
+          <label
+            >ID проекта<input
+              name="projectId"
+              required
+              maxlength="128"
+              value="default-project" /></label
+          ><label
+            >Ключ повторного выполнения<input
+              name="idempotencyKey"
+              required
+              minlength="8"
+              maxlength="128"
+              placeholder="change-request-2026-001" /></label
+          ><button type="submit">Создать migration run</button>
+        </form>
+        <form id="migration-select">
+          <label>Migration run ID<input id="migration-run-id" required /></label
+          ><button type="submit">Показать</button>
+        </form>
+        <div>
+          <button id="migration-execute" type="button">
+            Выполнить следующие шаги</button
+          ><button id="migration-pause" type="button">Пауза</button
+          ><button id="migration-resume" type="button">Возобновить</button>
+        </div>
+        <form id="migration-assess">
+          <label
+            >Gravit project ZIP (up to 64 MiB for compatibility)<input
+              name="source"
+              type="file"
+              accept=".zip,application/zip"
+              required /></label
+          ><label
+            >Версия по заявлению оператора (не подтверждает подлинность)<input
+              name="version"
+              placeholder="5.7.12"
+              maxlength="40" /></label
+          ><button type="submit">Проверить совместимость</button>
+        </form>
+        <div>
+          <button id="migration-inventory" type="button">
+            Сохранить инвентаризацию ZIP (до 512 MiB)</button
+          ><button id="migration-export" type="button">
+            Экспортировать проверенный ZIP
+          </button>
+        </div>
+        <div>
+          <button id="migration-map-identities" type="button">
+            Построить карту UUID</button
+          ><button id="migration-verify-identities" type="button">
+            Повторная сверка UUID
+          </button>
+        </div>
+        <form id="migration-auth" autocomplete="off">
+          <label
+            >Парольный формат Gravit FileAuth
+            <select name="format">
+              <option value="">Без FileAuth (SQL only)</option>
+              <option>sha256-hex</option>
+              <option>sha256-base64url</option>
+              <option>md5-hex</option>
+              <option>sha1-hex</option>
+              <option>sha512-hex</option>
+              <option>double-sha256-hex</option>
+              <option>double-sha256-binary-hex</option>
+              <option>phpass</option>
+              <option>bcrypt</option>
+              <option>argon2id</option>
+            </select></label
+          >
+          <label
+            >Подтвердить ID запуска для импорта<input
+              name="confirmRun"
+              autocomplete="off"
+              placeholder="Точный Migration run ID"
+          /></label>
+          <button id="migration-preview-credentials" type="button">
+            Проверка авторизации (dry-run)</button
+          ><button id="migration-import-credentials" type="button">
+            Импортировать новые учётные записи
+          </button>
+        </form>
+        <fieldset>
+          <legend>Security &amp; Trust Reset (MIG06)</legend>
+          <button id="migration-preview-security" type="button">
+            Проверить security reset</button
+          ><button id="migration-verify-security" type="button">
+            Проверить применённый reset
+          </button>
+          <label
+            >Подтвердить точный ID запуска<input
+              id="migration-security-run"
+              autocomplete="off"
+              placeholder="Migration run ID"
+          /></label>
+          <label
+            ><input id="migration-security-keys" type="checkbox" /> Новые
+            независимые JWT и Ed25519 ключи Never provisioned, не унаследованы
+            от Gravit</label
+          >
+          <button id="migration-activate-security" type="button">
+            Отозвать старое доверие
+          </button>
+        </fieldset>
+        <fieldset id="migration-content">
+          <legend>Content &amp; Profile Migration (MIG07)</legend>
+          <p>
+            Сопоставляет реальный ClientProfile и проверенные файлы ZIP с новым
+            Build Workspace. Не импортирует ключи, auth или неизвестные модули.
+            Импорт можно повторять после прерывания.
+          </p>
+          <label
+            >Путь профиля внутри ZIP<input
+              id="migration-content-profile-path"
+              value="profiles/client.json"
+              required
+          /></label>
+          <label
+            >ID нового профиля<input
+              id="migration-content-profile-id"
+              value="gravit-client"
+              required
+          /></label>
+          <label
+            >Название нового профиля<input
+              id="migration-content-name"
+              placeholder="Имя из ClientProfile"
+          /></label>
+          <label
+            >Загрузчик<select id="migration-content-loader">
+              <option>vanilla</option>
+              <option>fabric</option>
+              <option>quilt</option>
+              <option>forge</option>
+              <option>neoforge</option>
+            </select></label
+          >
+          <label
+            >Канал<input id="migration-content-channel" value="stable"
+          /></label>
+          <label
+            >Версия нового релиза<input
+              id="migration-content-version"
+              value="migrated-1"
+          /></label>
+          <button id="migration-content-preview" type="button">
+            Проверить содержимое (dry-run)</button
+          ><button id="migration-content-status" type="button">
+            Прочитать сохранённый import
+          </button>
+          <label
+            >Подтвердить точный run ID<input
+              id="migration-content-run"
+              autocomplete="off"
+          /></label>
+          <button id="migration-content-import" type="button">
+            Перенести проверенные файлы
+          </button>
+          <button id="migration-content-optionals" type="button">
+            Применить optional catalog после сборки
+          </button>
+        </fieldset>
+        <fieldset id="migration-modules">
+          <legend>Module &amp; ServerWrapper Migration (MIG08)</legend>
+          <p>
+            Проверка JAR без исполнения, проверка исходного ZIP по MIG03, отчёт
+            по неизвестным модулям. Перенос старых ServerWrapper токенов
+            запрещён.
+          </p>
+          <button id="migration-modules-analyze" type="button">
+            Анализировать модули и ServerWrapper</button
+          ><button id="migration-modules-get" type="button">
+            Прочитать сохранённый отчёт
+          </button>
+          <label
+            >Исходный путь ServerWrapperConfig.json или .env<input
+              id="migration-modules-wrapper"
+              placeholder="server/ServerWrapperConfig.json"
+          /></label>
+          <label
+            >Новый ServerBridge Node ID<input
+              id="migration-modules-node"
+              placeholder="my-server"
+          /></label>
+          <label
+            >Название сервера<input
+              id="migration-modules-name"
+              placeholder="Minecraft Server"
+          /></label>
+          <label
+            >Тип сервера<input
+              id="migration-modules-kind"
+              value="paper"
+              placeholder="paper / forge / velocity"
+          /></label>
+          <label
+            >ID профиля Never<input
+              id="migration-modules-profile"
+              placeholder="my-profile"
+          /></label>
+          <label
+            >НОВЫЙ Ed25519 publicKey (base64url; private key никогда не
+            отправляется)<input
+              id="migration-modules-public-key"
+              autocomplete="off"
+          /></label>
+          <label
+            ><input id="migration-modules-fresh" type="checkbox" /> Подтверждаю,
+            что это новый независимый Ed25519 keypair Never; старые ключи Gravit
+            не используются</label
+          >
+          <label
+            >Подтвердить точный run ID<input
+              id="migration-modules-confirm"
+              autocomplete="off"
+          /></label>
+          <button id="migration-modules-enroll" type="button">
+            Зарегистрировать новый ServerBridge node (MFA)
+          </button>
+        </fieldset>
+        <fieldset>
+          <legend>Isolated Migration Rehearsal (MIG10)</legend>
+          <p>
+            Запуск только из CLI в отдельном тестовом окружении; Backend
+            выполняет независимую проверку UUID и сохранённых MIG03–MIG08. Не
+            является разрешением на production cutover.
+          </p>
+          <button id="migration-rehearsal-get" type="button">
+            Проверить последний отчёт репетиции
+          </button>
+        </fieldset>
+        <fieldset>
+          <legend>Staged Cutover (MIG11)</legend>
+          <p>
+            Рабочее переключение `channel_heads`. Staging блокирует публикацию
+            указанного профиля/канала в PostgreSQL. Остановка Gravit/world/SQL
+            writers выполняется оператором отдельно; подтверждение и SHA не
+            доказывают её автоматически.
+          </p>
+          <label
+            >Профиль<input
+              id="migration-cutover-profile"
+              placeholder="gravit-client"
+          /></label>
+          <label
+            >Канал<input id="migration-cutover-channel" value="stable"
+          /></label>
+          <label
+            >ID подписанного опубликованного релиза MIG07<input
+              id="migration-cutover-release"
+          /></label>
+          <label
+            >Текущая ревизия channel head<input
+              id="migration-cutover-head-revision"
+              type="number"
+              min="0"
+              value="0"
+          /></label>
+          <label
+            >Stage ID успешной репетиции MIG10<input
+              id="migration-cutover-stage-id"
+          /></label>
+          <label
+            >Подтверждение — точный migration run ID<input
+              id="migration-cutover-confirm"
+              autocomplete="off"
+          /></label>
+          <button id="migration-cutover-stage" type="button">
+            Stage (заморозить публикацию)</button
+          ><button id="migration-cutover-list" type="button">
+            Проверить состояния cutover
+          </button>
+          <p>
+            Для activation введите ожидаемую ревизию cutover receipt (не channel
+            head), ссылку на внешнее доказательство fencing и SHA-256 независимо
+            полученного snapshot текущего Gravit.
+          </p>
+          <label
+            >Cutover receipt revision<input
+              id="migration-cutover-revision"
+              type="number"
+              min="1"
+              value="1"
+          /></label>
+          <label
+            >Source fence reference<input id="migration-cutover-fence-ref"
+          /></label>
+          <label
+            >Source fence evidence SHA-256<input
+              id="migration-cutover-fence-sha"
+          /></label>
+          <label
+            >Fresh source snapshot SHA-256<input
+              id="migration-cutover-source-sha"
+          /></label>
+          <label
+            ><input id="migration-cutover-source-fenced" type="checkbox" />
+            Исходный Gravit writer отдельно остановлен и проверен
+            оператором</label
+          >
+          <button id="migration-cutover-activate" type="button">
+            Activate (MFA; переключить канал)</button
+          ><button id="migration-cutover-cancel" type="button">
+            Отменить staging до activation
+          </button>
+        </fieldset>
+        <fieldset>
+          <legend>Operational Rollback (MIG12)</legend>
+          <p>
+            Безопасный rollback возвращает только канал Never при совпадении
+            мира, инвентаря, экономики, прав и UUID с MIG10. Snapshot
+            экспортируйте из отдельно остановленного игрового сервера.
+            Изменённые данные блокируют автоматический откат.
+          </p>
+          <label
+            >Fresh snapshot JSON<textarea
+              id="migration-rollback-snapshot"
+              rows="7"
+            ></textarea>
+          </label>
+          <label
+            >Опционально JSON сверенного Gravit snapshot после внешнего переноса
+            новых записей<textarea
+              id="migration-rollback-source-snapshot"
+              rows="5"
+            ></textarea>
+          </label>
+          <label
+            >SHA-256 доказательства переноса новых данных в Gravit<input
+              id="migration-rollback-reconciliation-sha"
+          /></label>
+          <label
+            >Ссылка на доказательство<input
+              id="migration-rollback-evidence-ref"
+          /></label>
+          <label
+            >SHA-256 доказательства актуального snapshot<input
+              id="migration-rollback-evidence-sha"
+          /></label>
+          <label
+            >SHA-256 ранее сформированного плана<input
+              id="migration-rollback-plan-sha"
+          /></label>
+          <label
+            ><input id="migration-rollback-never-fenced" type="checkbox" />
+            Never/game writers остановлены и проверены отдельно</label
+          >
+          <label
+            ><input id="migration-rollback-source-fenced" type="checkbox" />
+            Gravit writer продолжает быть остановленным</label
+          >
+          <button id="migration-rollback-plan" type="button">
+            Проверить rollback (MFA)
+          </button>
+          <button id="migration-rollback-commit" type="button">
+            Commit rollback (MFA)
+          </button>
+          <button id="migration-rollback-status" type="button">
+            Проверить сохранённый план
+          </button>
+        </fieldset>
+        <fieldset>
+          <legend>Reports &amp; Certification RC (MIG13)</legend>
+          <p>
+            Отчёт из PostgreSQL MIG03–MIG12 с SHA-256, картой UUID и
+            перечислением blockers. Reviewing не является GA или доказательством
+            production-совместимости.
+          </p>
+          <button id="migration-rc-report" type="button">
+            Сформировать текущий отчёт
+          </button>
+          <button id="migration-rc-status" type="button">
+            Прочитать сохранённый review
+          </button>
+          <label
+            >SHA-256 текущего отчёта<input
+              id="migration-rc-report-sha"
+              readonly
+          /></label>
+          <label
+            >Ссылка на независимые CI/E2E доказательства<input
+              id="migration-rc-reference"
+          /></label>
+          <label
+            >SHA-256 независимых доказательств<input
+              id="migration-rc-evidence-sha"
+          /></label>
+          <label
+            >Подтвердить точный run ID (MFA)<input
+              id="migration-rc-confirm"
+              autocomplete="off"
+          /></label>
+          <button id="migration-rc-review" type="button">
+            Зафиксировать RC review (НЕ GA)
+          </button>
+        </fieldset>
+        <p>
+          Сначала выполните dry-run. Импорт не обновляет пароли существующих
+          пользователей, не переносит токены или права и не разрешает cutover.
+        </p>
+        <p>
+          Экспорт содержит исходные конфигурации и может включать пароли/ключи.
+          Сохраняйте его в защищённом каталоге.
+        </p>
+        <pre id="migration-report"></pre>
+        <h2>Проекты</h2>
+        <pre id="projects"></pre>
+      </section>
+      <footer>
+        Полная Admin SPA развёртывается отдельно. Здесь доступны bootstrap,
+        вход, readiness и создание первого проекта.
+      </footer>
+    </main>
+    <script src="/admin/app.js" defer></script>
+  </body>
+</html>

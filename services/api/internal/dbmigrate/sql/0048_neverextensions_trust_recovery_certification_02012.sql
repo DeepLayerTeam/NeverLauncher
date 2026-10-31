@@ -1,4 +1,4 @@
--- NeverLauncher 0.20.12: доверие, восстановление и сертификация.
+-- Launcher 0.20.12: доверие, восстановление и сертификация.
 
 CREATE TABLE IF NOT EXISTS extension_trust_policy (
     singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton),
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS extension_emergency_disables (
 );
 CREATE INDEX IF NOT EXISTS idx_extension_emergency_disables_active_02012 ON extension_emergency_disables(scope,scope_id,extension_id) WHERE cleared_at IS NULL;
 
-CREATE OR REPLACE FUNCTION neverlauncher_revoke_extension_key_02012(p_publisher TEXT, p_fingerprint TEXT)
+CREATE OR REPLACE FUNCTION launcher_revoke_extension_key_02012(p_publisher TEXT, p_fingerprint TEXT)
 RETURNS VOID LANGUAGE plpgsql AS $$
 BEGIN
     UPDATE extension_registry_publisher_keys

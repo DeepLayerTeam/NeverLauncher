@@ -1,7 +1,7 @@
-package ru.example.neverlauncher;
+package ru.example.launcher;
 
 import java.util.*;
-import ru.neverlauncher.sdk.core.*;
+import ru.launcher.sdk.core.*;
 
 /** Executable sample: backend receives typed events; CLI reads the SAME state through Go. */
 public final class RuntimeExample implements Extension {

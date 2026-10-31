@@ -42,7 +42,7 @@ jobs:
         run: |
           if ([string]::IsNullOrWhiteSpace($env:PFX_BASE64)) { throw "WINDOWS_CODESIGN_PFX_BASE64 secret is required" }
           $bytes = [Convert]::FromBase64String($env:PFX_BASE64)
-          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\neverlauncher-codesign.pfx", $bytes)
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\launcher-codesign.pfx", $bytes)
       - name: Install component-set signing dependency
         shell: pwsh
         run: python -m pip install 'cryptography>=43,<47'
@@ -56,7 +56,7 @@ jobs:
         run: |
           ./scripts/release/build-windows-desktop.ps1 `
             -RequireCodeSigning `
-            -CodeSigningCertificatePath "$env:RUNNER_TEMP\neverlauncher-codesign.pfx"
+            -CodeSigningCertificatePath "$env:RUNNER_TEMP\launcher-codesign.pfx"
       - name: Generate delivery manifest and verify production signing evidence
         shell: pwsh
         run: |
@@ -64,7 +64,7 @@ jobs:
           $Dir = "dist/release-$Version"
           Push-Location cli
           try {
-            go build -trimpath -ldflags "-s -w -X main.version=$Version" -o "$env:RUNNER_TEMP\nl.exe" .\cmd\neverlauncher
+            go build -trimpath -ldflags "-s -w -X main.version=$Version" -o "$env:RUNNER_TEMP\nl.exe" .\cmd\launcher
           } finally {
             Pop-Location
           }
@@ -73,24 +73,24 @@ jobs:
       - name: Remove signing credential file
         if: always()
         shell: pwsh
-        run: Remove-Item "$env:RUNNER_TEMP\neverlauncher-codesign.pfx" -Force -ErrorAction SilentlyContinue
+        run: Remove-Item "$env:RUNNER_TEMP\launcher-codesign.pfx" -Force -ErrorAction SilentlyContinue
       - name: Upload signed Windows delivery artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-windows-production-${{ github.sha }}
+          name: launcher-windows-production-${{ github.sha }}
           path: |
-            dist/release-*/neverlauncher-cli-windows-x64.exe
-            dist/release-*/neverlauncher-cli-windows-arm64.exe
-            dist/release-*/neverlauncher-desktop-windows-x64.exe
-            dist/release-*/neverlauncher-desktop-windows-arm64.exe
+            dist/release-*/launcher-cli-windows-x64.exe
+            dist/release-*/launcher-cli-windows-arm64.exe
+            dist/release-*/launcher-desktop-windows-x64.exe
+            dist/release-*/launcher-desktop-windows-arm64.exe
             dist/release-*/guard-windows-x64.exe
             dist/release-*/guard-windows-arm64.exe
             dist/release-*/guard-sensor-windows-x64.dll
             dist/release-*/guard-sensor-windows-arm64.dll
-            dist/release-*/neverruntime-windows-x64.exe
-            dist/release-*/neverruntime-windows-arm64.exe
-            dist/release-*/neverlauncher-desktop-*-windows-x64.zip
-            dist/release-*/neverlauncher-desktop-*-windows-arm64.zip
+            dist/release-*/runtime-windows-x64.exe
+            dist/release-*/runtime-windows-arm64.exe
+            dist/release-*/launcher-desktop-*-windows-x64.zip
+            dist/release-*/launcher-desktop-*-windows-arm64.zip
             dist/release-*/WINDOWS_PACKAGE_MANIFEST_X64.json
             dist/release-*/WINDOWS_PACKAGE_MANIFEST_ARM64.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json

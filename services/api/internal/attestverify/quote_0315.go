@@ -65,7 +65,7 @@ func LoadPCRPolicy0315(path string, now time.Time) (PCRPolicyFile0315, string, e
 	if dec.Decode(&extra) != io.EOF {
 		return out, "", errors.New("PCR policy trailing data")
 	}
-	if out.Schema != "neverlauncher/tpm-pcr-policy/v1" || len(out.Policies) == 0 || len(out.Policies) > 64 {
+	if out.Schema != "launcher/tpm-pcr-policy/v1" || len(out.Policies) == 0 || len(out.Policies) > 64 {
 		return out, "", errors.New("invalid PCR policy schema/count")
 	}
 	seen := map[string]bool{}
@@ -114,7 +114,7 @@ type QuoteEvidence0315 struct {
 
 func ExpectedQuoteData0315(b Binding, policyID, policyHash string) [32]byte {
 	// Independent, domain-separated nonce (Certify evidence is never a quote).
-	return sha256.Sum256([]byte(fmt.Sprintf("NeverLauncher TPM Quote v1\nuser=%s\ndevice=%s\nsession=%s\nbinding-epoch=%d\nchallenge-id=%s\nchallenge=%s\nissued-at=%s\nexpires-at=%s\npolicy-id=%s\npolicy-hash=%s\n", b.UserID, b.DeviceID, b.SessionID, b.BindingEpoch, b.ChallengeID, b.Challenge, b.IssuedAt.UTC().Format(time.RFC3339Nano), b.ExpiresAt.UTC().Format(time.RFC3339Nano), policyID, policyHash)))
+	return sha256.Sum256([]byte(fmt.Sprintf("Launcher TPM Quote v1\nuser=%s\ndevice=%s\nsession=%s\nbinding-epoch=%d\nchallenge-id=%s\nchallenge=%s\nissued-at=%s\nexpires-at=%s\npolicy-id=%s\npolicy-hash=%s\n", b.UserID, b.DeviceID, b.SessionID, b.BindingEpoch, b.ChallengeID, b.Challenge, b.IssuedAt.UTC().Format(time.RFC3339Nano), b.ExpiresAt.UTC().Format(time.RFC3339Nano), policyID, policyHash)))
 }
 
 type QuoteResult0315 struct {

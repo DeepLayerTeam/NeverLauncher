@@ -10,7 +10,7 @@ on:
       - 'apps/admin/src/api/serverbridge.ts'
       - 'apps/admin/src/admin/ServerBridgeWorkspace.tsx'
       - 'apps/admin/tests/serverbridge-operations.test.mjs'
-      - 'e2e/java/ru/neverlauncher/bridge/common/ServerBridgeAdapterCapability0286Harness.java'
+      - 'e2e/java/ru/launcher/bridge/common/ServerBridgeAdapterCapability0286Harness.java'
       - 'e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh'
       - 'serverbridge/certify_release.py'
       - '.github/workflows/serverbridge-adapter-capabilities-0286.yml'
@@ -23,7 +23,7 @@ on:
       - 'services/api/internal/httpapi/server_bridge_ga_0200.go'
       - 'apps/admin/src/api/serverbridge.ts'
       - 'apps/admin/src/admin/ServerBridgeWorkspace.tsx'
-      - 'e2e/java/ru/neverlauncher/bridge/common/ServerBridgeAdapterCapability0286Harness.java'
+      - 'e2e/java/ru/launcher/bridge/common/ServerBridgeAdapterCapability0286Harness.java'
       - 'e2e/scripts/run-serverbridge-adapter-capabilities-0286.sh'
       - '.github/workflows/serverbridge-adapter-capabilities-0286.yml'
   workflow_dispatch:

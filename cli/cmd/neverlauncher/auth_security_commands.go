@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/cli/internal/dbmigrate"
+	"gitflic.ru/skif4er/launcher/cli/internal/dbmigrate"
 )
 
 func handleAuth(args []string) error {
@@ -232,7 +232,7 @@ func supplyChainSecurityModel() map[string]any {
 		"toolVersion":      version,
 		"generatedAt":      time.Now().UTC().Format(time.RFC3339),
 		"status":           "security-supply-chain-ready",
-		"release":          "NeverLauncher " + version + " security model",
+		"release":          "Launcher " + version + " security model",
 		"signedArtifacts":  []string{"manifest", "release-bundle", "desktop-package", "extension-package", "client-package"},
 		"requiredControls": []string{"ed25519-signatures", "sha256-every-file", "root-signed-trust-policy", "trusted-keys-registry", "key-rotation", "revocation-list", "trust-epoch-anti-rollback", "release-version-anti-rollback", "sbom", "provenance", "audit-log", "safe-extraction", "download-allowlist"},
 		"checks": []map[string]string{

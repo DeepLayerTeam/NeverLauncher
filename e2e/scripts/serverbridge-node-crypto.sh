@@ -91,15 +91,15 @@ print(t)
 PY
 )"
   body_hash="$(printf '%s' "$body" | sha256sum | awk '{print $1}')"
-  canonical="$(printf 'NeverLauncher-ServerBridge-Node-v1\n%s\n%s\n%s\n%s\n%s\n%s' "$node_id" "${method^^}" "$target" "$timestamp" "$nonce" "$body_hash")"
+  canonical="$(printf 'Launcher-ServerBridge-Node-v1\n%s\n%s\n%s\n%s\n%s\n%s' "$node_id" "${method^^}" "$target" "$timestamp" "$nonce" "$body_hash")"
   signature="$(serverbridge_node_sign "$key" "$canonical")"
 
   local args=(-sS -o "$out" -w '%{http_code}' -X "${method^^}"
-    -H "X-NeverLauncher-Node-Id: $node_id"
-    -H "X-NeverLauncher-Node-Key-Fingerprint: $(serverbridge_node_public "$key" | python3 -c 'import base64,hashlib,sys; s=sys.stdin.read().strip(); d=base64.urlsafe_b64decode(s+"="*((4-len(s)%4)%4)); print(hashlib.sha256(d).hexdigest())')"
-    -H "X-NeverLauncher-Node-Timestamp: $timestamp"
-    -H "X-NeverLauncher-Node-Nonce: $nonce"
-    -H "X-NeverLauncher-Node-Signature: $signature")
+    -H "X-Launcher-Node-Id: $node_id"
+    -H "X-Launcher-Node-Key-Fingerprint: $(serverbridge_node_public "$key" | python3 -c 'import base64,hashlib,sys; s=sys.stdin.read().strip(); d=base64.urlsafe_b64decode(s+"="*((4-len(s)%4)%4)); print(hashlib.sha256(d).hexdigest())')"
+    -H "X-Launcher-Node-Timestamp: $timestamp"
+    -H "X-Launcher-Node-Nonce: $nonce"
+    -H "X-Launcher-Node-Signature: $signature")
   if [[ -n "$body" ]]; then
     args+=(-H 'Content-Type: application/json' --data-binary "$body")
   fi

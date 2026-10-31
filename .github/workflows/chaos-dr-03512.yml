@@ -1,4 +1,4 @@
-name: NeverLauncher 0.35.12 DR Security and Recovery Regression
+name: Launcher 0.35.12 DR Security and Recovery Regression
 on:
   workflow_dispatch:
   push:
@@ -42,4 +42,4 @@ jobs:
         run: |
           test -z "$(gofmt -l internal/httpapi/operations_backup.go)"
           go test -count=1 -timeout=8m ./internal/httpapi -run 'TestCanonicalOperationsBackupFlow|TestBackupRestoreRestoresStorageObject'
-          go build ./cmd/neverlauncher-api
+          go build ./cmd/launcher-api

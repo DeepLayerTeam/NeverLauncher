@@ -7,7 +7,7 @@ on:
       - 'services/api/internal/httpapi/migration_report_03313.go'
       - 'services/api/internal/httpapi/handler.go'
       - 'services/api/internal/dbmigrate/sql/0100*'
-      - 'cli/cmd/neverlauncher/migration_report_03313*'
+      - 'cli/cmd/launcher/migration_report_03313*'
       - 'apps/admin/src/admin/MigrationCenter0331.tsx'
       - 'services/api/internal/embeddedadmin/site/**'
       - 'schemas/openapi*'
@@ -23,17 +23,17 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: neverlauncher_test
-          POSTGRES_USER: neverlauncher_test
+          POSTGRES_DB: launcher_test
+          POSTGRES_USER: launcher_test
           POSTGRES_PASSWORD: test_only_not_production
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U neverlauncher_test -d neverlauncher_test'
+          --health-cmd 'pg_isready -U launcher_test -d launcher_test'
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -52,8 +52,8 @@ jobs:
       - name: CLI build and HTTP tests
         working-directory: cli
         run: |
-          go test -count=1 ./cmd/neverlauncher -run '^TestMigrationReportCLI03313$'
-          go build ./cmd/neverlauncher
+          go test -count=1 ./cmd/launcher -run '^TestMigrationReportCLI03313$'
+          go build ./cmd/launcher
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

@@ -146,7 +146,7 @@ func TestHostServiceUserInstallLifecycle02811(t *testing.T) {
 	if !strings.Contains(string(content), hostServiceMarker02811) || !strings.Contains(string(content), "Type=notify") {
 		t.Fatal("wrong unit content", string(content))
 	}
-	if strings.Join(calls, "|") != "--user daemon-reload|--user enable --now neverlauncher-host-world.service" {
+	if strings.Join(calls, "|") != "--user daemon-reload|--user enable --now launcher-host-world.service" {
 		t.Fatal("systemctl sequence", calls)
 	}
 	if err := hostServiceHandle02811(args); err == nil {
@@ -158,7 +158,7 @@ func TestHostServiceUserInstallLifecycle02811(t *testing.T) {
 	if _, err := os.Stat(file); !os.IsNotExist(err) {
 		t.Fatalf("unit not removed: %v", err)
 	}
-	if strings.Join(calls[2:], "|") != "--user disable --now neverlauncher-host-world.service|--user daemon-reload" {
+	if strings.Join(calls[2:], "|") != "--user disable --now launcher-host-world.service|--user daemon-reload" {
 		t.Fatal("uninstall sequence", calls)
 	}
 	// Failed enable must not leave a partially installed service.
@@ -192,7 +192,7 @@ func TestHostSystemdUnitParser02811(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	unit := filepath.Join(t.TempDir(), "neverlauncher-verify.service")
+	unit := filepath.Join(t.TempDir(), "launcher-verify.service")
 	if err = os.WriteFile(unit, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}

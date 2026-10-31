@@ -17,7 +17,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 SCHEMA_VERSION = "1.0"
-CERT_KIND = "neverlauncher-windows-adversarial-certification"
+CERT_KIND = "launcher-windows-adversarial-certification"
 CERTIFIED_JAVA_MAJORS = (8, 16, 17, 21, 25)
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -165,7 +165,7 @@ def run_scenario(
         "cargo",
         "test",
         "--manifest-path",
-        "runtime/neverruntime/Cargo.toml",
+        "runtime/runtime/Cargo.toml",
         "--test",
         "guard_sensor_windows",
         scenario.test_name,
@@ -247,7 +247,7 @@ def validate_result(
     errors: list[str] = []
     if payload.get("schemaVersion") != SCHEMA_VERSION:
         errors.append("schemaVersion mismatch")
-    if payload.get("kind") != "neverlauncher-windows-adversarial-result":
+    if payload.get("kind") != "launcher-windows-adversarial-result":
         errors.append("kind mismatch")
     if payload.get("productVersion") != PRODUCT_VERSION:
         errors.append("productVersion mismatch")
@@ -369,7 +369,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     all_passed = all(row["status"] == "passed" for row in scenarios)
     result: dict[str, Any] = {
         "schemaVersion": SCHEMA_VERSION,
-        "kind": "neverlauncher-windows-adversarial-result",
+        "kind": "launcher-windows-adversarial-result",
         "productVersion": PRODUCT_VERSION,
         "javaMajor": args.java_major,
         "runtimeArch": platform.machine().lower() or "unknown",
@@ -497,7 +497,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
         json.dumps(certificate, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     lines = [
-        f"# NeverLauncher {PRODUCT_VERSION} Windows Adversarial CI",
+        f"# Launcher {PRODUCT_VERSION} Windows Adversarial CI",
         "",
         f"Evidence root: `{certificate['evidenceRootSha256']}`",
         "",
@@ -522,7 +522,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="NeverLauncher Windows adversarial CI runner and certifier"
+        description="Launcher Windows adversarial CI runner and certifier"
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

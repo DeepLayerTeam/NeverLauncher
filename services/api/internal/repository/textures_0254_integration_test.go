@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func TestTextureURLImportProvenance0254(t *testing.T) {
@@ -53,7 +53,7 @@ func TestTextureURLImportProvenance0254(t *testing.T) {
 		}
 	}
 	repo := &SQLRepository{db: db}
-	owner := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "owner", Name: "Steve", Realm: "local", Issuer: "neverlauncher"}
+	owner := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "owner", Name: "Steve", Realm: "local", Issuer: "launcher"}
 	content := []byte("verified-normalized-png-bytes")
 	hash := sha256.Sum256(content)
 	digest := hex.EncodeToString(hash[:])

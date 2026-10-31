@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-const modpackEvidencePath0275 = ".neverlauncher/modpack-import.json"
+const modpackEvidencePath0275 = ".launcher/modpack-import.json"
 const modpackMaxBytes0275 int64 = 2 << 30
 const modpackMaxFile0275 int64 = 512 << 20
 
@@ -143,7 +143,7 @@ func packOutputPath0275(v string) error {
 		return err
 	}
 	lower := strings.ToLower(v)
-	for _, prefix := range []string{".neverlauncher/", "versions/", "assets/", "libraries/", "natives/", "runtime/"} {
+	for _, prefix := range []string{".launcher/", "versions/", "assets/", "libraries/", "natives/", "runtime/"} {
 		if lower == strings.TrimSuffix(prefix, "/") || strings.HasPrefix(lower, prefix) {
 			return fmt.Errorf("modpack cannot overwrite managed path %s", v)
 		}
@@ -674,7 +674,7 @@ func readZipOverride0275(z *zip.File, dir string) (string, string, int64, error)
 	return name, hex.EncodeToString(h.Sum(nil)), n, nil
 }
 func modpackReportFromSpec0275(spec modpackSpec0275) modpackReport0275 {
-	return modpackReport0275{SchemaVersion: "neverlauncher.modpack-import.v1", Format: spec.Format, Name: spec.Name, Minecraft: spec.Minecraft, Loader: spec.Loader, LoaderVersion: spec.LoaderVersion, PackSHA256: spec.PackSHA256, Skipped: spec.Skipped, Status: "inspected", FileCount: len(spec.Files), OverrideCount: len(spec.Overrides)}
+	return modpackReport0275{SchemaVersion: "launcher.modpack-import.v1", Format: spec.Format, Name: spec.Name, Minecraft: spec.Minecraft, Loader: spec.Loader, LoaderVersion: spec.LoaderVersion, PackSHA256: spec.PackSHA256, Skipped: spec.Skipped, Status: "inspected", FileCount: len(spec.Files), OverrideCount: len(spec.Overrides)}
 }
 func importModpack0275(ctx context.Context, archive, destination, manual, api, key string, includeOptional bool, options factoryBuildOptions0271) (modpackReport0275, error) {
 	return importModpackWithGates0276(ctx, archive, destination, manual, api, key, includeOptional, options, "", "local")

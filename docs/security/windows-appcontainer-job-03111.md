@@ -29,7 +29,7 @@ Run from a Windows machine:
 ```powershell
 cd services/api
 $env:NL_RUN_LIVE_WIN_SANDBOX='1'
-go test -tags neverlauncher_nopgx -count=1 -v ./internal/windowssandbox
+go test -tags launcher_nopgx -count=1 -v ./internal/windowssandbox
 ```
 
 The test creates a **real** AppContainer process, asserts it cannot read private backend files or change package contents, probes denied direct outbound access and attempts to exceed its Job active-process limit. Test failures must block deployment; availability checks and compilation alone do not certify the kernel isolation.

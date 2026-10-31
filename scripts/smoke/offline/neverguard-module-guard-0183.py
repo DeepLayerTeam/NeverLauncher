@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Module Guard 0.18.3 gate: {label} missing {missing}"
+            f"[Launcher] Module Guard 0.18.3 gate: {label} missing {missing}"
         )
 
 
@@ -22,15 +22,13 @@ def main() -> int:
     if tuple(
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 3):
-        raise SystemExit(
-            f"[NeverLauncher] Module Guard 0.18.3 gate: VERSION is {version}"
-        )
+        raise SystemExit(f"[Launcher] Module Guard 0.18.3 gate: VERSION is {version}")
 
     sensor = read("runtime/guard-sensor/src/lib.rs")
-    parent = read("runtime/neverruntime/src/windows_module_guard.rs")
-    bootstrap = read("runtime/neverruntime/src/windows_sensor.rs")
-    supervisor = read("runtime/neverruntime/src/supervisor.rs")
-    integration = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    parent = read("runtime/runtime/src/windows_module_guard.rs")
+    bootstrap = read("runtime/runtime/src/windows_sensor.rs")
+    supervisor = read("runtime/runtime/src/supervisor.rs")
+    integration = read("runtime/runtime/tests/guard_sensor_windows.rs")
     ci = read(".github/workflows/ci.yml")
     preflight = read("scripts/release/preflight.sh")
 
@@ -118,21 +116,21 @@ def main() -> int:
         ci,
         [
             "python scripts/smoke/offline/guard-module-guard-0183.py",
-            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows -- --nocapture",
+            "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings",
-            "cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings",
+            "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
         ],
         "Windows CI compile/integration/clippy enforcement",
     )
     if "guard-module-guard-0183.py" not in preflight:
         raise SystemExit(
-            "[NeverLauncher] Module Guard 0.18.3 gate: preflight wiring missing"
+            "[Launcher] Module Guard 0.18.3 gate: preflight wiring missing"
         )
 
     for path, body in [
         ("runtime/guard-sensor/src/lib.rs", sensor),
-        ("runtime/neverruntime/src/windows_module_guard.rs", parent),
-        ("runtime/neverruntime/src/windows_sensor.rs", bootstrap),
+        ("runtime/runtime/src/windows_module_guard.rs", parent),
+        ("runtime/runtime/src/windows_sensor.rs", bootstrap),
     ]:
         for forbidden in (
             "todo!()",
@@ -142,10 +140,10 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[NeverLauncher] Module Guard 0.18.3 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Module Guard 0.18.3 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[NeverLauncher] Module Guard 0.18.3 gate: OK")
+    print("[Launcher] Module Guard 0.18.3 gate: OK")
     return 0
 
 

@@ -8,9 +8,7 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 def read(rel: str) -> str:
     path = ROOT / rel
     if not path.is_file():
-        raise SystemExit(
-            f"[NeverLauncher] JVM-Aware Protection 0.18.8 gate: missing {rel}"
-        )
+        raise SystemExit(f"[Launcher] JVM-Aware Protection 0.18.8 gate: missing {rel}")
     return path.read_text(encoding="utf-8")
 
 
@@ -18,7 +16,7 @@ def require(text: str, rel: str, values: list[str]) -> None:
     missing = [value for value in values if value not in text]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] JVM-Aware Protection 0.18.8 gate: {rel} missing {missing}"
+            f"[Launcher] JVM-Aware Protection 0.18.8 gate: {rel} missing {missing}"
         )
 
 
@@ -28,17 +26,17 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) < (
     8,
 ):
     raise SystemExit(
-        f"[NeverLauncher] JVM-Aware Protection 0.18.8 gate: VERSION is {VERSION}"
+        f"[Launcher] JVM-Aware Protection 0.18.8 gate: VERSION is {VERSION}"
     )
 
 sensor = read("runtime/guard-sensor/src/jvm_awareness.rs")
 stream = read("runtime/guard-sensor/src/lib.rs")
 hooks = read("runtime/guard-sensor/src/hook_engine.rs")
-parent = read("runtime/neverruntime/src/windows_module_guard.rs")
-report = read("runtime/neverruntime/src/windows_jvm_aware.rs")
-integration = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+parent = read("runtime/runtime/src/windows_module_guard.rs")
+report = read("runtime/runtime/src/windows_jvm_aware.rs")
+integration = read("runtime/runtime/tests/guard_sensor_windows.rs")
 probe = read("runtime/guard-jvm-probe/src/lib.rs")
-managed_java = read("runtime/neverruntime/src/managed_java.rs")
+managed_java = read("runtime/runtime/src/managed_java.rs")
 ci = read(".github/workflows/ci.yml")
 adversarial_ci = read("scripts/guard_ci/windows_adversarial.py")
 preflight = read("scripts/release/preflight.sh")
@@ -85,7 +83,7 @@ require(
 )
 require(
     parent,
-    "runtime/neverruntime/src/windows_module_guard.rs",
+    "runtime/runtime/src/windows_module_guard.rs",
     [
         "jvm_aware: crate::WindowsJvmAwareProtectionReport",
         "expected JVM_AWARE_READY as fifth event",
@@ -96,7 +94,7 @@ require(
 )
 require(
     report,
-    "runtime/neverruntime/src/windows_jvm_aware.rs",
+    "runtime/runtime/src/windows_jvm_aware.rs",
     [
         "NEVERGUARD_JVM_AWARE_PROTECTION_VERSION",
         "NEVERGUARD_CERTIFIED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25]",
@@ -109,7 +107,7 @@ require(
 )
 require(
     integration,
-    "runtime/neverruntime/tests/guard_sensor_windows.rs",
+    "runtime/runtime/tests/guard_sensor_windows.rs",
     [
         "guard_jvm_aware_protection_accepts_certified_hotspot_jit",
         "guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
@@ -130,7 +128,7 @@ require(
 )
 require(
     managed_java,
-    "runtime/neverruntime/src/managed_java.rs",
+    "runtime/runtime/src/managed_java.rs",
     [
         "MANAGED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25]",
     ],
@@ -157,19 +155,19 @@ require(
 )
 if "guard-jvm-aware-protection-0188.py" not in preflight:
     raise SystemExit(
-        "[NeverLauncher] JVM-Aware Protection 0.18.8 gate: preflight wiring missing"
+        "[Launcher] JVM-Aware Protection 0.18.8 gate: preflight wiring missing"
     )
 
 for rel, text in [
     ("runtime/guard-sensor/src/jvm_awareness.rs", sensor),
-    ("runtime/neverruntime/src/windows_jvm_aware.rs", report),
+    ("runtime/runtime/src/windows_jvm_aware.rs", report),
     ("runtime/guard-jvm-probe/src/lib.rs", probe),
 ]:
     lowered = text.lower()
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
             raise SystemExit(
-                f"[NeverLauncher] JVM-Aware Protection 0.18.8 gate: placeholder {placeholder!r} in {rel}"
+                f"[Launcher] JVM-Aware Protection 0.18.8 gate: placeholder {placeholder!r} in {rel}"
             )
 
-print("[NeverLauncher] JVM-Aware Protection 0.18.8 gate: OK")
+print("[Launcher] JVM-Aware Protection 0.18.8 gate: OK")

@@ -78,7 +78,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 		hasManifest = true
 		break
 	}
-	if !hasManifest || manifest.Format != "neverlauncher.gravit-source-inventory.v1" {
+	if !hasManifest || manifest.Format != "launcher.gravit-source-inventory.v1" {
 		return errors.New("missing/invalid export manifest")
 	}
 	// Stream every exported file and verify checksum, size, CRC and membership.

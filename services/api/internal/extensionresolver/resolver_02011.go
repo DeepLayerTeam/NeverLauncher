@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensioncontract"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 type Environment struct{ LauncherVersion, APIVersion, OS, Architecture, DefaultChannel string }
@@ -130,14 +130,14 @@ func compatible(item model.ExtensionRegistryVersion, env Environment) bool {
 		return false
 	}
 	c := item.Compatibility
-	if c.MinNeverLauncher != "" {
-		x, e := ParseVersion(c.MinNeverLauncher)
+	if c.MinLauncher != "" {
+		x, e := ParseVersion(c.MinLauncher)
 		if e != nil || Compare(lv, x) < 0 {
 			return false
 		}
 	}
-	if c.MaxNeverLauncher != "" {
-		x, e := ParseVersion(c.MaxNeverLauncher)
+	if c.MaxLauncher != "" {
+		x, e := ParseVersion(c.MaxLauncher)
 		if e != nil || Compare(lv, x) > 0 {
 			return false
 		}

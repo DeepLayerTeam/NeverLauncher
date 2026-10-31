@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/localpassword"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitecore"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/localpassword"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitecore"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 func isAuthAction(action string) bool {

@@ -9,7 +9,7 @@ import (
 )
 
 func TestGoSignedOptionalActionFixture0245(t *testing.T) {
-	b, e := os.ReadFile("../../../../runtime/neverruntime/tests/fixtures/catalog_actions_0245_go_signed.json")
+	b, e := os.ReadFile("../../../../runtime/runtime/tests/fixtures/catalog_actions_0245_go_signed.json")
 	if e != nil {
 		t.Fatal(e)
 	}

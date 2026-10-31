@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // The channel generation is an authorization sequence, not the user's

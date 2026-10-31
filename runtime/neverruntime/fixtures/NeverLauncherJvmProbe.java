@@ -1,10 +1,10 @@
 /**
  * Java 8-compatible bytecode probe for managed runtime acceptance.
- * Compile reproducibly with: javac --release 8 NeverLauncherJvmProbe.java
+ * Compile reproducibly with: javac --release 8 LauncherJvmProbe.java
  * Runs on the runtime being installed, without javac or the system JDK.
  */
-public final class NeverLauncherJvmProbe {
-    private NeverLauncherJvmProbe() { }
+public final class LauncherJvmProbe {
+    private LauncherJvmProbe() { }
 
     public static void main(String[] args) {
         if (args.length != 1 || args[0].length() == 0) {

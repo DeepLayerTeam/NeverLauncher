@@ -6,10 +6,10 @@ import (
 	"os/exec"
 	"runtime"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/linuxsandbox"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/macossandbox"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/windowssandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/linuxsandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/macossandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/windowssandbox"
 )
 
 // A sandbox can be reported as isolated only after Started has confirmed that

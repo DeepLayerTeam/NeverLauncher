@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
-	gm "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitmodules"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
+	gm "gitflic.ru/skif4er/launcher/services/api/internal/gravitmodules"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 type migrationModulesStore0338 interface {

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Execute against a built NeverRuntime binary and an authentic, pinned Temurin
+# Execute against a built Runtime binary and an authentic, pinned Temurin
 # distribution. Unlike fixture-only probes, this installs and runs the JVM
 # with no java executable available through PATH, then repairs it offline.
 set -euo pipefail
 if (( $# != 4 )); then
-  echo "Usage: $0 /absolute/path/neverruntime /path/MANAGED_JRE_MANIFEST.json SHA256 MAJOR" >&2
+  echo "Usage: $0 /absolute/path/runtime /path/MANAGED_JRE_MANIFEST.json SHA256 MAJOR" >&2
   exit 64
 fi
 runtime="$(realpath "$1")"
@@ -19,9 +19,9 @@ trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/bin" "$work/runtimes"
 # Do not auto-discover a release manifest beside the original binary during
 # the second, explicitly manifest-free cache recovery operation.
-cp "$runtime" "$work/neverruntime"
-chmod +x "$work/neverruntime"
-runtime="$work/neverruntime"
+cp "$runtime" "$work/runtime"
+chmod +x "$work/runtime"
+runtime="$work/runtime"
 # No system Java, javac or java home. tar and gzip are used only for extraction.
 for executable in tar gzip; do
   source_bin="$(command -v "$executable")"

@@ -2,12 +2,12 @@ name: Manual Artifacts and Permission Gates 0.27.6
 on:
   push:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - '.github/workflows/manual-artifacts-permission-gates-0276.yml'
       - 'VERSION'
   pull_request:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - '.github/workflows/manual-artifacts-permission-gates-0276.yml'
       - 'VERSION'
 permissions:
@@ -28,21 +28,21 @@ jobs:
       - name: Formatting
         if: runner.os == 'Linux'
         shell: bash
-        run: test -z "$(gofmt -l cli/cmd/neverlauncher/manual_artifact_gates_0276*.go cli/cmd/neverlauncher/modpack_import_0275.go cli/cmd/neverlauncher/client_factory_0271.go)"
+        run: test -z "$(gofmt -l cli/cmd/launcher/manual_artifact_gates_0276*.go cli/cmd/launcher/modpack_import_0275.go cli/cmd/launcher/client_factory_0271.go)"
       - name: Functional and regression tests
         working-directory: cli
         shell: bash
         run: >-
-          go test ./cmd/neverlauncher
+          go test ./cmd/launcher
           -run 'TestManualGates0276|TestModpack0275|TestClientFactory0271|TestMirrorHelper0274|TestModernLoader0272|TestProcessorWorker0273'
           -count=1 -timeout=5m
       - name: Static analysis
         working-directory: cli
-        run: go vet ./cmd/neverlauncher
+        run: go vet ./cmd/launcher
       - name: Build Go CLI
         working-directory: cli
-        run: go build -o neverlauncher-test ./cmd/neverlauncher
+        run: go build -o launcher-test ./cmd/launcher
       - name: Race tests
         if: runner.os == 'Linux'
         working-directory: cli
-        run: go test -race ./cmd/neverlauncher -run 'TestManualGates0276|TestModpack0275|TestClientFactory0271' -count=1 -timeout=5m
+        run: go test -race ./cmd/launcher -run 'TestManualGates0276|TestModpack0275|TestClientFactory0271' -count=1 -timeout=5m

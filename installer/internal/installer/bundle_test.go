@@ -178,7 +178,7 @@ func TestOwnerBootstrapUsesFilesAndSingleRequest(t *testing.T) {
 	calls := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		if r.Method != "POST" || r.URL.Path != "/api/v1/install/bootstrap-admin" || r.Header.Get("X-NeverLauncher-Bootstrap-Token") != strings.Repeat("a", 64) {
+		if r.Method != "POST" || r.URL.Path != "/api/v1/install/bootstrap-admin" || r.Header.Get("X-Launcher-Bootstrap-Token") != strings.Repeat("a", 64) {
 			t.Error("wrong bootstrap request")
 		}
 		w.WriteHeader(http.StatusCreated)
@@ -246,7 +246,7 @@ func TestBootstrapFromGeneratedEnv(t *testing.T) {
 	count := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		count++
-		if r.Header.Get("X-NeverLauncher-Bootstrap-Token") != token {
+		if r.Header.Get("X-Launcher-Bootstrap-Token") != token {
 			t.Error("wrong token")
 		}
 		w.WriteHeader(201)
@@ -266,9 +266,9 @@ func TestBootstrapFromGeneratedEnv(t *testing.T) {
 
 func TestSystemdUnitHardening(t *testing.T) {
 	dir := t.TempDir()
-	app := filepath.Join(dir, "neverlauncher-api")
+	app := filepath.Join(dir, "launcher-api")
 	secret := filepath.Join(dir, "backend.env")
-	unit := filepath.Join(dir, "neverlauncher.service")
+	unit := filepath.Join(dir, "launcher.service")
 	put(t, app, "#!/bin/sh\n", 0755)
 	put(t, secret, "BOOTSTRAP=secret\n", 0600)
 	if err := WriteSystemdUnit(unit, app, secret); err != nil {
@@ -278,7 +278,7 @@ func TestSystemdUnitHardening(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, needle := range []string{"User=neverlauncher", "ProtectSystem=strict", "NoNewPrivileges=true", "StateDirectoryMode=0700"} {
+	for _, needle := range []string{"User=launcher", "ProtectSystem=strict", "NoNewPrivileges=true", "StateDirectoryMode=0700"} {
 		if !bytes.Contains(data, []byte(needle)) {
 			t.Fatalf("missing %s", needle)
 		}

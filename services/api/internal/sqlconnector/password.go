@@ -28,7 +28,7 @@ func verifyPassword(secret, encoded string, cfg PasswordConfig) (bool, error) {
 			return false, err
 		}
 		if cost < 4 || cost > 16 {
-			return false, fmt.Errorf("bcrypt cost %d is outside NeverLauncher safety range 4..16", cost)
+			return false, fmt.Errorf("bcrypt cost %d is outside Launcher safety range 4..16", cost)
 		}
 		return verifyBcryptSystem(secret, encoded), nil
 	case "pbkdf2-sha256":
@@ -60,7 +60,7 @@ func consumePasswordWork(secret string, cfg PasswordConfig) {
 	var encoded string
 	switch cfg.Algorithm {
 	case "argon2id":
-		salt := base64.RawStdEncoding.EncodeToString([]byte("neverlauncher-dummy-salt"))
+		salt := base64.RawStdEncoding.EncodeToString([]byte("launcher-dummy-salt"))
 		digest := base64.RawStdEncoding.EncodeToString(make([]byte, 32))
 		encoded = "$argon2id$v=19$m=65536,t=3,p=1$" + salt + "$" + digest
 	case "bcrypt":
@@ -70,7 +70,7 @@ func consumePasswordWork(secret string, cfg PasswordConfig) {
 		if iterations <= 0 {
 			iterations = 10000
 		}
-		salt := []byte("neverlauncher-dummy-salt")
+		salt := []byte("launcher-dummy-salt")
 		encoded = "$pbkdf2-sha256$" + strconv.Itoa(iterations) + "$" + base64.RawStdEncoding.EncodeToString(salt) + "$" + base64.RawStdEncoding.EncodeToString(make([]byte, 32))
 	case "digest", "double-digest":
 		size := digestLength(cfg.DigestAlgorithm)
@@ -125,7 +125,7 @@ func validateArgon2idPHC(encoded string) error {
 		return errors.New("argon2id parameters m/t/p are required")
 	}
 	if memory > 1024*1024 || iterations > 20 || parallelism > 32 {
-		return errors.New("argon2id parameters exceed NeverLauncher safety limits")
+		return errors.New("argon2id parameters exceed Launcher safety limits")
 	}
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil || len(salt) < 8 {
@@ -195,7 +195,7 @@ func verifyPBKDF2SHA256(secret, encoded string, minIterations int) (bool, error)
 		return false, fmt.Errorf("pbkdf2 iteration count %d is below configured minimum %d", iterations, minIterations)
 	}
 	if iterations > 10_000_000 {
-		return false, errors.New("pbkdf2 iteration count exceeds NeverLauncher safety limit")
+		return false, errors.New("pbkdf2 iteration count exceeds Launcher safety limit")
 	}
 	if len(salt) < 8 || len(expected) < 16 || len(expected) > 128 {
 		return false, errors.New("invalid pbkdf2 salt/digest length")

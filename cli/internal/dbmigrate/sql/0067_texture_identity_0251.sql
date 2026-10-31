@@ -125,7 +125,7 @@ SELECT lower(p.uuid),p.uuid,p.user_id,'exact' FROM minecraft_profiles p
 ON CONFLICT(legacy_uuid) DO NOTHING;
 INSERT INTO texture_legacy_aliases(legacy_uuid,profile_uuid,user_id,mapping)
 SELECT substring(h FROM 1 FOR 8)||'-'||substring(h FROM 9 FOR 4)||'-'||substring(h FROM 13 FOR 4)||'-'||substring(h FROM 17 FOR 4)||'-'||substring(h FROM 21 FOR 12),uuid,user_id,'user-derived-v2'
-FROM (SELECT uuid,user_id,encode(sha256(convert_to('neverlauncher-player:'||user_id,'UTF8')),'hex') h FROM minecraft_profiles) derived
+FROM (SELECT uuid,user_id,encode(sha256(convert_to('launcher-player:'||user_id,'UTF8')),'hex') h FROM minecraft_profiles) derived
 ON CONFLICT(legacy_uuid) DO NOTHING;
 
 INSERT INTO texture_assignments(realm,profile_uuid,user_id,kind,external_url,source,model,visibility,updated_at)

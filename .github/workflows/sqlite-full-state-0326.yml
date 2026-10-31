@@ -4,7 +4,7 @@ on:
     paths:
       - 'services/api/internal/sqlitecore/**'
       - 'services/api/internal/sqlitedurable/**'
-      - 'services/api/cmd/neverlauncher-sqlite/**'
+      - 'services/api/cmd/launcher-sqlite/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
       - '.github/workflows/sqlite-full-state-0326.yml'
@@ -30,26 +30,26 @@ jobs:
           set -euo pipefail
           go mod download
           go mod verify
-          test -z "$(gofmt -l internal/sqlitecore internal/sqlitedurable cmd/neverlauncher-sqlite)"
+          test -z "$(gofmt -l internal/sqlitecore internal/sqlitedurable cmd/launcher-sqlite)"
       - name: SQLite WAL integration and concurrent state tests
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/neverlauncher-sqlite-326
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-sqlite-326
           NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
           mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
           chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
           stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          go test -race -count=1 -timeout=15m ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
-          go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+          go test -race -count=1 -timeout=15m ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
+          go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Native build + schema 326 and backup-compatible startup check
         run: |
           set -euo pipefail
-          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+          go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
           mkdir -p "$RUNNER_TEMP/nl-326-db"
           chmod 700 "$RUNNER_TEMP/nl-326-db"
-          "$RUNNER_TEMP/neverlauncher-sqlite" core-init --db "$RUNNER_TEMP/nl-326-db/state.db" > "$RUNNER_TEMP/nl-326-init.json"
-          "$RUNNER_TEMP/neverlauncher-sqlite" core-status --db "$RUNNER_TEMP/nl-326-db/state.db" > "$RUNNER_TEMP/nl-326-status.json"
+          "$RUNNER_TEMP/launcher-sqlite" core-init --db "$RUNNER_TEMP/nl-326-db/state.db" > "$RUNNER_TEMP/nl-326-init.json"
+          "$RUNNER_TEMP/launcher-sqlite" core-status --db "$RUNNER_TEMP/nl-326-db/state.db" > "$RUNNER_TEMP/nl-326-status.json"
           python3 - "$RUNNER_TEMP/nl-326-status.json" <<'PY'
           import json,sys
           value=json.load(open(sys.argv[1]))

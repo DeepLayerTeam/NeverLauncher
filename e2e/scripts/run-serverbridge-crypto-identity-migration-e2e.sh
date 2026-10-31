@@ -6,9 +6,9 @@ COMPOSE_FILE="$ROOT/e2e/docker-compose.federation-e2e.yml"
 RUNTIME_DIR="$ROOT/e2e/serverbridge-crypto-migration-runtime"
 RESULT_DIR="$ROOT/e2e/serverbridge-crypto-migration-result"
 ENV_FILE="$RUNTIME_DIR/e2e.env"
-DB_DSN="postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable"
+DB_DSN="postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
-PROJECT_NAME="neverlauncher-serverbridge-crypto-migration"
+PROJECT_NAME="launcher-serverbridge-crypto-migration"
 AUTH_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 BOOTSTRAP_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 REDIS_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
@@ -100,7 +100,7 @@ INSERT INTO server_bridge_join_tickets_v2(
 COMMIT;
 SQL
 
-( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/neverlauncher )
+( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/launcher )
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-apply.log"
 "$RUNTIME_DIR/nl" db migrate verify --dsn "$DB_DSN" > "$RUNTIME_DIR/migrate-verify.log"
 grep -q 'verified' "$RUNTIME_DIR/migrate-verify.log"

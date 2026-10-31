@@ -7,7 +7,7 @@ on:
       - 'services/api/internal/repository/migration_cutover_03311_integration_test.go'
       - 'services/api/internal/httpapi/migration_rollback_03312.go'
       - 'services/api/internal/dbmigrate/sql/0099*'
-      - 'cli/cmd/neverlauncher/migration_rollback*'
+      - 'cli/cmd/launcher/migration_rollback*'
       - 'apps/admin/src/admin/MigrationCenter0331.tsx'
       - 'schemas/openapi*'
       - '.github/workflows/gravit-operational-rollback-03312.yml'
@@ -22,17 +22,17 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: neverlauncher_test
-          POSTGRES_USER: neverlauncher_test
+          POSTGRES_DB: launcher_test
+          POSTGRES_USER: launcher_test
           POSTGRES_PASSWORD: test_only_not_production
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U neverlauncher_test -d neverlauncher_test'
+          --health-cmd 'pg_isready -U launcher_test -d launcher_test'
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -47,7 +47,7 @@ jobs:
           go test -race -count=1 ./internal/repository -run '^TestMigrationCutoverPostgres03311$'
       - name: CLI tests and compilation
         working-directory: cli
-        run: go test -race -count=1 ./cmd/neverlauncher -run 'TestRollbackCLIRequiresWriterFences03312|TestMigrationCutover03311'
+        run: go test -race -count=1 ./cmd/launcher -run 'TestRollbackCLIRequiresWriterFences03312|TestMigrationCutover03311'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

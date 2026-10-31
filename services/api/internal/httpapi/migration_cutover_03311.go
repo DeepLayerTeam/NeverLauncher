@@ -4,11 +4,11 @@ import (
 	"context"
 	"crypto/ed25519"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 	"net/http"
 	"time"
 
-	co "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcutover"
+	co "gitflic.ru/skif4er/launcher/services/api/internal/gravitcutover"
 )
 
 type migrationCutoverStore03311 interface {

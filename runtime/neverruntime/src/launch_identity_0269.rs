@@ -1,4 +1,4 @@
-//! NeverRuntime's enforceable Minecraft authentication boundary.
+//! Runtime's enforceable Minecraft authentication boundary.
 //! Credentials from each provider are never interchangeable. In particular,
 //! a project/Yggdrasil token is not a Mojang session-server token.
 use crate::{MinecraftLaunchCredentials, LaunchPlan};

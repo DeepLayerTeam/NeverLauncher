@@ -26,10 +26,10 @@ private enum SandboxError: Error {
     case invalid(String)
     var message: String { if case let .invalid(s) = self { return s }; return "helper-error" }
 }
-private func fail(_ why: String) -> Never { 
+private func fail(_ why: String) -> Never {
     let bytes = Array(("error " + why + "\n").utf8)
     _ = bytes.withUnsafeBytes { write(5, $0.baseAddress, $0.count) }
-    fputs("NeverLauncher macOS sandbox: \(why)\n", stderr)
+    fputs("Launcher macOS sandbox: \(why)\n", stderr)
     exit(126)
 }
 private func exactRead(_ fd: Int32, _ length: Int) throws -> Data {
@@ -68,7 +68,7 @@ private func stage(_ image: Data) throws -> (String, String) {
     guard home.path.contains("/Library/Containers/") && home.path.hasSuffix("/Data") else {
         throw SandboxError.invalid("app-sandbox-home-container-required")
     }
-    let base = home.appendingPathComponent("Library/Application Support/NeverLauncherIsolated", isDirectory: true)
+    let base = home.appendingPathComponent("Library/Application Support/LauncherIsolated", isDirectory: true)
     try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
     let run = base.appendingPathComponent(UUID().uuidString, isDirectory: true)
     try FileManager.default.createDirectory(at: run, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
@@ -155,5 +155,5 @@ private func run() throws {
 }
 do { try run() } catch let e as SandboxError { fail(e.message) } catch { fail("sandbox-initialization-failed") }
 #else
-fatalError("NeverLauncher macOS Sandbox Helper can run only on macOS")
+fatalError("Launcher macOS Sandbox Helper can run only on macOS")
 #endif

@@ -1,4 +1,4 @@
--- NeverLauncher 0.14.1: ServerBridge Protocol v2 и PostgreSQL как источник истины.
+-- Launcher 0.14.1: ServerBridge Protocol v2 и PostgreSQL как источник истины.
 -- Состояние моста нормализовано и долговечно. Допуски на соединение одноразовые:
 -- только один проверяющий может атомарно погасить активную непросроченную строку.
 
@@ -86,11 +86,11 @@ CREATE TABLE IF NOT EXISTS server_bridge_textures_v2 (
 -- обновлении не сохраняются, поскольку их bearer-хеш также не записывался.
 DO $$
 BEGIN
-    IF to_regclass('neverlauncher_persistence_snapshots_950') IS NOT NULL THEN
+    IF to_regclass('launcher_persistence_snapshots_950') IS NOT NULL THEN
         EXECUTE $m$
             WITH latest AS (
                 SELECT payload
-                FROM neverlauncher_persistence_snapshots_950
+                FROM launcher_persistence_snapshots_950
                 WHERE kind='all'
                 ORDER BY created_at DESC, id DESC
                 LIMIT 1
@@ -124,7 +124,7 @@ BEGIN
         EXECUTE $m$
             WITH latest AS (
                 SELECT payload
-                FROM neverlauncher_persistence_snapshots_950
+                FROM launcher_persistence_snapshots_950
                 WHERE kind='all'
                 ORDER BY created_at DESC, id DESC
                 LIMIT 1

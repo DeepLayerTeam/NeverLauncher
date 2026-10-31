@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://neverlauncher.local/schemas/neverlauncher-admin-extension-rpc.schema.json",
-  "title": "NeverLauncher Admin Extension RPC v1",
+  "$id": "https://launcher.local/schemas/launcher-admin-extension-rpc.schema.json",
+  "title": "Launcher Admin Extension RPC v1",
   "oneOf": [
     {
       "type": "object",

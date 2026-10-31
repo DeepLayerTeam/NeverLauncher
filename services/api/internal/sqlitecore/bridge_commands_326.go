@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 var ErrBridgeUncertain = errors.New("bridge delivery outcome is indeterminate; manual reconciliation required")
@@ -28,7 +28,7 @@ type BridgeRuntimeHeartbeat struct {
 }
 
 func bridgeRuntimePayload(b BridgeRuntimeHeartbeat) []byte {
-	return []byte(fmt.Sprintf("NeverLauncher/bridge-runtime/0.32.6\n%s\n%s\n%d\n%d\n", b.Proof.NodeID, b.RuntimeID, b.Epoch, b.Sequence))
+	return []byte(fmt.Sprintf("Launcher/bridge-runtime/0.32.6\n%s\n%s\n%d\n%d\n", b.Proof.NodeID, b.RuntimeID, b.Epoch, b.Sequence))
 }
 
 func (r *Repository) HeartbeatBridgeRuntime(ctx context.Context, b BridgeRuntimeHeartbeat) error {
@@ -363,10 +363,10 @@ func invalidateBridgeRuntimeTx(ctx context.Context, q sqlitedurable.Executor, no
 
 // The signed payload binds every dispatch/ACK parameter to the enrolled node key.
 func bridgeLeasePayload(runtime string, epoch int64, worker string, after int64, ttl time.Duration) []byte {
-	return []byte(fmt.Sprintf("NeverLauncher/bridge-lease/0.32.6\n%s\n%d\n%s\n%d\n%d\n", runtime, epoch, worker, after, int64(ttl)))
+	return []byte(fmt.Sprintf("Launcher/bridge-lease/0.32.6\n%s\n%d\n%s\n%d\n%d\n", runtime, epoch, worker, after, int64(ttl)))
 }
 func bridgeAckPayload(id, runtime, worker, token string, epoch, seq int64, status, encoded, failure string) []byte {
-	return []byte(fmt.Sprintf("NeverLauncher/bridge-ack/0.32.6\n%s\n%s\n%s\n%s\n%d\n%d\n%s\n%s\n%s\n", id, runtime, worker, token, epoch, seq, status, encoded, failure))
+	return []byte(fmt.Sprintf("Launcher/bridge-ack/0.32.6\n%s\n%s\n%s\n%s\n%d\n%d\n%s\n%s\n%s\n", id, runtime, worker, token, epoch, seq, status, encoded, failure))
 }
 func verifyAndConsumeBridgeControlProof(ctx context.Context, q sqlitedurable.Executor, action string, proof NodeProof, payload []byte) error {
 	now := time.Now().UTC()

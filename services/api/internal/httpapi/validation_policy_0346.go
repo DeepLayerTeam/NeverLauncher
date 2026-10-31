@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-const validationAudience0346 = "neverlauncher-api/validation-evidence/0.34.7"
+const validationAudience0346 = "launcher-api/validation-evidence/0.34.7"
 const validationPurpose0346 = "staged-package-runtime-verification"
 
 // This is a pinned, operator-managed set of REQUIRED execution targets. There
@@ -119,7 +119,7 @@ func configuredTargets0346(raw string, release model.ReleaseVersion, manifestSHA
 	if err != nil {
 		return nil, "", err
 	}
-	digest := sha256.Sum256(append([]byte("NeverLauncher/required-validation-targets/0.34.6\x00"), canonical...))
+	digest := sha256.Sum256(append([]byte("Launcher/required-validation-targets/0.34.6\x00"), canonical...))
 	return relevant, hex.EncodeToString(digest[:]), nil
 }
 func matchingTarget0346(p validationPayload0345, t validationTarget0346) bool {

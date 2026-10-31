@@ -11,7 +11,7 @@ import (
 	"io"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // This evaluator runs on the API host, not the runner. An evidence record is

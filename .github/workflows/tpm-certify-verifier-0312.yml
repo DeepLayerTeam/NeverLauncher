@@ -32,4 +32,4 @@ jobs:
       - name: TPM Certify negative fixtures and repository/session policy
         run: go test -race -count=1 ./internal/attestverify ./internal/model ./internal/trustbaseline ./internal/repository ./internal/httpapi
       - name: Compile backend
-        run: go build ./cmd/neverlauncher-api
+        run: go build ./cmd/launcher-api

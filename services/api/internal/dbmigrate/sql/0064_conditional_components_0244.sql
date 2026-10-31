@@ -1,7 +1,7 @@
 -- 0.24.4: allow signed conditional catalog schema 4.0.
 -- Constraints are checked in Go publisher and native runtime before installation.
 -- Retain immutable published manifests, release identity and profile snapshots.
--- Go and NeverRuntime validate the full v2 topology and digest.
+-- Go and Runtime validate the full v2 topology and digest.
 CREATE OR REPLACE FUNCTION enforce_release_snapshot_0222() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE snap JSONB;
 DECLARE spec JSONB;

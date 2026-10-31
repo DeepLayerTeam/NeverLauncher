@@ -16,7 +16,7 @@ import (
 	"syscall"
 )
 
-const hostServiceMarker02811 = "# Managed by NeverLauncher Host Service Installer 0.28.11"
+const hostServiceMarker02811 = "# Managed by Launcher Host Service Installer 0.28.11"
 
 var hostServiceName02811 = regexp.MustCompile(`^[a-z][a-z0-9-]{0,47}$`)
 
@@ -41,7 +41,7 @@ func hostServiceFile02811(scope, name string) (string, error) {
 	if !hostServiceName02811.MatchString(name) {
 		return "", errors.New("--name must be 1-48 lowercase ASCII letters, digits or hyphens, starting with a letter")
 	}
-	unit := "neverlauncher-" + name + ".service"
+	unit := "launcher-" + name + ".service"
 	if scope == "system" {
 		return filepath.Join("/etc/systemd/system", unit), nil
 	}
@@ -121,7 +121,7 @@ func hostServiceUnit02811(spec hostServiceSpec02811) (string, error) {
 		return "", errors.New("working directory contains characters unsupported by systemd")
 	}
 	unit := hostServiceMarker02811 + "\n" +
-		"[Unit]\nDescription=NeverLauncher " + strings.ToUpper(spec.Component[:1]) + spec.Component[1:] + " (" + spec.Name + ")\nAfter=network-online.target\nWants=network-online.target\nStartLimitIntervalSec=300\nStartLimitBurst=5\n\n" +
+		"[Unit]\nDescription=Launcher " + strings.ToUpper(spec.Component[:1]) + spec.Component[1:] + " (" + spec.Name + ")\nAfter=network-online.target\nWants=network-online.target\nStartLimitIntervalSec=300\nStartLimitBurst=5\n\n" +
 		"[Service]\nType=simple\nWorkingDirectory=" + workingDirectory + "\nExecStart=" + command + "\n" +
 		"Restart=on-failure\nRestartSec=5s\n" +
 		"UMask=0077\nNoNewPrivileges=yes\nRestrictSUIDSGID=yes\n" +
@@ -248,7 +248,7 @@ func hostServiceHandle02811(args []string) error {
 				return readErr
 			}
 			if !strings.HasPrefix(string(data), hostServiceMarker02811+"\n") {
-				return errors.New("refusing to remove service not managed by NeverLauncher")
+				return errors.New("refusing to remove service not managed by Launcher")
 			}
 			if err = hostServiceSystemctl02811(scope, "disable", "--now", unit); err != nil {
 				return err

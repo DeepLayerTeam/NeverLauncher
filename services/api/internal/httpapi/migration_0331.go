@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 // The 0.33.1 executable workers only collect target-state baseline information.

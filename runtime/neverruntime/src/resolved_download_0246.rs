@@ -31,7 +31,7 @@ fn string_field(hasher: &mut Sha256, value: &str) -> Result<(), String> {
 pub fn resolve(manifest: &Manifest, preset: Option<&str>) -> Result<ResolvedDownloadPlan, String> {
     let selected = component_catalog_0241::active_files(manifest, preset)?;
     let mut hasher = Sha256::new();
-    hasher.update(b"neverlauncher.resolved-download-plan.v1\0");
+    hasher.update(b"launcher.resolved-download-plan.v1\0");
     let signature = manifest.signature.as_ref().ok_or("resolved plan requires signed manifest")?;
     string_field(&mut hasher, &signature.public_key)?;
     string_field(&mut hasher, &signature.signature)?;

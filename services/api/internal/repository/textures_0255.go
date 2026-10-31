@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 var ErrTextureNotSelected0255 = errors.New("no selected texture")
@@ -48,7 +48,7 @@ func validTextureDigest0255(v string) bool {
 }
 func validTextureKind0255(v string) bool { return v == "skin" || v == "cape" }
 func localTextureOwner0255(p model.MinecraftProfile) bool {
-	return p.Realm == "local" && p.Issuer == "neverlauncher" && p.UserID != "" && p.UUID != ""
+	return p.Realm == "local" && p.Issuer == "launcher" && p.UserID != "" && p.UUID != ""
 }
 
 // Serializes create-only, overwrite, reset and delete with UploadTexture0252.

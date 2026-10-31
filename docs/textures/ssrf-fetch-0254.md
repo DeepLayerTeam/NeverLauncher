@@ -1,6 +1,6 @@
-# NeverLauncher 0.25.4 — SSRF-Safe Texture Fetcher
+# Launcher 0.25.4 — SSRF-Safe Texture Fetcher
 
-**Scope:** authenticated, local NeverLauncher Minecraft profiles only. Official Minecraft identities are not writable by this feature.
+**Scope:** authenticated, local Launcher Minecraft profiles only. Official Minecraft identities are not writable by this feature.
 
 ## HTTP import (implemented in the existing backend)
 

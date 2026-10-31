@@ -42,7 +42,7 @@ func protectedFilePath0224(s string) bool {
 	if s == "options.txt" || s == "optionsof.txt" || s == "servers.dat" || s == "usercache.json" {
 		return true
 	}
-	for _, prefix := range []string{"saves/", "screenshots/", "resourcepacks/", "shaderpacks/", "config/", "logs/", "crash-reports/", "diagnostics/", ".neverlauncher/", ".neverlauncher-quarantine/"} {
+	for _, prefix := range []string{"saves/", "screenshots/", "resourcepacks/", "shaderpacks/", "config/", "logs/", "crash-reports/", "diagnostics/", ".launcher/", ".launcher-quarantine/"} {
 		if strings.HasPrefix(s, prefix) || strings.TrimSuffix(prefix, "/") == s {
 			return true
 		}

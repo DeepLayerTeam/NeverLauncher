@@ -1,6 +1,6 @@
 # Участники проекта
 
-NeverLauncher разрабатывается в организации [DeepLayerTeam](https://github.com/DeepLayerTeam). Актуальный поимённый перечень участников формируется на основе [истории коммитов](https://github.com/DeepLayerTeam/NeverLauncher/graphs/contributors) и авторства pull requests.
+Launcher разрабатывается в организации [DeepLayerTeam](https://github.com/DeepLayerTeam). Актуальный поимённый перечень участников формируется на основе [истории коммитов](https://github.com/DeepLayerTeam/Launcher/graphs/contributors) и авторства pull requests.
 
 Вклад может включать реализацию, review, тестирование, анализ безопасности, переводы и документацию. Упоминание в этом файле само по себе не передаёт право на лицензирование чужого кода или управление репозиторием.
 

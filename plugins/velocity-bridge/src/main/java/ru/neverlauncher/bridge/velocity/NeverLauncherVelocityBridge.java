@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.velocity;
+package ru.launcher.bridge.velocity;
 
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.EventTask;
@@ -14,14 +14,14 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.scheduler.ScheduledTask;
 import net.kyori.adventure.text.Component;
-import ru.neverlauncher.bridge.common.BridgeDefaults;
-import ru.neverlauncher.bridge.common.BridgeControlCommand;
-import ru.neverlauncher.bridge.common.BridgeControlResult;
-import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
-import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
-import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
-import ru.neverlauncher.bridge.common.JoinValidationResult;
-import ru.neverlauncher.bridge.proxy.ProxyBridgeRuntime;
+import ru.launcher.bridge.common.BridgeDefaults;
+import ru.launcher.bridge.common.BridgeControlCommand;
+import ru.launcher.bridge.common.BridgeControlResult;
+import ru.launcher.bridge.common.BridgeRuntimeDescriptor;
+import ru.launcher.bridge.common.BridgePlatformTelemetry;
+import ru.launcher.bridge.common.BridgeRuntimeProbe;
+import ru.launcher.bridge.common.JoinValidationResult;
+import ru.launcher.bridge.proxy.ProxyBridgeRuntime;
 
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
@@ -30,9 +30,9 @@ import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-@Plugin(id = BridgeDefaults.VELOCITY_ID, name = "NeverLauncher Velocity Bridge", version = BridgeDefaults.VERSION, authors = {"SkiF4er"})
-public final class NeverLauncherVelocityBridge {
-    private final Logger logger = Logger.getLogger("NeverLauncherVelocityBridge");
+@Plugin(id = BridgeDefaults.VELOCITY_ID, name = "Launcher Velocity Bridge", version = BridgeDefaults.VERSION, authors = {"SkiF4er"})
+public final class LauncherVelocityBridge {
+    private final Logger logger = Logger.getLogger("LauncherVelocityBridge");
     private final ProxyServer proxy;
     private volatile ProxyBridgeRuntime runtime;
     private volatile ScheduledTask telemetryTask;
@@ -42,7 +42,7 @@ public final class NeverLauncherVelocityBridge {
     private final ConcurrentHashMap<String, PendingTransfer> pendingTransfers = new ConcurrentHashMap<>();
 
     @Inject
-    public NeverLauncherVelocityBridge(ProxyServer proxy) {
+    public LauncherVelocityBridge(ProxyServer proxy) {
         this.proxy = proxy;
     }
 
@@ -52,8 +52,8 @@ public final class NeverLauncherVelocityBridge {
             ProxyBridgeRuntime next = new ProxyBridgeRuntime(
                 "velocity",
                 "Velocity",
-                Path.of("plugins", "neverlauncher-velocity", "config.yml"),
-                NeverLauncherVelocityBridge.class,
+                Path.of("plugins", "launcher-velocity", "config.yml"),
+                LauncherVelocityBridge.class,
                 logger,
                 () -> {
                     String velocityVersion = BridgeRuntimeProbe.packageVersion("com.velocitypowered.api.proxy.ProxyServer");
@@ -80,8 +80,8 @@ public final class NeverLauncherVelocityBridge {
             next.startControlChannel(this::executeControl);
             scheduleTelemetry(next);
         } catch (Exception e) {
-            logger.severe("NeverLauncher Velocity Bridge initialization failed: " + e.getMessage());
-            throw new IllegalStateException("NeverLauncher Velocity Bridge failed closed", e);
+            logger.severe("Launcher Velocity Bridge initialization failed: " + e.getMessage());
+            throw new IllegalStateException("Launcher Velocity Bridge failed closed", e);
         }
     }
 
@@ -110,7 +110,7 @@ public final class NeverLauncherVelocityBridge {
         return EventTask.async(() -> {
             ProxyBridgeRuntime current = runtime;
             if (current == null) {
-                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(Component.text("NeverLauncher ServerBridge is not ready")));
+                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(Component.text("Launcher ServerBridge is not ready")));
                 return;
             }
             String username = event.getUsername();
@@ -125,10 +125,10 @@ public final class NeverLauncherVelocityBridge {
             ));
             if (!result.allowed) {
                 event.setResult(PreLoginEvent.PreLoginComponentResult.denied(Component.text(result.userMessage())));
-                logger.info("neverlauncher.join.denied username=" + username + " reason=" + result.reason + " platform=velocity");
+                logger.info("launcher.join.denied username=" + username + " reason=" + result.reason + " platform=velocity");
                 return;
             }
-            logger.info("neverlauncher.join.allowed username=" + username + " serverId=" + current.serverId() + " platform=velocity");
+            logger.info("launcher.join.allowed username=" + username + " serverId=" + current.serverId() + " platform=velocity");
         });
     }
 
@@ -142,8 +142,8 @@ public final class NeverLauncherVelocityBridge {
         String authenticatedUUID = event.getPlayer().getUniqueId() == null ? "" : event.getPlayer().getUniqueId().toString();
         if (current == null || !current.confirmAuthenticatedPlayer(username, authenticatedUUID)) {
             event.setResult(LoginEvent.ComponentResult.denied(Component.text(
-                "NeverLauncher authenticated Minecraft UUID does not match the launcher session")));
-            logger.warning("neverlauncher.join.uuid-denied username=" + username + " platform=velocity");
+                "Launcher authenticated Minecraft UUID does not match the launcher session")));
+            logger.warning("launcher.join.uuid-denied username=" + username + " platform=velocity");
         }
     }
 
@@ -183,7 +183,7 @@ public final class NeverLauncherVelocityBridge {
                     pendingTransfers.get(key) != reservation) {
                     event.setResult(ServerPreConnectEvent.ServerResult.denied());
                     pendingTransfers.remove(key, reservation);
-                    logger.info("neverlauncher.handoff.denied username=" + username + " target=" +
+                    logger.info("launcher.handoff.denied username=" + username + " target=" +
                         target + " reason=" + (result.allowed ? "topology_changed" : result.reason));
                 }
                 if (result.allowed && runtime == current &&
@@ -195,7 +195,7 @@ public final class NeverLauncherVelocityBridge {
             } catch (RuntimeException failure) {
                 pendingTransfers.remove(key, reservation);
                 event.setResult(ServerPreConnectEvent.ServerResult.denied());
-                logger.warning("neverlauncher.handoff.failed username=" + username + " target=" + target);
+                logger.warning("launcher.handoff.failed username=" + username + " target=" + target);
             }
         });
     }
@@ -236,7 +236,7 @@ public final class NeverLauncherVelocityBridge {
                 return BridgeControlResult.ok(Map.of("recipients", Integer.toString(recipients)));
             }
             case "server.shutdown" -> {
-                String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by NeverLauncher"), 512);
+                String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by Launcher"), 512);
                 proxy.getScheduler().buildTask(this, () -> proxy.shutdown(Component.text(reason))).delay(1500, TimeUnit.MILLISECONDS).schedule();
                 return BridgeControlResult.accepted(Map.of("scheduled", "true", "graceMillis", "1500"));
             }

@@ -63,7 +63,7 @@ pub fn advance_event_chain(packet: &[u8]) -> Result<[u8; 32], String> {
         .lock()
         .map_err(|_| "Continuous Guard event-chain lock poisoned".to_string())?;
     let mut digest = Sha256::new();
-    digest.update(b"NeverLauncher Continuous Guard sensor-event-chain v1\0");
+    digest.update(b"Launcher Continuous Guard sensor-event-chain v1\0");
     digest.update(*chain);
     digest.update((packet.len() as u32).to_le_bytes());
     digest.update(packet);

@@ -1,6 +1,6 @@
 //! Certification-only fixture signer. Never used as a production signing service.
 //! The secret must be explicitly provided by the test harness (not bundled).
-use neverruntime::{sign_manifest, Manifest};
+use runtime::{sign_manifest, Manifest};
 use std::{env, fs, process};
 
 fn main() {

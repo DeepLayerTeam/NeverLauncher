@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "id": "neverlauncher_fabric_bridge",
+  "id": "launcher_fabric_bridge",
   "version": "${version}",
-  "name": "NeverLauncher Fabric Server Bridge",
-  "description": "Server-only NeverLauncher ServerBridge integration for Fabric 1.21.1.",
-  "authors": ["NeverLauncher Team"],
+  "name": "Launcher Fabric Server Bridge",
+  "description": "Server-only Launcher ServerBridge integration for Fabric 1.21.1.",
+  "authors": ["Launcher Team"],
   "license": "Apache-2.0",
   "environment": "server",
   "entrypoints": {
     "main": [
-      "ru.neverlauncher.bridge.fabric.NeverLauncherFabricBridge"
+      "ru.launcher.bridge.fabric.LauncherFabricBridge"
     ]
   },
   "mixins": [
-    "neverlauncher.fabric.mixins.json"
+    "launcher.fabric.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.16.14",
@@ -22,7 +22,7 @@
     "java": ">=21"
   },
   "custom": {
-    "neverlauncher": {
+    "launcher": {
       "serverBridgeProtocol": 2,
       "serverType": "fabric",
       "clientModRequired": false

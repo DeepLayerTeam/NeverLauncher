@@ -48,7 +48,7 @@ func acquireCompatibilityMaterializationLock(clientDir string) (*compatibilityMa
 	} else if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 		return nil, errors.New("clientDir должен быть реальным каталогом, а не symlink")
 	}
-	stateDir, err := secureClientDestination(root, ".neverlauncher")
+	stateDir, err := secureClientDestination(root, ".launcher")
 	if err != nil {
 		return nil, err
 	}

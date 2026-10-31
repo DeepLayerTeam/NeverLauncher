@@ -7,7 +7,7 @@ dependencies {
 }
 tasks.jar {
     dependsOn(configurations.runtimeClasspath.get().buildDependencies)
-    archiveBaseName.set("neverlauncher-velocity-bridge")
+    archiveBaseName.set("launcher-velocity-bridge")
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
@@ -15,7 +15,7 @@ tasks.jar {
 
 
 tasks.processResources {
-    inputs.property("neverLauncherVersion", project.version.toString())
+    inputs.property("LauncherVersion", project.version.toString())
     filesMatching(listOf("plugin.yml", "velocity-plugin.json")) {
         expand("version" to project.version.toString())
     }

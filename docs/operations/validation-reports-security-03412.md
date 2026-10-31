@@ -1,4 +1,4 @@
-# NeverLauncher 0.34.12 — Validation Reports & Security Hardening (V12)
+# Launcher 0.34.12 — Validation Reports & Security Hardening (V12)
 
 ## Deployment order
 

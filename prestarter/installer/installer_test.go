@@ -7,7 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	prestarter "github.com/DeepLayerTeam/NeverLauncher/prestarter"
+	prestarter "github.com/DeepLayerTeam/Launcher/prestarter"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -36,7 +36,7 @@ func signedBundle(t *testing.T, root string, offline bool) Options {
 	manifest := []byte("profile manifest")
 	java := []byte("java manifest")
 	tpath := prestarter.Target{OS: runtime.GOOS, Arch: runtime.GOARCH}
-	for _, role := range []string{"neverruntime", "desktop", "guard"} {
+	for _, role := range []string{"runtime", "desktop", "guard"} {
 		tpath.Components = append(tpath.Components, prestarter.Component{Name: role, Artifact: artifact(componentData)})
 	}
 	cfg := prestarter.Config{SchemaVersion: "1.0", ProjectID: "Project", ProfileID: "profile", Channel: "stable", ProfilePublicKey: strings.Repeat("a", 64), Manifest: artifact(manifest), JavaManifest: artifact(java), Targets: []prestarter.Target{tpath}, Branding: &prestarter.Branding{DisplayName: "Project Launcher", Publisher: "Project"}, InstallerTargets: []prestarter.InstallerTarget{{OS: runtime.GOOS, Arch: runtime.GOARCH, Prestarter: artifact(script)}}}
@@ -98,7 +98,7 @@ func TestInstallRepairUninstallKeepsGameData(t *testing.T) {
 	if data, e := os.ReadFile(game); e != nil || string(data) != "save data" {
 		t.Fatal("uninstall deleted user save")
 	}
-	if _, e = os.Stat(filepath.Join(opts.Root, ".neverlauncher-installer")); !os.IsNotExist(e) {
+	if _, e = os.Stat(filepath.Join(opts.Root, ".launcher-installer")); !os.IsNotExist(e) {
 		t.Fatal("installer-owned files remain")
 	}
 }
@@ -148,7 +148,7 @@ func TestRepairCorruptedInstalledPrestarterFromRetainedOffline(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = cfg
-	release := filepath.Join(opts.Root, ".neverlauncher-installer", "releases", id+"-"+runtime.GOOS+"-"+runtime.GOARCH)
+	release := filepath.Join(opts.Root, ".launcher-installer", "releases", id+"-"+runtime.GOOS+"-"+runtime.GOARCH)
 	if err = os.WriteFile(filepath.Join(release, binaryName()), []byte("corrupted"), 0700); err != nil {
 		t.Fatal(err)
 	}

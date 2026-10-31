@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 func (r *Repository) checkFullState(ctx context.Context, q sqlitedurable.Executor) error {

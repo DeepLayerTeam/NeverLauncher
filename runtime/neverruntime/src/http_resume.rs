@@ -55,7 +55,7 @@ fn partial_paths(root: &Path, target: &Path) -> Result<(PathBuf, PathBuf), Strin
     // legitimately have a file called *.part or *.json.
     let relative = target.strip_prefix(root).map_err(|_| "target outside install root")?;
     let id = hex::encode(Sha256::digest(relative.to_string_lossy().as_bytes()));
-    let directory = root.join(".neverlauncher").join("downloads").join(&id[..2]);
+    let directory = root.join(".launcher").join("downloads").join(&id[..2]);
     Ok((directory.join(format!("{id}.part")), directory.join(format!("{id}.part.json"))))
 }
 

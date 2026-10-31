@@ -14,7 +14,7 @@ import (
 
 const loaderCompatibilityReleaseCertificateFile01711 = "LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json"
 
-const loaderCompatibilityReleaseCertificateKind01711 = "neverlauncher-loader-compatibility-release-certificate"
+const loaderCompatibilityReleaseCertificateKind01711 = "launcher-loader-compatibility-release-certificate"
 
 type loaderCompatibilityFamilyCertificate01711 struct {
 	Loader               string   `json:"loader"`

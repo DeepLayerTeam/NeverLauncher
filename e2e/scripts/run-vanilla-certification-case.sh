@@ -31,16 +31,16 @@ mkdir -p "$RUNTIME_DIR/materialized-client"
 EXE_SUFFIX=""
 [[ "$TARGET_OS" == "windows" ]] && EXE_SUFFIX=".exe"
 NL_BIN="$RUNTIME_DIR/nl$EXE_SUFFIX"
-NEVERRUNTIME_BIN="$ROOT/runtime/neverruntime/target/debug/neverruntime$EXE_SUFFIX"
+NEVERRUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime$EXE_SUFFIX"
 
-printf '[vanilla-cert] build CLI and NeverRuntime for %s/%s\n' "$TARGET_OS" "$TARGET_ARCH"
+printf '[vanilla-cert] build CLI and Runtime for %s/%s\n' "$TARGET_OS" "$TARGET_ARCH"
 (
   cd "$ROOT/cli"
-  go build -o "$NL_BIN" ./cmd/neverlauncher
+  go build -o "$NL_BIN" ./cmd/launcher
 )
-cargo build --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bin neverruntime
+cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
 certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$NEVERRUNTIME_BIN"
-[[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[vanilla-cert] NeverRuntime binary is missing" >&2; exit 1; }
+[[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[vanilla-cert] Runtime binary is missing" >&2; exit 1; }
 
 printf '[vanilla-cert] materialize Mojang Vanilla %s for %s/%s\n' "$MINECRAFT_VERSION" "$TARGET_OS" "$TARGET_ARCH"
 "$NL_BIN" runtime vanilla-package \
@@ -58,7 +58,7 @@ printf '[vanilla-cert] materialize Mojang Vanilla %s for %s/%s\n' "$MINECRAFT_VE
   --client-dir "$RUNTIME_DIR/materialized-client" \
   --output "$RUNTIME_DIR/materialized-client-verify.json"
 
-cp "$RUNTIME_DIR/materialized-client/.neverlauncher/vanilla-install.json" "$RUNTIME_DIR/vanilla-install.json"
+cp "$RUNTIME_DIR/materialized-client/.launcher/vanilla-install.json" "$RUNTIME_DIR/vanilla-install.json"
 python3 - "$RUNTIME_DIR/vanilla-install.json" "$RUNTIME_DIR/materialized-client-verify.json" "$RUNTIME_DIR/client-package.json" "$MINECRAFT_VERSION" "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH" <<'PY'
 import json, sys
 install_p, verify_p, package_p, mc, java, os_name, arch = sys.argv[1:]

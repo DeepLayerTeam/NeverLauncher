@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/cli/internal/devtools"
+	"gitflic.ru/skif4er/launcher/cli/internal/devtools"
 )
 
 func devtoolsPrint03010(v any) error {

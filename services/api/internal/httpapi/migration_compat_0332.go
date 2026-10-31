@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	gd "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitdetector"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gd "gitflic.ru/skif4er/launcher/services/api/internal/gravitdetector"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 type migrationCompatibilityStore0332 interface {

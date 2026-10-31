@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func TestStableRepositoryGuardsAndDevContinueWorking0341(t *testing.T) {

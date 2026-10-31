@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: {label} missing {missing}"
+            f"[Launcher] Aggressive Hook Engine I 0.18.4 gate: {label} missing {missing}"
         )
 
 
@@ -23,15 +23,15 @@ def main() -> int:
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 4):
         raise SystemExit(
-            f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: VERSION is {version}"
+            f"[Launcher] Aggressive Hook Engine I 0.18.4 gate: VERSION is {version}"
         )
 
     engine = read("runtime/guard-sensor/src/hook_engine.rs")
     sensor = read("runtime/guard-sensor/src/lib.rs")
-    parent = read("runtime/neverruntime/src/windows_module_guard.rs")
-    report = read("runtime/neverruntime/src/windows_hook_engine.rs")
-    bootstrap = read("runtime/neverruntime/src/windows_sensor.rs")
-    integration = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    parent = read("runtime/runtime/src/windows_module_guard.rs")
+    report = read("runtime/runtime/src/windows_hook_engine.rs")
+    bootstrap = read("runtime/runtime/src/windows_sensor.rs")
+    integration = read("runtime/runtime/tests/guard_sensor_windows.rs")
     ci = read(".github/workflows/ci.yml")
     preflight = read("scripts/release/preflight.sh")
 
@@ -86,7 +86,7 @@ def main() -> int:
     ):
         if forbidden in engine:
             raise SystemExit(
-                f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: cross/global-process primitive forbidden: {forbidden}"
+                f"[Launcher] Aggressive Hook Engine I 0.18.4 gate: cross/global-process primitive forbidden: {forbidden}"
             )
 
     require(
@@ -163,21 +163,21 @@ def main() -> int:
         ci,
         [
             "python scripts/smoke/offline/guard-aggressive-hook-engine-0184.py",
-            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows -- --nocapture",
+            "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings",
-            "cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings",
+            "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
         ],
         "Windows compilation/integration/clippy CI",
     )
     if "guard-aggressive-hook-engine-0184.py" not in preflight:
         raise SystemExit(
-            "[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: preflight wiring missing"
+            "[Launcher] Aggressive Hook Engine I 0.18.4 gate: preflight wiring missing"
         )
 
     for path, body in [
         ("runtime/guard-sensor/src/hook_engine.rs", engine),
         ("runtime/guard-sensor/src/lib.rs", sensor),
-        ("runtime/neverruntime/src/windows_module_guard.rs", parent),
+        ("runtime/runtime/src/windows_module_guard.rs", parent),
     ]:
         for forbidden in (
             "todo!()",
@@ -187,10 +187,10 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Aggressive Hook Engine I 0.18.4 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: OK")
+    print("[Launcher] Aggressive Hook Engine I 0.18.4 gate: OK")
     return 0
 
 

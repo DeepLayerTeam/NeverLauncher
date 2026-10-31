@@ -1,4 +1,4 @@
-# NeverLauncher 0.35.0 — Runtime Certification GA operations
+# Launcher 0.35.0 — Runtime Certification GA operations
 
 ## Trust boundary and prerequisites
 
@@ -10,7 +10,7 @@ Provision: PostgreSQL 17 with migrations through `0107`; deployed API configured
 
 1. Deploy `0107_ga_stable_snapshot_0350.sql` **after** migrations through `0106`. Backup PostgreSQL and verify `stable_runtime_release_guard_0341`, `stable_runtime_head_guard_0341`, `stable_files_guard_0350` and `stable_integrity_immutable_0350` triggers are enabled. Use least-privilege app roles; a DB owner/superuser is outside the SQL trigger trust boundary.
 2. Build and sign candidate 0.35.0 from one exact source commit. Stage the immutable package, run the real package integrity check and freeze its file metadata. Do not recreate equivalent upstream artifacts in test runners. Every OS, architecture, Java, loader, preset and condition branch claimed in target policy must have a concrete target.
-3. On the attestation host, run **each** required target in a new rootless Podman container with an independent workspace and single-use challenge. Fetch the staged package from the configured API; perform transactional materialization; verify manifest/file SHA-256; execute normal NeverRuntime with the specified Java, loader and selected optional components.
+3. On the attestation host, run **each** required target in a new rootless Podman container with an independent workspace and single-use challenge. Fetch the staged package from the configured API; perform transactional materialization; verify manifest/file SHA-256; execute normal Runtime with the specified Java, loader and selected optional components.
 4. On a real GUI-capable worker confirm the correct process/window, usable renderer, actual main menu and loader readiness, then connect to the matching server and record login, client/server join, game state, ticks and a player action. Use real provider integration (not mock) for custom join/hasJoined and official Minecraft login. Include authorization revocation, Guard/device policy and anti-replay cases. Missing display/renderer means `blocked`, not a Minecraft incompatibility.
 5. Execute V09 against the signed **previous** release: cold install, update, corrupt cache/file and repair, interrupted download and two transaction kill points, Java replacement/recovery and actual previous-release rollback/relaunch. Observe exact bytes and actual state, not only process exit status.
 6. The independent attestor rehashes diagnostic artifacts, checks the completed scenario and signs v4 `ValidationEvidence` with its protected key. Check API `/api/v1/packages/{packageId}/validation-report`: every mandatory target must be `signature-and-execution-verified` and every required runtime stage must be `passed`.

@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionresolver"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionupdates"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionlifecycle"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionresolver"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionupdates"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 type extensionUpdateRequest02011 struct {

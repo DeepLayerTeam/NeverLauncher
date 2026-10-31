@@ -1,6 +1,6 @@
 package repository
 
-import "gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+import "gitflic.ru/skif4er/launcher/services/api/internal/model"
 
 // ProviderCredentialRepository намеренно отделён от Repository, чтобы
 // коннекторы и встроенные интеграции без постоянного хранения внешних

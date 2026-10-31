@@ -92,7 +92,7 @@ def make_fixture(root: Path):
             ),
             "cleanMachine": dict(
                 common,
-                schemaVersion="neverlauncher.ga.clean-machine.v1",
+                schemaVersion="launcher.ga.clean-machine.v1",
                 javaSha256=HEXDIGEST,
                 logSha256=HEXDIGEST,
                 minecraftVersion="1.21.1",
@@ -111,7 +111,7 @@ def make_fixture(root: Path):
             ),
             "components": dict(
                 common,
-                schemaVersion="neverlauncher.components.certification.v1",
+                schemaVersion="launcher.components.certification.v1",
                 target=target,
                 gitTreeClean=True,
                 signedManifestVersion="3.0",
@@ -154,7 +154,7 @@ def make_fixture(root: Path):
         if platform == "windows":
             checks["windows-executable-lock"] = "passed"
         doc = {
-            "schemaVersion": "neverlauncher.ga.optional-components.v1",
+            "schemaVersion": "launcher.ga.optional-components.v1",
             "productVersion": VERSION,
             "status": "passed",
             "commit": COMMIT,

@@ -1,4 +1,4 @@
-//go:build neverlauncher_nopgx
+//go:build launcher_nopgx
 
 package sqlconnector
 
@@ -8,5 +8,5 @@ import (
 )
 
 func openDatabase(cfg RuntimeConfig) (*sql.DB, error) {
-	return nil, fmt.Errorf("SQL auth database drivers are excluded by neverlauncher_nopgx build tag")
+	return nil, fmt.Errorf("SQL auth database drivers are excluded by launcher_nopgx build tag")
 }

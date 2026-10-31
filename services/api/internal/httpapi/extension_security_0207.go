@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionpolicy"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionsecurity"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 type extensionPermissionGrantRequest0207 struct {

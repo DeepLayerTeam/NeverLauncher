@@ -1,4 +1,4 @@
-# NeverLauncher 0.22.5 — Profile Management
+# Launcher 0.22.5 — Profile Management
 
 ## Real production execution paths
 
@@ -25,7 +25,7 @@ for `project:write` on `demo-project`.
   JSON `{"id":"vanilla-copy","name":"Vanilla copy","sourceRevision":1}`.
   Omit `sourceRevision` to clone the current immutable profile revision.
 - `GET /api/v1/admin/projects/demo-project/profiles/vanilla/export?revision=1`
-  downloads JSON containing `{"format":"neverlauncher.profile.v1", "snapshot":{...}}`.
+  downloads JSON containing `{"format":"launcher.profile.v1", "snapshot":{...}}`.
 - `POST /api/v1/admin/projects/demo-project/profiles/import`
   JSON `{"id":"imported","name":"Imported","bundle":<exported JSON object>}`.
 - `GET /api/v1/admin/projects/demo-project/profiles/vanilla/diff?fromRevision=1&toRevision=2`
@@ -68,7 +68,7 @@ go test ./internal/model ./internal/repository ./internal/httpapi
 ```
 
 The isolated `model` and `repository` suites can run offline with
-`GOPROXY=off go test -tags neverlauncher_nopgx ./internal/model ./internal/repository`.
+`GOPROXY=off go test -tags launcher_nopgx ./internal/model ./internal/repository`.
 The nopgx build tag excludes the PostgreSQL driver; it cannot certify SQL
 behavior. Before declaring a production GA, additionally run full API tests,
 PostgreSQL integration tests (including parallel conflicting profile inserts),

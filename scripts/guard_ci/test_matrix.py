@@ -15,7 +15,7 @@ TARGETS = ROOT / "guard-ci/targets.json"
 VERSION = (ROOT / "VERSION").read_text().strip()
 COMMIT = "0123456789abcdef0123456789abcdef01234567"
 RUN_ID = "139001"
-REPOSITORY = "DeepLayerTeam/NeverLauncher"
+REPOSITORY = "DeepLayerTeam/Launcher"
 
 
 def sha(path: Path) -> str:
@@ -43,17 +43,17 @@ def emit(root: Path, target: str, os_name: str, signing: str) -> Path:
     package = (
         d
         / {
-            "linux": f"neverlauncher-desktop-{VERSION}-linux-amd64.zip",
-            "windows": f"neverlauncher-desktop-{VERSION}-windows-amd64.zip",
-            "macos": f"neverlauncher-desktop-{VERSION}-macos-universal.zip",
+            "linux": f"launcher-desktop-{VERSION}-linux-amd64.zip",
+            "windows": f"launcher-desktop-{VERSION}-windows-amd64.zip",
+            "macos": f"launcher-desktop-{VERSION}-macos-universal.zip",
         }[os_name]
     )
     launcher = (
         d
         / {
-            "linux": "neverlauncher-desktop-linux-amd64",
-            "windows": "neverlauncher-desktop-windows-amd64.exe",
-            "macos": "neverlauncher-desktop-macos-universal",
+            "linux": "launcher-desktop-linux-amd64",
+            "windows": "launcher-desktop-windows-amd64.exe",
+            "macos": "launcher-desktop-macos-universal",
         }[os_name]
     )
     guard = (
@@ -89,10 +89,10 @@ def emit(root: Path, target: str, os_name: str, signing: str) -> Path:
             "schemaVersion": "1.0",
             "productVersion": VERSION,
             "platform": "linux-amd64",
-            "neverGuardProtocolVersion": 4,
+            "GuardProtocolVersion": 4,
             "artifacts": [
                 {
-                    "name": "neverlauncher-desktop",
+                    "name": "launcher-desktop",
                     "size": launcher.stat().st_size,
                     "sha256": lh,
                 },
@@ -104,10 +104,10 @@ def emit(root: Path, target: str, os_name: str, signing: str) -> Path:
             "schemaVersion": "1.0",
             "productVersion": VERSION,
             "platform": "windows-amd64",
-            "neverGuardProtocolVersion": 4,
+            "GuardProtocolVersion": 4,
             "artifacts": [
                 {
-                    "name": f"neverlauncher-desktop-{VERSION}-windows-amd64.exe",
+                    "name": f"launcher-desktop-{VERSION}-windows-amd64.exe",
                     "size": launcher.stat().st_size,
                     "sha256": lh,
                 },
@@ -119,7 +119,7 @@ def emit(root: Path, target: str, os_name: str, signing: str) -> Path:
             "schemaVersion": "1.0",
             "productVersion": VERSION,
             "platform": "macos-universal",
-            "neverGuardProtocolVersion": 4,
+            "GuardProtocolVersion": 4,
             "desktopSha256": lh,
             "desktopSize": launcher.stat().st_size,
             "guardSha256": gh,
@@ -189,7 +189,7 @@ def emit(root: Path, target: str, os_name: str, signing: str) -> Path:
 
 def main() -> int:
     run("validate", "--targets", str(TARGETS))
-    with tempfile.TemporaryDirectory(prefix="neverlauncher-guard-ci-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="launcher-guard-ci-") as tmp:
         root = Path(tmp)
         emit(root, "guard-linux-amd64", "linux", "none-linux-integrity")
         emit(root, "guard-windows-amd64", "windows", "unsigned-development-ci")
@@ -241,9 +241,7 @@ def main() -> int:
             )
 
         linux_package = (
-            root
-            / "guard-linux-amd64"
-            / f"neverlauncher-desktop-{VERSION}-linux-amd64.zip"
+            root / "guard-linux-amd64" / f"launcher-desktop-{VERSION}-linux-amd64.zip"
         )
         linux_package.write_bytes(linux_package.read_bytes() + b"tamper")
         tampered_stage = subprocess.run(
@@ -270,7 +268,7 @@ def main() -> int:
         write(linux_package, b"package-guard-linux-amd64\n")
         bad_matrix = json.loads((out / "matrix.json").read_text(encoding="utf-8"))
         bad_matrix["targets"][0]["artifacts"]["launcher"]["name"] = (
-            "neverlauncher-cli-linux-amd64"
+            "launcher-cli-linux-amd64"
         )
         bad_matrix_path = root / "matrix-bad-name.json"
         bad_matrix_path.write_text(json.dumps(bad_matrix), encoding="utf-8")
@@ -298,7 +296,7 @@ def main() -> int:
 
         bad = root / "guard-windows-amd64" / "guard-ci-result.json"
         payload = json.loads(bad.read_text())
-        payload["repository"] = "fork/NeverLauncher"
+        payload["repository"] = "fork/Launcher"
         bad.write_text(json.dumps(payload), encoding="utf-8")
         run(
             "aggregate",

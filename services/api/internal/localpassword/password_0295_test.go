@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/fileauth"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
 )
 
 func TestLocalPasswordUpgrade0295(t *testing.T) {

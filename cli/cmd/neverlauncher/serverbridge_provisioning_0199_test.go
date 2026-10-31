@@ -43,10 +43,10 @@ func writeCertifiedArtifact0199(t *testing.T, dir, platform, ver string) string 
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	name := "neverlauncher-" + platform + "-bridge-" + ver + ".jar"
+	name := "launcher-" + platform + "-bridge-" + ver + ".jar"
 	path := filepath.Join(dir, name)
 	required := map[string][]string{
-		"paper": {"plugin.yml", "ru/neverlauncher/bridge/paper/NeverLauncherPaperBridge.class"},
+		"paper": {"plugin.yml", "ru/launcher/bridge/paper/LauncherPaperBridge.class"},
 	}
 	f, err := os.Create(path)
 	if err != nil {
@@ -98,7 +98,7 @@ func writeCertifiedArtifact0199(t *testing.T, dir, platform, ver string) string 
 		cert.PublicCompatibilityMatrix = true
 	}
 	for _, id := range targets {
-		item := serverBridge2CertifiedArtifact0150{ID: id, File: "neverlauncher-" + id + "-bridge-" + ver + ".jar", SHA256: strings.Repeat("a", 64), Bytes: 1}
+		item := serverBridge2CertifiedArtifact0150{ID: id, File: "launcher-" + id + "-bridge-" + ver + ".jar", SHA256: strings.Repeat("a", 64), Bytes: 1}
 		if id == platform {
 			item.File = name
 			item.SHA256 = digest

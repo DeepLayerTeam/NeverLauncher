@@ -1,10 +1,10 @@
-package ru.neverlauncher.bridge.purpur;
+package ru.launcher.bridge.purpur;
 
-import ru.neverlauncher.bridge.bukkit.BukkitFamilyBridgePlugin;
-import ru.neverlauncher.bridge.bukkit.BukkitFamilyPlatform;
+import ru.launcher.bridge.bukkit.BukkitFamilyBridgePlugin;
+import ru.launcher.bridge.bukkit.BukkitFamilyPlatform;
 
-public final class NeverLauncherPurpurBridge extends BukkitFamilyBridgePlugin {
-    public NeverLauncherPurpurBridge() {
+public final class LauncherPurpurBridge extends BukkitFamilyBridgePlugin {
+    public LauncherPurpurBridge() {
         super(BukkitFamilyPlatform.PURPUR);
     }
 }

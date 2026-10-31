@@ -21,7 +21,7 @@ func writeProductionReleaseFixture0160(t *testing.T, dir, ver, baseURL string) {
 	}
 	matrix := PublicProductionDeliveryMatrix0159{
 		SchemaVersion: publicProductionDeliverySchema0159,
-		Product:       "NeverLauncher",
+		Product:       "Launcher",
 		Version:       ver,
 		Channel:       publicProductionDeliveryChannel0159,
 		GeneratedAt:   "2026-09-25T18:07:04Z",
@@ -41,7 +41,7 @@ func writeProductionReleaseFixture0160(t *testing.T, dir, ver, baseURL string) {
 func TestProductionDeliveryRelease0160BindsCandidateAndAnchors(t *testing.T) {
 	dir := t.TempDir()
 	ver := "0.16.0"
-	writeProductionReleaseFixture0160(t, dir, ver, "https://github.com/DeepLayerTeam/NeverLauncher/releases/download/v0.16.0")
+	writeProductionReleaseFixture0160(t, dir, ver, "https://github.com/DeepLayerTeam/Launcher/releases/download/v0.16.0")
 	if err := writeProductionDeliveryRelease0160(dir, ver); err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestProductionDeliveryRelease0160BindsCandidateAndAnchors(t *testing.T) {
 func TestProductionDeliveryRelease0160RejectsUnversionedPublicOrigin(t *testing.T) {
 	dir := t.TempDir()
 	ver := "0.16.0"
-	writeProductionReleaseFixture0160(t, dir, ver, "https://downloads.example.invalid/neverlauncher/stable")
+	writeProductionReleaseFixture0160(t, dir, ver, "https://downloads.example.invalid/launcher/stable")
 	if err := writeProductionDeliveryRelease0160(dir, ver); err == nil || !strings.Contains(err.Error(), "immutable version segment") {
 		t.Fatalf("expected immutable URL rejection, got %v", err)
 	}
@@ -85,7 +85,7 @@ func TestProductionDeliveryRelease0160PublicMatrixPublishesGACertificateControl(
 	dir := t.TempDir()
 	ver := "0.16.0"
 	createPublicMatrixFixture0159(t, dir, ver)
-	matrix, err := buildPublicProductionDeliveryMatrix0159(dir, ver, "https://downloads.example.test/neverlauncher/v0.16.0", false)
+	matrix, err := buildPublicProductionDeliveryMatrix0159(dir, ver, "https://downloads.example.test/launcher/v0.16.0", false)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/texturegravit"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/texturegravit"
 )
 
 func main() {
@@ -58,7 +58,7 @@ func run() error {
 	sourceTemplate := flag.String("source-template", "%kind%/%hash%.png", "object-key template, e.g. skins/%hash%.png or %hash%")
 	mappingFile := flag.String("mapping", "", "JSON array of source_uuid,target_uuid; missing identities skipped")
 	reportFile := flag.String("report", "", "required JSON report output path")
-	replace := flag.Bool("replace", false, "explicitly replace an existing NeverLauncher texture assignment")
+	replace := flag.Bool("replace", false, "explicitly replace an existing Launcher texture assignment")
 	dryRun := flag.Bool("dry-run", false, "validate source PNGs and identities without persisting")
 	flag.Parse()
 	if *reportFile == "" || *sourceID == "" {

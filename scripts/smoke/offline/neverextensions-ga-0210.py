@@ -72,7 +72,7 @@ for token in [
 routes = read("services/api/internal/httpapi/routes_packages.go")
 for token in ["/extension-ga/status", "/extension-ga/reconcile"]:
     require(token in routes, f"GA route missing {token}")
-cli = read("cli/cmd/neverlauncher/extension_ga_0210.go")
+cli = read("cli/cmd/launcher/extension_ga_0210.go")
 for token in [
     "upgrade-source",
     "signed .nlext packages are immutable",

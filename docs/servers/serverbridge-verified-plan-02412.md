@@ -6,7 +6,7 @@ Set **all three** environment variables on every API instance:
 
 ```sh
 NEVERLAUNCHER_SERVERBRIDGE_REQUIRE_PLAN_POLICY=1
-NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE=/etc/neverlauncher/bridge-plans.signed.json
+NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE=/etc/launcher/bridge-plans.signed.json
 NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY=<64-char-hex-offline-policy-public-key>
 ```
 
@@ -44,13 +44,13 @@ cd services/api
 go run ./cmd/planpolicy-02412 -policy /secure/policy.json -key /secure/offline-policy-seed.hex -out /secure/bridge-plans.signed.json
 ```
 
-The command emits a policy envelope with `schemaVersion`, base64 of the exact signed policy bytes, and an Ed25519 signature over `NeverLauncher-ServerBridge-Plan-Policy-v1\n` + those bytes, and prints the public key for configuration. This is a **separate operator key**, not the game release signing key or ServerBridge node private key. Store the private seed offline.
+The command emits a policy envelope with `schemaVersion`, base64 of the exact signed policy bytes, and an Ed25519 signature over `Launcher-ServerBridge-Plan-Policy-v1\n` + those bytes, and prints the public key for configuration. This is a **separate operator key**, not the game release signing key or ServerBridge node private key. Store the private seed offline.
 
 ## Execution path
 
 1. Desktop launches verified Minecraft and completes Continuous Guard v2 attestation. The Backend produces a one-time Guard ticket containing the attestation digest, runtime PID, hashes and session/device bindings.
 2. Authenticated Desktop requests `POST /api/v1/server-bridge/plan-challenge` for server/project/profile/channel; Backend checks authorized project, Device Trust, pinned policy, generates an unpredictable 60-second challenge, and stores it in `device_challenges` (PostgreSQL or in-memory development).
-3. Native Tauri reads the signed, installed active release from NeverRuntime; `verified_active_selection_02410` validates all managed files. It recomputes the exact native resolved-download plan and signs a domain-separated proof with the currently bound **hardware P-256 device key**. Arbitrary client-provided component lists and plan hashes are not accepted by the native signing command.
+3. Native Tauri reads the signed, installed active release from Runtime; `verified_active_selection_02410` validates all managed files. It recomputes the exact native resolved-download plan and signs a domain-separated proof with the currently bound **hardware P-256 device key**. Arbitrary client-provided component lists and plan hashes are not accepted by the native signing command.
 4. `POST /api/v1/session/join` submits this proof together with the one-time Continuous Guard ticket. The API verifies the policy, target, session, device/binding epoch, exact allowlist tuple, Guard attestation digest and P-256 signature; atomically consumes the one-use plan challenge. Only then does the existing ServerBridge issue a one-time join ticket.
 5. The registered node cryptographically authenticates `validate-join`; existing checks for session, Guard, trust, release integrity, one-time redemption and routing still run. On policy rotation, unredeemed tickets minted before `issuedAt` are invalidated.
 

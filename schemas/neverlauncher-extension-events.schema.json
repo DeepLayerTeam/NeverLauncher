@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://neverlauncher.local/schemas/neverlauncher-extension-events.schema.json",
+  "$id": "https://launcher.local/schemas/launcher-extension-events.schema.json",
   "title": "Extensions Event Envelope",
   "type": "object",
   "additionalProperties": false,

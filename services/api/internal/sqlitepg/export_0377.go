@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitecore"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitecore"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -75,7 +75,7 @@ func Export(ctx context.Context, postgresDSN, target string) (out Report, err er
 	}
 	// A private temporary backup is not exposed until both PostgreSQL mirrors
 	// and original SQLite application invariants have passed verification.
-	dir, err := os.MkdirTemp(parent, ".neverlauncher-export-*")
+	dir, err := os.MkdirTemp(parent, ".launcher-export-*")
 	if err != nil {
 		return out, err
 	}

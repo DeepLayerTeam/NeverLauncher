@@ -1,4 +1,4 @@
-# Client Factory → Build Workspace → Desktop / NeverRuntime (0.40.1)
+# Client Factory → Build Workspace → Desktop / Runtime (0.40.1)
 
 The API executes the existing Client Factory CLI to materialize a real Minecraft
 client. The `POST .../deliver` operation makes those verified files first-class
@@ -30,7 +30,7 @@ verification results.
    version package using the existing signed delivery pipeline. Continue with
    package validation, signing, staged runtime/game tests, and publication.
 7. On Desktop fetch the **published, signed** manifest and complete standard
-   NeverRuntime download/repair, Java selection, compatibility launch-plan
+   Runtime download/repair, Java selection, compatibility launch-plan
    creation, launch and server join. The factory transfer alone cannot confirm
    successful Minecraft execution.
 

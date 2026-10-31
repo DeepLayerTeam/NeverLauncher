@@ -83,7 +83,7 @@ for token in (
     "generate_handler",
 ):
     require(token in tauri, f"Tauri limited bridge missing {token}")
-cli = read("cli/cmd/neverlauncher/extension_cli_0209.go")
+cli = read("cli/cmd/launcher/extension_cli_0209.go")
 for token in (
     "handleExtensionNamespace0209",
     "extensionCLICompletion0209",
@@ -92,8 +92,8 @@ for token in (
     "namespace",
 ):
     require(token in cli, f"CLI namespace runtime missing {token}")
-scaffold = read("cli/cmd/neverlauncher/project_commands.go") + read(
-    "cli/cmd/neverlauncher/extension_sdk_02010.go"
+scaffold = read("cli/cmd/launcher/project_commands.go") + read(
+    "cli/cmd/launcher/extension_sdk_02010.go"
 )
 for token in (
     'return "desktop/index.html"',
@@ -103,10 +103,10 @@ for token in (
     "/v1/hello",
 ):
     require(token in scaffold, f"SDK scaffold missing {token}")
-schema = read("schemas/neverlauncher-extension.schema.json")
+schema = read("schemas/launcher-extension.schema.json")
 for token in ('"desktop"', '"cli"', '"namespace"', '"commands"'):
     require(token in schema, f"extension schema missing {token}")
-rpc_schema = read("schemas/neverlauncher-desktop-extension-rpc.schema.json")
+rpc_schema = read("schemas/launcher-desktop-extension-rpc.schema.json")
 require(
     "extensions.desktop-rpc.v1" in rpc_schema, "Desktop RPC schema missing protocol"
 )

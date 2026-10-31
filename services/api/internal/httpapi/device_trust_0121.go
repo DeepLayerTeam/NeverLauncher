@@ -16,9 +16,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/trustbaseline"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/trustbaseline"
 )
 
 const deviceChallengeTTL0121 = 5 * time.Minute
@@ -193,7 +193,7 @@ func deviceChallengeHash0121(challenge string) string {
 }
 
 func deviceProofPayload0121(purpose, challenge, userID, deviceID, sessionID string) string {
-	return "NeverLauncher Device Trust v1\n" +
+	return "Launcher Device Trust v1\n" +
 		"purpose=" + strings.TrimSpace(purpose) + "\n" +
 		"challenge=" + strings.TrimSpace(challenge) + "\n" +
 		"user=" + strings.TrimSpace(userID) + "\n" +

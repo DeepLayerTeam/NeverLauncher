@@ -1,17 +1,17 @@
-package ru.neverlauncher.bridge.modloader;
+package ru.launcher.bridge.modloader;
 
 import org.slf4j.Logger;
-import ru.neverlauncher.bridge.common.BridgeConfig;
-import ru.neverlauncher.bridge.common.BridgeControlCommand;
-import ru.neverlauncher.bridge.common.BridgeControlExecutor;
-import ru.neverlauncher.bridge.common.BridgeControlResult;
-import ru.neverlauncher.bridge.common.BridgeDefaults;
-import ru.neverlauncher.bridge.common.BridgeIntegrity;
-import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
-import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
-import ru.neverlauncher.bridge.common.JoinValidationResult;
-import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
-import ru.neverlauncher.bridge.common.NodeIdentity;
+import ru.launcher.bridge.common.BridgeConfig;
+import ru.launcher.bridge.common.BridgeControlCommand;
+import ru.launcher.bridge.common.BridgeControlExecutor;
+import ru.launcher.bridge.common.BridgeControlResult;
+import ru.launcher.bridge.common.BridgeDefaults;
+import ru.launcher.bridge.common.BridgeIntegrity;
+import ru.launcher.bridge.common.BridgeRuntimeDescriptor;
+import ru.launcher.bridge.common.BridgePlatformTelemetry;
+import ru.launcher.bridge.common.JoinValidationResult;
+import ru.launcher.bridge.common.LauncherApiClient;
+import ru.launcher.bridge.common.NodeIdentity;
 
 import java.nio.file.Path;
 import java.time.Instant;
@@ -80,7 +80,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         RuntimeState current = state;
         current.api.publishEvent("server.startup", Map.of("platform", platformId));
         current.api.publishEvent("server.ready", Map.of("platform", platformId));
-        logger.info("NeverLauncher {} Server Bridge {} enabled; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; runtimeId={}; asyncLoginGate=true; clientModRequired=false",
+        logger.info("Launcher {} Server Bridge {} enabled; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; runtimeId={}; asyncLoginGate=true; clientModRequired=false",
             displayName, BridgeDefaults.VERSION, current.config.serverId, current.identity.fingerprint(),
             current.identity.publicKeyBase64Url(), shortHash(current.pluginSha256), current.api.runtimeId());
     }
@@ -92,7 +92,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         try {
             return CompletableFuture.supplyAsync(() -> validateJoin(username, uuid, ip), validationExecutor);
         } catch (RejectedExecutionException e) {
-            logger.warn("NeverLauncher {} Server Bridge join validation queue saturated; failing closed", displayName);
+            logger.warn("Launcher {} Server Bridge join validation queue saturated; failing closed", displayName);
             return CompletableFuture.completedFuture(new JoinValidationResult(false, "bridge_overloaded", "{}"));
         }
     }
@@ -198,7 +198,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
             boolean heartbeatStopped = heartbeatExecutor.awaitTermination(2, TimeUnit.SECONDS);
             boolean validationStopped = validationExecutor.awaitTermination(2, TimeUnit.SECONDS);
             if (!heartbeatStopped || !validationStopped) {
-                logger.warn("NeverLauncher {} Server Bridge workers did not terminate within shutdown window", displayName);
+                logger.warn("Launcher {} Server Bridge workers did not terminate within shutdown window", displayName);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -218,7 +218,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
         BridgeRuntimeDescriptor descriptor = Objects.requireNonNull(runtimeDescriptorSupplier.get(), "runtime descriptor");
-        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, platformId, BridgeDefaults.VERSION, pluginSha256, descriptor);
+        LauncherApiClient api = new LauncherApiClient(config, identity, platformId, BridgeDefaults.VERSION, pluginSha256, descriptor);
         return new RuntimeState(config, identity, api, pluginSha256);
     }
 
@@ -228,7 +228,7 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
             Path path = artifactPathSupplier.get();
             return path == null ? null : path.toAbsolutePath().normalize();
         } catch (RuntimeException e) {
-            logger.warn("NeverLauncher {} Server Bridge could not resolve loader-owned artifact path; trying CodeSource fallback", displayName, e);
+            logger.warn("Launcher {} Server Bridge could not resolve loader-owned artifact path; trying CodeSource fallback", displayName, e);
             return null;
         }
     }
@@ -252,18 +252,18 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         lastHeartbeatOK = ok;
         lastHeartbeatAt = Instant.now();
         if (previousAt == null || previous != ok) {
-            if (ok) logger.info("NeverLauncher {} Server Bridge heartbeat=true serverId={}", displayName, current.config.serverId);
-            else logger.warn("NeverLauncher {} Server Bridge heartbeat=false serverId={} reason=rejected_or_unavailable", displayName, current.config.serverId);
+            if (ok) logger.info("Launcher {} Server Bridge heartbeat=true serverId={}", displayName, current.config.serverId);
+            else logger.warn("Launcher {} Server Bridge heartbeat=false serverId={} reason=rejected_or_unavailable", displayName, current.config.serverId);
         }
     }
 
     private Thread daemonThread(Runnable task, String role) {
-        Thread thread = new Thread(task, "neverlauncher-" + platformId + "-bridge-" + role);
+        Thread thread = new Thread(task, "launcher-" + platformId + "-bridge-" + role);
         thread.setDaemon(true);
         thread.setUncaughtExceptionHandler((t, error) -> {
             RuntimeState current = state;
             if (current != null) current.api.publishEvent("server.error", Map.of("component", role, "message", safeError(error)));
-            logger.error("NeverLauncher {} Server Bridge {} worker failed", displayName, role, error);
+            logger.error("Launcher {} Server Bridge {} worker failed", displayName, role, error);
         });
         return thread;
     }
@@ -284,5 +284,5 @@ public final class ModLoaderBridgeRuntime implements AutoCloseable {
         return value.trim();
     }
 
-    private record RuntimeState(BridgeConfig config, NodeIdentity identity, NeverLauncherApiClient api, String pluginSha256) {}
+    private record RuntimeState(BridgeConfig config, NodeIdentity identity, LauncherApiClient api, String pluginSha256) {}
 }

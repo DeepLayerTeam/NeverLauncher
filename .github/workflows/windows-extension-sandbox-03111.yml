@@ -35,9 +35,9 @@ jobs:
           NL_RUN_LIVE_WIN_SANDBOX: '1'
         run: |
           cd services/api
-          go test -tags neverlauncher_nopgx -count=1 -v ./internal/windowssandbox
-          go test -tags neverlauncher_nopgx -run 'TestSignedPolicy|TestExtensionHost' ./internal/extensionpolicy ./internal/extensionhost
+          go test -tags launcher_nopgx -count=1 -v ./internal/windowssandbox
+          go test -tags launcher_nopgx -run 'TestSignedPolicy|TestExtensionHost' ./internal/extensionpolicy ./internal/extensionhost
       - name: Windows backend build
         run: |
           cd services/api
-          go build -o "$env:RUNNER_TEMP/neverlauncher-api.exe" ./cmd/neverlauncher-api
+          go build -o "$env:RUNNER_TEMP/launcher-api.exe" ./cmd/launcher-api

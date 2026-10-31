@@ -36,35 +36,35 @@ require() { command -v "$1" >/dev/null 2>&1 || { echo "$1 is required" >&2; exit
 for tool in go cargo npm python3; do require "${tool}"; done
 mkdir -p "${OUT_DIR}"
 
-echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build frontend"
+echo "[Launcher ${VERSION}] Linux ${ARCH}: build frontend"
 (
   cd "${ROOT_DIR}/apps/desktop"
   npm ci
   npm run build
 )
 
-echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build CLI/API"
+echo "[Launcher ${VERSION}] Linux ${ARCH}: build CLI/API"
 (
   cd "${ROOT_DIR}/cli"
-  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.componentSetTrustedKey02310=${NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-} -X main.componentSetRootKey02312=${NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY:-}" -o "${OUT_DIR}/neverlauncher-cli-linux-${ARCH}" ./cmd/neverlauncher
+  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.componentSetTrustedKey02310=${NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-} -X main.componentSetRootKey02312=${NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY:-}" -o "${OUT_DIR}/launcher-cli-linux-${ARCH}" ./cmd/launcher
 )
 (
   cd "${ROOT_DIR}/services/api"
-  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${NEVERLAUNCHER_SOURCE_COMMIT:-${GITHUB_SHA:-unknown}}" -o "${OUT_DIR}/neverlauncher-api-linux-${ARCH}" ./cmd/neverlauncher-api
+  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${NEVERLAUNCHER_SOURCE_COMMIT:-${GITHUB_SHA:-unknown}}" -o "${OUT_DIR}/launcher-api-linux-${ARCH}" ./cmd/launcher-api
 )
 
-echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build Desktop/Guard/NeverRuntime natively"
+echo "[Launcher ${VERSION}] Linux ${ARCH}: build Desktop/Guard/Runtime natively"
 cargo build --release --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
-cargo build --release --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bins
+cargo build --release --manifest-path "${ROOT_DIR}/runtime/runtime/Cargo.toml" --bins
 
-install -m 0755 "${ROOT_DIR}/apps/desktop/src-tauri/target/release/neverlauncher-desktop" "${OUT_DIR}/neverlauncher-desktop-linux-${ARCH}"
-install -m 0755 "${ROOT_DIR}/runtime/neverruntime/target/release/guard" "${OUT_DIR}/guard-linux-${ARCH}"
-install -m 0755 "${ROOT_DIR}/runtime/neverruntime/target/release/neverruntime" "${OUT_DIR}/neverruntime-linux-${ARCH}"
+install -m 0755 "${ROOT_DIR}/apps/desktop/src-tauri/target/release/launcher-desktop" "${OUT_DIR}/launcher-desktop-linux-${ARCH}"
+install -m 0755 "${ROOT_DIR}/runtime/runtime/target/release/guard" "${OUT_DIR}/guard-linux-${ARCH}"
+install -m 0755 "${ROOT_DIR}/runtime/runtime/target/release/runtime" "${OUT_DIR}/runtime-linux-${ARCH}"
 chmod 0755 \
-  "${OUT_DIR}/neverlauncher-cli-linux-${ARCH}" \
-  "${OUT_DIR}/neverlauncher-api-linux-${ARCH}"
+  "${OUT_DIR}/launcher-cli-linux-${ARCH}" \
+  "${OUT_DIR}/launcher-api-linux-${ARCH}"
 
 python3 "${ROOT_DIR}/scripts/release/linux-package.py" \
   --out "${OUT_DIR}" --version "${VERSION}" --architecture "${ARCH}"
 
-echo "[NeverLauncher ${VERSION}] Linux ${ARCH} production package ready: ${OUT_DIR}"
+echo "[Launcher ${VERSION}] Linux ${ARCH} production package ready: ${OUT_DIR}"

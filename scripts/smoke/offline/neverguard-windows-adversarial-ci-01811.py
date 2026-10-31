@@ -13,7 +13,7 @@ def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Windows Adversarial CI 0.18.11 gate: {path} missing: {', '.join(missing)}"
+            f"[Launcher] Windows Adversarial CI 0.18.11 gate: {path} missing: {', '.join(missing)}"
         )
 
 
@@ -45,7 +45,7 @@ require(
         'Scenario("startup-instrumentation", "adversarial"',
         'Scenario("live-debugger", "adversarial"',
         'Scenario("foreign-executable-allocation", "adversarial"',
-        '"cargo", "test", "--manifest-path", "runtime/neverruntime/Cargo.toml"',
+        '"cargo", "test", "--manifest-path", "runtime/runtime/Cargo.toml"',
         '"evidenceRootSha256"',
         '"allAdversarialScenariosDetected": True',
         '"allCompatibilityScenariosPassed": True',
@@ -66,7 +66,7 @@ require(
     ],
 )
 
-windows_tests = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+windows_tests = read("runtime/runtime/tests/guard_sensor_windows.rs")
 for test_name in [
     "guard_sensor_agentpath_loads_before_jvm_startup",
     "guard_module_guard_tracks_real_jvm_dll_load_and_heartbeat",
@@ -82,7 +82,7 @@ for test_name in [
 ]:
     if test_name not in windows_tests:
         raise SystemExit(
-            f"[NeverLauncher] Windows Adversarial CI 0.18.11 gate: live test missing: {test_name}"
+            f"[Launcher] Windows Adversarial CI 0.18.11 gate: live test missing: {test_name}"
         )
 
 ci = read(".github/workflows/ci.yml")
@@ -108,7 +108,7 @@ for manifest in [
 ]:
     if manifest not in ci:
         raise SystemExit(
-            f"[NeverLauncher] Windows Adversarial CI 0.18.11 gate: CI does not build {manifest}"
+            f"[Launcher] Windows Adversarial CI 0.18.11 gate: CI does not build {manifest}"
         )
 
 preflight = read("scripts/release/preflight.sh")
@@ -117,7 +117,7 @@ if (
     or "test_windows_adversarial.py" not in preflight
 ):
     raise SystemExit(
-        "[NeverLauncher] Windows Adversarial CI 0.18.11 gate: release preflight/self-test wiring missing"
+        "[Launcher] Windows Adversarial CI 0.18.11 gate: release preflight/self-test wiring missing"
     )
 
 for rel, text in [
@@ -128,9 +128,9 @@ for rel, text in [
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
             raise SystemExit(
-                f"[NeverLauncher] Windows Adversarial CI 0.18.11 gate: placeholder {placeholder!r} in {rel}"
+                f"[Launcher] Windows Adversarial CI 0.18.11 gate: placeholder {placeholder!r} in {rel}"
             )
 
 print(
-    f"[NeverLauncher] Windows Adversarial CI attack-simulation + compatibility certification 0.18.11 gate: OK ({version})"
+    f"[Launcher] Windows Adversarial CI attack-simulation + compatibility certification 0.18.11 gate: OK ({version})"
 )

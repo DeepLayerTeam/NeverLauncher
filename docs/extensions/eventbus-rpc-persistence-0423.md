@@ -1,4 +1,4 @@
-# NeverLauncher 0.42.3 — EventBus, hooks, JVM RPC and durable runtime storage
+# Launcher 0.42.3 — EventBus, hooks, JVM RPC and durable runtime storage
 
 This release changes **executable behavior**, not protocol identifiers. Host Protocol, Event Protocol and Extension API stay at `1.0`. No new public endpoint or manifest format is required.
 

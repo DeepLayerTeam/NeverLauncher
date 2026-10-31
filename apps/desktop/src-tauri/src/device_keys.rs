@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use zeroize::Zeroize;
 
-const DEVICE_KEY_SERVICE: &str = "NeverLauncher Device Keys";
+const DEVICE_KEY_SERVICE: &str = "Launcher Device Keys";
 const DEVICE_KEY_SCHEMA_VERSION: &str = "2";
-const DEVICE_HARDWARE_APP: &str = "neverlauncher-desktop";
+const DEVICE_HARDWARE_APP: &str = "launcher-desktop";
 
 fn default_software_algorithm() -> String { "ed25519".into() }
 fn default_software_binding() -> String { "software".into() }
@@ -105,7 +105,7 @@ fn device_key_username(backend_url: &str, user_id: &str) -> Result<String, Strin
     let backend = normalize_backend_url(backend_url)?;
     let user = normalize_user_id(user_id)?;
     let mut hasher = Sha256::new();
-    hasher.update(b"NeverLauncher Device Key v1\0");
+    hasher.update(b"Launcher Device Key v1\0");
     hasher.update(backend.as_bytes());
     hasher.update(b"\0");
     hasher.update(user.as_bytes());
@@ -119,7 +119,7 @@ fn staged_device_key_username(backend_url: &str, user_id: &str) -> Result<String
 fn hardware_key_label_generation(backend_url: &str, user_id: &str, generation: &str) -> Result<String, String> {
     let username = device_key_username(backend_url, user_id)?;
     let mut hasher = Sha256::new();
-    hasher.update(b"NeverLauncher Hardware Device Key v2\0");
+    hasher.update(b"Launcher Hardware Device Key v2\0");
     hasher.update(username.as_bytes());
     hasher.update(b"\0");
     hasher.update(generation.as_bytes());
@@ -401,8 +401,8 @@ fn validate_device_signing_payload(payload: &str, user_id: &str) -> Result<(), S
         return Err("device signing payload имеет недопустимый размер".into());
     }
     let lines = payload.split_terminator('\n').collect::<Vec<_>>();
-    if lines.len() != 6 || lines[0] != "NeverLauncher Device Trust v1" {
-        return Err("device signing payload не является каноническим NeverLauncher Device Trust v1 payload".into());
+    if lines.len() != 6 || lines[0] != "Launcher Device Trust v1" {
+        return Err("device signing payload не является каноническим Launcher Device Trust v1 payload".into());
     }
     if lines[1] != "purpose=register" && lines[1] != "purpose=session-bind" {
         return Err("device signing purpose не разрешён".into());
@@ -428,8 +428,8 @@ fn validate_device_attestation_payload(payload: &str, user_id: &str, record: &Se
         return Err("device attestation требует уже зарегистрированный deviceId".into());
     }
     let lines = payload.split_terminator('\n').collect::<Vec<_>>();
-    if lines.len() != 13 || lines[0] != "NeverLauncher Device Attestation v1" || lines[1] != "purpose=attest" {
-        return Err("device attestation payload не является каноническим NeverLauncher Device Attestation v1 payload".into());
+    if lines.len() != 13 || lines[0] != "Launcher Device Attestation v1" || lines[1] != "purpose=attest" {
+        return Err("device attestation payload не является каноническим Launcher Device Attestation v1 payload".into());
     }
     if lines[2].strip_prefix("challenge=").unwrap_or("").is_empty()
         || lines[3] != format!("user={}", user_id)
@@ -510,7 +510,7 @@ fn guard_attestation_device_payload(
     let launcher_sha256 = require_hex_sha256("launcherSha256", launcher_sha256)?;
     Ok(format!(
         concat!(
-            "NeverLauncher Guard Attestation Device Binding v1\n",
+            "Launcher Guard Attestation Device Binding v1\n",
             "purpose=guard-attest\n",
             "challenge={}\n",
             "challenge-id={}\n",
@@ -604,7 +604,7 @@ fn guard_attestation_v2_device_payload(
     let base_attestation_sha256 = require_hex_sha256("baseAttestationSha256", &request.base_attestation_sha256)?;
     Ok(format!(
         concat!(
-            "NeverLauncher Guard Attestation Device Binding v2\n",
+            "Launcher Guard Attestation Device Binding v2\n",
             "purpose=guard-attest-v2\n",
             "challenge={}\n",
             "challenge-id={}\n",
@@ -696,7 +696,7 @@ fn session_refresh_payload(user_id: &str, session_id: &str, device_id: &str, bin
     }
     let digest = hex::encode(Sha256::digest(refresh_token.as_bytes()));
     Ok(format!(
-        "NeverLauncher Session Device Binding v1\npurpose=refresh\nuser={}\nsession={}\ndevice={}\nbinding-epoch={}\nrefresh-token-sha256={}\n",
+        "Launcher Session Device Binding v1\npurpose=refresh\nuser={}\nsession={}\ndevice={}\nbinding-epoch={}\nrefresh-token-sha256={}\n",
         user_id, session_id, device_id, binding_epoch, digest
     ))
 }
@@ -766,7 +766,7 @@ pub fn attest_device_payload(backend_url: &str, user_id: &str, payload: &str) ->
 fn validate_device_replacement_payload(payload: &str, user_id: &str) -> Result<Vec<String>, String> {
     if payload.is_empty() || payload.len() > 16 * 1024 { return Err("device replacement payload имеет недопустимый размер".into()); }
     let lines = payload.split_terminator('\n').map(str::to_string).collect::<Vec<_>>();
-    if lines.len() != 14 || lines[0] != "NeverLauncher Device Key Replacement v1" { return Err("replacement payload не является каноническим NeverLauncher v1 payload".into()); }
+    if lines.len() != 14 || lines[0] != "Launcher Device Key Replacement v1" { return Err("replacement payload не является каноническим Launcher v1 payload".into()); }
     if lines[1] != "purpose=rotate" && lines[1] != "purpose=recover" { return Err("replacement purpose не разрешён".into()); }
     if lines[2].strip_prefix("challenge=").unwrap_or("").is_empty()
         || lines[3] != format!("user={}", user_id)
@@ -955,7 +955,7 @@ mod tests {
 
     #[test]
     fn native_replacement_payload_refuses_forged_scope_0316() {
-        let payload = "NeverLauncher Device Key Replacement v1\npurpose=recover\nchallenge=x\nuser=user-a\nsession=s\nold-device=d1\nold-fingerprint=f1\nnew-device=d2\nnew-fingerprint=f2\nnew-algorithm=ed25519\nnew-binding=software\nnew-provider=\nissued-at=2026-01-01T00:00:00Z\nexpires-at=2026-01-01T00:01:00Z\n";
+        let payload = "Launcher Device Key Replacement v1\npurpose=recover\nchallenge=x\nuser=user-a\nsession=s\nold-device=d1\nold-fingerprint=f1\nnew-device=d2\nnew-fingerprint=f2\nnew-algorithm=ed25519\nnew-binding=software\nnew-provider=\nissued-at=2026-01-01T00:00:00Z\nexpires-at=2026-01-01T00:01:00Z\n";
         assert!(validate_device_replacement_payload(payload, "user-a").is_ok());
         assert!(validate_device_replacement_payload(payload, "user-b").is_err());
         assert!(validate_device_replacement_payload(&payload.replace("purpose=recover", "purpose=admin"), "user-a").is_err());
@@ -995,7 +995,7 @@ mod tests {
 
     #[test]
     fn replacement_payload_is_canonical_and_user_scoped() {
-        let good = "NeverLauncher Device Key Replacement v1\npurpose=rotate\nchallenge=abc\nuser=user-a\nsession=sess-1\nold-device=dev-old\nold-fingerprint=oldfp\nnew-device=dev-new\nnew-fingerprint=newfp\nnew-algorithm=ed25519\nnew-binding=software\nnew-provider=\nissued-at=2026-09-22T12:00:00Z\nexpires-at=2026-09-22T12:02:00Z\n";
+        let good = "Launcher Device Key Replacement v1\npurpose=rotate\nchallenge=abc\nuser=user-a\nsession=sess-1\nold-device=dev-old\nold-fingerprint=oldfp\nnew-device=dev-new\nnew-fingerprint=newfp\nnew-algorithm=ed25519\nnew-binding=software\nnew-provider=\nissued-at=2026-09-22T12:00:00Z\nexpires-at=2026-09-22T12:02:00Z\n";
         assert!(validate_device_replacement_payload(good, "user-a").is_ok());
         assert!(validate_device_replacement_payload(good, "user-b").is_err());
         assert!(validate_device_replacement_payload(&good.replace("purpose=rotate", "purpose=delete"), "user-a").is_err());
@@ -1011,7 +1011,7 @@ mod tests {
 
     #[test]
     fn signing_payload_is_scoped_to_device_trust_and_user() {
-        let good = "NeverLauncher Device Trust v1\npurpose=register\nchallenge=abc\nuser=user-a\ndevice=dev-1\nsession=sess-1\n";
+        let good = "Launcher Device Trust v1\npurpose=register\nchallenge=abc\nuser=user-a\ndevice=dev-1\nsession=sess-1\n";
         assert!(validate_device_signing_payload(good, "user-a").is_ok());
         assert!(validate_device_signing_payload(good, "user-b").is_err());
         assert!(validate_device_signing_payload("arbitrary payload", "user-a").is_err());
@@ -1045,7 +1045,7 @@ mod tests {
             hardware_provider: "WindowsTpm".into(),
             hardware_label: "nl-device-test".into(),
         };
-        let good = "NeverLauncher Device Attestation v1\npurpose=attest\nchallenge=abc\nuser=user-a\ndevice=dev-1\nsession=sess-1\nfingerprint=fp123\nalgorithm=p256\nbinding=hardware\nprovider=WindowsTpm\nissued-at=2026-09-16T20:00:00Z\nchallenge-expires-at=2026-09-16T20:02:00Z\nattestation-valid-until=2026-09-17T08:00:00Z\n";
+        let good = "Launcher Device Attestation v1\npurpose=attest\nchallenge=abc\nuser=user-a\ndevice=dev-1\nsession=sess-1\nfingerprint=fp123\nalgorithm=p256\nbinding=hardware\nprovider=WindowsTpm\nissued-at=2026-09-16T20:00:00Z\nchallenge-expires-at=2026-09-16T20:02:00Z\nattestation-valid-until=2026-09-17T08:00:00Z\n";
         assert!(validate_device_attestation_payload(good, "user-a", &record).is_ok());
         assert!(validate_device_attestation_payload(good, "user-b", &record).is_err());
         assert!(validate_device_attestation_payload(&good.replace("fingerprint=fp123", "fingerprint=other"), "user-a", &record).is_err());
@@ -1075,7 +1075,7 @@ mod tests {
 /// Only the native verified-installed-release path may call this signer.
 /// The generic JS device signing API deliberately rejects this domain.
 pub fn sign_verified_plan_payload_02412(backend_url: &str, user_id: &str, device_id: &str, payload: &str) -> Result<DeviceSignatureResult, String> {
-    if payload.len() > 4096 || !payload.starts_with("NeverLauncher-Verified-Component-Plan-v1\n")
+    if payload.len() > 4096 || !payload.starts_with("Launcher-Verified-Component-Plan-v1\n")
         || payload.contains('\r') || payload.split('\n').count() != 16 {
         return Err("invalid native verified plan payload".into());
     }

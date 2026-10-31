@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
 )
 
 const persistenceSchema950 = "0.10.0"
@@ -164,10 +164,10 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 		}
 	}
 	persistenceMode := "postgres-backed-security-serverbridge-state"
-	persistenceRelease := "NeverLauncher 0.10.0 Persisted PostgreSQL State"
+	persistenceRelease := "Launcher 0.10.0 Persisted PostgreSQL State"
 	if strings.EqualFold(s.Config.RepositoryDriver, "sqlite") {
 		persistenceMode = "sqlite-wal-security-serverbridge-state"
-		persistenceRelease = "NeverLauncher 0.37.3 SQLite Runtime State"
+		persistenceRelease = "Launcher 0.37.3 SQLite Runtime State"
 	}
 	payload := map[string]any{
 		"schemaVersion": persistenceSchema950,
@@ -278,7 +278,7 @@ func (p persistenceSQL950) save(ctx context.Context, kind string, snapshot persi
 	if err != nil {
 		return err
 	}
-	_, err = db.ExecContext(ctx, `INSERT INTO neverlauncher_persistence_snapshots_950 (kind, schema_version, payload, created_at) VALUES ($1,$2,$3,$4)`, kind, persistenceSchema950, string(payload), time.Now().UTC())
+	_, err = db.ExecContext(ctx, `INSERT INTO launcher_persistence_snapshots_950 (kind, schema_version, payload, created_at) VALUES ($1,$2,$3,$4)`, kind, persistenceSchema950, string(payload), time.Now().UTC())
 	return err
 }
 
@@ -289,7 +289,7 @@ func (p persistenceSQL950) loadLatest(ctx context.Context, kind string) (persist
 	}
 	defer db.Close()
 	var raw string
-	err = db.QueryRowContext(ctx, `SELECT payload::text FROM neverlauncher_persistence_snapshots_950 WHERE kind = $1 ORDER BY created_at DESC, id DESC LIMIT 1`, kind).Scan(&raw)
+	err = db.QueryRowContext(ctx, `SELECT payload::text FROM launcher_persistence_snapshots_950 WHERE kind = $1 ORDER BY created_at DESC, id DESC LIMIT 1`, kind).Scan(&raw)
 	if errors.Is(err, sql.ErrNoRows) {
 		return persistenceSnapshot950{}, false, nil
 	}
@@ -305,8 +305,8 @@ func (p persistenceSQL950) loadLatest(ctx context.Context, kind string) (persist
 
 func persistenceDDL950() []string {
 	return []string{
-		`CREATE TABLE IF NOT EXISTS neverlauncher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
-		`CREATE INDEX IF NOT EXISTS idx_neverlauncher_persistence_snapshots_950_kind_created ON neverlauncher_persistence_snapshots_950 (kind, created_at DESC)`,
+		`CREATE TABLE IF NOT EXISTS launcher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+		`CREATE INDEX IF NOT EXISTS idx_launcher_persistence_snapshots_950_kind_created ON launcher_persistence_snapshots_950 (kind, created_at DESC)`,
 	}
 }
 

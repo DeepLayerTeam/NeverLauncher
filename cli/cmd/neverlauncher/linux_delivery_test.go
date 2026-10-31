@@ -38,11 +38,11 @@ func writeLinuxTargetFixture0153(t *testing.T, dir, ver, arch string) {
 		t.Fatal(err)
 	}
 	packagePaths := map[string]string{
-		"cli":              "neverlauncher/neverlauncher-cli",
-		"api":              "neverlauncher/neverlauncher-api",
-		"desktop-launcher": "neverlauncher/neverlauncher-desktop",
-		"guard":            "neverlauncher/guard",
-		"runtime":          "neverlauncher/neverruntime",
+		"cli":              "launcher/launcher-cli",
+		"api":              "launcher/launcher-api",
+		"desktop-launcher": "launcher/launcher-desktop",
+		"guard":            "launcher/guard",
+		"runtime":          "launcher/runtime",
 	}
 	components := make([]string, 0, len(packagePaths))
 	for component := range packagePaths {
@@ -67,7 +67,7 @@ func writeLinuxTargetFixture0153(t *testing.T, dir, ver, arch string) {
 	}
 	packageName, manifestName := expectedLinuxPackage0153(ver, arch)
 	manifest := LinuxPackageManifest0153{
-		SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: ver, Platform: "linux",
+		SchemaVersion: "1.0", Product: "Launcher", ProductVersion: ver, Platform: "linux",
 		Architecture: arch, ELFMachine: machineText, PackageFormat: "tar.gz", PackageArtifact: packageName, Artifacts: artifacts,
 	}
 	manifestRaw, err := json.MarshalIndent(manifest, "", "  ")
@@ -99,7 +99,7 @@ func writeLinuxTargetFixture0153(t *testing.T, dir, ver, arch string) {
 			t.Fatal(err)
 		}
 	}
-	if err := tw.WriteHeader(&tar.Header{Name: "neverlauncher/LINUX_PACKAGE_MANIFEST.json", Mode: 0o644, Size: int64(len(manifestRaw)), Typeflag: tar.TypeReg}); err != nil {
+	if err := tw.WriteHeader(&tar.Header{Name: "launcher/LINUX_PACKAGE_MANIFEST.json", Mode: 0o644, Size: int64(len(manifestRaw)), Typeflag: tar.TypeReg}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := tw.Write(manifestRaw); err != nil {
@@ -169,7 +169,7 @@ func TestLinuxProductionEvidence0153RejectsWrongELFArchitecture(t *testing.T) {
 	dir := t.TempDir()
 	writeLinuxTargetFixture0153(t, dir, ver, "x64")
 	writeLinuxTargetFixture0153(t, dir, ver, "arm64")
-	if err := os.WriteFile(filepath.Join(dir, "neverlauncher-cli-linux-arm64"), fakeLinuxELF0153("x64", 1), 0o755); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "launcher-cli-linux-arm64"), fakeLinuxELF0153("x64", 1), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := writeLinuxProductionEvidence0153(dir, ver); err == nil {

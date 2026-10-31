@@ -1,17 +1,17 @@
-# NeverLauncher 0.36.1: independently signed release policy
+# Launcher 0.36.1: independently signed release policy
 
 The release signer implements a **fail-closed exact-byte gate**. These are the
 operational inputs for real protected environments, not fixture certificates.
 
 ## Version selection
 
-- 0.36.0: legacy `neverlauncher.ga036.targets.v1` domain and
+- 0.36.0: legacy `launcher.ga036.targets.v1` domain and
   `GA_VERIFIED_TARGETS_0360.json`/`GA_TARGET_APPROVAL_0360.{json,sig}`.
 - Stable releases >=0.36.1: Ed25519 domain
-  `neverlauncher.ga.targets.v2\0` (a *literal NUL byte*),
-  `neverlauncher.ga.targets.v2` signed approval schema,
-  `neverlauncher.ga.execution.v2` execution trace schema and
-  `neverlauncher.ga.verified-targets.v2` receipt schema. Files:
+  `launcher.ga.targets.v2\0` (a *literal NUL byte*),
+  `launcher.ga.targets.v2` signed approval schema,
+  `launcher.ga.execution.v2` execution trace schema and
+  `launcher.ga.verified-targets.v2` receipt schema. Files:
   `GA_VERIFIED_TARGETS.json`, `GA_TARGET_APPROVAL.json`, `GA_TARGET_APPROVAL.sig`.
 - Historical single-node SQLite GA 0.33.0 remains specific to 0.33.0. Its
   certificate **does not** authorize a later release.
@@ -52,7 +52,7 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from pathlib import Path
 approval = Path('approval.json').read_bytes()
 private = load_pem_private_key(Path('/secure/operator-private.pem').read_bytes(), password=None)
-Path('approval.sig').write_text(private.sign(b'neverlauncher.ga.targets.v2\x00' + approval).hex() + '\n')
+Path('approval.sig').write_text(private.sign(b'launcher.ga.targets.v2\x00' + approval).hex() + '\n')
 ```
 
 The signing snippet signs an existing independently collected evidence set;
@@ -64,7 +64,7 @@ it does **not** generate reports or claim to have executed Minecraft.
    execution produces and signs the 54 reports tied to the actual staged
    executable and installer hashes; publication must wait for these results.
 2. Upload `approval.json`, `approval.sig`, `targets/` as a protected Actions
-   artifact named `neverlauncher-ga-signed-<commit>`. Pass its **workflow run ID**
+   artifact named `launcher-ga-signed-<commit>`. Pass its **workflow run ID**
    to `ga_operator_approval_run_id` when dispatching
    `.github/workflows/production-release-candidate.yml`.
 3. Supply pinned `NL_GA_OPERATOR_PUBLIC_KEY_HEX`. The release runner verifies

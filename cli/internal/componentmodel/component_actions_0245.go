@@ -23,7 +23,7 @@ func ComponentCatalogDigest0245(c ComponentCatalog0241) string {
 		return ComponentCatalogDigest0244(c)
 	}
 	h := sha256.New()
-	h.Write([]byte("neverlauncher.component-catalog.v5\x00"))
+	h.Write([]byte("launcher.component-catalog.v5\x00"))
 	var buf [4]byte
 	count := func(v int) { binary.BigEndian.PutUint32(buf[:], uint32(v)); h.Write(buf[:]) }
 	str := func(v string) { count(len(v)); h.Write([]byte(v)) }
@@ -85,7 +85,7 @@ func safeOptionalArgument0245(t, arg string) bool {
 			return false
 		}
 		allowed := false
-		for _, prefix := range []string{"neverlauncher.optional.", "fabric.", "forge.", "neoforge.", "mixin."} {
+		for _, prefix := range []string{"launcher.optional.", "fabric.", "forge.", "neoforge.", "mixin."} {
 			if strings.HasPrefix(kv[0], prefix) {
 				allowed = true
 			}

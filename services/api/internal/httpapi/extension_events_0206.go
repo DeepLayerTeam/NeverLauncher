@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
+	"gitflic.ru/skif4er/launcher/services/api/internal/eventbus"
 )
 
 func (s Server) eventBusStatus0206(w http.ResponseWriter, r *http.Request) {

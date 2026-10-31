@@ -317,7 +317,7 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 		}
 		env = append(env, v)
 	}
-	env = append(env, "NEVERLAUNCHER_EXTENSION_HOST_URL=http://neverlauncher.host.invalid", "NEVERLAUNCHER_EXTENSION_HOST_PIPE="+c.Pipe)
+	env = append(env, "NEVERLAUNCHER_EXTENSION_HOST_URL=http://launcher.host.invalid", "NEVERLAUNCHER_EXTENSION_HOST_PIPE="+c.Pipe)
 	env = append(env, "TEMP="+c.Scratch, "TMP="+c.Scratch, "LOCALAPPDATA="+c.Scratch)
 	sort.Slice(env, func(i, j int) bool { return strings.ToUpper(env[i]) < strings.ToUpper(env[j]) })
 	envBlock := []uint16{}

@@ -15,8 +15,8 @@ type RegistryVersionView = {
   publisherId: string;
   manifest?: { name?: string; description?: string };
   compatibility?: {
-    minNeverLauncher?: string;
-    maxNeverLauncher?: string;
+    minLauncher?: string;
+    maxLauncher?: string;
     supportedOs?: string[];
     supportedArchitectures?: string[];
   };
@@ -337,9 +337,9 @@ export function RegistryWorkspace({
     if (registryPublishChannels.trim())
       body.append("channels", registryPublishChannels.trim());
     if (registryMinLauncher.trim())
-      body.append("minNeverLauncher", registryMinLauncher.trim());
+      body.append("minLauncher", registryMinLauncher.trim());
     if (registryMaxLauncher.trim())
-      body.append("maxNeverLauncher", registryMaxLauncher.trim());
+      body.append("maxLauncher", registryMaxLauncher.trim());
     if (registryPublishOS.trim()) body.append("os", registryPublishOS.trim());
     if (registryPublishArch.trim())
       body.append("arch", registryPublishArch.trim());
@@ -592,7 +592,7 @@ export function RegistryWorkspace({
           aria-label="Registry launcher version"
           value={registryLauncherVersion}
           onChange={(event) => setRegistryLauncherVersion(event.target.value)}
-          placeholder="NeverLauncher version"
+          placeholder="Launcher version"
         />
         <input
           aria-label="Registry OS"
@@ -676,12 +676,12 @@ export function RegistryWorkspace({
             onChange={setRegistryPublishChannels}
           />
           <TextInput
-            label="Min NeverLauncher"
+            label="Min Launcher"
             value={registryMinLauncher}
             onChange={setRegistryMinLauncher}
           />
           <TextInput
-            label="Max NeverLauncher"
+            label="Max Launcher"
             value={registryMaxLauncher}
             onChange={setRegistryMaxLauncher}
           />
@@ -744,8 +744,8 @@ export function RegistryWorkspace({
               </div>
               <p>{item.manifest?.description || "Без описания"}</p>
               <p className="muted">
-                NeverLauncher {item.compatibility?.minNeverLauncher || "any"} →{" "}
-                {item.compatibility?.maxNeverLauncher || "any"} · OS{" "}
+                Launcher {item.compatibility?.minLauncher || "any"} →{" "}
+                {item.compatibility?.maxLauncher || "any"} · OS{" "}
                 {(item.compatibility?.supportedOs ?? []).join(", ") || "any"} ·
                 arch{" "}
                 {(item.compatibility?.supportedArchitectures ?? []).join(

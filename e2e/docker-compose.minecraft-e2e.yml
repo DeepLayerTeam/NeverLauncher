@@ -2,13 +2,13 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: neverlauncher
-      POSTGRES_USER: neverlauncher
-      POSTGRES_PASSWORD: neverlauncher
+      POSTGRES_DB: launcher
+      POSTGRES_USER: launcher
+      POSTGRES_PASSWORD: launcher
     ports:
       - "55432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U neverlauncher -d neverlauncher"]
+      test: ["CMD-SHELL", "pg_isready -U launcher -d launcher"]
       interval: 2s
       timeout: 3s
       retries: 30
@@ -41,7 +41,7 @@ services:
       - e2e-storage:/storage
       - e2e-backups:/backups
 
-  neverlauncher-api:
+  launcher-api:
     build:
       context: ..
       dockerfile: services/api/Dockerfile
@@ -52,12 +52,12 @@ services:
       NEVERLAUNCHER_HTTP_ADDR: 0.0.0.0:8080
       NEVERLAUNCHER_REPOSITORY_DRIVER: postgres
       NEVERLAUNCHER_SQL_DRIVER: pgx
-      NEVERLAUNCHER_DATABASE_DSN: postgres://neverlauncher:neverlauncher@postgres:5432/neverlauncher?sslmode=disable
+      NEVERLAUNCHER_DATABASE_DSN: postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable
       NEVERLAUNCHER_DATABASE_AUTO_MIGRATE: "false"
       NEVERLAUNCHER_PUBLIC_URL: http://127.0.0.1:18080
       NEVERLAUNCHER_STORAGE_DRIVER: local
-      NEVERLAUNCHER_STORAGE_LOCAL_PATH: /var/lib/neverlauncher/storage/current
-      NEVERLAUNCHER_BACKUP_ROOT: /var/lib/neverlauncher/backups
+      NEVERLAUNCHER_STORAGE_LOCAL_PATH: /var/lib/launcher/storage/current
+      NEVERLAUNCHER_BACKUP_ROOT: /var/lib/launcher/backups
       NEVERLAUNCHER_CORS_ALLOWED_ORIGINS: https://e2e.invalid
       NEVERLAUNCHER_AUTH_TOKEN_SECRET: ${NEVERLAUNCHER_E2E_AUTH_SECRET}
       NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '{"schemaVersion":"2.0","releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","requireAuthenticode":true}]},"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]},"macos":{"signingMode":"developer-id-notarized","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]}}}}}'
@@ -80,8 +80,8 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - e2e-storage:/var/lib/neverlauncher/storage
-      - e2e-backups:/var/lib/neverlauncher/backups
+      - e2e-storage:/var/lib/launcher/storage
+      - e2e-backups:/var/lib/launcher/backups
 
   velocity:
     image: itzg/mc-proxy:java21
@@ -91,10 +91,10 @@ services:
       MEMORY: 384m
       PUID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
       NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
       NEVERLAUNCHER_SERVER_ID: velocity-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -103,7 +103,7 @@ services:
       NEVERLAUNCHER_TIMEOUT_MS: "5000"
       NEVERLAUNCHER_RETRIES: "2"
     depends_on:
-      - neverlauncher-api
+      - launcher-api
     healthcheck:
       test: ["CMD-SHELL", "/usr/bin/health.sh"]
       interval: 5s
@@ -114,7 +114,7 @@ services:
       - "25570:25577"
     volumes:
       - ./runtime/plugins/velocity:/plugins:ro
-      - ./runtime/node-identities/velocity:/server/.neverlauncher-identity
+      - ./runtime/node-identities/velocity:/server/.launcher-identity
       - velocity-data:/server
 
   bungeecord:
@@ -124,10 +124,10 @@ services:
       MEMORY: 384m
       PUID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
       NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
       NEVERLAUNCHER_SERVER_ID: bungeecord-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -136,7 +136,7 @@ services:
       NEVERLAUNCHER_TIMEOUT_MS: "5000"
       NEVERLAUNCHER_RETRIES: "2"
     depends_on:
-      - neverlauncher-api
+      - launcher-api
     healthcheck:
       test: ["CMD-SHELL", "/usr/bin/health.sh"]
       interval: 5s
@@ -147,7 +147,7 @@ services:
       - "25575:25577"
     volumes:
       - ./runtime/plugins/bungeecord:/plugins:ro
-      - ./runtime/node-identities/bungeecord:/server/.neverlauncher-identity
+      - ./runtime/node-identities/bungeecord:/server/.launcher-identity
       - bungeecord-data:/server
 
   waterfall:
@@ -157,10 +157,10 @@ services:
       MEMORY: 384m
       PUID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
       NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
       NEVERLAUNCHER_SERVER_ID: waterfall-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -169,7 +169,7 @@ services:
       NEVERLAUNCHER_TIMEOUT_MS: "5000"
       NEVERLAUNCHER_RETRIES: "2"
     depends_on:
-      - neverlauncher-api
+      - launcher-api
     healthcheck:
       test: ["CMD-SHELL", "/usr/bin/health.sh"]
       interval: 5s
@@ -180,7 +180,7 @@ services:
       - "25576:25577"
     volumes:
       - ./runtime/plugins/waterfall:/plugins:ro
-      - ./runtime/node-identities/waterfall:/server/.neverlauncher-identity
+      - ./runtime/node-identities/waterfall:/server/.launcher-identity
       - waterfall-data:/server
 
   spigot:
@@ -195,10 +195,10 @@ services:
       SPAWN_PROTECTION: "0"
       UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
       NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
       NEVERLAUNCHER_SERVER_ID: spigot-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -207,7 +207,7 @@ services:
       NEVERLAUNCHER_TIMEOUT_MS: "5000"
       NEVERLAUNCHER_RETRIES: "2"
     depends_on:
-      - neverlauncher-api
+      - launcher-api
     healthcheck:
       test: ["CMD", "mc-health"]
       interval: 5s
@@ -218,7 +218,7 @@ services:
       - "25573:25565"
     volumes:
       - ./runtime/plugins/spigot:/plugins:ro
-      - ./runtime/node-identities/spigot:/data/.neverlauncher-identity
+      - ./runtime/node-identities/spigot:/data/.launcher-identity
       - spigot-data:/data
 
   paper:
@@ -236,10 +236,10 @@ services:
       SPAWN_PROTECTION: "0"
       UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
       NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
       NEVERLAUNCHER_SERVER_ID: paper-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -248,7 +248,7 @@ services:
       NEVERLAUNCHER_TIMEOUT_MS: "5000"
       NEVERLAUNCHER_RETRIES: "2"
     depends_on:
-      - neverlauncher-api
+      - launcher-api
     healthcheck:
       test: ["CMD", "mc-health"]
       interval: 5s
@@ -259,7 +259,7 @@ services:
       - "25571:25565"
     volumes:
       - ./runtime/plugins/paper:/plugins:ro
-      - ./runtime/node-identities/paper:/data/.neverlauncher-identity
+      - ./runtime/node-identities/paper:/data/.launcher-identity
       - paper-data:/data
 
   purpur:
@@ -274,10 +274,10 @@ services:
       SPAWN_PROTECTION: "0"
       UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
       NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
       NEVERLAUNCHER_SERVER_ID: purpur-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -286,7 +286,7 @@ services:
       NEVERLAUNCHER_TIMEOUT_MS: "5000"
       NEVERLAUNCHER_RETRIES: "2"
     depends_on:
-      - neverlauncher-api
+      - launcher-api
     healthcheck:
       test: ["CMD", "mc-health"]
       interval: 5s
@@ -297,7 +297,7 @@ services:
       - "25572:25565"
     volumes:
       - ./runtime/plugins/purpur:/plugins:ro
-      - ./runtime/node-identities/purpur:/data/.neverlauncher-identity
+      - ./runtime/node-identities/purpur:/data/.launcher-identity
       - purpur-data:/data
 
   folia:
@@ -313,10 +313,10 @@ services:
       SPAWN_PROTECTION: "0"
       UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
       NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
       NEVERLAUNCHER_SERVER_ID: folia-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -325,7 +325,7 @@ services:
       NEVERLAUNCHER_TIMEOUT_MS: "5000"
       NEVERLAUNCHER_RETRIES: "2"
     depends_on:
-      - neverlauncher-api
+      - launcher-api
     healthcheck:
       test: ["CMD", "mc-health"]
       interval: 5s
@@ -336,7 +336,7 @@ services:
       - "25574:25565"
     volumes:
       - ./runtime/plugins/folia:/plugins:ro
-      - ./runtime/node-identities/folia:/data/.neverlauncher-identity
+      - ./runtime/node-identities/folia:/data/.launcher-identity
       - ./runtime/folia-runtime:/folia-runtime:ro
       - folia-data:/data
 
@@ -355,10 +355,10 @@ services:
       SPAWN_PROTECTION: "0"
       UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
       NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
       NEVERLAUNCHER_SERVER_ID: fabric-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -367,7 +367,7 @@ services:
       NEVERLAUNCHER_TIMEOUT_MS: "5000"
       NEVERLAUNCHER_RETRIES: "2"
     depends_on:
-      - neverlauncher-api
+      - launcher-api
     healthcheck:
       test: ["CMD", "mc-health"]
       interval: 5s
@@ -378,7 +378,7 @@ services:
       - "25577:25565"
     volumes:
       - ./runtime/plugins/fabric:/mods:ro
-      - ./runtime/node-identities/fabric:/data/.neverlauncher-identity
+      - ./runtime/node-identities/fabric:/data/.launcher-identity
       - fabric-data:/data
 
   forge:
@@ -394,10 +394,10 @@ services:
       SPAWN_PROTECTION: "0"
       UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
       NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
       NEVERLAUNCHER_SERVER_ID: forge-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -406,7 +406,7 @@ services:
       NEVERLAUNCHER_TIMEOUT_MS: "5000"
       NEVERLAUNCHER_RETRIES: "2"
     depends_on:
-      - neverlauncher-api
+      - launcher-api
     healthcheck:
       test: ["CMD", "mc-health"]
       interval: 5s
@@ -417,7 +417,7 @@ services:
       - "25578:25565"
     volumes:
       - ./runtime/plugins/forge:/mods:ro
-      - ./runtime/node-identities/forge:/data/.neverlauncher-identity
+      - ./runtime/node-identities/forge:/data/.launcher-identity
       - forge-data:/data
 
   neoforge:
@@ -433,10 +433,10 @@ services:
       SPAWN_PROTECTION: "0"
       UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://neverlauncher-api:8080
+      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
       NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
       NEVERLAUNCHER_SERVER_ID: neoforge-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.neverlauncher-identity/node-identity.properties
+      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
       NEVERLAUNCHER_PROJECT_ID: e2e-project
       NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
       NEVERLAUNCHER_CHANNEL: stable
@@ -445,7 +445,7 @@ services:
       NEVERLAUNCHER_TIMEOUT_MS: "5000"
       NEVERLAUNCHER_RETRIES: "2"
     depends_on:
-      - neverlauncher-api
+      - launcher-api
     healthcheck:
       test: ["CMD", "mc-health"]
       interval: 5s
@@ -456,7 +456,7 @@ services:
       - "25579:25565"
     volumes:
       - ./runtime/plugins/neoforge:/mods:ro
-      - ./runtime/node-identities/neoforge:/data/.neverlauncher-identity
+      - ./runtime/node-identities/neoforge:/data/.launcher-identity
       - neoforge-data:/data
 
   loader-native:
@@ -477,7 +477,7 @@ services:
       ENABLE_AUTOSTOP: "false"
       UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
       GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      MOTD: "NeverLauncher loader-native E2E"
+      MOTD: "Launcher loader-native E2E"
     healthcheck:
       test: ["CMD", "mc-health"]
       interval: 5s

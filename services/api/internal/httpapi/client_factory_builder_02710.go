@@ -564,7 +564,7 @@ func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (
 		paths = append(paths, f.Path)
 		total += f.Size
 	}
-	paths = append(paths, ".neverlauncher/install-plan.json")
+	paths = append(paths, ".launcher/install-plan.json")
 	sort.Strings(paths)
 	archiveFile, err := os.CreateTemp(jobDir, "client-export-*.zip")
 	if err != nil {
@@ -611,7 +611,7 @@ func factoryPackageVerified0280(jobDir, client string, p factoryPlanView02710) (
 			file.Close()
 			return "", errors.New("export file size changed")
 		}
-		if path == ".neverlauncher/install-plan.json" && (stat.Size() > 8<<20 || total+stat.Size() > maxExportBytes) {
+		if path == ".launcher/install-plan.json" && (stat.Size() > 8<<20 || total+stat.Size() > maxExportBytes) {
 			file.Close()
 			return "", errors.New("InstallPlan too large")
 		}
@@ -724,10 +724,10 @@ func (s Server) factoryExport02710(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=neverlauncher-client-%s.zip", job.ID))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=launcher-client-%s.zip", job.ID))
 	w.Header().Set("Cache-Control", "private, no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("X-NeverLauncher-Distribution", "local-only; publication requires permission gates and signed runtime certification")
+	w.Header().Set("X-Launcher-Distribution", "local-only; publication requires permission gates and signed runtime certification")
 	http.ServeContent(w, r, "client.zip", stat.ModTime(), file)
 	s.audit(r, job.OwnerID, "client-factory:export", job.ID)
 }

@@ -7,14 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 	"os"
 	"strings"
 	"time"
 )
 
 // The control plane uses the same role-separated, root-signed policy bytes as
-// Prestarter and NeverRuntime. An API request may NOT supply its own trust root.
+// Prestarter and Runtime. An API request may NOT supply its own trust root.
 type gameTrustEnvelope02312 struct {
 	SchemaVersion string `json:"schemaVersion"`
 	Payload       string `json:"payload"`
@@ -72,13 +72,13 @@ func currentGameTrust02312() (gameTrustPolicy02312, error) {
 		return p, errors.New("invalid game trust policy payload")
 	}
 	sig, e := hex.DecodeString(env.RootSignature)
-	if e != nil || len(sig) != 64 || !ed25519.Verify(ed25519.PublicKey(root), append([]byte("NeverLauncher-Trust-Policy-v1\n"), payload...), sig) {
+	if e != nil || len(sig) != 64 || !ed25519.Verify(ed25519.PublicKey(root), append([]byte("Launcher-Trust-Policy-v1\n"), payload...), sig) {
 		return p, errors.New("game trust root signature invalid")
 	}
 	if e = json.Unmarshal(payload, &p); e != nil {
 		return p, e
 	}
-	if p.SchemaVersion != "1.0" || p.Domain != "neverlauncher.trust.v1" || p.Epoch == 0 {
+	if p.SchemaVersion != "1.0" || p.Domain != "launcher.trust.v1" || p.Epoch == 0 {
 		return p, errors.New("invalid game trust domain/epoch")
 	}
 	start, e := gameTrustUTC02312(p.IssuedAt)

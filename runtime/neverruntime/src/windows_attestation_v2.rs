@@ -91,7 +91,7 @@ fn require_hash(label: &str, value: &str) -> Result<(), String> {
 pub fn continuous_evidence_core(evidence: &WindowsContinuousEvidenceV2) -> String {
     format!(
         concat!(
-            "NeverLauncher Windows Continuous Evidence v2\n",
+            "Launcher Windows Continuous Evidence v2\n",
             "process-id={}\n","runtime-pid={}\n","collected-at-ms={}\n",
             "sensor-protocol-version={}\n","sensor-authenticated={}\n","sensor-loaded-before-main={}\n",
             "module-guard-version={}\n","module-guard-healthy={}\n","module-event-count={}\n","module-last-sequence={}\n",
@@ -319,7 +319,7 @@ pub fn collect_windows_continuous_evidence_v2(
 pub fn windows_attestation_v2_core(attestation: &GuardRemoteAttestationV2) -> String {
     format!(
         concat!(
-            "NeverLauncher Guard Attestation Core Windows v2\n",
+            "Launcher Guard Attestation Core Windows v2\n",
             "challenge-id={}\n","challenge-sha256={}\n","collected-at-ms={}\n",
             "base-attestation-sha256={}\n","continuous-evidence-sha256={}\n",
             "runtime-pid={}\n","last-sensor-sequence={}\n","last-guard-sequence={}\n",

@@ -131,7 +131,7 @@ func TestClientLifecycleInstallRepairCleanupRollback(t *testing.T) {
 func TestDesktopPackageRequiresRealArtifactAndDetectsTampering(t *testing.T) {
 	artifactDir := t.TempDir()
 	out := t.TempDir()
-	artifact := filepath.Join(artifactDir, "neverlauncher-desktop-linux-amd64")
+	artifact := filepath.Join(artifactDir, "launcher-desktop-linux-amd64")
 	if err := os.WriteFile(artifact, []byte("real-native-binary"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +141,7 @@ func TestDesktopPackageRequiresRealArtifactAndDetectsTampering(t *testing.T) {
 	if err := verifyDesktopPackage(out); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(out, "neverlauncher-desktop-linux-amd64"), []byte("tampered"), 0o755); err != nil {
+	if err := os.WriteFile(filepath.Join(out, "launcher-desktop-linux-amd64"), []byte("tampered"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := verifyDesktopPackage(out); err == nil {

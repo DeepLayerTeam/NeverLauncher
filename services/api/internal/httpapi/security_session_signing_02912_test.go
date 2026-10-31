@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 func TestSessionSigningFailureRevokesRefreshFamily02912(t *testing.T) {
 	repo := repository.NewMemoryRepository("https://api.example.test")
-	admin, err := repo.GetUserByEmail("admin@neverlauncher.local")
+	admin, err := repo.GetUserByEmail("admin@launcher.local")
 	if err != nil {
 		t.Fatal(err)
 	}

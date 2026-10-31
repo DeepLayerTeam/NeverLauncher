@@ -1,4 +1,4 @@
--- NeverLauncher 0.11.7: Passkeys / WebAuthn и MFA 2.0. Запросы WebAuthn одноразовые
+-- Launcher 0.11.7: Passkeys / WebAuthn и MFA 2.0. Запросы WebAuthn одноразовые
 -- и хранятся в PostgreSQL для развёртываний с несколькими экземплярами.
 
 CREATE TABLE IF NOT EXISTS webauthn_credentials (

@@ -63,7 +63,7 @@ func fixtureMinimalBundle0377(t *testing.T, base string) string {
 			t.Fatal(err)
 		}
 	}
-	m := MinimalBundleManifest0377{Format: minimalBundleFormat0377, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano), SourceRoot: "/var/lib/neverlauncher", Directories: []string{".", "config", "db", "storage"}}
+	m := MinimalBundleManifest0377{Format: minimalBundleFormat0377, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano), SourceRoot: "/var/lib/launcher", Directories: []string{".", "config", "db", "storage"}}
 	for _, p := range []string{"config/backend.env", "db/coordinator.sqlite", "db/http.sqlite", "storage/client.bin"} {
 		n, sum, err := digestFile0377(filepath.Join(payload, p))
 		if err != nil {

@@ -185,7 +185,7 @@ func TestFabricAndQuiltMaterializersProduceConsumableClientTree(t *testing.T) {
 			}
 			seenProfile, seenLoaderJar := false, false
 			for _, file := range pkg.Files {
-				if strings.HasPrefix(file.Path, ".neverlauncher/") {
+				if strings.HasPrefix(file.Path, ".launcher/") {
 					t.Fatalf("local loader state leaked into package: %s", file.Path)
 				}
 				seenProfile = seenProfile || file.Path == result.ProfilePath

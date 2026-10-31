@@ -139,7 +139,7 @@ func (r *Reporter) send(ctx context.Context, e event) error {
 		return err
 	}
 	id := hex.EncodeToString(idBytes[:])
-	payload := map[string]any{"event_id": id, "timestamp": time.Now().UTC().Format(time.RFC3339Nano), "platform": "go", "level": "error", "release": r.release, "environment": r.environment, "logger": "neverlauncher." + e.Component, "message": e.Category + ": " + e.Message, "sdk": map[string]any{"name": "neverlauncher.go", "version": "0.30.9"}}
+	payload := map[string]any{"event_id": id, "timestamp": time.Now().UTC().Format(time.RFC3339Nano), "platform": "go", "level": "error", "release": r.release, "environment": r.environment, "logger": "launcher." + e.Component, "message": e.Category + ": " + e.Message, "sdk": map[string]any{"name": "launcher.go", "version": "0.30.9"}}
 	head, _ := json.Marshal(map[string]any{"event_id": id, "dsn": r.dest.dsn, "sent_at": time.Now().UTC().Format(time.RFC3339)})
 	item, _ := json.Marshal(map[string]any{"type": "event"})
 	body, _ := json.Marshal(payload)
@@ -155,7 +155,7 @@ func (r *Reporter) send(ctx context.Context, e event) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/x-sentry-envelope")
-	req.Header.Set("X-Sentry-Auth", fmt.Sprintf("Sentry sentry_version=7,sentry_client=neverlauncher.go/0.30.9,sentry_key=%s", r.dest.key))
+	req.Header.Set("X-Sentry-Auth", fmt.Sprintf("Sentry sentry_version=7,sentry_client=launcher.go/0.30.9,sentry_key=%s", r.dest.key))
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return err

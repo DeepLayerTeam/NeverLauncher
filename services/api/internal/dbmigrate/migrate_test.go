@@ -130,7 +130,7 @@ func TestServerBridgeProtocolV2Migration0141(t *testing.T) {
 		"uq_server_bridge_join_v2_active_player",
 		"status='consumed'",
 		"credential-rotation-required",
-		"neverlauncher_persistence_snapshots_950",
+		"launcher_persistence_snapshots_950",
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.14.1 ServerBridge v2 migration missing %q", required)
@@ -567,9 +567,9 @@ func TestExtensionsRegistryMigration0203(t *testing.T) {
 		"extension_registry_channels",
 		"package_identity",
 		"signature_key_fingerprint",
-		"neverlauncher_registry_version_guard_0203",
-		"neverlauncher_registry_immutable_guard_0203",
-		"neverlauncher_registry_channel_guard_0203",
+		"launcher_registry_version_guard_0203",
+		"launcher_registry_immutable_guard_0203",
+		"launcher_registry_channel_guard_0203",
 		"yank state is irreversible",
 	} {
 		if !strings.Contains(text, required) {
@@ -587,7 +587,7 @@ func TestExtensionsInstallLifecycleMigration0204(t *testing.T) {
 	for _, required := range []string{
 		"desired_version", "current_version", "desired_state", "current_state",
 		"package_identity", "current_package_identity", "generation", "extension_install_revisions",
-		"neverlauncher_extension_install_state_guard_0204", "activated_at",
+		"launcher_extension_install_state_guard_0204", "activated_at",
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.20.4 lifecycle migration missing %q", required)
@@ -655,7 +655,7 @@ func TestExtensionsTrustRecoveryCertificationMigration02012(t *testing.T) {
 	text := string(b)
 	for _, required := range []string{
 		"extension_trust_policy", "allowed_publishers", "extension_quarantine", "extension_emergency_disables",
-		"revoked_at", "released_at", "source", "neverlauncher_revoke_extension_key_02012",
+		"revoked_at", "released_at", "source", "launcher_revoke_extension_key_02012",
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("0.20.12 trust/recovery migration missing %q", required)

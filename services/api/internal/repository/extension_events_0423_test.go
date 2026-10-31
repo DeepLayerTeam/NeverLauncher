@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // Persisting only the first of two concatenated JSON documents would silently

@@ -1,4 +1,4 @@
-# NeverLauncher OIDC Connector 0.11.5
+# Launcher OIDC Connector 0.11.5
 
 Production connector implements OpenID Connect Authorization Code Flow with PKCE S256.
 

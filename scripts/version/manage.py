@@ -80,12 +80,12 @@ def desired_files(version: str) -> dict[Path, str]:
         result[path] = render_json(path, version)
 
     for rel in (
-        "runtime/neverruntime/Cargo.toml",
-        "runtime/neverguard-sensor/Cargo.toml",
-        "runtime/neverguard-memory-probe/Cargo.toml",
-        "runtime/neverguard-thread-probe/Cargo.toml",
-        "runtime/neverguard-debug-probe/Cargo.toml",
-        "runtime/neverguard-jvm-probe/Cargo.toml",
+        "runtime/runtime/Cargo.toml",
+        "runtime/guard-sensor/Cargo.toml",
+        "runtime/guard-memory-probe/Cargo.toml",
+        "runtime/guard-thread-probe/Cargo.toml",
+        "runtime/guard-debug-probe/Cargo.toml",
+        "runtime/guard-jvm-probe/Cargo.toml",
         "apps/desktop/src-tauri/Cargo.toml",
     ):
         path = ROOT / rel
@@ -113,7 +113,7 @@ def desired_files(version: str) -> dict[Path, str]:
 
     for rel in (
         "deploy/production/env.production.example",
-        "cli/cmd/neverlauncher/templates/production/env.production.example",
+        "cli/cmd/launcher/templates/production/env.production.example",
     ):
         path = ROOT / rel
         result[path] = replace_env_image_tag(
@@ -139,7 +139,7 @@ def command_check() -> int:
     version = read_version()
     drift = sync(version, check_only=True)
     schema = (ROOT / "schemas/openapi.yaml").read_text(encoding="utf-8")
-    if f"NeverLauncher {version}." not in schema:
+    if f"Launcher {version}." not in schema:
         drift.append("schemas/openapi.yaml")
     if drift:
         print(f"Version metadata drift for VERSION={version}:", file=sys.stderr)
@@ -147,7 +147,7 @@ def command_check() -> int:
             print(f" - {rel}", file=sys.stderr)
         print("Run: python3 scripts/version/manage.py sync", file=sys.stderr)
         return 1
-    print(f"NeverLauncher version metadata OK: {version} (source: VERSION)")
+    print(f"Launcher version metadata OK: {version} (source: VERSION)")
     return 0
 
 
@@ -183,14 +183,12 @@ def command_set(value: str) -> int:
         check=True,
         stdout=subprocess.DEVNULL,
     )
-    print(f"NeverLauncher version set to {value}; VERSION is the canonical source")
+    print(f"Launcher version set to {value}; VERSION is the canonical source")
     return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="NeverLauncher canonical version manager"
-    )
+    parser = argparse.ArgumentParser(description="Launcher canonical version manager")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("get")
     sub.add_parser("check")

@@ -141,7 +141,7 @@ func productionDeliveryReleaseAnchors0160(dir, ver string) ([]productionDelivery
 
 func productionDeliveryReleaseBoundaryDigest0160(anchors []productionDeliveryReleaseAnchor0160, targets []DeliveryTarget, ver, commit, baseURL string) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "NeverLauncher\n%s\n%s\n%s\n%s\n", ver, strings.ToLower(commit), productionDeliveryReleaseChannel0160, baseURL)
+	fmt.Fprintf(h, "Launcher\n%s\n%s\n%s\n%s\n", ver, strings.ToLower(commit), productionDeliveryReleaseChannel0160, baseURL)
 	for _, target := range targets {
 		fmt.Fprintf(h, "target %s/%s\n", target.Platform, target.Architecture)
 	}
@@ -263,7 +263,7 @@ func buildProductionDeliveryReleaseDocument0160(dir, ver string) (productionDeli
 	}
 	return productionDeliveryRelease0160{
 		SchemaVersion:         productionDeliveryReleaseSchema0160,
-		Product:               "NeverLauncher",
+		Product:               "Launcher",
 		Version:               ver,
 		Status:                productionDeliveryReleaseStatus0160,
 		Channel:               productionDeliveryReleaseChannel0160,
@@ -304,7 +304,7 @@ func verifyProductionDeliveryReleaseDocument0160(dir, ver string) (string, error
 	if err != nil {
 		return "", err
 	}
-	if doc.SchemaVersion != productionDeliveryReleaseSchema0160 || doc.Product != "NeverLauncher" || doc.Version != ver || doc.Status != productionDeliveryReleaseStatus0160 || doc.Channel != productionDeliveryReleaseChannel0160 || !doc.PostPublishE2E {
+	if doc.SchemaVersion != productionDeliveryReleaseSchema0160 || doc.Product != "Launcher" || doc.Version != ver || doc.Status != productionDeliveryReleaseStatus0160 || doc.Channel != productionDeliveryReleaseChannel0160 || !doc.PostPublishE2E {
 		return "", errors.New("production delivery release metadata mismatch")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, doc.CreatedAt); err != nil {

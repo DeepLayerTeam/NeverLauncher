@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 var errSessionRiskDenied0126 = errors.New("session risk policy denied request")
@@ -231,7 +231,7 @@ func (s Server) writeRiskRequirement0126(w http.ResponseWriter, claims authClaim
 }
 
 func sessionRefreshProofPayload0126(refreshToken string, session authSessionRecord) string {
-	return "NeverLauncher Session Device Binding v1\n" +
+	return "Launcher Session Device Binding v1\n" +
 		"purpose=refresh\n" +
 		"user=" + session.UserID + "\n" +
 		"session=" + session.ID + "\n" +

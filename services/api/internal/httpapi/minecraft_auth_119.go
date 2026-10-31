@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
+	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/protection"
 )
 
 const minecraftSessionTTL119 = 24 * time.Hour
@@ -144,7 +144,7 @@ func (s Server) ensureMinecraftProfile119(user model.User) (model.MinecraftProfi
 		}
 		profile, err := repo.SaveMinecraftProfile(model.MinecraftProfile{
 			UserID: user.ID, UUID: uuid, Name: name,
-			Issuer: "neverlauncher", Realm: "local", Subject: uuid, IdentityVersion: "independent-v1",
+			Issuer: "launcher", Realm: "local", Subject: uuid, IdentityVersion: "independent-v1",
 		})
 		if err == nil {
 			if err := s.syncTextureIdentity0251(profile); err != nil {
@@ -417,7 +417,7 @@ func (s Server) yggdrasilAuthenticate119(w http.ResponseWriter, r *http.Request)
 	}
 	mfa, err := s.evaluateLoginMFA117(result.User, result.AuthMethods, req.TOTP, req.RecoveryCode)
 	if err != nil || mfa.NeedPasskey {
-		writeYggdrasilError119(w, http.StatusForbidden, "MFA requires NeverLauncher session exchange")
+		writeYggdrasilError119(w, http.StatusForbidden, "MFA requires Launcher session exchange")
 		return
 	}
 	_, _, neverSession, err := s.issueLoginSessionWithAuth(result.User, r, "minecraft-authlib", mfa.Methods, mfa.Strength, time.Now().UTC(), result.Identity.ID, result.Provider.ID)
@@ -537,7 +537,7 @@ func (s Server) yggdrasilJoin119(w http.ResponseWriter, r *http.Request) {
 	}
 	_, trust := s.evaluateGameplayTrust0127(r, session.UserID, session.NeverSessionID, session.TrustedDeviceID, session.BindingEpoch, true)
 	if !trust.Allowed {
-		writeYggdrasilError119(w, http.StatusForbidden, "NeverLauncher trust policy denied join: "+trust.Reason)
+		writeYggdrasilError119(w, http.StatusForbidden, "Launcher trust policy denied join: "+trust.Reason)
 		return
 	}
 	repo, _ := s.minecraftRepo119()
@@ -594,7 +594,7 @@ func (s Server) yggdrasilHasJoined119(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	profile, err := repo.GetMinecraftProfileByUUID(join.ProfileUUID)
-	if err != nil || profile.Issuer != "neverlauncher" || profile.Realm != "local" {
+	if err != nil || profile.Issuer != "launcher" || profile.Realm != "local" {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -622,7 +622,7 @@ func (s Server) yggdrasilProfile119(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	profile, err := repo.GetMinecraftProfileByUUID(r.PathValue("uuid"))
-	if err != nil || profile.Issuer != "neverlauncher" || profile.Realm != "local" {
+	if err != nil || profile.Issuer != "launcher" || profile.Realm != "local" {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -651,7 +651,7 @@ func (s Server) yggdrasilProfileByName119(w http.ResponseWriter, r *http.Request
 		return
 	}
 	profile, err := repo.GetMinecraftProfileByName(r.PathValue("username"))
-	if err != nil || profile.Issuer != "neverlauncher" || profile.Realm != "local" {
+	if err != nil || profile.Issuer != "launcher" || profile.Realm != "local" {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -672,7 +672,7 @@ func (s Server) yggdrasilMetadata119(w http.ResponseWriter, r *http.Request) {
 	base := strings.TrimRight(strings.TrimSpace(s.Config.PublicURL), "/")
 	w.Header().Set("Cache-Control", "public, max-age=300")
 	writeJSON(w, http.StatusOK, map[string]any{
-		"meta": map[string]any{"serverName": "NeverLauncher", "implementationName": "NeverLauncher Yggdrasil", "implementationVersion": s.Version,
+		"meta": map[string]any{"serverName": "Launcher", "implementationName": "Launcher Yggdrasil", "implementationVersion": s.Version,
 			"feature.non_email_login": true, "feature.enable_profile_key": false, "links": map[string]string{"homepage": base}},
 		"skinDomains": domains, "signaturePublickey": signer.PublicPEM,
 	})

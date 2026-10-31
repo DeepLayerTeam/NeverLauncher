@@ -1,4 +1,4 @@
-package ru.neverlauncher.sdk.core;
+package ru.launcher.sdk.core;
 
 /** Extension lifecycle is invoked on dedicated managed worker threads, not HTTP request threads. */
 public interface Extension {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/officialminecraft"
+	"gitflic.ru/skif4er/launcher/services/api/internal/officialminecraft"
 )
 
 const ownMicrosoftClient0263 = "01234567-89ab-cdef-0123-456789abcdef"

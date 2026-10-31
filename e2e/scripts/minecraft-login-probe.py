@@ -5,11 +5,12 @@ The primary release gate launches the actual Mojang client. This probe is
 kept only for fast protocol-level bridge checks after session issuance or
 revocation; it is not accepted as evidence of Minecraft client compatibility.
 
-Forge and NeoForge run their pre-world NeverLauncher gates in Minecraft's
+Forge and NeoForge run their pre-world Launcher gates in Minecraft's
 CONFIGURATION phase. --enter-configuration performs the LOGIN -> CONFIGURATION
 transition. --drive-neoforge-configuration additionally completes NeoForge's
 vanilla-client prelude (Ping/Pong and Select Known Packs) without entering PLAY.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -118,7 +119,9 @@ def framed_packet(payload: bytes, compression_threshold: int | None) -> bytes:
     return packet(body)
 
 
-def receive_packet(sock: socket.socket, compression_threshold: int | None) -> tuple[int, bytes, int]:
+def receive_packet(
+    sock: socket.socket, compression_threshold: int | None
+) -> tuple[int, bytes, int]:
     frame_length = read_varint(sock)
     frame = read_exact(sock, frame_length)
     wire_bytes = len(varint(frame_length)) + frame_length
@@ -138,7 +141,9 @@ def receive_packet(sock: socket.socket, compression_threshold: int | None) -> tu
             try:
                 payload = zlib.decompress(encoded)
             except zlib.error as exc:
-                raise ProtocolError(f"invalid compressed Minecraft packet: {exc}") from exc
+                raise ProtocolError(
+                    f"invalid compressed Minecraft packet: {exc}"
+                ) from exc
             if len(payload) != data_length:
                 raise ProtocolError(
                     f"decompressed packet length mismatch: expected {data_length}, got {len(payload)}"
@@ -148,13 +153,16 @@ def receive_packet(sock: socket.socket, compression_threshold: int | None) -> tu
     return packet_id, payload[offset:], wire_bytes
 
 
-def send_protocol_packet(sock: socket.socket, payload: bytes, compression_threshold: int | None) -> None:
+def send_protocol_packet(
+    sock: socket.socket, payload: bytes, compression_threshold: int | None
+) -> None:
     sock.sendall(framed_packet(payload, compression_threshold))
 
 
 def offline_uuid(name: str) -> uuid.UUID:
     # Та же структура, что у Java nameUUIDFromBytes для OfflinePlayer:<name>.
     import hashlib
+
     digest = bytearray(hashlib.md5(("OfflinePlayer:" + name).encode("utf-8")).digest())
     digest[6] = (digest[6] & 0x0F) | 0x30
     digest[8] = (digest[8] & 0x3F) | 0x80
@@ -193,10 +201,17 @@ def enter_configuration(
 
         if packet_id == LOGIN_DISCONNECT:
             if allow_pre_configuration_disconnect:
-                return packets_seen, compression_threshold, wire_bytes, "login-disconnect"
+                return (
+                    packets_seen,
+                    compression_threshold,
+                    wire_bytes,
+                    "login-disconnect",
+                )
             raise ProtocolError("server disconnected before CONFIGURATION")
         if packet_id == LOGIN_ENCRYPTION_REQUEST:
-            raise ProtocolError("server requested online-mode encryption; E2E probe requires offline-mode runtime")
+            raise ProtocolError(
+                "server requested online-mode encryption; E2E probe requires offline-mode runtime"
+            )
         if packet_id == LOGIN_SET_COMPRESSION:
             threshold, offset = decode_varint(payload)
             if offset != len(payload):
@@ -207,7 +222,11 @@ def enter_configuration(
             transaction_id, _ = decode_varint(payload)
             # Ответ null на пользовательский запрос указывает на клиент Vanilla.
             # FriendlyByteBuf.writeNullable кодирует null одним байтом false.
-            response = varint(SERVERBOUND_LOGIN_CUSTOM_QUERY_ANSWER) + varint(transaction_id) + b"\x00"
+            response = (
+                varint(SERVERBOUND_LOGIN_CUSTOM_QUERY_ANSWER)
+                + varint(transaction_id)
+                + b"\x00"
+            )
             send_protocol_packet(sock, response, compression_threshold)
             continue
         if packet_id == LOGIN_COOKIE_REQUEST:
@@ -250,7 +269,7 @@ def drive_neoforge_configuration(
     NeoForge waits for Pong(0) before runConfiguration(), then vanilla's
     SynchronizeRegistriesTask waits for ServerboundSelectKnownPacks. Replying
     to those protocol-native packets is sufficient to let server-only
-    configuration tasks (including NeverLauncher) execute without a client mod.
+    configuration tasks (including Launcher) execute without a client mod.
     """
     deadline = time.monotonic() + max(0.0, seconds)
     wire_bytes = 0
@@ -265,19 +284,39 @@ def drive_neoforge_configuration(
         except socket.timeout:
             continue
         except EOFError:
-            return "configuration-eof", wire_bytes, packets_seen, pongs_sent, known_packs_responses
+            return (
+                "configuration-eof",
+                wire_bytes,
+                packets_seen,
+                pongs_sent,
+                known_packs_responses,
+            )
         except ConnectionResetError:
-            return "configuration-reset", wire_bytes, packets_seen, pongs_sent, known_packs_responses
+            return (
+                "configuration-reset",
+                wire_bytes,
+                packets_seen,
+                pongs_sent,
+                known_packs_responses,
+            )
 
         packets_seen += 1
         wire_bytes += received
 
         if packet_id == CONFIG_CLIENTBOUND_DISCONNECT:
-            return "configuration-disconnect", wire_bytes, packets_seen, pongs_sent, known_packs_responses
+            return (
+                "configuration-disconnect",
+                wire_bytes,
+                packets_seen,
+                pongs_sent,
+                known_packs_responses,
+            )
 
         if packet_id == CONFIG_CLIENTBOUND_PING:
             if len(payload) != 4:
-                raise ProtocolError(f"invalid configuration Ping payload length: {len(payload)}")
+                raise ProtocolError(
+                    f"invalid configuration Ping payload length: {len(payload)}"
+                )
             ping_id = struct.unpack(">i", payload)[0]
             response = varint(CONFIG_SERVERBOUND_PONG) + struct.pack(">i", ping_id)
             send_protocol_packet(sock, response, compression_threshold)
@@ -286,7 +325,9 @@ def drive_neoforge_configuration(
 
         if packet_id == CONFIG_CLIENTBOUND_KEEP_ALIVE:
             if len(payload) != 8:
-                raise ProtocolError(f"invalid configuration KeepAlive payload length: {len(payload)}")
+                raise ProtocolError(
+                    f"invalid configuration KeepAlive payload length: {len(payload)}"
+                )
             response = varint(CONFIG_SERVERBOUND_KEEP_ALIVE) + payload
             send_protocol_packet(sock, response, compression_threshold)
             continue
@@ -301,10 +342,18 @@ def drive_neoforge_configuration(
             continue
 
     if pongs_sent == 0:
-        raise ProtocolError("NeoForge CONFIGURATION prelude did not expose ClientboundPingPacket")
+        raise ProtocolError(
+            "NeoForge CONFIGURATION prelude did not expose ClientboundPingPacket"
+        )
     if known_packs_responses == 0:
         raise ProtocolError("NeoForge CONFIGURATION did not reach Select Known Packs")
-    return "configuration-hold", wire_bytes, packets_seen, pongs_sent, known_packs_responses
+    return (
+        "configuration-hold",
+        wire_bytes,
+        packets_seen,
+        pongs_sent,
+        known_packs_responses,
+    )
 
 
 def main() -> int:
@@ -312,7 +361,9 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--username", required=True)
-    parser.add_argument("--protocol", type=int, default=767, help="Minecraft 1.21.1 protocol")
+    parser.add_argument(
+        "--protocol", type=int, default=767, help="Minecraft 1.21.1 protocol"
+    )
     parser.add_argument(
         "--enter-configuration",
         action="store_true",
@@ -330,18 +381,22 @@ def main() -> int:
         action="store_true",
         help=(
             "treat LOGIN disconnect/EOF/reset before Login Acknowledged as a successful "
-            "transport terminal; callers must still assert the NeverLauncher deny marker"
+            "transport terminal; callers must still assert the Launcher deny marker"
         ),
     )
     args = parser.parse_args()
-    if not (3 <= len(args.username) <= 16) or not all(c.isalnum() or c == "_" for c in args.username):
+    if not (3 <= len(args.username) <= 16) or not all(
+        c.isalnum() or c == "_" for c in args.username
+    ):
         raise SystemExit("username must match Minecraft Java rules: 3-16 [A-Za-z0-9_]")
     if args.login_timeout_seconds <= 0:
         raise SystemExit("--login-timeout-seconds must be positive")
     if args.configuration_hold_seconds < 0:
         raise SystemExit("--configuration-hold-seconds cannot be negative")
     if args.drive_neoforge_configuration and not args.enter_configuration:
-        raise SystemExit("--drive-neoforge-configuration requires --enter-configuration")
+        raise SystemExit(
+            "--drive-neoforge-configuration requires --enter-configuration"
+        )
 
     handshake = (
         varint(0x00)
@@ -350,7 +405,9 @@ def main() -> int:
         + struct.pack(">H", args.port)
         + varint(2)
     )
-    login_start = varint(0x00) + mc_string(args.username) + offline_uuid(args.username).bytes
+    login_start = (
+        varint(0x00) + mc_string(args.username) + offline_uuid(args.username).bytes
+    )
 
     with socket.create_connection((args.host, args.port), timeout=5) as sock:
         sock.settimeout(3)
@@ -359,7 +416,12 @@ def main() -> int:
 
         if args.enter_configuration:
             try:
-                packets_seen, compression_threshold, login_wire_bytes, login_terminal = enter_configuration(
+                (
+                    packets_seen,
+                    compression_threshold,
+                    login_wire_bytes,
+                    login_terminal,
+                ) = enter_configuration(
                     sock,
                     args.login_timeout_seconds,
                     args.allow_pre_configuration_disconnect,
@@ -389,7 +451,12 @@ def main() -> int:
                     terminal = login_terminal
                     configuration_bytes = 0
                     login_acknowledged = False
-            except (EOFError, socket.timeout, ConnectionResetError, ProtocolError) as exc:
+            except (
+                EOFError,
+                socket.timeout,
+                ConnectionResetError,
+                ProtocolError,
+            ) as exc:
                 raise SystemExit(f"configuration login probe failed: {exc}") from exc
             print(
                 f"probe host={args.host} port={args.port} username={args.username} "
@@ -408,7 +475,7 @@ def main() -> int:
                 terminal = "eof"
         except socket.timeout:
             # Обычный пробный запрос лишь инициирует вход. Решение моста проверяется
-            # обязательными записями разрешения или отказа NeverLauncher в журнале.
+            # обязательными записями разрешения или отказа Launcher в журнале.
             response = b""
             terminal = "timeout"
         except ConnectionResetError:

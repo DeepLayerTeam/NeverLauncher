@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // factoryReadSource0401 refuses symlinks at every level, rejects changing

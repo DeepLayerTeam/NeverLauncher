@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 type boundSession0126 struct {
@@ -82,7 +82,7 @@ func refreshProof0126(session boundSession0126, refresh string) string {
 }
 
 func TestSessionDeviceBindingInvalidatesPreBindTokenAndRequiresRefreshProof0126(t *testing.T) {
-	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-session-device-risk", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"}}
+	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-session-device-risk", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "launcher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://api.example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	h := Server{Version: "0.12.6", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(t.TempDir())}.Handler()
 	bound := registerBoundSession0126(t, h)
@@ -131,14 +131,14 @@ func TestSessionDeviceBindingInvalidatesPreBindTokenAndRequiresRefreshProof0126(
 }
 
 func TestSessionRiskUserAgentDriftIsPersistedAndRequiresStepUp0126(t *testing.T) {
-	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-session-risk-drift", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"}}
+	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-session-risk-drift", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "launcher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://api.example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	h := Server{Version: "0.12.6", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(t.TempDir())}.Handler()
 	bound := registerBoundSession0126(t, h)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/sessions", nil)
 	req.Header.Set("Authorization", "Bearer "+bound.Access)
-	req.Header.Set("User-Agent", "NeverLauncher-DeviceTrust-Test/0.12.6-drift")
+	req.Header.Set("User-Agent", "Launcher-DeviceTrust-Test/0.12.6-drift")
 	req.RemoteAddr = "203.0.113.10:4242"
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)

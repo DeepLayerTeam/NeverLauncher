@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"strings"
 
-	gc "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcontent"
-	cr "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcredentials"
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
-	gm "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitmodules"
-	gr "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrehearsal"
-	rr "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitreport"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcontent"
+	cr "gitflic.ru/skif4er/launcher/services/api/internal/gravitcredentials"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
+	gm "gitflic.ru/skif4er/launcher/services/api/internal/gravitmodules"
+	gr "gitflic.ru/skif4er/launcher/services/api/internal/gravitrehearsal"
+	rr "gitflic.ru/skif4er/launcher/services/api/internal/gravitreport"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 // migrationEvidence03313 is deliberately a read-only, REPEATABLE READ

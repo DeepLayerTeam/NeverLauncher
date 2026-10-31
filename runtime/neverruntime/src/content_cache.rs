@@ -36,7 +36,7 @@ fn user_cache_root() -> Result<PathBuf, String> {
         .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")));
     let base = path.ok_or("no user cache directory (HOME/LOCALAPPDATA missing)")?;
     if !base.is_absolute() { return Err("cache base must be absolute".into()); }
-    Ok(base.join("NeverLauncher").join("content-v1"))
+    Ok(base.join("Launcher").join("content-v1"))
 }
 
 async fn directory(path: &Path) -> Result<(), String> {

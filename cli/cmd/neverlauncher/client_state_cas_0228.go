@@ -11,7 +11,7 @@ import (
 // Returns a digest of the exact persisted version pointer, not a timestamp.
 // A missing pointer has a distinct sentinel from an empty pointer.
 func clientStateSHA2560228(root string) (string, error) {
-	file := filepath.Join(root, ".neverlauncher", "client-state.json")
+	file := filepath.Join(root, ".launcher", "client-state.json")
 	info, err := os.Lstat(file)
 	if errors.Is(err, os.ErrNotExist) {
 		return "absent", nil

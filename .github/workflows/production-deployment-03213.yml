@@ -35,14 +35,14 @@ jobs:
         run: |
           go test -race ./...
           go vet ./...
-          go build -o /tmp/neverlauncher-install ./cmd/neverlauncher-install
+          go build -o /tmp/launcher-install ./cmd/launcher-install
       - name: Validate compose Standard and Network/HA overlays
         shell: bash
         run: |
           set -euo pipefail
-          cp deploy/production/env.production.example /tmp/neverlauncher-dep09.env
-          chmod 600 /tmp/neverlauncher-dep09.env
-          cat >> /tmp/neverlauncher-dep09.env <<'EOF'
+          cp deploy/production/env.production.example /tmp/launcher-dep09.env
+          chmod 600 /tmp/launcher-dep09.env
+          cat >> /tmp/launcher-dep09.env <<'EOF'
           POSTGRES_PASSWORD=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
           REDIS_PASSWORD=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
           NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON={"ci":"not-production"}
@@ -57,9 +57,9 @@ jobs:
           NEVERLAUNCHER_REPLICA_ID=api-ci
           EOF
           # The compose CLI validates resolved service definitions, not application secrets.
-          docker compose --project-name neverlauncher --env-file /tmp/neverlauncher-dep09.env \
+          docker compose --project-name launcher --env-file /tmp/launcher-dep09.env \
             -f deploy/production/docker-compose.yml config --quiet
-          docker compose --project-name neverlauncher --env-file /tmp/neverlauncher-dep09.env \
+          docker compose --project-name launcher --env-file /tmp/launcher-dep09.env \
             -f deploy/production/docker-compose.yml \
             -f deploy/production/docker-compose.network-ha.yml \
             --profile network-ha config --quiet

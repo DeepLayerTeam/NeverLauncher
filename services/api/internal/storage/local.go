@@ -80,7 +80,7 @@ func (s *LocalStorage) Health(ctx context.Context) error {
 	if err := os.MkdirAll(s.root, 0o755); err != nil {
 		return fmt.Errorf("локальное хранилище недоступно: %w", err)
 	}
-	probe, err := os.CreateTemp(s.root, ".neverlauncher-health-*")
+	probe, err := os.CreateTemp(s.root, ".launcher-health-*")
 	if err != nil {
 		return fmt.Errorf("не удалось создать проверочный файл хранилища: %w", err)
 	}

@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-const worldBackupSchema02810 = "neverlauncher-world-backup/v1"
+const worldBackupSchema02810 = "launcher-world-backup/v1"
 
 var worldBackupID02810 = regexp.MustCompile(`^[0-9a-f]{32}$`)
 
@@ -413,7 +413,7 @@ func worldBackupWorlds02810(root string, requested []string) ([]string, error) {
 	selected := map[string]bool{}
 	worlds := []string{}
 	for _, name := range requested {
-		if !worldBackupValidRelative02810(name) || strings.Contains(name, "/") || name == ".neverlauncher" {
+		if !worldBackupValidRelative02810(name) || strings.Contains(name, "/") || name == ".launcher" {
 			return nil, fmt.Errorf("invalid world directory %q", name)
 		}
 		if selected[name] {

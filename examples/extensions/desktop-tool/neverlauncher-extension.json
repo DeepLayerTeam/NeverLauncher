@@ -1,9 +1,9 @@
 {
   "schemaVersion": "2.0",
-  "id": "ru.example.neverlauncher.desktop-tool",
+  "id": "ru.example.launcher.desktop-tool",
   "name": "Desktop Tool Example",
   "version": "0.1.0",
-  "publisher": "NeverLauncher Examples",
+  "publisher": "Launcher Examples",
   "api": "1.0",
   "targets": [
     {

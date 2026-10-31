@@ -1,4 +1,4 @@
-name: NeverLauncher current-version native source RC acceptance
+name: Launcher current-version native source RC acceptance
 on:
   workflow_call:
   workflow_dispatch:
@@ -23,7 +23,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: neverlauncher-03514-${{ github.ref }}
+  group: launcher-03514-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   rc-regressions:
@@ -68,7 +68,7 @@ jobs:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
       - name: Compile real native executable and restricted Ed25519 fixture signer
-        run: cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime --example cert_sign_fixture
+        run: cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime --example cert_sign_fixture
       - name: Execute signed HTTP install/repair and negative native trust tests
         shell: bash
         run: |
@@ -77,8 +77,8 @@ jobs:
           if [ '${{ matrix.target }}' = 'windows' ]; then ext='.exe'; fi
           mkdir -p rc-out/native
           python scripts/rc/native_03514.py \
-            --runtime "runtime/neverruntime/target/release/neverruntime${ext}" \
-            --signer "runtime/neverruntime/target/release/examples/cert_sign_fixture${ext}" \
+            --runtime "runtime/runtime/target/release/runtime${ext}" \
+            --signer "runtime/runtime/target/release/examples/cert_sign_fixture${ext}" \
             --commit "$GITHUB_SHA" \
             --output 'rc-out/native/${{ matrix.target }}.json'
       - uses: actions/upload-artifact@v4
@@ -131,7 +131,7 @@ jobs:
           npm run test:update-migration
           npm run test:diagnostics-support
           npm run test:accessibility
-      - name: Compile and unit-test native Tauri with current NeverRuntime
+      - name: Compile and unit-test native Tauri with current Runtime
         run: |
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --no-default-features
           cargo build --release --manifest-path apps/desktop/src-tauri/Cargo.toml
@@ -143,7 +143,7 @@ jobs:
           if [ '${{ matrix.target }}' = 'windows' ]; then ext='.exe'; fi
           mkdir -p rc-out/desktop
           python scripts/rc/platform_03514.py \
-            --binary "apps/desktop/src-tauri/target/release/neverlauncher-desktop${ext}" \
+            --binary "apps/desktop/src-tauri/target/release/launcher-desktop${ext}" \
             --frontend apps/desktop/dist \
             --commit "$GITHUB_SHA" \
             --output 'rc-out/desktop/${{ matrix.target }}.json'
@@ -162,15 +162,15 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_USER: neverlauncher_rc
-          POSTGRES_PASSWORD: neverlauncher_rc_ci_only
-          POSTGRES_DB: neverlauncher_rc
+          POSTGRES_USER: launcher_rc
+          POSTGRES_PASSWORD: launcher_rc_ci_only
+          POSTGRES_DB: launcher_rc
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U neverlauncher_rc -d neverlauncher_rc'
+          --health-cmd 'pg_isready -U launcher_rc -d launcher_rc'
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_rc:neverlauncher_rc_ci_only@127.0.0.1:5432/neverlauncher_rc?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:launcher_rc_ci_only@127.0.0.1:5432/launcher_rc?sslmode=disable
     steps:
       - uses: actions/checkout@v4
         with:
@@ -186,7 +186,7 @@ jobs:
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout 25m ./internal/httpapi ./internal/repository -run 'TestRollbackOperationIdempotency0217|TestReleaseWorkspaceDraftOwnershipAndResume0218|TestDurablePublishRechecksAuthorizationBeforeCommit0213|TestCanonicalPackageProductUploadValidatePublish|TestSupportReportSubmitRequiresLoginAndConsent03510|TestSupportReportRejectsUnknownFields03510|TestOperatorDiagnosticsDoesNotLeakInfrastructure03510|TestProductionGateFailClosedWithoutTargets03411|TestProductionGateUnknownEvidenceFieldsRejected03411|TestGAStableSnapshotImmutablePostgres0350|TestStableSQLTriggersRejectAllHeadAndManualStatusWrites0341'
-          go build ./cmd/neverlauncher-api
+          go build ./cmd/launcher-api
       - name: Real disposable Backend and owner/player authenticated HTTP E2E
         run: |
           mkdir -p rc-out/backend

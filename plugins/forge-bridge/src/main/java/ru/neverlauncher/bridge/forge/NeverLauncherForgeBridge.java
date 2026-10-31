@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.forge;
+package ru.launcher.bridge.forge;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.logging.LogUtils;
@@ -24,16 +24,16 @@ import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.network.config.ConfigurationTaskContext;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
-import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
-import ru.neverlauncher.bridge.common.BridgeControlCommand;
-import ru.neverlauncher.bridge.common.BridgeControlResult;
-import ru.neverlauncher.bridge.common.KickConfirmations;
-import ru.neverlauncher.bridge.common.PlatformControlReadback;
-import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
-import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
-import ru.neverlauncher.bridge.common.BridgeTickSampler;
-import ru.neverlauncher.bridge.common.JoinValidationResult;
-import ru.neverlauncher.bridge.modloader.ModLoaderBridgeRuntime;
+import ru.launcher.bridge.common.BridgePlatformTelemetry;
+import ru.launcher.bridge.common.BridgeControlCommand;
+import ru.launcher.bridge.common.BridgeControlResult;
+import ru.launcher.bridge.common.KickConfirmations;
+import ru.launcher.bridge.common.PlatformControlReadback;
+import ru.launcher.bridge.common.BridgeRuntimeDescriptor;
+import ru.launcher.bridge.common.BridgeRuntimeProbe;
+import ru.launcher.bridge.common.BridgeTickSampler;
+import ru.launcher.bridge.common.JoinValidationResult;
+import ru.launcher.bridge.modloader.ModLoaderBridgeRuntime;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -43,24 +43,24 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-@Mod(NeverLauncherForgeBridge.MOD_ID)
-public final class NeverLauncherForgeBridge {
+@Mod(LauncherForgeBridge.MOD_ID)
+public final class LauncherForgeBridge {
     private final KickConfirmations kickConfirmations = new KickConfirmations();
-    public static final String MOD_ID = "neverlauncher_serverbridge";
+    public static final String MOD_ID = "launcher_serverbridge";
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final ConfigurationTask.Type JOIN_VALIDATION_TASK =
-        new ConfigurationTask.Type("neverlauncher:join_validation");
+        new ConfigurationTask.Type("launcher:join_validation");
 
     private final ModLoaderBridgeRuntime runtime;
     private final BridgeTickSampler tickSampler = new BridgeTickSampler();
     private long lastTelemetrySampleAt;
 
-    public NeverLauncherForgeBridge(FMLJavaModLoadingContext context) {
+    public LauncherForgeBridge(FMLJavaModLoadingContext context) {
         Path configPath = FMLPaths.CONFIGDIR.get()
-            .resolve("neverlauncher-forge-bridge")
+            .resolve("launcher-forge-bridge")
             .resolve("config.yml");
         this.runtime = new ModLoaderBridgeRuntime(
-            "forge", "Forge", configPath, NeverLauncherForgeBridge.class, NeverLauncherForgeBridge::loadedArtifactPath, LOGGER,
+            "forge", "Forge", configPath, LauncherForgeBridge.class, LauncherForgeBridge::loadedArtifactPath, LOGGER,
             () -> {
                 String loaderVersion = BridgeRuntimeProbe.nestedStaticString("net.minecraftforge.fml.loading.FMLLoader", "versionInfo", "forgeVersion");
                 if (loaderVersion.isBlank()) loaderVersion = BridgeRuntimeProbe.packageVersion("net.minecraftforge.fml.loading.FMLLoader");
@@ -93,7 +93,7 @@ public final class NeverLauncherForgeBridge {
             runtime.start();
             runtime.startControlChannel(command -> executeControl(event.getServer(), command));
         } catch (Exception e) {
-            throw new IllegalStateException("NeverLauncher Forge ServerBridge failed to start", e);
+            throw new IllegalStateException("Launcher Forge ServerBridge failed to start", e);
         }
     }
 
@@ -197,7 +197,7 @@ public final class NeverLauncherForgeBridge {
         Connection connection = event.getConnection();
         PacketListener listener = connection.getPacketListener();
         if (!(listener instanceof ServerCommonPacketListenerImpl serverListener)) {
-            connection.disconnect(Component.literal("NeverLauncher could not resolve the login listener"));
+            connection.disconnect(Component.literal("Launcher could not resolve the login listener"));
             return;
         }
 
@@ -219,7 +219,7 @@ public final class NeverLauncherForgeBridge {
         @Override
         public void start(ConfigurationTaskContext ctx) {
             if (username.isBlank()) {
-                ctx.getConnection().disconnect(Component.literal("NeverLauncher could not resolve the login profile"));
+                ctx.getConnection().disconnect(Component.literal("Launcher could not resolve the login profile"));
                 return;
             }
 
@@ -232,7 +232,7 @@ public final class NeverLauncherForgeBridge {
 
         @Override
         public void start(Consumer<Packet<?>> send) {
-            throw new IllegalStateException("Forge must start NeverLauncher join validation with ConfigurationTaskContext");
+            throw new IllegalStateException("Forge must start Launcher join validation with ConfigurationTaskContext");
         }
 
         @Override
@@ -243,7 +243,7 @@ public final class NeverLauncherForgeBridge {
         private void completeOnServerThread(ConfigurationTaskContext ctx, JoinValidationResult decision) {
             var server = ServerLifecycleHooks.getCurrentServer();
             if (server == null) {
-                ctx.getConnection().disconnect(Component.literal("NeverLauncher server is not available"));
+                ctx.getConnection().disconnect(Component.literal("Launcher server is not available"));
                 return;
             }
 
@@ -259,7 +259,7 @@ public final class NeverLauncherForgeBridge {
                 ));
                 if (decision.allowed) {
                     LOGGER.info(
-                        "neverlauncher.join.allowed username={} serverId={} platform=forge",
+                        "launcher.join.allowed username={} serverId={} platform=forge",
                         username,
                         runtime.serverId()
                     );
@@ -269,7 +269,7 @@ public final class NeverLauncherForgeBridge {
 
                 ctx.getConnection().disconnect(Component.literal(decision.userMessage()));
                 LOGGER.info(
-                    "neverlauncher.join.denied username={} reason={} platform=forge",
+                    "launcher.join.denied username={} reason={} platform=forge",
                     username,
                     decision.reason
                 );
@@ -281,14 +281,14 @@ public final class NeverLauncherForgeBridge {
     private BridgeControlResult executeControl(net.minecraft.server.MinecraftServer server, BridgeControlCommand command) throws Exception {
         if (server == null) return BridgeControlResult.failed("minecraft_server_unavailable");
         if ("server.shutdown".equals(command.type())) {
-            String reason = safeLine(command.payload().getOrDefault("reason", "Shutdown requested by NeverLauncher"), 512);
+            String reason = safeLine(command.payload().getOrDefault("reason", "Shutdown requested by Launcher"), 512);
             Thread thread = new Thread(() -> {
                 try { Thread.sleep(1500L); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
                 server.execute(() -> {
                     runtime.publishEvent("server.shutdown", Map.of("reason", reason, "source", "control-api"));
                     server.halt(false);
                 });
-            }, "neverlauncher-control-shutdown");
+            }, "launcher-control-shutdown");
             thread.setDaemon(true);
             thread.start();
             return BridgeControlResult.accepted(Map.of("scheduled", "true", "graceMillis", "1500"));

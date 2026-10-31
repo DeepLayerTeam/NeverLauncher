@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Regressions for bounded and secret-redacted Minecraft CI diagnostics."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -21,8 +22,8 @@ class ClientDiagnosticsTest(unittest.TestCase):
             runtime = Path(tmp) / "runtime"
             logs = runtime / "materialized-client" / "logs"
             logs.mkdir(parents=True)
-            (logs / "neverruntime-vanilla-certification-1.12.2-1.log").write_text(
-                'exception sample\nBearer ABC.def/ghi\n--accessToken SECRET_TOKEN\n'
+            (logs / "runtime-vanilla-certification-1.12.2-1.log").write_text(
+                "exception sample\nBearer ABC.def/ghi\n--accessToken SECRET_TOKEN\n"
                 '{"accessToken":"JSON_SECRET", "password":"PASSWORD_SECRET"}\n',
                 encoding="utf-8",
             )
@@ -30,7 +31,12 @@ class ClientDiagnosticsTest(unittest.TestCase):
             MODULE.export(runtime, out)
             data = out.read_text(encoding="utf-8")
             self.assertIn("exception sample", data)
-            for secret in ("ABC.def/ghi", "SECRET_TOKEN", "JSON_SECRET", "PASSWORD_SECRET"):
+            for secret in (
+                "ABC.def/ghi",
+                "SECRET_TOKEN",
+                "JSON_SECRET",
+                "PASSWORD_SECRET",
+            ):
                 self.assertNotIn(secret, data)
             self.assertIn("[REDACTED]", data)
 
@@ -40,8 +46,10 @@ class ClientDiagnosticsTest(unittest.TestCase):
             client = runtime / "materialized-client"
             client.mkdir(parents=True)
             (client / "hs_err_pid123.log").write_text(
-                "Native JVM crash\n" + "X" * (MODULE.MAX_BYTES + 20) +
-                "\n--accessToken DO_NOT_DISCLOSE\n", encoding="utf-8"
+                "Native JVM crash\n"
+                + "X" * (MODULE.MAX_BYTES + 20)
+                + "\n--accessToken DO_NOT_DISCLOSE\n",
+                encoding="utf-8",
             )
             output = runtime / "client-diagnostics.txt"
             MODULE.export(runtime, output)
@@ -49,7 +57,9 @@ class ClientDiagnosticsTest(unittest.TestCase):
             self.assertIn("native crash report", data)
             self.assertIn("[REDACTED]", data)
             self.assertNotIn("DO_NOT_DISCLOSE", data)
-            self.assertNotIn("Native JVM crash", data)  # За пределами ограниченного хвоста.
+            self.assertNotIn(
+                "Native JVM crash", data
+            )  # За пределами ограниченного хвоста.
 
     def test_missing_log_is_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

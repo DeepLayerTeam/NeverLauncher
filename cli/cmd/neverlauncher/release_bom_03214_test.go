@@ -70,13 +70,13 @@ func TestReleaseBOM03214TamperBlocks(t *testing.T) {
 	}{
 		{"modified backend binary", func(t *testing.T, dir string) {
 			t.Helper()
-			if err := os.WriteFile(filepath.Join(dir, "neverlauncher-api-linux-x64"), []byte("changed"), 0600); err != nil {
+			if err := os.WriteFile(filepath.Join(dir, "launcher-api-linux-x64"), []byte("changed"), 0600); err != nil {
 				t.Fatal(err)
 			}
 		}},
 		{"deleted plugin", func(t *testing.T, dir string) {
 			t.Helper()
-			if err := os.Remove(filepath.Join(dir, "neverlauncher-velocity-bridge-0.32.14.jar")); err != nil {
+			if err := os.Remove(filepath.Join(dir, "launcher-velocity-bridge-0.32.14.jar")); err != nil {
 				t.Fatal(err)
 			}
 		}},

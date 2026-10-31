@@ -19,7 +19,7 @@ if ([string]::IsNullOrWhiteSpace($OutDir)) {
     $OutDir = Join-Path $Root $OutDir
 }
 $OutDir = [System.IO.Path]::GetFullPath($OutDir)
-$RuntimeManifest = Join-Path $Root "runtime\neverruntime\Cargo.toml"
+$RuntimeManifest = Join-Path $Root "runtime\runtime\Cargo.toml"
 $SensorManifest = Join-Path $Root "runtime\guard-sensor\Cargo.toml"
 $DesktopManifest = Join-Path $Root "apps\desktop\src-tauri\Cargo.toml"
 
@@ -222,36 +222,36 @@ try {
         New-Item -ItemType Directory -Force -Path $PackageDir | Out-Null
 
         Invoke-Checked { rustup target add $Target.RustTarget } "rustup target add $($Target.RustTarget)"
-        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $RuntimeManifest --bin guard --bin neverruntime } "Guard/NeverRuntime $Arch release build"
+        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $RuntimeManifest --bin guard --bin runtime } "Guard/Runtime $Arch release build"
         Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $SensorManifest } "Guard Sensor $Arch release build"
         Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $DesktopManifest } "Desktop $Arch native release build"
 
-        $DesktopSource = Join-Path $Root "apps\desktop\src-tauri\target\$($Target.RustTarget)\release\neverlauncher-desktop.exe"
-        $GuardSource = Join-Path $Root "runtime\neverruntime\target\$($Target.RustTarget)\release\guard.exe"
-        $RuntimeSource = Join-Path $Root "runtime\neverruntime\target\$($Target.RustTarget)\release\neverruntime.exe"
+        $DesktopSource = Join-Path $Root "apps\desktop\src-tauri\target\$($Target.RustTarget)\release\launcher-desktop.exe"
+        $GuardSource = Join-Path $Root "runtime\runtime\target\$($Target.RustTarget)\release\guard.exe"
+        $RuntimeSource = Join-Path $Root "runtime\runtime\target\$($Target.RustTarget)\release\runtime.exe"
         $SensorSource = Join-Path $Root "runtime\guard-sensor\target\$($Target.RustTarget)\release\guard_sensor.dll"
         if (-not (Test-Path $DesktopSource -PathType Leaf)) { throw "Desktop $Arch artifact missing: $DesktopSource" }
         if (-not (Test-Path $GuardSource -PathType Leaf)) { throw "Guard $Arch artifact missing: $GuardSource" }
-        if (-not (Test-Path $RuntimeSource -PathType Leaf)) { throw "NeverRuntime $Arch artifact missing: $RuntimeSource" }
+        if (-not (Test-Path $RuntimeSource -PathType Leaf)) { throw "Runtime $Arch artifact missing: $RuntimeSource" }
         if (-not (Test-Path $SensorSource -PathType Leaf)) { throw "Guard Sensor $Arch artifact missing: $SensorSource" }
 
-        $DesktopPackageName = "neverlauncher-desktop.exe"
+        $DesktopPackageName = "launcher-desktop.exe"
         $DesktopPackagePath = Join-Path $PackageDir $DesktopPackageName
         $GuardPackagePath = Join-Path $PackageDir "guard.exe"
-        $RuntimePackagePath = Join-Path $PackageDir "neverruntime.exe"
+        $RuntimePackagePath = Join-Path $PackageDir "runtime.exe"
         $SensorPackagePath = Join-Path $PackageDir "guard-sensor.dll"
         Copy-Item $DesktopSource $DesktopPackagePath -Force
         Copy-Item $GuardSource $GuardPackagePath -Force
         Copy-Item $RuntimeSource $RuntimePackagePath -Force
         Copy-Item $SensorSource $SensorPackagePath -Force
 
-        $CliRootName = "neverlauncher-cli-windows-$Arch.exe"
+        $CliRootName = "launcher-cli-windows-$Arch.exe"
         $CliRootPath = Join-Path $OutDir $CliRootName
         Push-Location (Join-Path $Root "cli")
         $OldGOOS = $env:GOOS; $OldGOARCH = $env:GOARCH; $OldCGO = $env:CGO_ENABLED
         try {
             $env:GOOS = "windows"; $env:GOARCH = $Target.GoArch; $env:CGO_ENABLED = "0"
-            Invoke-Checked { go build -trimpath -ldflags "-s -w -X main.version=$Version -X main.componentSetTrustedKey02310=$env:NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY -X main.componentSetRootKey02312=$env:NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY" -o $CliRootPath .\cmd\neverlauncher } "CLI $Arch release build"
+            Invoke-Checked { go build -trimpath -ldflags "-s -w -X main.version=$Version -X main.componentSetTrustedKey02310=$env:NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY -X main.componentSetRootKey02312=$env:NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY" -o $CliRootPath .\cmd\launcher } "CLI $Arch release build"
         } finally {
             $env:GOOS = $OldGOOS; $env:GOARCH = $OldGOARCH; $env:CGO_ENABLED = $OldCGO
             Pop-Location
@@ -279,12 +279,12 @@ try {
 
         $DesktopRecord = Get-ArtifactRecord $DesktopPackagePath $DesktopPackageName "desktop-launcher" $Arch $Target.MachineText $DesktopSignature $SignedProduction
         $GuardRecord = Get-ArtifactRecord $GuardPackagePath "guard.exe" "guard" $Arch $Target.MachineText $GuardSignature $SignedProduction
-        $RuntimeRecord = Get-ArtifactRecord $RuntimePackagePath "neverruntime.exe" "runtime" $Arch $Target.MachineText $RuntimeSignature $SignedProduction
+        $RuntimeRecord = Get-ArtifactRecord $RuntimePackagePath "runtime.exe" "runtime" $Arch $Target.MachineText $RuntimeSignature $SignedProduction
         $SensorRecord = Get-ArtifactRecord $SensorPackagePath "guard-sensor.dll" "sensor" $Arch $Target.MachineText $SensorSignature $SignedProduction
-        $CliPackagePath = Join-Path $PackageDir "neverlauncher-cli.exe"
+        $CliPackagePath = Join-Path $PackageDir "launcher-cli.exe"
         Copy-Item $CliRootPath $CliPackagePath -Force
         $CliPackageSignature = if ($SignedProduction) { Get-AuthenticodeSignature $CliPackagePath } else { $null }
-        $CliPackageRecord = Get-ArtifactRecord $CliPackagePath "neverlauncher-cli.exe" "cli" $Arch $Target.MachineText $CliPackageSignature $SignedProduction
+        $CliPackageRecord = Get-ArtifactRecord $CliPackagePath "launcher-cli.exe" "cli" $Arch $Target.MachineText $CliPackageSignature $SignedProduction
         $Manifest = [ordered]@{
             schemaVersion = "1.1"
             productVersion = $Version
@@ -292,7 +292,7 @@ try {
             architecture = $Arch
             rustTarget = $Target.RustTarget
             peMachine = $Target.MachineText
-            neverGuardProtocolVersion = 4
+            GuardProtocolVersion = 4
             processBoundary = "separate-guard-executable"
             authenticatedIpc = "windows-named-pipe+current-user-system-acl+hmac-sha256-v4"
             windowsProductionHardeningVersion = 1
@@ -304,7 +304,7 @@ try {
             signingMode = $(if ($SignedProduction) { "authenticode-rfc3161" } else { "unsigned-development" })
             signerThumbprint = $(if ($SignedProduction) { $SigningContext.Certificate.Thumbprint.ToLowerInvariant() } else { "" })
             timestampServer = $(if ($SignedProduction) { $TimestampServer } else { "" })
-            requiredAdjacentArtifacts = @("guard.exe", "guard-sensor.dll", "neverruntime.exe", "neverlauncher-cli.exe")
+            requiredAdjacentArtifacts = @("guard.exe", "guard-sensor.dll", "runtime.exe", "launcher-cli.exe")
             artifacts = @($DesktopRecord, $GuardRecord, $SensorRecord, $RuntimeRecord, $CliPackageRecord)
         }
         $PackageManifestPath = Join-Path $PackageDir "WINDOWS_PACKAGE_MANIFEST.json"
@@ -317,20 +317,20 @@ try {
         $PackageManifestHash = (Get-FileHash -Algorithm SHA256 $PackageManifestPath).Hash.ToLowerInvariant()
         $ComponentUpdateManifest = [ordered]@{
             schemaVersion = "1.0"
-            product = "NeverLauncher"
+            product = "Launcher"
             productVersion = $Version
             platform = "windows"
             architecture = $Arch
             layout = "adjacent-files"
             trustMode = $(if ($SignedProduction) { "authenticode-rfc3161" } else { "unsigned-development" })
             components = @(
-                [ordered]@{ component = "desktop"; sourcePath = "neverlauncher-desktop.exe"; targetPath = "neverlauncher-desktop.exe"; sha256 = $DesktopRecord.sha256; size = $DesktopRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $DesktopRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $DesktopRecord.timestampSignerThumbprint } else { "" }) },
+                [ordered]@{ component = "desktop"; sourcePath = "launcher-desktop.exe"; targetPath = "launcher-desktop.exe"; sha256 = $DesktopRecord.sha256; size = $DesktopRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $DesktopRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $DesktopRecord.timestampSignerThumbprint } else { "" }) },
                 [ordered]@{ component = "guard"; sourcePath = "guard.exe"; targetPath = "guard.exe"; sha256 = $GuardRecord.sha256; size = $GuardRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $GuardRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $GuardRecord.timestampSignerThumbprint } else { "" }) },
-                [ordered]@{ component = "runtime"; sourcePath = "neverruntime.exe"; targetPath = "neverruntime.exe"; sha256 = $RuntimeRecord.sha256; size = $RuntimeRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $RuntimeRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $RuntimeRecord.timestampSignerThumbprint } else { "" }) },
+                [ordered]@{ component = "runtime"; sourcePath = "runtime.exe"; targetPath = "runtime.exe"; sha256 = $RuntimeRecord.sha256; size = $RuntimeRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $RuntimeRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $RuntimeRecord.timestampSignerThumbprint } else { "" }) },
                 [ordered]@{ component = "sensor"; sourcePath = "guard-sensor.dll"; targetPath = "guard-sensor.dll"; sha256 = $SensorRecord.sha256; size = $SensorRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $SensorRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $SensorRecord.timestampSignerThumbprint } else { "" }) }
             )
             supportFiles = @(
-                [ordered]@{ component = "updater"; sourcePath = "neverlauncher-cli.exe"; targetPath = "neverlauncher-cli.exe"; sha256 = $CliPackageRecord.sha256; size = $CliPackageRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $CliPackageRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $CliPackageRecord.timestampSignerThumbprint } else { "" }) },
+                [ordered]@{ component = "updater"; sourcePath = "launcher-cli.exe"; targetPath = "launcher-cli.exe"; sha256 = $CliPackageRecord.sha256; size = $CliPackageRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $CliPackageRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $CliPackageRecord.timestampSignerThumbprint } else { "" }) },
                 [ordered]@{ component = "package-manifest"; sourcePath = "WINDOWS_PACKAGE_MANIFEST.json"; targetPath = "WINDOWS_PACKAGE_MANIFEST.json"; sha256 = $PackageManifestHash; size = $PackageManifestItem.Length; executable = $false }
             )
         }
@@ -343,15 +343,15 @@ try {
             Invoke-Checked { python $ComponentSigner --manifest $ComponentUpdatePath --development } "prepare development component set"
         }
 
-        $ZipName = "neverlauncher-desktop-$Version-windows-$Arch.zip"
+        $ZipName = "launcher-desktop-$Version-windows-$Arch.zip"
         $ZipPath = Join-Path $OutDir $ZipName
         if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
         Compress-Archive -Path (Join-Path $PackageDir "*") -DestinationPath $ZipPath -CompressionLevel Optimal
         if (-not (Test-Path $ZipPath -PathType Leaf)) { throw "Windows $Arch package was not created: $ZipPath" }
 
-        $DesktopRootName = "neverlauncher-desktop-windows-$Arch.exe"
+        $DesktopRootName = "launcher-desktop-windows-$Arch.exe"
         $GuardRootName = "guard-windows-$Arch.exe"
-        $RuntimeRootName = "neverruntime-windows-$Arch.exe"
+        $RuntimeRootName = "runtime-windows-$Arch.exe"
         $SensorRootName = "guard-sensor-windows-$Arch.dll"
         $DesktopRootPath = Join-Path $OutDir $DesktopRootName
         $GuardRootPath = Join-Path $OutDir $GuardRootName
@@ -416,17 +416,17 @@ try {
     # Обратно совместимый пакет x64 Guard CI — отдельный артефакт
     # сертификации со старым контрактом схемы и платформы;
     # намеренно исключён из DELIVERY_MANIFEST.json для 0.15.2+.
-    $LegacyDesktopRoot = Join-Path $OutDir "neverlauncher-desktop-windows-amd64.exe"
+    $LegacyDesktopRoot = Join-Path $OutDir "launcher-desktop-windows-amd64.exe"
     $LegacyGuardRoot = Join-Path $OutDir "guard-windows-amd64.exe"
-    $LegacyCliRoot = Join-Path $OutDir "neverlauncher-cli-windows-amd64.exe"
-    Copy-Item (Join-Path $OutDir "neverlauncher-desktop-windows-x64.exe") $LegacyDesktopRoot -Force
+    $LegacyCliRoot = Join-Path $OutDir "launcher-cli-windows-amd64.exe"
+    Copy-Item (Join-Path $OutDir "launcher-desktop-windows-x64.exe") $LegacyDesktopRoot -Force
     Copy-Item (Join-Path $OutDir "guard-windows-x64.exe") $LegacyGuardRoot -Force
-    Copy-Item (Join-Path $OutDir "neverlauncher-cli-windows-x64.exe") $LegacyCliRoot -Force
+    Copy-Item (Join-Path $OutDir "launcher-cli-windows-x64.exe") $LegacyCliRoot -Force
 
     $LegacyPackageDir = Join-Path $OutDir "windows-amd64-guard-ci-package"
     if (Test-Path $LegacyPackageDir) { Remove-Item -Recurse -Force $LegacyPackageDir }
     New-Item -ItemType Directory -Force -Path $LegacyPackageDir | Out-Null
-    $LegacyDesktopName = "neverlauncher-desktop-$Version-windows-amd64.exe"
+    $LegacyDesktopName = "launcher-desktop-$Version-windows-amd64.exe"
     $LegacyDesktopPackage = Join-Path $LegacyPackageDir $LegacyDesktopName
     $LegacyGuardPackage = Join-Path $LegacyPackageDir "guard.exe"
     Copy-Item $LegacyDesktopRoot $LegacyDesktopPackage -Force
@@ -439,7 +439,7 @@ try {
         schemaVersion = "1.0"
         productVersion = $Version
         platform = "windows-amd64"
-        neverGuardProtocolVersion = 4
+        GuardProtocolVersion = 4
         processBoundary = "separate-guard-executable"
         authenticatedIpc = "windows-named-pipe+current-user-system-acl+hmac-sha256-v4"
         windowsProductionHardeningVersion = 1
@@ -456,7 +456,7 @@ try {
     Write-JsonNoBom (Join-Path $LegacyPackageDir "WINDOWS_PACKAGE_MANIFEST.json") $LegacyManifest
     Copy-Item (Join-Path $OutDir "GUARD_RELEASE_ALLOWLIST_WINDOWS.json") (Join-Path $LegacyPackageDir "GUARD_RELEASE_ALLOWLIST.json") -Force
     Write-JsonNoBom (Join-Path $OutDir "WINDOWS_PACKAGE_MANIFEST.json") $LegacyManifest
-    $LegacyZipPath = Join-Path $OutDir "neverlauncher-desktop-$Version-windows-amd64.zip"
+    $LegacyZipPath = Join-Path $OutDir "launcher-desktop-$Version-windows-amd64.zip"
     if (Test-Path $LegacyZipPath) { Remove-Item -Force $LegacyZipPath }
     Compress-Archive -Path (Join-Path $LegacyPackageDir "*") -DestinationPath $LegacyZipPath -CompressionLevel Optimal
     if (-not (Test-Path $LegacyZipPath -PathType Leaf)) { throw "Legacy Guard CI Windows package was not created: $LegacyZipPath" }
@@ -475,7 +475,7 @@ try {
     }
     $Evidence = [ordered]@{
         schemaVersion = "1.0"
-        product = "NeverLauncher"
+        product = "Launcher"
         productVersion = $Version
         platform = "windows"
         signingMode = $(if ($SignedProduction) { "authenticode-rfc3161" } else { "unsigned-development" })
@@ -486,7 +486,7 @@ try {
     if ($null -ne $SignerEvidence) { $Evidence["signer"] = $SignerEvidence }
     Write-JsonNoBom (Join-Path $OutDir "WINDOWS_SIGNING_EVIDENCE.json") $Evidence
 
-    Write-Host "NeverLauncher $Version Windows x64+ARM64 packages prepared (signingMode=$($Evidence.signingMode))"
+    Write-Host "Launcher $Version Windows x64+ARM64 packages prepared (signingMode=$($Evidence.signingMode))"
 } finally {
     if ($null -ne $SigningContext -and $SigningContext.Imported) {
         $ImportedPath = "Cert:\CurrentUser\My\$($SigningContext.Certificate.Thumbprint)"

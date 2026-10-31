@@ -9,7 +9,7 @@ def read(rel: str) -> str:
     path = ROOT / rel
     if not path.is_file():
         raise SystemExit(
-            f"[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: missing {rel}"
+            f"[Launcher] Debug & Instrumentation Guard 0.18.7 gate: missing {rel}"
         )
     return path.read_text(encoding="utf-8")
 
@@ -18,7 +18,7 @@ def require(text: str, rel: str, values: list[str]) -> None:
     missing = [value for value in values if value not in text]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: {rel} missing {missing}"
+            f"[Launcher] Debug & Instrumentation Guard 0.18.7 gate: {rel} missing {missing}"
         )
 
 
@@ -28,15 +28,15 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) < (
     7,
 ):
     raise SystemExit(
-        f"[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: VERSION is {VERSION}"
+        f"[Launcher] Debug & Instrumentation Guard 0.18.7 gate: VERSION is {VERSION}"
     )
 
 sensor = read("runtime/guard-sensor/src/debug_instrumentation.rs")
 stream = read("runtime/guard-sensor/src/lib.rs")
-launcher = read("runtime/neverruntime/src/windows_sensor.rs")
-parent = read("runtime/neverruntime/src/windows_module_guard.rs")
-report = read("runtime/neverruntime/src/windows_debug_instrumentation.rs")
-integration = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+launcher = read("runtime/runtime/src/windows_sensor.rs")
+parent = read("runtime/runtime/src/windows_module_guard.rs")
+report = read("runtime/runtime/src/windows_debug_instrumentation.rs")
+integration = read("runtime/runtime/tests/guard_sensor_windows.rs")
 probe = read("runtime/guard-debug-probe/src/main.rs")
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
@@ -65,7 +65,7 @@ for forbidden in [
 ]:
     if forbidden in sensor:
         raise SystemExit(
-            f"[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: Sensor uses forbidden anti-analysis primitive {forbidden}"
+            f"[Launcher] Debug & Instrumentation Guard 0.18.7 gate: Sensor uses forbidden anti-analysis primitive {forbidden}"
         )
 
 require(
@@ -83,7 +83,7 @@ require(
 )
 require(
     launcher,
-    "runtime/neverruntime/src/windows_sensor.rs",
+    "runtime/runtime/src/windows_sensor.rs",
     [
         "-XX:+DisableAttachMechanism",
         "-javaagent:",
@@ -101,7 +101,7 @@ require(
 )
 require(
     parent,
-    "runtime/neverruntime/src/windows_module_guard.rs",
+    "runtime/runtime/src/windows_module_guard.rs",
     [
         "debug_instrumentation: crate::WindowsDebugInstrumentationReport",
         "expected DEBUG_INSTRUMENTATION_READY as fourth event",
@@ -112,7 +112,7 @@ require(
 )
 require(
     report,
-    "runtime/neverruntime/src/windows_debug_instrumentation.rs",
+    "runtime/runtime/src/windows_debug_instrumentation.rs",
     [
         "pub struct WindowsDebugInstrumentationReport",
         "NEVERGUARD_DEBUG_INSTRUMENTATION_VERSION",
@@ -124,7 +124,7 @@ require(
 )
 require(
     integration,
-    "runtime/neverruntime/tests/guard_sensor_windows.rs",
+    "runtime/runtime/tests/guard_sensor_windows.rs",
     [
         "guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable",
         "guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach",
@@ -155,18 +155,18 @@ require(
 )
 if "guard-debug-instrumentation-0187.py" not in preflight:
     raise SystemExit(
-        "[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: preflight wiring missing"
+        "[Launcher] Debug & Instrumentation Guard 0.18.7 gate: preflight wiring missing"
     )
 
 for rel, text in [
     ("runtime/guard-sensor/src/debug_instrumentation.rs", sensor),
-    ("runtime/neverruntime/src/windows_debug_instrumentation.rs", report),
+    ("runtime/runtime/src/windows_debug_instrumentation.rs", report),
 ]:
     lowered = text.lower()
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
             raise SystemExit(
-                f"[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: placeholder {placeholder!r} in {rel}"
+                f"[Launcher] Debug & Instrumentation Guard 0.18.7 gate: placeholder {placeholder!r} in {rel}"
             )
 
-print("[NeverLauncher] Debug & Instrumentation Guard 0.18.7 gate: OK")
+print("[Launcher] Debug & Instrumentation Guard 0.18.7 gate: OK")

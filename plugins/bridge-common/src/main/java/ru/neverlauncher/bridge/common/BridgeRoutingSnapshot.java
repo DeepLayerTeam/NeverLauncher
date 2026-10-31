@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -22,7 +22,7 @@ public record BridgeRoutingSnapshot(
     String digest,
     String signature
 ) {
-    private static final String SCHEME = "NeverLauncher-ServerBridge-Routing-v2";
+    private static final String SCHEME = "Launcher-ServerBridge-Routing-v2";
 
     public static BridgeRoutingSnapshot create(
         String serverId,

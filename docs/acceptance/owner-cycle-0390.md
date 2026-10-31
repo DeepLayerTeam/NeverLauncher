@@ -1,10 +1,10 @@
-# NeverLauncher 0.39.0 — реальная приёмка владельца через Admin
+# Launcher 0.39.0 — реальная приёмка владельца через Admin
 
 Это **исполняемый сценарий**, не декларация готовности. Для допуска 0.39.0 `scripts/release/certify-admin-ga-0220.sh` требует запуск `e2e/scripts/owner-cycle-0390-browser.py` и точную привязку `owner-cycle-0390.json` к `admin-0220.json`. Отсутствие окружения, любой отказ или неполный результат блокируют сертификат.
 
 ## Развёртывание
 
-1. На **одноразовом** изолированном стенде развернуть Admin и PostgreSQL Backend из того же commit и версии, что кандидат. В `E2E_EXPECTED_COMMIT` указать точный SHA checkout; для Backend `/api/v1/status` и метатег Admin `neverlauncher-source-commit` должны вернуть тот же SHA. Сертификатор дополнительно проверяет действующие правила выпуска, тесты, Go и Vite сборки.
+1. На **одноразовом** изолированном стенде развернуть Admin и PostgreSQL Backend из того же commit и версии, что кандидат. В `E2E_EXPECTED_COMMIT` указать точный SHA checkout; для Backend `/api/v1/status` и метатег Admin `launcher-source-commit` должны вернуть тот же SHA. Сертификатор дополнительно проверяет действующие правила выпуска, тесты, Go и Vite сборки.
 2. Создать проект с профилем и каналом; в нём **две реальные immutable-сборки**: одна проверена и допущена к публикации согласно действующей политике (включая trusted runtime evidence, если канал это требует), вторая не допущена. Подготовить через Admin сохранённые release-drafts с разными версиями, привязанные к этим пакетам. Не заменять runtime evidence имитациями и не создавать искусственные PASS.
 3. Обеспечить уже опубликованную более старую версию в канале для rollback. Если политика stable разрешает только staged rollback, выполнить его штатную независимую сертификацию или использовать отдельный проверенный канал, где rollback действительно переключает указатель. Сценарий **не засчитывает staged rollback за выполненный**.
 4. Установить Playwright с Chromium и переменные окружения: `E2E_ADMIN_URL`, `E2E_API_URL`, `E2E_ADMIN_TOKEN`, `E2E_OPERATOR_TOKEN`, `E2E_FOREIGN_PROJECT_ID`, `E2E_EXPECTED_COMMIT`, `E2E_OWNER_PROJECT_ID`, `E2E_OWNER_PROFILE_ID`, `E2E_OWNER_CHANNEL`, `E2E_OWNER_VALID_PACKAGE_ID`, `E2E_OWNER_BROKEN_PACKAGE_ID`, `E2E_OWNER_VALID_DRAFT_VERSION`, `E2E_OWNER_BROKEN_DRAFT_VERSION`, `E2E_OWNER_ROLLBACK_VERSION`, `E2E_OWNER_DESTRUCTIVE_ACK=OWNER_0390_DISPOSABLE_STAGING`. Для полноценной работы административные токены должны иметь необходимые реальные права и MFA; сценарий не подменяет MFA.

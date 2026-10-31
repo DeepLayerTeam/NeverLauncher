@@ -38,11 +38,11 @@ func TestDeliveryTargetNormalization0151(t *testing.T) {
 func TestDeliveryManifestBuildVerifyAndResolve0151(t *testing.T) {
 	dir := t.TempDir()
 	files := map[string]string{
-		"neverlauncher-desktop-linux-amd64":              "linux launcher",
+		"launcher-desktop-linux-amd64":              "linux launcher",
 		"guard-linux-amd64":                         "linux guard",
-		"neverlauncher-desktop-0.15.1-windows-arm64.exe": "windows arm launcher",
-		"neverlauncher-desktop-macos-universal":          "mac universal launcher",
-		"neverlauncher-paper-bridge-0.15.1.jar":          "paper bridge",
+		"launcher-desktop-0.15.1-windows-arm64.exe": "windows arm launcher",
+		"launcher-desktop-macos-universal":          "mac universal launcher",
+		"launcher-paper-bridge-0.15.1.jar":          "paper bridge",
 		"RELEASE_NOTES.txt":                              "notes",
 	}
 	for name, body := range files {
@@ -68,7 +68,7 @@ func TestDeliveryManifestBuildVerifyAndResolve0151(t *testing.T) {
 		t.Fatal(err)
 	}
 	matches := resolveDeliveryArtifacts0151(manifest, macArm, "desktop-launcher", "")
-	if len(matches) != 1 || matches[0].Name != "neverlauncher-desktop-macos-universal" {
+	if len(matches) != 1 || matches[0].Name != "launcher-desktop-macos-universal" {
 		t.Fatalf("macOS universal resolution failed: %+v", matches)
 	}
 	linux, _ := canonicalDeliveryTarget("linux", "amd64")
@@ -80,7 +80,7 @@ func TestDeliveryManifestBuildVerifyAndResolve0151(t *testing.T) {
 
 func TestDeliveryManifestTamperFailsClosed0151(t *testing.T) {
 	dir := t.TempDir()
-	artifact := filepath.Join(dir, "neverlauncher-cli-linux-amd64")
+	artifact := filepath.Join(dir, "launcher-cli-linux-amd64")
 	if err := os.WriteFile(artifact, []byte("original"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestReleaseBuildEmbedsDeliveryManifest0151(t *testing.T) {
 	}
 	foundLinuxCLI := false
 	for _, artifact := range manifest.Artifacts {
-		if artifact.Name == "neverlauncher-cli-linux-amd64" {
+		if artifact.Name == "launcher-cli-linux-amd64" {
 			foundLinuxCLI = artifact.Platform == "linux" && artifact.Architecture == "x64" && artifact.Component == "cli"
 		}
 	}

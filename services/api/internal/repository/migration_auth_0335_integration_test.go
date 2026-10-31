@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/fileauth"
-	gc "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcredentials"
-	gi "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitidentity"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
+	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcredentials"
+	gi "gitflic.ru/skif4er/launcher/services/api/internal/gravitidentity"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 // Requires a disposable PostgreSQL. Exercises actual inserts, transaction

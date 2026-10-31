@@ -31,12 +31,12 @@ jobs:
       - name: Run security boundary tests (no skips)
         run: go test -count=1 ./internal/model ./internal/trustbaseline ./internal/repository ./internal/extensionhost ./internal/httpapi
       - name: Compile actual backend
-        run: go build -o neverlauncher-api-diag.exe ./cmd/neverlauncher-api
+        run: go build -o launcher-api-diag.exe ./cmd/launcher-api
       - name: Verify both diagnostics and fail-closed flags
         shell: bash
         run: |
           set -euo pipefail
-          bin=./neverlauncher-api-diag.exe
+          bin=./launcher-api-diag.exe
           "$bin" diagnose device-trust > device.json
           "$bin" diagnose extension-sandbox > extension.json
           python -c 'import json; d=json.load(open("device.json")); x=json.load(open("extension.json")); assert d["remoteProvenanceVerifier"]["state"] == "unsupported"; assert d["measuredBootVerifier"]["state"] == "unsupported"; assert x["enforced"] is False; assert x["isolationStatus"] == "unsupported"'

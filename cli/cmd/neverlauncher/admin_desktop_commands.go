@@ -182,33 +182,33 @@ func desktopPackagePlatforms(ver string) []DesktopPackagePlatform {
 	items := []DesktopPackagePlatform{}
 	if linuxProductionRequired0153(ver) {
 		items = append(items,
-			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "binary", Artifact: "neverlauncher-desktop-linux-x64", Status: "supported"},
-			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "tar.gz", Artifact: "neverlauncher-linux-x64-" + ver + ".tar.gz", Status: "supported"},
-			DesktopPackagePlatform{OS: "linux", Arch: "arm64", Format: "binary", Artifact: "neverlauncher-desktop-linux-arm64", Status: "supported"},
-			DesktopPackagePlatform{OS: "linux", Arch: "arm64", Format: "tar.gz", Artifact: "neverlauncher-linux-arm64-" + ver + ".tar.gz", Status: "supported"},
+			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "binary", Artifact: "launcher-desktop-linux-x64", Status: "supported"},
+			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "tar.gz", Artifact: "launcher-linux-x64-" + ver + ".tar.gz", Status: "supported"},
+			DesktopPackagePlatform{OS: "linux", Arch: "arm64", Format: "binary", Artifact: "launcher-desktop-linux-arm64", Status: "supported"},
+			DesktopPackagePlatform{OS: "linux", Arch: "arm64", Format: "tar.gz", Artifact: "launcher-linux-arm64-" + ver + ".tar.gz", Status: "supported"},
 		)
 	} else {
 		items = append(items,
-			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "binary", Artifact: "neverlauncher-desktop-linux-amd64", Status: "supported"},
-			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "AppImage", Artifact: "neverlauncher-desktop-" + ver + "-linux-amd64.AppImage", Status: "supported-if-built"},
-			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "deb", Artifact: "neverlauncher-desktop-" + ver + "-linux-amd64.deb", Status: "supported-if-built"},
+			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "binary", Artifact: "launcher-desktop-linux-amd64", Status: "supported"},
+			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "AppImage", Artifact: "launcher-desktop-" + ver + "-linux-amd64.AppImage", Status: "supported-if-built"},
+			DesktopPackagePlatform{OS: "linux", Arch: "x64", Format: "deb", Artifact: "launcher-desktop-" + ver + "-linux-amd64.deb", Status: "supported-if-built"},
 		)
 	}
 	items = append(items,
-		DesktopPackagePlatform{OS: "windows", Arch: "x64", Format: "exe", Artifact: "neverlauncher-desktop-windows-x64.exe", Status: "supported"},
-		DesktopPackagePlatform{OS: "windows", Arch: "x64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-windows-x64.zip", Status: "supported"},
-		DesktopPackagePlatform{OS: "windows", Arch: "arm64", Format: "exe", Artifact: "neverlauncher-desktop-windows-arm64.exe", Status: "supported"},
-		DesktopPackagePlatform{OS: "windows", Arch: "arm64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-windows-arm64.zip", Status: "supported"},
+		DesktopPackagePlatform{OS: "windows", Arch: "x64", Format: "exe", Artifact: "launcher-desktop-windows-x64.exe", Status: "supported"},
+		DesktopPackagePlatform{OS: "windows", Arch: "x64", Format: "zip", Artifact: "launcher-desktop-" + ver + "-windows-x64.zip", Status: "supported"},
+		DesktopPackagePlatform{OS: "windows", Arch: "arm64", Format: "exe", Artifact: "launcher-desktop-windows-arm64.exe", Status: "supported"},
+		DesktopPackagePlatform{OS: "windows", Arch: "arm64", Format: "zip", Artifact: "launcher-desktop-" + ver + "-windows-arm64.zip", Status: "supported"},
 	)
 	if macOSProductionRequired0154(ver) {
 		items = append(items,
-			DesktopPackagePlatform{OS: "macos", Arch: "x64", Format: "binary", Artifact: "neverlauncher-desktop-macos-x64", Status: "supported"},
-			DesktopPackagePlatform{OS: "macos", Arch: "x64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-macos-x64.zip", Status: "supported"},
-			DesktopPackagePlatform{OS: "macos", Arch: "arm64", Format: "binary", Artifact: "neverlauncher-desktop-macos-arm64", Status: "supported"},
-			DesktopPackagePlatform{OS: "macos", Arch: "arm64", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-macos-arm64.zip", Status: "supported"},
+			DesktopPackagePlatform{OS: "macos", Arch: "x64", Format: "binary", Artifact: "launcher-desktop-macos-x64", Status: "supported"},
+			DesktopPackagePlatform{OS: "macos", Arch: "x64", Format: "zip", Artifact: "launcher-desktop-" + ver + "-macos-x64.zip", Status: "supported"},
+			DesktopPackagePlatform{OS: "macos", Arch: "arm64", Format: "binary", Artifact: "launcher-desktop-macos-arm64", Status: "supported"},
+			DesktopPackagePlatform{OS: "macos", Arch: "arm64", Format: "zip", Artifact: "launcher-desktop-" + ver + "-macos-arm64.zip", Status: "supported"},
 		)
 	} else {
-		items = append(items, DesktopPackagePlatform{OS: "macos", Arch: "universal", Format: "zip", Artifact: "neverlauncher-desktop-" + ver + "-macos-universal.zip", Status: "supported-if-built"})
+		items = append(items, DesktopPackagePlatform{OS: "macos", Arch: "universal", Format: "zip", Artifact: "launcher-desktop-" + ver + "-macos-universal.zip", Status: "supported-if-built"})
 	}
 	return items
 }
@@ -234,7 +234,7 @@ func handlePackaging(args []string) error {
 	switch args[0] {
 	case "prepare", "build":
 		root := flagValue(args, "--root", ".")
-		dir := flagValue(args, "--out", filepath.Join("dist", "neverlauncher-production-"+version))
+		dir := flagValue(args, "--out", filepath.Join("dist", "launcher-production-"+version))
 		if err := packaging940Prepare(root, dir); err != nil {
 			return err
 		}
@@ -273,8 +273,8 @@ func handlePackaging(args []string) error {
 func packaging940ReleaseGates() []map[string]any {
 	return []map[string]any{
 		{"id": "version-matrix", "required": true, "status": "required", "check": "VERSION, CLI, API, Admin, Desktop, Tauri, OpenAPI must equal 0.10.0"},
-		{"id": "backend-build", "required": true, "status": "required", "check": "go build -tags neverlauncher_nopgx ./cmd/neverlauncher-api"},
-		{"id": "cli-build", "required": true, "status": "required", "check": "go build ./cmd/neverlauncher"},
+		{"id": "backend-build", "required": true, "status": "required", "check": "go build -tags launcher_nopgx ./cmd/launcher-api"},
+		{"id": "cli-build", "required": true, "status": "required", "check": "go build ./cmd/launcher"},
 		{"id": "admin-build", "required": true, "status": "required", "check": "npm ci && npm run build --prefix apps/admin"},
 		{"id": "desktop-web-build", "required": true, "status": "required", "check": "npm ci && npm run build --prefix apps/desktop"},
 		{"id": "tauri-native-build", "required": true, "status": "external", "check": "cargo/tauri build on Linux/Windows/macOS runner"},
@@ -305,7 +305,7 @@ func packaging940Prepare(srcRoot, outDir string) error {
 	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
 		return err
 	}
-	candidates := []string{"VERSION", "README.md", "CHANGELOG.md", "SECURITY.md", "LICENSE", "NOTICE", "schemas/openapi.yaml", "cli/nl", "services/api/neverlauncher-api", "apps/admin/package.json", "apps/admin/package-lock.json", "apps/desktop/package.json", "apps/desktop/package-lock.json", "apps/desktop/src-tauri/tauri.conf.json", "apps/desktop/src-tauri/Cargo.toml"}
+	candidates := []string{"VERSION", "README.md", "CHANGELOG.md", "SECURITY.md", "LICENSE", "NOTICE", "schemas/openapi.yaml", "cli/nl", "services/api/launcher-api", "apps/admin/package.json", "apps/admin/package-lock.json", "apps/desktop/package.json", "apps/desktop/package-lock.json", "apps/desktop/src-tauri/tauri.conf.json", "apps/desktop/src-tauri/Cargo.toml"}
 	entries := []map[string]any{}
 	for _, rel := range candidates {
 		src := filepath.Join(absRoot, filepath.FromSlash(rel))
@@ -340,7 +340,7 @@ func packaging940Prepare(srcRoot, outDir string) error {
 	if err := writeJSONFile(filepath.Join(absOut, "ARTIFACTS.json"), map[string]any{"schemaVersion": "0.10.0", "toolVersion": version, "artifacts": entries}); err != nil {
 		return err
 	}
-	manifest := map[string]any{"schemaVersion": "0.10.0", "toolVersion": version, "name": "NeverLauncher", "version": version, "mode": "production-packaging", "createdAt": time.Now().UTC().Format(time.RFC3339), "artifacts": entries, "releaseGates": packaging940ReleaseGates(), "requiredFiles": []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "BUILD_MATRIX.json", "ARTIFACTS.json"}}
+	manifest := map[string]any{"schemaVersion": "0.10.0", "toolVersion": version, "name": "Launcher", "version": version, "mode": "production-packaging", "createdAt": time.Now().UTC().Format(time.RFC3339), "artifacts": entries, "releaseGates": packaging940ReleaseGates(), "requiredFiles": []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "BUILD_MATRIX.json", "ARTIFACTS.json"}}
 	if err := writeJSONFile(filepath.Join(absOut, "RELEASE_MANIFEST.json"), manifest); err != nil {
 		return err
 	}
@@ -453,17 +453,17 @@ func packaging940SBOM(entries []map[string]any) map[string]any {
 	for _, e := range entries {
 		pkgs = append(pkgs, map[string]any{"SPDXID": "SPDXRef-" + strings.NewReplacer("/", "-", ".", "-").Replace(fmt.Sprint(e["source"])), "name": fmt.Sprint(e["source"]), "versionInfo": version, "filesAnalyzed": true, "checksums": []map[string]string{{"algorithm": "SHA256", "checksumValue": fmt.Sprint(e["sha256"])}}})
 	}
-	return map[string]any{"spdxVersion": "SPDX-2.3", "SPDXID": "SPDXRef-DOCUMENT", "name": "NeverLauncher " + version, "documentName": "NeverLauncher-" + version, "dataLicense": "CC0-1.0", "creationInfo": map[string]any{"created": time.Now().UTC().Format(time.RFC3339), "creators": []string{"Tool: NeverLauncher CLI " + version}}, "packages": pkgs}
+	return map[string]any{"spdxVersion": "SPDX-2.3", "SPDXID": "SPDXRef-DOCUMENT", "name": "Launcher " + version, "documentName": "Launcher-" + version, "dataLicense": "CC0-1.0", "creationInfo": map[string]any{"created": time.Now().UTC().Format(time.RFC3339), "creators": []string{"Tool: Launcher CLI " + version}}, "packages": pkgs}
 }
 
 func packaging940Provenance(srcRoot string) map[string]any {
-	return map[string]any{"schemaVersion": "0.10.0", "subject": "NeverLauncher", "version": version, "builder": "NeverLauncher CLI production packaging 0.10.0", "sourceRoot": srcRoot, "generatedAt": time.Now().UTC().Format(time.RFC3339), "commands": []string{"nl release doctor", "nl db migration-doctor", "nl packaging prepare", "nl packaging verify", "nl packaging smoke"}, "materials": []string{"VERSION", "CLI binary", "Backend API binary", "Admin package metadata", "Desktop package metadata", "OpenAPI", "README", "CHANGELOG", "SECURITY"}}
+	return map[string]any{"schemaVersion": "0.10.0", "subject": "Launcher", "version": version, "builder": "Launcher CLI production packaging 0.10.0", "sourceRoot": srcRoot, "generatedAt": time.Now().UTC().Format(time.RFC3339), "commands": []string{"nl release doctor", "nl db migration-doctor", "nl packaging prepare", "nl packaging verify", "nl packaging smoke"}, "materials": []string{"VERSION", "CLI binary", "Backend API binary", "Admin package metadata", "Desktop package metadata", "OpenAPI", "README", "CHANGELOG", "SECURITY"}}
 }
 
 func packaging940BuildMatrix() map[string]any {
-	return map[string]any{"schemaVersion": "0.10.0", "toolVersion": version, "targets": []map[string]any{{"id": "backend-linux-amd64", "required": true, "command": "go build -tags neverlauncher_nopgx -o services/api/neverlauncher-api ./cmd/neverlauncher-api"}, {"id": "cli-linux-amd64", "required": true, "command": "go build -o cli/nl ./cmd/neverlauncher"}, {"id": "admin-web", "required": true, "command": "npm ci --prefix apps/admin && npm run build --prefix apps/admin"}, {"id": "desktop-web", "required": true, "command": "npm ci --prefix apps/desktop && npm run build --prefix apps/desktop"}, {"id": "tauri-linux", "required": true, "external": true, "command": "cargo tauri build"}, {"id": "tauri-windows", "required": true, "external": true, "command": "cargo tauri build --target x86_64-pc-windows-msvc"}, {"id": "tauri-macos", "required": true, "external": true, "command": "cargo tauri build --target universal-apple-darwin"}}}
+	return map[string]any{"schemaVersion": "0.10.0", "toolVersion": version, "targets": []map[string]any{{"id": "backend-linux-amd64", "required": true, "command": "go build -tags launcher_nopgx -o services/api/launcher-api ./cmd/launcher-api"}, {"id": "cli-linux-amd64", "required": true, "command": "go build -o cli/nl ./cmd/launcher"}, {"id": "admin-web", "required": true, "command": "npm ci --prefix apps/admin && npm run build --prefix apps/admin"}, {"id": "desktop-web", "required": true, "command": "npm ci --prefix apps/desktop && npm run build --prefix apps/desktop"}, {"id": "tauri-linux", "required": true, "external": true, "command": "cargo tauri build"}, {"id": "tauri-windows", "required": true, "external": true, "command": "cargo tauri build --target x86_64-pc-windows-msvc"}, {"id": "tauri-macos", "required": true, "external": true, "command": "cargo tauri build --target universal-apple-darwin"}}}
 }
 
 func packaging940Description() string {
-	return "# NeverLauncher 0.10.0 — Production Packaging\n\nРелиз закрепляет проверяемый production packaging: RELEASE_MANIFEST.json, SHA256SUMS, SBOM.spdx.json, PROVENANCE.json, BUILD_MATRIX.json, ARTIFACTS.json, smoke-signature и offline packaging smoke.\n"
+	return "# Launcher 0.10.0 — Production Packaging\n\nРелиз закрепляет проверяемый production packaging: RELEASE_MANIFEST.json, SHA256SUMS, SBOM.spdx.json, PROVENANCE.json, BUILD_MATRIX.json, ARTIFACTS.json, smoke-signature и offline packaging smoke.\n"
 }

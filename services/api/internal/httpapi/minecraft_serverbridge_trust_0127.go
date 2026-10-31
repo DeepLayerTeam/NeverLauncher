@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"context"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/protection"
 )
 
 const gameplayTrustPolicy0127 = "session-device-risk-v1"

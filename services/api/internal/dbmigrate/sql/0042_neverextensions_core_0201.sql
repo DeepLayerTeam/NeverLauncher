@@ -1,6 +1,6 @@
--- NeverLauncher 0.20.1: каноническое постоянное ядро
+-- Launcher 0.20.1: каноническое постоянное ядро
 -- Extensions. Миграция вводит нормализованную производственную
--- модель манифеста neverlauncher-extension.json. Поведение
+-- модель манифеста launcher-extension.json. Поведение
 -- реестра и запуска здесь не определяется: таблицы служат
 -- авторитетным хранилищем идентичности расширения, неизменяемых
 -- версий, зависимостей, разрешений и состояния установки.
@@ -86,12 +86,12 @@ CREATE INDEX IF NOT EXISTS idx_extension_installs_enabled_0201
     WHERE enabled;
 
 COMMENT ON TABLE extensions IS 'Extensions canonical extension identities (0.20.1).';
-COMMENT ON TABLE extension_versions IS 'Immutable canonical neverlauncher-extension.json versions with SHA-256 digest.';
+COMMENT ON TABLE extension_versions IS 'Immutable canonical launcher-extension.json versions with SHA-256 digest.';
 COMMENT ON TABLE extension_permissions IS 'Normalized requested permissions for one immutable extension version.';
 COMMENT ON TABLE extension_dependencies IS 'Normalized extension dependencies for one immutable extension version.';
 COMMENT ON TABLE extension_installs IS 'Persisted desired install selection; lifecycle activation is introduced by later Extensions releases.';
 
-CREATE OR REPLACE FUNCTION neverlauncher_extension_identity_guard_0201()
+CREATE OR REPLACE FUNCTION launcher_extension_identity_guard_0201()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF NEW.id IS DISTINCT FROM OLD.id OR NEW.publisher IS DISTINCT FROM OLD.publisher THEN
@@ -104,9 +104,9 @@ $$;
 DROP TRIGGER IF EXISTS trg_extensions_identity_guard_0201 ON extensions;
 CREATE TRIGGER trg_extensions_identity_guard_0201
 BEFORE UPDATE ON extensions
-FOR EACH ROW EXECUTE FUNCTION neverlauncher_extension_identity_guard_0201();
+FOR EACH ROW EXECUTE FUNCTION launcher_extension_identity_guard_0201();
 
-CREATE OR REPLACE FUNCTION neverlauncher_extension_version_guard_0201()
+CREATE OR REPLACE FUNCTION launcher_extension_version_guard_0201()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF NEW.extension_id IS DISTINCT FROM OLD.extension_id
@@ -125,4 +125,4 @@ $$;
 DROP TRIGGER IF EXISTS trg_extension_versions_immutable_0201 ON extension_versions;
 CREATE TRIGGER trg_extension_versions_immutable_0201
 BEFORE UPDATE ON extension_versions
-FOR EACH ROW EXECUTE FUNCTION neverlauncher_extension_version_guard_0201();
+FOR EACH ROW EXECUTE FUNCTION launcher_extension_version_guard_0201();

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	wa "gitflic.ru/skif4er/neverlauncher/services/api/internal/webauthn"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	wa "gitflic.ru/skif4er/launcher/services/api/internal/webauthn"
 )
 
 type webauthnRegistrationComplete117 struct {
@@ -102,7 +102,7 @@ func (s Server) authPasskeyRegisterBegin117(w http.ResponseWriter, r *http.Reque
 		exclude = append(exclude, map[string]any{"type": "public-key", "id": base64.RawURLEncoding.EncodeToString(c.CredentialID), "transports": c.Transports})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{"transactionToken": token, "expiresInSeconds": int(webauthnChallengeTTL117.Seconds()), "publicKey": map[string]any{
-		"challenge": base64.RawURLEncoding.EncodeToString(challenge), "rp": map[string]any{"id": s.Config.WebAuthnRPID, "name": firstNonEmpty(s.Config.WebAuthnRPName, "NeverLauncher")}, "user": map[string]any{"id": base64.RawURLEncoding.EncodeToString(s.webauthnUserHandle117(user.ID)), "name": user.Email, "displayName": firstNonEmpty(user.DisplayName, user.Email)}, "pubKeyCredParams": []map[string]any{{"type": "public-key", "alg": -7}, {"type": "public-key", "alg": -8}, {"type": "public-key", "alg": -257}}, "timeout": int(webauthnChallengeTTL117.Milliseconds()), "excludeCredentials": exclude, "authenticatorSelection": map[string]any{"residentKey": "required", "requireResidentKey": true, "userVerification": "required"}, "attestation": "none"}}})
+		"challenge": base64.RawURLEncoding.EncodeToString(challenge), "rp": map[string]any{"id": s.Config.WebAuthnRPID, "name": firstNonEmpty(s.Config.WebAuthnRPName, "Launcher")}, "user": map[string]any{"id": base64.RawURLEncoding.EncodeToString(s.webauthnUserHandle117(user.ID)), "name": user.Email, "displayName": firstNonEmpty(user.DisplayName, user.Email)}, "pubKeyCredParams": []map[string]any{{"type": "public-key", "alg": -7}, {"type": "public-key", "alg": -8}, {"type": "public-key", "alg": -257}}, "timeout": int(webauthnChallengeTTL117.Milliseconds()), "excludeCredentials": exclude, "authenticatorSelection": map[string]any{"residentKey": "required", "requireResidentKey": true, "userVerification": "required"}, "attestation": "none"}}})
 }
 
 func (s Server) authPasskeyRegisterComplete117(w http.ResponseWriter, r *http.Request) {
@@ -514,7 +514,7 @@ func (s Server) webauthnVerifyConfig117(challenge []byte) wa.VerifyConfig {
 }
 func (s Server) webauthnUserHandle117(userID string) []byte {
 	mac := hmac.New(sha256.New, []byte(s.Config.AuthTokenSecret))
-	mac.Write([]byte("neverlauncher/webauthn-user/v1\x00"))
+	mac.Write([]byte("launcher/webauthn-user/v1\x00"))
 	mac.Write([]byte(userID))
 	return mac.Sum(nil)
 }

@@ -42,13 +42,13 @@ jobs:
       - name: Trust, malicious-package and crash-loop E2E
         shell: bash
         run: |
-          (cd services/api && go test ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/dbmigrate ./cmd/neverlauncher-api)
-          (cd cli && go test ./internal/dbmigrate && go test ./cmd/neverlauncher -run '^$')
+          (cd services/api && go test ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/dbmigrate ./cmd/launcher-api)
+          (cd cli && go test ./internal/dbmigrate && go test ./cmd/launcher -run '^$')
       - name: Build production binaries
         shell: bash
         run: |
-          (cd services/api && go build ./cmd/neverlauncher-api)
-          (cd cli && go build ./cmd/neverlauncher)
+          (cd services/api && go build ./cmd/launcher-api)
+          (cd cli && go build ./cmd/launcher)
           python3 scripts/contracts/validate-openapi.py
       - name: Write signed-by-run evidence input
         shell: bash

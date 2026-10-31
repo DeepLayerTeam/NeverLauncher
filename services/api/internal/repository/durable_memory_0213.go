@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func (r *MemoryRepository) EnqueueDurableJob(_ context.Context, job model.DurableJob, ttl time.Duration) (model.DurableJob, bool, error) {

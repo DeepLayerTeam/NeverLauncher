@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
 )
 
 func TestServerBridgeSecurityCapabilityDigest01912(t *testing.T) {

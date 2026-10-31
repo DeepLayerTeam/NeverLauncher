@@ -1,19 +1,19 @@
 name: Сообщение об ошибке
-description: Сообщите о воспроизводимой ошибке в NeverLauncher
+description: Сообщите о воспроизводимой ошибке в Launcher
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Перед отправкой ознакомьтесь с [руководством по диагностике](https://github.com/DeepLayerTeam/NeverLauncher/blob/main/docs/troubleshooting/common.md) и проверьте существующие задачи.
+        Перед отправкой ознакомьтесь с [руководством по диагностике](https://github.com/DeepLayerTeam/Launcher/blob/main/docs/troubleshooting/common.md) и проверьте существующие задачи.
         **Не публикуйте пароли, закрытые ключи, токены доступа, персональные данные и подробности эксплуатации уязвимостей.**
-        Об уязвимостях сообщайте конфиденциально согласно [политике безопасности](https://github.com/DeepLayerTeam/NeverLauncher/blob/main/SECURITY.md).
+        Об уязвимостях сообщайте конфиденциально согласно [политике безопасности](https://github.com/DeepLayerTeam/Launcher/blob/main/SECURITY.md).
   - type: input
     id: component
     attributes:
       label: Компонент
-      description: 'Например: Backend, Admin, Desktop, CLI, NeverRuntime, Guard, ServerBridge, Extensions или CI.'
-      placeholder: 'Например: NeverRuntime / Fabric'
+      description: 'Например: Backend, Admin, Desktop, CLI, Runtime, Guard, ServerBridge, Extensions или CI.'
+      placeholder: 'Например: Runtime / Fabric'
     validations:
       required: true
   - type: input

@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitecore"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitecore"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 	"github.com/jackc/pgx/v5"
 )
 

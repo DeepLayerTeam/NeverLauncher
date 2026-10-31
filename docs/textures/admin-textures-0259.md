@@ -1,4 +1,4 @@
-# NeverLauncher 0.25.9 — Admin Texture Management
+# Launcher 0.25.9 — Admin Texture Management
 
 ## What is deployed
 
@@ -33,7 +33,7 @@ All routes require an authenticated Admin Bearer token with **global** `settings
 
 **PUT policy** receives a JSON object with `expectedRevision`, `policy` and a 3–500-character `reason`. `policy` includes all booleans, four SHA-256 digest fields (empty string disables them), both skin-model fields and both quotas. Server-supplied `revision`, `projectId` and timestamps inside the policy object never authorize mutation: the scope is derived from the query and current revision from PostgreSQL.
 
-**PUT exception** receives `kind` (`skin`/`cape`), `decision` (`allow`/`deny`/`inherit`), `reason` (3–500 characters), optionally the matching `userId`. The actual user must exist in the NeverLauncher users table, and the global capability is checked before the handler.
+**PUT exception** receives `kind` (`skin`/`cape`), `decision` (`allow`/`deny`/`inherit`), `reason` (3–500 characters), optionally the matching `userId`. The actual user must exist in the Launcher users table, and the global capability is checked before the handler.
 
 ## Deployment and verification
 

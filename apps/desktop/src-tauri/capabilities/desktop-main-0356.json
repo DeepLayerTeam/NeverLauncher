@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "desktop-main-0356",
-  "description": "Core events for the local trusted NeverLauncher window; no remote origins, filesystem or shell permissions.",
+  "description": "Core events for the local trusted Launcher window; no remote origins, filesystem or shell permissions.",
   "windows": [
     "main"
   ],

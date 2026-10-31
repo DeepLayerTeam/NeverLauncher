@@ -1,4 +1,4 @@
-name: NeverLauncher 0.35.13 Owner Lifecycle and G-M Acceptance
+name: Launcher 0.35.13 Owner Lifecycle and G-M Acceptance
 on:
   workflow_dispatch:
   pull_request:
@@ -55,8 +55,8 @@ jobs:
       - name: Run genuine package -> signed release -> rollback/API gate regression
         working-directory: services/api
         run: |
-          go test -tags neverlauncher_nopgx -count=1 -timeout=15m ./internal/httpapi -run 'TestRollbackOperationIdempotency0217|TestCanonicalPackageProductUploadValidatePublish|TestReleaseWorkspaceDraftOwnershipAndResume0218|TestDurablePublishRechecksAuthorizationBeforeCommit0213'
-          go build -tags neverlauncher_nopgx ./cmd/neverlauncher-api
+          go test -tags launcher_nopgx -count=1 -timeout=15m ./internal/httpapi -run 'TestRollbackOperationIdempotency0217|TestCanonicalPackageProductUploadValidatePublish|TestReleaseWorkspaceDraftOwnershipAndResume0218|TestDurablePublishRechecksAuthorizationBeforeCommit0213'
+          go build -tags launcher_nopgx ./cmd/launcher-api
       - name: Run disposable authenticated owner and player HTTP journey
         run: |
           bash scripts/acceptance/run_owner_player_0351.sh "$RUNNER_TEMP/03513-owner-player.json"

@@ -4,7 +4,7 @@ on:
     paths:
       - 'services/api/internal/sqlitedurable/**'
       - 'services/api/internal/sqlitecore/**'
-      - 'services/api/cmd/neverlauncher-sqlite/**'
+      - 'services/api/cmd/launcher-sqlite/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
       - '.github/workflows/sqlite-backup-03210.yml'
@@ -30,7 +30,7 @@ jobs:
           set -euo pipefail
           go mod download
           go mod verify
-          test -z "$(gofmt -l internal/sqlitedurable internal/sqlitecore cmd/neverlauncher-sqlite)"
+          test -z "$(gofmt -l internal/sqlitedurable internal/sqlitecore cmd/launcher-sqlite)"
       - name: Verify local durable filesystem
         env:
           NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-backup-tests
@@ -45,15 +45,15 @@ jobs:
       - name: Integration, concurrency and source vet
         run: |
           set -euo pipefail
-          go test -race -count=1 -timeout=20m ./internal/sqlitedurable ./internal/sqlitecore ./cmd/neverlauncher-sqlite
-          go vet ./internal/sqlitedurable ./internal/sqlitecore ./cmd/neverlauncher-sqlite
+          go test -race -count=1 -timeout=20m ./internal/sqlitedurable ./internal/sqlitecore ./cmd/launcher-sqlite
+          go vet ./internal/sqlitedurable ./internal/sqlitecore ./cmd/launcher-sqlite
       - name: End-to-end CLI backup, verify, restore, pre-upgrade
         run: |
           set -euo pipefail
-          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+          go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
           mkdir -p "$RUNNER_TEMP/dep06/live" "$RUNNER_TEMP/dep06/backups" "$RUNNER_TEMP/dep06/restored"
           chmod 0700 "$RUNNER_TEMP/dep06" "$RUNNER_TEMP/dep06/live" "$RUNNER_TEMP/dep06/backups" "$RUNNER_TEMP/dep06/restored"
-          exe="$RUNNER_TEMP/neverlauncher-sqlite"
+          exe="$RUNNER_TEMP/launcher-sqlite"
           "$exe" core-init --db "$RUNNER_TEMP/dep06/live/state.db"
           "$exe" backup --db "$RUNNER_TEMP/dep06/live/state.db" --backup "$RUNNER_TEMP/dep06/backups/initial.db"
           "$exe" backup-verify --backup "$RUNNER_TEMP/dep06/backups/initial.db"

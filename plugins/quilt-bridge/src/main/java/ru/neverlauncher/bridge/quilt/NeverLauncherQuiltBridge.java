@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.quilt;
+package ru.launcher.bridge.quilt;
 
 import com.mojang.authlib.GameProfile;
 import net.fabricmc.api.ModInitializer;
@@ -15,21 +15,21 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.neverlauncher.bridge.common.BridgeConfig;
-import ru.neverlauncher.bridge.common.BridgeDefaults;
-import ru.neverlauncher.bridge.common.BridgeIntegrity;
-import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
-import ru.neverlauncher.bridge.common.BridgeRuntimeProbe;
-import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
-import ru.neverlauncher.bridge.common.BridgeControlCommand;
-import ru.neverlauncher.bridge.common.BridgeControlResult;
-import ru.neverlauncher.bridge.common.KickConfirmations;
-import ru.neverlauncher.bridge.common.PlatformControlReadback;
-import ru.neverlauncher.bridge.common.BridgeTickSampler;
-import ru.neverlauncher.bridge.common.JoinValidationResult;
-import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
-import ru.neverlauncher.bridge.common.NodeIdentity;
-import ru.neverlauncher.bridge.quilt.mixin.ServerLoginNetworkHandlerAccessor;
+import ru.launcher.bridge.common.BridgeConfig;
+import ru.launcher.bridge.common.BridgeDefaults;
+import ru.launcher.bridge.common.BridgeIntegrity;
+import ru.launcher.bridge.common.BridgeRuntimeDescriptor;
+import ru.launcher.bridge.common.BridgeRuntimeProbe;
+import ru.launcher.bridge.common.BridgePlatformTelemetry;
+import ru.launcher.bridge.common.BridgeControlCommand;
+import ru.launcher.bridge.common.BridgeControlResult;
+import ru.launcher.bridge.common.KickConfirmations;
+import ru.launcher.bridge.common.PlatformControlReadback;
+import ru.launcher.bridge.common.BridgeTickSampler;
+import ru.launcher.bridge.common.JoinValidationResult;
+import ru.launcher.bridge.common.LauncherApiClient;
+import ru.launcher.bridge.common.NodeIdentity;
+import ru.launcher.bridge.quilt.mixin.ServerLoginNetworkHandlerAccessor;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -45,8 +45,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public final class NeverLauncherQuiltBridge implements ModInitializer {
-    private static final Logger LOGGER = LoggerFactory.getLogger("NeverLauncherQuiltBridge");
+public final class LauncherQuiltBridge implements ModInitializer {
+    private static final Logger LOGGER = LoggerFactory.getLogger("LauncherQuiltBridge");
     private static final String PLATFORM = "quilt";
 
     private final AtomicBoolean stopping = new AtomicBoolean(false);
@@ -70,7 +70,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
     private volatile boolean lastHeartbeatOK;
     private volatile Instant lastHeartbeatAt;
 
-    public NeverLauncherQuiltBridge() {
+    public LauncherQuiltBridge() {
         validationExecutor.allowCoreThreadTimeOut(true);
     }
 
@@ -79,7 +79,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
         try {
             state = loadState();
         } catch (Exception e) {
-            throw new IllegalStateException("NeverLauncher Quilt ServerBridge initialization failed", e);
+            throw new IllegalStateException("Launcher Quilt ServerBridge initialization failed", e);
         }
 
         ServerLoginConnectionEvents.QUERY_START.register(this::onLoginQueryStart);
@@ -101,7 +101,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
 
         RuntimeState current = state;
         current.api.publishEvent("server.startup", Map.of("platform", PLATFORM));
-        LOGGER.info("NeverLauncher Quilt Server Bridge {} enabled; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; asyncLoginGate=true; clientModRequired=false",
+        LOGGER.info("Launcher Quilt Server Bridge {} enabled; serverId={}; nodeKeyFingerprint={}; nodePublicKey={}; sha256={}; asyncLoginGate=true; clientModRequired=false",
             BridgeDefaults.VERSION,
             current.config.serverId,
             current.identity.fingerprint(),
@@ -113,7 +113,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
                                    net.fabricmc.fabric.api.networking.v1.LoginPacketSender sender,
                                    net.fabricmc.fabric.api.networking.v1.ServerLoginNetworking.LoginSynchronizer synchronizer) {
         if (stopping.get()) {
-            handler.disconnect(Text.literal("NeverLauncher ServerBridge is stopping"));
+            handler.disconnect(Text.literal("Launcher ServerBridge is stopping"));
             return;
         }
         if (maintenanceMode.get() || drainMode.get()) {
@@ -123,7 +123,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
 
         LoginIdentity login = loginIdentity(handler);
         if (login.username.isBlank()) {
-            handler.disconnect(Text.literal("NeverLauncher could not resolve the login profile"));
+            handler.disconnect(Text.literal("Launcher could not resolve the login profile"));
             return;
         }
 
@@ -134,7 +134,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
                 validationExecutor
             );
         } catch (RejectedExecutionException e) {
-            LOGGER.warn("NeverLauncher Quilt Bridge join validation queue saturated; failing closed username={}", login.username);
+            LOGGER.warn("Launcher Quilt Bridge join validation queue saturated; failing closed username={}", login.username);
             handler.disconnect(Text.literal(new JoinValidationResult(false, "bridge_overloaded", "{}").userMessage()));
             return;
         }
@@ -153,7 +153,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
                 "reason", decision.reason == null ? "" : decision.reason
             ));
             if (decision.allowed) {
-                LOGGER.info("neverlauncher.join.allowed username={} serverId={} platform=quilt", login.username, serverId());
+                LOGGER.info("launcher.join.allowed username={} serverId={} platform=quilt", login.username, serverId());
                 return CompletableFuture.completedFuture(null);
             }
             // Синхронизатор входа Quilt может завершиться вне логического потока
@@ -161,7 +161,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
             // блокируйте вход, пока переход состояния действительно не применён.
             return server.submit(() -> {
                 handler.disconnect(Text.literal(decision.userMessage()));
-                LOGGER.info("neverlauncher.join.denied username={} reason={} platform=quilt", login.username, decision.reason);
+                LOGGER.info("launcher.join.denied username={} reason={} platform=quilt", login.username, decision.reason);
             });
         });
         synchronizer.waitFor(gate);
@@ -177,7 +177,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
 
     private RuntimeState loadState() throws Exception {
         Path configPath = QuiltLoader.getConfigDir()
-            .resolve("neverlauncher-quilt-bridge")
+            .resolve("launcher-quilt-bridge")
             .resolve("config.yml")
             .toAbsolutePath()
             .normalize();
@@ -207,7 +207,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
                 "loader.quilt"
             )
         );
-        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, PLATFORM, BridgeDefaults.VERSION, pluginSha256, descriptor);
+        LauncherApiClient api = new LauncherApiClient(config, identity, PLATFORM, BridgeDefaults.VERSION, pluginSha256, descriptor);
         return new RuntimeState(config, identity, api, pluginSha256);
     }
 
@@ -320,13 +320,13 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
             return drainMode.get() == enabled ? BridgeControlResult.verified(Map.of("enabled", Boolean.toString(enabled), "mode", "drain")) : BridgeControlResult.indeterminate("drain_mode_not_observed");
         }
         if ("server.shutdown".equals(command.type())) {
-            String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by NeverLauncher"), 512);
+            String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by Launcher"), 512);
             Thread thread = new Thread(() -> {
                 try { Thread.sleep(1500L); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
                 RuntimeState current = state;
                 if (current != null) current.api.publishEvent("server.shutdown", Map.of("reason", reason, "source", "control-api"));
                 server.stop(false);
-            }, "neverlauncher-control-shutdown");
+            }, "launcher-control-shutdown");
             thread.setDaemon(true);
             thread.start();
             return BridgeControlResult.accepted(Map.of("scheduled", "true", "graceMillis", "1500"));
@@ -445,9 +445,9 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
         lastHeartbeatAt = Instant.now();
         if (previousAt == null || previous != ok) {
             if (ok) {
-                LOGGER.info("NeverLauncher Quilt Server Bridge heartbeat=true serverId={}", current.config.serverId);
+                LOGGER.info("Launcher Quilt Server Bridge heartbeat=true serverId={}", current.config.serverId);
             } else {
-                LOGGER.warn("NeverLauncher Quilt Server Bridge heartbeat=false serverId={} reason=rejected_or_unavailable", current.config.serverId);
+                LOGGER.warn("Launcher Quilt Server Bridge heartbeat=false serverId={} reason=rejected_or_unavailable", current.config.serverId);
             }
         }
     }
@@ -466,7 +466,7 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
             boolean heartbeatStopped = heartbeatExecutor.awaitTermination(2, TimeUnit.SECONDS);
             boolean validationStopped = validationExecutor.awaitTermination(2, TimeUnit.SECONDS);
             if (!heartbeatStopped || !validationStopped) {
-                LOGGER.warn("NeverLauncher Quilt ServerBridge workers did not terminate within shutdown window");
+                LOGGER.warn("Launcher Quilt ServerBridge workers did not terminate within shutdown window");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -481,14 +481,14 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
 
     private static LoginIdentity loginIdentity(ServerLoginNetworkHandler handler) {
         ServerLoginNetworkHandlerAccessor accessor = (ServerLoginNetworkHandlerAccessor) handler;
-        GameProfile profile = accessor.neverlauncher$getProfile();
+        GameProfile profile = accessor.launcher$getProfile();
         String username = profile != null && profile.getName() != null ? profile.getName().trim() : "";
         if (username.isBlank()) {
-            String profileName = accessor.neverlauncher$getProfileName();
+            String profileName = accessor.launcher$getProfileName();
             username = profileName == null ? "" : profileName.trim();
         }
         String uuid = profile != null && profile.getId() != null ? profile.getId().toString() : "";
-        return new LoginIdentity(username, uuid, remoteIp(accessor.neverlauncher$getConnection()));
+        return new LoginIdentity(username, uuid, remoteIp(accessor.launcher$getConnection()));
     }
 
     private static String remoteIp(ClientConnection connection) {
@@ -502,12 +502,12 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
     }
 
     private Thread daemonThread(Runnable task, String role) {
-        Thread thread = new Thread(task, "neverlauncher-quilt-bridge-" + role);
+        Thread thread = new Thread(task, "launcher-quilt-bridge-" + role);
         thread.setDaemon(true);
         thread.setUncaughtExceptionHandler((t, error) -> {
             RuntimeState current = state;
             if (current != null) current.api.publishEvent("server.error", Map.of("component", role, "message", safeError(error)));
-            LOGGER.error("NeverLauncher Quilt bridge {} worker failed", role, error);
+            LOGGER.error("Launcher Quilt bridge {} worker failed", role, error);
         });
         return thread;
     }
@@ -523,6 +523,6 @@ public final class NeverLauncherQuiltBridge implements ModInitializer {
         return BridgeIntegrity.isSha256(hash) ? hash.substring(0, 12) : "unavailable";
     }
 
-    private record RuntimeState(BridgeConfig config, NodeIdentity identity, NeverLauncherApiClient api, String pluginSha256) {}
+    private record RuntimeState(BridgeConfig config, NodeIdentity identity, LauncherApiClient api, String pluginSha256) {}
     private record LoginIdentity(String username, String uuid, String ip) {}
 }

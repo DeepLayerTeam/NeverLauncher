@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/localpassword"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/localpassword"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 // TOTP follows RFC6238 (HMAC-SHA1, 6 digits, 30s, +/- one time step).
@@ -36,7 +36,7 @@ func (a *Auth) seal(secret []byte) ([]byte, error) {
 	if _, e = rand.Read(nonce); e != nil {
 		return nil, e
 	}
-	return gcm.Seal(nonce, nonce, secret, []byte("NeverLauncher/TOTP/0.32.3")), nil
+	return gcm.Seal(nonce, nonce, secret, []byte("Launcher/TOTP/0.32.3")), nil
 }
 func (a *Auth) unseal(ciphertext []byte) ([]byte, error) {
 	block, e := aes.NewCipher(a.key[:])
@@ -51,7 +51,7 @@ func (a *Auth) unseal(ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) < n+gcm.Overhead() {
 		return nil, ErrAuthentication
 	}
-	secret, e := gcm.Open(nil, ciphertext[:n], ciphertext[n:], []byte("NeverLauncher/TOTP/0.32.3"))
+	secret, e := gcm.Open(nil, ciphertext[:n], ciphertext[n:], []byte("Launcher/TOTP/0.32.3"))
 	if e != nil {
 		return nil, ErrAuthentication
 	}

@@ -3,7 +3,7 @@ on:
   push:
     paths:
       - 'services/api/internal/sentrydiag/**'
-      - 'services/api/cmd/neverlauncher-api/main.go'
+      - 'services/api/cmd/launcher-api/main.go'
       - 'apps/desktop/src/sentry_diagnostics_0309.ts'
       - 'apps/desktop/src-tauri/src/sentry_diagnostics_0309.rs'
       - 'sdk/java/core/**'
@@ -12,7 +12,7 @@ on:
   pull_request:
     paths:
       - 'services/api/internal/sentrydiag/**'
-      - 'services/api/cmd/neverlauncher-api/main.go'
+      - 'services/api/cmd/launcher-api/main.go'
       - 'apps/desktop/**'
       - 'sdk/java/core/**'
       - 'scripts/diagnostics/**'
@@ -26,9 +26,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: {go-version-file: services/api/go.mod}
-      - run: go test -race -count=1 ./internal/sentrydiag ./cmd/neverlauncher-api
+      - run: go test -race -count=1 ./internal/sentrydiag ./cmd/launcher-api
         working-directory: services/api
-      - run: go vet ./internal/sentrydiag ./cmd/neverlauncher-api
+      - run: go vet ./internal/sentrydiag ./cmd/launcher-api
         working-directory: services/api
   jvm:
     runs-on: ubuntu-24.04

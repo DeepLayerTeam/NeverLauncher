@@ -66,7 +66,9 @@ def load_targets(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         die("device trust targets document must be an object")
     if set(payload) != {"schemaVersion", "productVersion", "targets"}:
-        die("device trust targets must contain only schemaVersion/productVersion/targets")
+        die(
+            "device trust targets must contain only schemaVersion/productVersion/targets"
+        )
     if payload.get("schemaVersion") != "1.0":
         die("device trust targets schemaVersion must be 1.0")
     if str(payload.get("productVersion", "")).strip() != PRODUCT_VERSION:
@@ -82,7 +84,9 @@ def load_targets(path: Path) -> dict[str, Any]:
             die(f"target #{index + 1} must be an object")
         unknown = sorted(set(raw) - allowed)
         if unknown:
-            die(f"target #{index + 1}: unknown fields are forbidden: {', '.join(unknown)}")
+            die(
+                f"target #{index + 1}: unknown fields are forbidden: {', '.join(unknown)}"
+            )
         target_id = str(raw.get("id", "")).strip()
         kind = str(raw.get("kind", "")).strip()
         runner = str(raw.get("runner", "")).strip()
@@ -103,23 +107,35 @@ def load_targets(path: Path) -> dict[str, Any]:
             die(f"{target_id}: unsupported arch {arch!r}")
         if not isinstance(required, bool):
             die(f"{target_id}: required must be boolean")
-        if not isinstance(checks, list) or not checks or any(not isinstance(v, str) or not CHECK_RE.fullmatch(v) for v in checks):
+        if (
+            not isinstance(checks, list)
+            or not checks
+            or any(not isinstance(v, str) or not CHECK_RE.fullmatch(v) for v in checks)
+        ):
             die(f"{target_id}: requiredChecks must be a non-empty unique string array")
         if len(checks) != len(set(checks)):
             die(f"{target_id}: duplicate requiredChecks")
         missing = sorted(KIND_MANDATORY_CHECKS[kind] - set(checks))
         if missing:
-            die(f"{target_id}: requiredChecks weaken {kind} baseline: missing {', '.join(missing)}")
-        normalized.append({
-            "id": target_id,
-            "kind": kind,
-            "runner": runner,
-            "os": os_name,
-            "arch": arch,
-            "required": required,
-            "requiredChecks": checks,
-        })
-    return {"schemaVersion": "1.0", "productVersion": PRODUCT_VERSION, "targets": normalized}
+            die(
+                f"{target_id}: requiredChecks weaken {kind} baseline: missing {', '.join(missing)}"
+            )
+        normalized.append(
+            {
+                "id": target_id,
+                "kind": kind,
+                "runner": runner,
+                "os": os_name,
+                "arch": arch,
+                "required": required,
+                "requiredChecks": checks,
+            }
+        )
+    return {
+        "schemaVersion": "1.0",
+        "productVersion": PRODUCT_VERSION,
+        "targets": normalized,
+    }
 
 
 def sha256_file(path: Path) -> str:
@@ -130,7 +146,9 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def discover_results(root: Path) -> tuple[dict[str, tuple[Path, dict[str, Any]]], list[str]]:
+def discover_results(
+    root: Path,
+) -> tuple[dict[str, tuple[Path, dict[str, Any]]], list[str]]:
     found: dict[str, tuple[Path, dict[str, Any]]] = {}
     errors: list[str] = []
     if not root.exists():
@@ -155,7 +173,14 @@ def discover_results(root: Path) -> tuple[dict[str, tuple[Path, dict[str, Any]]]
     return found, errors
 
 
-def verify_result(target: dict[str, Any], result: dict[str, Any], *, result_path: Path, commit: str, run_id: str) -> list[str]:
+def verify_result(
+    target: dict[str, Any],
+    result: dict[str, Any],
+    *,
+    result_path: Path,
+    commit: str,
+    run_id: str,
+) -> list[str]:
     errors: list[str] = []
     expected = {
         "schemaVersion": "1.0",
@@ -190,19 +215,33 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, result_path
     else:
         files = evidence.get("files")
         digests = evidence.get("sha256")
-        if not isinstance(files, list) or not files or any(not isinstance(v, str) or not EVIDENCE_RE.fullmatch(v) for v in files):
-            errors.append("evidence.files must be a non-empty safe-basename string array")
+        if (
+            not isinstance(files, list)
+            or not files
+            or any(
+                not isinstance(v, str) or not EVIDENCE_RE.fullmatch(v) for v in files
+            )
+        ):
+            errors.append(
+                "evidence.files must be a non-empty safe-basename string array"
+            )
         elif len(files) != len(set(files)):
             errors.append("evidence.files contains duplicates")
         elif "device-trust-result.json" in files:
             errors.append("evidence.files cannot include device-trust-result.json")
         elif not isinstance(digests, dict) or set(digests) != set(files):
-            errors.append("evidence.sha256 must contain exactly one digest for every evidence file")
+            errors.append(
+                "evidence.sha256 must contain exactly one digest for every evidence file"
+            )
         else:
             for name in files:
                 expected_digest = digests.get(name)
-                if not isinstance(expected_digest, str) or not SHA256_RE.fullmatch(expected_digest):
-                    errors.append(f"evidence digest for {name} is not canonical SHA-256")
+                if not isinstance(expected_digest, str) or not SHA256_RE.fullmatch(
+                    expected_digest
+                ):
+                    errors.append(
+                        f"evidence digest for {name} is not canonical SHA-256"
+                    )
                     continue
                 evidence_path = result_path.parent / name
                 if evidence_path.is_symlink() or not evidence_path.is_file():
@@ -221,22 +260,43 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, result_path
             if claims.get("vendorHardwareProvenance") != "not-verified":
                 errors.append("protocol E2E must not claim vendor hardware provenance")
             if claims.get("privateKeyServerExposed") is not False:
-                errors.append("protocol E2E must explicitly assert private key is not server-exposed")
+                errors.append(
+                    "protocol E2E must explicitly assert private key is not server-exposed"
+                )
             if claims.get("deviceTrustRelease") != PRODUCT_VERSION:
-                errors.append("protocol E2E is not bound to the current Device Trust release")
+                errors.append(
+                    "protocol E2E is not bound to the current Device Trust release"
+                )
     elif target["kind"] == "native-tests":
         limitations = result.get("limitations")
-        if not isinstance(limitations, list) or "headless-ci-does-not-prove-os-secure-storage-runtime" not in limitations:
-            errors.append("native result must disclose secure-storage runtime limitation")
+        if (
+            not isinstance(limitations, list)
+            or "headless-ci-does-not-prove-os-secure-storage-runtime" not in limitations
+        ):
+            errors.append(
+                "native result must disclose secure-storage runtime limitation"
+            )
         claims = result.get("claims")
-        if not isinstance(claims, dict) or claims.get("deviceTrustRelease") != PRODUCT_VERSION:
-            errors.append("native result is not bound to the current Device Trust release")
+        if (
+            not isinstance(claims, dict)
+            or claims.get("deviceTrustRelease") != PRODUCT_VERSION
+        ):
+            errors.append(
+                "native result is not bound to the current Device Trust release"
+            )
     return errors
 
 
-def render_markdown(product_version: str, targets: list[dict[str, Any]], records: dict[str, dict[str, Any]], commit: str, run_id: str, repository: str) -> str:
+def render_markdown(
+    product_version: str,
+    targets: list[dict[str, Any]],
+    records: dict[str, dict[str, Any]],
+    commit: str,
+    run_id: str,
+    repository: str,
+) -> str:
     lines = [
-        f"# NeverLauncher {product_version} — Public Device Trust Matrix",
+        f"# Launcher {product_version} — Public Device Trust Matrix",
         "",
         "> Матрица генерируется только из CI evidence для exact commit/run ID. PASS нельзя записать вручную в targets.json.",
         "",
@@ -249,7 +309,11 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
         passed = sum(1 for name in target["requiredChecks"] if checks.get(name) is True)
         total = len(target["requiredChecks"])
         status = "PASS" if record.get("status") == "passed" else "FAIL"
-        scope = "PostgreSQL protocol E2E" if target["kind"] == "protocol-e2e" else "Native Tauri compile + key-policy unit tests"
+        scope = (
+            "PostgreSQL protocol E2E"
+            if target["kind"] == "protocol-e2e"
+            else "Native Tauri compile + key-policy unit tests"
+        )
         lines.append(
             f"| `{target['id']}` | {scope} | `{target['os']}/{target['arch']}` | "
             f"`{record.get('runtimeArch', '—')}` | {passed}/{total} | **{status}** |"
@@ -270,7 +334,9 @@ def render_markdown(product_version: str, targets: list[dict[str, Any]], records
 
 def command_validate(args: argparse.Namespace) -> int:
     payload = load_targets(args.targets)
-    print(f"Device Trust targets OK: {len(payload['targets'])} targets for {PRODUCT_VERSION}")
+    print(
+        f"Device Trust targets OK: {len(payload['targets'])} targets for {PRODUCT_VERSION}"
+    )
     return 0
 
 
@@ -293,17 +359,30 @@ def command_aggregate(args: argparse.Namespace) -> int:
         if found is None:
             if target["required"]:
                 errors.append(f"missing required device trust result: {target['id']}")
-            records[target["id"]] = {"targetId": target["id"], "status": "missing", "checks": {}}
+            records[target["id"]] = {
+                "targetId": target["id"],
+                "status": "missing",
+                "checks": {},
+            }
             continue
         path, result = found
-        result_errors = verify_result(target, result, result_path=path, commit=args.commit, run_id=args.run_id)
+        result_errors = verify_result(
+            target, result, result_path=path, commit=args.commit, run_id=args.run_id
+        )
         record = dict(result)
         record["evidenceSha256"] = sha256_file(path)
         if result_errors:
             record["status"] = "invalid"
             errors.extend(f"{target['id']}: {item}" for item in result_errors)
         records[target["id"]] = record
-    status = "passed" if not errors and all(records[t["id"]].get("status") == "passed" for t in targets if t["required"]) else "failed"
+    status = (
+        "passed"
+        if not errors
+        and all(
+            records[t["id"]].get("status") == "passed" for t in targets if t["required"]
+        )
+        else "failed"
+    )
     matrix = {
         "schemaVersion": "1.0",
         "productVersion": PRODUCT_VERSION,
@@ -314,21 +393,35 @@ def command_aggregate(args: argparse.Namespace) -> int:
         "status": status,
         "targets": [records[t["id"]] for t in targets],
         "errors": errors,
-        "generatorRuntime": {"python": platform.python_version(), "platform": platform.platform()},
+        "generatorRuntime": {
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+        },
     }
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    (args.output_dir / "matrix.json").write_text(json.dumps(matrix, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (args.output_dir / "matrix.md").write_text(render_markdown(PRODUCT_VERSION, targets, records, args.commit, args.run_id, args.repository), encoding="utf-8")
+    (args.output_dir / "matrix.json").write_text(
+        json.dumps(matrix, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    (args.output_dir / "matrix.md").write_text(
+        render_markdown(
+            PRODUCT_VERSION, targets, records, args.commit, args.run_id, args.repository
+        ),
+        encoding="utf-8",
+    )
     if errors:
         for item in errors:
             print(f"device trust matrix: {item}", flush=True)
         return 1
-    print(f"Device Trust matrix PASS: {len(targets)} targets, commit={args.commit}, run={args.run_id}")
+    print(
+        f"Device Trust matrix PASS: {len(targets)} targets, commit={args.commit}, run={args.run_id}"
+    )
     return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NeverLauncher public Device Trust CI matrix")
+    parser = argparse.ArgumentParser(
+        description="Launcher public Device Trust CI matrix"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("validate")
     p.add_argument("--targets", type=Path, required=True)

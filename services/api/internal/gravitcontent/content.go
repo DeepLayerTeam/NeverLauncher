@@ -16,8 +16,8 @@ import (
 	"sort"
 	"strings"
 
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 const MaxFileBytes int64 = 64 << 20 // encrypted workspace upload is buffered by the existing builder
@@ -80,7 +80,7 @@ func sourceFile(z *zip.Reader, name string, limit int64) ([]byte, error) {
 // other profiles, launchserver, auth, wrappers, keys and custom modules are
 // never copied into a client workspace.
 func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Inventory, profilePath, projectID, profileID, name, loader string) (Plan, error) {
-	out := Plan{Format: "neverlauncher.gravit-content.v1", SourceSHA256: saved.SourceSHA256, InventorySHA256: saved.ManifestSHA256, ProfilePath: profilePath, Files: []File{}, Blockers: []string{}}
+	out := Plan{Format: "launcher.gravit-content.v1", SourceSHA256: saved.SourceSHA256, InventorySHA256: saved.ManifestSHA256, ProfilePath: profilePath, Files: []File{}, Blockers: []string{}}
 	actual, e := inv.Inspect(ctx, src, size, saved.SourceSHA256)
 	if e != nil {
 		return out, e

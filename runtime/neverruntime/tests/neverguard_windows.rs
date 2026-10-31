@@ -1,6 +1,6 @@
 #![cfg(windows)]
 
-use neverruntime::{
+use runtime::{
     GuardSupervisor, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
     NEVERGUARD_INTEGRITY_EVIDENCE_VERSION, NEVERGUARD_PROTOCOL_VERSION,
     NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION,
@@ -110,7 +110,7 @@ async fn guard_process_boundary_authenticates_and_shuts_down() {
     assert_eq!(evidence.guard.mitigations.child_process.map(|flags| flags & 0x1), Some(0x1));
 
     let challenge_id = "integration-guard-attestation-0134";
-    let challenge = "integration-server-challenge-neverlauncher-0134";
+    let challenge = "integration-server-challenge-launcher-0134";
     let attestation = supervisor
         .remote_attestation(challenge_id, challenge)
         .await

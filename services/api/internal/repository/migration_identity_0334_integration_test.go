@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	gi "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitidentity"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gi "gitflic.ru/skif4er/launcher/services/api/internal/gravitidentity"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 // PostgreSQL integration covers actual row locks, stable snapshot replay,
@@ -87,7 +87,7 @@ func TestMigrationIdentityTransactional0334(t *testing.T) {
 	if _, e = repo.db.ExecContext(ctx, `INSERT INTO users(id,email,display_name) VALUES($1,$2,'Alice334')`, user, user+"@example.invalid"); e != nil {
 		t.Fatal(e)
 	}
-	if _, e = repo.db.ExecContext(ctx, `INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version) VALUES($1,$2,'Alice334','neverlauncher','local',$2,'legacy-fileauth-v1')`, user, uuid); e != nil {
+	if _, e = repo.db.ExecContext(ctx, `INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version) VALUES($1,$2,'Alice334','launcher','local',$2,'legacy-fileauth-v1')`, user, uuid); e != nil {
 		t.Fatal(e)
 	}
 	verified, e := repo.VerifyMigrationIdentities0334(ctx, run.ID)

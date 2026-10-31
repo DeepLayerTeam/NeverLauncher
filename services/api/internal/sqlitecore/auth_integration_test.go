@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/localpassword"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/localpassword"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 func setupAuth(t *testing.T) (*Repository, *Auth, string, string) {
@@ -139,7 +139,7 @@ func TestSQLiteMFAEnrollmentRecoveryAndRevocation(t *testing.T) {
 func TestMinecraftIdentityImmutableAndAuthEpoch(t *testing.T) {
 	r, a, path, pw := setupAuth(t)
 	ctx := context.Background()
-	p := model.MinecraftProfile{UserID: "owner", UUID: "123e4567-e89b-42d3-a456-426614174000", Name: "Steve_1", Issuer: "neverlauncher"}
+	p := model.MinecraftProfile{UserID: "owner", UUID: "123e4567-e89b-42d3-a456-426614174000", Name: "Steve_1", Issuer: "launcher"}
 	out, e := a.SaveMinecraftIdentity(ctx, p, "owner")
 	if e != nil {
 		t.Fatal(e)

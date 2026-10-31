@@ -29,7 +29,7 @@ func TestVerifyServerBridge2CertificationInBundle0150(t *testing.T) {
 		NodeIdentity: "Ed25519", OneTimeJoin: true,
 	}
 	for i, id := range serverBridge2ReleaseTargets0150 {
-		name := fmt.Sprintf("neverlauncher-%s-bridge-%s.jar", id, ver)
+		name := fmt.Sprintf("launcher-%s-bridge-%s.jar", id, ver)
 		body := []byte(fmt.Sprintf("synthetic-platform-artifact:%s:%d", id, i))
 		if err := os.WriteFile(filepath.Join(dir, name), body, 0o644); err != nil {
 			t.Fatal(err)
@@ -71,7 +71,7 @@ func TestVerifyServerBridge3CertificationInBundle0191(t *testing.T) {
 		NodeIdentity: "Ed25519", OneTimeJoin: true,
 	}
 	for i, id := range serverBridge2ReleaseTargets0150 {
-		name := fmt.Sprintf("neverlauncher-%s-bridge-%s.jar", id, ver)
+		name := fmt.Sprintf("launcher-%s-bridge-%s.jar", id, ver)
 		body := []byte(fmt.Sprintf("synthetic-serverbridge3-artifact:%s:%d", id, i))
 		if err := os.WriteFile(filepath.Join(dir, name), body, 0o644); err != nil {
 			t.Fatal(err)
@@ -125,7 +125,7 @@ func TestVerifyServerBridge3GACertification0200(t *testing.T) {
 		UnifiedOperatorAPI: "/api/v1/server-bridge/overview", PublicCompatibilityMatrix: true,
 	}
 	for i, id := range serverBridgeUniversalReleaseTargets0198 {
-		name := fmt.Sprintf("neverlauncher-%s-bridge-%s.jar", id, ver)
+		name := fmt.Sprintf("launcher-%s-bridge-%s.jar", id, ver)
 		body := []byte(fmt.Sprintf("synthetic-serverbridge3-ga-artifact:%s:%d", id, i))
 		if err := os.WriteFile(filepath.Join(dir, name), body, 0o644); err != nil {
 			t.Fatal(err)

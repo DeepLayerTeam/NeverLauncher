@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 func signedEvent0194(t *testing.T, private ed25519.PrivateKey, serverID, runtimeID string, sequence int64, eventType string, payload map[string]string) bridgeEventContract0194 {

@@ -1,6 +1,6 @@
-package ru.neverlauncher.sdk.gravit;
+package ru.launcher.sdk.gravit;
 import pro.gravit.launcher.base.modules.LauncherModule;
-import ru.neverlauncher.sdk.core.RuntimeEvents;
+import ru.launcher.sdk.core.RuntimeEvents;
 import java.util.Map;
 /** Go eventbus release.published with original idempotency metadata. */
 @HostEvent(type="release.published")

@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
 )
 
 func TestMinimalDeployment0375(t *testing.T) {
 	root := t.TempDir()
 	cfg := config.Config{Environment: "production", DeploymentMode: "single-node", RepositoryDriver: "sqlite", DatabaseDSN: filepath.Join(root, "db", "http.sqlite"), SQLiteCoordinatorPath: filepath.Join(root, "db", "coordinator.sqlite"), StorageDriver: "local", StorageLocalPath: filepath.Join(root, "storage"), RateLimitEnabled: true, RateLimitFailClosed: true, RateLimitGlobalPerMinute: 1200, RateLimitAuthPerMinute: 20, RateLimitServerBridgePerMinute: 6000}
 	plan, err := Detect(cfg)
-	if err != nil || plan.Mode != SingleNode || !plan.SingleInstance || !strings.HasSuffix(plan.LockPath, ".neverlauncher-api.owner.lock") {
+	if err != nil || plan.Mode != SingleNode || !plan.SingleInstance || !strings.HasSuffix(plan.LockPath, ".launcher-api.owner.lock") {
 		t.Fatalf("plan=%+v err=%v", plan, err)
 	}
 	owner, err := Acquire(plan)

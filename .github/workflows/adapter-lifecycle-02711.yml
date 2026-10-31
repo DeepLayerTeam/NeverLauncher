@@ -2,14 +2,14 @@ name: Adapter Lifecycle 0.27.11
 on:
   push:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - 'cli/go.mod'
       - 'cli/go.sum'
       - '.github/workflows/adapter-lifecycle-02711.yml'
       - 'VERSION'
   pull_request:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - 'cli/go.mod'
       - 'cli/go.sum'
       - '.github/workflows/adapter-lifecycle-02711.yml'
@@ -33,21 +33,21 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          test -z "$(gofmt -l cli/cmd/neverlauncher/{adapter_lifecycle_02711,adapter_lifecycle_cli_02711,adapter_lifecycle_02711_test,client_factory_0271,manual_artifact_gates_0276,mirror_helper_parity_0274}.go)"
+          test -z "$(gofmt -l cli/cmd/launcher/{adapter_lifecycle_02711,adapter_lifecycle_cli_02711,adapter_lifecycle_02711_test,client_factory_0271,manual_artifact_gates_0276,mirror_helper_parity_0274}.go)"
       - name: Real Client Factory integration and compatibility fixtures
         working-directory: cli
         shell: bash
         run: >-
-          go test ./cmd/neverlauncher -run
+          go test ./cmd/launcher -run
           'TestAdapterLifecycle02711|TestClientFactory0271|TestModernLoader0272|TestMirrorHelper0274|TestAuthlibClassloader0279|TestLegacyClientAdapters0278'
           -count=1 -timeout=5m
       - name: CLI compile
         working-directory: cli
-        run: go build ./cmd/neverlauncher
+        run: go build ./cmd/launcher
       - name: Vet
         working-directory: cli
-        run: go vet ./cmd/neverlauncher
+        run: go vet ./cmd/launcher
       - name: Race verification
         if: runner.os == 'Linux'
         working-directory: cli
-        run: go test -race ./cmd/neverlauncher -run 'TestAdapterLifecycle02711|TestClientFactory0271VanillaTransactionReplayAndTampering' -count=1 -timeout=5m
+        run: go test -race ./cmd/launcher -run 'TestAdapterLifecycle02711|TestClientFactory0271VanillaTransactionReplayAndTampering' -count=1 -timeout=5m

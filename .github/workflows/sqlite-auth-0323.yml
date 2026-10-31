@@ -5,7 +5,7 @@ on:
       - 'services/api/internal/sqlitecore/**'
       - 'services/api/internal/sqlitedurable/**'
       - 'services/api/internal/localpassword/**'
-      - 'services/api/cmd/neverlauncher-sqlite/**'
+      - 'services/api/cmd/launcher-sqlite/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
       - '.github/workflows/sqlite-auth-0323.yml'
@@ -29,7 +29,7 @@ jobs:
           set -euo pipefail
           go mod download
           go mod verify
-          test -z "$(gofmt -l internal/sqlitecore cmd/neverlauncher-sqlite)"
+          test -z "$(gofmt -l internal/sqlitecore cmd/launcher-sqlite)"
       - name: Certify native local filesystem
         run: |
           set -euo pipefail
@@ -42,15 +42,15 @@ jobs:
           NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
-          go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
-          go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+          go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
+          go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Compile and initialize CLI with current schema
         run: |
           set -euo pipefail
-          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+          go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
           db="$RUNNER_TEMP/never-sqlite-auth/live.sqlite"
-          "$RUNNER_TEMP/neverlauncher-sqlite" core-init --db "$db" > "$RUNNER_TEMP/auth-init.json"
-          "$RUNNER_TEMP/neverlauncher-sqlite" core-status --db "$db" > "$RUNNER_TEMP/auth-status.json"
+          "$RUNNER_TEMP/launcher-sqlite" core-init --db "$db" > "$RUNNER_TEMP/auth-init.json"
+          "$RUNNER_TEMP/launcher-sqlite" core-status --db "$db" > "$RUNNER_TEMP/auth-status.json"
           python3 - <<'PY'
           import json,os
           with open(os.environ['RUNNER_TEMP']+'/auth-status.json') as f: result=json.load(f)
@@ -60,7 +60,7 @@ jobs:
           PY
           printf '{"password":"correct long secret"}\n' > "$RUNNER_TEMP/never-sqlite-auth/password.json"
           chmod 0600 "$RUNNER_TEMP/never-sqlite-auth/password.json"
-          "$RUNNER_TEMP/neverlauncher-sqlite" auth-hash-password --input "$RUNNER_TEMP/never-sqlite-auth/password.json" > "$RUNNER_TEMP/never-sqlite-auth/hash.json"
+          "$RUNNER_TEMP/launcher-sqlite" auth-hash-password --input "$RUNNER_TEMP/never-sqlite-auth/password.json" > "$RUNNER_TEMP/never-sqlite-auth/hash.json"
           python3 - <<'PY'
           import json,os
           with open(os.environ['RUNNER_TEMP']+'/never-sqlite-auth/hash.json') as f: result=json.load(f)

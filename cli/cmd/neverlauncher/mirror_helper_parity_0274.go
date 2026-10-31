@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const mirrorActionsPath0274 = ".neverlauncher/mirror-actions.json"
+const mirrorActionsPath0274 = ".launcher/mirror-actions.json"
 
 type mirrorArtifact0274 struct {
 	Path      string `json:"path"`
@@ -279,12 +279,12 @@ func mirrorTransactional0274(ctx context.Context, dir string, operate func(strin
 	if err := attachCompatToPlan0279(stage, &plan); err != nil {
 		return plan, err
 	}
-	ledger := mirrorActions0274{SchemaVersion: "neverlauncher.mirror-actions.v1", Actions: []mirrorAction0274{}}
+	ledger := mirrorActions0274{SchemaVersion: "launcher.mirror-actions.v1", Actions: []mirrorAction0274{}}
 	if raw, e := os.ReadFile(filepath.Join(stage, mirrorActionsPath0274)); e == nil {
 		if err = json.Unmarshal(raw, &ledger); err != nil {
 			return plan, err
 		}
-		if ledger.SchemaVersion != "neverlauncher.mirror-actions.v1" {
+		if ledger.SchemaVersion != "launcher.mirror-actions.v1" {
 			return plan, errors.New("unknown mirror actions schema")
 		}
 	} else if !errors.Is(e, os.ErrNotExist) {
@@ -659,7 +659,7 @@ func mirrorPatchAuthlib0274(stage, target, patch, baseSHA, patchSHA, expectedSHA
 		return nil, err
 	}
 	// Pin the actual overlay bytes in the build, not just its digest.
-	patchRel := ".neverlauncher/compat/patches/" + strings.ToLower(patchSHA) + ".jar"
+	patchRel := ".launcher/compat/patches/" + strings.ToLower(patchSHA) + ".jar"
 	patchDst, err := secureClientDestination(stage, patchRel)
 	if err != nil {
 		return nil, err
@@ -767,7 +767,7 @@ func mirrorReadWorkspace0274(path string) (mirrorWorkspace0274, error) {
 	if err = dec.Decode(new(any)); !errors.Is(err, io.EOF) {
 		return ws, errors.New("extra data after workspace JSON")
 	}
-	if ws.SchemaVersion != "neverlauncher.mirror-workspace.v1" {
+	if ws.SchemaVersion != "launcher.mirror-workspace.v1" {
 		return ws, errors.New("unsupported workspace schema")
 	}
 	switch ws.Loader {

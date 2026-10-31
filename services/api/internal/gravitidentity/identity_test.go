@@ -9,7 +9,7 @@ import (
  "strings"
  "testing"
 
- inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
+ inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
 )
 func archive334(t *testing.T, files map[string]string) ([]byte,inv.Inventory) {
  t.Helper();var buf bytes.Buffer;w:=zip.NewWriter(&buf)

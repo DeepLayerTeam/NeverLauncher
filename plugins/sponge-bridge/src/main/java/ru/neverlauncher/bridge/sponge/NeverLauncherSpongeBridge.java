@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.sponge;
+package ru.launcher.bridge.sponge;
 
 import com.google.inject.Inject;
 import net.kyori.adventure.text.Component;
@@ -14,7 +14,7 @@ import org.spongepowered.api.event.network.ServerSideConnectionEvent.Join;
 import org.spongepowered.api.event.network.ServerSideConnectionEvent.Disconnect;
 import org.spongepowered.plugin.PluginContainer;
 import org.spongepowered.plugin.builtin.jvm.Plugin;
-import ru.neverlauncher.bridge.common.*;
+import ru.launcher.bridge.common.*;
 
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
@@ -25,11 +25,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** Нативный адаптер SpongeAPI; рефлексия используется только для необязательных метрик и различий версий. */
-@Plugin("neverlauncher_sponge_bridge")
-public final class NeverLauncherSpongeBridge {
+@Plugin("launcher_sponge_bridge")
+public final class LauncherSpongeBridge {
     private final PluginContainer container;
     private final Logger logger;
-    private final ScheduledExecutorService workers = Executors.newSingleThreadScheduledExecutor(r -> { Thread t=new Thread(r,"neverlauncher-sponge-heartbeat");t.setDaemon(true);return t; });
+    private final ScheduledExecutorService workers = Executors.newSingleThreadScheduledExecutor(r -> { Thread t=new Thread(r,"launcher-sponge-heartbeat");t.setDaemon(true);return t; });
     private final AtomicBoolean stopping = new AtomicBoolean();
     private final AtomicBoolean maintenance = new AtomicBoolean();
     private final AtomicBoolean draining = new AtomicBoolean();
@@ -37,10 +37,10 @@ public final class NeverLauncherSpongeBridge {
     private final KickConfirmations kickConfirmations = new KickConfirmations();
     private volatile Server server;
     private volatile BridgeConfig config;
-    private volatile NeverLauncherApiClient api;
+    private volatile LauncherApiClient api;
 
     @Inject
-    public NeverLauncherSpongeBridge(PluginContainer container, Logger logger) {
+    public LauncherSpongeBridge(PluginContainer container, Logger logger) {
         this.container = container; this.logger = logger;
     }
 
@@ -48,7 +48,7 @@ public final class NeverLauncherSpongeBridge {
     public void onStarted(StartedEngineEvent<Server> event) {
         this.server = event.engine();
         try {
-            Path configPath = Path.of(System.getProperty("user.dir", "."), "config", "neverlauncher-sponge-bridge", "config.yml").toAbsolutePath().normalize();
+            Path configPath = Path.of(System.getProperty("user.dir", "."), "config", "launcher-sponge-bridge", "config.yml").toAbsolutePath().normalize();
             config = BridgeConfig.load(configPath, "sponge-main");
             String sha = BridgeIntegrity.artifactSha256(getClass());
             if (config.requireIntegrity && !BridgeIntegrity.isSha256(sha)) throw new IllegalStateException("cannot measure running Sponge bridge JAR SHA-256");
@@ -58,22 +58,22 @@ public final class NeverLauncherSpongeBridge {
             BridgeRuntimeDescriptor descriptor = BridgeRuntimeDescriptor.of(minecraftVersion, "sponge", "SpongeAPI", spongeVersion,
                 "Sponge " + spongeVersion, List.of("heartbeat.signed","join.sponge-auth-gate","artifact.sha256","runtime.discovery","runtime.ed25519-attestation","telemetry.server-v1","events.ordered-stream-v1","control.secure-channel-v1","loader.sponge"));
             BridgeAdapterProfiles.rejectUncertifiedHybrid("sponge", descriptor.serverBrand());
-            api = new NeverLauncherApiClient(config, identity, "sponge", BridgeDefaults.VERSION, sha, descriptor);
+            api = new LauncherApiClient(config, identity, "sponge", BridgeDefaults.VERSION, sha, descriptor);
             api.setRoutingModes(false,false);
             api.startControlChannel(this::executeControl);
             api.publishEvent("server.startup", Map.of("platform","sponge"));
             api.publishEvent("server.ready", Map.of("platform","sponge"));
             workers.scheduleWithFixedDelay(this::sampleAndHeartbeat, 0, Math.max(5, Math.min(config.heartbeatIntervalSeconds, config.telemetrySampleIntervalSeconds)), TimeUnit.SECONDS);
-            logger.info("NeverLauncher Sponge ServerBridge {} ready; serverId={}; runtimeId={}", BridgeDefaults.VERSION, config.serverId, api.runtimeId());
+            logger.info("Launcher Sponge ServerBridge {} ready; serverId={}; runtimeId={}", BridgeDefaults.VERSION, config.serverId, api.runtimeId());
         } catch (Exception e) {
-            throw new IllegalStateException("NeverLauncher Sponge ServerBridge initialization failed", e);
+            throw new IllegalStateException("Launcher Sponge ServerBridge initialization failed", e);
         }
     }
 
     @Listener(order = Order.FIRST)
     public void onAuth(Auth event) {
-        NeverLauncherApiClient current=api;
-        if(current==null || stopping.get()){ deny(event,"NeverLauncher ServerBridge unavailable"); return; }
+        LauncherApiClient current=api;
+        if(current==null || stopping.get()){ deny(event,"Launcher ServerBridge unavailable"); return; }
         if(maintenance.get() || draining.get()){ deny(event, maintenance.get()?"Server is in maintenance mode":"Server is draining"); return; }
         String username = profileString(event.profile(), "name");
         String uuid = profileString(event.profile(), "uniqueId");
@@ -98,7 +98,7 @@ public final class NeverLauncherSpongeBridge {
     @Listener public void onStopping(StoppingEngineEvent<Server> event) { close(); }
 
     private void sampleAndHeartbeat() {
-        NeverLauncherApiClient current=api; Server s=server; if(current==null||s==null||stopping.get()) return;
+        LauncherApiClient current=api; Server s=server; if(current==null||s==null||stopping.get()) return;
         try {
             int players = collectionSize(invokeNoArg(s,"onlinePlayers"), online.get());
             int max = intValue(invokeNoArg(s,"maxPlayers"), Math.max(players,players));
@@ -186,5 +186,5 @@ public final class NeverLauncherSpongeBridge {
     private static boolean invokeComponent(Object target,String method,Component c){try{target.getClass().getMethod(method,Component.class).invoke(target,c);return true;}catch(Exception e){return false;}}
     private static String safe(String s,int max){String v=s==null?"":s.replace('\r',' ').replace('\n',' ').trim();return v.length()>max?v.substring(0,max):v;}
 
-    private void close(){ if(!stopping.compareAndSet(false,true))return; NeverLauncherApiClient current=api; if(current!=null){current.publishEvent("server.shutdown",Map.of("platform","sponge"));current.flushEventsNow();current.closeEventStreamCleanly();} kickConfirmations.close(); workers.shutdownNow(); }
+    private void close(){ if(!stopping.compareAndSet(false,true))return; LauncherApiClient current=api; if(current!=null){current.publishEvent("server.shutdown",Map.of("platform","sponge"));current.flushEventsNow();current.closeEventStreamCleanly();} kickConfirmations.close(); workers.shutdownNow(); }
 }

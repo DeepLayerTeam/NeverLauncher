@@ -7,7 +7,7 @@ Extensions — система расширения возможностей Back
 - `extensions/` — файлы целевых сценариев/сертификации.
 - `sdk/` — доступные SDK и типы.
 - `examples/extensions/` — примеры расширений серверной части и CLI.
-- `cli/cmd/neverlauncher/main.go` — команды `nl extension ...` и альтернативная команда `nl plugin ...`.
+- `cli/cmd/launcher/main.go` — команды `nl extension ...` и альтернативная команда `nl plugin ...`.
 - `services/api/internal/extension*`, `services/api/internal/httpapi/extension*` — серверная реализация.
 
 ## Жизненный цикл

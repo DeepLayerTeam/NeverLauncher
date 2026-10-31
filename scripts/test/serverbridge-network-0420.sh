@@ -13,7 +13,7 @@ GITHUB_SHA="$SOURCE_COMMIT" NEVERLAUNCHER_E2E_MODE=full bash "$ROOT/e2e/scripts/
 mkdir -p "$ROOT/e2e/runtime"
 (
   cd "$ROOT/cli"
-  GOTOOLCHAIN=local go test -json -race -count=1 -timeout 240s ./cmd/neverlauncher \
+  GOTOOLCHAIN=local go test -json -race -count=1 -timeout 240s ./cmd/launcher \
     -run '^(TestRemoteFault.*04112|TestHostLifecycle0414(RealJVMStartStopRestartAndSIGTERM|RealJVMAutoRecoveryAfterCrash|RealJVMCrashLoopIsBounded|ActualCLIAndRemoteEffects|StopWhileJavaCrashIsInBackoff)|TestWorldBackup(CreateVerifyRestore02810|GateBlocksStartAndSecondBackup04110|GateFailsClosedAndRecoversOffline04110))$'
 ) > "$ROOT/e2e/runtime/network-faults-0420.go-test.jsonl"
 python3 "$ROOT/scripts/ga/record_network_faults_0420.py" \

@@ -14,14 +14,14 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/serverbridgeha"
+	"gitflic.ru/skif4er/launcher/services/api/internal/authorization"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/serverbridgeha"
 )
 
 const (
-	serverBridgeControlSignatureScheme0195 = "NeverLauncher-ServerBridge-Control-v1"
+	serverBridgeControlSignatureScheme0195 = "Launcher-ServerBridge-Control-v1"
 	serverBridgeControlLease0195           = 30 * time.Second
 	serverBridgeControlPayloadMax0195      = 4096
 )

@@ -1,17 +1,17 @@
-package ru.neverlauncher.bridge.proxy;
+package ru.launcher.bridge.proxy;
 
-import ru.neverlauncher.bridge.common.BridgeAuthResponse0287;
-import ru.neverlauncher.bridge.common.BridgeConfig;
-import ru.neverlauncher.bridge.common.BridgeControlCommand;
-import ru.neverlauncher.bridge.common.BridgeControlExecutor;
-import ru.neverlauncher.bridge.common.BridgeControlResult;
-import ru.neverlauncher.bridge.common.BridgeDefaults;
-import ru.neverlauncher.bridge.common.BridgeIntegrity;
-import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
-import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
-import ru.neverlauncher.bridge.common.JoinValidationResult;
-import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
-import ru.neverlauncher.bridge.common.NodeIdentity;
+import ru.launcher.bridge.common.BridgeAuthResponse0287;
+import ru.launcher.bridge.common.BridgeConfig;
+import ru.launcher.bridge.common.BridgeControlCommand;
+import ru.launcher.bridge.common.BridgeControlExecutor;
+import ru.launcher.bridge.common.BridgeControlResult;
+import ru.launcher.bridge.common.BridgeDefaults;
+import ru.launcher.bridge.common.BridgeIntegrity;
+import ru.launcher.bridge.common.BridgeRuntimeDescriptor;
+import ru.launcher.bridge.common.BridgePlatformTelemetry;
+import ru.launcher.bridge.common.JoinValidationResult;
+import ru.launcher.bridge.common.LauncherApiClient;
+import ru.launcher.bridge.common.NodeIdentity;
 
 import java.nio.file.Path;
 import java.time.Instant;
@@ -95,7 +95,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         RuntimeState current = state;
         current.api.publishEvent("server.startup", Map.of("platform", platformId));
         current.api.publishEvent("server.ready", Map.of("platform", platformId));
-        logger.info("NeverLauncher " + displayName + " Bridge " + BridgeDefaults.VERSION +
+        logger.info("Launcher " + displayName + " Bridge " + BridgeDefaults.VERSION +
             " enabled; serverId=" + current.config.serverId +
             "; nodeKeyFingerprint=" + current.identity.fingerprint() +
             "; nodePublicKey=" + current.identity.publicKeyBase64Url() +
@@ -115,7 +115,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         if (platformControlExecutor != null) next.api.startControlChannel(this::executeControl);
         next.api.publishEvent("server.ready", Map.of("platform", platformId, "reason", "reload"));
         triggerHeartbeat();
-        logger.info("NeverLauncher " + displayName + " Bridge configuration reloaded; serverId=" + next.config.serverId +
+        logger.info("Launcher " + displayName + " Bridge configuration reloaded; serverId=" + next.config.serverId +
             "; nodeKeyFingerprint=" + next.identity.fingerprint());
     }
 
@@ -194,7 +194,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         try {
             return CompletableFuture.supplyAsync(() -> createHandoff(username, targetServer), validationExecutor);
         } catch (RejectedExecutionException e) {
-            logger.warning("NeverLauncher " + displayName + " Bridge handoff queue saturated; failing closed");
+            logger.warning("Launcher " + displayName + " Bridge handoff queue saturated; failing closed");
             return CompletableFuture.completedFuture(new JoinValidationResult(false, "bridge_overloaded", "{}"));
         }
     }
@@ -209,7 +209,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         try {
             return CompletableFuture.supplyAsync(() -> validateJoin(username, uuid, ip, onlineModeVerified), validationExecutor);
         } catch (RejectedExecutionException e) {
-            logger.warning("NeverLauncher " + displayName + " Bridge join validation queue saturated; failing closed");
+            logger.warning("Launcher " + displayName + " Bridge join validation queue saturated; failing closed");
             return CompletableFuture.completedFuture(new JoinValidationResult(false, "bridge_overloaded", "{}"));
         }
     }
@@ -325,7 +325,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
             boolean heartbeatStopped = heartbeatExecutor.awaitTermination(2, TimeUnit.SECONDS);
             boolean validationStopped = validationExecutor.awaitTermination(2, TimeUnit.SECONDS);
             if (!heartbeatStopped || !validationStopped) {
-                logger.warning("NeverLauncher proxy bridge I/O workers did not terminate within shutdown window");
+                logger.warning("Launcher proxy bridge I/O workers did not terminate within shutdown window");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -341,7 +341,7 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         }
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
         BridgeRuntimeDescriptor descriptor = Objects.requireNonNull(runtimeDescriptorSupplier.get(), "runtime descriptor");
-        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, platformId, BridgeDefaults.VERSION, pluginSha256, descriptor);
+        LauncherApiClient api = new LauncherApiClient(config, identity, platformId, BridgeDefaults.VERSION, pluginSha256, descriptor);
         return new RuntimeState(config, identity, api, pluginSha256);
     }
 
@@ -364,8 +364,8 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         lastHeartbeatOK = ok;
         lastHeartbeatAt = Instant.now();
         if (previousAt == null || previous != ok) {
-            if (ok) logger.info("NeverLauncher " + displayName + " Bridge heartbeat=true serverId=" + current.config.serverId);
-            else logger.warning("NeverLauncher " + displayName + " Bridge heartbeat=false serverId=" + current.config.serverId + " reason=rejected_or_unavailable");
+            if (ok) logger.info("Launcher " + displayName + " Bridge heartbeat=true serverId=" + current.config.serverId);
+            else logger.warning("Launcher " + displayName + " Bridge heartbeat=false serverId=" + current.config.serverId + " reason=rejected_or_unavailable");
         }
     }
 
@@ -374,12 +374,12 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
     }
 
     private Thread daemonThread(Runnable task, String role) {
-        Thread thread = new Thread(task, "neverlauncher-proxy-bridge-" + role + "-" + platformId);
+        Thread thread = new Thread(task, "launcher-proxy-bridge-" + role + "-" + platformId);
         thread.setDaemon(true);
         thread.setUncaughtExceptionHandler((t, error) -> {
             RuntimeState current = state;
             if (current != null) current.api.publishEvent("server.error", Map.of("component", role, "message", safeError(error)));
-            logger.severe("NeverLauncher proxy bridge " + role + " worker failed: " + error.getMessage());
+            logger.severe("Launcher proxy bridge " + role + " worker failed: " + error.getMessage());
         });
         return thread;
     }
@@ -400,5 +400,5 @@ public final class ProxyBridgeRuntime implements AutoCloseable {
         return value.trim();
     }
 
-    private record RuntimeState(BridgeConfig config, NodeIdentity identity, NeverLauncherApiClient api, String pluginSha256) {}
+    private record RuntimeState(BridgeConfig config, NodeIdentity identity, LauncherApiClient api, String pluginSha256) {}
 }

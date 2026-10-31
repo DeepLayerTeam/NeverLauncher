@@ -193,7 +193,7 @@ mod tests {
     use super::*;
     #[test]
     fn activity_needs_valid_snowflake_and_action() {
-        let mut req = PresenceRequest{application_id:"123456789012345678".into(),details:"NeverLauncher".into(),state:"In launcher".into(),action_url:None};
+        let mut req = PresenceRequest{application_id:"123456789012345678".into(),details:"Launcher".into(),state:"In launcher".into(),action_url:None};
         assert!(validate(&req).is_ok());
         req.action_url=Some("javascript:alert(1)".into());
         assert!(validate(&req).is_err());

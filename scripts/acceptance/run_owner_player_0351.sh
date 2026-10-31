@@ -12,7 +12,7 @@ trap cleanup EXIT
 
 # Only the CI/dev default test identity may be used. Do not point this runner at
 # a supplied Backend; it must start its own ephemeral memory-only instance.
-export NEVERLAUNCHER_TEST_ADMIN_EMAIL=admin@neverlauncher.local
+export NEVERLAUNCHER_TEST_ADMIN_EMAIL=admin@launcher.local
 export NEVERLAUNCHER_TEST_ADMIN_PASSWORD=admin
 export NEVERLAUNCHER_REPOSITORY_DRIVER=memory
 export NEVERLAUNCHER_STORAGE_DRIVER=local
@@ -28,9 +28,9 @@ export NEVERLAUNCHER_HTTP_ADDR="127.0.0.1:$PORT"
 VERSION="$(cat "$ROOT/VERSION")"
 (
   cd "$ROOT/services/api"
-  go build -tags neverlauncher_nopgx -trimpath -ldflags="-X main.version=$VERSION" -o "$TMP/neverlauncher-api" ./cmd/neverlauncher-api
+  go build -tags launcher_nopgx -trimpath -ldflags="-X main.version=$VERSION" -o "$TMP/launcher-api" ./cmd/launcher-api
 )
-"$TMP/neverlauncher-api" > "$TMP/backend.log" 2>&1 &
+"$TMP/launcher-api" > "$TMP/backend.log" 2>&1 &
 PID=$!
 BASE="http://127.0.0.1:$PORT"
 for _ in $(seq 1 100); do

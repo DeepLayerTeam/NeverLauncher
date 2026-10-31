@@ -1,5 +1,5 @@
-//go:build !neverlauncher_nopgx
-// +build !neverlauncher_nopgx
+//go:build !launcher_nopgx
+// +build !launcher_nopgx
 
 package repository
 

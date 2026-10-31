@@ -1,10 +1,10 @@
-# NeverLauncher 0.25.8 — Desktop Textures UI
+# Launcher 0.25.8 — Desktop Textures UI
 
 ## What ships
 
-**Desktop → Скины и плащи** is a real React UI, integrated into the existing app navigation and NeverLauncher session lifecycle (not an iframe, stub or mock backend). It consumes the previously deployed 0.25.1–0.25.7 backend texture APIs and separates two identities:
+**Desktop → Скины и плащи** is a real React UI, integrated into the existing app navigation and Launcher session lifecycle (not an iframe, stub or mock backend). It consumes the previously deployed 0.25.1–0.25.7 backend texture APIs and separates two identities:
 
-- **Локальный NeverLauncher:** uses the authenticated Never session and its server-owned canonical Minecraft UUID. Saved library (12 images per page), selected texture, revision, gallery previews, selecting an existing PNG, uploading/importing, reset/delete, model and visibility changes, history and permission-error feedback.
+- **Локальный Launcher:** uses the authenticated Never session and its server-owned canonical Minecraft UUID. Saved library (12 images per page), selected texture, revision, gallery previews, selecting an existing PNG, uploading/importing, reset/delete, model and visibility changes, history and permission-error feedback.
 - **Официальный Minecraft:** uses only the Microsoft account explicitly linked in **Вход** and the existing official Minecraft Services gateway. Uploads official skins, selects only owned official capes, resets skins/capes and retrieves the current official profile. Neither the local UUID nor local texture blob IDs are forwarded to official services. The official session is scoped to Never session and cleared on logout.
 
 The preview renders the classic/slim Minecraft avatar with the actual Java skin-atlas UV layout, including 64x64 overlay layers. In **3D**, 3D-transformed textured cubes provide live orbit via pointer drag, with cape behind the avatar and front/back/side faces; **2D** uses a flat front projection, plus a separate 2D cape preview. Pixel-art rendering uses `image-rendering: pixelated`. There are no additional runtime libraries. Higher-resolution skins preserve original UV proportions. This visual-only client renderer does not replace validating/uploading the full PNG on the server.
@@ -13,7 +13,7 @@ Owner-only gallery PNGs are fetched with the authenticated Bearer token; tempora
 
 ## Behavior
 
-1. Open Desktop and log in to NeverLauncher using **Вход**.
+1. Open Desktop and log in to Launcher using **Вход**.
 2. Open **Скины и плащи**. Select local or official identity explicitly; local identity never switches the selected launch identity in the background.
 3. Choose **Скины** or **Плащи**. Upload a PNG (up to 4 MiB), choose classic/slim (skin only), or select a previously saved asset; the server validates format and Minecraft geometry. Import via external HTTPS is executed by the existing server-side SSRF-safe fetcher.
 4. Observe upload progress and errors. Local requests include `expectedRevision` for CAS and refresh both selection and library after mutations; HTTP 409 refreshes current state without unsafe automatic retry.

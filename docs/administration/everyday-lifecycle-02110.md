@@ -1,4 +1,4 @@
-# NeverLauncher 0.21.10 — Everyday Lifecycle
+# Launcher 0.21.10 — Everyday Lifecycle
 
 Admin 0.21.10 connects existing backend actions to interactive workflows. It does not change ServerBridge v3 or weaken backend authorization.
 

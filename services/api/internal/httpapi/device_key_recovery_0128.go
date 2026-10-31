@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 const deviceKeyRecoveryFreshAuth0128 = 5 * time.Minute
@@ -32,7 +32,7 @@ type deviceKeyReplacementComplete0128 struct {
 }
 
 func deviceKeyReplacementPayload0128(mode, challenge, userID, sessionID, oldDeviceID, oldFingerprint, newDeviceID, newFingerprint, algorithm, binding, provider string, issuedAt, expiresAt time.Time) string {
-	return "NeverLauncher Device Key Replacement v1\n" +
+	return "Launcher Device Key Replacement v1\n" +
 		"purpose=" + strings.TrimSpace(mode) + "\n" +
 		"challenge=" + strings.TrimSpace(challenge) + "\n" +
 		"user=" + strings.TrimSpace(userID) + "\n" +

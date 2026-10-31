@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-const permissionSchema0276 = "neverlauncher.artifact-permissions.v1"
+const permissionSchema0276 = "launcher.artifact-permissions.v1"
 
 type artifactGrant0276 struct {
 	Path         string `json:"path"`
@@ -270,7 +270,7 @@ func exportModpackArtifacts0276(dir, permissionsFile, output string) (permission
 		Files             []modpackFile0275 `json:"files"`
 		// Human-declared provenance, not independent verification of licensing.
 		DeclaredRights []artifactGrant0276 `json:"declaredRights"`
-	}{SchemaVersion: "neverlauncher.modpack-artifact-bundle.v1", PackSHA256: result.PackSHA256, InstallPlanSHA256: result.PlanSHA256, Files: files}
+	}{SchemaVersion: "launcher.modpack-artifact-bundle.v1", PackSHA256: result.PackSHA256, InstallPlanSHA256: result.PlanSHA256, Files: files}
 	grants, _ := readArtifactPermissions0276(permissionsFile)
 	manifest.DeclaredRights = grants.Grants
 	sort.Slice(manifest.DeclaredRights, func(i, j int) bool { return manifest.DeclaredRights[i].Path < manifest.DeclaredRights[j].Path })

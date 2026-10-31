@@ -4,7 +4,7 @@ on:
     paths:
       - 'services/api/internal/sqlitecore/**'
       - 'services/api/internal/sqlitedurable/**'
-      - 'services/api/cmd/neverlauncher-sqlite/**'
+      - 'services/api/cmd/launcher-sqlite/**'
       - '.github/workflows/sqlite-durable-0325.yml'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
@@ -28,27 +28,27 @@ jobs:
           set -euo pipefail
           go mod download
           go mod verify
-          test -z "$(gofmt -l internal/sqlitecore internal/sqlitedurable cmd/neverlauncher-sqlite)"
+          test -z "$(gofmt -l internal/sqlitecore internal/sqlitedurable cmd/launcher-sqlite)"
       - name: Require supported native filesystem; race + restart tests
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/neverlauncher-durable
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-durable
           NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
           mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
           chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
           stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
-          go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+          go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
+          go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Build production CLI and exercise real durable queue & outbox
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/neverlauncher-durable
+          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-durable
         run: |
           set -euo pipefail
-          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+          go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
           cd "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
           db="$PWD/durable.db"
-          cli="$RUNNER_TEMP/neverlauncher-sqlite"
+          cli="$RUNNER_TEMP/launcher-sqlite"
           "$cli" core-init --db "$db" > init.json
           "$cli" core-status --db "$db" > status.json
           python3 - <<'PY'

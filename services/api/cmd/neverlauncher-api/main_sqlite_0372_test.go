@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func TestSQLiteHTTPRepositoryBootstrap0372(t *testing.T) {

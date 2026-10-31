@@ -398,7 +398,7 @@ fn thread_set_sha256(threads: &HashMap<u32, ThreadRecord>) -> String {
         .collect::<Vec<_>>();
     records.sort_unstable();
     let mut digest = Sha256::new();
-    digest.update(b"NeverLauncher Thread Integrity thread-set v1\0");
+    digest.update(b"Launcher Thread Integrity thread-set v1\0");
     for record in records {
         digest.update((record.len() as u32).to_le_bytes());
         digest.update(record.as_bytes());
@@ -415,7 +415,7 @@ fn origin_set_sha256(threads: &HashMap<u32, ThreadRecord>) -> String {
         .collect::<Vec<_>>();
     origins.sort_unstable();
     let mut digest = Sha256::new();
-    digest.update(b"NeverLauncher Thread Integrity origin-set v1\0");
+    digest.update(b"Launcher Thread Integrity origin-set v1\0");
     for origin in origins {
         digest.update((origin.len() as u32).to_le_bytes());
         digest.update(origin.as_bytes());

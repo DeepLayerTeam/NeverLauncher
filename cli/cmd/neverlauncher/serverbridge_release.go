@@ -255,7 +255,7 @@ func verifyServerBridge2CertificationInBundle0150(dir, ver string) error {
 		if item.ID != expectedID {
 			return fmt.Errorf("%s artifact #%d must be %s, got %s", expectedRelease, i+1, expectedID, item.ID)
 		}
-		expectedFile := fmt.Sprintf("neverlauncher-%s-bridge-%s.jar", expectedID, ver)
+		expectedFile := fmt.Sprintf("launcher-%s-bridge-%s.jar", expectedID, ver)
 		if item.File != expectedFile || item.Bytes <= 0 {
 			return fmt.Errorf("%s: invalid certified artifact metadata", expectedID)
 		}

@@ -19,7 +19,7 @@ func TestOwnerSignedFirstRun0352(t *testing.T) {
 	cfg.AutoEnter = true
 	signed, root := generateConfig(t, cfg)
 	temp := t.TempDir()
-	store := &storage{root: filepath.Join(temp, ".neverlauncher-prestarter")}
+	store := &storage{root: filepath.Join(temp, ".launcher-prestarter")}
 	p := installer{root: temp, store: store, config: cfg, rawConfig: signed, key: root, gameRoot: filepath.Join(temp, "profiles", "hello", "vanilla")}
 	dir, err := p.ensureDesktopConfig("Player_123", false)
 	if err != nil {

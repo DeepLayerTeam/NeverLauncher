@@ -1,14 +1,14 @@
 {
   "openapi": "3.1.1",
   "info": {
-    "title": "NeverLauncher API",
+    "title": "Launcher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.42.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API Launcher 0.42.3. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
       "url": "/",
-      "description": "Текущий Backend NeverLauncher"
+      "description": "Текущий Backend Launcher"
     }
   ],
   "tags": [
@@ -2985,10 +2985,10 @@
                   "channels": {
                     "type": "string"
                   },
-                  "minNeverLauncher": {
+                  "minLauncher": {
                     "type": "string"
                   },
-                  "maxNeverLauncher": {
+                  "maxLauncher": {
                     "type": "string"
                   },
                   "os": {
@@ -19315,7 +19315,7 @@
             "$ref": "#/components/responses/BadRequest"
           }
         },
-        "description": "NeverLauncher 0.14.3 One-Time Join Tickets: issues a short-lived identity-bound ServerBridge authorization that can be redeemed exactly once by the active cryptographic node identity.",
+        "description": "Launcher 0.14.3 One-Time Join Tickets: issues a short-lived identity-bound ServerBridge authorization that can be redeemed exactly once by the active cryptographic node identity.",
         "security": [
           {
             "BearerAuth": []
@@ -21759,37 +21759,37 @@
       "NodeId": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-NeverLauncher-Node-Id",
+        "name": "X-Launcher-Node-Id",
         "description": "ServerBridge node id included in the Ed25519 canonical request."
       },
       "NodeKeyFingerprint": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-NeverLauncher-Node-Key-Fingerprint",
+        "name": "X-Launcher-Node-Key-Fingerprint",
         "description": "Lowercase SHA-256 fingerprint of the registered raw Ed25519 public key."
       },
       "NodeTimestamp": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-NeverLauncher-Node-Timestamp",
+        "name": "X-Launcher-Node-Timestamp",
         "description": "Unix timestamp in seconds; must be within the ServerBridge signing window."
       },
       "NodeNonce": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-NeverLauncher-Node-Nonce",
+        "name": "X-Launcher-Node-Nonce",
         "description": "Fresh unpadded base64url nonce, consumed once by PostgreSQL replay protection."
       },
       "NodeSignature": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-NeverLauncher-Node-Signature",
+        "name": "X-Launcher-Node-Signature",
         "description": "Unpadded base64url Ed25519 signature over the legacy Node-v1 domain or the Protocol v3 canonical signing domain negotiated by the bridge."
       },
       "BootstrapToken": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-NeverLauncher-Bootstrap-Token"
+        "name": "X-Launcher-Bootstrap-Token"
       }
     },
     "schemas": {
@@ -22620,7 +22620,7 @@
           },
           "deviceSignature": {
             "type": "string",
-            "description": "base64url signature by the current trusted-device key over the canonical NeverLauncher Session Device Binding v1 refresh payload"
+            "description": "base64url signature by the current trusted-device key over the canonical Launcher Session Device Binding v1 refresh payload"
           }
         }
       },
@@ -23510,7 +23510,7 @@
         ],
         "properties": {
           "format": {
-            "const": "neverlauncher.profile.v1"
+            "const": "launcher.profile.v1"
           },
           "snapshot": {
             "$ref": "#/components/schemas/ProfileSnapshot0225"
@@ -25363,7 +25363,7 @@
         ],
         "properties": {
           "format": {
-            "const": "neverlauncher.gravit-compatibility.v1"
+            "const": "launcher.gravit-compatibility.v1"
           },
           "sourceSha256": {
             "type": "string",
@@ -25510,7 +25510,7 @@
             "pattern": "^[0-9a-f]{64}$"
           },
           "format": {
-            "const": "neverlauncher.gravit-source-inventory.v1"
+            "const": "launcher.gravit-source-inventory.v1"
           },
           "categories": {
             "type": "object",
@@ -25586,7 +25586,7 @@
         ],
         "properties": {
           "format": {
-            "const": "neverlauncher.gravit-identity-map.v1"
+            "const": "launcher.gravit-identity-map.v1"
           },
           "runId": {
             "type": "string"
@@ -25679,7 +25679,7 @@
         ],
         "properties": {
           "format": {
-            "const": "neverlauncher.gravit-credentials.v1"
+            "const": "launcher.gravit-credentials.v1"
           },
           "runId": {
             "type": "string"

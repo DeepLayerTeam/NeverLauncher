@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-const canonicalExtensionManifestName0201 = "neverlauncher-extension.json"
+const canonicalExtensionManifestName0201 = "launcher-extension.json"
 
 var (
 	canonicalExtensionID0201         = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{2,127}$`)
@@ -141,8 +141,8 @@ func handleExtension0201(args []string) error {
 		out := flagValue(args, "--output", canonicalExtensionManifestName0201)
 		manifest := CanonicalExtensionManifest0201{
 			SchemaVersion: "2.0",
-			ID:            "ru.example.neverlauncher.extension",
-			Name:          "Пример расширения NeverLauncher",
+			ID:            "ru.example.launcher.extension",
+			Name:          "Пример расширения Launcher",
 			Version:       "1.0.0",
 			Publisher:     "Example Publisher",
 			API:           neverExtensionsAPIVersion0210,
@@ -176,7 +176,7 @@ func handleExtension0201(args []string) error {
 		return writeJSONFile(out, manifest)
 	case "validate":
 		if len(args) < 2 {
-			return errors.New("extension validate требует путь к neverlauncher-extension.json или каталогу")
+			return errors.New("extension validate требует путь к launcher-extension.json или каталогу")
 		}
 		manifest, path, digest, err := loadCanonicalExtension0201(args[1])
 		if err != nil {
@@ -208,7 +208,7 @@ func handleExtension0201(args []string) error {
 		return handleExtensionLifecycle0204(args[0], args[1:])
 	case "import-legacy":
 		if len(args) < 2 {
-			return errors.New("extension import-legacy требует путь к neverlauncher-plugin.json или каталогу")
+			return errors.New("extension import-legacy требует путь к launcher-plugin.json или каталогу")
 		}
 		publisher := strings.TrimSpace(flagValue(args, "--publisher", ""))
 		out := flagValue(args, "--output", canonicalExtensionManifestName0201)
@@ -558,7 +558,7 @@ func normalizeCLIContributions0209(c *CanonicalExtensionCLIContributions0209) er
 
 func importLegacyPluginManifest0201(path, publisher string) (CanonicalExtensionManifest0201, string, error) {
 	if st, err := os.Stat(path); err == nil && st.IsDir() {
-		path = filepath.Join(path, "neverlauncher-plugin.json")
+		path = filepath.Join(path, "launcher-plugin.json")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -594,7 +594,7 @@ func importLegacyPluginManifest0201(path, publisher string) (CanonicalExtensionM
 		Targets:       []CanonicalExtensionTarget0201{{Kind: legacy.Target, Entrypoint: legacy.Entrypoint}},
 		Permissions:   append([]string(nil), legacy.Permissions...),
 		Hooks:         append([]string(nil), legacy.Hooks...),
-		Metadata:      map[string]string{"importedFrom": "neverlauncher-plugin.json", "legacySchemaVersion": legacy.SchemaVersion},
+		Metadata:      map[string]string{"importedFrom": "launcher-plugin.json", "legacySchemaVersion": legacy.SchemaVersion},
 	}
 	for k, v := range legacy.Metadata {
 		if k == "publisher" {

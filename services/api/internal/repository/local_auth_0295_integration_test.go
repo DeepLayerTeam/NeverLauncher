@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/fileauth"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
 )
 
 // A disposable PostgreSQL database proves atomic import, live identity lookup,
@@ -54,7 +54,7 @@ func TestFileAuthImportPostgres0295(t *testing.T) {
 	if err != nil || user.Email != account.Email || user.RoleID != "player" || user.PasswordHash != hash {
 		t.Fatalf("persisted user: %+v %v", user, err)
 	}
-	identity, err := r.GetAuthIdentityByIssuer("local", "neverlauncher", key)
+	identity, err := r.GetAuthIdentityByIssuer("local", "launcher", key)
 	if err != nil || identity.UserID != key {
 		t.Fatalf("missing real local identity: %+v %v", identity, err)
 	}

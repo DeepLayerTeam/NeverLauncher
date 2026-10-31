@@ -1,4 +1,4 @@
-# NeverLauncher 0.33.4 — Identity & UUID Mapping (MIG04)
+# Launcher 0.33.4 — Identity & UUID Mapping (MIG04)
 
 This release is an executable identity reconciliation step. It does **not** create users, transfer password hashes, accept legacy credentials or cut over servers. A `prepared` run is not a successful migration.
 

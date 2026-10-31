@@ -6,8 +6,8 @@ on:
       - 'e2e/scripts/**'
       - 'services/api/internal/httpapi/validation_attestation_0345*'
       - 'services/api/internal/httpapi/validation_component_matrix_0348*'
-      - 'runtime/neverruntime/src/bin/neverruntime.rs'
-      - 'runtime/neverruntime/src/transactional_release.rs'
+      - 'runtime/runtime/src/bin/runtime.rs'
+      - 'runtime/runtime/src/transactional_release.rs'
       - 'tools/validation-attestor/official_chain_0347.py'
       - 'services/api/internal/httpapi/validation_*0346*'
       - 'services/api/internal/repository/validation_*0346*'
@@ -44,11 +44,11 @@ jobs:
           go-version-file: cli/go.mod
       - name: Run real CLI client update, repair and SIGKILL recovery tests
         run: |
-          cd cli && go build -o "$RUNNER_TEMP/neverlauncher" ./cmd/neverlauncher
+          cd cli && go build -o "$RUNNER_TEMP/launcher" ./cmd/launcher
           cd ..
-          NL349_CLI="$RUNNER_TEMP/neverlauncher" python3 e2e/scripts/test_staged_lifecycle_0349.py
-      - name: Test real NeverRuntime offline import, digest enforcement, and rollback paths
-        run: cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib offline_staged_adoption
+          NL349_CLI="$RUNNER_TEMP/launcher" python3 e2e/scripts/test_staged_lifecycle_0349.py
+      - name: Test real Runtime offline import, digest enforcement, and rollback paths
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib offline_staged_adoption
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod

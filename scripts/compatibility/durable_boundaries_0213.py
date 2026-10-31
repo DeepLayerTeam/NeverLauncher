@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""NeverLauncher 0.21.3 Durable Boundaries & Certification release gate.
+"""Launcher 0.21.3 Durable Boundaries & Certification release gate.
 
 This gate verifies the concrete 0.21.3 implementation is wired into the
 production publish path: durable jobs, idempotency, distributed fencing,
 transactional outbox, single-use runtime nonces, live authorization rechecks
 and restart recovery. It intentionally rejects a tables-only implementation.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -28,7 +29,7 @@ def text(path: str) -> str:
 
 def validate() -> None:
     try:
-        version = tuple(int(x) for x in text("VERSION").strip().split('.')[:3])
+        version = tuple(int(x) for x in text("VERSION").strip().split(".")[:3])
     except ValueError:
         fail("VERSION is not semantic version")
     if version < (0, 21, 3):
@@ -38,7 +39,14 @@ def validate() -> None:
     cli_m = text("cli/internal/dbmigrate/sql/0052_durable_boundaries_0213.sql")
     if api_m != cli_m:
         fail("API and CLI 0052 migrations differ")
-    for table in ("durable_jobs", "durable_job_attempts", "durable_scope_leases", "event_outbox", "used_nonces", "idempotency_records"):
+    for table in (
+        "durable_jobs",
+        "durable_job_attempts",
+        "durable_scope_leases",
+        "event_outbox",
+        "used_nonces",
+        "idempotency_records",
+    ):
         if f"CREATE TABLE IF NOT EXISTS {table}" not in api_m:
             fail(f"0052 migration missing {table}")
 
@@ -59,7 +67,10 @@ def validate() -> None:
             fail(f"production durable repository invariant missing: {needle}")
 
     runtime_repo = text("services/api/internal/repository/validation_0212.go")
-    if "runtime-validation-run" not in runtime_repo or "used_nonces" not in runtime_repo:
+    if (
+        "runtime-validation-run" not in runtime_repo
+        or "used_nonces" not in runtime_repo
+    ):
         fail("runtime evidence runId is not consumed through durable nonce storage")
 
     worker = text("services/api/internal/httpapi/durable_control_0213.go")
@@ -78,11 +89,15 @@ def validate() -> None:
         fail("publish job must re-check live authorization immediately before commit")
 
     lock = text("services/api/internal/httpapi/package_mutation_lock.go")
-    for needle in ("AcquireDurableScopeLease", "RenewDurableScopeLease", "lockPackageLookupMutation"):
+    for needle in (
+        "AcquireDurableScopeLease",
+        "RenewDurableScopeLease",
+        "lockPackageLookupMutation",
+    ):
         if needle not in lock:
             fail(f"package mutation boundary missing: {needle}")
 
-    main = text("services/api/cmd/neverlauncher-api/main.go")
+    main = text("services/api/cmd/launcher-api/main.go")
     if "StartDurableControlPlane0213" not in main:
         fail("API startup does not start durable restart/outbox worker")
 
@@ -102,7 +117,9 @@ def validate() -> None:
     if admin.count("publishDurably0213") < 2:
         fail("admin publication routes bypass durable publication")
 
-    tests = text("services/api/internal/repository/durable_0213_test.go") + text("services/api/internal/repository/durable_0213_integration_test.go")
+    tests = text("services/api/internal/repository/durable_0213_test.go") + text(
+        "services/api/internal/repository/durable_0213_integration_test.go"
+    )
     for needle in (
         "TestDurableScopeLeaseFencing0213",
         "TestDurableJobIdempotencyRejectsDifferentPayload0213",

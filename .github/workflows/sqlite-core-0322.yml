@@ -4,7 +4,7 @@ on:
     paths:
       - 'services/api/internal/sqlitecore/**'
       - 'services/api/internal/sqlitedurable/**'
-      - 'services/api/cmd/neverlauncher-sqlite/**'
+      - 'services/api/cmd/launcher-sqlite/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
       - '.github/workflows/sqlite-core-0322.yml'
@@ -28,7 +28,7 @@ jobs:
           set -euo pipefail
           go mod download
           go mod verify
-          test -z "$(gofmt -l internal/sqlitecore cmd/neverlauncher-sqlite/main.go)"
+          test -z "$(gofmt -l internal/sqlitecore cmd/launcher-sqlite/main.go)"
       - name: Prepare supported real local filesystem
         run: |
           set -euo pipefail
@@ -39,18 +39,18 @@ jobs:
         env:
           NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-core
           NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
-        run: go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+        run: go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Build operational CLI and exercise durable core initialization
         run: |
           set -euo pipefail
-          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+          go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
           db="$RUNNER_TEMP/never-sqlite-core/live-core.sqlite"
-          "$RUNNER_TEMP/neverlauncher-sqlite" core-init --db "$db" > "$RUNNER_TEMP/sqlite-core-init.json"
-          "$RUNNER_TEMP/neverlauncher-sqlite" core-status --db "$db" > "$RUNNER_TEMP/sqlite-core-status.json"
+          "$RUNNER_TEMP/launcher-sqlite" core-init --db "$db" > "$RUNNER_TEMP/sqlite-core-init.json"
+          "$RUNNER_TEMP/launcher-sqlite" core-status --db "$db" > "$RUNNER_TEMP/sqlite-core-status.json"
           printf '%s\n' '{"id":"ci-project","name":"CI Project"}' > "$RUNNER_TEMP/never-sqlite-core/project.json"
           chmod 0600 "$RUNNER_TEMP/never-sqlite-core/project.json"
-          "$RUNNER_TEMP/neverlauncher-sqlite" core-put --db "$db" --kind project --actor ci --input "$RUNNER_TEMP/never-sqlite-core/project.json" > "$RUNNER_TEMP/sqlite-core-written.json"
-          "$RUNNER_TEMP/neverlauncher-sqlite" core-get --db "$db" --kind project --project ci-project > "$RUNNER_TEMP/sqlite-core-read.json"
+          "$RUNNER_TEMP/launcher-sqlite" core-put --db "$db" --kind project --actor ci --input "$RUNNER_TEMP/never-sqlite-core/project.json" > "$RUNNER_TEMP/sqlite-core-written.json"
+          "$RUNNER_TEMP/launcher-sqlite" core-get --db "$db" --kind project --project ci-project > "$RUNNER_TEMP/sqlite-core-read.json"
           python3 - <<'PY'
           import json,os
           root=os.environ['RUNNER_TEMP']
@@ -63,7 +63,7 @@ jobs:
               project=json.load(f)
           assert project['id']=='ci-project' and project['name']=='CI Project'
           PY
-          if "$RUNNER_TEMP/neverlauncher-sqlite" core-status --db "$RUNNER_TEMP/never-sqlite-core/nonexistent.sqlite"; then
+          if "$RUNNER_TEMP/launcher-sqlite" core-status --db "$RUNNER_TEMP/never-sqlite-core/nonexistent.sqlite"; then
             echo 'core-status incorrectly initialized a nonexistent database' >&2
             exit 1
           fi

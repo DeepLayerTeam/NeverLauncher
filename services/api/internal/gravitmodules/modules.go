@@ -18,10 +18,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
 )
 
-const Format = "neverlauncher.gravit-modules.v1"
+const Format = "launcher.gravit-modules.v1"
 const maxJar int64 = 32 << 20
 const maxJarEntries = 12000
 const maxJarExpanded uint64 = 128 << 20

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func signedRuntimeContract0192(t *testing.T, serverID, platform string, identity testBridgeNodeIdentity0142, startedAt time.Time, pid int64, capabilities []string) bridgeRuntimeIdentityV3Contract0192 {

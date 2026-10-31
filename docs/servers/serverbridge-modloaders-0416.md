@@ -1,4 +1,4 @@
-# NeverLauncher 0.41.6 — Fabric, Quilt, Forge, NeoForge, Vanilla, Sponge
+# Launcher 0.41.6 — Fabric, Quilt, Forge, NeoForge, Vanilla, Sponge
 
 ## Executable changes
 

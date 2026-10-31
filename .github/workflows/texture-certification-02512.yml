@@ -68,7 +68,7 @@ jobs:
       - name: Compile real API and maintenance tools (not mock drivers)
         working-directory: services/api
         run: |
-          go build -trimpath -o /tmp/neverlauncher-api ./cmd/neverlauncher-api
+          go build -trimpath -o /tmp/launcher-api ./cmd/launcher-api
           go build -trimpath -o /tmp/texture-maintenance ./cmd/texture-maintenance-0253
           go build -trimpath -o /tmp/gravit-textures-import ./cmd/gravit-textures-import-02510
           go build -trimpath -o /tmp/texture-compat ./cmd/texture-compat-02512

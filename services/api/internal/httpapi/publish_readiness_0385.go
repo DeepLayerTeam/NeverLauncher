@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // A publish refusal is a set of observed, actionable problems, not a manually

@@ -1,4 +1,4 @@
-# NeverLauncher 0.34.11 — Production Runtime Gate (V11)
+# Launcher 0.34.11 — Production Runtime Gate (V11)
 
 ## Publication prerequisites
 

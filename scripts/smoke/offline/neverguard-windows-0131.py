@@ -26,7 +26,7 @@ version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 1):
     raise SystemExit(f"Guard Windows gate requires >=0.13.1, got {version}")
 
-cargo = read("runtime/neverruntime/Cargo.toml")
+cargo = read("runtime/runtime/Cargo.toml")
 require(
     cargo,
     [
@@ -38,14 +38,14 @@ require(
         'subtle = "2"',
         'zeroize = "1"',
     ],
-    "NeverRuntime Cargo",
+    "Runtime Cargo",
 )
 
-guard = read("runtime/neverruntime/src/guard_ipc.rs")
+guard = read("runtime/runtime/src/guard_ipc.rs")
 require(
     guard,
     [
-        r"\\.\pipe\NeverLauncher.Guard.",
+        r"\\.\pipe\Launcher.Guard.",
         "first_pipe_instance(true)",
         "reject_remote_clients(true)",
         "max_instances(1)",
@@ -68,7 +68,7 @@ require(
     "Guard authenticated IPC",
 )
 
-binary = read("runtime/neverruntime/src/bin/guard.rs")
+binary = read("runtime/runtime/src/bin/guard.rs")
 require(
     binary,
     ["--pipe", "--parent-pid", "run_windows_guard_server"],
@@ -89,7 +89,7 @@ require(
     "Desktop fail-closed Guard launch",
 )
 
-integration = read("runtime/neverruntime/tests/guard_windows.rs")
+integration = read("runtime/runtime/tests/guard_windows.rs")
 require(
     integration,
     [
@@ -107,7 +107,7 @@ require(
     package,
     [
         "guard.exe",
-        "neverlauncher-desktop-$Version-windows-amd64.exe",
+        "launcher-desktop-$Version-windows-amd64.exe",
         "cargo build --release",
         "WINDOWS_PACKAGE_MANIFEST.json",
         "Compress-Archive",
@@ -127,4 +127,4 @@ require(
 )
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
-print(f"[NeverLauncher] Guard Windows authenticated IPC gate OK: {version}")
+print(f"[Launcher] Guard Windows authenticated IPC gate OK: {version}")

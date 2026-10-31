@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Опишите проблему пользователя и проверяемые критерии готовности.
-        Ознакомьтесь с [дорожной картой](https://github.com/DeepLayerTeam/NeverLauncher/blob/main/ROADMAP.md). Она не устанавливает обязательных сроков выпуска.
+        Ознакомьтесь с [дорожной картой](https://github.com/DeepLayerTeam/Launcher/blob/main/ROADMAP.md). Она не устанавливает обязательных сроков выпуска.
   - type: dropdown
     id: area
     attributes:
@@ -15,7 +15,7 @@ body:
         - Серверный API
         - Панель администрирования
         - Настольный лаунчер
-        - Совместимость Minecraft / NeverRuntime
+        - Совместимость Minecraft / Runtime
         - Guard / безопасность
         - ServerBridge
         - Extensions / SDK

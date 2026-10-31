@@ -1,4 +1,4 @@
-name: NeverLauncher Compatibility Matrix
+name: Launcher Compatibility Matrix
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: neverlauncher-compatibility-${{ github.ref }}-${{ github.event_name }}
+  group: launcher-compatibility-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 env:
@@ -211,7 +211,7 @@ jobs:
             e2e/runtime/loader-platform.json
             e2e/runtime/loader-hardening.json
             e2e/runtime/loader-hardening-package.json
-            e2e/runtime/materialized-client/.neverlauncher/installers/**/processor-journal.json
+            e2e/runtime/materialized-client/.launcher/installers/**/processor-journal.json
             e2e/runtime/fabric-resolution-lock.json
             e2e/runtime/quilt-resolution-lock.json
             e2e/runtime/forge-resolution-lock.json
@@ -412,7 +412,7 @@ jobs:
             e2e/runtime/loader-platform.json
             e2e/runtime/loader-hardening.json
             e2e/runtime/loader-hardening-package.json
-            e2e/runtime/materialized-client/.neverlauncher/installers/**/processor-journal.json
+            e2e/runtime/materialized-client/.launcher/installers/**/processor-journal.json
             e2e/runtime/fabric-resolution-lock.json
             e2e/runtime/quilt-resolution-lock.json
             e2e/runtime/forge-resolution-lock.json
@@ -481,7 +481,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-compatibility-matrix-${{ github.run_id }}
+          name: launcher-compatibility-matrix-${{ github.run_id }}
           path: |
             compatibility-public/matrix.json
             compatibility-public/matrix.md

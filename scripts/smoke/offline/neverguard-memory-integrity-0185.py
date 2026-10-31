@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Memory Integrity 0.18.5 gate: {label} missing {missing}"
+            f"[Launcher] Memory Integrity 0.18.5 gate: {label} missing {missing}"
         )
 
 
@@ -23,16 +23,16 @@ def main() -> int:
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 5):
         raise SystemExit(
-            f"[NeverLauncher] Memory Integrity 0.18.5 gate: VERSION is {version}"
+            f"[Launcher] Memory Integrity 0.18.5 gate: VERSION is {version}"
         )
 
     memory = read("runtime/guard-sensor/src/memory_integrity.rs")
     hooks = read("runtime/guard-sensor/src/hook_engine.rs")
     sensor = read("runtime/guard-sensor/src/lib.rs")
-    parent = read("runtime/neverruntime/src/windows_module_guard.rs")
-    report = read("runtime/neverruntime/src/windows_memory_integrity.rs")
-    exports = read("runtime/neverruntime/src/lib.rs")
-    integration = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    parent = read("runtime/runtime/src/windows_module_guard.rs")
+    report = read("runtime/runtime/src/windows_memory_integrity.rs")
+    exports = read("runtime/runtime/src/lib.rs")
+    integration = read("runtime/runtime/tests/guard_sensor_windows.rs")
     probe = read("runtime/guard-memory-probe/src/lib.rs")
     ci = read(".github/workflows/ci.yml")
     preflight = read("scripts/release/preflight.sh")
@@ -66,7 +66,7 @@ def main() -> int:
     ):
         if forbidden in memory:
             raise SystemExit(
-                f"[NeverLauncher] Memory Integrity 0.18.5 gate: cross-process primitive forbidden: {forbidden}"
+                f"[Launcher] Memory Integrity 0.18.5 gate: cross-process primitive forbidden: {forbidden}"
             )
 
     require(
@@ -146,20 +146,20 @@ def main() -> int:
             "python scripts/smoke/offline/guard-memory-integrity-0185.py",
             "cargo build --manifest-path runtime/guard-memory-probe/Cargo.toml",
             "NEVERGUARD_MEMORY_PROBE_DLL",
-            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows -- --nocapture",
+            "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/guard-memory-probe/Cargo.toml --all-targets -- -D warnings",
         ],
         "Windows compilation/adversarial integration/clippy CI",
     )
     if "guard-memory-integrity-0185.py" not in preflight:
         raise SystemExit(
-            "[NeverLauncher] Memory Integrity 0.18.5 gate: preflight wiring missing"
+            "[Launcher] Memory Integrity 0.18.5 gate: preflight wiring missing"
         )
 
     for path, body in [
         ("runtime/guard-sensor/src/memory_integrity.rs", memory),
         ("runtime/guard-sensor/src/lib.rs", sensor),
-        ("runtime/neverruntime/src/windows_module_guard.rs", parent),
+        ("runtime/runtime/src/windows_module_guard.rs", parent),
     ]:
         for forbidden in (
             "todo!()",
@@ -169,10 +169,10 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[NeverLauncher] Memory Integrity 0.18.5 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Memory Integrity 0.18.5 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[NeverLauncher] Memory Integrity 0.18.5 gate: OK")
+    print("[Launcher] Memory Integrity 0.18.5 gate: OK")
     return 0
 
 

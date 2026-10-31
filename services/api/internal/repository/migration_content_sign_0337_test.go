@@ -3,8 +3,8 @@ package repository
 import (
 	"testing"
 
-	gc "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcontent"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcontent"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func TestMigrationContentSigning0337(t *testing.T) {

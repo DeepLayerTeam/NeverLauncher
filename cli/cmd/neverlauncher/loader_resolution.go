@@ -33,7 +33,7 @@ type loaderResolutionLock struct {
 }
 
 func defaultLoaderResolutionLockPath(clientDir, loader string) string {
-	return filepath.Join(clientDir, ".neverlauncher", strings.ToLower(strings.TrimSpace(loader))+"-resolution-lock.json")
+	return filepath.Join(clientDir, ".launcher", strings.ToLower(strings.TrimSpace(loader))+"-resolution-lock.json")
 }
 
 func isMutableLoaderSelector(value string) bool {

@@ -1,8 +1,8 @@
-package ru.neverlauncher.bridge.bungeecord;
+package ru.launcher.bridge.bungeecord;
 
-import ru.neverlauncher.bridge.bungee.BungeeFamilyBridgePlugin;
-import ru.neverlauncher.bridge.bungee.BungeeFamilyPlatform;
+import ru.launcher.bridge.bungee.BungeeFamilyBridgePlugin;
+import ru.launcher.bridge.bungee.BungeeFamilyPlatform;
 
-public final class NeverLauncherBungeeCordBridge extends BungeeFamilyBridgePlugin {
-    public NeverLauncherBungeeCordBridge() { super(BungeeFamilyPlatform.BUNGEECORD); }
+public final class LauncherBungeeCordBridge extends BungeeFamilyBridgePlugin {
+    public LauncherBungeeCordBridge() { super(BungeeFamilyPlatform.BUNGEECORD); }
 }

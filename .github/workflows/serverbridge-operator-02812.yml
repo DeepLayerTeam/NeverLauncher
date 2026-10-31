@@ -2,8 +2,8 @@ name: ServerBridge Operator 0.28.12
 on:
   push:
     paths:
-      - 'cli/cmd/neverlauncher/serverbridge_operator_02812*'
-      - 'cli/cmd/neverlauncher/serverbridge_provisioning_0199.go'
+      - 'cli/cmd/launcher/serverbridge_operator_02812*'
+      - 'cli/cmd/launcher/serverbridge_provisioning_0199.go'
       - 'apps/admin/src/api/serverbridge.ts'
       - 'apps/admin/src/admin/ServerBridgeWorkspace.tsx'
       - 'apps/admin/src/admin/AdminApp.tsx'
@@ -11,8 +11,8 @@ on:
       - '.github/workflows/serverbridge-operator-02812.yml'
   pull_request:
     paths:
-      - 'cli/cmd/neverlauncher/serverbridge_operator_02812*'
-      - 'cli/cmd/neverlauncher/serverbridge_provisioning_0199.go'
+      - 'cli/cmd/launcher/serverbridge_operator_02812*'
+      - 'cli/cmd/launcher/serverbridge_provisioning_0199.go'
       - 'apps/admin/**'
       - '.github/workflows/serverbridge-operator-02812.yml'
 jobs:
@@ -24,9 +24,9 @@ jobs:
         with:
           go-version: '1.23'
           cache-dependency-path: cli/go.mod
-      - run: go test ./cmd/neverlauncher -run 'TestBridge|TestServerBridge(Detect|Install|Upgrade|DryRun)' -count=1
+      - run: go test ./cmd/launcher -run 'TestBridge|TestServerBridge(Detect|Install|Upgrade|DryRun)' -count=1
         working-directory: cli
-      - run: go vet ./cmd/neverlauncher
+      - run: go vet ./cmd/launcher
         working-directory: cli
   admin:
     runs-on: ubuntu-latest

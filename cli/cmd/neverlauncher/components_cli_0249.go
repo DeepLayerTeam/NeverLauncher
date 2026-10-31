@@ -17,7 +17,7 @@ import (
 	"sort"
 	"strings"
 
-	cm "gitflic.ru/skif4er/neverlauncher/cli/internal/componentmodel"
+	cm "gitflic.ru/skif4er/launcher/cli/internal/componentmodel"
 )
 
 // The signed manifest is serialized in the exact Go API field order. RawMessage

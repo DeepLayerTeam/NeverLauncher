@@ -14,11 +14,11 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
-const runtimeValidationSchema0212 = "neverlauncher/runtime-validation/v1"
+const runtimeValidationSchema0212 = "launcher/runtime-validation/v1"
 
 type runtimeValidationEvidence0212 struct {
 	SchemaVersion    string            `json:"schemaVersion"`

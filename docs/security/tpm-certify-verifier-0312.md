@@ -1,4 +1,4 @@
-# NeverLauncher 0.31.2 — TPM Certify verifier and AK trust roots
+# Launcher 0.31.2 — TPM Certify verifier and AK trust roots
 
 ## Enforced behavior
 
@@ -14,7 +14,7 @@ Set `NEVERLAUNCHER_TPM_AK_ROOTS_FILE` to an absolute path to a **regular file** 
 
 ```json
 {
-  "schema": "neverlauncher/tpm-ak-trust-roots/v1",
+  "schema": "launcher/tpm-ak-trust-roots/v1",
   "roots": [{
     "id": "ak-issuer-prod-2026",
     "certificatePem": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n",
@@ -62,7 +62,7 @@ Run from `services/api`:
 
 ```sh
 go test -race -count=1 ./internal/attestverify ./internal/trustbaseline ./internal/repository ./internal/httpapi
-go build ./cmd/neverlauncher-api
+go build ./cmd/launcher-api
 ```
 
 `internal/attestverify` uses only the Go standard library, so it can be run offline. Fixture tests create real X.509 CA/AK keys and cryptographically sign a TPM2 Certify-shaped statement, then test invalid key/name/nonce/session/user/device/epoch/expiry/signatures and root/AK revocation. These tests establish verifier behavior, not certification against physical TPM firmware or production AK issuers.

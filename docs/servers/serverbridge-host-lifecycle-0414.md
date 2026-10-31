@@ -30,8 +30,8 @@ The `start` exit code is zero only when the supervisor **and Java child** are al
 
 ```bash
 cd cli
-GOTOOLCHAIN=local go test ./cmd/neverlauncher -run 'TestHostLifecycle0414' -count=1 -v
-GOTOOLCHAIN=local go test ./cmd/neverlauncher -run 'TestHost0282|TestJVM0283' -count=1
+GOTOOLCHAIN=local go test ./cmd/launcher -run 'TestHostLifecycle0414' -count=1 -v
+GOTOOLCHAIN=local go test ./cmd/launcher -run 'TestHost0282|TestJVM0283' -count=1
 ```
 
 On Linux with `java`, `javac`, and `jar`, these tests compile and run an actual Java JAR, verify the OS executable (`/proc/<pid>/exe`), check Java-authored boot/exit/save markers, and test the **built CLI** rather than trusting mocked subprocesses. The integration fixtures use a small Java test server and do not claim to validate a commercial Paper/Folia server distribution. Full Minecraft-version compatibility and backend/host cross-node recovery require additional lab testing.

@@ -45,7 +45,7 @@ func TestPublicProductionDeliveryMatrix0159CoversSixTargets(t *testing.T) {
 	dir := t.TempDir()
 	ver := "0.15.9"
 	manifest := createPublicMatrixFixture0159(t, dir, ver)
-	matrix, err := buildPublicProductionDeliveryMatrix0159(dir, ver, "https://downloads.example.test/neverlauncher/v0.15.9", false)
+	matrix, err := buildPublicProductionDeliveryMatrix0159(dir, ver, "https://downloads.example.test/launcher/v0.15.9", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,13 +73,13 @@ func TestPublicProductionDeliveryMatrix0159RejectsMissingRuntime(t *testing.T) {
 	dir := t.TempDir()
 	ver := "0.15.9"
 	createPublicMatrixFixture0159(t, dir, ver)
-	if err := os.Remove(filepath.Join(dir, "neverruntime-windows-arm64.exe")); err != nil {
+	if err := os.Remove(filepath.Join(dir, "runtime-windows-arm64.exe")); err != nil {
 		t.Fatal(err)
 	}
 	if err := writeDeliveryManifest0151(dir, ver); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := buildPublicProductionDeliveryMatrix0159(dir, ver, "https://downloads.example.test/v0.15.9", false); err == nil || !strings.Contains(err.Error(), "neverruntime-windows-arm64.exe") {
+	if _, err := buildPublicProductionDeliveryMatrix0159(dir, ver, "https://downloads.example.test/v0.15.9", false); err == nil || !strings.Contains(err.Error(), "runtime-windows-arm64.exe") {
 		t.Fatalf("expected missing runtime failure, got %v", err)
 	}
 }
@@ -112,7 +112,7 @@ func TestPublicProductionDeliveryMatrix01511PublishesCandidateControl(t *testing
 	dir := t.TempDir()
 	ver := "0.15.11"
 	createPublicMatrixFixture0159(t, dir, ver)
-	matrix, err := buildPublicProductionDeliveryMatrix0159(dir, ver, "https://downloads.example.test/neverlauncher/v0.15.11", false)
+	matrix, err := buildPublicProductionDeliveryMatrix0159(dir, ver, "https://downloads.example.test/launcher/v0.15.11", false)
 	if err != nil {
 		t.Fatal(err)
 	}

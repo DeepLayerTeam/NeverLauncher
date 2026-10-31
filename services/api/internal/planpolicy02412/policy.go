@@ -13,7 +13,7 @@ import (
 
 // A trusted operator signs the exact policy bytes offline. Neither the caller nor
 // the ServerBridge node can supply the signing key or relax the allowlist.
-const Domain = "NeverLauncher-ServerBridge-Plan-Policy-v1\n"
+const Domain = "Launcher-ServerBridge-Plan-Policy-v1\n"
 
 type Envelope struct {
 	SchemaVersion string `json:"schemaVersion"`

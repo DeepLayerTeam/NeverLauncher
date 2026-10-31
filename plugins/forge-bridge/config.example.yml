@@ -14,7 +14,7 @@ security:
   failMode: "closed"
   requireLauncherSession: true
   requireIntegrity: true
-  identityFile: "config/neverlauncher-forge-bridge/node-identity.properties"
+  identityFile: "config/launcher-forge-bridge/node-identity.properties"
 heartbeat:
   intervalSeconds: 30
 

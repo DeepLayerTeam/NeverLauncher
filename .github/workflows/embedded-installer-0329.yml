@@ -1,4 +1,4 @@
-name: NeverLauncher 0.32.9 signed installer and embedded Admin
+name: Launcher 0.32.9 signed installer and embedded Admin
 on:
   push:
     paths:
@@ -25,10 +25,10 @@ jobs:
           go-version-file: installer/go.mod
       - run: go test -race -count=1 ./...
       - run: go vet ./...
-      - run: go build -trimpath -o "$RUNNER_TEMP/neverlauncher-install" ./cmd/neverlauncher-install
+      - run: go build -trimpath -o "$RUNNER_TEMP/launcher-install" ./cmd/launcher-install
       - name: CLI sanity
         run: |
-          "$RUNNER_TEMP/neverlauncher-install" verify --bundle /nonexistent --trusted-key /nonexistent && exit 1 || true
+          "$RUNNER_TEMP/launcher-install" verify --bundle /nonexistent --trusted-key /nonexistent && exit 1 || true
   embedded-admin:
     runs-on: ubuntu-24.04
     steps:

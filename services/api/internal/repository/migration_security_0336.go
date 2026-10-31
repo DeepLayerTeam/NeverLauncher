@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	gc "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcredentials"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcredentials"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 // MigrationSecurityReport0336 deliberately contains no user credentials, old

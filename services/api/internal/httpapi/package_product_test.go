@@ -43,7 +43,7 @@ func TestCanonicalPackageProductUploadValidatePublish(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _ = part.Write([]byte("neverlauncher-package-product-840"))
+	_, _ = part.Write([]byte("launcher-package-product-840"))
 	_ = writer.Close()
 
 	req = httptest.NewRequest(http.MethodPost, "/api/v1/packages/"+packageID+"/files", &body)

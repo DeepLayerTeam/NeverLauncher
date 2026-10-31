@@ -15,7 +15,9 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
 
 def run(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run([sys.executable, str(TOOL), *args], text=True, capture_output=True, cwd=ROOT)
+    return subprocess.run(
+        [sys.executable, str(TOOL), *args], text=True, capture_output=True, cwd=ROOT
+    )
 
 
 class DeviceTrustMatrixTests(unittest.TestCase):
@@ -66,20 +68,31 @@ class DeviceTrustMatrixTests(unittest.TestCase):
                 "attestationPayloadValidation": True,
                 "deviceTrustRelease0130": True,
             },
-            "evidence": {"files": ["native-cargo-test.txt"], "sha256": {"native-cargo-test.txt": "0" * 64}},
+            "evidence": {
+                "files": ["native-cargo-test.txt"],
+                "sha256": {"native-cargo-test.txt": "0" * 64},
+            },
             "limitations": ["headless-ci-does-not-prove-os-secure-storage-runtime"],
             "claims": {"deviceTrustRelease": VERSION},
         }
 
-
-    def write_result(self, result_dir: Path, payload: dict, *, evidence_name: str = "native-cargo-test.txt", content: bytes = b"device trust evidence\n") -> None:
+    def write_result(
+        self,
+        result_dir: Path,
+        payload: dict,
+        *,
+        evidence_name: str = "native-cargo-test.txt",
+        content: bytes = b"device trust evidence\n",
+    ) -> None:
         evidence_path = result_dir / evidence_name
         evidence_path.write_bytes(content)
         payload["evidence"] = {
             "files": [evidence_name],
             "sha256": {evidence_name: hashlib.sha256(content).hexdigest()},
         }
-        (result_dir / "device-trust-result.json").write_text(json.dumps(payload), encoding="utf-8")
+        (result_dir / "device-trust-result.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
 
     def test_validate_rejects_manual_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -110,7 +123,21 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             result_dir.mkdir(parents=True)
             self.write_result(result_dir, self.passing_result())
             out = tmp / "out"
-            proc = run("aggregate", "--targets", str(targets), "--results-root", str(tmp / "results"), "--output-dir", str(out), "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            proc = run(
+                "aggregate",
+                "--targets",
+                str(targets),
+                "--results-root",
+                str(tmp / "results"),
+                "--output-dir",
+                str(out),
+                "--commit",
+                "abc123",
+                "--run-id",
+                "77",
+                "--repository",
+                "DeepLayerTeam/Launcher",
+            )
             self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
             matrix = json.loads((out / "matrix.json").read_text(encoding="utf-8"))
             self.assertEqual(matrix["status"], "passed")
@@ -126,7 +153,21 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             bad = self.passing_result()
             bad["commit"] = "other"
             self.write_result(result_dir, bad)
-            proc = run("aggregate", "--targets", str(targets), "--results-root", str(tmp / "results"), "--output-dir", str(tmp / "out"), "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            proc = run(
+                "aggregate",
+                "--targets",
+                str(targets),
+                "--results-root",
+                str(tmp / "results"),
+                "--output-dir",
+                str(tmp / "out"),
+                "--commit",
+                "abc123",
+                "--run-id",
+                "77",
+                "--repository",
+                "DeepLayerTeam/Launcher",
+            )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("commit", proc.stderr + proc.stdout)
 
@@ -140,7 +181,21 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             bad = self.passing_result()
             bad["checks"]["tauriCompile"] = False
             self.write_result(result_dir, bad)
-            proc = run("aggregate", "--targets", str(targets), "--results-root", str(tmp / "results"), "--output-dir", str(tmp / "out"), "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            proc = run(
+                "aggregate",
+                "--targets",
+                str(targets),
+                "--results-root",
+                str(tmp / "results"),
+                "--output-dir",
+                str(tmp / "out"),
+                "--commit",
+                "abc123",
+                "--run-id",
+                "77",
+                "--repository",
+                "DeepLayerTeam/Launcher",
+            )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("tauriCompile", proc.stderr + proc.stdout)
 
@@ -152,8 +207,24 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             result_dir = tmp / "results" / "native-linux"
             result_dir.mkdir(parents=True)
             self.write_result(result_dir, self.passing_result())
-            (result_dir / "native-cargo-test.txt").write_text("tampered\n", encoding="utf-8")
-            proc = run("aggregate", "--targets", str(targets), "--results-root", str(tmp / "results"), "--output-dir", str(tmp / "out"), "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            (result_dir / "native-cargo-test.txt").write_text(
+                "tampered\n", encoding="utf-8"
+            )
+            proc = run(
+                "aggregate",
+                "--targets",
+                str(targets),
+                "--results-root",
+                str(tmp / "results"),
+                "--output-dir",
+                str(tmp / "out"),
+                "--commit",
+                "abc123",
+                "--run-id",
+                "77",
+                "--repository",
+                "DeepLayerTeam/Launcher",
+            )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("SHA-256 mismatch", proc.stderr + proc.stdout)
 
@@ -165,9 +236,28 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             result_dir = tmp / "results" / "native-linux"
             result_dir.mkdir(parents=True)
             payload = self.passing_result()
-            payload["evidence"] = {"files": ["../outside.txt"], "sha256": {"../outside.txt": "0" * 64}}
-            (result_dir / "device-trust-result.json").write_text(json.dumps(payload), encoding="utf-8")
-            proc = run("aggregate", "--targets", str(targets), "--results-root", str(tmp / "results"), "--output-dir", str(tmp / "out"), "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            payload["evidence"] = {
+                "files": ["../outside.txt"],
+                "sha256": {"../outside.txt": "0" * 64},
+            }
+            (result_dir / "device-trust-result.json").write_text(
+                json.dumps(payload), encoding="utf-8"
+            )
+            proc = run(
+                "aggregate",
+                "--targets",
+                str(targets),
+                "--results-root",
+                str(tmp / "results"),
+                "--output-dir",
+                str(tmp / "out"),
+                "--commit",
+                "abc123",
+                "--run-id",
+                "77",
+                "--repository",
+                "DeepLayerTeam/Launcher",
+            )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("safe-basename", proc.stderr + proc.stdout)
 
@@ -175,28 +265,56 @@ class DeviceTrustMatrixTests(unittest.TestCase):
         doc = {
             "schemaVersion": "1.0",
             "productVersion": VERSION,
-            "targets": [{
-                "id": "postgres-protocol-linux-x64",
-                "kind": "protocol-e2e",
-                "runner": "ubuntu-24.04",
-                "os": "linux",
-                "arch": "x86_64",
-                "required": True,
-                "requiredChecks": sorted([
-                    "postgresRepository", "migrationStabilization01210", "registrationReplayDenied", "sessionBindingEpoch", "boundRefreshProof",
-                    "rotationDualProof", "oldKeyTombstone", "serverBridgeBindingDeny", "revocationCascade",
-                    "riskStepUp", "p256AttestationProtocol", "attestationReplayDenied",
-                    "recoveryRequiresPhishingResistantStepUp", "recoveryPhishingResistantEndToEnd", "deviceTrustRelease0130",
-                ]),
-            }],
+            "targets": [
+                {
+                    "id": "postgres-protocol-linux-x64",
+                    "kind": "protocol-e2e",
+                    "runner": "ubuntu-24.04",
+                    "os": "linux",
+                    "arch": "x86_64",
+                    "required": True,
+                    "requiredChecks": sorted(
+                        [
+                            "postgresRepository",
+                            "migrationStabilization01210",
+                            "registrationReplayDenied",
+                            "sessionBindingEpoch",
+                            "boundRefreshProof",
+                            "rotationDualProof",
+                            "oldKeyTombstone",
+                            "serverBridgeBindingDeny",
+                            "revocationCascade",
+                            "riskStepUp",
+                            "p256AttestationProtocol",
+                            "attestationReplayDenied",
+                            "recoveryRequiresPhishingResistantStepUp",
+                            "recoveryPhishingResistantEndToEnd",
+                            "deviceTrustRelease0130",
+                        ]
+                    ),
+                }
+            ],
         }
         result = {
-            "schemaVersion": "1.0", "productVersion": VERSION, "targetId": "postgres-protocol-linux-x64",
-            "kind": "protocol-e2e", "os": "linux", "arch": "x86_64", "runtimeArch": "x86_64",
-            "commit": "abc123", "runId": "77", "status": "passed", "exitCode": 0,
+            "schemaVersion": "1.0",
+            "productVersion": VERSION,
+            "targetId": "postgres-protocol-linux-x64",
+            "kind": "protocol-e2e",
+            "os": "linux",
+            "arch": "x86_64",
+            "runtimeArch": "x86_64",
+            "commit": "abc123",
+            "runId": "77",
+            "status": "passed",
+            "exitCode": 0,
             "checks": {name: True for name in doc["targets"][0]["requiredChecks"]},
             "evidence": {"files": ["protocol-checks.json"]},
-            "claims": {"repository": "postgresql", "vendorHardwareProvenance": "verified", "privateKeyServerExposed": False, "deviceTrustRelease": VERSION},
+            "claims": {
+                "repository": "postgresql",
+                "vendorHardwareProvenance": "verified",
+                "privateKeyServerExposed": False,
+                "deviceTrustRelease": VERSION,
+            },
         }
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
@@ -204,10 +322,31 @@ class DeviceTrustMatrixTests(unittest.TestCase):
             targets.write_text(json.dumps(doc), encoding="utf-8")
             result_dir = tmp / "results" / "protocol"
             result_dir.mkdir(parents=True)
-            self.write_result(result_dir, result, evidence_name="protocol-checks.json", content=b"protocol evidence\n")
-            proc = run("aggregate", "--targets", str(targets), "--results-root", str(tmp / "results"), "--output-dir", str(tmp / "out"), "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            self.write_result(
+                result_dir,
+                result,
+                evidence_name="protocol-checks.json",
+                content=b"protocol evidence\n",
+            )
+            proc = run(
+                "aggregate",
+                "--targets",
+                str(targets),
+                "--results-root",
+                str(tmp / "results"),
+                "--output-dir",
+                str(tmp / "out"),
+                "--commit",
+                "abc123",
+                "--run-id",
+                "77",
+                "--repository",
+                "DeepLayerTeam/Launcher",
+            )
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("vendor hardware provenance", (proc.stderr + proc.stdout).lower())
+            self.assertIn(
+                "vendor hardware provenance", (proc.stderr + proc.stdout).lower()
+            )
 
 
 if __name__ == "__main__":

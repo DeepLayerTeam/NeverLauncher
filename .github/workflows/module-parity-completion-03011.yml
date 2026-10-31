@@ -4,7 +4,7 @@ on:
     paths:
       - 'compatibility/gravit/**'
       - 'cli/internal/moduleparity/**'
-      - 'cli/cmd/neverlauncher/module_parity_0301.go'
+      - 'cli/cmd/launcher/module_parity_0301.go'
       - 'apps/desktop/**'
       - 'scripts/desktop/**'
       - 'scripts/diagnostics/**'
@@ -14,7 +14,7 @@ on:
     paths:
       - 'compatibility/gravit/**'
       - 'cli/internal/moduleparity/**'
-      - 'cli/cmd/neverlauncher/module_parity_0301.go'
+      - 'cli/cmd/launcher/module_parity_0301.go'
       - 'apps/desktop/**'
       - 'scripts/desktop/**'
       - 'scripts/diagnostics/**'
@@ -35,8 +35,8 @@ jobs:
       - name: Version and native parity checks
         run: |
           python3 scripts/version/manage.py check
-          (cd cli && go test -count=1 ./internal/moduleparity ./cmd/neverlauncher -run 'TestAudit0301|TestAudit0302PinnedBaseline|TestModuleParityCLI0301|TestModuleParity03011')
-          (cd cli && go vet ./internal/moduleparity && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+          (cd cli && go test -count=1 ./internal/moduleparity ./cmd/launcher -run 'TestAudit0301|TestAudit0302PinnedBaseline|TestModuleParityCLI0301|TestModuleParity03011')
+          (cd cli && go vet ./internal/moduleparity && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
       - name: All modules have real sources and runnable test evidence
         run: |
           mkdir -p parity-reports

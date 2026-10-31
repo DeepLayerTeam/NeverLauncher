@@ -26,12 +26,12 @@ version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 4):
     raise SystemExit(f"Guard Guard Attestation gate requires >=0.13.4, got {version}")
 
-attestation = read("runtime/neverruntime/src/attestation.rs")
+attestation = read("runtime/runtime/src/attestation.rs")
 require(
     attestation,
     [
         "guard/windows-guard-attestation/v1",
-        "NeverLauncher Guard Attestation Core v1",
+        "Launcher Guard Attestation Core v1",
         "challenge_sha256",
         "recompute_attestation_sha256",
         "process_policy",
@@ -41,7 +41,7 @@ require(
     "Guard challenge-bound attestation",
 )
 
-guard = read("runtime/neverruntime/src/guard_ipc.rs")
+guard = read("runtime/runtime/src/guard_ipc.rs")
 require(
     guard,
     [
@@ -72,7 +72,7 @@ device_keys = read("apps/desktop/src-tauri/src/device_keys.rs")
 require(
     device_keys,
     [
-        "NeverLauncher Guard Attestation Device Binding v1",
+        "Launcher Guard Attestation Device Binding v1",
         "purpose=guard-attest",
         "sign_guard_attestation",
         "attestation-sha256=",
@@ -183,7 +183,7 @@ require(
     "Backend Guard Attestation E2E tests",
 )
 
-integration = read("runtime/neverruntime/tests/guard_windows.rs")
+integration = read("runtime/runtime/tests/guard_windows.rs")
 require(
     integration,
     [
@@ -198,7 +198,7 @@ release = read("scripts/release/build-windows-desktop.ps1")
 require(
     release,
     [
-        "neverGuardProtocolVersion = 4",
+        "GuardProtocolVersion = 4",
         "windows-named-pipe+current-user-system-acl+hmac-sha256-v4",
         "GUARD_RELEASE_ALLOWLIST.json",
         "guardSha256",
@@ -218,13 +218,13 @@ if "guard-guard-attestation-0134.py" not in preflight:
 require(
     ci,
     [
-        "cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests",
-        "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_windows",
+        "cargo test --manifest-path runtime/runtime/Cargo.toml --lib attestation::tests",
+        "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_windows",
     ],
     "Windows Guard Attestation native CI",
 )
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
 print(
-    f"[NeverLauncher] Guard Guard Attestation + Backend verification 0.13.4 gate OK: {version}"
+    f"[Launcher] Guard Guard Attestation + Backend verification 0.13.4 gate OK: {version}"
 )

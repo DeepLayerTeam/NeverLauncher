@@ -22,7 +22,7 @@ import (
 // The factory uses the existing, tested materializers as executable install
 // adapters. Its lock is an immutable receipt for exact inputs and on-disk
 // outputs, not an optimistic description of what an installer might produce.
-const factoryPlanSchema0271 = "neverlauncher.client-factory.install-plan.v1"
+const factoryPlanSchema0271 = "launcher.client-factory.install-plan.v1"
 
 type factorySource0271 struct {
 	Path   string `json:"path"`
@@ -214,7 +214,7 @@ func factoryDigest0271(p factoryPlan0271) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 func factoryPlanPath0271(root string) string {
-	return filepath.Join(root, ".neverlauncher", "install-plan.json")
+	return filepath.Join(root, ".launcher", "install-plan.json")
 }
 func readFactoryPlan0271(root string) (factoryPlan0271, error) {
 	var p factoryPlan0271
@@ -307,7 +307,7 @@ func scanFactoryOutputs0271(root string) ([]factoryOutput0271, error) {
 			return nil
 		}
 		normalized := filepath.ToSlash(rel)
-		if normalized == ".neverlauncher" && d.IsDir() {
+		if normalized == ".launcher" && d.IsDir() {
 			return filepath.SkipDir
 		}
 		if d.Type()&os.ModeSymlink != 0 {
@@ -357,7 +357,7 @@ func verifyFactoryPlan0271(root string, p factoryPlan0271) error {
 		}
 	}
 	for _, src := range p.Sources {
-		if !strings.HasPrefix(src.Path, ".neverlauncher/") {
+		if !strings.HasPrefix(src.Path, ".launcher/") {
 			continue
 		}
 		full, err := secureClientDestination(root, src.Path)
@@ -524,7 +524,7 @@ func copyFactoryExisting0271(from, to string) error {
 		if rel == "." {
 			return nil
 		}
-		if filepath.ToSlash(rel) == ".neverlauncher/materialize.lock" {
+		if filepath.ToSlash(rel) == ".launcher/materialize.lock" {
 			return nil
 		}
 		if d.Type()&os.ModeSymlink != 0 {
@@ -681,7 +681,7 @@ func executeFactoryBuild0271(ctx context.Context, raw factoryBuildOptions0271) (
 		loaderVersion = result.LoaderVersion
 		profilePath = result.ProfilePath
 		mainClass = result.MainClass
-		installerRel := filepath.ToSlash(filepath.Join(".neverlauncher", "installers", o.Loader, sanitizeVersionToken(result.ArtifactVersion), "installer.jar"))
+		installerRel := filepath.ToSlash(filepath.Join(".launcher", "installers", o.Loader, sanitizeVersionToken(result.ArtifactVersion), "installer.jar"))
 		pinned, e := readLoaderResolutionLock(defaultLoaderResolutionLockPath(staging, o.Loader), o.Loader, vanilla.MinecraftVersion, o.LoaderVersion)
 		if e != nil || pinned == nil {
 			return factoryPlan0271{}, fmt.Errorf("missing Forge installer evidence: %v", e)

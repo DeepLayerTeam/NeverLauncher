@@ -679,7 +679,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 7,
-          "evidence": "NEVERLAUNCHER_DATABASE_DSN=postgres://neverlauncher:neverlauncher@localhost:5432/neverlauncher?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_DATABASE_DSN=postgres://launcher:launcher@localhost:5432/launcher?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -719,7 +719,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 116,
-          "evidence": "# NEVERLAUNCHER_DATABASE_DSN=postgres://neverlauncher:neverlauncher@postgres:5432/neverlauncher?sslmode=disable"
+          "evidence": "# NEVERLAUNCHER_DATABASE_DSN=postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable"
         }
       ]
     },
@@ -819,17 +819,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 56,
-          "evidence": "NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://neverauth:integration-only@127.0.0.1:5432/neverauth?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://auth:integration-only@127.0.0.1:5432/auth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 57,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverauth:integration-only@127.0.0.1:5432/neverauth?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://auth:integration-only@127.0.0.1:5432/auth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 58,
-          "evidence": "NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://neverauth:integration-only@127.0.0.1:5432/neverauth?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@127.0.0.1:5432/auth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -839,17 +839,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 105,
-          "evidence": "go test -json -count=1 -timeout=12m ./internal/httpapi -run '^TestSecurityRealAuthPostgresTwoReplicas02912$' | tee \"$RUNNER_TEMP/never-auth-postgres.json\""
+          "evidence": "go test -json -count=1 -timeout=12m ./internal/httpapi -run '^TestSecurityRealAuthPostgresTwoReplicas02912$' | tee \"$RUNNER_TEMP/auth-postgres.json\""
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 106,
-          "evidence": "go test -json -count=1 -timeout=12m ./internal/repository -run '^TestGlobalSessionRevocationPostgres0297$|^TestProtectionBanPostgres0298$' | tee -a \"$RUNNER_TEMP/never-auth-postgre"
+          "evidence": "go test -json -count=1 -timeout=12m ./internal/repository -run '^TestGlobalSessionRevocationPostgres0297$|^TestProtectionBanPostgres0298$' | tee -a \"$RUNNER_TEMP/auth-postgre"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 107,
-          "evidence": "python3 ../../scripts/ga/assert_go_test_0300.py \"$RUNNER_TEMP/never-auth-postgres.json\" \\"
+          "evidence": "python3 ../../scripts/ga/assert_go_test_0300.py \"$RUNNER_TEMP/auth-postgres.json\" \\"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -859,7 +859,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 131,
-          "evidence": "${{ runner.temp }}/never-auth-postgres.json"
+          "evidence": "${{ runner.temp }}/auth-postgres.json"
         }
       ]
     },
@@ -974,7 +974,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 1283,
-          "evidence": "NEVERLAUNCHER_PARITY_POSTGRES_DSN: postgres://neverlauncher_parity:parity-ephemeral-only@127.0.0.1:5432/neverlauncher_storage_parity?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_PARITY_POSTGRES_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -989,7 +989,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 1340,
-          "evidence": "NEVERLAUNCHER_PG_TEST_DSN: postgres://neverlauncher_parity:parity-ephemeral-only@127.0.0.1:5432/neverlauncher_storage_parity?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_PG_TEST_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable"
         }
       ]
     },
@@ -1044,7 +1044,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 41,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher:test-only@localhost:5432/neverlauncher?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable"
         }
       ]
     },
@@ -1069,7 +1069,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1089,7 +1089,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:disposable_test_only@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:disposable_test_only@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1114,7 +1114,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1134,7 +1134,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 34,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1159,7 +1159,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:disposable_only_0334@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:disposable_only_0334@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1184,7 +1184,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 40,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1214,7 +1214,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1239,7 +1239,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 34,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1259,7 +1259,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1279,7 +1279,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 33,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1309,7 +1309,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1334,7 +1334,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 38,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:disposable_only_0333@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:disposable_only_0333@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1359,7 +1359,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher:test-only@localhost:5432/neverlauncher?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1384,7 +1384,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 44,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher:integration-only@localhost:5432/neverlauncher_auth0295?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:integration-only@localhost:5432/launcher_auth0295?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1414,7 +1414,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1434,7 +1434,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 41,
-          "evidence": "NEVER_TEST_POSTGRES_DSN: postgresql://ci:ci@localhost:5432/neverlauncher_link_ci?sslmode=disable"
+          "evidence": "NEVER_TEST_POSTGRES_DSN: postgresql://ci:ci@localhost:5432/launcher_link_ci?sslmode=disable"
         }
       ]
     },
@@ -1479,17 +1479,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 59,
-          "evidence": "NEVERLAUNCHER_PG_TEST_DSN: postgres://neverlauncher_rc:rc-temporary-password@127.0.0.1:5432/neverlauncher_rc?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_PG_TEST_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 60,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_rc:rc-temporary-password@127.0.0.1:5432/neverlauncher_rc?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 61,
-          "evidence": "NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://neverlauncher_rc:rc-temporary-password@127.0.0.1:5432/neverlauncher_rc?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable"
         }
       ]
     },
@@ -1519,7 +1519,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 168,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:neverlauncher_test_ci_only@127.0.0.1:5432/neverlauncher_profile_ga?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:launcher_test_ci_only@127.0.0.1:5432/launcher_profile_ga?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1559,7 +1559,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher:test-only@localhost:5432/neverlauncher?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable"
         }
       ]
     },
@@ -1579,7 +1579,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 44,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://routing_ci:routing_ci_only@127.0.0.1:5432/neverlauncher_routing?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://routing_ci:routing_ci_only@127.0.0.1:5432/launcher_routing?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1639,7 +1639,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 173,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_rc:neverlauncher_rc_ci_only@127.0.0.1:5432/neverlauncher_rc?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:launcher_rc_ci_only@127.0.0.1:5432/launcher_rc?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1709,12 +1709,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 54,
-          "evidence": "NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://neverauth:integration-only@localhost:5432/neverauth?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 55,
-          "evidence": "NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://neverauth:integration-only@localhost:5432/neverauth?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1779,12 +1779,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "NEVERLAUNCHER_PG_TEST_DSN: postgres://neverlauncher_test:test-only-secret@127.0.0.1:5432/neverlauncher_migration_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_PG_TEST_DSN: postgres://launcher_test:test-only-secret@127.0.0.1:5432/launcher_migration_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 37,
-          "evidence": "NEVERLAUNCHER_POSTGRES_DSN: postgres://neverlauncher_test:test-only-secret@127.0.0.1:5432/neverlauncher_migration_test?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_POSTGRES_DSN: postgres://launcher_test:test-only-secret@127.0.0.1:5432/launcher_migration_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1844,7 +1844,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 40,
-          "evidence": "NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://neverlauncher_growth:growth-ci-only@127.0.0.1:5432/neverlauncher_growth?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://launcher_growth:growth-ci-only@127.0.0.1:5432/launcher_growth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1954,7 +1954,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/auth_security_commands.go",
+      "path": "cli/cmd/launcher/auth_security_commands.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1999,7 +1999,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/auth_upgrade_02911.go",
+      "path": "cli/cmd/launcher/auth_upgrade_02911.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2014,7 +2014,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/authlib_classloader_0279_test.go",
+      "path": "cli/cmd/launcher/authlib_classloader_0279_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -2024,7 +2024,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/device_trust_release.go",
+      "path": "cli/cmd/launcher/device_trust_release.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2039,7 +2039,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/device_trust_release_test.go",
+      "path": "cli/cmd/launcher/device_trust_release_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2054,7 +2054,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/extension_sdk_02010_test.go",
+      "path": "cli/cmd/launcher/extension_sdk_02010_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2064,7 +2064,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/forge_runtime_test.go",
+      "path": "cli/cmd/launcher/forge_runtime_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -2074,7 +2074,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/legacy_client_adapters_0278_test.go",
+      "path": "cli/cmd/launcher/legacy_client_adapters_0278_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -2084,17 +2084,17 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/main.go",
+      "path": "cli/cmd/launcher/main.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
           "line": 19,
-          "evidence": "const helpText = `NeverLauncher CLI"
+          "evidence": "const helpText = `Launcher CLI"
         }
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/operations_commands.go",
+      "path": "cli/cmd/launcher/operations_commands.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2104,7 +2104,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 71,
-          "evidence": "\"volumes\": []string{\"neverlauncher_postgres\", \"neverlauncher_redis\", \"neverlauncher_storage\", \"neverlauncher_backups\"},"
+          "evidence": "\"volumes\": []string{\"launcher_postgres\", \"launcher_redis\", \"launcher_storage\", \"launcher_backups\"},"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -2119,7 +2119,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/release_single_node_ga_0330.go",
+      "path": "cli/cmd/launcher/release_single_node_ga_0330.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2134,7 +2134,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/release_single_node_ga_0330_test.go",
+      "path": "cli/cmd/launcher/release_single_node_ga_0330_test.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2154,7 +2154,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/runtime_certification_02712_test.go",
+      "path": "cli/cmd/launcher/runtime_certification_02712_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -2164,7 +2164,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/templates/production/docker-compose.yml",
+      "path": "cli/cmd/launcher/templates/production/docker-compose.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2179,7 +2179,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 10,
-          "evidence": "- neverlauncher_postgres:/var/lib/postgresql/data"
+          "evidence": "- launcher_postgres:/var/lib/postgresql/data"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -2199,17 +2199,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 76,
-          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://${POSTGRES_USER:-neverlauncher}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-neverlauncher}?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://${POSTGRES_USER:-launcher}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-launcher}?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 164,
-          "evidence": "neverlauncher_postgres:"
+          "evidence": "launcher_postgres:"
         }
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/templates/production/env.production.example",
+      "path": "cli/cmd/launcher/templates/production/env.production.example",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -2234,7 +2234,7 @@
       ]
     },
     {
-      "path": "cli/cmd/neverlauncher/trusted_jvm_0306_test.go",
+      "path": "cli/cmd/launcher/trusted_jvm_0306_test.go",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -2334,7 +2334,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.10.0-P0: базовая производственная схема."
+          "evidence": "-- Launcher 0.10.0-P0: базовая производственная схема."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -2899,7 +2899,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.10.0-P0: состояние безопасности установки и первоначальной инициализации."
+          "evidence": "-- Launcher 0.10.0-P0: состояние безопасности установки и первоначальной инициализации."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -2939,7 +2939,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.10.1: механизм совместимости, учитывающий платформу в метаданных релизных"
+          "evidence": "-- Launcher 0.10.1: механизм совместимости, учитывающий платформу в метаданных релизных"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -2969,7 +2969,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.1: нормализованное постоянное ядро аутентификации."
+          "evidence": "-- Launcher 0.11.1: нормализованное постоянное ядро аутентификации."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -3184,7 +3184,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.2: метаданные идентификаций Federation Core. Таблица"
+          "evidence": "-- Launcher 0.11.2: метаданные идентификаций Federation Core. Таблица"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -3214,7 +3214,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.6: зашифрованные учётные данные внешних провайдеров."
+          "evidence": "-- Launcher 0.11.6: зашифрованные учётные данные внешних провайдеров."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -3259,7 +3259,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.7: Passkeys / WebAuthn и MFA 2.0. Запросы WebAuthn одноразовые"
+          "evidence": "-- Launcher 0.11.7: Passkeys / WebAuthn и MFA 2.0. Запросы WebAuthn одноразовые"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -3384,7 +3384,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.8: управление сеансами 2.0. Добавляет"
+          "evidence": "-- Launcher 0.11.8: управление сеансами 2.0. Добавляет"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -3424,7 +3424,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.9: совместимость аутентификации Minecraft 2.0."
+          "evidence": "-- Launcher 0.11.9: совместимость аутентификации Minecraft 2.0."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -3514,7 +3514,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.10: сквозные проверки федерации и стабилизация миграций. Отклоняйте"
+          "evidence": "-- Launcher 0.11.10: сквозные проверки федерации и стабилизация миграций. Отклоняйте"
         }
       ]
     },
@@ -3524,7 +3524,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.0: инварианты выпуска федерации аутентификации. Локальная"
+          "evidence": "-- Launcher 0.12.0: инварианты выпуска федерации аутентификации. Локальная"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -3544,7 +3544,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.1: ядро доверия устройствам и постоянный реестр. Старое"
+          "evidence": "-- Launcher 0.12.1: ядро доверия устройствам и постоянный реестр. Старое"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -3654,7 +3654,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.3: идентичности с аппаратной привязкой. Миграция хранит локальную привязку"
+          "evidence": "-- Launcher 0.12.3: идентичности с аппаратной привязкой. Миграция хранит локальную привязку"
         }
       ]
     },
@@ -3664,7 +3664,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.4: аттестация устройства по схеме вызов–ответ. Подтверждает"
+          "evidence": "-- Launcher 0.12.4: аттестация устройства по схеме вызов–ответ. Подтверждает"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -3694,7 +3694,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.6: авторитетная привязка сеанса к устройству и интеграция"
+          "evidence": "-- Launcher 0.12.6: авторитетная привязка сеанса к устройству и интеграция"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -3714,7 +3714,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.7: контроль доверия Minecraft / ServerBridge."
+          "evidence": "-- Launcher 0.12.7: контроль доверия Minecraft / ServerBridge."
         }
       ]
     },
@@ -3724,7 +3724,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.8: кроссплатформенное восстановление и ротация ключей"
+          "evidence": "-- Launcher 0.12.8: кроссплатформенное восстановление и ротация ключей"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -3744,7 +3744,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.10: миграция и стабилизация доверенных устройств."
+          "evidence": "-- Launcher 0.12.10: миграция и стабилизация доверенных устройств."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -3764,7 +3764,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.13.5: сохраняйте проверенный снимок запуска Guard в данных"
+          "evidence": "-- Launcher 0.13.5: сохраняйте проверенный снимок запуска Guard в данных"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -3784,7 +3784,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.13.10: миграция Guard, совместимость и стабилизация."
+          "evidence": "-- Launcher 0.13.10: миграция Guard, совместимость и стабилизация."
         }
       ]
     },
@@ -3794,12 +3794,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.1: ServerBridge Protocol v2 и PostgreSQL как источник истины."
+          "evidence": "-- Launcher 0.14.1: ServerBridge Protocol v2 и PostgreSQL как источник истины."
         },
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.1: ServerBridge Protocol v2 и PostgreSQL как источник истины."
+          "evidence": "-- Launcher 0.14.1: ServerBridge Protocol v2 и PostgreSQL как источник истины."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -3949,7 +3949,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.2: криптографические идентичности узлов. Узлы"
+          "evidence": "-- Launcher 0.14.2: криптографические идентичности узлов. Узлы"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -3994,7 +3994,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.3: одноразовые разрешения на вход."
+          "evidence": "-- Launcher 0.14.3: одноразовые разрешения на вход."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -4014,7 +4014,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.4: семейство Bukkit — Bukkit/Spigot/Paper/Purpur/Folia."
+          "evidence": "-- Launcher 0.14.4: семейство Bukkit — Bukkit/Spigot/Paper/Purpur/Folia."
         }
       ]
     },
@@ -4024,7 +4024,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.5: семейство прокси Velocity/BungeeCord/Waterfall. Расширяет"
+          "evidence": "-- Launcher 0.14.5: семейство прокси Velocity/BungeeCord/Waterfall. Расширяет"
         }
       ]
     },
@@ -4034,7 +4034,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.6: мост Fabric Server Bridge становится полноценным типом узла Protocol v2."
+          "evidence": "-- Launcher 0.14.6: мост Fabric Server Bridge становится полноценным типом узла Protocol v2."
         }
       ]
     },
@@ -4044,7 +4044,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.7: мосты Forge и NeoForge Server Bridge. Расширяет фиксированный"
+          "evidence": "-- Launcher 0.14.7: мосты Forge и NeoForge Server Bridge. Расширяет фиксированный"
         }
       ]
     },
@@ -4054,7 +4054,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.8: топология без патчей и одноразовая передача proxy -\u003e backend."
+          "evidence": "-- Launcher 0.14.8: топология без патчей и одноразовая передача proxy -\u003e backend."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -4129,7 +4129,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.9: публичная матрица ServerBridge и усиление"
+          "evidence": "-- Launcher 0.14.9: публичная матрица ServerBridge и усиление"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -4144,7 +4144,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.10: миграция и стабилизация ServerBridge. Модель"
+          "evidence": "-- Launcher 0.14.10: миграция и стабилизация ServerBridge. Модель"
         }
       ]
     },
@@ -4154,7 +4154,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.16.1: завершение схемы назначений запросов Guard Attestation."
+          "evidence": "-- Launcher 0.16.1: завершение схемы назначений запросов Guard Attestation."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -4169,7 +4169,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.1: поддержка постепенного перехода ServerBridge 3 на"
+          "evidence": "-- Launcher 0.19.1: поддержка постепенного перехода ServerBridge 3 на"
         }
       ]
     },
@@ -4179,7 +4179,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.18.10: назначения запросов и разрешений Guard Attestation v2."
+          "evidence": "-- Launcher 0.18.10: назначения запросов и разрешений Guard Attestation v2."
         }
       ]
     },
@@ -4189,7 +4189,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.2: обнаружение узлов ServerBridge 3 и идентичность процесса."
+          "evidence": "-- Launcher 0.19.2: обнаружение узлов ServerBridge 3 и идентичность процесса."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -4289,7 +4289,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.3: ограниченная история телеметрии ServerBridge v3."
+          "evidence": "-- Launcher 0.19.3: ограниченная история телеметрии ServerBridge v3."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -4359,7 +4359,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.4: постоянный упорядоченный поток событий ServerBridge v3."
+          "evidence": "-- Launcher 0.19.4: постоянный упорядоченный поток событий ServerBridge v3."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -4409,7 +4409,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.5: постоянная идемпотентная очередь управления Backend -\u003e Bridge."
+          "evidence": "-- Launcher 0.19.5: постоянная идемпотентная очередь управления Backend -\u003e Bridge."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -4509,7 +4509,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.6: топология и маршрутизация ServerBridge 2. Аутентифицированные"
+          "evidence": "-- Launcher 0.19.6: топология и маршрутизация ServerBridge 2. Аутентифицированные"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -4529,7 +4529,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.7: интеграция игровых сеансов ServerBridge 3."
+          "evidence": "-- Launcher 0.19.7: интеграция игровых сеансов ServerBridge 3."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -4599,7 +4599,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.8: универсальные серверные адаптеры. Расширяет"
+          "evidence": "-- Launcher 0.19.8: универсальные серверные адаптеры. Расширяет"
         }
       ]
     },
@@ -4609,7 +4609,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.11: последовательность операций управляющего сервиса HA ServerBridge и владение с защитой от \ufffd"
+          "evidence": "-- Launcher 0.19.11: последовательность операций управляющего сервиса HA ServerBridge и владение с защитой от \ufffd"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -4629,7 +4629,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.0: миграция состояния Protocol v3 для ServerBridge 3 GA. Protocol v3"
+          "evidence": "-- Launcher 0.20.0: миграция состояния Protocol v3 для ServerBridge 3 GA. Protocol v3"
         }
       ]
     },
@@ -4639,7 +4639,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.1: каноническое постоянное ядро"
+          "evidence": "-- Launcher 0.20.1: каноническое постоянное ядро"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -4729,7 +4729,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.3: производственный закрытый или локальный реестр"
+          "evidence": "-- Launcher 0.20.3: производственный закрытый или локальный реестр"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -4849,7 +4849,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.4: производственный жизненный цикл установки Extensions."
+          "evidence": "-- Launcher 0.20.4: производственный жизненный цикл установки Extensions."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -5049,7 +5049,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.7: явная выдача возможностей и зашифрованные секреты расширений. Права в"
+          "evidence": "-- Launcher 0.20.7: явная выдача возможностей и зашифрованные секреты расширений. Права в"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -5099,7 +5099,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.11: постоянное состояние разрешения зависимостей и"
+          "evidence": "-- Launcher 0.20.11: постоянное состояние разрешения зависимостей и"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -5199,7 +5199,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.12: доверие, восстановление и сертификация."
+          "evidence": "-- Launcher 0.20.12: доверие, восстановление и сертификация."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -5279,7 +5279,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.21.0: контракт GA для Extensions и отметка обновления 0.20"
+          "evidence": "-- Launcher 0.21.0: контракт GA для Extensions и отметка обновления 0.20"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -5319,7 +5319,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.21.1: основа авторизации и границы идентичностей."
+          "evidence": "-- Launcher 0.21.1: основа авторизации и границы идентичностей."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -5424,7 +5424,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.21.2: добросовестная валидация и явные границы доверия. Проверки"
+          "evidence": "-- Launcher 0.21.2: добросовестная валидация и явные границы доверия. Проверки"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -5504,7 +5504,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.21.3: постоянные границы управляющего сервиса. Публикация,"
+          "evidence": "-- Launcher 0.21.3: постоянные границы управляющего сервиса. Публикация,"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7114,7 +7114,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 10,
-          "evidence": "- neverlauncher_postgres:/var/lib/postgresql/data"
+          "evidence": "- launcher_postgres:/var/lib/postgresql/data"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7134,12 +7134,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 77,
-          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://${POSTGRES_USER:-neverlauncher}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-neverlauncher}?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://${POSTGRES_USER:-launcher}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-launcher}?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 166,
-          "evidence": "neverlauncher_postgres:"
+          "evidence": "launcher_postgres:"
         }
       ]
     },
@@ -7209,7 +7209,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 5,
-          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://neverlauncher:neverlauncher@postgres:5432/neverlauncher?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7269,7 +7269,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 55,
-          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://neverlauncher:neverlauncher@postgres:5432/neverlauncher?sslmode=disable"
+          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7389,7 +7389,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 81,
-          "evidence": "DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:${PORT}/neverlauncher?sslmode=disable\""
+          "evidence": "DSN=\"postgres://launcher:launcher@127.0.0.1:${PORT}/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7414,7 +7414,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 9,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -7479,7 +7479,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 10,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7584,7 +7584,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 9,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -7794,7 +7794,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 81,
-          "evidence": "DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:${PORT}/neverlauncher?sslmode=disable\""
+          "evidence": "DSN=\"postgres://launcher:launcher@127.0.0.1:${PORT}/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7814,7 +7814,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 9,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -7864,7 +7864,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 8,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -7959,7 +7959,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 8,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8004,7 +8004,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 9,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8054,7 +8054,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 9,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55432/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55432/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8139,52 +8139,52 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 604,
-          "evidence": "PAPER_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/neverlauncher-paper-bridge-${VERSION}.jar\" | awk '{print $1}')\""
+          "evidence": "PAPER_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/launcher-paper-bridge-${VERSION}.jar\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 615,
-          "evidence": "VELOCITY_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/neverlauncher-velocity-bridge-${VERSION}.jar\" | awk '{print $1}')\""
+          "evidence": "VELOCITY_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/launcher-velocity-bridge-${VERSION}.jar\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 616,
-          "evidence": "BUNGEECORD_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/neverlauncher-bungeecord-bridge-${VERSION}.jar\" | awk '{print $1}')\""
+          "evidence": "BUNGEECORD_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/launcher-bungeecord-bridge-${VERSION}.jar\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 617,
-          "evidence": "WATERFALL_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/neverlauncher-waterfall-bridge-${VERSION}.jar\" | awk '{print $1}')\""
+          "evidence": "WATERFALL_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/launcher-waterfall-bridge-${VERSION}.jar\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 618,
-          "evidence": "SPIGOT_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/neverlauncher-spigot-bridge-${VERSION}.jar\" | awk '{print $1}')\""
+          "evidence": "SPIGOT_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/launcher-spigot-bridge-${VERSION}.jar\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 619,
-          "evidence": "PURPUR_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/neverlauncher-purpur-bridge-${VERSION}.jar\" | awk '{print $1}')\""
+          "evidence": "PURPUR_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/launcher-purpur-bridge-${VERSION}.jar\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 620,
-          "evidence": "FOLIA_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/neverlauncher-folia-bridge-${VERSION}.jar\" | awk '{print $1}')\""
+          "evidence": "FOLIA_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/launcher-folia-bridge-${VERSION}.jar\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 621,
-          "evidence": "FABRIC_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/neverlauncher-fabric-bridge-${VERSION}.jar\" | awk '{print $1}')\""
+          "evidence": "FABRIC_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/launcher-fabric-bridge-${VERSION}.jar\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 622,
-          "evidence": "FORGE_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/neverlauncher-forge-bridge-${VERSION}.jar\" | awk '{print $1}')\""
+          "evidence": "FORGE_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/launcher-forge-bridge-${VERSION}.jar\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 623,
-          "evidence": "NEOFORGE_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/neverlauncher-neoforge-bridge-${VERSION}.jar\" | awk '{print $1}')\""
+          "evidence": "NEOFORGE_BRIDGE_SHA=\"$(sha256sum \"$ROOT/artifacts/plugins/launcher-neoforge-bridge-${VERSION}.jar\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8254,7 +8254,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 9,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8304,7 +8304,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 9,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8354,7 +8354,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 9,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8404,7 +8404,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 8,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8444,7 +8444,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 8,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8484,7 +8484,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 9,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8534,7 +8534,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 8,
-          "evidence": "DB_DSN=\"postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable\""
+          "evidence": "DB_DSN=\"postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8689,7 +8689,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 54,
-          "evidence": "\"neverruntime\": []byte(\"#!/bin/sh\\ncase \\\"$1\\\" in\\nverify) echo '{\\\"status\\\":\\\"ready\\\"}' ;;\\njava) echo '{\\\"javaExecutable\\\":\\\"/verified/runtime/bin/java\\\",\\\"majorVersion\\\":21,\\\"di"
+          "evidence": "\"runtime\": []byte(\"#!/bin/sh\\ncase \\\"$1\\\" in\\nverify) echo '{\\\"status\\\":\\\"ready\\\"}' ;;\\njava) echo '{\\\"javaExecutable\\\":\\\"/verified/runtime/bin/java\\\",\\\"majorVersion\\\":21,\\\"di"
         }
       ]
     },
@@ -8924,7 +8924,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 521,
-          "evidence": "\"components\":{\"securitySchemes\":{\"BearerAuth\":{\"type\":\"http\",\"scheme\":\"bearer\"},\"NodeId\":{\"type\":\"apiKey\",\"in\":\"header\",\"name\":\"X-NeverLauncher-Node-Id\",\"description\":\"ServerBridge"
+          "evidence": "\"components\":{\"securitySchemes\":{\"BearerAuth\":{\"type\":\"http\",\"scheme\":\"bearer\"},\"NodeId\":{\"type\":\"apiKey\",\"in\":\"header\",\"name\":\"X-Launcher-Node-Id\",\"description\":\"ServerBridge"
         }
       ]
     },
@@ -9294,7 +9294,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 23,
-          "evidence": "DESKTOP_HASH=\"$(sha256sum \"${PACKAGE_DIR}/neverlauncher-desktop\" | awk '{print $1}')\""
+          "evidence": "DESKTOP_HASH=\"$(sha256sum \"${PACKAGE_DIR}/launcher-desktop\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -9339,7 +9339,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 72,
-          "evidence": "DESKTOP_HASH=\"$(shasum -a 256 \"${MACOS_DIR}/neverlauncher-desktop\" | awk '{print $1}')\""
+          "evidence": "DESKTOP_HASH=\"$(shasum -a 256 \"${MACOS_DIR}/launcher-desktop\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -9349,7 +9349,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 127,
-          "evidence": "DESKTOP_HASH=\"$(shasum -a 256 \"${MACOS_DIR}/neverlauncher-desktop\" | awk '{print $1}')\""
+          "evidence": "DESKTOP_HASH=\"$(shasum -a 256 \"${MACOS_DIR}/launcher-desktop\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -9529,7 +9529,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 11,
-          "evidence": "echo \"[NeverLauncher] backend build: offline neverlauncher_nopgx mode. Для pgx/full: NEVERLAUNCHER_PREFLIGHT_PGX=1\" \u003e\u00262"
+          "evidence": "echo \"[Launcher] backend build: offline launcher_nopgx mode. Для pgx/full: NEVERLAUNCHER_PREFLIGHT_PGX=1\" \u003e\u00262"
         }
       ]
     },
@@ -9539,7 +9539,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 8,
-          "evidence": "echo \"[NeverLauncher] backend tests: offline neverlauncher_nopgx mode. Для pgx/full: NEVERLAUNCHER_PREFLIGHT_PGX=1\" \u003e\u00262"
+          "evidence": "echo \"[Launcher] backend tests: offline launcher_nopgx mode. Для pgx/full: NEVERLAUNCHER_PREFLIGHT_PGX=1\" \u003e\u00262"
         }
       ]
     },
@@ -10059,7 +10059,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 90,
-          "evidence": "print(f\"NeverLauncher ServerBridge Protocol v2 rolling-compatibility + PostgreSQL source-of-truth gate: OK ({version})\")"
+          "evidence": "print(f\"Launcher ServerBridge Protocol v2 rolling-compatibility + PostgreSQL source-of-truth gate: OK ({version})\")"
         }
       ]
     },
@@ -10249,12 +10249,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 25,
-          "evidence": "echo \"[NeverLauncher] pgx/full backend build недоступен; собираю neverlauncher_nopgx fallback\" \u003e\u00262"
+          "evidence": "echo \"[Launcher] pgx/full backend build недоступен; собираю launcher_nopgx fallback\" \u003e\u00262"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 31,
-          "evidence": "NEVERLAUNCHER_HTTP_ADDR=\"${API_ADDR}\" NEVERLAUNCHER_REPOSITORY_DRIVER=memory NEVERLAUNCHER_STORAGE_DRIVER=local \"${API_BIN}\" \u003e/tmp/neverlauncher-api-smoke-${VERSION}.log 2\u003e\u00261 \u0026"
+          "evidence": "NEVERLAUNCHER_HTTP_ADDR=\"${API_ADDR}\" NEVERLAUNCHER_REPOSITORY_DRIVER=memory NEVERLAUNCHER_STORAGE_DRIVER=local \"${API_BIN}\" \u003e/tmp/launcher-api-smoke-${VERSION}.log 2\u003e\u00261 \u0026"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -10374,7 +10374,7 @@
       ]
     },
     {
-      "path": "services/api/cmd/neverlauncher-api/main.go",
+      "path": "services/api/cmd/launcher-api/main.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10444,7 +10444,7 @@
       ]
     },
     {
-      "path": "services/api/cmd/neverlauncher-sqlite/main.go",
+      "path": "services/api/cmd/launcher-sqlite/main.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10464,7 +10464,7 @@
       ]
     },
     {
-      "path": "services/api/cmd/neverlauncher-sqlite/minimal_pg_0377.go",
+      "path": "services/api/cmd/launcher-sqlite/minimal_pg_0377.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10489,7 +10489,7 @@
       ]
     },
     {
-      "path": "services/api/cmd/neverlauncher-sqlite/postgres_export_0377.go",
+      "path": "services/api/cmd/launcher-sqlite/postgres_export_0377.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10519,7 +10519,7 @@
       ]
     },
     {
-      "path": "services/api/cmd/neverlauncher-sqlite/postgres_transfer.go",
+      "path": "services/api/cmd/launcher-sqlite/postgres_transfer.go",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -10664,7 +10664,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 222,
-          "evidence": "DatabaseDSN: env(\"NEVERLAUNCHER_DATABASE_DSN\", env(\"NEVERLAUNCHER_DATABASE_URL\", \"postgres://neverlauncher:neverlauncher@localhost:5432/neverlauncher?sslmode=disable\")),"
+          "evidence": "DatabaseDSN: env(\"NEVERLAUNCHER_DATABASE_DSN\", env(\"NEVERLAUNCHER_DATABASE_URL\", \"postgres://launcher:launcher@localhost:5432/launcher?sslmode=disable\")),"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10759,7 +10759,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 13,
-          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/neverlauncher?sslmode=require\","
+          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/launcher?sslmode=require\","
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10774,7 +10774,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 33,
-          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/neverlauncher?sslmode=require\","
+          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/launcher?sslmode=require\","
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10789,7 +10789,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 58,
-          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/neverlauncher?sslmode=disable\","
+          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/launcher?sslmode=disable\","
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10804,7 +10804,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 92,
-          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/neverlauncher?sslmode=require\","
+          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/launcher?sslmode=require\","
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10819,7 +10819,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 121,
-          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/neverlauncher?sslmode=require\","
+          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/launcher?sslmode=require\","
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10829,7 +10829,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 148,
-          "evidence": "DatabaseDSN: \"postgres://user:pass@db/neverlauncher\", PublicURL: \"https://launcher.example.com\","
+          "evidence": "DatabaseDSN: \"postgres://user:pass@db/launcher\", PublicURL: \"https://launcher.example.com\","
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10839,7 +10839,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 170,
-          "evidence": "DatabaseDSN: \"postgres://user:pass@db/neverlauncher\", PublicURL: \"https://launcher.example.com\","
+          "evidence": "DatabaseDSN: \"postgres://user:pass@db/launcher\", PublicURL: \"https://launcher.example.com\","
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10849,7 +10849,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 192,
-          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/neverlauncher?sslmode=require\", PublicURL: \"https://api.example.com\","
+          "evidence": "DatabaseDSN: \"postgres://user:pass@db:5432/launcher?sslmode=require\", PublicURL: \"https://api.example.com\","
         }
       ]
     },
@@ -10859,7 +10859,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 10,
-          "evidence": "Environment: \"production\", RepositoryDriver: \"postgres\", SQLDriver: \"pgx\", DatabaseDSN: \"postgres://user:pass@db:5432/neverlauncher?sslmode=require\","
+          "evidence": "Environment: \"production\", RepositoryDriver: \"postgres\", SQLDriver: \"pgx\", DatabaseDSN: \"postgres://user:pass@db:5432/launcher?sslmode=require\","
         },
         {
           "category": "storage-configuration-read",
@@ -10979,7 +10979,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.10.0-P0: базовая производственная схема."
+          "evidence": "-- Launcher 0.10.0-P0: базовая производственная схема."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -11544,7 +11544,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.10.0-P0: состояние безопасности установки и первоначальной инициализации."
+          "evidence": "-- Launcher 0.10.0-P0: состояние безопасности установки и первоначальной инициализации."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -11584,7 +11584,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.10.1: механизм совместимости, учитывающий платформу в метаданных релизных"
+          "evidence": "-- Launcher 0.10.1: механизм совместимости, учитывающий платформу в метаданных релизных"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -11614,7 +11614,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.1: нормализованное постоянное ядро аутентификации."
+          "evidence": "-- Launcher 0.11.1: нормализованное постоянное ядро аутентификации."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -11829,7 +11829,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.2: метаданные идентификаций Federation Core. Таблица"
+          "evidence": "-- Launcher 0.11.2: метаданные идентификаций Federation Core. Таблица"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -11859,7 +11859,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.6: зашифрованные учётные данные внешних провайдеров."
+          "evidence": "-- Launcher 0.11.6: зашифрованные учётные данные внешних провайдеров."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -11904,7 +11904,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.7: Passkeys / WebAuthn и MFA 2.0. Запросы WebAuthn одноразовые"
+          "evidence": "-- Launcher 0.11.7: Passkeys / WebAuthn и MFA 2.0. Запросы WebAuthn одноразовые"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -12029,7 +12029,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.8: управление сеансами 2.0. Добавляет"
+          "evidence": "-- Launcher 0.11.8: управление сеансами 2.0. Добавляет"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -12069,7 +12069,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.9: совместимость аутентификации Minecraft 2.0."
+          "evidence": "-- Launcher 0.11.9: совместимость аутентификации Minecraft 2.0."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -12159,7 +12159,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.11.10: сквозные проверки федерации и стабилизация миграций. Отклоняйте"
+          "evidence": "-- Launcher 0.11.10: сквозные проверки федерации и стабилизация миграций. Отклоняйте"
         }
       ]
     },
@@ -12169,7 +12169,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.0: инварианты выпуска федерации аутентификации. Локальная"
+          "evidence": "-- Launcher 0.12.0: инварианты выпуска федерации аутентификации. Локальная"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -12189,7 +12189,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.1: ядро доверия устройствам и постоянный реестр. Старое"
+          "evidence": "-- Launcher 0.12.1: ядро доверия устройствам и постоянный реестр. Старое"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -12299,7 +12299,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.3: идентичности с аппаратной привязкой. Миграция хранит локальную привязку"
+          "evidence": "-- Launcher 0.12.3: идентичности с аппаратной привязкой. Миграция хранит локальную привязку"
         }
       ]
     },
@@ -12309,7 +12309,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.4: аттестация устройства по схеме вызов–ответ. Подтверждает"
+          "evidence": "-- Launcher 0.12.4: аттестация устройства по схеме вызов–ответ. Подтверждает"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -12339,7 +12339,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.6: авторитетная привязка сеанса к устройству и интеграция"
+          "evidence": "-- Launcher 0.12.6: авторитетная привязка сеанса к устройству и интеграция"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -12359,7 +12359,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.7: контроль доверия Minecraft / ServerBridge."
+          "evidence": "-- Launcher 0.12.7: контроль доверия Minecraft / ServerBridge."
         }
       ]
     },
@@ -12369,7 +12369,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.8: кроссплатформенное восстановление и ротация ключей"
+          "evidence": "-- Launcher 0.12.8: кроссплатформенное восстановление и ротация ключей"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -12389,7 +12389,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.12.10: миграция и стабилизация доверенных устройств."
+          "evidence": "-- Launcher 0.12.10: миграция и стабилизация доверенных устройств."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -12409,7 +12409,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.13.5: сохраняйте проверенный снимок запуска Guard в данных"
+          "evidence": "-- Launcher 0.13.5: сохраняйте проверенный снимок запуска Guard в данных"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -12429,7 +12429,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.13.10: миграция Guard, совместимость и стабилизация."
+          "evidence": "-- Launcher 0.13.10: миграция Guard, совместимость и стабилизация."
         }
       ]
     },
@@ -12439,12 +12439,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.1: ServerBridge Protocol v2 и PostgreSQL как источник истины."
+          "evidence": "-- Launcher 0.14.1: ServerBridge Protocol v2 и PostgreSQL как источник истины."
         },
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.1: ServerBridge Protocol v2 и PostgreSQL как источник истины."
+          "evidence": "-- Launcher 0.14.1: ServerBridge Protocol v2 и PostgreSQL как источник истины."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -12594,7 +12594,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.2: криптографические идентичности узлов. Узлы"
+          "evidence": "-- Launcher 0.14.2: криптографические идентичности узлов. Узлы"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -12639,7 +12639,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.3: одноразовые разрешения на вход."
+          "evidence": "-- Launcher 0.14.3: одноразовые разрешения на вход."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -12659,7 +12659,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.4: семейство Bukkit — Bukkit/Spigot/Paper/Purpur/Folia."
+          "evidence": "-- Launcher 0.14.4: семейство Bukkit — Bukkit/Spigot/Paper/Purpur/Folia."
         }
       ]
     },
@@ -12669,7 +12669,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.5: семейство прокси Velocity/BungeeCord/Waterfall. Расширяет"
+          "evidence": "-- Launcher 0.14.5: семейство прокси Velocity/BungeeCord/Waterfall. Расширяет"
         }
       ]
     },
@@ -12679,7 +12679,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.6: мост Fabric Server Bridge становится полноценным типом узла Protocol v2."
+          "evidence": "-- Launcher 0.14.6: мост Fabric Server Bridge становится полноценным типом узла Protocol v2."
         }
       ]
     },
@@ -12689,7 +12689,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.7: мосты Forge и NeoForge Server Bridge. Расширяет фиксированный"
+          "evidence": "-- Launcher 0.14.7: мосты Forge и NeoForge Server Bridge. Расширяет фиксированный"
         }
       ]
     },
@@ -12699,7 +12699,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.8: топология без патчей и одноразовая передача proxy -\u003e backend."
+          "evidence": "-- Launcher 0.14.8: топология без патчей и одноразовая передача proxy -\u003e backend."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -12774,7 +12774,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.9: публичная матрица ServerBridge и усиление"
+          "evidence": "-- Launcher 0.14.9: публичная матрица ServerBridge и усиление"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -12789,7 +12789,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.14.10: миграция и стабилизация ServerBridge. Модель"
+          "evidence": "-- Launcher 0.14.10: миграция и стабилизация ServerBridge. Модель"
         }
       ]
     },
@@ -12799,7 +12799,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.16.1: завершение схемы назначений запросов Guard Attestation."
+          "evidence": "-- Launcher 0.16.1: завершение схемы назначений запросов Guard Attestation."
         },
         {
           "category": "postgresql-config-or-literal",
@@ -12814,7 +12814,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.1: поддержка постепенного перехода ServerBridge 3 на"
+          "evidence": "-- Launcher 0.19.1: поддержка постепенного перехода ServerBridge 3 на"
         }
       ]
     },
@@ -12824,7 +12824,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.18.10: назначения запросов и разрешений Guard Attestation v2."
+          "evidence": "-- Launcher 0.18.10: назначения запросов и разрешений Guard Attestation v2."
         }
       ]
     },
@@ -12834,7 +12834,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.2: обнаружение узлов ServerBridge 3 и идентичность процесса."
+          "evidence": "-- Launcher 0.19.2: обнаружение узлов ServerBridge 3 и идентичность процесса."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -12934,7 +12934,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.3: ограниченная история телеметрии ServerBridge v3."
+          "evidence": "-- Launcher 0.19.3: ограниченная история телеметрии ServerBridge v3."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13004,7 +13004,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.4: постоянный упорядоченный поток событий ServerBridge v3."
+          "evidence": "-- Launcher 0.19.4: постоянный упорядоченный поток событий ServerBridge v3."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13054,7 +13054,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.5: постоянная идемпотентная очередь управления Backend -\u003e Bridge."
+          "evidence": "-- Launcher 0.19.5: постоянная идемпотентная очередь управления Backend -\u003e Bridge."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13154,7 +13154,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.6: топология и маршрутизация ServerBridge 2. Аутентифицированные"
+          "evidence": "-- Launcher 0.19.6: топология и маршрутизация ServerBridge 2. Аутентифицированные"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13174,7 +13174,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.7: интеграция игровых сеансов ServerBridge 3."
+          "evidence": "-- Launcher 0.19.7: интеграция игровых сеансов ServerBridge 3."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13244,7 +13244,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.8: универсальные серверные адаптеры. Расширяет"
+          "evidence": "-- Launcher 0.19.8: универсальные серверные адаптеры. Расширяет"
         }
       ]
     },
@@ -13254,7 +13254,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.19.11: последовательность операций управляющего сервиса HA ServerBridge и владение с защитой от \ufffd"
+          "evidence": "-- Launcher 0.19.11: последовательность операций управляющего сервиса HA ServerBridge и владение с защитой от \ufffd"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13274,7 +13274,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.0: миграция состояния Protocol v3 для ServerBridge 3 GA. Protocol v3"
+          "evidence": "-- Launcher 0.20.0: миграция состояния Protocol v3 для ServerBridge 3 GA. Protocol v3"
         }
       ]
     },
@@ -13284,7 +13284,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.1: каноническое постоянное ядро"
+          "evidence": "-- Launcher 0.20.1: каноническое постоянное ядро"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13374,7 +13374,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.3: производственный закрытый или локальный реестр"
+          "evidence": "-- Launcher 0.20.3: производственный закрытый или локальный реестр"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13494,7 +13494,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.4: производственный жизненный цикл установки Extensions."
+          "evidence": "-- Launcher 0.20.4: производственный жизненный цикл установки Extensions."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13694,7 +13694,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.7: явная выдача возможностей и зашифрованные секреты расширений. Права в"
+          "evidence": "-- Launcher 0.20.7: явная выдача возможностей и зашифрованные секреты расширений. Права в"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13744,7 +13744,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.11: постоянное состояние разрешения зависимостей и"
+          "evidence": "-- Launcher 0.20.11: постоянное состояние разрешения зависимостей и"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13844,7 +13844,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.12: доверие, восстановление и сертификация."
+          "evidence": "-- Launcher 0.20.12: доверие, восстановление и сертификация."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13924,7 +13924,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.21.0: контракт GA для Extensions и отметка обновления 0.20"
+          "evidence": "-- Launcher 0.21.0: контракт GA для Extensions и отметка обновления 0.20"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13964,7 +13964,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.21.1: основа авторизации и границы идентичностей."
+          "evidence": "-- Launcher 0.21.1: основа авторизации и границы идентичностей."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -14069,7 +14069,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.21.2: добросовестная валидация и явные границы доверия. Проверки"
+          "evidence": "-- Launcher 0.21.2: добросовестная валидация и явные границы доверия. Проверки"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -14149,7 +14149,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.21.3: постоянные границы управляющего сервиса. Публикация,"
+          "evidence": "-- Launcher 0.21.3: постоянные границы управляющего сервиса. Публикация,"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -17124,7 +17124,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 80,
-          "evidence": "_, err = db.ExecContext(ctx, `UPDATE neverlauncher_installation_state SET bootstrap_token_hash=$1, updated_at=now() WHERE singleton=TRUE AND bootstrap_token_hash=''`, bootstrapToke"
+          "evidence": "_, err = db.ExecContext(ctx, `UPDATE launcher_installation_state SET bootstrap_token_hash=$1, updated_at=now() WHERE singleton=TRUE AND bootstrap_token_hash=''`, bootstrapToke"
         },
         {
           "category": "database-sql-handle",
@@ -17184,7 +17184,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 155,
-          "evidence": "res, err := db.ExecContext(ctx, `UPDATE neverlauncher_installation_state SET bootstrap_token_used_at=now(), updated_at=now() WHERE singleton=TRUE AND installation_completed=FALSE A"
+          "evidence": "res, err := db.ExecContext(ctx, `UPDATE launcher_installation_state SET bootstrap_token_used_at=now(), updated_at=now() WHERE singleton=TRUE AND installation_completed=FALSE A"
         },
         {
           "category": "storage-configuration-read",
@@ -17239,7 +17239,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 259,
-          "evidence": "if err = tx.QueryRowContext(ctx, `SELECT bootstrap_token_hash, bootstrap_token_used_at, installation_completed FROM neverlauncher_installation_state WHERE singleton=TRUE FOR UPDATE"
+          "evidence": "if err = tx.QueryRowContext(ctx, `SELECT bootstrap_token_hash, bootstrap_token_used_at, installation_completed FROM launcher_installation_state WHERE singleton=TRUE FOR UPDATE"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -17264,7 +17264,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 287,
-          "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE neverlauncher_installation_state SET bootstrap_token_used_at=$1, updated_at=$1 WHERE singleton=TRUE`, now); err != nil {"
+          "evidence": "if _, err = tx.ExecContext(ctx, `UPDATE launcher_installation_state SET bootstrap_token_used_at=$1, updated_at=$1 WHERE singleton=TRUE`, now); err != nil {"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -17464,7 +17464,7 @@
         {
           "category": "storage-configuration-read",
           "line": 121,
-          "evidence": "_, _ = fmt.Fprintf(w, \"# HELP neverlauncher_info Backend identity\\n# TYPE neverlauncher_info gauge\\nneverlauncher_info{version=%q,storage=%q,repository=%q} 1\\n\", s.Version, s.Stora"
+          "evidence": "_, _ = fmt.Fprintf(w, \"# HELP launcher_info Backend identity\\n# TYPE launcher_info gauge\\nlauncher_info{version=%q,storage=%q,repository=%q} 1\\n\", s.Version, s.Stora"
         },
         {
           "category": "storage-configuration-read",
@@ -17649,7 +17649,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 167,
-          "evidence": "persistenceRelease := \"NeverLauncher 0.10.0 Persisted PostgreSQL State\""
+          "evidence": "persistenceRelease := \"Launcher 0.10.0 Persisted PostgreSQL State\""
         },
         {
           "category": "storage-configuration-read",
@@ -17739,22 +17739,22 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 281,
-          "evidence": "_, err = db.ExecContext(ctx, `INSERT INTO neverlauncher_persistence_snapshots_950 (kind, schema_version, payload, created_at) VALUES ($1,$2,$3,$4)`, kind, persistenceSchema950, str"
+          "evidence": "_, err = db.ExecContext(ctx, `INSERT INTO launcher_persistence_snapshots_950 (kind, schema_version, payload, created_at) VALUES ($1,$2,$3,$4)`, kind, persistenceSchema950, str"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 292,
-          "evidence": "err = db.QueryRowContext(ctx, `SELECT payload::text FROM neverlauncher_persistence_snapshots_950 WHERE kind = $1 ORDER BY created_at DESC, id DESC LIMIT 1`, kind).Scan(\u0026raw)"
+          "evidence": "err = db.QueryRowContext(ctx, `SELECT payload::text FROM launcher_persistence_snapshots_950 WHERE kind = $1 ORDER BY created_at DESC, id DESC LIMIT 1`, kind).Scan(\u0026raw)"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 308,
-          "evidence": "`CREATE TABLE IF NOT EXISTS neverlauncher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, payload JSONB NOT NULL, created_at "
+          "evidence": "`CREATE TABLE IF NOT EXISTS launcher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, payload JSONB NOT NULL, created_at "
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 308,
-          "evidence": "`CREATE TABLE IF NOT EXISTS neverlauncher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, payload JSONB NOT NULL, created_at "
+          "evidence": "`CREATE TABLE IF NOT EXISTS launcher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, payload JSONB NOT NULL, created_at "
         }
       ]
     },
@@ -19254,7 +19254,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 822,
-          "evidence": "err = tx.QueryRowContext(ctx, `SELECT rv.publisher_id,a.package_identity,a.sha256,a.size_bytes,c.min_neverlauncher,c.max_neverlauncher,c.min_api,c.max_api,c.supported_os,c.supporte"
+          "evidence": "err = tx.QueryRowContext(ctx, `SELECT rv.publisher_id,a.package_identity,a.sha256,a.size_bytes,c.min_launcher,c.max_launcher,c.min_api,c.max_api,c.supported_os,c.supporte"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -19269,12 +19269,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 848,
-          "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_compatibility(extension_id,version,min_neverlauncher,max_neverlauncher,min_api,max_api,supported_os,supported_archi"
+          "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_compatibility(extension_id,version,min_launcher,max_launcher,min_api,max_api,supported_os,supported_archi"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 848,
-          "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_compatibility(extension_id,version,min_neverlauncher,max_neverlauncher,min_api,max_api,supported_os,supported_archi"
+          "evidence": "if _, err := tx.ExecContext(ctx, `INSERT INTO extension_registry_compatibility(extension_id,version,min_launcher,max_launcher,min_api,max_api,supported_os,supported_archi"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -19289,7 +19289,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 899,
-          "evidence": "item, err := scanRegistryVersionBase0203(r.db.QueryRowContext(ctx, `SELECT rv.extension_id,rv.version,rv.publisher_id,ev.manifest,c.min_neverlauncher,c.max_neverlauncher,c.min_api,"
+          "evidence": "item, err := scanRegistryVersionBase0203(r.db.QueryRowContext(ctx, `SELECT rv.extension_id,rv.version,rv.publisher_id,ev.manifest,c.min_launcher,c.max_launcher,c.min_api,"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -21064,7 +21064,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 90,
-          "evidence": "q(`INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at) VALUES($1,$2,'TestPlayer','neverlauncher','local',$2,'gravit-import"
+          "evidence": "q(`INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at) VALUES($1,$2,'TestPlayer','launcher','local',$2,'gravit-import"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -21334,7 +21334,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 90,
-          "evidence": "if _, e = repo.db.ExecContext(ctx, `INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version) VALUES($1,$2,'Alice334','neverlauncher','local',$2,'lega"
+          "evidence": "if _, e = repo.db.ExecContext(ctx, `INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version) VALUES($1,$2,'Alice334','launcher','local',$2,'lega"
         }
       ]
     },
@@ -22469,22 +22469,22 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 28,
-          "evidence": "if _, err := r.DB.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS neverlauncher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, "
+          "evidence": "if _, err := r.DB.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS launcher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, "
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 28,
-          "evidence": "if _, err := r.DB.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS neverlauncher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, "
+          "evidence": "if _, err := r.DB.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS launcher_persistence_snapshots_950 (id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL, "
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 40,
-          "evidence": "_, err = r.DB.ExecContext(ctx, `INSERT INTO neverlauncher_persistence_snapshots_950 (kind, schema_version, payload, created_at) VALUES ($1,$2,$3,$4)`, kind, schemaVersion, string(r"
+          "evidence": "_, err = r.DB.ExecContext(ctx, `INSERT INTO launcher_persistence_snapshots_950 (kind, schema_version, payload, created_at) VALUES ($1,$2,$3,$4)`, kind, schemaVersion, string(r"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 46,
-          "evidence": "err := r.DB.QueryRowContext(ctx, `SELECT payload::text FROM neverlauncher_persistence_snapshots_950 WHERE kind=$1 ORDER BY created_at DESC, id DESC LIMIT 1`, kind).Scan(\u0026raw)"
+          "evidence": "err := r.DB.QueryRowContext(ctx, `SELECT payload::text FROM launcher_persistence_snapshots_950 WHERE kind=$1 ORDER BY created_at DESC, id DESC LIMIT 1`, kind).Scan(\u0026raw)"
         }
       ]
     },
@@ -25204,7 +25204,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 23,
-          "evidence": "err = r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM minecraft_profiles WHERE uuid=$1 AND user_id=$2 AND realm='local' AND issuer='neverlauncher')`, p.UUID, p.UserID).Scan("
+          "evidence": "err = r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM minecraft_profiles WHERE uuid=$1 AND user_id=$2 AND realm='local' AND issuer='launcher')`, p.UUID, p.UserID).Scan("
         },
         {
           "category": "postgresql-sql-dialect",
@@ -25704,7 +25704,7 @@
         {
           "category": "direct-sql-open",
           "line": 115,
-          "evidence": "db, err := sql.Open(\"neverlauncher-sqlconnector-test\", key)"
+          "evidence": "db, err := sql.Open(\"launcher-sqlconnector-test\", key)"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -26209,7 +26209,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 29,
-          "evidence": "const importVersion = \"neverlauncher-sqlite-to-postgresql-v2\""
+          "evidence": "const importVersion = \"launcher-sqlite-to-postgresql-v2\""
         },
         {
           "category": "database-sql-handle",

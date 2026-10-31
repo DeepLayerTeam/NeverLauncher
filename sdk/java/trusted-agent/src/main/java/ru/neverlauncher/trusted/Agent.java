@@ -1,4 +1,4 @@
-package ru.neverlauncher.trusted;
+package ru.launcher.trusted;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -66,7 +66,7 @@ public final class Agent {
                     }
                     return modified ? current : null;
                 } catch (Exception ex) {
-                    System.err.println("[NeverLauncher trusted JVM] transform rejected for " + name + ": " + ex);
+                    System.err.println("[Launcher trusted JVM] transform rejected for " + name + ": " + ex);
                     // JVM may ignore transformer exceptions: do not pretend it is a sandbox.
                     return null;
                 } finally { IN_CALLBACK.remove(); }

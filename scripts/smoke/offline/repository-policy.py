@@ -38,13 +38,13 @@ if version_check.returncode != 0:
     fail("version metadata drift: " + version_check.stdout.strip())
 
 dynamic_version_expectations = {
-    "cli/cmd/neverlauncher/main.go": 'var version = "dev"',
-    "services/api/cmd/neverlauncher-api/main.go": 'var version = "dev"',
+    "cli/cmd/launcher/main.go": 'var version = "dev"',
+    "services/api/cmd/launcher-api/main.go": 'var version = "dev"',
     "apps/admin/src/admin/AdminApp.tsx": "const TOOL_VERSION = __NEVERLAUNCHER_VERSION__;",
     "apps/desktop/src/main.tsx": "const DESKTOP_VERSION = __NEVERLAUNCHER_VERSION__;",
     "apps/admin/vite.config.ts": "../../VERSION",
     "apps/desktop/vite.config.ts": "../../VERSION",
-    "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/BridgeDefaults.java": "BridgeVersion.VERSION",
+    "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeDefaults.java": "BridgeVersion.VERSION",
     "plugins/bridge-common/build.gradle.kts": "generated/sources/version/java",
     "plugins/proxy-family-common/build.gradle.kts": 'version = rootProject.file("VERSION").readText().trim()',
     "plugins/bungee-family-common/build.gradle.kts": 'version = rootProject.file("VERSION").readText().trim()',
@@ -153,7 +153,7 @@ legacy_schema_patterns = [
     re.compile(r'\bSchemaVersion\s*:\s*"([4-8]\.\d+(?:\.\d+)?)"'),
     re.compile(r'\["schemaVersion"\]\s*=\s*"([4-8]\.\d+(?:\.\d+)?)"'),
 ]
-for path in sorted((ROOT / "cli/cmd/neverlauncher").glob("*.go")):
+for path in sorted((ROOT / "cli/cmd/launcher").glob("*.go")):
     text = path.read_text(encoding="utf-8")
     for pattern in legacy_schema_patterns:
         for match in pattern.finditer(text):
@@ -162,11 +162,9 @@ for path in sorted((ROOT / "cli/cmd/neverlauncher").glob("*.go")):
                 f"{path.relative_to(ROOT)}:{line}: запрещён исторический schemaVersion {match.group(1)}"
             )
 
-main_go = read("cli/cmd/neverlauncher/main.go")
+main_go = read("cli/cmd/launcher/main.go")
 if 'const cliSchemaVersion = "1.0"' not in main_go:
-    fail(
-        'cli/cmd/neverlauncher/main.go: отсутствует canonical cliSchemaVersion = "1.0"'
-    )
+    fail('cli/cmd/launcher/main.go: отсутствует canonical cliSchemaVersion = "1.0"')
 
 # Документация Markdown необязательна; проверяйте согласование версий только в работающем интерфейсе.
 # The Admin entrypoint only mounts the modular AdminApp. Validate its executable
@@ -216,7 +214,7 @@ for rel, forbidden in forbidden_ui.items():
 # 6. P3.2v3 production hardening: auth/storage/backup/CORS должны быть fail-closed.
 config_go = read("services/api/internal/config/config.go")
 admin_handlers = read("services/api/internal/httpapi/admin_handlers.go")
-api_main = read("services/api/cmd/neverlauncher-api/main.go")
+api_main = read("services/api/cmd/launcher-api/main.go")
 server_go = read("services/api/internal/httpapi/server.go")
 routes_operations = read("services/api/internal/httpapi/routes_operations.go")
 backup_go = read("services/api/internal/httpapi/operations_backup.go")
@@ -226,7 +224,7 @@ ci = read(".github/workflows/ci.yml")
 production_release_workflow = read(".github/workflows/production-release-candidate.yml")
 compatibility_workflow = read(".github/workflows/compatibility.yml")
 if (
-    "group: neverlauncher-compatibility-${{ github.ref }}-${{ github.event_name }}"
+    "group: launcher-compatibility-${{ github.ref }}-${{ github.event_name }}"
     not in compatibility_workflow
 ):
     fail("Compatibility concurrency must isolate push from scheduled certification")
@@ -254,10 +252,7 @@ for rel in [
     if "NEVERLAUNCHER_ADMIN_PASSWORD" in text or "NEVERLAUNCHER_ADMIN_EMAIL" in text:
         fail(f"{rel}: устаревшие runtime admin credentials запрещены")
 admin_ui = read("apps/admin/src/main.tsx")
-if (
-    "useState('admin@neverlauncher.local')" in admin_ui
-    or "useState('admin')" in admin_ui
-):
+if "useState('admin@launcher.local')" in admin_ui or "useState('admin')" in admin_ui:
     fail("Admin UI не должен предзаполнять production credentials")
 if "req.Password == s.Config." in admin_handlers:
     fail("admin login содержит config-password fallback")
@@ -393,7 +388,7 @@ for required in [
 for forbidden in [
     "privateSeed",
     "private_seed",
-    "localStorage.setItem('neverlauncher.device",
+    "localStorage.setItem('launcher.device",
 ]:
     if forbidden in desktop_ui:
         fail(
@@ -567,7 +562,7 @@ for required in [
     if required not in auth_go:
         fail(f"0.12.6 authoritative session/device binding missing: {required}")
 for required in [
-    "NeverLauncher Session Device Binding v1",
+    "Launcher Session Device Binding v1",
     "refresh-token-sha256=",
     "verifyRefreshDeviceProof0126",
     "device-attestation-stale",
@@ -673,7 +668,7 @@ for required in [
     "NEVERLAUNCHER_ENV: e2e-production",
     "NEVERLAUNCHER_BACKUP_ROOT",
     "NEVERLAUNCHER_CORS_ALLOWED_ORIGINS",
-    "e2e-backups:/var/lib/neverlauncher/backups",
+    "e2e-backups:/var/lib/launcher/backups",
 ]:
     if required not in e2e_compose:
         fail(f"production E2E не содержит обязательный hardening: {required}")
@@ -706,11 +701,11 @@ if 'case "production", "prod", "e2e-production"' not in config_go:
 # 7. Завершение производственного этапа P3.2v3: настоящая подпись выпусков, строгие артефакты, реальные
 # проверки конвейера, хранилища, миграций, установки и детерминированных разрешений развёртывания.
 dockerfile = read("services/api/Dockerfile")
-release_signing = read("cli/cmd/neverlauncher/release_signing.go")
-release_commands = read("cli/cmd/neverlauncher/release_commands.go")
-package_commands = read("cli/cmd/neverlauncher/package_commands.go")
-security_commands = read("cli/cmd/neverlauncher/auth_security_commands.go")
-install_commands = read("cli/cmd/neverlauncher/operations_commands.go")
+release_signing = read("cli/cmd/launcher/release_signing.go")
+release_commands = read("cli/cmd/launcher/release_commands.go")
+package_commands = read("cli/cmd/launcher/package_commands.go")
+security_commands = read("cli/cmd/launcher/auth_security_commands.go")
+install_commands = read("cli/cmd/launcher/operations_commands.go")
 operations_integrity = read("services/api/internal/httpapi/operations_integrity.go")
 maintenance_go = read("services/api/internal/httpapi/maintenance.go")
 install_handlers = read("services/api/internal/httpapi/install_handlers.go")
@@ -718,9 +713,9 @@ build_release = read("scripts/release/build-release.sh")
 release_bundle_gate = read("scripts/smoke/release-required/release-bundle.sh")
 
 for required in [
-    "mkdir -p /var/lib/neverlauncher/storage/current /var/lib/neverlauncher/backups",
-    "chown -R 10001:10001 /var/lib/neverlauncher",
-    "USER neverlauncher",
+    "mkdir -p /var/lib/launcher/storage/current /var/lib/launcher/backups",
+    "chown -R 10001:10001 /var/lib/launcher",
+    "USER launcher",
 ]:
     if required not in dockerfile:
         fail(
@@ -730,7 +725,7 @@ for required in [
     "api-volume-init:",
     "chown -R 10001:10001 /storage /backups",
     "condition: service_completed_successfully",
-    "NEVERLAUNCHER_STORAGE_LOCAL_PATH: /var/lib/neverlauncher/storage/current",
+    "NEVERLAUNCHER_STORAGE_LOCAL_PATH: /var/lib/launcher/storage/current",
 ]:
     if required not in compose:
         fail(
@@ -773,10 +768,10 @@ for rel in [
 for required in [
     "source-package.py",
     "secret-scan.py",
-    "neverruntime-linux-amd64",
-    "neverlauncher-desktop-linux-amd64",
+    "runtime-linux-amd64",
+    "launcher-desktop-linux-amd64",
     "bridge-plugins.sh",
-    "artifacts/plugins/neverlauncher-${bridge}-bridge-${VERSION}.jar",
+    "artifacts/plugins/launcher-${bridge}-bridge-${VERSION}.jar",
 ]:
     if required not in build_release:
         fail(f"build-release не собирает/проверяет обязательный artifact: {required}")
@@ -859,7 +854,7 @@ for required in [
         )
 for name in ["docker-compose.yml", "nginx.conf", "env.production.example"]:
     canonical = ROOT / "deploy/production" / name
-    embedded = ROOT / "cli/cmd/neverlauncher/templates/production" / name
+    embedded = ROOT / "cli/cmd/launcher/templates/production" / name
     if not embedded.is_file():
         fail(f"first-run embedded template отсутствует: {name}")
     elif canonical.read_bytes() != embedded.read_bytes():
@@ -900,12 +895,12 @@ memory_repo = read("services/api/internal/repository/memory.go")
 postgres_repo = read("services/api/internal/repository/postgres.go")
 package_product = read("services/api/internal/httpapi/package_product.go")
 package_mutation_lock = read("services/api/internal/httpapi/package_mutation_lock.go")
-client_lifecycle = read("cli/cmd/neverlauncher/client_lifecycle.go")
-desktop_package = read("cli/cmd/neverlauncher/desktop_package.go")
-security_keyring = read("cli/cmd/neverlauncher/security_keyring.go")
-supply_chain = read("cli/cmd/neverlauncher/supply_chain.go")
-release_signing_v4 = read("cli/cmd/neverlauncher/release_signing.go")
-product_tests = read("cli/cmd/neverlauncher/p32v4_product_test.go")
+client_lifecycle = read("cli/cmd/launcher/client_lifecycle.go")
+desktop_package = read("cli/cmd/launcher/desktop_package.go")
+security_keyring = read("cli/cmd/launcher/security_keyring.go")
+supply_chain = read("cli/cmd/launcher/supply_chain.go")
+release_signing_v4 = read("cli/cmd/launcher/release_signing.go")
+product_tests = read("cli/cmd/launcher/p32v4_product_test.go")
 immutable_tests = read("services/api/internal/repository/immutable_test.go")
 package_product_tests = read("services/api/internal/httpapi/package_product_test.go")
 
@@ -980,7 +975,7 @@ for required in [
     if required not in desktop_package:
         fail(f"desktop package/verify не проверяет реальный artifact: {required}")
 if "checksums are populated by the native release build" in read(
-    "cli/cmd/neverlauncher/admin_desktop_commands.go"
+    "cli/cmd/launcher/admin_desktop_commands.go"
 ):
     fail("desktop package вернулся к placeholder checksum")
 if "TestDesktopPackageRequiresRealArtifactAndDetectsTampering" not in product_tests:
@@ -1021,13 +1016,13 @@ for required in [
     if required not in release_signing_v4:
         fail(f"provenance attestation не подписывается/проверяется: {required}")
 for required in [
-    "neverlauncher-desktop-package-${VERSION}.zip",
+    "launcher-desktop-package-${VERSION}.zip",
     "desktop package",
     "desktop verify",
 ]:
     if required not in build_release:
         fail(f"release bundle не включает реальный Desktop package: {required}")
-if "neverlauncher-desktop-package-" not in release_commands:
+if "launcher-desktop-package-" not in release_commands:
     fail("release manifest не требует Desktop package artifact")
 if "PROVENANCE.json.sig" not in release_commands:
     fail("release verify не требует signed provenance attestation")
@@ -1135,19 +1130,19 @@ for required in [
         fail(
             f"E2E package publisher не проверяет реальный artifact lifecycle/rate-limit contract: {required}"
         )
-neverruntime_lib = read("runtime/neverruntime/src/lib.rs")
-if "#[serde(default)]\n    pub executable: bool," not in neverruntime_lib:
+runtime_lib = read("runtime/runtime/src/lib.rs")
+if "#[serde(default)]\n    pub executable: bool," not in runtime_lib:
     fail(
-        "NeverRuntime manifest signing payload must preserve executable=false exactly like Go ManifestFile"
+        "Runtime manifest signing payload must preserve executable=false exactly like Go ManifestFile"
     )
 # The real signed-file download path is lib.rs -> durable_downloads ->
 # download_scheduler -> http_resume -> network_resilience. Checking old
 # inlined retry constants in lib.rs was a false negative and missed the actual
 # execution path. Keep this guard tied to every active hop instead.
-resilience = read("runtime/neverruntime/src/network_resilience.rs")
-resume = read("runtime/neverruntime/src/http_resume.rs")
-scheduler = read("runtime/neverruntime/src/download_scheduler.rs")
-durable = read("runtime/neverruntime/src/durable_downloads.rs")
+resilience = read("runtime/runtime/src/network_resilience.rs")
+resume = read("runtime/runtime/src/http_resume.rs")
+scheduler = read("runtime/runtime/src/download_scheduler.rs")
+durable = read("runtime/runtime/src/durable_downloads.rs")
 for required in [
     "StatusCode::TOO_MANY_REQUESTS",
     '"X-RateLimit-Reset"',
@@ -1159,7 +1154,7 @@ for required in [
     "pub async fn wait",
 ]:
     if required not in resilience:
-        fail(f"NeverRuntime clean sync missing bounded rate-limit handling: {required}")
+        fail(f"Runtime clean sync missing bounded rate-limit handling: {required}")
 for required in [
     "retryable_status(response.status())",
     "retry_after(&response)",
@@ -1167,20 +1162,18 @@ for required in [
 ]:
     if required not in resume:
         fail(
-            f"NeverRuntime verified HTTP downloader ignores rate-limit response: {required}"
+            f"Runtime verified HTTP downloader ignores rate-limit response: {required}"
         )
 for required in ["network_resilience::retry_delay", "network_resilience::wait"]:
     if required not in scheduler:
-        fail(
-            f"NeverRuntime scheduler cannot retry with cancellable backoff: {required}"
-        )
-transactional = read("runtime/neverruntime/src/transactional_release.rs")
+        fail(f"Runtime scheduler cannot retry with cancellable backoff: {required}")
+transactional = read("runtime/runtime/src/transactional_release.rs")
 if (
     "transactional_release::install" not in durable
     or "download_scheduler::run_selected" not in transactional
-    or "durable_downloads::start_with_preset" not in neverruntime_lib
+    or "durable_downloads::start_with_preset" not in runtime_lib
 ):
-    fail("NeverRuntime clean sync must use verified resumable download scheduler")
+    fail("Runtime clean sync must use verified resumable download scheduler")
 
 for required in [
     'JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"',
@@ -1322,16 +1315,16 @@ if (
 # 11. Стабилизация совместимости 0.10.7: параллельные материализаторы
 # блокируются, временные внешние сбои повторяются, выход через символические
 # ссылки дерева запрещён, используется переносимая атомарная замена, а
-# исходный бинарный файл NeverRuntime обязателен при объявлении Cargo.
-stability_go = read("cli/cmd/neverlauncher/compatibility_stability.go")
-stability_tests = read("cli/cmd/neverlauncher/compatibility_stability_test.go")
-vanilla_runtime = read("cli/cmd/neverlauncher/vanilla_runtime.go")
-managed_java = read("runtime/neverruntime/src/managed_java.rs")
-runtime_compat = read("runtime/neverruntime/src/compatibility.rs")
-forge_runtime = read("cli/cmd/neverlauncher/forge_runtime.go")
-forge_runtime_tests = read("cli/cmd/neverlauncher/forge_runtime_test.go")
-if not (ROOT / "runtime/neverruntime/src/bin/neverruntime.rs").is_file():
-    fail("Cargo declares neverruntime binary but src/bin/neverruntime.rs is missing")
+# исходный бинарный файл Runtime обязателен при объявлении Cargo.
+stability_go = read("cli/cmd/launcher/compatibility_stability.go")
+stability_tests = read("cli/cmd/launcher/compatibility_stability_test.go")
+vanilla_runtime = read("cli/cmd/launcher/vanilla_runtime.go")
+managed_java = read("runtime/runtime/src/managed_java.rs")
+runtime_compat = read("runtime/runtime/src/compatibility.rs")
+forge_runtime = read("cli/cmd/launcher/forge_runtime.go")
+forge_runtime_tests = read("cli/cmd/launcher/forge_runtime_test.go")
+if not (ROOT / "runtime/runtime/src/bin/runtime.rs").is_file():
+    fail("Cargo declares runtime binary but src/bin/runtime.rs is missing")
 for required in [
     "acquireCompatibilityMaterializationLock",
     "compatibilityGET",
@@ -1364,7 +1357,7 @@ for required in [
     'strings.Contains(err.Error(), "HTTP 404")',
     "compatibilityRetryDelay",
     "forgeLikeMetadataRefreshURL",
-    "_neverlauncher_refresh",
+    "_launcher_refresh",
     "fresh metadata snapshots",
 ]:
     if required not in forge_runtime:
@@ -1390,7 +1383,7 @@ if (
 ):
     fail("Managed Java cached runtime must execute one full OS/arch JVM self-test")
 if "compatibility path содержит symlink" not in runtime_compat:
-    fail("NeverRuntime Compatibility Engine must reject symlink path components")
+    fail("Runtime Compatibility Engine must reject symlink path components")
 for required in [
     "ensure_neoforge_bootstrap_ignores_base_client",
     'value == "--fml.neoForgeVersion"',
@@ -1399,7 +1392,7 @@ for required in [
 ]:
     if required not in runtime_compat:
         fail(
-            f"NeverRuntime NeoForge BootstrapLauncher module-isolation regression guard missing: {required}"
+            f"Runtime NeoForge BootstrapLauncher module-isolation regression guard missing: {required}"
         )
 if (
     "runtime record java path вышел за Managed Java root через symlink"
@@ -1419,7 +1412,7 @@ for required in [
 # повреждённые записи кеша изолируются, метаданные Mojang точной версии
 # при недоступности сети могут восстанавливаться из проверенного снимка,
 # границы архивов и безопасности всегда соблюдаются строго.
-compat_hardening = read("cli/cmd/neverlauncher/compatibility_hardening.go")
+compat_hardening = read("cli/cmd/launcher/compatibility_hardening.go")
 for required in [
     "resolveVanillaMetadataWithRecovery",
     "latest/snapshot metadata recovery запрещён",
@@ -1449,7 +1442,7 @@ for required in [
     "TestDownloadVanillaArtifactRepairsCorruptCompletedPartialInSameRun",
     "TestVanillaMetadataRecoveryDoesNotResurrectMissingAuthoritativeVersion",
 ]:
-    if required not in read("cli/cmd/neverlauncher/compatibility_hardening_test.go"):
+    if required not in read("cli/cmd/launcher/compatibility_hardening_test.go"):
         fail(f"0.16.11 compatibility hardening regression test missing: {required}")
 for required in [
     "java_sha256",
@@ -1467,8 +1460,8 @@ for required in [
 # 12. Выпуск совместимости Minecraft: публикация в производстве требует
 # машинно проверяемых свидетельств совместимости той же версии и
 # коммита; свидетельства должны входить в подписанный SHA256SUMS.
-compat_release = read("cli/cmd/neverlauncher/compatibility_release.go")
-release_commands = read("cli/cmd/neverlauncher/release_commands.go")
+compat_release = read("cli/cmd/launcher/compatibility_release.go")
+release_commands = read("cli/cmd/launcher/release_commands.go")
 build_release = read("scripts/release/build-release.sh")
 for required in [
     "COMPATIBILITY_TARGETS.json",
@@ -1508,7 +1501,7 @@ for required in [
 ]:
     if required not in build_release:
         fail(f"build-release compatibility certification incomplete: {required}")
-compat_release_tests_path = ROOT / "cli/cmd/neverlauncher/compatibility_release_test.go"
+compat_release_tests_path = ROOT / "cli/cmd/launcher/compatibility_release_test.go"
 if not compat_release_tests_path.is_file():
     fail("compatibility release certification regression tests are missing")
 compat_release_tests = compat_release_tests_path.read_text(encoding="utf-8")
@@ -1540,8 +1533,8 @@ for required in [
     "refusing release fallback",
     'status": "passed"',
     "archive_download_url",
-    "neverlauncher-compatibility-matrix-",
-    "neverlauncher-device-trust-matrix-",
+    "launcher-compatibility-matrix-",
+    "launcher-device-trust-matrix-",
     "exact-commit",
     "ArtifactRedirectHandler",
     "ARTIFACT_REDIRECT_SUFFIXES",
@@ -1577,7 +1570,7 @@ key_recovery_migration_cli = read(
     "cli/internal/dbmigrate/sql/0017_device_key_recovery_rotation_0128.sql"
 )
 for required in [
-    "NeverLauncher Device Key Replacement v1",
+    "Launcher Device Key Replacement v1",
     "oldSignature",
     "newSignature",
     "phishing-resistant",
@@ -1922,7 +1915,7 @@ for required in [
 ]:
     if required not in attestation_v2_bridge:
         fail(f"0.18.10 ServerBridge continuous evidence binding missing: {required}")
-attestation_v2_runtime = read("runtime/neverruntime/src/windows_attestation_v2.rs")
+attestation_v2_runtime = read("runtime/runtime/src/windows_attestation_v2.rs")
 for required in [
     "collect_windows_continuous_evidence_v2",
     "guard/windows-continuous-evidence/v2",
@@ -1938,8 +1931,8 @@ if (
 
 # В 0.13.2: свидетельства целостности Guard Windows v1 собирает отдельный
 # Guard-процесс и аутентифицирует через существующий локальный IPC-сеанс.
-integrity_0132 = read("runtime/neverruntime/src/integrity.rs")
-guard_0132 = read("runtime/neverruntime/src/guard_ipc.rs")
+integrity_0132 = read("runtime/runtime/src/integrity.rs")
+guard_0132 = read("runtime/runtime/src/guard_ipc.rs")
 desktop_0132 = read("apps/desktop/src-tauri/src/main.rs")
 integrity_gate_0132 = read("scripts/smoke/offline/guard-integrity-evidence-0132.py")
 for required in [
@@ -1977,9 +1970,9 @@ if "Integrity Evidence v1 gate OK" not in integrity_gate_0132:
 # В 0.13.3: контроль политик процесса и выполнения Guard Windows. Защитные
 # меры Guard применяются до Tokio; Java запускается приостановленной внутри
 # Job Object с запретом выхода и принудительным завершением при закрытии.
-policy_0133 = read("runtime/neverruntime/src/windows_policy.rs")
-guard_0133 = read("runtime/neverruntime/src/guard_ipc.rs")
-supervisor_0133 = read("runtime/neverruntime/src/supervisor.rs")
+policy_0133 = read("runtime/runtime/src/windows_policy.rs")
+guard_0133 = read("runtime/runtime/src/guard_ipc.rs")
+supervisor_0133 = read("runtime/runtime/src/supervisor.rs")
 desktop_0133 = read("apps/desktop/src-tauri/src/main.rs")
 policy_gate_0133 = read("scripts/smoke/offline/guard-process-policy-0133.py")
 for required in [
@@ -2031,7 +2024,7 @@ if "runtime/process policy 0.13.3 gate OK" not in policy_gate_0133:
 guard_targets_0139 = read("guard-ci/targets.json")
 guard_matrix_0139 = read("scripts/guard_ci/matrix.py")
 guard_stage_0139 = read("scripts/guard_ci/stage_release.py")
-guard_release_0139 = read("cli/cmd/neverlauncher/guard_ci_release.go")
+guard_release_0139 = read("cli/cmd/launcher/guard_ci_release.go")
 guard_gate_0139 = read("scripts/smoke/offline/guard-ci-release-certification-0139.py")
 build_release_0139 = read("scripts/release/build-release.sh")
 for required in [
@@ -2101,7 +2094,7 @@ if (
     fail("0.13.9 Guard release certification gate is not wired into preflight/CI")
 if "cross-platform Guard CI matrix + release certification gate" not in guard_gate_0139:
     fail("0.13.9 mandatory Guard release gate is incomplete")
-if not (ROOT / "cli/cmd/neverlauncher/guard_ci_release_test.go").is_file():
+if not (ROOT / "cli/cmd/launcher/guard_ci_release_test.go").is_file():
     fail("0.13.9 Guard release certification regression tests are missing")
 
 
@@ -2117,10 +2110,10 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
     )
     crypto_repo_0142 = read("services/api/internal/repository/server_bridge_v2.go")
     crypto_java_identity_0142 = read(
-        "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NodeIdentity.java"
+        "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/NodeIdentity.java"
     )
     crypto_java_client_0142 = read(
-        "plugins/bridge-common/src/main/java/ru/neverlauncher/bridge/common/NeverLauncherApiClient.java"
+        "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/LauncherApiClient.java"
     )
     crypto_gate_0142 = read(
         "scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py"
@@ -2156,13 +2149,13 @@ if tuple(int(p) for p in VERSION.split(".")[:3]) >= (0, 14, 2):
         if required not in crypto_java_identity_0142:
             fail(f"0.14.2 plugin node private-key lifecycle incomplete: {required}")
     for required in [
-        "NeverLauncher-ServerBridge-Node-v1",
-        "X-NeverLauncher-Node-Signature",
+        "Launcher-ServerBridge-Node-v1",
+        "X-Launcher-Node-Signature",
         "identity.sign(canonical)",
     ]:
         if required not in crypto_java_client_0142:
             fail(f"0.14.2 plugin request signing incomplete: {required}")
-    if "X-NeverLauncher-Server-Token" in crypto_java_client_0142:
+    if "X-Launcher-Server-Token" in crypto_java_client_0142:
         fail("0.14.2 plugin still contains shared ServerBridge bearer authentication")
     if (
         "serverbridge-crypto-node-identities-0142.py" not in preflight
@@ -2273,8 +2266,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     15,
     1,
 ):
-    delivery_0151 = read("cli/cmd/neverlauncher/delivery_manifest.go")
-    release_0151 = read("cli/cmd/neverlauncher/release_commands.go")
+    delivery_0151 = read("cli/cmd/launcher/delivery_manifest.go")
+    release_0151 = read("cli/cmd/launcher/release_commands.go")
     delivery_gate_0151 = read(
         "scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"
     )
@@ -2306,7 +2299,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.1 delivery gate is not wired into preflight/CI")
     if "Delivery Manifest + platform/architecture gate: OK" not in delivery_gate_0151:
         fail("0.15.1 mandatory delivery gate is incomplete")
-    if not (ROOT / "cli/cmd/neverlauncher/delivery_manifest_test.go").is_file():
+    if not (ROOT / "cli/cmd/launcher/delivery_manifest_test.go").is_file():
         fail("0.15.1 delivery regression tests are missing")
 
 
@@ -2318,7 +2311,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     15,
     3,
 ):
-    linux_delivery_0153 = read("cli/cmd/neverlauncher/linux_delivery.go")
+    linux_delivery_0153 = read("cli/cmd/launcher/linux_delivery.go")
     linux_builder_0153 = read("scripts/release/build-linux-production.sh")
     linux_packager_0153 = read("scripts/release/linux-package.py")
     linux_release_0153 = read("scripts/release/build-release.sh")
@@ -2340,11 +2333,11 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         'ARCH="x64"',
         'ARCH="arm64"',
-        "neverlauncher-cli-linux-${ARCH}",
-        "neverlauncher-api-linux-${ARCH}",
-        "neverlauncher-desktop-linux-${ARCH}",
+        "launcher-cli-linux-${ARCH}",
+        "launcher-api-linux-${ARCH}",
+        "launcher-desktop-linux-${ARCH}",
         "guard-linux-${ARCH}",
-        "neverruntime-linux-${ARCH}",
+        "runtime-linux-${ARCH}",
         "linux-package.py",
     ]:
         if required not in linux_builder_0153:
@@ -2360,7 +2353,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR",
         "LINUX_DUAL_ARCH_REQUIRED",
-        "neverlauncher-linux-${arch}-${VERSION}.tar.gz",
+        "launcher-linux-${arch}-${VERSION}.tar.gz",
     ]:
         if required not in linux_release_0153:
             fail(f"0.15.3 release staging incomplete: {required}")
@@ -2390,7 +2383,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.3 Linux dual-arch package gate is not wired into preflight/CI")
     if "Linux x64 + ARM64 production packages gate: OK" not in linux_gate_0153:
         fail("0.15.3 mandatory Linux production package gate is incomplete")
-    if not (ROOT / "cli/cmd/neverlauncher/linux_delivery_test.go").is_file():
+    if not (ROOT / "cli/cmd/launcher/linux_delivery_test.go").is_file():
         fail("0.15.3 Linux delivery regression tests are missing")
 
 
@@ -2402,7 +2395,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     15,
     4,
 ):
-    macos_delivery_0154 = read("cli/cmd/neverlauncher/macos_delivery.go")
+    macos_delivery_0154 = read("cli/cmd/launcher/macos_delivery.go")
     macos_builder_0154 = read("scripts/release/build-macos-production.sh")
     macos_packager_0154 = read("scripts/release/macos-package.py")
     macos_release_0154 = read("scripts/release/build-release.sh")
@@ -2475,21 +2468,21 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.4 macOS notarization gate is not wired into preflight/CI")
     if "notarized macOS x64 + ARM64 gate: OK" not in macos_gate_0154:
         fail("0.15.4 mandatory macOS notarization gate is incomplete")
-    if not (ROOT / "cli/cmd/neverlauncher/macos_delivery_test.go").is_file():
+    if not (ROOT / "cli/cmd/launcher/macos_delivery_test.go").is_file():
         fail("0.15.4 macOS delivery regression tests are missing")
 
 
 # В 0.15.5: распространение управляемых JRE — собственная поставка для шести
-# целей. Байты выпуска точно соответствуют архивам Temurin; NeverRuntime до
+# целей. Байты выпуска точно соответствуют архивам Temurin; Runtime до
 # использования проверяет закреплённый манифест, хеш, размер и среду Java.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (
     0,
     15,
     5,
 ):
-    jre_delivery_0155 = read("cli/cmd/neverlauncher/managed_jre_delivery.go")
+    jre_delivery_0155 = read("cli/cmd/launcher/managed_jre_delivery.go")
     jre_builder_0155 = read("scripts/release/managed-jre-distribution.py")
-    jre_runtime_0155 = read("runtime/neverruntime/src/managed_java.rs")
+    jre_runtime_0155 = read("runtime/runtime/src/managed_java.rs")
     jre_release_0155 = read("scripts/release/build-release.sh")
     jre_gate_0155 = read("scripts/smoke/offline/managed-jre-distribution-0155.py")
     jre_workflow_0155 = read(".github/workflows/managed-jre-production-delivery.yml")
@@ -2526,12 +2519,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "Managed JRE javaEntry mismatch",
     ]:
         if required not in jre_runtime_0155:
-            fail(f"0.15.5 NeverRuntime Managed JRE consumer incomplete: {required}")
+            fail(f"0.15.5 Runtime Managed JRE consumer incomplete: {required}")
     for required in [
         "NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR",
         "MANAGED_JRE_REQUIRED",
         "MANAGED_JRE_MANIFEST.json",
-        "neverlauncher-jre-temurin21-",
+        "launcher-jre-temurin21-",
     ]:
         if required not in jre_release_0155:
             fail(f"0.15.5 release JRE staging incomplete: {required}")
@@ -2546,7 +2539,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "managed-jre-production:",
         "Managed Java II Java 8/16/17/21/25 production E2E + Temurin 21 delivery",
         "Upload exact-commit Managed JRE production assets",
-        "name: neverlauncher-managed-jre-${{ github.sha }}",
+        "name: launcher-managed-jre-${{ github.sha }}",
     ]:
         if required not in ci:
             fail(f"0.15.5 Managed JRE main certification is incomplete: {required}")
@@ -2562,12 +2555,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "MANAGED_JRE_MANIFEST.json",
         "MANAGED_JRE_EVIDENCE.json",
-        "neverlauncher-jre-temurin21-windows-x64",
-        "neverlauncher-jre-temurin21-windows-arm64",
-        "neverlauncher-jre-temurin21-linux-x64",
-        "neverlauncher-jre-temurin21-linux-arm64",
-        "neverlauncher-jre-temurin21-macos-x64",
-        "neverlauncher-jre-temurin21-macos-arm64",
+        "launcher-jre-temurin21-windows-x64",
+        "launcher-jre-temurin21-windows-arm64",
+        "launcher-jre-temurin21-linux-x64",
+        "launcher-jre-temurin21-linux-arm64",
+        "launcher-jre-temurin21-macos-x64",
+        "launcher-jre-temurin21-macos-arm64",
     ]:
         if required not in release_bundle_0155:
             fail(f"0.15.5 release bundle JRE gate incomplete: {required}")
@@ -2578,7 +2571,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.15.5 Managed JRE gate is not wired into preflight/CI")
     if "Managed JRE Distribution gate: OK" not in jre_gate_0155:
         fail("0.15.5 mandatory Managed JRE Distribution gate is incomplete")
-    if not (ROOT / "cli/cmd/neverlauncher/managed_jre_delivery_test.go").is_file():
+    if not (ROOT / "cli/cmd/launcher/managed_jre_delivery_test.go").is_file():
         fail("0.15.5 Managed JRE regression tests are missing")
 
 
@@ -2590,11 +2583,11 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     16,
     5,
 ):
-    managed_java_0165 = read("runtime/neverruntime/src/managed_java.rs")
-    managed_java_cli_0165 = read("runtime/neverruntime/src/bin/neverruntime.rs")
+    managed_java_0165 = read("runtime/runtime/src/managed_java.rs")
+    managed_java_cli_0165 = read("runtime/runtime/src/bin/runtime.rs")
     managed_java_e2e_0165 = read("e2e/scripts/run-managed-java-II-e2e.sh")
     managed_java_gate_0165 = read("scripts/smoke/offline/managed-java-II-0165.py")
-    release_commands_0165 = read("cli/cmd/neverlauncher/release_commands.go")
+    release_commands_0165 = read("cli/cmd/launcher/release_commands.go")
     release_builder_0165 = read("scripts/release/build-release.sh")
     release_bundle_0165 = read("scripts/smoke/release-required/release-bundle.sh")
     for required in [
@@ -2648,14 +2641,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     16,
     6,
 ):
-    vanilla_0166 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
-    vanilla_tests_0166 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
-    runtime_0166 = read("runtime/neverruntime/src/compatibility.rs")
+    vanilla_0166 = read("cli/cmd/launcher/vanilla_runtime.go")
+    vanilla_tests_0166 = read("cli/cmd/launcher/vanilla_runtime_test.go")
+    runtime_0166 = read("runtime/runtime/src/compatibility.rs")
     matrix_0166 = read("scripts/compatibility/matrix.py")
     matrix_tests_0166 = read("scripts/compatibility/test_matrix.py")
     targets_0166 = read("compatibility/targets.json")
-    release_0166 = read("cli/cmd/neverlauncher/compatibility_release.go")
-    release_tests_0166 = read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    release_0166 = read("cli/cmd/launcher/compatibility_release.go")
+    release_tests_0166 = read("cli/cmd/launcher/compatibility_release_test.go")
     for required in [
         "expectedJavaMajorForVanilla0166",
         "Mojang metadata не содержит javaVersion.majorVersion",
@@ -2671,7 +2664,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "0.16.6 requires exact Java",
     ]:
         if required not in runtime_0166:
-            fail(f"0.16.6 NeverRuntime exact-Java path incomplete: {required}")
+            fail(f"0.16.6 Runtime exact-Java path incomplete: {required}")
     for target in [
         "vanilla-1.17.1-linux-x64",
         "vanilla-1.18.2-linux-x64",
@@ -2710,14 +2703,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     16,
     7,
 ):
-    vanilla_0167 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
-    vanilla_tests_0167 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
-    runtime_0167 = read("runtime/neverruntime/src/compatibility.rs")
+    vanilla_0167 = read("cli/cmd/launcher/vanilla_runtime.go")
+    vanilla_tests_0167 = read("cli/cmd/launcher/vanilla_runtime_test.go")
+    runtime_0167 = read("runtime/runtime/src/compatibility.rs")
     matrix_0167 = read("scripts/compatibility/matrix.py")
     matrix_tests_0167 = read("scripts/compatibility/test_matrix.py")
     targets_0167 = read("compatibility/targets.json")
-    release_0167 = read("cli/cmd/neverlauncher/compatibility_release.go")
-    release_tests_0167 = read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    release_0167 = read("cli/cmd/launcher/compatibility_release.go")
+    release_tests_0167 = read("cli/cmd/launcher/compatibility_release_test.go")
     for required in [
         "expectedJavaMajorForVanilla0167",
         "0.16.7 требует exact Java",
@@ -2733,7 +2726,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "resolved_java_major_version(&merged)?",
     ]:
         if required not in runtime_0167:
-            fail(f"0.16.7 NeverRuntime exact-Java 21 path incomplete: {required}")
+            fail(f"0.16.7 Runtime exact-Java 21 path incomplete: {required}")
     for version in [
         "1.20.5",
         "1.20.6",
@@ -2779,14 +2772,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     16,
     8,
 ):
-    vanilla_0168 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
-    vanilla_tests_0168 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
-    runtime_0168 = read("runtime/neverruntime/src/compatibility.rs")
+    vanilla_0168 = read("cli/cmd/launcher/vanilla_runtime.go")
+    vanilla_tests_0168 = read("cli/cmd/launcher/vanilla_runtime_test.go")
+    runtime_0168 = read("runtime/runtime/src/compatibility.rs")
     matrix_0168 = read("scripts/compatibility/matrix.py")
     matrix_tests_0168 = read("scripts/compatibility/test_matrix.py")
     targets_0168 = read("compatibility/targets.json")
-    release_0168 = read("cli/cmd/neverlauncher/compatibility_release.go")
-    release_tests_0168 = read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    release_0168 = read("cli/cmd/launcher/compatibility_release.go")
+    release_tests_0168 = read("cli/cmd/launcher/compatibility_release_test.go")
     for required in [
         "expectedJavaMajorForVanilla0168",
         "0.16.8 требует exact Java",
@@ -2802,7 +2795,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "resolved_java_major_version(&merged)?",
     ]:
         if required not in runtime_0168:
-            fail(f"0.16.8 NeverRuntime exact-Java 25 path incomplete: {required}")
+            fail(f"0.16.8 Runtime exact-Java 25 path incomplete: {required}")
     for version in ["26.1", "26.1.1", "26.1.2", "26.3"]:
         target = f"vanilla-{version}-linux-x64"
         if target not in targets_0168:
@@ -2834,18 +2827,18 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     16,
     9,
 ):
-    vanilla_0169 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
-    vanilla_tests_0169 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
-    runtime_compat_0169 = read("runtime/neverruntime/src/compatibility.rs")
-    runtime_core_0169 = read("runtime/neverruntime/src/lib.rs")
+    vanilla_0169 = read("cli/cmd/launcher/vanilla_runtime.go")
+    vanilla_tests_0169 = read("cli/cmd/launcher/vanilla_runtime_test.go")
+    runtime_compat_0169 = read("runtime/runtime/src/compatibility.rs")
+    runtime_core_0169 = read("runtime/runtime/src/lib.rs")
     matrix_0169 = read("scripts/compatibility/matrix.py")
     matrix_tests_0169 = read("scripts/compatibility/test_matrix.py")
     targets_0169 = read("compatibility/targets.json")
     workflow_0169 = read(".github/workflows/compatibility.yml")
     compat_case_0169 = read("e2e/scripts/run-compatibility-case.sh")
     vanilla_case_0169 = read("e2e/scripts/run-vanilla-certification-case.sh")
-    release_0169 = read("cli/cmd/neverlauncher/compatibility_release.go")
-    release_tests_0169 = read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    release_0169 = read("cli/cmd/launcher/compatibility_release.go")
+    release_tests_0169 = read("cli/cmd/launcher/compatibility_release_test.go")
     for target in [
         "vanilla-26.3-linux-x64",
         "vanilla-26.3-linux-arm64",
@@ -2897,9 +2890,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "os_name_matches_environment",
     ]:
         if required not in runtime_compat_0169:
-            fail(f"0.16.9 NeverRuntime native filtering incomplete: {required}")
+            fail(f"0.16.9 Runtime native filtering incomplete: {required}")
     if "base.join(platform).join(arch)" not in runtime_core_0169:
-        fail("0.16.9 NeverRuntime does not isolate natives by OS/architecture")
+        fail("0.16.9 Runtime does not isolate natives by OS/architecture")
     if "cross-platform-vanilla-windows-linux-macos-x64-arm64" not in release_0169:
         fail("0.16.9 release certification does not bind cross-platform Vanilla policy")
     for required in [
@@ -2925,10 +2918,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     16,
     10,
 ):
-    vanilla_01610 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
-    vanilla_tests_01610 = read("cli/cmd/neverlauncher/vanilla_runtime_test.go")
-    runtime_01610 = read("runtime/neverruntime/src/lib.rs") + read(
-        "runtime/neverruntime/src/bin/neverruntime.rs"
+    vanilla_01610 = read("cli/cmd/launcher/vanilla_runtime.go")
+    vanilla_tests_01610 = read("cli/cmd/launcher/vanilla_runtime_test.go")
+    runtime_01610 = read("runtime/runtime/src/lib.rs") + read(
+        "runtime/runtime/src/bin/runtime.rs"
     )
     matching_case_01610 = read("e2e/scripts/run-vanilla-matching-e2e.sh")
     compat_case_01610 = read("e2e/scripts/run-compatibility-case.sh")
@@ -2936,8 +2929,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     matrix_tests_01610 = read("scripts/compatibility/test_matrix.py")
     targets_01610 = read("compatibility/targets.json")
     workflow_01610 = read(".github/workflows/compatibility.yml")
-    release_01610 = read("cli/cmd/neverlauncher/compatibility_release.go")
-    release_tests_01610 = read("cli/cmd/neverlauncher/compatibility_release_test.go")
+    release_01610 = read("cli/cmd/launcher/compatibility_release.go")
+    release_tests_01610 = read("cli/cmd/launcher/compatibility_release_test.go")
     for required in [
         "handleRuntimeVanillaServer",
         "installVanillaServer",
@@ -2965,7 +2958,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in runtime_01610:
             fail(
-                f"0.16.10 NeverRuntime direct matching-server launch incomplete: {required}"
+                f"0.16.10 Runtime direct matching-server launch incomplete: {required}"
             )
     for required in [
         "runtime vanilla-server",
@@ -3023,15 +3016,15 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     15,
     6,
 ):
-    updater_core_0156 = read("cli/cmd/neverlauncher/transactional_updater.go")
-    updater_cmd_0156 = read("cli/cmd/neverlauncher/transactional_updater_command.go")
-    updater_client_0156 = read("cli/cmd/neverlauncher/client_lifecycle.go") + read(
-        "cli/cmd/neverlauncher/package_commands.go"
+    updater_core_0156 = read("cli/cmd/launcher/transactional_updater.go")
+    updater_cmd_0156 = read("cli/cmd/launcher/transactional_updater_command.go")
+    updater_client_0156 = read("cli/cmd/launcher/client_lifecycle.go") + read(
+        "cli/cmd/launcher/package_commands.go"
     )
     updater_gate_0156 = read(
         "scripts/smoke/offline/unified-transactional-updater-core-0156.py"
     )
-    updater_tests_0156 = read("cli/cmd/neverlauncher/transactional_updater_test.go")
+    updater_tests_0156 = read("cli/cmd/launcher/transactional_updater_test.go")
     for required in [
         "prepareLocked",
         "commitLocked",
@@ -3059,7 +3052,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "client-repair",
         "client-rollback",
         "unified-transactional-updater/0.15.6",
-        ".neverlauncher/client-state.json",
+        ".launcher/client-state.json",
     ]:
         if required not in updater_client_0156:
             fail(f"0.15.6 client updater integration incomplete: {required}")
@@ -3087,9 +3080,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     15,
     7,
 ):
-    component_core_0157 = read("cli/cmd/neverlauncher/component_update.go")
-    component_main_0157 = read("cli/cmd/neverlauncher/main.go")
-    component_tests_0157 = read("cli/cmd/neverlauncher/component_update_test.go")
+    component_core_0157 = read("cli/cmd/launcher/component_update.go")
+    component_main_0157 = read("cli/cmd/launcher/main.go")
+    component_tests_0157 = read("cli/cmd/launcher/component_update_test.go")
     desktop_0157 = read("apps/desktop/src-tauri/src/main.rs")
     windows_0157 = read("scripts/release/build-windows-desktop.ps1")
     linux_0157 = read("scripts/release/linux-package.py")
@@ -3100,9 +3093,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py"
     )
     rust_guard_0157 = (
-        read("runtime/neverruntime/src/guard_ipc.rs")
-        + read("runtime/neverruntime/src/linux_guard.rs")
-        + read("runtime/neverruntime/src/macos_guard.rs")
+        read("runtime/runtime/src/guard_ipc.rs")
+        + read("runtime/runtime/src/linux_guard.rs")
+        + read("runtime/runtime/src/macos_guard.rs")
     )
     for required in [
         "applyComponentPackage0157",
@@ -3136,8 +3129,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in desktop_0157:
             fail(f"0.15.7 Desktop self-update handoff incomplete: {required}")
     for required in [
-        "neverruntime.exe",
-        "neverlauncher-cli.exe",
+        "runtime.exe",
+        "launcher-cli.exe",
         "COMPONENT_UPDATE_MANIFEST.json",
         "authenticode-rfc3161",
     ]:
@@ -3146,7 +3139,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "COMPONENT_UPDATE_MANIFEST.json",
         "sha256-delivery",
-        "neverruntime",
+        "runtime",
     ]:
         if required not in linux_0157:
             fail(f"0.15.7 Linux component package incomplete: {required}")
@@ -3191,17 +3184,17 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     15,
     8,
 ):
-    rv2_0158 = read("cli/cmd/neverlauncher/release_verification_v2.go")
-    keyring_0158 = read("cli/cmd/neverlauncher/security_keyring.go")
-    release_0158 = read("cli/cmd/neverlauncher/release_commands.go")
+    rv2_0158 = read("cli/cmd/launcher/release_verification_v2.go")
+    keyring_0158 = read("cli/cmd/launcher/security_keyring.go")
+    release_0158 = read("cli/cmd/launcher/release_commands.go")
     build_release_0158 = read("scripts/release/build-release.sh")
     gate_0158 = read(
         "scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py"
     )
-    tests_0158 = read("cli/cmd/neverlauncher/release_verification_v2_test.go")
+    tests_0158 = read("cli/cmd/launcher/release_verification_v2_test.go")
     for required in [
         "RELEASE_TRUST_POLICY.json",
-        "neverlauncher.release.v2",
+        "launcher.release.v2",
         "verifyReleaseTrustPolicy0158",
         "signReleaseBundleV20158",
         "verifyReleaseSignatureV20158",
@@ -3252,15 +3245,15 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     15,
     9,
 ):
-    public_delivery_0159 = read("cli/cmd/neverlauncher/public_delivery_matrix.go")
-    delivery_cmd_0159 = read("cli/cmd/neverlauncher/delivery_manifest.go")
-    release_0159 = read("cli/cmd/neverlauncher/release_commands.go")
+    public_delivery_0159 = read("cli/cmd/launcher/public_delivery_matrix.go")
+    delivery_cmd_0159 = read("cli/cmd/launcher/delivery_manifest.go")
+    release_0159 = read("cli/cmd/launcher/release_commands.go")
     build_release_0159 = read("scripts/release/build-release.sh")
     workflow_0159 = read(".github/workflows/public-production-delivery.yml")
     gate_0159 = read(
         "scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py"
     )
-    tests_0159 = read("cli/cmd/neverlauncher/public_delivery_matrix_test.go")
+    tests_0159 = read("cli/cmd/launcher/public_delivery_matrix_test.go")
     for required in [
         "PUBLIC_PRODUCTION_DELIVERY_MATRIX.json",
         "buildPublicProductionDeliveryMatrix0159",
@@ -3289,8 +3282,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.15.9 release integration incomplete: {required}")
     for required in [
         "NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL",
-        "neverruntime-windows-x64.exe",
-        "neverruntime-windows-arm64.exe",
+        "runtime-windows-x64.exe",
+        "runtime-windows-arm64.exe",
     ]:
         if required not in build_release_0159:
             fail(f"0.15.9 aggregate release staging incomplete: {required}")
@@ -3321,7 +3314,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 
 # В 0.13.0: сертификация выпуска Device Trust и контракт выполнения.
 if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
-    dt_release = read("cli/cmd/neverlauncher/device_trust_release.go")
+    dt_release = read("cli/cmd/launcher/device_trust_release.go")
     dt_runtime = read("services/api/internal/httpapi/device_trust_release_0130.go")
     dt_targets_0130 = read("device-trust/targets.json")
     build_release_0130 = read("scripts/release/build-release.sh")
@@ -3354,15 +3347,15 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     15,
     10,
 ):
-    stabilization_01510 = read("cli/cmd/neverlauncher/migration_stabilization_01510.go")
+    stabilization_01510 = read("cli/cmd/launcher/migration_stabilization_01510.go")
     stabilization_tests_01510 = read(
-        "cli/cmd/neverlauncher/migration_stabilization_01510_test.go"
+        "cli/cmd/launcher/migration_stabilization_01510_test.go"
     )
-    rv2_01510 = read("cli/cmd/neverlauncher/release_verification_v2.go")
-    update_01510 = read("cli/cmd/neverlauncher/transactional_updater.go") + read(
-        "cli/cmd/neverlauncher/component_update.go"
+    rv2_01510 = read("cli/cmd/launcher/release_verification_v2.go")
+    update_01510 = read("cli/cmd/launcher/transactional_updater.go") + read(
+        "cli/cmd/launcher/component_update.go"
     )
-    release_01510 = read("cli/cmd/neverlauncher/release_commands.go")
+    release_01510 = read("cli/cmd/launcher/release_commands.go")
     gate_01510 = read("scripts/smoke/offline/migration-stabilization-01510.py")
     for required in [
         "withReleaseTrustStateLock01510",
@@ -3422,11 +3415,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     15,
     11,
 ):
-    rc_01511 = read("cli/cmd/neverlauncher/production_release_candidate_01511.go")
-    rc_tests_01511 = read(
-        "cli/cmd/neverlauncher/production_release_candidate_01511_test.go"
-    )
-    release_01511 = read("cli/cmd/neverlauncher/release_commands.go")
+    rc_01511 = read("cli/cmd/launcher/production_release_candidate_01511.go")
+    rc_tests_01511 = read("cli/cmd/launcher/production_release_candidate_01511_test.go")
+    release_01511 = read("cli/cmd/launcher/release_commands.go")
     build_01511 = read("scripts/release/build-release.sh")
     artifact_layout_01511 = read("scripts/release/resolve-artifact-payload.sh")
     bundle_gate_01511 = read("scripts/smoke/release-required/release-bundle.sh")
@@ -3507,14 +3498,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     16,
     0,
 ):
-    pdr_0160 = read("cli/cmd/neverlauncher/production_delivery_release_0160.go")
-    pdr_tests_0160 = read(
-        "cli/cmd/neverlauncher/production_delivery_release_0160_test.go"
-    )
-    release_0160 = read("cli/cmd/neverlauncher/release_commands.go")
+    pdr_0160 = read("cli/cmd/launcher/production_delivery_release_0160.go")
+    pdr_tests_0160 = read("cli/cmd/launcher/production_delivery_release_0160_test.go")
+    release_0160 = read("cli/cmd/launcher/release_commands.go")
     build_0160 = read("scripts/release/build-release.sh")
     bundle_0160 = read("scripts/smoke/release-required/release-bundle.sh")
-    public_0160 = read("cli/cmd/neverlauncher/public_delivery_matrix.go")
+    public_0160 = read("cli/cmd/launcher/public_delivery_matrix.go")
     public_workflow_0160 = read(".github/workflows/public-production-delivery.yml")
     gate_0160 = read("scripts/smoke/offline/production-delivery-release-0160.py")
     for required in [
@@ -3596,14 +3585,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ga_matrix_0170 = read("scripts/compatibility/matrix.py")
     ga_jre_0170 = read("scripts/compatibility/certify-jre.py")
     ga_case_0170 = read("e2e/scripts/run-compatibility-case.sh")
-    ga_release_0170 = read("cli/cmd/neverlauncher/compatibility_release.go")
-    ga_vanilla_runtime_0170 = read("cli/cmd/neverlauncher/vanilla_runtime.go")
-    ga_neverruntime_0170 = read("runtime/neverruntime/src/compatibility.rs")
+    ga_release_0170 = read("cli/cmd/launcher/compatibility_release.go")
+    ga_vanilla_runtime_0170 = read("cli/cmd/launcher/vanilla_runtime.go")
+    ga_runtime_0170 = read("runtime/runtime/src/compatibility.rs")
     ga_targets_0170 = json.loads(read("compatibility/targets.json"))["targets"]
     ga_tests_0170 = (
         read("scripts/compatibility/test_matrix.py")
         + read("scripts/compatibility/test_certify_jre.py")
-        + read("cli/cmd/neverlauncher/compatibility_release_test.go")
+        + read("cli/cmd/launcher/compatibility_release_test.go")
     )
     ga_gate_0170 = read("scripts/smoke/offline/minecraft-compatibility-II-ga-0170.py")
     for required in [
@@ -3682,8 +3671,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "expected_java_major_for_vanilla_0170v3",
         "0.17.0v3 requires exact Java",
     ]:
-        if required not in ga_neverruntime_0170:
-            fail(f"0.17.0v3 NeverRuntime exact-Java path incomplete: {required}")
+        if required not in ga_runtime_0170:
+            fail(f"0.17.0v3 Runtime exact-Java path incomplete: {required}")
     v3_targets = {
         row["minecraft"]: row
         for row in ga_targets_0170
@@ -3719,10 +3708,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     fabric_matrix_0171 = read("scripts/compatibility/matrix.py")
     fabric_case_0171 = read("e2e/scripts/run-fabric-certification-case.sh")
     compat_case_0171 = read("e2e/scripts/run-compatibility-case.sh")
-    fabric_release_0171 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    fabric_release_0171 = read("cli/cmd/launcher/compatibility_release.go")
     fabric_targets_0171 = json.loads(read("compatibility/targets.json"))["targets"]
     fabric_tests_0171 = read("scripts/compatibility/test_matrix.py") + read(
-        "cli/cmd/neverlauncher/compatibility_release_test.go"
+        "cli/cmd/launcher/compatibility_release_test.go"
     )
     fabric_gate_0171 = read("scripts/smoke/offline/fabric-compatibility-II-0171.py")
     compat_workflow_0171 = read(".github/workflows/compatibility.yml")
@@ -3807,15 +3796,15 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     2,
 ):
     quilt_matrix_0172 = read("scripts/compatibility/matrix.py")
-    quilt_runtime_0172 = read("cli/cmd/neverlauncher/loader_runtime.go")
+    quilt_runtime_0172 = read("cli/cmd/launcher/loader_runtime.go")
     quilt_case_0172 = read("e2e/scripts/run-quilt-certification-case.sh")
     compat_case_0172 = read("e2e/scripts/run-compatibility-case.sh")
-    quilt_release_0172 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    quilt_release_0172 = read("cli/cmd/launcher/compatibility_release.go")
     quilt_targets_0172 = json.loads(read("compatibility/targets.json"))["targets"]
     quilt_tests_0172 = (
         read("scripts/compatibility/test_matrix.py")
-        + read("cli/cmd/neverlauncher/compatibility_release_test.go")
-        + read("cli/cmd/neverlauncher/loader_runtime_test.go")
+        + read("cli/cmd/launcher/compatibility_release_test.go")
+        + read("cli/cmd/launcher/loader_runtime_test.go")
     )
     quilt_gate_0172 = read("scripts/smoke/offline/quilt-compatibility-II-0172.py")
     compat_workflow_0172 = read(".github/workflows/compatibility.yml")
@@ -3897,23 +3886,23 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 
 # В 0.17.3: Forge Modern делает линейку 1.13.2+ с процессорными установщиками
 # реально запускаемой: процессоры должны выполниться, создать проверенный профиль,
-# разрешить точную версию Forge и запустить профиль через NeverRuntime.
+# разрешить точную версию Forge и запустить профиль через Runtime.
 if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= (
     0,
     17,
     3,
 ):
     forge_matrix_0173 = read("scripts/compatibility/matrix.py")
-    forge_runtime_0173 = read("cli/cmd/neverlauncher/forge_runtime.go")
+    forge_runtime_0173 = read("cli/cmd/launcher/forge_runtime.go")
     forge_case_0173 = read("e2e/scripts/run-forge-certification-case.sh")
     forge_api_0173 = read("services/api/internal/httpapi/server.go")
     compat_case_0173 = read("e2e/scripts/run-compatibility-case.sh")
-    forge_release_0173 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    forge_release_0173 = read("cli/cmd/launcher/compatibility_release.go")
     forge_targets_0173 = json.loads(read("compatibility/targets.json"))["targets"]
     forge_tests_0173 = (
         read("scripts/compatibility/test_matrix.py")
-        + read("cli/cmd/neverlauncher/compatibility_release_test.go")
-        + read("cli/cmd/neverlauncher/forge_runtime_test.go")
+        + read("cli/cmd/launcher/compatibility_release_test.go")
+        + read("cli/cmd/launcher/forge_runtime_test.go")
     )
     forge_gate_0173 = read("scripts/smoke/offline/forge-modern-0173.py")
     compat_workflow_0173 = read(".github/workflows/compatibility.yml")
@@ -3926,7 +3915,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.17.3 Forge compatibility matrix incomplete: {required}")
     if (
         '"id": "forge"' not in forge_api_0173
-        or '"installer": "neverlauncher-forge-materializer"' not in forge_api_0173
+        or '"installer": "launcher-forge-materializer"' not in forge_api_0173
         or '"adapter": "compatibility-engine"' not in forge_api_0173
     ):
         fail("0.17.3 Forge loader catalog still advertises a planned adapter")
@@ -4017,17 +4006,17 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     17,
     4,
 ):
-    legacy_runtime_0174 = read("cli/cmd/neverlauncher/forge_runtime.go")
-    legacy_commands_0174 = read("cli/cmd/neverlauncher/runtime_commands.go")
-    legacy_neverruntime_0174 = read("runtime/neverruntime/src/compatibility.rs")
+    legacy_runtime_0174 = read("cli/cmd/launcher/forge_runtime.go")
+    legacy_commands_0174 = read("cli/cmd/launcher/runtime_commands.go")
+    legacy_runtime_0174 = read("runtime/runtime/src/compatibility.rs")
     legacy_case_0174 = read("e2e/scripts/run-forge-certification-case.sh")
     legacy_matrix_0174 = read("scripts/compatibility/matrix.py")
-    legacy_release_0174 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    legacy_release_0174 = read("cli/cmd/launcher/compatibility_release.go")
     legacy_targets_0174 = json.loads(read("compatibility/targets.json"))["targets"]
     legacy_tests_0174 = (
         read("scripts/compatibility/test_matrix.py")
-        + read("cli/cmd/neverlauncher/compatibility_release_test.go")
-        + read("cli/cmd/neverlauncher/forge_runtime_test.go")
+        + read("cli/cmd/launcher/compatibility_release_test.go")
+        + read("cli/cmd/launcher/forge_runtime_test.go")
     )
     legacy_gate_0174 = read("scripts/smoke/offline/forge-legacy-1122-0174.py")
     for required in [
@@ -4046,9 +4035,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in legacy_commands_0174:
             fail(f"0.17.4 runtime capability status incomplete: {required}")
     for required in ['alias = "clientreq"', "library.client_req == Some(false)"]:
-        if required not in legacy_neverruntime_0174:
+        if required not in legacy_runtime_0174:
             fail(
-                f"0.17.4 NeverRuntime legacy client library semantics incomplete: {required}"
+                f"0.17.4 Runtime legacy client library semantics incomplete: {required}"
             )
     for required in [
         "mc in ('1.7.10', '1.12.2')",
@@ -4118,17 +4107,17 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     17,
     5,
 ):
-    legacy_runtime_0175 = read("cli/cmd/neverlauncher/forge_runtime.go")
-    legacy_commands_0175 = read("cli/cmd/neverlauncher/runtime_commands.go")
-    legacy_neverruntime_0175 = read("runtime/neverruntime/src/compatibility.rs")
+    legacy_runtime_0175 = read("cli/cmd/launcher/forge_runtime.go")
+    legacy_commands_0175 = read("cli/cmd/launcher/runtime_commands.go")
+    legacy_runtime_0175 = read("runtime/runtime/src/compatibility.rs")
     legacy_case_0175 = read("e2e/scripts/run-forge-certification-case.sh")
     legacy_matrix_0175 = read("scripts/compatibility/matrix.py")
-    legacy_release_0175 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    legacy_release_0175 = read("cli/cmd/launcher/compatibility_release.go")
     legacy_targets_0175 = json.loads(read("compatibility/targets.json"))["targets"]
     legacy_tests_0175 = (
         read("scripts/compatibility/test_matrix.py")
-        + read("cli/cmd/neverlauncher/compatibility_release_test.go")
-        + read("cli/cmd/neverlauncher/forge_runtime_test.go")
+        + read("cli/cmd/launcher/compatibility_release_test.go")
+        + read("cli/cmd/launcher/forge_runtime_test.go")
     )
     legacy_gate_0175 = read("scripts/smoke/offline/forge-legacy-1710-0175.py")
     for required in [
@@ -4153,8 +4142,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "library.downloads.classifiers.is_empty()",
         "legacy_forge_native_classifier_without_downloads_is_resolved_from_maven_coordinate",
     ]:
-        if required not in legacy_neverruntime_0175:
-            fail(f"0.17.5 NeverRuntime legacy native resolution incomplete: {required}")
+        if required not in legacy_runtime_0175:
+            fail(f"0.17.5 Runtime legacy native resolution incomplete: {required}")
     for required in [
         "mc in ('1.7.10', '1.12.2')",
         "cpw.mods.fml.common.launcher.FMLTweaker",
@@ -4223,18 +4212,18 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     17,
     6,
 ):
-    neo_runtime_0176 = read("cli/cmd/neverlauncher/forge_runtime.go")
+    neo_runtime_0176 = read("cli/cmd/launcher/forge_runtime.go")
     neo_case_0176 = read("e2e/scripts/run-neoforge-certification-case.sh")
     neo_compat_0176 = read("e2e/scripts/run-compatibility-case.sh")
     neo_matrix_0176 = read("scripts/compatibility/matrix.py")
-    neo_release_0176 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    neo_release_0176 = read("cli/cmd/launcher/compatibility_release.go")
     neo_api_0176 = read("services/api/internal/httpapi/server.go")
     neo_workflow_0176 = read(".github/workflows/compatibility.yml")
     neo_targets_0176 = json.loads(read("compatibility/targets.json"))["targets"]
     neo_tests_0176 = (
         read("scripts/compatibility/test_matrix.py")
-        + read("cli/cmd/neverlauncher/compatibility_release_test.go")
-        + read("cli/cmd/neverlauncher/forge_runtime_test.go")
+        + read("cli/cmd/launcher/compatibility_release_test.go")
+        + read("cli/cmd/launcher/forge_runtime_test.go")
     )
     neo_gate_0176 = read("scripts/smoke/offline/neoforge-compatibility-II-0176.py")
     for required in [
@@ -4331,7 +4320,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                 ):
                     fail(f"0.17.6 NeoForge {mc} target binding mismatch")
     if (
-        '"adapter": "compatibility-engine", "installer": "neverlauncher-neoforge-materializer", "managedJava": true'
+        '"adapter": "compatibility-engine", "installer": "launcher-neoforge-materializer", "managedJava": true'
         not in neo_api_0176
     ):
         fail("0.17.6 NeoForge public loader catalog still advertises a placeholder")
@@ -4363,18 +4352,18 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     17,
     7,
 ):
-    pin_lock_0177 = read("cli/cmd/neverlauncher/loader_resolution.go")
-    pin_meta_0177 = read("cli/cmd/neverlauncher/loader_runtime.go")
-    pin_forge_0177 = read("cli/cmd/neverlauncher/forge_runtime.go")
+    pin_lock_0177 = read("cli/cmd/launcher/loader_resolution.go")
+    pin_meta_0177 = read("cli/cmd/launcher/loader_runtime.go")
+    pin_forge_0177 = read("cli/cmd/launcher/forge_runtime.go")
     pin_compat_0177 = read("e2e/scripts/run-compatibility-case.sh")
     pin_integration_0177 = read("e2e/scripts/run-minecraft-e2e.sh")
     pin_matrix_0177 = read("scripts/compatibility/matrix.py")
-    pin_release_0177 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    pin_release_0177 = read("cli/cmd/launcher/compatibility_release.go")
     pin_workflow_0177 = read(".github/workflows/compatibility.yml")
     pin_tests_0177 = (
-        read("cli/cmd/neverlauncher/loader_resolution_test.go")
-        + read("cli/cmd/neverlauncher/loader_runtime_test.go")
-        + read("cli/cmd/neverlauncher/compatibility_release_test.go")
+        read("cli/cmd/launcher/loader_resolution_test.go")
+        + read("cli/cmd/launcher/loader_runtime_test.go")
+        + read("cli/cmd/launcher/compatibility_release_test.go")
         + read("scripts/compatibility/test_matrix.py")
     )
     pin_gate_0177 = read("scripts/smoke/offline/loader-resolution-pinning-0177.py")
@@ -4465,11 +4454,11 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     native_integration_0178 = read("e2e/scripts/run-minecraft-e2e.sh")
     native_compat_0178 = read("e2e/scripts/run-compatibility-case.sh")
     native_matrix_0178 = read("scripts/compatibility/matrix.py")
-    native_release_0178 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    native_release_0178 = read("cli/cmd/launcher/compatibility_release.go")
     native_workflow_0178 = read(".github/workflows/compatibility.yml")
-    native_tests_0178 = read(
-        "cli/cmd/neverlauncher/compatibility_release_test.go"
-    ) + read("scripts/compatibility/test_matrix.py")
+    native_tests_0178 = read("cli/cmd/launcher/compatibility_release_test.go") + read(
+        "scripts/compatibility/test_matrix.py"
+    )
     native_gate_0178 = read("scripts/smoke/offline/loader-native-e2e-0178.py")
     for required in [
         "loader-native:",
@@ -4558,13 +4547,13 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     platform_verifier_0179 = read("scripts/compatibility/verify-loader-platform.py")
     platform_compat_0179 = read("e2e/scripts/run-compatibility-case.sh")
     platform_matrix_0179 = read("scripts/compatibility/matrix.py")
-    platform_release_0179 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    platform_release_0179 = read("cli/cmd/launcher/compatibility_release.go")
     platform_workflow_0179 = read(".github/workflows/compatibility.yml")
-    platform_runtime_0179 = read("runtime/neverruntime/src/lib.rs")
+    platform_runtime_0179 = read("runtime/runtime/src/lib.rs")
     platform_tests_0179 = (
         read("scripts/compatibility/test_matrix.py")
         + read("scripts/compatibility/test_verify_loader_platform.py")
-        + read("cli/cmd/neverlauncher/compatibility_release_test.go")
+        + read("cli/cmd/launcher/compatibility_release_test.go")
     )
     platform_gate_0179 = read("scripts/smoke/offline/cross-platform-loaders-0179.py")
     for required in [
@@ -4615,9 +4604,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "natives_dir.to_string_lossy().to_string()",
     ]:
         if required not in platform_runtime_0179:
-            fail(
-                f"0.17.9 NeverRuntime native-directory evidence incomplete: {required}"
-            )
+            fail(f"0.17.9 Runtime native-directory evidence incomplete: {required}")
     for required in [
         "architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}",
         "e2e/runtime/loader-platform.json",
@@ -4649,18 +4636,16 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     17,
     10,
 ):
-    hardening_cache_01710 = read("cli/cmd/neverlauncher/loader_hardening.go")
-    hardening_processors_01710 = read(
-        "cli/cmd/neverlauncher/forge_processor_recovery.go"
-    )
+    hardening_cache_01710 = read("cli/cmd/launcher/loader_hardening.go")
+    hardening_processors_01710 = read("cli/cmd/launcher/forge_processor_recovery.go")
     hardening_compat_01710 = read("e2e/scripts/run-compatibility-case.sh")
     hardening_matrix_01710 = read("scripts/compatibility/matrix.py")
-    hardening_release_01710 = read("cli/cmd/neverlauncher/compatibility_release.go")
+    hardening_release_01710 = read("cli/cmd/launcher/compatibility_release.go")
     hardening_workflow_01710 = read(".github/workflows/compatibility.yml")
     hardening_tests_01710 = (
-        read("cli/cmd/neverlauncher/loader_runtime_test.go")
-        + read("cli/cmd/neverlauncher/forge_runtime_test.go")
-        + read("cli/cmd/neverlauncher/compatibility_release_test.go")
+        read("cli/cmd/launcher/loader_runtime_test.go")
+        + read("cli/cmd/launcher/forge_runtime_test.go")
+        + read("cli/cmd/launcher/compatibility_release_test.go")
         + read("scripts/compatibility/test_matrix.py")
     )
     hardening_gate_01710 = read("scripts/smoke/offline/loader-hardening-01710.py")
@@ -4738,15 +4723,13 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     17,
     11,
 ):
-    rc_cert_01711 = read("cli/cmd/neverlauncher/compatibility_release_certificate.go")
-    rc_compat_01711 = read("cli/cmd/neverlauncher/compatibility_release.go")
-    rc_release_01711 = read("cli/cmd/neverlauncher/release_commands.go")
+    rc_cert_01711 = read("cli/cmd/launcher/compatibility_release_certificate.go")
+    rc_compat_01711 = read("cli/cmd/launcher/compatibility_release.go")
+    rc_release_01711 = read("cli/cmd/launcher/release_commands.go")
     rc_production_workflow_01711 = read(
         ".github/workflows/production-release-candidate.yml"
     )
-    rc_tests_01711 = read(
-        "cli/cmd/neverlauncher/compatibility_release_certificate_test.go"
-    )
+    rc_tests_01711 = read("cli/cmd/launcher/compatibility_release_certificate_test.go")
     rc_gate_01711 = read("scripts/smoke/offline/loader-compatibility-rc-01711.py")
     rc_targets_01711 = json.loads(read("compatibility/targets.json"))["targets"]
     for required in [
@@ -4864,15 +4847,15 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     18,
     0,
 ):
-    ga_runtime_0180 = read("cli/cmd/neverlauncher/loader_ga.go")
-    ga_meta_0180 = read("cli/cmd/neverlauncher/loader_runtime.go")
-    ga_forge_0180 = read("cli/cmd/neverlauncher/forge_runtime.go")
-    ga_cert_0180 = read("cli/cmd/neverlauncher/compatibility_release_certificate.go")
-    ga_release_0180 = read("cli/cmd/neverlauncher/release_commands.go")
-    ga_ops_0180 = read("cli/cmd/neverlauncher/operations_commands.go")
+    ga_runtime_0180 = read("cli/cmd/launcher/loader_ga.go")
+    ga_meta_0180 = read("cli/cmd/launcher/loader_runtime.go")
+    ga_forge_0180 = read("cli/cmd/launcher/forge_runtime.go")
+    ga_cert_0180 = read("cli/cmd/launcher/compatibility_release_certificate.go")
+    ga_release_0180 = read("cli/cmd/launcher/release_commands.go")
+    ga_ops_0180 = read("cli/cmd/launcher/operations_commands.go")
     ga_workflow_0180 = read(".github/workflows/production-release-candidate.yml")
-    ga_tests_0180 = read("cli/cmd/neverlauncher/loader_ga_test.go") + read(
-        "cli/cmd/neverlauncher/compatibility_release_certificate_test.go"
+    ga_tests_0180 = read("cli/cmd/launcher/loader_ga_test.go") + read(
+        "cli/cmd/launcher/compatibility_release_certificate_test.go"
     )
     ga_gate_0180 = read("scripts/smoke/offline/loader-compatibility-ga-0180.py")
     for required in [
@@ -4955,10 +4938,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     18,
     1,
 ):
-    windows_core_0181 = read("runtime/neverruntime/src/windows_protection.rs")
-    windows_policy_0181 = read("runtime/neverruntime/src/windows_policy.rs")
-    windows_ipc_0181 = read("runtime/neverruntime/src/guard_ipc.rs")
-    windows_test_0181 = read("runtime/neverruntime/tests/guard_windows.rs")
+    windows_core_0181 = read("runtime/runtime/src/windows_protection.rs")
+    windows_policy_0181 = read("runtime/runtime/src/windows_policy.rs")
+    windows_ipc_0181 = read("runtime/runtime/src/guard_ipc.rs")
+    windows_test_0181 = read("runtime/runtime/tests/guard_windows.rs")
     windows_gate_0181 = read("scripts/smoke/offline/windows-protection-core-II-0181.py")
     for required in [
         "WindowsProtectionProfile",
@@ -5019,15 +5002,15 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     2,
 ):
     sensor_native_0182 = read("runtime/guard-sensor/src/lib.rs")
-    sensor_bootstrap_0182 = read("runtime/neverruntime/src/windows_sensor.rs")
-    sensor_runtime_0182 = read("runtime/neverruntime/src/lib.rs")
-    sensor_supervisor_0182 = read("runtime/neverruntime/src/supervisor.rs")
-    sensor_ipc_0182 = read("runtime/neverruntime/src/guard_ipc.rs")
+    sensor_bootstrap_0182 = read("runtime/runtime/src/windows_sensor.rs")
+    sensor_runtime_0182 = read("runtime/runtime/src/lib.rs")
+    sensor_supervisor_0182 = read("runtime/runtime/src/supervisor.rs")
+    sensor_ipc_0182 = read("runtime/runtime/src/guard_ipc.rs")
     sensor_build_0182 = read("scripts/release/build-windows-desktop.ps1")
-    sensor_test_0182 = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    sensor_test_0182 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     sensor_gate_0182 = read("scripts/smoke/offline/guard-sensor-0182.py")
-    sensor_updater_0182 = read("cli/cmd/neverlauncher/component_update.go")
-    sensor_signing_0182 = read("cli/cmd/neverlauncher/windows_signing.go")
+    sensor_updater_0182 = read("cli/cmd/launcher/component_update.go")
+    sensor_signing_0182 = read("cli/cmd/launcher/windows_signing.go")
     for required in [
         "Agent_OnLoad",
         "JNI_ERR",
@@ -5123,10 +5106,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     3,
 ):
     module_sensor_0183 = read("runtime/guard-sensor/src/lib.rs")
-    module_parent_0183 = read("runtime/neverruntime/src/windows_module_guard.rs")
-    module_bootstrap_0183 = read("runtime/neverruntime/src/windows_sensor.rs")
-    module_supervisor_0183 = read("runtime/neverruntime/src/supervisor.rs")
-    module_test_0183 = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    module_parent_0183 = read("runtime/runtime/src/windows_module_guard.rs")
+    module_bootstrap_0183 = read("runtime/runtime/src/windows_sensor.rs")
+    module_supervisor_0183 = read("runtime/runtime/src/supervisor.rs")
+    module_test_0183 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     module_gate_0183 = read("scripts/smoke/offline/guard-module-guard-0183.py")
     for required in [
         "LdrRegisterDllNotification",
@@ -5205,10 +5188,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 ):
     hook_engine_0184 = read("runtime/guard-sensor/src/hook_engine.rs")
     hook_sensor_0184 = read("runtime/guard-sensor/src/lib.rs")
-    hook_parent_0184 = read("runtime/neverruntime/src/windows_module_guard.rs")
-    hook_report_0184 = read("runtime/neverruntime/src/windows_hook_engine.rs")
-    hook_bootstrap_0184 = read("runtime/neverruntime/src/windows_sensor.rs")
-    hook_test_0184 = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    hook_parent_0184 = read("runtime/runtime/src/windows_module_guard.rs")
+    hook_report_0184 = read("runtime/runtime/src/windows_hook_engine.rs")
+    hook_bootstrap_0184 = read("runtime/runtime/src/windows_sensor.rs")
+    hook_test_0184 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     hook_gate_0184 = read("scripts/smoke/offline/guard-aggressive-hook-engine-0184.py")
     for required in [
         "collect_hook_candidates",
@@ -5295,9 +5278,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     memory_0185 = read("runtime/guard-sensor/src/memory_integrity.rs")
     memory_hooks_0185 = read("runtime/guard-sensor/src/hook_engine.rs")
     memory_sensor_0185 = read("runtime/guard-sensor/src/lib.rs")
-    memory_parent_0185 = read("runtime/neverruntime/src/windows_module_guard.rs")
-    memory_report_0185 = read("runtime/neverruntime/src/windows_memory_integrity.rs")
-    memory_test_0185 = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    memory_parent_0185 = read("runtime/runtime/src/windows_module_guard.rs")
+    memory_report_0185 = read("runtime/runtime/src/windows_memory_integrity.rs")
+    memory_test_0185 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     memory_probe_0185 = read("runtime/guard-memory-probe/src/lib.rs")
     memory_gate_0185 = read("scripts/smoke/offline/guard-memory-integrity-0185.py")
     for required in [
@@ -5396,12 +5379,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 ):
     thread_sensor_0186 = read("runtime/guard-sensor/src/thread_integrity.rs")
     thread_stream_0186 = read("runtime/guard-sensor/src/lib.rs")
-    thread_policy_0186 = read("runtime/neverruntime/src/windows_policy.rs")
-    thread_parent_0186 = read("runtime/neverruntime/src/windows_module_guard.rs")
-    thread_report_0186 = read(
-        "runtime/neverruntime/src/windows_thread_process_integrity.rs"
-    )
-    thread_test_0186 = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    thread_policy_0186 = read("runtime/runtime/src/windows_policy.rs")
+    thread_parent_0186 = read("runtime/runtime/src/windows_module_guard.rs")
+    thread_report_0186 = read("runtime/runtime/src/windows_thread_process_integrity.rs")
+    thread_test_0186 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     thread_probe_0186 = read("runtime/guard-thread-probe/src/lib.rs")
     thread_gate_0186 = read(
         "scripts/smoke/offline/guard-thread-process-integrity-0186.py"
@@ -5517,12 +5498,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 ):
     debug_sensor_0187 = read("runtime/guard-sensor/src/debug_instrumentation.rs")
     debug_stream_0187 = read("runtime/guard-sensor/src/lib.rs")
-    debug_launcher_0187 = read("runtime/neverruntime/src/windows_sensor.rs")
-    debug_parent_0187 = read("runtime/neverruntime/src/windows_module_guard.rs")
-    debug_report_0187 = read(
-        "runtime/neverruntime/src/windows_debug_instrumentation.rs"
-    )
-    debug_test_0187 = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    debug_launcher_0187 = read("runtime/runtime/src/windows_sensor.rs")
+    debug_parent_0187 = read("runtime/runtime/src/windows_module_guard.rs")
+    debug_report_0187 = read("runtime/runtime/src/windows_debug_instrumentation.rs")
+    debug_test_0187 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     debug_probe_0187 = read("runtime/guard-debug-probe/src/main.rs")
     debug_gate_0187 = read("scripts/smoke/offline/guard-debug-instrumentation-0187.py")
     for required in [
@@ -5631,9 +5610,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     jvm_sensor_0188 = read("runtime/guard-sensor/src/jvm_awareness.rs")
     jvm_stream_0188 = read("runtime/guard-sensor/src/lib.rs")
     jvm_hooks_0188 = read("runtime/guard-sensor/src/hook_engine.rs")
-    jvm_parent_0188 = read("runtime/neverruntime/src/windows_module_guard.rs")
-    jvm_report_0188 = read("runtime/neverruntime/src/windows_jvm_aware.rs")
-    jvm_test_0188 = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    jvm_parent_0188 = read("runtime/runtime/src/windows_module_guard.rs")
+    jvm_report_0188 = read("runtime/runtime/src/windows_jvm_aware.rs")
+    jvm_test_0188 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     jvm_probe_0188 = read("runtime/guard-jvm-probe/src/lib.rs")
     jvm_gate_0188 = read("scripts/smoke/offline/guard-jvm-aware-protection-0188.py")
     jvm_adversarial_ci_0188 = read("scripts/guard_ci/windows_adversarial.py")
@@ -5731,14 +5710,12 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
 ):
     continuous_sensor_0189 = read("runtime/guard-sensor/src/continuous_guard.rs")
     continuous_stream_0189 = read("runtime/guard-sensor/src/lib.rs")
-    continuous_parent_0189 = read("runtime/neverruntime/src/windows_module_guard.rs")
-    continuous_report_0189 = read(
-        "runtime/neverruntime/src/windows_continuous_guard.rs"
-    )
-    continuous_test_0189 = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    continuous_parent_0189 = read("runtime/runtime/src/windows_module_guard.rs")
+    continuous_report_0189 = read("runtime/runtime/src/windows_continuous_guard.rs")
+    continuous_test_0189 = read("runtime/runtime/tests/guard_sensor_windows.rs")
     continuous_gate_0189 = read("scripts/smoke/offline/guard-continuous-guard-0189.py")
     for required in [
-        "NeverLauncher Continuous Guard sensor-event-chain v1",
+        "Launcher Continuous Guard sensor-event-chain v1",
         "NGCGAK01",
         "PeekNamedPipe",
         "advance_event_chain",
@@ -5815,7 +5792,7 @@ for required in [
     'Scenario("startup-instrumentation", "adversarial"',
     'Scenario("live-debugger", "adversarial"',
     'Scenario("foreign-executable-allocation", "adversarial"',
-    '"cargo", "test", "--manifest-path", "runtime/neverruntime/Cargo.toml"',
+    '"cargo", "test", "--manifest-path", "runtime/runtime/Cargo.toml"',
     "WINDOWS_ADVERSARIAL_CERTIFICATE.json",
     '"allAdversarialScenariosDetected": True',
     '"allCompatibilityScenariosPassed": True',
@@ -5858,26 +5835,24 @@ if (
 # В 0.18.12: Windows Protection RC должен связывать точную атакующую
 # сертификацию с опубликованными байтами x64/ARM64, подписанными Authenticode.
 windows_protection_rc_01812 = read(
-    "cli/cmd/neverlauncher/windows_protection_release_01812.go"
+    "cli/cmd/launcher/windows_protection_release_01812.go"
 )
 windows_protection_rc_tests_01812 = read(
-    "cli/cmd/neverlauncher/windows_protection_release_01812_test.go"
+    "cli/cmd/launcher/windows_protection_release_01812_test.go"
 )
 windows_protection_gate_01812 = read(
     "scripts/smoke/offline/guard-windows-protection-rc-01812.py"
 )
-release_commands_01812 = read("cli/cmd/neverlauncher/release_commands.go")
+release_commands_01812 = read("cli/cmd/launcher/release_commands.go")
 build_release_01812 = read("scripts/release/build-release.sh")
 production_candidate_01812 = read(
-    "cli/cmd/neverlauncher/production_release_candidate_01511.go"
+    "cli/cmd/launcher/production_release_candidate_01511.go"
 )
-production_delivery_01812 = read(
-    "cli/cmd/neverlauncher/production_delivery_release_0160.go"
-)
+production_delivery_01812 = read("cli/cmd/launcher/production_delivery_release_0160.go")
 for required in [
     "WINDOWS_ADVERSARIAL_CERTIFICATE.json",
     "WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json",
-    'windowsProtectionRepository01812       = "DeepLayerTeam/NeverLauncher"',
+    'windowsProtectionRepository01812       = "DeepLayerTeam/Launcher"',
     "cert.ScenarioExecutions != 55",
     "expectedJava := []int{8, 16, 17, 21, 25}",
     "verifyWindowsSigningEvidence0152(dir, ver, true)",
@@ -5959,9 +5934,9 @@ if (
 
 # В 0.19.0: Guard Windows Protection GA переводит проверенный набор RC в производственную
 # защиту пользовательского режима со строгим отказом без добавления драйвера ядра.
-windows_protection_ga_0190 = read("cli/cmd/neverlauncher/windows_protection_ga_0190.go")
+windows_protection_ga_0190 = read("cli/cmd/launcher/windows_protection_ga_0190.go")
 windows_protection_ga_tests_0190 = read(
-    "cli/cmd/neverlauncher/windows_protection_ga_0190_test.go"
+    "cli/cmd/launcher/windows_protection_ga_0190_test.go"
 )
 windows_protection_ga_gate_0190 = read(
     "scripts/smoke/offline/guard-windows-protection-ga-0190.py"
@@ -6130,11 +6105,11 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         )
 
 if errors:
-    print("[NeverLauncher] repository policy: FAILED", file=sys.stderr)
+    print("[Launcher] repository policy: FAILED", file=sys.stderr)
     for item in errors:
         print(f" - {item}", file=sys.stderr)
     sys.exit(1)
 
 print(
-    f"[NeverLauncher] repository policy OK: {VERSION}; immutable releases/client/desktop/key lifecycle/SBOM/provenance production gates активны"
+    f"[Launcher] repository policy OK: {VERSION}; immutable releases/client/desktop/key lifecycle/SBOM/provenance production gates активны"
 )

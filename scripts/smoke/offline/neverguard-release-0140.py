@@ -20,9 +20,9 @@ def require(path: str, needles: list[str]) -> None:
 
 
 for path, platform in [
-    ("runtime/neverruntime/src/guard_ipc.rs", "windows-amd64"),
-    ("runtime/neverruntime/src/linux_guard.rs", "linux-amd64"),
-    ("runtime/neverruntime/src/macos_guard.rs", "macos-universal"),
+    ("runtime/runtime/src/guard_ipc.rs", "windows-amd64"),
+    ("runtime/runtime/src/linux_guard.rs", "linux-amd64"),
+    ("runtime/runtime/src/macos_guard.rs", "macos-universal"),
 ]:
     require(
         path,
@@ -112,7 +112,7 @@ require(
 
 matrix = read("scripts/guard_ci/matrix.py")
 for needle in [
-    "neverGuardRelease0140",
+    "GuardRelease0140",
     "releasePolicySchema",
     "releaseIdentityAuthenticated",
 ]:
@@ -122,14 +122,14 @@ targets = json.loads(read("guard-ci/targets.json"))
 if targets.get("productVersion") != version:
     raise SystemExit("Guard CI target productVersion is not aligned with VERSION")
 for target in targets.get("targets", []):
-    if "neverGuardRelease0140" not in target.get("requiredChecks", []):
+    if "GuardRelease0140" not in target.get("requiredChecks", []):
         raise SystemExit(f"{target.get('id')}: Guard 0.14 release check is missing")
 
 require("scripts/release/preflight.sh", ["guard-release-0140.py"])
 require(".github/workflows/ci.yml", ["guard-release-0140.py"])
 require(
-    "cli/cmd/neverlauncher/release_commands.go",
+    "cli/cmd/launcher/release_commands.go",
     ["guard-release-0140.py", '"guard-release"'],
 )
 
-print(f"NeverLauncher 0.14.0 Guard Release gate: OK ({version})")
+print(f"Launcher 0.14.0 Guard Release gate: OK ({version})")

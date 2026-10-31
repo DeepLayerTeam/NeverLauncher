@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 const (
@@ -93,7 +93,7 @@ func (s Server) securityHardeningStatus(w http.ResponseWriter, r *http.Request) 
 func (s Server) ecosystemSecurityHardening(w http.ResponseWriter, r *http.Request) {
 	payload := s.securityHardeningPayload902("ecosystem-security-hardening")
 	payload["ecosystemGate"] = "required-after-9.0.1-stabilization"
-	payload["release"] = "NeverLauncher 0.10.0 Security Hardening"
+	payload["release"] = "Launcher 0.10.0 Security Hardening"
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": securityHardeningSchema902, "data": payload})
 }
 
@@ -172,7 +172,7 @@ func (s Server) authTOTPEnroll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = s.flushPersistenceState950("totp-enroll")
-	issuer := "NeverLauncher"
+	issuer := "Launcher"
 	account := claims.Email
 	provisioning := "otpauth://totp/" + url.PathEscape(issuer+":"+account) + "?secret=" + url.QueryEscape(secret) + "&issuer=" + url.QueryEscape(issuer) + "&algorithm=SHA1&digits=6&period=30"
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: securityAuditID902("totp-enroll"), Actor: claims.Email, Action: "auth:totp:enroll", Target: claims.Sub, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})

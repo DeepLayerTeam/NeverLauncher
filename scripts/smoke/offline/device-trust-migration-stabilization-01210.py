@@ -30,56 +30,106 @@ except ValueError as exc:
 if version_tuple < (0, 12, 10):
     raise SystemExit(f"VERSION must be >= 0.12.10, got {version}")
 
-migration_api = read("services/api/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql")
-migration_cli = read("cli/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql")
+migration_api = read(
+    "services/api/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql"
+)
+migration_cli = read(
+    "cli/internal/dbmigrate/sql/0018_device_trust_stabilization_01210.sql"
+)
 if migration_api != migration_cli:
     raise SystemExit("0.12.10 API/CLI migration 0018 differs")
-require(migration_api, [
-    "key-rotate", "key-recover", "device_challenges_purpose_check",
-    "trusted_devices_lifecycle_check", "trusted_devices_replacement_shape_check",
-    "auth_sessions_device_binding_shape_check", "trusted_devices_id_user_key",
-    "auth_sessions_trusted_device_owner_fk", "trusted_devices_replacement_owner_fk",
-    "minecraft_sessions_never_session_owner_fk", "minecraft_sessions_device_owner_fk",
-    "minecraft_sessions_profile_owner_fk", "legacy-device-revoked",
-    "UPDATE minecraft_sessions SET trusted_device_id=NULL",
-], "0.12.10 stabilization migration")
+require(
+    migration_api,
+    [
+        "key-rotate",
+        "key-recover",
+        "device_challenges_purpose_check",
+        "trusted_devices_lifecycle_check",
+        "trusted_devices_replacement_shape_check",
+        "auth_sessions_device_binding_shape_check",
+        "trusted_devices_id_user_key",
+        "auth_sessions_trusted_device_owner_fk",
+        "trusted_devices_replacement_owner_fk",
+        "minecraft_sessions_never_session_owner_fk",
+        "minecraft_sessions_device_owner_fk",
+        "minecraft_sessions_profile_owner_fk",
+        "legacy-device-revoked",
+        "UPDATE minecraft_sessions SET trusted_device_id=NULL",
+    ],
+    "0.12.10 stabilization migration",
+)
 
 repo_devices = read("services/api/internal/repository/devices_0121.go")
 repo_postgres = read("services/api/internal/repository/postgres.go")
-require(repo_devices, [
-    "var replacedBy sql.NullString", "d.ReplacedByDeviceID = replacedBy.String",
-    "NULL,NULL,'')", "ON CONFLICT DO NOTHING RETURNING",
-], "nullable replacement repository path")
-require(repo_postgres, [
-    "func nullText(value string) any", "nullText(item.TrustedDeviceID)",
-    "var trustedDeviceID sql.NullString", "item.TrustedDeviceID = trustedDeviceID.String",
-], "nullable Minecraft trust snapshot repository path")
+require(
+    repo_devices,
+    [
+        "var replacedBy sql.NullString",
+        "d.ReplacedByDeviceID = replacedBy.String",
+        "NULL,NULL,'')",
+        "ON CONFLICT DO NOTHING RETURNING",
+    ],
+    "nullable replacement repository path",
+)
+require(
+    repo_postgres,
+    [
+        "func nullText(value string) any",
+        "nullText(item.TrustedDeviceID)",
+        "var trustedDeviceID sql.NullString",
+        "item.TrustedDeviceID = trustedDeviceID.String",
+    ],
+    "nullable Minecraft trust snapshot repository path",
+)
 
 upgrade_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
-require(upgrade_e2e, [
-    "0017_device_key_recovery_rotation_0128", "0018_device_trust_stabilization_01210",
-    "0.12.9 schema (0001..0017)", "key-rotate", "key-recover",
-    "cross-user auth session/device binding unexpectedly succeeded",
-    "cross-user replacement link unexpectedly succeeded",
-    "cross-user Minecraft device snapshot unexpectedly succeeded",
-    "migration-stabilization.json",
-], "0.12.10 PostgreSQL upgrade E2E")
+require(
+    upgrade_e2e,
+    [
+        "0017_device_key_recovery_rotation_0128",
+        "0018_device_trust_stabilization_01210",
+        "0.12.9 schema (0001..0017)",
+        "key-rotate",
+        "key-recover",
+        "cross-user auth session/device binding unexpectedly succeeded",
+        "cross-user replacement link unexpectedly succeeded",
+        "cross-user Minecraft device snapshot unexpectedly succeeded",
+        "migration-stabilization.json",
+    ],
+    "0.12.10 PostgreSQL upgrade E2E",
+)
 
 protocol_e2e = read("e2e/scripts/run-device-trust-e2e.sh")
-require(protocol_e2e, [
-    "migrationStabilization01210:true", "migration-upgrade-e2e.json",
-    "run-device-trust-migration-e2e.sh first", "0018_device_trust_stabilization_01210",
-], "0.12.10 public protocol evidence")
+require(
+    protocol_e2e,
+    [
+        "migrationStabilization01210:true",
+        "migration-upgrade-e2e.json",
+        "run-device-trust-migration-e2e.sh first",
+        "0018_device_trust_stabilization_01210",
+    ],
+    "0.12.10 public protocol evidence",
+)
 
 targets = json.loads(read("device-trust/targets.json"))
 if targets.get("productVersion") != version:
     raise SystemExit("Device Trust targets must track canonical VERSION")
-protocol_targets = [row for row in targets.get("targets", []) if row.get("kind") == "protocol-e2e"]
-if len(protocol_targets) != 1 or "migrationStabilization01210" not in protocol_targets[0].get("requiredChecks", []):
-    raise SystemExit("public protocol trust target must require migrationStabilization01210")
+protocol_targets = [
+    row for row in targets.get("targets", []) if row.get("kind") == "protocol-e2e"
+]
+if len(protocol_targets) != 1 or "migrationStabilization01210" not in protocol_targets[
+    0
+].get("requiredChecks", []):
+    raise SystemExit(
+        "public protocol trust target must require migrationStabilization01210"
+    )
 
 matrix = read("scripts/device_trust/matrix.py")
-require(matrix, ["migrationStabilization01210", "migration stabilization 0.12.10"], "public trust matrix")
+require(
+    matrix,
+    ["migrationStabilization01210", "migration stabilization 0.12.10"],
+    "public trust matrix",
+)
 
 preflight = read("scripts/release/preflight.sh")
 ci = read(".github/workflows/ci.yml")
@@ -89,17 +139,51 @@ for text, label in [(preflight, "preflight"), (ci, "main CI")]:
         raise SystemExit(f"0.12.10 release gate is not wired into {label}")
     if "run-device-trust-migration-e2e.sh" not in text:
         raise SystemExit(f"0.12.10 upgrade E2E is not wired into {label}")
-require(workflow, [
-    "run-device-trust-migration-e2e.sh", "run-device-trust-e2e.sh",
-    "e2e/device-trust-migration-result/", "matrix.py aggregate",
-], "public Device Trust workflow")
+require(
+    workflow,
+    [
+        "run-device-trust-migration-e2e.sh",
+        "run-device-trust-e2e.sh",
+        "e2e/device-trust-migration-result/",
+        "matrix.py aggregate",
+    ],
+    "public Device Trust workflow",
+)
 
 # Необязательные производственные инструкции и контрольный список не ограничивают безопасность миграций.
 
-subprocess.run(["bash", "-n", str(ROOT / "e2e/scripts/run-device-trust-migration-e2e.sh")], check=True)
-subprocess.run(["bash", "-n", str(ROOT / "e2e/scripts/run-device-trust-e2e.sh")], check=True)
-subprocess.run(["go", "test", "-tags", "neverlauncher_nopgx", "./internal/dbmigrate", "./internal/repository", "./internal/httpapi"], cwd=ROOT / "services/api", check=True)
+subprocess.run(
+    ["bash", "-n", str(ROOT / "e2e/scripts/run-device-trust-migration-e2e.sh")],
+    check=True,
+)
+subprocess.run(
+    ["bash", "-n", str(ROOT / "e2e/scripts/run-device-trust-e2e.sh")], check=True
+)
+subprocess.run(
+    [
+        "go",
+        "test",
+        "-tags",
+        "launcher_nopgx",
+        "./internal/dbmigrate",
+        "./internal/repository",
+        "./internal/httpapi",
+    ],
+    cwd=ROOT / "services/api",
+    check=True,
+)
 subprocess.run(["go", "test", "./internal/dbmigrate"], cwd=ROOT / "cli", check=True)
-subprocess.run([sys.executable, str(ROOT / "scripts/device_trust/matrix.py"), "validate", "--targets", str(ROOT / "device-trust/targets.json")], check=True)
-subprocess.run([sys.executable, str(ROOT / "scripts/device_trust/test_matrix.py")], check=True)
-print(f"[NeverLauncher] Device Trust migration + stabilization 0.12.10 gate OK ({version})")
+subprocess.run(
+    [
+        sys.executable,
+        str(ROOT / "scripts/device_trust/matrix.py"),
+        "validate",
+        "--targets",
+        str(ROOT / "device-trust/targets.json"),
+    ],
+    check=True,
+)
+subprocess.run(
+    [sys.executable, str(ROOT / "scripts/device_trust/test_matrix.py")], check=True
+)
+print(f"[Launcher] Device Trust migration + stabilization 0.12.10 gate OK ({version})")

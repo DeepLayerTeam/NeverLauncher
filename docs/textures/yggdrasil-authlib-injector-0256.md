@@ -1,4 +1,4 @@
-# NeverLauncher 0.25.6 — Yggdrasil/authlib-injector texture signing
+# Launcher 0.25.6 — Yggdrasil/authlib-injector texture signing
 
 ## Production deployment
 
@@ -6,8 +6,8 @@ Generate a persistent RSA private key separate from the **Ed25519 release manife
 
 ```sh
 umask 077
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out /etc/neverlauncher/yggdrasil-rsa.pem
-chmod 600 /etc/neverlauncher/yggdrasil-rsa.pem
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out /etc/launcher/yggdrasil-rsa.pem
+chmod 600 /etc/launcher/yggdrasil-rsa.pem
 ```
 
 Set `NEVERLAUNCHER_YGGDRASIL_RSA_KEY_FILE` to its absolute path on **each replica** and distribute the **same key** securely to all API instances. Do not commit the PEM to git, bake it into an image, serve it over HTTP, or place it in `NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY`. File must be a non-symlink regular file with mode 0600, PKCS#1 or PKCS#8, unencrypted RSA >= 2048 bits. Rotate only as a coordinated deployment: changing the public key invalidates cached metadata/profile signatures. Restart replicas when changing the file. If no key is configured in production or key loading fails, metadata and signed texture profile endpoints return 503 rather than unsigned properties.

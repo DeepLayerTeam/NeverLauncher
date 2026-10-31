@@ -3,15 +3,15 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authrequest"
+	"gitflic.ru/skif4er/launcher/services/api/internal/authrequest"
 	"net/http"
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
+	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/protection"
 )
 
 type authLoginRequest struct {
@@ -325,7 +325,7 @@ func (s Server) sessionPolicyPayload(version string) map[string]any {
 		"authStrengths":      []string{"single-factor", "mfa", "phishing-resistant"}, "stepUpFreshnessMinutes": 5,
 		"accessTokenFormat":    "JWT/JWS HS256",
 		"accessTokenClaims":    []string{"iss", "aud", "sub", "sid", "jti", "iat", "exp", "kid(header)", "auth_time", "amr", "binding_epoch", "risk_state", "risk_score", "risk_action", "risk_updated_at", "device_id", "device_trust", "device_verified_at", "device_key_binding", "device_hardware_provider", "device_attestation", "device_attestation_method", "device_attested_at", "device_attestation_expires_at"},
-		"sessionDeviceBinding": map[string]any{"serverAuthoritative": true, "bindingEpoch": true, "staleAccessTokenRejected": true, "boundRefreshRequiresDeviceSignature": true, "refreshProofPayload": "NeverLauncher Session Device Binding v1", "refreshSecretDisclosure": false},
+		"sessionDeviceBinding": map[string]any{"serverAuthoritative": true, "bindingEpoch": true, "staleAccessTokenRejected": true, "boundRefreshRequiresDeviceSignature": true, "refreshProofPayload": "Launcher Session Device Binding v1", "refreshSecretDisclosure": false},
 		"riskStates":           []string{"normal", "elevated", "compromised"}, "riskActions": []string{"allow", "step-up", "reattest", "revoke"},
 		"riskSignals":    []string{"ip-changed", "user-agent-changed", "trusted-device-missing", "trusted-device-revoked", "device-attestation-stale", "refresh-token-reuse"},
 		"sessionBackend": s.State.AuthSessions.summary(), "passkeyBackend": s.State.Passkeys.summary(),

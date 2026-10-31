@@ -11,13 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 const (
-	serverBridgeRuntimeIdentityScheme0192 = "NeverLauncher-ServerBridge-RuntimeIdentity-v1"
-	serverBridgeRuntimeIDScheme0192       = "NeverLauncher-ServerBridge-RuntimeId-v1"
+	serverBridgeRuntimeIdentityScheme0192 = "Launcher-ServerBridge-RuntimeIdentity-v1"
+	serverBridgeRuntimeIDScheme0192       = "Launcher-ServerBridge-RuntimeId-v1"
 )
 
 type bridgeRuntimeIdentityV3Contract0192 struct {

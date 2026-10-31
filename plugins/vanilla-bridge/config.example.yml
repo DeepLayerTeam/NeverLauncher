@@ -1,4 +1,4 @@
-# Vanilla-sidecar адаптер NeverLauncher. Ограничивайте RCON loopback-интерфейсом и брандмауэром.
+# Vanilla-sidecar адаптер Launcher. Ограничивайте RCON loopback-интерфейсом и брандмауэром.
 backend:
   url: http://127.0.0.1:8080
   # Упорядоченные конечные точки HA. Одиночный url выше используется, только когда urls пуст.

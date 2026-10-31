@@ -26,15 +26,15 @@ import (
 	"sync"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionbroker"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/eventbus"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionbroker"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensioncontract"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionlifecycle"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionpolicy"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionsecurity"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 const ProtocolVersion = extensioncontract.HostProtocolVersion
@@ -1298,7 +1298,7 @@ func (s *Supervisor) authenticate(w http.ResponseWriter, r *http.Request) (*proc
 	// The Windows IPC listener is not TCP. Only its exact per-instance named
 	// pipe may authenticate a sandboxed extension; regular TCP stays loopback.
 	tcpLoopback := loopbackRequest(r)
-	pipeRequest := strings.HasPrefix(r.RemoteAddr, `\\.\pipe\LOCAL\NeverLauncher-Extension-`)
+	pipeRequest := strings.HasPrefix(r.RemoteAddr, `\\.\pipe\LOCAL\Launcher-Extension-`)
 	macRequest := strings.HasPrefix(r.RemoteAddr, "nlmac:")
 	if !tcpLoopback && !pipeRequest && !macRequest {
 		http.Error(w, "loopback or authenticated sandbox pipe required", http.StatusForbidden)
@@ -2078,7 +2078,7 @@ func (s *Supervisor) callbackRequest0206(ctx context.Context, sub model.Extensio
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-NeverLauncher-Event-ID", event.ID)
+	req.Header.Set("X-Launcher-Event-ID", event.ID)
 	req.Header.Set("Idempotency-Key", event.IdempotencyKey)
 	return s.callbackClient.Do(req)
 }

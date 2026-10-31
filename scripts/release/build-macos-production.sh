@@ -45,7 +45,7 @@ else
 fi
 
 mkdir -p "${OUT_DIR}"
-WORK_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/neverlauncher-macos-production.XXXXXX")"
+WORK_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/launcher-macos-production.XXXXXX")"
 cleanup() { rm -rf -- "${WORK_ROOT}"; }
 trap cleanup EXIT
 
@@ -59,7 +59,7 @@ trap cleanup EXIT
 rustup target add x86_64-apple-darwin aarch64-apple-darwin
 for target in x86_64-apple-darwin aarch64-apple-darwin; do
   cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
-  cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bin guard --bin neverruntime
+  cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/runtime/runtime/Cargo.toml" --bin guard --bin runtime
 done
 
 NOTARY_X64=""
@@ -71,31 +71,31 @@ for arch in x64 arm64; do
     arm64) RUST_TARGET="aarch64-apple-darwin"; GOARCH="arm64"; LIPO_ARCH="arm64" ;;
   esac
 
-  GO_CLI="${WORK_ROOT}/neverlauncher-cli-${arch}"
+  GO_CLI="${WORK_ROOT}/launcher-cli-${arch}"
   (
     cd "${ROOT_DIR}/cli"
-    GOOS=darwin GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.componentSetTrustedKey02310=${NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-} -X main.componentSetRootKey02312=${NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY:-}" -o "${GO_CLI}" ./cmd/neverlauncher
+    GOOS=darwin GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.componentSetTrustedKey02310=${NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-} -X main.componentSetRootKey02312=${NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY:-}" -o "${GO_CLI}" ./cmd/launcher
   )
 
-  APP_ROOT="${WORK_ROOT}/${arch}/NeverLauncher.app"
+  APP_ROOT="${WORK_ROOT}/${arch}/Launcher.app"
   MACOS_DIR="${APP_ROOT}/Contents/MacOS"
   HELPERS_DIR="${APP_ROOT}/Contents/Helpers"
   RES_DIR="${APP_ROOT}/Contents/Resources"
   mkdir -p "${MACOS_DIR}" "${HELPERS_DIR}" "${RES_DIR}"
-  cp "${ROOT_DIR}/apps/desktop/src-tauri/target/${RUST_TARGET}/release/neverlauncher-desktop" "${MACOS_DIR}/neverlauncher-desktop"
-  cp "${ROOT_DIR}/runtime/neverruntime/target/${RUST_TARGET}/release/guard" "${HELPERS_DIR}/guard"
-  cp "${ROOT_DIR}/runtime/neverruntime/target/${RUST_TARGET}/release/neverruntime" "${HELPERS_DIR}/neverruntime"
-  cp "${GO_CLI}" "${HELPERS_DIR}/neverlauncher-cli"
-  chmod 0755 "${MACOS_DIR}/neverlauncher-desktop" "${HELPERS_DIR}/"*
+  cp "${ROOT_DIR}/apps/desktop/src-tauri/target/${RUST_TARGET}/release/launcher-desktop" "${MACOS_DIR}/launcher-desktop"
+  cp "${ROOT_DIR}/runtime/runtime/target/${RUST_TARGET}/release/guard" "${HELPERS_DIR}/guard"
+  cp "${ROOT_DIR}/runtime/runtime/target/${RUST_TARGET}/release/runtime" "${HELPERS_DIR}/runtime"
+  cp "${GO_CLI}" "${HELPERS_DIR}/launcher-cli"
+  chmod 0755 "${MACOS_DIR}/launcher-desktop" "${HELPERS_DIR}/"*
 
   cat > "${APP_ROOT}/Contents/Info.plist" <<EOF_PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>CFBundleDisplayName</key><string>NeverLauncher</string>
-<key>CFBundleExecutable</key><string>neverlauncher-desktop</string>
-<key>CFBundleIdentifier</key><string>ru.skif4er.neverlauncher</string>
-<key>CFBundleName</key><string>NeverLauncher</string>
+<key>CFBundleDisplayName</key><string>Launcher</string>
+<key>CFBundleExecutable</key><string>launcher-desktop</string>
+<key>CFBundleIdentifier</key><string>ru.skif4er.launcher</string>
+<key>CFBundleName</key><string>Launcher</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>${VERSION}</string>
 <key>CFBundleVersion</key><string>${VERSION}</string>
@@ -105,14 +105,14 @@ for arch in x64 arm64; do
 EOF_PLIST
 
   # Сначала подписывайте вложенные вспомогательные утилиты. Не подписывайте
-  # Contents/MacOS/neverlauncher-desktop напрямую внутри .app: codesign воспринимает
+  # Contents/MacOS/launcher-desktop напрямую внутри .app: codesign воспринимает
   # основной исполняемый файл как сам пакет и требует предварительной подписи всех
   # помощников. Итоговая подпись APP_ROOT подписывает и запечатывает основной файл.
-  for binary in guard neverruntime neverlauncher-cli; do
+  for binary in guard runtime launcher-cli; do
     case "${binary}" in
-      guard) identifier="ru.skif4er.neverlauncher.guard" ;;
-      neverruntime) identifier="ru.skif4er.neverlauncher.runtime" ;;
-      neverlauncher-cli) identifier="ru.skif4er.neverlauncher.cli" ;;
+      guard) identifier="ru.skif4er.launcher.guard" ;;
+      runtime) identifier="ru.skif4er.launcher.runtime" ;;
+      launcher-cli) identifier="ru.skif4er.launcher.cli" ;;
       *) echo "unsupported macOS helper identifier mapping: ${binary}" >&2; exit 1 ;;
     esac
     file="${HELPERS_DIR}/${binary}"
@@ -137,9 +137,9 @@ EOF_PLIST
 
   # Завершите подписание изнутри наружу, подписав пакет приложения ровно один раз. Это
   # подпишет основной исполняемый файл и защитит уже подписанные Helpers и Resources.
-  codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"
-  codesign --verify --strict --verbose=2 "${MACOS_DIR}/neverlauncher-desktop"
-  for binary in guard neverruntime neverlauncher-cli; do
+  codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.launcher "${APP_ROOT}"
+  codesign --verify --strict --verbose=2 "${MACOS_DIR}/launcher-desktop"
+  for binary in guard runtime launcher-cli; do
     codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"
   done
   codesign --verify --deep --strict --verbose=2 "${APP_ROOT}"
@@ -147,12 +147,12 @@ EOF_PLIST
     app_details="$(codesign -dv --verbose=4 "${APP_ROOT}" 2>&1)"
     grep -F "TeamIdentifier=${TEAM_ID}" <<<"${app_details}" >/dev/null || { echo "TeamIdentifier mismatch for ${APP_ROOT}" >&2; exit 1; }
     grep -E 'flags=.*runtime' <<<"${app_details}" >/dev/null || { echo "Hardened Runtime flag missing for ${APP_ROOT}" >&2; exit 1; }
-    desktop_details="$(codesign -dv --verbose=4 "${MACOS_DIR}/neverlauncher-desktop" 2>&1)"
-    grep -F "TeamIdentifier=${TEAM_ID}" <<<"${desktop_details}" >/dev/null || { echo "TeamIdentifier mismatch for ${MACOS_DIR}/neverlauncher-desktop" >&2; exit 1; }
-    grep -E 'flags=.*runtime' <<<"${desktop_details}" >/dev/null || { echo "Hardened Runtime flag missing for ${MACOS_DIR}/neverlauncher-desktop" >&2; exit 1; }
+    desktop_details="$(codesign -dv --verbose=4 "${MACOS_DIR}/launcher-desktop" 2>&1)"
+    grep -F "TeamIdentifier=${TEAM_ID}" <<<"${desktop_details}" >/dev/null || { echo "TeamIdentifier mismatch for ${MACOS_DIR}/launcher-desktop" >&2; exit 1; }
+    grep -E 'flags=.*runtime' <<<"${desktop_details}" >/dev/null || { echo "Hardened Runtime flag missing for ${MACOS_DIR}/launcher-desktop" >&2; exit 1; }
   fi
 
-  NOTARY_ZIP="${WORK_ROOT}/neverlauncher-${arch}-notary.zip"
+  NOTARY_ZIP="${WORK_ROOT}/launcher-${arch}-notary.zip"
   rm -f "${NOTARY_ZIP}"
   ditto -c -k --sequesterRsrc --keepParent "${APP_ROOT}" "${NOTARY_ZIP}"
 
@@ -176,7 +176,7 @@ PY
     --version "${VERSION}" --arch "${arch}" \
     --app "${APP_ROOT}" --out-dir "${OUT_DIR}"
 
-  FINAL_ZIP="${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-${arch}.zip"
+  FINAL_ZIP="${OUT_DIR}/launcher-desktop-${VERSION}-macos-${arch}.zip"
   rm -f "${FINAL_ZIP}"
   ditto -c -k --sequesterRsrc --keepParent "${APP_ROOT}" "${FINAL_ZIP}"
   python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${FINAL_ZIP}"
@@ -202,26 +202,26 @@ for arch in x64 arm64; do
     arm64) MANIFEST_SUFFIX="ARM64" ;;
   esac
   REQUIRED_ARTIFACTS=(
-    "neverlauncher-cli-macos-${arch}"
-    "neverlauncher-desktop-macos-${arch}"
+    "launcher-cli-macos-${arch}"
+    "launcher-desktop-macos-${arch}"
     "guard-macos-${arch}"
-    "neverruntime-macos-${arch}"
-    "neverlauncher-desktop-${VERSION}-macos-${arch}.zip"
+    "runtime-macos-${arch}"
+    "launcher-desktop-${VERSION}-macos-${arch}.zip"
     "MACOS_PACKAGE_MANIFEST_${MANIFEST_SUFFIX}.json"
   )
   for artifact in "${REQUIRED_ARTIFACTS[@]}"; do
     [[ -s "${OUT_DIR}/${artifact}" ]] || { echo "missing final macOS delivery artifact: ${OUT_DIR}/${artifact}" >&2; exit 1; }
   done
   shasum -a 256 \
-    "${OUT_DIR}/neverlauncher-cli-macos-${arch}" \
-    "${OUT_DIR}/neverlauncher-desktop-macos-${arch}" \
+    "${OUT_DIR}/launcher-cli-macos-${arch}" \
+    "${OUT_DIR}/launcher-desktop-macos-${arch}" \
     "${OUT_DIR}/guard-macos-${arch}" \
-    "${OUT_DIR}/neverruntime-macos-${arch}" \
-    "${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-${arch}.zip"
+    "${OUT_DIR}/runtime-macos-${arch}" \
+    "${OUT_DIR}/launcher-desktop-${VERSION}-macos-${arch}.zip"
 done
 [[ -s "${OUT_DIR}/MACOS_NOTARIZATION_EVIDENCE.json" ]] || { echo "missing final macOS notarization evidence" >&2; exit 1; }
 [[ -s "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json" ]] || { echo "missing final macOS Guard allowlist evidence" >&2; exit 1; }
 printf 'Final macOS delivery inventory (%s):\n' "${OUT_DIR}"
 find "${OUT_DIR}" -maxdepth 1 -type f -print | sort
 
-echo "NeverLauncher ${VERSION} macOS x64+ARM64 packages prepared (signingMode=${SIGNING_MODE})"
+echo "Launcher ${VERSION} macOS x64+ARM64 packages prepared (signingMode=${SIGNING_MODE})"

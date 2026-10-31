@@ -9,7 +9,7 @@ import (
 
 func TestBuildWorkspaceCASDeepCopyAndImmutableResult0226(t *testing.T) {
 	ctx := context.Background()
-	repo := NewMemoryRepository("https://neverlauncher.test")
+	repo := NewMemoryRepository("https://launcher.test")
 	initial := BuildWorkspace{ID: "ws-test", ProjectID: "demo-project", OwnerID: "admin", ProfileID: "vanilla", Channel: "stable", Version: "0.22.6", ProfileRevision: 1, ProfileDigest: strings.Repeat("a", 64), Settings: BuildSettings{ToolVersions: map[string]string{"api": "0.22.6"}}, Files: []BuildFile{{Path: "mods/first.jar", SHA256: strings.Repeat("b", 64), Size: 5, Selected: true}}}
 	saved, err := repo.CreateBuildWorkspace(ctx, initial)
 	if err != nil {

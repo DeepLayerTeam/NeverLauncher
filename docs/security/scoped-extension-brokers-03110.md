@@ -1,4 +1,4 @@
-# NeverLauncher 0.31.10 — Scoped Filesystem, Network & Secrets Brokers
+# Launcher 0.31.10 — Scoped Filesystem, Network & Secrets Brokers
 
 This release extends the **enforced Linux x86-64** sandbox from 0.31.9. It does not create host-network interfaces or mount host shares inside an extension. All privileged operations pass through the existing token-authenticated Extension Host Protocol over the inherited Unix socketpair, with server-side signed-policy checks **plus** the already-existing revocable permission manager. Extension manifest fields cannot disable the namespace, seccomp or cgroup restrictions.
 
@@ -7,7 +7,7 @@ This release extends the **enforced Linux x86-64** sandbox from 0.31.9. It does 
 Run API as a **dedicated unprivileged service user** with a delegated cgroup v2 subtree. Configure only the directories you intend to expose through the broker:
 
 ```sh
-NEVERLAUNCHER_EXTENSION_SHARED_ROOTS_JSON='{"reports":"/srv/neverlauncher-extension-shares/reports"}'
+NEVERLAUNCHER_EXTENSION_SHARED_ROOTS_JSON='{"reports":"/srv/launcher-extension-shares/reports"}'
 ```
 
 Roots must be absolute pre-existing directories. Every path component must be a genuine directory (not a symlink); the root directory `/` is forbidden. The application fails closed for sandbox packages requesting an unmapped or invalid shared root, without falling back to `trusted`. Keep host secrets **outside** shared roots; the administrator mapping is trusted configuration, never package-controlled. The broker runs with the unprivileged API service's permissions.
@@ -50,11 +50,11 @@ A `shared:<name>` grant does not grant direct mount access. Paths are slash-sepa
 
 ```sh
 cd services/api
-GOPROXY=off go test -race -tags neverlauncher_nopgx -count=1 ./internal/extensionbroker ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
+GOPROXY=off go test -race -tags launcher_nopgx -count=1 ./internal/extensionbroker ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
 # On CI with all external Go dependencies:
 go test -race -count=1 ./internal/extensionbroker ./internal/linuxsandbox ./internal/extensionpolicy ./internal/extensionhost
 # Only on a deliberately provisioned, unprivileged Linux runner with delegated cgroups v2:
-NL_RUN_LIVE_LINUX_SANDBOX=1 go test -tags neverlauncher_nopgx -v ./internal/linuxsandbox -run TestLinuxIsolationLive0319
+NL_RUN_LIVE_LINUX_SANDBOX=1 go test -tags launcher_nopgx -v ./internal/linuxsandbox -run TestLinuxIsolationLive0319
 ```
 
 The included tests cover symlink/traversal/hardlink attacks, underspecified origins, unauthorized secret use, permission revocation, and missing resource mappings. The live cgroup/namespace test requires a real Linux deployment; passing unit tests cannot certify kernel isolation or full production-readiness.

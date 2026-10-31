@@ -7,7 +7,7 @@ RUNTIME_DIR="$ROOT/e2e/device-trust-runtime"
 RESULT_DIR="$ROOT/e2e/device-trust-result"
 ENV_FILE="$RUNTIME_DIR/e2e.env"
 API="http://127.0.0.1:18081"
-DB_DSN="postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable"
+DB_DSN="postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 TARGET_ID="${NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID:-postgres-protocol-linux-x64}"
 RESULT_COMMIT="${NEVERLAUNCHER_DEVICE_TRUST_COMMIT:-${GITHUB_SHA:-local}}"
@@ -16,7 +16,7 @@ AUTH_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 BOOTSTRAP_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 REDIS_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 SIGNING_SEED="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
-ADMIN_EMAIL="device-trust-e2e@neverlauncher.local"
+ADMIN_EMAIL="device-trust-e2e@launcher.local"
 ADMIN_PASSWORD="$(python3 -c 'import secrets; print("DT-E2E-" + secrets.token_urlsafe(24))')"
 CRYPTO="$ROOT/e2e/scripts/device-trust-crypto.py"
 WEBAUTHN="$ROOT/e2e/scripts/webauthn-test-authenticator.py"
@@ -131,13 +131,13 @@ sign_payload() {
 refresh_payload() {
   local user="$1" session="$2" device="$3" epoch="$4" refresh="$5" hash
   hash="$(printf '%s' "$refresh" | sha256sum | awk '{print $1}')"
-  printf 'NeverLauncher Session Device Binding v1\npurpose=refresh\nuser=%s\nsession=%s\ndevice=%s\nbinding-epoch=%s\nrefresh-token-sha256=%s\n' "$user" "$session" "$device" "$epoch" "$hash"
+  printf 'Launcher Session Device Binding v1\npurpose=refresh\nuser=%s\nsession=%s\ndevice=%s\nbinding-epoch=%s\nrefresh-token-sha256=%s\n' "$user" "$session" "$device" "$epoch" "$hash"
 }
 sanitize_registration() { jq '{data:{device:.data.device,session:(.data.session|del(.refreshToken?)),accessTokenIssued:(.data.accessToken|type=="string")}}'; }
 sanitize_rotation() { jq '{data:{mode:.data.mode,oldDevice:.data.oldDevice,device:.data.device,session:.data.session,oldFingerprintPermanentTombstone:.data.oldFingerprintPermanentTombstone,revokedSessions:.data.revokedSessions,revokedRefreshFamilies:.data.revokedRefreshFamilies,revokedMinecraftSessions:.data.revokedMinecraftSessions,invalidatedChallenges:.data.invalidatedChallenges,invalidatedBridgeJoins:.data.invalidatedBridgeJoins,accessTokenIssued:(.data.accessToken|type=="string")}}'; }
 
 printf '[device-trust-e2e] build CLI, start PostgreSQL/Redis, apply sealed migrations\n'
-( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/neverlauncher )
+( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/launcher )
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -152,11 +152,11 @@ grep -q 'verified' "$RUNTIME_DIR/migrate-verify.json"
 printf '[device-trust-e2e] start production PostgreSQL Backend and bootstrap account\n'
 compose up -d --build api-a
 wait_http
-curl -fsS -H 'Content-Type: application/json' -H "X-NeverLauncher-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
+curl -fsS -H 'Content-Type: application/json' -H "X-Launcher-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
   -d "$(jq -cn --arg email "$ADMIN_EMAIL" --arg password "$ADMIN_PASSWORD" '{email:$email,displayName:"Device Trust E2E",password:$password,actor:"device-trust-e2e"}')" \
   "$API/api/v1/install/bootstrap-admin" > "$RUNTIME_DIR/bootstrap.json"
 repo_driver="$(psql "$DB_DSN" -Atqc "SELECT current_database()")"
-[[ "$repo_driver" == "neverlauncher" ]]
+[[ "$repo_driver" == "launcher" ]]
 
 printf '[device-trust-e2e] verify 0.13.0 runtime release/readiness contract\n'
 curl -fsS "$API/api/v1/auth/capabilities" > "$RESULT_DIR/release-capabilities.json"
@@ -272,7 +272,7 @@ RISK_BEGIN="$(json_post "$API/api/v1/auth/devices/$DEVICE2/verify/begin" "$RISK_
 RISK_SIG="$(sign_payload ed25519 "$KEY2" "$(jq -er '.data.signingPayload' <<<"$RISK_BEGIN")")"
 RISK_COMPLETE="$(json_post "$API/api/v1/auth/devices/$DEVICE2/verify/complete" "$RISK_ACCESS_PRE" "$(jq -cn --arg id "$(jq -er '.data.challengeId' <<<"$RISK_BEGIN")" --arg ch "$(jq -er '.data.challenge' <<<"$RISK_BEGIN")" --arg sig "$RISK_SIG" '{challengeId:$id,challenge:$ch,signature:$sig}')")"
 RISK_ACCESS="$(jq -er '.data.accessToken' <<<"$RISK_COMPLETE")"
-RISK_UA="NeverLauncher-DeviceTrust-E2E/${VERSION}-risk"
+RISK_UA="Launcher-DeviceTrust-E2E/${VERSION}-risk"
 code="$(request_code GET "$API/api/v1/auth/sessions" "$RISK_ACCESS" '' "$RUNTIME_DIR/risk-sessions.json" "$RISK_UA")"; expect_code 200 "$code" 'risk observation request'
 jq -e --arg sid "$RISK_SESSION" '.data.items[] | select(.id==$sid) | .riskAction=="step-up" and .riskState=="elevated" and .riskScore>=35' "$RUNTIME_DIR/risk-sessions.json" >/dev/null
 jq --arg sid "$RISK_SESSION" '{data:{session:(.data.items[]|select(.id==$sid)|{id,riskState,riskScore,riskAction,riskReasons})}}' "$RUNTIME_DIR/risk-sessions.json" > "$RESULT_DIR/risk-step-up.json"

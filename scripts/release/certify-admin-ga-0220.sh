@@ -44,13 +44,13 @@ python3 -m unittest scripts/release/test_owner_cycle_0390.py -v
   cd services/api
   go test -race -count=1 ./...
   go vet ./...
-  go build -trimpath -ldflags="-X main.version=${RELEASE_VERSION} -X main.commit=${COMMIT}" -o /tmp/neverlauncher-ga-api ./cmd/neverlauncher-api
+  go build -trimpath -ldflags="-X main.version=${RELEASE_VERSION} -X main.commit=${COMMIT}" -o /tmp/launcher-ga-api ./cmd/launcher-api
 )
 (
   cd cli
   go test -race -count=1 ./...
   go vet ./...
-  go build -trimpath -o /tmp/neverlauncher-ga-cli ./cmd/neverlauncher
+  go build -trimpath -o /tmp/launcher-ga-cli ./cmd/launcher
 )
 # Covers live pgx migration, CAS, durable/ServerBridge enqueue, lease and signed ACK.
 bash e2e/scripts/run-admin-hardening-02112-e2e.sh

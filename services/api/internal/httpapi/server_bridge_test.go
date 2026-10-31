@@ -18,7 +18,7 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 		t.Fatalf("register server => %d %s", res.Code, res.Body.String())
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"admin@neverlauncher.local","password":"admin","deviceId":"desktop-smoke"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"admin@launcher.local","password":"admin","deviceId":"desktop-smoke"}`))
 	req.Header.Set("Content-Type", "application/json")
 	setDeviceTrustClientMeta0127(req)
 	res = httptest.NewRecorder()
@@ -52,7 +52,7 @@ func TestCanonicalServerBridgeAuthFlow(t *testing.T) {
 	signBridgeNodeRequest0142(t, req, "velocity-main", identity)
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
-	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "neverlauncher") {
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "launcher") {
 		t.Fatalf("has-joined => %d %s", res.Code, res.Body.String())
 	}
 	var joined struct {

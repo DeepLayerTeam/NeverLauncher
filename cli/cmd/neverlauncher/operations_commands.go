@@ -68,7 +68,7 @@ func productionDeployment990() map[string]any {
 		"envExample":    "deploy/production/env.production.example",
 		"nginxConfig":   "deploy/production/nginx.conf",
 		"services":      []string{"postgres", "redis", "api", "admin", "nginx"},
-		"volumes":       []string{"neverlauncher_postgres", "neverlauncher_redis", "neverlauncher_storage", "neverlauncher_backups"},
+		"volumes":       []string{"launcher_postgres", "launcher_redis", "launcher_storage", "launcher_backups"},
 		"commands":      []string{"cp deploy/production/env.production.example deploy/production/.env", "cd deploy/production && docker compose --env-file .env up -d", "./scripts/install/production-setup.sh"},
 	}
 }
@@ -80,7 +80,7 @@ func productionFirstRun990() map[string]any {
 		"status":        "first-run-prepared",
 		"script":        "scripts/install/production-setup.sh",
 		"bootstrap":     []string{"validate env", "apply migrations", "create first admin", "create demo project", "create vanilla profile", "create stable channel", "issue bridge token", "write bootstrap report"},
-		"outputs":       []string{".neverlauncher/production-first-run/first-run-report-0.10.0.json"},
+		"outputs":       []string{".launcher/production-first-run/first-run-report-0.10.0.json"},
 	}
 }
 
@@ -175,7 +175,7 @@ func isSupportedLoader(loader string) bool {
 
 func realLoaderInstallPlan(loader, minecraftVersion, loaderVersion, metadataPath, installerProfile, versionJSON, assetIndexPath string) (map[string]any, error) {
 	if loader == "vanilla" {
-		plan, err := realRuntimePlan(minecraftVersion, "vanilla", "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
+		plan, err := realRuntimePlan(minecraftVersion, "vanilla", "Player", ".launcher/client", versionJSON, assetIndexPath)
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +183,7 @@ func realLoaderInstallPlan(loader, minecraftVersion, loaderVersion, metadataPath
 		plan["loaderInstall"] = map[string]any{"type": "vanilla", "status": "builtin", "steps": []string{"resolve-mojang-version", "resolve-assets", "resolve-libraries"}}
 		return plan, nil
 	}
-	basePlan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
+	basePlan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".launcher/client", versionJSON, assetIndexPath)
 	if err != nil {
 		return nil, err
 	}
@@ -506,7 +506,7 @@ func migrationDoctorReport(items []string) map[string]any {
 	var migrations []migrationInfo
 	for _, path := range items {
 		data, readErr := os.ReadFile(path)
-		if readErr == nil && strings.Contains(string(data), "neverlauncher-migration-superseded: true") {
+		if readErr == nil && strings.Contains(string(data), "launcher-migration-superseded: true") {
 			continue
 		}
 		base := filepath.Base(path)
@@ -564,7 +564,7 @@ func handleInstall(args []string) error {
 			return errors.New("bootstrap-admin требует --email и --password")
 		}
 		body := map[string]any{"email": email, "displayName": flagValue(args, "--display-name", "Administrator"), "password": password, "actor": "nl install bootstrap-admin"}
-		payload, err := httpJSONWithHeaders("POST", backend+"/api/v1/install/bootstrap-admin", body, map[string]string{"X-NeverLauncher-Bootstrap-Token": token})
+		payload, err := httpJSONWithHeaders("POST", backend+"/api/v1/install/bootstrap-admin", body, map[string]string{"X-Launcher-Bootstrap-Token": token})
 		if err != nil {
 			return err
 		}
@@ -648,12 +648,12 @@ func installStorageCheck(args []string) error {
 	if err := os.MkdirAll(rootDir, 0o755); err != nil {
 		return err
 	}
-	probe, err := os.CreateTemp(rootDir, ".neverlauncher-storage-check-*")
+	probe, err := os.CreateTemp(rootDir, ".launcher-storage-check-*")
 	if err != nil {
 		return fmt.Errorf("storage root не writable: %w", err)
 	}
 	name := probe.Name()
-	if _, err := probe.WriteString("neverlauncher-storage-check"); err != nil {
+	if _, err := probe.WriteString("launcher-storage-check"); err != nil {
 		probe.Close()
 		_ = os.Remove(name)
 		return err
@@ -713,7 +713,7 @@ func installVerify(args []string) error {
 
 func installFirstRun(args []string) error {
 	out := flagValue(args, "--output", "")
-	backend := strings.TrimRight(flagValue(args, "--backend", "https://neverlauncher.example"), "/")
+	backend := strings.TrimRight(flagValue(args, "--backend", "https://launcher.example"), "/")
 	project := flagValue(args, "--project", "demo-project")
 	profile := flagValue(args, "--profile", "vanilla")
 	outputDir := strings.TrimSpace(flagValue(args, "--output-dir", ""))

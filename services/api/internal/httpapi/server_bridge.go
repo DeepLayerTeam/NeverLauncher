@@ -7,14 +7,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/officialminecraft"
+	"gitflic.ru/skif4er/launcher/services/api/internal/officialminecraft"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 const serverBridgeSchema910 = apiContractVersion
@@ -503,7 +503,7 @@ func (s Server) sessionHasJoined(w http.ResponseWriter, r *http.Request) {
 	join = consumed
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("has-joined-ok"), Actor: server.ID, Action: "serverbridge:has-joined:ok", Target: join.UUID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	w.Header().Set("Cache-Control", "no-store, max-age=0")
-	writeJSON(w, http.StatusOK, map[string]any{"id": minecraftID119(join.UUID), "name": join.Username, "properties": []map[string]string{property}, "neverlauncher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": join.ProtocolVersion, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "sessionCorrelationId": join.SessionCorrelationID, "sessionLifecycle": "active", "trustIntegrityRechecked": true, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
+	writeJSON(w, http.StatusOK, map[string]any{"id": minecraftID119(join.UUID), "name": join.Username, "properties": []map[string]string{property}, "launcher": map[string]any{"schemaVersion": serverBridgeSchema910, "protocolVersion": join.ProtocolVersion, "status": "joined", "projectId": join.ProjectID, "profileId": join.ProfileID, "channel": join.Channel, "serverId": join.ServerID, "sessionCorrelationId": join.SessionCorrelationID, "sessionLifecycle": "active", "trustIntegrityRechecked": true, "nodeKeyFingerprint": server.KeyFingerprint, "identityEpoch": server.IdentityEpoch, "expiresAt": join.ExpiresAt, "trust": trust, "integrity": integrity}})
 }
 
 func (s Server) sessionInvalidate(w http.ResponseWriter, r *http.Request) {
@@ -563,7 +563,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 	base := map[string]any{
 		"schemaVersion":             serverBridgeSchema910,
 		"toolVersion":               s.Version,
-		"release":                   fmt.Sprintf("NeverLauncher %s ServerBridge 3 GA", s.Version),
+		"release":                   fmt.Sprintf("Launcher %s ServerBridge 3 GA", s.Version),
 		"mode":                      "serverbridge3-ga-protocol-v3-frozen-v2-compatibility-deprecated",
 		"protocolVersion":           serverBridgeProtocolCurrent,
 		"supportedProtocolVersions": serverBridgeSupportedProtocols0191,
@@ -607,7 +607,7 @@ func (s Server) serverBridgePayload910(kind string) map[string]any {
 		base["productFlow"] = []string{"node generates a local Ed25519 key and admin enrolls its public key in PostgreSQL", "Desktop/player logs in and binds a verified trusted device", "Desktop sends session join with project/profile/channel and Backend snapshots device binding", "server plugin signs validate-join/has-joined with its local Ed25519 private key", "Backend re-checks parent session, device, binding epoch and risk policy", "Backend returns profile/texture metadata or a concrete trust denial", "re-bind/revoke/permanent risk invalidates stale gameplay credentials"}
 	case "smoke":
 		base["status"] = "checkable"
-		base["requiredCommands"] = []string{"go test -tags neverlauncher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}
+		base["requiredCommands"] = []string{"go test -tags launcher_nopgx ./internal/httpapi", "bash e2e/scripts/run-minecraft-e2e.sh"}
 		base["checks"] = []map[string]string{{"id": "protocol-v3", "status": "implemented"}, {"id": "protocol-v2-compatibility-deprecated", "status": "implemented"}, {"id": "capability-negotiation", "status": "implemented"}, {"id": "protocol-feature-flags", "status": "implemented"}, {"id": "runtime-node-discovery", "status": "implemented"}, {"id": "runtime-ed25519-identity", "status": "implemented"}, {"id": "runtime-restart-replacement-detection", "status": "implemented"}, {"id": "postgresql-source-of-truth", "status": "implemented"}, {"id": "one-time-join-consume", "status": "implemented"}, {"id": "identity-bound-ticket", "status": "implemented"}, {"id": "yggdrasil-consume-once", "status": "implemented"}, {"id": "cryptographic-node-identity", "status": "implemented"}, {"id": "node-nonce-replay-protection", "status": "implemented"}, {"id": "server-registration", "status": "implemented"}, {"id": "join-session", "status": "implemented"}, {"id": "has-joined", "status": "implemented"}, {"id": "authlib", "status": "implemented"}, {"id": "gameplay-trust-enforcement", "status": "implemented"}, {"id": "binding-epoch-invalidation", "status": "implemented"}, {"id": "textures", "status": "signed-managed-png"}}
 	default:
 		base["status"] = "active"
@@ -1031,7 +1031,7 @@ func sanitizeJoinRecord910(join bridgeJoinRecord) map[string]any {
 
 // playerUUID910 is the legacy 0.25.0 alias algorithm only; never issue this as a new Minecraft UUID.
 func playerUUID910(seed string) string {
-	sum := sha256.Sum256([]byte("neverlauncher-player:" + seed))
+	sum := sha256.Sum256([]byte("launcher-player:" + seed))
 	hexed := hex.EncodeToString(sum[:16])
 	return hexed[0:8] + "-" + hexed[8:12] + "-" + hexed[12:16] + "-" + hexed[16:20] + "-" + hexed[20:32]
 }

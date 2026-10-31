@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.vanilla;
+package ru.launcher.bridge.vanilla;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

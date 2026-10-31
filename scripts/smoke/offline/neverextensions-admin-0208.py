@@ -73,20 +73,20 @@ require(
     "extensions-manager" in main and "<AdminExtensions" in main,
     "Admin SPA did not wire Extension Manager/widgets",
 )
-cli_scaffold = read("cli/cmd/neverlauncher/project_commands.go") + read(
-    "cli/cmd/neverlauncher/extension_sdk_02010.go"
+cli_scaffold = read("cli/cmd/launcher/project_commands.go") + read(
+    "cli/cmd/launcher/extension_sdk_02010.go"
 )
 for token in ('case "admin":', "admin/index.html", "ui:contribute", "uiTemplate02010"):
     require(token in cli_scaffold, f"Admin SDK scaffold missing {token}")
-sdk = read("sdk/admin/typescript/neverlauncher-admin.ts")
+sdk = read("sdk/admin/typescript/launcher-admin.ts")
 for token in (
-    "NeverLauncherAdminBridge",
+    "LauncherAdminBridge",
     "projects.list",
     "releases.list",
     "telemetry.emit",
 ):
     require(token in sdk, f"Admin SDK missing {token}")
-schema = read("schemas/neverlauncher-extension.schema.json")
+schema = read("schemas/launcher-extension.schema.json")
 for token in ('"admin"', '"dashboardWidgets"', '"navigation"', '"actions"'):
     require(token in schema, f"extension schema missing {token}")
 openapi = read("schemas/openapi.yaml")

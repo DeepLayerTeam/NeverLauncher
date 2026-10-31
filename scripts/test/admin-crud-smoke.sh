@@ -2,13 +2,13 @@
 set -euo pipefail
 
 BACKEND="${1:-http://127.0.0.1:8080}"
-EMAIL="${NEVERLAUNCHER_TEST_ADMIN_EMAIL:-admin@neverlauncher.local}"
+EMAIL="${NEVERLAUNCHER_TEST_ADMIN_EMAIL:-admin@launcher.local}"
 PASSWORD="${NEVERLAUNCHER_TEST_ADMIN_PASSWORD:-admin}"
 TS="$(date +%s)"
 PROJECT="crud-${TS}"
 PROFILE="vanilla"
 CHANNEL="stable"
-USER_EMAIL="operator-${TS}@neverlauncher.local"
+USER_EMAIL="operator-${TS}@launcher.local"
 
 login_json="$(curl -fsS -X POST "$BACKEND/api/v1/admin/login" -H 'Content-Type: application/json' -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")"
 TOKEN="$(printf '%s' "$login_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')"
@@ -26,4 +26,4 @@ curl -fsS -X POST "$BACKEND/api/v1/admin/users/$USER_ID/disable" "${AUTH[@]}" >/
 curl -fsS -X POST "$BACKEND/api/v1/admin/users/$USER_ID/enable" "${AUTH[@]}" >/dev/null
 curl -fsS "$BACKEND/api/v1/admin/audit" "${AUTH[@]}" >/dev/null
 
-echo "NeverLauncher ${VERSION:-0.10.0} admin CRUD smoke: OK"
+echo "Launcher ${VERSION:-0.10.0} admin CRUD smoke: OK"

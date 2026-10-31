@@ -205,7 +205,7 @@ func extensionRegistryPublishCLI0203(backend, token, packagePath string, args []
 	}
 	fields := map[string]string{
 		"publisher": flagValue(args, "--publisher", ""), "channels": flagValue(args, "--channels", flagValue(args, "--channel", "stable")),
-		"minNeverLauncher": flagValue(args, "--min-launcher", ""), "maxNeverLauncher": flagValue(args, "--max-launcher", ""),
+		"minLauncher": flagValue(args, "--min-launcher", ""), "maxLauncher": flagValue(args, "--max-launcher", ""),
 		"minApi": flagValue(args, "--min-api", ""), "maxApi": flagValue(args, "--max-api", ""),
 		"os": flagValue(args, "--os", ""), "arch": flagValue(args, "--arch", ""),
 	}
@@ -300,6 +300,6 @@ func extensionRegistryPullCLI0203(backend, token, id, versionValue, dest string)
 		return err
 	}
 	ok = true
-	printJSON(map[string]any{"pulled": true, "extensionId": id, "version": versionValue, "path": dest, "sha256": hex.EncodeToString(h.Sum(nil)), "size": size, "packageIdentity": resp.Header.Get("X-NeverLauncher-Package-Identity")})
+	printJSON(map[string]any{"pulled": true, "extensionId": id, "version": versionValue, "path": dest, "sha256": hex.EncodeToString(h.Sum(nil)), "size": size, "packageIdentity": resp.Header.Get("X-Launcher-Package-Identity")})
 	return nil
 }

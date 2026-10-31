@@ -1,4 +1,4 @@
--- NeverLauncher 0.11.6: зашифрованные учётные данные внешних провайдеров.
+-- Launcher 0.11.6: зашифрованные учётные данные внешних провайдеров.
 -- Поле encrypted_refresh_token содержит конверт AES-GCM уровня приложения.
 -- Открытые refresh-токены Microsoft/OIDC никогда не хранятся в PostgreSQL.
 CREATE TABLE IF NOT EXISTS provider_credentials (

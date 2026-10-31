@@ -1,55 +1,328 @@
 #!/usr/bin/env python3
 from pathlib import Path
+
 root = Path(__file__).resolve().parents[3]
 version = (root / "VERSION").read_text(encoding="utf-8").strip()
-if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 7): raise SystemExit("VERSION is older than 0.14.7")
-def read(path): return (root / path).read_text(encoding="utf-8")
+if tuple(int(p) for p in version.split(".")[:3]) < (0, 14, 7):
+    raise SystemExit("VERSION is older than 0.14.7")
+
+
+def read(path):
+    return (root / path).read_text(encoding="utf-8")
+
+
 def require(text, needles, label):
-    missing=[n for n in needles if n not in text]
-    if missing: raise SystemExit(f"{label}: missing {missing}")
-api_migration=read("services/api/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql")
-cli_migration=read("cli/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql")
-if api_migration != cli_migration: raise SystemExit("0.14.7 API/CLI Forge/NeoForge migrations differ")
-require(api_migration,["server_bridge_nodes_v2_kind_check","'forge'","'neoforge'","'fabric'"],"0.14.7 PostgreSQL migration")
-settings=read("settings.gradle.kts")
-require(settings,['maven("https://maven.minecraftforge.net/")','maven("https://maven.neoforged.net/releases/")','include("plugins:modloader-family-common")','include("plugins:forge-bridge")','include("plugins:neoforge-bridge")'],"Gradle Forge-family modules")
-runtime=read("plugins/modloader-family-common/src/main/java/ru/neverlauncher/bridge/modloader/ModLoaderBridgeRuntime.java")
-require(runtime,["new ArrayBlockingQueue<>(256)","new ThreadPoolExecutor.AbortPolicy()","Supplier<Path> artifactPathSupplier","resolveArtifactPath()","BridgeIntegrity.artifactSha256(artifactPath)","BridgeIntegrity.artifactSha256(artifactAnchor)","NodeIdentity.loadOrCreate","validateJoinAsync","current.api.validateJoin","current.api.heartbeat","validationExecutor.shutdownNow()","heartbeatExecutor.shutdownNow()"],"shared modloader-family production runtime")
-forge=read("plugins/forge-bridge/src/main/java/ru/neverlauncher/bridge/forge/NeverLauncherForgeBridge.java")
-neo=read("plugins/neoforge-bridge/src/main/java/ru/neverlauncher/bridge/neoforge/NeverLauncherNeoForgeBridge.java")
-require(forge,["GatherLoginConfigurationTasksEvent","ConfigurationTaskContext","new ConfigurationTask.Type(\"neverlauncher:join_validation\")","event.addTask(new JoinValidationTask","runtime.validateJoinAsync","ServerLifecycleHooks.getCurrentServer()","server.execute(() ->","ctx.finish(JOIN_VALIDATION_TASK)","connection.disconnect","ModList.get()","getModFileById(MOD_ID)","getFile().getFilePath()","NeverLauncherForgeBridge::loadedArtifactPath",'"forge"'],"Forge pre-world configuration login gate")
-require(neo,["RegisterConfigurationTasksEvent","modEventBus.addListener(this::onRegisterConfigurationTasks)","event.register(new JoinValidationTask",'new ConfigurationTask.Type(ResourceLocation.fromNamespaceAndPath(MOD_ID, "join_validation"))',"runtime.validateJoinAsync","ServerLifecycleHooks.getCurrentServer()","server.execute(() ->","listener.finishCurrentTask(JOIN_VALIDATION_TASK)","listener.disconnect","ModList.get()","getModFileById(MOD_ID)","getFile().getFilePath()","NeverLauncherNeoForgeBridge::loadedArtifactPath",'"neoforge"'],"NeoForge pre-world configuration login gate")
-forge_build=read("plugins/forge-bridge/build.gradle.kts")
-neo_build=read("plugins/neoforge-bridge/build.gradle.kts")
-require(forge_build,['net.minecraftforge.gradle','1.21.1-52.1.16','minecraft.mavenizer(this)','maven(fg.forgeMaven)','maven(fg.minecraftLibsMaven)','configurations.create("bridgeRuntime")','implementation(minecraft.dependency("net.minecraftforge:forge:1.21.1-52.1.16"))','add(bridgeRuntime.name, project(":plugins:modloader-family-common"))'],"Forge production build")
-require(neo_build,['net.neoforged.moddev','21.1.251','configurations.create("bridgeRuntime")','add(bridgeRuntime.name, project(":plugins:modloader-family-common"))'],"NeoForge production build")
-require(read("plugins/forge-bridge/src/main/resources/META-INF/mods.toml"),['displayTest="IGNORE_SERVER_VERSION"','side="SERVER"','versionRange="[1.21.1,1.21.2)"'],"Forge server-only metadata")
-require(read("plugins/neoforge-bridge/src/main/resources/META-INF/neoforge.mods.toml"),['displayTest="IGNORE_SERVER_VERSION"','side="SERVER"','versionRange="[1.21.1,1.21.2)"'],"NeoForge server-only metadata")
-backend=read("services/api/internal/httpapi/server_bridge.go")
-integrity=read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
-config=read("services/api/internal/config/config.go")
-manifest=read("services/api/internal/httpapi/bridge_plugins.go")
-require(backend,['"fabric"','"forge"','"neoforge"'],"Backend Forge/NeoForge kind enforcement")
-require(integrity,["ForgeSHA256","NeoForgeSHA256",'case "forge":','case "neoforge":'],"Forge/NeoForge integrity namespaces")
-require(config,["bridgeReleaseRequiresForgeFamily0147","ForgeSHA256","NeoForgeSHA256","для 0.14.7+"],"0.14.7 production release policy")
-for kind,descriptor in (("forge","META-INF/mods.toml"),("neoforge","META-INF/neoforge.mods.toml")):
-    require(manifest,[f'{{"id": "{kind}"',f'neverlauncher-{kind}-bridge-',f'"descriptor": "{descriptor}"'],f"{kind} manifest")
-build=read("scripts/build/bridge-plugins.sh")
-require(build,[":plugins:forge-bridge:clean",":plugins:neoforge-bridge:clean","forgeSha256","neoforgeSha256","ModLoaderBridgeRuntime.class","META-INF/mods.toml","META-INF/neoforge.mods.toml"],"Forge/NeoForge release build")
-require(read("scripts/release/build-release.sh"),["fabric forge neoforge"],"release bundle Forge/NeoForge artifacts")
-require(read("cli/cmd/neverlauncher/release_commands.go"),['"neverlauncher-forge-bridge-" + ver + ".jar"','"neverlauncher-neoforge-bridge-" + ver + ".jar"'],"release verification Forge/NeoForge artifacts")
-require(read("scripts/contracts/generate_openapi.py"),['"fabric"','"forge"','"neoforge"'],"OpenAPI Forge/NeoForge kinds")
-tests=read("services/api/internal/httpapi/serverbridge_forge_neoforge_0147_test.go")
-require(tests,["TestForgeNeoForgeKinds0147","TestForgeNeoForgeIntegrityNamespaces0147","TestForgeNeoForgeManifest0147"],"Forge/NeoForge regressions")
-e2e=read("e2e/scripts/run-minecraft-e2e.sh"); compose=read("e2e/docker-compose.minecraft-e2e.yml")
-probe=read("e2e/scripts/minecraft-login-probe.py")
-require(e2e,["compose up -d velocity paper","certify_aux_bridge forge-e2e-p3","certify_aux_bridge neoforge-e2e-p3","wait_bridge_heartbeat \"$service\"","capture_health_evidence \"$service\"","forgeNeoForgeServerBridge:true","health-forge.json","health-neoforge.json","forge)","neoforge)","allow_probe_mode","deny_probe_mode","--enter-configuration","--drive-neoforge-configuration","--allow-pre-configuration-disconnect","NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS","${allow_probe_mode[@]}","${deny_probe_mode[@]}"],"Forge/NeoForge runtime E2E")
-flow=e2e[e2e.index("flow_for_server() {"):e2e.index("flow_for_server velocity-e2e-p3")]
-if flow.index("neoforge)") < flow.index("forge)"): raise SystemExit("NeoForge probe mode must be explicit after Forge mode")
-require(probe,["--enter-configuration","--drive-neoforge-configuration","--allow-pre-configuration-disconnect","LOGIN_SET_COMPRESSION = 0x03","SERVERBOUND_LOGIN_ACKNOWLEDGED = 0x03","CONFIG_CLIENTBOUND_PING = 0x05","CONFIG_CLIENTBOUND_SELECT_KNOWN_PACKS = 0x0E","CONFIG_SERVERBOUND_PONG = 0x05","CONFIG_SERVERBOUND_SELECT_KNOWN_PACKS = 0x07","zlib.decompress","framed_packet","enter_configuration","drive_neoforge_configuration","login-eof","login-reset","login-disconnect","send_protocol_packet(sock, acknowledgement, compression_threshold)","knownPacksResponses={known_packs_responses}","mode=configuration","loginAcknowledged={str(login_acknowledged).lower()}"],"Minecraft 1.21.1 Forge/NeoForge stateful login probe")
-require(compose,["TYPE: FORGE","TYPE: NEOFORGE","FORGE_VERSION: \"52.1.16\"","NEOFORGE_VERSION: \"21.1.251\"","./runtime/plugins/forge:/mods:ro","./runtime/plugins/neoforge:/mods:ro"],"Forge/NeoForge Docker E2E")
-migration=read("e2e/scripts/run-forge-neoforge-server-bridge-migration-e2e.sh")
-require(migration,["0026_fabric_server_bridge_0146","0027_forge_neoforge_server_bridge_0147","kind IN ('forge','neoforge')","non-canonical kind bypassed constraint"],"0.14.6 -> 0.14.7 migration E2E")
-for text,label in ((read("scripts/release/preflight.sh"),"preflight"),(read(".github/workflows/ci.yml"),"CI")):
-    require(text,["serverbridge-forge-neoforge-0147.py","run-forge-neoforge-server-bridge-migration-e2e.sh"],f"0.14.7 {label} wiring")
-print(f"NeverLauncher 0.14.7 Forge + NeoForge Server Bridge gate: OK ({version})")
+    missing = [n for n in needles if n not in text]
+    if missing:
+        raise SystemExit(f"{label}: missing {missing}")
+
+
+api_migration = read(
+    "services/api/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql"
+)
+cli_migration = read(
+    "cli/internal/dbmigrate/sql/0027_forge_neoforge_server_bridge_0147.sql"
+)
+if api_migration != cli_migration:
+    raise SystemExit("0.14.7 API/CLI Forge/NeoForge migrations differ")
+require(
+    api_migration,
+    ["server_bridge_nodes_v2_kind_check", "'forge'", "'neoforge'", "'fabric'"],
+    "0.14.7 PostgreSQL migration",
+)
+settings = read("settings.gradle.kts")
+require(
+    settings,
+    [
+        'maven("https://maven.minecraftforge.net/")',
+        'maven("https://maven.neoforged.net/releases/")',
+        'include("plugins:modloader-family-common")',
+        'include("plugins:forge-bridge")',
+        'include("plugins:neoforge-bridge")',
+    ],
+    "Gradle Forge-family modules",
+)
+runtime = read(
+    "plugins/modloader-family-common/src/main/java/ru/launcher/bridge/modloader/ModLoaderBridgeRuntime.java"
+)
+require(
+    runtime,
+    [
+        "new ArrayBlockingQueue<>(256)",
+        "new ThreadPoolExecutor.AbortPolicy()",
+        "Supplier<Path> artifactPathSupplier",
+        "resolveArtifactPath()",
+        "BridgeIntegrity.artifactSha256(artifactPath)",
+        "BridgeIntegrity.artifactSha256(artifactAnchor)",
+        "NodeIdentity.loadOrCreate",
+        "validateJoinAsync",
+        "current.api.validateJoin",
+        "current.api.heartbeat",
+        "validationExecutor.shutdownNow()",
+        "heartbeatExecutor.shutdownNow()",
+    ],
+    "shared modloader-family production runtime",
+)
+forge = read(
+    "plugins/forge-bridge/src/main/java/ru/launcher/bridge/forge/LauncherForgeBridge.java"
+)
+neo = read(
+    "plugins/neoforge-bridge/src/main/java/ru/launcher/bridge/neoforge/LauncherNeoForgeBridge.java"
+)
+require(
+    forge,
+    [
+        "GatherLoginConfigurationTasksEvent",
+        "ConfigurationTaskContext",
+        'new ConfigurationTask.Type("launcher:join_validation")',
+        "event.addTask(new JoinValidationTask",
+        "runtime.validateJoinAsync",
+        "ServerLifecycleHooks.getCurrentServer()",
+        "server.execute(() ->",
+        "ctx.finish(JOIN_VALIDATION_TASK)",
+        "connection.disconnect",
+        "ModList.get()",
+        "getModFileById(MOD_ID)",
+        "getFile().getFilePath()",
+        "LauncherForgeBridge::loadedArtifactPath",
+        '"forge"',
+    ],
+    "Forge pre-world configuration login gate",
+)
+require(
+    neo,
+    [
+        "RegisterConfigurationTasksEvent",
+        "modEventBus.addListener(this::onRegisterConfigurationTasks)",
+        "event.register(new JoinValidationTask",
+        'new ConfigurationTask.Type(ResourceLocation.fromNamespaceAndPath(MOD_ID, "join_validation"))',
+        "runtime.validateJoinAsync",
+        "ServerLifecycleHooks.getCurrentServer()",
+        "server.execute(() ->",
+        "listener.finishCurrentTask(JOIN_VALIDATION_TASK)",
+        "listener.disconnect",
+        "ModList.get()",
+        "getModFileById(MOD_ID)",
+        "getFile().getFilePath()",
+        "LauncherNeoForgeBridge::loadedArtifactPath",
+        '"neoforge"',
+    ],
+    "NeoForge pre-world configuration login gate",
+)
+forge_build = read("plugins/forge-bridge/build.gradle.kts")
+neo_build = read("plugins/neoforge-bridge/build.gradle.kts")
+require(
+    forge_build,
+    [
+        "net.minecraftforge.gradle",
+        "1.21.1-52.1.16",
+        "minecraft.mavenizer(this)",
+        "maven(fg.forgeMaven)",
+        "maven(fg.minecraftLibsMaven)",
+        'configurations.create("bridgeRuntime")',
+        'implementation(minecraft.dependency("net.minecraftforge:forge:1.21.1-52.1.16"))',
+        'add(bridgeRuntime.name, project(":plugins:modloader-family-common"))',
+    ],
+    "Forge production build",
+)
+require(
+    neo_build,
+    [
+        "net.neoforged.moddev",
+        "21.1.251",
+        'configurations.create("bridgeRuntime")',
+        'add(bridgeRuntime.name, project(":plugins:modloader-family-common"))',
+    ],
+    "NeoForge production build",
+)
+require(
+    read("plugins/forge-bridge/src/main/resources/META-INF/mods.toml"),
+    [
+        'displayTest="IGNORE_SERVER_VERSION"',
+        'side="SERVER"',
+        'versionRange="[1.21.1,1.21.2)"',
+    ],
+    "Forge server-only metadata",
+)
+require(
+    read("plugins/neoforge-bridge/src/main/resources/META-INF/neoforge.mods.toml"),
+    [
+        'displayTest="IGNORE_SERVER_VERSION"',
+        'side="SERVER"',
+        'versionRange="[1.21.1,1.21.2)"',
+    ],
+    "NeoForge server-only metadata",
+)
+backend = read("services/api/internal/httpapi/server_bridge.go")
+integrity = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
+config = read("services/api/internal/config/config.go")
+manifest = read("services/api/internal/httpapi/bridge_plugins.go")
+require(
+    backend,
+    ['"fabric"', '"forge"', '"neoforge"'],
+    "Backend Forge/NeoForge kind enforcement",
+)
+require(
+    integrity,
+    ["ForgeSHA256", "NeoForgeSHA256", 'case "forge":', 'case "neoforge":'],
+    "Forge/NeoForge integrity namespaces",
+)
+require(
+    config,
+    [
+        "bridgeReleaseRequiresForgeFamily0147",
+        "ForgeSHA256",
+        "NeoForgeSHA256",
+        "для 0.14.7+",
+    ],
+    "0.14.7 production release policy",
+)
+for kind, descriptor in (
+    ("forge", "META-INF/mods.toml"),
+    ("neoforge", "META-INF/neoforge.mods.toml"),
+):
+    require(
+        manifest,
+        [
+            f'{{"id": "{kind}"',
+            f"launcher-{kind}-bridge-",
+            f'"descriptor": "{descriptor}"',
+        ],
+        f"{kind} manifest",
+    )
+build = read("scripts/build/bridge-plugins.sh")
+require(
+    build,
+    [
+        ":plugins:forge-bridge:clean",
+        ":plugins:neoforge-bridge:clean",
+        "forgeSha256",
+        "neoforgeSha256",
+        "ModLoaderBridgeRuntime.class",
+        "META-INF/mods.toml",
+        "META-INF/neoforge.mods.toml",
+    ],
+    "Forge/NeoForge release build",
+)
+require(
+    read("scripts/release/build-release.sh"),
+    ["fabric forge neoforge"],
+    "release bundle Forge/NeoForge artifacts",
+)
+require(
+    read("cli/cmd/launcher/release_commands.go"),
+    [
+        '"launcher-forge-bridge-" + ver + ".jar"',
+        '"launcher-neoforge-bridge-" + ver + ".jar"',
+    ],
+    "release verification Forge/NeoForge artifacts",
+)
+require(
+    read("scripts/contracts/generate_openapi.py"),
+    ['"fabric"', '"forge"', '"neoforge"'],
+    "OpenAPI Forge/NeoForge kinds",
+)
+tests = read("services/api/internal/httpapi/serverbridge_forge_neoforge_0147_test.go")
+require(
+    tests,
+    [
+        "TestForgeNeoForgeKinds0147",
+        "TestForgeNeoForgeIntegrityNamespaces0147",
+        "TestForgeNeoForgeManifest0147",
+    ],
+    "Forge/NeoForge regressions",
+)
+e2e = read("e2e/scripts/run-minecraft-e2e.sh")
+compose = read("e2e/docker-compose.minecraft-e2e.yml")
+probe = read("e2e/scripts/minecraft-login-probe.py")
+require(
+    e2e,
+    [
+        "compose up -d velocity paper",
+        "certify_aux_bridge forge-e2e-p3",
+        "certify_aux_bridge neoforge-e2e-p3",
+        'wait_bridge_heartbeat "$service"',
+        'capture_health_evidence "$service"',
+        "forgeNeoForgeServerBridge:true",
+        "health-forge.json",
+        "health-neoforge.json",
+        "forge)",
+        "neoforge)",
+        "allow_probe_mode",
+        "deny_probe_mode",
+        "--enter-configuration",
+        "--drive-neoforge-configuration",
+        "--allow-pre-configuration-disconnect",
+        "NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS",
+        "${allow_probe_mode[@]}",
+        "${deny_probe_mode[@]}",
+    ],
+    "Forge/NeoForge runtime E2E",
+)
+flow = e2e[
+    e2e.index("flow_for_server() {") : e2e.index("flow_for_server velocity-e2e-p3")
+]
+if flow.index("neoforge)") < flow.index("forge)"):
+    raise SystemExit("NeoForge probe mode must be explicit after Forge mode")
+require(
+    probe,
+    [
+        "--enter-configuration",
+        "--drive-neoforge-configuration",
+        "--allow-pre-configuration-disconnect",
+        "LOGIN_SET_COMPRESSION = 0x03",
+        "SERVERBOUND_LOGIN_ACKNOWLEDGED = 0x03",
+        "CONFIG_CLIENTBOUND_PING = 0x05",
+        "CONFIG_CLIENTBOUND_SELECT_KNOWN_PACKS = 0x0E",
+        "CONFIG_SERVERBOUND_PONG = 0x05",
+        "CONFIG_SERVERBOUND_SELECT_KNOWN_PACKS = 0x07",
+        "zlib.decompress",
+        "framed_packet",
+        "enter_configuration",
+        "drive_neoforge_configuration",
+        "login-eof",
+        "login-reset",
+        "login-disconnect",
+        "send_protocol_packet(sock, acknowledgement, compression_threshold)",
+        "knownPacksResponses={known_packs_responses}",
+        "mode=configuration",
+        "loginAcknowledged={str(login_acknowledged).lower()}",
+    ],
+    "Minecraft 1.21.1 Forge/NeoForge stateful login probe",
+)
+require(
+    compose,
+    [
+        "TYPE: FORGE",
+        "TYPE: NEOFORGE",
+        'FORGE_VERSION: "52.1.16"',
+        'NEOFORGE_VERSION: "21.1.251"',
+        "./runtime/plugins/forge:/mods:ro",
+        "./runtime/plugins/neoforge:/mods:ro",
+    ],
+    "Forge/NeoForge Docker E2E",
+)
+migration = read("e2e/scripts/run-forge-neoforge-server-bridge-migration-e2e.sh")
+require(
+    migration,
+    [
+        "0026_fabric_server_bridge_0146",
+        "0027_forge_neoforge_server_bridge_0147",
+        "kind IN ('forge','neoforge')",
+        "non-canonical kind bypassed constraint",
+    ],
+    "0.14.6 -> 0.14.7 migration E2E",
+)
+for text, label in (
+    (read("scripts/release/preflight.sh"), "preflight"),
+    (read(".github/workflows/ci.yml"), "CI"),
+):
+    require(
+        text,
+        [
+            "serverbridge-forge-neoforge-0147.py",
+            "run-forge-neoforge-server-bridge-migration-e2e.sh",
+        ],
+        f"0.14.7 {label} wiring",
+    )
+print(f"Launcher 0.14.7 Forge + NeoForge Server Bridge gate: OK ({version})")

@@ -186,7 +186,7 @@ type ComponentCatalog = {
   }[];
   defaultPreset?: string;
 };
-// UI explanation only. NeverRuntime's verified resolver is authoritative for IO and launch.
+// UI explanation only. Runtime's verified resolver is authoritative for IO and launch.
 function previewVersion0243(actual: string, range: string): boolean {
   if (!range.trim() || range.trim() === "*") return true;
   const parse = (value: string): { parts: number[]; pre: string[] } | null => {
@@ -593,7 +593,7 @@ type DesktopReadiness = {
   readiness: BackendReadiness;
   serviceStatus: BackendServiceStatus;
   apiVersion: "v1";
-  runtime: "NeverRuntime";
+  runtime: "Runtime";
 };
 type DesktopDiagnosticsPolicy = {
   enabled?: boolean;
@@ -606,7 +606,7 @@ type DesktopDiagnosticsPolicy = {
 type DesktopBindingPolicy = {
   apiVersion: "v1";
   manifestVerification: "Ed25519 pinned-key required";
-  runtime: "NeverRuntime";
+  runtime: "Runtime";
 };
 type DesktopBindingResult = {
   status: string;
@@ -837,7 +837,7 @@ const defaultSettings: DesktopSettings = {
 
 function loadSettings(): DesktopSettings {
   try {
-    const raw = localStorage.getItem("neverlauncher.desktop.settings");
+    const raw = localStorage.getItem("launcher.desktop.settings");
     return raw ? { ...defaultSettings, ...JSON.parse(raw) } : defaultSettings;
   } catch {
     return defaultSettings;
@@ -1116,12 +1116,9 @@ function App() {
   useEffect(() => {
     let mounted = true;
     let unlisten: (() => void) | undefined;
-    void listen<DownloadProgress>(
-      "neverlauncher-download-progress",
-      (event) => {
-        if (mounted) setDownloadProgress(event.payload);
-      },
-    )
+    void listen<DownloadProgress>("launcher-download-progress", (event) => {
+      if (mounted) setDownloadProgress(event.payload);
+    })
       .then((stop) => {
         if (mounted) unlisten = stop;
         else stop();
@@ -1146,7 +1143,7 @@ function App() {
   const [diagnosticStatus03510, setDiagnosticStatus03510] = useState("");
   const [diagnosticBusy03510, setDiagnosticBusy03510] = useState(false);
   const [logs, setLogs] = useState<string[]>([
-    `NeverLauncher Desktop ${DESKTOP_VERSION}: product-клиент ожидает first-run подключение к Backend API.`,
+    `Launcher Desktop ${DESKTOP_VERSION}: product-клиент ожидает first-run подключение к Backend API.`,
   ]);
   const [backendStatus, setBackendStatus] = useState<string>("не проверен");
   const [projects, setProjects] = useState<BackendProject[]>([]);
@@ -1410,14 +1407,14 @@ function App() {
         : stage === "launching"
           ? "Запуск Minecraft"
           : screen === "auth" || !authSession
-            ? "Вход в NeverLauncher"
+            ? "Вход в Launcher"
             : selectedProfile
               ? "Выбор / подготовка профиля"
               : "Выбор проекта";
     const details =
       stage === "running"
         ? `Minecraft · ${selectedProfile || "Клиент"}`
-        : "NeverLauncher";
+        : "Launcher";
     const update = () =>
       void callTauri<void>("discord_presence_set", {
         request: {
@@ -1472,10 +1469,7 @@ function App() {
 
   useEffect(() => {
     const next = normalizedSettings(settings);
-    localStorage.setItem(
-      "neverlauncher.desktop.settings",
-      JSON.stringify(next),
-    );
+    localStorage.setItem("launcher.desktop.settings", JSON.stringify(next));
     if (next.projectId && next.projectId !== selectedProject)
       setSelectedProject(next.projectId);
     if (next.profileId && next.profileId !== selectedProfile)
@@ -1601,10 +1595,7 @@ function App() {
         log(`Desktop config не сохранён: ${String(error)}`);
         return;
       }
-      localStorage.setItem(
-        "neverlauncher.desktop.settings",
-        JSON.stringify(next),
-      );
+      localStorage.setItem("launcher.desktop.settings", JSON.stringify(next));
       log(
         "Web preview: localStorage fallback не является production configuration.",
       );
@@ -1635,7 +1626,7 @@ function App() {
       setScreen("firstRun");
       log(result.message);
     } catch {
-      localStorage.removeItem("neverlauncher.desktop.settings");
+      localStorage.removeItem("launcher.desktop.settings");
       setSettings(defaultSettings);
       setSelectedProject("");
       setSelectedProfile("");
@@ -1843,7 +1834,7 @@ function App() {
         session.accessToken,
         {
           oldDeviceId,
-          name: `NeverLauncher Desktop · ${navigator.platform || "desktop"}`.slice(
+          name: `Launcher Desktop · ${navigator.platform || "desktop"}`.slice(
             0,
             96,
           ),
@@ -2307,7 +2298,7 @@ function App() {
       "/api/v1/auth/devices/register/begin",
       session.accessToken,
       {
-        name: `NeverLauncher Desktop · ${navigator.platform || "desktop"}`.slice(
+        name: `Launcher Desktop · ${navigator.platform || "desktop"}`.slice(
           0,
           96,
         ),
@@ -2645,7 +2636,7 @@ function App() {
 
   async function linkPasswordProvider0293(): Promise<void> {
     if (!authSession?.accessToken)
-      throw new Error("Сначала войдите в NeverLauncher.");
+      throw new Error("Сначала войдите в Launcher.");
     if (
       !linkedProvider0293 ||
       !linkedIdentifier0293.trim() ||
@@ -2800,7 +2791,7 @@ function App() {
         readiness: readiness ?? {},
         serviceStatus: status ?? {},
         apiVersion: "v1",
-        runtime: "NeverRuntime",
+        runtime: "Runtime",
       });
       setDiagnosticsPolicy(
         diagnostics
@@ -2813,7 +2804,7 @@ function App() {
       setBindingPolicy({
         apiVersion: "v1",
         manifestVerification: "Ed25519 pinned-key required",
-        runtime: "NeverRuntime",
+        runtime: "Runtime",
       });
       setBackendStatus("ready");
       log(
@@ -3041,7 +3032,7 @@ function App() {
       setRequirementsError0359("");
       const actualRoot = settings.gameDirectory.includes(result.projectId)
         ? settings.gameDirectory
-        : `${settings.gameDirectory || "./.neverlauncher/projects"}/${result.projectId}/${result.profileId}`;
+        : `${settings.gameDirectory || "./.launcher/projects"}/${result.projectId}/${result.profileId}`;
       const newRequirements = await callTauri<ReleaseRequirements0359>(
         "preview_release_requirements_0359",
         {
@@ -3073,7 +3064,7 @@ function App() {
       }
       const effectiveRoot = settings.gameDirectory.includes(result.projectId)
         ? settings.gameDirectory
-        : `${settings.gameDirectory || "./.neverlauncher/projects"}/${result.projectId}/${result.profileId}`;
+        : `${settings.gameDirectory || "./.launcher/projects"}/${result.projectId}/${result.profileId}`;
       // Do not cache a merely fetched release. The active installed release
       // must be committed and verified before replacing the offline cache.
       log(
@@ -3087,7 +3078,7 @@ function App() {
           ...current,
           gameDirectory: current.gameDirectory.includes(result.projectId)
             ? current.gameDirectory
-            : `${current.gameDirectory || "./.neverlauncher/projects"}/${result.projectId}/${result.profileId}`,
+            : `${current.gameDirectory || "./.launcher/projects"}/${result.projectId}/${result.profileId}`,
           projectId: result.projectId,
           profileId: result.profileId,
           channel: result.channel || current.channel,
@@ -4231,7 +4222,7 @@ function App() {
               "Подключите официальный Minecraft-профиль в разделе авторизации.",
             );
           if (!authSession?.accessToken || !authSession.sessionId)
-            throw new Error("Необходимо войти в NeverLauncher.");
+            throw new Error("Необходимо войти в Launcher.");
           officialLaunchIdentity = {
             backendUrl: settings.backendUrl,
             neverToken: authSession.accessToken,
@@ -4728,7 +4719,7 @@ function App() {
                 className="brandIcon0355"
               />
             )}
-            {signedProvisioning0352?.displayName || "NeverLauncher"}
+            {signedProvisioning0352?.displayName || "Launcher"}
           </div>
           {signedProvisioning0352?.branding?.publisher && (
             <p className="brandPublisher0355">
@@ -5735,7 +5726,7 @@ function FirstRunSigned0352({
           <p>
             {manifest.minecraft.version} · {manifest.minecraft.loader} ·{" "}
             {manifest.files.length} файлов. Фактические зависимости и конфликты
-            проверит NeverRuntime перед установкой.
+            проверит Runtime перед установкой.
           </p>
           <div className="toolbar inline">
             <button onClick={onComponents}>{t.detailMods}</button>
@@ -5790,8 +5781,8 @@ function FirstRunPanel({
     <section className="panel">
       <h3>Первый запуск</h3>
       <p>
-        NeverLauncher {DESKTOP_VERSION} требует явной привязки Desktop к Backend
-        API и реальному проекту; запуск проходит через рабочий движок запуска и
+        Launcher {DESKTOP_VERSION} требует явной привязки Desktop к Backend API
+        и реальному проекту; запуск проходит через рабочий движок запуска и
         режим восстановления.
       </p>
       <div className="settings">
@@ -5989,7 +5980,7 @@ function AuthPanel({
     <section className="panel">
       <h3>Вход, сессия и Device Management</h3>
       <p>
-        NeverLauncher {DESKTOP_VERSION} регистрирует отдельную device identity,
+        Launcher {DESKTOP_VERSION} регистрирует отдельную device identity,
         подтверждает владение ключом и для hardware P-256 выполняет
         challenge-response proof-of-possession (это НЕ удалённая TPM
         attestation). Стандартный профиль доступен с подтверждённым устройством

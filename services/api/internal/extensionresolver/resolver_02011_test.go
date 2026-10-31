@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 type registryFixture02011 struct {
@@ -47,7 +47,7 @@ func (f registryFixture02011) publish(t *testing.T, id, version string, channels
 	}
 	_, err := f.repo.PublishExtensionRegistryVersion(context.Background(), model.ExtensionRegistryPublication{
 		Manifest: manifest, PublisherID: "publisher.test",
-		Compatibility: model.ExtensionRegistryCompatibility{MinNeverLauncher: "0.20.0", MaxNeverLauncher: "0.21.99", MinAPI: "3.7", MaxAPI: "3.7"},
+		Compatibility: model.ExtensionRegistryCompatibility{MinLauncher: "0.20.0", MaxLauncher: "0.21.99", MinAPI: "3.7", MaxAPI: "3.7"},
 		Artifact:      model.ExtensionRegistryArtifact{PackageIdentity: "sha256:" + sha, ExtensionID: id, Version: version, SHA256: sha, Size: int64(len(id) + len(version) + 1), StorageProject: "registry", StorageVersion: id + "-" + version, StoragePath: sha + ".nlext", SignatureKeyFingerprint: f.fp},
 		Channels:      channels,
 	})
@@ -125,7 +125,7 @@ func TestResolverRejectsIncompatiblePlatformAndAPI02011(t *testing.T) {
 	sha := hex.EncodeToString(h[:])
 	_, err := f.repo.PublishExtensionRegistryVersion(context.Background(), model.ExtensionRegistryPublication{
 		Manifest:    model.ExtensionManifest{SchemaVersion: "2.0", ID: id, Name: id, Version: "1.0.0", Publisher: "publisher.test", API: "1.0", Targets: []model.ExtensionTarget{{Kind: "backend", Entrypoint: "backend/bin/x"}}},
-		PublisherID: "publisher.test", Compatibility: model.ExtensionRegistryCompatibility{MinNeverLauncher: "0.20.0", MinAPI: "2.0", SupportedOS: []string{"windows"}, SupportedArchitectures: []string{"amd64"}},
+		PublisherID: "publisher.test", Compatibility: model.ExtensionRegistryCompatibility{MinLauncher: "0.20.0", MinAPI: "2.0", SupportedOS: []string{"windows"}, SupportedArchitectures: []string{"amd64"}},
 		Artifact: model.ExtensionRegistryArtifact{PackageIdentity: "sha256:" + sha, ExtensionID: id, Version: "1.0.0", SHA256: sha, Size: 1, StorageProject: "r", StorageVersion: "r", StoragePath: "r", SignatureKeyFingerprint: f.fp}, Channels: []string{"stable"},
 	})
 	if err != nil {

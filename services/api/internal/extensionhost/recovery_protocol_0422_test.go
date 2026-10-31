@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // If Stop races Java's hello, the old bearer token must not turn a stopped

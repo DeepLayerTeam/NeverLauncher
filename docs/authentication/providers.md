@@ -45,7 +45,7 @@ Backend включает внутреннюю auth-систему, поддер�
 
 ## SQL Mapping & Legacy Hash (0.29.4)
 
-Configure **one explicit password verifier per SQL provider**. Existing `argon2id`, `bcrypt`, `pbkdf2-sha256`, and opt-in `legacy-sha256` continue to work. In addition, NeverLauncher supports Gravit `digest`, `doubleDigest`, and portable WordPress PHPass (`$P$`, `$H$`) from AdditionalHash. Digest algorithms are explicitly selected from `md5`, `sha1`, `sha256`, `sha512`; the recorded text format is `hex` (default) or canonical padded `base64`. `doubleDigestHex: true` hashes the lowercase hexadecimal representation of the first digest; `false` hashes its raw bytes. These Gravit digests are **unsalted**, while PHPass stores its salt and iteration count inside the hash. Do not assume that custom CMS salts, custom password verifiers, or arbitrary Gravit module extensions are compatible.
+Configure **one explicit password verifier per SQL provider**. Existing `argon2id`, `bcrypt`, `pbkdf2-sha256`, and opt-in `legacy-sha256` continue to work. In addition, Launcher supports Gravit `digest`, `doubleDigest`, and portable WordPress PHPass (`$P$`, `$H$`) from AdditionalHash. Digest algorithms are explicitly selected from `md5`, `sha1`, `sha256`, `sha512`; the recorded text format is `hex` (default) or canonical padded `base64`. `doubleDigestHex: true` hashes the lowercase hexadecimal representation of the first digest; `false` hashes its raw bytes. These Gravit digests are **unsalted**, while PHPass stores its salt and iteration count inside the hash. Do not assume that custom CMS salts, custom password verifiers, or arbitrary Gravit module extensions are compatible.
 
 ```json
 [

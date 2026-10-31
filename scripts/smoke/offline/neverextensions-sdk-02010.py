@@ -29,13 +29,13 @@ required = [
     "sdk/cli/go/openapi_generated.go",
     "sdk/cli/go/api_types_generated.go",
     "sdk/admin/typescript/package.json",
-    "sdk/admin/typescript/neverlauncher-admin.ts",
+    "sdk/admin/typescript/launcher-admin.ts",
     "sdk/admin/typescript/generated.ts",
     "sdk/admin/typescript/openapi-generated.ts",
     "sdk/admin/typescript/api-types-generated.ts",
     "sdk/admin/typescript/api-requests-generated.ts",
     "sdk/desktop/typescript/package.json",
-    "sdk/desktop/typescript/neverlauncher-desktop.ts",
+    "sdk/desktop/typescript/launcher-desktop.ts",
     "sdk/desktop/typescript/generated.ts",
     "sdk/desktop/typescript/openapi-generated.ts",
     "sdk/desktop/typescript/api-types-generated.ts",
@@ -46,7 +46,7 @@ required = [
     "sdk/api/extension-host-protocol.json",
     "sdk/api/openapi-operations-generated.json",
     "scripts/sdk/generate-types.py",
-    "cli/cmd/neverlauncher/extension_sdk_02010.go",
+    "cli/cmd/launcher/extension_sdk_02010.go",
 ]
 for rel in required:
     require((ROOT / rel).is_file(), f"missing SDK production file {rel}")
@@ -66,9 +66,9 @@ for token in (
 cli_sdk = read("sdk/cli/go/client.go")
 for token in ("NewApp", "Command", "Main", "Hello", "Capability", "ExitError"):
     require(token in cli_sdk, f"CLI Go SDK missing {token}")
-admin = read("sdk/admin/typescript/neverlauncher-admin.ts")
+admin = read("sdk/admin/typescript/launcher-admin.ts")
 for token in (
-    "NeverLauncherAdminBridge",
+    "LauncherAdminBridge",
     "event.source!==window.parent",
     "rpc.request",
     "close()",
@@ -77,9 +77,9 @@ for token in (
         token.replace(" ", "") in admin.replace(" ", ""),
         f"Admin TypeScript SDK missing {token}",
     )
-desktop = read("sdk/desktop/typescript/neverlauncher-desktop.ts")
+desktop = read("sdk/desktop/typescript/launcher-desktop.ts")
 for token in (
-    "NeverLauncherDesktopBridge",
+    "LauncherDesktopBridge",
     "tauri.platform",
     "tauri.openGameDirectory",
     "event.source!==window.parent",
@@ -92,7 +92,7 @@ rust = read("sdk/desktop/rust/src/lib.rs")
 for token in ("RpcRequest", "DESKTOP_PROTOCOL_VERSION", "validate"):
     require(token in rust, f"Desktop Rust SDK missing {token}")
 
-cmd = read("cli/cmd/neverlauncher/extension_sdk_02010.go")
+cmd = read("cli/cmd/launcher/extension_sdk_02010.go")
 for token in (
     "extensionInit02010",
     "extensionBuildCommand02010",
@@ -110,10 +110,10 @@ for token in (
     require(token in cmd, f"SDK CLI workflow missing {token}")
 require(
     'return "backend/bin/extension-backend"'
-    in read("cli/cmd/neverlauncher/project_commands.go"),
+    in read("cli/cmd/launcher/project_commands.go"),
     "backend SDK entrypoint must be executable payload",
 )
-routing = read("cli/cmd/neverlauncher/extension_commands_0201.go")
+routing = read("cli/cmd/launcher/extension_commands_0201.go")
 require(
     'case "init", "dev", "test", "build"' in routing,
     "extension SDK commands are not routed",
@@ -132,8 +132,6 @@ require(
 
 for example in ("backend-health", "cli-status", "admin-dashboard", "desktop-tool"):
     root = ROOT / "examples/extensions" / example
-    require(
-        (root / "neverlauncher-extension.json").is_file(), f"missing example {example}"
-    )
+    require((root / "launcher-extension.json").is_file(), f"missing example {example}")
 
 print("Extensions SDK 0.20.10 production gate: OK")

@@ -10,7 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 HOOKS = ROOT / "runtime/guard-sensor/src/hook_engine.rs"
 SENSOR = ROOT / "runtime/guard-sensor/src/lib.rs"
-RUNTIME = ROOT / "runtime/neverruntime/src/lib.rs"
+RUNTIME = ROOT / "runtime/runtime/src/lib.rs"
 
 
 class WindowsPostloadProvenanceTests(unittest.TestCase):
@@ -107,7 +107,7 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         self.assertNotIn("DISABLE_JVM_GUARD", source)
 
     def test_runtime_event_watchdog_remains_bounded_and_fail_closed(self):
-        source = (ROOT / "runtime/neverruntime/src/windows_module_guard.rs").read_text(
+        source = (ROOT / "runtime/runtime/src/windows_module_guard.rs").read_text(
             encoding="utf-8"
         )
         self.assertIn(
@@ -130,7 +130,7 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         )
 
     def test_unloads_require_signed_notification_and_bounded_grace(self):
-        source = (ROOT / "runtime/neverruntime/src/windows_module_guard.rs").read_text(
+        source = (ROOT / "runtime/runtime/src/windows_module_guard.rs").read_text(
             encoding="utf-8"
         )
         self.assertIn("UNLOAD_EVENT_GRACE: Duration = Duration::from_secs(4)", source)
@@ -192,7 +192,7 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
         sensor = (ROOT / "runtime/guard-sensor/src/continuous_guard.rs").read_text(
             encoding="utf-8"
         )
-        guard = (ROOT / "runtime/neverruntime/src/windows_module_guard.rs").read_text(
+        guard = (ROOT / "runtime/runtime/src/windows_module_guard.rs").read_text(
             encoding="utf-8"
         )
         import re
@@ -222,9 +222,9 @@ class WindowsGuardRaceRegressionTests(unittest.TestCase):
 
 class AdversarialProbeRuntimeTests(unittest.TestCase):
     def test_module_lifecycle_probe_allows_two_full_heartbeat_cycles(self):
-        source = (
-            ROOT / "runtime/neverruntime/tests/guard_sensor_windows.rs"
-        ).read_text(encoding="utf-8")
+        source = (ROOT / "runtime/runtime/tests/guard_sensor_windows.rs").read_text(
+            encoding="utf-8"
+        )
         block = source.split("fn compile_module_probe(", 1)[1].split(
             "fn compile_memory_integrity_probe(", 1
         )[0]
@@ -235,7 +235,7 @@ class AdversarialProbeRuntimeTests(unittest.TestCase):
 
 class MaterializedWindowsLWJGLTests(unittest.TestCase):
     def test_windows_classifier_natives_are_published_as_verified_flat_copies(self):
-        source = (ROOT / "cli/cmd/neverlauncher/vanilla_runtime.go").read_text(
+        source = (ROOT / "cli/cmd/launcher/vanilla_runtime.go").read_text(
             encoding="utf-8"
         )
         self.assertIn(
@@ -252,7 +252,7 @@ class MaterializedWindowsLWJGLTests(unittest.TestCase):
         self.assertIn("writeAtomicBytes(to, data, 0o644)", source)
 
     def test_classpath_lwjgl_extracts_only_into_pinned_client_directory(self):
-        runtime = (ROOT / "runtime/neverruntime/src/compatibility.rs").read_text(
+        runtime = (ROOT / "runtime/runtime/src/compatibility.rs").read_text(
             encoding="utf-8"
         )
         source = (ROOT / "runtime/guard-sensor/src/jvm_awareness.rs").read_text(
@@ -264,7 +264,7 @@ class MaterializedWindowsLWJGLTests(unittest.TestCase):
         self.assertIn(
             "args.retain(|arg| !arg.starts_with(LWJGL_EXTRACT_PROPERTY))", runtime
         )
-        self.assertIn('join(".neverlauncher").join("lwjgl-extract")', runtime)
+        self.assertIn('join(".launcher").join("lwjgl-extract")', runtime)
         self.assertIn('join("windows").join(std::env::consts::ARCH)', source)
         self.assertIn('extract_root.join("lwjgl.dll")', source)
         self.assertIn(
@@ -297,7 +297,7 @@ class MaterializedWindowsLWJGLTests(unittest.TestCase):
         self.assertIn("rejected reparse/symlink native path", source)
         self.assertIn("outside pinned client root", source)
         self.assertIn("RUNTIME_NATIVE_LOAD_FAILED.store(true", source)
-        launch = (ROOT / "runtime/neverruntime/src/lib.rs").read_text(encoding="utf-8")
+        launch = (ROOT / "runtime/runtime/src/lib.rs").read_text(encoding="utf-8")
         self.assertIn("compatibility::pin_windows_lwjgl_extract_path(", launch)
         self.assertIn('if strategy == "compatibility" || strategy == "mojang"', launch)
 

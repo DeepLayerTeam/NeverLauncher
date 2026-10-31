@@ -115,24 +115,24 @@ func macOSTargetMetadata0154(arch string) (rustTarget string, cpuType uint32, cp
 
 func expectedMacOSArtifacts0154(arch string) map[string]string {
 	return map[string]string{
-		"cli":              "neverlauncher-cli-macos-" + arch,
-		"desktop-launcher": "neverlauncher-desktop-macos-" + arch,
+		"cli":              "launcher-cli-macos-" + arch,
+		"desktop-launcher": "launcher-desktop-macos-" + arch,
 		"guard":            "guard-macos-" + arch,
-		"runtime":          "neverruntime-macos-" + arch,
+		"runtime":          "runtime-macos-" + arch,
 	}
 }
 
 func expectedMacOSBundlePaths0154() map[string]string {
 	return map[string]string{
-		"cli":              "NeverLauncher.app/Contents/Helpers/neverlauncher-cli",
-		"desktop-launcher": "NeverLauncher.app/Contents/MacOS/neverlauncher-desktop",
-		"guard":            "NeverLauncher.app/Contents/Helpers/guard",
-		"runtime":          "NeverLauncher.app/Contents/Helpers/neverruntime",
+		"cli":              "Launcher.app/Contents/Helpers/launcher-cli",
+		"desktop-launcher": "Launcher.app/Contents/MacOS/launcher-desktop",
+		"guard":            "Launcher.app/Contents/Helpers/guard",
+		"runtime":          "Launcher.app/Contents/Helpers/runtime",
 	}
 }
 
 func expectedMacOSPackage0154(ver, arch string) (string, string) {
-	return "neverlauncher-desktop-" + ver + "-macos-" + arch + ".zip", "MACOS_PACKAGE_MANIFEST_" + strings.ToUpper(arch) + ".json"
+	return "launcher-desktop-" + ver + "-macos-" + arch + ".zip", "MACOS_PACKAGE_MANIFEST_" + strings.ToUpper(arch) + ".json"
 }
 
 func inspectMacOSMachOBytes0154(data []byte) (macOSMachOInfo0154, error) {
@@ -222,7 +222,7 @@ func verifyMacOSPackageManifest0154(dir, ver, arch string, requireSigned bool, e
 	if err != nil {
 		return MacOSPackageManifest0154{}, "", err
 	}
-	if manifest.SchemaVersion != "1.0" || manifest.Product != "NeverLauncher" || manifest.ProductVersion != ver || manifest.Platform != "macos" || manifest.Architecture != arch || manifest.CPUType != cpuText || manifest.RustTarget != rustTarget || manifest.PackageFormat != "zip" || manifest.PackageArtifact != expectedPackage || manifest.BundleIdentifier != "ru.skif4er.neverlauncher" || strings.TrimSpace(manifest.MinimumSystemVersion) == "" || manifest.HashBindingMode != "final-artifact-sha256" {
+	if manifest.SchemaVersion != "1.0" || manifest.Product != "Launcher" || manifest.ProductVersion != ver || manifest.Platform != "macos" || manifest.Architecture != arch || manifest.CPUType != cpuText || manifest.RustTarget != rustTarget || manifest.PackageFormat != "zip" || manifest.PackageArtifact != expectedPackage || manifest.BundleIdentifier != "ru.skif4er.launcher" || strings.TrimSpace(manifest.MinimumSystemVersion) == "" || manifest.HashBindingMode != "final-artifact-sha256" {
 		return MacOSPackageManifest0154{}, "", fmt.Errorf("macOS %s package manifest identity/schema mismatch", arch)
 	}
 	expected := expectedMacOSArtifacts0154(arch)
@@ -386,7 +386,7 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 			return fmt.Errorf("macOS %s package payload Mach-O mismatch for %s", arch, artifact.BundlePath)
 		}
 	}
-	manifestPath := "NeverLauncher.app/Contents/Resources/MACOS_PACKAGE_MANIFEST.json"
+	manifestPath := "Launcher.app/Contents/Resources/MACOS_PACKAGE_MANIFEST.json"
 	embeddedRaw, ok := entries[manifestPath]
 	if !ok {
 		return fmt.Errorf("macOS %s package missing embedded manifest", arch)
@@ -396,7 +396,7 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 		return err
 	}
 	if componentTransactionalUpdateRequired0157(ver) {
-		updatePath := "NeverLauncher.app/Contents/Resources/" + componentUpdateManifestFile0157
+		updatePath := "Launcher.app/Contents/Resources/" + componentUpdateManifestFile0157
 		updateRaw, ok := entries[updatePath]
 		if !ok {
 			return fmt.Errorf("macOS %s package missing %s", arch, updatePath)
@@ -409,7 +409,7 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 		if evidencePackage.NotaryStatus == "Accepted" && evidencePackage.Stapled && evidencePackage.StaplerValidated && evidencePackage.GatekeeperAccepted {
 			expectedTrust = "developer-id-notarized"
 		}
-		if update.SchemaVersion != "1.0" || update.Product != "NeverLauncher" || update.ProductVersion != ver || update.Platform != "macos" || update.Architecture != arch || update.Layout != "macos-app-bundle" || update.BundleName != "NeverLauncher.app" || update.TrustMode != expectedTrust || len(update.Components) != 3 {
+		if update.SchemaVersion != "1.0" || update.Product != "Launcher" || update.ProductVersion != ver || update.Platform != "macos" || update.Architecture != arch || update.Layout != "macos-app-bundle" || update.BundleName != "Launcher.app" || update.TrustMode != expectedTrust || len(update.Components) != 3 {
 			return fmt.Errorf("macOS %s component update manifest identity mismatch", arch)
 		}
 		byComponent := map[string]MacOSPackageArtifact0154{}
@@ -417,12 +417,12 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 			byComponent[row.Component] = row
 		}
 		aliases := map[string]string{"desktop": "desktop-launcher", "guard": "guard", "runtime": "runtime"}
-		expectedPath := map[string]string{"desktop": "Contents/MacOS/neverlauncher-desktop", "guard": "Contents/Helpers/guard", "runtime": "Contents/Helpers/neverruntime"}
+		expectedPath := map[string]string{"desktop": "Contents/MacOS/launcher-desktop", "guard": "Contents/Helpers/guard", "runtime": "Contents/Helpers/runtime"}
 		seen := map[string]bool{}
 		for _, row := range update.Components {
 			sourceComponent, known := aliases[row.Component]
 			artifact, exists := byComponent[sourceComponent]
-			if !known || !exists || seen[row.Component] || row.SourcePath != expectedPath[row.Component] || row.TargetPath != row.SourcePath || !row.Executable || row.Size != artifact.Size || !strings.EqualFold(row.SHA256, artifact.SHA256) || artifact.BundlePath != "NeverLauncher.app/"+row.SourcePath {
+			if !known || !exists || seen[row.Component] || row.SourcePath != expectedPath[row.Component] || row.TargetPath != row.SourcePath || !row.Executable || row.Size != artifact.Size || !strings.EqualFold(row.SHA256, artifact.SHA256) || artifact.BundlePath != "Launcher.app/"+row.SourcePath {
 				return fmt.Errorf("macOS %s component update binding mismatch for %s", arch, row.Component)
 			}
 			seen[row.Component] = true
@@ -530,7 +530,7 @@ func verifyMacOSNativePackage0154(packagePath, expectedTeamID string) error {
 	if _, err := os.Stat(spctl); err != nil {
 		return errors.New("spctl is required for Gatekeeper verification")
 	}
-	tmp, err := os.MkdirTemp("", "neverlauncher-macos-verify-*")
+	tmp, err := os.MkdirTemp("", "launcher-macos-verify-*")
 	if err != nil {
 		return err
 	}
@@ -542,7 +542,7 @@ func verifyMacOSNativePackage0154(packagePath, expectedTeamID string) error {
 	if output, err := exec.Command(ditto, "-x", "-k", packagePath, tmp).CombinedOutput(); err != nil {
 		return fmt.Errorf("ditto package extraction failed: %w: %s", err, strings.TrimSpace(string(output)))
 	}
-	app := filepath.Join(tmp, "NeverLauncher.app")
+	app := filepath.Join(tmp, "Launcher.app")
 	if output, err := exec.Command(codesign, "--verify", "--deep", "--strict", "--verbose=2", app).CombinedOutput(); err != nil {
 		return fmt.Errorf("codesign verify failed: %w: %s", err, strings.TrimSpace(string(output)))
 	}
@@ -574,7 +574,7 @@ func verifyMacOSNotarizationEvidenceWithNativeVerifier0154(dir, ver string, requ
 	if err != nil {
 		return err
 	}
-	if evidence.SchemaVersion != "1.0" || evidence.Product != "NeverLauncher" || evidence.ProductVersion != ver || evidence.Platform != "macos" {
+	if evidence.SchemaVersion != "1.0" || evidence.Product != "Launcher" || evidence.ProductVersion != ver || evidence.Platform != "macos" {
 		return errors.New("macOS notarization evidence identity/schema mismatch")
 	}
 	production := evidence.SigningMode == "developer-id-notarized"

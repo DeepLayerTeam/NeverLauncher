@@ -36,7 +36,7 @@ func writeCompatibilityEvidenceFixture(t *testing.T, dir, ver, commit string) (s
 	checks := map[string]bool{"actualClient": true, "packageVerified": true, "signedManifest": true, "cleanSync": true, "paperJoin": true, "sessionRevokeDeny": true, "paperHealthy": true}
 	evidence := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	matrix := releaseCompatibilityMatrix{
-		SchemaVersion: "1.0", ProductVersion: ver, GeneratedAt: "2026-09-15T00:00:00Z", Repository: "DeepLayerTeam/NeverLauncher", Commit: commit, RunID: "12345", Status: "passed", Errors: []string{},
+		SchemaVersion: "1.0", ProductVersion: ver, GeneratedAt: "2026-09-15T00:00:00Z", Repository: "DeepLayerTeam/Launcher", Commit: commit, RunID: "12345", Status: "passed", Errors: []string{},
 		Targets: []releaseCompatibilityResult{
 			{SchemaVersion: "1.0", ProductVersion: ver, TargetID: "vanilla-1.21.1-linux-x64", Status: "passed", MinecraftVersion: "1.21.1", Loader: "vanilla", LoaderSelector: "", OS: "linux", Arch: "x86_64", Commit: commit, RunID: "12345", ExitCode: 0, Checks: checks, EvidenceSHA256: evidence},
 			{SchemaVersion: "1.0", ProductVersion: ver, TargetID: "fabric-1.21.1-linux-x64", Status: "passed", MinecraftVersion: "1.21.1", Loader: "fabric", LoaderSelector: "latest-stable", ResolvedLoaderVersion: "0.16.10", OS: "linux", Arch: "x86_64", Commit: commit, RunID: "12345", ExitCode: 0, Checks: checks, EvidenceSHA256: evidence},
@@ -302,7 +302,7 @@ func vanillaBaselineIIEvidenceFixture(t *testing.T, ver, commit string) ([]byte,
 	targets := releaseCompatibilityTargets{SchemaVersion: "1.0", ProductVersion: ver}
 	matrix := releaseCompatibilityMatrix{
 		SchemaVersion: "1.0", ProductVersion: ver, GeneratedAt: "2026-10-01T00:00:00Z",
-		Repository: "DeepLayerTeam/NeverLauncher", Commit: commit, RunID: "162", Status: "passed", Errors: []string{},
+		Repository: "DeepLayerTeam/Launcher", Commit: commit, RunID: "162", Status: "passed", Errors: []string{},
 	}
 	evidence := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	for _, minecraft := range versions {

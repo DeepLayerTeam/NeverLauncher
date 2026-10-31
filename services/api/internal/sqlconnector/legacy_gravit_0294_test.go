@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 func TestGravitLegacyVerifierVectors(t *testing.T) {

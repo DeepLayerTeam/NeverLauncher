@@ -237,7 +237,7 @@ func TestClientFactory0271ForgeNeoForgeProcessorsAreRealAndPinned(t *testing.T) 
 
 func TestClientFactory0271RejectsOutputInsideManagedTree(t *testing.T) {
 	root := t.TempDir()
-	for _, output := range []string{filepath.Join(root, "result.json"), filepath.Join(root, ".neverlauncher", "install-plan.json"), root} {
+	for _, output := range []string{filepath.Join(root, "result.json"), filepath.Join(root, ".launcher", "install-plan.json"), root} {
 		if err := rejectFactoryOutputPath0271(root, output); err == nil {
 			t.Fatalf("unsafe --output allowed: %s", output)
 		}

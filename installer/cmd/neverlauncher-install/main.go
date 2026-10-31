@@ -3,18 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/installer/internal/installer"
+	"gitflic.ru/skif4er/launcher/installer/internal/installer"
 	"os"
 )
 
 func usage() {
-	fmt.Fprintln(os.Stderr, `neverlauncher-install:
+	fmt.Fprintln(os.Stderr, `launcher-install:
   verify --bundle BUNDLE --trusted-key ED25519_PUBLIC_HEX_FILE
   install --bundle BUNDLE --trusted-key ED25519_PUBLIC_HEX_FILE --target ABSOLUTE_NEW_DIRECTORY
   pack --source FILES --version X.Y.Z --private-key ED25519_SEED_HEX_FILE --output BUNDLE
-  init --output /etc/neverlauncher/service.env --public-url https://host --dsn POSTGRES_DSN --storage /var/lib/neverlauncher/storage
+  init --output /etc/launcher/service.env --public-url https://host --dsn POSTGRES_DSN --storage /var/lib/launcher/storage
   bootstrap-owner --url https://host --email EMAIL --name NAME --password-file 0600_FILE --env-file INSTALL_ENV (or --token-file 0600_FILE)
-  systemd-unit --binary /opt/neverlauncher/bin/neverlauncher-api --env-file /etc/neverlauncher/backend.env --output /etc/systemd/system/neverlauncher.service`)
+  systemd-unit --binary /opt/launcher/bin/launcher-api --env-file /etc/launcher/backend.env --output /etc/systemd/system/launcher.service`)
 }
 func run() error {
 	if len(os.Args) < 2 {
@@ -42,7 +42,7 @@ func run() error {
 				return err
 			}
 		}
-		fmt.Printf("verified NeverLauncher %s\n", v.Manifest.Version)
+		fmt.Printf("verified Launcher %s\n", v.Manifest.Version)
 		return nil
 	case "pack":
 		f := flag.NewFlagSet("pack", flag.ContinueOnError)
@@ -101,7 +101,7 @@ func run() error {
 }
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "neverlauncher-install:", err)
+		fmt.Fprintln(os.Stderr, "launcher-install:", err)
 		os.Exit(1)
 	}
 }

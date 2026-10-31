@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 type fixtureState struct {
@@ -107,12 +107,12 @@ var (
 
 func openFixtureDB(t *testing.T, rows [][]driver.Value) (*sql.DB, *fixtureState) {
 	t.Helper()
-	registerFixtureDriver.Do(func() { sql.Register("neverlauncher-sqlconnector-test", fixtureDriver{states: &fixtureStates}) })
+	registerFixtureDriver.Do(func() { sql.Register("launcher-sqlconnector-test", fixtureDriver{states: &fixtureStates}) })
 	key := strings.ReplaceAll(t.Name(), "/", "-") + time.Now().Format("150405.000000000")
 	state := &fixtureState{rows: rows}
 	fixtureStates.Store(key, state)
 	t.Cleanup(func() { fixtureStates.Delete(key) })
-	db, err := sql.Open("neverlauncher-sqlconnector-test", key)
+	db, err := sql.Open("launcher-sqlconnector-test", key)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +191,7 @@ func TestPasswordAlgorithms(t *testing.T) {
 	if ok, err := verifyPassword("correct horse battery staple", "$2y$10$xskAkxff64efsclNY8HUa.BoeuCiSQFbUuLnwNQc8krReAyjtKS3e", PasswordConfig{Algorithm: "bcrypt"}); err != nil || !ok {
 		t.Fatalf("bcrypt verification failed ok=%v err=%v", ok, err)
 	}
-	salt := []byte("neverlauncher-test-salt")
+	salt := []byte("launcher-test-salt")
 	derived := pbkdf2SHA256([]byte("secret"), salt, 12000, 32)
 	encoded := "$pbkdf2-sha256$12000$" + rawBase64(salt) + "$" + rawBase64(derived)
 	if ok, err := verifyPassword("secret", encoded, PasswordConfig{Algorithm: "pbkdf2-sha256", PBKDF2MinIterations: 10000}); err != nil || !ok {

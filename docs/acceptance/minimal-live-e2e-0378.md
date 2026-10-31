@@ -1,6 +1,6 @@
 # 0.37.8: минимальный SQLite backend — живая интеграционная приёмка
 
-`minimal-live-e2e-0378` в `.github/workflows/ci.yml` — обязательная, **не симулированная** проверка с реальным бинарником `neverlauncher-api` на Linux и постоянными SQLite-файлами. Работа не считается выполненной по прохождению локальных Python unit-тестов: они проверяют только надёжность runner.
+`minimal-live-e2e-0378` в `.github/workflows/ci.yml` — обязательная, **не симулированная** проверка с реальным бинарником `launcher-api` на Linux и постоянными SQLite-файлами. Работа не считается выполненной по прохождению локальных Python unit-тестов: они проверяют только надёжность runner.
 
 ## Что реально исполняется в CI
 
@@ -23,7 +23,7 @@ CI создаёт изолированные **тестовые** Guard/Bridge a
 
 ```bash
 python3 scripts/acceptance/minimal_live_e2e_0378.py \
-  --binary /opt/neverlauncher/bin/neverlauncher-api \
+  --binary /opt/launcher/bin/launcher-api \
   --guard-policy /secure/guard-policy.json \
   --bridge-policy /secure/bridge-policy.json \
   --work-root /private/empty-e2e-directory \

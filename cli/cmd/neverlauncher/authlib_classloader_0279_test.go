@@ -66,7 +66,7 @@ func compatFixture0279(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	putLegacyTestFile0278(t, root, ".neverlauncher/install-plan.json", b)
+	putLegacyTestFile0278(t, root, ".launcher/install-plan.json", b)
 	if err = verifyFactoryPlan0271(root, p); err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestAuthlibClassloader0279ApplyLegacyRuntimeAndTampering(t *testing.T) {
 	agent := compatJarFixture0279(t, true)
 	putLegacyTestFile0278(t, sourceDir, "extra.jar", extra)
 	putLegacyTestFile0278(t, sourceDir, "agent.jar", agent)
-	config := compatRequest0279{SchemaVersion: compatSchema0279, AuthMode: "official", Classpath: []compatInputArtifact0279{{Path: ".neverlauncher/compat/classpath/extra.jar", SHA256: sha256HexBytes(extra), SourceFile: "extra.jar"}}, JavaAgents: []compatInputAgent0279{{Path: ".neverlauncher/compat/agents/agent.jar", SHA256: sha256HexBytes(agent), SourceFile: "agent.jar", Options: "https://auth.example.test"}}}
+	config := compatRequest0279{SchemaVersion: compatSchema0279, AuthMode: "official", Classpath: []compatInputArtifact0279{{Path: ".launcher/compat/classpath/extra.jar", SHA256: sha256HexBytes(extra), SourceFile: "extra.jar"}}, JavaAgents: []compatInputAgent0279{{Path: ".launcher/compat/agents/agent.jar", SHA256: sha256HexBytes(agent), SourceFile: "agent.jar", Options: "https://auth.example.test"}}}
 	b, _ := json.Marshal(config)
 	putLegacyTestFile0278(t, sourceDir, "compat.json", b)
 	if err := handleRuntimeCompat0279([]string{"compat-apply", "--client-dir", root, "--file", filepath.Join(sourceDir, "compat.json"), "--output", filepath.Join(t.TempDir(), "result.json")}); err != nil {
@@ -134,7 +134,7 @@ printf '%s\n' "$@" > "$LEGACY_CAPTURE_ARGV"
 	if err = handleRuntimeCompat0279([]string{"compat-apply", "--client-dir", root, "--file", filepath.Join(sourceDir, "compat.json")}); err == nil {
 		t.Fatal("mutated compatible build without new project")
 	}
-	if err = os.WriteFile(filepath.Join(root, ".neverlauncher/compat/agents/agent.jar"), []byte("tamper"), 0644); err != nil {
+	if err = os.WriteFile(filepath.Join(root, ".launcher/compat/agents/agent.jar"), []byte("tamper"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	if err = verifyFactoryPlan0271(root, p); err == nil {
@@ -147,7 +147,7 @@ func TestAuthlibClassloader0279ModulepathAndUnsupportedRules(t *testing.T) {
 	if err := compatValidateLock0279(&base); err != nil {
 		t.Fatal(err)
 	}
-	base.Modulepath = []compatArtifact0279{{Path: ".neverlauncher/compat/modules/module.jar", SHA256: sha}}
+	base.Modulepath = []compatArtifact0279{{Path: ".launcher/compat/modules/module.jar", SHA256: sha}}
 	if err := compatValidateLock0279(&base); err == nil {
 		t.Fatal("Java 8 modulepath accepted")
 	}
@@ -166,7 +166,7 @@ func TestAuthlibClassloader0279ModulepathAndUnsupportedRules(t *testing.T) {
 	if err := compatValidateLock0279(&base); err == nil {
 		t.Fatal("unpinned auth agent accepted")
 	}
-	base.JavaAgents = []compatAgent0279{{Path: ".neverlauncher/compat/agents/ygg.jar", SHA256: sha, Options: "${TOKEN}"}}
+	base.JavaAgents = []compatAgent0279{{Path: ".launcher/compat/agents/ygg.jar", SHA256: sha, Options: "${TOKEN}"}}
 	if err := compatValidateLock0279(&base); err == nil {
 		t.Fatal("secret placeholder accepted")
 	}
@@ -217,7 +217,7 @@ func TestAuthlibClassloader0279AuthlibProvenanceAndRollback(t *testing.T) {
 	if err = verifyFactoryPlan0271(root, updated); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = os.Stat(filepath.Join(root, ".neverlauncher/compat/patches", sha256HexBytes(overlay)+".jar")); err != nil {
+	if _, err = os.Stat(filepath.Join(root, ".launcher/compat/patches", sha256HexBytes(overlay)+".jar")); err != nil {
 		t.Fatal("overlay not retained", err)
 	}
 	raw, err := os.ReadFile(filepath.Join(root, authlibProvenancePath0279))
@@ -242,7 +242,7 @@ func TestAuthlibClassloader0279RejectInvalidAgentAndCustomModeRequiresOptIn(t *t
 	if err := os.WriteFile(source, invalid, 0600); err != nil {
 		t.Fatal(err)
 	}
-	req := compatRequest0279{SchemaVersion: compatSchema0279, AuthMode: "yggdrasil", JavaAgents: []compatInputAgent0279{{Path: ".neverlauncher/compat/agents/custom.jar", SHA256: sha256HexBytes(invalid), SourceFile: source}}}
+	req := compatRequest0279{SchemaVersion: compatSchema0279, AuthMode: "yggdrasil", JavaAgents: []compatInputAgent0279{{Path: ".launcher/compat/agents/custom.jar", SHA256: sha256HexBytes(invalid), SourceFile: source}}}
 	previous, _ := readFactoryPlan0271(root)
 	_, err := mirrorTransactional0274(context.Background(), root, func(stage string) ([]mirrorAction0274, error) {
 		p, e := readFactoryPlan0271(stage)
@@ -291,7 +291,7 @@ func TestAuthlibClassloader0279RejectSignedAuthlib(t *testing.T) {
 func TestAuthlibClassloader0279ModuleArgumentsAndVerifiedHashes(t *testing.T) {
 	root := t.TempDir()
 	data := compatJarFixture0279(t, false)
-	path := ".neverlauncher/compat/modules/example.jar"
+	path := ".launcher/compat/modules/example.jar"
 	putLegacyTestFile0278(t, root, path, data)
 	lock := compatLock0279{
 		SchemaVersion: compatSchema0279, AuthMode: "offline", JavaMajor: 17,

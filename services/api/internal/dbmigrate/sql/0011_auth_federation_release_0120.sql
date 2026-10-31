@@ -1,4 +1,4 @@
--- NeverLauncher 0.12.0: инварианты выпуска федерации аутентификации. Локальная
+-- Launcher 0.12.0: инварианты выпуска федерации аутентификации. Локальная
 -- аутентификация по паролю — полноценный провайдер и должна соблюдать ту же
 -- каноническую границу идентичности, что SQL/HTTP/OIDC/Microsoft.
 
@@ -54,7 +54,7 @@ END $$;
 
 -- Отложенные триггеры ограничений сохраняют согласованность пользователей с паролем и локальных
 -- идентичностей, даже если пользователь, пароль и идентичность меняются одной транзакцией.
-CREATE OR REPLACE FUNCTION neverlauncher_check_local_identity_for_user() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION launcher_check_local_identity_for_user() RETURNS trigger AS $$
 DECLARE local_subject TEXT;
 BEGIN
     IF btrim(coalesce(NEW.password_hash,''))='' THEN
@@ -72,9 +72,9 @@ DROP TRIGGER IF EXISTS trg_users_require_local_identity ON users;
 CREATE CONSTRAINT TRIGGER trg_users_require_local_identity
 AFTER INSERT OR UPDATE OF password_hash ON users
 DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION neverlauncher_check_local_identity_for_user();
+FOR EACH ROW EXECUTE FUNCTION launcher_check_local_identity_for_user();
 
-CREATE OR REPLACE FUNCTION neverlauncher_check_local_identity_change() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION launcher_check_local_identity_change() RETURNS trigger AS $$
 DECLARE uid TEXT;
 DECLARE pwd TEXT;
 DECLARE local_subject TEXT;
@@ -99,7 +99,7 @@ DROP TRIGGER IF EXISTS trg_auth_identities_preserve_local ON auth_identities;
 CREATE CONSTRAINT TRIGGER trg_auth_identities_preserve_local
 AFTER INSERT OR UPDATE OR DELETE ON auth_identities
 DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION neverlauncher_check_local_identity_change();
+FOR EACH ROW EXECUTE FUNCTION launcher_check_local_identity_change();
 
 CREATE INDEX IF NOT EXISTS idx_auth_identities_provider_subject_user
     ON auth_identities(provider,subject,user_id);

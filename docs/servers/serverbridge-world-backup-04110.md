@@ -1,4 +1,4 @@
-# NeverLauncher 0.41.10 — verified world backup and recovery
+# Launcher 0.41.10 — verified world backup and recovery
 
 The CLI **does not** perform a live `save-all` snapshot. A consistent snapshot is accepted only after Host Supervisor has confirmed a graceful Minecraft `stop` and the JVM has exited. Hosts that run outside the managed supervisor are not automatically discoverable: an untracked Minecraft process must be stopped separately and its exit established by the operator.
 
@@ -12,7 +12,7 @@ nl server-bridge host world-backup verify --server-root /srv/minecraft --backup-
 
 The host-level `world-maintenance.gate` prevents a new JVM spawn during snapshot creation, including the supervisor's crash-loop retry path. Only the backup agent owning the gate can release it. After a crash, the gate persists so that neither an automatic start nor a second backup can overwrite the uncertain state.
 
-To inspect a crashed gate read `.neverlauncher/server-bridge/host/world-maintenance.gate/owner.json`, Host Supervisor `runtime.json`, and the OS process identities. Only once the former owner, supervisor and game JVM are confirmed gone may the operator run:
+To inspect a crashed gate read `.launcher/server-bridge/host/world-maintenance.gate/owner.json`, Host Supervisor `runtime.json`, and the OS process identities. Only once the former owner, supervisor and game JVM are confirmed gone may the operator run:
 
 ```bash
 nl server-bridge host world-backup gate-recover --server-root /srv/minecraft --confirm stale-gate
@@ -31,8 +31,8 @@ The destination must not exist and cannot overlap the live server or backup stor
 ## Reproducible integration checks
 
 ```bash
-cd cli && go test -race ./cmd/neverlauncher -run 'TestWorldBackup' -count=1
-cd cli && go build -o /tmp/nl ./cmd/neverlauncher
+cd cli && go test -race ./cmd/launcher -run 'TestWorldBackup' -count=1
+cd cli && go build -o /tmp/nl ./cmd/launcher
 python3 scripts/test/world-backup-real-java-04110.py --cli /tmp/nl
 python3 scripts/test/world-backup-host-e2e-02810.py --cli /tmp/nl
 ```

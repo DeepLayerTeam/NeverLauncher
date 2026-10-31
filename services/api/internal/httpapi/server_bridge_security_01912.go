@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	serverBridgeV3SigningDomain01912 = "NeverLauncher-ServerBridge-Protocol-v3"
+	serverBridgeV3SigningDomain01912 = "Launcher-ServerBridge-Protocol-v3"
 	serverBridgeSecurityProfile01912 = "serverbridge3-security-01912"
 
 	serverBridgeFeatureV3SigningDomain01912     = "security.protocol-v3-signing-domain"

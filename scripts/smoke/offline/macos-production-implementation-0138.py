@@ -21,7 +21,7 @@ def version_tuple(value):
 if version_tuple((root / "VERSION").read_text().strip()) < (0, 13, 8):
     raise SystemExit("VERSION is older than 0.13.8")
 
-policy = read("runtime/neverruntime/src/macos_policy.rs")
+policy = read("runtime/runtime/src/macos_policy.rs")
 require(
     policy,
     [
@@ -37,7 +37,7 @@ require(
     ],
     "macOS runtime hardening",
 )
-ipc = read("runtime/neverruntime/src/macos_guard.rs")
+ipc = read("runtime/runtime/src/macos_guard.rs")
 require(
     ipc,
     [
@@ -53,11 +53,11 @@ require(
         "integrity-evidence",
         "desktop_sha256",
         "guard_sha256",
-        "ru.skif4er.neverlauncher.guard",
+        "ru.skif4er.launcher.guard",
     ],
     "macOS authenticated IPC/package verification",
 )
-integrity = read("runtime/neverruntime/src/integrity.rs")
+integrity = read("runtime/runtime/src/integrity.rs")
 require(
     integrity,
     [
@@ -70,7 +70,7 @@ require(
     ],
     "macOS integrity evidence",
 )
-att = read("runtime/neverruntime/src/attestation.rs")
+att = read("runtime/runtime/src/attestation.rs")
 require(
     att,
     ["guard/macos-guard-attestation/v1", "Guard Attestation Core macOS v1"],
@@ -122,7 +122,7 @@ require(
         "guardSha256",
         "desktopSize",
         "guardSize",
-        "--identifier ru.skif4er.neverlauncher.guard",
+        "--identifier ru.skif4er.launcher.guard",
     ],
     "macOS release package",
 )
@@ -140,4 +140,4 @@ require(
 )
 preflight = read("scripts/release/preflight.sh")
 require(preflight, ["macos-production-implementation-0138.py"], "preflight macOS gate")
-print("NeverLauncher 0.13.8 macOS production implementation gate: OK")
+print("Launcher 0.13.8 macOS production implementation gate: OK")

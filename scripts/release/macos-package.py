@@ -25,13 +25,13 @@ ARCHES = {
     },
 }
 COMPONENTS = {
-    "cli": ("Contents/Helpers/neverlauncher-cli", "neverlauncher-cli-macos-{arch}"),
+    "cli": ("Contents/Helpers/launcher-cli", "launcher-cli-macos-{arch}"),
     "desktop-launcher": (
-        "Contents/MacOS/neverlauncher-desktop",
-        "neverlauncher-desktop-macos-{arch}",
+        "Contents/MacOS/launcher-desktop",
+        "launcher-desktop-macos-{arch}",
     ),
     "guard": ("Contents/Helpers/guard", "guard-macos-{arch}"),
-    "runtime": ("Contents/Helpers/neverruntime", "neverruntime-macos-{arch}"),
+    "runtime": ("Contents/Helpers/runtime", "runtime-macos-{arch}"),
 }
 
 
@@ -116,7 +116,7 @@ def manifest_cmd(args: argparse.Namespace) -> int:
         artifacts.append(
             {
                 "name": canonical_name,
-                "bundlePath": f"NeverLauncher.app/{bundle_path}",
+                "bundlePath": f"Launcher.app/{bundle_path}",
                 "component": component,
                 "architecture": arch,
                 "cpuType": meta["cpuText"],
@@ -127,10 +127,10 @@ def manifest_cmd(args: argparse.Namespace) -> int:
                 "teamId": args.team_id,
             }
         )
-    package_name = f"neverlauncher-desktop-{args.version}-macos-{arch}.zip"
+    package_name = f"launcher-desktop-{args.version}-macos-{arch}.zip"
     payload = {
         "schemaVersion": "1.0",
-        "product": "NeverLauncher",
+        "product": "Launcher",
         "productVersion": args.version,
         "platform": "macos",
         "architecture": arch,
@@ -138,7 +138,7 @@ def manifest_cmd(args: argparse.Namespace) -> int:
         "rustTarget": meta["rustTarget"],
         "packageFormat": "zip",
         "packageArtifact": package_name,
-        "bundleIdentifier": "ru.skif4er.neverlauncher",
+        "bundleIdentifier": "ru.skif4er.launcher",
         "minimumSystemVersion": "12.0",
         "hashBindingMode": "codesign+external-release-policy",
         "artifacts": artifacts,
@@ -149,13 +149,13 @@ def manifest_cmd(args: argparse.Namespace) -> int:
     by_component = {row["component"]: row for row in artifacts}
     component_update = {
         "schemaVersion": "1.0",
-        "product": "NeverLauncher",
+        "product": "Launcher",
         "productVersion": args.version,
         "platform": "macos",
         "architecture": arch,
         "layout": "macos-app-bundle",
         "trustMode": args.trust_mode,
-        "bundleName": "NeverLauncher.app",
+        "bundleName": "Launcher.app",
         "components": [],
         "supportFiles": [],
     }
@@ -165,7 +165,7 @@ def manifest_cmd(args: argparse.Namespace) -> int:
         ("runtime", "runtime"),
     ):
         row = by_component[source_component]
-        relative = str(row["bundlePath"]).removeprefix("NeverLauncher.app/")
+        relative = str(row["bundlePath"]).removeprefix("Launcher.app/")
         component_update["components"].append(
             {
                 "component": public_name,
@@ -180,8 +180,8 @@ def manifest_cmd(args: argparse.Namespace) -> int:
     component_update["supportFiles"].append(
         {
             "component": "updater",
-            "sourcePath": "Contents/Helpers/neverlauncher-cli",
-            "targetPath": "Contents/Helpers/neverlauncher-cli",
+            "sourcePath": "Contents/Helpers/launcher-cli",
+            "targetPath": "Contents/Helpers/launcher-cli",
             "sha256": cli["sha256"],
             "size": cli["size"],
             "executable": True,
@@ -235,7 +235,7 @@ def finalize_cmd(args: argparse.Namespace) -> int:
         canonical = out / canonical_name
         shutil.copy2(source, canonical)
         artifact["name"] = canonical_name
-        artifact["bundlePath"] = f"NeverLauncher.app/{bundle_path}"
+        artifact["bundlePath"] = f"Launcher.app/{bundle_path}"
         artifact["sha256"] = sha256(source)
         artifact["size"] = source.stat().st_size
     payload["hashBindingMode"] = "final-artifact-sha256"
@@ -286,7 +286,7 @@ def evidence_cmd(args: argparse.Namespace) -> int:
                 or path.stat().st_size != artifact["size"]
             ):
                 raise RuntimeError(f"{artifact['name']}: hash/size drift")
-        package_name = f"neverlauncher-desktop-{args.version}-macos-{arch}.zip"
+        package_name = f"launcher-desktop-{args.version}-macos-{arch}.zip"
         package = out / package_name
         if not package.is_file() or package.stat().st_size <= 0:
             raise RuntimeError(f"missing final macOS package: {package}")
@@ -326,7 +326,7 @@ def evidence_cmd(args: argparse.Namespace) -> int:
         )
     evidence = {
         "schemaVersion": "1.0",
-        "product": "NeverLauncher",
+        "product": "Launcher",
         "productVersion": args.version,
         "platform": "macos",
         "signingMode": args.signing_mode,
@@ -357,7 +357,7 @@ def evidence_cmd(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="NeverLauncher macOS x64/ARM64 production package helper"
+        description="Launcher macOS x64/ARM64 production package helper"
     )
     sub = parser.add_subparsers(dest="command", required=True)
     manifest = sub.add_parser("manifest")

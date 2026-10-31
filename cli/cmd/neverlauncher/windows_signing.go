@@ -111,8 +111,8 @@ func windowsTargetMetadata0152(arch string) (rustTarget string, machine uint16, 
 
 func expectedWindowsSignedArtifacts0152(arch string) map[string]string {
 	return map[string]string{
-		"cli":              "neverlauncher-cli-windows-" + arch + ".exe",
-		"desktop-launcher": "neverlauncher-desktop-windows-" + arch + ".exe",
+		"cli":              "launcher-cli-windows-" + arch + ".exe",
+		"desktop-launcher": "launcher-desktop-windows-" + arch + ".exe",
 		"guard":            "guard-windows-" + arch + ".exe",
 	}
 }
@@ -120,7 +120,7 @@ func expectedWindowsSignedArtifacts0152(arch string) map[string]string {
 func expectedWindowsSignedArtifactsForVersion0157(ver, arch string) map[string]string {
 	artifacts := expectedWindowsSignedArtifacts0152(arch)
 	if componentTransactionalUpdateRequired0157(ver) {
-		artifacts["runtime"] = "neverruntime-windows-" + arch + ".exe"
+		artifacts["runtime"] = "runtime-windows-" + arch + ".exe"
 	}
 	if guardSensorRequired0182(ver) {
 		artifacts["sensor"] = "guard-sensor-windows-" + arch + ".dll"
@@ -130,7 +130,7 @@ func expectedWindowsSignedArtifactsForVersion0157(ver, arch string) map[string]s
 
 func expectedWindowsPackage0152(ver, arch string) (string, string) {
 	manifest := "WINDOWS_PACKAGE_MANIFEST_" + strings.ToUpper(arch) + ".json"
-	return "neverlauncher-desktop-" + ver + "-windows-" + arch + ".zip", manifest
+	return "launcher-desktop-" + ver + "-windows-" + arch + ".zip", manifest
 }
 
 func inspectWindowsPEBytes0152(data []byte) (windowsPEInfo0152, error) {
@@ -394,15 +394,15 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 		return fmt.Errorf("Windows %s package embedded manifest differs from release manifest", arch)
 	}
 	packageEntries := map[string]string{
-		"desktop-launcher": "neverlauncher-desktop-" + ver + "-windows-" + arch + ".exe",
+		"desktop-launcher": "launcher-desktop-" + ver + "-windows-" + arch + ".exe",
 		"guard":            "guard.exe",
 	}
 	if componentTransactionalUpdateRequired0157(ver) {
 		packageEntries = map[string]string{
-			"cli":              "neverlauncher-cli.exe",
-			"desktop-launcher": "neverlauncher-desktop.exe",
+			"cli":              "launcher-cli.exe",
+			"desktop-launcher": "launcher-desktop.exe",
 			"guard":            "guard.exe",
-			"runtime":          "neverruntime.exe",
+			"runtime":          "runtime.exe",
 		}
 	}
 	if guardSensorRequired0182(ver) {
@@ -443,11 +443,11 @@ func verifyWindowsPackage0152(dir, ver, arch string, target WindowsSigningTarget
 		if guardSensorRequired0182(ver) {
 			expectedComponentCount = 4
 		}
-		if update.SchemaVersion != "1.0" || update.Product != "NeverLauncher" || update.ProductVersion != ver || update.Platform != "windows" || update.Architecture != arch || update.Layout != "adjacent-files" || update.TrustMode != expectedTrust || len(update.Components) != expectedComponentCount {
+		if update.SchemaVersion != "1.0" || update.Product != "Launcher" || update.ProductVersion != ver || update.Platform != "windows" || update.Architecture != arch || update.Layout != "adjacent-files" || update.TrustMode != expectedTrust || len(update.Components) != expectedComponentCount {
 			return fmt.Errorf("Windows %s component update manifest identity mismatch", arch)
 		}
 		aliases := map[string]string{"desktop": "desktop-launcher", "guard": "guard", "runtime": "runtime"}
-		expectedEntry := map[string]string{"desktop": "neverlauncher-desktop.exe", "guard": "guard.exe", "runtime": "neverruntime.exe"}
+		expectedEntry := map[string]string{"desktop": "launcher-desktop.exe", "guard": "guard.exe", "runtime": "runtime.exe"}
 		if guardSensorRequired0182(ver) {
 			aliases["sensor"] = "sensor"
 			expectedEntry["sensor"] = "guard-sensor.dll"
@@ -540,7 +540,7 @@ func verifyWindowsSigningEvidence0152(dir, ver string, requireSigned bool) error
 	if err != nil {
 		return err
 	}
-	if evidence.SchemaVersion != "1.0" || evidence.Product != "NeverLauncher" || evidence.ProductVersion != ver || evidence.Platform != "windows" {
+	if evidence.SchemaVersion != "1.0" || evidence.Product != "Launcher" || evidence.ProductVersion != ver || evidence.Platform != "windows" {
 		return errors.New("Windows signing evidence identity/schema mismatch")
 	}
 	if _, err := time.Parse(time.RFC3339Nano, evidence.GeneratedAt); err != nil {

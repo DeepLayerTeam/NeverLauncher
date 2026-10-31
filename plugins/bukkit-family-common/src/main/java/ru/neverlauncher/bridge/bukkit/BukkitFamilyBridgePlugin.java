@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.bukkit;
+package ru.launcher.bridge.bukkit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -13,19 +13,19 @@ import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import ru.neverlauncher.bridge.common.BridgeConfig;
-import ru.neverlauncher.bridge.common.BridgeAdapterCapability;
-import ru.neverlauncher.bridge.common.BridgeAdapterProfile;
-import ru.neverlauncher.bridge.common.BridgeAdapterProfiles;
-import ru.neverlauncher.bridge.common.BridgeControlCommand;
-import ru.neverlauncher.bridge.common.BridgeControlResult;
-import ru.neverlauncher.bridge.common.BridgeDefaults;
-import ru.neverlauncher.bridge.common.BridgeIntegrity;
-import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
-import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
-import ru.neverlauncher.bridge.common.JoinValidationResult;
-import ru.neverlauncher.bridge.common.NeverLauncherApiClient;
-import ru.neverlauncher.bridge.common.NodeIdentity;
+import ru.launcher.bridge.common.BridgeConfig;
+import ru.launcher.bridge.common.BridgeAdapterCapability;
+import ru.launcher.bridge.common.BridgeAdapterProfile;
+import ru.launcher.bridge.common.BridgeAdapterProfiles;
+import ru.launcher.bridge.common.BridgeControlCommand;
+import ru.launcher.bridge.common.BridgeControlResult;
+import ru.launcher.bridge.common.BridgeDefaults;
+import ru.launcher.bridge.common.BridgeIntegrity;
+import ru.launcher.bridge.common.BridgeRuntimeDescriptor;
+import ru.launcher.bridge.common.BridgePlatformTelemetry;
+import ru.launcher.bridge.common.JoinValidationResult;
+import ru.launcher.bridge.common.LauncherApiClient;
+import ru.launcher.bridge.common.NodeIdentity;
 
 import java.nio.file.Path;
 import java.lang.reflect.Method;
@@ -79,7 +79,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         stopping.set(false);
         BukkitFamilyPlatform actual = BukkitFamilyPlatform.detect();
         if (actual != expectedPlatform) {
-            getLogger().severe("NeverLauncher " + expectedPlatform.displayName() + " Bridge cannot run on detected platform " + actual.displayName() + ". Install neverlauncher-" + actual.id() + "-bridge instead.");
+            getLogger().severe("Launcher " + expectedPlatform.displayName() + " Bridge cannot run on detected platform " + actual.displayName() + ". Install launcher-" + actual.id() + "-bridge instead.");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -87,7 +87,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         try {
             runtime = loadRuntime();
         } catch (Exception e) {
-            getLogger().severe("NeverLauncher ServerBridge initialization failed: " + e.getMessage());
+            getLogger().severe("Launcher ServerBridge initialization failed: " + e.getMessage());
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -96,12 +96,12 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         if (getCommand("nlbridge") != null) getCommand("nlbridge").setExecutor(this);
 
         networkExecutor = Executors.newSingleThreadScheduledExecutor(task -> {
-            Thread thread = new Thread(task, "neverlauncher-bridge-io-" + expectedPlatform.id());
+            Thread thread = new Thread(task, "launcher-bridge-io-" + expectedPlatform.id());
             thread.setDaemon(true);
             thread.setUncaughtExceptionHandler((t, error) -> {
                 RuntimeState state = runtime;
                 if (state != null) state.api.publishEvent("server.error", Map.of("component", "io", "message", safeError(error)));
-                getLogger().severe("NeverLauncher bridge I/O worker failed: " + error.getMessage());
+                getLogger().severe("Launcher bridge I/O worker failed: " + error.getMessage());
             });
             return thread;
         });
@@ -112,7 +112,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         state.api.startControlChannel(this::executeControl);
         state.api.publishEvent("server.startup", Map.of("platform", expectedPlatform.id()));
         state.api.publishEvent("server.ready", Map.of("platform", expectedPlatform.id()));
-        getLogger().info("NeverLauncher " + expectedPlatform.displayName() + " Bridge " + BridgeDefaults.VERSION +
+        getLogger().info("Launcher " + expectedPlatform.displayName() + " Bridge " + BridgeDefaults.VERSION +
             " enabled; serverId=" + state.config.serverId +
             "; nodeKeyFingerprint=" + state.identity.fingerprint() +
             "; sha256=" + shortHash(state.pluginSha256) +
@@ -139,7 +139,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             executor.shutdownNow();
             try {
                 if (!executor.awaitTermination(2, TimeUnit.SECONDS)) {
-                    getLogger().warning("NeverLauncher bridge I/O worker did not terminate within shutdown window");
+                    getLogger().warning("Launcher bridge I/O worker did not terminate within shutdown window");
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -156,7 +156,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             return;
         }
         if (state == null) {
-            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, "NeverLauncher ServerBridge is not ready");
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, "Launcher ServerBridge is not ready");
             return;
         }
         String ip = event.getAddress() == null ? "" : event.getAddress().getHostAddress();
@@ -169,10 +169,10 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         ));
         if (!result.allowed) {
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, result.userMessage());
-            getLogger().info("neverlauncher.join.denied username=" + event.getName() + " reason=" + result.reason + " platform=" + expectedPlatform.id());
+            getLogger().info("launcher.join.denied username=" + event.getName() + " reason=" + result.reason + " platform=" + expectedPlatform.id());
             return;
         }
-        getLogger().info("neverlauncher.join.allowed username=" + event.getName() + " serverId=" + state.config.serverId + " platform=" + expectedPlatform.id());
+        getLogger().info("launcher.join.allowed username=" + event.getName() + " serverId=" + state.config.serverId + " platform=" + expectedPlatform.id());
     }
 
     @EventHandler
@@ -219,28 +219,28 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         String sub = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
         RuntimeState state = runtime;
         if (state == null) {
-            sender.sendMessage("NeverLauncher ServerBridge is not initialized");
+            sender.sendMessage("Launcher ServerBridge is not initialized");
             return true;
         }
         switch (sub) {
             case "status" -> {
-                sender.sendMessage("NeverLauncher " + expectedPlatform.displayName() + " Bridge " + BridgeDefaults.VERSION +
+                sender.sendMessage("Launcher " + expectedPlatform.displayName() + " Bridge " + BridgeDefaults.VERSION +
                     " serverId=" + state.config.serverId + " backend=" + state.config.backendUrl +
                     " heartbeat=" + heartbeatStatus());
                 return true;
             }
             case "test" -> {
-                if (!sender.hasPermission("neverlauncher.bridge.admin")) {
-                    sender.sendMessage("Недостаточно прав: neverlauncher.bridge.admin");
+                if (!sender.hasPermission("launcher.bridge.admin")) {
+                    sender.sendMessage("Недостаточно прав: launcher.bridge.admin");
                     return true;
                 }
                 triggerHeartbeat();
-                sender.sendMessage("NeverLauncher heartbeat queued; last=" + heartbeatStatus());
+                sender.sendMessage("Launcher heartbeat queued; last=" + heartbeatStatus());
                 return true;
             }
             case "reload" -> {
-                if (!sender.hasPermission("neverlauncher.bridge.reload")) {
-                    sender.sendMessage("Недостаточно прав: neverlauncher.bridge.reload");
+                if (!sender.hasPermission("launcher.bridge.reload")) {
+                    sender.sendMessage("Недостаточно прав: launcher.bridge.reload");
                     return true;
                 }
                 try {
@@ -254,18 +254,18 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                     next.api.startControlChannel(this::executeControl);
                     next.api.publishEvent("server.ready", Map.of("platform", expectedPlatform.id(), "reason", "reload"));
                     triggerHeartbeat();
-                    sender.sendMessage("NeverLauncher bridge configuration reloaded; serverId=" + next.config.serverId + " nodeKeyFingerprint=" + next.identity.fingerprint());
+                    sender.sendMessage("Launcher bridge configuration reloaded; serverId=" + next.config.serverId + " nodeKeyFingerprint=" + next.identity.fingerprint());
                 } catch (Exception e) {
-                    sender.sendMessage("NeverLauncher reload failed; previous runtime kept active: " + e.getMessage());
+                    sender.sendMessage("Launcher reload failed; previous runtime kept active: " + e.getMessage());
                 }
                 return true;
             }
             case "diagnostics" -> {
-                if (!sender.hasPermission("neverlauncher.bridge.diagnostics")) {
-                    sender.sendMessage("Недостаточно прав: neverlauncher.bridge.diagnostics");
+                if (!sender.hasPermission("launcher.bridge.diagnostics")) {
+                    sender.sendMessage("Недостаточно прав: launcher.bridge.diagnostics");
                     return true;
                 }
-                sender.sendMessage("NeverLauncher diagnostics: platform=" + expectedPlatform.id() +
+                sender.sendMessage("Launcher diagnostics: platform=" + expectedPlatform.id() +
                     ", detected=" + BukkitFamilyPlatform.detect().id() +
                     ", failMode=" + state.config.failMode +
                     ", requireLauncherSession=" + state.config.requireLauncherSession +
@@ -293,7 +293,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         NodeIdentity identity = NodeIdentity.loadOrCreate(config.identityFile);
         BridgeRuntimeDescriptor descriptor = runtimeDescriptor();
         BridgeAdapterProfiles.rejectUncertifiedHybrid(expectedPlatform.id(), descriptor.serverBrand());
-        NeverLauncherApiClient api = new NeverLauncherApiClient(config, identity, expectedPlatform.id(), BridgeDefaults.VERSION, pluginSha256, descriptor);
+        LauncherApiClient api = new LauncherApiClient(config, identity, expectedPlatform.id(), BridgeDefaults.VERSION, pluginSha256, descriptor);
         return new RuntimeState(config, identity, api, pluginSha256);
     }
 
@@ -336,7 +336,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 );
                 telemetryTask = runTaskTimer.invoke(scheduler, this, (Runnable) this::collectTelemetry, 1L, periodTicks);
             } catch (ReflectiveOperationException e) {
-                getLogger().warning("NeverLauncher telemetry: Bukkit scheduler unavailable; JVM telemetry will continue without platform counters: " + e.getMessage());
+                getLogger().warning("Launcher telemetry: Bukkit scheduler unavailable; JVM telemetry will continue without platform counters: " + e.getMessage());
             }
             return;
         }
@@ -357,7 +357,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
             Consumer<Object> task = ignored -> collectTelemetry();
             foliaTelemetryTask = run.invoke(scheduler, this, task, 1L, periodTicks);
         } catch (ReflectiveOperationException e) {
-            getLogger().warning("NeverLauncher telemetry: Folia global scheduler unavailable; JVM telemetry will continue without platform counters: " + e.getMessage());
+            getLogger().warning("Launcher telemetry: Folia global scheduler unavailable; JVM telemetry will continue without platform counters: " + e.getMessage());
         }
     }
 
@@ -662,7 +662,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                         // The player may already have quit; do not overwrite
                         // a confirmed PlayerQuitEvent result with an exception.
                         confirmation.complete(BridgeControlResult.indeterminate("player_kick_invocation_failed"));
-                        getLogger().warning("NeverLauncher player kick invocation: " + safeError(error));
+                        getLogger().warning("Launcher player kick invocation: " + safeError(error));
                     }
                 };
                 if (adapterProfile.supports(BridgeAdapterCapability.REGION_SAFE_SCHEDULER)) {
@@ -674,7 +674,7 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
                 }
             } catch (Throwable error) {
                 confirmation.complete(BridgeControlResult.indeterminate("player_kick_scheduler_failed"));
-                getLogger().warning("NeverLauncher player kick scheduling: " + safeError(error));
+                getLogger().warning("Launcher player kick scheduling: " + safeError(error));
             }
         });
         try {
@@ -826,9 +826,9 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         lastHeartbeatAt = Instant.now();
         if (previousAt == null || previous != ok) {
             if (ok) {
-                getLogger().info("NeverLauncher " + expectedPlatform.displayName() + " Bridge heartbeat=true serverId=" + state.config.serverId);
+                getLogger().info("Launcher " + expectedPlatform.displayName() + " Bridge heartbeat=true serverId=" + state.config.serverId);
             } else {
-                getLogger().warning("NeverLauncher " + expectedPlatform.displayName() + " Bridge heartbeat=false serverId=" + state.config.serverId + " reason=rejected_or_unavailable");
+                getLogger().warning("Launcher " + expectedPlatform.displayName() + " Bridge heartbeat=false serverId=" + state.config.serverId + " reason=rejected_or_unavailable");
             }
         }
     }
@@ -843,5 +843,5 @@ public abstract class BukkitFamilyBridgePlugin extends JavaPlugin implements Lis
         return BridgeIntegrity.isSha256(hash) ? hash.substring(0, 12) : "unavailable";
     }
 
-    private record RuntimeState(BridgeConfig config, NodeIdentity identity, NeverLauncherApiClient api, String pluginSha256) {}
+    private record RuntimeState(BridgeConfig config, NodeIdentity identity, LauncherApiClient api, String pluginSha256) {}
 }

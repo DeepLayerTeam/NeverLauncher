@@ -436,7 +436,7 @@ func bridgeSafeTransaction02812(root string, tx *bridgeProvisionTransaction0199)
 	for _, change := range tx.Changes {
 		if !allowed[change.Path] {
 			name := filepath.Base(change.Path)
-			if filepath.Dir(change.Path) != detection.InstallDir || !strings.HasPrefix(strings.ToLower(name), "neverlauncher-") || !strings.Contains(strings.ToLower(name), "-bridge-") || !strings.HasSuffix(strings.ToLower(name), ".jar") {
+			if filepath.Dir(change.Path) != detection.InstallDir || !strings.HasPrefix(strings.ToLower(name), "launcher-") || !strings.Contains(strings.ToLower(name), "-bridge-") || !strings.HasSuffix(strings.ToLower(name), ".jar") {
 				return fmt.Errorf("transaction target not owned by ServerBridge: %s", change.Path)
 			}
 		}

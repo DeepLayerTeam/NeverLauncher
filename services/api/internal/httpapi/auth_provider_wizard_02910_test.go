@@ -2,7 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 	"strings"
 	"testing"
 )

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitepg"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitepg"
 )
 
 func runPGExport(args []string) int {

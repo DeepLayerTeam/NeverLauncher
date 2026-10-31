@@ -14,10 +14,10 @@ import (
 	"strconv"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensioncontract"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpackage"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensioncontract"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionpackage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 const extensionRegistryMaxUpload0203 = int64(2<<30) + int64(32<<20)
@@ -186,7 +186,7 @@ func splitRegistryList0203(raw string) []string {
 }
 
 func copyMultipartArtifact0203(file io.Reader) (string, string, int64, error) {
-	tmp, err := os.CreateTemp("", "neverlauncher-registry-*.nlext")
+	tmp, err := os.CreateTemp("", "launcher-registry-*.nlext")
 	if err != nil {
 		return "", "", 0, err
 	}
@@ -260,7 +260,7 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 	}
 	if publisherID != inspected.Manifest.Publisher {
 		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "publisher field does not match signed manifest publisher", &model.ExtensionRegistryVersion{ExtensionID: inspected.Manifest.ID, Version: inspected.Manifest.Version, PublisherID: inspected.Manifest.Publisher, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: inspected.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: inspected.KeyFingerprint}})
-		writeError(w, http.StatusBadRequest, "publisher field must match neverlauncher-extension.json publisher")
+		writeError(w, http.StatusBadRequest, "publisher field must match launcher-extension.json publisher")
 		return
 	}
 	if trustErr := s.enforcePublisherTrust02012(r.Context(), publisherID); trustErr != nil {
@@ -323,8 +323,8 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 		Manifest:    verified.Manifest,
 		PublisherID: publisherID,
 		Compatibility: model.ExtensionRegistryCompatibility{
-			MinNeverLauncher:       strings.TrimSpace(r.FormValue("minNeverLauncher")),
-			MaxNeverLauncher:       strings.TrimSpace(r.FormValue("maxNeverLauncher")),
+			MinLauncher:       strings.TrimSpace(r.FormValue("minLauncher")),
+			MaxLauncher:       strings.TrimSpace(r.FormValue("maxLauncher")),
 			MinAPI:                 strings.TrimSpace(r.FormValue("minApi")),
 			MaxAPI:                 strings.TrimSpace(r.FormValue("maxApi")),
 			SupportedOS:            splitRegistryList0203(r.FormValue("os")),
@@ -420,7 +420,7 @@ func (s Server) extensionRegistryArtifact0203(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename=%q`, item.ExtensionID+"-"+item.Version+".nlext"))
 	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 	w.Header().Set("ETag", `"`+item.Artifact.SHA256+`"`)
-	w.Header().Set("X-NeverLauncher-Package-Identity", item.Artifact.PackageIdentity)
+	w.Header().Set("X-Launcher-Package-Identity", item.Artifact.PackageIdentity)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.Copy(w, reader)
@@ -435,7 +435,7 @@ func (s Server) verifiedRegistryArtifactToTemp0203(r *http.Request, item model.E
 	if size != item.Artifact.Size {
 		return "", errors.New("registry artifact storage size mismatch")
 	}
-	tmp, err := os.CreateTemp("", "neverlauncher-registry-install-*.nlext")
+	tmp, err := os.CreateTemp("", "launcher-registry-install-*.nlext")
 	if err != nil {
 		return "", err
 	}

@@ -11,14 +11,14 @@
 ## Prerequisites
 
 - Dedicated self-hosted OS user, no production data or signing keys, disposable worker VM/snapshot; outbound connections allowlisted for staged delivery, live provider and pinned server dependencies. Do not run GUI E2E unattended on a shared interactive workstation.
-- `python >=3.11`, Go toolchain from `cli/go.mod`, Rust toolchain for `NeverRuntime`, Java runtimes for all supported target majors, real staged package grant/operator credentials, exact prior-release and pinned ServerBridge artifacts, properly authorized real-provider test accounts. No mock provider for V07.
+- `python >=3.11`, Go toolchain from `cli/go.mod`, Rust toolchain for `Runtime`, Java runtimes for all supported target majors, real staged package grant/operator credentials, exact prior-release and pinned ServerBridge artifacts, properly authorized real-provider test accounts. No mock provider for V07.
 - GUI workers require `psutil`, Pillow, `glfw`, `PyOpenGL`, `pynput`, Tesseract (English OCR) and a working native desktop. **macOS:** additionally `pyobjc-framework-Quartz`, Screen Recording and Accessibility grants for the dedicated agent account. **Windows:** unlocked interactive desktop; service session 0 / disconnected RDP is blocked. **Linux:** `DISPLAY`, `xwininfo`, `xprop`, `scrot`, `identify`, `tesseract`, `glxinfo`, `xdotool`, functional GLX/OpenGL (software renderer accepted if functional). No assumption that a GitHub-hosted runner is GUI-capable.
 - GUI proof is only for an English main menu with two recognizable Minecraft controls and an actual window belonging to the selected Java binary. Other localizations/themes require separate real probes; they are not auto-certified.
 - On Windows, modded matching servers may use a pinned `run.bat` or direct Java JAR; Unix `run.sh` is rejected. Windows local workers need Git Bash if using the supplied workflow. Headless does not run a matching server.
 
 ## CI and local execution
 
-`native-runtime-v10-03410.yml` is opt-in `workflow_dispatch` (package ID, OS, architecture, execution mode). A matching dedicated runner must bear **all** labels: `self-hosted`, `nl-validation`, `nl-<os>`, `nl-<arch>`, `nl-<mode>`. Only explicitly provisioned runners execute these jobs. Jobs compile the real production CLI and NeverRuntime, run platform probes, use a private per-job temporary directory, and export a restricted set of JSON diagnostics. Failure or lack of a renderer means **BLOCKED**, not false incompatible-Minecraft **FAILED**. The published CI artifact is observational.
+`native-runtime-v10-03410.yml` is opt-in `workflow_dispatch` (package ID, OS, architecture, execution mode). A matching dedicated runner must bear **all** labels: `self-hosted`, `nl-validation`, `nl-<os>`, `nl-<arch>`, `nl-<mode>`. Only explicitly provisioned runners execute these jobs. Jobs compile the real production CLI and Runtime, run platform probes, use a private per-job temporary directory, and export a restricted set of JSON diagnostics. Failure or lack of a renderer means **BLOCKED**, not false incompatible-Minecraft **FAILED**. The published CI artifact is observational.
 
 Manual capability check, with an actual executable Java path:
 

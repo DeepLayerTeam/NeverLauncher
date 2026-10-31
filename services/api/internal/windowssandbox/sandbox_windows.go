@@ -325,7 +325,7 @@ func Prepare(o Options) (*Handle, error) {
 	if id == "" {
 		return nil, errors.New("secure random unavailable")
 	}
-	profile := "NeverLauncherExt" + id
+	profile := "LauncherExt" + id
 	sidPtr, sid, e := newProfile(profile)
 	if e != nil {
 		return nil, e
@@ -346,8 +346,8 @@ func Prepare(o Options) (*Handle, error) {
 	if output, e := exec.Command("icacls.exe", o.PayloadRoot, "/grant", "*"+sid+":(OI)(CI)(RX)", "/T", "/C").CombinedOutput(); e != nil {
 		return fail(fmt.Errorf("package AppContainer ACL: %w: %s", e, string(output)))
 	}
-	pipeName := `\\.\pipe\LOCAL\NeverLauncher-Extension-` + id
-	readyName := `\\.\pipe\LOCAL\NeverLauncher-Ready-` + id
+	pipeName := `\\.\pipe\LOCAL\Launcher-Extension-` + id
+	readyName := `\\.\pipe\LOCAL\Launcher-Ready-` + id
 	ready, e := createPipe(readyName, "AU")
 	if e != nil {
 		return fail(e)
@@ -365,7 +365,7 @@ func Prepare(o Options) (*Handle, error) {
 	if e != nil {
 		return fail(e)
 	}
-	cmd := exec.Command(exe, "--neverlauncher-windows-sandbox-03111")
+	cmd := exec.Command(exe, "--launcher-windows-sandbox-03111")
 	cmd.Env = []string{marker + "=1", "SystemRoot=" + os.Getenv("SystemRoot"), "WINDIR=" + os.Getenv("WINDIR")}
 	cmd.Stdin = bytes.NewReader(raw)
 	h.Cmd = cmd

@@ -1,4 +1,4 @@
-module gitflic.ru/skif4er/neverlauncher/services/api
+module gitflic.ru/skif4er/launcher/services/api
 
 go 1.27.3
 

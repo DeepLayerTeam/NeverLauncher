@@ -13,11 +13,11 @@ not embed SSH or run arbitrary remote shells.
 2. On the host, initialize the RemoteControl identity:
    `nl server-bridge host remote init --server-root /srv/minecraft/survival`.
 3. Issue a **short-lived** service token for the Backend source address:
-   `nl server-bridge host remote issue --server-root /srv/minecraft/survival --subject backend-control --scope host.status --scope host.start --scope host.stop --scope host.restart --source 10.10.0.5/32 --ttl-seconds 900 --token-file /etc/neverlauncher/host-survival.token`.
+   `nl server-bridge host remote issue --server-root /srv/minecraft/survival --subject backend-control --scope host.status --scope host.start --scope host.stop --scope host.restart --source 10.10.0.5/32 --ttl-seconds 900 --token-file /etc/launcher/host-survival.token`.
    Re-issue tokens as they expire and atomically update the private token file.
    Never commit the token or TLS private keys to source control.
 4. Start the agent with a trusted TLS certificate:
-   `nl server-bridge host remote serve --server-root /srv/minecraft/survival --listen 10.10.0.21:9443 --tls-cert /etc/neverlauncher/host.crt --tls-key /etc/neverlauncher/host.key --allow-source 10.10.0.5/32`.
+   `nl server-bridge host remote serve --server-root /srv/minecraft/survival --listen 10.10.0.21:9443 --tls-cert /etc/launcher/host.crt --tls-key /etc/launcher/host.key --allow-source 10.10.0.5/32`.
    Use `--client-ca` to enforce mutual TLS in production, and provision the
    corresponding Backend client certificate. The RemoteControl key and host
    journal remain private to that server root.
@@ -28,10 +28,10 @@ not embed SSH or run arbitrary remote shells.
   "survival": {
     "url": "https://10.10.0.21:9443",
     "nodeId": "<RemoteControl nodeId from remote init>",
-    "caFile": "/etc/neverlauncher/remote-ca.pem",
-    "tokenFile": "/etc/neverlauncher/host-survival.token",
-    "clientCert": "/etc/neverlauncher/backend.crt",
-    "clientKey": "/etc/neverlauncher/backend.key"
+    "caFile": "/etc/launcher/remote-ca.pem",
+    "tokenFile": "/etc/launcher/host-survival.token",
+    "clientCert": "/etc/launcher/backend.crt",
+    "clientKey": "/etc/launcher/backend.key"
   }
 }
 ```

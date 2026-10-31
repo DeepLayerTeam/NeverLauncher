@@ -52,7 +52,7 @@ for token in (
 ):
     require(token in linux, f"Linux host isolation missing {token}")
 
-main = read("services/api/cmd/neverlauncher-api/main.go")
+main = read("services/api/cmd/launcher-api/main.go")
 for token in (
     "extensionhost.HardenBackendProcess()",
     "extensionhost.New(",
@@ -95,7 +95,7 @@ for suffix in (
         f"host admin route missing {suffix}",
     )
 
-cli = read("cli/cmd/neverlauncher/extension_host_0205.go")
+cli = read("cli/cmd/launcher/extension_host_0205.go")
 for token in (
     "list",
     "status",
@@ -139,7 +139,7 @@ for token in (
 
 for envfile in (
     "deploy/production/env.production.example",
-    "cli/cmd/neverlauncher/templates/production/env.production.example",
+    "cli/cmd/launcher/templates/production/env.production.example",
 ):
     env = read(envfile)
     for key in (

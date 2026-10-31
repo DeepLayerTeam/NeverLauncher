@@ -22,7 +22,7 @@
         "releasePackageBuilt",
         "linuxProductionGate",
         "guardRelease0139",
-        "neverGuardRelease0140"
+        "GuardRelease0140"
       ]
     },
     {
@@ -45,7 +45,7 @@
         "releasePackageBuilt",
         "windowsProductionGate",
         "guardRelease0139",
-        "neverGuardRelease0140"
+        "GuardRelease0140"
       ]
     },
     {
@@ -68,7 +68,7 @@
         "releasePackageBuilt",
         "macosProductionGate",
         "guardRelease0139",
-        "neverGuardRelease0140"
+        "GuardRelease0140"
       ]
     }
   ]

@@ -1,10 +1,10 @@
-package ru.neverlauncher.bridge.paper;
+package ru.launcher.bridge.paper;
 
-import ru.neverlauncher.bridge.bukkit.BukkitFamilyBridgePlugin;
-import ru.neverlauncher.bridge.bukkit.BukkitFamilyPlatform;
+import ru.launcher.bridge.bukkit.BukkitFamilyBridgePlugin;
+import ru.launcher.bridge.bukkit.BukkitFamilyPlatform;
 
-public final class NeverLauncherPaperBridge extends BukkitFamilyBridgePlugin {
-    public NeverLauncherPaperBridge() {
+public final class LauncherPaperBridge extends BukkitFamilyBridgePlugin {
+    public LauncherPaperBridge() {
         super(BukkitFamilyPlatform.PAPER);
     }
 }

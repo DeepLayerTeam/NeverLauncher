@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"reflect"
 
-	gc "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcontent"
-	gm "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitmodules"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcontent"
+	gm "gitflic.ru/skif4er/launcher/services/api/internal/gravitmodules"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // VerifyMigrationContentBeforeSign0337 is a last-mile guard: a migrated build

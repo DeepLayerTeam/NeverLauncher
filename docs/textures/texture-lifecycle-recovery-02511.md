@@ -1,4 +1,4 @@
-# NeverLauncher 0.25.11 — Texture Lifecycle & Recovery
+# Launcher 0.25.11 — Texture Lifecycle & Recovery
 
 This release makes the existing texture maintenance CLI safe against multiple
 GC processes and concurrent backup/restore operations. It operates on the real
@@ -8,7 +8,7 @@ or an independent database.
 ## Runbook
 
 1. Stop previous texture-maintenance workers before upgrading. Old 0.25.3–0.25.10 GC workers do not understand backup pins or fenced leases; **never run old and new workers concurrently**. Apply database migration `0074_texture_lifecycle_recovery_02511.sql` using
-   the normal NeverLauncher migration command **before** running the updated
+   the normal Launcher migration command **before** running the updated
    maintenance CLI. Keep `texture_blobs` and storage snapshots together in your
    disaster-recovery plan; a PNG-only snapshot does not restore assignments.
 2. Set `NEVERLAUNCHER_DATABASE_DSN` and `NEVERLAUNCHER_STORAGE_DRIVER=local|s3`

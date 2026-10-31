@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 
-	gr "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrehearsal"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gr "gitflic.ru/skif4er/launcher/services/api/internal/gravitrehearsal"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 func (r *SQLRepository) GetMigrationRehearsal03310(ctx context.Context, runID string) (gr.Report, error) {

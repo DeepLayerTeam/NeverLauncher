@@ -1,4 +1,4 @@
--- NeverLauncher 0.20.4: производственный жизненный цикл установки Extensions.
+-- Launcher 0.20.4: производственный жизненный цикл установки Extensions.
 -- Строки установки 0.20.1/0.20.3 описывали лишь желаемое состояние; они
 -- преобразуются в desired=disabled/current=absent, поскольку до этого выпуска
 -- файлы расширений ещё не подготавливались и не активировались на диске.
@@ -79,7 +79,7 @@ CREATE INDEX IF NOT EXISTS idx_extension_install_revisions_backup_0204
     ON extension_install_revisions(extension_id,scope,scope_id,generation DESC)
     WHERE backup_path<>'';
 
-CREATE OR REPLACE FUNCTION neverlauncher_extension_install_state_guard_0204()
+CREATE OR REPLACE FUNCTION launcher_extension_install_state_guard_0204()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF NEW.version <> NEW.desired_version THEN
@@ -118,7 +118,7 @@ $$;
 DROP TRIGGER IF EXISTS trg_extension_installs_state_guard_0204 ON extension_installs;
 CREATE TRIGGER trg_extension_installs_state_guard_0204
 BEFORE INSERT OR UPDATE ON extension_installs
-FOR EACH ROW EXECUTE FUNCTION neverlauncher_extension_install_state_guard_0204();
+FOR EACH ROW EXECUTE FUNCTION launcher_extension_install_state_guard_0204();
 
 COMMENT ON TABLE extension_installs IS 'Extensions 0.20.4 persistent desired/current install lifecycle state.';
 COMMENT ON TABLE extension_install_revisions IS 'Append-only successful Extensions lifecycle transitions and rollback backup references.';

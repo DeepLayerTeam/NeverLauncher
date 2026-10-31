@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/officialminecraft"
+	"gitflic.ru/skif4er/launcher/services/api/internal/officialminecraft"
 )
 
 const ownClientID = "4b8f7734-4f10-44ca-b870-b4d89d34a319"
@@ -173,7 +173,7 @@ func TestReportExclusivePrivateAndAtomicEnoughForProof(t *testing.T) {
 	if err := json.Unmarshal(b, &parsed); err != nil {
 		t.Fatal(err)
 	}
-	if parsed.Schema != "neverlauncher.official-provider-poc.v1" {
+	if parsed.Schema != "launcher.official-provider-poc.v1" {
 		t.Fatal("wrong report schema")
 	}
 }

@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	gd "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitdetector"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gd "gitflic.ru/skif4er/launcher/services/api/internal/gravitdetector"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 func TestGravitAssessmentTransactional0332(t *testing.T) {
@@ -40,7 +40,7 @@ func TestGravitAssessmentTransactional0332(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report := gd.Report{Format: "neverlauncher.gravit-compatibility.v1", SourceSHA256: fmt.Sprintf("%064x", 77), ClaimedVersion: "5.7.12", Status: "manual", VersionStatus: "unverified", CutoverAllowed: false}
+	report := gd.Report{Format: "launcher.gravit-compatibility.v1", SourceSHA256: fmt.Sprintf("%064x", 77), ClaimedVersion: "5.7.12", Status: "manual", VersionStatus: "unverified", CutoverAllowed: false}
 	if _, err = repo.SaveMigrationCompatibility0332(ctx, run.ID, report); !errors.Is(err, mw.ErrBusy) {
 		t.Fatalf("assessment before baseline accepted: %v", err)
 	}

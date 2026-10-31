@@ -58,9 +58,9 @@ func writeWindowsPackageFixture0152(t *testing.T, dir, ver, arch string, desktop
 		"architecture":              arch,
 		"authenticodeRequired":      signed,
 		"signingMode":               map[bool]string{true: "authenticode-rfc3161", false: "unsigned-development"}[signed],
-		"neverGuardProtocolVersion": 4,
+		"GuardProtocolVersion": 4,
 		"artifacts": []map[string]any{
-			{"name": "neverlauncher-desktop-" + ver + "-windows-" + arch + ".exe", "component": "desktop-launcher", "architecture": arch, "sha256": digestBytes0152(desktop), "size": len(desktop)},
+			{"name": "launcher-desktop-" + ver + "-windows-" + arch + ".exe", "component": "desktop-launcher", "architecture": arch, "sha256": digestBytes0152(desktop), "size": len(desktop)},
 			{"name": "guard.exe", "component": "guard", "architecture": arch, "sha256": digestBytes0152(guard), "size": len(guard)},
 		},
 	}
@@ -80,7 +80,7 @@ func writeWindowsPackageFixture0152(t *testing.T, dir, ver, arch string, desktop
 	zw := zip.NewWriter(zf)
 	for name, data := range map[string][]byte{
 		"WINDOWS_PACKAGE_MANIFEST.json":                              manifestRaw,
-		"neverlauncher-desktop-" + ver + "-windows-" + arch + ".exe": desktop,
+		"launcher-desktop-" + ver + "-windows-" + arch + ".exe": desktop,
 		"guard.exe": guard,
 	} {
 		w, err := zw.Create(name)
@@ -116,12 +116,12 @@ func buildWindowsEvidenceFixture0152(t *testing.T, dir, ver string, signed bool)
 		mode = "authenticode-rfc3161"
 		now := time.Now().UTC()
 		signer = &WindowsSigner0152{
-			Subject: "CN=NeverLauncher Test", Issuer: "CN=Test CA", Thumbprint: "0123456789abcdef0123456789abcdef01234567",
+			Subject: "CN=Launcher Test", Issuer: "CN=Test CA", Thumbprint: "0123456789abcdef0123456789abcdef01234567",
 			SerialNumber: "01", NotBefore: now.Add(-time.Hour).Format(time.RFC3339), NotAfter: now.Add(time.Hour).Format(time.RFC3339),
 		}
 	}
 	evidence := WindowsSigningEvidence0152{
-		SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: ver, Platform: "windows", SigningMode: mode,
+		SchemaVersion: "1.0", Product: "Launcher", ProductVersion: ver, Platform: "windows", SigningMode: mode,
 		TimestampServer: "http://timestamp.test.invalid", GeneratedAt: time.Now().UTC().Format(time.RFC3339Nano), Signer: signer,
 	}
 	for _, arch := range []string{"x64", "arm64"} {

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // List stored operations without exposing payloads, idempotency keys or worker leases.

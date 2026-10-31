@@ -48,7 +48,7 @@ func factoryAdapterPinByID02711(id string) (factoryAdapterPin02711, error) {
 		return factoryAdapterPin02711{}, fmt.Errorf("unknown executable adapter %q", id)
 	}
 	h := sha256.New()
-	_, _ = h.Write([]byte("neverlauncher-adapter-v1\x00" + id + "\x00" + def.version + "\x00"))
+	_, _ = h.Write([]byte("launcher-adapter-v1\x00" + id + "\x00" + def.version + "\x00"))
 	files := append([]string(nil), def.files...)
 	sort.Strings(files)
 	for _, filename := range files {
@@ -151,7 +151,7 @@ func invalidateFactoryProcessorRecovery02711(staging, loader string) error {
 	if loader != "forge" && loader != "neoforge" {
 		return nil
 	}
-	installerRoot := filepath.Join(staging, ".neverlauncher", "installers", loader)
+	installerRoot := filepath.Join(staging, ".launcher", "installers", loader)
 	if _, err := os.Lstat(installerRoot); errors.Is(err, os.ErrNotExist) {
 		return nil
 	} else if err != nil {

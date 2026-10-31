@@ -6,7 +6,7 @@ COMPOSE_FILE="$ROOT/e2e/docker-compose.minecraft-e2e.yml"
 RUNTIME_DIR="$ROOT/e2e/runtime"
 ENV_FILE="$RUNTIME_DIR/e2e.env"
 API="${NEVERLAUNCHER_E2E_API:-http://127.0.0.1:18080}"
-DB_DSN="postgres://neverlauncher:neverlauncher@127.0.0.1:55432/neverlauncher?sslmode=disable"
+DB_DSN="postgres://launcher:launcher@127.0.0.1:55432/launcher?sslmode=disable"
 BOOTSTRAP_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 AUTH_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 REDIS_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
@@ -33,7 +33,7 @@ print(base64.urlsafe_b64encode(public_der[-32:]).decode("ascii").rstrip("="))
 PYKEY
 )"
 PINNED_PUBLIC_KEY="03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8"
-ADMIN_EMAIL="admin@neverlauncher.local"
+ADMIN_EMAIL="admin@launcher.local"
 ADMIN_PASSWORD="$(python3 -c 'import secrets; print("E2E-" + secrets.token_urlsafe(24))')"
 PLAYER_USERNAME="E2EPlayer"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
@@ -61,7 +61,7 @@ WEBAUTHN="$ROOT/e2e/scripts/webauthn-test-authenticator.py"
 DEVICE_CRYPTO="$ROOT/e2e/scripts/device-trust-crypto.py"
 GUARD_EVIDENCE="$ROOT/e2e/scripts/guard-attestation-e2e.py"
 GUARD_E2E_VERSION="$VERSION"
-E2E_USER_AGENT="NeverLauncher-E2E/${VERSION}"
+E2E_USER_AGENT="Launcher-E2E/${VERSION}"
 # shellcheck source=serverbridge-node-crypto.sh
 source "$SERVERBRIDGE_CRYPTO"
 
@@ -103,7 +103,7 @@ mkdir -p "$RUNTIME_DIR/plugins/velocity" "$RUNTIME_DIR/plugins/bungeecord" "$RUN
 GUARD_POLICY_OVERRIDE="$RUNTIME_DIR/guard-policy.override.yml"
 cat > "$GUARD_POLICY_OVERRIDE" <<YAML
 services:
-  neverlauncher-api:
+  launcher-api:
     environment:
       NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '$GUARD_RELEASE_ALLOWLIST_JSON'
 YAML
@@ -139,7 +139,7 @@ wait_http() {
     sleep 2
   done
   echo "[e2e] timeout waiting for $url" >&2
-  compose logs neverlauncher-api >&2 || true
+  compose logs launcher-api >&2 || true
   return 1
 }
 wait_healthy() {
@@ -184,12 +184,12 @@ wait_paper_healthy_with_bootstrap_recovery() {
 wait_bridge_heartbeat() {
   local service="$1"
   for _ in $(seq 1 60); do
-    if compose logs "$service" 2>&1 | grep -Eqi 'NeverLauncher .* Bridge .*heartbeat=true'; then
+    if compose logs "$service" 2>&1 | grep -Eqi 'Launcher .* Bridge .*heartbeat=true'; then
       return 0
     fi
     sleep 2
   done
-  echo "[e2e] $service NeverLauncher bridge did not report successful heartbeat" >&2
+  echo "[e2e] $service Launcher bridge did not report successful heartbeat" >&2
   compose logs "$service" >&2 || true
   return 1
 }
@@ -244,7 +244,7 @@ record_live_serverbridge_04113() {
   python3 "$ROOT/e2e/scripts/record-serverbridge-runtime-04113.py" \
     --service "$service" --node "$node" --port "$port" --container "$cid" \
     --player "$PLAYER_USERNAME" --version "$VERSION" --runtime "$RUNTIME_DIR" \
-    --artifact "$ROOT/artifacts/plugins/neverlauncher-${service}-bridge-${VERSION}.jar" \
+    --artifact "$ROOT/artifacts/plugins/launcher-${service}-bridge-${VERSION}.jar" \
     --source-commit "${GITHUB_SHA:-}" "${extra[@]}"
 }
 wait_log() {
@@ -366,7 +366,7 @@ if (pinnedRepo == null || pinnedRepo.trim().isEmpty()) {
 gradle.beforeProject { project ->
     project.repositories {
         maven {
-            name = "neverlauncherPinnedSparkBuild"
+            name = "launcherPinnedSparkBuild"
             url = project.uri(pinnedRepo)
             metadataSources {
                 mavenPom()
@@ -452,7 +452,7 @@ if (pinnedRepo == null || pinnedRepo.trim().isEmpty()) {
 gradle.beforeProject { project ->
     project.repositories {
         maven {
-            name = "neverlauncherPinnedFoliaBuild"
+            name = "launcherPinnedFoliaBuild"
             url = project.uri(pinnedRepo)
             metadataSources {
                 mavenPom()
@@ -482,10 +482,10 @@ GRADLE
     # При применении патчей Paper/Folia paperweight создаёт вложенные Git-репозитории.
     # Экспортируйте идентичность через окружение процесса, чтобы все вложенные
     # git-процессы наследовали её без изменения глобальных настроек Git агента.
-    export GIT_AUTHOR_NAME="NeverLauncher E2E"
-    export GIT_AUTHOR_EMAIL="neverlauncher-e2e@invalid.local"
-    export GIT_COMMITTER_NAME="NeverLauncher E2E"
-    export GIT_COMMITTER_EMAIL="neverlauncher-e2e@invalid.local"
+    export GIT_AUTHOR_NAME="Launcher E2E"
+    export GIT_AUTHOR_EMAIL="launcher-e2e@invalid.local"
+    export GIT_COMMITTER_NAME="Launcher E2E"
+    export GIT_COMMITTER_EMAIL="launcher-e2e@invalid.local"
     export NEVERLAUNCHER_FOLIA_BUILD_MAVEN_REPO="$build_maven_repo"
     cd "$source_dir"
     ./gradlew --no-daemon --stacktrace --init-script "$init_script" applyPatches
@@ -522,17 +522,17 @@ printf '[e2e] build real ServerBridge artifacts\n'
 bash "$ROOT/scripts/build/bridge-plugins.sh"
 BRIDGE_ALLOWLIST_JSON="$(tr -d '\r\n' < "$ROOT/artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json")"
 write_env_file
-cp "$ROOT/artifacts/plugins/neverlauncher-paper-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/paper/neverlauncher-paper-bridge.jar"
+cp "$ROOT/artifacts/plugins/launcher-paper-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/paper/launcher-paper-bridge.jar"
 if [[ "$MODE" == "full" ]]; then
-  cp "$ROOT/artifacts/plugins/neverlauncher-velocity-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/velocity/neverlauncher-velocity-bridge.jar"
-  cp "$ROOT/artifacts/plugins/neverlauncher-bungeecord-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/bungeecord/neverlauncher-bungeecord-bridge.jar"
-  cp "$ROOT/artifacts/plugins/neverlauncher-waterfall-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/waterfall/neverlauncher-waterfall-bridge.jar"
-  cp "$ROOT/artifacts/plugins/neverlauncher-spigot-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/spigot/neverlauncher-spigot-bridge.jar"
-  cp "$ROOT/artifacts/plugins/neverlauncher-purpur-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/purpur/neverlauncher-purpur-bridge.jar"
-  cp "$ROOT/artifacts/plugins/neverlauncher-folia-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/folia/neverlauncher-folia-bridge.jar"
-  cp "$ROOT/artifacts/plugins/neverlauncher-fabric-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/fabric/neverlauncher-fabric-bridge.jar"
-  cp "$ROOT/artifacts/plugins/neverlauncher-forge-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/forge/neverlauncher-forge-bridge.jar"
-  cp "$ROOT/artifacts/plugins/neverlauncher-neoforge-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/neoforge/neverlauncher-neoforge-bridge.jar"
+  cp "$ROOT/artifacts/plugins/launcher-velocity-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/velocity/launcher-velocity-bridge.jar"
+  cp "$ROOT/artifacts/plugins/launcher-bungeecord-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/bungeecord/launcher-bungeecord-bridge.jar"
+  cp "$ROOT/artifacts/plugins/launcher-waterfall-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/waterfall/launcher-waterfall-bridge.jar"
+  cp "$ROOT/artifacts/plugins/launcher-spigot-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/spigot/launcher-spigot-bridge.jar"
+  cp "$ROOT/artifacts/plugins/launcher-purpur-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/purpur/launcher-purpur-bridge.jar"
+  cp "$ROOT/artifacts/plugins/launcher-folia-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/folia/launcher-folia-bridge.jar"
+  cp "$ROOT/artifacts/plugins/launcher-fabric-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/fabric/launcher-fabric-bridge.jar"
+  cp "$ROOT/artifacts/plugins/launcher-forge-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/forge/launcher-forge-bridge.jar"
+  cp "$ROOT/artifacts/plugins/launcher-neoforge-bridge-${VERSION}.jar" "$RUNTIME_DIR/plugins/neoforge/launcher-neoforge-bridge.jar"
   materialize_pinned_folia_runtime
 fi
 
@@ -541,16 +541,16 @@ compose up -d postgres
 wait_healthy postgres
 (
   cd "$ROOT/cli"
-  go build -o "$RUNTIME_DIR/nl" ./cmd/neverlauncher
+  go build -o "$RUNTIME_DIR/nl" ./cmd/launcher
 )
 "$RUNTIME_DIR/nl" db migrate apply --dsn "$DB_DSN"
 
 printf '[e2e] start production-configured API with auto-migrate disabled\n'
-compose up -d --build neverlauncher-api
+compose up -d --build launcher-api
 wait_http "$API/health"
 
 printf '[e2e] one-time bootstrap and canonical /api/v1 login\n'
-curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' -H "X-NeverLauncher-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
+curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' -H "X-Launcher-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
   -d "{\"email\":\"$ADMIN_EMAIL\",\"displayName\":\"E2E Owner\",\"password\":\"$ADMIN_PASSWORD\",\"actor\":\"github-actions\"}" \
   "$API/api/v1/install/bootstrap-admin" > "$RUNTIME_DIR/bootstrap.json"
 LOGIN="$(curl -fsS -H "User-Agent: $E2E_USER_AGENT" -H 'Content-Type: application/json' -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" "$API/api/v1/admin/login")"
@@ -615,7 +615,7 @@ if [[ "$MODE" == "full" ]]; then
   serverbridge_node_generate "$FORGE_NODE_KEY" "$RUNTIME_DIR/node-identities/forge/node-identity.properties"
   serverbridge_node_generate "$NEOFORGE_NODE_KEY" "$RUNTIME_DIR/node-identities/neoforge/node-identity.properties"
 fi
-PAPER_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-paper-bridge-${VERSION}.jar" | awk '{print $1}')"
+PAPER_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/launcher-paper-bridge-${VERSION}.jar" | awk '{print $1}')"
 VELOCITY_BRIDGE_SHA=""
 BUNGEECORD_BRIDGE_SHA=""
 WATERFALL_BRIDGE_SHA=""
@@ -626,15 +626,15 @@ FABRIC_BRIDGE_SHA=""
 FORGE_BRIDGE_SHA=""
 NEOFORGE_BRIDGE_SHA=""
 if [[ "$MODE" == "full" ]]; then
-  VELOCITY_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-velocity-bridge-${VERSION}.jar" | awk '{print $1}')"
-  BUNGEECORD_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-bungeecord-bridge-${VERSION}.jar" | awk '{print $1}')"
-  WATERFALL_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-waterfall-bridge-${VERSION}.jar" | awk '{print $1}')"
-  SPIGOT_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-spigot-bridge-${VERSION}.jar" | awk '{print $1}')"
-  PURPUR_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-purpur-bridge-${VERSION}.jar" | awk '{print $1}')"
-  FOLIA_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-folia-bridge-${VERSION}.jar" | awk '{print $1}')"
-  FABRIC_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-fabric-bridge-${VERSION}.jar" | awk '{print $1}')"
-  FORGE_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-forge-bridge-${VERSION}.jar" | awk '{print $1}')"
-  NEOFORGE_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/neverlauncher-neoforge-bridge-${VERSION}.jar" | awk '{print $1}')"
+  VELOCITY_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/launcher-velocity-bridge-${VERSION}.jar" | awk '{print $1}')"
+  BUNGEECORD_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/launcher-bungeecord-bridge-${VERSION}.jar" | awk '{print $1}')"
+  WATERFALL_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/launcher-waterfall-bridge-${VERSION}.jar" | awk '{print $1}')"
+  SPIGOT_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/launcher-spigot-bridge-${VERSION}.jar" | awk '{print $1}')"
+  PURPUR_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/launcher-purpur-bridge-${VERSION}.jar" | awk '{print $1}')"
+  FOLIA_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/launcher-folia-bridge-${VERSION}.jar" | awk '{print $1}')"
+  FABRIC_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/launcher-fabric-bridge-${VERSION}.jar" | awk '{print $1}')"
+  FORGE_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/launcher-forge-bridge-${VERSION}.jar" | awk '{print $1}')"
+  NEOFORGE_BRIDGE_SHA="$(sha256sum "$ROOT/artifacts/plugins/launcher-neoforge-bridge-${VERSION}.jar" | awk '{print $1}')"
 fi
 register_server() {
   local id="$1" kind="$2" key="$3" public_key body
@@ -690,10 +690,10 @@ case "$LOADER" in
     "$RUNTIME_DIR/nl" runtime vanilla-package "${PACKAGE_ARGS[@]}"
     ;;
   fabric|quilt)
-    "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.neverlauncher/${LOADER}-resolution-lock.json"
+    "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.launcher/${LOADER}-resolution-lock.json"
     ;;
   forge|neoforge)
-    "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.neverlauncher/${LOADER}-resolution-lock.json" --java "$JAVA_BIN"
+    "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.launcher/${LOADER}-resolution-lock.json" --java "$JAVA_BIN"
     ;;
 esac
 
@@ -705,13 +705,13 @@ if [[ "$LOADER" != "vanilla" ]]; then
   FIRST_REPRO_SHA256="$(jq -er --arg loader "$LOADER" '.[$loader].reproducibilitySha256' "$CLIENT_PACKAGE")"
   case "$LOADER" in
     fabric|quilt)
-      "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.neverlauncher/${LOADER}-resolution-lock.json"
+      "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.launcher/${LOADER}-resolution-lock.json"
       ;;
     forge|neoforge)
-      "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.neverlauncher/${LOADER}-resolution-lock.json" --java "$JAVA_BIN"
+      "$RUNTIME_DIR/nl" runtime "${LOADER}-package" "${PACKAGE_ARGS[@]}" --loader-version "$LOADER_VERSION_SELECTOR" --resolution-lock "$RUNTIME_DIR/materialized-client/.launcher/${LOADER}-resolution-lock.json" --java "$JAVA_BIN"
       ;;
   esac
-  cp "$RUNTIME_DIR/materialized-client/.neverlauncher/${LOADER}-resolution-lock.json" "$RUNTIME_DIR/${LOADER}-resolution-lock.json"
+  cp "$RUNTIME_DIR/materialized-client/.launcher/${LOADER}-resolution-lock.json" "$RUNTIME_DIR/${LOADER}-resolution-lock.json"
   RESOLUTION_LOCK_SHA256="$(jq -er --arg loader "$LOADER" '.[$loader].resolutionLockSha256' "$CLIENT_PACKAGE")"
   RESOLUTION_REPRO_SHA256="$(jq -er --arg loader "$LOADER" '.[$loader].reproducibilitySha256' "$CLIENT_PACKAGE")"
   RESOLUTION_SOURCE_SHA256="$(jq -er --arg loader "$LOADER" '.[$loader].resolutionSourceSha256' "$CLIENT_PACKAGE")"
@@ -779,14 +779,14 @@ jq -e --arg key "$PINNED_PUBLIC_KEY" --arg version "$RELEASE_VERSION" --arg mc "
   '.version == $version and .minecraft.version == $mc and .minecraft.loader == $loader and ((($loader == "vanilla") and ((.minecraft.loaderVersion // "") == "")) or (($loader != "vanilla") and .minecraft.loaderVersion == $resolved)) and .runtime.launch.classpathStrategy == "compatibility" and .signature.algorithm == "Ed25519" and .signature.publicKey == $key and (.signature.signature|length == 128)' \
   "$RUNTIME_DIR/manifest.json" >/dev/null
 
-printf '[e2e] NeverRuntime pinned Ed25519 verify -> clean sync from Backend -> actual Minecraft client launch\n'
+printf '[e2e] Runtime pinned Ed25519 verify -> clean sync from Backend -> actual Minecraft client launch\n'
 (
   cd "$ROOT"
-  cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- verify \
+  cargo run --quiet --manifest-path runtime/runtime/Cargo.toml --bin runtime -- verify \
     --manifest "$RUNTIME_DIR/manifest.json" --pinned-public-key "$PINNED_PUBLIC_KEY" > "$RUNTIME_DIR/runtime-verify.json"
   rm -rf "$RUNTIME_DIR/client"
   mkdir -p "$RUNTIME_DIR/client"
-  cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- sync \
+  cargo run --quiet --manifest-path runtime/runtime/Cargo.toml --bin runtime -- sync \
     --manifest-url "$MANIFEST_URL" --pinned-public-key "$PINNED_PUBLIC_KEY" --root "$RUNTIME_DIR/client" > "$RUNTIME_DIR/runtime-sync.json"
 )
 jq -e '.status == "ready" and .signature.valid == true' "$RUNTIME_DIR/runtime-verify.json" >/dev/null
@@ -851,7 +851,7 @@ MINECRAFT_ACCESS_TOKEN="$(jq -er '.data.accessToken' <<<"$MC_SESSION")"
 PLAYER_USERNAME="$(jq -er '.data.profile.name' <<<"$MC_SESSION")"
 jq -e --arg v "$VERSION" --arg gh "$GUARD_SHA" --arg lh "$LAUNCHER_SHA" '.data.integrity.verified==true and .data.integrity.launcherVersion==$v and .data.integrity.guardSha256==$gh and .data.integrity.launcherSha256==$lh' <<<"$MC_SESSION" >/dev/null
 # Все дальнейшие запросы соединения, аннулирования и топологии должны использовать тот же аппаратно
-# аттестованный сеанс NeverLauncher, которому принадлежит токен Minecraft с проверенной целостностью.
+# аттестованный сеанс Launcher, которому принадлежит токен Minecraft с проверенной целостностью.
 ACCESS_TOKEN="$HW_ACCESS_ATTESTED"
 build_join_body() {
   local server_id="$1"
@@ -928,7 +928,7 @@ jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | 
   export NEVERLAUNCHER_RESOLUTION_WIDTH=854
   export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
   xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
-    cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- launch \
+    cargo run --quiet --manifest-path runtime/runtime/Cargo.toml --bin runtime -- launch \
       --manifest "$RUNTIME_DIR/manifest.json" \
       --pinned-public-key "$PINNED_PUBLIC_KEY" \
       --root "$RUNTIME_DIR/client" \
@@ -938,7 +938,7 @@ jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | 
       > "$RUNTIME_DIR/runtime-launch-minecraft.json"
 )
 jq -e '.timedOut == true or .success == true' "$RUNTIME_DIR/runtime-launch-minecraft.json" >/dev/null
-wait_log paper "neverlauncher.join.allowed username=$PLAYER_USERNAME"
+wait_log paper "launcher.join.allowed username=$PLAYER_USERNAME"
 wait_log paper "$PLAYER_USERNAME joined the game"
 
 # Since 0.36.4 the real player cycle must include a second, distinct signed
@@ -969,7 +969,7 @@ if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head
     "$RUNTIME_DIR/cycle-manifest-update.json" >/dev/null
   (
     cd "$ROOT"
-    cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- verify \
+    cargo run --quiet --manifest-path runtime/runtime/Cargo.toml --bin runtime -- verify \
       --manifest "$RUNTIME_DIR/cycle-manifest-update.json" \
       --pinned-public-key "$PINNED_PUBLIC_KEY" > "$RUNTIME_DIR/cycle-runtime-verify-update.json"
   )
@@ -981,7 +981,7 @@ if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head
     local kind="$1" log
     log="$(compose logs --no-color paper 2>&1)"
     if [[ "$kind" == allowed ]]; then
-      grep -Fc "neverlauncher.join.allowed username=$PLAYER_USERNAME" <<< "$log" || true
+      grep -Fc "launcher.join.allowed username=$PLAYER_USERNAME" <<< "$log" || true
     else
       grep -Fc "$PLAYER_USERNAME joined the game" <<< "$log" || true
     fi
@@ -1000,7 +1000,7 @@ if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head
       export NEVERLAUNCHER_RESOLUTION_WIDTH=854
       export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
       xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
-        cargo run --quiet --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime -- launch \
+        cargo run --quiet --manifest-path runtime/runtime/Cargo.toml --bin runtime -- launch \
           --manifest "$manifest" --pinned-public-key "$PINNED_PUBLIC_KEY" \
           --root "$RUNTIME_DIR/cycle-client" --java "$JAVA_BIN" \
           --username "$PLAYER_USERNAME" \
@@ -1030,15 +1030,15 @@ if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head
   python3 "$ROOT/e2e/scripts/game_cycle_0364.py" finalize \
     --root "$ROOT" --work "$RUNTIME_DIR" --version "$VERSION" \
     --profile "$PROFILE_ID" --player "$PLAYER_USERNAME" \
-    --java "$JAVA_BIN" --runtime "$ROOT/runtime/neverruntime/target/debug/neverruntime" \
-    --bridge "$ROOT/artifacts/plugins/neverlauncher-paper-bridge-${VERSION}.jar"
+    --java "$JAVA_BIN" --runtime "$ROOT/runtime/runtime/target/debug/runtime" \
+    --bridge "$ROOT/artifacts/plugins/launcher-paper-bridge-${VERSION}.jar"
 fi
 
 printf '[e2e] revoke launcher session and verify subsequent joins are denied\n'
 json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" '{"serverId":"paper-e2e-p3","reason":"e2e-revoke"}' > "$RUNTIME_DIR/revoke-paper-real-client.json"
 validate_join paper-e2e-p3 "$PAPER_NODE_KEY" "$PAPER_BRIDGE_SHA" deny
 python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port 25571 --username "$PLAYER_USERNAME" > "$RUNTIME_DIR/probe-paper-deny.txt"
-wait_log paper "neverlauncher.join.denied username=$PLAYER_USERNAME"
+wait_log paper "launcher.join.denied username=$PLAYER_USERNAME"
 if [[ "$MODE" == "full" ]]; then
   record_live_serverbridge_04113 paper paper-e2e-p3 25571
 fi
@@ -1066,7 +1066,7 @@ if [[ "$MODE" == "full" ]]; then
     local -a allow_probe_mode=() deny_probe_mode=()
     case "$service" in
       forge)
-        # Forge проверяет NeverLauncher на этапе CONFIGURATION. Завершите LOGIN через
+        # Forge проверяет Launcher на этапе CONFIGURATION. Завершите LOGIN через
         # Login Acknowledged как для разрешённого, так и для отклонённого сценария.
         allow_probe_mode=(
           --enter-configuration
@@ -1075,10 +1075,10 @@ if [[ "$MODE" == "full" ]]; then
         deny_probe_mode=("${allow_probe_mode[@]}")
         ;;
       neoforge)
-        # NeoForge 1.21.1 публикует NeverLauncher через RegisterConfigurationTasksEvent.
+        # NeoForge 1.21.1 публикует Launcher через RegisterConfigurationTasksEvent.
         # После Login Acknowledged начальная стадия Vanilla ждёт Pong(0), затем
         # SynchronizeRegistriesTask ожидает Select Known Packs. Отправляйте оба
-        # нативных ответа протокола, чтобы серверная задача NeverLauncher стала
+        # нативных ответа протокола, чтобы серверная задача Launcher стала
         # текущей без клиентского мода NeoForge. При отозванном доступе отключение
         # возможно на более ранней стадии строгого отказа; обязательный маркер
         # отказа ниже остаётся решающим доказательством.
@@ -1100,26 +1100,26 @@ if [[ "$MODE" == "full" ]]; then
     validate_join "$id" "$key" "$plugin_sha" deny
     json_post "$API/api/v1/session/join" "$ACCESS_TOKEN" "$join_body" > "$RUNTIME_DIR/join-$id-fresh.json"
     python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" "${allow_probe_mode[@]}" > "$RUNTIME_DIR/probe-$id-allow.txt"
-    wait_log "$service" "neverlauncher.join.allowed username=$PLAYER_USERNAME"
+    wait_log "$service" "launcher.join.allowed username=$PLAYER_USERNAME"
     json_post "$API/api/v1/session/invalidate" "$ACCESS_TOKEN" "$revoke_body" > "$RUNTIME_DIR/revoke-$id.json"
     validate_join "$id" "$key" "$plugin_sha" deny
     case "$service" in
       velocity|bungeecord|waterfall)
         # Прокси ограничивают переподключения по IP до обработчиков
         # PreLogin. Сохраняйте защиту и ждите производственное
-        # окно, чтобы проба отказа дошла до NeverLauncher.
+        # окно, чтобы проба отказа дошла до Launcher.
         sleep "${NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5}"
         ;;
       spigot|paper|purpur|folia)
         # Среды Bukkit/Paper применяют своё ограничение подключений до
         # AsyncPlayerPreLoginEvent. Сохраняйте защиту и ждите установленное
         # окно, чтобы проба отозванного сеанса дошла до обработчика
-        # отказа NeverLauncher, а не до ограничения Bukkit.
+        # отказа Launcher, а не до ограничения Bukkit.
         sleep "${NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5}"
         ;;
     esac
     python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" "${deny_probe_mode[@]}" > "$RUNTIME_DIR/probe-$id-deny.txt"
-    wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"
+    wait_log "$service" "launcher.join.denied username=$PLAYER_USERNAME"
     record_live_serverbridge_04113 "$service" "$id" "$port"
   }
   flow_for_server velocity-e2e-p3 "$VELOCITY_NODE_KEY" "$VELOCITY_BRIDGE_SHA" velocity 25570
@@ -1159,7 +1159,7 @@ fi
 # back up its persisted UUID/playerdata and plugin files with the production
 # Host CLI, and independently verify a restoration. Only for >= 0.29.0.
 if [[ "$MODE" == "full" && "$(printf '%s\n' '0.29.0' "$VERSION" | sort -V | head -1)" == "0.29.0" ]]; then
-  (cd "$ROOT/cli" && go build -trimpath -o "$RUNTIME_DIR/nl-server-control-0290" ./cmd/neverlauncher)
+  (cd "$ROOT/cli" && go build -trimpath -o "$RUNTIME_DIR/nl-server-control-0290" ./cmd/launcher)
   python3 "$ROOT/e2e/scripts/verify-real-world-backup-0290.py" \
     --cli "$RUNTIME_DIR/nl-server-control-0290" \
     --compose-file "$COMPOSE_FILE" --override-file "$GUARD_POLICY_OVERRIDE" \

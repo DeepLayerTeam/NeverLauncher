@@ -243,7 +243,7 @@ pub async fn ensure_managed_java_from_distribution(
     let manifest: ManagedJREDistributionManifest = serde_json::from_slice(&manifest_bytes)
         .map_err(|err| format!("Managed JRE manifest JSON: {err}"))?;
     if manifest.schema_version != "1.0"
-        || manifest.product != "NeverLauncher"
+        || manifest.product != "Launcher"
         || manifest.distribution != "temurin"
         || manifest.vendor != "Eclipse Adoptium"
         || manifest.major_version != required_major
@@ -335,7 +335,7 @@ async fn load_distribution_manifest(location: &str) -> Result<(Vec<u8>, Distribu
         let response = managed_java_send_with_retry(
             &client,
             url.as_str(),
-            &format!("NeverLauncher/{} ManagedJRE", env!("CARGO_PKG_VERSION")),
+            &format!("Launcher/{} ManagedJRE", env!("CARGO_PKG_VERSION")),
         )
         .await
         .map_err(|err| format!("Managed JRE manifest download: {err}"))?;
@@ -577,7 +577,7 @@ async fn install_managed_java_archive(
         installed_at: stamp,
         file_hashes: inventory_runtime_files(&staging).await?,
     };
-    let record_path = staging.join(".neverruntime.json");
+    let record_path = staging.join(".runtime.json");
     let mut record_file = fs::File::create(&record_path).await.map_err(|err| format!("runtime record create: {err}"))?;
     use tokio::io::AsyncWriteExt;
     record_file.write_all(&serde_json::to_vec_pretty(&record).map_err(|err| format!("runtime record serialize: {err}"))?)
@@ -838,7 +838,7 @@ async fn resolve_adoptium_latest_asset(
     let response = managed_java_send_with_retry(
         client,
         &url,
-        &format!("NeverLauncher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")),
+        &format!("Launcher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")),
     )
     .await
     .map_err(|err| format!("Adoptium latest API request: {err}"))?;
@@ -874,7 +874,7 @@ async fn resolve_adoptium_feature_release_asset(
     let response = managed_java_send_with_retry(
         client,
         &url,
-        &format!("NeverLauncher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")),
+        &format!("Launcher/{} ManagedJavaII", env!("CARGO_PKG_VERSION")),
     )
     .await
     .map_err(|err| format!("Adoptium feature release API request: {err}"))?;
@@ -1146,7 +1146,7 @@ async fn restore_cached_managed_java(
     for dir in candidates {
         let meta = match fs::symlink_metadata(&dir).await { Ok(v) => v, Err(_) => continue };
         if meta.file_type().is_symlink() || !meta.is_dir() { continue; }
-        let bytes = match fs::read(dir.join(".neverruntime.json")).await { Ok(b) => b, Err(_) => continue };
+        let bytes = match fs::read(dir.join(".runtime.json")).await { Ok(b) => b, Err(_) => continue };
         let record: ManagedJavaRecord = match serde_json::from_slice(&bytes) { Ok(r) => r, Err(_) => continue };
         if record.schema_version != "1.3" || record.distribution != distribution || record.major_version != major
             || record.os != os || record.arch != arch || record.archive_size == 0
@@ -1184,7 +1184,7 @@ async fn validate_installed_runtime(dir: &Path, major: u32, distribution: &str, 
     if dir_meta.file_type().is_symlink() || !dir_meta.is_dir() {
         return Ok(None);
     }
-    let record_path = dir.join(".neverruntime.json");
+    let record_path = dir.join(".runtime.json");
     let bytes = match fs::read(&record_path).await {
         Ok(bytes) => bytes,
         Err(_) => return Ok(None),
@@ -1252,7 +1252,7 @@ async fn inventory_runtime_files(root: &Path) -> Result<BTreeMap<String, String>
                 if meta.is_dir() { pending.push(path); continue; }
                 let relative = path.strip_prefix(&root).map_err(|e| e.to_string())?
                     .to_string_lossy().replace('\\', "/");
-                if relative == ".neverruntime.json" { continue; }
+                if relative == ".runtime.json" { continue; }
                 if !(meta.is_file() || meta.file_type().is_symlink()) {
                     return Err(format!("unsupported Java runtime entry: {relative}"));
                 }
@@ -1346,16 +1346,16 @@ async fn verify_java_bytecode_execution(java: &Path, major: u32) -> Result<(), S
     // from replacing the classpath probe. It is not written into the runtime
     // installation, so integrity inventory remains immutable on cache reads.
     let temp = std::env::temp_dir().join(format!(
-        "neverlauncher-java-probe-{}-{:016x}", std::process::id(), rand::random::<u64>()
+        "launcher-java-probe-{}-{:016x}", std::process::id(), rand::random::<u64>()
     ));
     fs::create_dir(&temp).await.map_err(|e| format!("Java probe directory: {e}"))?;
     let _cleanup = StagingCleanup(temp.clone());
-    fs::write(temp.join("NeverLauncherJvmProbe.class"),
-        include_bytes!("../fixtures/NeverLauncherJvmProbe.class"))
+    fs::write(temp.join("LauncherJvmProbe.class"),
+        include_bytes!("../fixtures/LauncherJvmProbe.class"))
         .await.map_err(|e| format!("Java bytecode probe write: {e}"))?;
     let nonce = format!("{:016x}{:016x}", rand::random::<u64>(), rand::random::<u64>());
     let mut command = Command::new(java);
-    command.arg("-cp").arg(&temp).arg("NeverLauncherJvmProbe").arg(&nonce)
+    command.arg("-cp").arg(&temp).arg("LauncherJvmProbe").arg(&nonce)
         .stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true);
     for key in ["JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS", "CLASSPATH"] {
         command.env_remove(key);
@@ -1454,19 +1454,19 @@ fn managed_runtime_root() -> Result<PathBuf, String> {
     }
     if cfg!(windows) {
         if let Ok(value) = std::env::var("LOCALAPPDATA") {
-            return Ok(PathBuf::from(value).join("NeverLauncher").join("runtimes"));
+            return Ok(PathBuf::from(value).join("Launcher").join("runtimes"));
         }
     }
     if cfg!(target_os = "macos") {
         if let Ok(value) = std::env::var("HOME") {
-            return Ok(PathBuf::from(value).join("Library").join("Application Support").join("NeverLauncher").join("runtimes"));
+            return Ok(PathBuf::from(value).join("Library").join("Application Support").join("Launcher").join("runtimes"));
         }
     }
     if let Ok(value) = std::env::var("XDG_DATA_HOME") {
-        return Ok(PathBuf::from(value).join("NeverLauncher").join("runtimes"));
+        return Ok(PathBuf::from(value).join("Launcher").join("runtimes"));
     }
     if let Ok(value) = std::env::var("HOME") {
-        return Ok(PathBuf::from(value).join(".local").join("share").join("NeverLauncher").join("runtimes"));
+        return Ok(PathBuf::from(value).join(".local").join("share").join("Launcher").join("runtimes"));
     }
     Err("не удалось определить каталог Managed Java; задайте NEVERLAUNCHER_RUNTIME_DIR".to_string())
 }
@@ -1660,7 +1660,7 @@ mod tests {
 
     #[test]
     fn managed_distribution_paths_are_fail_closed() {
-        assert!(validate_distribution_archive_name("neverlauncher-jre-temurin21-linux-x64.tar.gz").is_ok());
+        assert!(validate_distribution_archive_name("launcher-jre-temurin21-linux-x64.tar.gz").is_ok());
         assert!(validate_distribution_archive_name("../runtime.tar.gz").is_err());
         assert!(validate_distribution_archive_name("nested/runtime.tar.gz").is_err());
         assert!(validate_distribution_java_entry("jdk-21/bin/java", "linux").is_ok());
@@ -1767,7 +1767,7 @@ mod tests {
         let (checksum, size) = sha256_file(&archive).await.unwrap();
         let (platform, architecture) = distribution_platform().unwrap();
         let manifest = serde_json::json!({
-            "schemaVersion": "1.0", "product": "NeverLauncher", "productVersion": env!("CARGO_PKG_VERSION"),
+            "schemaVersion": "1.0", "product": "Launcher", "productVersion": env!("CARGO_PKG_VERSION"),
             "distribution": "temurin", "vendor": "Eclipse Adoptium", "majorVersion": 21,
             "targets": [{
                 "platform": platform, "architecture": architecture, "distribution": "temurin", "majorVersion": 21,

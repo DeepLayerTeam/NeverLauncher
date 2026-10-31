@@ -1,4 +1,4 @@
-// neverlauncher-sqlite is the DEP00 physical SQLite WAL preflight/verification
+// launcher-sqlite is the DEP00 physical SQLite WAL preflight/verification
 // executable. It is intentionally NOT a substitute for the future DEP01 app
 // schema or DEP03 Redis-less coordinator.
 package main
@@ -8,11 +8,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitecore"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitecore"
 	"os"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 func main() { os.Exit(run(os.Args[1:])) }
@@ -45,7 +45,7 @@ func run(args []string) int {
 		return runCoreAction(args)
 	}
 	if len(args) == 0 || (args[0] != "verify" && args[0] != "probe" && args[0] != "core-init" && args[0] != "core-status") {
-		fmt.Fprintln(os.Stderr, "usage: neverlauncher-sqlite {verify|probe|core-init|core-status|backup|backup-verify|restore|pre-upgrade} [--db PATH] [--backup PATH]")
+		fmt.Fprintln(os.Stderr, "usage: launcher-sqlite {verify|probe|core-init|core-status|backup|backup-verify|restore|pre-upgrade} [--db PATH] [--backup PATH]")
 		return 2
 	}
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)

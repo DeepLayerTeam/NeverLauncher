@@ -1,4 +1,4 @@
--- NeverLauncher 0.10.0-P0: базовая производственная схема.
+-- Launcher 0.10.0-P0: базовая производственная схема.
 -- Миграция намеренно идемпотентна и нормализует два исторических
 -- варианта PostgreSQL до 0.10.0 к схеме SQLRepository.
 
@@ -406,7 +406,7 @@ BEGIN
 END $$;
 DROP TABLE IF EXISTS storage_objects_v52;
 
-CREATE TABLE IF NOT EXISTS neverlauncher_persistence_snapshots_950 (
+CREATE TABLE IF NOT EXISTS launcher_persistence_snapshots_950 (
     id BIGSERIAL PRIMARY KEY, kind TEXT NOT NULL, schema_version TEXT NOT NULL,
     payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -419,4 +419,4 @@ CREATE INDEX IF NOT EXISTS idx_users_email_lower_p0 ON users(lower(email));
 CREATE INDEX IF NOT EXISTS idx_audit_events_created_p0 ON audit_events(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_telemetry_events_created_p0 ON telemetry_events(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_crash_reports_created_p0 ON crash_reports(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_persistence_kind_created_p0 ON neverlauncher_persistence_snapshots_950(kind,created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_persistence_kind_created_p0 ON launcher_persistence_snapshots_950(kind,created_at DESC);

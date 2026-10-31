@@ -1,9 +1,9 @@
 {
   "schemaVersion": "2.0",
-  "id": "ru.example.neverlauncher.admin-dashboard",
+  "id": "ru.example.launcher.admin-dashboard",
   "name": "Admin Dashboard Example",
   "version": "0.1.0",
-  "publisher": "NeverLauncher Examples",
+  "publisher": "Launcher Examples",
   "api": "1.0",
   "targets": [
     {

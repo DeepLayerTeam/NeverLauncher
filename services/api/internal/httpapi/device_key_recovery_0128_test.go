@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func newReplacementKey0128(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
@@ -56,7 +56,7 @@ func rotateBoundAccess0128(t *testing.T, h http.Handler, current boundAccess0127
 }
 
 func TestDeviceKeyRotationRequiresOldAndNewProofAndTombstonesOldIdentity0128(t *testing.T) {
-	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-key-rotation", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"}}
+	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-key-rotation", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "launcher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://api.example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	h := Server{Version: "0.12.8", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(t.TempDir())}.Handler()
 	old := registerSoftwareDevice0125(t, h, "rotation-primary", "Rotation workstation")
@@ -117,7 +117,7 @@ func TestDeviceKeyRotationRequiresOldAndNewProofAndTombstonesOldIdentity0128(t *
 }
 
 func TestDeviceKeyRecoveryRequiresFreshPhishingResistantAuthAndOnlyNewKeyProof0128(t *testing.T) {
-	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-key-recovery", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"}}
+	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-key-recovery", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "launcher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://api.example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	state := NewRuntimeState()
 	srv := Server{Version: "0.12.8", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(t.TempDir()), State: state}
@@ -168,7 +168,7 @@ func TestDeviceKeyRecoveryRequiresFreshPhishingResistantAuthAndOnlyNewKeyProof01
 }
 
 func TestBoundSessionCannotBypassReplacementViaOrdinaryRegistration0128(t *testing.T) {
-	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-key-hardening", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"}}
+	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-key-hardening", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "launcher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://api.example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	h := Server{Version: "0.12.8", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(t.TempDir())}.Handler()
 	bound := registerSoftwareDevice0125(t, h, "registration-bypass", "Bound workstation")

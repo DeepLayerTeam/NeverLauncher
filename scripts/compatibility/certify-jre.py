@@ -73,7 +73,9 @@ def sha256_file(path: Path) -> tuple[str, int]:
     return digest.hexdigest(), size
 
 
-def certify(java: str, expected_major: int, expected_os: str, expected_arch: str) -> dict[str, Any]:
+def certify(
+    java: str, expected_major: int, expected_os: str, expected_arch: str
+) -> dict[str, Any]:
     if expected_major <= 0:
         raise ValueError("expected Java major must be positive")
     expected_os = normalize_os(expected_os)
@@ -110,7 +112,11 @@ def certify(java: str, expected_major: int, expected_os: str, expected_arch: str
     java_home_raw = properties.get("java.home", "").strip()
     java_home = str(Path(java_home_raw).expanduser().resolve()) if java_home_raw else ""
     vendor = properties.get("java.vendor", "").strip()
-    runtime_version = (properties.get("java.runtime.version") or properties.get("java.version") or version_string).strip()
+    runtime_version = (
+        properties.get("java.runtime.version")
+        or properties.get("java.version")
+        or version_string
+    ).strip()
     vm_name = properties.get("java.vm.name", "").strip()
     detected_os = normalize_os(properties.get("os.name", ""))
     detected_arch = normalize_arch(properties.get("os.arch", ""))
@@ -154,7 +160,9 @@ def certify(java: str, expected_major: int, expected_os: str, expected_arch: str
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Certify the exact JRE binary used by a NeverLauncher compatibility target")
+    parser = argparse.ArgumentParser(
+        description="Certify the exact JRE binary used by a Launcher compatibility target"
+    )
     parser.add_argument("--java", required=True)
     parser.add_argument("--major", required=True, type=int)
     parser.add_argument("--os", required=True, dest="expected_os")
@@ -167,7 +175,9 @@ def main() -> int:
         print(f"jre-certification: {exc}", file=sys.stderr)
         return 2
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     if not payload["certified"]:
         print(
             "jre-certification: mismatch "

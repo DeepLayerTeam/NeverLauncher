@@ -14,7 +14,7 @@ import (
 func TestFactoryPackageVerified0280(t *testing.T) {
 	root := t.TempDir()
 	client := filepath.Join(root, "client")
-	if err := os.MkdirAll(filepath.Join(client, ".neverlauncher"), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(client, ".launcher"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	payload := []byte("client-payload")
@@ -24,7 +24,7 @@ func TestFactoryPackageVerified0280(t *testing.T) {
 		t.Fatal(err)
 	}
 	lock := []byte(`{"reproducibilitySha256":"` + strings.Repeat("a", 64) + `"}`)
-	if err := os.WriteFile(filepath.Join(client, ".neverlauncher", "install-plan.json"), lock, 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(client, ".launcher", "install-plan.json"), lock, 0600); err != nil {
 		t.Fatal(err)
 	}
 	raw := []byte(`{"reproducibilitySha256":"` + strings.Repeat("a", 64) + `","outputs":[{"path":"mod.jar","sha256":"` + sha + `","size":14}]}`)
@@ -57,7 +57,7 @@ func TestFactoryPackageVerified0280(t *testing.T) {
 	if err := os.Remove(filepath.Join(client, "mod.jar")); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(filepath.Join(client, ".neverlauncher", "install-plan.json"), filepath.Join(client, "mod.jar")); err != nil {
+	if err := os.Symlink(filepath.Join(client, ".launcher", "install-plan.json"), filepath.Join(client, "mod.jar")); err != nil {
 		t.Skipf("symlinks unavailable: %v", err)
 	}
 	if _, err := factoryPackageVerified0280(root, client, plan); err == nil {

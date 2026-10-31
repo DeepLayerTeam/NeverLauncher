@@ -10,7 +10,7 @@ import (
 
 func extensionAdminToken0201(t *testing.T, h http.Handler) string {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/login", strings.NewReader(`{"email":"admin@neverlauncher.local","password":"admin"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/login", strings.NewReader(`{"email":"admin@launcher.local","password":"admin"}`))
 	req.Header.Set("Content-Type", "application/json")
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)

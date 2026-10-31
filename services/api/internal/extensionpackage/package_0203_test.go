@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 func writeRegistryTestEntry0203(t *testing.T, zw *zip.Writer, name string, data []byte, mode os.FileMode, when time.Time) {
@@ -56,8 +56,8 @@ func buildRegistryTestPackage0203(t *testing.T, creatorVersion string) (string, 
 	fileID := "SPDXRef-File-" + hex.EncodeToString(pathDigest[:8])
 	sbom := spdxDocument0203{
 		SPDXVersion: "SPDX-2.3", DataLicense: "CC0-1.0", SPDXID: "SPDXRef-DOCUMENT", Name: manifest.ID + " " + manifest.Version,
-		DocumentNamespace: "https://neverlauncher.local/spdx/extension/" + manifest.ID + "/" + manifest.Version + "/" + canonicalDigest,
-		CreationInfo:      spdxCreationInfo0203{Created: buildTime.Format(time.RFC3339), Creators: []string{"Tool: NeverLauncher CLI " + creatorVersion}},
+		DocumentNamespace: "https://launcher.local/spdx/extension/" + manifest.ID + "/" + manifest.Version + "/" + canonicalDigest,
+		CreationInfo:      spdxCreationInfo0203{Created: buildTime.Format(time.RFC3339), Creators: []string{"Tool: Launcher CLI " + creatorVersion}},
 		Packages:          []spdxPackage0203{{SPDXID: "SPDXRef-Package-Extension", Name: manifest.Name, VersionInfo: manifest.Version, DownloadLocation: "NOASSERTION", FilesAnalyzed: true, LicenseConcluded: "NOASSERTION", LicenseDeclared: "NOASSERTION"}},
 		Files:             []spdxFile0203{{SPDXID: fileID, FileName: "./payload/" + payloadFile.Path, Checksums: []spdxChecksum0203{{Algorithm: "SHA256", ChecksumValue: payloadFile.SHA256}}}},
 		Relationships:     []spdxRelationship0203{{SPDXElementID: "SPDXRef-DOCUMENT", RelationshipType: "DESCRIBES", RelatedSPDXElement: "SPDXRef-Package-Extension"}, {SPDXElementID: "SPDXRef-Package-Extension", RelationshipType: "CONTAINS", RelatedSPDXElement: fileID}},

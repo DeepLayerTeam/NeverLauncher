@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "NeverLauncher",
+  "productName": "Launcher",
   "version": "0.42.3",
-  "identifier": "ru.skif4er.neverlauncher",
+  "identifier": "ru.skif4er.launcher",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "NeverLauncher",
+        "title": "Launcher",
         "width": 1180,
         "height": 760,
         "minWidth": 960,
@@ -33,6 +33,6 @@
     "targets": "all",
     "category": "Game",
     "shortDescription": "Брендируемый открытый лаунчер для Minecraft-проектов",
-    "longDescription": "NeverLauncher — русскоязычная open-source инфраструктура лаунчера с white-label branding system для Minecraft-проектов."
+    "longDescription": "Launcher — русскоязычная open-source инфраструктура лаунчера с white-label branding system для Minecraft-проектов."
   }
 }

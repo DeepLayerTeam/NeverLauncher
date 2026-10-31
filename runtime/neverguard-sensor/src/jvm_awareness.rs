@@ -552,7 +552,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
             "aarch64" => "arm64",
             arch => return Err(format!("Guard JVM-Aware unsupported LWJGL architecture: {arch}")),
         };
-        let extract_root = launch_root.join(".neverlauncher").join("lwjgl-extract")
+        let extract_root = launch_root.join(".launcher").join("lwjgl-extract")
             .join("windows").join(std::env::consts::ARCH);
         let candidates = [
             native_root.join("lwjgl.dll"),

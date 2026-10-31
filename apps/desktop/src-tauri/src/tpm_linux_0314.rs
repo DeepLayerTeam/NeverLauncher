@@ -4,7 +4,7 @@
 //! and raw TPM2B_PRIVATE.buffer, under a deterministic owner-hierarchy ECC SRK.
 //! tpm2-tools 5.x is used to reconstruct/load that exact child, without exporting
 //! a private key or allocating a second device identity. All evidence is independently
-//! verified by the NeverLauncher backend. No software-key fallback is allowed.
+//! verified by the Launcher backend. No software-key fallback is allowed.
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use rand::{rngs::OsRng, RngCore};
 use serde::Serialize;
@@ -39,7 +39,7 @@ fn parse_ak_handle(input: &str) -> Result<String, String> {
     Ok(format!("0x{n:08x}"))
 }
 
-// NeverLauncher hardware-enclave config uses app_name=neverlauncher-desktop.
+// Launcher hardware-enclave config uses app_name=launcher-desktop.
 // 0.2.10 adds -unsigned for unsigned developer binaries. Only the normal
 // XDG application directories are eligible; never accept a frontend path.
 fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
@@ -50,7 +50,7 @@ fn device_blobs(label: &str) -> Result<(Vec<u8>,Vec<u8>),String> {
     let config=std::env::var_os("XDG_CONFIG_HOME").filter(|v| Path::new(v).is_absolute())
         .map(PathBuf::from).unwrap_or_else(|| PathBuf::from(home).join(".config"));
     let mut found=None;
-    for app in ["neverlauncher-desktop", "neverlauncher-desktop-unsigned"] {
+    for app in ["launcher-desktop", "launcher-desktop-unsigned"] {
         let dir=config.join(app).join("keys");
         let public=dir.join(format!("{label}.tpm_pub"));
         let private=dir.join(format!("{label}.tpm_priv"));

@@ -1,5 +1,5 @@
-name: NeverLauncherWaterfallBridge
-main: ru.neverlauncher.bridge.waterfall.NeverLauncherWaterfallBridge
+name: LauncherWaterfallBridge
+main: ru.launcher.bridge.waterfall.LauncherWaterfallBridge
 version: "${version}"
 author: SkiF4er
-description: NeverLauncher ServerBridge 3 integration for Waterfall with Protocol v3 negotiation and Protocol v2 rolling-upgrade compatibility.
+description: Launcher ServerBridge 3 integration for Waterfall with Protocol v3 negotiation and Protocol v2 rolling-upgrade compatibility.

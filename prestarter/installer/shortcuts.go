@@ -2,7 +2,7 @@ package installer
 
 import (
 	"fmt"
-	prestarter "github.com/DeepLayerTeam/NeverLauncher/prestarter"
+	prestarter "github.com/DeepLayerTeam/Launcher/prestarter"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,13 +17,13 @@ func (i *installation) shortcutPath() string {
 		if !filepath.IsAbs(appdata) {
 			appdata = filepath.Join(home, "AppData", "Roaming")
 		}
-		return filepath.Join(appdata, "Microsoft", "Windows", "Start Menu", "Programs", "NeverLauncher.lnk")
+		return filepath.Join(appdata, "Microsoft", "Windows", "Start Menu", "Programs", "Launcher.lnk")
 	case "linux":
 		base := os.Getenv("XDG_DATA_HOME")
 		if !filepath.IsAbs(base) {
 			base = filepath.Join(home, ".local", "share")
 		}
-		return filepath.Join(base, "applications", "neverlauncher.desktop")
+		return filepath.Join(base, "applications", "launcher.desktop")
 	default:
 		return "" // macOS has an app bundle installed by pkgbuild.
 	}
@@ -37,7 +37,7 @@ func (i *installation) createShortcut(r record, cfg prestarter.Config) error {
 		return e
 	}
 	base := filepath.Join(i.base, "releases", r.Release)
-	name := "NeverLauncher"
+	name := "Launcher"
 	if cfg.Branding != nil {
 		name = cfg.Branding.DisplayName
 	}

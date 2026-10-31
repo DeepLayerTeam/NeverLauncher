@@ -1,8 +1,8 @@
-# NeverLauncher 0.25.7 — Official Minecraft Integration
+# Launcher 0.25.7 — Official Minecraft Integration
 
 ## Implemented (not a local-Yggdrasil impersonation)
 
-NeverLauncher 0.25.7 offers an **independent** Minecraft Java integration:
+Launcher 0.25.7 offers an **independent** Minecraft Java integration:
 Microsoft OAuth 2.0 device-code authorization → Xbox Live → XSTS → Minecraft
 Services token → the real Minecraft Services `/minecraft/profile` of that
 Microsoft account. The `/minecraft/profile` endpoint must return a UUID/name;
@@ -11,9 +11,9 @@ Minecraft Java profile. Game Pass accounts can have an accessible profile withou
 ordinary purchase-entitlement items, so the verified live Minecraft profile is
 used as the eligibility criterion.
 
-The official session is different from the NeverLauncher login. Login requires
+The official session is different from the Launcher login. Login requires
 a valid current Never session and **separate user confirmation at Microsoft**.
-NeverLauncher local UUIDs, textures, skin signatures, custom profile IDs,
+Launcher local UUIDs, textures, skin signatures, custom profile IDs,
 ServerBridge ownership and Yggdrasil RSA keys are never reused for official
 accounts. OAuth client ID is the registered *public* Microsoft identity
 application; this implementation does not require or retain its client secret.
@@ -25,7 +25,7 @@ Azure/Microsoft identity app configured for *personal Microsoft accounts* and
 public-client/device-code authentication. Consent must support the `XboxLive.signin`
 and `offline_access` scopes. Ensure production `NEVERLAUNCHER_AUTH_TOKEN_SECRET`
 is random, at least 24 bytes, and **identical across API replicas** (the
-recommended value is a random 32+-byte secret). Use HTTPS for NeverLauncher.
+recommended value is a random 32+-byte secret). Use HTTPS for Launcher.
 The API has a fixed allowlist of outbound origins, all Microsoft/Xbox/Minecraft;
 there are no caller-provided URLs. API-to-Microsoft redirects are disabled and
 all responses are capped to 1 MiB with finite timeouts.
@@ -72,7 +72,7 @@ access/refresh session remains in the existing OS credential store as before.
   cape can be added to that list. Reset/delete applies only to the active
   official skin/cape via official Minecraft Services.
 - Official metadata/skin/cape URLs come from the real Minecraft profile.
-  They are never copied into local-Yggdrasil assignments and NeverLauncher
+  They are never copied into local-Yggdrasil assignments and Launcher
   **never signs** them with the local Yggdrasil key.
 
 ### Desktop identity selection and game launch
@@ -81,7 +81,7 @@ The **Авторизация** panel lets the player complete Microsoft device l
 inspect the verified official profile, upload/reset its skin, and select/hide
 an owned cape. Account mode defaults to **local** and must be explicitly
 changed to **official** before launch. `userType=msa`, the official UUID and
-the real Minecraft bearer are passed to the native NeverRuntime. No local
+the real Minecraft bearer are passed to the native Runtime. No local
 Yggdrasil URL or authlib-injector agent is injected for `msa`. Any signed
 manifest JVM args containing authlib-injector cause this official mode to fail
 closed. Official tokens may not be used for local ServerBridge join; this

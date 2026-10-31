@@ -1,4 +1,4 @@
-name: NeverLauncher Production Release Candidate
+name: Launcher Production Release Candidate
 
 on:
   workflow_dispatch:
@@ -42,7 +42,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: neverlauncher-production-release-${{ github.ref }}
+  group: launcher-production-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -77,7 +77,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-minecraft-client-e2e-evidence
+          name: launcher-minecraft-client-e2e-evidence
           path: real-minecraft-e2e
       - name: Validate live join/replay/handoff and world restore results
         run: |
@@ -153,7 +153,7 @@ jobs:
         run: bash scripts/release/certify-admin-ga-0220.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-admin-ga-${{ github.sha }}
+          name: launcher-admin-ga-${{ github.sha }}
           path: dist/ga-certification/admin-0220.json
           if-no-files-found: error
           retention-days: 90
@@ -167,18 +167,18 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_USER: neverlauncher_test
-          POSTGRES_PASSWORD: neverlauncher_test_ci_only
-          POSTGRES_DB: neverlauncher_profile_ga
+          POSTGRES_USER: launcher_test
+          POSTGRES_PASSWORD: launcher_test_ci_only
+          POSTGRES_DB: launcher_profile_ga
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_profile_ga"
+          --health-cmd "pg_isready -U launcher_test -d launcher_profile_ga"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 15
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:neverlauncher_test_ci_only@127.0.0.1:5432/neverlauncher_profile_ga?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:launcher_test_ci_only@127.0.0.1:5432/launcher_profile_ga?sslmode=disable
     steps:
       - uses: actions/checkout@v4
         with:
@@ -202,7 +202,7 @@ jobs:
         run: python3 scripts/release/certify-profiles-ga-0230.py
       - uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-profiles-ga-${{ github.sha }}
+          name: launcher-profiles-ga-${{ github.sha }}
           path: dist/ga-certification/profiles-0230.json
           if-no-files-found: error
           retention-days: 90
@@ -308,14 +308,14 @@ jobs:
       - name: Fetch independent signed acceptance evidence from protected run
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-single-node-ga-0330-${{ github.sha }}
+          name: launcher-single-node-ga-0330-${{ github.sha }}
           run-id: ${{ inputs.single_node_ga_evidence_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: single-node-ga-evidence
       - name: Fetch this workflow's independently executed RC result
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-03216-rc-${{ github.sha }}
+          name: launcher-03216-rc-${{ github.sha }}
           path: live-rc-03216
       - name: Verify complete installed GA evidence and RC integrity
         env:
@@ -335,7 +335,7 @@ jobs:
           test -n "$TRUSTED_GA_PUBLIC_KEY"
           umask 077
           printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > "$RUNNER_TEMP/ga-trust.pub"
-          cmp live-rc-03216/neverlauncher-03216-rc.json single-node-ga-evidence/SINGLE_NODE_GA_RC.json
+          cmp live-rc-03216/launcher-03216-rc.json single-node-ga-evidence/SINGLE_NODE_GA_RC.json
           python3 -m pip install 'cryptography>=43,<47'
           python3 scripts/ga/single_node_ga_0330.py \
             --evidence-dir single-node-ga-evidence \
@@ -345,7 +345,7 @@ jobs:
         run: cp "$RUNNER_TEMP/SINGLE_NODE_GA_CERTIFICATION.json" single-node-ga-evidence/
       - uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-single-node-ga-verified-${{ github.sha }}
+          name: launcher-single-node-ga-verified-${{ github.sha }}
           path: single-node-ga-evidence/
           if-no-files-found: error
           retention-days: 90
@@ -391,7 +391,7 @@ jobs:
           STAGED_PACKAGE: ${{ inputs.staged_package_id }}
         run: |
           jq -e --arg pkg "$STAGED_PACKAGE" --arg sha "$GITHUB_SHA" --arg version "$(cat VERSION)" \
-            '.schemaVersion == "neverlauncher.ga-runtime-preflight.v1" and
+            '.schemaVersion == "launcher.ga-runtime-preflight.v1" and
              .status == "backend-eligible-not-published" and .packageId == $pkg and
              .productVersion == $version and .sourceSha == $sha and
              .verifiedTargets > 0 and (.matrixSha256 | length) == 64' \
@@ -466,7 +466,7 @@ jobs:
       - name: Verify exact-commit Admin GA result
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-admin-ga-${{ github.sha }}
+          name: launcher-admin-ga-${{ github.sha }}
           path: admin-ga-certification
       - name: Reject missing or mismatched Admin GA certification
         run: |
@@ -476,7 +476,7 @@ jobs:
       - name: Download exact-commit Profile GA certification
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-profiles-ga-${{ github.sha }}
+          name: launcher-profiles-ga-${{ github.sha }}
           path: profile-ga-certification
       - name: Reject missing, skipped or mismatched Profile GA evidence
         run: |
@@ -495,43 +495,43 @@ jobs:
       - name: Download certified Linux Guard artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-linux-guard-${{ github.sha }}
+          name: launcher-linux-guard-${{ github.sha }}
           path: guard-platform-artifacts/linux
       - name: Download native Linux x64 + ARM64 production artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: neverlauncher-linux-production-*-${{ github.sha }}
+          pattern: launcher-linux-production-*-${{ github.sha }}
           path: linux-production-artifacts
           merge-multiple: true
       - name: Download notarized macOS x64 + ARM64 production artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-macos-notarized-${{ github.sha }}
+          name: launcher-macos-notarized-${{ github.sha }}
           path: macos-production-artifacts
       - name: Download Managed JRE six-target production assets
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-managed-jre-${{ github.sha }}
+          name: launcher-managed-jre-${{ github.sha }}
           path: managed-jre-artifacts
       - name: Download Authenticode Windows x64 + ARM64 production artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-windows-production-${{ github.sha }}
+          name: launcher-windows-production-${{ github.sha }}
           path: windows-production-artifacts
       - name: Download certified Windows Guard artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-windows-guard-${{ github.sha }}
+          name: launcher-windows-guard-${{ github.sha }}
           path: guard-platform-artifacts/windows
       - name: Download certified macOS Guard artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-macos-guard-${{ github.sha }}
+          name: launcher-macos-guard-${{ github.sha }}
           path: guard-platform-artifacts/macos
       - name: Download Guard CI matrix
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-guard-ci-matrix-${{ github.run_id }}
+          name: launcher-guard-ci-matrix-${{ github.run_id }}
           path: guard-certification
       - name: Download exact-commit Windows adversarial certificate
         uses: actions/download-artifact@v4
@@ -590,12 +590,12 @@ jobs:
           test -n "$PRODUCTION_RELEASE_SIGNING_KEY"
           test -n "$PRODUCTION_RELEASE_ROOT_PUBLIC_KEY"
           test -n "$PRODUCTION_RELEASE_TRUST_POLICY"
-          printf '%s\n' "$PRODUCTION_RELEASE_SIGNING_KEY" > /tmp/neverlauncher-release-private.pem
-          printf '%s\n' "$PRODUCTION_RELEASE_ROOT_PUBLIC_KEY" > /tmp/neverlauncher-release-root-public.pem
-          printf '%s\n' "$PRODUCTION_RELEASE_TRUST_POLICY" > /tmp/neverlauncher-release-trust-policy.json
-          openssl pkey -in /tmp/neverlauncher-release-private.pem -noout >/dev/null
-          openssl pkey -pubin -in /tmp/neverlauncher-release-root-public.pem -noout >/dev/null
-          jq -e '.schemaVersion and .trustDomain' /tmp/neverlauncher-release-trust-policy.json >/dev/null
+          printf '%s\n' "$PRODUCTION_RELEASE_SIGNING_KEY" > /tmp/launcher-release-private.pem
+          printf '%s\n' "$PRODUCTION_RELEASE_ROOT_PUBLIC_KEY" > /tmp/launcher-release-root-public.pem
+          printf '%s\n' "$PRODUCTION_RELEASE_TRUST_POLICY" > /tmp/launcher-release-trust-policy.json
+          openssl pkey -in /tmp/launcher-release-private.pem -noout >/dev/null
+          openssl pkey -pubin -in /tmp/launcher-release-root-public.pem -noout >/dev/null
+          jq -e '.schemaVersion and .trustDomain' /tmp/launcher-release-trust-policy.json >/dev/null
       - name: Download historical 0.25.0 Optional Components GA evidence packages
         if: inputs.optional_components_ga_evidence_run_id != ''
         uses: actions/download-artifact@v4
@@ -619,7 +619,7 @@ jobs:
       - name: Download independently verified Single-Node GA evidence
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-single-node-ga-verified-${{ github.sha }}
+          name: launcher-single-node-ga-verified-${{ github.sha }}
           path: single-node-ga-approved
       - name: Pin independent GA verification key for release signing
         env:
@@ -631,7 +631,7 @@ jobs:
             --version "$(cat VERSION)" --commit "$GITHUB_SHA"
           test -n "$TRUSTED_GA_PUBLIC_KEY"
           umask 077
-          printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > /tmp/neverlauncher-single-node-ga.pub
+          printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > /tmp/launcher-single-node-ga.pub
           test -s single-node-ga-approved/SINGLE_NODE_GA_ATTESTATION.json
       - name: Resolve mandatory independently trusted GA policy
         id: release-policy
@@ -652,7 +652,7 @@ jobs:
         if: steps.release-policy.outputs.mode == 'signed-ga-v2'
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-ga-signed-${{ github.sha }}
+          name: launcher-ga-signed-${{ github.sha }}
           run-id: ${{ inputs.ga_operator_approval_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ga-protected-approval
@@ -660,7 +660,7 @@ jobs:
         if: steps.release-policy.outputs.mode == 'legacy-ga036'
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-ga036-signed-${{ github.sha }}
+          name: launcher-ga036-signed-${{ github.sha }}
           run-id: ${{ inputs.ga036_operator_approval_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: ga-protected-approval
@@ -694,10 +694,10 @@ jobs:
           NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ga-operator.pub
           NEVERLAUNCHER_GA_EVIDENCE_DIR: ${{ github.workspace }}/ga-protected-approval
           NEVERLAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ga-operator.pub
-          NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/neverlauncher-release-private.pem
-          NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE: /tmp/neverlauncher-release-root-public.pem
-          NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE: /tmp/neverlauncher-release-trust-policy.json
-          NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE: /tmp/neverlauncher-release-trust-state.json
+          NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/launcher-release-private.pem
+          NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE: /tmp/launcher-release-root-public.pem
+          NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE: /tmp/launcher-release-trust-policy.json
+          NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE: /tmp/launcher-release-trust-state.json
           NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE: ${{ github.workspace }}/external-certifications/compatibility/matrix.json
           NEVERLAUNCHER_COMPATIBILITY_TARGETS_FILE: ${{ github.workspace }}/compatibility/targets.json
           NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE: ${{ github.workspace }}/external-certifications/device-trust/matrix.json
@@ -715,7 +715,7 @@ jobs:
           NL_GA_BACKEND_URL: ${{ vars.NL_GA_BACKEND_URL }}
           NL_GA_PACKAGE_ID: ${{ inputs.staged_package_id }}
           NEVERLAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR: ${{ github.workspace }}/single-node-ga-approved
-          NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE: /tmp/neverlauncher-single-node-ga.pub
+          NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE: /tmp/launcher-single-node-ga.pub
           NEVERLAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/optional-components-ga-0250
           NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY }}
           NEVERLAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/official-minecraft-ga-0270
@@ -732,16 +732,16 @@ jobs:
           VERSION="$(tr -d '[:space:]' < VERSION)"
           DIR="dist/release-${VERSION}"
           test -s "$DIR/SHA256SUMS.sig"
-          test -s "$DIR/neverlauncher-api-linux-x64"
+          test -s "$DIR/launcher-api-linux-x64"
           # Downloaded build artifacts may lose executable mode. chmod changes
           # file metadata, not the independently approved artifact bytes.
-          chmod u+x "$DIR/neverlauncher-api-linux-x64"
+          chmod u+x "$DIR/launcher-api-linux-x64"
           mkdir -p "$RUNNER_TEMP/nl-final-e2e-0380" "$RUNNER_TEMP/nl-final-e2e-policies"
           python3 - <<'PYCODE'
           import hashlib,json,os,pathlib
           folder=pathlib.Path(os.environ['RUNNER_TEMP'])/'nl-final-e2e-policies'
           # These are validation configuration, never operator signing evidence.
-          fixture=hashlib.sha256(b'NeverLauncher E2E NON-RELEASE fixture no signing').hexdigest()
+          fixture=hashlib.sha256(b'Launcher E2E NON-RELEASE fixture no signing').hexdigest()
           guard={'schemaVersion':'2.0','releases':{'0.1.0':{'protocolVersion':4,
             'platforms':{'linux':{'signingMode':'integrity-only','artifacts':[
               {'guardSha256':fixture,'launcherSha256':fixture}]}}}}}
@@ -762,7 +762,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-final-bundle-e2e-0380-${{ github.sha }}-${{ github.run_id }}
+          name: launcher-final-bundle-e2e-0380-${{ github.sha }}-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/nl-final-bundle-e2e-0380.json
             ${{ runner.temp }}/nl-final-bundle-e2e-0380-live.json
@@ -778,14 +778,14 @@ jobs:
             test -s "$DIR/RELEASE_REHEARSAL_0365.json"
             test -s "dist/.release-${VERSION}/PUBLICATION_DRY_RUN_0365.json"
             jq -e --arg version "$VERSION" --arg commit "$GITHUB_SHA" \
-              '.schemaVersion == "neverlauncher.release.publication-dry-run.v1" and .status == "passed" and .published == false and .version == $version and .commit == $commit and .runId == env.GITHUB_RUN_ID and .runAttempt == env.GITHUB_RUN_ATTEMPT and .filesCopied > 20' \
+              '.schemaVersion == "launcher.release.publication-dry-run.v1" and .status == "passed" and .published == false and .version == $version and .commit == $commit and .runId == env.GITHUB_RUN_ID and .runAttempt == env.GITHUB_RUN_ATTEMPT and .filesCopied > 20' \
               "dist/.release-${VERSION}/PUBLICATION_DRY_RUN_0365.json" >/dev/null
           fi
       - name: Upload independent publication dry-run result
         if: ${{ success() }}
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-publication-dry-run-${{ github.sha }}
+          name: launcher-publication-dry-run-${{ github.sha }}
           path: dist/.release-*/PUBLICATION_DRY_RUN_0365.json
           if-no-files-found: error
           retention-days: 90
@@ -800,12 +800,12 @@ jobs:
             RECEIPT=GA_VERIFIED_TARGETS_0360.json
             APPROVAL=GA_TARGET_APPROVAL_0360.json
             SIG=GA_TARGET_APPROVAL_0360.sig
-            SCHEMA=neverlauncher.ga036.verified-targets.v1
+            SCHEMA=launcher.ga036.verified-targets.v1
           elif [[ "$MODE" == 'signed-ga-v2' ]]; then
             RECEIPT=GA_VERIFIED_TARGETS.json
             APPROVAL=GA_TARGET_APPROVAL.json
             SIG=GA_TARGET_APPROVAL.sig
-            SCHEMA=neverlauncher.ga.verified-targets.v2
+            SCHEMA=launcher.ga.verified-targets.v2
           else
             echo 'missing mandatory signed GA policy' >&2; exit 2
           fi
@@ -820,7 +820,7 @@ jobs:
           DIR="dist/release-${VERSION}"
           test -s "${DIR}/SHA256SUMS.sig"
           test -s "${DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
-          jq -e --arg commit "$GITHUB_SHA" '.schemaVersion == "neverlauncher.official-minecraft.ga-receipt.v1" and .status == "passed" and .commit == $commit and .productVersion == "0.27.0" and (.targets | length) == 6 and all(.targets[]; .status == "passed")' "${DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json" >/dev/null
+          jq -e --arg commit "$GITHUB_SHA" '.schemaVersion == "launcher.official-minecraft.ga-receipt.v1" and .status == "passed" and .commit == $commit and .productVersion == "0.27.0" and (.targets | length) == 6 and all(.targets[]; .status == "passed")' "${DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json" >/dev/null
           test -s "${DIR}/PROVENANCE.json.sig"
           test -s "${DIR}/RELEASE_TRUST_POLICY.json"
           test -s "${DIR}/COMPATIBILITY_TARGETS.json"
@@ -829,39 +829,39 @@ jobs:
           test -s "${DIR}/LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json"
           jq -e '.status == "ga-certified" and .releaseStage == "ga" and .requiredTargetCount == 292 and .passedTargetCount == 292 and .runtimeSupportEntries == 163 and (.runtimeSupportSha256 | length == 64) and (.legacyForgeVersions == ["1.7.10","1.12.2"]) and .invariants.gaRuntimeSupportEnforced == true and .invariants.legacyForgeGA == true and (.certificateId | startswith("sha256:"))' "${DIR}/LOADER_COMPATIBILITY_RELEASE_CERTIFICATE.json" >/dev/null
           jq -e '.loaderCompatibilityReleaseCertified == true and .loaderCompatibilityGA == true and (.loaderCompatibilityReleaseCertificateSha256 | length == 64) and (.loaderCompatibilityGASupportSha256 | length == 64)' "${DIR}/RELEASE_MANIFEST.json" >/dev/null
-          jq -e '.schemaVersion == "2.0" and .trustDomain == "neverlauncher.release.v2" and .trustEpoch >= 1' "${DIR}/SHA256SUMS.sig" >/dev/null
-          test -s "${DIR}/neverlauncher-desktop-linux-amd64"
+          jq -e '.schemaVersion == "2.0" and .trustDomain == "launcher.release.v2" and .trustEpoch >= 1' "${DIR}/SHA256SUMS.sig" >/dev/null
+          test -s "${DIR}/launcher-desktop-linux-amd64"
           test -s "${DIR}/guard-linux-amd64"
           test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json"
-          test -s "${DIR}/neverlauncher-cli-linux-x64"
-          test -s "${DIR}/neverlauncher-cli-linux-arm64"
-          test -s "${DIR}/neverlauncher-api-linux-x64"
-          test -s "${DIR}/neverlauncher-api-linux-arm64"
-          test -s "${DIR}/neverlauncher-desktop-linux-x64"
-          test -s "${DIR}/neverlauncher-desktop-linux-arm64"
+          test -s "${DIR}/launcher-cli-linux-x64"
+          test -s "${DIR}/launcher-cli-linux-arm64"
+          test -s "${DIR}/launcher-api-linux-x64"
+          test -s "${DIR}/launcher-api-linux-arm64"
+          test -s "${DIR}/launcher-desktop-linux-x64"
+          test -s "${DIR}/launcher-desktop-linux-arm64"
           test -s "${DIR}/guard-linux-x64"
           test -s "${DIR}/guard-linux-arm64"
-          test -s "${DIR}/neverruntime-linux-x64"
-          test -s "${DIR}/neverruntime-linux-arm64"
-          test -s "${DIR}/neverlauncher-linux-x64-${VERSION}.tar.gz"
-          test -s "${DIR}/neverlauncher-linux-arm64-${VERSION}.tar.gz"
+          test -s "${DIR}/runtime-linux-x64"
+          test -s "${DIR}/runtime-linux-arm64"
+          test -s "${DIR}/launcher-linux-x64-${VERSION}.tar.gz"
+          test -s "${DIR}/launcher-linux-arm64-${VERSION}.tar.gz"
           test -s "${DIR}/LINUX_PACKAGE_MANIFEST_X64.json"
           test -s "${DIR}/LINUX_PACKAGE_MANIFEST_ARM64.json"
           test -s "${DIR}/LINUX_PRODUCTION_EVIDENCE.json"
           test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX_DELIVERY.json"
-          test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-amd64.zip"
+          test -s "${DIR}/launcher-desktop-${VERSION}-windows-amd64.zip"
           test -s "${DIR}/guard-windows-amd64.exe"
           test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST.json"
-          test -s "${DIR}/neverlauncher-cli-windows-x64.exe"
-          test -s "${DIR}/neverlauncher-cli-windows-arm64.exe"
-          test -s "${DIR}/neverlauncher-desktop-windows-x64.exe"
-          test -s "${DIR}/neverlauncher-desktop-windows-arm64.exe"
+          test -s "${DIR}/launcher-cli-windows-x64.exe"
+          test -s "${DIR}/launcher-cli-windows-arm64.exe"
+          test -s "${DIR}/launcher-desktop-windows-x64.exe"
+          test -s "${DIR}/launcher-desktop-windows-arm64.exe"
           test -s "${DIR}/guard-windows-x64.exe"
           test -s "${DIR}/guard-windows-arm64.exe"
           test -s "${DIR}/guard-sensor-windows-x64.dll"
           test -s "${DIR}/guard-sensor-windows-arm64.dll"
-          test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-x64.zip"
-          test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-arm64.zip"
+          test -s "${DIR}/launcher-desktop-${VERSION}-windows-x64.zip"
+          test -s "${DIR}/launcher-desktop-${VERSION}-windows-arm64.zip"
           test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST_X64.json"
           test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST_ARM64.json"
           test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json"
@@ -873,19 +873,19 @@ jobs:
           test -s "${DIR}/WINDOWS_PROTECTION_GA_CERTIFICATE.json"
           jq -e '.status == "windows-protection-ga" and .releaseStage == "ga" and .protectionModel == "user-mode" and .protectionProfile == "aggressive" and .enforcementMode == "fail-closed" and .scenarioExecutions == 55 and (.javaMajors == [8,16,17,21,25]) and (.boundarySha256 | length == 64) and (.certificateId | startswith("sha256:")) and .invariants.kernelDriverAbsent == true and .invariants.userModeProtectionBoundary == true and .invariants.continuousAttestationV2Required == true and .invariants.oneTimeServerJoinTicketRequired == true' "${DIR}/WINDOWS_PROTECTION_GA_CERTIFICATE.json" >/dev/null
           jq -e '.windowsProtectionGACertified == true and (.windowsProtectionGACertificateSha256 | length == 64)' "${DIR}/RELEASE_MANIFEST.json" >/dev/null
-          test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
+          test -s "${DIR}/launcher-desktop-${VERSION}-macos-universal.zip"
           test -s "${DIR}/guard-macos-universal"
           test -s "${DIR}/MACOS_PACKAGE_MANIFEST.json"
-          test -s "${DIR}/neverlauncher-cli-macos-x64"
-          test -s "${DIR}/neverlauncher-cli-macos-arm64"
-          test -s "${DIR}/neverlauncher-desktop-macos-x64"
-          test -s "${DIR}/neverlauncher-desktop-macos-arm64"
+          test -s "${DIR}/launcher-cli-macos-x64"
+          test -s "${DIR}/launcher-cli-macos-arm64"
+          test -s "${DIR}/launcher-desktop-macos-x64"
+          test -s "${DIR}/launcher-desktop-macos-arm64"
           test -s "${DIR}/guard-macos-x64"
           test -s "${DIR}/guard-macos-arm64"
-          test -s "${DIR}/neverruntime-macos-x64"
-          test -s "${DIR}/neverruntime-macos-arm64"
-          test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-x64.zip"
-          test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-arm64.zip"
+          test -s "${DIR}/runtime-macos-x64"
+          test -s "${DIR}/runtime-macos-arm64"
+          test -s "${DIR}/launcher-desktop-${VERSION}-macos-x64.zip"
+          test -s "${DIR}/launcher-desktop-${VERSION}-macos-arm64.zip"
           test -s "${DIR}/MACOS_PACKAGE_MANIFEST_X64.json"
           test -s "${DIR}/MACOS_PACKAGE_MANIFEST_ARM64.json"
           test -s "${DIR}/MACOS_NOTARIZATION_EVIDENCE.json"
@@ -895,22 +895,22 @@ jobs:
           test -s "${DIR}/GUARD_CI_CERTIFICATION.json"
           test -s "${DIR}/MANAGED_JRE_MANIFEST.json"
           test -s "${DIR}/MANAGED_JRE_EVIDENCE.json"
-          test -s "${DIR}/neverlauncher-jre-temurin21-windows-x64-${VERSION}.zip"
-          test -s "${DIR}/neverlauncher-jre-temurin21-windows-arm64-${VERSION}.zip"
-          test -s "${DIR}/neverlauncher-jre-temurin21-linux-x64-${VERSION}.tar.gz"
-          test -s "${DIR}/neverlauncher-jre-temurin21-linux-arm64-${VERSION}.tar.gz"
-          test -s "${DIR}/neverlauncher-jre-temurin21-macos-x64-${VERSION}.tar.gz"
-          test -s "${DIR}/neverlauncher-jre-temurin21-macos-arm64-${VERSION}.tar.gz"
-          test -s "${DIR}/neverlauncher-desktop-package-${VERSION}.zip"
-          test -s "${DIR}/neverlauncher-velocity-bridge-${VERSION}.jar"
-          test -s "${DIR}/neverlauncher-bungeecord-bridge-${VERSION}.jar"
-          test -s "${DIR}/neverlauncher-waterfall-bridge-${VERSION}.jar"
-          test -s "${DIR}/neverlauncher-bukkit-bridge-${VERSION}.jar"
-          test -s "${DIR}/neverlauncher-spigot-bridge-${VERSION}.jar"
-          test -s "${DIR}/neverlauncher-paper-bridge-${VERSION}.jar"
-          test -s "${DIR}/neverlauncher-purpur-bridge-${VERSION}.jar"
-          test -s "${DIR}/neverlauncher-folia-bridge-${VERSION}.jar"
-          test -s "${DIR}/neverlauncher-fabric-bridge-${VERSION}.jar"
+          test -s "${DIR}/launcher-jre-temurin21-windows-x64-${VERSION}.zip"
+          test -s "${DIR}/launcher-jre-temurin21-windows-arm64-${VERSION}.zip"
+          test -s "${DIR}/launcher-jre-temurin21-linux-x64-${VERSION}.tar.gz"
+          test -s "${DIR}/launcher-jre-temurin21-linux-arm64-${VERSION}.tar.gz"
+          test -s "${DIR}/launcher-jre-temurin21-macos-x64-${VERSION}.tar.gz"
+          test -s "${DIR}/launcher-jre-temurin21-macos-arm64-${VERSION}.tar.gz"
+          test -s "${DIR}/launcher-desktop-package-${VERSION}.zip"
+          test -s "${DIR}/launcher-velocity-bridge-${VERSION}.jar"
+          test -s "${DIR}/launcher-bungeecord-bridge-${VERSION}.jar"
+          test -s "${DIR}/launcher-waterfall-bridge-${VERSION}.jar"
+          test -s "${DIR}/launcher-bukkit-bridge-${VERSION}.jar"
+          test -s "${DIR}/launcher-spigot-bridge-${VERSION}.jar"
+          test -s "${DIR}/launcher-paper-bridge-${VERSION}.jar"
+          test -s "${DIR}/launcher-purpur-bridge-${VERSION}.jar"
+          test -s "${DIR}/launcher-folia-bridge-${VERSION}.jar"
+          test -s "${DIR}/launcher-fabric-bridge-${VERSION}.jar"
           test -s "${DIR}/BRIDGE_RELEASE_ALLOWLIST.json"
           test -s "${DIR}/BRIDGE_PLUGIN_MANIFEST.json"
 
@@ -922,7 +922,7 @@ jobs:
       - name: Upload immutable signed GA release for post-gate publication
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-final-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: launcher-final-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: dist/release-${{ steps.final-release.outputs.version }}/*
           if-no-files-found: error
           compression-level: 0
@@ -961,7 +961,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-required-production-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: launcher-required-production-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: required-production-evidence.json
           if-no-files-found: error
           retention-days: 90
@@ -987,15 +987,15 @@ jobs:
         run: python3 -m pip install cryptography==46.0.4
       - uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-final-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: launcher-final-release-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: signed-release
       - uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-required-production-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: launcher-required-production-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: required-production
       - uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-publication-dry-run-${{ github.sha }}
+          name: launcher-publication-dry-run-${{ github.sha }}
           path: publication-dry-run
       - name: Load pinned verification identities without access to private signing keys
         shell: bash
@@ -1019,7 +1019,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(cat VERSION)"
-          CLI="$PWD/signed-release/neverlauncher-cli-linux-x64"
+          CLI="$PWD/signed-release/launcher-cli-linux-x64"
           test -s "$CLI"
           python3 scripts/release/publish_0370.py publish \
             --bundle signed-release \
@@ -1036,7 +1036,7 @@ jobs:
       - name: Record verified GitHub publication
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-publication-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: launcher-publication-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/PUBLICATION_0370.json
           if-no-files-found: error
           retention-days: 90

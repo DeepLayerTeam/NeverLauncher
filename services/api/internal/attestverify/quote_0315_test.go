@@ -157,7 +157,7 @@ func TestQuote0315ValidAndAdversarial(t *testing.T) {
 }
 func TestPCRPolicy0315FailClosed(t *testing.T) {
 	now := time.Now().UTC()
-	file := PCRPolicyFile0315{Schema: "neverlauncher/tpm-pcr-policy/v1", Policies: []PCRPolicy0315{{ID: "approved", Platform: "linux", PCRs: map[string]string{"0": strings.Repeat("11", 32), "2": strings.Repeat("22", 32)}, NotBefore: now.Add(-time.Minute), NotAfter: now.Add(time.Hour)}}}
+	file := PCRPolicyFile0315{Schema: "launcher/tpm-pcr-policy/v1", Policies: []PCRPolicy0315{{ID: "approved", Platform: "linux", PCRs: map[string]string{"0": strings.Repeat("11", 32), "2": strings.Repeat("22", 32)}, NotBefore: now.Add(-time.Minute), NotAfter: now.Add(time.Hour)}}}
 	path := filepath.Join(t.TempDir(), "policy.json")
 	write := func() {
 		raw, _ := json.Marshal(file)

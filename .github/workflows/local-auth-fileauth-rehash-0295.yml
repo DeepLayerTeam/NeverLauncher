@@ -30,18 +30,18 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: neverlauncher_auth0295
-          POSTGRES_USER: neverlauncher
+          POSTGRES_DB: launcher_auth0295
+          POSTGRES_USER: launcher
           POSTGRES_PASSWORD: integration-only
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U neverlauncher -d neverlauncher_auth0295" --health-interval 5s --health-timeout 5s --health-retries 25
+          --health-cmd "pg_isready -U launcher -d launcher_auth0295" --health-interval 5s --health-timeout 5s --health-retries 25
     defaults:
       run:
         working-directory: services/api
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher:integration-only@localhost:5432/neverlauncher_auth0295?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:integration-only@localhost:5432/launcher_auth0295?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -55,6 +55,6 @@ jobs:
       - name: PostgreSQL atomic import, UUID, collision and CAS integration
         run: go test -count=1 -timeout=8m ./internal/repository -run '^TestFileAuthImportPostgres0295$' -v
       - name: Compile CLI and Backend
-        run: go build ./cmd/local-auth-0295 ./cmd/neverlauncher-api
+        run: go build ./cmd/local-auth-0295 ./cmd/launcher-api
       - name: Core regression tests
         run: go test -count=1 -timeout=8m ./internal/federation ./internal/repository ./internal/httpapi

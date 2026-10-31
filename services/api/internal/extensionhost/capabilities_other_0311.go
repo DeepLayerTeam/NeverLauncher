@@ -3,8 +3,8 @@
 package extensionhost
 
 import (
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/macossandbox"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/windowssandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/macossandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/windowssandbox"
 	"runtime"
 )
 

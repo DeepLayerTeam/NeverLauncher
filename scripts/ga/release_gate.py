@@ -18,9 +18,9 @@ import sys
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 
-DOMAIN = b"NeverLauncher-GA-0.24.0-attestation-v1\n"
-COMPONENT_GA_DOMAIN = b"NeverLauncher-GA-0.25.0-optional-components-v1\n"
-COMPONENT_GA_SCHEMA = "neverlauncher.ga.optional-components.v1"
+DOMAIN = b"Launcher-GA-0.24.0-attestation-v1\n"
+COMPONENT_GA_DOMAIN = b"Launcher-GA-0.25.0-optional-components-v1\n"
+COMPONENT_GA_SCHEMA = "launcher.ga.optional-components.v1"
 COMPONENT_GA_CHECKS = {
     "signed-catalog",
     "dependency-conflicts",
@@ -115,7 +115,7 @@ def check_report(
             raise ValueError("native OS signature/pinned publisher was not verified")
     elif subject == "cleanMachine":
         if (
-            report.get("schemaVersion") != "neverlauncher.ga.clean-machine.v1"
+            report.get("schemaVersion") != "launcher.ga.clean-machine.v1"
             or not SHA256.fullmatch(report.get("javaSha256", ""))
             or not SHA256.fullmatch(report.get("logSha256", ""))
             or not report.get("minecraftVersion")
@@ -169,8 +169,7 @@ def check_report(
     elif subject == "components":
         if (
             version != "0.25.0"
-            or report.get("schemaVersion")
-            != "neverlauncher.components.certification.v1"
+            or report.get("schemaVersion") != "launcher.components.certification.v1"
         ):
             raise ValueError("unsupported optional components certification schema")
         if report.get("target") != target or report.get("gitTreeClean") is not True:
@@ -240,9 +239,7 @@ def verify_target(folder: Path, key: Ed25519PublicKey, commit: str, version: str
     if pair not in TARGETS or folder.name != "-".join(pair):
         raise ValueError(f"unexpected platform/architecture {pair}")
     schema = (
-        COMPONENT_GA_SCHEMA
-        if version == "0.25.0"
-        else "neverlauncher.ga.attestation.v1"
+        COMPONENT_GA_SCHEMA if version == "0.25.0" else "launcher.ga.attestation.v1"
     )
     if doc.get("schemaVersion") != schema or doc.get("status") != "passed":
         raise ValueError("unsupported or incomplete signed attestation")
@@ -349,7 +346,7 @@ def verify_all(root: Path, public_key_hex: str, commit: str, version="0.24.0") -
         assert pair == (platform, arch)
         results.append(result)
     return {
-        "schemaVersion": "neverlauncher.ga.release.v1",
+        "schemaVersion": "launcher.ga.release.v1",
         "productVersion": version,
         "commit": commit,
         "status": "passed",

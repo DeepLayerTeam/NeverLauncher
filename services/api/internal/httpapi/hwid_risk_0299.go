@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 var hwidSignalHex0299 = regexp.MustCompile(`^[0-9a-f]{64}$`)
@@ -32,7 +32,7 @@ type hwidResolveRequest0299 struct {
 // be consistent across all API replicas (the validated AuthTokenSecret).
 func hwidAccountDigest0299(secret, userID, signal string) string {
 	h := hmac.New(sha256.New, []byte(secret))
-	h.Write([]byte("NeverLauncher HWID risk v1\x00"))
+	h.Write([]byte("Launcher HWID risk v1\x00"))
 	h.Write([]byte(userID))
 	h.Write([]byte{'\x00'})
 	h.Write([]byte(signal))

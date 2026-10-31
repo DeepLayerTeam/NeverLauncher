@@ -8,22 +8,22 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 func TestAccessToken118IsJWTAndSupportsKeyRotation(t *testing.T) {
 	state := NewRuntimeState()
 	repo := repository.NewMemoryRepository("https://api.example.test")
-	s := Server{Repo: repo, Config: config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "fallback-secret", AuthTokenIssuer: "https://issuer.example.test", AuthTokenAudience: "neverlauncher-api", AuthTokenActiveKID: "old", AuthTokenKeysJSON: `{"old":"0123456789abcdef0123456789abcdef-old","new":"0123456789abcdef0123456789abcdef-new"}`}, State: state}
+	s := Server{Repo: repo, Config: config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "fallback-secret", AuthTokenIssuer: "https://issuer.example.test", AuthTokenAudience: "launcher-api", AuthTokenActiveKID: "old", AuthTokenKeysJSON: `{"old":"0123456789abcdef0123456789abcdef-old","new":"0123456789abcdef0123456789abcdef-new"}`}, State: state}
 	user := model.User{ID: "user-1", Email: "u@example.test", RoleID: "owner", Status: "active"}
 	if _, err := repo.SaveUser(user); err != nil {
 		t.Fatal(err)
 	}
 	req := httptest.NewRequest("POST", "https://api.example.test/login", nil)
 	req.RemoteAddr = "203.0.113.10:1234"
-	req.Header.Set("User-Agent", "NeverLauncher-Test/1")
+	req.Header.Set("User-Agent", "Launcher-Test/1")
 	session, _, err := state.AuthSessions.createWithAuth(user, req, "Desktop", []string{"password", "passkey"}, "phishing-resistant", time.Now().UTC(), "identity-local-user-1", "local")
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +42,7 @@ func TestAccessToken118IsJWTAndSupportsKeyRotation(t *testing.T) {
 		t.Fatalf("bad JWT header: %s", raw)
 	}
 	claims, err := s.verifyAdminToken(token)
-	if err != nil || claims.Iss != "https://issuer.example.test" || claims.Aud != "neverlauncher-api" || claims.JTI == "" {
+	if err != nil || claims.Iss != "https://issuer.example.test" || claims.Aud != "launcher-api" || claims.JTI == "" {
 		t.Fatalf("bad claims: %#v err=%v", claims, err)
 	}
 	s.Config.AuthTokenActiveKID = "new"

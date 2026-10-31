@@ -1,4 +1,4 @@
-// neverlauncher-local-auth is a production operator CLI. Import runs offline
+// launcher-local-auth is a production operator CLI. Import runs offline
 // against PostgreSQL; all ordinary account changes use the running API so
 // session revocation, RBAC, MFA and audit remain server-authoritative.
 package main
@@ -18,10 +18,10 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/fileauth"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/dbmigrate"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 

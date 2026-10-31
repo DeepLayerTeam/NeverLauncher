@@ -1,6 +1,6 @@
 -- 0.24.2: allow content-addressed, signed catalog topology v2.
 -- Retain immutable published manifests, release identity and profile snapshots.
--- Go and NeverRuntime validate the full v2 topology and digest.
+-- Go and Runtime validate the full v2 topology and digest.
 CREATE OR REPLACE FUNCTION enforce_release_snapshot_0222() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE snap JSONB;
 DECLARE spec JSONB;

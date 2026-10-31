@@ -3,12 +3,12 @@ on:
   push:
     paths:
       - 'apps/desktop/**'
-      - 'runtime/neverruntime/**'
+      - 'runtime/runtime/**'
       - '.github/workflows/desktop-migrations-0359.yml'
   pull_request:
     paths:
       - 'apps/desktop/**'
-      - 'runtime/neverruntime/**'
+      - 'runtime/runtime/**'
       - '.github/workflows/desktop-migrations-0359.yml'
 jobs:
   renderer:
@@ -41,6 +41,6 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev
       - name: Conflict archive and fail-closed regression
-        run: cargo test --manifest-path runtime/neverruntime/Cargo.toml _0359 --no-default-features
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml _0359 --no-default-features
       - name: Settings migration and durable legacy backup
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml desktop_settings_0359_tests --no-default-features

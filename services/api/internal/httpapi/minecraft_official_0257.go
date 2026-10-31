@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/officialminecraft"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/texturepng"
+	"gitflic.ru/skif4er/launcher/services/api/internal/officialminecraft"
+	"gitflic.ru/skif4er/launcher/services/api/internal/texturepng"
 )
 
 // Tickets use AES-256-GCM, scoped to a live Never account and session. Neither
@@ -49,7 +49,7 @@ func officialSeal0257(secret string, state officialState0257) (string, error) {
 	if len(secret) < 24 {
 		return "", errors.New("official token encryption key not configured")
 	}
-	key := sha256.Sum256([]byte("neverlauncher/official-minecraft/aes-gcm/v1\x00" + secret))
+	key := sha256.Sum256([]byte("launcher/official-minecraft/aes-gcm/v1\x00" + secret))
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		return "", err
@@ -66,7 +66,7 @@ func officialSeal0257(secret string, state officialState0257) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sealed := aead.Seal(nil, nonce, plain, []byte("neverlauncher-official-0257"))
+	sealed := aead.Seal(nil, nonce, plain, []byte("launcher-official-0257"))
 	for i := range plain {
 		plain[i] = 0
 	}
@@ -81,7 +81,7 @@ func officialOpen0257(secret, ticket string) (officialState0257, error) {
 	if err != nil {
 		return state, errors.New("invalid official session")
 	}
-	key := sha256.Sum256([]byte("neverlauncher/official-minecraft/aes-gcm/v1\x00" + secret))
+	key := sha256.Sum256([]byte("launcher/official-minecraft/aes-gcm/v1\x00" + secret))
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		return state, err
@@ -93,7 +93,7 @@ func officialOpen0257(secret, ticket string) (officialState0257, error) {
 	if len(raw) < aead.NonceSize()+aead.Overhead() {
 		return state, errors.New("invalid official session")
 	}
-	plain, err := aead.Open(nil, raw[:aead.NonceSize()], raw[aead.NonceSize():], []byte("neverlauncher-official-0257"))
+	plain, err := aead.Open(nil, raw[:aead.NonceSize()], raw[aead.NonceSize():], []byte("launcher-official-0257"))
 	if err != nil {
 		return state, errors.New("invalid official session")
 	}

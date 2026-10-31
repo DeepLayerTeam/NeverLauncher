@@ -1,4 +1,4 @@
--- NeverLauncher 0.10.1: механизм совместимости, учитывающий платформу в метаданных релизных
+-- Launcher 0.10.1: механизм совместимости, учитывающий платформу в метаданных релизных
 -- файлов. Существующие строки остаются независимыми от платформы и неисполняемыми.
 ALTER TABLE files ADD COLUMN IF NOT EXISTS executable BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE files ADD COLUMN IF NOT EXISTS target_os JSONB NOT NULL DEFAULT '[]'::jsonb;

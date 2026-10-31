@@ -9,14 +9,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 type stableSQLiteFixture0374 struct {
@@ -80,7 +80,7 @@ func stableFixture0374(t *testing.T) stableSQLiteFixture0374 {
 	target := map[string]string{"id": "linux-x64", "projectId": rel.ProjectID, "profileId": "vanilla", "channel": "stable", "manifestSha256": md, "artifactSha256": ad, "version": rel.Version, "resolvedPlanSha256": strings.Repeat("1", 64), "sourceSha": strings.Repeat("2", 40), "buildSha": strings.Repeat("3", 64), "javaSha256": strings.Repeat("4", 64), "javaVersion": "21", "os": "linux", "arch": "amd64", "loader": "vanilla", "installAdapterSha256": strings.Repeat("5", 64), "guardMode": "strict", "guardPolicySha256": strings.Repeat("6", 64), "serverBridgeSha256": strings.Repeat("7", 64), "serverPluginVersion": "1.0", "preset": "default", "authenticationMode": "custom"}
 	targets, _ := json.Marshal([]map[string]string{target})
 	p := StableRuntimePermit03411{PackageID: rel.ID, ProjectID: rel.ProjectID, ManifestSHA256: md, ArtifactSHA256: ad, MatrixSHA256: matrix, TargetsJSON: targets, Runs: map[string]string{"linux-x64": "run-1"}, TrustedAttestorKey0374: base64.RawURLEncoding.EncodeToString(pub)}
-	ev := sqliteSignedEvidence0374{SchemaVersion: "neverlauncher.validation-evidence.v4", RunNonce: strings.Repeat("8", 64), Audience: "neverlauncher-api/validation-evidence/0.34.7", Purpose: "staged-package-runtime-verification", TargetID: target["id"], TargetMatrixSHA256: matrix, SignerKeyID: hex.EncodeToString(fingerprint[:]), PackageVersion: rel.Version, RunID: "run-1", PackageID: rel.ID, ManifestSHA256: md, ArtifactSHA256: ad, ResolvedPlanSHA256: target["resolvedPlanSha256"], SourceSHA: target["sourceSha"], BuildSHA: target["buildSha"], RunnerImageSHA256: strings.Repeat("9", 64), JavaSHA256: target["javaSha256"], JavaVersion: target["javaVersion"], OS: target["os"], Arch: target["arch"], Loader: target["loader"], InstallAdapterSHA256: target["installAdapterSha256"], GuardMode: target["guardMode"], GuardPolicySHA256: target["guardPolicySha256"], ServerBridgeSHA256: target["serverBridgeSha256"], ServerPluginVersion: target["serverPluginVersion"], Preset: target["preset"], AuthenticationMode: target["authenticationMode"], Stages: map[string]string{}, ArtifactHashes: map[string]string{"verified.json": strings.Repeat("a", 64)}, StartedAt: now.Add(-2 * time.Minute).Format(time.RFC3339Nano), FinishedAt: now.Add(-time.Minute).Format(time.RFC3339Nano), IssuedAt: now.Add(-time.Minute).Format(time.RFC3339Nano), ExpiresAt: now.Add(2 * time.Minute).Format(time.RFC3339Nano)}
+	ev := sqliteSignedEvidence0374{SchemaVersion: "launcher.validation-evidence.v4", RunNonce: strings.Repeat("8", 64), Audience: "launcher-api/validation-evidence/0.34.7", Purpose: "staged-package-runtime-verification", TargetID: target["id"], TargetMatrixSHA256: matrix, SignerKeyID: hex.EncodeToString(fingerprint[:]), PackageVersion: rel.Version, RunID: "run-1", PackageID: rel.ID, ManifestSHA256: md, ArtifactSHA256: ad, ResolvedPlanSHA256: target["resolvedPlanSha256"], SourceSHA: target["sourceSha"], BuildSHA: target["buildSha"], RunnerImageSHA256: strings.Repeat("9", 64), JavaSHA256: target["javaSha256"], JavaVersion: target["javaVersion"], OS: target["os"], Arch: target["arch"], Loader: target["loader"], InstallAdapterSHA256: target["installAdapterSha256"], GuardMode: target["guardMode"], GuardPolicySHA256: target["guardPolicySha256"], ServerBridgeSHA256: target["serverBridgeSha256"], ServerPluginVersion: target["serverPluginVersion"], Preset: target["preset"], AuthenticationMode: target["authenticationMode"], Stages: map[string]string{}, ArtifactHashes: map[string]string{"verified.json": strings.Repeat("a", 64)}, StartedAt: now.Add(-2 * time.Minute).Format(time.RFC3339Nano), FinishedAt: now.Add(-time.Minute).Format(time.RFC3339Nano), IssuedAt: now.Add(-time.Minute).Format(time.RFC3339Nano), ExpiresAt: now.Add(2 * time.Minute).Format(time.RFC3339Nano)}
 	for _, stage := range requiredStableStages0374 {
 		ev.Stages[stage] = "passed"
 	}
@@ -116,7 +116,7 @@ func (f *stableSQLiteFixture0374) installEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig := ed25519.Sign(f.key, append([]byte("NeverLauncher/validation-evidence/v4\x00"), raw...))
+	sig := ed25519.Sign(f.key, append([]byte("Launcher/validation-evidence/v4\x00"), raw...))
 	if err = f.repo.SaveValidationAttestation0345(ctx, model.ValidationAttestation0345{RunID: f.evidence.RunID, PackageID: f.rel.ID, ProjectID: f.rel.ProjectID, ManifestSHA256: f.permit.ManifestSHA256, ArtifactSHA256: f.permit.ArtifactSHA256, Evidence: raw, Signature: base64.RawURLEncoding.EncodeToString(sig), ReceivedAt: now}); err != nil {
 		t.Fatal(err)
 	}

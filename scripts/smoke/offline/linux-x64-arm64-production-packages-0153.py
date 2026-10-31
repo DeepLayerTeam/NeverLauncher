@@ -31,11 +31,11 @@ require(
         'x86_64|amd64) ARCH="x64"',
         'aarch64|arm64) ARCH="arm64"',
         'GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED=0',
-        "neverlauncher-cli-linux-${ARCH}",
-        "neverlauncher-api-linux-${ARCH}",
-        "neverlauncher-desktop-linux-${ARCH}",
+        "launcher-cli-linux-${ARCH}",
+        "launcher-api-linux-${ARCH}",
+        "launcher-desktop-linux-${ARCH}",
         "guard-linux-${ARCH}",
-        "neverruntime-linux-${ARCH}",
+        "runtime-linux-${ARCH}",
         "linux-package.py",
         "--expected-arch",
     ],
@@ -49,7 +49,7 @@ require(
         '"x64": (62, "EM_X86_64")',
         '"arm64": (183, "EM_AARCH64")',
         "production package requires ELF64 little-endian",
-        "neverlauncher/LINUX_PACKAGE_MANIFEST.json",
+        "launcher/LINUX_PACKAGE_MANIFEST.json",
         "gzip.GzipFile",
         "mtime=0",
         'mode": "0755"',
@@ -57,7 +57,7 @@ require(
     "deterministic Linux packager",
 )
 
-verifier = read("cli/cmd/neverlauncher/linux_delivery.go")
+verifier = read("cli/cmd/launcher/linux_delivery.go")
 require(
     verifier,
     [
@@ -75,7 +75,7 @@ require(
     "Linux delivery verifier",
 )
 
-release = read("cli/cmd/neverlauncher/release_commands.go")
+release = read("cli/cmd/launcher/release_commands.go")
 require(
     release,
     [
@@ -94,9 +94,9 @@ require(
     [
         "NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR",
         "LINUX_DUAL_ARCH_REQUIRED",
-        "neverlauncher-linux-${arch}-${VERSION}.tar.gz",
+        "launcher-linux-${arch}-${VERSION}.tar.gz",
         "LINUX_PACKAGE_MANIFEST_$(tr",
-        "neverlauncher-cli-linux-x64",
+        "launcher-cli-linux-x64",
     ],
     "release staging",
 )
@@ -109,7 +109,7 @@ require(
         "runner: ubuntu-24.04",
         "runner: ubuntu-24.04-arm",
         "build-linux-production.sh",
-        "neverlauncher-linux-production-${{ matrix.arch }}-${{ github.sha }}",
+        "launcher-linux-production-${{ matrix.arch }}-${{ github.sha }}",
     ],
     "native Linux CI matrix",
 )
@@ -119,7 +119,7 @@ require(
     production_release,
     [
         "Download native Linux x64 + ARM64 production artifacts",
-        "pattern: neverlauncher-linux-production-*-${{ github.sha }}",
+        "pattern: launcher-linux-production-*-${{ github.sha }}",
         "path: linux-production-artifacts",
         "merge-multiple: true",
         "NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts",
@@ -128,9 +128,9 @@ require(
 )
 
 subprocess.run(
-    ["go", "test", "./cmd/neverlauncher", "-run", "TestLinuxProduction", "-count=1"],
+    ["go", "test", "./cmd/launcher", "-run", "TestLinuxProduction", "-count=1"],
     cwd=ROOT / "cli",
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} Linux x64 + ARM64 production packages gate: OK")
+print(f"Launcher {VERSION} Linux x64 + ARM64 production packages gate: OK")

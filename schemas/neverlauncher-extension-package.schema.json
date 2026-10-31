@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://neverlauncher.local/schemas/neverlauncher-extension-package.schema.json",
-  "title": "NeverLauncher Extension Package Descriptor",
+  "$id": "https://launcher.local/schemas/launcher-extension-package.schema.json",
+  "title": "Launcher Extension Package Descriptor",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -21,7 +21,7 @@
   ],
   "properties": {
     "format": {
-      "const": "NeverLauncher Extension Package"
+      "const": "Launcher Extension Package"
     },
     "formatVersion": {
       "const": "1.0"

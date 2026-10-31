@@ -118,7 +118,7 @@ impl NativeProvider {
     pub fn new() -> Result<Self,String> {
         let http = Client::builder().timeout(Duration::from_secs(25))
             .redirect(reqwest::redirect::Policy::none())
-            .user_agent(concat!("NeverLauncher/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!("Launcher/", env!("CARGO_PKG_VERSION")))
             .build().map_err(|_| "Не удалось инициализировать официальный HTTP transport")?;
         Ok(Self { http, microsoft: Url::parse(MICROSOFT).unwrap(), xbox: Url::parse(XBOX).unwrap(),
             xsts: Url::parse(XSTS).unwrap(), minecraft: Url::parse(MINECRAFT).unwrap() })

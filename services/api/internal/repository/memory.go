@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 var ErrNotFound = errors.New("запись не найдена")
@@ -296,7 +296,7 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 		validationPolicies:             map[string]model.ProjectValidationPolicy{"demo-project": {ProjectID: "demo-project", RequiredLevel: "integrity", UpdatedAt: now}},
 		extensionTrustPolicy:           model.ExtensionTrustPolicy{Mode: model.ExtensionTrustModeStrict, AllowedPublishers: []string{}, UpdatedAt: now},
 		projects: []model.Project{
-			{ID: "demo-project", Name: "Демонстрационный проект", Description: "Пример проекта NeverLauncher", DefaultChannel: "stable", CreatedAt: now, UpdatedAt: now},
+			{ID: "demo-project", Name: "Демонстрационный проект", Description: "Пример проекта Launcher", DefaultChannel: "stable", CreatedAt: now, UpdatedAt: now},
 		},
 		profiles: []model.Profile{
 			{ID: "vanilla", ProjectID: "demo-project", Name: "Vanilla", Description: "Минимальный vanilla-профиль", Loader: "vanilla", IsDefault: true, CreatedAt: now, UpdatedAt: now},
@@ -328,13 +328,13 @@ func NewMemoryRepository(publicURL string) *MemoryRepository {
 			{ID: "player", Name: "Игрок", Description: "Вход в desktop и запуск доступных профилей", Permissions: []string{"launcher:login", "profile:download", "profile:launch"}},
 		},
 		users: []model.User{
-			{ID: "admin", Email: "admin@neverlauncher.local", DisplayName: "Администратор", RoleID: "owner", Status: "active", ProjectRoles: map[string]string{"demo-project": "owner"}, PasswordHash: "sha256:8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", PasswordUpdatedAt: now, CreatedAt: now, UpdatedAt: now},
+			{ID: "admin", Email: "admin@launcher.local", DisplayName: "Администратор", RoleID: "owner", Status: "active", ProjectRoles: map[string]string{"demo-project": "owner"}, PasswordHash: "sha256:8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", PasswordUpdatedAt: now, CreatedAt: now, UpdatedAt: now},
 		},
 		identities: []model.AuthIdentity{
-			{ID: "identity-local-admin", UserID: "admin", Provider: "local", Issuer: "neverlauncher", Subject: "admin", Email: "admin@neverlauncher.local", Username: "admin@neverlauncher.local", DisplayName: "Администратор", CreatedAt: now, UpdatedAt: now},
+			{ID: "identity-local-admin", UserID: "admin", Provider: "local", Issuer: "launcher", Subject: "admin", Email: "admin@launcher.local", Username: "admin@launcher.local", DisplayName: "Администратор", CreatedAt: now, UpdatedAt: now},
 		},
 		audit: []model.AuditEvent{
-			{ID: "audit-start", Actor: "system", Action: "backend:start", Target: "neverlauncher-api", CreatedAt: now},
+			{ID: "audit-start", Actor: "system", Action: "backend:start", Target: "launcher-api", CreatedAt: now},
 		},
 	}
 }
@@ -1339,7 +1339,7 @@ func (r *MemoryRepository) SaveMinecraftProfile(item model.MinecraftProfile) (mo
 	item.Subject = strings.TrimSpace(item.Subject)
 	item.IdentityVersion = strings.TrimSpace(item.IdentityVersion)
 	if item.Issuer == "" {
-		item.Issuer = "neverlauncher"
+		item.Issuer = "launcher"
 	}
 	if item.Realm == "" {
 		item.Realm = "local"

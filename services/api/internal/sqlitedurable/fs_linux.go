@@ -146,7 +146,7 @@ func durableFileSystemProbe(dir string) error {
 	name := tmp.Name()
 	defer os.Remove(name)
 	defer tmp.Close()
-	if _, err = io.WriteString(tmp, "neverlauncher-sqlite-durable-fs-v1"); err != nil {
+	if _, err = io.WriteString(tmp, "launcher-sqlite-durable-fs-v1"); err != nil {
 		return err
 	}
 	if err = tmp.Sync(); err != nil {

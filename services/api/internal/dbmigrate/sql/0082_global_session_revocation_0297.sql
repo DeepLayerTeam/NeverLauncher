@@ -292,7 +292,7 @@ CREATE OR REPLACE FUNCTION nl_queue_revoked_player_kicks_0297()
 RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
     node RECORD;
-    kick_reason text := 'NeverLauncher session invalidated';
+    kick_reason text := 'Launcher session invalidated';
     actor text := 'serverbridge-player-session';
     payload_text text;
     payload_hash text;

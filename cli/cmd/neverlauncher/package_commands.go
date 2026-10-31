@@ -193,7 +193,7 @@ func handlePipeline(args []string) error {
 		if err := json.Unmarshal(raw, &evidence); err != nil {
 			return fmt.Errorf("runtime evidence JSON: %w", err)
 		}
-		if evidence.SchemaVersion != "neverlauncher/runtime-validation/v1" || evidence.PackageID == "" || evidence.ManifestDigest == "" || evidence.TargetID == "" {
+		if evidence.SchemaVersion != "launcher/runtime-validation/v1" || evidence.PackageID == "" || evidence.ManifestDigest == "" || evidence.TargetID == "" {
 			return errors.New("runtime evidence missing canonical schema/package/manifest/target")
 		}
 		privateKey, err := loadRuntimePrivateKey0212(keyPath)
@@ -302,14 +302,14 @@ func handleClient(args []string) error {
 	}
 	profile := flagValue(args, "--profile", "vanilla")
 	channel := flagValue(args, "--channel", "stable")
-	clientDir := flagValue(args, "--client-dir", ".neverlauncher/client")
+	clientDir := flagValue(args, "--client-dir", ".launcher/client")
 	manifestPath := flagValue(args, "--manifest", "manifest.json")
 	out := flagValue(args, "--output", "")
 	var payload map[string]any
 	switch args[0] {
 	case "install", "update":
 		pkgPath := flagValue(args, "--package", manifestPath)
-		report, err := clientInstallOrUpdate(pkgPath, flagValue(args, "--storage-dir", ".neverlauncher/storage"), clientDir, args[0])
+		report, err := clientInstallOrUpdate(pkgPath, flagValue(args, "--storage-dir", ".launcher/storage"), clientDir, args[0])
 		if err != nil {
 			return err
 		}
@@ -326,7 +326,7 @@ func handleClient(args []string) error {
 		}
 	case "repair":
 		pkgPath := flagValue(args, "--package", manifestPath)
-		report, err := repairClientInstallation(pkgPath, flagValue(args, "--storage-dir", ".neverlauncher/storage"), clientDir, flagValue(args, "--repair-optional", "false") == "true")
+		report, err := repairClientInstallation(pkgPath, flagValue(args, "--storage-dir", ".launcher/storage"), clientDir, flagValue(args, "--repair-optional", "false") == "true")
 		if err != nil {
 			return err
 		}
@@ -366,7 +366,7 @@ func handleClient(args []string) error {
 		payload = plan
 	case "package-upload":
 		pkgPath := flagValue(args, "--package", manifestPath)
-		report, err := clientPackageUpload(pkgPath, flagValue(args, "--client-dir", clientDir), flagValue(args, "--storage-dir", ".neverlauncher/storage"), flagValue(args, "--prefix", "clients/"+profile+"/"+channel))
+		report, err := clientPackageUpload(pkgPath, flagValue(args, "--client-dir", clientDir), flagValue(args, "--storage-dir", ".launcher/storage"), flagValue(args, "--prefix", "clients/"+profile+"/"+channel))
 		if err != nil {
 			return err
 		}
@@ -380,25 +380,25 @@ func handleClient(args []string) error {
 		payload = plan
 	case "package-publish":
 		pkgPath := flagValue(args, "--package", manifestPath)
-		report, err := clientPackagePublish(pkgPath, channel, flagValue(args, "--registry-dir", ".neverlauncher/publications"), flagValue(args, "--upload-report", ""))
+		report, err := clientPackagePublish(pkgPath, channel, flagValue(args, "--registry-dir", ".launcher/publications"), flagValue(args, "--upload-report", ""))
 		if err != nil {
 			return err
 		}
 		payload = report
 	case "package-release":
-		report, err := clientPackageRelease(clientDir, flagValue(args, "--project", "demo-project"), profile, channel, flagValue(args, "--version", version), flagValue(args, "--base-url", ""), flagValue(args, "--storage-dir", ".neverlauncher/storage"), flagValue(args, "--registry-dir", ".neverlauncher/publications"), flagValue(args, "--dist-dir", ".neverlauncher/dist"))
+		report, err := clientPackageRelease(clientDir, flagValue(args, "--project", "demo-project"), profile, channel, flagValue(args, "--version", version), flagValue(args, "--base-url", ""), flagValue(args, "--storage-dir", ".launcher/storage"), flagValue(args, "--registry-dir", ".launcher/publications"), flagValue(args, "--dist-dir", ".launcher/dist"))
 		if err != nil {
 			return err
 		}
 		payload = report
 	case "package-status":
-		report, err := clientPackageStatus(flagValue(args, "--registry-dir", ".neverlauncher/publications"), flagValue(args, "--project", "demo-project"), profile, channel, flagValue(args, "--version", ""))
+		report, err := clientPackageStatus(flagValue(args, "--registry-dir", ".launcher/publications"), flagValue(args, "--project", "demo-project"), profile, channel, flagValue(args, "--version", ""))
 		if err != nil {
 			return err
 		}
 		payload = report
 	case "channel-status":
-		report, err := clientPackageStatus(flagValue(args, "--registry-dir", ".neverlauncher/publications"), flagValue(args, "--project", "demo-project"), profile, channel, flagValue(args, "--version", ""))
+		report, err := clientPackageStatus(flagValue(args, "--registry-dir", ".launcher/publications"), flagValue(args, "--project", "demo-project"), profile, channel, flagValue(args, "--version", ""))
 		if err != nil {
 			return err
 		}
@@ -412,7 +412,7 @@ func handleClient(args []string) error {
 		}
 		payload = plan
 	case "package-consume", "package-apply":
-		report, err := clientPackageConsume(flagValue(args, "--package", manifestPath), flagValue(args, "--storage-dir", ".neverlauncher/storage"), clientDir)
+		report, err := clientPackageConsume(flagValue(args, "--package", manifestPath), flagValue(args, "--storage-dir", ".launcher/storage"), clientDir)
 		if err != nil {
 			return err
 		}
@@ -489,7 +489,7 @@ func buildClientPackage(clientDir, project, profile, channel, ver, baseURL strin
 		}
 		if d.IsDir() {
 			name := d.Name()
-			if strings.HasPrefix(name, ".git") || name == "node_modules" || name == ".neverlauncher-cache" || name == ".neverlauncher" {
+			if strings.HasPrefix(name, ".git") || name == "node_modules" || name == ".launcher-cache" || name == ".launcher" {
 				return filepath.SkipDir
 			}
 			return nil
@@ -917,7 +917,7 @@ func clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, s
 	}
 	stateRaw = append(stateRaw, '\n')
 	stateSize, stateSHA := updaterBytesMetadata0156(stateRaw)
-	files = append(files, updaterFileSpec0156{Path: ".neverlauncher/client-state.json", Data: stateRaw, Size: stateSize, SHA256: stateSHA})
+	files = append(files, updaterFileSpec0156{Path: ".launcher/client-state.json", Data: stateRaw, Size: stateSize, SHA256: stateSHA})
 
 	updater, err := newTransactionalUpdater0156(clientDir)
 	if err != nil {
@@ -946,7 +946,7 @@ func clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, s
 	if err != nil {
 		return nil, err
 	}
-	statePath := filepath.Join(clientDir, ".neverlauncher", "client-state.json")
+	statePath := filepath.Join(clientDir, ".launcher", "client-state.json")
 	return map[string]any{
 		"schemaVersion": cliSchemaVersion,
 		"toolVersion":   version,
@@ -964,7 +964,7 @@ func clientPackageConsumeTransactional0156(packagePath, storageDir, clientDir, s
 }
 
 func clientInstalledVersion0156(clientDir string) string {
-	raw, err := os.ReadFile(filepath.Join(clientDir, ".neverlauncher", "client-state.json"))
+	raw, err := os.ReadFile(filepath.Join(clientDir, ".launcher", "client-state.json"))
 	if err != nil {
 		return ""
 	}
@@ -987,7 +987,7 @@ func inferStoragePrefix(packagePath, storageDir string, manifest ClientPackageMa
 }
 
 func clientLocalState(clientDir, profile, channel string) (map[string]any, error) {
-	statePath := filepath.Join(clientDir, ".neverlauncher", "client-state.json")
+	statePath := filepath.Join(clientDir, ".launcher", "client-state.json")
 	data, err := os.ReadFile(statePath)
 	if errors.Is(err, os.ErrNotExist) {
 		return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "clientDir": clientDir, "profileId": profile, "channel": channel, "stateFile": statePath, "status": "empty"}, nil

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 var (
@@ -82,7 +82,7 @@ func isHex256(v string) bool {
 	return e == nil && len(b) == 32 && strings.ToLower(v) == v
 }
 func CanonicalNodeRequest(action string, proof NodeProof, payloadHash string) string {
-	return "NeverLauncher/sqlite-bridge/0.32.4\n" + action + "\n" + proof.NodeID + "\n" +
+	return "Launcher/sqlite-bridge/0.32.4\n" + action + "\n" + proof.NodeID + "\n" +
 		strconv.FormatInt(proof.IdentityEpoch, 10) + "\n" + strconv.FormatInt(proof.Timestamp, 10) + "\n" + proof.Nonce + "\n" + payloadHash + "\n"
 }
 func (r *Repository) RegisterNode(ctx context.Context, input NodeRegistration) (BridgeNode, error) {

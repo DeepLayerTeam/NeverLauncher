@@ -1,16 +1,16 @@
 {
-  "name": "@neverlauncher/desktop-extension-sdk",
+  "name": "@launcher/desktop-extension-sdk",
   "version": "0.21.0",
   "type": "module",
   "exports": {
-    ".": "./neverlauncher-desktop.ts",
+    ".": "./launcher-desktop.ts",
     "./generated": "./generated.ts",
     "./openapi": "./openapi-generated.ts",
     "./api-types": "./api-types-generated.ts",
     "./api-requests": "./api-requests-generated.ts"
   },
   "files": [
-    "neverlauncher-desktop.ts",
+    "launcher-desktop.ts",
     "generated.ts",
     "openapi-generated.ts",
     "api-types-generated.ts",

@@ -1,4 +1,4 @@
-# NeverLauncher 0.31.3 — Windows TPM key attestation
+# Launcher 0.31.3 — Windows TPM key attestation
 
 ## Implemented path
 
@@ -11,7 +11,7 @@ No `NCryptCreateClaim`-based assertion, CNG backend name, software signature or 
 ## Prerequisites and operational setup
 
 1. A physical or firmware TPM 2.0 with an existing Windows device identity key stored via **Microsoft Platform Crypto Provider**. The PCP name must be the name of the key `hardware-enclave` actually generated. If the dependency stores the key under a different name or refuses to expose its loaded TPM handle, the client **fails closed**. No silent key replacement or software fallback.
-2. Independently enroll a **distinct TPM-backed Attestation Key (AK)** with a trusted attestation CA that *validates actual AK TPM provenance* (e.g. issuance bound to TPM credentials), record the AK's PCP key name and obtain the issued AK leaf X.509 certificate and intermediates. Enrollment is not performed by NeverLauncher. Do not use a general-purpose software CA or manually self-signed AK certificate as a production trust root.
+2. Independently enroll a **distinct TPM-backed Attestation Key (AK)** with a trusted attestation CA that *validates actual AK TPM provenance* (e.g. issuance bound to TPM credentials), record the AK's PCP key name and obtain the issued AK leaf X.509 certificate and intermediates. Enrollment is not performed by Launcher. Do not use a general-purpose software CA or manually self-signed AK certificate as a production trust root.
 3. On the backend, configure `NEVERLAUNCHER_TPM_AK_ROOTS_FILE` (see `tpm-certify-verifier-0312.md`) with the true AK-issuer CA and Windows in its allowed platforms. Root status and AK revocation are server-controlled.
 4. Sign in, register and verify the Windows P-256 device, check device is bound to the current session, open **Device Management → Windows TPM Key Attestation**. Supply AK PCP name and provisioned AK certificate PEM (plus intermediary certificate if applicable) and run **Подтвердить TPM-происхождение**. The local certificate is public data; never paste AK private material or any EK/AK secrets.
 

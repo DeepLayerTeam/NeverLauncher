@@ -47,7 +47,7 @@ signing key or production database credential in the worker or CI.
 5. Start the service with `python3 tools/validation-attestor/attestor.py
    --backend https://staging.example.test --operator-token-file /secure/operator-token
    --signing-key /secure/attestor-ed25519.pem
-   --image registry.example.test/neverlauncher/runner@sha256:<digest>
+   --image registry.example.test/launcher/runner@sha256:<digest>
    --source-sha <git-commit> --build-sha <sha256> --manifest-key <64-hex-key>
    --tls-cert /secure/server.pem --tls-key /secure/server-key.pem
    --client-ca /secure/clients-ca.pem`. Client certificates are required for
@@ -62,13 +62,13 @@ matching server, Java, GUI, account or bridge prevents attestation.
 ## Execution
 
 The service issues a fresh Backend grant, then hands **only that grant** to
-its immutable OCI worker using a read-only mount. It runs NeverRuntime using
+its immutable OCI worker using a read-only mount. It runs Runtime using
 normal staged download, transactional install, GUI, loader and gameplay logic.
 Worker exit alone is not PASS: the host rehashes downloaded **and installed**
 files, recomputes runtime plan/Guard digests and verifies menu frames,
 matching server evidence, player positions, game ticks, client input, gameplay
 frames and stage hashes. Only after all seven required checks pass does the
-HOST sign `neverlauncher.validation-evidence.v2` under a domain-separated
+HOST sign `launcher.validation-evidence.v2` under a domain-separated
 Ed25519 signature and submit it with its scoped operator token.
 
 Backend verifies the pinned public key and OCI image digest, rejects arbitrary

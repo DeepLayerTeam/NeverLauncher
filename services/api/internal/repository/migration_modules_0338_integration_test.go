@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	gm "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitmodules"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gm "gitflic.ru/skif4er/launcher/services/api/internal/gravitmodules"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 func TestMigrationModuleReportImmutable0338(t *testing.T) {

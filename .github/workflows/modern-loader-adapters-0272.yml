@@ -2,14 +2,14 @@ name: Modern Loader Adapters 0.27.2
 on:
   push:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - 'cli/go.mod'
       - 'cli/go.sum'
       - '.github/workflows/modern-loader-adapters-0272.yml'
       - 'VERSION'
   pull_request:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - 'cli/go.mod'
       - 'cli/go.sum'
       - '.github/workflows/modern-loader-adapters-0272.yml'
@@ -34,17 +34,17 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          test -z "$(gofmt -l cli/cmd/neverlauncher/modern_loader_adapters_0272*.go cli/cmd/neverlauncher/{client_factory_0271,loader_runtime,forge_runtime,vanilla_runtime,compatibility_hardening}.go)"
+          test -z "$(gofmt -l cli/cmd/launcher/modern_loader_adapters_0272*.go cli/cmd/launcher/{client_factory_0271,loader_runtime,forge_runtime,vanilla_runtime,compatibility_hardening}.go)"
       - name: Client Factory and modern adapter integration fixtures
         working-directory: cli
         shell: bash
         run: >-
-          go test ./cmd/neverlauncher
+          go test ./cmd/launcher
           -run 'TestModernLoader0272|TestClientFactory0271|TestForgeAndNeoForgeProcessorMaterializers|TestForgeNeoForgeMavenVersionSelection|TestForgeLatestStableChoosesNumericMaximumIndependentOfMetadataOrder|TestNeoForgePrereleaseOnlyMetadataDoesNotPassAsStable|TestFabricAndQuiltMaterializersProduceConsumableClientTree|TestVanillaMetadataRecoveryExactVersionOnly|TestLoaderResolution'
           -count=1 -timeout=5m
       - name: Build CLI
         working-directory: cli
-        run: go build ./cmd/neverlauncher
+        run: go build ./cmd/launcher
       - name: Vet CLI
         working-directory: cli
-        run: go vet ./cmd/neverlauncher
+        run: go vet ./cmd/launcher

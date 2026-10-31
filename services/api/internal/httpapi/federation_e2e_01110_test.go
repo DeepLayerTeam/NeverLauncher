@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 type federationMatrixPasswordConnector01110 struct{ id string }
@@ -75,7 +75,7 @@ func TestFederationE2E01110CanonicalSessionMatrix(t *testing.T) {
 		methods  []string
 		strength string
 	}
-	localUser, err := repo.GetUserByEmail("admin@neverlauncher.local")
+	localUser, err := repo.GetUserByEmail("admin@launcher.local")
 	if err != nil {
 		t.Fatal(err)
 	}

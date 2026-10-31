@@ -36,7 +36,7 @@
       "equivalent": "Discord IPC SET_ACTIVITY (login/profile/play) and optional HTTPS activity button; no client dependency on Discord",
       "sourceRefs": [
         "cli/internal/discordrpc/client.go",
-        "cli/cmd/neverlauncher/lan_discord_0308.go"
+        "cli/cmd/launcher/lan_discord_0308.go"
       ],
       "testRefs": [
         "cli/internal/discordrpc/client_test.go"
@@ -78,10 +78,10 @@
       "status": "partial",
       "equivalent": "Certificate verification and signed release workflows.",
       "sourceRefs": [
-        "cli/cmd/neverlauncher/compatibility_release_certificate.go"
+        "cli/cmd/launcher/compatibility_release_certificate.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/compatibility_release_certificate_test.go"
+        "cli/cmd/launcher/compatibility_release_certificate_test.go"
       ],
       "limitations": "No full Gravit certificate generation workflow equivalence test."
     },
@@ -118,10 +118,10 @@
       "status": "partial",
       "equivalent": "MirrorHelper equivalents for verified asset operations, mod merges and authlib patching.",
       "sourceRefs": [
-        "cli/cmd/neverlauncher/mirror_helper_parity_0274.go"
+        "cli/cmd/launcher/mirror_helper_parity_0274.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/mirror_helper_parity_0274_test.go"
+        "cli/cmd/launcher/mirror_helper_parity_0274_test.go"
       ],
       "limitations": "No exhaustive command-by-command upstream verification across all loader versions."
     },
@@ -132,10 +132,10 @@
       "equivalent": "Official Minecraft sign-in and Mojang-profile integration.",
       "sourceRefs": [
         "apps/desktop/src/official_minecraft_0257.ts",
-        "cli/cmd/neverlauncher/official_ga_release_0270.go"
+        "cli/cmd/launcher/official_ga_release_0270.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/official_ga_release_0270_test.go"
+        "cli/cmd/launcher/official_ga_release_0270_test.go"
       ],
       "limitations": "Real account live-service and JVM launch are not attested by the local test alone."
     },
@@ -145,10 +145,10 @@
       "status": "partial",
       "equivalent": "Windows PE/code-signing verification and publication gates.",
       "sourceRefs": [
-        "cli/cmd/neverlauncher/windows_signing.go"
+        "cli/cmd/launcher/windows_signing.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/windows_signing_test.go"
+        "cli/cmd/launcher/windows_signing_test.go"
       ],
       "limitations": "No OpenSSLSignCode-specific command/format parity."
     },
@@ -171,10 +171,10 @@
       "status": "partial",
       "equivalent": "Scoped HTTPS RemoteControl for server host via ServerBridge.",
       "sourceRefs": [
-        "cli/cmd/neverlauncher/serverbridge_host_remote_0284.go"
+        "cli/cmd/launcher/serverbridge_host_remote_0284.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/serverbridge_host_remote_0284_test.go"
+        "cli/cmd/launcher/serverbridge_host_remote_0284_test.go"
       ],
       "limitations": "No generic reflection into Java LaunchServer internals."
     },
@@ -198,7 +198,7 @@
       "equivalent": "Optional redacted Desktop JS/JVM Sentry diagnostics",
       "sourceRefs": [
         "apps/desktop/src/sentry_diagnostics_0309.ts",
-        "sdk/java/core/src/main/java/ru/neverlauncher/sdk/core/SentryDiagnostics.java"
+        "sdk/java/core/src/main/java/ru/launcher/sdk/core/SentryDiagnostics.java"
       ],
       "testRefs": [
         "scripts/desktop/desktop_diagnostics_03011.test.mjs"
@@ -224,10 +224,10 @@
       "status": "partial",
       "equivalent": "Linux host systemd notify/watchdog and service lifecycle.",
       "sourceRefs": [
-        "cli/cmd/neverlauncher/serverbridge_host_systemd_linux_02811.go"
+        "cli/cmd/launcher/serverbridge_host_systemd_linux_02811.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/serverbridge_host_systemd_linux_02811_test.go"
+        "cli/cmd/launcher/serverbridge_host_systemd_linux_02811_test.go"
       ],
       "limitations": "Systemd service support is host-scoped; no generic LaunchServer Java module."
     },

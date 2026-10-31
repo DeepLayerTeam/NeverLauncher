@@ -13,7 +13,7 @@ unsupported layouts are denied; no transition to `trusted` occurs.
    ```sh
    export NEVERLAUNCHER_MACOS_SANDBOX_TEAM_ID='YOURTEAMID'
    export NEVERLAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY='Developer ID Application: Example (YOURTEAMID)'
-   ./scripts/security/build-macos-sandbox-helper-03112.sh /opt/neverlauncher/libexec/NeverExtensionSandbox
+   ./scripts/security/build-macos-sandbox-helper-03112.sh /opt/launcher/libexec/NeverExtensionSandbox
    ```
 
 2. Configure the API service with `NEVERLAUNCHER_MACOS_SANDBOX_HELPER` and

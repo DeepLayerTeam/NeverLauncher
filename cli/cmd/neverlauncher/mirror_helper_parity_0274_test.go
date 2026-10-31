@@ -245,7 +245,7 @@ func TestMirrorHelper0274WorkspaceAppliesActualVanillaWithMods(t *testing.T) {
 	folder := t.TempDir()
 	modPath := filepath.Join(folder, "fixture.jar")
 	os.WriteFile(modPath, mod, 0600)
-	workspace := mirrorWorkspace0274{SchemaVersion: "neverlauncher.mirror-workspace.v1", Minecraft: "test-vanilla", Loader: "vanilla", Mods: []mirrorArtifact0274{{Path: "mods/fixture.jar", File: "fixture.jar", SHA256: mirrorSHA0274(mod)}}}
+	workspace := mirrorWorkspace0274{SchemaVersion: "launcher.mirror-workspace.v1", Minecraft: "test-vanilla", Loader: "vanilla", Mods: []mirrorArtifact0274{{Path: "mods/fixture.jar", File: "fixture.jar", SHA256: mirrorSHA0274(mod)}}}
 	data, _ := json.Marshal(workspace)
 	workspaceFile := filepath.Join(folder, "workspace.json")
 	os.WriteFile(workspaceFile, data, 0600)

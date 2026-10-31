@@ -19,9 +19,9 @@ import (
 	"strings"
 )
 
-const trustedRoot0306 = ".neverlauncher/trusted-jvm"
+const trustedRoot0306 = ".launcher/trusted-jvm"
 const trustedActive0306 = trustedRoot0306 + "/active.json"
-const trustedSchema0306 = "neverlauncher.trusted-jvm.v1"
+const trustedSchema0306 = "launcher.trusted-jvm.v1"
 const trustedPublicKeyEnv0306 = "NEVERLAUNCHER_TRUSTED_JVM_PUBLIC_KEY_FILE"
 
 type trustedRecord0306 struct {
@@ -198,11 +198,11 @@ func trustedAnalyze0306(archive, key string) (trustedRecord0306, map[string][]by
 			for _, f := range zr.File {
 				if f.Name == "META-INF/MANIFEST.MF" {
 					m, _ := trustedBytes0306(f, 65536)
-					found = strings.Contains(string(m), "Premain-Class: ru.neverlauncher.trusted.Agent")
+					found = strings.Contains(string(m), "Premain-Class: ru.launcher.trusted.Agent")
 				}
 			}
 			if !found {
-				return record, nil, errors.New("trusted agent must use NeverLauncher premain")
+				return record, nil, errors.New("trusted agent must use Launcher premain")
 			}
 			record.AgentSHA256 = trustedDigest0306(b)
 		} else {
@@ -391,7 +391,7 @@ func trustedPrepare0306(root, originalMain string) ([]string, string, func(), er
 		return nil, "", nil, err
 	}
 	cleanup := func() { _ = os.Remove(f.Name()) }
-	return []string{"-javaagent:" + agent + "=" + f.Name()}, "ru.neverlauncher.trusted.MinecraftMain", cleanup, nil
+	return []string{"-javaagent:" + agent + "=" + f.Name()}, "ru.launcher.trusted.MinecraftMain", cleanup, nil
 }
 func handleTrustedJVM0306(args []string) error {
 	if len(args) == 0 {

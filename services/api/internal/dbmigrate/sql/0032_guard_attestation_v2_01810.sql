@@ -1,4 +1,4 @@
--- NeverLauncher 0.18.10: назначения запросов и разрешений Guard Attestation v2.
+-- Launcher 0.18.10: назначения запросов и разрешений Guard Attestation v2.
 --
 -- В Windows аттестация v2 намеренно проходит после запуска: новый запрос выполняется,
 -- только когда активны Guard Sensor и Continuous Guard. Полученный короткий

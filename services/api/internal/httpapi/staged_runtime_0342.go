@@ -19,13 +19,13 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // A staging grant conveys read/report access ONLY to one already integrity-checked
 // release snapshot. It is not runtime attestation and cannot certify stable.
-const stagedGrantSchema0342 = "neverlauncher.staged-runtime-grant.v1"
-const stagedRunSchema0342 = "neverlauncher.staged-runtime-run.v1"
+const stagedGrantSchema0342 = "launcher.staged-runtime-grant.v1"
+const stagedRunSchema0342 = "launcher.staged-runtime-run.v1"
 
 type stagedGrant0342 struct {
 	Schema         string `json:"schema"`
@@ -64,7 +64,7 @@ func (s Server) grantMAC0342(data []byte) ([]byte, error) {
 	if len(s.Config.AuthTokenSecret) < 24 {
 		return nil, errors.New("staged runner requires configured backend auth secret")
 	}
-	m := hmac.New(sha256.New, []byte("NeverLauncher/staged-runtime/0.34.2\x00"+s.Config.AuthTokenSecret))
+	m := hmac.New(sha256.New, []byte("Launcher/staged-runtime/0.34.2\x00"+s.Config.AuthTokenSecret))
 	_, _ = m.Write(data)
 	return m.Sum(nil), nil
 }
@@ -244,7 +244,7 @@ func (s Server) stagedRunDownloadManifest0342(w http.ResponseWriter, r *http.Req
 	for _, f := range lookup.Files {
 		files = append(files, map[string]any{"path": f.Path, "size": f.Size, "sha256": strings.ToLower(f.SHA256), "url": "/api/v1/staged-runs/" + g.PackageID + "/files/" + stagedEscapePath0342(f.Path), "required": f.Required, "group": f.Ownership, "executable": f.Executable, "targetOs": f.TargetOS})
 	}
-	p := map[string]any{"schemaVersion": "neverlauncher.client-package.v1", "packageId": g.PackageID, "projectId": g.ProjectID, "profileId": lookup.Release.ProfileID, "channel": lookup.Release.Channel, "version": lookup.Release.Version, "files": files}
+	p := map[string]any{"schemaVersion": "launcher.client-package.v1", "packageId": g.PackageID, "projectId": g.ProjectID, "profileId": lookup.Release.ProfileID, "channel": lookup.Release.Channel, "version": lookup.Release.Version, "files": files}
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, map[string]any{"schemaVersion": stagedRunSchema0342, "runId": g.RunID, "packageId": g.PackageID, "manifestSha256": g.ManifestSHA256, "artifactSha256": g.ArtifactSHA256, "signedManifest": lookup.Release.Manifest, "package": p})
 }
@@ -292,7 +292,7 @@ func (s Server) stagedRunDownloadFile0342(w http.ResponseWriter, r *http.Request
 		return
 	}
 	// Read to a bounded temporary file, hash before sending any HTTP 200 bytes.
-	tmp, err := os.CreateTemp("", "neverlauncher-staged-0342-*")
+	tmp, err := os.CreateTemp("", "launcher-staged-0342-*")
 	if err != nil {
 		writeError(w, 503, "staged temporary storage unavailable")
 		return

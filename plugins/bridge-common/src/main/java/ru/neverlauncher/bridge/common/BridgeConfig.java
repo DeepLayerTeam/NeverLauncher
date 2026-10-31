@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -127,7 +127,7 @@ public final class BridgeConfig {
             // Специально записывайте только комментарии. Рабочие значения берутся из переменных
             // окружения или стандартных настроек, поэтому установка JAR или мода не патчит
             // конфигурацию Paper/Velocity/Bungee/Fabric/Forge и не фиксирует окружение.
-            String template = "# NeverLauncher ServerBridge " + BridgeDefaults.VERSION + " zero-patch bootstrap\n" +
+            String template = "# Launcher ServerBridge " + BridgeDefaults.VERSION + " zero-patch bootstrap\n" +
                 "# No Minecraft/proxy configuration is modified by this plugin.\n" +
                 "# Defaults: backend=http://127.0.0.1:8080 server.id=" + defaultServerId + "\n" +
                 "# Override with NEVERLAUNCHER_BACKEND_URLS (HA) or NEVERLAUNCHER_BACKEND_URL / NEVERLAUNCHER_SERVER_ID,\n" +

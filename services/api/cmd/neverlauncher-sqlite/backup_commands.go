@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitecore"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitecore"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 func isBackupAction(action string) bool {
@@ -84,7 +84,7 @@ func runBackupAction(args []string) int {
 		if err == nil {
 			// Restore into a fresh private directory on the SAME supported local FS.
 			base := filepath.Dir(*backup)
-			dir, e := os.MkdirTemp(base, ".neverlauncher-pre-upgrade-restore-*")
+			dir, e := os.MkdirTemp(base, ".launcher-pre-upgrade-restore-*")
 			if e != nil {
 				err = e
 			} else {

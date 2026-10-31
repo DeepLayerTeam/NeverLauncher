@@ -20,7 +20,7 @@ import (
 	"time"
 )
 
-const serverBridgeProvisionStateDir0199 = ".neverlauncher/server-bridge"
+const serverBridgeProvisionStateDir0199 = ".launcher/server-bridge"
 
 type bridgeDetection0199 struct {
 	SchemaVersion string   `json:"schemaVersion"`
@@ -207,7 +207,7 @@ func detectServerBridgePlatform0199(root, explicit string) (bridgeDetection0199,
 	candidates := collectServerJarCandidates0199(root)
 	for _, path := range candidates {
 		base := strings.ToLower(filepath.Base(path))
-		if strings.HasPrefix(base, "neverlauncher-") && strings.Contains(base, "-bridge-") {
+		if strings.HasPrefix(base, "launcher-") && strings.Contains(base, "-bridge-") {
 			continue
 		}
 		nameRules := []struct {
@@ -352,35 +352,35 @@ func bridgeDetectionForPlatform0199(root, platform, confidence string, evidence 
 func bridgeConfigPath0199(root, platform string) string {
 	switch platform {
 	case "velocity":
-		return filepath.Join(root, "plugins", "neverlauncher-velocity", "config.yml")
+		return filepath.Join(root, "plugins", "launcher-velocity", "config.yml")
 	case "bungeecord":
-		return filepath.Join(root, "plugins", "NeverLauncherBungeeBridge", "config.yml")
+		return filepath.Join(root, "plugins", "LauncherBungeeBridge", "config.yml")
 	case "waterfall":
-		return filepath.Join(root, "plugins", "NeverLauncherWaterfallBridge", "config.yml")
+		return filepath.Join(root, "plugins", "LauncherWaterfallBridge", "config.yml")
 	case "bukkit":
-		return filepath.Join(root, "plugins", "NeverLauncherBukkitBridge", "config.yml")
+		return filepath.Join(root, "plugins", "LauncherBukkitBridge", "config.yml")
 	case "spigot":
-		return filepath.Join(root, "plugins", "NeverLauncherSpigotBridge", "config.yml")
+		return filepath.Join(root, "plugins", "LauncherSpigotBridge", "config.yml")
 	case "paper":
-		return filepath.Join(root, "plugins", "NeverLauncherPaperBridge", "config.yml")
+		return filepath.Join(root, "plugins", "LauncherPaperBridge", "config.yml")
 	case "purpur":
-		return filepath.Join(root, "plugins", "NeverLauncherPurpurBridge", "config.yml")
+		return filepath.Join(root, "plugins", "LauncherPurpurBridge", "config.yml")
 	case "folia":
-		return filepath.Join(root, "plugins", "NeverLauncherFoliaBridge", "config.yml")
+		return filepath.Join(root, "plugins", "LauncherFoliaBridge", "config.yml")
 	case "fabric":
-		return filepath.Join(root, "config", "neverlauncher-fabric-bridge", "config.yml")
+		return filepath.Join(root, "config", "launcher-fabric-bridge", "config.yml")
 	case "quilt":
-		return filepath.Join(root, "config", "neverlauncher-quilt-bridge", "config.yml")
+		return filepath.Join(root, "config", "launcher-quilt-bridge", "config.yml")
 	case "forge":
-		return filepath.Join(root, "config", "neverlauncher-forge-bridge", "config.yml")
+		return filepath.Join(root, "config", "launcher-forge-bridge", "config.yml")
 	case "neoforge":
-		return filepath.Join(root, "config", "neverlauncher-neoforge-bridge", "config.yml")
+		return filepath.Join(root, "config", "launcher-neoforge-bridge", "config.yml")
 	case "sponge":
-		return filepath.Join(root, "config", "neverlauncher-sponge-bridge", "config.yml")
+		return filepath.Join(root, "config", "launcher-sponge-bridge", "config.yml")
 	case "vanilla":
-		return filepath.Join(root, "config", "neverlauncher-vanilla-bridge", "config.yml")
+		return filepath.Join(root, "config", "launcher-vanilla-bridge", "config.yml")
 	default:
-		return filepath.Join(root, "config", "neverlauncher-bridge", "config.yml")
+		return filepath.Join(root, "config", "launcher-bridge", "config.yml")
 	}
 }
 
@@ -716,7 +716,7 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 		if err != nil {
 			return bridgeArtifact0199{}, err
 		}
-		prefix := "neverlauncher-" + platform + "-bridge-"
+		prefix := "launcher-" + platform + "-bridge-"
 		suffix := ".jar"
 		matches := []string{}
 		for _, entry := range entries {
@@ -735,7 +735,7 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 			return compareSemver0199(extractBridgeVersion0199(matches[i], platform), extractBridgeVersion0199(matches[j], platform)) > 0
 		})
 		if requestedVersion != "" && requestedVersion != "dev" {
-			exact := "neverlauncher-" + platform + "-bridge-" + requestedVersion + ".jar"
+			exact := "launcher-" + platform + "-bridge-" + requestedVersion + ".jar"
 			found := false
 			for _, name := range matches {
 				if name == exact {
@@ -763,7 +763,7 @@ func resolveBridgeArtifact0199(args []string, platform, requestedVersion string)
 		return bridgeArtifact0199{}, fmt.Errorf("invalid bridge artifact: %s", abs)
 	}
 	file := filepath.Base(abs)
-	expectedPrefix := "neverlauncher-" + platform + "-bridge-"
+	expectedPrefix := "launcher-" + platform + "-bridge-"
 	if !strings.HasPrefix(file, expectedPrefix) || !strings.HasSuffix(file, ".jar") {
 		return bridgeArtifact0199{}, fmt.Errorf("artifact filename does not match detected platform %s: %s", platform, file)
 	}
@@ -860,7 +860,7 @@ func bridgeAllowlistField0199(platform string) string {
 }
 
 func extractBridgeVersion0199(file, platform string) string {
-	prefix := "neverlauncher-" + platform + "-bridge-"
+	prefix := "launcher-" + platform + "-bridge-"
 	return strings.TrimSuffix(strings.TrimPrefix(file, prefix), ".jar")
 }
 
@@ -897,7 +897,7 @@ func existingManagedBridgeArtifacts0199(dir string) []string {
 			continue
 		}
 		name := strings.ToLower(entry.Name())
-		if strings.HasPrefix(name, "neverlauncher-") && strings.Contains(name, "-bridge-") && strings.HasSuffix(name, ".jar") {
+		if strings.HasPrefix(name, "launcher-") && strings.Contains(name, "-bridge-") && strings.HasSuffix(name, ".jar") {
 			out = append(out, filepath.Join(dir, entry.Name()))
 		}
 	}
@@ -907,20 +907,20 @@ func existingManagedBridgeArtifacts0199(dir string) []string {
 
 func verifyBridgeArtifactShape0199(path, platform string) error {
 	required := map[string][]string{
-		"velocity":   {"velocity-plugin.json", "ru/neverlauncher/bridge/velocity/NeverLauncherVelocityBridge.class"},
-		"bungeecord": {"bungee.yml", "ru/neverlauncher/bridge/bungeecord/NeverLauncherBungeeCordBridge.class"},
-		"waterfall":  {"bungee.yml", "ru/neverlauncher/bridge/waterfall/NeverLauncherWaterfallBridge.class"},
-		"bukkit":     {"plugin.yml", "ru/neverlauncher/bridge/bukkit/NeverLauncherBukkitBridge.class"},
-		"spigot":     {"plugin.yml", "ru/neverlauncher/bridge/spigot/NeverLauncherSpigotBridge.class"},
-		"paper":      {"plugin.yml", "ru/neverlauncher/bridge/paper/NeverLauncherPaperBridge.class"},
-		"purpur":     {"plugin.yml", "ru/neverlauncher/bridge/purpur/NeverLauncherPurpurBridge.class"},
-		"folia":      {"plugin.yml", "ru/neverlauncher/bridge/folia/NeverLauncherFoliaBridge.class"},
-		"fabric":     {"fabric.mod.json", "ru/neverlauncher/bridge/fabric/NeverLauncherFabricBridge.class"},
-		"quilt":      {"quilt.mod.json", "ru/neverlauncher/bridge/quilt/NeverLauncherQuiltBridge.class"},
-		"forge":      {"META-INF/mods.toml", "ru/neverlauncher/bridge/forge/NeverLauncherForgeBridge.class"},
-		"neoforge":   {"META-INF/neoforge.mods.toml", "ru/neverlauncher/bridge/neoforge/NeverLauncherNeoForgeBridge.class"},
-		"sponge":     {"ru/neverlauncher/bridge/sponge/NeverLauncherSpongeBridge.class"},
-		"vanilla":    {"META-INF/MANIFEST.MF", "ru/neverlauncher/bridge/vanilla/NeverLauncherVanillaBridge.class"},
+		"velocity":   {"velocity-plugin.json", "ru/launcher/bridge/velocity/LauncherVelocityBridge.class"},
+		"bungeecord": {"bungee.yml", "ru/launcher/bridge/bungeecord/LauncherBungeeCordBridge.class"},
+		"waterfall":  {"bungee.yml", "ru/launcher/bridge/waterfall/LauncherWaterfallBridge.class"},
+		"bukkit":     {"plugin.yml", "ru/launcher/bridge/bukkit/LauncherBukkitBridge.class"},
+		"spigot":     {"plugin.yml", "ru/launcher/bridge/spigot/LauncherSpigotBridge.class"},
+		"paper":      {"plugin.yml", "ru/launcher/bridge/paper/LauncherPaperBridge.class"},
+		"purpur":     {"plugin.yml", "ru/launcher/bridge/purpur/LauncherPurpurBridge.class"},
+		"folia":      {"plugin.yml", "ru/launcher/bridge/folia/LauncherFoliaBridge.class"},
+		"fabric":     {"fabric.mod.json", "ru/launcher/bridge/fabric/LauncherFabricBridge.class"},
+		"quilt":      {"quilt.mod.json", "ru/launcher/bridge/quilt/LauncherQuiltBridge.class"},
+		"forge":      {"META-INF/mods.toml", "ru/launcher/bridge/forge/LauncherForgeBridge.class"},
+		"neoforge":   {"META-INF/neoforge.mods.toml", "ru/launcher/bridge/neoforge/LauncherNeoForgeBridge.class"},
+		"sponge":     {"ru/launcher/bridge/sponge/LauncherSpongeBridge.class"},
+		"vanilla":    {"META-INF/MANIFEST.MF", "ru/launcher/bridge/vanilla/LauncherVanillaBridge.class"},
 	}
 	r, err := zip.OpenReader(path)
 	if err != nil {
@@ -950,7 +950,7 @@ func verifyBridgeArtifactShape0199(path, platform string) error {
 		if err != nil {
 			return err
 		}
-		if !strings.Contains(text, "Main-Class: ru.neverlauncher.bridge.vanilla.NeverLauncherVanillaBridge") {
+		if !strings.Contains(text, "Main-Class: ru.launcher.bridge.vanilla.LauncherVanillaBridge") {
 			return errors.New("Vanilla ServerBridge sidecar Main-Class is missing")
 		}
 	}
@@ -997,7 +997,7 @@ func writeBridgeConfig0199(path, backend, serverID, projectID, profileID, channe
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	body := fmt.Sprintf("# Managed by `nl server-bridge install` (NeverLauncher %s).\n# Only ServerBridge-owned files are changed; Minecraft/proxy core/authlib files are untouched.\nbackend:\n  url: %q\n  timeoutMs: 5000\n  retries: 2\n  heartbeatIntervalSeconds: 30\nserver:\n  id: %q\nidentity:\n  file: %q\nprofile:\n  projectId: %q\n  profileId: %q\n  channel: %q\nsecurity:\n  failMode: closed\n  requireLauncherSession: true\n  requireIntegrity: true\ntelemetry:\n  sampleIntervalSeconds: 10\n  samplingBudgetMs: 20\n", version, backend, serverID, "node-identity.properties", projectID, profileID, channel)
+	body := fmt.Sprintf("# Managed by `nl server-bridge install` (Launcher %s).\n# Only ServerBridge-owned files are changed; Minecraft/proxy core/authlib files are untouched.\nbackend:\n  url: %q\n  timeoutMs: 5000\n  retries: 2\n  heartbeatIntervalSeconds: 30\nserver:\n  id: %q\nidentity:\n  file: %q\nprofile:\n  projectId: %q\n  profileId: %q\n  channel: %q\nsecurity:\n  failMode: closed\n  requireLauncherSession: true\n  requireIntegrity: true\ntelemetry:\n  sampleIntervalSeconds: 10\n  samplingBudgetMs: 20\n", version, backend, serverID, "node-identity.properties", projectID, profileID, channel)
 	return atomicWrite0199(path, []byte(body), 0o644)
 }
 
@@ -1023,7 +1023,7 @@ func loadOrCreateNodeIdentity0199(path string) (bridgeIdentityMaterial0199, erro
 	fingerprintBytes := sha256.Sum256(pub)
 	fingerprint := hex.EncodeToString(fingerprintBytes[:])
 	enc := base64.RawURLEncoding
-	text := "# NeverLauncher ServerBridge node identity - PRIVATE KEY, do not share\n" +
+	text := "# Launcher ServerBridge node identity - PRIVATE KEY, do not share\n" +
 		"formatVersion=1\nkeyAlgorithm=ed25519\n" +
 		"publicKey=" + enc.EncodeToString(pub) + "\n" +
 		"keyFingerprint=" + fingerprint + "\n" +

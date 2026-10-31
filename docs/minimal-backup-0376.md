@@ -1,4 +1,4 @@
-# NeverLauncher 0.37.6 — минимальное развёртывание: согласованный backup/restore
+# Launcher 0.37.6 — минимальное развёртывание: согласованный backup/restore
 
 Это рабочий офлайн-инструмент резервного копирования Linux single-node, **не онлайн-backup**. Для общей точки согласованности SQLite, конфигурации и файлов требуется остановить API и все процессы, которые могут изменять `storage`, `extensions` или `factory` (включая внешние расширения и задачи). API и SQLite должны находиться на локальной файловой системе, поддерживающей flock. Нельзя использовать это средство как механизм горячего резервирования или HA.
 
@@ -6,9 +6,9 @@
 
 ```bash
 # 1. Остановить службу API и зависимые процессы (systemctl stop ...).
-python3 scripts/install/minimal-install.py backup --root /var/lib/neverlauncher
+python3 scripts/install/minimal-install.py backup --root /var/lib/launcher
 # При необходимости сохранить сразу в отдельном приватном каталоге:
-python3 scripts/install/minimal-install.py backup --root /var/lib/neverlauncher \
+python3 scripts/install/minimal-install.py backup --root /var/lib/launcher \
   --destination /private/offsite/minimal-2026-10-29
 ```
 
@@ -20,13 +20,13 @@ python3 scripts/install/minimal-install.py backup --root /var/lib/neverlauncher 
 
 ```bash
 python3 scripts/install/minimal-install.py backup-verify \
-  --bundle /var/lib/neverlauncher/backups/minimal-YYYYMMDDTHHMMSSZ-XXXXXXXXXXXX
+  --bundle /var/lib/launcher/backups/minimal-YYYYMMDDTHHMMSSZ-XXXXXXXXXXXX
 
 # Копию предварительно разместить за пределами повреждённой установки.
 # Восстановление доступно только в отсутствующий каталог — действующие данные не затираются.
 python3 scripts/install/minimal-install.py restore \
   --bundle /private/offsite/minimal-2026-10-29 \
-  --target-root /var/lib/neverlauncher
+  --target-root /var/lib/launcher
 ```
 
 Проверка проверяет точное совпадение файлов и каталогов с индексом, хеши и целостность SQLite до первой записи целевого каталога. Восстановление создаётся в закрытой временной папке, переписывает только известные абсолютные пути установки в `backend.env`, синхронизирует файлы и атомарно переименовывает каталог. **Уже существующая установка не перезаписывается.** При пересоздании хоста должны быть заново установлены и проверены бинарники API/CLI, системная служба, обратный HTTPS-прокси и внешние файлы/ключи, не лежавшие в корне minimal; восстановление директорий не означает автоматического восстановления инфраструктуры хоста.

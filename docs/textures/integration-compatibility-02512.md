@@ -1,4 +1,4 @@
-# NeverLauncher 0.25.12 — Texture Integration & Compatibility Certification
+# Launcher 0.25.12 — Texture Integration & Compatibility Certification
 
 This update ships **executable** PostgreSQL/GC concurrency hardening, a live
 Yggdrasil/authlib-injector profile + PNG verifier, a real S3 lifecycle test and
@@ -69,7 +69,7 @@ Desktop and Admin verification:
 
 ## Probe a running Yggdrasil/authlib-injector deployment
 
-Select a **local NeverLauncher Minecraft UUID** with an active public, managed
+Select a **local Launcher Minecraft UUID** with an active public, managed
 PNG skin. Set a production HTTPS API origin and run:
 
 ```bash

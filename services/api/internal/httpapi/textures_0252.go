@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/texturepng"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/texturepng"
 )
 
 const maxMultipartTexture0252 = texturepng.MaxEncodedBytes + 16*1024

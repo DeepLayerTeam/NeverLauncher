@@ -1,6 +1,6 @@
 # Gravit Compatibility Adapter 0.31.0 (limited API)
 
-This is a **working, deliberately limited source-port adapter** for GravitLauncher-style Java modules, not a universal Gravit JAR loader. It runs in NeverLauncher's existing Java Extension Host (`java -jar`) under Go supervisor deadlines and Ed25519-signed `.nlext` package verification. Gravit's internal LaunchServer/LauncherRuntime/JavaFX APIs are not present and are not emulated. This code is independently implemented and is not a copy of Gravit sources.
+This is a **working, deliberately limited source-port adapter** for GravitLauncher-style Java modules, not a universal Gravit JAR loader. It runs in Launcher's existing Java Extension Host (`java -jar`) under Go supervisor deadlines and Ed25519-signed `.nlext` package verification. Gravit's internal LaunchServer/LauncherRuntime/JavaFX APIs are not present and are not emulated. This code is independently implemented and is not a copy of Gravit sources.
 
 ## Supported API (fixed list)
 
@@ -22,7 +22,7 @@ This is a **working, deliberately limited source-port adapter** for GravitLaunch
 sh sdk/java/gravit-compat/build.sh test
 sh examples/extensions/gravit-compat/build.sh
 python3 examples/extensions/gravit-compat/test-runner.py
-# Requires NeverLauncher CLI and a pre-existing protected Ed25519 private key
+# Requires Launcher CLI and a pre-existing protected Ed25519 private key
 nl extension pack examples/extensions/gravit-compat/build/package --output /tmp/gravit-port.nlext --private-key /secure/extension-private.pem
 nl extension verify /tmp/gravit-port.nlext --public-key /secure/extension-public.pem
 ```
@@ -30,9 +30,9 @@ nl extension verify /tmp/gravit-port.nlext --public-key /secure/extension-public
 For each ported module, build a self-contained JAR with:
 
 ```
-Main-Class: ru.neverlauncher.sdk.host.JavaExtensionHost
-NeverLauncher-Extension-Class: ru.neverlauncher.sdk.gravit.GravitCompatExtension
-NeverLauncher-Gravit-Module-Class: your.package.YourPortedModule
+Main-Class: ru.launcher.sdk.host.JavaExtensionHost
+Launcher-Extension-Class: ru.launcher.sdk.gravit.GravitCompatExtension
+Launcher-Gravit-Module-Class: your.package.YourPortedModule
 ```
 
 The Java SDK, adapter and ported class must be packaged in this JAR. Go's `extensionjava.Inspect()` verifies that the adapter and module class are present **before** a Java process is launched; signature verification and issuer trust remain in existing Extensions package lifecycle. No automatic loading of arbitrary Gravit JARs or dependencies on external `Class-Path` is allowed. Compile with Java 17+; Java 21 is also covered by CI.

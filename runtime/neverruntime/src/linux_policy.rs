@@ -152,7 +152,7 @@ mod imp {
         let own_process_group = pgid as u32 == pid;
         if !no_new_privs || !own_process_group { return Err("Linux runtime process policy verification failed".into()); }
         Ok(LinuxRuntimeProcessPolicyReport {
-            schema: "neverruntime/linux-process-policy/v1".into(), policy_version: 1, pid,
+            schema: "runtime/linux-process-policy/v1".into(), policy_version: 1, pid,
             enforced: true, no_new_privs, parent_death_signal: true, own_process_group,
             core_dumps_disabled: true,
         })

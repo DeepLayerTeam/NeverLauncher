@@ -46,7 +46,7 @@ func TestHTTPMiddleware(t *testing.T) {
 	}
 	var out bytes.Buffer
 	m.Prometheus(&out)
-	if !strings.Contains(out.String(), "neverlauncher_http_5xx_60s 1") {
+	if !strings.Contains(out.String(), "launcher_http_5xx_60s 1") {
 		t.Fatal(out.String())
 	}
 }

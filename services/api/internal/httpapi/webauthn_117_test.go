@@ -277,7 +277,7 @@ func TestPhishingResistantPolicyBlocksSessionUntilPasskey117(t *testing.T) {
 		t.Fatalf("set policy => %d %s", rr.Code, rr.Body.String())
 	}
 
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"admin@neverlauncher.local","password":"admin","deviceId":"policy-test"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBufferString(`{"email":"admin@launcher.local","password":"admin","deviceId":"policy-test"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rr = httptest.NewRecorder()
 	h.ServeHTTP(rr, req)

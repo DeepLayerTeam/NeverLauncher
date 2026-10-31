@@ -2,9 +2,9 @@ package pro.gravit.launcher.base.modules;
 import java.lang.reflect.Constructor;
 import java.util.*;
 import pro.gravit.utils.command.CommandHandler;
-import ru.neverlauncher.sdk.core.RuntimeEvents;
-import ru.neverlauncher.sdk.core.RuntimeServices;
-import ru.neverlauncher.sdk.gravit.HostEvent;
+import ru.launcher.sdk.core.RuntimeEvents;
+import ru.launcher.sdk.core.RuntimeServices;
+import ru.launcher.sdk.gravit.HostEvent;
 
 /** Explicitly maps ported module event handlers to real Go EventBus subscriptions. */
 public final class LauncherModulesManager {

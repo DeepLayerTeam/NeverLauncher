@@ -16,8 +16,8 @@ func guardChecks0139(osName, ver string) []string {
 		"packageManifestVerified", "artifactHashesVerified", "authenticatedIpcV4",
 		"runtimePolicyEnforced", "releasePackageBuilt", "guardRelease0139",
 	}
-	if neverGuardReleasePolicyV2Required0140(ver) {
-		checks = append(checks, "neverGuardRelease0140")
+	if GuardReleasePolicyV2Required0140(ver) {
+		checks = append(checks, "GuardRelease0140")
 	}
 	checks = append(checks, map[string]string{"linux": "linuxProductionGate", "windows": "windowsProductionGate", "macos": "macosProductionGate"}[osName])
 	return checks
@@ -63,7 +63,7 @@ func writeGuardCIEvidenceFixture(t *testing.T, dir, out, ver, commit string) (st
 			artifacts[role] = releaseGuardCIArtifact{Name: name, Size: size, SHA256: digest}
 		}
 		claims := map[string]any{"guardProtocolVersion": 4, "releaseCertification": ver, "packagePlatform": map[string]string{"linux": "linux-amd64", "windows": "windows-amd64", "macos": "macos-universal"}[target.OS], "ciSigningMode": target.CISigningMode, "vendorSigningProvenance": "not-certified-by-ci", "packageManifestBound": true, "artifactSetComplete": true}
-		if neverGuardReleasePolicyV2Required0140(ver) {
+		if GuardReleasePolicyV2Required0140(ver) {
 			claims["releasePolicySchema"] = "2.0"
 			claims["releaseIdentityAuthenticated"] = true
 			claims["releaseSigningMode"] = map[string]string{"linux": "integrity-only", "windows": "unsigned-development", "macos": "adhoc-development"}[target.OS]
@@ -71,12 +71,12 @@ func writeGuardCIEvidenceFixture(t *testing.T, dir, out, ver, commit string) (st
 		results = append(results, releaseGuardCIResult{
 			SchemaVersion: "1.0", ProductVersion: ver, TargetID: target.ID, Runner: target.Runner,
 			OS: target.OS, Arch: target.Arch, RuntimeArch: map[string]string{"linux": "x86_64", "windows": "x86_64", "macos": "arm64"}[target.OS],
-			Repository: "DeepLayerTeam/NeverLauncher", Commit: commit, RunID: "13900", Status: "passed", ExitCode: 0, Checks: mkChecks(target.RequiredChecks), Artifacts: artifacts,
+			Repository: "DeepLayerTeam/Launcher", Commit: commit, RunID: "13900", Status: "passed", ExitCode: 0, Checks: mkChecks(target.RequiredChecks), Artifacts: artifacts,
 			Claims:      claims,
 			Limitations: []string{guardCILimitation0139}, EvidenceSHA256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 		})
 	}
-	matrix := releaseGuardCIMatrix{SchemaVersion: "1.0", ProductVersion: ver, GeneratedAt: "2026-09-24T00:00:00Z", Repository: "DeepLayerTeam/NeverLauncher", Commit: commit, RunID: "13900", Status: "passed", Targets: results, Errors: []string{}}
+	matrix := releaseGuardCIMatrix{SchemaVersion: "1.0", ProductVersion: ver, GeneratedAt: "2026-09-24T00:00:00Z", Repository: "DeepLayerTeam/Launcher", Commit: commit, RunID: "13900", Status: "passed", Targets: results, Errors: []string{}}
 	matrixRaw, err := json.MarshalIndent(matrix, "", "  ")
 	if err != nil {
 		t.Fatal(err)
@@ -202,7 +202,7 @@ func TestGuardCICertificationRejectsRepositoryMismatch01310(t *testing.T) {
 	if err := json.Unmarshal(matrixRaw, &matrix); err != nil {
 		t.Fatal(err)
 	}
-	matrix.Targets[0].Repository = "fork/neverlauncher"
+	matrix.Targets[0].Repository = "fork/launcher"
 	matrixRaw, _ = json.Marshal(matrix)
 	targetsRaw, _ := os.ReadFile(targetsPath)
 	if _, err := validateGuardCIEvidence(matrixRaw, targetsRaw, "0.13.10", "abc1310"); err == nil {

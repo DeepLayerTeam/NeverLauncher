@@ -1,31 +1,31 @@
-# NeverLauncher 0.37.5: single-host SQLite installation (Linux)
+# Launcher 0.37.5: single-host SQLite installation (Linux)
 
 This procedure uses the actual HTTP repository and persisted auth/session stores; it does not set up PostgreSQL or Redis. It is a **single API process** on a supported local filesystem, not network HA. Use a service account that owns the installation directory, and a reverse proxy terminating HTTPS. Never place the SQLite databases on NFS or shared/overlay writable volumes.
 
 ## Prerequisites
 
-Build `neverlauncher-api` from the exact release sources with the toolchain pinned by `services/api/go.mod`; obtain a verified executable and the actual `Guard` and `ServerBridge` release allowlist JSON policies for your shipped artifacts. The installer intentionally cannot invent signed release data. If these policies are missing or invalid, startup must fail.
+Build `launcher-api` from the exact release sources with the toolchain pinned by `services/api/go.mod`; obtain a verified executable and the actual `Guard` and `ServerBridge` release allowlist JSON policies for your shipped artifacts. The installer intentionally cannot invent signed release data. If these policies are missing or invalid, startup must fail.
 
 ## Install
 
 ```sh
 python3 scripts/install/minimal-install.py init \
-  --root /var/lib/neverlauncher-minimal \
-  --binary /opt/neverlauncher/bin/neverlauncher-api \
+  --root /var/lib/launcher-minimal \
+  --binary /opt/launcher/bin/launcher-api \
   --public-url https://api.example.org \
-  --guard-policy /etc/neverlauncher/verified-guard.json \
-  --bridge-policy /etc/neverlauncher/verified-bridge.json
+  --guard-policy /etc/launcher/verified-guard.json \
+  --bridge-policy /etc/launcher/verified-bridge.json
 python3 scripts/install/minimal-install.py check \
-  --env-file /var/lib/neverlauncher-minimal/config/backend.env \
-  --binary /opt/neverlauncher/bin/neverlauncher-api
+  --env-file /var/lib/launcher-minimal/config/backend.env \
+  --binary /opt/launcher/bin/launcher-api
 python3 scripts/install/minimal-install.py run \
-  --env-file /var/lib/neverlauncher-minimal/config/backend.env \
-  --binary /opt/neverlauncher/bin/neverlauncher-api
+  --env-file /var/lib/launcher-minimal/config/backend.env \
+  --binary /opt/launcher/bin/launcher-api
 ```
 
 The initializer creates private `config`, `db`, `storage`, `backups`, `extensions` and `factory` directories and writes the initial configuration with mode `0600`. It refuses to overwrite an existing installation. `check` calls the backend's real offline `diagnose deployment` command and stops if release policies, persistent storage or security settings are invalid. `run` replaces the Python process with the API. To enable automatic startup, configure your local service manager to run that command as the dedicated service user; ensure the API binary and Python script are protected against untrusted modification.
 
-Use a TLS reverse proxy for `https://api.example.org`; the API defaults to `127.0.0.1:8080` and is not exposed directly. Read `NEVERLAUNCHER_BOOTSTRAP_TOKEN` only from the private `backend.env`; never include it in a URL, log, issue or public paste. Submit it to `POST /api/v1/install/bootstrap-admin` via the `X-NeverLauncher-Bootstrap-Token` header with a 12+-character admin password. Sign in as that owner, then call `POST /api/v1/install/first-project` with the owner's credentials. `GET /api/v1/install/readiness` shows installation status.
+Use a TLS reverse proxy for `https://api.example.org`; the API defaults to `127.0.0.1:8080` and is not exposed directly. Read `NEVERLAUNCHER_BOOTSTRAP_TOKEN` only from the private `backend.env`; never include it in a URL, log, issue or public paste. Submit it to `POST /api/v1/install/bootstrap-admin` via the `X-Launcher-Bootstrap-Token` header with a 12+-character admin password. Sign in as that owner, then call `POST /api/v1/install/first-project` with the owner's credentials. `GET /api/v1/install/readiness` shows installation status.
 
 After the administrator is committed, the bootstrap token cannot be reused and restarting with a different value does not re-enable it. For **0.37.6**, use the operational offline backup/restore commands in [minimal-backup-0376.md](../minimal-backup-0376.md). Stop API and other file writers before creating the backup; never copy live `*.sqlite` files or separate blobs while API is running. The **0.37.7 SQLite ↔ PostgreSQL transfer** stage requires separate acceptance. A green offline backup test does not certify the complete deployment as production-ready.
 

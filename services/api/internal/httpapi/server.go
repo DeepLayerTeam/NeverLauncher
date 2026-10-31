@@ -9,17 +9,17 @@ import (
 	"net/http"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/capacity"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionga"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
+	"gitflic.ru/skif4er/launcher/services/api/internal/authorization"
+	"gitflic.ru/skif4er/launcher/services/api/internal/capacity"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/eventbus"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionga"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionhost"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionsecurity"
+	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/protection"
 )
 
 type Server struct {
@@ -115,11 +115,11 @@ type crashRequest struct {
 }
 
 func (s Server) health(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, statusResponse{Name: "NeverLauncher API", Version: s.Version, SourceCommit: s.SourceCommit, Status: "ok", Environment: s.Config.Environment, Message: "Backend API работает", Storage: s.Storage.Driver()})
+	writeJSON(w, http.StatusOK, statusResponse{Name: "Launcher API", Version: s.Version, SourceCommit: s.SourceCommit, Status: "ok", Environment: s.Config.Environment, Message: "Backend API работает", Storage: s.Storage.Driver()})
 }
 
 func (s Server) status(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, statusResponse{Name: "NeverLauncher", Version: s.Version, SourceCommit: s.SourceCommit, Status: "ok", Environment: s.Config.Environment, Message: "Сервис доступен", Storage: s.Storage.Driver()})
+	writeJSON(w, http.StatusOK, statusResponse{Name: "Launcher", Version: s.Version, SourceCommit: s.SourceCommit, Status: "ok", Environment: s.Config.Environment, Message: "Сервис доступен", Storage: s.Storage.Driver()})
 }
 
 func (s Server) contracts(w http.ResponseWriter, r *http.Request) {
@@ -170,7 +170,7 @@ func (s Server) launchTemplate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"id":          "recommended",
 		"name":        "Recommended",
-		"description": "Шаблон профиля запуска Minecraft для NeverLauncher",
+		"description": "Шаблон профиля запуска Minecraft для Launcher",
 		"minecraft": map[string]any{
 			"version": "1.21.1",
 			"loader":  "vanilla",
@@ -216,11 +216,11 @@ func (s Server) loaderCompatibility(w http.ResponseWriter, r *http.Request) {
 
 func loaderCatalog() []map[string]any {
 	return []map[string]any{
-		{"id": "vanilla", "name": "Vanilla", "resolution": "mojang-version-manifest-v2", "adapter": "compatibility-engine", "installer": "neverlauncher-vanilla-materializer", "managedJava": true},
-		{"id": "fabric", "name": "Fabric", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "neverlauncher-fabric-materializer", "managedJava": true},
-		{"id": "quilt", "name": "Quilt", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "neverlauncher-quilt-materializer", "managedJava": true},
-		{"id": "forge", "name": "Forge", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "neverlauncher-forge-materializer", "managedJava": true},
-		{"id": "neoforge", "name": "NeoForge", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "neverlauncher-neoforge-materializer", "managedJava": true},
+		{"id": "vanilla", "name": "Vanilla", "resolution": "mojang-version-manifest-v2", "adapter": "compatibility-engine", "installer": "launcher-vanilla-materializer", "managedJava": true},
+		{"id": "fabric", "name": "Fabric", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "launcher-fabric-materializer", "managedJava": true},
+		{"id": "quilt", "name": "Quilt", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "launcher-quilt-materializer", "managedJava": true},
+		{"id": "forge", "name": "Forge", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "launcher-forge-materializer", "managedJava": true},
+		{"id": "neoforge", "name": "NeoForge", "resolution": "inherited-version-json", "adapter": "compatibility-engine", "installer": "launcher-neoforge-materializer", "managedJava": true},
 	}
 }
 

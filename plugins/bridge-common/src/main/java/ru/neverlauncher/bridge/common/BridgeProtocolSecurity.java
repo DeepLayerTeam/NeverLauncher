@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
@@ -13,7 +13,7 @@ import java.util.List;
 
 /** Общие для всех адаптеров ServerBridge канонические проверки безопасности и сертификации Protocol v3. */
 final class BridgeProtocolSecurity {
-    static final String DOMAIN = "NeverLauncher-ServerBridge-Protocol-v3";
+    static final String DOMAIN = "Launcher-ServerBridge-Protocol-v3";
     static final String PROFILE = "serverbridge3-security-01912";
     static final List<String> REQUIRED_FEATURES = List.of(
         BridgeDefaults.FEATURE_SECURITY_V3_SIGNING_DOMAIN,

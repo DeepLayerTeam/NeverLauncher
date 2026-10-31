@@ -11,12 +11,12 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/fileauth"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/localpassword"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
+	"gitflic.ru/skif4er/launcher/services/api/internal/localpassword"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 func TestImportedFileAuthLocalLoginAndAtomicRehash0295(t *testing.T) {
@@ -32,7 +32,7 @@ func TestImportedFileAuthLocalLoginAndAtomicRehash0295(t *testing.T) {
 		t.Fatal(err)
 	}
 	uuid := "8af62031-2333-4333-8333-000000000001"
-	_, err = r.SaveMinecraftProfile(model.MinecraftProfile{UserID: id, UUID: uuid, Name: "Migrated_01", Issuer: "neverlauncher", Realm: "local", Subject: uuid})
+	_, err = r.SaveMinecraftProfile(model.MinecraftProfile{UserID: id, UUID: uuid, Name: "Migrated_01", Issuer: "launcher", Realm: "local", Subject: uuid})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestImportedFileAuthLocalLoginAndAtomicRehash0295(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.User.ID != id || result.Identity.Issuer != "neverlauncher" {
+	if result.User.ID != id || result.Identity.Issuer != "launcher" {
 		t.Fatalf("wrong canonical identity %+v", result.Identity)
 	}
 	after, err := r.GetUser(id)
@@ -94,7 +94,7 @@ func TestImportedFileAuthYggdrasilLoginPreservesUUID0295(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = r.SaveMinecraftProfile(model.MinecraftProfile{UserID: id, UUID: uuid, Name: "Legacy_41", Issuer: "neverlauncher", Realm: "local", Subject: uuid})
+	_, err = r.SaveMinecraftProfile(model.MinecraftProfile{UserID: id, UUID: uuid, Name: "Legacy_41", Issuer: "launcher", Realm: "local", Subject: uuid})
 	if err != nil {
 		t.Fatal(err)
 	}

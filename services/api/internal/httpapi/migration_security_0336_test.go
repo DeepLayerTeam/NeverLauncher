@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
 )
 
 func TestMigrationIndependentNeverSigners0336(t *testing.T) {
 	seed := sha256.Sum256([]byte("0336 unique test manifest key"))
-	cfg := config.Config{AuthTokenActiveKID: "never-2026-10", AuthTokenKeysJSON: `{"never-2026-10":"never-auth-secret-independently-provisioned-123456789"}`, ManifestSigningPrivateKey: hex.EncodeToString(seed[:])}
+	cfg := config.Config{AuthTokenActiveKID: "never-2026-10", AuthTokenKeysJSON: `{"never-2026-10":"auth-secret-independently-provisioned-123456789"}`, ManifestSigningPrivateKey: hex.EncodeToString(seed[:])}
 	kid, pub, err := migrationSigner0336(cfg)
 	if err != nil || kid != "never-2026-10" || len(pub) != 64 {
 		t.Fatalf("valid signers %s %s %v", kid, pub, err)

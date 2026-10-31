@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"time"
 
-	co "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcutover"
-	gr "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrehearsal"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	co "gitflic.ru/skif4er/launcher/services/api/internal/gravitcutover"
+	gr "gitflic.ru/skif4er/launcher/services/api/internal/gravitrehearsal"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 const cutoverFields03311 = `run_id,project_id,profile_id,channel,stage_id,release_id,release_version,target_digest,baseline_revision,baseline_release_id,baseline_version,baseline_digest,state,revision,activated_revision,fence_reference,fence_evidence_sha256`

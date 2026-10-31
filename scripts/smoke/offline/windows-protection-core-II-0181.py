@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Windows Protection Core II 0.18.1 gate: {label} missing {missing}"
+            f"[Launcher] Windows Protection Core II 0.18.1 gate: {label} missing {missing}"
         )
 
 
@@ -23,15 +23,15 @@ def main() -> int:
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 1):
         raise SystemExit(
-            f"[NeverLauncher] Windows Protection Core II 0.18.1 gate: VERSION is {version}"
+            f"[Launcher] Windows Protection Core II 0.18.1 gate: VERSION is {version}"
         )
 
-    protection = read("runtime/neverruntime/src/windows_protection.rs")
-    policy = read("runtime/neverruntime/src/windows_policy.rs")
-    ipc = read("runtime/neverruntime/src/guard_ipc.rs")
-    guard = read("runtime/neverruntime/src/bin/guard.rs")
-    lib = read("runtime/neverruntime/src/lib.rs")
-    integration = read("runtime/neverruntime/tests/guard_windows.rs")
+    protection = read("runtime/runtime/src/windows_protection.rs")
+    policy = read("runtime/runtime/src/windows_policy.rs")
+    ipc = read("runtime/runtime/src/guard_ipc.rs")
+    guard = read("runtime/runtime/src/bin/guard.rs")
+    lib = read("runtime/runtime/src/lib.rs")
+    integration = read("runtime/runtime/tests/guard_windows.rs")
     ci = read(".github/workflows/ci.yml")
     preflight = read("scripts/release/preflight.sh")
 
@@ -118,21 +118,21 @@ def main() -> int:
         ci,
         [
             "windows-protection-core-II-0181.py",
-            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_windows -- --nocapture",
-            "cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings",
+            "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_windows -- --nocapture",
+            "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
         ],
         "Windows CI",
     )
     if "windows-protection-core-II-0181.py" not in preflight:
         raise SystemExit(
-            "[NeverLauncher] Windows Protection Core II 0.18.1 gate: preflight wiring missing"
+            "[Launcher] Windows Protection Core II 0.18.1 gate: preflight wiring missing"
         )
 
     for path, body in [
-        ("runtime/neverruntime/src/windows_protection.rs", protection),
-        ("runtime/neverruntime/src/windows_policy.rs", policy),
-        ("runtime/neverruntime/src/guard_ipc.rs", ipc),
-        ("runtime/neverruntime/src/bin/guard.rs", guard),
+        ("runtime/runtime/src/windows_protection.rs", protection),
+        ("runtime/runtime/src/windows_policy.rs", policy),
+        ("runtime/runtime/src/guard_ipc.rs", ipc),
+        ("runtime/runtime/src/bin/guard.rs", guard),
     ]:
         for forbidden in (
             "todo!()",
@@ -142,10 +142,10 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[NeverLauncher] Windows Protection Core II 0.18.1 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Windows Protection Core II 0.18.1 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[NeverLauncher] Windows Protection Core II 0.18.1 gate: OK")
+    print("[Launcher] Windows Protection Core II 0.18.1 gate: OK")
     return 0
 
 

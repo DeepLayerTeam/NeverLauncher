@@ -55,12 +55,12 @@ jobs:
           python3 e2e/scripts/test_staged_matching_0344.py
           python3 e2e/scripts/test_staged_auth_0347.py
           python3 e2e/scripts/test_staged_lifecycle_0349.py
-      - name: Build CLI and NeverRuntime executables only (never build Minecraft client)
+      - name: Build CLI and Runtime executables only (never build Minecraft client)
         run: |
-          cd cli && go build -o ../nl ./cmd/neverlauncher
+          cd cli && go build -o ../nl ./cmd/launcher
           cd ..
-          cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
-      - name: Execute exact staged contents via transactional installer and NeverRuntime
+          cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
+      - name: Execute exact staged contents via transactional installer and Runtime
         env:
           STAGED_BACKEND: ${{ vars.NL_STAGED_BACKEND_URL }}
           STAGED_OPERATOR: ${{ secrets.NL_STAGED_RUNNER_OPERATOR_TOKEN }}
@@ -112,7 +112,7 @@ jobs:
           curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
             --max-time 600 --output "$RUNNER_TEMP/previous-signed-release.zip" "$PREVIOUS_BUNDLE_URL"
           echo "$PREVIOUS_BUNDLE_SHA256  $RUNNER_TEMP/previous-signed-release.zip" | sha256sum -c - >/dev/null
-          # The same production NeverRuntime Managed Java installer must
+          # The same production Runtime Managed Java installer must
           # quarantine/reinstall an intentionally corrupted signed Java binary.
           [[ "$MANAGED_JRE_BUNDLE_URL" == https://* ]] || { echo 'V09 pinned Managed JRE bundle URL missing' >&2; exit 2; }
           [[ "$MANAGED_JRE_BUNDLE_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'V09 Managed JRE bundle SHA256 missing' >&2; exit 2; }
@@ -140,7 +140,7 @@ jobs:
               --backend "$STAGED_BACKEND" --admin-token "$STAGED_OPERATOR" \
               --package-id "$STAGED_PACKAGE_ID" --output "$RUNNER_TEMP/staged-execution" \
               --cli "$GITHUB_WORKSPACE/nl" \
-              --runtime "$GITHUB_WORKSPACE/runtime/neverruntime/target/release/neverruntime" \
+              --runtime "$GITHUB_WORKSPACE/runtime/runtime/target/release/runtime" \
               --java auto --pinned-public-key "$STAGED_MANIFEST_KEY" --runtime-seconds "$STAGED_DURATION" \
               --auth-mode "$AUTH_MODE" --credentials-file "$AUTH_DIR/credentials.json" \
               --previous-bundle "$RUNNER_TEMP/previous-signed-release.zip" \

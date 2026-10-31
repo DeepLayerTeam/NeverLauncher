@@ -69,7 +69,7 @@ func (s *S3Storage) SaveContext(ctx context.Context, projectID, versionID, relat
 	// Для SigV4 хеш содержимого необходим до подписания заголовков. Сохраняйте
 	// входящий поток на диск при одновременном хешировании вместо буферизации целого
 	// объекта в памяти. Затем передавайте временный файл в S3 напрямую потоком.
-	tmp, err := os.CreateTemp("", "neverlauncher-s3-upload-*")
+	tmp, err := os.CreateTemp("", "launcher-s3-upload-*")
 	if err != nil {
 		return "", 0, fmt.Errorf("не удалось создать временный файл S3 upload: %w", err)
 	}

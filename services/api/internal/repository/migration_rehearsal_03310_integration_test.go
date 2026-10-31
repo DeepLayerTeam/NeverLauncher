@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -6,9 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	gm "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitmodules"
-	gr "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrehearsal"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gm "gitflic.ru/skif4er/launcher/services/api/internal/gravitmodules"
+	gr "gitflic.ru/skif4er/launcher/services/api/internal/gravitrehearsal"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 	"os"
 	"strings"
 	"testing"

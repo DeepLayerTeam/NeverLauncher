@@ -1,4 +1,4 @@
-name: NeverLauncher 0.24.0 executable certification
+name: Launcher 0.24.0 executable certification
 on:
   pull_request:
     paths:

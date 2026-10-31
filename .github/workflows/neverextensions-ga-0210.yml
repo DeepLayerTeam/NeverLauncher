@@ -55,14 +55,14 @@ jobs:
       - name: Backend Extensions GA tests
         shell: bash
         run: |
-          (cd services/api && go test ./internal/extensioncontract ./internal/extensionpackage ./internal/extensiontrust ./internal/extensionsecurity ./internal/extensionresolver ./internal/extensionupdates ./internal/extensionlifecycle ./internal/extensionhost ./internal/extensionga ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/neverlauncher-api)
-          (cd services/api && go build ./cmd/neverlauncher-api)
+          (cd services/api && go test ./internal/extensioncontract ./internal/extensionpackage ./internal/extensiontrust ./internal/extensionsecurity ./internal/extensionresolver ./internal/extensionupdates ./internal/extensionlifecycle ./internal/extensionhost ./internal/extensionga ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/launcher-api)
+          (cd services/api && go build ./cmd/launcher-api)
 
       - name: CLI and SDK tests
         shell: bash
         run: |
-          (cd cli && go test ./internal/dbmigrate ./cmd/neverlauncher)
-          (cd cli && go build ./cmd/neverlauncher)
+          (cd cli && go test ./internal/dbmigrate ./cmd/launcher)
+          (cd cli && go build ./cmd/launcher)
           (cd sdk/backend/go && go test ./...)
           (cd sdk/cli/go && go test ./...)
           python3 scripts/sdk/generate-types.py

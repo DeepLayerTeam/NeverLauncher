@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
 )
 
 func zipFixture0338(t *testing.T, files map[string][]byte) []byte {

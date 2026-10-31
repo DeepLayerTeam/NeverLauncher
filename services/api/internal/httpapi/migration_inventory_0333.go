@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 // Limits concurrent temporary ZIP staging to protect a production API host.

@@ -31,11 +31,11 @@ build/
 target/
 src-tauri/target/
 
-# Локальные данные NeverLauncher
+# Локальные данные Launcher
 /data/
 /storage/
 
-# NeverLauncher generated artifacts
+# Launcher generated artifacts
 /artifacts/
 /e2e/runtime/
 /e2e/runtime-ci/
@@ -47,13 +47,13 @@ src-tauri/target/
 /compatibility-public/
 /device-trust-results/
 /device-trust-public/
-/.neverlauncher/
+/.launcher/
 
 # Built application binaries
 /cli/nl
 /cli/nl.exe
-/services/api/neverlauncher-api
-/services/api/neverlauncher-api.exe
+/services/api/launcher-api
+/services/api/launcher-api.exe
 
 # Local environment files
 .env.*

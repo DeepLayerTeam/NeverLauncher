@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionbroker"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionbroker"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // Check the operator's mapping before we ever claim OS-isolated execution.

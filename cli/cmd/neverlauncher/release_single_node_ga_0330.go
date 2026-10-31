@@ -111,7 +111,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 		"second_backend_denied_same_storage", "negative_security_and_signature_tests", "bounded_capacity_measurement",
 		"operator_runbook_smoke",
 	}
-	if report.Schema != "neverlauncher-single-node-ga-attestation-v1" || report.Version != ver || report.Commit != commit ||
+	if report.Schema != "launcher-single-node-ga-attestation-v1" || report.Version != ver || report.Commit != commit ||
 		report.RCSHA != singleNodeSHA0330(rcRaw) || report.Operator == "" || report.Environment.Backend != "sqlite" ||
 		report.Environment.Coordinator != "sqlite" || report.Environment.WAL != "wal" || report.Environment.Processes != 1 ||
 		!report.Environment.LocalFS || report.Environment.PostgresRequired || report.Environment.RedisRequired || !report.Environment.Durable ||
@@ -126,7 +126,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 	if len(report.TestedArtifacts) != 3 {
 		return errors.New("GA report must pin all tested API, CLI and distribution package bytes")
 	}
-	for _, name := range []string{"neverlauncher-api-linux-x64", "neverlauncher-cli-linux-x64", "neverlauncher-linux-x64-0.33.0.tar.gz"} {
+	for _, name := range []string{"launcher-api-linux-x64", "launcher-cli-linux-x64", "launcher-linux-x64-0.33.0.tar.gz"} {
 		digest, ok := report.TestedArtifacts[name]
 		if !ok || !bomSHA03214(digest) {
 			return fmt.Errorf("missing SHA-256 of tested artifact %s", name)
@@ -151,7 +151,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 		"single-node-coordinator": 5, "postgres-transfer-invariants": 1, "actual-postgres-redis-and-s3": 4,
 		"http-security-and-minecraft": 4, "measured-load-safety": 3,
 	}
-	if rc.Format != "neverlauncher-03216-rc-test-evidence-v1" || rc.Version != ver || rc.Commit != commit || len(rc.Suites) != len(required) || !regexp.MustCompile(`go1\.(?:2[7-9]|[3-9]\d)\.`).MatchString(rc.Toolchain) {
+	if rc.Format != "launcher-03216-rc-test-evidence-v1" || rc.Version != ver || rc.Commit != commit || len(rc.Suites) != len(required) || !regexp.MustCompile(`go1\.(?:2[7-9]|[3-9]\d)\.`).MatchString(rc.Toolchain) {
 		return errors.New("RC exact-commit evidence incomplete")
 	}
 	for _, suite := range rc.Suites {
@@ -185,7 +185,7 @@ func verifySingleNodeGA0330(dir, ver, commit, publicKeyFile string) error {
 	if err := json.Unmarshal(certRaw, &cert); err != nil {
 		return err
 	}
-	if cert.Schema != "neverlauncher-single-node-ga-verification-v1" || cert.Version != ver || cert.Commit != commit || cert.Status != "independently-attested" ||
+	if cert.Schema != "launcher-single-node-ga-verification-v1" || cert.Version != ver || cert.Commit != commit || cert.Status != "independently-attested" ||
 		cert.RCSHA != singleNodeSHA0330(rcRaw) || cert.AttestationSHA != singleNodeSHA0330(reportRaw) ||
 		cert.SignatureSHA != singleNodeSHA0330([]byte(strings.TrimSpace(string(sigRaw)))) || cert.Fingerprint != singleNodeSHA0330(pub) || cert.Checks != len(expectedChecks) {
 		return errors.New("GA certificate is not bound to signed evidence and exact RC receipt")
@@ -264,7 +264,7 @@ func verifySingleNodeGATestedArtifacts0330(dir string) error {
 		return errors.New("GA tested artifact inventory incomplete")
 	}
 	for name, expected := range report.TestedArtifacts {
-		if name != "neverlauncher-api-linux-x64" && name != "neverlauncher-cli-linux-x64" && name != "neverlauncher-linux-x64-0.33.0.tar.gz" {
+		if name != "launcher-api-linux-x64" && name != "launcher-cli-linux-x64" && name != "launcher-linux-x64-0.33.0.tar.gz" {
 			return fmt.Errorf("unapproved tested artifact: %s", name)
 		}
 		actual, _, err := hashFile(filepath.Join(dir, name))

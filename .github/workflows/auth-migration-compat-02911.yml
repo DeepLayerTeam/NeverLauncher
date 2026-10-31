@@ -38,14 +38,14 @@ jobs:
         run: |
           go test -race ./internal/authupgrade ./internal/dbmigrate
           go vet ./internal/authupgrade ./internal/dbmigrate
-          go build -o /tmp/nl-upgrade ./cmd/neverlauncher
+          go build -o /tmp/nl-upgrade ./cmd/launcher
       - name: Reproduce upgrade from the exact 0.29.10 migration catalogue
         run: |
           # Copy the CLI migration catalogue, excluding ONLY 0086. This creates
           # a database with every immutable migration through 0.29.10.
           cp -a cli /tmp/nl-cli-prior
           rm /tmp/nl-cli-prior/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
-          (cd /tmp/nl-cli-prior && go build -o /tmp/nl-prior ./cmd/neverlauncher)
+          (cd /tmp/nl-cli-prior && go build -o /tmp/nl-prior ./cmd/launcher)
           /tmp/nl-prior db migrate apply
       - name: Seed two isolated issuers before upgrade
         run: |
@@ -58,8 +58,8 @@ jobs:
             ('migration-id-a','migration-a','oidc-smoke','https://issuer-a.example.invalid','shared-subject','shared@example.invalid','Migration_A','Migration_A','{}'::jsonb),
             ('migration-id-b','migration-b','oidc-smoke','https://issuer-b.example.invalid','shared-subject','shared@example.invalid','Migration_B','Migration_B','{}'::jsonb);
           INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version)
-          VALUES ('migration-a','7e58de9e-6dde-40ea-bfe6-16c85ae32971','Migration_A','neverlauncher','local','7e58de9e-6dde-40ea-bfe6-16c85ae32971','legacy-migration'),
-                 ('migration-b','7e58de9e-6dde-40ea-bfe6-16c85ae32972','Migration_B','neverlauncher','local','7e58de9e-6dde-40ea-bfe6-16c85ae32972','legacy-migration');
+          VALUES ('migration-a','7e58de9e-6dde-40ea-bfe6-16c85ae32971','Migration_A','launcher','local','7e58de9e-6dde-40ea-bfe6-16c85ae32971','legacy-migration'),
+                 ('migration-b','7e58de9e-6dde-40ea-bfe6-16c85ae32972','Migration_B','launcher','local','7e58de9e-6dde-40ea-bfe6-16c85ae32972','legacy-migration');
           COMMIT;
           SQL
       - name: Actual PostgreSQL checkpoint, apply and verify

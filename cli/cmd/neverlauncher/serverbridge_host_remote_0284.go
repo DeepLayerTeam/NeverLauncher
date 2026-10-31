@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-const remoteAudience0284 = "neverlauncher/host-remote/v1"
+const remoteAudience0284 = "launcher/host-remote/v1"
 const remoteMaxTTL0284 = 15 * time.Minute
 
 var remoteScopes0284 = map[string]bool{

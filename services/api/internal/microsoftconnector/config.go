@@ -3,7 +3,7 @@ package microsoftconnector
 import (
 	"errors"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/configmigration"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector/configmigration"
 	"net"
 	"net/url"
 	"os"
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/oidcconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/oidcconnector"
 )
 
 const providerVersion = "0.11.6"

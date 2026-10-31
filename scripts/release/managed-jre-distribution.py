@@ -19,7 +19,7 @@ from pathlib import Path, PurePosixPath
 API = "https://api.adoptium.net/v3"
 MAX_ARCHIVE = 1_500_000_000
 MAX_JAVA_BINARY = 256 * 1024 * 1024
-USER_AGENT = "NeverLauncher ManagedJRE/0.15.5"
+USER_AGENT = "Launcher ManagedJRE/0.15.5"
 TARGETS = (
     ("windows", "x64", "windows", "x64", "zip"),
     ("windows", "arm64", "windows", "aarch64", "zip"),
@@ -43,13 +43,20 @@ def canonical_sha256(value: str) -> str:
 
 def https_url(value: str) -> str:
     parsed = urllib.parse.urlparse(value)
-    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+    ):
         die(f"HTTPS URL required: {value!r}")
     return value
 
 
 def request_json(url: str) -> object:
-    req = urllib.request.Request(https_url(url), headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+    req = urllib.request.Request(
+        https_url(url), headers={"User-Agent": USER_AGENT, "Accept": "application/json"}
+    )
     with urllib.request.urlopen(req, timeout=60) as response:
         if response.status != 200:
             die(f"{url}: HTTP {response.status}")
@@ -62,14 +69,16 @@ def request_json(url: str) -> object:
 
 
 def resolve_asset(major: int, vendor_os: str, vendor_arch: str) -> dict:
-    query = urllib.parse.urlencode({
-        "architecture": vendor_arch,
-        "heap_size": "normal",
-        "image_type": "jre",
-        "jvm_impl": "hotspot",
-        "os": vendor_os,
-        "vendor": "eclipse",
-    })
+    query = urllib.parse.urlencode(
+        {
+            "architecture": vendor_arch,
+            "heap_size": "normal",
+            "image_type": "jre",
+            "jvm_impl": "hotspot",
+            "os": vendor_os,
+            "vendor": "eclipse",
+        }
+    )
     url = f"{API}/assets/latest/{major}/hotspot?{query}"
     payload = request_json(url)
     if not isinstance(payload, list):
@@ -117,7 +126,9 @@ def sha256_file(path: Path) -> tuple[str, int]:
     return digest.hexdigest(), size
 
 
-def download_exact(url: str, path: Path, expected_sha256: str, expected_size: int) -> None:
+def download_exact(
+    url: str, path: Path, expected_sha256: str, expected_size: int
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         digest, size = sha256_file(path)
@@ -126,11 +137,17 @@ def download_exact(url: str, path: Path, expected_sha256: str, expected_size: in
         path.unlink()
     part = path.with_name(path.name + f".part-{os.getpid()}")
     part.unlink(missing_ok=True)
-    req = urllib.request.Request(https_url(url), headers={"User-Agent": USER_AGENT, "Accept": "application/octet-stream"})
+    req = urllib.request.Request(
+        https_url(url),
+        headers={"User-Agent": USER_AGENT, "Accept": "application/octet-stream"},
+    )
     digest = hashlib.sha256()
     written = 0
     try:
-        with urllib.request.urlopen(req, timeout=15 * 60) as response, part.open("xb") as out:
+        with (
+            urllib.request.urlopen(req, timeout=15 * 60) as response,
+            part.open("xb") as out,
+        ):
             if urllib.parse.urlparse(response.geturl()).scheme != "https":
                 die("JRE archive redirect downgraded from HTTPS")
             header_size = response.headers.get("Content-Length")
@@ -149,7 +166,9 @@ def download_exact(url: str, path: Path, expected_sha256: str, expected_size: in
             os.fsync(out.fileno())
         got = digest.hexdigest()
         if written != expected_size or got != expected_sha256:
-            die(f"JRE archive checksum/size mismatch: {got}/{written}, expected {expected_sha256}/{expected_size}")
+            die(
+                f"JRE archive checksum/size mismatch: {got}/{written}, expected {expected_sha256}/{expected_size}"
+            )
         os.replace(part, path)
     finally:
         part.unlink(missing_ok=True)
@@ -170,7 +189,7 @@ def validate_binary(platform: str, arch: str, data: bytes) -> None:
         if len(data) < 0x40 or data[:2] != b"MZ":
             die("bin/java.exe is not PE")
         peoff = struct.unpack_from("<I", data, 0x3C)[0]
-        if peoff + 6 > len(data) or data[peoff:peoff + 4] != b"PE\0\0":
+        if peoff + 6 > len(data) or data[peoff : peoff + 4] != b"PE\0\0":
             die("bin/java.exe has invalid PE header")
         machine = struct.unpack_from("<H", data, peoff + 4)[0]
         expected = 0x8664 if arch == "x64" else 0xAA64
@@ -268,8 +287,12 @@ def inspect_tar(path: Path, platform: str, arch: str) -> str:
 
 def write_json_atomic(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    encoded = (json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=False) + "\n").encode("utf-8")
-    fd, temp_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+    encoded = (
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=False) + "\n"
+    ).encode("utf-8")
+    fd, temp_name = tempfile.mkstemp(
+        prefix=path.name + ".", suffix=".tmp", dir=path.parent
+    )
     try:
         with os.fdopen(fd, "wb") as handle:
             handle.write(encoded)
@@ -285,7 +308,7 @@ def write_json_atomic(path: Path, payload: object) -> None:
 
 def archive_name(version: str, major: int, platform: str, arch: str, fmt: str) -> str:
     ext = ".zip" if fmt == "zip" else ".tar.gz"
-    return f"neverlauncher-jre-temurin{major}-{platform}-{arch}-{version}{ext}"
+    return f"launcher-jre-temurin{major}-{platform}-{arch}-{version}{ext}"
 
 
 def build_distribution(out: Path, version: str, major: int) -> None:
@@ -293,36 +316,46 @@ def build_distribution(out: Path, version: str, major: int) -> None:
     generated = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     targets = []
     for platform, arch, vendor_os, vendor_arch, fmt in TARGETS:
-        print(f"[ManagedJRE] resolving Temurin {major} {platform}/{arch}", file=sys.stderr)
+        print(
+            f"[ManagedJRE] resolving Temurin {major} {platform}/{arch}", file=sys.stderr
+        )
         asset = resolve_asset(major, vendor_os, vendor_arch)
         name = archive_name(version, major, platform, arch, fmt)
         path = out / name
-        download_exact(asset["sourceUrl"], path, asset["sourceSha256"], asset["sourceSize"])
-        java_entry = inspect_zip(path, platform, arch) if fmt == "zip" else inspect_tar(path, platform, arch)
+        download_exact(
+            asset["sourceUrl"], path, asset["sourceSha256"], asset["sourceSize"]
+        )
+        java_entry = (
+            inspect_zip(path, platform, arch)
+            if fmt == "zip"
+            else inspect_tar(path, platform, arch)
+        )
         digest, size = sha256_file(path)
         if digest != asset["sourceSha256"] or size != asset["sourceSize"]:
             die(f"post-download mismatch for {name}")
-        targets.append({
-            "platform": platform,
-            "architecture": arch,
-            "distribution": "temurin",
-            "majorVersion": major,
-            "releaseName": asset["releaseName"],
-            "semver": asset["semver"],
-            "archive": name,
-            "format": fmt,
-            "sha256": digest,
-            "size": size,
-            "javaEntry": java_entry,
-            "sourceUrl": asset["sourceUrl"],
-            "sourceSha256": asset["sourceSha256"],
-            "vendorOs": vendor_os,
-            "vendorArch": vendor_arch,
-        })
+        targets.append(
+            {
+                "platform": platform,
+                "architecture": arch,
+                "distribution": "temurin",
+                "majorVersion": major,
+                "releaseName": asset["releaseName"],
+                "semver": asset["semver"],
+                "archive": name,
+                "format": fmt,
+                "sha256": digest,
+                "size": size,
+                "javaEntry": java_entry,
+                "sourceUrl": asset["sourceUrl"],
+                "sourceSha256": asset["sourceSha256"],
+                "vendorOs": vendor_os,
+                "vendorArch": vendor_arch,
+            }
+        )
     targets.sort(key=lambda item: (item["platform"], item["architecture"]))
     manifest = {
         "schemaVersion": "1.0",
-        "product": "NeverLauncher",
+        "product": "Launcher",
         "productVersion": version,
         "distribution": "temurin",
         "vendor": "Eclipse Adoptium",
@@ -335,7 +368,7 @@ def build_distribution(out: Path, version: str, major: int) -> None:
     manifest_sha, _ = sha256_file(manifest_path)
     evidence = {
         "schemaVersion": "1.0",
-        "product": "NeverLauncher",
+        "product": "Launcher",
         "productVersion": version,
         "distribution": "temurin",
         "vendor": "Eclipse Adoptium",
@@ -361,7 +394,9 @@ def build_distribution(out: Path, version: str, major: int) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build NeverLauncher Managed JRE Distribution from exact Eclipse Temurin vendor archives")
+    parser = argparse.ArgumentParser(
+        description="Build Launcher Managed JRE Distribution from exact Eclipse Temurin vendor archives"
+    )
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--version", required=True)
     parser.add_argument("--major", type=int, default=21)
@@ -373,7 +408,14 @@ def main() -> int:
     try:
         build_distribution(args.out.resolve(), args.version.strip(), args.major)
         return 0
-    except (OSError, ValueError, KeyError, json.JSONDecodeError, urllib.error.URLError, RuntimeError) as exc:
+    except (
+        OSError,
+        ValueError,
+        KeyError,
+        json.JSONDecodeError,
+        urllib.error.URLError,
+        RuntimeError,
+    ) as exc:
         print(f"managed-jre-distribution: {exc}", file=sys.stderr)
         return 1
 

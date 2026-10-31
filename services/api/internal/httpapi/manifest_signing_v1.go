@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func (s Server) manifestSigningPrivateKey() (ed25519.PrivateKey, error) {
@@ -20,7 +20,7 @@ func (s Server) manifestSigningPrivateKey() (ed25519.PrivateKey, error) {
 		if strings.EqualFold(s.Config.Environment, "production") || strings.EqualFold(s.Config.Environment, "prod") {
 			return nil, errors.New("NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY обязателен для production publish")
 		}
-		dev := sha256.Sum256([]byte("NeverLauncher development signing key - never use in production"))
+		dev := sha256.Sum256([]byte("Launcher development signing key - never use in production"))
 		seedHex = hex.EncodeToString(dev[:])
 	}
 	seed, err := hex.DecodeString(seedHex)

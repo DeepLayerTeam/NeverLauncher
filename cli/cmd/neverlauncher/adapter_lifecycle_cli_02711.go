@@ -43,14 +43,14 @@ func handleRuntimeFactoryAdapters02711(args []string) error {
 			}
 			pins = append(pins, pin)
 		}
-		return writeOrPrintJSON(out, factoryAdapterReport02711{Schema: "neverlauncher.factory.adapters.v1", Available: pins, Current: true, Status: "registry"})
+		return writeOrPrintJSON(out, factoryAdapterReport02711{Schema: "launcher.factory.adapters.v1", Available: pins, Current: true, Status: "registry"})
 	}
 	p, err := readFactoryPlan0271(dir)
 	if err != nil {
 		return err
 	}
 	currentErr := requireCurrentFactoryAdapters02711(p)
-	report := factoryAdapterReport02711{Schema: "neverlauncher.factory.adapters.v1", Loader: p.Loader, Minecraft: p.MinecraftVersion, Targets: p.Targets, Locked: p.AdapterPins, Available: currentFactoryAdapterPins02711(p.Loader), Current: currentErr == nil, BuildSHA256: p.ReproducibilitySHA256}
+	report := factoryAdapterReport02711{Schema: "launcher.factory.adapters.v1", Loader: p.Loader, Minecraft: p.MinecraftVersion, Targets: p.Targets, Locked: p.AdapterPins, Available: currentFactoryAdapterPins02711(p.Loader), Current: currentErr == nil, BuildSHA256: p.ReproducibilitySHA256}
 	if currentErr != nil {
 		report.Status = "adapter-upgrade-required"
 	} else {

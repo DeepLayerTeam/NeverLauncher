@@ -52,7 +52,7 @@ func handleRuntime(args []string) error {
 		if versionJSON == "" {
 			return errors.New("runtime resolve требует --version-json; fallback runtime plan в текущей версии запрещён")
 		}
-		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".neverlauncher/client", versionJSON, assetIndexPath)
+		plan, err := realRuntimePlan(minecraftVersion, loader, "Player", ".launcher/client", versionJSON, assetIndexPath)
 		if err != nil {
 			return err
 		}
@@ -91,7 +91,7 @@ func handleRuntime(args []string) error {
 			printJSON(payload)
 			return nil
 		}
-		printJSON(map[string]any{"schemaVersion": cliSchemaVersion, "minecraftVersion": minecraftVersion, "assetIndex": map[string]any{"id": minecraftVersion, "url": "https://resources.download.minecraft.net/", "strategy": "mojang-asset-index", "status": "source-required"}, "usage": "neverlauncher runtime assets --asset-index <indexes/version.json>"})
+		printJSON(map[string]any{"schemaVersion": cliSchemaVersion, "minecraftVersion": minecraftVersion, "assetIndex": map[string]any{"id": minecraftVersion, "url": "https://resources.download.minecraft.net/", "strategy": "mojang-asset-index", "status": "source-required"}, "usage": "launcher runtime assets --asset-index <indexes/version.json>"})
 		return nil
 	case "libraries":
 		minecraftVersion := flagValue(args, "--minecraft", "1.21.1")
@@ -105,7 +105,7 @@ func handleRuntime(args []string) error {
 			printJSON(map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "minecraftVersion": minecraftVersion, "source": versionJSON, "libraries": libs, "natives": natives, "classpath": classpath, "status": "resolved"})
 			return nil
 		}
-		printJSON(map[string]any{"schemaVersion": cliSchemaVersion, "minecraftVersion": minecraftVersion, "status": "source-required", "usage": "neverlauncher runtime libraries --version-json <version.json>"})
+		printJSON(map[string]any{"schemaVersion": cliSchemaVersion, "minecraftVersion": minecraftVersion, "status": "source-required", "usage": "launcher runtime libraries --version-json <version.json>"})
 		return nil
 	case "java-check":
 		javaPath := flagValue(args, "--java-path", "java")
@@ -124,7 +124,7 @@ func handleRuntime(args []string) error {
 		minecraftVersion := flagValue(args, "--minecraft", "1.21.1")
 		loader := flagValue(args, "--loader", "vanilla")
 		username := flagValue(args, "--username", "Player")
-		gameDir := flagValue(args, "--game-dir", ".neverlauncher/client")
+		gameDir := flagValue(args, "--game-dir", ".launcher/client")
 		versionJSON := flagValue(args, "--version-json", "")
 		assetIndexPath := flagValue(args, "--asset-index", "")
 		loaderVersion := flagValue(args, "--loader-version", "")
@@ -412,7 +412,7 @@ func runtimeMatrix740() map[string]any {
 		"schemaVersion": cliSchemaVersion,
 		"toolVersion":   version,
 		"status":        "loader-compatibility-ga",
-		"title":         "NeverLauncher " + version + " Compatibility Matrix",
+		"title":         "Launcher " + version + " Compatibility Matrix",
 		"capabilities": []map[string]any{
 			{"feature": "version inheritance", "status": "implemented"},
 			{"feature": "exclusive materialization lock", "status": "implemented"},
@@ -486,7 +486,7 @@ func handleRuntimeFetchMetadata850(args []string) error {
 	versionJSON := flagValue(args, "--version-json", "")
 	assetIndex := flagValue(args, "--asset-index", "")
 	manifestPath := flagValue(args, "--version-manifest", "")
-	cacheDir := flagValue(args, "--cache-dir", filepath.Join(".neverlauncher", "metadata"))
+	cacheDir := flagValue(args, "--cache-dir", filepath.Join(".launcher", "metadata"))
 	out := flagValue(args, "--output", "")
 	if versionJSON == "" && manifestPath == "" {
 		return errors.New("runtime fetch-metadata требует --version-json или --version-manifest")
@@ -565,7 +565,7 @@ func handleRuntimeResolveLoader850(args []string) error {
 	metadata := flagValue(args, "--metadata", "")
 	installer := flagValue(args, "--installer-profile", "")
 	out := flagValue(args, "--output", "")
-	plan, err := productLaunchPlan850(minecraftVersion, loader, loaderVersion, "Player", ".neverlauncher/client", versionJSON, assetIndex, metadata, installer)
+	plan, err := productLaunchPlan850(minecraftVersion, loader, loaderVersion, "Player", ".launcher/client", versionJSON, assetIndex, metadata, installer)
 	if err != nil {
 		return err
 	}
@@ -582,7 +582,7 @@ func handleRuntimeBuildClasspath850(args []string) error {
 	metadata := flagValue(args, "--metadata", "")
 	installer := flagValue(args, "--installer-profile", "")
 	out := flagValue(args, "--output", "")
-	plan, err := productLaunchPlan850(minecraftVersion, loader, loaderVersion, "Player", ".neverlauncher/client", versionJSON, assetIndex, metadata, installer)
+	plan, err := productLaunchPlan850(minecraftVersion, loader, loaderVersion, "Player", ".launcher/client", versionJSON, assetIndex, metadata, installer)
 	if err != nil {
 		return err
 	}
@@ -595,7 +595,7 @@ func handleRuntimeBuildLaunchPlan850(args []string) error {
 	minecraftVersion := flagValue(args, "--minecraft", "1.21.1")
 	loaderVersion := flagValue(args, "--loader-version", "")
 	username := flagValue(args, "--username", "Player")
-	gameDir := flagValue(args, "--game-dir", ".neverlauncher/client")
+	gameDir := flagValue(args, "--game-dir", ".launcher/client")
 	versionJSON := flagValue(args, "--version-json", "")
 	assetIndex := flagValue(args, "--asset-index", "")
 	metadata := flagValue(args, "--metadata", "")

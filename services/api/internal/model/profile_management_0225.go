@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const PortableProfileFormat0225 = "neverlauncher.profile.v1"
+const PortableProfileFormat0225 = "launcher.profile.v1"
 
 // PortableProfile0225 deliberately exports ONLY the immutable public ProfileSpec.
 // Release signatures, access rights, credentials and project roles cannot be exported.

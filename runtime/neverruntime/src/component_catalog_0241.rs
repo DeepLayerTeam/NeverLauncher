@@ -124,13 +124,13 @@ fn count(h:&mut Sha256,n:usize){h.update((n as u32).to_be_bytes());}
 fn str_f(h:&mut Sha256,s:&str){count(h,s.len());h.update(s.as_bytes());}
 fn bit(h:&mut Sha256,b:bool){h.update([u8::from(b)]);}
 pub fn digest(components:&[CatalogComponent])->String {
-    let mut h=Sha256::new();h.update(b"neverlauncher.component-catalog.v1\0");
+    let mut h=Sha256::new();h.update(b"launcher.component-catalog.v1\0");
     count(&mut h,components.len());
     for c in components {str_f(&mut h,&c.id);str_f(&mut h,&c.name);count(&mut h,c.files.len());for p in &c.files{str_f(&mut h,p)}}
     hex::encode(h.finalize())
 }
 pub fn digest_v2(cat:&ComponentCatalog)->String{
-    let mut h=Sha256::new();h.update(b"neverlauncher.component-catalog.v2\0");
+    let mut h=Sha256::new();h.update(b"launcher.component-catalog.v2\0");
     count(&mut h,cat.components.len());
     for c in &cat.components {
         str_f(&mut h,&c.id);str_f(&mut h,&c.name);count(&mut h,c.files.len());for p in &c.files{str_f(&mut h,p)}
@@ -145,7 +145,7 @@ pub fn digest_v2(cat:&ComponentCatalog)->String{
     hex::encode(h.finalize())
 }
 pub fn digest_v3(cat:&ComponentCatalog)->String{
-    let mut h=Sha256::new();h.update(b"neverlauncher.component-catalog.v3\0");
+    let mut h=Sha256::new();h.update(b"launcher.component-catalog.v3\0");
     str_f(&mut h,&digest_v2(cat));count(&mut h,cat.components.len());
     for c in &cat.components {
         str_f(&mut h,&c.version);str_f(&mut h,&c.exclusive_group);
@@ -155,7 +155,7 @@ pub fn digest_v3(cat:&ComponentCatalog)->String{
     hex::encode(h.finalize())
 }
 pub fn digest_v4(cat:&ComponentCatalog)->String{
-    let mut h=Sha256::new();h.update(b"neverlauncher.component-catalog.v4\0");
+    let mut h=Sha256::new();h.update(b"launcher.component-catalog.v4\0");
     str_f(&mut h,&digest_v3(cat));count(&mut h,cat.components.len());
     for c in &cat.components {
         if let Some(v)=&c.conditions {

@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 type installationStateP0 struct {
@@ -77,7 +77,7 @@ func InitializeInstallationSecurityP0(cfg config.Config, backend any) error {
 			}
 			return nil
 		}
-		_, err = db.ExecContext(ctx, `UPDATE neverlauncher_installation_state SET bootstrap_token_hash=$1, updated_at=now() WHERE singleton=TRUE AND bootstrap_token_hash=''`, bootstrapTokenHashP0(token))
+		_, err = db.ExecContext(ctx, `UPDATE launcher_installation_state SET bootstrap_token_hash=$1, updated_at=now() WHERE singleton=TRUE AND bootstrap_token_hash=''`, bootstrapTokenHashP0(token))
 		return err
 	}
 	if token != "" && subtle.ConstantTimeCompare([]byte(state.TokenHash), []byte(bootstrapTokenHashP0(token))) != 1 {
@@ -88,7 +88,7 @@ func InitializeInstallationSecurityP0(cfg config.Config, backend any) error {
 
 func loadInstallationStateP0(ctx context.Context, db *sql.DB) (installationStateP0, error) {
 	var s installationStateP0
-	err := db.QueryRowContext(ctx, `SELECT bootstrap_token_hash, bootstrap_token_used_at, installation_completed, completed_at FROM neverlauncher_installation_state WHERE singleton=TRUE`).Scan(&s.TokenHash, &s.TokenUsedAt, &s.Completed, &s.CompletedAt)
+	err := db.QueryRowContext(ctx, `SELECT bootstrap_token_hash, bootstrap_token_used_at, installation_completed, completed_at FROM launcher_installation_state WHERE singleton=TRUE`).Scan(&s.TokenHash, &s.TokenUsedAt, &s.Completed, &s.CompletedAt)
 	return s, err
 }
 
@@ -152,7 +152,7 @@ func (s Server) consumeBootstrapTokenP0(ctx context.Context, token string) error
 		return err
 	}
 	defer db.Close()
-	res, err := db.ExecContext(ctx, `UPDATE neverlauncher_installation_state SET bootstrap_token_used_at=now(), updated_at=now() WHERE singleton=TRUE AND installation_completed=FALSE AND bootstrap_token_used_at IS NULL AND bootstrap_token_hash=$1`, hash)
+	res, err := db.ExecContext(ctx, `UPDATE launcher_installation_state SET bootstrap_token_used_at=now(), updated_at=now() WHERE singleton=TRUE AND installation_completed=FALSE AND bootstrap_token_used_at IS NULL AND bootstrap_token_hash=$1`, hash)
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (s Server) completeInstallationP0(ctx context.Context) error {
 		return err
 	}
 	defer db.Close()
-	res, err := db.ExecContext(ctx, `UPDATE neverlauncher_installation_state SET installation_completed=TRUE, completed_at=COALESCE(completed_at,now()), bootstrap_token_hash='', updated_at=now() WHERE singleton=TRUE AND bootstrap_token_used_at IS NOT NULL`)
+	res, err := db.ExecContext(ctx, `UPDATE launcher_installation_state SET installation_completed=TRUE, completed_at=COALESCE(completed_at,now()), bootstrap_token_hash='', updated_at=now() WHERE singleton=TRUE AND bootstrap_token_used_at IS NOT NULL`)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func (s Server) completeInstallationP0(ctx context.Context) error {
 }
 
 func bootstrapTokenFromRequestP0(r *http.Request) string {
-	if v := strings.TrimSpace(r.Header.Get("X-NeverLauncher-Bootstrap-Token")); v != "" {
+	if v := strings.TrimSpace(r.Header.Get("X-Launcher-Bootstrap-Token")); v != "" {
 		return v
 	}
 	h := strings.TrimSpace(r.Header.Get("Authorization"))
@@ -227,7 +227,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 		if !ok {
 			return model.User{}, errors.New("SQLite repository missing atomic installation bootstrap")
 		}
-		identity := model.AuthIdentity{ID: "identity-local-" + user.ID, UserID: user.ID, Provider: "local", Issuer: "neverlauncher", Subject: user.ID, Email: user.Email, Username: user.Email, DisplayName: user.DisplayName, CreatedAt: now, UpdatedAt: now}
+		identity := model.AuthIdentity{ID: "identity-local-" + user.ID, UserID: user.ID, Provider: "local", Issuer: "launcher", Subject: user.ID, Email: user.Email, Username: user.Email, DisplayName: user.DisplayName, CreatedAt: now, UpdatedAt: now}
 		return store.BootstrapMinimalAdmin0375(ctx, user, identity, token, firstNonEmpty(actor, "installer"))
 	}
 	if isMemoryRepository950(s.Config.RepositoryDriver) {
@@ -256,7 +256,7 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 	var tokenHash string
 	var used sql.NullTime
 	var completed bool
-	if err = tx.QueryRowContext(ctx, `SELECT bootstrap_token_hash, bootstrap_token_used_at, installation_completed FROM neverlauncher_installation_state WHERE singleton=TRUE FOR UPDATE`).Scan(&tokenHash, &used, &completed); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT bootstrap_token_hash, bootstrap_token_used_at, installation_completed FROM launcher_installation_state WHERE singleton=TRUE FOR UPDATE`).Scan(&tokenHash, &used, &completed); err != nil {
 		return model.User{}, err
 	}
 	if completed || used.Valid {
@@ -279,12 +279,12 @@ func (s Server) createBootstrapAdminP0(ctx context.Context, email, displayName, 
 		return model.User{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)
-VALUES($1,$2,'local','neverlauncher',$2,$3,$3,$4,'{}'::jsonb,$5,$5)
+VALUES($1,$2,'local','launcher',$2,$3,$3,$4,'{}'::jsonb,$5,$5)
 ON CONFLICT(user_id,provider,issuer) DO UPDATE SET email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,updated_at=EXCLUDED.updated_at
 WHERE auth_identities.subject=EXCLUDED.subject`, "identity-local-"+user.ID, user.ID, user.Email, user.DisplayName, now); err != nil {
 		return model.User{}, err
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE neverlauncher_installation_state SET bootstrap_token_used_at=$1, updated_at=$1 WHERE singleton=TRUE`, now); err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE launcher_installation_state SET bootstrap_token_used_at=$1, updated_at=$1 WHERE singleton=TRUE`, now); err != nil {
 		return model.User{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(id,actor,action,target,ip,user_agent,created_at) VALUES($1,$2,'install.bootstrap-admin',$3,'','0.10.0-P0',$4)`, fmt.Sprintf("install-admin-%d", now.UnixNano()), firstNonEmpty(actor, "installer"), email, now); err != nil {

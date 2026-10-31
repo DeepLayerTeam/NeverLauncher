@@ -1,12 +1,12 @@
-# NeverLauncher 0.22.7 — Deterministic Launch
+# Launcher 0.22.7 — Deterministic Launch
 
 ## Исполняемый путь
 
-`neverruntime::build_launch_plan` и `build_authenticated_launch_plan` сначала проверяют Ed25519-подпись полного Manifest (`verify_manifest_signature`) с закреплённым публичным ключом. После построения плана `create_launch_plan_with_credentials` проверяет обязательные JAR-файлы и metadata против подписанных `size`/`SHA-256`, разрешает типизированные classpath/modulepath/Java/RAM ограничения, применяет подписи на пользовательских JVM/client args и вычисляет `LaunchPlan.deterministicSha256`. `launch_with_timeout` отдельно выполняет полную проверку установленных файлов и только затем передаёт аргументы в `tokio::process::Command` (без shell, `sh -c`, `cmd /c`, и без разбиения аргументов по пробелам).
+`runtime::build_launch_plan` и `build_authenticated_launch_plan` сначала проверяют Ed25519-подпись полного Manifest (`verify_manifest_signature`) с закреплённым публичным ключом. После построения плана `create_launch_plan_with_credentials` проверяет обязательные JAR-файлы и metadata против подписанных `size`/`SHA-256`, разрешает типизированные classpath/modulepath/Java/RAM ограничения, применяет подписи на пользовательских JVM/client args и вычисляет `LaunchPlan.deterministicSha256`. `launch_with_timeout` отдельно выполняет полную проверку установленных файлов и только затем передаёт аргументы в `tokio::process::Command` (без shell, `sh -c`, `cmd /c`, и без разбиения аргументов по пробелам).
 
 ## Контракт детерминированности
 
-`deterministicSha256` — SHA-256 от JSON статического *resolved* плана (`neverlauncher.resolved-launch-plan/1`). В идентичность входят Ed25519-подпись релиза, версия Runtime, OS/arch, выбранная major Java, Java distribution, auth mode, Java entrypoint, порядок classpath/modulepath/JVM/client аргументов и множество разрешённых переменных окружения. Порядок classpath из Mojang metadata сохраняется (важен для загрузчиков); для явного classpath сохраняется авторский порядок подписанных `classpathEntries`. Автоматический v2 classpath формируется по порядку подписанных `files`, независимо от присутствия необязательных/пользовательских JAR. Выбор нативной папки для v2 основан только на подписанном списке файлов, а не на текущем содержимом диска.
+`deterministicSha256` — SHA-256 от JSON статического *resolved* плана (`launcher.resolved-launch-plan/1`). В идентичность входят Ed25519-подпись релиза, версия Runtime, OS/arch, выбранная major Java, Java distribution, auth mode, Java entrypoint, порядок classpath/modulepath/JVM/client аргументов и множество разрешённых переменных окружения. Порядок classpath из Mojang metadata сохраняется (важен для загрузчиков); для явного classpath сохраняется авторский порядок подписанных `classpathEntries`. Автоматический v2 classpath формируется по порядку подписанных `files`, независимо от присутствия необязательных/пользовательских JAR. Выбор нативной папки для v2 основан только на подписанном списке файлов, а не на текущем содержимом диска.
 
 При вычислении идентичности из абсолютных путей удаляется корень установки; из сессионной части — значения username, UUID, access token и путь исполняемого файла Java. Они **сохраняются в фактической команде запуска** и обрабатываются штатной аутентификацией. Изменение подписанных аргументов, metadata, порядка файлов, версии Runtime или параметров разрешения, влияющих на аргументы, меняет digest. Фактические значения allowlisted environment variables не включаются в digest (это внешнее состояние запуска); их **имена** нормализуются и сортируются. Неизвестные или несовместимые v2 runtime-настройки отклоняются до запуска.
 
@@ -15,12 +15,12 @@
 - Любые кастомные JVM/game args v2 находятся внутри манифеста, покрытого подписью владельца **ключа релиза**. Отдельная подпись индивидуального владельца профиля в версии 0.22.7 не добавляется: для такого утверждения нужна отдельная модель ключей/ACL. На клиенте неподписанные локальные JVM overrides не принимаются.
 - У v2 с пустым `environmentAllowlist` дочерний Java-процесс получает очищенное окружение; Windows `SystemRoot` и `WINDIR` разрешаются как необходимые системные значения. Динамические значения переменных из явно заданного allowlist могут отличаться между машинами и сознательно не входят в статическую идентичность.
 - Manifest v1 продолжает использовать прежнюю логику classpath, Java/environment и не получает deterministic SHA-256. Ранее опубликованные файлы не изменяются и не переподписываются.
-- Для полных гарантий запуск на одной версии должен дополнительно пройти integration/E2E на Windows, Linux, macOS и на реальных Mojang/Forge/NeoForge метаданных. Изолированные тесты Rust покрывают fingerprint, изоляцию сессий и сериализацию `features`; в CI требуется `cargo test -p neverruntime`.
+- Для полных гарантий запуск на одной версии должен дополнительно пройти integration/E2E на Windows, Linux, macOS и на реальных Mojang/Forge/NeoForge метаданных. Изолированные тесты Rust покрывают fingerprint, изоляцию сессий и сериализацию `features`; в CI требуется `cargo test -p runtime`.
 
 ## Команды проверки
 
 ```bash
 python3 scripts/version/manage.py check
-cd runtime/neverruntime && cargo test --locked
+cd runtime/runtime && cargo test --locked
 cd apps/desktop && npm ci && npm run build
 ```

@@ -7,8 +7,8 @@ on:
       - 'apps/desktop/src/launch_modes_0269.ts'
       - 'apps/desktop/src/desktop_experience_0229.ts'
       - 'apps/desktop/tests/launch_modes_0269.test.mjs'
-      - 'runtime/neverruntime/src/lib.rs'
-      - 'runtime/neverruntime/src/launch_identity_0269.rs'
+      - 'runtime/runtime/src/lib.rs'
+      - 'runtime/runtime/src/launch_identity_0269.rs'
       - '.github/workflows/official-game-launch-0269.yml'
   pull_request:
   workflow_dispatch:
@@ -36,7 +36,7 @@ jobs:
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
       - name: Runtime realm tests
-        run: cargo test --manifest-path runtime/neverruntime/Cargo.toml launch_identity_0269::tests
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml launch_identity_0269::tests
       - name: Tauri realm command tests
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml launch_realm_0269_tests
       - name: Rust compilation

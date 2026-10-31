@@ -26,7 +26,7 @@ func TestCompatibilityGETRetriesTransientStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	resp, err := compatibilityGET(context.Background(), server.Client(), server.URL, "NeverLauncher/test")
+	resp, err := compatibilityGET(context.Background(), server.Client(), server.URL, "Launcher/test")
 	if err != nil {
 		t.Fatalf("compatibilityGET: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestCompatibilityGETRetriesUnexpectedNotModifiedWithoutTrustingCache(t *tes
 	}))
 	defer server.Close()
 
-	resp, err := compatibilityGET(context.Background(), server.Client(), server.URL, "NeverLauncher/test")
+	resp, err := compatibilityGET(context.Background(), server.Client(), server.URL, "Launcher/test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestMaterializationLockIsExclusive(t *testing.T) {
 	}
 	defer first.Close()
 
-	lockPath := filepath.Join(dir, ".neverlauncher", "materialize.lock")
+	lockPath := filepath.Join(dir, ".launcher", "materialize.lock")
 	if _, err := os.Stat(lockPath); err != nil {
 		t.Fatalf("lock file: %v", err)
 	}

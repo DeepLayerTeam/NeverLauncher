@@ -64,6 +64,6 @@ func validateMySQLTLSMode(cfg RuntimeConfig, tlsMode string) error {
 	case "skip-verify", "preferred":
 		return fmt.Errorf("MySQL/MariaDB TLS verification is required; tls=%s is not allowed", mode)
 	default:
-		return fmt.Errorf("MySQL/MariaDB TLS verification requires tls=true; custom TLS config %q is not registered by NeverLauncher", mode)
+		return fmt.Errorf("MySQL/MariaDB TLS verification requires tls=true; custom TLS config %q is not registered by Launcher", mode)
 	}
 }

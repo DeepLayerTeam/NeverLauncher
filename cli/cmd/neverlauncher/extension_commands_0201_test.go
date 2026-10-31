@@ -34,7 +34,7 @@ func TestCanonicalExtensionManifestValidate0201(t *testing.T) {
 
 func TestImportLegacyPluginManifest0201(t *testing.T) {
 	dir := t.TempDir()
-	legacyPath := filepath.Join(dir, "neverlauncher-plugin.json")
+	legacyPath := filepath.Join(dir, "launcher-plugin.json")
 	legacy := PluginManifest{
 		SchemaVersion: "1.2",
 		ID:            "ru.example.legacy",
@@ -57,7 +57,7 @@ func TestImportLegacyPluginManifest0201(t *testing.T) {
 	if source != legacyPath || manifest.SchemaVersion != "2.0" || manifest.Publisher != "Legacy Publisher" || len(manifest.Targets) != 1 || manifest.Targets[0].Kind != "admin" {
 		t.Fatalf("legacy import mismatch: %#v source=%s", manifest, source)
 	}
-	if manifest.Metadata["importedFrom"] != "neverlauncher-plugin.json" || manifest.Metadata["custom"] != "value" {
+	if manifest.Metadata["importedFrom"] != "launcher-plugin.json" || manifest.Metadata["custom"] != "value" {
 		t.Fatalf("legacy metadata not preserved: %#v", manifest.Metadata)
 	}
 }

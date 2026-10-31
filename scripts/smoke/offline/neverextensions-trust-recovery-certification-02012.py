@@ -24,7 +24,7 @@ for token in [
     "extension_quarantine",
     "extension_emergency_disables",
     "revoked_at",
-    "neverlauncher_revoke_extension_key_02012",
+    "launcher_revoke_extension_key_02012",
 ]:
     require(token in mig, f"migration missing {token}")
 repo = read("services/api/internal/repository/extension_trust_02012.go")
@@ -52,7 +52,7 @@ for token in [
     "crashloop",
 ]:
     require(token in host, f"host missing {token}")
-main = read("services/api/cmd/neverlauncher-api/main.go")
+main = read("services/api/cmd/launcher-api/main.go")
 for token in [
     "--no-extensions",
     "SetCrashLoopHandler",
@@ -93,7 +93,7 @@ for token in [
     "windows-latest",
     "macos-latest",
     "public-matrix",
-    "go build ./cmd/neverlauncher-api",
+    "go build ./cmd/launcher-api",
 ]:
     require(token in workflow, f"cross-platform workflow missing {token}")
 openapi = read("schemas/openapi.yaml")

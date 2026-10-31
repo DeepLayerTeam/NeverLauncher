@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/planpolicy02412"
+	"gitflic.ru/skif4er/launcher/services/api/internal/planpolicy02412"
 	"os"
 	"strings"
 )

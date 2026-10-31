@@ -112,8 +112,8 @@ async fn handle_connection(mut stream: TcpStream, port: u16, state: &str) -> Cal
         std::str::from_utf8(&buf).map(|request| parse_callback(request,port,state)).unwrap_or(Callback::Reject)
     } else { Callback::Reject };
     let (status,message) = match &callback {
-        Callback::Code(_) => ("200 OK", "Microsoft sign-in received. Return to NeverLauncher."),
-        Callback::Declined => ("200 OK", "Microsoft sign-in declined. Return to NeverLauncher."),
+        Callback::Code(_) => ("200 OK", "Microsoft sign-in received. Return to Launcher."),
+        Callback::Declined => ("200 OK", "Microsoft sign-in declined. Return to Launcher."),
         Callback::Irrelevant => ("404 Not Found", "Not found"),
         Callback::Reject => ("400 Bad Request", "Invalid sign-in callback"),
     };

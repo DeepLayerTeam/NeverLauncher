@@ -29,16 +29,16 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: neverlauncher_link_ci
+          POSTGRES_DB: launcher_link_ci
           POSTGRES_USER: ci
           POSTGRES_PASSWORD: ci
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U ci -d neverlauncher_link_ci"
+          --health-cmd "pg_isready -U ci -d launcher_link_ci"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      NEVER_TEST_POSTGRES_DSN: postgresql://ci:ci@localhost:5432/neverlauncher_link_ci?sslmode=disable
+      NEVER_TEST_POSTGRES_DSN: postgresql://ci:ci@localhost:5432/launcher_link_ci?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

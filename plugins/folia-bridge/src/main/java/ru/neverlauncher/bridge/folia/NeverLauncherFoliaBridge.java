@@ -1,10 +1,10 @@
-package ru.neverlauncher.bridge.folia;
+package ru.launcher.bridge.folia;
 
-import ru.neverlauncher.bridge.bukkit.BukkitFamilyBridgePlugin;
-import ru.neverlauncher.bridge.bukkit.BukkitFamilyPlatform;
+import ru.launcher.bridge.bukkit.BukkitFamilyBridgePlugin;
+import ru.launcher.bridge.bukkit.BukkitFamilyPlatform;
 
-public final class NeverLauncherFoliaBridge extends BukkitFamilyBridgePlugin {
-    public NeverLauncherFoliaBridge() {
+public final class LauncherFoliaBridge extends BukkitFamilyBridgePlugin {
+    public LauncherFoliaBridge() {
         super(BukkitFamilyPlatform.FOLIA);
     }
 }

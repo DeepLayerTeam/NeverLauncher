@@ -5,16 +5,16 @@ VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
 
 if ! command -v gradle >/dev/null 2>&1 || ! command -v jar >/dev/null 2>&1; then
   if [[ "${NEVERLAUNCHER_PREFLIGHT_BRIDGE_STRICT:-0}" == "1" || "${NEVERLAUNCHER_PREFLIGHT_BRIDGE_STRICT:-0}" == "true" ]]; then
-    echo "[NeverLauncher] strict preflight: Gradle/JDK обязательны для ServerBridge" >&2
+    echo "[Launcher] strict preflight: Gradle/JDK обязательны для ServerBridge" >&2
     exit 1
   fi
-  echo "[NeverLauncher] Gradle/JDK не найдены: production bridge build пропущен локально; такой прогон не является production-ready" >&2
+  echo "[Launcher] Gradle/JDK не найдены: production bridge build пропущен локально; такой прогон не является production-ready" >&2
   exit 0
 fi
 
 bash "${ROOT_DIR}/scripts/build/bridge-plugins.sh"
 for platform in velocity bungeecord waterfall bukkit spigot paper purpur folia fabric quilt forge neoforge sponge vanilla; do
-  artifact="${ROOT_DIR}/artifacts/plugins/neverlauncher-${platform}-bridge-${VERSION}.jar"
+  artifact="${ROOT_DIR}/artifacts/plugins/launcher-${platform}-bridge-${VERSION}.jar"
   test -s "$artifact"
 done
 grep -q "${VERSION}" "${ROOT_DIR}/artifacts/plugins/PLUGIN_MANIFEST.json"

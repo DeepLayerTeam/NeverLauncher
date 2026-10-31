@@ -9,7 +9,9 @@ VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 core = VERSION.split("-", 1)[0].split("+", 1)[0]
 parts = tuple(int(x) for x in core.split(".")[:3])
 if parts < (0, 15, 2):
-    raise SystemExit(f"Signed Windows x64+ARM64 gate requires VERSION>=0.15.2, got {VERSION}")
+    raise SystemExit(
+        f"Signed Windows x64+ARM64 gate requires VERSION>=0.15.2, got {VERSION}"
+    )
 
 
 def read(rel: str) -> str:
@@ -30,50 +32,50 @@ require(
         'Architecture = "arm64"',
         'RustTarget = "x86_64-pc-windows-msvc"',
         'RustTarget = "aarch64-pc-windows-msvc"',
-        'Get-SignToolPath',
+        "Get-SignToolPath",
         '"/fd", "SHA256"',
         '"/tr", $TimestampServer',
         '"/td", "SHA256"',
         '"verify", "/pa", "/all", "/v"',
-        'Import-PfxCertificate',
-        'Assert-PEArchitecture',
-        'WINDOWS_SIGNING_EVIDENCE.json',
-        'GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json',
+        "Import-PfxCertificate",
+        "Assert-PEArchitecture",
+        "WINDOWS_SIGNING_EVIDENCE.json",
+        "GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json",
         'schemaVersion = "1.0"',
         'platform = "windows-amd64"',
-        'windows-amd64-guard-ci-package',
+        "windows-amd64-guard-ci-package",
     ],
     "Windows builder",
 )
 
-verifier = read("cli/cmd/neverlauncher/windows_signing.go")
+verifier = read("cli/cmd/launcher/windows_signing.go")
 require(
     verifier,
     [
         'const windowsSigningEvidenceFile0152 = "WINDOWS_SIGNING_EVIDENCE.json"',
         'const windowsDeliveryAllowlistFile0152 = "GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json"',
-        'windowsSigningRequired0152',
-        'inspectWindowsPEBytes0152',
-        'case 0x8664:',
-        'case 0xaa64:',
-        'production publish requires Authenticode+RFC3161 Windows signing',
-        'verifyWindowsPackage0152',
-        'verifyWindowsDeliveryAllowlist0152',
-        'verifyWindowsAuthenticodeNative0152',
-        'signtool.exe',
-        'Get-AuthenticodeSignature',
+        "windowsSigningRequired0152",
+        "inspectWindowsPEBytes0152",
+        "case 0x8664:",
+        "case 0xaa64:",
+        "production publish requires Authenticode+RFC3161 Windows signing",
+        "verifyWindowsPackage0152",
+        "verifyWindowsDeliveryAllowlist0152",
+        "verifyWindowsAuthenticodeNative0152",
+        "signtool.exe",
+        "Get-AuthenticodeSignature",
     ],
     "Windows signing verifier",
 )
 
-release = read("cli/cmd/neverlauncher/release_commands.go")
+release = read("cli/cmd/launcher/release_commands.go")
 require(
     release,
     [
-        'verifyWindowsSigningEvidence0152(args[1], manifestVersion, true)',
-        'windows-x64-arm64-authenticode-evidence',
-        'neverlauncher-cli-windows-arm64.exe',
-        'WINDOWS_PACKAGE_MANIFEST_ARM64.json',
+        "verifyWindowsSigningEvidence0152(args[1], manifestVersion, true)",
+        "windows-x64-arm64-authenticode-evidence",
+        "launcher-cli-windows-arm64.exe",
+        "WINDOWS_PACKAGE_MANIFEST_ARM64.json",
     ],
     "release integration",
 )
@@ -82,10 +84,10 @@ build_release = read("scripts/release/build-release.sh")
 require(
     build_release,
     [
-        'NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR',
-        'WINDOWS_DUAL_ARCH_REQUIRED',
-        'GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json',
-        'WINDOWS_SIGNING_EVIDENCE.json',
+        "NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR",
+        "WINDOWS_DUAL_ARCH_REQUIRED",
+        "GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json",
+        "WINDOWS_SIGNING_EVIDENCE.json",
     ],
     "release staging",
 )
@@ -94,12 +96,12 @@ workflow = read(".github/workflows/windows-production-delivery.yml")
 require(
     workflow,
     [
-        'workflow_call:',
-        'WINDOWS_CODESIGN_PFX_BASE64',
-        'WINDOWS_CODESIGN_PFX_PASSWORD',
-        '-RequireCodeSigning',
-        'delivery verify-windows',
-        '--production',
+        "workflow_call:",
+        "WINDOWS_CODESIGN_PFX_BASE64",
+        "WINDOWS_CODESIGN_PFX_PASSWORD",
+        "-RequireCodeSigning",
+        "delivery verify-windows",
+        "--production",
     ],
     "production signing workflow",
 )
@@ -109,25 +111,35 @@ production_release = read(".github/workflows/production-release-candidate.yml")
 require(
     production_release,
     [
-        'windows-production-signed:',
-        'uses: ./.github/workflows/windows-production-delivery.yml',
-        'secrets: inherit',
-        'neverlauncher-windows-production-${{ github.sha }}',
-        'path: windows-production-artifacts',
-        'NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR: ${{ github.workspace }}/windows-production-artifacts',
-        'needs: [base-ci, windows-production-signed, macos-production-notarized]',
+        "windows-production-signed:",
+        "uses: ./.github/workflows/windows-production-delivery.yml",
+        "secrets: inherit",
+        "launcher-windows-production-${{ github.sha }}",
+        "path: windows-production-artifacts",
+        "NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR: ${{ github.workspace }}/windows-production-artifacts",
+        "needs: [base-ci, windows-production-signed, macos-production-notarized]",
     ],
     "production release Windows signing wiring",
 )
-if 'windows-production-signed:' in ci or 'neverlauncher-windows-production-${{ github.sha }}' in ci:
-    raise SystemExit("ordinary main CI must not require production Authenticode credentials")
-if 'release-bundle' in ci.split('production-e2e:', 1)[1].split('needs:', 1)[1].split('\n', 1)[0]:
-    raise SystemExit("functional production E2E must not depend on publish-only signing")
+if (
+    "windows-production-signed:" in ci
+    or "launcher-windows-production-${{ github.sha }}" in ci
+):
+    raise SystemExit(
+        "ordinary main CI must not require production Authenticode credentials"
+    )
+if (
+    "release-bundle"
+    in ci.split("production-e2e:", 1)[1].split("needs:", 1)[1].split("\n", 1)[0]
+):
+    raise SystemExit(
+        "functional production E2E must not depend on publish-only signing"
+    )
 
 subprocess.run(
-    ["go", "test", "./cmd/neverlauncher", "-run", "TestWindows", "-count=1"],
+    ["go", "test", "./cmd/launcher", "-run", "TestWindows", "-count=1"],
     cwd=ROOT / "cli",
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} Signed Windows x64 + ARM64 gate: OK")
+print(f"Launcher {VERSION} Signed Windows x64 + ARM64 gate: OK")

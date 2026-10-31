@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // sqliteRuntimeBackend0373 binds HTTP-only stores to the same WAL database and
@@ -386,7 +386,7 @@ func sqliteEncrypt0373(secret, name string, plain []byte) ([]byte, error) {
 		return nil, err
 	}
 	out := append([]byte(nil), nonce...)
-	return aead.Seal(out, nonce, plain, []byte("neverlauncher-runtime-0.37.3:"+name)), nil
+	return aead.Seal(out, nonce, plain, []byte("launcher-runtime-0.37.3:"+name)), nil
 }
 func sqliteRead0373(ctx context.Context, store sqliteRuntimeBackend0373, name, secret string, out any) error {
 	encrypted, found, err := store.ReadRuntimeComponent0373(ctx, name)
@@ -408,7 +408,7 @@ func sqliteRead0373(ctx context.Context, store sqliteRuntimeBackend0373, name, s
 	if len(encrypted) < aead.NonceSize() {
 		return fmt.Errorf("SQLite component %s ciphertext truncated", name)
 	}
-	raw, err := aead.Open(nil, encrypted[:aead.NonceSize()], encrypted[aead.NonceSize():], []byte("neverlauncher-runtime-0.37.3:"+name))
+	raw, err := aead.Open(nil, encrypted[:aead.NonceSize()], encrypted[aead.NonceSize():], []byte("launcher-runtime-0.37.3:"+name))
 	if err != nil {
 		return fmt.Errorf("SQLite component %s: wrong key or corrupted ciphertext: %w", name, err)
 	}

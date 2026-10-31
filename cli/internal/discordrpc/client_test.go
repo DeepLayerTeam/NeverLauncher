@@ -14,7 +14,7 @@ import (
 )
 
 func TestActivityValidation(t *testing.T) {
-	a := Activity{Details: "NeverLauncher", Buttons: []Button{{Label: "Server", URL: "https://example.org"}}}
+	a := Activity{Details: "Launcher", Buttons: []Button{{Label: "Server", URL: "https://example.org"}}}
 	if err := a.Validate(); err != nil {
 		t.Fatal(err)
 	}

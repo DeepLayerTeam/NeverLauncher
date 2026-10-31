@@ -31,18 +31,18 @@ func WriteSystemdUnit(output, binary, envFile string) error {
 		return errors.New("environment must be a private 0600 file")
 	}
 	unit := fmt.Sprintf(`[Unit]
-Description=NeverLauncher Backend API
+Description=Launcher Backend API
 Wants=network-online.target
 After=network-online.target
 
 [Service]
 Type=simple
-User=neverlauncher
-Group=neverlauncher
+User=launcher
+Group=launcher
 EnvironmentFile=%s
 ExecStart=%s
-WorkingDirectory=/var/lib/neverlauncher
-StateDirectory=neverlauncher
+WorkingDirectory=/var/lib/launcher
+StateDirectory=launcher
 StateDirectoryMode=0700
 UMask=0077
 NoNewPrivileges=true

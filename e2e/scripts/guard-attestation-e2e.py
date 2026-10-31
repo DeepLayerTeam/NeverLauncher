@@ -31,7 +31,7 @@ def process(
 ) -> dict:
     return {
         "pid": pid,
-        "imagePath": "/opt/neverlauncher/e2e-binary",
+        "imagePath": "/opt/launcher/e2e-binary",
         "imageSha256": image_hash,
         "imageSize": 2048,
         "imageModifiedUnixMs": 2000,
@@ -136,7 +136,7 @@ def main() -> None:
     }
     linux = process_policy["linux"]
     core_payload = (
-        "NeverLauncher Guard Attestation Core Linux v1\n"
+        "Launcher Guard Attestation Core Linux v1\n"
         f"challenge-id={a.challenge_id}\n"
         f"challenge-sha256={challenge_sha}\n"
         f"evidence-id={evidence['evidenceId']}\n"
@@ -159,7 +159,7 @@ def main() -> None:
     attestation["attestationSha256"] = attestation_sha
 
     signing_payload = (
-        "NeverLauncher Guard Attestation Device Binding v1\n"
+        "Launcher Guard Attestation Device Binding v1\n"
         "purpose=guard-attest\n"
         f"challenge={a.challenge.strip()}\n"
         f"challenge-id={a.challenge_id.strip()}\n"

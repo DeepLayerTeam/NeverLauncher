@@ -195,7 +195,7 @@ type vanillaTaskResult struct {
 
 func handleRuntimeVanillaInstall(args []string) error {
 	minecraftVersion := flagValue(args, "--minecraft", "latest-release")
-	clientDir := flagValue(args, "--client-dir", filepath.Join(".neverlauncher", "vanilla", minecraftVersion))
+	clientDir := flagValue(args, "--client-dir", filepath.Join(".launcher", "vanilla", minecraftVersion))
 	lock, err := acquireCompatibilityMaterializationLock(clientDir)
 	if err != nil {
 		return err
@@ -230,7 +230,7 @@ func handleRuntimeVanillaInstall(args []string) error {
 
 func handleRuntimeVanillaPackage(args []string) error {
 	minecraftVersion := flagValue(args, "--minecraft", "latest-release")
-	clientDir := flagValue(args, "--client-dir", filepath.Join(".neverlauncher", "vanilla", minecraftVersion))
+	clientDir := flagValue(args, "--client-dir", filepath.Join(".launcher", "vanilla", minecraftVersion))
 	lock, err := acquireCompatibilityMaterializationLock(clientDir)
 	if err != nil {
 		return err
@@ -279,7 +279,7 @@ func handleRuntimeVanillaPackage(args []string) error {
 
 func handleRuntimeVanillaServer(args []string) error {
 	minecraftVersion := flagValue(args, "--minecraft", "latest-release")
-	serverDir := flagValue(args, "--server-dir", filepath.Join(".neverlauncher", "vanilla-server", minecraftVersion))
+	serverDir := flagValue(args, "--server-dir", filepath.Join(".launcher", "vanilla-server", minecraftVersion))
 	lock, err := acquireCompatibilityMaterializationLock(serverDir)
 	if err != nil {
 		return err
@@ -896,7 +896,7 @@ func installVanilla(ctx context.Context, opts vanillaInstallOptions) (vanillaIns
 			result.SharedCacheHits++
 		}
 	}
-	statePath, err := secureClientDestination(opts.ClientDir, ".neverlauncher/vanilla-install.json")
+	statePath, err := secureClientDestination(opts.ClientDir, ".launcher/vanilla-install.json")
 	if err != nil {
 		return vanillaInstallResult{}, err
 	}
@@ -1158,7 +1158,7 @@ func fetchVanillaArtifactResponse(ctx context.Context, client *http.Client, task
 	if resumeOffset > 0 && task.Size > resumeOffset {
 		headers := make(http.Header)
 		headers.Set("Range", fmt.Sprintf("bytes=%d-", resumeOffset))
-		resp, err := compatibilityGETWithHeaders(ctx, client, task.URL, "NeverLauncher/"+version+" VanillaMaterializer", headers)
+		resp, err := compatibilityGETWithHeaders(ctx, client, task.URL, "Launcher/"+version+" VanillaMaterializer", headers)
 		if err != nil {
 			return nil, false, err
 		}
@@ -1172,7 +1172,7 @@ func fetchVanillaArtifactResponse(ctx context.Context, client *http.Client, task
 		}
 		return resp, false, nil
 	}
-	resp, err := compatibilityGET(ctx, client, task.URL, "NeverLauncher/"+version+" VanillaMaterializer")
+	resp, err := compatibilityGET(ctx, client, task.URL, "Launcher/"+version+" VanillaMaterializer")
 	return resp, false, err
 }
 
@@ -1368,7 +1368,7 @@ func fetchBytesVerified(ctx context.Context, client *http.Client, source, expect
 	if err := validateRemoteURL(source); err != nil {
 		return nil, err
 	}
-	resp, err := compatibilityGET(ctx, client, source, "NeverLauncher/"+version+" VanillaMaterializer")
+	resp, err := compatibilityGET(ctx, client, source, "Launcher/"+version+" VanillaMaterializer")
 	if err != nil {
 		return nil, err
 	}

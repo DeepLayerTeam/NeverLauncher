@@ -310,7 +310,7 @@ func releaseDoctor() error {
 		"scripts/smoke/release-required/release-bundle.sh",
 		"deploy/production/docker-compose.yml",
 		"apps/admin/Dockerfile",
-		"runtime/neverruntime/Cargo.toml",
+		"runtime/runtime/Cargo.toml",
 		"e2e/scripts/run-minecraft-e2e.sh",
 		"compatibility/targets.json",
 		"scripts/compatibility/matrix.py",
@@ -447,7 +447,7 @@ func desktopConfigModel(args []string) map[string]any {
 		"toolVersion":   version,
 		"mode":          "desktop-persisted-config",
 		"status":        "product-config",
-		"configPath":    "NeverLauncher/config.json",
+		"configPath":    "Launcher/config.json",
 		"projectId":     project,
 		"profileId":     profile,
 		"channel":       channel,
@@ -817,7 +817,7 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	}
 	manifest := map[string]any{
 		"schemaVersion":                       cliSchemaVersion,
-		"name":                                "NeverLauncher",
+		"name":                                "Launcher",
 		"version":                             ver,
 		"createdAt":                           time.Now().UTC().Format(time.RFC3339),
 		"mode":                                "release-pipeline",
@@ -1244,21 +1244,21 @@ func verifyReleaseBundle(dir, publicKeyPath string) error {
 
 func releaseArtifacts(ver string) []string {
 	artifacts := []string{
-		"neverlauncher-source-" + ver + ".zip",
-		"neverlauncher-admin-web-" + ver + ".zip",
-		"neverlauncher-desktop-web-" + ver + ".zip",
-		"neverlauncher-desktop-package-" + ver + ".zip",
-		"neverlauncher-velocity-bridge-" + ver + ".jar",
-		"neverlauncher-bungeecord-bridge-" + ver + ".jar",
-		"neverlauncher-waterfall-bridge-" + ver + ".jar",
-		"neverlauncher-bukkit-bridge-" + ver + ".jar",
-		"neverlauncher-spigot-bridge-" + ver + ".jar",
-		"neverlauncher-paper-bridge-" + ver + ".jar",
-		"neverlauncher-purpur-bridge-" + ver + ".jar",
-		"neverlauncher-folia-bridge-" + ver + ".jar",
-		"neverlauncher-fabric-bridge-" + ver + ".jar",
-		"neverlauncher-forge-bridge-" + ver + ".jar",
-		"neverlauncher-neoforge-bridge-" + ver + ".jar",
+		"launcher-source-" + ver + ".zip",
+		"launcher-admin-web-" + ver + ".zip",
+		"launcher-desktop-web-" + ver + ".zip",
+		"launcher-desktop-package-" + ver + ".zip",
+		"launcher-velocity-bridge-" + ver + ".jar",
+		"launcher-bungeecord-bridge-" + ver + ".jar",
+		"launcher-waterfall-bridge-" + ver + ".jar",
+		"launcher-bukkit-bridge-" + ver + ".jar",
+		"launcher-spigot-bridge-" + ver + ".jar",
+		"launcher-paper-bridge-" + ver + ".jar",
+		"launcher-purpur-bridge-" + ver + ".jar",
+		"launcher-folia-bridge-" + ver + ".jar",
+		"launcher-fabric-bridge-" + ver + ".jar",
+		"launcher-forge-bridge-" + ver + ".jar",
+		"launcher-neoforge-bridge-" + ver + ".jar",
 		"BRIDGE_RELEASE_ALLOWLIST.json",
 		"BRIDGE_PLUGIN_MANIFEST.json",
 		serverBridge2CertificationReleaseFile,
@@ -1282,14 +1282,14 @@ func releaseArtifacts(ver string) []string {
 		artifacts = append(artifacts, linuxProductionArtifacts0153(ver)...)
 	} else {
 		artifacts = append(artifacts,
-			"neverlauncher-cli-linux-amd64",
-			"neverlauncher-api-linux-amd64",
-			"neverlauncher-desktop-linux-amd64",
-			"neverruntime-linux-amd64",
+			"launcher-cli-linux-amd64",
+			"launcher-api-linux-amd64",
+			"launcher-desktop-linux-amd64",
+			"runtime-linux-amd64",
 		)
 	}
 	if !windowsSigningRequired0152(ver) {
-		artifacts = append(artifacts, "neverlauncher-cli-windows-amd64.exe")
+		artifacts = append(artifacts, "launcher-cli-windows-amd64.exe")
 	}
 	if deliveryManifestRequired0151(ver) {
 		artifacts = append(artifacts, deliveryManifestFile0151)
@@ -1317,22 +1317,22 @@ func releaseArtifacts(ver string) []string {
 	}
 	if windowsSigningRequired0152(ver) {
 		artifacts = append(artifacts,
-			"neverlauncher-cli-windows-x64.exe",
-			"neverlauncher-cli-windows-arm64.exe",
-			"neverlauncher-desktop-windows-x64.exe",
-			"neverlauncher-desktop-windows-arm64.exe",
+			"launcher-cli-windows-x64.exe",
+			"launcher-cli-windows-arm64.exe",
+			"launcher-desktop-windows-x64.exe",
+			"launcher-desktop-windows-arm64.exe",
 			"guard-windows-x64.exe",
 			"guard-windows-arm64.exe",
 		)
 		if componentTransactionalUpdateRequired0157(ver) {
-			artifacts = append(artifacts, "neverruntime-windows-x64.exe", "neverruntime-windows-arm64.exe")
+			artifacts = append(artifacts, "runtime-windows-x64.exe", "runtime-windows-arm64.exe")
 		}
 		if guardSensorRequired0182(ver) {
 			artifacts = append(artifacts, "guard-sensor-windows-x64.dll", "guard-sensor-windows-arm64.dll")
 		}
 		artifacts = append(artifacts,
-			"neverlauncher-desktop-"+ver+"-windows-x64.zip",
-			"neverlauncher-desktop-"+ver+"-windows-arm64.zip",
+			"launcher-desktop-"+ver+"-windows-x64.zip",
+			"launcher-desktop-"+ver+"-windows-arm64.zip",
 			"WINDOWS_PACKAGE_MANIFEST_X64.json",
 			"WINDOWS_PACKAGE_MANIFEST_ARM64.json",
 			windowsDeliveryAllowlistFile0152,
@@ -1409,7 +1409,7 @@ func releaseDescription(ver string) string {
 		extra += "\n- начиная с 0.15.2 publish-check требует реальные Windows x64+ARM64 PE для CLI/Desktop/Guard, Authenticode SHA-256 + RFC3161 timestamp и WINDOWS_SIGNING_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json и package ZIP;"
 	}
 	if linuxProductionRequired0153(ver) {
-		extra += "\n- начиная с 0.15.3 publish-check требует нативно собранные Linux x64+ARM64 CLI/API/Desktop/Guard/NeverRuntime, проверяет ELF e_machine, deterministic tar.gz, embedded package manifests и их привязку к DELIVERY_MANIFEST.json;"
+		extra += "\n- начиная с 0.15.3 publish-check требует нативно собранные Linux x64+ARM64 CLI/API/Desktop/Guard/Runtime, проверяет ELF e_machine, deterministic tar.gz, embedded package manifests и их привязку к DELIVERY_MANIFEST.json;"
 	}
 	if macOSProductionRequired0154(ver) {
 		extra += "\n- начиная с 0.15.4 publish-check требует отдельные macOS x64+ARM64 Mach-O, Developer ID Application + Hardened Runtime, Accepted Apple notarization, stapled ticket, Gatekeeper acceptance и MACOS_NOTARIZATION_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json;"
@@ -1432,10 +1432,10 @@ func releaseDescription(ver string) string {
 	if productionDeliveryReleaseRequired0160(ver) {
 		extra += "\n- начиная с 0.16.0 Production Delivery Release промотит прошедший exact-commit RC в stable GA boundary: PRODUCTION_DELIVERY_RELEASE.json связывает six-target delivery, vendor signing/notarization, Managed JRE, trust policy и immutable versioned public origin; документ сам входит в Release Verification v2 signature boundary;"
 	}
-	return fmt.Sprintf("# NeverLauncher %s — Release Pipeline\n\n"+
-		"NeverLauncher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+
+	return fmt.Sprintf("# Launcher %s — Release Pipeline\n\n"+
+		"Launcher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+
 		"Основное:\n"+
-		"- единый build-release сценарий для CLI, Backend API, Admin Web, Desktop Web/native, NeverRuntime и ServerBridge;\n"+
+		"- единый build-release сценарий для CLI, Backend API, Admin Web, Desktop Web/native, Runtime и ServerBridge;\n"+
 		"- фактический SHA256SUMS вместо декларативных placeholder-комментариев;\n"+
 		"- SBOM.spdx.json, PROVENANCE.json и RELEASE_MANIFEST.json в каждом release bundle;\n"+
 		"- проверка release bundle через nl release verify;\n"+
@@ -1532,7 +1532,7 @@ func readManifest(path string) (Manifest, error) {
 		return Manifest{}, err
 	}
 	if manifest.SchemaVersion == "3.0" {
-		return Manifest{}, errors.New("Manifest v3 component catalog requires native NeverRuntime 0.24.1; legacy CLI updater cannot safely apply this release")
+		return Manifest{}, errors.New("Manifest v3 component catalog requires native Runtime 0.24.1; legacy CLI updater cannot safely apply this release")
 	}
 	if manifest.ProjectID == "" || manifest.ProfileID == "" || manifest.Version == "" {
 		return Manifest{}, errors.New("manifest не содержит обязательные поля projectId, profileId или version")

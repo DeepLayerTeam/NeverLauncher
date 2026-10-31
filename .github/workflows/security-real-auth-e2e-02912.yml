@@ -21,17 +21,17 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: neverauth
-          POSTGRES_USER: neverauth
+          POSTGRES_DB: auth
+          POSTGRES_USER: auth
           POSTGRES_PASSWORD: integration-only
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U neverauth -d neverauth' --health-interval 5s --health-timeout 5s --health-retries 25
+          --health-cmd 'pg_isready -U auth -d auth' --health-interval 5s --health-timeout 5s --health-retries 25
       mysql:
         image: mysql:8.4
         env:
-          MYSQL_DATABASE: neverauth
-          MYSQL_USER: neverauth
+          MYSQL_DATABASE: auth
+          MYSQL_USER: auth
           MYSQL_PASSWORD: integration-only
           MYSQL_ROOT_PASSWORD: integration-root-only
         ports: ['3306:3306']
@@ -40,8 +40,8 @@ jobs:
       mariadb:
         image: mariadb:11.4
         env:
-          MARIADB_DATABASE: neverauth
-          MARIADB_USER: neverauth
+          MARIADB_DATABASE: auth
+          MARIADB_USER: auth
           MARIADB_PASSWORD: integration-only
           MARIADB_ROOT_PASSWORD: integration-root-only
         ports: ['3307:3306']
@@ -51,10 +51,10 @@ jobs:
       run:
         working-directory: services/api
     env:
-      NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://neverauth:integration-only@localhost:5432/neverauth?sslmode=disable
-      NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://neverauth:integration-only@localhost:5432/neverauth?sslmode=disable
-      NEVERLAUNCHER_SQL_TEST_MYSQL_DSN: neverauth:integration-only@tcp(localhost:3306)/neverauth?tls=false
-      NEVERLAUNCHER_SQL_TEST_MARIADB_DSN: neverauth:integration-only@tcp(localhost:3307)/neverauth?tls=false
+      NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable
+      NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable
+      NEVERLAUNCHER_SQL_TEST_MYSQL_DSN: auth:integration-only@tcp(localhost:3306)/auth?tls=false
+      NEVERLAUNCHER_SQL_TEST_MARIADB_DSN: auth:integration-only@tcp(localhost:3307)/auth?tls=false
       NEVERLAUNCHER_SQL_REQUIRE_ALL: '1'
     steps:
       - uses: actions/checkout@v4
@@ -82,4 +82,4 @@ jobs:
         run: |
           go test -count=1 ./internal/dbmigrate
           cmp internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql ../../cli/internal/dbmigrate/sql/0086_auth_upgrade_integrity_02911.sql
-          (cd ../../cli && go test ./internal/dbmigrate ./internal/authupgrade && go build ./cmd/neverlauncher)
+          (cd ../../cli && go test ./internal/dbmigrate ./internal/authupgrade && go build ./cmd/launcher)

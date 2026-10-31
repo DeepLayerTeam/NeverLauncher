@@ -5,7 +5,7 @@ on:
       - 'services/api/internal/sqlitepg/**'
       - 'services/api/internal/sqlitecore/**'
       - 'services/api/internal/sqlitedurable/**'
-      - 'services/api/cmd/neverlauncher-sqlite/**'
+      - 'services/api/cmd/launcher-sqlite/**'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
       - '.github/workflows/sqlite-postgresql-transfer-03211.yml'
@@ -21,20 +21,20 @@ jobs:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_DB: neverlauncher_migration_test
-          POSTGRES_USER: neverlauncher_test
+          POSTGRES_DB: launcher_migration_test
+          POSTGRES_USER: launcher_test
           POSTGRES_PASSWORD: test-only-secret
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_migration_test"
+          --health-cmd "pg_isready -U launcher_test -d launcher_migration_test"
           --health-interval 5s --health-timeout 5s --health-retries 20
     defaults:
       run:
         working-directory: services/api
     env:
-      NEVERLAUNCHER_PG_TEST_DSN: postgres://neverlauncher_test:test-only-secret@127.0.0.1:5432/neverlauncher_migration_test?sslmode=disable
-      NEVERLAUNCHER_POSTGRES_DSN: postgres://neverlauncher_test:test-only-secret@127.0.0.1:5432/neverlauncher_migration_test?sslmode=disable
+      NEVERLAUNCHER_PG_TEST_DSN: postgres://launcher_test:test-only-secret@127.0.0.1:5432/launcher_migration_test?sslmode=disable
+      NEVERLAUNCHER_POSTGRES_DSN: postgres://launcher_test:test-only-secret@127.0.0.1:5432/launcher_migration_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v6
@@ -56,8 +56,8 @@ jobs:
           set -euo pipefail
           go mod download
           go mod verify
-          test -z "$(gofmt -l internal/sqlitepg cmd/neverlauncher-sqlite)"
-          go vet ./internal/sqlitepg ./cmd/neverlauncher-sqlite
+          test -z "$(gofmt -l internal/sqlitepg cmd/launcher-sqlite)"
+          go vet ./internal/sqlitepg ./cmd/launcher-sqlite
       - name: Native SQLite/PostgreSQL bidirectional transfer, minimal bundle and negative tests
         shell: bash
         run: |
@@ -67,7 +67,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          go build -trimpath -o "$RUNNER_TEMP/nl-sqlite" ./cmd/neverlauncher-sqlite
+          go build -trimpath -o "$RUNNER_TEMP/nl-sqlite" ./cmd/launcher-sqlite
           mkdir -p "$TMPDIR/cli" && chmod 0700 "$TMPDIR/cli"
           "$RUNNER_TEMP/nl-sqlite" core-init --db "$TMPDIR/cli/core.db"
           "$RUNNER_TEMP/nl-sqlite" backup --db "$TMPDIR/cli/core.db" --backup "$TMPDIR/cli/backup.db"

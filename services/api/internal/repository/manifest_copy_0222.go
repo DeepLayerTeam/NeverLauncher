@@ -1,6 +1,6 @@
 package repository
 
-import "gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+import "gitflic.ru/skif4er/launcher/services/api/internal/model"
 
 // Memory repository must not return aliases to immutable release snapshots.
 // The production PostgreSQL repository materializes JSON on each read;

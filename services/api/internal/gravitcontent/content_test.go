@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
 )
 
 const profileFixture = `{"title":"Demo","info":"Server","version":"1.20.4","mainClass":"net.minecraft.client.main.Main","recommendJavaVersion":17,"minJavaVersion":17,"maxJavaVersion":999,"classLoaderConfig":"SYSTEM_ARGS","classPath":["minecraft.jar"],"update":["minecraft.jar"],"updateVerify":["minecraft.jar"],"updateExclusions":["saves","screenshots","resourcepacks","options.txt"],"settings":{"ram":4096,"autoEnter":false,"fullScreen":false},"limited":false}`

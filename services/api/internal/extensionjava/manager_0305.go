@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const HostMain = "ru.neverlauncher.sdk.host.JavaExtensionHost"
+const HostMain = "ru.launcher.sdk.host.JavaExtensionHost"
 
 var className = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$.]{1,200}$`)
 var javaVersionPattern = regexp.MustCompile(`(?:java|openjdk) version "(?:1\.)?(\d+)(?:[.\-+"_]|$)`)
@@ -162,9 +162,9 @@ func Inspect(file string) (JarInfo, error) {
 	if attrs["main-class"] != HostMain {
 		return JarInfo{}, fmt.Errorf("JAR Main-Class must be %s", HostMain)
 	}
-	class := attrs["neverlauncher-extension-class"]
+	class := attrs["launcher-extension-class"]
 	if !className.MatchString(class) || strings.Contains(class, "..") || strings.HasPrefix(class, ".") || strings.HasSuffix(class, ".") {
-		return JarInfo{}, errors.New("invalid NeverLauncher-Extension-Class")
+		return JarInfo{}, errors.New("invalid Launcher-Extension-Class")
 	}
 	if _, ok := attrs["class-path"]; ok {
 		return JarInfo{}, errors.New("external JAR Class-Path is forbidden")
@@ -174,23 +174,23 @@ func Inspect(file string) (JarInfo, error) {
 	}
 	// The Gravit adapter is opt-in, with a fixed entrypoint and an explicit
 	// ported module. Never treat arbitrary Gravit JARs as compatible.
-	const gravitAdapter = "ru.neverlauncher.sdk.gravit.GravitCompatExtension"
-	portedModule := attrs["neverlauncher-gravit-module-class"]
+	const gravitAdapter = "ru.launcher.sdk.gravit.GravitCompatExtension"
+	portedModule := attrs["launcher-gravit-module-class"]
 	if class == gravitAdapter {
-		if !className.MatchString(portedModule) || strings.Contains(portedModule, "..") || strings.HasPrefix(portedModule, ".") || strings.HasSuffix(portedModule, ".") || strings.HasPrefix(portedModule, "pro.gravit.launcher.") || strings.HasPrefix(portedModule, "ru.neverlauncher.sdk.") {
-			return JarInfo{}, errors.New("Gravit compatibility package requires valid NeverLauncher-Gravit-Module-Class")
+		if !className.MatchString(portedModule) || strings.Contains(portedModule, "..") || strings.HasPrefix(portedModule, ".") || strings.HasSuffix(portedModule, ".") || strings.HasPrefix(portedModule, "pro.gravit.launcher.") || strings.HasPrefix(portedModule, "ru.launcher.sdk.") {
+			return JarInfo{}, errors.New("Gravit compatibility package requires valid Launcher-Gravit-Module-Class")
 		}
 		if !classes[strings.ReplaceAll(portedModule, ".", "/")+".class"] {
 			return JarInfo{}, errors.New("ported Gravit module class absent from JAR")
 		}
-		if !classes["ru/neverlauncher/sdk/gravit/GravitCompatExtension.class"] {
+		if !classes["ru/launcher/sdk/gravit/GravitCompatExtension.class"] {
 			return JarInfo{}, errors.New("Gravit compatibility runtime class absent from JAR")
 		}
 		result.GravitModuleClass = portedModule
 	} else if portedModule != "" {
 		return JarInfo{}, errors.New("Gravit module class requires the explicit compatibility adapter entrypoint")
 	}
-	if !classes["ru/neverlauncher/sdk/host/JavaExtensionHost.class"] {
+	if !classes["ru/launcher/sdk/host/JavaExtensionHost.class"] {
 		return JarInfo{}, errors.New("Java Extension Host class absent from JAR")
 	}
 	result.EntrypointClass = class

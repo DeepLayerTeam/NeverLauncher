@@ -155,7 +155,7 @@ func TestAdapterLifecycle02711SourceChangeBlocked(t *testing.T) {
 
 func TestAdapterLifecycle02711ProcessorJournalInvalidation(t *testing.T) {
 	root := t.TempDir()
-	journal := filepath.Join(root, ".neverlauncher", "installers", "forge", "forge-1", "processor-journal.json")
+	journal := filepath.Join(root, ".launcher", "installers", "forge", "forge-1", "processor-journal.json")
 	if err := os.MkdirAll(filepath.Dir(journal), 0o700); err != nil {
 		t.Fatal(err)
 	}

@@ -24,16 +24,16 @@ mkdir -p "$RUNTIME_DIR/materialized-client"
 
 EXE_SUFFIX="$(certification_exe_suffix "$TARGET_OS")"
 NL_BIN="$RUNTIME_DIR/nl$EXE_SUFFIX"
-NEVERRUNTIME_BIN="$ROOT/runtime/neverruntime/target/debug/neverruntime$EXE_SUFFIX"
+NEVERRUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime$EXE_SUFFIX"
 
-printf '[neoforge-cert] build CLI and NeverRuntime\n'
+printf '[neoforge-cert] build CLI and Runtime\n'
 (
   cd "$ROOT/cli"
-  go build -o "$NL_BIN" ./cmd/neverlauncher
+  go build -o "$NL_BIN" ./cmd/launcher
 )
-cargo build --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bin neverruntime
+cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
 certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$NEVERRUNTIME_BIN"
-[[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[neoforge-cert] NeverRuntime binary is missing" >&2; exit 1; }
+[[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[neoforge-cert] Runtime binary is missing" >&2; exit 1; }
 
 printf '[neoforge-cert] materialize NeoForge %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
 materialize_loader_package() {
@@ -41,7 +41,7 @@ materialize_loader_package() {
     --minecraft "$MINECRAFT_VERSION" \
     --loader-version "$LOADER_SELECTOR" \
     --client-dir "$RUNTIME_DIR/materialized-client" \
-    --resolution-lock "$RUNTIME_DIR/materialized-client/.neverlauncher/neoforge-resolution-lock.json" \
+    --resolution-lock "$RUNTIME_DIR/materialized-client/.launcher/neoforge-resolution-lock.json" \
     --java "$JAVA_BIN" \
     --target "$TARGET_OS/$TARGET_ARCH" \
     --project compatibility-certification \
@@ -56,7 +56,7 @@ FIRST_REPRODUCIBILITY_SHA256="$(python3 -c 'import json,sys; print((json.load(op
 FIRST_LOCK_SHA256="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1],encoding="utf-8")).get("neoforge") or {}).get("resolutionLockSha256") or "")' "$RUNTIME_DIR/client-package.json")"
 # Повторите изменяемый селектор через созданный lock-файл. Не разрешайте latest-stable повторно.
 materialize_loader_package
-cp "$RUNTIME_DIR/materialized-client/.neverlauncher/neoforge-resolution-lock.json" "$RUNTIME_DIR/neoforge-resolution-lock.json"
+cp "$RUNTIME_DIR/materialized-client/.launcher/neoforge-resolution-lock.json" "$RUNTIME_DIR/neoforge-resolution-lock.json"
 
 python3 - "$RUNTIME_DIR/client-package.json" "$RUNTIME_DIR/neoforge-resolution-lock.json" "$FIRST_REPRODUCIBILITY_SHA256" "$FIRST_LOCK_SHA256" <<'PY'
 import hashlib, json, re, sys

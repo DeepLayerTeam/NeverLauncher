@@ -1,14 +1,14 @@
-# NeverLauncher 0.32.15 — DEP10 Capacity & Diagnostics
+# Launcher 0.32.15 — DEP10 Capacity & Diagnostics
 
 This release includes **real process and infrastructure measurements**, a 60-second rolling request window, a read-only bounded benchmark utility, and operator recommendations. It **does not** claim to know the maximum throughput of your infrastructure without measurements on it.
 
 ## Operational interfaces
 
-- `neverlauncher-api diagnose capacity` — JSON with observed disk usage, PostgreSQL connections/DB size/job and outbox backlog, Go heap, goroutines, and recommendations. Exit `2` for failed probes or critical conditions. Run with the SAME environment as the service; secrets stay on the host.
+- `launcher-api diagnose capacity` — JSON with observed disk usage, PostgreSQL connections/DB size/job and outbox backlog, Go heap, goroutines, and recommendations. Exit `2` for failed probes or critical conditions. Run with the SAME environment as the service; secrets stay on the host.
 - `GET /api/v1/operations/capacity` — last sampled JSON, requires existing `diagnostics:read`; returns HTTP 503 if no verified/fresh sample.
 - `GET /metrics` — Prometheus gauges. Samples are collected in the background at 30-second intervals and never query PostgreSQL on the HTTP request path. Keep this pre-existing endpoint isolated to your monitoring network or reverse proxy.
 - HTTP middleware — last-minute request count, 429 count, 5xx count, current in-flight, average and histogram-estimated p95. No route labels, tokens, IPs, or player identifiers.
-- `neverlauncher-capacity-bench --confirm --url http://127.0.0.1:8080/api/v1/status --max-workers 16 --step 8s` — explicitly requested GET load test with 1,2,4,8,16 concurrent requests, automatically stopping on first failing step. `--allow-remote` is also required for non-loopback targets, which you must own/control. Responses contain observed RPS, p95/p99, failures and rate limiting. Do not run against third-party endpoints.
+- `launcher-capacity-bench --confirm --url http://127.0.0.1:8080/api/v1/status --max-workers 16 --step 8s` — explicitly requested GET load test with 1,2,4,8,16 concurrent requests, automatically stopping on first failing step. `--allow-remote` is also required for non-loopback targets, which you must own/control. Responses contain observed RPS, p95/p99, failures and rate limiting. Do not run against third-party endpoints.
 
 ## Measured conditions and actions
 

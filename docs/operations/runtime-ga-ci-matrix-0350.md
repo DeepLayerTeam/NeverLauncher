@@ -1,4 +1,4 @@
-# NeverLauncher 0.35.0 — CI and independent runtime matrix
+# Launcher 0.35.0 — CI and independent runtime matrix
 
 | Check | Runner | Trust | Required for 0.35.0 GA |
 |---|---|---|---|

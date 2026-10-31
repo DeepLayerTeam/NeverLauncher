@@ -47,7 +47,7 @@ func TestChildIsolation03111(t *testing.T) {
 		return
 	}
 	pipe := os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_PIPE")
-	if !strings.HasPrefix(pipe, `\\.\pipe\LOCAL\NeverLauncher-Extension-`) {
+	if !strings.HasPrefix(pipe, `\\.\pipe\LOCAL\Launcher-Extension-`) {
 		t.Fatal("missing named broker pipe")
 	}
 	handle, err := syscall.CreateFile(syscall.StringToUTF16Ptr(pipe), syscall.GENERIC_READ|syscall.GENERIC_WRITE, 0, nil, syscall.OPEN_EXISTING, 0, 0)

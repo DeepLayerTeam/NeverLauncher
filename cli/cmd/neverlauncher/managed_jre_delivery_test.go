@@ -104,7 +104,7 @@ func writeManagedJREFixture0155(t *testing.T, dir, ver string) {
 	}
 	targets = sortedManagedJRETargets0155(targets)
 	manifest := ManagedJREManifest0155{
-		SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: ver, Distribution: "temurin",
+		SchemaVersion: "1.0", Product: "Launcher", ProductVersion: ver, Distribution: "temurin",
 		Vendor: "Eclipse Adoptium", MajorVersion: managedJREMajor0155, GeneratedAt: "2026-09-24T20:41:23Z", Targets: targets,
 	}
 	if err := writeJSONFile(filepath.Join(dir, managedJREManifestFile0155), manifest); err != nil {
@@ -115,7 +115,7 @@ func writeManagedJREFixture0155(t *testing.T, dir, ver string) {
 		t.Fatal(err)
 	}
 	evidence := ManagedJREEvidence0155{
-		SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: ver, Distribution: "temurin", Vendor: "Eclipse Adoptium",
+		SchemaVersion: "1.0", Product: "Launcher", ProductVersion: ver, Distribution: "temurin", Vendor: "Eclipse Adoptium",
 		IntegrityMode: "exact-vendor-archive-sha256", Manifest: managedJREManifestFile0155, ManifestSHA256: manifestHash, GeneratedAt: "2026-09-24T20:41:23Z",
 	}
 	for _, target := range targets {

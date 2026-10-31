@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 var extensionSecretName0207 = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_.-]{0,127}$`)

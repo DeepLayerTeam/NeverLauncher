@@ -11,7 +11,7 @@ on:
       - 'services/api/internal/sqlitepg/**'
       - 'services/api/internal/deployment/**'
       - 'services/api/internal/httpapi/**'
-      - 'services/api/cmd/neverlauncher-capacity-bench/**'
+      - 'services/api/cmd/launcher-capacity-bench/**'
       - 'scripts/rc/**'
       - 'VERSION'
       - '.github/workflows/production-rc-03216.yml'
@@ -23,7 +23,7 @@ on:
       - 'services/api/internal/sqlitepg/**'
       - 'services/api/internal/deployment/**'
       - 'services/api/internal/httpapi/**'
-      - 'services/api/cmd/neverlauncher-capacity-bench/**'
+      - 'services/api/cmd/launcher-capacity-bench/**'
       - 'scripts/rc/**'
       - 'VERSION'
       - '.github/workflows/production-rc-03216.yml'
@@ -40,12 +40,12 @@ jobs:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_USER: neverlauncher_rc
+          POSTGRES_USER: launcher_rc
           POSTGRES_PASSWORD: rc-temporary-password
-          POSTGRES_DB: neverlauncher_rc
+          POSTGRES_DB: launcher_rc
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U neverlauncher_rc -d neverlauncher_rc'
+          --health-cmd 'pg_isready -U launcher_rc -d launcher_rc'
           --health-interval 5s --health-timeout 5s --health-retries 30
       redis:
         image: redis:7
@@ -55,16 +55,16 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 30
     env:
       NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
-      NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/neverlauncher-rc-sqlite
-      NEVERLAUNCHER_PG_TEST_DSN: postgres://neverlauncher_rc:rc-temporary-password@127.0.0.1:5432/neverlauncher_rc?sslmode=disable
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_rc:rc-temporary-password@127.0.0.1:5432/neverlauncher_rc?sslmode=disable
-      NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://neverlauncher_rc:rc-temporary-password@127.0.0.1:5432/neverlauncher_rc?sslmode=disable
+      NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-rc-sqlite
+      NEVERLAUNCHER_PG_TEST_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
+      NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
       NEVERLAUNCHER_GROWTH_TEST_REDIS_URL: redis://127.0.0.1:6379/0
       NEVERLAUNCHER_RC_S3_ENDPOINT: http://127.0.0.1:9000
-      NEVERLAUNCHER_RC_S3_BUCKET: neverlauncher-rc
+      NEVERLAUNCHER_RC_S3_BUCKET: launcher-rc
       NEVERLAUNCHER_RC_S3_REGION: us-east-1
-      NEVERLAUNCHER_RC_S3_ACCESS_KEY: neverlauncher-rc-user
-      NEVERLAUNCHER_RC_S3_SECRET_KEY: neverlauncher-rc-temporary-secret
+      NEVERLAUNCHER_RC_S3_ACCESS_KEY: launcher-rc-user
+      NEVERLAUNCHER_RC_S3_SECRET_KEY: launcher-rc-temporary-secret
     steps:
       - uses: actions/checkout@v4
         with:
@@ -94,7 +94,7 @@ jobs:
       - name: Start a real isolated MinIO S3 service
         run: |
           set -euo pipefail
-          docker run -d --name neverlauncher-rc-minio \
+          docker run -d --name launcher-rc-minio \
             -p 127.0.0.1:9000:9000 \
             -e MINIO_ROOT_USER="$NEVERLAUNCHER_RC_S3_ACCESS_KEY" \
             -e MINIO_ROOT_PASSWORD="$NEVERLAUNCHER_RC_S3_SECRET_KEY" \
@@ -122,11 +122,11 @@ jobs:
       - name: Execute strictly verified live release candidate tests
         run: |
           set -euo pipefail
-          python3 scripts/rc/production_rc.py --output "$RUNNER_TEMP/neverlauncher-03216-rc.json"
+          python3 scripts/rc/production_rc.py --output "$RUNNER_TEMP/launcher-03216-rc.json"
       - name: Upload actual passing RC test receipt only
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-03216-rc-${{ github.sha }}
-          path: ${{ runner.temp }}/neverlauncher-03216-rc.json
+          name: launcher-03216-rc-${{ github.sha }}
+          path: ${{ runner.temp }}/launcher-03216-rc.json
           if-no-files-found: error
           retention-days: 30

@@ -11,10 +11,10 @@ mkdir -p "$folder/build/classes" "$folder/build/test-classes"
 find "$folder/src/main/java" -name '*.java' | LC_ALL=C sort > "$folder/build/sources.txt"
 "$javac" --release 17 -encoding UTF-8 -cp sdk/java/core/build/classes -d "$folder/build/classes" @"$folder/build/sources.txt"
 version=$(cat VERSION)
-"$jar" --create --file "$folder/build/neverlauncher-gravit-compat-$version.jar" -C "$folder/build/classes" .
-cp "$folder/build/neverlauncher-gravit-compat-$version.jar" "$folder/build/neverlauncher-gravit-compat.jar"
+"$jar" --create --file "$folder/build/launcher-gravit-compat-$version.jar" -C "$folder/build/classes" .
+cp "$folder/build/launcher-gravit-compat-$version.jar" "$folder/build/launcher-gravit-compat.jar"
 if [ "${1:-}" = test ]; then
   find "$folder/src/test/java" -name '*.java' | LC_ALL=C sort > "$folder/build/tests.txt"
   "$javac" --release 17 -encoding UTF-8 -cp sdk/java/core/build/classes${cpsep}"$folder/build/classes" -d "$folder/build/test-classes" @"$folder/build/tests.txt"
-  "$java" -cp sdk/java/core/build/classes${cpsep}"$folder/build/classes"${cpsep}"$folder/build/test-classes" ru.neverlauncher.sdk.gravit.GravitCompatTests
+  "$java" -cp sdk/java/core/build/classes${cpsep}"$folder/build/classes"${cpsep}"$folder/build/test-classes" ru.launcher.sdk.gravit.GravitCompatTests
 fi

@@ -81,7 +81,7 @@ pub(super) fn plan_digest(
         .map(|item| if cfg!(windows) { item.to_ascii_uppercase() } else { item.clone() }).collect::<BTreeSet<_>>()
         .into_iter().collect::<Vec<_>>();
     let input = ResolvedPlanIdentity {
-        format: "neverlauncher.resolved-launch-plan/1",
+        format: "launcher.resolved-launch-plan/1",
         signature: signature.signature.clone(),
         owner_public_key: signature.public_key.clone(),
         runtime_version: env!("CARGO_PKG_VERSION"),

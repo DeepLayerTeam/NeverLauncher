@@ -1,4 +1,4 @@
-name: NeverLauncher 0.35.0 trusted runtime GA acceptance
+name: Launcher 0.35.0 trusted runtime GA acceptance
 on:
   workflow_call:
     inputs:

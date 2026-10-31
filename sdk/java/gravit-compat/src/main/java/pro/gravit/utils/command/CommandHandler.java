@@ -1,6 +1,6 @@
 package pro.gravit.utils.command;
 import java.util.*;
-import ru.neverlauncher.sdk.core.RuntimeCommands;
+import ru.launcher.sdk.core.RuntimeCommands;
 /** Exposes only commands present in the signed extension CLI manifest. */
 public final class CommandHandler {
     private static final ThreadLocal<Object> RESPONSE=new ThreadLocal<>();

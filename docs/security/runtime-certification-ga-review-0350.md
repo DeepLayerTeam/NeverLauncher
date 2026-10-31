@@ -1,4 +1,4 @@
-# NeverLauncher 0.35.0 — Runtime GA security review
+# Launcher 0.35.0 — Runtime GA security review
 
 ## Protected assets and trust roots
 

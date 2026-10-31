@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	prestarter "github.com/DeepLayerTeam/NeverLauncher/prestarter"
+	prestarter "github.com/DeepLayerTeam/Launcher/prestarter"
 	"io"
 	"os"
 	"os/exec"
@@ -234,7 +234,7 @@ func newInstall(opts Options) (*installation, error) {
 	if e := secureDir(root); e != nil {
 		return nil, e
 	}
-	return &installation{root: root, base: filepath.Join(root, ".neverlauncher-installer"), key: opts.TrustedKey}, nil
+	return &installation{root: root, base: filepath.Join(root, ".launcher-installer"), key: opts.TrustedKey}, nil
 }
 func (i *installation) current() (*record, error) {
 	var result *record

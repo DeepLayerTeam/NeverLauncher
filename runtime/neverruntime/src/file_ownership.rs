@@ -89,7 +89,7 @@ fn overlap(a: &str, b: &str) -> bool {
 pub fn protected(p: &str) -> bool {
     let lower = p.to_ascii_lowercase();
     if matches!(lower.as_str(), "options.txt" | "optionsof.txt" | "servers.dat" | "usercache.json") { return true }
-    ["saves", "screenshots", "resourcepacks", "shaderpacks", "config", "logs", "crash-reports", "diagnostics", ".neverlauncher", ".neverlauncher-quarantine"]
+    ["saves", "screenshots", "resourcepacks", "shaderpacks", "config", "logs", "crash-reports", "diagnostics", ".launcher", ".launcher-quarantine"]
         .iter().any(|prefix| lower == *prefix || lower.starts_with(&format!("{prefix}/")))
 }
 

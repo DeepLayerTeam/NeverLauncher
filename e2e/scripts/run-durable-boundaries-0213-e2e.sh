@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CONTAINER="neverlauncher-durable-0213-${GITHUB_RUN_ID:-local}-$$"
+CONTAINER="launcher-durable-0213-${GITHUB_RUN_ID:-local}-$$"
 # Предпочитайте случайный свободный loopback-порт, чтобы не
 # конфликтовать с другими PostgreSQL в том же агенте. Для
 # разработчиков, которым нужен постоянный порт, остаётся явная настройка.
@@ -42,9 +42,9 @@ for attempt in 1 2 3; do
   cleanup
   echo "[durable-0213] starting isolated PostgreSQL (attempt $attempt/3)"
   if docker run -d --name "$CONTAINER" \
-      -e POSTGRES_DB=neverlauncher \
-      -e POSTGRES_USER=neverlauncher \
-      -e POSTGRES_PASSWORD=neverlauncher \
+      -e POSTGRES_DB=launcher \
+      -e POSTGRES_USER=launcher \
+      -e POSTGRES_PASSWORD=launcher \
       -p "$PUBLISH_PORT" postgres:16-alpine >"$START_LOG" 2>&1; then
     if docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>>"$START_LOG" | grep -qx true; then
       STARTED=true
@@ -78,11 +78,11 @@ if [[ -z "$PORT" ]]; then
     exit 1
   fi
 fi
-DSN="postgres://neverlauncher:neverlauncher@127.0.0.1:${PORT}/neverlauncher?sslmode=disable"
+DSN="postgres://launcher:launcher@127.0.0.1:${PORT}/launcher?sslmode=disable"
 
 READY=false
 for _ in $(seq 1 60); do
-  if docker exec "$CONTAINER" pg_isready -U neverlauncher -d neverlauncher >"$READY_LOG" 2>&1; then
+  if docker exec "$CONTAINER" pg_isready -U launcher -d launcher >"$READY_LOG" 2>&1; then
     READY=true
     break
   fi

@@ -19,7 +19,7 @@ pub(crate) fn pin_windows_lwjgl_extract_path(args: &mut Vec<String>, game_root: 
     // Strip publisher/mod-provided overrides so the JVM and Sensor cannot
     // disagree on where LWJGL's classpath natives are expected to be loaded.
     args.retain(|arg| !arg.starts_with(LWJGL_EXTRACT_PROPERTY));
-    let extract = game_root.join(".neverlauncher").join("lwjgl-extract")
+    let extract = game_root.join(".launcher").join("lwjgl-extract")
         .join("windows").join(arch);
     args.push(format!("{LWJGL_EXTRACT_PROPERTY}{}", extract.display()));
 }
@@ -1334,7 +1334,7 @@ mod tests {
     use std::fs as stdfs;
 
     fn temp_root(name: &str) -> PathBuf {
-        let root = std::env::temp_dir().join(format!("neverruntime-compat-{name}-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("runtime-compat-{name}-{}", std::process::id()));
         let _ = stdfs::remove_dir_all(&root);
         stdfs::create_dir_all(&root).expect("mkdir");
         root
@@ -1403,7 +1403,7 @@ mod tests {
 
         let ctx = CompatibilityContext {
             username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
-            launcher_name: "NeverLauncher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/custom").to_string_lossy().to_string(), features: HashMap::new(),
         };
         let result = resolve_compatibility(&root, "custom", None, &ctx).await.expect("resolve");
@@ -1439,7 +1439,7 @@ mod tests {
         let native_path = root.join("natives/linux/aarch64");
         let ctx = CompatibilityContext {
             username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(),
-            access_token: "offline".into(), user_type: "legacy".into(), launcher_name: "NeverLauncher".into(),
+            access_token: "offline".into(), user_type: "legacy".into(), launcher_name: "Launcher".into(),
             launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(),
             natives_directory: native_path.to_string_lossy().to_string(), features: HashMap::new(),
@@ -1481,7 +1481,7 @@ mod tests {
 
         let ctx = CompatibilityContext {
             username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
-            launcher_name: "NeverLauncher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/neoforge").to_string_lossy().to_string(), features: HashMap::new(),
         };
         let result = resolve_compatibility(&root, "neoforge-21.1.252", None, &ctx).await.expect("resolve NeoForge");
@@ -1514,7 +1514,7 @@ mod tests {
         ).unwrap();
         let ctx = CompatibilityContext {
             username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
-            launcher_name: "NeverLauncher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/forge").to_string_lossy().to_string(), features: HashMap::new(),
         };
         let result = resolve_compatibility(&root, "1.19.4-forge-45.4.5", None, &ctx).await.expect("resolve Forge");
@@ -1547,7 +1547,7 @@ mod tests {
         ).unwrap();
         let ctx = CompatibilityContext {
             username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
-            launcher_name: "NeverLauncher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/forge").to_string_lossy().to_string(), features: HashMap::new(),
         };
         let result = resolve_compatibility(&root, "1.20.2-forge-48.1.0", None, &ctx).await.expect("resolve Forge 1.20.2");
@@ -1609,13 +1609,13 @@ mod tests {
         ).unwrap();
         let ctx = CompatibilityContext {
             username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
-            launcher_name: "NeverLauncher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/linux").to_string_lossy().to_string(), features: HashMap::new(),
         };
         let result = resolve_compatibility(&root, "1.7.10", None, &ctx).await.expect("resolve legacy");
         assert!(result.jvm_args.iter().any(|value| value.starts_with("-Djava.library.path=")));
         assert!(result.jvm_args.iter().any(|value| value.starts_with("-Dorg.lwjgl.librarypath=")));
-        assert!(result.jvm_args.iter().any(|value| value == "-Dminecraft.launcher.brand=NeverLauncher"));
+        assert!(result.jvm_args.iter().any(|value| value == "-Dminecraft.launcher.brand=Launcher"));
         assert!(!result.jvm_args.iter().any(|value| value == "-cp"));
         assert_eq!(result.java_major_version, Some(8));
         assert!(result.game_args.windows(2).any(|pair| pair[0] == "--username" && pair[1] == "Player"));
@@ -1643,7 +1643,7 @@ mod tests {
         ).unwrap();
         let ctx = CompatibilityContext {
             username: "LegacyPlayer".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline-session".into(), user_type: "legacy".into(),
-            launcher_name: "NeverLauncher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/linux").to_string_lossy().to_string(), features: HashMap::new(),
         };
         let result = resolve_compatibility(&root, "1.5.2", None, &ctx).await.expect("resolve pre-1.6");
@@ -1694,7 +1694,7 @@ mod tests {
         }"#).unwrap();
         let ctx = CompatibilityContext {
             username: "Player".into(), uuid: "uuid".into(), access_token: "offline".into(), user_type: "legacy".into(),
-            launcher_name: "NeverLauncher".into(), launcher_version: "0.41.6".into(),
+            launcher_name: "Launcher".into(), launcher_version: "0.41.6".into(),
             game_directory: root.to_string_lossy().to_string(),
             assets_directory: root.join("assets").to_string_lossy().to_string(),
             natives_directory: root.join("natives").to_string_lossy().to_string(), features: HashMap::new(),
@@ -1982,7 +1982,7 @@ mod windows_lwjgl_extract_tests {
         assert_eq!(args.len(), 2);
         assert_eq!(args[0], "-Xmx1024m");
         assert!(args[1].starts_with(LWJGL_EXTRACT_PROPERTY));
-        assert!(args[1].contains(".neverlauncher"));
+        assert!(args[1].contains(".launcher"));
         assert!(args[1].contains("lwjgl-extract"));
         assert!(args[1].contains("aarch64"));
         assert!(!args[1].contains("Public"));

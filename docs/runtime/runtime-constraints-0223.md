@@ -1,8 +1,8 @@
-# NeverLauncher 0.22.3 — Runtime Constraints
+# Launcher 0.22.3 — Runtime Constraints
 
 ## What runs
 
-The production paths are `model.ValidateManifestSchema` (and its v2-only runtime constraints), `adminVersionManifestUpdate`, release publication integrity checks, and `neverruntime::{verify_manifest_signature,create_launch_plan_with_credentials,launch_with_timeout}`. New fields are stored in the existing signed Manifest v2 JSON; no SQL schema change is needed. Old Manifest v1 payloads and signatures remain unmodified.
+The production paths are `model.ValidateManifestSchema` (and its v2-only runtime constraints), `adminVersionManifestUpdate`, release publication integrity checks, and `runtime::{verify_manifest_signature,create_launch_plan_with_credentials,launch_with_timeout}`. New fields are stored in the existing signed Manifest v2 JSON; no SQL schema change is needed. Old Manifest v1 payloads and signatures remain unmodified.
 
 ### Example fields inside a v2 manifest
 

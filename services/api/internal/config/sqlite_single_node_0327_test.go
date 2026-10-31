@@ -7,13 +7,13 @@ import (
 
 func TestSingleNodeSQLiteProductionPolicy0327(t *testing.T) {
 	cfg := Config{
-		Environment: "production", RepositoryDriver: "postgres", SQLDriver: "pgx", DatabaseDSN: "postgres://user:pass@db:5432/neverlauncher?sslmode=require",
+		Environment: "production", RepositoryDriver: "postgres", SQLDriver: "pgx", DatabaseDSN: "postgres://user:pass@db:5432/launcher?sslmode=require",
 		PublicURL: "https://api.example.com", AuthTokenSecret: "0123456789abcdef0123456789abcdef", StorageDriver: "local",
-		StorageLocalPath: "/var/lib/neverlauncher/storage", BackupRoot: "/var/lib/neverlauncher/backups", ExtensionRoot: "/var/lib/neverlauncher/extensions",
-		ExtensionBackupRetention: 10, CORSAllowedOrigins: []string{"https://launcher.example.com"}, WebAuthnRPID: "example.com", WebAuthnRPName: "NeverLauncher",
+		StorageLocalPath: "/var/lib/launcher/storage", BackupRoot: "/var/lib/launcher/backups", ExtensionRoot: "/var/lib/launcher/extensions",
+		ExtensionBackupRetention: 10, CORSAllowedOrigins: []string{"https://launcher.example.com"}, WebAuthnRPID: "example.com", WebAuthnRPName: "Launcher",
 		WebAuthnOrigins: []string{"https://launcher.example.com"}, GuardReleaseAllowlistJSON: testGuardAllowlist0134,
 		BridgeReleaseAllowlistJSON: testBridgeAllowlist0135,
-		SQLiteCoordinatorPath:      "/var/lib/neverlauncher/coord/state.db", RateLimitEnabled: true, RateLimitFailClosed: true,
+		SQLiteCoordinatorPath:      "/var/lib/launcher/coord/state.db", RateLimitEnabled: true, RateLimitFailClosed: true,
 		RateLimitGlobalPerMinute: 1200, RateLimitAuthPerMinute: 20, RateLimitServerBridgePerMinute: 6000,
 	}
 	// Explicit SQLite coordination does not require Redis when HA is disabled.
@@ -39,10 +39,10 @@ func TestSingleNodeSQLiteProductionPolicy0327(t *testing.T) {
 func TestProductionMinimalSQLiteAccepted0375(t *testing.T) {
 	cfg := Config{
 		Environment: "production", DeploymentMode: "single-node", RepositoryDriver: "sqlite",
-		DatabaseDSN: "/var/lib/neverlauncher/db/http.sqlite", SQLiteCoordinatorPath: "/var/lib/neverlauncher/db/coord.sqlite",
+		DatabaseDSN: "/var/lib/launcher/db/http.sqlite", SQLiteCoordinatorPath: "/var/lib/launcher/db/coord.sqlite",
 		PublicURL: "https://api.example.com", AuthTokenSecret: "0123456789abcdef0123456789abcdef",
-		StorageDriver: "local", StorageLocalPath: "/var/lib/neverlauncher/storage", BackupRoot: "/var/lib/neverlauncher/backups", ExtensionRoot: "/var/lib/neverlauncher/extensions", ExtensionBackupRetention: 10,
-		CORSAllowedOrigins: []string{"https://launcher.example.com"}, WebAuthnRPID: "example.com", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://launcher.example.com"},
+		StorageDriver: "local", StorageLocalPath: "/var/lib/launcher/storage", BackupRoot: "/var/lib/launcher/backups", ExtensionRoot: "/var/lib/launcher/extensions", ExtensionBackupRetention: 10,
+		CORSAllowedOrigins: []string{"https://launcher.example.com"}, WebAuthnRPID: "example.com", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://launcher.example.com"},
 		GuardReleaseAllowlistJSON: testGuardAllowlist0134, BridgeReleaseAllowlistJSON: testBridgeAllowlist0135,
 		RateLimitEnabled: true, RateLimitFailClosed: true, RateLimitGlobalPerMinute: 1200, RateLimitAuthPerMinute: 20, RateLimitServerBridgePerMinute: 6000,
 	}

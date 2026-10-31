@@ -53,7 +53,7 @@ func legacyFamily0278(loader, mc string) bool {
 	return ok && major == 1 && minor <= 12
 }
 func legacyLaunchFile0278(root string) string {
-	return filepath.Join(root, ".neverlauncher", "legacy-launch.json")
+	return filepath.Join(root, ".launcher", "legacy-launch.json")
 }
 
 // Mojang older versions do not use modern arguments.game. The split keeps
@@ -261,7 +261,7 @@ func resolveLegacyLaunch0278(root, loader, minecraft, profilePath string, javaMa
 	if len(args) == 0 {
 		return nil, errors.New("legacy launch has no arguments")
 	}
-	recipe := &legacyLaunch0278{Schema: "neverlauncher.legacy-launch.v1", Family: loader + "/" + minecraft, ParentProfile: parentRel, ParentSHA256: parentHash, ChildProfile: childRel, ChildSHA256: childHash, JavaMajor: 8, MainClass: selected.MainClass, GameArguments: args}
+	recipe := &legacyLaunch0278{Schema: "launcher.legacy-launch.v1", Family: loader + "/" + minecraft, ParentProfile: parentRel, ParentSHA256: parentHash, ChildProfile: childRel, ChildSHA256: childHash, JavaMajor: 8, MainClass: selected.MainClass, GameArguments: args}
 	if loader == "forge" {
 		for i := 0; i < len(args)-1; i++ {
 			if args[i] == "--tweakClass" {
@@ -467,7 +467,7 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 		"user_properties": "{}", "user_type": "legacy", "version_name": p.MinecraftVersion, "version_type": "release",
 		"game_directory": absRoot, "game_assets": gameAssets,
 		"assets_root": filepath.Join(absRoot, "assets"), "assets_index_name": p.Launch.AssetIndex,
-		"launcher_name": "NeverLauncher", "launcher_version": version, "classpath": strings.Join(classpath, string(os.PathListSeparator)),
+		"launcher_name": "Launcher", "launcher_version": version, "classpath": strings.Join(classpath, string(os.PathListSeparator)),
 		"natives_directory": natives,
 	}
 	if p.Compatibility != nil {

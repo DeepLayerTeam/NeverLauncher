@@ -3,15 +3,15 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VERSION="${NEVERLAUNCHER_EXPECTED_VERSION:-$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")}"
-API_BIN="${NEVERLAUNCHER_API_BIN:-${ROOT_DIR}/services/api/neverlauncher-api}"
+API_BIN="${NEVERLAUNCHER_API_BIN:-${ROOT_DIR}/services/api/launcher-api}"
 API_ADDR="${NEVERLAUNCHER_AUTH_SMOKE_ADDR:-127.0.0.1:18131}"
 API_URL="http://${API_ADDR}"
-LOG_FILE="${TMPDIR:-/tmp}/neverlauncher-auth-session-smoke.log"
+LOG_FILE="${TMPDIR:-/tmp}/launcher-auth-session-smoke.log"
 
 if [[ ! -x "${API_BIN}" ]]; then
-  echo "[NeverLauncher] API binary не найден, собираю offline memory-only" >&2
-  ( cd "${ROOT_DIR}/services/api" && go build -tags neverlauncher_nopgx -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o neverlauncher-api ./cmd/neverlauncher-api )
-  API_BIN="${ROOT_DIR}/services/api/neverlauncher-api"
+  echo "[Launcher] API binary не найден, собираю offline memory-only" >&2
+  ( cd "${ROOT_DIR}/services/api" && go build -tags launcher_nopgx -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o launcher-api ./cmd/launcher-api )
+  API_BIN="${ROOT_DIR}/services/api/launcher-api"
 fi
 
 NEVERLAUNCHER_HTTP_ADDR="${API_ADDR}" NEVERLAUNCHER_REPOSITORY_DRIVER=memory NEVERLAUNCHER_STORAGE_DRIVER=local "${API_BIN}" >"${LOG_FILE}" 2>&1 &
@@ -35,7 +35,7 @@ fi
 
 login_json=$(curl -fsS -X POST "${API_URL}/api/v1/auth/login" \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin@neverlauncher.local","password":"admin","deviceId":"auth-smoke"}')
+  -d '{"email":"admin@launcher.local","password":"admin","deviceId":"auth-smoke"}')
 
 access=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["tokens"]["accessToken"])' <<<"${login_json}")
 refresh=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["tokens"]["refreshToken"])' <<<"${login_json}")
@@ -63,7 +63,7 @@ fi
 # Регрессия 0.11.1: повторное использование погашенного refresh-токена должно компрометировать всё семейство.
 replay_login=$(curl -fsS -X POST "${API_URL}/api/v1/auth/login" \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin@neverlauncher.local","password":"admin","deviceId":"auth-smoke-replay"}')
+  -d '{"email":"admin@launcher.local","password":"admin","deviceId":"auth-smoke-replay"}')
 replay_old=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["tokens"]["refreshToken"])' <<<"${replay_login}")
 replay_rotated=$(curl -fsS -X POST "${API_URL}/api/v1/auth/refresh" \
   -H 'Content-Type: application/json' \
@@ -84,4 +84,4 @@ if [[ "${status}" != "401" ]]; then
   exit 1
 fi
 
-echo "[NeverLauncher] Auth session smoke OK for ${VERSION}"
+echo "[Launcher] Auth session smoke OK for ${VERSION}"

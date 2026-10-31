@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/officialminecraft"
+	"gitflic.ru/skif4er/launcher/services/api/internal/officialminecraft"
 )
 
 // OAuth code/verifier is received exclusively from the native desktop client,

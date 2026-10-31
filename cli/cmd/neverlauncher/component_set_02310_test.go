@@ -28,8 +28,8 @@ func signedComponentFixture02310(t *testing.T) (string, componentUpdateManifest0
 		t.Fatal(err)
 	}
 	bundle := t.TempDir()
-	rows := []struct{ role, file string }{{"desktop", "neverlauncher-desktop"}, {"guard", "guard"}, {"runtime", "neverruntime"}, {"updater", "neverlauncher-cli"}}
-	manifest := componentUpdateManifest0157{SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: "0.23.10", Platform: target.Platform, Architecture: target.Architecture, Layout: "adjacent-files", TrustMode: "sha256-delivery"}
+	rows := []struct{ role, file string }{{"desktop", "launcher-desktop"}, {"guard", "guard"}, {"runtime", "runtime"}, {"updater", "launcher-cli"}}
+	manifest := componentUpdateManifest0157{SchemaVersion: "1.0", Product: "Launcher", ProductVersion: "0.23.10", Platform: target.Platform, Architecture: target.Architecture, Layout: "adjacent-files", TrustMode: "sha256-delivery"}
 	for _, row := range rows {
 		name := filepath.Join(bundle, row.file)
 		if err := copyUpdaterSource0156(binary, name, 0o755); err != nil {
@@ -154,7 +154,7 @@ func TestCoordinatedPackageCommitAndFailure02310(t *testing.T) {
 	if _, err := applyComponentPackage0157(bundle, "", "", installRoot, "", 0, false, true); err == nil {
 		t.Fatal("tampered component accepted")
 	}
-	body, err := os.ReadFile(filepath.Join(installRoot, "neverlauncher-desktop"))
+	body, err := os.ReadFile(filepath.Join(installRoot, "launcher-desktop"))
 	if err != nil || string(body) != "old desktop" {
 		t.Fatal("failed package changed live Desktop")
 	}
@@ -183,7 +183,7 @@ func TestCoordinatedPackageCommitAndFailure02310(t *testing.T) {
 		t.Fatal(err)
 	}
 	zw := zip.NewWriter(zf)
-	for _, name := range []string{componentUpdateManifestFile0157, componentSetSignatureFile02310, "neverlauncher-desktop", "guard", "neverruntime", "neverlauncher-cli"} {
+	for _, name := range []string{componentUpdateManifestFile0157, componentSetSignatureFile02310, "launcher-desktop", "guard", "runtime", "launcher-cli"} {
 		b, e := os.ReadFile(filepath.Join(bundle, name))
 		if e != nil {
 			t.Fatal(e)
@@ -213,7 +213,7 @@ func TestComponentSetInterruptedSwitchRecovery02310(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	oldFiles := map[string]string{"neverlauncher-desktop": "old-desktop", "guard": "old-guard", "neverruntime": "old-runtime", "neverlauncher-cli": "old-updater"}
+	oldFiles := map[string]string{"launcher-desktop": "old-desktop", "guard": "old-guard", "runtime": "old-runtime", "launcher-cli": "old-updater"}
 	files := []updaterFileSpec0156{}
 	for name, old := range oldFiles {
 		if err := os.WriteFile(filepath.Join(root, name), []byte(old), 0o755); err != nil {

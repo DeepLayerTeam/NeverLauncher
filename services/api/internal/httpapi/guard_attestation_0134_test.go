@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func authClaimsFromToken0134(t *testing.T, token string) authClaims {
@@ -63,7 +63,7 @@ func makeGuardAttestation0134(t *testing.T, challengeID, challenge string) guard
 	u := func(value uint32) *uint32 { return &value }
 	process := func(pid uint32, imageHash, moduleHash string) guardProcessIntegrityEvidence0134 {
 		return guardProcessIntegrityEvidence0134{
-			PID: pid, ImagePath: `C:\\NeverLauncher\\binary.exe`, ImageSHA256: imageHash,
+			PID: pid, ImagePath: `C:\\Launcher\\binary.exe`, ImageSHA256: imageHash,
 			ImageSize: 1024, ImageModifiedUnixMS: 1000, ProcessCreatedFiletime: 100,
 			Authenticode: guardAuthenticodeEvidence0134{Trusted: true, Status: "0x00000000"},
 			Mitigations: guardProcessMitigationEvidence0134{
@@ -153,8 +153,8 @@ func TestGuardAttestationBackendVerificationAndOneTimeLaunchTicket0134(t *testin
 	allowlist := `{"0.13.4":{"guardSha256":["` + testGuardHash0134 + `"],"launcherSha256":["` + testLauncherHash0134 + `"],"requireAuthenticode":true}}`
 	cfg := config.Config{
 		PublicURL: "https://api.example.test", Environment: "test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-guard-attestation",
-		AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api",
-		WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"},
+		AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "launcher-api",
+		WebAuthnRPID: "api.example.test", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://api.example.test"},
 		GuardReleaseAllowlistJSON: allowlist,
 	}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
@@ -227,7 +227,7 @@ func makeLinuxGuardAttestation0137(t *testing.T, challengeID, challenge string) 
 	t.Helper()
 	process := func(pid uint32, imageHash, moduleHash string, pdeath bool) guardProcessIntegrityEvidence0134 {
 		return guardProcessIntegrityEvidence0134{
-			PID: pid, ImagePath: "/opt/neverlauncher/binary", ImageSHA256: imageHash,
+			PID: pid, ImagePath: "/opt/launcher/binary", ImageSHA256: imageHash,
 			ImageSize: 2048, ImageModifiedUnixMS: 2000, ProcessCreatedFiletime: 12345,
 			Authenticode: guardAuthenticodeEvidence0134{Trusted: false, Status: "not-applicable-linux"},
 			Mitigations:  guardProcessMitigationEvidence0134{QueryFailures: []string{}},
@@ -278,7 +278,7 @@ func makeMacOSGuardAttestation0138(t *testing.T, challengeID, challenge string) 
 	t.Helper()
 	process := func(pid uint32, imageHash, moduleHash string) guardProcessIntegrityEvidence0134 {
 		return guardProcessIntegrityEvidence0134{
-			PID: pid, ImagePath: "/Applications/NeverLauncher.app/Contents/MacOS/binary", ImageSHA256: imageHash,
+			PID: pid, ImagePath: "/Applications/Launcher.app/Contents/MacOS/binary", ImageSHA256: imageHash,
 			ImageSize: 4096, ImageModifiedUnixMS: 3000, ProcessCreatedFiletime: 987654,
 			Authenticode: guardAuthenticodeEvidence0134{Trusted: true, Status: "macos-codesign-valid"},
 			Mitigations:  guardProcessMitigationEvidence0134{QueryFailures: []string{}},

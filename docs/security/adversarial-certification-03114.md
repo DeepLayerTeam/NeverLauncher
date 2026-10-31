@@ -1,4 +1,4 @@
-# NeverLauncher 0.31.14 — Adversarial Security Certification
+# Launcher 0.31.14 — Adversarial Security Certification
 
 **Status: certification pending external test evidence.** This release adds executable regression attacks and a fail-closed results gate; it does **not** certify the kernel, physical TPM, other host applications, or the full launcher without running those tests.
 

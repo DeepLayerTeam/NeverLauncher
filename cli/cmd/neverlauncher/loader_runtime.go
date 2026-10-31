@@ -187,7 +187,7 @@ func parseLoaderMaterializeOptions(loader string, args []string) (loaderMaterial
 			return loaderMaterializeOptions{}, err
 		}
 	}
-	clientDir := flagValue(args, "--client-dir", filepath.Join(".neverlauncher", loader, minecraftVersion))
+	clientDir := flagValue(args, "--client-dir", filepath.Join(".launcher", loader, minecraftVersion))
 	workers, err := strconv.Atoi(flagValue(args, "--workers", "12"))
 	if err != nil || workers < 1 || workers > 64 {
 		return loaderMaterializeOptions{}, errors.New("--workers должен быть числом от 1 до 64")
@@ -420,7 +420,7 @@ func installMetaLoader(ctx context.Context, opts loaderMaterializeOptions) (load
 		"status":                 "installed-and-verified",
 	}
 	stateBytes, _ := json.MarshalIndent(state, "", "  ")
-	statePath, err := secureClientDestination(opts.ClientDir, filepath.ToSlash(filepath.Join(".neverlauncher", loader+"-install.json")))
+	statePath, err := secureClientDestination(opts.ClientDir, filepath.ToSlash(filepath.Join(".launcher", loader+"-install.json")))
 	if err != nil {
 		return loaderMaterializeResult{}, err
 	}
@@ -710,7 +710,7 @@ func fetchLimitedBytes(ctx context.Context, client *http.Client, rawURL string, 
 	if err := validateRemoteURL(rawURL); err != nil {
 		return nil, err
 	}
-	resp, err := compatibilityGET(ctx, client, rawURL, "NeverLauncher/"+version+" LoaderMaterializer")
+	resp, err := compatibilityGET(ctx, client, rawURL, "Launcher/"+version+" LoaderMaterializer")
 	if err != nil {
 		return nil, err
 	}

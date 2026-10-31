@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Performs actual Minecraft JVM launch via NeverRuntime on a verified Client Factory build.
+# Performs actual Minecraft JVM launch via Runtime on a verified Client Factory build.
 # This is NOT a fixture-only check; missing Java, graphics, Minecraft or network fails closed.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -17,17 +17,17 @@ case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "Unsupported l
 [[ -f "$JAVA" ]] || { echo "Java executable not found: $JAVA" >&2; exit 2; }
 mkdir -p "$DEST"
 DEST="$(cd "$DEST" && pwd -P)"
-BIN="$DEST/neverlauncher"
-RT="${NEVERLAUNCHER_CERT_RUNTIME_BIN:-$ROOT/runtime/neverruntime/target/debug/neverruntime}"
+BIN="$DEST/launcher"
+RT="${NEVERLAUNCHER_CERT_RUNTIME_BIN:-$ROOT/runtime/runtime/target/debug/runtime}"
 (
  cd "$ROOT/cli"
- go build -o "$BIN" ./cmd/neverlauncher
+ go build -o "$BIN" ./cmd/launcher
 )
 if [[ ! -f "$RT" ]]; then
- cargo build --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bin neverruntime
+ cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
 fi
-[[ -f "$RT" ]] || { echo "NeverRuntime binary missing" >&2; exit 2; }
-# NeverRuntime itself is pinned before the test; Go checks its hash before and after execution.
+[[ -f "$RT" ]] || { echo "Runtime binary missing" >&2; exit 2; }
+# Runtime itself is pinned before the test; Go checks its hash before and after execution.
 RT_SHA="$(python3 - "$RT" <<'PY'
 from pathlib import Path
 import hashlib,sys

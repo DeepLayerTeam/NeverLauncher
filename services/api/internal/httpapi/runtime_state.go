@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/ratelimit"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/serverbridgeha"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/ratelimit"
+	"gitflic.ru/skif4er/launcher/services/api/internal/serverbridgeha"
 )
 
 type RuntimeState struct {

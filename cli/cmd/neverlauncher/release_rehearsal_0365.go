@@ -61,7 +61,7 @@ func verifyRehearsal0365(dir, version, commit string) error {
 	if err = json.Unmarshal(raw, &r); err != nil {
 		return err
 	}
-	if r.SchemaVersion != "neverlauncher.release.rehearsal.v1" || r.Version != version ||
+	if r.SchemaVersion != "launcher.release.rehearsal.v1" || r.Version != version ||
 		r.Commit != commit || r.Status != "package-and-ga-verified" || len(r.Targets) != 6 {
 		return errors.New("0.36.5+: stale/incomplete release rehearsal")
 	}

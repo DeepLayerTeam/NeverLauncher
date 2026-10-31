@@ -276,7 +276,7 @@ mod imp {
         let own_process_group = pgid as u32 == pid;
         if !own_process_group { return Err("macOS runtime process group policy verification failed".to_string()); }
         Ok(MacOSRuntimeProcessPolicyReport {
-            schema: "neverruntime/macos-process-policy/v1".to_string(),
+            schema: "runtime/macos-process-policy/v1".to_string(),
             policy_version: 1,
             pid,
             enforced: true,

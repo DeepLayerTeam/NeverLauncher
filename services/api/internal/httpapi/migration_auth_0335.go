@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	gc "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcredentials"
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcredentials"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 type migrationAuthStore0335 interface {

@@ -11,7 +11,12 @@ import time
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 API = ROOT / "services" / "api"
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-OUT = pathlib.Path(os.environ.get("NEVERLAUNCHER_FEDERATION_E2E_REPORT", ROOT / "dist" / "reports" / "federation-e2e.json"))
+OUT = pathlib.Path(
+    os.environ.get(
+        "NEVERLAUNCHER_FEDERATION_E2E_REPORT",
+        ROOT / "dist" / "reports" / "federation-e2e.json",
+    )
+)
 
 CASES = [
     {
@@ -20,7 +25,17 @@ CASES = [
         "tests": [
             "TestFederationE2E01110CanonicalSessionMatrix",
         ],
-        "coverage": ["local", "sql", "http", "oidc", "microsoft", "passkey", "refresh", "revoke", "minecraft-session"],
+        "coverage": [
+            "local",
+            "sql",
+            "http",
+            "oidc",
+            "microsoft",
+            "passkey",
+            "refresh",
+            "revoke",
+            "minecraft-session",
+        ],
     },
     {
         "id": "local",
@@ -125,9 +140,20 @@ CASES = [
 
 def run_case(case: dict) -> dict:
     regex = "^(?:" + "|".join(case["tests"]) + ")$"
-    cmd = ["go", "test", "-tags", "neverlauncher_nopgx", case["package"], "-run", regex, "-count=1"]
+    cmd = [
+        "go",
+        "test",
+        "-tags",
+        "launcher_nopgx",
+        case["package"],
+        "-run",
+        regex,
+        "-count=1",
+    ]
     started = time.time()
-    proc = subprocess.run(cmd, cwd=API, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.run(
+        cmd, cwd=API, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
     result = dict(case)
     result["status"] = "passed" if proc.returncode == 0 else "failed"
     result["durationMs"] = int((time.time() - started) * 1000)
@@ -158,7 +184,9 @@ def main() -> int:
         "releaseGate": True,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    OUT.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(f"[federation-e2e] report: {OUT}")
     return 1 if failed else 0
 

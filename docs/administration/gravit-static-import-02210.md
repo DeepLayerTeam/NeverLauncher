@@ -1,4 +1,4 @@
-# NeverLauncher 0.22.10 — Static Gravit ClientProfile import
+# Launcher 0.22.10 — Static Gravit ClientProfile import
 
 The importer is accessible under **Admin → Profiles → Gravit static import**. It processes a single Gravit `ClientProfile` JSON document. Inputs must be valid JSON (remove JSONC comments with a JSON-aware editor), at most 1 MiB. Input is never evaluated; no Java code, loader agent, shell, optional action or module from Gravit is executed.
 
@@ -28,7 +28,7 @@ Example inspection request:
 }
 ```
 
-The response includes `data.format=neverlauncher.gravit-import-report.v1`, exact source SHA-256, `ready`, a deterministic field-by-field `fields` list, `summary`, normalized Never `profile`, `settings` compatible with a Build Workspace, and server descriptions for manual registration. On `inspect-gravit`, **nothing is persisted**. Unknown fields and unsafe conversions are `blocked`; fields needing operator decisions are `manual`. Both prevent import.
+The response includes `data.format=launcher.gravit-import-report.v1`, exact source SHA-256, `ready`, a deterministic field-by-field `fields` list, `summary`, normalized Never `profile`, `settings` compatible with a Build Workspace, and server descriptions for manual registration. On `inspect-gravit`, **nothing is persisted**. Unknown fields and unsafe conversions are `blocked`; fields needing operator decisions are `manual`. Both prevent import.
 
 For commit send the *same* input and also:
 

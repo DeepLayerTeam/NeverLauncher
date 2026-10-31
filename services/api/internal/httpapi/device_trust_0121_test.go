@@ -13,9 +13,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func deviceTrustRequest0121(t *testing.T, h http.Handler, method, path, token string, body any) (int, map[string]any) {
@@ -35,7 +35,7 @@ func deviceTrustRequest0121(t *testing.T, h http.Handler, method, path, token st
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
-	req.Header.Set("User-Agent", "NeverLauncher-DeviceTrust-Test/0.12.1")
+	req.Header.Set("User-Agent", "Launcher-DeviceTrust-Test/0.12.1")
 	req.RemoteAddr = "203.0.113.10:4242"
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -55,7 +55,7 @@ func deviceTrustData0121(t *testing.T, out map[string]any) map[string]any {
 
 func deviceTrustLogin0121(t *testing.T, h http.Handler, deviceID string) (string, string) {
 	t.Helper()
-	code, out := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/login", "", map[string]any{"email": "admin@neverlauncher.local", "password": "admin", "deviceId": deviceID})
+	code, out := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/login", "", map[string]any{"email": "admin@launcher.local", "password": "admin", "deviceId": deviceID})
 	if code != http.StatusOK {
 		t.Fatalf("login status=%d body=%#v", code, out)
 	}
@@ -73,7 +73,7 @@ func deviceTrustLogin0121(t *testing.T, h http.Handler, deviceID string) (string
 }
 
 func TestDeviceTrustRegistrationBindingReplayAndRevocation0121(t *testing.T) {
-	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-trust", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"}}
+	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-trust", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "launcher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://api.example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	h := Server{Version: "0.12.1", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(t.TempDir())}.Handler()
 
@@ -171,7 +171,7 @@ func TestDeviceTrustRegistrationBindingReplayAndRevocation0121(t *testing.T) {
 }
 
 func TestDeviceTrustRejectsWrongSignatureAndDuplicateKey0121(t *testing.T) {
-	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-trust", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"}}
+	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-trust", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "launcher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://api.example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	h := Server{Version: "0.12.1", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(t.TempDir())}.Handler()
 	access, _ := deviceTrustLogin0121(t, h, "client")
@@ -225,7 +225,7 @@ func signP256P1363Test0123(t *testing.T, priv *ecdsa.PrivateKey, payload string)
 }
 
 func TestDeviceTrustHardwareP256RegistrationAndBinding0123(t *testing.T) {
-	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-trust", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "neverlauncher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "NeverLauncher", WebAuthnOrigins: []string{"https://api.example.test"}}
+	cfg := config.Config{PublicURL: "https://api.example.test", AuthTokenSecret: "0123456789abcdef0123456789abcdef-device-trust", AuthTokenIssuer: "https://api.example.test", AuthTokenAudience: "launcher-api", WebAuthnRPID: "api.example.test", WebAuthnRPName: "Launcher", WebAuthnOrigins: []string{"https://api.example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	h := Server{Version: "0.12.3", Config: cfg, Repo: repo, Storage: storage.NewLocalStorage(t.TempDir())}.Handler()
 

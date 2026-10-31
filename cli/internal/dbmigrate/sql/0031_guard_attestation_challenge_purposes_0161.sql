@@ -1,4 +1,4 @@
--- NeverLauncher 0.16.1: завершение схемы назначений запросов Guard Attestation.
+-- Launcher 0.16.1: завершение схемы назначений запросов Guard Attestation.
 --
 -- Guard Attestation 0.13.4 добавила два одноразовых назначения в device_challenges:
 -- guard-attest-v1 для доказательства вызов–ответ и guard-launch-v1 для

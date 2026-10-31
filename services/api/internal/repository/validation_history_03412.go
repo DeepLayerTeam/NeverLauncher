@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // Exact run retrieval makes older attempts reproducible despite bounded

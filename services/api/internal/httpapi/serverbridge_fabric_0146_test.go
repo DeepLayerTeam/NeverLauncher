@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
 )
 
 func TestServerBridgeFabricKind0146(t *testing.T) {
@@ -49,7 +49,7 @@ func TestBridgePluginsManifestIncludesFabric0146(t *testing.T) {
 	if fabric == nil {
 		t.Fatal("bridge manifest missing Fabric artifact")
 	}
-	if fabric["descriptor"] != "fabric.mod.json" || fabric["serverType"] != "fabric" || fabric["mainClass"] != "ru.neverlauncher.bridge.fabric.NeverLauncherFabricBridge" {
+	if fabric["descriptor"] != "fabric.mod.json" || fabric["serverType"] != "fabric" || fabric["mainClass"] != "ru.launcher.bridge.fabric.LauncherFabricBridge" {
 		t.Fatalf("invalid Fabric manifest descriptor: %#v", fabric)
 	}
 	if required, ok := fabric["clientModRequired"].(bool); !ok || required {

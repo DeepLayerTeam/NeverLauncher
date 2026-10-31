@@ -99,7 +99,7 @@ func vanillaMetadataCachePaths(root, resolvedVersion string) (string, string, er
 	if strings.TrimSpace(root) == "" || strings.TrimSpace(resolvedVersion) == "" {
 		return "", "", errors.New("metadata cache требует root/version")
 	}
-	stateDir, err := secureClientDestination(root, ".neverlauncher/upstream-cache")
+	stateDir, err := secureClientDestination(root, ".launcher/upstream-cache")
 	if err != nil {
 		return "", "", err
 	}
@@ -236,7 +236,7 @@ func quarantineCompatibilityArtifact(root, relative, reason string) (bool, error
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
 		return false, fmt.Errorf("повреждённый cache artifact имеет небезопасный тип: %s", relative)
 	}
-	quarantineDir, err := secureClientDestination(root, ".neverlauncher/quarantine")
+	quarantineDir, err := secureClientDestination(root, ".launcher/quarantine")
 	if err != nil {
 		return false, err
 	}

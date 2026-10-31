@@ -2,8 +2,8 @@ name: Player Migration Assistant 0.33.9
 on:
   push:
     paths:
-      - 'runtime/neverruntime/src/player_migration_0339.rs'
-      - 'runtime/neverruntime/src/content_cache.rs'
+      - 'runtime/runtime/src/player_migration_0339.rs'
+      - 'runtime/runtime/src/content_cache.rs'
       - 'apps/desktop/src/PlayerMigration0339.tsx'
       - 'apps/desktop/src/main.tsx'
       - 'apps/desktop/src-tauri/src/main.rs'
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Rust tests including actual signed-manifest, source hashing and symlink defense
-        working-directory: runtime/neverruntime
+        working-directory: runtime/runtime
         run: cargo test --locked --lib player_migration_0339 -- --nocapture
       - name: Compile desktop Tauri bridge
         run: |

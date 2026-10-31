@@ -15,7 +15,7 @@ import (
 func TestRuntimeCertification02712RejectsFalseProbe(t *testing.T) {
 	plan := factoryPlan0271{MinecraftVersion: "1.21.1", Loader: "vanilla", Java: factoryJava0271{Major: 21}, Launch: factoryLaunch0271{MainClass: "net.minecraft.client.main.Main"}}
 	good := factoryProbe02712{Status: "passed", MinecraftVersion: "1.21.1", MainClass: plan.Launch.MainClass, RequiredJavaMajor: 21, DetectedJavaMajor: 21, ClasspathEntries: 3, TimedOut: true, RuntimeSeconds: 20}
-	goodLog := []byte("NeverRuntime ...\n--- process output ---\n[main/INFO] LWJGL version 3.3\n")
+	goodLog := []byte("Runtime ...\n--- process output ---\n[main/INFO] LWJGL version 3.3\n")
 	if err := certValidateProbe02712(plan, "1.21.1", good, goodLog, 30); err == nil {
 		t.Fatal("legacy timeout/marker accepted as runtime readiness")
 	}
@@ -138,7 +138,7 @@ func TestRuntimeCertification02712HostAndPaths(t *testing.T) {
 func TestRuntimeCertification02712MatrixRejectsMissingOrUnsigned(t *testing.T) {
 	root := t.TempDir()
 	matrix := filepath.Join(root, "matrix.json")
-	valid := `{"schema":"neverlauncher.factory.certification-matrix.v1","targets":[{"id":"vanilla-linux","loader":"vanilla","minecraft":"1.21.1","os":"linux","arch":"x86_64","clientDir":"not-found","certificate":"not-found.json"}]}`
+	valid := `{"schema":"launcher.factory.certification-matrix.v1","targets":[{"id":"vanilla-linux","loader":"vanilla","minecraft":"1.21.1","os":"linux","arch":"x86_64","clientDir":"not-found","certificate":"not-found.json"}]}`
 	if err := os.WriteFile(matrix, []byte(valid), 0600); err != nil {
 		t.Fatal(err)
 	}

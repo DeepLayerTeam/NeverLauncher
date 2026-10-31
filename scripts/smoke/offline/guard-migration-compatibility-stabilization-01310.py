@@ -73,7 +73,7 @@ require(
     "Guard CI repository binding",
 )
 
-go_release = read("cli/cmd/neverlauncher/guard_ci_release.go")
+go_release = read("cli/cmd/launcher/guard_ci_release.go")
 require(
     go_release,
     [
@@ -83,10 +83,10 @@ require(
     "CLI Guard evidence repository binding",
 )
 
-go_tests = read("cli/cmd/neverlauncher/guard_ci_release_test.go")
+go_tests = read("cli/cmd/launcher/guard_ci_release_test.go")
 require(
     go_tests,
-    ["TestGuardCICertificationRejectsRepositoryMismatch01310", "fork/neverlauncher"],
+    ["TestGuardCICertificationRejectsRepositoryMismatch01310", "fork/launcher"],
     "CLI repository mismatch regression",
 )
 
@@ -128,7 +128,7 @@ require(
     [
         "guard-migration-compatibility-stabilization-01310.py",
         "run-guard-migration-e2e.sh",
-        "neverlauncher-guard-migration-e2e-evidence",
+        "launcher-guard-migration-e2e-evidence",
     ],
     "CI gate",
 )
@@ -176,5 +176,5 @@ if targets.get("productVersion") != version:
     raise SystemExit("Guard CI targets are not aligned with VERSION")
 
 print(
-    f"NeverLauncher 0.13.10 Guard migration + compatibility + stabilization gate: OK ({version})"
+    f"Launcher 0.13.10 Guard migration + compatibility + stabilization gate: OK ({version})"
 )

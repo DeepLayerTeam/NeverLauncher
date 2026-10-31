@@ -9,10 +9,33 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-EXPECTED = ["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]
-ALLOWED_FAMILIES = {"proxy","bukkit","fabric","quilt","modloader","sponge","vanilla-sidecar"}
-ALLOWED_ROLES = {"proxy","backend"}
-ALLOWED_COVERAGE = {"runtime-e2e","build-compatibility","sidecar-rcon-e2e"}
+EXPECTED = [
+    "velocity",
+    "bungeecord",
+    "waterfall",
+    "bukkit",
+    "spigot",
+    "paper",
+    "purpur",
+    "folia",
+    "fabric",
+    "quilt",
+    "forge",
+    "neoforge",
+    "sponge",
+    "vanilla",
+]
+ALLOWED_FAMILIES = {
+    "proxy",
+    "bukkit",
+    "fabric",
+    "quilt",
+    "modloader",
+    "sponge",
+    "vanilla-sidecar",
+}
+ALLOWED_ROLES = {"proxy", "backend"}
+ALLOWED_COVERAGE = {"runtime-e2e", "build-compatibility", "sidecar-rcon-e2e"}
 ID_RE = re.compile(r"^[a-z][a-z0-9-]{1,31}$")
 
 
@@ -21,13 +44,15 @@ def load(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict) or data.get("schemaVersion") != "1.0":
         raise SystemExit("ServerBridge targets schemaVersion must be 1.0")
     if str(data.get("productVersion", "")) != VERSION:
-        raise SystemExit(f"ServerBridge targets productVersion must equal VERSION={VERSION}")
+        raise SystemExit(
+            f"ServerBridge targets productVersion must equal VERSION={VERSION}"
+        )
     if data.get("protocolVersion") != 3:
         raise SystemExit("ServerBridge targets protocolVersion must be 3")
     rows = data.get("targets")
     if not isinstance(rows, list) or not rows:
         raise SystemExit("ServerBridge targets must be a non-empty array")
-    allowed = {"id","family","role","minecraft","coverage","required"}
+    allowed = {"id", "family", "role", "minecraft", "coverage", "required"}
     ids: list[str] = []
     for i, row in enumerate(rows, 1):
         if not isinstance(row, dict):
@@ -41,19 +66,31 @@ def load(path: Path) -> dict[str, Any]:
         if tid in ids:
             raise SystemExit(f"duplicate target {tid}")
         ids.append(tid)
-        if row.get("family") not in ALLOWED_FAMILIES or row.get("role") not in ALLOWED_ROLES:
+        if (
+            row.get("family") not in ALLOWED_FAMILIES
+            or row.get("role") not in ALLOWED_ROLES
+        ):
             raise SystemExit(f"{tid}: invalid family/role")
         if row.get("coverage") not in ALLOWED_COVERAGE:
             raise SystemExit(f"{tid}: invalid coverage")
         if str(row.get("minecraft", "")) != "1.21.1":
-            raise SystemExit(f"{tid}: this release matrix is pinned to Minecraft 1.21.1")
+            raise SystemExit(
+                f"{tid}: this release matrix is pinned to Minecraft 1.21.1"
+            )
         if row.get("required") is not True:
             raise SystemExit(f"{tid}: required must be true")
         if (row.get("role") == "proxy") != (row.get("family") == "proxy"):
             raise SystemExit(f"{tid}: proxy family/role mismatch")
-        expected_coverage = {"bukkit":"build-compatibility", "quilt":"build-compatibility", "sponge":"build-compatibility", "vanilla":"sidecar-rcon-e2e"}.get(tid, "runtime-e2e")
+        expected_coverage = {
+            "bukkit": "build-compatibility",
+            "quilt": "build-compatibility",
+            "sponge": "build-compatibility",
+            "vanilla": "sidecar-rcon-e2e",
+        }.get(tid, "runtime-e2e")
         if row.get("coverage") != expected_coverage:
-            raise SystemExit(f"{tid}: expected coverage {expected_coverage}, got {row.get('coverage')}")
+            raise SystemExit(
+                f"{tid}: expected coverage {expected_coverage}, got {row.get('coverage')}"
+            )
     if ids != EXPECTED:
         raise SystemExit(f"ServerBridge target ordering/set mismatch: {ids!r}")
     return data
@@ -61,7 +98,7 @@ def load(path: Path) -> dict[str, Any]:
 
 def markdown(data: dict[str, Any]) -> str:
     lines = [
-        f"# NeverLauncher {data['productVersion']} — Public ServerBridge Matrix",
+        f"# Launcher {data['productVersion']} — Public ServerBridge Matrix",
         "",
         "> ServerBridge 3 GA compatibility matrix. Protocol v3 is frozen; Protocol v2 is compatibility/deprecation-only and must migrate with `nl server-bridge migrate-v3`. Runtime PASS evidence is produced by CI; Bukkit, Quilt and Sponge declare build-compatibility where CI cannot legally/practically redistribute a full target runtime; Vanilla is certified through the sidecar RCON harness.",
         "",
@@ -70,24 +107,36 @@ def markdown(data: dict[str, Any]) -> str:
     ]
     for row in data["targets"]:
         handoff = "source" if row["role"] == "proxy" else "target"
-        lines.append(f"| `{row['id']}` | `{row['family']}` | `{row['role']}` | `{row['minecraft']}` | `{row['coverage']}` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | {handoff} |")
-    lines += ["", "Runtime status is not hard-coded into this document; CI evidence is attached to the exact commit/run.", ""]
+        lines.append(
+            f"| `{row['id']}` | `{row['family']}` | `{row['role']}` | `{row['minecraft']}` | `{row['coverage']}` | 3 GA (frozen) | deprecated; migrate to v3 | yes | Ed25519 | yes | {handoff} |"
+        )
+    lines += [
+        "",
+        "Runtime status is not hard-coded into this document; CI evidence is attached to the exact commit/run.",
+        "",
+    ]
     return "\n".join(lines)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
-    v = sub.add_parser("validate"); v.add_argument("--targets", type=Path, default=ROOT / "serverbridge/targets.json")
-    r = sub.add_parser("render"); r.add_argument("--targets", type=Path, default=ROOT / "serverbridge/targets.json"); r.add_argument("--out", type=Path, default=ROOT / "serverbridge/MATRIX.md")
+    v = sub.add_parser("validate")
+    v.add_argument("--targets", type=Path, default=ROOT / "serverbridge/targets.json")
+    r = sub.add_parser("render")
+    r.add_argument("--targets", type=Path, default=ROOT / "serverbridge/targets.json")
+    r.add_argument("--out", type=Path, default=ROOT / "serverbridge/MATRIX.md")
     args = ap.parse_args()
     data = load(args.targets)
     if args.cmd == "render":
         args.out.write_text(markdown(data), encoding="utf-8")
         print(args.out)
     else:
-        print(f"ServerBridge public matrix OK: {len(data['targets'])} targets for {VERSION}")
+        print(
+            f"ServerBridge public matrix OK: {len(data['targets'])} targets for {VERSION}"
+        )
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

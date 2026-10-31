@@ -1,4 +1,4 @@
-# NeverLauncher 0.26.6 — Minecraft Java profile, entitlements and identity gate
+# Launcher 0.26.6 — Minecraft Java profile, entitlements and identity gate
 
 ## Runtime behavior (native Rust/Tauri)
 
@@ -18,7 +18,7 @@ Tokens stay in the Rust process / protected OS credential store and are never re
 ### What this does NOT prove
 
 - Whether Microsoft/Xbox family/privacy settings allow **multiplayer** for a specific user. Explicit XSTS family/age responses are categorized as `XboxFamily`, including `XErr` represented as a number or string. An otherwise valid profile does not override multiplayer privacy restrictions. A real vanilla/modded online-mode server join and Mojang sessionserver validation remain required for certification.
-- External registration/allowlisting of NeverLauncher's own Client ID at Minecraft Services, or a successful production login. Requires an approved app and actual Java/Game Pass account.
+- External registration/allowlisting of Launcher's own Client ID at Minecraft Services, or a successful production login. Requires an approved app and actual Java/Game Pass account.
 - Cancellation/refund/license changes after the last live check. A fresh check occurs on the next status/launch; no offline success is synthesized when services cannot be reached.
 
 ## Negative and positive fixture checks

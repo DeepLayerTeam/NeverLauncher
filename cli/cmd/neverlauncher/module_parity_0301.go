@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/cli/internal/moduleparity"
+	"gitflic.ru/skif4er/launcher/cli/internal/moduleparity"
 )
 
 func moduleParityRepo0301() (string, error) {

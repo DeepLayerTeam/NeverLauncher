@@ -24,7 +24,7 @@ def require(text: str, needles: list[str], label: str) -> None:
         raise SystemExit(f"{label}: missing {missing}")
 
 
-core_go = read("cli/cmd/neverlauncher/component_update.go")
+core_go = read("cli/cmd/launcher/component_update.go")
 require(
     core_go,
     [
@@ -44,7 +44,7 @@ require(
     "component transactional updater",
 )
 
-main_go = read("cli/cmd/neverlauncher/main.go")
+main_go = read("cli/cmd/launcher/main.go")
 require(
     main_go,
     [
@@ -77,8 +77,8 @@ windows = read("scripts/release/build-windows-desktop.ps1")
 require(
     windows,
     [
-        "neverruntime.exe",
-        "neverlauncher-cli.exe",
+        "runtime.exe",
+        "launcher-cli.exe",
         "COMPONENT_UPDATE_MANIFEST.json",
         'component = "desktop"',
         'component = "guard"',
@@ -111,17 +111,17 @@ require(
         "macos-app-bundle",
         "developer-id-notarized",
         "adhoc-development",
-        "neverlauncher-desktop",
+        "launcher-desktop",
         "guard",
-        "neverruntime",
+        "runtime",
     ],
     "macOS package",
 )
 
 rust = (
-    read("runtime/neverruntime/src/guard_ipc.rs")
-    + read("runtime/neverruntime/src/linux_guard.rs")
-    + read("runtime/neverruntime/src/macos_guard.rs")
+    read("runtime/runtime/src/guard_ipc.rs")
+    + read("runtime/runtime/src/linux_guard.rs")
+    + read("runtime/runtime/src/macos_guard.rs")
 )
 require(
     rust,
@@ -129,7 +129,7 @@ require(
     "Guard canonical package verification",
 )
 
-tests = read("cli/cmd/neverlauncher/component_update_test.go")
+tests = read("cli/cmd/launcher/component_update_test.go")
 require(
     tests,
     [
@@ -154,7 +154,7 @@ subprocess.run(
     [
         "go",
         "test",
-        "./cmd/neverlauncher",
+        "./cmd/launcher",
         "-run",
         "TestComponent|TestWindows|TestLinux|TestMacOS",
         "-count=1",
@@ -163,4 +163,4 @@ subprocess.run(
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} Desktop/Guard/Runtime transactional update gate: OK")
+print(f"Launcher {VERSION} Desktop/Guard/Runtime transactional update gate: OK")

@@ -5,13 +5,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT/e2e/docker-compose.federation-e2e.yml"
 RUNTIME_DIR="$ROOT/e2e/runtime-federation"
 ENV_FILE="$RUNTIME_DIR/e2e.env"
-DB_DSN="postgres://neverlauncher:neverlauncher@127.0.0.1:55433/neverlauncher?sslmode=disable"
+DB_DSN="postgres://launcher:launcher@127.0.0.1:55433/launcher?sslmode=disable"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 AUTH_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 BOOTSTRAP_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 REDIS_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
 SIGNING_SEED="000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
-ADMIN_EMAIL="federation-e2e@neverlauncher.local"
+ADMIN_EMAIL="federation-e2e@launcher.local"
 ADMIN_PASSWORD="$(python3 -c 'import secrets; print("E2E-" + secrets.token_urlsafe(24))')"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "[federation-postgres-e2e] required command missing: $1" >&2; exit 1; }; }
@@ -50,7 +50,7 @@ json_post() {
 }
 
 printf '[federation-postgres-e2e] build CLI and start PostgreSQL/Redis\n'
-( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/neverlauncher )
+( cd "$ROOT/cli" && go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o "$RUNTIME_DIR/nl" ./cmd/launcher )
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do
   if psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1; then break; fi
@@ -70,7 +70,7 @@ wait_http http://127.0.0.1:18081 api-a
 wait_http http://127.0.0.1:18082 api-b
 wait_http http://127.0.0.1:18083 api-c
 
-curl -fsS -H 'Content-Type: application/json' -H "X-NeverLauncher-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
+curl -fsS -H 'Content-Type: application/json' -H "X-Launcher-Bootstrap-Token: $BOOTSTRAP_TOKEN" \
   -d "{\"email\":\"$ADMIN_EMAIL\",\"displayName\":\"Federation E2E\",\"password\":\"$ADMIN_PASSWORD\",\"actor\":\"federation-e2e\"}" \
   http://127.0.0.1:18081/api/v1/install/bootstrap-admin > "$RUNTIME_DIR/bootstrap.json"
 
@@ -83,7 +83,7 @@ refresh_a="$(jq -er '.data.tokens.refreshToken' <<<"$login")"
 
 printf '[federation-postgres-e2e] promote external-only user to local password auth transactionally\n'
 EXTERNAL_USER_ID="user-federation-external-e2e"
-psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,created_at,updated_at) VALUES('$EXTERNAL_USER_ID','external-e2e@neverlauncher.local','External E2E','player','active','{}'::jsonb,'',now(),now()) ON CONFLICT(id) DO NOTHING; INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at) VALUES('identity-http-e2e','$EXTERNAL_USER_ID','http-e2e','subject-e2e','external-e2e@neverlauncher.local','external-e2e','External E2E','{}'::jsonb,now(),now()) ON CONFLICT DO NOTHING;" >/dev/null
+psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,created_at,updated_at) VALUES('$EXTERNAL_USER_ID','external-e2e@launcher.local','External E2E','player','active','{}'::jsonb,'',now(),now()) ON CONFLICT(id) DO NOTHING; INSERT INTO auth_identities(id,user_id,provider,subject,email,username,display_name,claims,created_at,updated_at) VALUES('identity-http-e2e','$EXTERNAL_USER_ID','http-e2e','subject-e2e','external-e2e@launcher.local','external-e2e','External E2E','{}'::jsonb,now(),now()) ON CONFLICT DO NOTHING;" >/dev/null
 json_post http://127.0.0.1:18081/api/v1/admin/users/$EXTERNAL_USER_ID/password "$access_a" '{"password":"Federation-E2E-Local-Password-0120"}' > "$RUNTIME_DIR/password-promotion.json"
 promoted_local_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM auth_identities WHERE user_id='$EXTERNAL_USER_ID' AND provider='local' AND subject='$EXTERNAL_USER_ID'")"
 [[ "$promoted_local_count" == "1" ]] || { echo "password promotion did not create canonical local identity: $promoted_local_count" >&2; exit 1; }

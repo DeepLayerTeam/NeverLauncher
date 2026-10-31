@@ -2,12 +2,12 @@
 set -euo pipefail
 
 BASE_URL="${1:-http://127.0.0.1:18084}"
-EMAIL="${NEVERLAUNCHER_TEST_ADMIN_EMAIL:-admin@neverlauncher.local}"
+EMAIL="${NEVERLAUNCHER_TEST_ADMIN_EMAIL:-admin@launcher.local}"
 PASSWORD="${NEVERLAUNCHER_TEST_ADMIN_PASSWORD:-admin}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-echo "neverlauncher-package-product-840" > "$TMP_DIR/example.jar"
+echo "launcher-package-product-840" > "$TMP_DIR/example.jar"
 TOKEN="$(curl -fsS -X POST "$BASE_URL/api/v1/admin/login" -H 'Content-Type: application/json' -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')"
 if [[ -z "$TOKEN" ]]; then
   echo "Не удалось получить token" >&2

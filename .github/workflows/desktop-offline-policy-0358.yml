@@ -3,12 +3,12 @@ on:
   push:
     paths:
       - 'apps/desktop/**'
-      - 'runtime/neverruntime/**'
+      - 'runtime/runtime/**'
       - '.github/workflows/desktop-offline-policy-0358.yml'
   pull_request:
     paths:
       - 'apps/desktop/**'
-      - 'runtime/neverruntime/**'
+      - 'runtime/runtime/**'
       - '.github/workflows/desktop-offline-policy-0358.yml'
 jobs:
   offline-renderer:

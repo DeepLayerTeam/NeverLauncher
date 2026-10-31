@@ -1,5 +1,5 @@
 -- 0.25.10: migration provenance is committed atomically with texture selection.
--- No external user UUID is treated as an authenticated NeverLauncher identity.
+-- No external user UUID is treated as an authenticated Launcher identity.
 CREATE TABLE texture_gravit_import_receipts (
   source_id TEXT NOT NULL CHECK (length(source_id) BETWEEN 1 AND 100),
   external_row_id TEXT NOT NULL CHECK (length(external_row_id) BETWEEN 1 AND 150),

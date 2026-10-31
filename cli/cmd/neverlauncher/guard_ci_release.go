@@ -128,7 +128,7 @@ func guardCICertificationRequired(ver string) bool {
 	return patch >= 9
 }
 
-func neverGuardReleasePolicyV2Required0140(ver string) bool {
+func GuardReleasePolicyV2Required0140(ver string) bool {
 	parts := strings.SplitN(strings.TrimSpace(ver), ".", 3)
 	if len(parts) < 2 {
 		return false
@@ -173,24 +173,24 @@ func expectedGuardArtifactNames0139(osName, ver string) map[string]string {
 	switch strings.ToLower(osName) {
 	case "linux":
 		return map[string]string{
-			"package":   "neverlauncher-desktop-" + ver + "-linux-amd64.zip",
-			"launcher":  "neverlauncher-desktop-linux-amd64",
+			"package":   "launcher-desktop-" + ver + "-linux-amd64.zip",
+			"launcher":  "launcher-desktop-linux-amd64",
 			"guard":     "guard-linux-amd64",
 			"manifest":  "LINUX_PACKAGE_MANIFEST.json",
 			"allowlist": "GUARD_RELEASE_ALLOWLIST_LINUX.json",
 		}
 	case "windows":
 		return map[string]string{
-			"package":   "neverlauncher-desktop-" + ver + "-windows-amd64.zip",
-			"launcher":  "neverlauncher-desktop-windows-amd64.exe",
+			"package":   "launcher-desktop-" + ver + "-windows-amd64.zip",
+			"launcher":  "launcher-desktop-windows-amd64.exe",
 			"guard":     "guard-windows-amd64.exe",
 			"manifest":  "WINDOWS_PACKAGE_MANIFEST.json",
 			"allowlist": "GUARD_RELEASE_ALLOWLIST_WINDOWS.json",
 		}
 	case "macos":
 		return map[string]string{
-			"package":   "neverlauncher-desktop-" + ver + "-macos-universal.zip",
-			"launcher":  "neverlauncher-desktop-macos-universal",
+			"package":   "launcher-desktop-" + ver + "-macos-universal.zip",
+			"launcher":  "launcher-desktop-macos-universal",
 			"guard":     "guard-macos-universal",
 			"manifest":  "MACOS_PACKAGE_MANIFEST.json",
 			"allowlist": "GUARD_RELEASE_ALLOWLIST_MACOS.json",
@@ -231,8 +231,8 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		"authenticatedIpcV4": true, "runtimePolicyEnforced": true, "releasePackageBuilt": true,
 		"guardRelease0139": true,
 	}
-	if neverGuardReleasePolicyV2Required0140(ver) {
-		commonChecks["neverGuardRelease0140"] = true
+	if GuardReleasePolicyV2Required0140(ver) {
+		commonChecks["GuardRelease0140"] = true
 	}
 	osCheck := map[string]string{"linux": "linuxProductionGate", "windows": "windowsProductionGate", "macos": "macosProductionGate"}
 	expectedArch := map[string]string{"linux": "x86_64", "windows": "x86_64", "macos": "universal"}
@@ -314,7 +314,7 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 		if fmt.Sprint(result.Claims["guardProtocolVersion"]) != "4" || fmt.Sprint(result.Claims["releaseCertification"]) != ver || fmt.Sprint(result.Claims["ciSigningMode"]) != target.CISigningMode || fmt.Sprint(result.Claims["vendorSigningProvenance"]) != "not-certified-by-ci" {
 			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s содержит неверные release/security claims", id)
 		}
-		if neverGuardReleasePolicyV2Required0140(ver) && (fmt.Sprint(result.Claims["releasePolicySchema"]) != "2.0" || result.Claims["releaseIdentityAuthenticated"] != true) {
+		if GuardReleasePolicyV2Required0140(ver) && (fmt.Sprint(result.Claims["releasePolicySchema"]) != "2.0" || result.Claims["releaseIdentityAuthenticated"] != true) {
 			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не подтверждает Guard 0.14 release identity", id)
 		}
 		if result.Claims["packageManifestBound"] != true || result.Claims["artifactSetComplete"] != true {

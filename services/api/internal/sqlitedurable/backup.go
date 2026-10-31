@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-const BackupFormat = "neverlauncher-sqlite-snapshot-v1"
+const BackupFormat = "launcher-sqlite-snapshot-v1"
 
 type BackupManifest struct {
 	Format        string `json:"format"`
@@ -137,7 +137,7 @@ func fileDigest(path string) (int64, string, error) {
 	return n, hex.EncodeToString(h.Sum(nil)), nil
 }
 func createStage(dir string) (string, error) {
-	f, err := os.CreateTemp(dir, ".neverlauncher-snapshot-*")
+	f, err := os.CreateTemp(dir, ".launcher-snapshot-*")
 	if err != nil {
 		return "", err
 	}
@@ -211,7 +211,7 @@ func requireNewBackupPath(source, dest string) (string, string, error) {
 	return src, dst, nil
 }
 
-// OnlineBackup works while the NeverLauncher API owns the source database.
+// OnlineBackup works while the Launcher API owns the source database.
 // It never acquires the source owner lock, never checkpoints/truncates the WAL,
 // and never replaces a previous backup. The .json sidecar is a checksum and
 // metadata (not an authentication signature). Backups contain sensitive data.

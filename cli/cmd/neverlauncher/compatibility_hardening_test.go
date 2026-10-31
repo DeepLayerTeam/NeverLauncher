@@ -89,7 +89,7 @@ func TestDownloadVanillaArtifactQuarantinesCorruptCache(t *testing.T) {
 	if err != nil || string(got) != string(payload) {
 		t.Fatalf("replacement mismatch: %q / %v", got, err)
 	}
-	entries, err := os.ReadDir(filepath.Join(root, ".neverlauncher", "quarantine"))
+	entries, err := os.ReadDir(filepath.Join(root, ".launcher", "quarantine"))
 	if err != nil {
 		t.Fatal(err)
 	}

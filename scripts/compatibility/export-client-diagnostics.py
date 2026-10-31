@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Export a bounded, redacted Minecraft launch failure trace for CI artifacts."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,8 +14,18 @@ MAX_NATIVE_REPORTS = 2
 
 # Никогда не отправляйте клиентские журналы без удаления секретов: аргументы могут содержать действующие токены сеансов.
 REDACTIONS = (
-    (re.compile(r"(?i)(--(?:accessToken|token|refreshToken|clientToken|password|session)\s+)([^\s]+)"), r"\1[REDACTED]"),
-    (re.compile(r"(?i)([\"']?(?:accessToken|refreshToken|clientToken|authorization|password|secret|api[-_]?key)[\"']?\s*[:=]\s*[\"']?)([^\s,;\"']+)"), r"\1[REDACTED]"),
+    (
+        re.compile(
+            r"(?i)(--(?:accessToken|token|refreshToken|clientToken|password|session)\s+)([^\s]+)"
+        ),
+        r"\1[REDACTED]",
+    ),
+    (
+        re.compile(
+            r"(?i)([\"']?(?:accessToken|refreshToken|clientToken|authorization|password|secret|api[-_]?key)[\"']?\s*[:=]\s*[\"']?)([^\s,;\"']+)"
+        ),
+        r"\1[REDACTED]",
+    ),
     (re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]+"), "Bearer [REDACTED]"),
 )
 
@@ -36,12 +47,19 @@ def export(runtime: Path, destination: Path) -> None:
     candidate_dir = runtime / "materialized-client" / "logs"
     found: list[Path] = []
     if candidate_dir.is_dir() and not candidate_dir.is_symlink():
-        found = [p for p in candidate_dir.glob("neverruntime-vanilla-certification-*.log")
-                 if p.is_file() and not p.is_symlink() and p.resolve().is_relative_to(candidate_dir.resolve())]
+        found = [
+            p
+            for p in candidate_dir.glob("runtime-vanilla-certification-*.log")
+            if p.is_file()
+            and not p.is_symlink()
+            and p.resolve().is_relative_to(candidate_dir.resolve())
+        ]
     found.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     output = ["Minecraft client diagnostics (bounded and redacted; no unfiltered logs)"]
     if not found:
-        output.append("No certification log has been written (failure may predate JVM launch).")
+        output.append(
+            "No certification log has been written (failure may predate JVM launch)."
+        )
     for index, path in enumerate(found[:MAX_LOGS], start=1):
         output.append(f"--- certification {index}, last {MAX_BYTES} bytes ---")
         output.append(redacted_tail(path))
@@ -61,7 +79,8 @@ def export(runtime: Path, destination: Path) -> None:
             # старые пользовательские отчёты об ошибках с компьютера экспортёра.
             threshold = runtime.stat().st_mtime - 300 if runtime.exists() else 0
             native_reports.extend(
-                p for pattern in ("java*.ips", "java*.crash", "Java*.ips", "Java*.crash")
+                p
+                for pattern in ("java*.ips", "java*.crash", "Java*.ips", "Java*.crash")
                 for p in mac_reports.glob(pattern)
                 if p.is_file() and p.stat().st_mtime >= threshold
             )

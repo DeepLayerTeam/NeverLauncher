@@ -1,3 +1,3 @@
-module github.com/DeepLayerTeam/NeverLauncher/prestarter
+module github.com/DeepLayerTeam/Launcher/prestarter
 
 go 1.22

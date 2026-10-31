@@ -387,7 +387,7 @@ func migrateUpdaterState01510(root string, force bool) (map[string]any, error) {
 }
 
 func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
-	root, err := os.MkdirTemp("", "neverlauncher-01510-selftest-")
+	root, err := os.MkdirTemp("", "launcher-01510-selftest-")
 	if err != nil {
 		return nil, err
 	}
@@ -398,9 +398,9 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 		return nil, err
 	}
 	components := []componentUpdateArtifact0157{
-		{Component: "desktop", TargetPath: "neverlauncher-desktop", SHA256: strings.Repeat("1", 64), Size: 1, Executable: true},
+		{Component: "desktop", TargetPath: "launcher-desktop", SHA256: strings.Repeat("1", 64), Size: 1, Executable: true},
 		{Component: "guard", TargetPath: "guard", SHA256: strings.Repeat("2", 64), Size: 1, Executable: true},
-		{Component: "runtime", TargetPath: "neverruntime", SHA256: strings.Repeat("3", 64), Size: 1, Executable: true},
+		{Component: "runtime", TargetPath: "runtime", SHA256: strings.Repeat("3", 64), Size: 1, Executable: true},
 	}
 	legacyState := componentUpdateState0157{SchemaVersion: "1.0", ToolVersion: "0.15.9", Version: "0.15.9", Platform: target.Platform, Architecture: target.Architecture, UpdatedAt: time.Now().UTC().Format(time.RFC3339Nano), Components: components}
 	legacyPath := filepath.Join(root, filepath.FromSlash(updaterCoreDir0156), "component-update-state.json")

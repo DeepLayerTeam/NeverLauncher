@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 /**
  * Сборщик тиков с ограниченной памятью. Хранит не более 1200 серверных тиков

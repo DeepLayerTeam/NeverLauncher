@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // ServerBridgeRepository реализуется репозиторием PostgreSQL и служит источником истины
@@ -1290,7 +1290,7 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 	}
 	result.LeaseAcquired = true
 	// Каждый пакет обслуживания блокирует только изменяемые строки. Консультативная
-	// блокировка предотвращает дублирование обслуживания NeverLauncher между репликами,
+	// блокировка предотвращает дублирование обслуживания Launcher между репликами,
 	// а SKIP LOCKED дополнительно исключает ожидание обычных записей токенов и передач.
 	if res, execErr := tx.ExecContext(ctx, `DELETE FROM server_bridge_node_nonces_v2 n USING (SELECT node_id,nonce_hash FROM server_bridge_node_nonces_v2 WHERE expires_at <= $1 ORDER BY expires_at LIMIT 10000 FOR UPDATE SKIP LOCKED) q WHERE n.node_id=q.node_id AND n.nonce_hash=q.nonce_hash`, now.UTC()); execErr != nil {
 		return result, execErr

@@ -16,7 +16,7 @@ func ComponentCatalogDigest0243(c ComponentCatalog0241) string {
 		return ComponentCatalogDigest0242(c)
 	}
 	h := sha256.New()
-	h.Write([]byte("neverlauncher.component-catalog.v3\x00"))
+	h.Write([]byte("launcher.component-catalog.v3\x00"))
 	var buf [4]byte
 	count := func(n int) { binary.BigEndian.PutUint32(buf[:], uint32(n)); _, _ = h.Write(buf[:]) }
 	write := func(s string) { count(len(s)); _, _ = h.Write([]byte(s)) }

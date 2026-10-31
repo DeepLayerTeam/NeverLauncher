@@ -15,12 +15,12 @@ import (
 	"io"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/fileauth"
-	gi "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitidentity"
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
+	gi "gitflic.ru/skif4er/launcher/services/api/internal/gravitidentity"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
 )
 
-const Format = "neverlauncher.gravit-credentials.v1"
+const Format = "launcher.gravit-credentials.v1"
 
 type Credential struct {
 	gi.Account

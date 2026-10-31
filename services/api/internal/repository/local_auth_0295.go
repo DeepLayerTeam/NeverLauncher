@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/fileauth"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
 )
 
 // PasswordCAS0295 is required for safe password upgrade after a successful
@@ -98,11 +98,11 @@ func (r *SQLRepository) ImportFileAuth0295(ctx context.Context, accounts []filea
 			return 0, fmt.Errorf("import user %q: %w", a.Username, err)
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)
-            VALUES($1,$2,'local','neverlauncher',$2,$3,$3,$4,'{}'::jsonb,now(),now())`, "identity-local-"+id, id, a.Email, a.Username); err != nil {
+            VALUES($1,$2,'local','launcher',$2,$3,$3,$4,'{}'::jsonb,now(),now())`, "identity-local-"+id, id, a.Email, a.Username); err != nil {
 			return 0, fmt.Errorf("import identity %q: %w", a.Username, err)
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at)
-            VALUES($1,$2,$3,'neverlauncher','local',$2,'legacy-fileauth-v1',now(),now())`, id, a.UUID, a.Username); err != nil {
+            VALUES($1,$2,$3,'launcher','local',$2,'legacy-fileauth-v1',now(),now())`, id, a.UUID, a.Username); err != nil {
 			return 0, fmt.Errorf("import Minecraft UUID %q: %w", a.Username, err)
 		}
 		// Only the username/UUID are recorded in audit; never the source hash.

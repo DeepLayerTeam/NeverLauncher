@@ -19,8 +19,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const MinimalBundleSchema0377 = "neverlauncher_minimal_transfer_0377"
-const minimalBundleFormat0377 = "neverlauncher-minimal-offline-backup-v1"
+const MinimalBundleSchema0377 = "launcher_minimal_transfer_0377"
+const minimalBundleFormat0377 = "launcher-minimal-offline-backup-v1"
 
 type MinimalBundleFile0377 struct {
 	Path   string `json:"path"`
@@ -347,7 +347,7 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 	}
 	// Read-only transfer tables prevent accidental change of token revocation,
 	// trust state or project configuration after this committed snapshot.
-	if _, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(MinimalBundleSchema0377)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'NeverLauncher minimal bundle is immutable'; END $$`); err != nil {
+	if _, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(MinimalBundleSchema0377)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Launcher minimal bundle is immutable'; END $$`); err != nil {
 		return report, err
 	}
 	for _, name := range []string{"receipt", "files", "chunks"} {
@@ -428,7 +428,7 @@ func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report Mi
 		return report, errors.New("unsupported backup format")
 	}
 	report = MinimalBundleReport0377{Format: m.Format, ManifestSHA256: receipt, Files: len(m.Files)}
-	stage, e := os.MkdirTemp(parent, ".neverlauncher-minimal-pg-*")
+	stage, e := os.MkdirTemp(parent, ".launcher-minimal-pg-*")
 	if e != nil {
 		return report, e
 	}

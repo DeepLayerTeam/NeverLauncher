@@ -11,7 +11,7 @@ import (
 func syntheticWindowsAdversarialCertificate01812() windowsAdversarialCertificate01812 {
 	roots := []string{strings.Repeat("a", 64), strings.Repeat("b", 64), strings.Repeat("c", 64), strings.Repeat("d", 64), strings.Repeat("e", 64)}
 	cert := windowsAdversarialCertificate01812{
-		SchemaVersion: "1.0", Kind: "neverlauncher-windows-adversarial-certification", ProductVersion: "0.18.12",
+		SchemaVersion: "1.0", Kind: "launcher-windows-adversarial-certification", ProductVersion: "0.18.12",
 		Repository: windowsProtectionRepository01812, Commit: testSourceCommit01511, RunID: "123456", Platform: "windows-x86_64",
 		JavaMajors: []int{8, 16, 17, 21, 25}, RequiredJavaMajorCount: 5, PassedJavaMajorCount: 5,
 		ScenarioExecutions:     55,

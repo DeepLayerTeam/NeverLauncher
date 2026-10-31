@@ -18,10 +18,10 @@ import (
 	"sort"
 	"strings"
 
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
 )
 
-const Format = "neverlauncher.gravit-identity-map.v1"
+const Format = "launcher.gravit-identity-map.v1"
 const MaxAccounts = 200000
 const MaxIdentityFile = 64 << 20
 

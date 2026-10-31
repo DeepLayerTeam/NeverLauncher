@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	gc "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcontent"
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcontent"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 func TestMigrationContentAtomicReplay0337(t *testing.T) {

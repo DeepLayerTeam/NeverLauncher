@@ -85,7 +85,7 @@ func TestExtensionRegistryInstallCLI0203(t *testing.T) {
 func TestExtensionRegistryPullRejectsBadSHA0203(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("ETag", `"`+strings.Repeat("0", 64)+`"`)
-		w.Header().Set("X-NeverLauncher-Package-Identity", "sha256:"+strings.Repeat("1", 64))
+		w.Header().Set("X-Launcher-Package-Identity", "sha256:"+strings.Repeat("1", 64))
 		_, _ = io.WriteString(w, "tampered artifact")
 	}))
 	defer server.Close()

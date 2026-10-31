@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
@@ -16,8 +16,8 @@ import java.util.List;
  * сервера; замена JVM или процесса обязательно даёт другой ID.
  */
 public final class BridgeRuntimeIdentity {
-    public static final String SIGNATURE_SCHEME = "NeverLauncher-ServerBridge-RuntimeIdentity-v1";
-    private static final String RUNTIME_ID_SCHEME = "NeverLauncher-ServerBridge-RuntimeId-v1";
+    public static final String SIGNATURE_SCHEME = "Launcher-ServerBridge-RuntimeIdentity-v1";
+    private static final String RUNTIME_ID_SCHEME = "Launcher-ServerBridge-RuntimeId-v1";
 
     private final String serverId;
     private final String nodeKeyFingerprint;
@@ -188,7 +188,7 @@ public final class BridgeRuntimeIdentity {
     }
 
     private static String detectNodeName(String hostname) {
-        String value = clean(System.getProperty("neverlauncher.nodeName", ""));
+        String value = clean(System.getProperty("launcher.nodeName", ""));
         if (!value.isBlank()) return value;
         value = clean(System.getenv("NEVERLAUNCHER_NODE_NAME"));
         if (!value.isBlank()) return value;

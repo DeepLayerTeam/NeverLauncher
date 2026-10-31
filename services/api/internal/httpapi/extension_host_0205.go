@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionhost"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 func extensionHostKey0205(r *http.Request) extensionhost.Key {

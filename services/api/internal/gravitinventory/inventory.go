@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	Format                 = "neverlauncher.gravit-source-inventory.v1"
+	Format                 = "launcher.gravit-source-inventory.v1"
 	MaxSourceBytes   int64 = 512 << 20
 	MaxExpandedBytes int64 = 2 << 30
 	MaxFiles               = 30000

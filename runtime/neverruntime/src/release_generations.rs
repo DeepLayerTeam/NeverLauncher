@@ -10,7 +10,7 @@ use std::{fs, io::Write, path::{Path, PathBuf}};
 #[serde(rename_all = "camelCase")]
 struct Watermark { schema: u32, generation: u64, manifest_digest: String }
 
-fn dir(root: &Path) -> PathBuf { root.join(".neverlauncher").join("client-releases") }
+fn dir(root: &Path) -> PathBuf { root.join(".launcher").join("client-releases") }
 fn slot(root: &Path, index: usize) -> PathBuf { dir(root).join(format!("security-generation-{index}.json")) }
 fn valid(item: &Watermark) -> bool {
     item.schema == 1 && item.generation > 0 && item.manifest_digest.len() == 64 &&

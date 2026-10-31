@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/fileauth"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/bcrypt"
 )

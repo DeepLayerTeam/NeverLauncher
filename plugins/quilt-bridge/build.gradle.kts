@@ -3,8 +3,8 @@ plugins {
 }
 
 version = rootProject.file("VERSION").readText().trim()
-group = "ru.neverlauncher"
-base { archivesName.set("neverlauncher-quilt-bridge") }
+group = "ru.launcher"
+base { archivesName.set("launcher-quilt-bridge") }
 
 java {
     toolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
@@ -35,7 +35,7 @@ dependencies {
 }
 
 tasks.processResources {
-    inputs.property("neverLauncherVersion", project.version.toString())
+    inputs.property("LauncherVersion", project.version.toString())
     filesMatching(listOf("fabric.mod.json", "quilt.mod.json")) {
         expand("version" to project.version.toString())
     }

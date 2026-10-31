@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 // Every production instance exposes the build-time commit for exact-source

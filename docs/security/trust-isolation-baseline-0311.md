@@ -1,4 +1,4 @@
-# NeverLauncher 0.31.1 — executable Trust & Isolation baseline
+# Launcher 0.31.1 — executable Trust & Isolation baseline
 
 ## Implemented and enforced in 0.31.1
 
@@ -15,10 +15,10 @@ Backend extension runtime reports `legacy-unisolated` and `isolationStatus=unsup
 From an installed backend binary, without a database connection:
 
 ```shell
-neverlauncher-api diagnose device-trust
-neverlauncher-api diagnose extension-sandbox
-neverlauncher-api diagnose device-trust --require-strict       # exit 2 until verifier is implemented
-neverlauncher-api diagnose extension-sandbox --require-isolation # exit 2 until isolation is enforced
+launcher-api diagnose device-trust
+launcher-api diagnose extension-sandbox
+launcher-api diagnose device-trust --require-strict       # exit 2 until verifier is implemented
+launcher-api diagnose extension-sandbox --require-isolation # exit 2 until isolation is enforced
 ```
 
 Diagnostics write machine-readable JSON to stdout, including reasons, platform/architecture and **observed capabilities**. They do not request elevation, read key material, or modify system resources. Read-only kernel interface detection is not an assertion that creating the corresponding namespace, resource boundary or network broker will succeed. This describes the **backend host**, not the remote game device. Neither the local TPM character device nor a provider label proves remote key provenance.
@@ -51,4 +51,4 @@ No absolute anti-cheat or defense against a compromised kernel is claimed. Overl
 
 ## Reproducible tests and constraints
 
-`go test ./internal/model ./internal/trustbaseline ./internal/repository ./internal/extensionhost ./internal/httpapi` from `services/api`. Tests cover no-TPM standard access, revoked/foreign session denial, forged legacy provenance downgrade, strict fail-closed, expired evidence and kernel probe honesty. `go build ./cmd/neverlauncher-api` then run diagnostics above. CI runs platform builds/tests against exact commits. Hardware-attestation and actual sandbox adversarial certification are **not** included in 0.31.1 and must not be inferred from green tests.
+`go test ./internal/model ./internal/trustbaseline ./internal/repository ./internal/extensionhost ./internal/httpapi` from `services/api`. Tests cover no-TPM standard access, revoked/foreign session denial, forged legacy provenance downgrade, strict fail-closed, expired evidence and kernel probe honesty. `go build ./cmd/launcher-api` then run diagnostics above. CI runs platform builds/tests against exact commits. Hardware-attestation and actual sandbox adversarial certification are **not** included in 0.31.1 and must not be inferred from green tests.

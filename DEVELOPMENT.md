@@ -1,11 +1,11 @@
-# Разработка NeverLauncher
+# Разработка Launcher
 
 ## Требования
 
 - Go 1.23.x — версия runner в основном CI (модули указывают минимум Go 1.22).
 - Python 3 для контрактов, верификации и матриц.
 - Node.js/npm, TypeScript и Vite для `apps/admin` и `apps/desktop` (ориентируйтесь на lockfiles).
-- Rust/Cargo и системные зависимости Tauri для Desktop/NeverRuntime/Guard.
+- Rust/Cargo и системные зависимости Tauri для Desktop/Runtime/Guard.
 - JDK, Gradle и Gradle-plugin toolchains для серверных Java-мостов; корневой Gradle wrapper в текущем архиве отсутствует.
 - Docker Compose/PostgreSQL/Redis — для интеграционных сценариев.
 
@@ -21,7 +21,7 @@ python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
 (cd cli && go test ./... && go build ./...)
 (cd apps/admin && npm ci && npm run build)
 (cd apps/desktop && npm ci && npm run build)
-(cd runtime/neverruntime && cargo test)
+(cd runtime/runtime && cargo test)
 ```
 
 Отдельный native build: `cd apps/desktop/src-tauri && cargo build` (не равен сборке установочного пакета). Проверки разных платформ могут требовать оборудования, подписывающих ключей и upstream-загрузок.

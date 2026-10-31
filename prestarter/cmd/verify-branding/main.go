@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DeepLayerTeam/NeverLauncher/prestarter"
+	"github.com/DeepLayerTeam/Launcher/prestarter"
 )
 
 func run() error {

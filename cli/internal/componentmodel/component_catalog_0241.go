@@ -82,7 +82,7 @@ type CatalogComponent0241 struct {
 // count and length-prefixed paths. Array order is significant and signed.
 func ComponentCatalogDigest0241(components []CatalogComponent0241) string {
 	h := sha256.New()
-	h.Write([]byte("neverlauncher.component-catalog.v1\x00"))
+	h.Write([]byte("launcher.component-catalog.v1\x00"))
 	var n [4]byte
 	writeCount := func(x int) { binary.BigEndian.PutUint32(n[:], uint32(x)); h.Write(n[:]) }
 	writeText := func(s string) { writeCount(len(s)); h.Write([]byte(s)) }
@@ -182,7 +182,7 @@ func ComponentCatalogDigest0242(cat ComponentCatalog0241) string {
 		return ComponentCatalogDigest0241(cat.Components)
 	}
 	h := sha256.New()
-	h.Write([]byte("neverlauncher.component-catalog.v2\x00"))
+	h.Write([]byte("launcher.component-catalog.v2\x00"))
 	var n [4]byte
 	count := func(v int) { binary.BigEndian.PutUint32(n[:], uint32(v)); h.Write(n[:]) }
 	str := func(v string) { count(len(v)); h.Write([]byte(v)) }

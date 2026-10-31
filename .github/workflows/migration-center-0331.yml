@@ -7,7 +7,7 @@ on:
       - 'services/api/internal/httpapi/migration_0331*'
       - 'services/api/internal/dbmigrate/sql/0089_*'
       - 'services/api/internal/httpapi/handler.go'
-      - 'cli/cmd/neverlauncher/migration_workflow_0331*'
+      - 'cli/cmd/launcher/migration_workflow_0331*'
       - 'apps/admin/src/admin/**'
       - '.github/workflows/migration-center-0331.yml'
   pull_request:
@@ -21,18 +21,18 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: neverlauncher_test
-          POSTGRES_USER: neverlauncher_test
+          POSTGRES_DB: launcher_test
+          POSTGRES_USER: launcher_test
           POSTGRES_PASSWORD: test_only_not_production
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_test"
+          --health-cmd "pg_isready -U launcher_test -d launcher_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -44,7 +44,7 @@ jobs:
         run: go test -race -count=1 -timeout 5m ./internal/migrationworkflow ./internal/repository ./internal/httpapi -run 'TestMigrationDurability0331|TestMigrationFailureResume0331|TestMigrationTargetSteps0331|TestMigrationStepGate0331'
       - name: CLI contract
         working-directory: cli
-        run: go test -count=1 ./cmd/neverlauncher -run '^TestMigrationWorkflowCLI0331$'
+        run: go test -count=1 ./cmd/launcher -run '^TestMigrationWorkflowCLI0331$'
   admin:
     runs-on: ubuntu-latest
     steps:

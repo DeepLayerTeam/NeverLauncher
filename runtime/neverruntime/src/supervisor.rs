@@ -140,11 +140,11 @@ impl ProcessSupervisor {
         let logs_dir = root.join("logs");
         tokio::fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;
         let started_at = now_unix()?;
-        let log_path = logs_dir.join(format!("neverruntime-launch-{started_at}.log"));
+        let log_path = logs_dir.join(format!("runtime-launch-{started_at}.log"));
 
         let mut log_file = OpenOptions::new().create(true).append(true).open(&log_path)
             .map_err(|err| format!("не удалось открыть runtime log {}: {err}", log_path.display()))?;
-        writeln!(log_file, "NeverRuntime {}", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
+        writeln!(log_file, "Runtime {}", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
         writeln!(log_file, "Команда: {}", plan.command_preview).map_err(|e| e.to_string())?;
         writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
         log_file.flush().map_err(|e| e.to_string())?;

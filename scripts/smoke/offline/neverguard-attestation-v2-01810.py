@@ -13,7 +13,7 @@ def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Attestation v2 0.18.10 gate: {path} missing: {', '.join(missing)}"
+            f"[Launcher] Attestation v2 0.18.10 gate: {path} missing: {', '.join(missing)}"
         )
 
 
@@ -28,10 +28,10 @@ version = read("VERSION").strip()
 if version_tuple(version) < (0, 18, 10):
     raise SystemExit(f"Attestation v2 gate requires >=0.18.10, got {version}")
 
-runtime = read("runtime/neverruntime/src/windows_attestation_v2.rs")
+runtime = read("runtime/runtime/src/windows_attestation_v2.rs")
 require(
     runtime,
-    "runtime/neverruntime/src/windows_attestation_v2.rs",
+    "runtime/runtime/src/windows_attestation_v2.rs",
     [
         "guard/windows-continuous-evidence/v2",
         "guard/windows-guard-attestation/v2",
@@ -65,7 +65,7 @@ require(
     device_keys,
     "apps/desktop/src-tauri/src/device_keys.rs",
     [
-        "NeverLauncher Guard Attestation Device Binding v2",
+        "Launcher Guard Attestation Device Binding v2",
         "purpose=guard-attest-v2",
         "continuous-evidence-sha256=",
         "base-attestation-sha256=",
@@ -145,7 +145,7 @@ migration_api = read(
 migration_cli = read("cli/internal/dbmigrate/sql/0032_guard_attestation_v2_01810.sql")
 if migration_api != migration_cli:
     raise SystemExit(
-        "[NeverLauncher] Attestation v2 0.18.10 gate: API/CLI migration 0032 differs"
+        "[Launcher] Attestation v2 0.18.10 gate: API/CLI migration 0032 differs"
     )
 require(
     migration_api,
@@ -195,20 +195,20 @@ require(
 )
 if "guard-attestation-v2-01810.py" not in preflight:
     raise SystemExit(
-        "[NeverLauncher] Attestation v2 0.18.10 gate: release preflight wiring missing"
+        "[Launcher] Attestation v2 0.18.10 gate: release preflight wiring missing"
     )
 
 for rel, text in [
-    ("runtime/neverruntime/src/windows_attestation_v2.rs", runtime),
+    ("runtime/runtime/src/windows_attestation_v2.rs", runtime),
     ("services/api/internal/httpapi/guard_attestation_v2_01810.go", backend),
 ]:
     lowered = text.lower()
     for placeholder in ["todo!", "unimplemented!", "placeholder", "stub"]:
         if placeholder in lowered:
             raise SystemExit(
-                f"[NeverLauncher] Attestation v2 0.18.10 gate: placeholder {placeholder!r} in {rel}"
+                f"[Launcher] Attestation v2 0.18.10 gate: placeholder {placeholder!r} in {rel}"
             )
 
 print(
-    f"[NeverLauncher] Guard Attestation v2 + continuous Windows evidence 0.18.10 gate: OK ({version})"
+    f"[Launcher] Guard Attestation v2 + continuous Windows evidence 0.18.10 gate: OK ({version})"
 )

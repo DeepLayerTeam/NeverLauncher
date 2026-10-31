@@ -23,7 +23,7 @@ func (s Server) authTokenIssuer118() string {
 		v = strings.TrimRight(strings.TrimSpace(s.Config.PublicURL), "/")
 	}
 	if v == "" {
-		v = "neverlauncher"
+		v = "launcher"
 	}
 	return v
 }
@@ -32,7 +32,7 @@ func (s Server) authTokenAudience118() string {
 	if v := strings.TrimSpace(s.Config.AuthTokenAudience); v != "" {
 		return v
 	}
-	return "neverlauncher-api"
+	return "launcher-api"
 }
 
 func (s Server) authTokenKeys118() (string, map[string]string, error) {

@@ -1,5 +1,5 @@
-name: NeverLauncherBungeeBridge
-main: ru.neverlauncher.bridge.bungeecord.NeverLauncherBungeeCordBridge
+name: LauncherBungeeBridge
+main: ru.launcher.bridge.bungeecord.LauncherBungeeCordBridge
 version: "${version}"
 author: SkiF4er
-description: NeverLauncher ServerBridge 3 integration for BungeeCord with Protocol v3 negotiation and Protocol v2 rolling-upgrade compatibility.
+description: Launcher ServerBridge 3 integration for BungeeCord with Protocol v3 negotiation and Protocol v2 rolling-upgrade compatibility.

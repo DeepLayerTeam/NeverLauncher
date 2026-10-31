@@ -1,6 +1,6 @@
 # ServerBridge
 
-ServerBridge связывает Backend NeverLauncher с Minecraft-серверами и прокси. Репозиторий содержит Java-мосты в `plugins/` (в том числе семейства Bukkit/Paper/Purpur/Spigot/Folia, Bungee/Waterfall/Velocity, Fabric/Quilt/Forge/NeoForge и другие предусмотренные модули) и средства регистрации, контроля и хостинга в CLI/backend.
+ServerBridge связывает Backend Launcher с Minecraft-серверами и прокси. Репозиторий содержит Java-мосты в `plugins/` (в том числе семейства Bukkit/Paper/Purpur/Spigot/Folia, Bungee/Waterfall/Velocity, Fabric/Quilt/Forge/NeoForge и другие предусмотренные модули) и средства регистрации, контроля и хостинга в CLI/backend.
 
 ## Логическая последовательность
 
@@ -10,7 +10,7 @@ ServerBridge связывает Backend NeverLauncher с Minecraft-сервер�
 4. Сервер передаёт heartbeat/telemetry, принимает только авторизованные команды и подтверждает события.
 5. При отзыве устройства или ключа узел должен перестать выполнять защищённые операции.
 
-Точный состав команд `nl server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host` приведён в `cli/cmd/neverlauncher/main.go`. Методы Backend — в `schemas/openapi.yaml`.
+Точный состав команд `nl server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host` приведён в `cli/cmd/launcher/main.go`. Методы Backend — в `schemas/openapi.yaml`.
 
 ## Защита
 

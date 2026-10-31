@@ -1,12 +1,12 @@
 package extensionpolicy
 
 import (
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/windowssandbox"
+	"gitflic.ru/skif4er/launcher/services/api/internal/windowssandbox"
 	"runtime"
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func signedPolicy0318() model.ExtensionManifest {

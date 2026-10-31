@@ -1,12 +1,12 @@
-# NeverLauncher
+# Launcher
 
-**NeverLauncher** — открытая платформа управления и доставки Minecraft-клиентов: серверное API, веб-панель, настольный лаунчер, CLI, собственный runtime, Guard, ServerBridge и Extensions. Репозиторий содержит код продукта, инфраструктуру развертывания и тестовые матрицы; это не готовый Minecraft-сервер или дистрибутив игры.
+**Launcher** — открытая платформа управления и доставки Minecraft-клиентов: серверное API, веб-панель, настольный лаунчер, CLI, собственный runtime, Guard, ServerBridge и Extensions. Репозиторий содержит код продукта, инфраструктуру развертывания и тестовые матрицы; это не готовый Minecraft-сервер или дистрибутив игры.
 
 - **Текущая версия исходников:** [`VERSION`](VERSION). Другие модули синхронизируются с этим файлом; не изменяйте версию вручную в отдельных пакетах.
 - **Лицензия:** [Apache License 2.0](LICENSE), дополнительные сведения — [NOTICE](NOTICE).
-- **Исходники:** https://github.com/DeepLayerTeam/NeverLauncher
+- **Исходники:** https://github.com/DeepLayerTeam/Launcher
 - **Совместимость:** [COMPATIBILITY.md](COMPATIBILITY.md), [матрица целевых сочетаний](compatibility/targets.json). Запись в матрице не означает успешную сертификацию.
-- **Обратная связь:** [задачи](https://github.com/DeepLayerTeam/NeverLauncher/issues), [обсуждения](https://github.com/DeepLayerTeam/NeverLauncher/discussions); сообщения об уязвимостях — через [SECURITY.md](SECURITY.md).
+- **Обратная связь:** [задачи](https://github.com/DeepLayerTeam/Launcher/issues), [обсуждения](https://github.com/DeepLayerTeam/Launcher/discussions); сообщения об уязвимостях — через [SECURITY.md](SECURITY.md).
 
 ## Состав продукта
 
@@ -16,7 +16,7 @@
 | Admin | `apps/admin/` | Веб-интерфейс управления |
 | Desktop | `apps/desktop/` | React + Tauri: конфигурация, проверка файлов и запуск клиентов |
 | CLI `nl` | `cli/` | Установка, администрирование, манифесты, диагностика, сборка и проверка релизов |
-| NeverRuntime / Guard | `runtime/` | Minecraft/JRE runtime, загрузки, контроль целостности и защитные механизмы |
+| Runtime / Guard | `runtime/` | Minecraft/JRE runtime, загрузки, контроль целостности и защитные механизмы |
 | ServerBridge | `plugins/`, `serverbridge/` | Интеграции Minecraft-серверов и прокси, управление узлами |
 | Extensions | `extensions/`, `sdk/`, `examples/extensions/` | Расширения и SDK |
 | Контракты и проверки | `schemas/`, `compatibility/`, `device-trust/`, `e2e/`, `scripts/` | OpenAPI, проверка версий, матрицы и выпускные проверки |

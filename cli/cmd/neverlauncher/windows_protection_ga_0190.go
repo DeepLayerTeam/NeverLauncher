@@ -139,7 +139,7 @@ func verifyWindowsUserModeOnlyPackages0190(dir, ver string) error {
 
 func windowsProtectionGABoundaryDigest0190(ver, commit, repository, rcHash, rcBoundary, adversarialHash, adversarialRoot string, artifacts []windowsProtectionArtifact01812, capabilities []string) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "NeverLauncher Windows Protection GA\n%s\n%s\n%s\n%s\n%s\n%s\n%s\nuser-mode\naggressive\nfail-closed\n", ver, strings.ToLower(commit), repository, strings.ToLower(rcHash), strings.ToLower(rcBoundary), strings.ToLower(adversarialHash), strings.ToLower(adversarialRoot))
+	fmt.Fprintf(h, "Launcher Windows Protection GA\n%s\n%s\n%s\n%s\n%s\n%s\n%s\nuser-mode\naggressive\nfail-closed\n", ver, strings.ToLower(commit), repository, strings.ToLower(rcHash), strings.ToLower(rcBoundary), strings.ToLower(adversarialHash), strings.ToLower(adversarialRoot))
 	for _, capability := range capabilities {
 		fmt.Fprintf(h, "capability %s\n", capability)
 	}
@@ -192,7 +192,7 @@ func buildWindowsProtectionGADocument0190(dir, ver string) (windowsProtectionGAC
 	}
 	return windowsProtectionGACertificate0190{
 		SchemaVersion:                 windowsProtectionGASchema0190,
-		Product:                       "NeverLauncher",
+		Product:                       "Launcher",
 		Version:                       ver,
 		Status:                        windowsProtectionGAStatus0190,
 		ReleaseStage:                  windowsProtectionGAStage0190,

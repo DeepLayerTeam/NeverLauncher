@@ -93,7 +93,7 @@ func (f *FixtureServer) Issue(sub string, scopes []string, ttl time.Duration) (s
 		return "", e
 	}
 	now := f.now()
-	payload, _ := json.Marshal(TestClaims{Issuer: "neverlauncher.devtools.test-only", Subject: sub, Scope: scopes, IssuedAt: now.Unix(), ExpiresAt: now.Add(ttl).Unix(), ID: base64.RawURLEncoding.EncodeToString(nonce[:])})
+	payload, _ := json.Marshal(TestClaims{Issuer: "launcher.devtools.test-only", Subject: sub, Scope: scopes, IssuedAt: now.Unix(), ExpiresAt: now.Add(ttl).Unix(), ID: base64.RawURLEncoding.EncodeToString(nonce[:])})
 	p := base64.RawURLEncoding.EncodeToString(payload)
 	mac := hmac.New(sha256.New, f.secret[:])
 	mac.Write([]byte(TestTokenPrefix + p))
@@ -120,7 +120,7 @@ func (f *FixtureServer) Verify(token string) (TestClaims, error) {
 	if e != nil || json.Unmarshal(payload, &claims) != nil {
 		return claims, errors.New("invalid test payload")
 	}
-	if claims.Issuer != "neverlauncher.devtools.test-only" || claims.ExpiresAt <= f.now().Unix() || claims.IssuedAt > f.now().Unix()+1 {
+	if claims.Issuer != "launcher.devtools.test-only" || claims.ExpiresAt <= f.now().Unix() || claims.IssuedAt > f.now().Unix()+1 {
 		return claims, errors.New("expired or incorrect test identity")
 	}
 	f.mu.Lock()
@@ -161,7 +161,7 @@ func fixtureDecode(r *http.Request, v any) error {
 func (f *FixtureServer) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /fixture/v1/health", func(w http.ResponseWriter, r *http.Request) {
-		writeFixtureJSON(w, 200, map[string]any{"mode": "test-only", "issuer": "neverlauncher.devtools.test-only"})
+		writeFixtureJSON(w, 200, map[string]any{"mode": "test-only", "issuer": "launcher.devtools.test-only"})
 	})
 	mux.HandleFunc("POST /fixture/v1/login", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {

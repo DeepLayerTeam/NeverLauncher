@@ -5,14 +5,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func TestAuthSession111RefreshReplayRevokesFamily(t *testing.T) {
 	store := newAuthSessionStore111()
 	user := model.User{ID: "user-111", Email: "user@example.test", RoleID: "player"}
 	req := httptest.NewRequest("POST", "http://127.0.0.1/api/v1/auth/login", nil)
-	req.Header.Set("User-Agent", "NeverLauncher-Test/0.11.1")
+	req.Header.Set("User-Agent", "Launcher-Test/0.11.1")
 
 	session, firstRefresh, err := store.create(user, req, "test-device")
 	if err != nil {

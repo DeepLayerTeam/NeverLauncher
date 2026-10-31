@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/cli/internal/authupgrade"
-	"gitflic.ru/skif4er/neverlauncher/cli/internal/dbmigrate"
+	"gitflic.ru/skif4er/launcher/cli/internal/authupgrade"
+	"gitflic.ru/skif4er/launcher/cli/internal/dbmigrate"
 )
 
 // handleAuthUpgrade02911 is deliberately separate from db migrate apply.
@@ -43,7 +43,7 @@ func handleAuthUpgrade02911(args []string) error {
 		return errors.New("--snapshot must name an existing or new checkpoint file")
 	}
 	if action == "apply" && (!*backup || !*maintenance) {
-		return errors.New("apply requires --backup-confirmed and --maintenance-confirmed; NeverLauncher cannot create or verify an off-host backup automatically")
+		return errors.New("apply requires --backup-confirmed and --maintenance-confirmed; Launcher cannot create or verify an off-host backup automatically")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()

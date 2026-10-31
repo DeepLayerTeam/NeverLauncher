@@ -3,9 +3,9 @@ on:
   push:
     paths:
       - 'VERSION'
-      - 'cli/cmd/neverlauncher/release_bom_03214*'
-      - 'cli/cmd/neverlauncher/release_commands.go'
-      - 'cli/cmd/neverlauncher/release_signing.go'
+      - 'cli/cmd/launcher/release_bom_03214*'
+      - 'cli/cmd/launcher/release_commands.go'
+      - 'cli/cmd/launcher/release_signing.go'
       - 'scripts/release/build-release.sh'
       - 'apps/**/package*.json'
       - 'apps/desktop/src-tauri/**'
@@ -18,9 +18,9 @@ on:
   pull_request:
     paths:
       - 'VERSION'
-      - 'cli/cmd/neverlauncher/release_bom_03214*'
-      - 'cli/cmd/neverlauncher/release_commands.go'
-      - 'cli/cmd/neverlauncher/release_signing.go'
+      - 'cli/cmd/launcher/release_bom_03214*'
+      - 'cli/cmd/launcher/release_commands.go'
+      - 'cli/cmd/launcher/release_signing.go'
       - 'scripts/release/build-release.sh'
       - 'apps/**/package*.json'
       - 'apps/desktop/src-tauri/**'
@@ -47,7 +47,7 @@ jobs:
       - name: Real Go BOM tests and race checks
         working-directory: cli
         run: |
-          go test -race ./cmd/neverlauncher -run '^TestReleaseBOM03214' -count=1 -v
-          go vet ./cmd/neverlauncher
+          go test -race ./cmd/launcher -run '^TestReleaseBOM03214' -count=1 -v
+          go vet ./cmd/launcher
       - name: Validate bash entrypoint
         run: bash -n scripts/release/build-release.sh

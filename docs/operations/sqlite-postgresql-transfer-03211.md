@@ -1,4 +1,4 @@
-# NeverLauncher 0.32.11 — DEP07: SQLite → PostgreSQL staging transfer
+# Launcher 0.32.11 — DEP07: SQLite → PostgreSQL staging transfer
 
 ## Important: no production cutover in this release
 
@@ -15,10 +15,10 @@ to the imported schema.** `readyForBackendCutover` is always `false`.
 1. Keep the SQLite service running and create a fresh online snapshot:
 
    ```sh
-   neverlauncher-sqlite backup --db /var/lib/neverlauncher/state.db \
-     --backup /var/lib/neverlauncher/backups/dep07-03211.db
-   neverlauncher-sqlite backup-verify \
-     --backup /var/lib/neverlauncher/backups/dep07-03211.db
+   launcher-sqlite backup --db /var/lib/launcher/state.db \
+     --backup /var/lib/launcher/backups/dep07-03211.db
+   launcher-sqlite backup-verify \
+     --backup /var/lib/launcher/backups/dep07-03211.db
    ```
 
 2. Provision a dedicated PostgreSQL database with a role allowed to create
@@ -30,13 +30,13 @@ to the imported schema.** `readyForBackendCutover` is always `false`.
    restore validation and a deadline appropriate for the database size):
 
    ```sh
-   neverlauncher-sqlite sqlite-to-postgres \
-     --backup /var/lib/neverlauncher/backups/dep07-03211.db \
+   launcher-sqlite sqlite-to-postgres \
+     --backup /var/lib/launcher/backups/dep07-03211.db \
      --ack-staging-only --timeout 60m > dep07-transfer-report.json
    ```
 
 4. Inspect the report and receipt in schema
-   `neverlauncher_sqlite_import_03211.migration_receipt`. The importer verifies
+   `launcher_sqlite_import_03211.migration_receipt`. The importer verifies
    the snapshot SHA-256 and `integrity_check`/`foreign_key_check`, restores an
    isolated copy to run SQLite Core application checks, then transfers every
    non-internal SQLite table to PostgreSQL as exactly typed SQL values.

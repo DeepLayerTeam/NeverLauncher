@@ -14,13 +14,13 @@ func devComponentManifest0157(t *testing.T, bundle string) componentUpdateManife
 		t.Fatal(err)
 	}
 	manifest := componentUpdateManifest0157{
-		SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: "0.15.7-test",
+		SchemaVersion: "1.0", Product: "Launcher", ProductVersion: "0.15.7-test",
 		Platform: target.Platform, Architecture: target.Architecture, Layout: "adjacent-files", TrustMode: "development-self-test",
 	}
 	for _, row := range []struct{ component, name, body string }{
-		{"desktop", "neverlauncher-desktop", "desktop-new"},
+		{"desktop", "launcher-desktop", "desktop-new"},
 		{"guard", "guard", "guard-new"},
-		{"runtime", "neverruntime", "runtime-new"},
+		{"runtime", "runtime", "runtime-new"},
 	} {
 		path := filepath.Join(bundle, row.name)
 		if err := os.WriteFile(path, []byte(row.body), 0o755); err != nil {
@@ -41,13 +41,13 @@ func devComponentManifest0157(t *testing.T, bundle string) componentUpdateManife
 func TestComponentUpdateAdjacentCommit0157(t *testing.T) {
 	root := t.TempDir()
 	bundle := t.TempDir()
-	for _, name := range []string{"neverlauncher-desktop", "guard", "neverruntime"} {
+	for _, name := range []string{"launcher-desktop", "guard", "runtime"} {
 		if err := os.WriteFile(filepath.Join(root, name), []byte("old-"+name), 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
 	manifest := devComponentManifest0157(t, bundle)
-	report, err := applyAdjacentComponentUpdate0157(manifest, bundle, root, filepath.Join(root, "neverlauncher-desktop"), true)
+	report, err := applyAdjacentComponentUpdate0157(manifest, bundle, root, filepath.Join(root, "launcher-desktop"), true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,22 +70,22 @@ func TestComponentTreePostVerifyFailureRollsBack0157(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	live := filepath.Join(root, "NeverLauncher.app")
+	live := filepath.Join(root, "Launcher.app")
 	if err := os.MkdirAll(filepath.Join(live, "Contents", "MacOS"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	old := filepath.Join(live, "Contents", "MacOS", "neverlauncher-desktop")
+	old := filepath.Join(live, "Contents", "MacOS", "launcher-desktop")
 	if err := os.WriteFile(old, []byte("old-desktop"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	stage := filepath.Join(u.controlDir, "incoming", "NeverLauncher.app")
+	stage := filepath.Join(u.controlDir, "incoming", "Launcher.app")
 	if err := os.MkdirAll(filepath.Join(stage, "Contents", "MacOS"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(stage, "Contents", "MacOS", "neverlauncher-desktop"), []byte("new-desktop"), 0o755); err != nil {
+	if err := os.WriteFile(filepath.Join(stage, "Contents", "MacOS", "launcher-desktop"), []byte("new-desktop"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	_, err = applyComponentTree0157(u, "NeverLauncher.app", stage, "0.15.6", "0.15.7", func(string) error {
+	_, err = applyComponentTree0157(u, "Launcher.app", stage, "0.15.6", "0.15.7", func(string) error {
 		return errors.New("forced post-verify failure")
 	})
 	if err == nil {

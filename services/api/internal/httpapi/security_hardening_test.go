@@ -9,15 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 func TestSecurityHardening902TOTPAndPasswordReset(t *testing.T) {
 	api := Server{Version: "9.0.2", Config: config.Config{PublicURL: "http://127.0.0.1:18092", AuthTokenSecret: "test-secret"}, Repo: repository.NewMemoryRepository("http://127.0.0.1:18092"), State: NewRuntimeState()}
 	h := api.Handler()
 
-	login := postJSON902(t, h, "/api/v1/admin/login", `{"email":"admin@neverlauncher.local","password":"admin"}`, "")
+	login := postJSON902(t, h, "/api/v1/admin/login", `{"email":"admin@launcher.local","password":"admin"}`, "")
 	token := stringField902(t, login, "token")
 	if token == "" {
 		t.Fatalf("admin login did not return token: %#v", login)
@@ -34,7 +34,7 @@ func TestSecurityHardening902TOTPAndPasswordReset(t *testing.T) {
 		t.Fatalf("totp was not enabled: %#v", verify)
 	}
 
-	withoutMFA := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"admin@neverlauncher.local","password":"admin"}`))
+	withoutMFA := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"admin@launcher.local","password":"admin"}`))
 	withoutMFA.Header.Set("Content-Type", "application/json")
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, withoutMFA)
@@ -42,12 +42,12 @@ func TestSecurityHardening902TOTPAndPasswordReset(t *testing.T) {
 		t.Fatalf("login without TOTP should fail after MFA enablement, got %d: %s", res.Code, res.Body.String())
 	}
 
-	withMFA := postJSON902(t, h, "/api/v1/auth/login", `{"email":"admin@neverlauncher.local","password":"admin","totp":"`+currentTOTPCode902(secret, nowUTC902())+`"}`, "")
+	withMFA := postJSON902(t, h, "/api/v1/auth/login", `{"email":"admin@launcher.local","password":"admin","totp":"`+currentTOTPCode902(secret, nowUTC902())+`"}`, "")
 	if nestedStringField902(t, withMFA, "data", "status") != "authenticated" {
 		t.Fatalf("login with TOTP failed: %#v", withMFA)
 	}
 
-	reset := postJSON902(t, h, "/api/v1/auth/password-reset/request", `{"email":"admin@neverlauncher.local"}`, "")
+	reset := postJSON902(t, h, "/api/v1/auth/password-reset/request", `{"email":"admin@launcher.local"}`, "")
 	resetToken := nestedStringField902(t, reset, "data", "token")
 	if resetToken == "" {
 		t.Fatalf("reset token missing: %#v", reset)
@@ -107,7 +107,7 @@ func TestAdminLoginDoesNotFallbackToConfigPassword(t *testing.T) {
 	api := Server{Version: "0.11.0", Config: config.Config{PublicURL: "http://127.0.0.1:18092", AuthTokenSecret: "test-secret"}, Repo: repo, State: NewRuntimeState()}
 	h := api.Handler()
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/login", strings.NewReader(`{"email":"admin@neverlauncher.local","password":"admin"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/login", strings.NewReader(`{"email":"admin@launcher.local","password":"admin"}`))
 	req.Header.Set("Content-Type", "application/json")
 	res := httptest.NewRecorder()
 	h.ServeHTTP(res, req)

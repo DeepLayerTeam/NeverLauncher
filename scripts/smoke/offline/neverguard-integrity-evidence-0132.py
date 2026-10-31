@@ -26,7 +26,7 @@ version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 2):
     raise SystemExit(f"Guard integrity evidence gate requires >=0.13.2, got {version}")
 
-cargo = read("runtime/neverruntime/Cargo.toml")
+cargo = read("runtime/runtime/Cargo.toml")
 require(
     cargo,
     [
@@ -36,10 +36,10 @@ require(
         '"Win32_System_Diagnostics_ToolHelp"',
         '"Win32_System_Threading"',
     ],
-    "NeverRuntime Windows dependencies",
+    "Runtime Windows dependencies",
 )
 
-integrity = read("runtime/neverruntime/src/integrity.rs")
+integrity = read("runtime/runtime/src/integrity.rs")
 require(
     integrity,
     [
@@ -71,7 +71,7 @@ require(
     "Windows Integrity Evidence v1 implementation",
 )
 
-guard = read("runtime/neverruntime/src/guard_ipc.rs")
+guard = read("runtime/runtime/src/guard_ipc.rs")
 require(
     guard,
     [
@@ -99,7 +99,7 @@ require(
     "Desktop fail-closed integrity wiring",
 )
 
-integration = read("runtime/neverruntime/tests/guard_windows.rs")
+integration = read("runtime/runtime/tests/guard_windows.rs")
 require(
     integration,
     [
@@ -122,4 +122,4 @@ if "guard-integrity-evidence-0132.py" not in preflight:
     raise SystemExit("Guard 0.13.2 integrity gate is not wired into release preflight")
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
-print(f"[NeverLauncher] Guard Windows Integrity Evidence v1 gate OK: {version}")
+print(f"[Launcher] Guard Windows Integrity Evidence v1 gate OK: {version}")

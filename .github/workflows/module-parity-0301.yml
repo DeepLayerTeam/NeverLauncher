@@ -40,9 +40,9 @@ jobs:
       - name: Version metadata, native auditor and negative tests
         run: |
           python3 scripts/version/manage.py check
-          (cd cli && go test -count=1 ./internal/moduleparity ./cmd/neverlauncher -run '^TestAudit0301|^TestModuleParityCLI0301' )
+          (cd cli && go test -count=1 ./internal/moduleparity ./cmd/launcher -run '^TestAudit0301|^TestModuleParityCLI0301' )
           (cd cli && go vet ./internal/moduleparity)
-          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
       - name: Validate all M01-M19 sources and Java protocol binding
         run: |
           mkdir -p audit-evidence

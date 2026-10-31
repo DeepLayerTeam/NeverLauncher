@@ -1,4 +1,4 @@
-# Release Workspace — NeverLauncher 0.21.8
+# Release Workspace — Launcher 0.21.8
 
 ## Назначение
 

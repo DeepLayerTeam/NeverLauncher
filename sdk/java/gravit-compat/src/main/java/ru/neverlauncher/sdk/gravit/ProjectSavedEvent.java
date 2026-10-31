@@ -1,6 +1,6 @@
-package ru.neverlauncher.sdk.gravit;
+package ru.launcher.sdk.gravit;
 import pro.gravit.launcher.base.modules.LauncherModule;
-import ru.neverlauncher.sdk.core.RuntimeEvents;
+import ru.launcher.sdk.core.RuntimeEvents;
 @HostEvent(type="project.saved")
 public final class ProjectSavedEvent extends LauncherModule.Event {
     public final String id,projectId,idempotencyKey;

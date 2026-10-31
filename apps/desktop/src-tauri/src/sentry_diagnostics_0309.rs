@@ -53,15 +53,15 @@ async fn transmit(category: &str, platform: &str, stack: Vec<serde_json::Value>)
         hex::encode(bytes)
     };
     let mut report = json!({"event_id":uuid,"platform":platform,"level":"error",
-      "release":option_env!("NEVERLAUNCHER_RELEASE_ID").map(str::to_string).unwrap_or_else(|| format!("neverlauncher@{}",env!("CARGO_PKG_VERSION"))),"message":category,
-      "sdk":{"name":"neverlauncher.desktop","version":"0.30.9"}});
+      "release":option_env!("NEVERLAUNCHER_RELEASE_ID").map(str::to_string).unwrap_or_else(|| format!("launcher@{}",env!("CARGO_PKG_VERSION"))),"message":category,
+      "sdk":{"name":"launcher.desktop","version":"0.30.9"}});
     if !stack.is_empty() { report["exception"] = json!({"values":[{"type":category,"value":"Desktop runtime error","stacktrace":{"frames":stack}}]}); }
     let head = json!({"event_id":uuid,"dsn":dest.dsn});
     let item = json!({"type":"event"});
     let envelope = format!("{}\n{}\n{}\n", head, item, report);
     let response = reqwest::Client::builder().timeout(Duration::from_secs(3)).build().map_err(|_|"cannot create diagnostics client")?
       .post(&dest.ingest).header("Content-Type","application/x-sentry-envelope")
-      .header("X-Sentry-Auth",format!("Sentry sentry_version=7,sentry_client=neverlauncher.desktop/0.30.9,sentry_key={}",dest.key))
+      .header("X-Sentry-Auth",format!("Sentry sentry_version=7,sentry_client=launcher.desktop/0.30.9,sentry_key={}",dest.key))
       .body(envelope).send().await.map_err(|_|"diagnostic transport failed")?;
     if !response.status().is_success() {return Err(format!("Sentry HTTP {}",response.status().as_u16()))}
     Ok(())

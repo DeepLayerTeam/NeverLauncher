@@ -1,4 +1,4 @@
-package ru.neverlauncher.sdk.core;
+package ru.launcher.sdk.core;
 import com.sun.net.httpserver.HttpServer;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
@@ -14,10 +14,10 @@ public final class SentryDiagnosticsTests {
     try {
       String dsn="http://publickey@127.0.0.1:"+server.getAddress().getPort()+"/42";
       RuntimeException e=new RuntimeException("Bearer abc123 user@example.com /home/john/password");
-      SentryDiagnostics.report(e,Map.of("NEVERLAUNCHER_SENTRY_JVM_ENABLED","true","NEVERLAUNCHER_SENTRY_JVM_DSN",dsn,"NEVERLAUNCHER_SENTRY_RELEASE","neverlauncher@0.30.9"));
+      SentryDiagnostics.report(e,Map.of("NEVERLAUNCHER_SENTRY_JVM_ENABLED","true","NEVERLAUNCHER_SENTRY_JVM_DSN",dsn,"NEVERLAUNCHER_SENTRY_RELEASE","launcher@0.30.9"));
       String text=received.poll(5,TimeUnit.SECONDS);if(text==null)throw new AssertionError("no Sentry envelope");
       for(String secret:List.of("abc123","user@example.com","/home/john"))if(text.contains(secret))throw new AssertionError("privacy leak "+secret);
-      if(!text.contains("neverlauncher@0.30.9")||!text.contains("RuntimeException"))throw new AssertionError("incomplete event");
+      if(!text.contains("launcher@0.30.9")||!text.contains("RuntimeException"))throw new AssertionError("incomplete event");
       Thread.UncaughtExceptionHandler old=Thread.getDefaultUncaughtExceptionHandler();
       try {
         SentryDiagnostics.installFromEnvironment(Map.of("NEVERLAUNCHER_SENTRY_JVM_ENABLED","true", "NEVERLAUNCHER_SENTRY_JVM_DSN",dsn));

@@ -3,7 +3,7 @@
   "id": "org.example.gravit-port",
   "name": "Gravit Port Compatibility Example",
   "version": "0.1.0",
-  "publisher": "NeverLauncher Examples",
+  "publisher": "Launcher Examples",
   "description": "Signed and runnable Gravit-style Java module backed by real Go events, storage and CLI",
   "api": "1.0",
   "targets": [

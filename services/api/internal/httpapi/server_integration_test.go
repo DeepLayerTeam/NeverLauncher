@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func testServer(t *testing.T) http.Handler {
@@ -29,7 +29,7 @@ func testServer(t *testing.T) http.Handler {
 		AuthTokenSecret:    "test-secret-for-integration",
 		AuthTokenTTLHours:  1,
 		WebAuthnRPID:       "example.test",
-		WebAuthnRPName:     "NeverLauncher Test",
+		WebAuthnRPName:     "Launcher Test",
 		WebAuthnOrigins:    []string{"http://example.test"},
 		MetricsEnabled:     true,
 	}
@@ -158,7 +158,7 @@ func TestAdminVersionUploadPublishFlow(t *testing.T) {
 
 func loginAdmin(t *testing.T, handler http.Handler) string {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/login", strings.NewReader(`{"email":"admin@neverlauncher.local","password":"admin"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/login", strings.NewReader(`{"email":"admin@launcher.local","password":"admin"}`))
 	req.Header.Set("Content-Type", "application/json")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -202,7 +202,7 @@ func TestAdminUsersSessionsAndRBAC(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
-	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "admin@neverlauncher.local") {
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), "admin@launcher.local") {
 		t.Fatalf("/admin/me вернул неожиданный ответ: %d %s", res.Code, res.Body.String())
 	}
 
@@ -257,7 +257,7 @@ func TestCanonicalAuthSessionEnforcement(t *testing.T) {
 		t.Fatalf("/api/v1/auth/accounts без токена должен вернуть 401, получено %d: %s", res.Code, res.Body.String())
 	}
 
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"identifier":"admin@neverlauncher.local","password":"admin","providerId":"local","deviceId":"integration-test"}`))
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"identifier":"admin@launcher.local","password":"admin","providerId":"local","deviceId":"integration-test"}`))
 	req.Header.Set("Content-Type", "application/json")
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)

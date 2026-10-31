@@ -91,7 +91,7 @@ func publicProductionDeliveryRequired0159(ver string) bool {
 }
 
 func defaultPublicReleaseBaseURL0159(ver string) string {
-	return "https://github.com/DeepLayerTeam/NeverLauncher/releases/download/v" + strings.TrimSpace(ver)
+	return "https://github.com/DeepLayerTeam/Launcher/releases/download/v" + strings.TrimSpace(ver)
 }
 
 func normalizePublicBaseURL0159(raw string, allowHTTP bool) (string, error) {
@@ -179,7 +179,7 @@ func buildPublicProductionDeliveryMatrix0159(dir, ver, rawBaseURL string, allowH
 	}
 	matrix := PublicProductionDeliveryMatrix0159{
 		SchemaVersion:          publicProductionDeliverySchema0159,
-		Product:                "NeverLauncher",
+		Product:                "Launcher",
 		Version:                strings.TrimSpace(ver),
 		Channel:                publicProductionDeliveryChannel0159,
 		GeneratedAt:            time.Now().UTC().Format(time.RFC3339Nano),
@@ -250,7 +250,7 @@ func readPublicProductionDeliveryMatrix0159(path string) (PublicProductionDelive
 }
 
 func validatePublicProductionDeliveryMatrix0159(dir string, matrix PublicProductionDeliveryMatrix0159, expectedVersion string, allowHTTP bool) error {
-	if matrix.SchemaVersion != publicProductionDeliverySchema0159 || matrix.Product != "NeverLauncher" || matrix.Channel != publicProductionDeliveryChannel0159 {
+	if matrix.SchemaVersion != publicProductionDeliverySchema0159 || matrix.Product != "Launcher" || matrix.Channel != publicProductionDeliveryChannel0159 {
 		return errors.New("public production delivery matrix header is invalid")
 	}
 	if strings.TrimSpace(expectedVersion) != "" && matrix.Version != strings.TrimSpace(expectedVersion) {
@@ -424,7 +424,7 @@ func downloadPublicAsset0159(ctx context.Context, client *http.Client, rawURL, d
 	if err != nil {
 		return 0, err
 	}
-	req.Header.Set("User-Agent", "NeverLauncher-public-delivery-e2e/0.15.9")
+	req.Header.Set("User-Agent", "Launcher-public-delivery-e2e/0.15.9")
 	resp, err := client.Do(req)
 	if err != nil {
 		return 0, err
@@ -512,7 +512,7 @@ func fetchPublicMatrix0159(ctx context.Context, matrixURL, downloadDir string, a
 
 func runPublicProductionDeliveryE2E0159(ctx context.Context, matrixURL, rootPublicKey, currentTrustPolicy, trustState, downloadDir string, allowHTTP bool) (PublicDeliveryE2EReport0159, error) {
 	start := time.Now().UTC()
-	report := PublicDeliveryE2EReport0159{SchemaVersion: "1.0", Product: "NeverLauncher", MatrixURL: matrixURL, StartedAt: start.Format(time.RFC3339Nano), Status: "failed"}
+	report := PublicDeliveryE2EReport0159{SchemaVersion: "1.0", Product: "Launcher", MatrixURL: matrixURL, StartedAt: start.Format(time.RFC3339Nano), Status: "failed"}
 	if strings.TrimSpace(downloadDir) == "" {
 		return report, errors.New("public E2E requires --download-dir")
 	}

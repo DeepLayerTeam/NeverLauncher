@@ -11,9 +11,9 @@ import (
 	"strings"
 	"sync"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/yggdrasiltexture"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/yggdrasiltexture"
 )
 
 // The authlib-injector key is NOT a ServerBridge or release manifest key.
@@ -180,7 +180,7 @@ func (s Server) localTextureRecord0394(ctx context.Context, uuid, name string) (
 			// substitute an arbitrary caller-supplied UUID for proof of ownership.
 			if mcRepo, repoErr := s.minecraftRepo119(); repoErr == nil {
 				if profile, lookupErr := mcRepo.GetMinecraftProfileByUUID(uuid); lookupErr == nil &&
-					profile.Issuer == "neverlauncher" && profile.Realm == "local" && profile.Name == name {
+					profile.Issuer == "launcher" && profile.Realm == "local" && profile.Name == name {
 					if err := s.syncTextureIdentity0251(profile); err != nil {
 						return bridgeTextureRecord{}, err
 					}

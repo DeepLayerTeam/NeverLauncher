@@ -71,7 +71,7 @@ fn write_private_bundle(base: &Path, report: &PlayerReport03510) -> Result<Strin
     if !meta.is_dir() || meta.file_type().is_symlink() { return Err("unsafe diagnostics directory".into()); }
     #[cfg(unix)] { use std::os::unix::fs::PermissionsExt; fs::set_permissions(base,fs::Permissions::from_mode(0o700)).map_err(|_|"cannot restrict diagnostics directory")?; }
     let file_id = hex::encode(rand::random::<[u8; 16]>());
-    let name = format!("neverlauncher-player-{file_id}.json");
+    let name = format!("launcher-player-{file_id}.json");
     let path = base.join(&name);
     let mut opts = OpenOptions::new(); opts.write(true).create_new(true);
     #[cfg(unix)] { use std::os::unix::fs::OpenOptionsExt; opts.mode(0o600); }

@@ -91,7 +91,7 @@ func Run(ctx context.Context, opts Options) error {
 	}
 	// Lock precedes trust-state acceptance; concurrent processes must not race
 	// policy epochs or downgrade a revocation during first-run.
-	store, e := newStorage(filepath.Join(root, ".neverlauncher-prestarter"), opts.OfflineDir, opts.Offline)
+	store, e := newStorage(filepath.Join(root, ".launcher-prestarter"), opts.OfflineDir, opts.Offline)
 	if e != nil {
 		return e
 	}
@@ -399,13 +399,13 @@ func (p *installer) activate(previous *activeRecord, desired activeRecord) error
 }
 func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, opts Options) error {
 	release := filepath.Join(p.launcherRoot, "releases", record.Release)
-	runtimeBin := filepath.Join(release, ComponentName("neverruntime"))
+	runtimeBin := filepath.Join(release, ComponentName("runtime"))
 	desktopBin := filepath.Join(release, ComponentName("desktop"))
 	manifestPath, e := p.prepareRecord(ctx, p.config.Manifest, "profile-manifest.json")
 	if e != nil {
 		return fmt.Errorf("profile manifest: %w", e)
 	}
-	// Verify with the *existing* NeverRuntime signature verifier BEFORE reading
+	// Verify with the *existing* Runtime signature verifier BEFORE reading
 	// any profile-supplied Java setting or installing game contents.
 	var gameTrustEnv []string
 	if p.configTrustEpoch() > 0 {

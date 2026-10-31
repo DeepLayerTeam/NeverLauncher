@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 func migrationID0331() (string, error) {

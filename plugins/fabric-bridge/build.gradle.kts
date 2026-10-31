@@ -3,8 +3,8 @@ plugins {
 }
 
 version = rootProject.file("VERSION").readText().trim()
-group = "ru.neverlauncher"
-base { archivesName.set("neverlauncher-fabric-bridge") }
+group = "ru.launcher"
+base { archivesName.set("launcher-fabric-bridge") }
 
 java {
     toolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
@@ -22,7 +22,7 @@ dependencies {
 }
 
 tasks.processResources {
-    inputs.property("neverLauncherVersion", project.version.toString())
+    inputs.property("LauncherVersion", project.version.toString())
     filesMatching("fabric.mod.json") {
         expand("version" to project.version.toString())
     }

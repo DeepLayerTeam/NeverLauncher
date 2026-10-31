@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func TestSecureTextureUploadPostgres0252(t *testing.T) {
@@ -56,7 +56,7 @@ func TestSecureTextureUploadPostgres0252(t *testing.T) {
 		}
 	}
 	r := &SQLRepository{db: db, publicURL: "https://launcher.example"}
-	p := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "owner", Name: "Steve", Realm: "local", Issuer: "neverlauncher"}
+	p := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "owner", Name: "Steve", Realm: "local", Issuer: "launcher"}
 	payload := []byte("already-verified-normalized-image")
 	sha := sha256.Sum256(payload)
 	digest := hex.EncodeToString(sha[:])

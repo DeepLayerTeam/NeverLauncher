@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"time"
 
-	co "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcutover"
-	gr "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrehearsal"
-	rb "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrollback"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	co "gitflic.ru/skif4er/launcher/services/api/internal/gravitcutover"
+	gr "gitflic.ru/skif4er/launcher/services/api/internal/gravitrehearsal"
+	rb "gitflic.ru/skif4er/launcher/services/api/internal/gravitrollback"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func rollbackTx03312(ctx context.Context, r *SQLRepository, run string) (*sql.Tx, string, error) {

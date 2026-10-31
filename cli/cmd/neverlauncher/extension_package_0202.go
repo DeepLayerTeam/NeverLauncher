@@ -21,12 +21,12 @@ import (
 )
 
 const (
-	extensionPackageFormat0202          = "NeverLauncher Extension Package"
+	extensionPackageFormat0202          = "Launcher Extension Package"
 	extensionPackageFormatVersion0202   = "1.0"
 	extensionPackageManifestName0202    = canonicalExtensionManifestName0201
 	extensionPackageChecksumsName0202   = "checksums.sha256"
 	extensionPackageSBOMName0202        = "SBOM.spdx.json"
-	extensionPackageDescriptorName0202  = "neverlauncher-package.json"
+	extensionPackageDescriptorName0202  = "launcher-package.json"
 	extensionPackageSignatureName0202   = "signature.ed25519"
 	extensionPackagePayloadPrefix0202   = "payload/"
 	extensionPackageMaxFiles0202        = 10000
@@ -591,8 +591,8 @@ func extensionSBOMBytes0202(manifest CanonicalExtensionManifest0201, canonicalDi
 		DataLicense:       "CC0-1.0",
 		SPDXID:            "SPDXRef-DOCUMENT",
 		Name:              manifest.ID + " " + manifest.Version,
-		DocumentNamespace: "https://neverlauncher.local/spdx/extension/" + manifest.ID + "/" + manifest.Version + "/" + canonicalDigest,
-		CreationInfo:      extensionSPDXCreationInfo0202{Created: buildTime.Format(time.RFC3339), Creators: []string{"Tool: NeverLauncher CLI " + version}},
+		DocumentNamespace: "https://launcher.local/spdx/extension/" + manifest.ID + "/" + manifest.Version + "/" + canonicalDigest,
+		CreationInfo:      extensionSPDXCreationInfo0202{Created: buildTime.Format(time.RFC3339), Creators: []string{"Tool: Launcher CLI " + version}},
 		Packages: []extensionSPDXPackage0202{{
 			SPDXID: pkgID, Name: manifest.Name, VersionInfo: manifest.Version, DownloadLocation: "NOASSERTION", FilesAnalyzed: true, LicenseConcluded: "NOASSERTION", LicenseDeclared: "NOASSERTION",
 		}},
@@ -614,10 +614,10 @@ func validateExtensionSBOM0203(data []byte, manifest CanonicalExtensionManifest0
 		return fmt.Errorf("decode SBOM.spdx.json: %w", err)
 	}
 	pkgID := "SPDXRef-Package-Extension"
-	if doc.SPDXVersion != "SPDX-2.3" || doc.DataLicense != "CC0-1.0" || doc.SPDXID != "SPDXRef-DOCUMENT" || doc.Name != manifest.ID+" "+manifest.Version || doc.DocumentNamespace != "https://neverlauncher.local/spdx/extension/"+manifest.ID+"/"+manifest.Version+"/"+canonicalDigest {
+	if doc.SPDXVersion != "SPDX-2.3" || doc.DataLicense != "CC0-1.0" || doc.SPDXID != "SPDXRef-DOCUMENT" || doc.Name != manifest.ID+" "+manifest.Version || doc.DocumentNamespace != "https://launcher.local/spdx/extension/"+manifest.ID+"/"+manifest.Version+"/"+canonicalDigest {
 		return errors.New("SBOM.spdx.json metadata не соответствует manifest")
 	}
-	if doc.CreationInfo.Created != buildTime.Format(time.RFC3339) || len(doc.CreationInfo.Creators) != 1 || !strings.HasPrefix(doc.CreationInfo.Creators[0], "Tool: NeverLauncher CLI ") {
+	if doc.CreationInfo.Created != buildTime.Format(time.RFC3339) || len(doc.CreationInfo.Creators) != 1 || !strings.HasPrefix(doc.CreationInfo.Creators[0], "Tool: Launcher CLI ") {
 		return errors.New("SBOM.spdx.json creationInfo некорректен")
 	}
 	if len(doc.Packages) != 1 {
@@ -796,7 +796,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 		return nil, err
 	}
 	if !bytes.Equal(manifestBytes, expectedManifestBytes) {
-		return nil, errors.New("neverlauncher-extension.json внутри .nlext не canonical")
+		return nil, errors.New("launcher-extension.json внутри .nlext не canonical")
 	}
 	analysis.Manifest = manifest
 	analysis.ManifestBytes = manifestBytes
@@ -846,13 +846,13 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 	}
 	var descriptor ExtensionPackageDescriptor0202
 	if err := decodeStrictJSON0202(descriptorBytes, &descriptor); err != nil {
-		return nil, fmt.Errorf("decode neverlauncher-package.json: %w", err)
+		return nil, fmt.Errorf("decode launcher-package.json: %w", err)
 	}
 	if descriptor.Format != extensionPackageFormat0202 || descriptor.FormatVersion != extensionPackageFormatVersion0202 {
 		return nil, fmt.Errorf("unsupported .nlext format %q/%q", descriptor.Format, descriptor.FormatVersion)
 	}
 	if descriptor.BuildEpoch < 315532800 {
-		return nil, errors.New("neverlauncher-package.json содержит некорректный buildEpoch")
+		return nil, errors.New("launcher-package.json содержит некорректный buildEpoch")
 	}
 	buildTime := time.Unix(descriptor.BuildEpoch, 0).UTC()
 	for _, entry := range reader.File {
@@ -881,7 +881,7 @@ func analyzeExtensionPackage0202(packagePath string) (*extensionPackageAnalysis0
 		return nil, err
 	}
 	if !bytes.Equal(descriptorBytes, expectedDescriptorBytes) {
-		return nil, errors.New("neverlauncher-package.json/immutable package identity не соответствует содержимому .nlext")
+		return nil, errors.New("launcher-package.json/immutable package identity не соответствует содержимому .nlext")
 	}
 	analysis.Descriptor = descriptor
 	analysis.DescriptorBytes = descriptorBytes
@@ -1148,7 +1148,7 @@ func copyCanonicalZipEntry0202(zw *zip.Writer, source *zip.File, modified time.T
 }
 
 func extensionSigningDomain0202() string {
-	return "neverlauncher.extension-package.v1"
+	return "launcher.extension-package.v1"
 }
 
 func extensionSigningMessage0202(identity string) []byte {

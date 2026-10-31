@@ -783,7 +783,7 @@ mod windows_impl {
         }
         records.sort_unstable();
         let mut digest = Sha256::new();
-        digest.update(b"NeverLauncher Thread & Process Integrity process-tree v1\0");
+        digest.update(b"Launcher Thread & Process Integrity process-tree v1\0");
         for (pid, parent) in records {
             digest.update(pid.to_le_bytes());
             digest.update(parent.to_le_bytes());

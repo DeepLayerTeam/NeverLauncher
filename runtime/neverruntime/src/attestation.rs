@@ -39,7 +39,7 @@ pub(crate) fn canonical_attestation_core(attestation: &GuardRemoteAttestation) -
         let linux = attestation.process_policy.linux.as_ref().ok_or_else(|| "Linux Guard Attestation missing Linux process policy details".to_string())?;
         return Ok(format!(
             concat!(
-                "NeverLauncher Guard Attestation Core Linux v1\n",
+                "Launcher Guard Attestation Core Linux v1\n",
                 "challenge-id={}\n","challenge-sha256={}\n","evidence-id={}\n","evidence-sha256={}\n",
                 "guard-sha256={}\n","launcher-sha256={}\n","guard-module-set-sha256={}\n","launcher-module-set-sha256={}\n",
                 "process-policy-version={}\n","process-policy-enforced={}\n","no-new-privs={}\n","dumpable-disabled={}\n",
@@ -60,7 +60,7 @@ pub(crate) fn canonical_attestation_core(attestation: &GuardRemoteAttestation) -
         let launcher = attestation.evidence.launcher.macos.as_ref().ok_or_else(|| "macOS Guard Attestation missing launcher security evidence".to_string())?;
         return Ok(format!(
             concat!(
-                "NeverLauncher Guard Attestation Core macOS v1\n",
+                "Launcher Guard Attestation Core macOS v1\n",
                 "challenge-id={}\n","challenge-sha256={}\n","evidence-id={}\n","evidence-sha256={}\n",
                 "guard-sha256={}\n","launcher-sha256={}\n","guard-module-set-sha256={}\n","launcher-module-set-sha256={}\n",
                 "guard-code-signature-valid={}\n","guard-hardened-runtime={}\n","guard-library-validation={}\n",
@@ -81,7 +81,7 @@ pub(crate) fn canonical_attestation_core(attestation: &GuardRemoteAttestation) -
     }
     Ok(format!(
         concat!(
-            "NeverLauncher Guard Attestation Core v1\n",
+            "Launcher Guard Attestation Core v1\n",
             "challenge-id={}\n","challenge-sha256={}\n","evidence-id={}\n","evidence-sha256={}\n",
             "guard-sha256={}\n","launcher-sha256={}\n","guard-module-set-sha256={}\n","launcher-module-set-sha256={}\n",
             "guard-authenticode-trusted={}\n","launcher-authenticode-trusted={}\n","process-policy-version={}\n",
@@ -156,7 +156,7 @@ mod tests {
     fn process(pid: u32, hash: &str) -> ProcessIntegrityEvidence {
         ProcessIntegrityEvidence {
             pid,
-            image_path: format!("C:/NeverLauncher/{pid}.exe"),
+            image_path: format!("C:/Launcher/{pid}.exe"),
             image_sha256: hash.to_string(),
             image_size: 10,
             image_modified_unix_ms: 20,

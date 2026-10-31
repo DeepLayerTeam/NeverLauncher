@@ -90,7 +90,7 @@ func TestComponentDelegatedTrust02312(t *testing.T) {
 	}
 	// Accepting a newer revocation epoch makes a previously signed older policy
 	// permanently unusable, even if its signature itself is still valid.
-	if _, e = AcceptTrustPolicy(filepath.Join(rootInstall, ".neverlauncher", "component-trust"), rootHex, revoked, now); e != nil {
+	if _, e = AcceptTrustPolicy(filepath.Join(rootInstall, ".launcher", "component-trust"), rootHex, revoked, now); e != nil {
 		t.Fatal(e)
 	}
 	sign(first, 1)

@@ -45,7 +45,7 @@ func securityRegistryDir(args []string) string {
 	if v := os.Getenv("NEVERLAUNCHER_SECURITY_REGISTRY_DIR"); v != "" {
 		return filepath.Clean(v)
 	}
-	return filepath.Clean(".neverlauncher/security")
+	return filepath.Clean(".launcher/security")
 }
 func registryPath(dir string) string { return filepath.Join(dir, "trusted-keys.json") }
 func loadKeyRegistry(dir string) (securityKeyRegistry, error) {

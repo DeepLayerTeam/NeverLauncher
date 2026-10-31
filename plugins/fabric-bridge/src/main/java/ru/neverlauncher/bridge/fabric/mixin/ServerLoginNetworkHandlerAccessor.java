@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.fabric.mixin;
+package ru.launcher.bridge.fabric.mixin;
 
 import com.mojang.authlib.GameProfile;
 import net.minecraft.network.ClientConnection;
@@ -9,11 +9,11 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(ServerLoginNetworkHandler.class)
 public interface ServerLoginNetworkHandlerAccessor {
     @Accessor("profile")
-    GameProfile neverlauncher$getProfile();
+    GameProfile launcher$getProfile();
 
     @Accessor("profileName")
-    String neverlauncher$getProfileName();
+    String launcher$getProfileName();
 
     @Accessor("connection")
-    ClientConnection neverlauncher$getConnection();
+    ClientConnection launcher$getConnection();
 }

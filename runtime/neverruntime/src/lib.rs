@@ -767,7 +767,7 @@ pub async fn clean_unused_files(manifest: &Manifest, root: &Path, pinned_public_
     verify_manifest_signature(manifest, pinned_public_key)?;
     file_ownership::ensure_no_symlinks(root, root)?;
     let expected: HashSet<String> = manifest.files.iter().map(|f| f.path.clone()).collect();
-    let quarantine = root.join(".neverlauncher-quarantine").join(now_unix()?.to_string());
+    let quarantine = root.join(".launcher-quarantine").join(now_unix()?.to_string());
     let mut result = CleanUnusedResult { moved: 0, preserved: 0, quarantine_dir: quarantine.to_string_lossy().into_owned(), messages: Vec::new() };
     if !root.exists() { return Ok(result); }
     // Unknown files are user-owned by default. Only explicitly signed include
@@ -779,7 +779,7 @@ pub async fn clean_unused_files(manifest: &Manifest, root: &Path, pinned_public_
             let entry = entry.map_err(|e| e.to_string())?;
             let p = entry.path();
             let rel = p.strip_prefix(root).map_err(|e| e.to_string())?.to_string_lossy().replace('\\', "/");
-            if rel == ".neverlauncher-quarantine" || rel.starts_with(".neverlauncher-quarantine/") { continue; }
+            if rel == ".launcher-quarantine" || rel.starts_with(".launcher-quarantine/") { continue; }
             let meta = std::fs::symlink_metadata(&p).map_err(|e| e.to_string())?;
             if meta.file_type().is_symlink() { result.preserved += 1; continue; }
             if meta.is_dir() { stack.push(p); continue; }
@@ -862,7 +862,7 @@ pub async fn certify_vanilla_compatibility(
         uuid: "00000000-0000-0000-0000-000000000000".to_string(),
         access_token: "offline".to_string(),
         user_type: "legacy".to_string(),
-        launcher_name: "NeverLauncher".to_string(),
+        launcher_name: "Launcher".to_string(),
         launcher_version: env!("CARGO_PKG_VERSION").to_string(),
         game_directory: root.to_string_lossy().to_string(),
         assets_directory: root.join("assets").to_string_lossy().to_string(),
@@ -940,11 +940,11 @@ pub async fn certify_vanilla_compatibility(
     let logs_dir = root.join("logs");
     fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;
     let started_at = now_unix()?;
-    let log_path = logs_dir.join(format!("neverruntime-vanilla-certification-{version}-{started_at}.log"));
+    let log_path = logs_dir.join(format!("runtime-vanilla-certification-{version}-{started_at}.log"));
     let mut log_file = std::fs::OpenOptions::new().create(true).append(true).open(&log_path)
         .map_err(|err| format!("не удалось открыть certification log {}: {err}", log_path.display()))?;
     use std::io::Write as _;
-    writeln!(log_file, "NeverRuntime {} Vanilla certification", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
+    writeln!(log_file, "Runtime {} Vanilla certification", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
     writeln!(log_file, "Minecraft: {version}; Java: {required_java_major}; Main: {}", plan.main_class).map_err(|e| e.to_string())?;
     // Записываются только уже разрешённые относительные JAR-пути, без учётных данных или
     // токенов аргументов. Так можно диагностировать отсутствие библиотек в старых версиях.
@@ -1116,11 +1116,11 @@ pub async fn launch_with_timeout_matching_authenticated(
     let logs_dir = root.join("logs");
     fs::create_dir_all(&logs_dir).await.map_err(|err| format!("не удалось создать каталог логов: {err}"))?;
     let started_at = now_unix()?;
-    let log_path = logs_dir.join(format!("neverruntime-launch-{started_at}.log"));
+    let log_path = logs_dir.join(format!("runtime-launch-{started_at}.log"));
     let mut log_file = std::fs::OpenOptions::new().create(true).append(true).open(&log_path)
         .map_err(|err| format!("не удалось открыть runtime log {}: {err}", log_path.display()))?;
     use std::io::Write as _;
-    writeln!(log_file, "NeverRuntime {}", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
+    writeln!(log_file, "Runtime {}", env!("CARGO_PKG_VERSION")).map_err(|e| e.to_string())?;
     writeln!(log_file, "Команда: {}", plan.command_preview).map_err(|e| e.to_string())?;
     writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
@@ -1242,7 +1242,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
             uuid: credentials.map(|c| c.uuid.clone()).unwrap_or_else(|| "00000000-0000-0000-0000-000000000000".to_string()),
             access_token: credentials.map(|c| c.access_token.clone()).unwrap_or_else(|| "offline".to_string()),
             user_type: credentials.map(|c| c.user_type.clone()).unwrap_or_else(|| "legacy".to_string()),
-            launcher_name: "NeverLauncher".to_string(),
+            launcher_name: "Launcher".to_string(),
             launcher_version: env!("CARGO_PKG_VERSION").to_string(),
             game_directory: game_dir.to_string_lossy().to_string(),
             assets_directory: assets_dir.to_string_lossy().to_string(),
@@ -1453,7 +1453,7 @@ fn apply_minecraft_auth119(manifest: &Manifest, root: &Path, credentials: &Minec
             }
         }
         GameIdentity::Yggdrasil => {
-            if forbidden_auth_agent(&plan.jvm_args) {return Err("Yggdrasil auth agent must be supplied exclusively by NeverRuntime".into());}
+            if forbidden_auth_agent(&plan.jvm_args) {return Err("Yggdrasil auth agent must be supplied exclusively by Runtime".into());}
             let mut injector: Option<PathBuf> = None;
             for file in &manifest.files {
                 let normalized = file.path.replace('\\', "/");
@@ -2011,7 +2011,7 @@ mod tests {
                 version: "1.21.1".to_string(),
                 loader: "fixture".to_string(),
                 loader_version: String::new(),
-                main_class: "ru.neverlauncher.e2e.LaunchFixture".to_string(),
+                main_class: "ru.launcher.e2e.LaunchFixture".to_string(),
                 game_args: Vec::new(),
             },
             runtime: RuntimeInfo {
@@ -2030,7 +2030,7 @@ mod tests {
                     maximum_mb: 256,
                 },
                 launch: RuntimeLaunch {
-                    main_class: "ru.neverlauncher.e2e.LaunchFixture".to_string(),
+                    main_class: "ru.launcher.e2e.LaunchFixture".to_string(),
                     classpath_strategy: "manifest".to_string(),
                     natives_directory: "natives".to_string(),
                     version_metadata_path: String::new(),
@@ -2236,7 +2236,7 @@ mod tests {
     #[tokio::test]
     async fn platform_natives_directory_prefers_os_arch_isolation() {
         let root = std::env::temp_dir().join(format!(
-            "neverruntime-natives-{}-{}",
+            "runtime-natives-{}-{}",
             std::process::id(),
             std::env::consts::ARCH
         ));
@@ -2263,7 +2263,7 @@ mod tests {
 
     #[test]
     fn safe_join_rejects_path_traversal() {
-        let root = Path::new("/tmp/neverruntime-test");
+        let root = Path::new("/tmp/runtime-test");
         assert!(safe_join(root, "libraries/a.jar").is_ok());
         assert!(safe_join(root, "../secret").is_err());
         assert!(safe_join(root, "/etc/passwd").is_err());

@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 // The token itself is never written to SQLite or to a durable job. Consuming
@@ -102,7 +102,7 @@ func verifySignedSQLiteEvidence0374(raw []byte, signature, key string) bool {
 	if e != nil {
 		return false
 	}
-	message := append([]byte("NeverLauncher/validation-evidence/v4\x00"), canonical...)
+	message := append([]byte("Launcher/validation-evidence/v4\x00"), canonical...)
 	return ed25519.Verify(ed25519.PublicKey(pub), message, signed)
 }
 
@@ -275,7 +275,7 @@ func (r *SQLiteHTTPRepository0372) validateStablePermit0374(q sqlitedurable.Exec
 				continue
 			}
 			field := func(k string) string { var value string; _ = json.Unmarshal(evidence[k], &value); return value }
-			if field("runNonce") != challenge.Nonce || field("targetMatrixSha256") != matrix || field("schemaVersion") != "neverlauncher.validation-evidence.v4" || field("audience") != "neverlauncher-api/validation-evidence/0.34.7" || field("purpose") != "staged-package-runtime-verification" || field("runId") != runID || field("packageId") != packageID {
+			if field("runNonce") != challenge.Nonce || field("targetMatrixSha256") != matrix || field("schemaVersion") != "launcher.validation-evidence.v4" || field("audience") != "launcher-api/validation-evidence/0.34.7" || field("purpose") != "staged-package-runtime-verification" || field("runId") != runID || field("packageId") != packageID {
 				continue
 			}
 			expiry, parseErr := time.Parse(time.RFC3339Nano, field("expiresAt"))

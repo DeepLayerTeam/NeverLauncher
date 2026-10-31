@@ -51,7 +51,7 @@ func TestSingleNodeGA0330SignedAttestationAndFallbacks(t *testing.T) {
 		suites = append(suites, map[string]any{"suite": name, "count": count, "passed": passed})
 	}
 	rcRaw := gaJSON0330(t, dir, "SINGLE_NODE_GA_RC.json", map[string]any{
-		"format": "neverlauncher-03216-rc-test-evidence-v1", "version": "0.33.0", "commit": commit, "toolchain": "go version go1.27.3 linux/amd64", "suites": suites,
+		"format": "launcher-03216-rc-test-evidence-v1", "version": "0.33.0", "commit": commit, "toolchain": "go version go1.27.3 linux/amd64", "suites": suites,
 	})
 	checks := map[string]string{}
 	for _, c := range []string{
@@ -63,7 +63,7 @@ func TestSingleNodeGA0330SignedAttestationAndFallbacks(t *testing.T) {
 		checks[c] = "pass"
 	}
 	report := map[string]any{
-		"schema": "neverlauncher-single-node-ga-attestation-v1", "version": "0.33.0", "source_commit": commit,
+		"schema": "launcher-single-node-ga-attestation-v1", "version": "0.33.0", "source_commit": commit,
 		"rc_receipt_sha256": singleNodeSHA0330(rcRaw), "operator": "independent synthetic test fixture",
 		"environment": map[string]any{
 			"backend_repository": "sqlite", "coordinator": "sqlite", "journal_mode": "wal",
@@ -71,9 +71,9 @@ func TestSingleNodeGA0330SignedAttestationAndFallbacks(t *testing.T) {
 			"postgres_required": false, "redis_required": false, "durable_data_after_restart": true,
 		}, "checks": checks,
 		"tested_artifacts": map[string]string{
-			"neverlauncher-api-linux-x64":           strings.Repeat("a", 64),
-			"neverlauncher-cli-linux-x64":           strings.Repeat("b", 64),
-			"neverlauncher-linux-x64-0.33.0.tar.gz": strings.Repeat("c", 64),
+			"launcher-api-linux-x64":           strings.Repeat("a", 64),
+			"launcher-cli-linux-x64":           strings.Repeat("b", 64),
+			"launcher-linux-x64-0.33.0.tar.gz": strings.Repeat("c", 64),
 		},
 	}
 	writeSigned := func() {
@@ -83,14 +83,14 @@ func TestSingleNodeGA0330SignedAttestationAndFallbacks(t *testing.T) {
 			t.Fatal(err)
 		}
 		gaJSON0330(t, dir, "SINGLE_NODE_GA_CERTIFICATION.json", map[string]any{
-			"schema": "neverlauncher-single-node-ga-verification-v1", "version": "0.33.0", "source_commit": commit,
+			"schema": "launcher-single-node-ga-verification-v1", "version": "0.33.0", "source_commit": commit,
 			"status": "independently-attested", "rc_receipt_sha256": singleNodeSHA0330(rcRaw),
 			"attestation_sha256": singleNodeSHA0330(raw), "attestation_signature_sha256": singleNodeSHA0330(sig),
 			"verification_key_fingerprint": singleNodeSHA0330(pub), "checks": len(checks),
 		})
 	}
 	// Bind approval to the exact installed Linux binary/package bytes.
-	for _, file := range []string{"neverlauncher-api-linux-x64", "neverlauncher-cli-linux-x64", "neverlauncher-linux-x64-0.33.0.tar.gz"} {
+	for _, file := range []string{"launcher-api-linux-x64", "launcher-cli-linux-x64", "launcher-linux-x64-0.33.0.tar.gz"} {
 		payload := []byte("tested release bytes:" + file)
 		if err := os.WriteFile(filepath.Join(dir, file), payload, 0o600); err != nil {
 			t.Fatal(err)
@@ -101,13 +101,13 @@ func TestSingleNodeGA0330SignedAttestationAndFallbacks(t *testing.T) {
 	if err := verifySingleNodeGATestedArtifacts0330(dir); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "neverlauncher-api-linux-x64"), []byte("tampered binary"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "launcher-api-linux-x64"), []byte("tampered binary"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := verifySingleNodeGATestedArtifacts0330(dir); err == nil {
 		t.Fatal("untested binary substitution accepted")
 	}
-	if err := os.WriteFile(filepath.Join(dir, "neverlauncher-api-linux-x64"), []byte("tested release bytes:neverlauncher-api-linux-x64"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "launcher-api-linux-x64"), []byte("tested release bytes:launcher-api-linux-x64"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	writeSigned()

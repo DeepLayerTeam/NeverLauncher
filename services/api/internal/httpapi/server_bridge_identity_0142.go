@@ -15,26 +15,26 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 const (
-	serverBridgeNodeSignatureScheme0142 = "NeverLauncher-ServerBridge-Node-v1"
+	serverBridgeNodeSignatureScheme0142 = "Launcher-ServerBridge-Node-v1"
 	serverBridgeNodeMaxBody0142         = 64 << 10
 	serverBridgeNodeClockSkew0142       = 90 * time.Second
 	serverBridgeNodeNonceTTL0142        = 3 * time.Minute
 )
 
 const (
-	nodeIDHeader0142          = "X-NeverLauncher-Node-Id"
-	nodeFingerprintHeader0142 = "X-NeverLauncher-Node-Key-Fingerprint"
-	nodeTimestampHeader0142   = "X-NeverLauncher-Node-Timestamp"
-	nodeNonceHeader0142       = "X-NeverLauncher-Node-Nonce"
-	nodeSignatureHeader0142   = "X-NeverLauncher-Node-Signature"
-	nodeProtocolHeader01912   = "X-NeverLauncher-Protocol-Version"
-	nodeSecurityProfile01912  = "X-NeverLauncher-Security-Profile"
-	nodeCapabilityDigest01912 = "X-NeverLauncher-Capability-Digest"
-	nodeRuntimeIDHeader01912  = "X-NeverLauncher-Runtime-Id"
+	nodeIDHeader0142          = "X-Launcher-Node-Id"
+	nodeFingerprintHeader0142 = "X-Launcher-Node-Key-Fingerprint"
+	nodeTimestampHeader0142   = "X-Launcher-Node-Timestamp"
+	nodeNonceHeader0142       = "X-Launcher-Node-Nonce"
+	nodeSignatureHeader0142   = "X-Launcher-Node-Signature"
+	nodeProtocolHeader01912   = "X-Launcher-Protocol-Version"
+	nodeSecurityProfile01912  = "X-Launcher-Security-Profile"
+	nodeCapabilityDigest01912 = "X-Launcher-Capability-Digest"
+	nodeRuntimeIDHeader01912  = "X-Launcher-Runtime-Id"
 )
 
 type bridgeNodeAuthError0142 struct {

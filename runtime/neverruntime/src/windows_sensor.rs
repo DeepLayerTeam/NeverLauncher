@@ -41,7 +41,7 @@ mod imp {
     type HmacSha256 = Hmac<Sha256>;
     const SENSOR_MAGIC: &[u8; 8] = b"NGSENS04";
     const SENSOR_DOMAIN: &[u8] = b"guard-sensor-startup-v3";
-    const SENSOR_PIPE_PREFIX: &str = r"\\.\pipe\NeverLauncher.Guard.Sensor.";
+    const SENSOR_PIPE_PREFIX: &str = r"\\.\pipe\Launcher.Guard.Sensor.";
     const SENSOR_STARTUP_TIMEOUT_SECS: u64 = 12;
     const DISABLE_ATTACH_MECHANISM_ARG: &str = "-XX:+DisableAttachMechanism";
     const JAVA_OPTION_ENV_VARS: [&str; 3] = ["JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "JDK_JAVA_OPTIONS"];

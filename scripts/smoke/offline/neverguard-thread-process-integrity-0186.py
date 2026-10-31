@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Thread & Process Integrity 0.18.6 gate: {label} missing {missing}"
+            f"[Launcher] Thread & Process Integrity 0.18.6 gate: {label} missing {missing}"
         )
 
 
@@ -23,17 +23,17 @@ def main() -> int:
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 6):
         raise SystemExit(
-            f"[NeverLauncher] Thread & Process Integrity 0.18.6 gate: VERSION is {version}"
+            f"[Launcher] Thread & Process Integrity 0.18.6 gate: VERSION is {version}"
         )
 
     thread_sensor = read("runtime/guard-sensor/src/thread_integrity.rs")
     sensor = read("runtime/guard-sensor/src/lib.rs")
-    policy = read("runtime/neverruntime/src/windows_policy.rs")
-    parent = read("runtime/neverruntime/src/windows_module_guard.rs")
-    report = read("runtime/neverruntime/src/windows_thread_process_integrity.rs")
-    exports = read("runtime/neverruntime/src/lib.rs")
-    bootstrap = read("runtime/neverruntime/src/windows_sensor.rs")
-    integration = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    policy = read("runtime/runtime/src/windows_policy.rs")
+    parent = read("runtime/runtime/src/windows_module_guard.rs")
+    report = read("runtime/runtime/src/windows_thread_process_integrity.rs")
+    exports = read("runtime/runtime/src/lib.rs")
+    bootstrap = read("runtime/runtime/src/windows_sensor.rs")
+    integration = read("runtime/runtime/tests/guard_sensor_windows.rs")
     probe = read("runtime/guard-thread-probe/src/lib.rs")
     ci = read(".github/workflows/ci.yml")
     preflight = read("scripts/release/preflight.sh")
@@ -63,7 +63,7 @@ def main() -> int:
     ):
         if forbidden in thread_sensor:
             raise SystemExit(
-                f"[NeverLauncher] Thread & Process Integrity 0.18.6 gate: forbidden cross-process primitive {forbidden}"
+                f"[Launcher] Thread & Process Integrity 0.18.6 gate: forbidden cross-process primitive {forbidden}"
             )
 
     require(
@@ -173,21 +173,21 @@ def main() -> int:
             "python scripts/smoke/offline/guard-thread-process-integrity-0186.py",
             "cargo build --manifest-path runtime/guard-thread-probe/Cargo.toml",
             "NEVERGUARD_THREAD_PROBE_DLL",
-            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows -- --nocapture",
+            "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/guard-thread-probe/Cargo.toml --all-targets -- -D warnings",
         ],
         "Windows integration/adversarial/clippy CI",
     )
     if "guard-thread-process-integrity-0186.py" not in preflight:
         raise SystemExit(
-            "[NeverLauncher] Thread & Process Integrity 0.18.6 gate: preflight wiring missing"
+            "[Launcher] Thread & Process Integrity 0.18.6 gate: preflight wiring missing"
         )
 
     for path, body in [
         ("runtime/guard-sensor/src/thread_integrity.rs", thread_sensor),
         ("runtime/guard-sensor/src/lib.rs", sensor),
-        ("runtime/neverruntime/src/windows_policy.rs", policy),
-        ("runtime/neverruntime/src/windows_module_guard.rs", parent),
+        ("runtime/runtime/src/windows_policy.rs", policy),
+        ("runtime/runtime/src/windows_module_guard.rs", parent),
     ]:
         for forbidden in (
             "todo!()",
@@ -197,10 +197,10 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[NeverLauncher] Thread & Process Integrity 0.18.6 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Thread & Process Integrity 0.18.6 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[NeverLauncher] Thread & Process Integrity 0.18.6 gate: OK")
+    print("[Launcher] Thread & Process Integrity 0.18.6 gate: OK")
     return 0
 
 

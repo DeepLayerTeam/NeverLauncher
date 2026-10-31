@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;

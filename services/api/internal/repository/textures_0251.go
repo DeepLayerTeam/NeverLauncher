@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // TextureRepository0251 is an operational CAS store. It is intentionally separate
@@ -194,7 +194,7 @@ func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile 
 	if expected < 1 {
 		return model.TextureAssignment0251{}, ErrTextureRevisionConflict0251
 	}
-	if profile.Realm != "local" || profile.Issuer != "neverlauncher" {
+	if profile.Realm != "local" || profile.Issuer != "launcher" {
 		return model.TextureAssignment0251{}, fmt.Errorf("official identity cannot be changed via local texture service")
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -317,7 +317,7 @@ func (r *SQLRepository) EnsureTextureIdentity0251(ctx context.Context, profile m
 	if err := r.check(); err != nil {
 		return err
 	}
-	if profile.Realm != "local" || profile.Issuer != "neverlauncher" {
+	if profile.Realm != "local" || profile.Issuer != "launcher" {
 		return fmt.Errorf("not a local Minecraft profile")
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -340,7 +340,7 @@ func (r *SQLRepository) EnsureTextureIdentity0251(ctx context.Context, profile m
 	if affected != 1 {
 		return ErrNotFound
 	}
-	digest := sha256.Sum256([]byte("neverlauncher-player:" + profile.UserID))
+	digest := sha256.Sum256([]byte("launcher-player:" + profile.UserID))
 	raw := hex.EncodeToString(digest[:16])
 	legacy := raw[:8] + "-" + raw[8:12] + "-" + raw[12:16] + "-" + raw[16:20] + "-" + raw[20:]
 	for _, candidate := range []struct{ key, mapping string }{{strings.ToLower(profile.UUID), "exact"}, {legacy, "user-derived-v2"}} {

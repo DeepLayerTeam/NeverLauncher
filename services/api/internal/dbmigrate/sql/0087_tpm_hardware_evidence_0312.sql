@@ -6,7 +6,7 @@ ALTER TABLE device_challenges ADD CONSTRAINT device_challenges_purpose_check CHE
  'serverbridge-verified-plan-v1','hardware-certify'
 ));
 
--- NeverLauncher 0.31.2: only server-verified TPM Certify results, not client claims.
+-- Launcher 0.31.2: only server-verified TPM Certify results, not client claims.
 CREATE TABLE IF NOT EXISTS device_hardware_evidence_0312 (
  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
  user_id TEXT NOT NULL,

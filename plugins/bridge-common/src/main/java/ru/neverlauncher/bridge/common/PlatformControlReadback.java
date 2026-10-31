@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;

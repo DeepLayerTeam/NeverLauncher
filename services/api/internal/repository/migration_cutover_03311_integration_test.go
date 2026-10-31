@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -16,11 +16,11 @@ import (
 	"testing"
 	"time"
 
-	co "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcutover"
-	gr "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrehearsal"
-	rb "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrollback"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	co "gitflic.ru/skif4er/launcher/services/api/internal/gravitcutover"
+	gr "gitflic.ru/skif4er/launcher/services/api/internal/gravitrehearsal"
+	rb "gitflic.ru/skif4er/launcher/services/api/internal/gravitrollback"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func TestMigrationCutoverPostgres03311(t *testing.T) {
@@ -87,7 +87,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	hash := strings.Repeat("a", 64)
 	q(`INSERT INTO migration_source_inventory_0333(run_id,source_sha256,manifest_sha256,inventory) VALUES($1,$2,$2,'{}'::jsonb)`, runID, hash)
 	q(`INSERT INTO users(id,email,display_name,role_id,status,project_roles,password_hash,created_at,updated_at) VALUES($1,$2,'TestPlayer','player','active','{}'::jsonb,'test',now(),now())`, user, project+"@example.test")
-	q(`INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at) VALUES($1,$2,'TestPlayer','neverlauncher','local',$2,'gravit-import-v1',now(),now())`, user, player)
+	q(`INSERT INTO minecraft_profiles(user_id,uuid,name,issuer,realm,subject,identity_version,created_at,updated_at) VALUES($1,$2,'TestPlayer','launcher','local',$2,'gravit-import-v1',now(),now())`, user, player)
 	q(`INSERT INTO migration_identity_snapshots_0334(run_id,source_sha256,inventory_sha256,entries_sha256) VALUES($1,$2,$2,$2)`, runID, hash)
 	q(`INSERT INTO migration_identity_rows_0334(run_id,ordinal,provider,source_id,username,minecraft_uuid,source_path,status,reason) VALUES($1,0,'fileauth','42','TestPlayer',$2,'Database.json','pending_import','test')`, runID, player)
 	q(`INSERT INTO migration_auth_imports_0335(run_id,source_sha256,identity_sha256,decision_sha256,report) VALUES($1,$2,$2,$2,'{"manualReset":0,"dryRun":false,"rows":[{"state":"imported"}]}'::jsonb)`, runID, hash)

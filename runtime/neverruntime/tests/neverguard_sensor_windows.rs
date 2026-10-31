@@ -1,6 +1,6 @@
 #![cfg(windows)]
 
-use neverruntime::{
+use runtime::{
     windows_policy::{enforce_runtime_process, prepare_runtime_command},
     windows_sensor::{
         authenticate_sensor_or_kill, prepare_sensor_command_with_path,

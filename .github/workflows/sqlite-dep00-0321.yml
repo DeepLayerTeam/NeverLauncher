@@ -3,7 +3,7 @@ on:
   push:
     paths:
       - "services/api/internal/sqlitedurable/**"
-      - "services/api/cmd/neverlauncher-sqlite/**"
+      - "services/api/cmd/launcher-sqlite/**"
       - "services/api/go.mod"
       - "services/api/go.sum"
       - ".github/workflows/sqlite-dep00-0321.yml"
@@ -35,10 +35,10 @@ jobs:
         env:
           NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: "1"
           NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-dep00
-        run: go test -race -count=1 -v ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
+        run: go test -race -count=1 -v ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Build actual CLI
-        run: go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite" ./cmd/neverlauncher-sqlite
+        run: go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
       - name: Real CLI probe and verification
         run: |
-          "$RUNNER_TEMP/neverlauncher-sqlite" probe --db "$RUNNER_TEMP/never-sqlite-dep00/preflight.sqlite"
-          "$RUNNER_TEMP/neverlauncher-sqlite" verify --db "$RUNNER_TEMP/never-sqlite-dep00/preflight.sqlite"
+          "$RUNNER_TEMP/launcher-sqlite" probe --db "$RUNNER_TEMP/never-sqlite-dep00/preflight.sqlite"
+          "$RUNNER_TEMP/launcher-sqlite" verify --db "$RUNNER_TEMP/never-sqlite-dep00/preflight.sqlite"

@@ -20,7 +20,7 @@ func TestMigrationIdentityCLI0334(t *testing.T) {
 			t.Error("missing auth token")
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"format": "neverlauncher.gravit-identity-map.v1", "ready": false}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"format": "launcher.gravit-identity-map.v1", "ready": false}})
 	}))
 	defer server.Close()
 	base := []string{"--backend", server.URL, "--token", "token334", "--run", "run334"}

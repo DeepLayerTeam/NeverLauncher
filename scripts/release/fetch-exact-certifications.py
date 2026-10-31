@@ -5,6 +5,7 @@ This helper is intentionally fail-closed. It only accepts successful workflow
 runs for the requested commit and validates the downloaded public matrix before
 release assembly. It never falls back to a previous successful run.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -25,7 +26,7 @@ API_ROOT = "https://api.github.com"
 API_VERSION = "2022-11-28"
 ROOT = Path(__file__).resolve().parents[2]
 PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-USER_AGENT = f"NeverLauncher-release-certification-fetch/{PRODUCT_VERSION}"
+USER_AGENT = f"Launcher-release-certification-fetch/{PRODUCT_VERSION}"
 ARTIFACT_REDIRECT_SUFFIXES = (
     ".blob.core.windows.net",
     ".githubusercontent.com",
@@ -33,12 +34,22 @@ ARTIFACT_REDIRECT_SUFFIXES = (
 )
 
 
-def _artifact_redirect_request(req: urllib.request.Request, newurl: str) -> urllib.request.Request:
+def _artifact_redirect_request(
+    req: urllib.request.Request, newurl: str
+) -> urllib.request.Request:
     parsed = urllib.parse.urlparse(newurl)
     host = (parsed.hostname or "").lower().rstrip(".")
-    if parsed.scheme != "https" or not host or parsed.username is not None or parsed.password is not None:
+    if (
+        parsed.scheme != "https"
+        or not host
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
         raise RuntimeError(f"artifact redirect URL is not a safe HTTPS URL: {newurl}")
-    if not any(host.endswith(suffix) or host == suffix[1:] for suffix in ARTIFACT_REDIRECT_SUFFIXES):
+    if not any(
+        host.endswith(suffix) or host == suffix[1:]
+        for suffix in ARTIFACT_REDIRECT_SUFFIXES
+    ):
         raise RuntimeError(f"artifact redirect host is not trusted: {host}")
     # Never forward the GitHub bearer token to signed artifact redirect hosts.
     # Никогда не передавайте bearer-токен GitHub на подписанный источник артефакта. URL
@@ -59,9 +70,10 @@ class ArtifactRedirectHandler(urllib.request.HTTPRedirectHandler):
             return None
         return _artifact_redirect_request(req, newurl)
 
+
 SPECS = (
-    ("compatibility", "compatibility.yml", "neverlauncher-compatibility-matrix-"),
-    ("device-trust", "device-trust.yml", "neverlauncher-device-trust-matrix-"),
+    ("compatibility", "compatibility.yml", "launcher-compatibility-matrix-"),
+    ("device-trust", "device-trust.yml", "launcher-device-trust-matrix-"),
 )
 
 
@@ -87,12 +99,18 @@ class GitHubAPI:
                 return response.read()
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"GitHub API HTTP {exc.code} for {url}: {body[:500]}") from exc
+            raise RuntimeError(
+                f"GitHub API HTTP {exc.code} for {url}: {body[:500]}"
+            ) from exc
         except urllib.error.URLError as exc:
             raise RuntimeError(f"GitHub API request failed for {url}: {exc}") from exc
 
     def json(self, path_or_url: str) -> dict[str, Any]:
-        url = path_or_url if path_or_url.startswith("https://") else API_ROOT + path_or_url
+        url = (
+            path_or_url
+            if path_or_url.startswith("https://")
+            else API_ROOT + path_or_url
+        )
         raw = self._request(url)
         try:
             doc = json.loads(raw)
@@ -104,7 +122,9 @@ class GitHubAPI:
 
     def bytes(self, url: str) -> bytes:
         if not url.startswith(API_ROOT + "/"):
-            raise RuntimeError("artifact download must start from the GitHub API origin")
+            raise RuntimeError(
+                "artifact download must start from the GitHub API origin"
+            )
         req = urllib.request.Request(
             url,
             headers={
@@ -121,9 +141,13 @@ class GitHubAPI:
                 return response.read()
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"GitHub artifact HTTP {exc.code} for {url}: {body[:500]}") from exc
+            raise RuntimeError(
+                f"GitHub artifact HTTP {exc.code} for {url}: {body[:500]}"
+            ) from exc
         except urllib.error.URLError as exc:
-            raise RuntimeError(f"GitHub artifact request failed for {url}: {exc}") from exc
+            raise RuntimeError(
+                f"GitHub artifact request failed for {url}: {exc}"
+            ) from exc
 
 
 def select_exact_run(runs: list[dict[str, Any]], commit: str) -> dict[str, Any] | None:
@@ -132,11 +156,21 @@ def select_exact_run(runs: list[dict[str, Any]], commit: str) -> dict[str, Any] 
         return None
     # GitHub может хранить повторные запуски для одного SHA. Выбирайте новейший,
     # чтобы устаревшая неудачная попытка не скрывала свежий повтор точного коммита.
-    exact.sort(key=lambda r: (str(r.get("created_at", "")), int(r.get("id", 0))), reverse=True)
+    exact.sort(
+        key=lambda r: (str(r.get("created_at", "")), int(r.get("id", 0))), reverse=True
+    )
     return exact[0]
 
 
-def validate_matrix_document(doc: dict[str, Any], *, repository: str, commit: str, version: str, run_id: int, label: str) -> None:
+def validate_matrix_document(
+    doc: dict[str, Any],
+    *,
+    repository: str,
+    commit: str,
+    version: str,
+    run_id: int,
+    label: str,
+) -> None:
     expected = {
         "repository": repository,
         "commit": commit,
@@ -148,9 +182,13 @@ def validate_matrix_document(doc: dict[str, Any], *, repository: str, commit: st
         actual = doc.get(key)
         if key == "commit":
             if str(actual).lower() != str(value).lower():
-                raise RuntimeError(f"{label} matrix {key} mismatch: expected={value} actual={actual}")
+                raise RuntimeError(
+                    f"{label} matrix {key} mismatch: expected={value} actual={actual}"
+                )
         elif str(actual) != str(value):
-            raise RuntimeError(f"{label} matrix {key} mismatch: expected={value} actual={actual}")
+            raise RuntimeError(
+                f"{label} matrix {key} mismatch: expected={value} actual={actual}"
+            )
     targets = doc.get("targets")
     if not isinstance(targets, list) or not targets:
         raise RuntimeError(f"{label} matrix contains no certified targets")
@@ -161,9 +199,15 @@ def validate_matrix_document(doc: dict[str, Any], *, repository: str, commit: st
 def matrix_from_zip(raw: bytes, *, label: str) -> bytes:
     try:
         with zipfile.ZipFile(io.BytesIO(raw)) as archive:
-            candidates = [n for n in archive.namelist() if n == "matrix.json" or n.endswith("/matrix.json")]
+            candidates = [
+                n
+                for n in archive.namelist()
+                if n == "matrix.json" or n.endswith("/matrix.json")
+            ]
             if len(candidates) != 1:
-                raise RuntimeError(f"{label} artifact must contain exactly one matrix.json, found {candidates}")
+                raise RuntimeError(
+                    f"{label} artifact must contain exactly one matrix.json, found {candidates}"
+                )
             data = archive.read(candidates[0])
     except zipfile.BadZipFile as exc:
         raise RuntimeError(f"{label} artifact is not a valid ZIP") from exc
@@ -172,7 +216,9 @@ def matrix_from_zip(raw: bytes, *, label: str) -> bytes:
     return data
 
 
-def workflow_runs(api: GitHubAPI, repository: str, workflow: str, commit: str) -> list[dict[str, Any]]:
+def workflow_runs(
+    api: GitHubAPI, repository: str, workflow: str, commit: str
+) -> list[dict[str, Any]]:
     repo = urllib.parse.quote(repository, safe="/")
     wf = urllib.parse.quote(workflow, safe="")
     q = urllib.parse.urlencode({"head_sha": commit, "event": "push", "per_page": 20})
@@ -183,10 +229,23 @@ def workflow_runs(api: GitHubAPI, repository: str, workflow: str, commit: str) -
     return [r for r in runs if isinstance(r, dict)]
 
 
-def fetch_matrix(api: GitHubAPI, *, repository: str, commit: str, version: str, label: str, workflow: str, artifact_prefix: str, output: Path) -> bool:
+def fetch_matrix(
+    api: GitHubAPI,
+    *,
+    repository: str,
+    commit: str,
+    version: str,
+    label: str,
+    workflow: str,
+    artifact_prefix: str,
+    output: Path,
+) -> bool:
     run = select_exact_run(workflow_runs(api, repository, workflow, commit), commit)
     if run is None:
-        print(f"[release-certification] {label}: exact-commit workflow run not visible yet", flush=True)
+        print(
+            f"[release-certification] {label}: exact-commit workflow run not visible yet",
+            flush=True,
+        )
         return False
     status = str(run.get("status", ""))
     conclusion = run.get("conclusion")
@@ -194,34 +253,51 @@ def fetch_matrix(api: GitHubAPI, *, repository: str, commit: str, version: str, 
     if run_id <= 0:
         raise RuntimeError(f"{label} exact-commit workflow run has invalid id")
     if status != "completed":
-        print(f"[release-certification] {label}: run {run_id} status={status}; waiting", flush=True)
+        print(
+            f"[release-certification] {label}: run {run_id} status={status}; waiting",
+            flush=True,
+        )
         return False
     if conclusion != "success":
-        raise RuntimeError(f"{label} exact-commit workflow run {run_id} concluded {conclusion!r}, refusing release fallback")
+        raise RuntimeError(
+            f"{label} exact-commit workflow run {run_id} concluded {conclusion!r}, refusing release fallback"
+        )
     if fresh_required(version):
         # Exact SHA alone is not freshness: the newest completed execution may
         # have occurred weeks earlier. Only a newly executed run is usable.
-        started = str(run.get('run_started_at', ''))
+        started = str(run.get("run_started_at", ""))
         try:
-            stamp = datetime.fromisoformat(started.replace('Z', '+00:00'))
-            attempt = run.get('run_attempt')
-            if not started.endswith('Z') or type(attempt) is not int or attempt < 1:
-                raise ValueError('missing run attempt or UTC start time')
+            stamp = datetime.fromisoformat(started.replace("Z", "+00:00"))
+            attempt = run.get("run_attempt")
+            if not started.endswith("Z") or type(attempt) is not int or attempt < 1:
+                raise ValueError("missing run attempt or UTC start time")
         except (ValueError, TypeError) as exc:
-            raise RuntimeError(f'{label} run lacks fresh execution provenance') from exc
+            raise RuntimeError(f"{label} run lacks fresh execution provenance") from exc
         delta = datetime.now(timezone.utc) - stamp
         if not timedelta(0) <= delta <= timedelta(hours=24):
-            raise RuntimeError(f'{label} exact-commit workflow run is historical; rerun verification for this release')
+            raise RuntimeError(
+                f"{label} exact-commit workflow run is historical; rerun verification for this release"
+            )
 
     repo = urllib.parse.quote(repository, safe="/")
-    artifacts_doc = api.json(f"/repos/{repo}/actions/runs/{run_id}/artifacts?per_page=100")
+    artifacts_doc = api.json(
+        f"/repos/{repo}/actions/runs/{run_id}/artifacts?per_page=100"
+    )
     artifacts = artifacts_doc.get("artifacts")
     if not isinstance(artifacts, list):
         raise RuntimeError(f"{label} artifact response is malformed")
     expected_name = artifact_prefix + str(run_id)
-    matches = [a for a in artifacts if isinstance(a, dict) and a.get("name") == expected_name and not a.get("expired", False)]
+    matches = [
+        a
+        for a in artifacts
+        if isinstance(a, dict)
+        and a.get("name") == expected_name
+        and not a.get("expired", False)
+    ]
     if len(matches) != 1:
-        raise RuntimeError(f"{label} exact-commit run {run_id} must expose exactly one {expected_name!r} artifact")
+        raise RuntimeError(
+            f"{label} exact-commit run {run_id} must expose exactly one {expected_name!r} artifact"
+        )
     archive_url = str(matches[0].get("archive_download_url", "")).strip()
     if not archive_url.startswith("https://api.github.com/"):
         raise RuntimeError(f"{label} artifact download URL is invalid")
@@ -232,10 +308,20 @@ def fetch_matrix(api: GitHubAPI, *, repository: str, commit: str, version: str, 
         raise RuntimeError(f"{label} matrix.json is invalid JSON") from exc
     if not isinstance(matrix, dict):
         raise RuntimeError(f"{label} matrix.json must be an object")
-    validate_matrix_document(matrix, repository=repository, commit=commit, version=version, run_id=run_id, label=label)
+    validate_matrix_document(
+        matrix,
+        repository=repository,
+        commit=commit,
+        version=version,
+        run_id=run_id,
+        label=label,
+    )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(matrix_raw)
-    print(f"[release-certification] {label}: accepted exact commit {commit} from run {run_id}", flush=True)
+    print(
+        f"[release-certification] {label}: accepted exact commit {commit} from run {run_id}",
+        flush=True,
+    )
     return True
 
 
@@ -252,7 +338,9 @@ def main() -> int:
 
     if not args.repository or "/" not in args.repository:
         raise SystemExit("invalid --repository")
-    if len(args.commit) not in (40, 64) or any(ch not in "0123456789abcdefABCDEF" for ch in args.commit):
+    if len(args.commit) not in (40, 64) or any(
+        ch not in "0123456789abcdefABCDEF" for ch in args.commit
+    ):
         raise SystemExit("--commit must be an exact 40/64-hex source commit")
     if args.timeout_seconds < 1 or args.timeout_seconds > 3600:
         raise SystemExit("--timeout-seconds must be between 1 and 3600")
@@ -287,7 +375,9 @@ def main() -> int:
         if not pending:
             break
         if time.monotonic() >= deadline:
-            raise RuntimeError(f"timed out waiting for exact-commit certifications: {', '.join(sorted(pending))}")
+            raise RuntimeError(
+                f"timed out waiting for exact-commit certifications: {', '.join(sorted(pending))}"
+            )
         time.sleep(args.poll_seconds)
 
     return 0

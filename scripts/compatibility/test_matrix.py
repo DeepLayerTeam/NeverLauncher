@@ -13,11 +13,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = ROOT / "scripts" / "compatibility" / "matrix.py"
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-REPOSITORY_TARGETS = json.loads((ROOT / "compatibility" / "targets.json").read_text(encoding="utf-8"))
+REPOSITORY_TARGETS = json.loads(
+    (ROOT / "compatibility" / "targets.json").read_text(encoding="utf-8")
+)
 
 
 def run(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["python3", str(TOOL), *args], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return subprocess.run(
+        ["python3", str(TOOL), *args],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
 
 
 class MatrixToolTests(unittest.TestCase):
@@ -54,8 +62,21 @@ class MatrixToolTests(unittest.TestCase):
                 "result.json",
             ]
             if target.get("matchingServer") is True:
-                checks.update({"matchingServer": True, "serverVersionMatched": True, "serverHealthy": True, "clientJoinedServer": True})
-                files.extend(["vanilla-server-install.json", "matching-server.json", "matching-server.log"])
+                checks.update(
+                    {
+                        "matchingServer": True,
+                        "serverVersionMatched": True,
+                        "serverHealthy": True,
+                        "clientJoinedServer": True,
+                    }
+                )
+                files.extend(
+                    [
+                        "vanilla-server-install.json",
+                        "matching-server.json",
+                        "matching-server.log",
+                    ]
+                )
         else:
             checks = {
                 "actualClient": True,
@@ -85,31 +106,57 @@ class MatrixToolTests(unittest.TestCase):
             checks.update({"loaderPinned": True, "reproducibleResolution": True})
             files.append(f"{target['loader']}-resolution-lock.json")
         if target["loader"] != "vanilla" and target["scope"] == "integration":
-            checks.update({
-                "loaderNativeServer": True,
-                "loaderVersionMatched": True,
-                "loaderServerHealthy": True,
-                "loaderNativeClientJoin": True,
-            })
-            files.extend([
-                "loader-native-server.json", "loader-native-client.json", "loader-native-server.log",
-                "loader-native-server-artifacts.txt", "loader-native-server-process.txt", "health-loader-native.json",
-            ])
-        cross_anchors = {"fabric": "26.3", "quilt": "26.3", "forge": "26.3", "neoforge": "26.2"}
-        if target["loader"] in cross_anchors and target["minecraft"] == cross_anchors[target["loader"]] and target["scope"] == "client":
-            checks.update({
-                "loaderPlatformMaterialized": True,
-                "loaderNativesResolved": True,
-                "loaderPlatformLaunch": True,
-            })
+            checks.update(
+                {
+                    "loaderNativeServer": True,
+                    "loaderVersionMatched": True,
+                    "loaderServerHealthy": True,
+                    "loaderNativeClientJoin": True,
+                }
+            )
+            files.extend(
+                [
+                    "loader-native-server.json",
+                    "loader-native-client.json",
+                    "loader-native-server.log",
+                    "loader-native-server-artifacts.txt",
+                    "loader-native-server-process.txt",
+                    "health-loader-native.json",
+                ]
+            )
+        cross_anchors = {
+            "fabric": "26.3",
+            "quilt": "26.3",
+            "forge": "26.3",
+            "neoforge": "26.2",
+        }
+        if (
+            target["loader"] in cross_anchors
+            and target["minecraft"] == cross_anchors[target["loader"]]
+            and target["scope"] == "client"
+        ):
+            checks.update(
+                {
+                    "loaderPlatformMaterialized": True,
+                    "loaderNativesResolved": True,
+                    "loaderPlatformLaunch": True,
+                }
+            )
             files.append("loader-platform.json")
             if target["os"] == "linux" and target["arch"] == "x86_64":
-                checks.update({
-                    "loaderCacheVerified": True,
-                    "loaderUpstreamRecovery": True,
-                })
+                checks.update(
+                    {
+                        "loaderCacheVerified": True,
+                        "loaderUpstreamRecovery": True,
+                    }
+                )
                 if target["loader"] in {"forge", "neoforge"}:
-                    checks.update({"loaderInstallerRecovery": True, "loaderProcessorRecovery": True})
+                    checks.update(
+                        {
+                            "loaderInstallerRecovery": True,
+                            "loaderProcessorRecovery": True,
+                        }
+                    )
                 files.extend(["loader-hardening.json", "loader-hardening-package.json"])
         return {
             "schemaVersion": "1.0",
@@ -178,60 +225,108 @@ class MatrixToolTests(unittest.TestCase):
             report.mkdir(parents=True, exist_ok=True)
             fingerprints = {}
             for name in result["evidence"]["files"]:
-                destination = (report if name in {"java-runtime.json", "platform-runtime.json"} else runtime) / name
+                destination = (
+                    report
+                    if name in {"java-runtime.json", "platform-runtime.json"}
+                    else runtime
+                ) / name
                 # Bytes are materialized, not merely a claimed list of paths.
                 contents = f"{target['id']}:{name}:proof".encode()
                 destination.write_bytes(contents)
                 fingerprints[name] = hashlib.sha256(contents).hexdigest()
             result["evidence"]["sha256"] = fingerprints
-            (report / "compatibility-result.json").write_text(json.dumps(result), encoding="utf-8")
+            (report / "compatibility-result.json").write_text(
+                json.dumps(result), encoding="utf-8"
+            )
 
-    def aggregate(self, tmp: Path, doc: dict, mutate=None) -> subprocess.CompletedProcess[str]:
+    def aggregate(
+        self, tmp: Path, doc: dict, mutate=None
+    ) -> subprocess.CompletedProcess[str]:
         targets = tmp / "targets.json"
         targets.write_text(json.dumps(doc), encoding="utf-8")
         results = tmp / "results"
         self.write_results(results, doc, mutate)
         return run(
             "aggregate",
-            "--targets", str(targets),
-            "--results-root", str(results),
-            "--output-dir", str(tmp / "out"),
-            "--commit", "abc123",
-            "--run-id", "77",
-            "--repository", "DeepLayerTeam/NeverLauncher",
+            "--targets",
+            str(targets),
+            "--results-root",
+            str(results),
+            "--output-dir",
+            str(tmp / "out"),
+            "--commit",
+            "abc123",
+            "--run-id",
+            "77",
+            "--repository",
+            "DeepLayerTeam/Launcher",
         )
 
-
-
-    def test_04010_rejects_missing_evidence_artifact_after_successful_runner(self) -> None:
+    def test_04010_rejects_missing_evidence_artifact_after_successful_runner(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             doc = self.target_doc()
             self.write_results(root / "results", doc)
             target = next(t for t in doc["targets"] if t["required"])
-            artifact = root / "results" / target["id"] / "e2e/runtime/client-package.json"
+            artifact = (
+                root / "results" / target["id"] / "e2e/runtime/client-package.json"
+            )
             artifact.unlink()
             (root / "targets.json").write_text(json.dumps(doc), encoding="utf-8")
-            proc = run("aggregate", "--targets", str(root / "targets.json"),
-                       "--results-root", str(root / "results"), "--output-dir", str(root / "out"),
-                       "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            proc = run(
+                "aggregate",
+                "--targets",
+                str(root / "targets.json"),
+                "--results-root",
+                str(root / "results"),
+                "--output-dir",
+                str(root / "out"),
+                "--commit",
+                "abc123",
+                "--run-id",
+                "77",
+                "--repository",
+                "DeepLayerTeam/Launcher",
+            )
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("missing/unsafe evidence artifact: client-package.json", proc.stderr)
+            self.assertIn(
+                "missing/unsafe evidence artifact: client-package.json", proc.stderr
+            )
 
     def test_04010_rejects_tampered_installer_after_result_emitted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             doc = self.target_doc()
             self.write_results(root / "results", doc)
-            target = next(t for t in doc["targets"] if t["required"] and t["loader"] == "forge")
-            artifact = root / "results" / target["id"] / "e2e/runtime/forge-install.json"
+            target = next(
+                t for t in doc["targets"] if t["required"] and t["loader"] == "forge"
+            )
+            artifact = (
+                root / "results" / target["id"] / "e2e/runtime/forge-install.json"
+            )
             artifact.write_bytes(b"attacker-replaced-installer-proof")
             (root / "targets.json").write_text(json.dumps(doc), encoding="utf-8")
-            proc = run("aggregate", "--targets", str(root / "targets.json"),
-                       "--results-root", str(root / "results"), "--output-dir", str(root / "out"),
-                       "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            proc = run(
+                "aggregate",
+                "--targets",
+                str(root / "targets.json"),
+                "--results-root",
+                str(root / "results"),
+                "--output-dir",
+                str(root / "out"),
+                "--commit",
+                "abc123",
+                "--run-id",
+                "77",
+                "--repository",
+                "DeepLayerTeam/Launcher",
+            )
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("evidence artifact sha256 mismatch: forge-install.json", proc.stderr)
+            self.assertIn(
+                "evidence artifact sha256 mismatch: forge-install.json", proc.stderr
+            )
 
     def test_04010_rejects_evidence_symlink(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -239,18 +334,34 @@ class MatrixToolTests(unittest.TestCase):
             doc = self.target_doc()
             self.write_results(root / "results", doc)
             target = next(t for t in doc["targets"] if t["required"])
-            artifact = root / "results" / target["id"] / "e2e/runtime/client-package.json"
+            artifact = (
+                root / "results" / target["id"] / "e2e/runtime/client-package.json"
+            )
             original = artifact.read_bytes()
             copied = root / "elsewhere.json"
             copied.write_bytes(original)
             artifact.unlink()
             artifact.symlink_to(copied)
             (root / "targets.json").write_text(json.dumps(doc), encoding="utf-8")
-            proc = run("aggregate", "--targets", str(root / "targets.json"),
-                       "--results-root", str(root / "results"), "--output-dir", str(root / "out"),
-                       "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            proc = run(
+                "aggregate",
+                "--targets",
+                str(root / "targets.json"),
+                "--results-root",
+                str(root / "results"),
+                "--output-dir",
+                str(root / "out"),
+                "--commit",
+                "abc123",
+                "--run-id",
+                "77",
+                "--repository",
+                "DeepLayerTeam/Launcher",
+            )
             self.assertNotEqual(proc.returncode, 0)
-            self.assertIn("missing/unsafe evidence artifact: client-package.json", proc.stderr)
+            self.assertIn(
+                "missing/unsafe evidence artifact: client-package.json", proc.stderr
+            )
 
     def test_upstream_blockers_are_explicit_and_excluded_from_ci_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -266,27 +377,38 @@ class MatrixToolTests(unittest.TestCase):
             self.assertEqual(len(planned), len(doc["targets"]) - 12)
             self.assertFalse({t["id"] for t in blocked} & {t["id"] for t in planned})
 
-    def test_windows_mesa_installer_has_unambiguous_variable_interpolation(self) -> None:
+    def test_windows_mesa_installer_has_unambiguous_variable_interpolation(
+        self,
+    ) -> None:
         """Catch the PowerShell parser error that blocked every Windows E2E shard."""
-        script = (ROOT / "scripts/compatibility/install-windows-mesa.ps1").read_text(encoding="utf-8")
-        self.assertIn('for ${arch}: $actual', script)
-        self.assertNotRegex(script, r'\$[A-Za-z_][A-Za-z_0-9]*:(?![A-Za-z_])')
-        workflow = (ROOT / '.github/workflows/compatibility.yml').read_text(encoding='utf-8')
-        self.assertEqual(workflow.count('Verify Windows Mesa installer syntax'), 2)
-        self.assertIn('System.Management.Automation.Language.Parser', workflow)
+        script = (ROOT / "scripts/compatibility/install-windows-mesa.ps1").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("for ${arch}: $actual", script)
+        self.assertNotRegex(script, r"\$[A-Za-z_][A-Za-z_0-9]*:(?![A-Za-z_])")
+        workflow = (ROOT / ".github/workflows/compatibility.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(workflow.count("Verify Windows Mesa installer syntax"), 2)
+        self.assertIn("System.Management.Automation.Language.Parser", workflow)
 
     def test_canonical_upstream_catalogue_policies(self) -> None:
         """Keep all 292 declared targets without pretending 12 unavailable ones passed."""
         for rel in (
-            'scripts/smoke/offline/quilt-compatibility-II-0172.py',
-            'scripts/smoke/offline/neoforge-compatibility-II-0176.py',
-            'scripts/smoke/offline/loader-compatibility-rc-01711.py',
-            'scripts/smoke/offline/loader-compatibility-ga-0180.py',
+            "scripts/smoke/offline/quilt-compatibility-II-0172.py",
+            "scripts/smoke/offline/neoforge-compatibility-II-0176.py",
+            "scripts/smoke/offline/loader-compatibility-rc-01711.py",
+            "scripts/smoke/offline/loader-compatibility-ga-0180.py",
         ):
-            proc = subprocess.run(['python3', str(ROOT / rel)], cwd=ROOT, text=True,
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.assertEqual(proc.returncode, 0, f'{rel}: {proc.stdout} {proc.stderr}')
-            self.assertIn('NOT CERTIFIED', proc.stdout)
+            proc = subprocess.run(
+                ["python3", str(ROOT / rel)],
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.assertEqual(proc.returncode, 0, f"{rel}: {proc.stdout} {proc.stderr}")
+            self.assertIn("NOT CERTIFIED", proc.stdout)
 
     def test_cannot_rebrand_upstream_blocked_as_certified(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -309,10 +431,24 @@ class MatrixToolTests(unittest.TestCase):
             blocked = next(t for t in doc["targets"] if "unavailableReason" in t)
             injected = result_dir / blocked["id"]
             injected.mkdir(parents=True)
-            (injected / "compatibility-result.json").write_text(json.dumps(self.passing_result(blocked)), encoding="utf-8")
-            proc = run("aggregate", "--targets", str(path / "targets.json"),
-                       "--results-root", str(result_dir), "--output-dir", str(path / "out2"),
-                       "--commit", "abc123", "--run-id", "77", "--repository", "DeepLayerTeam/NeverLauncher")
+            (injected / "compatibility-result.json").write_text(
+                json.dumps(self.passing_result(blocked)), encoding="utf-8"
+            )
+            proc = run(
+                "aggregate",
+                "--targets",
+                str(path / "targets.json"),
+                "--results-root",
+                str(result_dir),
+                "--output-dir",
+                str(path / "out2"),
+                "--commit",
+                "abc123",
+                "--run-id",
+                "77",
+                "--repository",
+                "DeepLayerTeam/Launcher",
+            )
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("unexpectedly produced certification evidence", proc.stderr)
 
@@ -327,13 +463,20 @@ class MatrixToolTests(unittest.TestCase):
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
-            self.assertTrue("Loader-native E2E 0.17.8" in proc.stderr or "Quilt 1.21.1" in proc.stderr)
+            self.assertTrue(
+                "Loader-native E2E 0.17.8" in proc.stderr
+                or "Quilt 1.21.1" in proc.stderr
+            )
 
     def test_validate_0179_requires_all_loader_platforms(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if target["id"] != "fabric-26.3-windows-arm64"]
+            doc["targets"] = [
+                target
+                for target in doc["targets"]
+                if target["id"] != "fabric-26.3-windows-arm64"
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -355,9 +498,11 @@ class MatrixToolTests(unittest.TestCase):
     def test_aggregate_0179_requires_native_platform_check(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             doc = self.target_doc()
+
             def mutate(target: dict, result: dict) -> None:
                 if target["id"] == "quilt-26.3-macos-arm64":
                     result["checks"]["loaderNativesResolved"] = False
+
             proc = self.aggregate(Path(tmp), doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("loaderNativesResolved", proc.stderr)
@@ -365,9 +510,11 @@ class MatrixToolTests(unittest.TestCase):
     def test_aggregate_0179_requires_loader_platform_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             doc = self.target_doc()
+
             def mutate(target: dict, result: dict) -> None:
                 if target["id"] == "forge-26.3-windows-x64":
                     result["evidence"]["files"].remove("loader-platform.json")
+
             proc = self.aggregate(Path(tmp), doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("evidence files", proc.stderr)
@@ -386,7 +533,9 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if target["minecraft"] != "1.17.1"]
+            doc["targets"] = [
+                target for target in doc["targets"] if target["minecraft"] != "1.17.1"
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -396,7 +545,9 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if target["minecraft"] != "1.8.9"]
+            doc["targets"] = [
+                target for target in doc["targets"] if target["minecraft"] != "1.8.9"
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -406,7 +557,9 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if target["minecraft"] != "1.2.5"]
+            doc["targets"] = [
+                target for target in doc["targets"] if target["minecraft"] != "1.2.5"
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -416,7 +569,9 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if target["minecraft"] != "1.8.8"]
+            doc["targets"] = [
+                target for target in doc["targets"] if target["minecraft"] != "1.8.8"
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -438,7 +593,13 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if not (target["loader"] == "vanilla" and target["minecraft"] == "1.19.2")]
+            doc["targets"] = [
+                target
+                for target in doc["targets"]
+                if not (
+                    target["loader"] == "vanilla" and target["minecraft"] == "1.19.2"
+                )
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -460,7 +621,13 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if not (target["loader"] == "vanilla" and target["minecraft"] == "1.21.11")]
+            doc["targets"] = [
+                target
+                for target in doc["targets"]
+                if not (
+                    target["loader"] == "vanilla" and target["minecraft"] == "1.21.11"
+                )
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -491,7 +658,8 @@ class MatrixToolTests(unittest.TestCase):
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
             doc["targets"] = [
-                target for target in doc["targets"]
+                target
+                for target in doc["targets"]
                 if not (target["loader"] == "fabric" and target["minecraft"] == "1.14")
             ]
             path.write_text(json.dumps(doc), encoding="utf-8")
@@ -515,7 +683,11 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            duplicate = next(target.copy() for target in doc["targets"] if target["loader"] == "fabric" and target["minecraft"] == "1.14")
+            duplicate = next(
+                target.copy()
+                for target in doc["targets"]
+                if target["loader"] == "fabric" and target["minecraft"] == "1.14"
+            )
             duplicate["id"] = "fabric-1.14-linux-x64-duplicate"
             doc["targets"].append(duplicate)
             path.write_text(json.dumps(doc), encoding="utf-8")
@@ -536,7 +708,8 @@ class MatrixToolTests(unittest.TestCase):
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
             doc["targets"] = [
-                target for target in doc["targets"]
+                target
+                for target in doc["targets"]
                 if not (target["loader"] == "quilt" and target["minecraft"] == "1.14")
             ]
             path.write_text(json.dumps(doc), encoding="utf-8")
@@ -560,7 +733,11 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            duplicate = next(target.copy() for target in doc["targets"] if target["loader"] == "quilt" and target["minecraft"] == "1.14")
+            duplicate = next(
+                target.copy()
+                for target in doc["targets"]
+                if target["loader"] == "quilt" and target["minecraft"] == "1.14"
+            )
             duplicate["id"] = "quilt-1.14-linux-x64-duplicate"
             doc["targets"].append(duplicate)
             path.write_text(json.dumps(doc), encoding="utf-8")
@@ -581,7 +758,8 @@ class MatrixToolTests(unittest.TestCase):
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
             doc["targets"] = [
-                target for target in doc["targets"]
+                target
+                for target in doc["targets"]
                 if not (target["loader"] == "forge" and target["minecraft"] == "1.13.2")
             ]
             path.write_text(json.dumps(doc), encoding="utf-8")
@@ -605,7 +783,11 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            duplicate = next(target.copy() for target in doc["targets"] if target["loader"] == "forge" and target["minecraft"] == "1.13.2")
+            duplicate = next(
+                target.copy()
+                for target in doc["targets"]
+                if target["loader"] == "forge" and target["minecraft"] == "1.13.2"
+            )
             duplicate["id"] = "forge-1.13.2-linux-x64-duplicate"
             doc["targets"].append(duplicate)
             path.write_text(json.dumps(doc), encoding="utf-8")
@@ -626,7 +808,8 @@ class MatrixToolTests(unittest.TestCase):
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
             doc["targets"] = [
-                target for target in doc["targets"]
+                target
+                for target in doc["targets"]
                 if not (target["loader"] == "forge" and target["minecraft"] == "1.12.2")
             ]
             path.write_text(json.dumps(doc), encoding="utf-8")
@@ -658,7 +841,11 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if not (target["loader"] == "forge" and target["minecraft"] == "1.7.10")]
+            doc["targets"] = [
+                target
+                for target in doc["targets"]
+                if not (target["loader"] == "forge" and target["minecraft"] == "1.7.10")
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -688,7 +875,13 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if not (target["loader"] == "neoforge" and target["minecraft"] == "1.20.1")]
+            doc["targets"] = [
+                target
+                for target in doc["targets"]
+                if not (
+                    target["loader"] == "neoforge" and target["minecraft"] == "1.20.1"
+                )
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -710,7 +903,11 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            duplicate = next(target.copy() for target in doc["targets"] if target["loader"] == "neoforge" and target["minecraft"] == "1.20.1")
+            duplicate = next(
+                target.copy()
+                for target in doc["targets"]
+                if target["loader"] == "neoforge" and target["minecraft"] == "1.20.1"
+            )
             duplicate["id"] = "neoforge-1.20.1-linux-x64-duplicate"
             doc["targets"].append(duplicate)
             path.write_text(json.dumps(doc), encoding="utf-8")
@@ -722,7 +919,9 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if target["minecraft"] != "1.20.2"]
+            doc["targets"] = [
+                target for target in doc["targets"] if target["minecraft"] != "1.20.2"
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -740,12 +939,17 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("requires Java 17", proc.stderr)
 
-
     def test_validate_rejects_missing_java21_release_line_0167(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if not (target["loader"] == "vanilla" and target["minecraft"] == "1.21.10")]
+            doc["targets"] = [
+                target
+                for target in doc["targets"]
+                if not (
+                    target["loader"] == "vanilla" and target["minecraft"] == "1.21.10"
+                )
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -767,7 +971,11 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [target for target in doc["targets"] if not (target["loader"] == "vanilla" and target["minecraft"] == "26.3")]
+            doc["targets"] = [
+                target
+                for target in doc["targets"]
+                if not (target["loader"] == "vanilla" and target["minecraft"] == "26.3")
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
@@ -789,12 +997,13 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "targets.json"
             doc = self.target_doc()
-            doc["targets"] = [t for t in doc["targets"] if t["id"] != "vanilla-26.3-windows-arm64"]
+            doc["targets"] = [
+                t for t in doc["targets"] if t["id"] != "vanilla-26.3-windows-arm64"
+            ]
             path.write_text(json.dumps(doc), encoding="utf-8")
             proc = run("validate", "--targets", str(path))
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("Cross-platform Vanilla 0.16.9", proc.stderr)
-
 
     def test_validate_rejects_missing_matching_server_target_01610(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -812,9 +1021,14 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
             doc = self.target_doc()
+
             def mutate(target: dict, result: dict) -> None:
-                if target.get("matchingServer") is True and target["minecraft"] == "1.17.1":
+                if (
+                    target.get("matchingServer") is True
+                    and target["minecraft"] == "1.17.1"
+                ):
                     result["checks"]["clientJoinedServer"] = False
+
             proc = self.aggregate(tmp, doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("clientJoinedServer", proc.stderr)
@@ -826,9 +1040,15 @@ class MatrixToolTests(unittest.TestCase):
             proc = run("plan", "--targets", str(path))
             self.assertEqual(proc.returncode, 0, proc.stderr)
             rows = {row["id"]: row for row in json.loads(proc.stdout)["include"]}
-            self.assertEqual(rows["vanilla-26.3-linux-arm64"]["runner"], "ubuntu-24.04-arm")
-            self.assertEqual(rows["vanilla-26.3-windows-arm64"]["runner"], "windows-11-arm")
-            self.assertEqual(rows["vanilla-26.3-windows-arm64"]["javaDistribution"], "microsoft")
+            self.assertEqual(
+                rows["vanilla-26.3-linux-arm64"]["runner"], "ubuntu-24.04-arm"
+            )
+            self.assertEqual(
+                rows["vanilla-26.3-windows-arm64"]["runner"], "windows-11-arm"
+            )
+            self.assertEqual(
+                rows["vanilla-26.3-windows-arm64"]["javaDistribution"], "microsoft"
+            )
             self.assertEqual(rows["vanilla-26.3-macos-x64"]["runner"], "macos-15-intel")
             self.assertEqual(rows["vanilla-26.3-macos-arm64"]["runner"], "macos-15")
 
@@ -836,10 +1056,12 @@ class MatrixToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
             doc = self.target_doc()
+
             def mutate(target: dict, result: dict) -> None:
                 if target["id"] == "vanilla-26.3-macos-arm64":
                     result["checks"]["platformMatched"] = False
                     result["evidence"]["platformRuntime"]["matched"] = False
+
             proc = self.aggregate(tmp, doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("platformMatched", proc.stderr)
@@ -850,7 +1072,9 @@ class MatrixToolTests(unittest.TestCase):
             doc = self.target_doc()
             proc = self.aggregate(tmp, doc)
             self.assertEqual(proc.returncode, 0, proc.stderr)
-            matrix = json.loads((tmp / "out" / "matrix.json").read_text(encoding="utf-8"))
+            matrix = json.loads(
+                (tmp / "out" / "matrix.json").read_text(encoding="utf-8")
+            )
             self.assertEqual(matrix["status"], "passed")
             self.assertEqual(len(matrix["targets"]), len(doc["targets"]))
             # Неподдерживаемые комбинации издателя не имеют настоящего дайджеста
@@ -860,17 +1084,21 @@ class MatrixToolTests(unittest.TestCase):
                     self.assertRegex(row["evidenceSha256"], r"^[0-9a-f]{64}$")
                 else:
                     self.assertEqual(row["status"], "unsupported")
-                    self.assertEqual(row["unavailableReason"], target["unavailableReason"])
+                    self.assertEqual(
+                        row["unavailableReason"], target["unavailableReason"]
+                    )
                     self.assertNotIn("evidenceSha256", row)
 
     def test_ga_aggregate_rejects_missing_jre_attestation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
             doc = self.target_doc()
+
             def mutate(target: dict, result: dict) -> None:
                 if target["id"] == "vanilla-1.20.4-linux-x64":
                     result["checks"]["jreCertified"] = False
                     result["evidence"]["javaRuntime"]["certified"] = False
+
             proc = self.aggregate(tmp, doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("jreCertified", proc.stderr)
@@ -881,10 +1109,19 @@ class MatrixToolTests(unittest.TestCase):
             doc = self.target_doc()
             proc = self.aggregate(tmp, doc)
             self.assertEqual(proc.returncode, 0, proc.stderr)
-            matrix = json.loads((tmp / "out" / "matrix.json").read_text(encoding="utf-8"))
+            matrix = json.loads(
+                (tmp / "out" / "matrix.json").read_text(encoding="utf-8")
+            )
             self.assertTrue(matrix["jreBase"])
-            self.assertEqual({row["javaMajor"] for row in matrix["jreBase"]}, {8, 16, 17, 21, 25})
-            self.assertTrue(all(re.fullmatch(r"[0-9a-f]{64}", row["executableSha256"]) for row in matrix["jreBase"]))
+            self.assertEqual(
+                {row["javaMajor"] for row in matrix["jreBase"]}, {8, 16, 17, 21, 25}
+            )
+            self.assertTrue(
+                all(
+                    re.fullmatch(r"[0-9a-f]{64}", row["executableSha256"])
+                    for row in matrix["jreBase"]
+                )
+            )
 
     def test_aggregate_rejects_mutable_resolved_loader(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -941,7 +1178,6 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("paperHealthy", proc.stderr)
 
-
     def test_0177_aggregate_rejects_missing_loader_resolution_pin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)
@@ -954,7 +1190,9 @@ class MatrixToolTests(unittest.TestCase):
 
             proc = self.aggregate(path, doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
-            self.assertTrue("resolutionLockSha256" in proc.stderr or "loaderPinned" in proc.stderr)
+            self.assertTrue(
+                "resolutionLockSha256" in proc.stderr or "loaderPinned" in proc.stderr
+            )
 
     def test_0177_aggregate_rejects_missing_resolution_lock_evidence_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -964,7 +1202,8 @@ class MatrixToolTests(unittest.TestCase):
             def mutate(target: dict, result: dict) -> None:
                 if target["loader"] == "quilt":
                     result["evidence"]["files"] = [
-                        item for item in result["evidence"]["files"]
+                        item
+                        for item in result["evidence"]["files"]
                         if item != "quilt-resolution-lock.json"
                     ]
 
@@ -985,23 +1224,33 @@ class MatrixToolTests(unittest.TestCase):
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("loaderNativeClientJoin", proc.stderr)
 
-    def test_vanilla_ci_reuses_pinned_target_jdk_without_redundant_download(self) -> None:
+    def test_vanilla_ci_reuses_pinned_target_jdk_without_redundant_download(
+        self,
+    ) -> None:
         # Каждый сегмент должен сохранить целевой JDK (исполняемый файл
         # закреплён NEVERLAUNCHER_E2E_JAVA), но для чистых заданий
         # сертификации Vanilla Go/Rust не нужно заново скачивать Java 21.
-        workflow = (ROOT / ".github" / "workflows" / "compatibility.yml").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github" / "workflows" / "compatibility.yml").read_text(
+            encoding="utf-8"
+        )
         restore_blocks = re.findall(
             r"(?m)^      - name: Restore Java 21 for loader/Gradle build tooling\n"
             r"((?:^        .*\n|^          .*\n)+)",
             workflow,
         )
-        self.assertEqual(len(restore_blocks), 2, "both matrix shards must use the same Java rule")
+        self.assertEqual(
+            len(restore_blocks), 2, "both matrix shards must use the same Java rule"
+        )
         for block in restore_blocks:
-            self.assertIn("if: matrix.loader != 'vanilla' && matrix.javaMajor != 21", block)
+            self.assertIn(
+                "if: matrix.loader != 'vanilla' && matrix.javaMajor != 21", block
+            )
             self.assertIn("uses: actions/setup-java@v5", block)
             self.assertIn("id: java21_tooling", block)
             self.assertIn("java-version: '21'", block)
-        self.assertEqual(workflow.count("- name: Install target Java ${{ matrix.javaMajor }}"), 2)
+        self.assertEqual(
+            workflow.count("- name: Install target Java ${{ matrix.javaMajor }}"), 2
+        )
         self.assertEqual(workflow.count("NEVERLAUNCHER_E2E_JAVA=%s"), 2)
 
     def test_0178_aggregate_rejects_missing_loader_native_evidence(self) -> None:
@@ -1012,14 +1261,14 @@ class MatrixToolTests(unittest.TestCase):
             def mutate(target: dict, result: dict) -> None:
                 if target["id"] == "neoforge-1.21.1-linux-x64":
                     result["evidence"]["files"] = [
-                        item for item in result["evidence"]["files"]
+                        item
+                        for item in result["evidence"]["files"]
                         if item != "loader-native-server.json"
                     ]
 
             proc = self.aggregate(path, doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("evidence files are incomplete", proc.stderr)
-
 
     def test_01710_aggregate_rejects_missing_loader_cache_recovery(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1054,27 +1303,46 @@ class MatrixToolTests(unittest.TestCase):
 
             def mutate(target: dict, result: dict) -> None:
                 if target["id"] == "neoforge-26.2-linux-x64":
-                    result["evidence"]["files"] = [x for x in result["evidence"]["files"] if x != "loader-hardening.json"]
+                    result["evidence"]["files"] = [
+                        x
+                        for x in result["evidence"]["files"]
+                        if x != "loader-hardening.json"
+                    ]
 
             proc = self.aggregate(path, doc, mutate)
             self.assertNotEqual(proc.returncode, 0)
             self.assertIn("evidence files are incomplete", proc.stderr)
 
+
 class EvidenceUploadRetryContractTests(unittest.TestCase):
     def test_fail_closed_upload_retry_for_both_client_shards(self) -> None:
-        workflow = (ROOT / '.github/workflows/compatibility.yml').read_text(encoding='utf-8')
-        self.assertEqual(workflow.count('id: compatibility_evidence_upload'), 2)
-        self.assertEqual(workflow.count('continue-on-error: true\n        uses: actions/upload-artifact@v4'), 2)
-        self.assertEqual(workflow.count("steps.compatibility_evidence_upload.outcome == 'failure'"), 2)
-        self.assertIn('with: &compatibility_evidence_a', workflow)
-        self.assertIn('with: *compatibility_evidence_a', workflow)
-        self.assertIn('with: &compatibility_evidence_b', workflow)
-        self.assertIn('with: *compatibility_evidence_b', workflow)
+        workflow = (ROOT / ".github/workflows/compatibility.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(workflow.count("id: compatibility_evidence_upload"), 2)
+        self.assertEqual(
+            workflow.count(
+                "continue-on-error: true\n        uses: actions/upload-artifact@v4"
+            ),
+            2,
+        )
+        self.assertEqual(
+            workflow.count("steps.compatibility_evidence_upload.outcome == 'failure'"),
+            2,
+        )
+        self.assertIn("with: &compatibility_evidence_a", workflow)
+        self.assertIn("with: *compatibility_evidence_a", workflow)
+        self.assertIn("with: &compatibility_evidence_b", workflow)
+        self.assertIn("with: *compatibility_evidence_b", workflow)
         # У повторной попытки нет continue-on-error: она должна
         # провалиться, если CreateArtifact GitHub остаётся недоступен.
-        for block in workflow.split('- name: Retry transient compatibility evidence upload')[1:]:
-            self.assertIn('uses: actions/upload-artifact@v4', block.split('      - name:', 1)[0])
-            self.assertNotIn('continue-on-error', block.split('      - name:', 1)[0])
+        for block in workflow.split(
+            "- name: Retry transient compatibility evidence upload"
+        )[1:]:
+            self.assertIn(
+                "uses: actions/upload-artifact@v4", block.split("      - name:", 1)[0]
+            )
+            self.assertNotIn("continue-on-error", block.split("      - name:", 1)[0])
 
 
 if __name__ == "__main__":

@@ -3,15 +3,15 @@ package httpapi
 import (
 	"encoding/hex"
 	"errors"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/planpolicy02412"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/planpolicy02412"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const planProofDomain02412 = "NeverLauncher-Verified-Component-Plan-v1"
+const planProofDomain02412 = "Launcher-Verified-Component-Plan-v1"
 const planChallengePurpose02412 = "serverbridge-verified-plan-v1"
 
 type planPolicy02412 = planpolicy02412.Policy

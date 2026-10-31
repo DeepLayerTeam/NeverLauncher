@@ -1,4 +1,4 @@
-# NeverLauncher 0.31.9 — Linux Native Extension Sandbox
+# Launcher 0.31.9 — Linux Native Extension Sandbox
 
 ## Executable boundary
 
@@ -15,7 +15,7 @@ The network namespace has **only loopback**. An internal TCP listener bridges au
 ## Deployment prerequisites
 
 - Linux x86-64, unprivileged service UID, user namespaces enabled, `clone3(CLONE_INTO_CGROUP)` available.
-- cgroups v2 subtree delegated to NeverLauncher service (`memory`, `pids`, `cpu` controllers). Use an appropriate systemd service with `Delegate=yes` and ensure the service can create/write child cgroups. Do *not* grant root or ambient capabilities to overcome delegation failures.
+- cgroups v2 subtree delegated to Launcher service (`memory`, `pids`, `cpu` controllers). Use an appropriate systemd service with `Delegate=yes` and ensure the service can create/write child cgroups. Do *not* grant root or ambient capabilities to overcome delegation failures.
 - Kernel support for recursive `mount_setattr` (Linux 5.12+), `pivot_root`, seccomp filtering and tmpfs/proc in user namespaces.
 - Use a dedicated, minimal `/usr` runtime root. Runtime directories are mounted readonly but their public readable contents remain visible. Do not store secrets under those runtime directories.
 - Linux arm64 and non-Linux platforms refuse `isolated` until their native implementation is validated.

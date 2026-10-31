@@ -88,7 +88,7 @@ func bootstrapWithToken(base, email, name, passwordFile, token string) error {
 	if len(token) < 32 || len(token) > 4096 {
 		return errors.New("invalid token length")
 	}
-	payload, err := json.Marshal(map[string]string{"email": email, "displayName": name, "password": password, "actor": "neverlauncher-install"})
+	payload, err := json.Marshal(map[string]string{"email": email, "displayName": name, "password": password, "actor": "launcher-install"})
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func bootstrapWithToken(base, email, name, passwordFile, token string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-NeverLauncher-Bootstrap-Token", token)
+	req.Header.Set("X-Launcher-Bootstrap-Token", token)
 	client := &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("bootstrap redirects forbidden") }, Transport: &http.Transport{Proxy: nil}}
 	res, err := client.Do(req)
 	if err != nil {

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/localpassword"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
+	"gitflic.ru/skif4er/launcher/services/api/internal/authorization"
+	"gitflic.ru/skif4er/launcher/services/api/internal/localpassword"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/protection"
 )
 
 type authClaims struct {

@@ -308,11 +308,11 @@
       "status": "implemented",
       "implementationRefs": [
         "services/api/internal/httpapi/manifest_signing_v1.go",
-        "cli/cmd/neverlauncher/release_commands.go"
+        "cli/cmd/launcher/release_commands.go"
       ],
       "testRefs": [
         "services/api/internal/httpapi/manifest_signing_test.go",
-        "cli/cmd/neverlauncher/release_verification_v2_test.go"
+        "cli/cmd/launcher/release_verification_v2_test.go"
       ],
       "verificationLevel": "unit-tested"
     },
@@ -327,12 +327,12 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "cli/cmd/neverlauncher/loader_runtime.go",
-        "cli/cmd/neverlauncher/vanilla_runtime.go"
+        "cli/cmd/launcher/loader_runtime.go",
+        "cli/cmd/launcher/vanilla_runtime.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/loader_runtime_test.go",
-        "cli/cmd/neverlauncher/vanilla_runtime_test.go"
+        "cli/cmd/launcher/loader_runtime_test.go",
+        "cli/cmd/launcher/vanilla_runtime_test.go"
       ],
       "verificationLevel": "unit-tested"
     },
@@ -347,11 +347,11 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "cli/cmd/neverlauncher/managed_jre_delivery.go"
+        "cli/cmd/launcher/managed_jre_delivery.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/managed_jre_delivery_test.go",
-        "cli/cmd/neverlauncher/managed_java_ii_test.go"
+        "cli/cmd/launcher/managed_jre_delivery_test.go",
+        "cli/cmd/launcher/managed_java_ii_test.go"
       ],
       "verificationLevel": "unit-tested"
     },
@@ -366,12 +366,12 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "cli/cmd/neverlauncher/loader_runtime.go",
-        "cli/cmd/neverlauncher/forge_runtime.go"
+        "cli/cmd/launcher/loader_runtime.go",
+        "cli/cmd/launcher/forge_runtime.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/loader_ga_test.go",
-        "cli/cmd/neverlauncher/loader_runtime_test.go"
+        "cli/cmd/launcher/loader_ga_test.go",
+        "cli/cmd/launcher/loader_runtime_test.go"
       ],
       "verificationLevel": "runtime-tested"
     },
@@ -386,12 +386,12 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "cli/cmd/neverlauncher/vanilla_runtime.go",
-        "cli/cmd/neverlauncher/compatibility_release.go"
+        "cli/cmd/launcher/vanilla_runtime.go",
+        "cli/cmd/launcher/compatibility_release.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/vanilla_runtime_test.go",
-        "cli/cmd/neverlauncher/compatibility_release_test.go"
+        "cli/cmd/launcher/vanilla_runtime_test.go",
+        "cli/cmd/launcher/compatibility_release_test.go"
       ],
       "verificationLevel": "runtime-tested"
     },
@@ -527,7 +527,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "No Gravit MirrorHelper-equivalent authlib patch/install pipeline is claimed by NeverLauncher 0.21.1."
+      "gapReason": "No Gravit MirrorHelper-equivalent authlib patch/install pipeline is claimed by Launcher 0.21.1."
     },
     {
       "id": "G24",
@@ -560,10 +560,10 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "cli/cmd/neverlauncher/component_update.go"
+        "cli/cmd/launcher/component_update.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/component_update_test.go"
+        "cli/cmd/launcher/component_update_test.go"
       ],
       "verificationLevel": "unit-tested"
     },
@@ -659,7 +659,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "NeverLauncher 0.21.1 does not ship a separate LauncherPrestarter-compatible bootstrap component."
+      "gapReason": "Launcher 0.21.1 does not ship a separate LauncherPrestarter-compatible bootstrap component."
     },
     {
       "id": "G31",
@@ -710,11 +710,11 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "cli/cmd/neverlauncher/main.go",
-        "cli/cmd/neverlauncher/package_commands.go"
+        "cli/cmd/launcher/main.go",
+        "cli/cmd/launcher/package_commands.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/compatibility_release_test.go"
+        "cli/cmd/launcher/compatibility_release_test.go"
       ],
       "verificationLevel": "unit-tested"
     },
@@ -748,12 +748,12 @@
       ],
       "status": "implemented",
       "implementationRefs": [
-        "cli/cmd/neverlauncher/release_commands.go",
-        "cli/cmd/neverlauncher/compatibility_release.go"
+        "cli/cmd/launcher/release_commands.go",
+        "cli/cmd/launcher/compatibility_release.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/compatibility_release_test.go",
-        "cli/cmd/neverlauncher/compatibility_release_certificate_test.go"
+        "cli/cmd/launcher/compatibility_release_test.go",
+        "cli/cmd/launcher/compatibility_release_certificate_test.go"
       ],
       "verificationLevel": "runtime-tested"
     },
@@ -828,10 +828,10 @@
       ],
       "status": "partial",
       "implementationRefs": [
-        "cli/cmd/neverlauncher/release_commands.go"
+        "cli/cmd/launcher/release_commands.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/release_verification_v2_test.go"
+        "cli/cmd/launcher/release_verification_v2_test.go"
       ],
       "verificationLevel": "unit-tested",
       "gapReason": "Never has production artifact signing/certification but not the same LaunchServer certificate-generation module API."
@@ -896,11 +896,11 @@
       "status": "partial",
       "implementationRefs": [
         "services/api/internal/httpapi/minecraft_auth_119.go",
-        "cli/cmd/neverlauncher/compatibility_release.go"
+        "cli/cmd/launcher/compatibility_release.go"
       ],
       "testRefs": [
         "services/api/internal/httpapi/minecraft_auth_119_test.go",
-        "cli/cmd/neverlauncher/compatibility_release_test.go"
+        "cli/cmd/launcher/compatibility_release_test.go"
       ],
       "verificationLevel": "unit-tested",
       "gapReason": "Local/Yggdrasil-compatible game auth exists; official Microsoft/Xbox/XSTS Minecraft token-chain parity remains explicitly unclaimed."
@@ -916,10 +916,10 @@
       ],
       "status": "partial",
       "implementationRefs": [
-        "cli/cmd/neverlauncher/windows_signing.go"
+        "cli/cmd/launcher/windows_signing.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/windows_protection_release_01812_test.go"
+        "cli/cmd/launcher/windows_protection_release_01812_test.go"
       ],
       "verificationLevel": "unit-tested",
       "gapReason": "Windows production signing exists but is not exposed as the Gravit module contract."
@@ -1030,7 +1030,7 @@
       "implementationRefs": [],
       "testRefs": [],
       "verificationLevel": "source-reviewed",
-      "gapReason": "Unsafe command pack behavior is intentionally not part of NeverLauncher production security surface."
+      "gapReason": "Unsafe command pack behavior is intentionally not part of Launcher production security surface."
     },
     {
       "id": "M18",

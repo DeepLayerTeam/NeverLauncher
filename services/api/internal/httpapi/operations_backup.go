@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 type operationsBackupFile880 struct {
@@ -205,7 +205,7 @@ func (s Server) adminCompliance(w http.ResponseWriter, r *http.Request) {
 		"audit":         map[string]any{"events": len(s.Repo.ListAuditEvents()), "export": "/api/v1/operations/audit/export", "hashChain": true},
 		"backup":        map[string]any{"count": len(backups), "root": s.operationsBackupRoot880(), "restoreDryRun": true, "restore": true},
 		"diagnostics":   map[string]any{"redacted": true, "endpoint": "/api/v1/operations/diagnostics-bundle"},
-		"metrics":       []string{"neverlauncher_backups_total", "neverlauncher_audit_events_total", "neverlauncher_telemetry_events_total", "neverlauncher_crash_reports_total"},
+		"metrics":       []string{"launcher_backups_total", "launcher_audit_events_total", "launcher_telemetry_events_total", "launcher_crash_reports_total"},
 	})
 }
 
@@ -457,7 +457,7 @@ func restoreLocalStorageAtomic880(sourceRoot, liveRoot string) (int, error) {
 	if err := os.MkdirAll(parent, 0o755); err != nil {
 		return 0, err
 	}
-	stageRoot, err := os.MkdirTemp(parent, ".neverlauncher-restore-*")
+	stageRoot, err := os.MkdirTemp(parent, ".launcher-restore-*")
 	if err != nil {
 		return 0, err
 	}
@@ -871,7 +871,7 @@ func (s Server) verifyOperationsBackup880(ctx context.Context, path, backupID st
 }
 
 func extractAndVerifyOperationsBackup880(path, expectedBackupID string) (string, operationsBackupManifest880, error) {
-	stage, err := os.MkdirTemp("", "neverlauncher-backup-verify-*")
+	stage, err := os.MkdirTemp("", "launcher-backup-verify-*")
 	if err != nil {
 		return "", operationsBackupManifest880{}, err
 	}

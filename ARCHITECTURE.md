@@ -1,4 +1,4 @@
-# Архитектура NeverLauncher
+# Архитектура Launcher
 
 ## Области ответственности
 
@@ -20,7 +20,7 @@
           | ServerBridge plugins / server hosts     |
           +-----------------------------------------+
 
- Desktop -> NeverRuntime -> manifest verification -> JRE/loader -> Minecraft
+ Desktop -> Runtime -> manifest verification -> JRE/loader -> Minecraft
              |          -> Guard / platform trust checks
  CLI `nl` -> API, manifests, release tools, ServerBridge, extensions
 ```
@@ -32,7 +32,7 @@
 1. **Уровень представления:** `apps/admin` (React/Vite/TypeScript), `apps/desktop` (React/Tauri, Rust). Не храните секреты серверной части в JavaScript или конфигурации интерфейса.
 2. **Уровень управления:** Go-сервис `services/api`. В `internal/httpapi` располагаются маршруты, обработчики и интеграционные сценарии. Доменные операции должны проходить авторизацию, аудит и проверку границ доверия.
 3. **Хранение данных:** PostgreSQL с миграциями; Redis используется там, где требуется распределённое состояние и координация; файлы пакетов — локальное хранилище или S3. Серверное хранилище в памяти не предназначено для промышленной эксплуатации.
-4. **Среда исполнения и обработки данных:** `runtime/neverruntime` отвечает за получение/проверку файлов, Java, загрузчики, запуск и контроль процесса. Guard поставляется как отдельные защитные компоненты.
+4. **Среда исполнения и обработки данных:** `runtime/runtime` отвечает за получение/проверку файлов, Java, загрузчики, запуск и контроль процесса. Guard поставляется как отдельные защитные компоненты.
 5. **Серверные интеграции:** `plugins/` содержит Gradle-модули мостов для Minecraft-серверов и прокси. Криптографическая идентичность узлов, enrollment и команды относятся к ServerBridge.
 6. **Расширения:** серверный хост, реестр, жизненный цикл, возможности, выдача разрешений и SDK — `extensions`, `services/api/internal`, `sdk`, `examples/extensions`.
 7. **Подготовка релизов:** `scripts/release`, `scripts/smoke`, `scripts/compatibility`, `e2e`, `.github/workflows`, сертификаты CI.

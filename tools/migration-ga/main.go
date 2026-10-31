@@ -33,7 +33,7 @@ import (
 )
 
 const version = "0.34.0"
-const format = "neverlauncher.gravit-ga-execution.v1"
+const format = "launcher.gravit-ga-execution.v1"
 const maxDocument = 32 << 20
 
 var gravit57 = regexp.MustCompile(`^5\.7\.[0-9]+$`)
@@ -219,7 +219,7 @@ func shaFile(path string, limit int64) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 func reportVerified(r Report) error {
-	if r.Format != "neverlauncher.gravit-migration-report.v1" || r.Status != "review_required" || len(r.Blockers) != 0 || !digest(r.SourceSHA256) || !digest(r.InventorySHA256) || !digest(r.ReportSHA256) || len(r.Identities) == 0 {
+	if r.Format != "launcher.gravit-migration-report.v1" || r.Status != "review_required" || len(r.Blockers) != 0 || !digest(r.SourceSHA256) || !digest(r.InventorySHA256) || !digest(r.ReportSHA256) || len(r.Identities) == 0 {
 		return errors.New("migration report is blocked or incomplete")
 	}
 	d := r.ReportSHA256
@@ -281,7 +281,7 @@ func getJSON(ctx context.Context, client *http.Client, endpoint, token string, o
 	if e != nil {
 		return e
 	}
-	// All NeverLauncher Admin responses are enveloped as {"data": ...}.
+	// All Launcher Admin responses are enveloped as {"data": ...}.
 	// Do not accept a bare or unknown response that only happens to match a
 	// subset of the expected report fields.
 	var envelope struct {
@@ -559,7 +559,7 @@ func seal(b Bundle, key ed25519.PrivateKey) (Bundle, error) {
 	if e != nil {
 		return b, e
 	}
-	b.Signature = base64.StdEncoding.EncodeToString(ed25519.Sign(key, append([]byte("NeverLauncher-Migration-GA-0.34.0\x00"), raw...)))
+	b.Signature = base64.StdEncoding.EncodeToString(ed25519.Sign(key, append([]byte("Launcher-Migration-GA-0.34.0\x00"), raw...)))
 	return b, nil
 }
 func verifyBundle(b Bundle, public ed25519.PublicKey) error {
@@ -578,7 +578,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	if e != nil {
 		return e
 	}
-	if !ed25519.Verify(public, append([]byte("NeverLauncher-Migration-GA-0.34.0\x00"), raw...), signature) {
+	if !ed25519.Verify(public, append([]byte("Launcher-Migration-GA-0.34.0\x00"), raw...), signature) {
 		return errors.New("invalid GA signature")
 	}
 	seen := map[string]bool{}

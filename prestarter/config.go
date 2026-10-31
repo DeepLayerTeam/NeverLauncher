@@ -263,10 +263,10 @@ func (c Config) Validate() error {
 		seen[id] = true
 		found := map[string]bool{}
 		if len(t.Components) != 3 {
-			return fmt.Errorf("%s: require exactly neverruntime, desktop, guard components", id)
+			return fmt.Errorf("%s: require exactly runtime, desktop, guard components", id)
 		}
 		for _, a := range t.Components {
-			if a.Name != "neverruntime" && a.Name != "desktop" && a.Name != "guard" {
+			if a.Name != "runtime" && a.Name != "desktop" && a.Name != "guard" {
 				return fmt.Errorf("invalid component role: %s", a.Name)
 			}
 			if found[a.Name] {
@@ -277,7 +277,7 @@ func (c Config) Validate() error {
 				return fmt.Errorf("%s: %w", a.Name, e)
 			}
 		}
-		for _, role := range []string{"neverruntime", "desktop", "guard"} {
+		for _, role := range []string{"runtime", "desktop", "guard"} {
 			if !found[role] {
 				return fmt.Errorf("missing component %s", role)
 			}
@@ -319,10 +319,10 @@ func (c Config) SelectTarget() (Target, error) {
 }
 func ComponentName(role string) string {
 	switch role {
-	case "neverruntime":
-		return "neverruntime" + exeSuffix()
+	case "runtime":
+		return "runtime" + exeSuffix()
 	case "desktop":
-		return "neverlauncher-desktop" + exeSuffix()
+		return "launcher-desktop" + exeSuffix()
 	case "guard":
 		return "guard" + exeSuffix()
 	}

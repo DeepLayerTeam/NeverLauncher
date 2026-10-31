@@ -50,7 +50,7 @@ pub(crate) fn hardware_risk_signal_0299() -> Result<String, String> {
     let parts = host_parts();
     if parts.is_empty() { return Err("OS не предоставила разрешённый machine-continuity signal".into()); }
     let mut sha = Sha256::new();
-    sha.update(b"NeverLauncher voluntary host continuity v1\0");
+    sha.update(b"Launcher voluntary host continuity v1\0");
     for part in parts {
         // No hostname, user name, MAC addresses, disks or serial-number list.
         sha.update((part.len() as u32).to_be_bytes());

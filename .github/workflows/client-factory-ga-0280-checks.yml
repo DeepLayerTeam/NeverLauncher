@@ -2,14 +2,14 @@ name: Client Factory 0.28.0 — offline regression checks
 on:
   push:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - 'services/api/internal/httpapi/client_factory*'
       - 'scripts/ga/*client_factory_0280*'
       - 'apps/admin/src/admin/ClientFactoryBuilder02710.tsx'
       - '.github/workflows/client-factory-ga-0280*.yml'
   pull_request:
     paths:
-      - 'cli/cmd/neverlauncher/**'
+      - 'cli/cmd/launcher/**'
       - 'services/api/internal/httpapi/client_factory*'
       - 'scripts/ga/*client_factory_0280*'
       - 'apps/admin/src/admin/ClientFactoryBuilder02710.tsx'
@@ -27,9 +27,9 @@ jobs:
       - name: Go unit, adversarial, existing materializer integration
         working-directory: cli
         run: |
-          go test ./cmd/neverlauncher -run 'TestClientFactoryGA0280|TestRuntimeCertification02712|TestClientFactory0271|TestAdapterLifecycle02711|TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases' -count=1 -timeout=7m
-          go test -race ./cmd/neverlauncher -run 'TestClientFactoryGA0280|TestRuntimeCertification02712' -count=1 -timeout=7m
-          go vet ./cmd/neverlauncher
+          go test ./cmd/launcher -run 'TestClientFactoryGA0280|TestRuntimeCertification02712|TestClientFactory0271|TestAdapterLifecycle02711|TestQuiltLatestStableFailsClosedWhenMetaContainsOnlyPrereleases' -count=1 -timeout=7m
+          go test -race ./cmd/launcher -run 'TestClientFactoryGA0280|TestRuntimeCertification02712' -count=1 -timeout=7m
+          go vet ./cmd/launcher
       - name: Verify independently signed evidence with negative fixtures
         run: |
           python3 -m pip install 'cryptography>=43,<47'

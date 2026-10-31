@@ -13,7 +13,7 @@ def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Guard Sensor 0.18.2 gate: {label} missing {missing}"
+            f"[Launcher] Guard Sensor 0.18.2 gate: {label} missing {missing}"
         )
 
 
@@ -22,21 +22,19 @@ def main() -> int:
     if tuple(
         int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
     ) < (0, 18, 2):
-        raise SystemExit(
-            f"[NeverLauncher] Guard Sensor 0.18.2 gate: VERSION is {version}"
-        )
+        raise SystemExit(f"[Launcher] Guard Sensor 0.18.2 gate: VERSION is {version}")
 
     sensor = read("runtime/guard-sensor/src/lib.rs")
     sensor_manifest = read("runtime/guard-sensor/Cargo.toml")
-    bootstrap = read("runtime/neverruntime/src/windows_sensor.rs")
-    runtime = read("runtime/neverruntime/src/lib.rs")
-    supervisor = read("runtime/neverruntime/src/supervisor.rs")
-    ipc = read("runtime/neverruntime/src/guard_ipc.rs")
-    integration = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    bootstrap = read("runtime/runtime/src/windows_sensor.rs")
+    runtime = read("runtime/runtime/src/lib.rs")
+    supervisor = read("runtime/runtime/src/supervisor.rs")
+    ipc = read("runtime/runtime/src/guard_ipc.rs")
+    integration = read("runtime/runtime/tests/guard_sensor_windows.rs")
     windows_build = read("scripts/release/build-windows-desktop.ps1")
-    updater = read("cli/cmd/neverlauncher/component_update.go")
-    signing = read("cli/cmd/neverlauncher/windows_signing.go")
-    release = read("cli/cmd/neverlauncher/release_commands.go")
+    updater = read("cli/cmd/launcher/component_update.go")
+    signing = read("cli/cmd/launcher/windows_signing.go")
+    release = read("cli/cmd/launcher/release_commands.go")
     ci = read(".github/workflows/ci.yml")
     preflight = read("scripts/release/preflight.sh")
 
@@ -81,14 +79,14 @@ def main() -> int:
     ]:
         if body.count("prepare_sensor_command(&mut command)") < count:
             raise SystemExit(
-                f"[NeverLauncher] Guard Sensor 0.18.2 gate: {label} does not prepare sensor"
+                f"[Launcher] Guard Sensor 0.18.2 gate: {label} does not prepare sensor"
             )
         if (
             body.count("authenticate_sensor_or_kill(sensor_bootstrap, &mut child)")
             < count
         ):
             raise SystemExit(
-                f"[NeverLauncher] Guard Sensor 0.18.2 gate: {label} does not authenticate sensor fail-closed"
+                f"[Launcher] Guard Sensor 0.18.2 gate: {label} does not authenticate sensor fail-closed"
             )
     require(
         supervisor,
@@ -112,7 +110,7 @@ def main() -> int:
             "guard_sensor.dll",
             "Sign-And-VerifyAuthenticode $SensorPackagePath",
             'sensorVerification = "sha256+pe-machine+authenticode-before-agentpath"',
-            '@("guard.exe", "guard-sensor.dll", "neverruntime.exe", "neverlauncher-cli.exe")',
+            '@("guard.exe", "guard-sensor.dll", "runtime.exe", "launcher-cli.exe")',
             'component = "sensor"',
             "guard-sensor-windows-$Arch.dll",
         ],
@@ -152,19 +150,19 @@ def main() -> int:
             "actions/setup-java@v4",
             "cargo build --manifest-path runtime/guard-sensor/Cargo.toml",
             "NEVERGUARD_SENSOR_TEST_DLL",
-            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows -- --nocapture",
+            "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture",
             "cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings",
         ],
         "Windows compile/integration/clippy CI",
     )
     if "guard-sensor-0182.py" not in preflight:
         raise SystemExit(
-            "[NeverLauncher] Guard Sensor 0.18.2 gate: preflight wiring missing"
+            "[Launcher] Guard Sensor 0.18.2 gate: preflight wiring missing"
         )
 
     for path, body in [
         ("runtime/guard-sensor/src/lib.rs", sensor),
-        ("runtime/neverruntime/src/windows_sensor.rs", bootstrap),
+        ("runtime/runtime/src/windows_sensor.rs", bootstrap),
         ("scripts/release/build-windows-desktop.ps1", windows_build),
     ]:
         for forbidden in (
@@ -175,10 +173,10 @@ def main() -> int:
         ):
             if forbidden in body:
                 raise SystemExit(
-                    f"[NeverLauncher] Guard Sensor 0.18.2 gate: placeholder {forbidden!r} in {path}"
+                    f"[Launcher] Guard Sensor 0.18.2 gate: placeholder {forbidden!r} in {path}"
                 )
 
-    print("[NeverLauncher] Guard Sensor 0.18.2 gate: OK")
+    print("[Launcher] Guard Sensor 0.18.2 gate: OK")
     return 0
 
 

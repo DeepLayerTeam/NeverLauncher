@@ -14,8 +14,8 @@ import (
 	"sort"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 const KeyVersion = "v1"
@@ -241,7 +241,7 @@ func normalizeScope0207(scope, scopeID string) (string, string, error) {
 }
 
 func secretAAD(extensionID, scope, scopeID, name string) []byte {
-	return []byte(strings.Join([]string{"neverlauncher-extension-secret-v1", extensionID, scope, scopeID, name}, "\x00"))
+	return []byte(strings.Join([]string{"launcher-extension-secret-v1", extensionID, scope, scopeID, name}, "\x00"))
 }
 func (m *Manager) SetSecret(ctx context.Context, extensionID, scope, scopeID, name string, plaintext []byte, actor string) (model.ExtensionSecretMetadata, error) {
 	var err error

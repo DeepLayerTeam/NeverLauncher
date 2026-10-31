@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/ratelimit"
+	"gitflic.ru/skif4er/launcher/services/api/internal/ratelimit"
 )
 
 func TestServerBridgePublicMatrix0149IsCompleteAndHonestAboutCoverage(t *testing.T) {

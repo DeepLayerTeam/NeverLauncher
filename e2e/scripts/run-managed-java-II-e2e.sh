@@ -2,13 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RUNTIME_BIN="${NEVERLAUNCHER_RUNTIME_BIN:-${ROOT_DIR}/runtime/neverruntime/target/release/neverruntime}"
+RUNTIME_BIN="${NEVERLAUNCHER_RUNTIME_BIN:-${ROOT_DIR}/runtime/runtime/target/release/runtime}"
 WORK_DIR="${NEVERLAUNCHER_MANAGED_JAVA_E2E_DIR:-${ROOT_DIR}/e2e/runtime/managed-java-II}"
 RUNTIME_ROOT="${WORK_DIR}/runtimes"
 EVIDENCE="${WORK_DIR}/MANAGED_JAVA_II_EVIDENCE.json"
 
 if [[ ! -x "${RUNTIME_BIN}" ]]; then
-  echo "neverruntime binary not executable: ${RUNTIME_BIN}" >&2
+  echo "runtime binary not executable: ${RUNTIME_BIN}" >&2
   exit 1
 fi
 
@@ -20,7 +20,7 @@ import json, sys
 from pathlib import Path
 Path(sys.argv[1]).write_text(json.dumps({
     "schemaVersion": "1.0",
-    "product": "NeverLauncher",
+    "product": "Launcher",
     "feature": "Managed Java II",
     "requiredMajors": [8, 16, 17, 21, 25],
     "results": []

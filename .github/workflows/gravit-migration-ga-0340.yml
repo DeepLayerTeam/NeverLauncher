@@ -27,17 +27,17 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: neverlauncher_test
-          POSTGRES_USER: neverlauncher_test
+          POSTGRES_DB: launcher_test
+          POSTGRES_USER: launcher_test
           POSTGRES_PASSWORD: test_only_not_production
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U neverlauncher_test -d neverlauncher_test'
+          --health-cmd 'pg_isready -U launcher_test -d launcher_test'
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -56,8 +56,8 @@ jobs:
       - name: CLI build and tests
         working-directory: cli
         run: |
-          go build ./cmd/neverlauncher
-          go test -count=1 ./cmd/neverlauncher -run 'TestMigration.*033'
+          go build ./cmd/launcher
+          go test -count=1 ./cmd/launcher -run 'TestMigration.*033'
       - name: Schema, OpenAPI and version
         run: |
           python3 scripts/contracts/validate-openapi.py

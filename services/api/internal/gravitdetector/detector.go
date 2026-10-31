@@ -79,7 +79,7 @@ func Assess(source []byte, claimedVersion string) (Report, error) {
 		return Report{}, errors.New("invalid claimed Gravit version")
 	}
 	h := sha256.Sum256(source)
-	r := Report{Format: "neverlauncher.gravit-compatibility.v1", SourceSHA256: hex.EncodeToString(h[:]), ClaimedVersion: strings.TrimSpace(claimedVersion), VersionEvidence: "absent", VersionStatus: "unverified", Status: "manual", Components: []Component{}, Findings: []Finding{}, Summary: map[string]int{}}
+	r := Report{Format: "launcher.gravit-compatibility.v1", SourceSHA256: hex.EncodeToString(h[:]), ClaimedVersion: strings.TrimSpace(claimedVersion), VersionEvidence: "absent", VersionStatus: "unverified", Status: "manual", Components: []Component{}, Findings: []Finding{}, Summary: map[string]int{}}
 	z, err := zip.NewReader(bytes.NewReader(source), int64(len(source)))
 	if err != nil {
 		return Report{}, fmt.Errorf("invalid Gravit ZIP: %w", err)

@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,10 +43,10 @@ public final class NodeIdentity {
         this.publicKey = publicKey;
         this.rawPublicKey = rawEd25519PublicKey(publicKey.getEncoded());
         this.fingerprint = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(rawPublicKey));
-        byte[] proof = sign("NeverLauncher-ServerBridge-NodeIdentity-self-test-v1");
+        byte[] proof = sign("Launcher-ServerBridge-NodeIdentity-self-test-v1");
         Signature verifier = Signature.getInstance("Ed25519");
         verifier.initVerify(publicKey);
-        verifier.update("NeverLauncher-ServerBridge-NodeIdentity-self-test-v1".getBytes(StandardCharsets.UTF_8));
+        verifier.update("Launcher-ServerBridge-NodeIdentity-self-test-v1".getBytes(StandardCharsets.UTF_8));
         if (!verifier.verify(proof)) throw new GeneralSecurityException("node identity keypair self-test failed");
     }
 
@@ -108,11 +108,11 @@ public final class NodeIdentity {
         properties.setProperty("privateKeyPkcs8", Base64.getUrlEncoder().withoutPadding().encodeToString(privateKey.getEncoded()));
 
         Path parent = path.getParent() == null ? Path.of(".").toAbsolutePath() : path.getParent();
-        Path temp = Files.createTempFile(parent, ".neverlauncher-node-identity-", ".tmp");
+        Path temp = Files.createTempFile(parent, ".launcher-node-identity-", ".tmp");
         try {
             setPrivatePermissions(temp);
             try (OutputStream out = Files.newOutputStream(temp)) {
-                properties.store(out, "NeverLauncher ServerBridge node identity - PRIVATE KEY, do not share");
+                properties.store(out, "Launcher ServerBridge node identity - PRIVATE KEY, do not share");
             }
             try {
                 Files.move(temp, path, StandardCopyOption.ATOMIC_MOVE);

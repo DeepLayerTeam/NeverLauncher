@@ -29,7 +29,9 @@ def load(path: Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Verify loader package native materialization for one OS/architecture")
+    parser = argparse.ArgumentParser(
+        description="Verify loader package native materialization for one OS/architecture"
+    )
     parser.add_argument("--install", type=Path, required=True)
     parser.add_argument("--certification", type=Path, required=True)
     parser.add_argument("--loader", required=True)
@@ -50,13 +52,19 @@ def main() -> int:
 
     install = load(args.install)
     cert = load(args.certification)
-    if install.get("status") != "installed-and-verified" or install.get("loader") != loader:
+    if (
+        install.get("status") != "installed-and-verified"
+        or install.get("loader") != loader
+    ):
         fail("loader install evidence is not installed-and-verified")
     if cert.get("status") != "passed":
-        fail("NeverRuntime certification did not pass")
+        fail("Runtime certification did not pass")
 
     vanilla = install.get("vanilla")
-    if not isinstance(vanilla, dict) or vanilla.get("status") != "installed-and-verified":
+    if (
+        not isinstance(vanilla, dict)
+        or vanilla.get("status") != "installed-and-verified"
+    ):
         fail("embedded Vanilla materialization evidence is missing")
     internal_os = "osx" if os_name == "macos" else os_name
     targets = vanilla.get("targets")
@@ -65,10 +73,13 @@ def main() -> int:
     expected_target = {"os": internal_os, "arch": arch}
     normalized_targets = [
         {"os": str(row.get("os", "")), "arch": str(row.get("arch", ""))}
-        for row in targets if isinstance(row, dict)
+        for row in targets
+        if isinstance(row, dict)
     ]
     if normalized_targets != [expected_target]:
-        fail(f"materializer target mismatch: got={normalized_targets!r} expected={[expected_target]!r}")
+        fail(
+            f"materializer target mismatch: got={normalized_targets!r} expected={[expected_target]!r}"
+        )
 
     files = vanilla.get("files")
     if not isinstance(files, list):
@@ -80,20 +91,28 @@ def main() -> int:
             continue
         path = str(row.get("path", "")).replace("\\", "/")
         if not path.startswith(prefix):
-            fail(f"foreign native path in single-target package: {path!r}, expected prefix {prefix!r}")
+            fail(
+                f"foreign native path in single-target package: {path!r}, expected prefix {prefix!r}"
+            )
         sha = str(row.get("sha256", "")).lower()
         if not SHA256_RE.fullmatch(sha):
             fail(f"native file {path!r} has invalid SHA-256")
-        native_rows.append({"path": path, "size": int(row.get("size") or 0), "sha256": sha})
+        native_rows.append(
+            {"path": path, "size": int(row.get("size") or 0), "sha256": sha}
+        )
     if not native_rows:
         fail(f"no materialized native files found below {prefix}")
 
     expected_suffix = f"/natives/{internal_os}/{arch}".lower()
-    actual_natives = str(cert.get("nativesDirectory") or "").replace("\\", "/").rstrip("/").lower()
+    actual_natives = (
+        str(cert.get("nativesDirectory") or "").replace("\\", "/").rstrip("/").lower()
+    )
     if not actual_natives.endswith(expected_suffix):
-        fail(f"NeverRuntime selected nativesDirectory={actual_natives!r}, expected suffix {expected_suffix!r}")
+        fail(
+            f"Runtime selected nativesDirectory={actual_natives!r}, expected suffix {expected_suffix!r}"
+        )
     if int(cert.get("classpathEntries") or 0) <= 0:
-        fail("NeverRuntime classpath is empty")
+        fail("Runtime classpath is empty")
 
     native_rows.sort(key=lambda row: row["path"])
     identity = hashlib.sha256()
@@ -122,7 +141,9 @@ def main() -> int:
         "classpathEntries": int(cert.get("classpathEntries") or 0),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     print(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
     return 0
 

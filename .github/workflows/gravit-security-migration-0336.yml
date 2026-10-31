@@ -6,8 +6,8 @@ on:
       - 'services/api/internal/httpapi/migration_security_0336*'
       - 'services/api/internal/httpapi/handler.go'
       - 'services/api/internal/dbmigrate/sql/0094*'
-      - 'cli/cmd/neverlauncher/migration_security_0336*'
-      - 'cli/cmd/neverlauncher/migration_workflow_0331.go'
+      - 'cli/cmd/launcher/migration_security_0336*'
+      - 'cli/cmd/launcher/migration_workflow_0331.go'
       - 'apps/admin/src/admin/MigrationCenter0331.tsx'
       - 'schemas/openapi*'
       - '.github/workflows/gravit-security-migration-0336.yml'
@@ -22,17 +22,17 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: neverlauncher_test
-          POSTGRES_USER: neverlauncher_test
+          POSTGRES_DB: launcher_test
+          POSTGRES_USER: launcher_test
           POSTGRES_PASSWORD: test_only_not_production
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_test"
+          --health-cmd "pg_isready -U launcher_test -d launcher_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:test_only_not_production@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -46,7 +46,7 @@ jobs:
           go test -race -count=1 -timeout 5m ./internal/httpapi -run 'TestMigrationIndependentNeverSigners0336|TestMigrationTargetSteps0331'
       - name: CLI tests
         working-directory: cli
-        run: go test -race -count=1 ./cmd/neverlauncher -run 'TestMigrationSecurityCLI0336|TestMigrationWorkflow0331'
+        run: go test -race -count=1 ./cmd/launcher -run 'TestMigrationSecurityCLI0336|TestMigrationWorkflow0331'
   api-admin:
     runs-on: ubuntu-latest
     steps:

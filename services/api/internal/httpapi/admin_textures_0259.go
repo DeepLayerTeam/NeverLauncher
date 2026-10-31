@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 func (s Server) textureAdminRepo0259(w http.ResponseWriter) (repository.TextureAdminRepository0259, bool) {

@@ -26,7 +26,7 @@ const testUUID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
 func sampleReport(t *testing.T, source string) Report {
 	t.Helper()
-	r := Report{Format: "neverlauncher.gravit-migration-report.v1", RunID: "abcdef0123456789", ProjectID: "project-1", SourceSHA256: source, InventorySHA256: testHash, RunRevision: 2, Items: []Item{}, Identities: []Identity{{Provider: "fileauth", SourceID: "1", Username: "player", UUID: testUUID, TargetUserID: "never-player", Status: "imported"}}, Evidence: []Evidence{}, Decisions: []Decision{}, Counts: map[string]int{"transferred": 0, "transformed": 0, "manual": 0, "blocked": 0}, Blockers: []string{}, Status: "review_required"}
+	r := Report{Format: "launcher.gravit-migration-report.v1", RunID: "abcdef0123456789", ProjectID: "project-1", SourceSHA256: source, InventorySHA256: testHash, RunRevision: 2, Items: []Item{}, Identities: []Identity{{Provider: "fileauth", SourceID: "1", Username: "player", UUID: testUUID, TargetUserID: "never-player", Status: "imported"}}, Evidence: []Evidence{}, Decisions: []Decision{}, Counts: map[string]int{"transferred": 0, "transformed": 0, "manual": 0, "blocked": 0}, Blockers: []string{}, Status: "review_required"}
 	for _, stage := range []string{"compatibility", "inventory", "identity", "authentication", "security", "content", "modules", "rehearsal", "cutover", "rollback"} {
 		r.Evidence = append(r.Evidence, Evidence{Stage: stage, State: "verified", SHA256: testHash})
 	}

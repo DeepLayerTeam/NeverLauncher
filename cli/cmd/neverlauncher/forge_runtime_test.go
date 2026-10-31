@@ -139,7 +139,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 			if err := writeAtomicBytes(filepath.FromSlash(second.ProcessorJournalPath), append(journalRaw, '\n'), 0o600); err != nil {
 				t.Fatalf("write simulated crash journal: %v", err)
 			}
-			installerPath := filepath.Join(dir, ".neverlauncher", "installers", loader, sanitizeVersionToken(second.ArtifactVersion), "installer.jar")
+			installerPath := filepath.Join(dir, ".launcher", "installers", loader, sanitizeVersionToken(second.ArtifactVersion), "installer.jar")
 			if err := os.Remove(installerPath); err != nil {
 				t.Fatalf("remove local installer before cache recovery: %v", err)
 			}
@@ -208,7 +208,7 @@ func TestForgeAndNeoForgeProcessorMaterializers(t *testing.T) {
 			}
 			seenProfile, seenGenerated := false, false
 			for _, file := range pkg.Files {
-				if strings.HasPrefix(file.Path, ".neverlauncher/") {
+				if strings.HasPrefix(file.Path, ".launcher/") {
 					t.Fatalf("local installer state leaked into package: %s", file.Path)
 				}
 				seenProfile = seenProfile || file.Path == result.ProfilePath
@@ -287,7 +287,7 @@ func TestNeoForgeMavenMetadataRetriesSemanticallyIncompleteSnapshot(t *testing.T
 	var refreshed atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		request := requests.Add(1)
-		if request > 1 && r.URL.Query().Get("_neverlauncher_refresh") != "" {
+		if request > 1 && r.URL.Query().Get("_launcher_refresh") != "" {
 			refreshed.Add(1)
 		}
 		if request == 1 {
@@ -376,7 +376,7 @@ func TestForgeLibraryMaterializationDeduplicatesSameDestinationBeforeWorkers(t *
 
 func TestForgeInstallV1ProcessorTokens(t *testing.T) {
 	clientDir := t.TempDir()
-	dataDir := filepath.Join(clientDir, ".neverlauncher", "installer-data")
+	dataDir := filepath.Join(clientDir, ".launcher", "installer-data")
 	if err := os.MkdirAll(filepath.Join(dataDir, "data"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -480,7 +480,7 @@ func TestForgeLegacy1122V1UniversalInstaller(t *testing.T) {
 		Workers: 2, StrictUpstream: true, HTTPClient: server.Client(),
 	}, vanillaInstallResult{MinecraftVersion: "1.12.2", JavaMajorVersion: 8, ClientDir: clientDir, Status: "installed-and-verified"},
 		"14.23.5.2859", "1.12.2-14.23.5.2859", "fixture-metadata", server.URL+"/installer.jar", sha1HexLocal(archive.Bytes()),
-		vanillaDownloadedFile{Path: ".neverlauncher/installers/forge.jar", SHA1: sha1HexLocal(archive.Bytes()), SHA256: strings.Repeat("b", 64)},
+		vanillaDownloadedFile{Path: ".launcher/installers/forge.jar", SHA1: sha1HexLocal(archive.Bytes()), SHA256: strings.Repeat("b", 64)},
 		installerPath, bundle,
 	)
 	if err != nil {
@@ -499,7 +499,7 @@ func TestForgeLegacy1122V1UniversalInstaller(t *testing.T) {
 		result.LegacyUniversalPath,
 		"libraries/com/example/clientlib/1.0/clientlib-1.0.jar",
 		result.ProfilePath,
-		".neverlauncher/forge-install.json",
+		".launcher/forge-install.json",
 	} {
 		if _, err := os.Stat(filepath.Join(clientDir, filepath.FromSlash(rel))); err != nil {
 			t.Fatalf("missing legacy Forge artifact %s: %v", rel, err)
@@ -569,7 +569,7 @@ func TestForgeLegacy1710V1LaunchWrapperInstaller(t *testing.T) {
 		Workers: 1, StrictUpstream: true, HTTPClient: http.DefaultClient,
 	}, vanillaInstallResult{MinecraftVersion: "1.7.10", JavaMajorVersion: 8, ClientDir: clientDir, Status: "installed-and-verified"},
 		"10.13.4.1614-1.7.10", "1.7.10-10.13.4.1614-1.7.10", "fixture-metadata", "https://example.invalid/installer.jar", sha1HexLocal(archive.Bytes()),
-		vanillaDownloadedFile{Path: ".neverlauncher/installers/forge.jar", SHA1: sha1HexLocal(archive.Bytes()), SHA256: strings.Repeat("c", 64)},
+		vanillaDownloadedFile{Path: ".launcher/installers/forge.jar", SHA1: sha1HexLocal(archive.Bytes()), SHA256: strings.Repeat("c", 64)},
 		installerPath, bundle,
 	)
 	if err != nil {

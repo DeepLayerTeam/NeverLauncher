@@ -18,7 +18,7 @@ import (
 )
 
 const updaterCoreSchema0156 = "1.0"
-const updaterCoreDir0156 = ".neverlauncher/updater"
+const updaterCoreDir0156 = ".launcher/updater"
 
 type updaterFileSpec0156 struct {
 	Path       string
@@ -398,7 +398,7 @@ func (u *transactionalUpdater0156) commitLocked(journal *updaterJournal0156, ver
 	}
 	for i := range journal.Files {
 		file := journal.Files[i]
-		if journal.Namespace == "client-package" && file.Path == ".neverlauncher/client-state.json" {
+		if journal.Namespace == "client-package" && file.Path == ".launcher/client-state.json" {
 			if activation != nil {
 				return errors.New("multiple client-state activation files")
 			}

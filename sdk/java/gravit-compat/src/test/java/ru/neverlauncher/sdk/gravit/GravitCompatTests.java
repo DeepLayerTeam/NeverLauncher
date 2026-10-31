@@ -1,4 +1,4 @@
-package ru.neverlauncher.sdk.gravit;
+package ru.launcher.sdk.gravit;
 import java.util.*;
 import pro.gravit.launcher.base.modules.*;
 import pro.gravit.utils.Version;

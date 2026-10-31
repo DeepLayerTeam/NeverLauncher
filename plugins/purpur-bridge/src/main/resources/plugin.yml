@@ -1,25 +1,25 @@
-name: NeverLauncherPurpurBridge
-main: ru.neverlauncher.bridge.purpur.NeverLauncherPurpurBridge
+name: LauncherPurpurBridge
+main: ru.launcher.bridge.purpur.LauncherPurpurBridge
 version: ${version}
 api-version: '1.21'
 author: SkiF4er
-description: NeverLauncher ServerBridge/AuthBridge integration for Purpur servers.
+description: Launcher ServerBridge/AuthBridge integration for Purpur servers.
 
 commands:
   nlbridge:
-    description: NeverLauncher bridge diagnostics and control command
+    description: Launcher bridge diagnostics and control command
     usage: /nlbridge <status|test|reload|diagnostics>
-    permission: neverlauncher.bridge.status
+    permission: launcher.bridge.status
 permissions:
-  neverlauncher.bridge.admin:
-    description: Trigger NeverLauncher bridge network diagnostics
+  launcher.bridge.admin:
+    description: Trigger Launcher bridge network diagnostics
     default: op
-  neverlauncher.bridge.status:
-    description: Read NeverLauncher bridge status
+  launcher.bridge.status:
+    description: Read Launcher bridge status
     default: op
-  neverlauncher.bridge.reload:
-    description: Reload NeverLauncher bridge configuration
+  launcher.bridge.reload:
+    description: Reload Launcher bridge configuration
     default: op
-  neverlauncher.bridge.diagnostics:
-    description: Read NeverLauncher bridge diagnostics
+  launcher.bridge.diagnostics:
+    description: Read Launcher bridge diagnostics
     default: op

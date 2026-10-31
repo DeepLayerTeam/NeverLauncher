@@ -1,5 +1,5 @@
 // Package conformance executes structural and live-fixture tests against the
-// same interfaces the NeverLauncher federation uses in production.
+// same interfaces the Launcher federation uses in production.
 package conformance
 
 import (
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 type Check struct {
@@ -112,7 +112,7 @@ func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixtu
 			}
 			// Must reject incorrect credentials: no fail-open behavior.
 			invalid := *fixture.Password
-			invalid.Secret += "-neverlauncher-invalid-proof"
+			invalid.Secret += "-launcher-invalid-proof"
 			_, invalidErr := connector.(authconnector.PasswordAuthenticator).AuthenticatePassword(ctx, invalid)
 			if invalidErr == nil {
 				r.add("authenticate:wrong-password", fmt.Errorf("accepted invalid credentials"))

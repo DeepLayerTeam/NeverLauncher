@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.io.IOException;
 import java.net.URI;
@@ -24,9 +24,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public final class NeverLauncherApiClient {
+public final class LauncherApiClient {
     // Совместимость со старым бэкендом поддерживается только сервером; запись сохранена здесь как происхождение миграции цепочки подписей 0.14.2.
-    private static final String LEGACY_NODE_SIGNATURE_DOMAIN = "NeverLauncher-ServerBridge-Node-v1";
+    private static final String LEGACY_NODE_SIGNATURE_DOMAIN = "Launcher-ServerBridge-Node-v1";
     private static final List<Integer> SUPPORTED_PROTOCOLS = List.of(BridgeDefaults.PROTOCOL_VERSION);
     private static final List<String> SUPPORTED_FEATURES = List.of(
         BridgeDefaults.FEATURE_CAPABILITY_NEGOTIATION,
@@ -78,12 +78,12 @@ public final class NeverLauncherApiClient {
     private volatile BridgeControlExecutor controlHandler;
     private volatile BridgeProtocolNegotiation negotiation;
 
-    public NeverLauncherApiClient(BridgeConfig config, NodeIdentity identity, String serverType, String pluginVersion, String pluginSha256) {
+    public LauncherApiClient(BridgeConfig config, NodeIdentity identity, String serverType, String pluginVersion, String pluginSha256) {
         this(config, identity, serverType, pluginVersion, pluginSha256,
             BridgeRuntimeDescriptor.of("", serverType, serverType, "", serverType, List.of("heartbeat.signed", "join.validation")));
     }
 
-    public NeverLauncherApiClient(BridgeConfig config, NodeIdentity identity, String serverType, String pluginVersion, String pluginSha256, BridgeRuntimeDescriptor runtimeDescriptor) {
+    public LauncherApiClient(BridgeConfig config, NodeIdentity identity, String serverType, String pluginVersion, String pluginSha256, BridgeRuntimeDescriptor runtimeDescriptor) {
         this.config = config;
         this.identity = identity;
         this.serverType = normalized(serverType);
@@ -102,7 +102,7 @@ public final class NeverLauncherApiClient {
                     identity
                 );
                 this.eventExecutor = Executors.newSingleThreadExecutor(task -> {
-                    Thread thread = new Thread(task, "neverlauncher-serverbridge-event-stream");
+                    Thread thread = new Thread(task, "launcher-serverbridge-event-stream");
                     thread.setDaemon(true);
                     return thread;
                 });
@@ -416,7 +416,7 @@ public final class NeverLauncherApiClient {
         controlClosed.set(false);
         controlWorkerStopped = false;
         controlExecutor = Executors.newSingleThreadScheduledExecutor(task -> {
-            Thread thread = new Thread(task, "neverlauncher-serverbridge-control");
+            Thread thread = new Thread(task, "launcher-serverbridge-control");
             thread.setDaemon(true);
             return thread;
         });
@@ -725,15 +725,15 @@ public final class NeverLauncherApiClient {
         return HttpRequest.newBuilder(uri)
             .timeout(Duration.ofMillis(config.timeoutMs))
             .header("Content-Type", "application/json")
-            .header("X-NeverLauncher-Node-Id", config.serverId)
-            .header("X-NeverLauncher-Node-Key-Fingerprint", identity.fingerprint())
-            .header("X-NeverLauncher-Node-Timestamp", timestamp)
-            .header("X-NeverLauncher-Node-Nonce", nonce)
-            .header("X-NeverLauncher-Node-Signature", signature)
-            .header("X-NeverLauncher-Protocol-Version", Integer.toString(BridgeDefaults.PROTOCOL_VERSION))
-            .header("X-NeverLauncher-Security-Profile", BridgeProtocolSecurity.PROFILE)
-            .header("X-NeverLauncher-Capability-Digest", capabilityDigest)
-            .header("X-NeverLauncher-Runtime-Id", runtimeIdentity.runtimeId())
+            .header("X-Launcher-Node-Id", config.serverId)
+            .header("X-Launcher-Node-Key-Fingerprint", identity.fingerprint())
+            .header("X-Launcher-Node-Timestamp", timestamp)
+            .header("X-Launcher-Node-Nonce", nonce)
+            .header("X-Launcher-Node-Signature", signature)
+            .header("X-Launcher-Protocol-Version", Integer.toString(BridgeDefaults.PROTOCOL_VERSION))
+            .header("X-Launcher-Security-Profile", BridgeProtocolSecurity.PROFILE)
+            .header("X-Launcher-Capability-Digest", capabilityDigest)
+            .header("X-Launcher-Runtime-Id", runtimeIdentity.runtimeId())
             .method(method, HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
             .build();
     }

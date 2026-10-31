@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func TestStagedExecutionGrantsExactDownloadedBytes0342(t *testing.T) {
-	cfg := config.Config{PublicURL: "http://example.test", RepositoryDriver: "memory", StorageDriver: "local", StorageLocalPath: t.TempDir(), BackupRoot: t.TempDir(), CORSAllowedOrigins: []string{"http://example.test"}, Environment: "test", AuthTokenSecret: "staged-0342-test-secret-with-enough-entropy", AuthTokenTTLHours: 1, WebAuthnRPID: "example.test", WebAuthnRPName: "NeverLauncher Test", WebAuthnOrigins: []string{"http://example.test"}}
+	cfg := config.Config{PublicURL: "http://example.test", RepositoryDriver: "memory", StorageDriver: "local", StorageLocalPath: t.TempDir(), BackupRoot: t.TempDir(), CORSAllowedOrigins: []string{"http://example.test"}, Environment: "test", AuthTokenSecret: "staged-0342-test-secret-with-enough-entropy", AuthTokenTTLHours: 1, WebAuthnRPID: "example.test", WebAuthnRPName: "Launcher Test", WebAuthnOrigins: []string{"http://example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	store := storage.NewLocalStorage(cfg.StorageLocalPath)
 	h := Server{Version: "0.34.2", Config: cfg, Repo: repo, Storage: store}.Handler()
@@ -69,7 +69,7 @@ func TestStagedExecutionGrantsExactDownloadedBytes0342(t *testing.T) {
 		t.Fatalf("forged grant: %d", rr.Code)
 	}
 	rr := call("GET", path, issued.Data.Token, nil)
-	if rr.Code != 200 || rr.Body.String() != "neverlauncher-0.21.2-runtime-validation" {
+	if rr.Code != 200 || rr.Body.String() != "launcher-0.21.2-runtime-validation" {
 		t.Fatalf("real downloaded bytes incorrect: %d %q", rr.Code, rr.Body.String())
 	}
 	g, err := (&Server{Config: cfg}).parseGrant0342(issued.Data.Token)

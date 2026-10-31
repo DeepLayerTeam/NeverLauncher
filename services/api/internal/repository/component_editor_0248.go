@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // UpdateDraftComponentCatalog0248 repairs intermediate draft state (optional

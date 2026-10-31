@@ -35,7 +35,7 @@ source_package_tmp="$(mktemp -d)"
 trap 'rm -rf "${source_package_tmp}"' EXIT
 python3 scripts/release/source-package.py \
   "${ROOT_DIR}" \
-  "${source_package_tmp}/neverlauncher-source.zip" \
+  "${source_package_tmp}/launcher-source.zip" \
   --list-file "${source_package_tmp}/source-files.txt"
 for required in \
   compatibility/targets.json \
@@ -46,7 +46,7 @@ for required in \
   scripts/build/bridge-plugins.sh; do
   grep -Fxq "${required}" "${source_package_tmp}/source-files.txt"
 done
-python3 scripts/release/secret-scan.py "${source_package_tmp}/neverlauncher-source.zip"
+python3 scripts/release/secret-scan.py "${source_package_tmp}/launcher-source.zip"
 python3 - <<'PY'
 import importlib.util
 from pathlib import Path
@@ -67,11 +67,11 @@ for rel in [
     "scripts/release/__pycache__/source-package.cpython-313.pyc",
     "apps/admin/node_modules/pkg/index.js",
     "apps/desktop/dist/index.html",
-    "runtime/neverruntime/target/release/neverruntime",
+    "runtime/runtime/target/release/runtime",
     "e2e/reports/result.json",
     "deploy/production/certs/server.pem",
     "cli/nl",
-    "services/api/neverlauncher-api",
+    "services/api/launcher-api",
     "apps/admin/.env.local",
     "scripts/release/debug.log",
 ]:

@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // BackendLifecycle0289 is a one-way request to the process owner. HTTP never

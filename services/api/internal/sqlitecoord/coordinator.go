@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/ratelimit"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/serverbridgeha"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/ratelimit"
+	"gitflic.ru/skif4er/launcher/services/api/internal/serverbridgeha"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 var ErrInvalid = errors.New("sqlite coordinator: invalid arguments")

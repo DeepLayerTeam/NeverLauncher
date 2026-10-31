@@ -9,7 +9,7 @@
 
 ## Управление через CLI
 
-CLI поддерживает `nl operations status|readiness|diagnostics|diagnostics-bundle`, `nl adminops ...`, `nl backup ...`, `nl db ...`; для серверных сценариев указывайте `--backend <url>` и авторизованный токен. Точный перечень команд — `cli/cmd/neverlauncher/main.go` и [справочник](../reference/cli.md).
+CLI поддерживает `nl operations status|readiness|diagnostics|diagnostics-bundle`, `nl adminops ...`, `nl backup ...`, `nl db ...`; для серверных сценариев указывайте `--backend <url>` и авторизованный токен. Точный перечень команд — `cli/cmd/launcher/main.go` и [справочник](../reference/cli.md).
 
 ## Резервные копии
 
@@ -17,6 +17,6 @@ CLI поддерживает `nl operations status|readiness|diagnostics|diagnos
 
 ## Службы
 
-Docker Compose: `deploy/production/docker-compose.yml`; systemd: `deploy/systemd/neverlauncher-api.service`; nginx: `deploy/production/nginx.conf`. Настройка обратного прокси и TLS зависит от инфраструктуры. Разрешайте сервисные порты минимальному набору сетей и проверяйте готовность API до подключения Desktop.
+Docker Compose: `deploy/production/docker-compose.yml`; systemd: `deploy/systemd/launcher-api.service`; nginx: `deploy/production/nginx.conf`. Настройка обратного прокси и TLS зависит от инфраструктуры. Разрешайте сервисные порты минимальному набору сетей и проверяйте готовность API до подключения Desktop.
 
 См. [развёртывание в промышленной среде](../getting-started/production.md) и [обновления](../migration/upgrade.md).

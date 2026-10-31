@@ -19,7 +19,7 @@ spec.loader.exec_module(mod)
 
 def synthetic_result(
     java_major: int,
-    repository: str = "DeepLayerTeam/NeverLauncher",
+    repository: str = "DeepLayerTeam/Launcher",
     commit: str = "a" * 40,
     run_id: str = "123",
 ):
@@ -44,7 +44,7 @@ def synthetic_result(
         )
     payload = {
         "schemaVersion": mod.SCHEMA_VERSION,
-        "kind": "neverlauncher-windows-adversarial-result",
+        "kind": "launcher-windows-adversarial-result",
         "productVersion": mod.PRODUCT_VERSION,
         "javaMajor": java_major,
         "runtimeArch": "amd64",
@@ -128,7 +128,7 @@ class WindowsAdversarialTests(unittest.TestCase):
             root = Path(td)
             results = root / "results"
             output = root / "certificate"
-            repository = "DeepLayerTeam/NeverLauncher"
+            repository = "DeepLayerTeam/Launcher"
             commit = "b" * 40
             run_id = "456"
             for major in mod.CERTIFIED_JAVA_MAJORS:

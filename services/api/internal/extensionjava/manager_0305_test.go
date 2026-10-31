@@ -28,12 +28,12 @@ func fixture0305(t *testing.T, major uint16, mainClass string) string {
 			t.Fatal(e)
 		}
 	}
-	add("META-INF/MANIFEST.MF", []byte("Manifest-Version: 1.0\r\nMain-Class: "+mainClass+"\r\nNeverLauncher-Extension-Class: example.Plugin\r\n\r\n"))
+	add("META-INF/MANIFEST.MF", []byte("Manifest-Version: 1.0\r\nMain-Class: "+mainClass+"\r\nLauncher-Extension-Class: example.Plugin\r\n\r\n"))
 	header := make([]byte, 8)
 	binary.BigEndian.PutUint32(header, 0xCAFEBABE)
 	binary.BigEndian.PutUint16(header[6:], major)
 	add("example/Plugin.class", header)
-	add("ru/neverlauncher/sdk/host/JavaExtensionHost.class", header)
+	add("ru/launcher/sdk/host/JavaExtensionHost.class", header)
 	if err := writer.Close(); err != nil {
 		t.Fatal(err)
 	}

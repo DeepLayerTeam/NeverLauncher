@@ -7,18 +7,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authrequest"
+	"gitflic.ru/skif4er/launcher/services/api/internal/authrequest"
 	"io"
 	"maps"
 	"net/http"
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
+	"gitflic.ru/skif4er/launcher/services/api/internal/authorization"
+	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/protection"
 )
 
 func (s Server) adminLogin(w http.ResponseWriter, r *http.Request) {

@@ -178,26 +178,26 @@ func deliveryArtifactComponent(name string) string {
 		return "sensor"
 	case strings.HasPrefix(lower, "guard-"):
 		return "guard"
-	case strings.HasPrefix(lower, "neverlauncher-desktop-web-"):
+	case strings.HasPrefix(lower, "launcher-desktop-web-"):
 		return "desktop-web"
-	case strings.HasPrefix(lower, "neverlauncher-desktop-package-"):
+	case strings.HasPrefix(lower, "launcher-desktop-package-"):
 		return "desktop-bundle"
-	case strings.HasPrefix(lower, "neverlauncher-desktop-"):
+	case strings.HasPrefix(lower, "launcher-desktop-"):
 		if strings.HasSuffix(lower, ".zip") || strings.HasSuffix(lower, ".msi") || strings.HasSuffix(lower, ".deb") || strings.HasSuffix(lower, ".appimage") {
 			return "desktop-package"
 		}
 		return "desktop-launcher"
-	case strings.HasPrefix(lower, "neverlauncher-cli-"):
+	case strings.HasPrefix(lower, "launcher-cli-"):
 		return "cli"
-	case strings.HasPrefix(lower, "neverlauncher-api-"):
+	case strings.HasPrefix(lower, "launcher-api-"):
 		return "api"
-	case strings.HasPrefix(lower, "neverruntime-"):
+	case strings.HasPrefix(lower, "runtime-"):
 		return "runtime"
-	case strings.HasPrefix(lower, "neverlauncher-jre-"):
+	case strings.HasPrefix(lower, "launcher-jre-"):
 		return "managed-jre"
-	case strings.HasPrefix(lower, "neverlauncher-admin-web-"):
+	case strings.HasPrefix(lower, "launcher-admin-web-"):
 		return "admin-web"
-	case strings.HasPrefix(lower, "neverlauncher-source-"):
+	case strings.HasPrefix(lower, "launcher-source-"):
 		return "source"
 	case strings.Contains(lower, "-bridge-") && strings.HasSuffix(lower, ".jar"):
 		return "serverbridge"
@@ -235,7 +235,7 @@ func buildDeliveryManifest0151(dir, ver string) (DeliveryManifest, error) {
 	}
 	manifest := DeliveryManifest{
 		SchemaVersion: "1.0",
-		Product:       "NeverLauncher",
+		Product:       "Launcher",
 		Version:       strings.TrimSpace(ver),
 		GeneratedAt:   time.Now().UTC().Format(time.RFC3339Nano),
 	}
@@ -349,7 +349,7 @@ func verifyDeliveryManifest0151(dir, expectedVersion string) error {
 	if err != nil {
 		return err
 	}
-	if manifest.SchemaVersion != "1.0" || manifest.Product != "NeverLauncher" || strings.TrimSpace(manifest.Version) == "" {
+	if manifest.SchemaVersion != "1.0" || manifest.Product != "Launcher" || strings.TrimSpace(manifest.Version) == "" {
 		return errors.New("delivery manifest header is invalid")
 	}
 	if strings.TrimSpace(expectedVersion) != "" && manifest.Version != strings.TrimSpace(expectedVersion) {
@@ -591,7 +591,7 @@ func handleDelivery(args []string) error {
 		downloadDir := flagValue(args, "--download-dir", "")
 		cleanup := false
 		if downloadDir == "" {
-			tmp, err := os.MkdirTemp("", "neverlauncher-public-delivery-e2e-")
+			tmp, err := os.MkdirTemp("", "launcher-public-delivery-e2e-")
 			if err != nil {
 				return err
 			}

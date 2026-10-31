@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func signedRouting0196(t *testing.T, serverID, runtimeID string, identity testBridgeNodeIdentity0142, state, health string, accepting bool, players, capacity int) bridgeRoutingV3Contract0196 {

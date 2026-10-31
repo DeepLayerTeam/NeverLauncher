@@ -15,7 +15,7 @@ import (
 // be inferred from productVersion, a mirror URL, or the local transaction ID.
 // The watermark lives outside the rollback-controlled managed component tree.
 // All calls are serialized by the existing transactional updater lock.
-const componentSecurityState02311 = ".neverlauncher/component-security"
+const componentSecurityState02311 = ".launcher/component-security"
 
 type componentGenerationRecord02311 struct {
 	Schema         uint32 `json:"schema"`

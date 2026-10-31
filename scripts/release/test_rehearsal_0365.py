@@ -104,13 +104,13 @@ class RehearsalTests(unittest.TestCase):
     def build_target(self, target):
         system, arch = target.split("-")
         components = {
-            "desktop-launcher": "neverlauncher-desktop",
+            "desktop-launcher": "launcher-desktop",
             "guard": "guard",
-            "runtime": "neverruntime",
-            "cli": "neverlauncher-cli",
+            "runtime": "runtime",
+            "cli": "launcher-cli",
         }
         if system == "linux":
-            components["api"] = "neverlauncher-api"
+            components["api"] = "launcher-api"
         binaries = {
             role: (
                 fake_pe(arch)
@@ -128,12 +128,12 @@ class RehearsalTests(unittest.TestCase):
             if system == "windows":
                 inner = name + ".exe"
                 if role == "desktop-launcher":
-                    inner = "neverlauncher-desktop.exe"
+                    inner = "launcher-desktop.exe"
             elif system == "linux":
-                inner = "neverlauncher/" + name
+                inner = "launcher/" + name
             else:
                 inner = (
-                    "NeverLauncher.app/Contents/"
+                    "Launcher.app/Contents/"
                     + ("MacOS/" if role == "desktop-launcher" else "Helpers/")
                     + name
                 )
@@ -167,17 +167,17 @@ class RehearsalTests(unittest.TestCase):
             inside = "WINDOWS_PACKAGE_MANIFEST.json"
         elif system == "linux":
             mn = "LINUX_PACKAGE_MANIFEST_" + arch.upper() + ".json"
-            inside = "neverlauncher/LINUX_PACKAGE_MANIFEST.json"
+            inside = "launcher/LINUX_PACKAGE_MANIFEST.json"
         else:
             mn = "MACOS_PACKAGE_MANIFEST_" + arch.upper() + ".json"
-            inside = "NeverLauncher.app/Contents/Resources/MACOS_PACKAGE_MANIFEST.json"
+            inside = "Launcher.app/Contents/Resources/MACOS_PACKAGE_MANIFEST.json"
         raw = json.dumps(embedded).encode()
         members[inside] = raw
         members["COMPONENT_SET_SIGNATURE.json"] = (
             b'{"signed":true}' if system == "windows" else b""
         )
         if system == "linux":
-            members["neverlauncher/COMPONENT_SET_SIGNATURE.json"] = members.pop(
+            members["launcher/COMPONENT_SET_SIGNATURE.json"] = members.pop(
                 "COMPONENT_SET_SIGNATURE.json"
             )
         if system == "darwin":
@@ -274,7 +274,7 @@ class RehearsalTests(unittest.TestCase):
             r.certify(self.bundle, self.evidence, self.key, "0.36.6", COMMIT)
 
     def test_seventh_target(self):
-        (self.bundle / f"neverlauncher-desktop-{VER}-windows-riscv64.zip").write_bytes(
+        (self.bundle / f"launcher-desktop-{VER}-windows-riscv64.zip").write_bytes(
             b"garbage"
         )
         with self.assertRaises(Blocked):
@@ -361,7 +361,7 @@ class RehearsalTests(unittest.TestCase):
         # the release CLI from the signed bundle, never this fixture program.
         report = self.check()
         (self.bundle / "RELEASE_REHEARSAL_0365.json").write_text(json.dumps(report))
-        cli = self.bundle / "neverlauncher-cli-linux-x64"
+        cli = self.bundle / "launcher-cli-linux-x64"
         cli.write_text('#!/bin/sh\n[ "$1" = release ] && [ "$2" = publish-check ]\n')
         cli.chmod(0o755)
         sums = []
@@ -401,7 +401,7 @@ class RehearsalTests(unittest.TestCase):
 
     def test_dry_run_rejects_changed_unsigned_bytes(self):
         cli, key, policy_file, state, stage = self.prepare_dryrun()
-        (self.bundle / "neverlauncher-cli-linux-x64").write_text("modified")
+        (self.bundle / "launcher-cli-linux-x64").write_text("modified")
         with self.assertRaises(Blocked):
             r.dry_run(
                 self.bundle,
@@ -474,7 +474,7 @@ class RehearsalTests(unittest.TestCase):
 
     def test_unapproved_linux_architecture(self):
         self.check()
-        (self.bundle / f"neverlauncher-desktop-{VER}-linux-riscv64.zip").write_bytes(
+        (self.bundle / f"launcher-desktop-{VER}-linux-riscv64.zip").write_bytes(
             b"wrong"
         )
         with self.assertRaises(Blocked):

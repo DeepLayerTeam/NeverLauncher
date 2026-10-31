@@ -1,9 +1,9 @@
 {
   "schemaVersion": "2.0",
-  "id": "ru.example.neverlauncher.cli-status",
+  "id": "ru.example.launcher.cli-status",
   "name": "CLI Status Example",
   "version": "0.1.0",
-  "publisher": "NeverLauncher Examples",
+  "publisher": "Launcher Examples",
   "api": "1.0",
   "targets": [
     {

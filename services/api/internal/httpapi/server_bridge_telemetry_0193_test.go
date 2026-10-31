@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func testTelemetry0193(now time.Time, runtimeID string) *bridgeServerTelemetryV3Contract0193 {

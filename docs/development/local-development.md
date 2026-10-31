@@ -12,7 +12,7 @@
 | Go CLI | `(cd cli && go test ./...)` |
 | Admin UI | `(cd apps/admin && npm ci && npm run build)` |
 | Desktop UI | `(cd apps/desktop && npm ci && npm run build)` |
-| NeverRuntime | `(cd runtime/neverruntime && cargo test)` |
+| Runtime | `(cd runtime/runtime && cargo test)` |
 | Compatibility target manifest | `python3 scripts/compatibility/matrix.py validate --targets compatibility/targets.json` |
 
 ## Запуск UI

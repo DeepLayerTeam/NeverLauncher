@@ -27,7 +27,7 @@ MACOS_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR:-
 MANAGED_JRE_ARTIFACTS_DIR="${NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR:-}"
 WINDOWS_ADVERSARIAL_CERTIFICATE="${NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE:-}"
 SOURCE_COMMIT="${NEVERLAUNCHER_SOURCE_COMMIT:-}"
-PUBLIC_RELEASE_BASE_URL="${NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL:-https://github.com/DeepLayerTeam/NeverLauncher/releases/download/v${VERSION}}"
+PUBLIC_RELEASE_BASE_URL="${NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL:-https://github.com/DeepLayerTeam/Launcher/releases/download/v${VERSION}}"
 export NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL="${PUBLIC_RELEASE_BASE_URL}"
 
 # 0.25.0 is GA only if a different, authorized CI attestation key has
@@ -144,7 +144,7 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
     --version "${VERSION}"
 fi
 
-# NeverLauncher 0.33.0 must not be shipped as GA based on an RC test receipt,
+# Launcher 0.33.0 must not be shipped as GA based on an RC test receipt,
 # a PostgreSQL+SQLite coordinator, or a self-attestation. Verify an independent
 # operator-signed, actual SQLite-only HTTP deployment report BEFORE touching
 # an existing output bundle.
@@ -222,7 +222,7 @@ if [[ "${VERSION}" == "0.33.0" ]]; then
   done
 fi
 
-log() { printf '[NeverLauncher %s] %s\n' "${VERSION}" "$*"; }
+log() { printf '[Launcher %s] %s\n' "${VERSION}" "$*"; }
 require() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "Ошибка: production release требует команду '$1'" >&2
@@ -462,16 +462,16 @@ if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
   log "Сборка legacy CLI linux/amd64"
   (
     cd "${ROOT_DIR}/cli"
-    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-cli-linux-amd64" ./cmd/neverlauncher
+    GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/launcher-cli-linux-amd64" ./cmd/launcher
   )
-  chmod +x "${OUT_DIR}/neverlauncher-cli-linux-amd64"
+  chmod +x "${OUT_DIR}/launcher-cli-linux-amd64"
 fi
 
 if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" != "1" ]]; then
   log "Сборка legacy CLI windows/amd64"
   (
     cd "${ROOT_DIR}/cli"
-    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/neverlauncher-cli-windows-amd64.exe" ./cmd/neverlauncher
+    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "${OUT_DIR}/launcher-cli-windows-amd64.exe" ./cmd/launcher
   )
 fi
 
@@ -479,9 +479,9 @@ if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
   log "Сборка legacy Backend API linux/amd64 (production pgx, fail-closed)"
   (
     cd "${ROOT_DIR}/services/api"
-    GOOS=linux GOARCH=amd64 CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${SOURCE_COMMIT:-unknown}" -o "${OUT_DIR}/neverlauncher-api-linux-amd64" ./cmd/neverlauncher-api
+    GOOS=linux GOARCH=amd64 CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${SOURCE_COMMIT:-unknown}" -o "${OUT_DIR}/launcher-api-linux-amd64" ./cmd/launcher-api
   )
-  chmod +x "${OUT_DIR}/neverlauncher-api-linux-amd64"
+  chmod +x "${OUT_DIR}/launcher-api-linux-amd64"
 fi
 printf 'apiBuildMode=pgx-production\n' > "${OUT_DIR}/BUILD_NOTES.txt"
 
@@ -491,7 +491,7 @@ log "Сборка Admin Web"
   npm ci
   npm run build
 )
-python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${ROOT_DIR}/apps/admin/dist" "${OUT_DIR}/neverlauncher-admin-web-${VERSION}.zip" --prefix admin
+python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${ROOT_DIR}/apps/admin/dist" "${OUT_DIR}/launcher-admin-web-${VERSION}.zip" --prefix admin
 
 log "Сборка Desktop Web и native binary"
 (
@@ -499,7 +499,7 @@ log "Сборка Desktop Web и native binary"
   npm ci
   npm run build
 )
-python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${ROOT_DIR}/apps/desktop/dist" "${OUT_DIR}/neverlauncher-desktop-web-${VERSION}.zip" --prefix desktop
+python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${ROOT_DIR}/apps/desktop/dist" "${OUT_DIR}/launcher-desktop-web-${VERSION}.zip" --prefix desktop
 if [[ -n "${GUARD_CI_MATRIX}" ]]; then
   log "Импорт exact cross-platform Guard artifacts из certification run"
   python3 "${ROOT_DIR}/scripts/guard_ci/stage_release.py" \
@@ -510,21 +510,21 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
   if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     windows_delivery_source="${WINDOWS_SIGNED_ARTIFACTS_DIR:-${GUARD_PLATFORM_ARTIFACTS_DIR}/windows}"
     windows_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
-      "${windows_delivery_source}" "${VERSION}" "neverlauncher-cli-windows-x64.exe" "Windows x64/ARM64 delivery")"
+      "${windows_delivery_source}" "${VERSION}" "launcher-cli-windows-x64.exe" "Windows x64/ARM64 delivery")"
     log "Импорт Windows x64/ARM64 delivery artifacts из ${windows_delivery_source}"
     for artifact in \
-      "neverlauncher-cli-windows-x64.exe" \
-      "neverlauncher-cli-windows-arm64.exe" \
-      "neverlauncher-desktop-windows-x64.exe" \
-      "neverlauncher-desktop-windows-arm64.exe" \
+      "launcher-cli-windows-x64.exe" \
+      "launcher-cli-windows-arm64.exe" \
+      "launcher-desktop-windows-x64.exe" \
+      "launcher-desktop-windows-arm64.exe" \
       "guard-windows-x64.exe" \
       "guard-windows-arm64.exe" \
       "guard-sensor-windows-x64.dll" \
       "guard-sensor-windows-arm64.dll" \
-      "neverruntime-windows-x64.exe" \
-      "neverruntime-windows-arm64.exe" \
-      "neverlauncher-desktop-${VERSION}-windows-x64.zip" \
-      "neverlauncher-desktop-${VERSION}-windows-arm64.zip" \
+      "runtime-windows-x64.exe" \
+      "runtime-windows-arm64.exe" \
+      "launcher-desktop-${VERSION}-windows-x64.zip" \
+      "launcher-desktop-${VERSION}-windows-arm64.zip" \
       "WINDOWS_PACKAGE_MANIFEST_X64.json" \
       "WINDOWS_PACKAGE_MANIFEST_ARM64.json" \
       "GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json" \
@@ -539,48 +539,48 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
   fi
   if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     linux_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
-      "${LINUX_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "neverlauncher-cli-linux-x64" "Linux x64/ARM64 delivery")"
+      "${LINUX_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "launcher-cli-linux-x64" "Linux x64/ARM64 delivery")"
     log "Импорт native Linux x64/ARM64 production artifacts из ${linux_delivery_source}"
     for arch in x64 arm64; do
       for artifact in \
-        "neverlauncher-cli-linux-${arch}" \
-        "neverlauncher-api-linux-${arch}" \
-        "neverlauncher-desktop-linux-${arch}" \
+        "launcher-cli-linux-${arch}" \
+        "launcher-api-linux-${arch}" \
+        "launcher-desktop-linux-${arch}" \
         "guard-linux-${arch}" \
-        "neverruntime-linux-${arch}" \
-        "neverlauncher-linux-${arch}-${VERSION}.tar.gz" \
+        "runtime-linux-${arch}" \
+        "launcher-linux-${arch}-${VERSION}.tar.gz" \
         "LINUX_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
         require_file "${linux_delivery_source}/${artifact}"
         cp "${linux_delivery_source}/${artifact}" "${OUT_DIR}/${artifact}"
       done
       chmod 0755 \
-        "${OUT_DIR}/neverlauncher-cli-linux-${arch}" \
-        "${OUT_DIR}/neverlauncher-api-linux-${arch}" \
-        "${OUT_DIR}/neverlauncher-desktop-linux-${arch}" \
+        "${OUT_DIR}/launcher-cli-linux-${arch}" \
+        "${OUT_DIR}/launcher-api-linux-${arch}" \
+        "${OUT_DIR}/launcher-desktop-linux-${arch}" \
         "${OUT_DIR}/guard-linux-${arch}" \
-        "${OUT_DIR}/neverruntime-linux-${arch}"
+        "${OUT_DIR}/runtime-linux-${arch}"
     done
   fi
   if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     macos_delivery_source="$(bash "${ROOT_DIR}/scripts/release/resolve-artifact-payload.sh" \
-      "${MACOS_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "neverlauncher-cli-macos-x64" "macOS x64/ARM64 delivery")"
+      "${MACOS_PRODUCTION_ARTIFACTS_DIR}" "${VERSION}" "launcher-cli-macos-x64" "macOS x64/ARM64 delivery")"
     log "Импорт macOS x64/ARM64 delivery artifacts из ${macos_delivery_source}"
     for arch in x64 arm64; do
       for artifact in \
-        "neverlauncher-cli-macos-${arch}" \
-        "neverlauncher-desktop-macos-${arch}" \
+        "launcher-cli-macos-${arch}" \
+        "launcher-desktop-macos-${arch}" \
         "guard-macos-${arch}" \
-        "neverruntime-macos-${arch}" \
-        "neverlauncher-desktop-${VERSION}-macos-${arch}.zip" \
+        "runtime-macos-${arch}" \
+        "launcher-desktop-${VERSION}-macos-${arch}.zip" \
         "MACOS_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
         require_file "${macos_delivery_source}/${artifact}"
         cp "${macos_delivery_source}/${artifact}" "${OUT_DIR}/${artifact}"
       done
       chmod 0755 \
-        "${OUT_DIR}/neverlauncher-cli-macos-${arch}" \
-        "${OUT_DIR}/neverlauncher-desktop-macos-${arch}" \
+        "${OUT_DIR}/launcher-cli-macos-${arch}" \
+        "${OUT_DIR}/launcher-desktop-macos-${arch}" \
         "${OUT_DIR}/guard-macos-${arch}" \
-        "${OUT_DIR}/neverruntime-macos-${arch}"
+        "${OUT_DIR}/runtime-macos-${arch}"
     done
     for artifact in MACOS_NOTARIZATION_EVIDENCE.json GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json; do
       require_file "${macos_delivery_source}/${artifact}"
@@ -592,43 +592,43 @@ else
   bash "${ROOT_DIR}/scripts/release/build-linux-desktop.sh" "${OUT_DIR}"
 fi
 for required_guard_artifact in \
-  "neverlauncher-desktop-linux-amd64" \
+  "launcher-desktop-linux-amd64" \
   "guard-linux-amd64" \
   "GUARD_RELEASE_ALLOWLIST_LINUX.json" \
   "LINUX_PACKAGE_MANIFEST.json" \
-  "neverlauncher-desktop-${VERSION}-linux-amd64.zip"; do
+  "launcher-desktop-${VERSION}-linux-amd64.zip"; do
   require_file "${OUT_DIR}/${required_guard_artifact}"
 done
 if [[ -n "${GUARD_CI_MATRIX}" ]]; then
   for required_guard_artifact in \
-    "neverlauncher-desktop-windows-amd64.exe" \
+    "launcher-desktop-windows-amd64.exe" \
     "guard-windows-amd64.exe" \
     "WINDOWS_PACKAGE_MANIFEST.json" \
     "GUARD_RELEASE_ALLOWLIST_WINDOWS.json" \
-    "neverlauncher-desktop-${VERSION}-windows-amd64.zip" \
-    "neverlauncher-desktop-macos-universal" \
+    "launcher-desktop-${VERSION}-windows-amd64.zip" \
+    "launcher-desktop-macos-universal" \
     "guard-macos-universal" \
     "MACOS_PACKAGE_MANIFEST.json" \
     "GUARD_RELEASE_ALLOWLIST_MACOS.json" \
-    "neverlauncher-desktop-${VERSION}-macos-universal.zip"; do
+    "launcher-desktop-${VERSION}-macos-universal.zip"; do
     require_file "${OUT_DIR}/${required_guard_artifact}"
   done
 fi
 
 if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   for required_windows_delivery in \
-    "neverlauncher-cli-windows-x64.exe" \
-    "neverlauncher-cli-windows-arm64.exe" \
-    "neverlauncher-desktop-windows-x64.exe" \
-    "neverlauncher-desktop-windows-arm64.exe" \
+    "launcher-cli-windows-x64.exe" \
+    "launcher-cli-windows-arm64.exe" \
+    "launcher-desktop-windows-x64.exe" \
+    "launcher-desktop-windows-arm64.exe" \
     "guard-windows-x64.exe" \
     "guard-windows-arm64.exe" \
     "guard-sensor-windows-x64.dll" \
     "guard-sensor-windows-arm64.dll" \
-    "neverruntime-windows-x64.exe" \
-    "neverruntime-windows-arm64.exe" \
-    "neverlauncher-desktop-${VERSION}-windows-x64.zip" \
-    "neverlauncher-desktop-${VERSION}-windows-arm64.zip" \
+    "runtime-windows-x64.exe" \
+    "runtime-windows-arm64.exe" \
+    "launcher-desktop-${VERSION}-windows-x64.zip" \
+    "launcher-desktop-${VERSION}-windows-arm64.zip" \
     "WINDOWS_PACKAGE_MANIFEST_X64.json" \
     "WINDOWS_PACKAGE_MANIFEST_ARM64.json" \
     "GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json" \
@@ -640,12 +640,12 @@ fi
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   for arch in x64 arm64; do
     for required_linux_delivery in \
-      "neverlauncher-cli-linux-${arch}" \
-      "neverlauncher-api-linux-${arch}" \
-      "neverlauncher-desktop-linux-${arch}" \
+      "launcher-cli-linux-${arch}" \
+      "launcher-api-linux-${arch}" \
+      "launcher-desktop-linux-${arch}" \
       "guard-linux-${arch}" \
-      "neverruntime-linux-${arch}" \
-      "neverlauncher-linux-${arch}-${VERSION}.tar.gz" \
+      "runtime-linux-${arch}" \
+      "launcher-linux-${arch}-${VERSION}.tar.gz" \
       "LINUX_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
       require_file "${OUT_DIR}/${required_linux_delivery}"
     done
@@ -654,11 +654,11 @@ fi
 if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   for arch in x64 arm64; do
     for required_macos_delivery in \
-      "neverlauncher-cli-macos-${arch}" \
-      "neverlauncher-desktop-macos-${arch}" \
+      "launcher-cli-macos-${arch}" \
+      "launcher-desktop-macos-${arch}" \
       "guard-macos-${arch}" \
-      "neverruntime-macos-${arch}" \
-      "neverlauncher-desktop-${VERSION}-macos-${arch}.zip" \
+      "runtime-macos-${arch}" \
+      "launcher-desktop-${VERSION}-macos-${arch}.zip" \
       "MACOS_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
       require_file "${OUT_DIR}/${required_macos_delivery}"
     done
@@ -681,7 +681,7 @@ if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
     for arch in x64 arm64; do
       ext="tar.gz"
       [[ "${platform}" == "windows" ]] && ext="zip"
-      artifact="neverlauncher-jre-temurin21-${platform}-${arch}-${VERSION}.${ext}"
+      artifact="launcher-jre-temurin21-${platform}-${arch}-${VERSION}.${ext}"
       require_file "${MANAGED_JRE_ARTIFACTS_DIR}/${artifact}"
       cp "${MANAGED_JRE_ARTIFACTS_DIR}/${artifact}" "${OUT_DIR}/${artifact}"
     done
@@ -689,9 +689,9 @@ if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
 fi
 
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
-  RELEASE_CLI="${OUT_DIR}/neverlauncher-cli-linux-x64"
+  RELEASE_CLI="${OUT_DIR}/launcher-cli-linux-x64"
 else
-  RELEASE_CLI="${OUT_DIR}/neverlauncher-cli-linux-amd64"
+  RELEASE_CLI="${OUT_DIR}/launcher-cli-linux-amd64"
 fi
 require_file "${RELEASE_CLI}"
 
@@ -704,22 +704,22 @@ fi
 log "Формирование и проверка реального Desktop package"
 "${RELEASE_CLI}" desktop package --version "${VERSION}" --artifact-dir "${OUT_DIR}" --out "${WORK_DIR}/desktop-package" --platform linux
 "${RELEASE_CLI}" desktop verify "${WORK_DIR}/desktop-package"
-python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${WORK_DIR}/desktop-package" "${OUT_DIR}/neverlauncher-desktop-package-${VERSION}.zip" --prefix desktop-package
+python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${WORK_DIR}/desktop-package" "${OUT_DIR}/launcher-desktop-package-${VERSION}.zip" --prefix desktop-package
 
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
-  log "Сборка legacy NeverRuntime linux/amd64"
-  cargo build --release --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml"
-  require_file "${ROOT_DIR}/runtime/neverruntime/target/release/neverruntime"
-  cp "${ROOT_DIR}/runtime/neverruntime/target/release/neverruntime" "${OUT_DIR}/neverruntime-linux-amd64"
-  chmod +x "${OUT_DIR}/neverruntime-linux-amd64"
+  log "Сборка legacy Runtime linux/amd64"
+  cargo build --release --manifest-path "${ROOT_DIR}/runtime/runtime/Cargo.toml"
+  require_file "${ROOT_DIR}/runtime/runtime/target/release/runtime"
+  cp "${ROOT_DIR}/runtime/runtime/target/release/runtime" "${OUT_DIR}/runtime-linux-amd64"
+  chmod +x "${OUT_DIR}/runtime-linux-amd64"
 fi
 
 log "Сборка ServerBridge JAR"
 bash "${ROOT_DIR}/scripts/build/bridge-plugins.sh"
 for bridge in velocity bungeecord waterfall bukkit spigot paper purpur folia fabric quilt forge neoforge sponge vanilla; do
-  src="${ROOT_DIR}/artifacts/plugins/neverlauncher-${bridge}-bridge-${VERSION}.jar"
+  src="${ROOT_DIR}/artifacts/plugins/launcher-${bridge}-bridge-${VERSION}.jar"
   require_file "${src}"
-  cp "${src}" "${OUT_DIR}/neverlauncher-${bridge}-bridge-${VERSION}.jar"
+  cp "${src}" "${OUT_DIR}/launcher-${bridge}-bridge-${VERSION}.jar"
 done
 require_file "${ROOT_DIR}/artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json"
 require_file "${ROOT_DIR}/artifacts/plugins/PLUGIN_MANIFEST.json"
@@ -741,22 +741,22 @@ if [[ "$(printf '%s\n' '0.42.0' "${VERSION}" | sort -V | head -n1)" == "0.42.0" 
 fi
 
 log "Source archive только из git-tracked/allowlisted файлов"
-python3 "${ROOT_DIR}/scripts/release/source-package.py" "${ROOT_DIR}" "${OUT_DIR}/neverlauncher-source-${VERSION}.zip" --list-file "${WORK_DIR}/source-files.txt"
-python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-source-${VERSION}.zip"
-python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-admin-web-${VERSION}.zip"
-python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-web-${VERSION}.zip"
-python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-package-${VERSION}.zip"
+python3 "${ROOT_DIR}/scripts/release/source-package.py" "${ROOT_DIR}" "${OUT_DIR}/launcher-source-${VERSION}.zip" --list-file "${WORK_DIR}/source-files.txt"
+python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-source-${VERSION}.zip"
+python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-admin-web-${VERSION}.zip"
+python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-desktop-web-${VERSION}.zip"
+python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-desktop-package-${VERSION}.zip"
 if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
-  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-windows-x64.zip"
-  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-windows-arm64.zip"
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-desktop-${VERSION}-windows-x64.zip"
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-desktop-${VERSION}-windows-arm64.zip"
 fi
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
-  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-linux-x64-${VERSION}.tar.gz"
-  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-linux-arm64-${VERSION}.tar.gz"
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-linux-x64-${VERSION}.tar.gz"
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-linux-arm64-${VERSION}.tar.gz"
 fi
 if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
-  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-x64.zip"
-  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-arm64.zip"
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-desktop-${VERSION}-macos-x64.zip"
+  python3 "${ROOT_DIR}/scripts/release/secret-scan.py" "${OUT_DIR}/launcher-desktop-${VERSION}-macos-arm64.zip"
 fi
 
 if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then

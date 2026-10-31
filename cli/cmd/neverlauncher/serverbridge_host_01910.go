@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const serverBridgeHostStateDir01910 = ".neverlauncher/server-bridge/host"
+const serverBridgeHostStateDir01910 = ".launcher/server-bridge/host"
 
 type serverBridgeHostConfig01910 struct {
 	SchemaVersion             string            `json:"schemaVersion"`
@@ -408,7 +408,7 @@ func selectServerJar01910(root, platform string) (string, error) {
 	}
 	for _, candidate := range candidates {
 		base := strings.ToLower(filepath.Base(candidate))
-		if strings.HasPrefix(base, "neverlauncher-") && strings.Contains(base, "-bridge-") {
+		if strings.HasPrefix(base, "launcher-") && strings.Contains(base, "-bridge-") {
 			continue
 		}
 		for _, marker := range markers[platform] {

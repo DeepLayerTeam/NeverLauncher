@@ -77,25 +77,25 @@ jobs:
       - name: Full Go Client Factory suite, race and vet
         working-directory: cli
         run: |
-          go test -count=1 -timeout=12m ./cmd/neverlauncher
-          go test -race -count=1 -timeout=12m ./cmd/neverlauncher -run 'TestClientFactoryGA0280|TestRuntimeCertification02712|TestAdapterLifecycle02711|TestClientFactory0271'
-          go vet ./cmd/neverlauncher
+          go test -count=1 -timeout=12m ./cmd/launcher
+          go test -race -count=1 -timeout=12m ./cmd/launcher -run 'TestClientFactoryGA0280|TestRuntimeCertification02712|TestAdapterLifecycle02711|TestClientFactory0271'
+          go vet ./cmd/launcher
       - name: API and Admin Panel build gates
         run: |
           (cd services/api && go test -count=1 -timeout=10m ./internal/httpapi)
           (cd apps/admin && npm ci && npm run build)
-      - name: Build NeverRuntime and install actual graphics dependencies
+      - name: Build Runtime and install actual graphics dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64 bubblewrap
-          cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
-          (cd cli && go build -trimpath -o "$RUNNER_TEMP/client-factory-ga" ./cmd/neverlauncher)
+          cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
+          (cd cli && go build -trimpath -o "$RUNNER_TEMP/client-factory-ga" ./cmd/launcher)
       - name: Real Client Factory five-family native GUI certification
         env:
           NEVERLAUNCHER_CERT_PROCESSOR_SANDBOX: required
           NEVERLAUNCHER_CERT_SIGNING_KEY: ${{ runner.temp }}/client-factory-keys/runtime.key
           NEVERLAUNCHER_CERT_PUBLIC_KEY: ${{ runner.temp }}/client-factory-keys/runtime.pub
-          NEVERLAUNCHER_CERT_RUNTIME_BIN: ${{ github.workspace }}/runtime/neverruntime/target/release/neverruntime
+          NEVERLAUNCHER_CERT_RUNTIME_BIN: ${{ github.workspace }}/runtime/runtime/target/release/runtime
         run: |
           set -euo pipefail
           mkdir -p e2e/client-factory-ga-0280
@@ -129,7 +129,7 @@ jobs:
           root=Path('e2e/client-factory-ga-0280')
           versions={'vanilla':'1.21.1','fabric':'1.20.1','quilt':'1.20.1','forge':'1.12.2','neoforge':'1.21.1'}
           targets=[{'id':loader+'-linux-x64','loader':loader,'minecraft':mc,'os':'linux','arch':'x86_64','clientDir':loader+'/client','certificate':loader+'/runtime-certificate.json'} for loader,mc in versions.items()]
-          (root/'matrix.json').write_text(json.dumps({'schema':'neverlauncher.factory.certification-matrix.v1','targets':targets},indent=2)+'\n')
+          (root/'matrix.json').write_text(json.dumps({'schema':'launcher.factory.certification-matrix.v1','targets':targets},indent=2)+'\n')
           PY
           "$RUNNER_TEMP/client-factory-ga" runtime client-factory ga-sign-join \
             --join-evidence e2e/runtime/matching-server.json \

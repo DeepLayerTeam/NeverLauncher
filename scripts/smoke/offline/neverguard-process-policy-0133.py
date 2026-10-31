@@ -26,7 +26,7 @@ version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 3):
     raise SystemExit(f"Guard process policy gate requires >=0.13.3, got {version}")
 
-cargo = read("runtime/neverruntime/Cargo.toml")
+cargo = read("runtime/runtime/Cargo.toml")
 require(
     cargo,
     [
@@ -34,10 +34,10 @@ require(
         '"Win32_System_Diagnostics_ToolHelp"',
         '"Win32_System_Threading"',
     ],
-    "NeverRuntime Windows policy dependencies",
+    "Runtime Windows policy dependencies",
 )
 
-policy = read("runtime/neverruntime/src/windows_policy.rs")
+policy = read("runtime/runtime/src/windows_policy.rs")
 require(
     policy,
     [
@@ -68,13 +68,13 @@ require(
     "Windows runtime/process policy implementation",
 )
 
-guard = read("runtime/neverruntime/src/bin/guard.rs")
+guard = read("runtime/runtime/src/bin/guard.rs")
 if guard.find("ensure_guard_process_policy()") > guard.find("tokio::runtime::Builder"):
     raise SystemExit(
         "Guard self policy must be enforced before Tokio runtime initialization"
     )
 
-guard = read("runtime/neverruntime/src/guard_ipc.rs")
+guard = read("runtime/runtime/src/guard_ipc.rs")
 require(
     guard,
     [
@@ -89,7 +89,7 @@ require(
     "Authenticated process-policy IPC",
 )
 
-supervisor = read("runtime/neverruntime/src/supervisor.rs")
+supervisor = read("runtime/runtime/src/supervisor.rs")
 require(
     supervisor,
     [
@@ -102,7 +102,7 @@ require(
     "Runtime supervisor fail-closed process policy",
 )
 
-runtime = read("runtime/neverruntime/src/lib.rs")
+runtime = read("runtime/runtime/src/lib.rs")
 require(
     runtime,
     [
@@ -110,7 +110,7 @@ require(
         "windows_policy::enforce_runtime_process(&mut child)",
         "RuntimeProcessPolicyReport",
     ],
-    "Direct NeverRuntime policy enforcement",
+    "Direct Runtime policy enforcement",
 )
 
 desktop = read("apps/desktop/src-tauri/src/main.rs")
@@ -126,7 +126,7 @@ require(
     "Desktop policy pre-launch gate",
 )
 
-integration = read("runtime/neverruntime/tests/guard_windows.rs")
+integration = read("runtime/runtime/tests/guard_windows.rs")
 require(
     integration,
     [
@@ -150,12 +150,12 @@ if "guard-process-policy-0133.py" not in preflight:
 require(
     ci,
     [
-        "cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests",
-        "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_windows",
-        "cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings",
+        "cargo test --manifest-path runtime/runtime/Cargo.toml --lib windows_policy::tests",
+        "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_windows",
+        "cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings",
     ],
     "Windows native policy CI",
 )
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
-print(f"[NeverLauncher] Guard Windows runtime/process policy 0.13.3 gate OK: {version}")
+print(f"[Launcher] Guard Windows runtime/process policy 0.13.3 gate OK: {version}")

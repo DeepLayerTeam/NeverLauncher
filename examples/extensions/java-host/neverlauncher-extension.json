@@ -3,7 +3,7 @@
   "id": "org.example.java-host",
   "name": "Java Extension Host Example",
   "version": "0.1.0",
-  "publisher": "NeverLauncher Examples",
+  "publisher": "Launcher Examples",
   "description": "Executable signed JAR with authenticated Go/Java RPC, lifecycle and CLI",
   "api": "1.0",
   "targets": [

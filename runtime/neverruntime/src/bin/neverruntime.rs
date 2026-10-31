@@ -1,4 +1,4 @@
-use neverruntime::{
+use runtime::{
     build_launch_plan, certify_vanilla_compatibility, check_files, check_files_with_preset, download_missing_files_with_preset, ensure_managed_java, ensure_managed_java_from_distribution, launch_with_timeout, launch_with_timeout_matching, launch_with_timeout_matching_authenticated, load_manifest,
     resolve_compatibility, verify_manifest_signature, CompatibilityContext, Manifest, MinecraftLaunchCredentials,
 };
@@ -12,14 +12,14 @@ async fn main() -> ExitCode {
             match serde_json::to_string_pretty(&value) {
                 Ok(text) => println!("{text}"),
                 Err(err) => {
-                    eprintln!("neverruntime: JSON output error: {err}");
+                    eprintln!("runtime: JSON output error: {err}");
                     return ExitCode::FAILURE;
                 }
             }
             ExitCode::SUCCESS
         }
         Err(err) => {
-            eprintln!("neverruntime: {err}");
+            eprintln!("runtime: {err}");
             ExitCode::FAILURE
         }
     }
@@ -115,7 +115,7 @@ async fn command_adopt_staged(args: &[String]) -> Result<serde_json::Value, Stri
     let source=PathBuf::from(required_flag(args,"--source")?);
     let root=PathBuf::from(required_flag(args,"--root")?);
     let preset=optional_flag(args,"--preset");
-    let (imported,digest)=neverruntime::transactional_release::adopt_verified_staged(
+    let (imported,digest)=runtime::transactional_release::adopt_verified_staged(
         &manifest,&source,&root,&pinned,preset).await?;
     Ok(json!({"status":"ready","importedFiles":imported,"networkDownloads":0,
              "planSha256":digest}))
@@ -124,13 +124,13 @@ async fn command_adopt_staged(args: &[String]) -> Result<serde_json::Value, Stri
 async fn command_rollback_release(args: &[String]) -> Result<serde_json::Value, String> {
     let root = PathBuf::from(required_flag(args, "--root")?);
     let key = required_flag(args, "--pinned-public-key")?;
-    neverruntime::transactional_release::rollback(&root, &key).await?;
+    runtime::transactional_release::rollback(&root, &key).await?;
     Ok(json!({"status":"rolled-back"}))
 }
 async fn command_recover_release(args: &[String]) -> Result<serde_json::Value, String> {
     let root = PathBuf::from(required_flag(args, "--root")?);
     let key = required_flag(args, "--pinned-public-key")?;
-    neverruntime::transactional_release::recover(&root, &key).await?;
+    runtime::transactional_release::recover(&root, &key).await?;
     Ok(json!({"status":"recovered"}))
 }
 
@@ -147,7 +147,7 @@ async fn command_launch(args: &[String]) -> Result<serde_json::Value, String> {
     // Runtime validation must execute exactly the installed signed preset,
     // not whichever selection a previous launch happened to leave active.
     if let Some(preset) = optional_flag(args, "--preset") {
-        neverruntime::transactional_release::ensure_active_preset(
+        runtime::transactional_release::ensure_active_preset(
             &manifest, &root, &pinned, Some(&preset)).await?;
     }
     // Credentials arrive only through a rootless-container read-only 0600
@@ -209,7 +209,7 @@ async fn command_compatibility(args: &[String]) -> Result<serde_json::Value, Str
         uuid: optional_flag(args, "--uuid").unwrap_or_else(|| "00000000-0000-0000-0000-000000000000".to_string()),
         access_token: optional_flag(args, "--access-token").unwrap_or_else(|| "offline".to_string()),
         user_type: optional_flag(args, "--user-type").unwrap_or_else(|| "legacy".to_string()),
-        launcher_name: "NeverLauncher".to_string(),
+        launcher_name: "Launcher".to_string(),
         launcher_version: env!("CARGO_PKG_VERSION").to_string(),
         game_directory: game,
         assets_directory: assets,
@@ -252,7 +252,7 @@ async fn command_certify_vanilla(args: &[String]) -> Result<serde_json::Value, S
 async fn command_java(args: &[String]) -> Result<serde_json::Value, String> {
     let subcommand = args.first().map(String::as_str).unwrap_or("");
     if subcommand != "ensure" {
-        return Err("использование: neverruntime java ensure --major <8|16|17|21|25> [--distribution temurin] [--runtime-root PATH] [--manifest PATH|HTTPS_URL --manifest-sha256 SHA256]".to_string());
+        return Err("использование: runtime java ensure --major <8|16|17|21|25> [--distribution temurin] [--runtime-root PATH] [--manifest PATH|HTTPS_URL --manifest-sha256 SHA256]".to_string());
     }
     let rest = &args[1..];
     let major = required_flag(rest, "--major")?

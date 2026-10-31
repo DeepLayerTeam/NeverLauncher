@@ -10,7 +10,7 @@ import (
  "strings"
  "testing"
 
- inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
+ inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
 )
 
 func sourceFixture335(t *testing.T, entries map[string]string)([]byte,inv.Inventory){

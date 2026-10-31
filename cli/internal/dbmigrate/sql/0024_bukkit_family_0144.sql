@@ -1,4 +1,4 @@
--- NeverLauncher 0.14.4: семейство Bukkit — Bukkit/Spigot/Paper/Purpur/Folia.
+-- Launcher 0.14.4: семейство Bukkit — Bukkit/Spigot/Paper/Purpur/Folia.
 -- Расширяет постоянный инвариант типа узла ServerBridge на всё
 -- совместимое семейство Bukkit, сохраняя семантику Protocol v2
 -- и криптографической идентичности 0.14.1–0.14.3.

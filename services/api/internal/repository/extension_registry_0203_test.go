@@ -10,7 +10,7 @@ import (
 	"errors"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func registryTestManifest0203(version string) model.ExtensionManifest {
@@ -35,8 +35,8 @@ func registryTestPublication0203(t *testing.T, version string, fingerprint strin
 		Manifest:    registryTestManifest0203(version),
 		PublisherID: "deeplayer.team",
 		Compatibility: model.ExtensionRegistryCompatibility{
-			MinNeverLauncher:       "0.20.0",
-			MaxNeverLauncher:       "0.20.9",
+			MinLauncher:       "0.20.0",
+			MaxLauncher:       "0.20.9",
 			SupportedOS:            []string{"linux"},
 			SupportedArchitectures: []string{"amd64"},
 		},
@@ -123,7 +123,7 @@ func TestExtensionRegistryMemoryProductionLifecycle0203(t *testing.T) {
 	}
 
 	mutated := v2pub
-	mutated.Compatibility.MaxNeverLauncher = "0.20.8"
+	mutated.Compatibility.MaxLauncher = "0.20.8"
 	if _, err := repo.PublishExtensionRegistryVersion(ctx, mutated); !errors.Is(err, ErrImmutable) {
 		t.Fatalf("compatibility mutation error=%v, want ErrImmutable", err)
 	}

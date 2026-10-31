@@ -51,10 +51,10 @@ func certifyMatrix02712(manifestPath, pubPath, out string, allLoaders bool) (fac
 	if err = json.Unmarshal(raw, &m); err != nil {
 		return report, err
 	}
-	if m.Schema != "neverlauncher.factory.certification-matrix.v1" || len(m.Targets) == 0 || len(m.Targets) > 100 {
+	if m.Schema != "launcher.factory.certification-matrix.v1" || len(m.Targets) == 0 || len(m.Targets) > 100 {
 		return report, errors.New("invalid certification matrix")
 	}
-	report = factoryMatrixReport02712{Schema: "neverlauncher.factory.certification-report.v1", Total: len(m.Targets), Status: "failed", Results: make([]factoryMatrixResult02712, 0, len(m.Targets))}
+	report = factoryMatrixReport02712{Schema: "launcher.factory.certification-report.v1", Total: len(m.Targets), Status: "failed", Results: make([]factoryMatrixResult02712, 0, len(m.Targets))}
 	seen := map[string]bool{}
 	families := map[string]bool{}
 	for _, t := range m.Targets {

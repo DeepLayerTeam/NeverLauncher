@@ -26,11 +26,11 @@ func gravitJar0307(t *testing.T, ext, ported string, include bool) string {
 			t.Fatal(e)
 		}
 	}
-	add("META-INF/MANIFEST.MF", []byte("Manifest-Version: 1.0\r\nMain-Class: "+HostMain+"\r\nNeverLauncher-Extension-Class: "+ext+"\r\nNeverLauncher-Gravit-Module-Class: "+ported+"\r\n\r\n"))
+	add("META-INF/MANIFEST.MF", []byte("Manifest-Version: 1.0\r\nMain-Class: "+HostMain+"\r\nLauncher-Extension-Class: "+ext+"\r\nLauncher-Gravit-Module-Class: "+ported+"\r\n\r\n"))
 	header := make([]byte, 8)
 	binary.BigEndian.PutUint32(header, 0xCAFEBABE)
 	binary.BigEndian.PutUint16(header[6:], 61)
-	for _, name := range []string{"ru/neverlauncher/sdk/host/JavaExtensionHost.class", "ru/neverlauncher/sdk/gravit/GravitCompatExtension.class", "example/Other.class"} {
+	for _, name := range []string{"ru/launcher/sdk/host/JavaExtensionHost.class", "ru/launcher/sdk/gravit/GravitCompatExtension.class", "example/Other.class"} {
 		add(name, header)
 	}
 	if include {
@@ -45,7 +45,7 @@ func gravitJar0307(t *testing.T, ext, ported string, include bool) string {
 	return file
 }
 func TestGravitOptInValidation0307(t *testing.T) {
-	const entry = "ru.neverlauncher.sdk.gravit.GravitCompatExtension"
+	const entry = "ru.launcher.sdk.gravit.GravitCompatExtension"
 	good := gravitJar0307(t, entry, "example.Ported", true)
 	result, err := Inspect(good)
 	if err != nil {

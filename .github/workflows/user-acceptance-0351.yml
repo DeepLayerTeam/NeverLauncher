@@ -1,4 +1,4 @@
-name: NeverLauncher 0.35.1 functional user acceptance
+name: Launcher 0.35.1 functional user acceptance
 on:
   push:
     paths:

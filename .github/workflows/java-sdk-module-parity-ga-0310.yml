@@ -1,4 +1,4 @@
-name: NeverLauncher 0.31.0 - Java SDK public artifacts and module parity release gates
+name: Launcher 0.31.0 - Java SDK public artifacts and module parity release gates
 on:
   push:
     paths:

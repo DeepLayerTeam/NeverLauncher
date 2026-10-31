@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Executable signing/compatibility tests using a throwaway Ed25519 key."""
+
 from __future__ import annotations
 
 import copy
@@ -13,24 +14,43 @@ from component_set_sign import signed_set
 class ComponentSetSigningTest(unittest.TestCase):
     def setUp(self):
         private = Ed25519PrivateKey.generate()
-        seed = private.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption())
-        public = private.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
-        self.prev = (os.environ.get("NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED"), os.environ.get("NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY"))
+        seed = private.private_bytes(
+            serialization.Encoding.Raw,
+            serialization.PrivateFormat.Raw,
+            serialization.NoEncryption(),
+        )
+        public = private.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
+        self.prev = (
+            os.environ.get("NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED"),
+            os.environ.get("NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY"),
+        )
         os.environ["NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED"] = seed.hex()
         os.environ["NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY"] = public.hex()
         self.public = private.public_key()
 
     def tearDown(self):
-        for name, value in zip(("NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED", "NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY"), self.prev):
+        for name, value in zip(
+            (
+                "NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED",
+                "NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY",
+            ),
+            self.prev,
+        ):
             if value is None:
                 os.environ.pop(name, None)
             else:
                 os.environ[name] = value
 
     def fixture(self, platform="linux"):
-        roles = ["desktop", "guard", "runtime"] + (["sensor"] if platform == "windows" else [])
+        roles = ["desktop", "guard", "runtime"] + (
+            ["sensor"] if platform == "windows" else []
+        )
         return {
-            "schemaVersion": "1.0", "product": "NeverLauncher", "productVersion": "0.23.10",
+            "schemaVersion": "1.0",
+            "product": "Launcher",
+            "productVersion": "0.23.10",
             "platform": platform,
             "components": [{"component": role} for role in roles],
             "supportFiles": [{"component": "updater", "executable": True}],
@@ -40,13 +60,19 @@ class ComponentSetSigningTest(unittest.TestCase):
         for platform in ("linux", "windows", "macos"):
             data, sig = signed_set(self.fixture(platform))
             import json
+
             envelope = json.loads(sig)
             assert envelope["algorithm"] == "ed25519"
             self.public.verify(bytes.fromhex(envelope["signature"]), data)
             parsed = json.loads(data)
-            self.assertEqual(parsed["schemaVersion"], "1.0")  # 0.23.9 upgrade compatibility
-            self.assertEqual({p["component"] for p in parsed["componentSet"]["protocols"]},
-                             {"desktop", "guard", "runtime", "updater"} | ({"sensor"} if platform == "windows" else set()))
+            self.assertEqual(
+                parsed["schemaVersion"], "1.0"
+            )  # 0.23.9 upgrade compatibility
+            self.assertEqual(
+                {p["component"] for p in parsed["componentSet"]["protocols"]},
+                {"desktop", "guard", "runtime", "updater"}
+                | ({"sensor"} if platform == "windows" else set()),
+            )
             with self.assertRaises(Exception):
                 self.public.verify(bytes.fromhex(envelope["signature"]), data + b" ")
 
@@ -69,9 +95,12 @@ class ComponentSetSigningTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             signed_set(value)
         os.environ["NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION"] = "14"
-        self.addCleanup(os.environ.pop,"NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION",None)
+        self.addCleanup(
+            os.environ.pop, "NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION", None
+        )
         raw, signature = signed_set(value)
         import json
+
         self.assertEqual(json.loads(raw)["securityGeneration"], 14)
         self.public.verify(bytes.fromhex(json.loads(signature)["signature"]), raw)
         value["securityGeneration"] = 0

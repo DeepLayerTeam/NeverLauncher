@@ -1,4 +1,4 @@
-# NeverLauncher 0.22.9 — Desktop Experience
+# Launcher 0.22.9 — Desktop Experience
 
 ## Рабочие функции
 

@@ -3,13 +3,13 @@ on:
   push:
     paths:
       - 'cli/internal/devtools/**'
-      - 'cli/cmd/neverlauncher/devtools_03010*'
+      - 'cli/cmd/launcher/devtools_03010*'
       - 'scripts/devtools/**'
       - '.github/workflows/devtools-test-isolation-03010.yml'
   pull_request:
     paths:
       - 'cli/internal/devtools/**'
-      - 'cli/cmd/neverlauncher/devtools_03010*'
+      - 'cli/cmd/launcher/devtools_03010*'
       - 'scripts/devtools/**'
   workflow_dispatch:
 permissions:
@@ -28,10 +28,10 @@ jobs:
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '21'}
       - name: Real JVM and fixture Go tests
-        run: go test -count=1 ./internal/devtools ./cmd/neverlauncher -run 'Test(AnalyzeAndTransformJava|SuspiciousReferenceAndSignatures|JarZipTraversalRejected|RunProcessSanitized|RunTimeout|AuthFixtureIntegration|AuthExpiryAndListener|AuthTokenNotProductionJWT|DevTools03010)'
+        run: go test -count=1 ./internal/devtools ./cmd/launcher -run 'Test(AnalyzeAndTransformJava|SuspiciousReferenceAndSignatures|JarZipTraversalRejected|RunProcessSanitized|RunTimeout|AuthFixtureIntegration|AuthExpiryAndListener|AuthTokenNotProductionJWT|DevTools03010)'
         working-directory: cli
       - name: CLI build and vet
-        run: go build ./cmd/neverlauncher && go vet ./internal/devtools ./cmd/neverlauncher
+        run: go build ./cmd/launcher && go vet ./internal/devtools ./cmd/launcher
         working-directory: cli
   linux-race-and-cli:
     runs-on: ubuntu-24.04
@@ -43,7 +43,7 @@ jobs:
         with: {distribution: temurin, java-version: '21'}
       - run: go test -race -count=1 ./internal/devtools
         working-directory: cli
-      - run: go build -o /tmp/nl-devtools ./cmd/neverlauncher
+      - run: go build -o /tmp/nl-devtools ./cmd/launcher
         working-directory: cli
       - run: python3 scripts/devtools/smoke_03010.py --cli /tmp/nl-devtools
       - run: python3 scripts/version/manage.py check
@@ -57,6 +57,6 @@ jobs:
         with: {distribution: temurin, java-version: '21'}
       - name: Install Linux OS sandbox and verify user namespaces
         run: sudo apt-get update && sudo apt-get install -y bubblewrap
-      - run: go build -o /tmp/nl-devtools ./cmd/neverlauncher
+      - run: go build -o /tmp/nl-devtools ./cmd/launcher
         working-directory: cli
       - run: bash scripts/devtools/sandbox_smoke_03010.sh /tmp/nl-devtools

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 func TestMigrationTargetSteps0331(t *testing.T) {

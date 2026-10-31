@@ -23,7 +23,7 @@ class MacOSSDL3RetryTest(unittest.TestCase):
         self.root = Path(self.temp.name) / "materialized-client"
         self.logs = self.root / "logs"
         self.logs.mkdir(parents=True)
-        self.log = self.logs / "neverruntime-vanilla-certification-fabric-26.3.log"
+        self.log = self.logs / "runtime-vanilla-certification-fabric-26.3.log"
         self.report = Path(self.temp.name) / "fabric-certification.json"
         self.payload = {
             "status": "failed",

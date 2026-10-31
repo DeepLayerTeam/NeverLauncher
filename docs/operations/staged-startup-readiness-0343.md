@@ -1,7 +1,7 @@
 # 0.34.3: staged startup and loader readiness
 
 The existing staged-package workflow now launches the **downloaded staged bytes**
-via the normal NeverRuntime `launch` command and observes the actual GUI process.
+via the normal Runtime `launch` command and observes the actual GUI process.
 It does not rebuild Minecraft or use a mock runtime. It still produces **untrusted,
 observational** evidence; stable publication remains blocked until V04–V06/V11.
 
@@ -13,7 +13,7 @@ with English recognition data. The workflow installs these dependencies.
 Windows/macOS/native Wayland require their own GUI observers (V10) and
 return `blocked`, not a Minecraft compatibility failure.
 
-A startup PASS requires all of the following from the *same NeverRuntime run*:
+A startup PASS requires all of the following from the *same Runtime run*:
 
 - The normal runtime verifies the signed manifest and installed package, and
   starts the actual JVM. The X11 PID of the Minecraft window must belong to

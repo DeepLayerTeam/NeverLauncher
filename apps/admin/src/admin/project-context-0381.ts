@@ -1,8 +1,17 @@
 /** Owner navigation is a non-secret, authenticated preference, never an authority.
  * Project/profile/channel IDs must be rechecked against a fresh access-filtered
  * Admin overview before any UI uses them. The API remains the access gate. */
-export type ProjectContext = { projectId: string; profileId: string; channelId: string; serverId?: string };
-export const emptyProjectContext: ProjectContext = { projectId: '', profileId: '', channelId: '' };
+export type ProjectContext = {
+  projectId: string;
+  profileId: string;
+  channelId: string;
+  serverId?: string;
+};
+export const emptyProjectContext: ProjectContext = {
+  projectId: "",
+  profileId: "",
+  channelId: "",
+};
 export type ProjectResource = { id: string; projectId?: string };
 export type ProjectCatalog = {
   projects: readonly ProjectResource[];
@@ -11,48 +20,103 @@ export type ProjectCatalog = {
   // Omit until a real, project-scoped ServerBridge overview has arrived.
   servers?: readonly (ProjectResource & { profileId?: string })[];
 };
-const bound = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 256 && !/[\u0000-\u001f\u007f]/.test(value);
-export function contextStorageKey(backendUrl: string, principalId: string): string {
-  const normalized = new URL(backendUrl, 'http://localhost').href.replace(/\/$/, '');
-  return `neverlauncher.admin.owner-context.0381.${encodeURIComponent(normalized)}.${encodeURIComponent(principalId)}`;
+const bound = (value: unknown): value is string =>
+  typeof value === "string" &&
+  value.length > 0 &&
+  value.length <= 256 &&
+  !/[\u0000-\u001f\u007f]/.test(value);
+export function contextStorageKey(
+  backendUrl: string,
+  principalId: string,
+): string {
+  const normalized = new URL(backendUrl, "http://localhost").href.replace(
+    /\/$/,
+    "",
+  );
+  return `launcher.admin.owner-context.0381.${encodeURIComponent(normalized)}.${encodeURIComponent(principalId)}`;
 }
-export function readSavedContext(storage: Pick<Storage, 'getItem'>, key: string): ProjectContext {
+export function readSavedContext(
+  storage: Pick<Storage, "getItem">,
+  key: string,
+): ProjectContext {
   try {
-    const raw: unknown = JSON.parse(storage.getItem(key) || 'null');
-    if (!raw || typeof raw !== 'object') return { ...emptyProjectContext };
+    const raw: unknown = JSON.parse(storage.getItem(key) || "null");
+    if (!raw || typeof raw !== "object") return { ...emptyProjectContext };
     const record = raw as Record<string, unknown>;
     return {
-      projectId: bound(record.projectId) ? record.projectId : '',
-      profileId: bound(record.profileId) ? record.profileId : '',
-      channelId: bound(record.channelId) ? record.channelId : '',
+      projectId: bound(record.projectId) ? record.projectId : "",
+      profileId: bound(record.profileId) ? record.profileId : "",
+      channelId: bound(record.channelId) ? record.channelId : "",
       ...(bound(record.serverId) ? { serverId: record.serverId } : {}),
     };
-  } catch { return { ...emptyProjectContext }; }
+  } catch {
+    return { ...emptyProjectContext };
+  }
 }
-export function saveContext(storage: Pick<Storage,'setItem'>, key: string, ctx: ProjectContext): void {
+export function saveContext(
+  storage: Pick<Storage, "setItem">,
+  key: string,
+  ctx: ProjectContext,
+): void {
   storage.setItem(key, JSON.stringify(ctx));
 }
-export function resolveProjectContext(url: Partial<ProjectContext>, saved: ProjectContext, catalog: ProjectCatalog): ProjectContext {
-  const projectExists = (id: string) => !!id && catalog.projects.some(p => p.id === id);
-  const projectId = [url.projectId, saved.projectId, catalog.projects[0]?.id].find(id => !!id && projectExists(id)) || '';
+export function resolveProjectContext(
+  url: Partial<ProjectContext>,
+  saved: ProjectContext,
+  catalog: ProjectCatalog,
+): ProjectContext {
+  const projectExists = (id: string) =>
+    !!id && catalog.projects.some((p) => p.id === id);
+  const projectId =
+    [url.projectId, saved.projectId, catalog.projects[0]?.id].find(
+      (id) => !!id && projectExists(id),
+    ) || "";
   if (!projectId) return { ...emptyProjectContext };
-  const within = (items: readonly ProjectResource[], id?: string) => !!id && items.some(item => item.id === id && (!item.projectId || item.projectId === projectId));
+  const within = (items: readonly ProjectResource[], id?: string) =>
+    !!id &&
+    items.some(
+      (item) =>
+        item.id === id && (!item.projectId || item.projectId === projectId),
+    );
   // A saved subresource from another project must never be reused.
   const sameSavedProject = saved.projectId === projectId;
   const sameUrlProject = url.projectId === projectId;
-  const profileId = sameUrlProject ? (within(catalog.profiles, url.profileId) ? url.profileId! : '') :
-    (sameSavedProject && within(catalog.profiles, saved.profileId) ? saved.profileId : '') || '';
-  const serverCandidate = sameUrlProject ? url.serverId : (sameSavedProject ? saved.serverId : undefined);
+  const profileId = sameUrlProject
+    ? within(catalog.profiles, url.profileId)
+      ? url.profileId!
+      : ""
+    : (sameSavedProject && within(catalog.profiles, saved.profileId)
+        ? saved.profileId
+        : "") || "";
+  const serverCandidate = sameUrlProject
+    ? url.serverId
+    : sameSavedProject
+      ? saved.serverId
+      : undefined;
   // Fail closed once the scoped inventory has loaded; never accept a node from another project
   // or a node bound to another selected profile. Until then, preserve only the navigation hint.
-  const server = serverCandidate && bound(serverCandidate) && (catalog.servers === undefined ||
-    catalog.servers.some(n => n.id === serverCandidate && n.projectId === projectId && (!profileId || !n.profileId || n.profileId === profileId)))
-      ? serverCandidate : undefined;
+  const server =
+    serverCandidate &&
+    bound(serverCandidate) &&
+    (catalog.servers === undefined ||
+      catalog.servers.some(
+        (n) =>
+          n.id === serverCandidate &&
+          n.projectId === projectId &&
+          (!profileId || !n.profileId || n.profileId === profileId),
+      ))
+      ? serverCandidate
+      : undefined;
   return {
     projectId,
-    ...(server ? {serverId: server} : {}),
+    ...(server ? { serverId: server } : {}),
     profileId,
-    channelId: sameUrlProject ? (within(catalog.channels, url.channelId) ? url.channelId! : '') :
-      (sameSavedProject && within(catalog.channels, saved.channelId) ? saved.channelId : '') || '',
+    channelId: sameUrlProject
+      ? within(catalog.channels, url.channelId)
+        ? url.channelId!
+        : ""
+      : (sameSavedProject && within(catalog.channels, saved.channelId)
+          ? saved.channelId
+          : "") || "",
   };
 }

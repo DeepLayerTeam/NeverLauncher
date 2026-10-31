@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector/conformance"
 )
 
 const (

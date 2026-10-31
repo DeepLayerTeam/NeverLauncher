@@ -1,7 +1,7 @@
 # 0.32.1 — SQLite Driver, WAL, durable commits (DEP00)
 
 **Scope:** A physically durable SQLite transactional component and preflight command.
-This is **not** a NeverLauncher SQLite application backend. Do not set
+This is **not** a Launcher SQLite application backend. Do not set
 `NEVERLAUNCHER_REPOSITORY_DRIVER=sqlite` in production until DEP01–DEP03 parity
 has been implemented, tested, and reviewed. The HTTP API continues to require PostgreSQL.
 
@@ -20,11 +20,11 @@ cd services/api
 go mod download
 go mod tidy
 # Commit the resulting go.sum after retrieving upstream signed checksums.
-go test -race -count=1 ./internal/sqlitedurable ./cmd/neverlauncher-sqlite
-go build -trimpath -o neverlauncher-sqlite ./cmd/neverlauncher-sqlite
-chmod 0700 /var/lib/neverlauncher/sqlite
-./neverlauncher-sqlite probe --db /var/lib/neverlauncher/sqlite/state.db
-./neverlauncher-sqlite verify --db /var/lib/neverlauncher/sqlite/state.db
+go test -race -count=1 ./internal/sqlitedurable ./cmd/launcher-sqlite
+go build -trimpath -o launcher-sqlite ./cmd/launcher-sqlite
+chmod 0700 /var/lib/launcher/sqlite
+./launcher-sqlite probe --db /var/lib/launcher/sqlite/state.db
+./launcher-sqlite verify --db /var/lib/launcher/sqlite/state.db
 ```
 
 The probe actually creates a test table, commits a nonce challenge, closes and

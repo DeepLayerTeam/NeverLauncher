@@ -85,7 +85,7 @@ func (r *RedisLimiter) Allow(ctx context.Context, key string, limit int, window 
 		return Result{Allowed: true, Limit: limit, Remaining: limit}, nil
 	}
 	sum := sha256.Sum256([]byte(key))
-	redisKey := "neverlauncher:ratelimit:" + hex.EncodeToString(sum[:16])
+	redisKey := "launcher:ratelimit:" + hex.EncodeToString(sum[:16])
 	ttlMs := window.Milliseconds()
 	value, err := r.command(ctx, "EVAL", fixedWindowScript, "1", redisKey, strconv.FormatInt(ttlMs, 10))
 	if err != nil {

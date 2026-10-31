@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -146,7 +146,7 @@ public final class BridgeEventJournal {
 
     private void compact() throws IOException {
         Path parent = path.getParent() == null ? Path.of(".").toAbsolutePath() : path.getParent();
-        Path tmp = Files.createTempFile(parent, ".neverlauncher-events-", ".tmp");
+        Path tmp = Files.createTempFile(parent, ".launcher-events-", ".tmp");
         try {
             setPrivatePermissions(tmp);
             StringBuilder out = new StringBuilder();

@@ -109,7 +109,7 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
         payload = json.dumps(
             {
                 "schemaVersion": "1.0",
-                "domain": "neverlauncher.trust.v1",
+                "domain": "launcher.trust.v1",
                 "epoch": 4,
                 "issuedAt": start,
                 "expiresAt": end,
@@ -129,7 +129,7 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
             "schemaVersion": "1.0",
             "payload": base64.b64encode(payload).decode(),
             "rootSignature": root_key.sign(
-                b"NeverLauncher-Trust-Policy-v1\n" + payload
+                b"Launcher-Trust-Policy-v1\n" + payload
             ).hex(),
         }
         policy_path = self.root / "root-signed-policy.json"
@@ -157,7 +157,7 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
         v2 = json.loads(members[prefix + "COMPONENT_SET_SIGNATURE_V2.json"])
         self.assertEqual(v2["manifestSha256"], digest(raw))
         context = (
-            "NeverLauncher-Component-v2\n"
+            "Launcher-Component-v2\n"
             + v2["keyId"]
             + "\n"
             + str(v2["trustEpoch"])
@@ -181,10 +181,10 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
                 fake_elf() + component.encode()
             )
         linux.write_package(self.root, VERSION, "x64")
-        package = self.root / f"neverlauncher-linux-x64-{VERSION}.tar.gz"
+        package = self.root / f"launcher-linux-x64-{VERSION}.tar.gz"
         members = release.unpack(package)
-        self.verify_signed_manifest(members, "neverlauncher/")
-        manifest = json.loads(members["neverlauncher/LINUX_PACKAGE_MANIFEST.json"])
+        self.verify_signed_manifest(members, "launcher/")
+        manifest = json.loads(members["launcher/LINUX_PACKAGE_MANIFEST.json"])
         release.verify_update_payload_0410(members, manifest, "linux", "x64", VERSION)
         self.assertTrue((self.root / "LINUX_PACKAGE_MANIFEST_X64.json").is_file())
         report = release.exact_package(self.root, VERSION, "linux-x64")
@@ -193,23 +193,21 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
         # An installer checksum alone can be updated by a compromised staging
         # step. The inner updater manifest must still reject altered payloads.
         mutated = dict(members)
-        mutated["neverlauncher/neverruntime"] += b"corrupt"
+        mutated["launcher/runtime"] += b"corrupt"
         with self.assertRaises(release.Blocked):
             release.verify_update_payload_0410(
                 mutated, manifest, "linux", "x64", VERSION
             )
         mutated = dict(members)
-        update = json.loads(mutated["neverlauncher/COMPONENT_UPDATE_MANIFEST.json"])
-        update["components"][0]["sourcePath"] = "../neverlauncher-desktop"
-        mutated["neverlauncher/COMPONENT_UPDATE_MANIFEST.json"] = json.dumps(
-            update
-        ).encode()
+        update = json.loads(mutated["launcher/COMPONENT_UPDATE_MANIFEST.json"])
+        update["components"][0]["sourcePath"] = "../launcher-desktop"
+        mutated["launcher/COMPONENT_UPDATE_MANIFEST.json"] = json.dumps(update).encode()
         with self.assertRaises(release.Blocked):
             release.verify_update_payload_0410(
                 mutated, manifest, "linux", "x64", VERSION
             )
         mutated = dict(members)
-        mutated.pop("neverlauncher/COMPONENT_SET_SIGNATURE_V2.json")
+        mutated.pop("launcher/COMPONENT_SET_SIGNATURE_V2.json")
         with self.assertRaises(release.Blocked):
             release.verify_update_payload_0410(
                 mutated, manifest, "linux", "x64", VERSION
@@ -217,9 +215,9 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
         # A forged signature with a correct manifest digest is still rejected
         # by the pinned delegated key and root-signed trust policy.
         mutated = dict(members)
-        forged = json.loads(mutated["neverlauncher/COMPONENT_SET_SIGNATURE_V2.json"])
+        forged = json.loads(mutated["launcher/COMPONENT_SET_SIGNATURE_V2.json"])
         forged["signature"] = "a" * 128
-        mutated["neverlauncher/COMPONENT_SET_SIGNATURE_V2.json"] = json.dumps(
+        mutated["launcher/COMPONENT_SET_SIGNATURE_V2.json"] = json.dumps(
             forged
         ).encode()
         with self.assertRaises(release.Blocked):
@@ -243,11 +241,11 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
             "updater": "cli",
         }
         names = {
-            "desktop": "neverlauncher-desktop.exe",
+            "desktop": "launcher-desktop.exe",
             "guard": "guard.exe",
-            "runtime": "neverruntime.exe",
+            "runtime": "runtime.exe",
             "sensor": "guard-sensor.dll",
-            "updater": "neverlauncher-cli.exe",
+            "updater": "launcher-cli.exe",
         }
         members = {names[role]: fake_pe() + role.encode() for role in roles}
         rows = []
@@ -298,7 +296,7 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
             )
         update = {
             "schemaVersion": "1.0",
-            "product": "NeverLauncher",
+            "product": "Launcher",
             "productVersion": VERSION,
             "platform": "windows",
             "architecture": "x64",
@@ -314,12 +312,12 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
         members["COMPONENT_TRUST_POLICY.json"] = policy_doc
         self.verify_signed_manifest(members, "")
         with zipfile.ZipFile(
-            self.root / f"neverlauncher-desktop-{VERSION}-windows-x64.zip", "w"
+            self.root / f"launcher-desktop-{VERSION}-windows-x64.zip", "w"
         ) as z:
             for name, data in members.items():
                 z.writestr(name, data)
-        (self.root / "neverlauncher-desktop-windows-x64.exe").write_bytes(
-            members["neverlauncher-desktop.exe"]
+        (self.root / "launcher-desktop-windows-x64.exe").write_bytes(
+            members["launcher-desktop.exe"]
         )
         self.assertEqual(
             release.exact_package(self.root, VERSION, "windows-x64")["target"],
@@ -328,7 +326,7 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
         bad = dict(members)
         bad["COMPONENT_UPDATE_MANIFEST.json"] = b"{}"
         with zipfile.ZipFile(
-            self.root / f"neverlauncher-desktop-{VERSION}-windows-x64.zip", "w"
+            self.root / f"launcher-desktop-{VERSION}-windows-x64.zip", "w"
         ) as z:
             for name, data in bad.items():
                 z.writestr(name, data)
@@ -336,7 +334,7 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
             release.exact_package(self.root, VERSION, "windows-x64")
 
     def test_macos_app_writer_embeds_delegated_component_trust(self):
-        app = self.root / "NeverLauncher.app"
+        app = self.root / "Launcher.app"
         for component, (relative, _) in macos.COMPONENTS.items():
             target = app / relative
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -350,7 +348,7 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
             out_dir=str(self.root / "dist"),
         )
         macos.manifest_cmd(args)
-        resource_prefix = "NeverLauncher.app/Contents/Resources/"
+        resource_prefix = "Launcher.app/Contents/Resources/"
         members = {
             str(file.relative_to(self.root)): file.read_bytes()
             for file in app.rglob("*")
@@ -360,7 +358,7 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
         manifest = json.loads(members[resource_prefix + "MACOS_PACKAGE_MANIFEST.json"])
         release.verify_update_payload_0410(members, manifest, "darwin", "x64", VERSION)
         macos.finalize_cmd(args)
-        package_name = f"neverlauncher-desktop-{VERSION}-macos-x64.zip"
+        package_name = f"launcher-desktop-{VERSION}-macos-x64.zip"
         package_path = self.root / "dist" / package_name
         with zipfile.ZipFile(package_path, "w") as archive:
             for name, content in members.items():
@@ -372,9 +370,7 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
         # Detect post-signing drift between the sealed component update list
         # and the final signed main application executable.
         modified = dict(members)
-        modified["NeverLauncher.app/Contents/MacOS/neverlauncher-desktop"] += (
-            b"codesign-drift"
-        )
+        modified["Launcher.app/Contents/MacOS/launcher-desktop"] += b"codesign-drift"
         with self.assertRaises(release.Blocked):
             release.verify_update_payload_0410(
                 modified, manifest, "darwin", "x64", VERSION

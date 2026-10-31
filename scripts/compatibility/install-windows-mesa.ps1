@@ -19,7 +19,7 @@ if ([IO.Path]::GetFileName($javaPath) -ine 'java.exe') { throw 'Expected a pinne
 $runtimeDirectory = Split-Path -Parent $javaPath
 $name = "mesa-llvmpipe-$arch-$mesaVersion.7z"
 $url = "https://github.com/mmozeiko/build-mesa/releases/download/$mesaVersion/$name"
-$work = Join-Path $env:RUNNER_TEMP ("neverlauncher-mesa-" + [Guid]::NewGuid().ToString('N'))
+$work = Join-Path $env:RUNNER_TEMP ("launcher-mesa-" + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 try {
     $archive = Join-Path $work $name

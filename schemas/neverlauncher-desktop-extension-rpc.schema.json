@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://neverlauncher.local/schemas/neverlauncher-desktop-extension-rpc.schema.json",
-  "title": "NeverLauncher Desktop Extension RPC v1",
+  "$id": "https://launcher.local/schemas/launcher-desktop-extension-rpc.schema.json",
+  "title": "Launcher Desktop Extension RPC v1",
   "oneOf": [
     {
       "type": "object",

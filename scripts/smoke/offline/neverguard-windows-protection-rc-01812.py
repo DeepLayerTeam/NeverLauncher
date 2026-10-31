@@ -13,7 +13,7 @@ def require(text: str, path: str, needles: list[str]) -> None:
     missing = [needle for needle in needles if needle not in text]
     if missing:
         raise SystemExit(
-            f"[NeverLauncher] Windows Protection RC 0.18.12 gate: {path} missing: {', '.join(missing)}"
+            f"[Launcher] Windows Protection RC 0.18.12 gate: {path} missing: {', '.join(missing)}"
         )
 
 
@@ -28,14 +28,14 @@ version = read("VERSION").strip()
 if version_tuple(version) < (0, 18, 12):
     raise SystemExit(f"Windows Protection RC gate requires >=0.18.12, got {version}")
 
-impl = read("cli/cmd/neverlauncher/windows_protection_release_01812.go")
+impl = read("cli/cmd/launcher/windows_protection_release_01812.go")
 require(
     impl,
-    "cli/cmd/neverlauncher/windows_protection_release_01812.go",
+    "cli/cmd/launcher/windows_protection_release_01812.go",
     [
         'windowsAdversarialCertificateFile01811 = "WINDOWS_ADVERSARIAL_CERTIFICATE.json"',
         'windowsProtectionReleaseFile01812      = "WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json"',
-        'windowsProtectionRepository01812       = "DeepLayerTeam/NeverLauncher"',
+        'windowsProtectionRepository01812       = "DeepLayerTeam/Launcher"',
         "func validateWindowsAdversarialCertificate01812",
         "cert.ScenarioExecutions != 55",
         "expectedJava := []int{8, 16, 17, 21, 25}",
@@ -53,10 +53,10 @@ require(
     ],
 )
 
-tests = read("cli/cmd/neverlauncher/windows_protection_release_01812_test.go")
+tests = read("cli/cmd/launcher/windows_protection_release_01812_test.go")
 require(
     tests,
-    "cli/cmd/neverlauncher/windows_protection_release_01812_test.go",
+    "cli/cmd/launcher/windows_protection_release_01812_test.go",
     [
         "TestWindowsProtectionReleaseRequired01812",
         "TestValidateWindowsAdversarialCertificate01812",
@@ -64,10 +64,10 @@ require(
     ],
 )
 
-release = read("cli/cmd/neverlauncher/release_commands.go")
+release = read("cli/cmd/launcher/release_commands.go")
 require(
     release,
-    "cli/cmd/neverlauncher/release_commands.go",
+    "cli/cmd/launcher/release_commands.go",
     [
         'case "windows-protection-verify":',
         "writeWindowsProtectionRelease01812(out, ver, expectedCommit)",
@@ -80,23 +80,23 @@ require(
     ],
 )
 
-candidate = read("cli/cmd/neverlauncher/production_release_candidate_01511.go")
-delivery = read("cli/cmd/neverlauncher/production_delivery_release_0160.go")
+candidate = read("cli/cmd/launcher/production_release_candidate_01511.go")
+delivery = read("cli/cmd/launcher/production_delivery_release_0160.go")
 for path, text in [
-    ("cli/cmd/neverlauncher/production_release_candidate_01511.go", candidate),
-    ("cli/cmd/neverlauncher/production_delivery_release_0160.go", delivery),
+    ("cli/cmd/launcher/production_release_candidate_01511.go", candidate),
+    ("cli/cmd/launcher/production_delivery_release_0160.go", delivery),
 ]:
     require(
         text, path, ["windows-protection-rc-adversarial-signed-production-boundary"]
     )
 require(
     candidate,
-    "cli/cmd/neverlauncher/production_release_candidate_01511.go",
+    "cli/cmd/launcher/production_release_candidate_01511.go",
     ["verifyWindowsProtectionRelease01812(dir, ver)"],
 )
 require(
     delivery,
-    "cli/cmd/neverlauncher/production_delivery_release_0160.go",
+    "cli/cmd/launcher/production_delivery_release_0160.go",
     [
         "windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812",
     ],
@@ -135,20 +135,20 @@ for text, path in [
 ]:
     if "guard-windows-protection-rc-01812.py" not in text:
         raise SystemExit(
-            f"[NeverLauncher] Windows Protection RC 0.18.12 gate: mandatory gate not wired into {path}"
+            f"[Launcher] Windows Protection RC 0.18.12 gate: mandatory gate not wired into {path}"
         )
 if "TestWindowsProtection" not in ci:
     raise SystemExit(
-        "[NeverLauncher] Windows Protection RC 0.18.12 gate: Go certificate tests are not wired into CI"
+        "[Launcher] Windows Protection RC 0.18.12 gate: Go certificate tests are not wired into CI"
     )
 
 lowered = impl.lower()
 for marker in ["todo!", "unimplemented!", "placeholder", "stub"]:
     if marker in lowered:
         raise SystemExit(
-            f"[NeverLauncher] Windows Protection RC 0.18.12 gate: placeholder {marker!r} in cli/cmd/neverlauncher/windows_protection_release_01812.go"
+            f"[Launcher] Windows Protection RC 0.18.12 gate: placeholder {marker!r} in cli/cmd/launcher/windows_protection_release_01812.go"
         )
 
 print(
-    f"[NeverLauncher] Windows Protection RC release certificate + production gates 0.18.12 gate: OK ({version})"
+    f"[Launcher] Windows Protection RC release certificate + production gates 0.18.12 gate: OK ({version})"
 )

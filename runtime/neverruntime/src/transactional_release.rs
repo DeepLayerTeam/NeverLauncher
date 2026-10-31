@@ -43,7 +43,7 @@ struct Journal {
     entries: Vec<Backup>,
 }
 
-fn base(root: &Path) -> PathBuf { root.join(".neverlauncher").join("client-releases") }
+fn base(root: &Path) -> PathBuf { root.join(".launcher").join("client-releases") }
 fn state_path(root: &Path, kind: &str, slot: usize) -> PathBuf {
     base(root).join(format!("{kind}-{slot}.json"))
 }

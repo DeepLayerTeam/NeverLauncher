@@ -1,9 +1,9 @@
-package ru.neverlauncher.sdk.gravit;
+package ru.launcher.sdk.gravit;
 import java.net.URI;
 import java.util.*;
 import java.util.jar.*;
 import pro.gravit.launcher.base.modules.*;
-import ru.neverlauncher.sdk.core.*;
+import ru.launcher.sdk.core.*;
 
 /** Executable adapter for explicitly ported Gravit-style modules in signed .nlext JARs. */
 public final class GravitCompatExtension implements Extension {
@@ -14,10 +14,10 @@ public final class GravitCompatExtension implements Extension {
         String className;
         try(JarFile jar=new JarFile(java.nio.file.Path.of(code).toFile())) {
             Attributes attrs=jar.getManifest().getMainAttributes();
-            if(!GravitCompatExtension.class.getName().equals(attrs.getValue("NeverLauncher-Extension-Class")))throw new SecurityException("not a Gravit compatibility package");
-            className=attrs.getValue("NeverLauncher-Gravit-Module-Class");
+            if(!GravitCompatExtension.class.getName().equals(attrs.getValue("Launcher-Extension-Class")))throw new SecurityException("not a Gravit compatibility package");
+            className=attrs.getValue("Launcher-Gravit-Module-Class");
         }
-        if(className==null||!className.matches("[a-zA-Z_$][a-zA-Z0-9_$.]{1,200}")||className.contains("..")||className.startsWith("pro.gravit.launcher.")||className.startsWith("ru.neverlauncher.sdk."))throw new SecurityException("invalid ported Gravit module class");
+        if(className==null||!className.matches("[a-zA-Z_$][a-zA-Z0-9_$.]{1,200}")||className.contains("..")||className.startsWith("pro.gravit.launcher.")||className.startsWith("ru.launcher.sdk."))throw new SecurityException("invalid ported Gravit module class");
         Class<?> type=Class.forName(className,false,GravitCompatExtension.class.getClassLoader());
         if(!LauncherModule.class.isAssignableFrom(type)||java.lang.reflect.Modifier.isAbstract(type.getModifiers()))throw new SecurityException("class is not a concrete LauncherModule");
         module=(LauncherModule)type.getDeclaredConstructor().newInstance();

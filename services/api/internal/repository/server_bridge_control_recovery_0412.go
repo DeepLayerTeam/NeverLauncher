@@ -1,6 +1,6 @@
 package repository
 
-import "gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+import "gitflic.ru/skif4er/launcher/services/api/internal/model"
 
 // An indeterminate result reported by an agent is FINAL. Only an indeterminate
 // result synthesized because a delivery lease expired may be replaced with a

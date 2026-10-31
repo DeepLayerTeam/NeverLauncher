@@ -10,8 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpackage"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionpackage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // checkRollbackPayload0305 ensures a local Java backup still equals the original

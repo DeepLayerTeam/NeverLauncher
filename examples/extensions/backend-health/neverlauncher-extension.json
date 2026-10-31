@@ -1,9 +1,9 @@
 {
   "schemaVersion": "2.0",
-  "id": "ru.example.neverlauncher.backend-health",
+  "id": "ru.example.launcher.backend-health",
   "name": "Backend Health Example",
   "version": "0.1.0",
-  "publisher": "NeverLauncher Examples",
+  "publisher": "Launcher Examples",
   "api": "1.0",
   "targets": [
     {

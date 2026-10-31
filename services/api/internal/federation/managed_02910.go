@@ -3,7 +3,7 @@ package federation
 import (
 	"errors"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 // SwapManaged replaces a live connector without closing one still in use by

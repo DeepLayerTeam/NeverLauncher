@@ -1,4 +1,4 @@
-# NeverLauncher 0.31.5 — TPM2 Quote, Measured Boot & PCR Verification
+# Launcher 0.31.5 — TPM2 Quote, Measured Boot & PCR Verification
 
 ## Guarantees and limits
 
@@ -28,7 +28,7 @@ represent an approved real system):
 
 ```json
 {
-  "schema": "neverlauncher/tpm-pcr-policy/v1",
+  "schema": "launcher/tpm-pcr-policy/v1",
   "policies": [
     {
       "id": "linux-approved-boot-v1",

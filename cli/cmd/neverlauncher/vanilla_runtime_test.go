@@ -164,7 +164,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 		"natives/" + target.OS + "/" + target.Arch + "/libtest-native.bin",
 		"natives/" + target.OS + "/" + target.Arch + "/liblegacy-native.bin",
 		"natives/" + target.OS + "/" + target.Arch + "/libmodern-native.bin",
-		".neverlauncher/vanilla-install.json",
+		".launcher/vanilla-install.json",
 	}
 	for _, rel := range required {
 		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
@@ -226,7 +226,7 @@ func TestInstallVanillaMaterializesVerifiedClient(t *testing.T) {
 	}
 	seenLogging, seenNative := false, false
 	for _, file := range packageManifest.Files {
-		if strings.HasPrefix(file.Path, ".neverlauncher/") {
+		if strings.HasPrefix(file.Path, ".launcher/") {
 			t.Fatalf("local Vanilla state leaked into client package: %s", file.Path)
 		}
 		seenLogging = seenLogging || file.Path == "assets/log_configs/client-test.xml"

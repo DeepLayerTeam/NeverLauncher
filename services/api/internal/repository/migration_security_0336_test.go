@@ -2,8 +2,8 @@ package repository
 
 import (
 	"errors"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitcredentials"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	"gitflic.ru/skif4er/launcher/services/api/internal/gravitcredentials"
+	"gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 	"testing"
 )
 

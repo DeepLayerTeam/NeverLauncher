@@ -3,7 +3,7 @@
   "id": "org.example.java-runtime",
   "name": "Java Runtime API Example",
   "version": "0.1.0",
-  "publisher": "NeverLauncher Examples",
+  "publisher": "Launcher Examples",
   "description": "Real Java backend event handler with durable JSON state and declared CLI status command",
   "api": "1.0",
   "targets": [

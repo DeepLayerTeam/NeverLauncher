@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 const (
@@ -98,7 +98,7 @@ type guardAttestationV2CompleteRequest01810 struct {
 }
 
 func guardContinuousEvidenceCore01810(e guardContinuousEvidence01810) string {
-	return "NeverLauncher Windows Continuous Evidence v2\n" +
+	return "Launcher Windows Continuous Evidence v2\n" +
 		"process-id=" + e.ProcessID + "\n" +
 		"runtime-pid=" + strconv.FormatUint(uint64(e.RuntimePID), 10) + "\n" +
 		"collected-at-ms=" + strconv.FormatUint(e.CollectedAtUnixMS, 10) + "\n" +
@@ -145,7 +145,7 @@ func recomputeGuardContinuousEvidenceSHA25601810(e guardContinuousEvidence01810)
 }
 
 func guardAttestationV2Core01810(a guardRemoteAttestationV201810) string {
-	return "NeverLauncher Guard Attestation Core Windows v2\n" +
+	return "Launcher Guard Attestation Core Windows v2\n" +
 		"challenge-id=" + a.ChallengeID + "\n" +
 		"challenge-sha256=" + a.ChallengeSHA256 + "\n" +
 		"collected-at-ms=" + strconv.FormatUint(a.CollectedAtUnixMS, 10) + "\n" +
@@ -254,7 +254,7 @@ func validateGuardAttestationV201810(a guardRemoteAttestationV201810, challengeI
 }
 
 func guardDeviceSigningPayloadV201810(challenge string, claims authClaims, device model.TrustedDevice, launcherVersion string, a guardRemoteAttestationV201810, challengeExpiresAt string) string {
-	return "NeverLauncher Guard Attestation Device Binding v2\n" +
+	return "Launcher Guard Attestation Device Binding v2\n" +
 		"purpose=guard-attest-v2\n" +
 		"challenge=" + strings.TrimSpace(challenge) + "\n" +
 		"challenge-id=" + strings.TrimSpace(a.ChallengeID) + "\n" +

@@ -105,7 +105,7 @@ export NEVERLAUNCHER_RESOLUTION_WIDTH=854
 export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
 export LIBGL_ALWAYS_SOFTWARE=1
 xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
-  cargo run --quiet --manifest-path "$ROOT/runtime/neverruntime/Cargo.toml" --bin neverruntime -- certify-vanilla \
+  cargo run --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime -- certify-vanilla \
     --root "$RUNTIME_DIR/materialized-client" \
     --version "$CLIENT_PROFILE_ID" \
     --java "$JAVA_BIN" \

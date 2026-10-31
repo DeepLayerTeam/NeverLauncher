@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 const http114Secret = "0123456789abcdef0123456789abcdef-http114"
@@ -34,11 +34,11 @@ func TestFederationCore114RegistersAndAuthenticatesHTTPProvider(t *testing.T) {
 			return
 		}
 		if r.URL.Path == "/health" {
-			writeHTTP114Signed(w, r, http.StatusOK, map[string]any{"protocolVersion": "neverlauncher-http-auth/1", "issuer": "cms-fixture", "status": "ok"})
+			writeHTTP114Signed(w, r, http.StatusOK, map[string]any{"protocolVersion": "launcher-http-auth/1", "issuer": "cms-fixture", "status": "ok"})
 			return
 		}
 		if r.URL.Path != "/authenticate" {
-			writeHTTP114Signed(w, r, http.StatusNotFound, map[string]any{"protocolVersion": "neverlauncher-http-auth/1", "issuer": "cms-fixture", "error": map[string]any{"code": "identity_not_found"}})
+			writeHTTP114Signed(w, r, http.StatusNotFound, map[string]any{"protocolVersion": "launcher-http-auth/1", "issuer": "cms-fixture", "error": map[string]any{"code": "identity_not_found"}})
 			return
 		}
 		var request map[string]any
@@ -46,11 +46,11 @@ func TestFederationCore114RegistersAndAuthenticatesHTTPProvider(t *testing.T) {
 			t.Error(err)
 		}
 		if request["identifier"] != "player@example.test" || request["password"] != "secret" {
-			writeHTTP114Signed(w, r, http.StatusUnauthorized, map[string]any{"protocolVersion": "neverlauncher-http-auth/1", "issuer": "cms-fixture", "error": map[string]any{"code": "invalid_credentials"}})
+			writeHTTP114Signed(w, r, http.StatusUnauthorized, map[string]any{"protocolVersion": "launcher-http-auth/1", "issuer": "cms-fixture", "error": map[string]any{"code": "invalid_credentials"}})
 			return
 		}
 		writeHTTP114Signed(w, r, http.StatusOK, map[string]any{
-			"protocolVersion": "neverlauncher-http-auth/1", "issuer": "cms-fixture", "subject": "cms-user-42",
+			"protocolVersion": "launcher-http-auth/1", "issuer": "cms-fixture", "subject": "cms-user-42",
 			"email": "player@example.test", "username": "player", "displayName": "HTTP Player",
 			"groups": []string{"vip"}, "roles": []string{"member"}, "authMethods": []string{"password"},
 			"providerToken": "must-never-become-never-token",
@@ -77,7 +77,7 @@ func TestFederationCore114RegistersAndAuthenticatesHTTPProvider(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repo := repository.NewMemoryRepository("https://neverlauncher.example.test")
+	repo := repository.NewMemoryRepository("https://launcher.example.test")
 	core, err := NewFederationCore114(context.Background(), repo, config.Config{AuthHTTPProvidersJSON: string(providers)})
 	if err != nil {
 		t.Fatal(err)
@@ -101,10 +101,10 @@ func TestFederationCore114RegistersAndAuthenticatesHTTPProvider(t *testing.T) {
 }
 
 func verifyHTTP114Request(r *http.Request, body []byte) bool {
-	timestamp := r.Header.Get("X-NeverLauncher-Timestamp")
-	nonce := r.Header.Get("X-NeverLauncher-Nonce")
-	provided, err := hex.DecodeString(strings.TrimPrefix(r.Header.Get("X-NeverLauncher-Signature"), "v1="))
-	if err != nil || r.Header.Get("X-NeverLauncher-Key-Id") != "fixture-key" {
+	timestamp := r.Header.Get("X-Launcher-Timestamp")
+	nonce := r.Header.Get("X-Launcher-Nonce")
+	provided, err := hex.DecodeString(strings.TrimPrefix(r.Header.Get("X-Launcher-Signature"), "v1="))
+	if err != nil || r.Header.Get("X-Launcher-Key-Id") != "fixture-key" {
 		return false
 	}
 	sum := sha256.Sum256(body)
@@ -117,16 +117,16 @@ func verifyHTTP114Request(r *http.Request, body []byte) bool {
 func writeHTTP114Signed(w http.ResponseWriter, r *http.Request, status int, value any) {
 	body, _ := json.Marshal(value)
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-	nonce := r.Header.Get("X-NeverLauncher-Nonce")
+	nonce := r.Header.Get("X-Launcher-Nonce")
 	sum := sha256.Sum256(body)
 	canonical := "RESPONSE\n" + strconv.Itoa(status) + "\n" + timestamp + "\n" + nonce + "\n" + hex.EncodeToString(sum[:])
 	mac := hmac.New(sha256.New, []byte(http114Secret))
 	_, _ = mac.Write([]byte(canonical))
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("X-NeverLauncher-Key-Id", "fixture-key")
-	w.Header().Set("X-NeverLauncher-Timestamp", timestamp)
-	w.Header().Set("X-NeverLauncher-Nonce", nonce)
-	w.Header().Set("X-NeverLauncher-Signature", "v1="+hex.EncodeToString(mac.Sum(nil)))
+	w.Header().Set("X-Launcher-Key-Id", "fixture-key")
+	w.Header().Set("X-Launcher-Timestamp", timestamp)
+	w.Header().Set("X-Launcher-Nonce", nonce)
+	w.Header().Set("X-Launcher-Signature", "v1="+hex.EncodeToString(mac.Sum(nil)))
 	w.WriteHeader(status)
 	_, _ = w.Write(body)
 }

@@ -1,6 +1,6 @@
 # Microsoft Connector (0.11.6)
 
-Production Microsoft identity provider for NeverLauncher Federation Core. It delegates standard OpenID Connect mechanics to `internal/oidcconnector` and adds Microsoft-specific tenant, issuer, cloud and stable-identity rules.
+Production Microsoft identity provider for Launcher Federation Core. It delegates standard OpenID Connect mechanics to `internal/oidcconnector` and adds Microsoft-specific tenant, issuer, cloud and stable-identity rules.
 
 ## Trust model
 

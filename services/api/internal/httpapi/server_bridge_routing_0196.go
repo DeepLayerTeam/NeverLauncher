@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 const (
-	serverBridgeRoutingSignatureScheme0196 = "NeverLauncher-ServerBridge-Routing-v2"
+	serverBridgeRoutingSignatureScheme0196 = "Launcher-ServerBridge-Routing-v2"
 	serverBridgeRoutingMaxClockSkew0196    = 2 * time.Minute
 	serverBridgeRoutingFreshnessHTTP0196   = 90 * time.Second
 )

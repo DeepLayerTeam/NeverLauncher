@@ -32,16 +32,16 @@ jobs:
         env:
           POSTGRES_USER: routing_ci
           POSTGRES_PASSWORD: routing_ci_only
-          POSTGRES_DB: neverlauncher_routing
+          POSTGRES_DB: launcher_routing
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U routing_ci -d neverlauncher_routing"
+          --health-cmd "pg_isready -U routing_ci -d launcher_routing"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 15
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://routing_ci:routing_ci_only@127.0.0.1:5432/neverlauncher_routing?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://routing_ci:routing_ci_only@127.0.0.1:5432/launcher_routing?sslmode=disable
     defaults:
       run:
         working-directory: services/api

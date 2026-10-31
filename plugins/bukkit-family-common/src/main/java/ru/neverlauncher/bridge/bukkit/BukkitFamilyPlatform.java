@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.bukkit;
+package ru.launcher.bridge.bukkit;
 
 import org.bukkit.Bukkit;
 

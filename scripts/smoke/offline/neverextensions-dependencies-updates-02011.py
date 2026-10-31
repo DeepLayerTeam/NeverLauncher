@@ -24,7 +24,7 @@ required = [
     "services/api/internal/model/extension_updates_02011.go",
     "services/api/internal/dbmigrate/sql/0047_extensions_dependencies_updates_02011.sql",
     "cli/internal/dbmigrate/sql/0047_extensions_dependencies_updates_02011.sql",
-    "cli/cmd/neverlauncher/extension_updates_02011.go",
+    "cli/cmd/launcher/extension_updates_02011.go",
 ]
 for rel in required:
     require((ROOT / rel).is_file(), f"missing production dependency/update file {rel}")
@@ -84,7 +84,7 @@ for token in (
     "in_flight",
 ):
     require(token in migration, f"migration 0047 missing {token}")
-manifest = json.loads(read("schemas/neverlauncher-extension.schema.json"))
+manifest = json.loads(read("schemas/launcher-extension.schema.json"))
 require(
     "conflicts" in manifest.get("properties", {}),
     "canonical manifest schema missing conflicts",
@@ -101,10 +101,10 @@ require(
     "resolver02011" in legacy and "updateManager02011" in legacy,
     "legacy update path bypasses dependency-aware transaction engine",
 )
-cli = read("cli/cmd/neverlauncher/extension_updates_02011.go")
+cli = read("cli/cmd/launcher/extension_updates_02011.go")
 for token in ("plan", "apply", "pins", "pin", "unpin", "transaction"):
     require(token in cli, f"CLI update workflow missing {token}")
-tables = read("cli/cmd/neverlauncher/release_commands.go")
+tables = read("cli/cmd/launcher/release_commands.go")
 for token in (
     "extension_update_pins",
     "extension_update_leases",

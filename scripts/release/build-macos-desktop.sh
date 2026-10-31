@@ -27,33 +27,33 @@ fi
 rustup target add aarch64-apple-darwin x86_64-apple-darwin
 for target in aarch64-apple-darwin x86_64-apple-darwin; do
   cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
-  cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bin guard
+  cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/runtime/runtime/Cargo.toml" --bin guard
 done
 
 PACKAGE_ROOT="${OUT_DIR}/macos-desktop-package"
-APP="${PACKAGE_ROOT}/NeverLauncher.app"
+APP="${PACKAGE_ROOT}/Launcher.app"
 MACOS_DIR="${APP}/Contents/MacOS"
 RES_DIR="${APP}/Contents/Resources"
 rm -rf "${PACKAGE_ROOT}"
 mkdir -p "${MACOS_DIR}" "${RES_DIR}" "${OUT_DIR}"
 lipo -create \
-  "${ROOT_DIR}/apps/desktop/src-tauri/target/aarch64-apple-darwin/release/neverlauncher-desktop" \
-  "${ROOT_DIR}/apps/desktop/src-tauri/target/x86_64-apple-darwin/release/neverlauncher-desktop" \
-  -output "${MACOS_DIR}/neverlauncher-desktop"
+  "${ROOT_DIR}/apps/desktop/src-tauri/target/aarch64-apple-darwin/release/launcher-desktop" \
+  "${ROOT_DIR}/apps/desktop/src-tauri/target/x86_64-apple-darwin/release/launcher-desktop" \
+  -output "${MACOS_DIR}/launcher-desktop"
 lipo -create \
-  "${ROOT_DIR}/runtime/neverruntime/target/aarch64-apple-darwin/release/guard" \
-  "${ROOT_DIR}/runtime/neverruntime/target/x86_64-apple-darwin/release/guard" \
+  "${ROOT_DIR}/runtime/runtime/target/aarch64-apple-darwin/release/guard" \
+  "${ROOT_DIR}/runtime/runtime/target/x86_64-apple-darwin/release/guard" \
   -output "${MACOS_DIR}/guard"
-chmod 0755 "${MACOS_DIR}/neverlauncher-desktop" "${MACOS_DIR}/guard"
+chmod 0755 "${MACOS_DIR}/launcher-desktop" "${MACOS_DIR}/guard"
 
 cat > "${APP}/Contents/Info.plist" <<EOF_PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>CFBundleDisplayName</key><string>NeverLauncher</string>
-<key>CFBundleExecutable</key><string>neverlauncher-desktop</string>
-<key>CFBundleIdentifier</key><string>ru.skif4er.neverlauncher</string>
-<key>CFBundleName</key><string>NeverLauncher</string>
+<key>CFBundleDisplayName</key><string>Launcher</string>
+<key>CFBundleExecutable</key><string>launcher-desktop</string>
+<key>CFBundleIdentifier</key><string>ru.skif4er.launcher</string>
+<key>CFBundleName</key><string>Launcher</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>${VERSION}</string>
 <key>CFBundleVersion</key><string>${VERSION}</string>
@@ -67,11 +67,11 @@ if [[ "${MODE}" == "production" ]]; then TIMESTAMP_ARG="--timestamp"; else TIMES
 
 # Сначала подпишите вложенные исполняемые файлы. Затем окончательные подписанные байты
 # закрепляются в манифесте пакета, а внешняя подпись приложения защищает сам манифест.
-codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher.guard "${MACOS_DIR}/guard"
-codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${MACOS_DIR}/neverlauncher-desktop"
-DESKTOP_HASH="$(shasum -a 256 "${MACOS_DIR}/neverlauncher-desktop" | awk '{print $1}')"
+codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.launcher.guard "${MACOS_DIR}/guard"
+codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.launcher "${MACOS_DIR}/launcher-desktop"
+DESKTOP_HASH="$(shasum -a 256 "${MACOS_DIR}/launcher-desktop" | awk '{print $1}')"
 GUARD_HASH="$(shasum -a 256 "${MACOS_DIR}/guard" | awk '{print $1}')"
-DESKTOP_SIZE="$(stat -f '%z' "${MACOS_DIR}/neverlauncher-desktop")"
+DESKTOP_SIZE="$(stat -f '%z' "${MACOS_DIR}/launcher-desktop")"
 GUARD_SIZE="$(stat -f '%z' "${MACOS_DIR}/guard")"
 
 cat > "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" <<EOF_MANIFEST
@@ -79,10 +79,10 @@ cat > "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" <<EOF_MANIFEST
   "schemaVersion":"1.0",
   "productVersion":"${VERSION}",
   "platform":"macos-universal",
-  "neverGuardProtocolVersion":4,
+  "GuardProtocolVersion":4,
   "authenticatedIpc":"unix-domain-socket+0600+peer-credentials+hmac-sha256-v4",
   "macosProductionHardeningVersion":1,
-  "bundleIdentifier":"ru.skif4er.neverlauncher",
+  "bundleIdentifier":"ru.skif4er.launcher",
   "signingTeamId":"${TEAM_ID}",
   "hashBindingMode":"codesign+external-release-policy",
   "desktopSha256":"${DESKTOP_HASH}",
@@ -98,13 +98,13 @@ chmod 0644 "${APP}/Contents/Info.plist" "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json"
 codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" "${APP}"
 codesign --verify --deep --strict --verbose=2 "${APP}"
 if [[ "${MODE}" == "production" ]]; then
-  for signed in "${MACOS_DIR}/guard" "${MACOS_DIR}/neverlauncher-desktop"; do
+  for signed in "${MACOS_DIR}/guard" "${MACOS_DIR}/launcher-desktop"; do
     codesign -dv --verbose=4 "${signed}" 2>&1 | grep -F "TeamIdentifier=${TEAM_ID}" >/dev/null || { echo "signing team mismatch for ${signed}" >&2; exit 1; }
     codesign -dv --verbose=4 "${signed}" 2>&1 | grep -E 'flags=.*runtime' >/dev/null || { echo "Hardened Runtime flag missing for ${signed}" >&2; exit 1; }
   done
 fi
 
-TMP_ZIP="${OUT_DIR}/.neverlauncher-macos-notary-${VERSION}.zip"
+TMP_ZIP="${OUT_DIR}/.launcher-macos-notary-${VERSION}.zip"
 ditto -c -k --sequesterRsrc --keepParent "${APP}" "${TMP_ZIP}"
 if [[ "${MODE}" == "production" ]]; then
   command -v xcrun >/dev/null || { echo "xcrun is required for notarization" >&2; exit 1; }
@@ -124,19 +124,19 @@ SIGNING_MODE="adhoc-development"
 # лишь после окончательной подписи и нотариального заверения; встроенный
 # манифест защищается подписью пакета и связью code-signing с внешней
 # политикой выпуска, чтобы избежать циклического самохеширования.
-DESKTOP_HASH="$(shasum -a 256 "${MACOS_DIR}/neverlauncher-desktop" | awk '{print $1}')"
+DESKTOP_HASH="$(shasum -a 256 "${MACOS_DIR}/launcher-desktop" | awk '{print $1}')"
 GUARD_HASH="$(shasum -a 256 "${MACOS_DIR}/guard" | awk '{print $1}')"
-DESKTOP_SIZE="$(stat -f '%z' "${MACOS_DIR}/neverlauncher-desktop")"
+DESKTOP_SIZE="$(stat -f '%z' "${MACOS_DIR}/launcher-desktop")"
 GUARD_SIZE="$(stat -f '%z' "${MACOS_DIR}/guard")"
 cat > "${OUT_DIR}/MACOS_PACKAGE_MANIFEST.json" <<EOF_FINAL_MANIFEST
 {
   "schemaVersion":"1.0",
   "productVersion":"${VERSION}",
   "platform":"macos-universal",
-  "neverGuardProtocolVersion":4,
+  "GuardProtocolVersion":4,
   "authenticatedIpc":"unix-domain-socket+0600+peer-credentials+hmac-sha256-v4",
   "macosProductionHardeningVersion":1,
-  "bundleIdentifier":"ru.skif4er.neverlauncher",
+  "bundleIdentifier":"ru.skif4er.launcher",
   "signingTeamId":"${TEAM_ID}",
   "hashBindingMode":"final-artifact-sha256",
   "desktopSha256":"${DESKTOP_HASH}",
@@ -150,11 +150,11 @@ EOF_FINAL_MANIFEST
 cat > "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS.json" <<EOF_ALLOW
 {"schemaVersion":"2.0","releases":{"${VERSION}":{"protocolVersion":4,"platforms":{"macos":{"signingMode":"${SIGNING_MODE}","artifacts":[{"guardSha256":"${GUARD_HASH}","launcherSha256":"${DESKTOP_HASH}"}]}}}}}
 EOF_ALLOW
-cp "${MACOS_DIR}/neverlauncher-desktop" "${OUT_DIR}/neverlauncher-desktop-macos-universal"
+cp "${MACOS_DIR}/launcher-desktop" "${OUT_DIR}/launcher-desktop-macos-universal"
 cp "${MACOS_DIR}/guard" "${OUT_DIR}/guard-macos-universal"
-FINAL_ZIP="${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
+FINAL_ZIP="${OUT_DIR}/launcher-desktop-${VERSION}-macos-universal.zip"
 rm -f "${FINAL_ZIP}"
 cp "${TMP_ZIP}" "${FINAL_ZIP}"
 [[ "${MODE}" == production ]] && rm -f "${TMP_ZIP}"
-shasum -a 256 "${FINAL_ZIP}" "${OUT_DIR}/neverlauncher-desktop-macos-universal" "${OUT_DIR}/guard-macos-universal"
+shasum -a 256 "${FINAL_ZIP}" "${OUT_DIR}/launcher-desktop-macos-universal" "${OUT_DIR}/guard-macos-universal"
 echo "macOS ${MODE} package created: ${FINAL_ZIP}"

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlitedurable"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
 var mcName = regexp.MustCompile(`^[A-Za-z0-9_]{3,16}$`)
@@ -28,7 +28,7 @@ func (a *Auth) SaveMinecraftIdentity(ctx context.Context, p model.MinecraftProfi
 	p.Subject = strings.TrimSpace(p.Subject)
 	p.IdentityVersion = strings.TrimSpace(p.IdentityVersion)
 	if p.Issuer == "" {
-		p.Issuer = "neverlauncher"
+		p.Issuer = "launcher"
 	}
 	if p.Realm == "" {
 		p.Realm = "local"

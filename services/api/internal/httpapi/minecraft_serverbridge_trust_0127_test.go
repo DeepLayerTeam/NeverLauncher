@@ -12,7 +12,7 @@ import (
 )
 
 func setDeviceTrustClientMeta0127(req *http.Request) {
-	req.Header.Set("User-Agent", "NeverLauncher-DeviceTrust-Test/0.12.1")
+	req.Header.Set("User-Agent", "Launcher-DeviceTrust-Test/0.12.1")
 	req.RemoteAddr = "203.0.113.10:4242"
 }
 
@@ -128,7 +128,7 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 		join := httptest.NewRequest(http.MethodPost, "/api/v1/session/join", strings.NewReader(`{"protocolVersion":2,"serverId":"trust-0127","projectId":"demo-project","profileId":"vanilla","channel":"stable","username":"TrustPlayer"}`))
 		join.Header.Set("Authorization", "Bearer "+bound.Access)
 		join.Header.Set("Content-Type", "application/json")
-		join.Header.Set("User-Agent", "NeverLauncher-DeviceTrust-Test/0.12.1")
+		join.Header.Set("User-Agent", "Launcher-DeviceTrust-Test/0.12.1")
 		join.RemoteAddr = "203.0.113.10:4242"
 		jv := httptest.NewRecorder()
 		h.ServeHTTP(jv, join)
@@ -165,7 +165,7 @@ func TestServerBridgeTrust0127LiveBindingAndRiskEnforcement(t *testing.T) {
 	// Запрос плагина не должен перезаписывать этот риск IP/UA игрового сервера.
 	drift := httptest.NewRequest(http.MethodGet, "/api/v1/auth/sessions", nil)
 	drift.Header.Set("Authorization", "Bearer "+bound.Access)
-	drift.Header.Set("User-Agent", "NeverLauncher-Risk-Drift/0.12.7")
+	drift.Header.Set("User-Agent", "Launcher-Risk-Drift/0.12.7")
 	drift.RemoteAddr = "203.0.113.77:4300"
 	dv := httptest.NewRecorder()
 	h.ServeHTTP(dv, drift)

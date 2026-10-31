@@ -21,7 +21,7 @@ func TestRehearsal0365RequiredAndSignedReceipt(t *testing.T) {
 		t.Fatal("missing receipt accepted")
 	}
 	approval := strings.Repeat("b", 64)
-	receipt := map[string]any{"schemaVersion": "neverlauncher.release.rehearsal.v1",
+	receipt := map[string]any{"schemaVersion": "launcher.release.rehearsal.v1",
 		"version": version, "commit": commit, "status": "package-and-ga-verified", "gaApprovalSha256": approval, "runId": "7654321", "runAttempt": "1"}
 	ga := map[string]any{"approvalSha256": approval}
 	targets := []map[string]any{}

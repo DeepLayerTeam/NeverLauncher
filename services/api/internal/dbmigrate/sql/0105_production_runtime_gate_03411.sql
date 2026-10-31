@@ -56,8 +56,8 @@ IF NOT EXISTS (SELECT 1 FROM (
        AND c.target_matrix_sha256=g.matrix_sha256
        AND a.evidence->>'runNonce'=c.nonce
        AND a.evidence->>'targetMatrixSha256'=g.matrix_sha256
-       AND a.evidence->>'schemaVersion'='neverlauncher.validation-evidence.v4'
-       AND a.evidence->>'audience'='neverlauncher-api/validation-evidence/0.34.7'
+       AND a.evidence->>'schemaVersion'='launcher.validation-evidence.v4'
+       AND a.evidence->>'audience'='launcher-api/validation-evidence/0.34.7'
        AND a.evidence->>'purpose'='staged-package-runtime-verification'
        AND (a.evidence->>'expiresAt')::timestamptz > clock_timestamp()
      FOR SHARE OF a,c;

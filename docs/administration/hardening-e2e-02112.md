@@ -1,4 +1,4 @@
-# NeverLauncher 0.21.12 — Admin Hardening & E2E
+# Launcher 0.21.12 — Admin Hardening & E2E
 
 ## Implemented hardening
 

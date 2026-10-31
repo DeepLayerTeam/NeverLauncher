@@ -1,4 +1,4 @@
-name: NeverLauncher 0.24.13 Component Integration Certification
+name: Launcher 0.24.13 Component Integration Certification
 on:
   pull_request:
     paths:
@@ -64,21 +64,21 @@ jobs:
           set -euo pipefail
           (cd services/api && go test -count=1 ./internal/model ./internal/planpolicy02412)
           (cd services/api && go test -count=1 ./internal/httpapi -run '^TestVerifiedPlanHardwareDeviceSignatureAndBinding02412$')
-          (cd cli && go test -count=1 ./cmd/neverlauncher -run 'Test.*Components.*0249|TestComponent.*02310')
+          (cd cli && go test -count=1 ./cmd/launcher -run 'Test.*Components.*0249|TestComponent.*02310')
       - name: Real Rust runtime and transactional/adversarial tests
         shell: bash
         run: |
           set -euo pipefail
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib
-          cargo build --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime --example cert_sign_fixture
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib
+          cargo build --manifest-path runtime/runtime/Cargo.toml --bin runtime --example cert_sign_fixture
       - name: Run signed v3 component lifecycle with loopback HTTP fault injection
         shell: bash
         run: |
           set -euo pipefail
           suffix=""; if [[ '${{ matrix.os }}' == windows ]]; then suffix=.exe; fi
           python3 scripts/certification/components_02413.py \
-            --runtime "runtime/neverruntime/target/debug/neverruntime${suffix}" \
-            --signer "runtime/neverruntime/target/debug/examples/cert_sign_fixture${suffix}" \
+            --runtime "runtime/runtime/target/debug/runtime${suffix}" \
+            --signer "runtime/runtime/target/debug/examples/cert_sign_fixture${suffix}" \
             --output "dist/02413/component-${{ matrix.os }}-${{ matrix.arch }}.json"
       - name: Install graphical dependencies for real Linux Minecraft
         if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft && matrix.os == 'linux'

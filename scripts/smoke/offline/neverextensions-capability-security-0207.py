@@ -94,7 +94,7 @@ for path in (
 ):
     require(path in routes, f"Admin capability route missing {path}")
 
-cli = read("cli/cmd/neverlauncher/extension_security_0207.go")
+cli = read("cli/cmd/launcher/extension_security_0207.go")
 for token in (
     "permission-grant",
     "permission-revoke",
@@ -104,7 +104,7 @@ for token in (
     "NEVERLAUNCHER_EXTENSION_SECRET_VALUE",
 ):
     require(token in cli, f"CLI capability security missing {token}")
-routing = read("cli/cmd/neverlauncher/extension_commands_0201.go")
+routing = read("cli/cmd/launcher/extension_commands_0201.go")
 require(
     "handleExtensionSecurity0207" in routing
     and '"permission-grant"' in routing
@@ -112,7 +112,7 @@ require(
     "CLI capability commands are not wired into nl extension",
 )
 
-prod = read("cli/cmd/neverlauncher/release_commands.go")
+prod = read("cli/cmd/launcher/release_commands.go")
 for table in ("extension_permission_grants", "extension_secrets"):
     require(table in prod, f"productionTables missing {table}")
 
@@ -126,7 +126,7 @@ for path in (
 
 for envfile in (
     "deploy/production/env.production.example",
-    "cli/cmd/neverlauncher/templates/production/env.production.example",
+    "cli/cmd/launcher/templates/production/env.production.example",
 ):
     env = read(envfile)
     for key in (

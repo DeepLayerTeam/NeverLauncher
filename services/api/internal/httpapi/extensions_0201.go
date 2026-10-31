@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 func (s Server) adminExtensions0201(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +63,7 @@ func (s Server) adminExtensionVersionRegister0201(w http.ResponseWriter, r *http
 	dec.DisallowUnknownFields()
 	var manifest model.ExtensionManifest
 	if err := dec.Decode(&manifest); err != nil {
-		writeError(w, http.StatusBadRequest, "некорректный neverlauncher-extension.json: "+err.Error())
+		writeError(w, http.StatusBadRequest, "некорректный launcher-extension.json: "+err.Error())
 		return
 	}
 	item, err := s.Repo.SaveExtensionVersion(r.Context(), manifest)

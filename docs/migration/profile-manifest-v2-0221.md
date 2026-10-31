@@ -21,7 +21,7 @@
 - Existing `release_versions.manifest` JSON and their Ed25519 signatures are **not changed** by the migration. There is no silent re-sign of public releases.
 - Existing mutable profiles become schema v2, revision 1. Migration seeds append-only `profile_revisions_0221` with the exact backfilled metadata and sha256 digest.
 - A profile edit changes the mutable head atomically with the insertion of one immutable revision row, with an optional compare-and-swap expected revision. A no-op edit doesn't increment the revision.
-- New drafts use Manifest `schemaVersion: "2.0"` and freeze the current `profileSnapshot` at draft creation. Modifying the mutable profile later doesn't alter the draft snapshot. Signing covers the entire v2 payload and the desktop NeverRuntime verifies both the signature and snapshot digest.
+- New drafts use Manifest `schemaVersion: "2.0"` and freeze the current `profileSnapshot` at draft creation. Modifying the mutable profile later doesn't alter the draft snapshot. Signing covers the entire v2 payload and the desktop Runtime verifies both the signature and snapshot digest.
 - v1 manifests do **not** carry `profileSnapshot`. v1 serialization is unchanged, so previously signed payloads verify without re-signing.
 - Unsupported manifest versions, missing v2 snapshots, changed snapshot digests, or invalid project/profile identities are rejected before signing or verifying.
 - `GET /api/v1/projects/{projectId}/profiles/{profileId}/manifest` returns only published versions, not drafts. New v2 public manifests are signature-checked before being returned.

@@ -7,7 +7,7 @@ on:
       - 'services/api/internal/httpapi/migration_identity_0334.go'
       - 'services/api/internal/dbmigrate/sql/0092_*'
       - 'services/api/internal/httpapi/handler.go'
-      - 'cli/cmd/neverlauncher/migration_workflow_0331.go'
+      - 'cli/cmd/launcher/migration_workflow_0331.go'
       - 'apps/admin/src/admin/MigrationCenter0331.tsx'
       - 'services/api/internal/embeddedadmin/site/**'
       - 'schemas/openapi-migration-center.json'
@@ -23,17 +23,17 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: neverlauncher_test
-          POSTGRES_USER: neverlauncher_test
+          POSTGRES_DB: launcher_test
+          POSTGRES_USER: launcher_test
           POSTGRES_PASSWORD: disposable_only_0334
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U neverlauncher_test -d neverlauncher_test"
+          --health-cmd "pg_isready -U launcher_test -d launcher_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://neverlauncher_test:disposable_only_0334@127.0.0.1:5432/neverlauncher_test?sslmode=disable
+      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:disposable_only_0334@127.0.0.1:5432/launcher_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -51,7 +51,7 @@ jobs:
         run: go test -run '^$' ./internal/httpapi ./internal/repository
       - name: CLI integration
         working-directory: cli
-        run: go test -race -count=1 -timeout 5m ./cmd/neverlauncher
+        run: go test -race -count=1 -timeout 5m ./cmd/launcher
       - name: OpenAPI and versions
         run: |
           python3 scripts/contracts/validate-openapi.py

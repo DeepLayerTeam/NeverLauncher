@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/trustbaseline"
+	"gitflic.ru/skif4er/launcher/services/api/internal/trustbaseline"
 	"log"
 	"net"
 	"net/http"
@@ -15,20 +15,20 @@ import (
 	"syscall"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/capacity"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/deployment"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/eventbus"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionga"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionhost"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionlifecycle"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionsecurity"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/httpapi"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sentrydiag"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/capacity"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/dbmigrate"
+	"gitflic.ru/skif4er/launcher/services/api/internal/deployment"
+	"gitflic.ru/skif4er/launcher/services/api/internal/eventbus"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionga"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionhost"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionlifecycle"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionsecurity"
+	"gitflic.ru/skif4er/launcher/services/api/internal/httpapi"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sentrydiag"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 var version = "dev"
@@ -135,7 +135,7 @@ func main() {
 			log.Fatal("Sentry backend reporting enabled without DSN")
 		}
 		var err error
-		diagnostics, err = sentrydiag.New(os.Getenv("NEVERLAUNCHER_SENTRY_BACKEND_DSN"), "neverlauncher@"+version+"+"+commit, cfg.Environment)
+		diagnostics, err = sentrydiag.New(os.Getenv("NEVERLAUNCHER_SENTRY_BACKEND_DSN"), "launcher@"+version+"+"+commit, cfg.Environment)
 		if err != nil {
 			log.Fatalf("invalid backend Sentry configuration: %v", err)
 		}
@@ -408,7 +408,7 @@ func main() {
 		log.Printf("Extensions Safe Mode active: --no-extensions; extension host/event execution is disabled")
 	}
 	log.Printf(
-		"NeverLauncher API %s слушает %s repository=%s storage=%s environment=%s",
+		"Launcher API %s слушает %s repository=%s storage=%s environment=%s",
 		version,
 		cfg.HTTPAddr,
 		cfg.RepositoryDriver+"("+cfg.SQLDriver+")",

@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/dbmigrate"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// SQLRepository — минимальная SQL-реализация Repository для PostgreSQL-схемы NeverLauncher.
+// SQLRepository — минимальная SQL-реализация Repository для PostgreSQL-схемы Launcher.
 //
 // Реализация намеренно ограничена: она охватывает основные производственные сущности API.
 // (projects, profiles, release_channels, release_versions, files, users, roles,
@@ -565,7 +565,7 @@ WHERE project_user_roles.role_id IS DISTINCT FROM EXCLUDED.role_id`, projectID, 
 	if strings.TrimSpace(user.PasswordHash) != "" {
 		identityID := "identity-local-" + user.ID
 		_, err = tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)
-VALUES($1,$2,'local','neverlauncher',$2,$3,$3,$4,'{}'::jsonb,now(),now())
+VALUES($1,$2,'local','launcher',$2,$3,$3,$4,'{}'::jsonb,now(),now())
 ON CONFLICT(user_id,provider,issuer) DO UPDATE SET email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,updated_at=now()
 WHERE auth_identities.subject=EXCLUDED.subject`, identityID, user.ID, user.Email, user.DisplayName)
 		if err != nil {
@@ -612,7 +612,7 @@ func (r *SQLRepository) SetUserPassword(id, passwordHash string) (model.User, er
 	}
 	if strings.TrimSpace(passwordHash) != "" {
 		if _, err := tx.Exec(`INSERT INTO auth_identities(id,user_id,provider,issuer,subject,email,username,display_name,claims,created_at,updated_at)
-VALUES($1,$2,'local','neverlauncher',$2,$3,$3,$4,'{}'::jsonb,now(),now())
+VALUES($1,$2,'local','launcher',$2,$3,$3,$4,'{}'::jsonb,now(),now())
 ON CONFLICT(user_id,provider,issuer) DO UPDATE SET email=EXCLUDED.email,username=EXCLUDED.username,display_name=EXCLUDED.display_name,updated_at=now()
 WHERE auth_identities.subject=EXCLUDED.subject`, "identity-local-"+id, id, email, displayName); err != nil {
 			return model.User{}, err
@@ -1716,7 +1716,7 @@ func (r *SQLRepository) SaveMinecraftProfile(item model.MinecraftProfile) (model
 	item.Subject = strings.TrimSpace(item.Subject)
 	item.IdentityVersion = strings.TrimSpace(item.IdentityVersion)
 	if item.Issuer == "" {
-		item.Issuer = "neverlauncher"
+		item.Issuer = "launcher"
 	}
 	if item.Realm == "" {
 		item.Realm = "local"

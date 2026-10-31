@@ -54,12 +54,12 @@ impl Drop for ActiveGuard {
 async fn normalized(root: &Path) -> Result<PathBuf, String> {
     fs::create_dir_all(root).await.map_err(|e| format!("create install root: {e}"))?;
     let resolved = fs::canonicalize(root).await.map_err(|e| format!("resolve install root: {e}"))?;
-    file_ownership::ensure_no_symlinks(&resolved, &resolved.join(".neverlauncher"))?;
+    file_ownership::ensure_no_symlinks(&resolved, &resolved.join(".launcher"))?;
     Ok(resolved)
 }
 
 fn journal_path(root: &Path, slot: usize) -> PathBuf {
-    root.join(".neverlauncher").join(format!("download-job-{slot}.json"))
+    root.join(".launcher").join(format!("download-job-{slot}.json"))
 }
 
 async fn read_slot(root: &Path, slot: usize) -> Option<SavedJob> {
@@ -83,7 +83,7 @@ async fn read(root: &Path) -> Option<SavedJob> {
 }
 
 async fn write(root: &Path, job: &SavedJob) -> Result<(), String> {
-    let dir = root.join(".neverlauncher");
+    let dir = root.join(".launcher");
     fs::create_dir_all(&dir).await.map_err(|e| format!("create journal directory: {e}"))?;
     crate::file_ownership::ensure_no_symlinks(root, &dir)?;
     let bytes = serde_json::to_vec(job).map_err(|e| format!("serialize job: {e}"))?;

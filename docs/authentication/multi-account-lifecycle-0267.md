@@ -1,4 +1,4 @@
-# NeverLauncher 0.26.7 — Official Minecraft multi-account and session lifecycle
+# Launcher 0.26.7 — Official Minecraft multi-account and session lifecycle
 
 ## Working behavior
 
@@ -12,7 +12,7 @@
 
 ## Security boundary and format
 
-Keyring service remains `NeverLauncher Official Minecraft 0.26.2` for compatible migration. Key identifiers are derived by SHA-256 from Backend origin and Never session identity. Account slots are `<scope>.account.<minecraft-uuid>`; the credential-free directory is `<scope>.directory.0267`. Each account uses the existing bounded OS-keyring chunked format, with random generation and SHA-256 integrity check. The metadata-only directory stores at most 16 lowercase 32-character Minecraft UUIDs and one active UUID. No plaintext JSON files, tokens in Tauri command results, or Browser localStorage.
+Keyring service remains `Launcher Official Minecraft 0.26.2` for compatible migration. Key identifiers are derived by SHA-256 from Backend origin and Never session identity. Account slots are `<scope>.account.<minecraft-uuid>`; the credential-free directory is `<scope>.directory.0267`. Each account uses the existing bounded OS-keyring chunked format, with random generation and SHA-256 integrity check. The metadata-only directory stores at most 16 lowercase 32-character Minecraft UUIDs and one active UUID. No plaintext JSON files, tokens in Tauri command results, or Browser localStorage.
 
 The 0.26.7 native vault remains scoped to the authenticated Never **session**, matching 0.26.2–0.26.6. This safely prevents accidental cross-Never-session reuse, but it does not yet share the accounts across unrelated Never sessions; cross-session Never identity linking is planned in 0.26.8. It is not an account-cloud sync feature.
 

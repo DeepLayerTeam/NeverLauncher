@@ -1,4 +1,4 @@
-# NeverLauncher 0.33.0 — Production Single-Node GA release & operations
+# Launcher 0.33.0 — Production Single-Node GA release & operations
 
 ## Release status and supported deployment modes
 
@@ -71,13 +71,13 @@ The report also needs passing observations of all 13 scenarios:
 The signed report is an externally produced JSON document, never generated
 as a passing fixture by the release pipeline. Its format is checked by
 `scripts/ga/single_node_ga_0330.py`: `schema` equals
-`neverlauncher-single-node-ga-attestation-v1`, `version` equals `0.33.0`,
+`launcher-single-node-ga-attestation-v1`, `version` equals `0.33.0`,
 `source_commit` equals the exact full Git SHA, `rc_receipt_sha256` equals the
 real RC file digest, `operator` identifies the independent verifier,
 `environment` has the required observed values, `checks` maps **all 13**
 scenario IDs to `pass`, and `tested_artifacts` pins three SHA-256 digests:
-`neverlauncher-api-linux-x64`, `neverlauncher-cli-linux-x64`, and
-`neverlauncher-linux-x64-0.33.0.tar.gz`. The release builder and verifier
+`launcher-api-linux-x64`, `launcher-cli-linux-x64`, and
+`launcher-linux-x64-0.33.0.tar.gz`. The release builder and verifier
 compare those hashes to the exact shipping artifact bytes, blocking
 substitution of an untested build. The operator signs the **exact raw JSON bytes** with
 a separately controlled Ed25519 key. The detached `.sig` contains the base64
@@ -127,10 +127,10 @@ public key in addition to the normal release root/trust policy:
 
 ```sh
 export NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE=/secure/trust/independent-ga.pub
-neverlauncher release verify /secure/release-0.33.0 \
+launcher release verify /secure/release-0.33.0 \
   --public-key /secure/trust/release-root.pub \
   --trust-policy /secure/trust/release-trust.json
-neverlauncher release publish-check /secure/release-0.33.0 \
+launcher release publish-check /secure/release-0.33.0 \
   --public-key /secure/trust/release-root.pub \
   --trust-policy /secure/trust/release-trust.json
 ```
@@ -147,13 +147,13 @@ stubs, downgraded modes, disabled tests or memory fallbacks.
 - **Start:** `python3 scripts/install/production-deploy.py compose check --mode standard`
   and then `... compose up --mode standard`; confirm health, readiness,
   logs, auth, admin and a real player join. Do not expose plaintext proxy ports.
-- **Observe:** `neverlauncher-api diagnose capacity`, `/metrics` through
+- **Observe:** `launcher-api diagnose capacity`, `/metrics` through
   authorized monitoring, queue/outbox age, disk headroom, HTTP p95/error rate,
   PostgreSQL connections and SQLite coordinator WAL/storage growth. Published
   capacity ceilings need target-host load measurements; synthetic RC tests do
   not produce them.
 - **Backup:** perform independent encrypted, off-host, restorable PostgreSQL
-  and local blob backups; use `neverlauncher-sqlite pre-upgrade` for the SQLite
+  and local blob backups; use `launcher-sqlite pre-upgrade` for the SQLite
   coordinator/Core where applicable. Validate restore to an isolated host.
   Never assume SQLite backup also backs up PostgreSQL or blobs.
 - **Upgrade:** pin the same BOM cohort, drain commands, record source/current

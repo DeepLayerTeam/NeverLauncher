@@ -1,5 +1,5 @@
--- NeverLauncher 0.10.0-P0: состояние безопасности установки и первоначальной инициализации.
-CREATE TABLE IF NOT EXISTS neverlauncher_installation_state (
+-- Launcher 0.10.0-P0: состояние безопасности установки и первоначальной инициализации.
+CREATE TABLE IF NOT EXISTS launcher_installation_state (
  singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK(singleton),
  bootstrap_token_hash TEXT NOT NULL DEFAULT '',
  bootstrap_token_used_at TIMESTAMPTZ,
@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS neverlauncher_installation_state (
  completed_at TIMESTAMPTZ,
  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-INSERT INTO neverlauncher_installation_state(singleton) VALUES(TRUE) ON CONFLICT(singleton) DO NOTHING;
-UPDATE neverlauncher_installation_state
+INSERT INTO launcher_installation_state(singleton) VALUES(TRUE) ON CONFLICT(singleton) DO NOTHING;
+UPDATE launcher_installation_state
 SET installation_completed = TRUE,
     completed_at = COALESCE(completed_at, now()),
     updated_at = now()

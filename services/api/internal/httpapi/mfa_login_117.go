@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 type loginMFAResult117 struct {
@@ -35,7 +35,7 @@ func authMethodStrength117(methods []string) string {
 func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp, recovery string) (loginMFAResult117, error) {
 	// A connector's authMethods (including signed HTTP claims and verified OIDC
 	// amr) report what the *upstream* provider did. They are not evidence that
-	// NeverLauncher verified a local TOTP, recovery code or passkey. In
+	// Launcher verified a local TOTP, recovery code or passkey. In
 	// particular a remote "passkey"/"mfa" string must never satisfy the local
 	// MFA policy or produce a privileged Never authStrength.
 	methods := mergeAuthMethods117(authconnector.SafeUpstreamAuthMethods(baseMethods))
@@ -46,7 +46,7 @@ func (s Server) evaluateLoginMFA117(user model.User, baseMethods []string, totp,
 	suppliedSecondFactor := strings.TrimSpace(totp) != "" || strings.TrimSpace(recovery) != ""
 
 	// PHISHING_RESISTANT специально контролируется локальной политикой. Заявление
-	// внешнего IdP о "mfa" не доказывает, что RP NeverLauncher проверил passkey.
+	// внешнего IdP о "mfa" не доказывает, что RP Launcher проверил passkey.
 	if policy == mfaPhishingResistant117 {
 		if passkeys == 0 {
 			return loginMFAResult117{}, errors.New("phishing-resistant MFA is required but no passkey is registered")

@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	extensions "gitflic.ru/skif4er/neverlauncher/sdk/backend/go"
+	extensions "gitflic.ru/skif4er/launcher/sdk/backend/go"
 )
 
 func main() {

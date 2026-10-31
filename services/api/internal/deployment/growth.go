@@ -15,9 +15,9 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/serverbridgeha"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/serverbridgeha"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 // GrowthReport represents actual external dependency checks; it is NOT a
@@ -200,8 +200,8 @@ func verifyS3Growth(ctx context.Context, cfg storage.S3Config) (err error) {
 	if err != nil {
 		return err
 	}
-	projectID, versionID, path := "neverlauncher-growth-check", nonce, "roundtrip.bin"
-	payload := []byte("neverlauncher-growth-v1:" + nonce)
+	projectID, versionID, path := "launcher-growth-check", nonce, "roundtrip.bin"
+	payload := []byte("launcher-growth-v1:" + nonce)
 	if _, _, err = writer.SaveContext(ctx, projectID, versionID, path, bytes.NewReader(payload)); err != nil {
 		return err
 	}

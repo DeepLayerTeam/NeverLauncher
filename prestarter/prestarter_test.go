@@ -28,7 +28,7 @@ func fakeArtifact(data []byte, uri string) Artifact {
 }
 func identityConfig(parts map[string][]byte) Config {
 	t := Target{OS: runtime.GOOS, Arch: runtime.GOARCH}
-	for _, name := range []string{"neverruntime", "desktop", "guard"} {
+	for _, name := range []string{"runtime", "desktop", "guard"} {
 		t.Components = append(t.Components, Component{Name: name, Artifact: fakeArtifact(parts[name], "https://example.invalid/"+name)})
 	}
 	return Config{SchemaVersion: "1.0", ProjectID: "hello", ProfileID: "vanilla", Channel: "stable", ProfilePublicKey: strings.Repeat("a", 64), Manifest: fakeArtifact(parts["profile-manifest.json"], "https://example.invalid/profile-manifest.json"), JavaManifest: fakeArtifact(parts["managed-jre/manifest.json"], "https://example.invalid/java-manifest.json"), Targets: []Target{t}}
@@ -51,7 +51,7 @@ func generateConfig(t *testing.T, cfg Config) ([]byte, string) {
 }
 func baseParts() map[string][]byte {
 	return map[string][]byte{
-		"neverruntime":              []byte("#!/bin/sh\ncase \"$1\" in\nverify) echo '{\"status\":\"ready\"}' ;;\njava) echo '{\"javaExecutable\":\"/verified/runtime/bin/java\",\"majorVersion\":21,\"distribution\":\"temurin\"}' ;;\nsync-local) echo '{\"status\":\"ready\"}' ;;\nlaunch) echo '{\"status\":\"ready\",\"success\":true}' ;;\n*) exit 7 ;;\nesac\n"),
+		"runtime":              []byte("#!/bin/sh\ncase \"$1\" in\nverify) echo '{\"status\":\"ready\"}' ;;\njava) echo '{\"javaExecutable\":\"/verified/runtime/bin/java\",\"majorVersion\":21,\"distribution\":\"temurin\"}' ;;\nsync-local) echo '{\"status\":\"ready\"}' ;;\nlaunch) echo '{\"status\":\"ready\",\"success\":true}' ;;\n*) exit 7 ;;\nesac\n"),
 		"desktop":                   []byte("#!/bin/sh\nexit 0\n"),
 		"guard":                []byte("#!/bin/sh\nexit 0\n"),
 		"profile-manifest.json":     []byte(`{"projectId":"hello","profileId":"vanilla","channel":"stable","runtime":{"java":{"majorVersion":21,"distribution":"temurin"},"launch":{"offlineMode":true}}}`),
@@ -350,7 +350,7 @@ func TestDesktopReceivesSignedFirstRunBinding(t *testing.T) {
 	if err := Run(context.Background(), opts); err != nil {
 		t.Fatal(err)
 	}
-	configDir := filepath.Join(opts.Root, ".neverlauncher-prestarter", "desktop-config")
+	configDir := filepath.Join(opts.Root, ".launcher-prestarter", "desktop-config")
 	raw, err := os.ReadFile(filepath.Join(configDir, "config.json"))
 	if err != nil {
 		t.Fatal(err)

@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // Run with TEST_PG_DSN_0251 pointing to an isolated PostgreSQL 17+ test DB.
@@ -51,8 +51,8 @@ func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 	if _, err := db.ExecContext(ctx, setup); err != nil {
 		t.Fatal(err)
 	}
-	p := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "account_a", Name: "AccountA", Realm: "local", Issuer: "neverlauncher"}
-	other := model.MinecraftProfile{UUID: "99999999-aaaa-4bbb-8ccc-dddddddddddd", UserID: "account_b", Name: "AccountB", Realm: "local", Issuer: "neverlauncher"}
+	p := model.MinecraftProfile{UUID: "11111111-2222-4333-8444-555555555555", UserID: "account_a", Name: "AccountA", Realm: "local", Issuer: "launcher"}
+	other := model.MinecraftProfile{UUID: "99999999-aaaa-4bbb-8ccc-dddddddddddd", UserID: "account_b", Name: "AccountB", Realm: "local", Issuer: "launcher"}
 	if _, err = db.ExecContext(ctx, `INSERT INTO users(id) VALUES ('account_a'),('account_b')`); err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +142,7 @@ func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 }
 
 func playerDerivedHashForTest0251(userID string) string {
-	sum := sha256.Sum256([]byte("neverlauncher-player:" + userID))
+	sum := sha256.Sum256([]byte("launcher-player:" + userID))
 	h := hex.EncodeToString(sum[:16])
 	return strings.Join([]string{h[:8], h[8:12], h[12:16], h[16:20], h[20:32]}, "-")
 }

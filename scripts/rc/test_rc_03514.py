@@ -1,197 +1,320 @@
 """Fail-closed RC harness tests. Fixtures only exercise the verifier, never sign GA."""
+
 import json
 from pathlib import Path
 import sys
 import tempfile
 import unittest
 
-sys.path.insert(0,str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gate_03514 import verify, GateBlocked, REQUIRED_NATIVE
 from native_03514 import process, pass_native, reject_native, RCBlocked, check_binary
 from operations_03514 import check_args, OperationsBlocked
 
-COMMIT='a'*40
-HEX='b'*64
+COMMIT = "a" * 40
+HEX = "b" * 64
 
 
 def fixtures(path):
-    native=path/'native'; desktop=path/'desktop'
-    native.mkdir(); desktop.mkdir()
-    for osname in ('linux','windows','darwin'):
-        (native/f'{osname}.json').write_text(json.dumps({
-            'schemaVersion':'neverlauncher.rc.native.v1', 'status':'passed', 'simulated':False,
-            'version':'0.35.14','commit':COMMIT,'platform':osname,
-            'runtimeSha256':HEX,'signerSha256':HEX,'signedFixtureSha256':HEX,
-            'fixtureBytes':128*1024,'checks':sorted(REQUIRED_NATIVE),
-            'certificationScope':'real native commands; not Minecraft/GUI E2E'}))
-        (desktop/f'{osname}.json').write_text(json.dumps({
-            'schemaVersion':'neverlauncher.rc.desktop-build.v1','status':'passed','simulated':False,
-            'version':'0.35.14','commit':COMMIT,'platform':osname,
-            'binarySha256':HEX,'binarySizeBytes':3_000_000,'frontendSha256':HEX,'frontendAssets':3}))
-    backend=path/'backend.json'
-    backend.write_text(json.dumps({'schemaVersion':'neverlauncher.owner-player-http-acceptance.v1',
-        'status':'local-loopback-passed', 'version':'0.35.14','realBackend':True,
-        'realMinecraftCertification':False,'nativeDesktopVerified':False,'stablePublicationVerified':False,
-        'checks':['real-backend-health-0351','unauthenticated-admin-mutation-denied',
-                  'real-admin-and-player-sign-in','player-accounts-protected',
-                  'owner-create-update-player-read-project','owner-create-player-discover-profile',
-                  'owner-create-player-discover-channel','unpublished-or-workspace-content-not-served',
-                  'refresh-rotation-and-logout-revocation']}))
-    return native,desktop,backend
+    native = path / "native"
+    desktop = path / "desktop"
+    native.mkdir()
+    desktop.mkdir()
+    for osname in ("linux", "windows", "darwin"):
+        (native / f"{osname}.json").write_text(
+            json.dumps(
+                {
+                    "schemaVersion": "launcher.rc.native.v1",
+                    "status": "passed",
+                    "simulated": False,
+                    "version": "0.35.14",
+                    "commit": COMMIT,
+                    "platform": osname,
+                    "runtimeSha256": HEX,
+                    "signerSha256": HEX,
+                    "signedFixtureSha256": HEX,
+                    "fixtureBytes": 128 * 1024,
+                    "checks": sorted(REQUIRED_NATIVE),
+                    "certificationScope": "real native commands; not Minecraft/GUI E2E",
+                }
+            )
+        )
+        (desktop / f"{osname}.json").write_text(
+            json.dumps(
+                {
+                    "schemaVersion": "launcher.rc.desktop-build.v1",
+                    "status": "passed",
+                    "simulated": False,
+                    "version": "0.35.14",
+                    "commit": COMMIT,
+                    "platform": osname,
+                    "binarySha256": HEX,
+                    "binarySizeBytes": 3_000_000,
+                    "frontendSha256": HEX,
+                    "frontendAssets": 3,
+                }
+            )
+        )
+    backend = path / "backend.json"
+    backend.write_text(
+        json.dumps(
+            {
+                "schemaVersion": "launcher.owner-player-http-acceptance.v1",
+                "status": "local-loopback-passed",
+                "version": "0.35.14",
+                "realBackend": True,
+                "realMinecraftCertification": False,
+                "nativeDesktopVerified": False,
+                "stablePublicationVerified": False,
+                "checks": [
+                    "real-backend-health-0351",
+                    "unauthenticated-admin-mutation-denied",
+                    "real-admin-and-player-sign-in",
+                    "player-accounts-protected",
+                    "owner-create-update-player-read-project",
+                    "owner-create-player-discover-profile",
+                    "owner-create-player-discover-channel",
+                    "unpublished-or-workspace-content-not-served",
+                    "refresh-rotation-and-logout-revocation",
+                ],
+            }
+        )
+    )
+    return native, desktop, backend
 
 
 class NativeRunnerTests(unittest.TestCase):
     def test_real_process_exit_and_rejection(self):
-        good=process(Path(sys.executable),'-c','import json; print(json.dumps({"status":"ready"}))')
-        self.assertEqual(pass_native(good)['status'],'ready')
+        good = process(
+            Path(sys.executable),
+            "-c",
+            'import json; print(json.dumps({"status":"ready"}))',
+        )
+        self.assertEqual(pass_native(good)["status"], "ready")
         with self.assertRaises(RCBlocked):
-            reject_native(good, 'a real ready result cannot be a rejection')
-        bad=process(Path(sys.executable),'-c','import json,sys; print(json.dumps({"status":"invalid"}));sys.exit(0)')
-        reject_native(bad, 'a native structured rejection must be accepted')
+            reject_native(good, "a real ready result cannot be a rejection")
+        bad = process(
+            Path(sys.executable),
+            "-c",
+            'import json,sys; print(json.dumps({"status":"invalid"}));sys.exit(0)',
+        )
+        reject_native(bad, "a native structured rejection must be accepted")
         with self.assertRaises(RCBlocked):
             pass_native(bad)
 
     def test_executable_absent_and_symlink_are_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
-            missing=Path(tmp)/'missing'
-            with self.assertRaises(RCBlocked):check_binary(missing)
-            link=Path(tmp)/'link'
+            missing = Path(tmp) / "missing"
+            with self.assertRaises(RCBlocked):
+                check_binary(missing)
+            link = Path(tmp) / "link"
             link.symlink_to(sys.executable)
-            with self.assertRaises(RCBlocked):check_binary(link)
+            with self.assertRaises(RCBlocked):
+                check_binary(link)
 
 
 class OperationsTests(unittest.TestCase):
     def test_requires_distinct_isolated_projects_and_protected_environment(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp)
-            env=root/'env';env.write_text('COMPOSE_PROJECT_NAME=some-staging-project')
+            root = Path(tmp)
+            env = root / "env"
+            env.write_text("COMPOSE_PROJECT_NAME=some-staging-project")
             with self.assertRaises(OperationsBlocked):
-                check_args('production','production','http://127.0.0.1:1/ready',
-                           'http://127.0.0.1:2/ready',env,root/'snapshot')
+                check_args(
+                    "production",
+                    "production",
+                    "http://127.0.0.1:1/ready",
+                    "http://127.0.0.1:2/ready",
+                    env,
+                    root / "snapshot",
+                )
             with self.assertRaises(OperationsBlocked):
-                check_args('nl-dr-source','nl-dr-target','http://127.0.0.1:1/ready',
-                           'http://127.0.0.1:1/ready',env,root/'snapshot')
+                check_args(
+                    "nl-dr-source",
+                    "nl-dr-target",
+                    "http://127.0.0.1:1/ready",
+                    "http://127.0.0.1:1/ready",
+                    env,
+                    root / "snapshot",
+                )
             with self.assertRaises(OperationsBlocked):
-                check_args('nl-dr-source','nl-dr-target','https://remote.example/ready',
-                           'http://127.0.0.1:2/ready',env,root/'snapshot')
+                check_args(
+                    "nl-dr-source",
+                    "nl-dr-target",
+                    "https://remote.example/ready",
+                    "http://127.0.0.1:2/ready",
+                    env,
+                    root / "snapshot",
+                )
             with self.assertRaises(OperationsBlocked):
-                check_args('nl-dr-source','nl-dr-target','http://127.0.0.1:1/ready',
-                           'http://127.0.0.1:2/ready',env,root/'snapshot')
+                check_args(
+                    "nl-dr-source",
+                    "nl-dr-target",
+                    "http://127.0.0.1:1/ready",
+                    "http://127.0.0.1:2/ready",
+                    env,
+                    root / "snapshot",
+                )
 
 
 class VerificationTests(unittest.TestCase):
     def test_three_platform_builds_and_true_backend_e2e(self):
         with tempfile.TemporaryDirectory() as tmp:
-            n,d,b=fixtures(Path(tmp))
-            report=verify(n,d,b,COMMIT,'0.35.14')
-            self.assertEqual(report['status'],'rc-source-checks-passed')
-            self.assertFalse(report['realMinecraftCertified'])
-            self.assertFalse(report['fullDisasterRecoveryCertified'])
+            n, d, b = fixtures(Path(tmp))
+            report = verify(n, d, b, COMMIT, "0.35.14")
+            self.assertEqual(report["status"], "rc-source-checks-passed")
+            self.assertFalse(report["realMinecraftCertified"])
+            self.assertFalse(report["fullDisasterRecoveryCertified"])
 
     def test_0360_same_executable_rc_checks_without_fabricated_ga(self):
         with tempfile.TemporaryDirectory() as tmp:
-            n,d,b=fixtures(Path(tmp))
-            for root in (n,d):
-                for file in root.glob('*.json'):
-                    obj=json.loads(file.read_text());obj['version']='0.36.0'
+            n, d, b = fixtures(Path(tmp))
+            for root in (n, d):
+                for file in root.glob("*.json"):
+                    obj = json.loads(file.read_text())
+                    obj["version"] = "0.36.0"
                     file.write_text(json.dumps(obj))
-            obj=json.loads(b.read_text());obj['version']='0.36.0'
+            obj = json.loads(b.read_text())
+            obj["version"] = "0.36.0"
             b.write_text(json.dumps(obj))
-            result=verify(n,d,b,COMMIT,'0.36.0')
-            self.assertEqual(result['status'],'rc-source-checks-passed')
-            self.assertFalse(result['realMinecraftCertified'])
+            result = verify(n, d, b, COMMIT, "0.36.0")
+            self.assertEqual(result["status"], "rc-source-checks-passed")
+            self.assertFalse(result["realMinecraftCertified"])
 
     def test_0361_same_real_source_rc_checks_without_ga_claim(self):
         with tempfile.TemporaryDirectory() as tmp:
-            n,d,b=fixtures(Path(tmp))
-            for root in (n,d):
-                for file in root.glob('*.json'):
-                    obj=json.loads(file.read_text());obj['version']='0.36.1'
+            n, d, b = fixtures(Path(tmp))
+            for root in (n, d):
+                for file in root.glob("*.json"):
+                    obj = json.loads(file.read_text())
+                    obj["version"] = "0.36.1"
                     file.write_text(json.dumps(obj))
-            obj=json.loads(b.read_text());obj['version']='0.36.1'
+            obj = json.loads(b.read_text())
+            obj["version"] = "0.36.1"
             b.write_text(json.dumps(obj))
-            result=verify(n,d,b,COMMIT,'0.36.1')
-            self.assertEqual(result['status'],'rc-source-checks-passed')
-            self.assertFalse(result['operatorSigned'])
+            result = verify(n, d, b, COMMIT, "0.36.1")
+            self.assertEqual(result["status"], "rc-source-checks-passed")
+            self.assertFalse(result["operatorSigned"])
 
-    def test_0362_requires_fresh_current_run_on_all_native_desktop_and_backend_receipts(self):
+    def test_0362_requires_fresh_current_run_on_all_native_desktop_and_backend_receipts(
+        self,
+    ):
         from datetime import datetime, timezone
         from unittest.mock import patch
-        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'release'))
+
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "release"))
         from certification_run import identity, CertificationBlocked
+
         sha = COMMIT
-        env = {'GITHUB_SHA': sha, 'GITHUB_REPOSITORY': 'DeepLayerTeam/NeverLauncher',
-               'GITHUB_RUN_ID': '777', 'GITHUB_RUN_ATTEMPT': '3'}
-        with tempfile.TemporaryDirectory() as tmp, patch.dict('os.environ', env, clear=True):
+        env = {
+            "GITHUB_SHA": sha,
+            "GITHUB_REPOSITORY": "DeepLayerTeam/Launcher",
+            "GITHUB_RUN_ID": "777",
+            "GITHUB_RUN_ATTEMPT": "3",
+        }
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.dict("os.environ", env, clear=True),
+        ):
             n, d, b = fixtures(Path(tmp))
-            evidence = identity('0.36.2', sha, env)
+            evidence = identity("0.36.2", sha, env)
             for root in (n, d):
-                for file in root.glob('*.json'):
+                for file in root.glob("*.json"):
                     doc = json.loads(file.read_text())
-                    doc['version'] = '0.36.2'
-                    doc['certificationRun'] = dict(evidence)
+                    doc["version"] = "0.36.2"
+                    doc["certificationRun"] = dict(evidence)
                     file.write_text(json.dumps(doc))
             backend = json.loads(b.read_text())
-            backend['version'] = '0.36.2'
-            backend['certificationRun'] = dict(evidence)
+            backend["version"] = "0.36.2"
+            backend["certificationRun"] = dict(evidence)
             b.write_text(json.dumps(backend))
-            receipt = verify(n, d, b, sha, '0.36.2')
-            self.assertEqual(receipt['certificationRun']['runAttempt'], 3)
-            old = json.loads((n / 'linux.json').read_text())
-            old['certificationRun']['runAttempt'] = 2
-            (n / 'linux.json').write_text(json.dumps(old))
+            receipt = verify(n, d, b, sha, "0.36.2")
+            self.assertEqual(receipt["certificationRun"]["runAttempt"], 3)
+            old = json.loads((n / "linux.json").read_text())
+            old["certificationRun"]["runAttempt"] = 2
+            (n / "linux.json").write_text(json.dumps(old))
             with self.assertRaises(CertificationBlocked):
-                verify(n, d, b, sha, '0.36.2')
-            (n / 'linux.json').write_text(json.dumps(dict(old, certificationRun=evidence)))
-            backend.pop('certificationRun')
+                verify(n, d, b, sha, "0.36.2")
+            (n / "linux.json").write_text(
+                json.dumps(dict(old, certificationRun=evidence))
+            )
+            backend.pop("certificationRun")
             b.write_text(json.dumps(backend))
             with self.assertRaises(CertificationBlocked):
-                verify(n, d, b, sha, '0.36.2')
+                verify(n, d, b, sha, "0.36.2")
 
     def deny(self, change):
         with tempfile.TemporaryDirectory() as tmp:
-            n,d,b=fixtures(Path(tmp))
-            change(n,d,b)
-            with self.assertRaises((GateBlocked,ValueError,TypeError,KeyError,FileNotFoundError)):
-                verify(n,d,b,COMMIT,'0.35.14')
+            n, d, b = fixtures(Path(tmp))
+            change(n, d, b)
+            with self.assertRaises(
+                (GateBlocked, ValueError, TypeError, KeyError, FileNotFoundError)
+            ):
+                verify(n, d, b, COMMIT, "0.35.14")
 
     def test_reject_missing_platform(self):
-        self.deny(lambda n,d,b: (n/'darwin.json').unlink())
+        self.deny(lambda n, d, b: (n / "darwin.json").unlink())
 
     def test_reject_wrong_commit(self):
-        def change(n,d,b):
-            f=d/'windows.json'; a=json.loads(f.read_text()); a['commit']='c'*40;f.write_text(json.dumps(a))
+        def change(n, d, b):
+            f = d / "windows.json"
+            a = json.loads(f.read_text())
+            a["commit"] = "c" * 40
+            f.write_text(json.dumps(a))
+
         self.deny(change)
 
     def test_reject_faked_native_success(self):
-        def change(n,d,b):
-            f=n/'linux.json'; a=json.loads(f.read_text()); a['simulated']=True;f.write_text(json.dumps(a))
+        def change(n, d, b):
+            f = n / "linux.json"
+            a = json.loads(f.read_text())
+            a["simulated"] = True
+            f.write_text(json.dumps(a))
+
         self.deny(change)
 
     def test_reject_missing_signature_negative_probe(self):
-        def change(n,d,b):
-            f=n/'linux.json'; a=json.loads(f.read_text()); a['checks'].remove('wrong-trust-root-denied');f.write_text(json.dumps(a))
+        def change(n, d, b):
+            f = n / "linux.json"
+            a = json.loads(f.read_text())
+            a["checks"].remove("wrong-trust-root-denied")
+            f.write_text(json.dumps(a))
+
         self.deny(change)
 
     def test_reject_swapped_platform(self):
-        def change(n,d,b):
-            f=n/'darwin.json'; a=json.loads(f.read_text()); a['platform']='linux';f.write_text(json.dumps(a))
+        def change(n, d, b):
+            f = n / "darwin.json"
+            a = json.loads(f.read_text())
+            a["platform"] = "linux"
+            f.write_text(json.dumps(a))
+
         self.deny(change)
 
     def test_reject_missing_real_backend_security_step(self):
-        def change(n,d,b):
-            a=json.loads(b.read_text());a['checks'].remove('unpublished-or-workspace-content-not-served');b.write_text(json.dumps(a))
+        def change(n, d, b):
+            a = json.loads(b.read_text())
+            a["checks"].remove("unpublished-or-workspace-content-not-served")
+            b.write_text(json.dumps(a))
+
         self.deny(change)
 
     def test_reject_false_claim_of_game_e2e(self):
-        def change(n,d,b):
-            a=json.loads(b.read_text());a['realMinecraftCertification']=True;b.write_text(json.dumps(a))
+        def change(n, d, b):
+            a = json.loads(b.read_text())
+            a["realMinecraftCertification"] = True
+            b.write_text(json.dumps(a))
+
         self.deny(change)
 
     def test_reject_symlinked_evidence(self):
-        def change(n,d,b):
-            file=n/'darwin.json';file.unlink();file.symlink_to(n/'linux.json')
+        def change(n, d, b):
+            file = n / "darwin.json"
+            file.unlink()
+            file.symlink_to(n / "linux.json")
+
         self.deny(change)
 
 
-if __name__=='__main__':unittest.main()
+if __name__ == "__main__":
+    unittest.main()

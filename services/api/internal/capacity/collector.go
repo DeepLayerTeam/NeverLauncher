@@ -70,30 +70,30 @@ func (c *Collector) Prometheus(w io.Writer) {
 	if r.Verified {
 		verified = 1
 	}
-	fmt.Fprintln(w, "# HELP neverlauncher_capacity_sample_verified 1 if last operational probe succeeded and is fresh\n# TYPE neverlauncher_capacity_sample_verified gauge")
-	fmt.Fprintf(w, "neverlauncher_capacity_sample_verified %d\n", verified)
-	fmt.Fprintf(w, "# TYPE neverlauncher_capacity_go_heap_bytes gauge\nneverlauncher_capacity_go_heap_bytes %d\n", r.GoHeapBytes)
-	fmt.Fprintf(w, "# TYPE neverlauncher_capacity_goroutines gauge\nneverlauncher_capacity_goroutines %d\n", r.Goroutines)
+	fmt.Fprintln(w, "# HELP launcher_capacity_sample_verified 1 if last operational probe succeeded and is fresh\n# TYPE launcher_capacity_sample_verified gauge")
+	fmt.Fprintf(w, "launcher_capacity_sample_verified %d\n", verified)
+	fmt.Fprintf(w, "# TYPE launcher_capacity_go_heap_bytes gauge\nlauncher_capacity_go_heap_bytes %d\n", r.GoHeapBytes)
+	fmt.Fprintf(w, "# TYPE launcher_capacity_goroutines gauge\nlauncher_capacity_goroutines %d\n", r.Goroutines)
 	if r.PostgreSQL != nil {
 		// Backwards-compatible legacy inventory counters, now from the cached
 		// SQL aggregate instead of materializing entire repository tables.
-		fmt.Fprintf(w, "# TYPE neverlauncher_projects_total gauge\nneverlauncher_projects_total %d\n", r.PostgreSQL.Projects)
-		fmt.Fprintf(w, "# TYPE neverlauncher_users_total gauge\nneverlauncher_users_total %d\n", r.PostgreSQL.Users)
-		fmt.Fprintf(w, "# TYPE neverlauncher_roles_total gauge\nneverlauncher_roles_total %d\n", r.PostgreSQL.Roles)
-		fmt.Fprintf(w, "# TYPE neverlauncher_audit_events_total gauge\nneverlauncher_audit_events_total %d\n", r.PostgreSQL.AuditEvents)
-		fmt.Fprintf(w, "# TYPE neverlauncher_telemetry_events_total gauge\nneverlauncher_telemetry_events_total %d\n", r.PostgreSQL.TelemetryEvents)
-		fmt.Fprintf(w, "# TYPE neverlauncher_crash_reports_total gauge\nneverlauncher_crash_reports_total %d\n", r.PostgreSQL.CrashReports)
-		fmt.Fprintf(w, "# TYPE neverlauncher_capacity_pg_connections gauge\nneverlauncher_capacity_pg_connections %d\n", r.PostgreSQL.ActiveConnections)
-		fmt.Fprintf(w, "# TYPE neverlauncher_capacity_pg_max_connections gauge\nneverlauncher_capacity_pg_max_connections %d\n", r.PostgreSQL.MaxConnections)
-		fmt.Fprintf(w, "# TYPE neverlauncher_capacity_pg_database_bytes gauge\nneverlauncher_capacity_pg_database_bytes %d\n", r.PostgreSQL.DatabaseBytes)
-		fmt.Fprintf(w, "# TYPE neverlauncher_capacity_jobs_pending gauge\nneverlauncher_capacity_jobs_pending %d\n", r.PostgreSQL.PendingJobs)
-		fmt.Fprintf(w, "# TYPE neverlauncher_capacity_jobs_expired_leases gauge\nneverlauncher_capacity_jobs_expired_leases %d\n", r.PostgreSQL.ExpiredJobLeases)
-		fmt.Fprintf(w, "# TYPE neverlauncher_capacity_outbox_pending gauge\nneverlauncher_capacity_outbox_pending %d\n", r.PostgreSQL.PendingOutbox)
+		fmt.Fprintf(w, "# TYPE launcher_projects_total gauge\nlauncher_projects_total %d\n", r.PostgreSQL.Projects)
+		fmt.Fprintf(w, "# TYPE launcher_users_total gauge\nlauncher_users_total %d\n", r.PostgreSQL.Users)
+		fmt.Fprintf(w, "# TYPE launcher_roles_total gauge\nlauncher_roles_total %d\n", r.PostgreSQL.Roles)
+		fmt.Fprintf(w, "# TYPE launcher_audit_events_total gauge\nlauncher_audit_events_total %d\n", r.PostgreSQL.AuditEvents)
+		fmt.Fprintf(w, "# TYPE launcher_telemetry_events_total gauge\nlauncher_telemetry_events_total %d\n", r.PostgreSQL.TelemetryEvents)
+		fmt.Fprintf(w, "# TYPE launcher_crash_reports_total gauge\nlauncher_crash_reports_total %d\n", r.PostgreSQL.CrashReports)
+		fmt.Fprintf(w, "# TYPE launcher_capacity_pg_connections gauge\nlauncher_capacity_pg_connections %d\n", r.PostgreSQL.ActiveConnections)
+		fmt.Fprintf(w, "# TYPE launcher_capacity_pg_max_connections gauge\nlauncher_capacity_pg_max_connections %d\n", r.PostgreSQL.MaxConnections)
+		fmt.Fprintf(w, "# TYPE launcher_capacity_pg_database_bytes gauge\nlauncher_capacity_pg_database_bytes %d\n", r.PostgreSQL.DatabaseBytes)
+		fmt.Fprintf(w, "# TYPE launcher_capacity_jobs_pending gauge\nlauncher_capacity_jobs_pending %d\n", r.PostgreSQL.PendingJobs)
+		fmt.Fprintf(w, "# TYPE launcher_capacity_jobs_expired_leases gauge\nlauncher_capacity_jobs_expired_leases %d\n", r.PostgreSQL.ExpiredJobLeases)
+		fmt.Fprintf(w, "# TYPE launcher_capacity_outbox_pending gauge\nlauncher_capacity_outbox_pending %d\n", r.PostgreSQL.PendingOutbox)
 	}
 	for _, d := range r.Disks {
 		// All names come from a closed set, never from request paths.
-		fmt.Fprintf(w, "neverlauncher_capacity_disk_available_bytes{volume=%q} %d\n", d.Name, d.AvailableBytes)
-		fmt.Fprintf(w, "neverlauncher_capacity_disk_available_ratio{volume=%q} %.6f\n", d.Name, d.AvailableFraction)
+		fmt.Fprintf(w, "launcher_capacity_disk_available_bytes{volume=%q} %d\n", d.Name, d.AvailableBytes)
+		fmt.Fprintf(w, "launcher_capacity_disk_available_ratio{volume=%q} %.6f\n", d.Name, d.AvailableFraction)
 	}
 	var warnings, critical int
 	for _, i := range r.Issues {
@@ -103,6 +103,6 @@ func (c *Collector) Prometheus(w io.Writer) {
 			warnings++
 		}
 	}
-	fmt.Fprintf(w, "# TYPE neverlauncher_capacity_warnings gauge\nneverlauncher_capacity_warnings %d\n", warnings)
-	fmt.Fprintf(w, "# TYPE neverlauncher_capacity_critical gauge\nneverlauncher_capacity_critical %d\n", critical)
+	fmt.Fprintf(w, "# TYPE launcher_capacity_warnings gauge\nlauncher_capacity_warnings %d\n", warnings)
+	fmt.Fprintf(w, "# TYPE launcher_capacity_critical gauge\nlauncher_capacity_critical %d\n", critical)
 }

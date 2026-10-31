@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 
-	gm "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitmodules"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gm "gitflic.ru/skif4er/launcher/services/api/internal/gravitmodules"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 func (r *SQLRepository) GetMigrationModules0338(ctx context.Context, runID string) (gm.Report, error) {

@@ -111,7 +111,7 @@ func decode(s string, limit int) ([]byte, error) {
 // ExpectedExtraData is a domain-separated hash of the entire challenge and
 // active session/device binding. TPM2_Commit/Certify extraData has bounded size.
 func ExpectedExtraData(b Binding) [32]byte {
-	p := fmt.Sprintf("NeverLauncher TPM Certify v1\nuser=%s\ndevice=%s\nsession=%s\nbinding-epoch=%d\nchallenge-id=%s\nchallenge=%s\nissued-at=%s\nexpires-at=%s\n", b.UserID, b.DeviceID, b.SessionID, b.BindingEpoch, b.ChallengeID, b.Challenge, b.IssuedAt.UTC().Format(time.RFC3339Nano), b.ExpiresAt.UTC().Format(time.RFC3339Nano))
+	p := fmt.Sprintf("Launcher TPM Certify v1\nuser=%s\ndevice=%s\nsession=%s\nbinding-epoch=%d\nchallenge-id=%s\nchallenge=%s\nissued-at=%s\nexpires-at=%s\n", b.UserID, b.DeviceID, b.SessionID, b.BindingEpoch, b.ChallengeID, b.Challenge, b.IssuedAt.UTC().Format(time.RFC3339Nano), b.ExpiresAt.UTC().Format(time.RFC3339Nano))
 	return sha256.Sum256([]byte(p))
 }
 func parsePublic(raw []byte) ([]byte, []byte, error) {

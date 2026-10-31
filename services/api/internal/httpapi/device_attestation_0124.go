@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 const (
@@ -46,7 +46,7 @@ func sanitizeAttestationFreshness0124(device model.TrustedDevice) model.TrustedD
 }
 
 func deviceAttestationPayload0124(challenge string, challengeRecord model.DeviceChallenge, device model.TrustedDevice, sessionID string, validUntil time.Time) string {
-	return "NeverLauncher Device Attestation v1\n" +
+	return "Launcher Device Attestation v1\n" +
 		"purpose=attest\n" +
 		"challenge=" + strings.TrimSpace(challenge) + "\n" +
 		"user=" + strings.TrimSpace(device.UserID) + "\n" +

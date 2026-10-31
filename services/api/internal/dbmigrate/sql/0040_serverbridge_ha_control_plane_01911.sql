@@ -1,4 +1,4 @@
--- NeverLauncher 0.19.11: последовательность операций управляющего сервиса HA ServerBridge и владение с защитой от устаревших исполнителей.
+-- Launcher 0.19.11: последовательность операций управляющего сервиса HA ServerBridge и владение с защитой от устаревших исполнителей.
 ALTER TABLE server_bridge_control_commands_v3
     ADD COLUMN IF NOT EXISTS delivery_sequence BIGSERIAL,
     ADD COLUMN IF NOT EXISTS lease_owner TEXT NOT NULL DEFAULT '',

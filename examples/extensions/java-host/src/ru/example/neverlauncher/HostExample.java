@@ -1,8 +1,8 @@
-package ru.example.neverlauncher;
+package ru.example.launcher;
 
 import java.util.Map;
-import ru.neverlauncher.sdk.core.Extension;
-import ru.neverlauncher.sdk.core.ExtensionContext;
+import ru.launcher.sdk.core.Extension;
+import ru.launcher.sdk.core.ExtensionContext;
 
 /** Runnable JVM-host integration fixture; executes typed commands on live RPC requests. */
 public final class HostExample implements Extension {

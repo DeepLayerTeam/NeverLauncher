@@ -14,7 +14,7 @@ security:
   failMode: "closed"
   requireLauncherSession: true
   requireIntegrity: true
-  identityFile: "config/neverlauncher-neoforge-bridge/node-identity.properties"
+  identityFile: "config/launcher-neoforge-bridge/node-identity.properties"
 heartbeat:
   intervalSeconds: 30
 

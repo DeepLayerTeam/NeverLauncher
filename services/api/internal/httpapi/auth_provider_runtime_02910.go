@@ -10,15 +10,15 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authrequest"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/httpconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/microsoftconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/oidcconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/sqlconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/conformance"
+	"gitflic.ru/skif4er/launcher/services/api/internal/authrequest"
+	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
+	"gitflic.ru/skif4er/launcher/services/api/internal/httpconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/microsoftconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/oidcconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/sqlconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector/conformance"
 )
 
 type managedProbe02910 struct {

@@ -9,10 +9,10 @@ import (
 	"sync"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/config"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/config"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 func decodeMap119(t *testing.T, body *bytes.Buffer) map[string]any {
@@ -129,7 +129,7 @@ func TestMinecraftAuth119NeverSessionExchangeJoinAndParentRevoke(t *testing.T) {
 
 func TestMinecraftAuth119YggdrasilPasswordUsesFederationCore(t *testing.T) {
 	handler := testServer(t)
-	body := `{"username":"admin@neverlauncher.local","password":"admin","clientToken":"legacy-client","requestUser":true}`
+	body := `{"username":"admin@launcher.local","password":"admin","clientToken":"legacy-client","requestUser":true}`
 	r := httptest.NewRequest(http.MethodPost, "/authserver/authenticate", strings.NewReader(body))
 	v := httptest.NewRecorder()
 	handler.ServeHTTP(v, r)
@@ -151,7 +151,7 @@ func TestMinecraftAuth119YggdrasilPasswordUsesFederationCore(t *testing.T) {
 
 func TestMinecraftAuth119RefreshConsumesOldToken(t *testing.T) {
 	handler := testServer(t)
-	auth := httptest.NewRequest(http.MethodPost, "/authserver/authenticate", strings.NewReader(`{"username":"admin@neverlauncher.local","password":"admin","clientToken":"refresh-client"}`))
+	auth := httptest.NewRequest(http.MethodPost, "/authserver/authenticate", strings.NewReader(`{"username":"admin@launcher.local","password":"admin","clientToken":"refresh-client"}`))
 	av := httptest.NewRecorder()
 	handler.ServeHTTP(av, auth)
 	if av.Code != http.StatusOK {
@@ -175,7 +175,7 @@ func TestMinecraftAuth119RefreshConsumesOldToken(t *testing.T) {
 }
 
 func TestMinecraftAuth119PlayerRoleCanExchangeSession(t *testing.T) {
-	cfg := config.Config{PublicURL: "http://example.test", RepositoryDriver: "memory", StorageDriver: "local", StorageLocalPath: t.TempDir(), BackupRoot: t.TempDir(), Environment: "test", AuthTokenSecret: "test-secret-player-119", WebAuthnRPID: "example.test", WebAuthnRPName: "NeverLauncher Test", WebAuthnOrigins: []string{"http://example.test"}}
+	cfg := config.Config{PublicURL: "http://example.test", RepositoryDriver: "memory", StorageDriver: "local", StorageLocalPath: t.TempDir(), BackupRoot: t.TempDir(), Environment: "test", AuthTokenSecret: "test-secret-player-119", WebAuthnRPID: "example.test", WebAuthnRPName: "Launcher Test", WebAuthnOrigins: []string{"http://example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	user, err := repo.SaveUser(model.User{Email: "player@example.test", DisplayName: "Player119", RoleID: "player", Status: "active", PasswordHash: hashPassword("player-password")})
 	if err != nil {
@@ -205,7 +205,7 @@ func TestMinecraftAuth119PlayerRoleCanExchangeSession(t *testing.T) {
 
 func TestMinecraftAuth119ExchangeRejectsMalformedJSON(t *testing.T) {
 	handler := testServer(t)
-	login := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"admin@neverlauncher.local","password":"admin"}`))
+	login := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", strings.NewReader(`{"email":"admin@launcher.local","password":"admin"}`))
 	login.Header.Set("Content-Type", "application/json")
 	lr := httptest.NewRecorder()
 	handler.ServeHTTP(lr, login)
@@ -226,7 +226,7 @@ func TestMinecraftAuth119ExchangeRejectsMalformedJSON(t *testing.T) {
 }
 
 func TestMinecraftProfile119StableAcrossEmailChange(t *testing.T) {
-	cfg := config.Config{PublicURL: "http://example.test", RepositoryDriver: "memory", StorageDriver: "local", StorageLocalPath: t.TempDir(), BackupRoot: t.TempDir(), Environment: "test", AuthTokenSecret: "test-secret-profile-119", WebAuthnRPID: "example.test", WebAuthnRPName: "NeverLauncher Test", WebAuthnOrigins: []string{"http://example.test"}}
+	cfg := config.Config{PublicURL: "http://example.test", RepositoryDriver: "memory", StorageDriver: "local", StorageLocalPath: t.TempDir(), BackupRoot: t.TempDir(), Environment: "test", AuthTokenSecret: "test-secret-profile-119", WebAuthnRPID: "example.test", WebAuthnRPName: "Launcher Test", WebAuthnOrigins: []string{"http://example.test"}}
 	repo := repository.NewMemoryRepository(cfg.PublicURL)
 	user, err := repo.SaveUser(model.User{Email: "first@example.test", DisplayName: "Stable119", RoleID: "player", Status: "active", PasswordHash: hashPassword("pw")})
 	if err != nil {
@@ -257,7 +257,7 @@ func TestYggdrasilMetadata119RootIsExact(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	v := httptest.NewRecorder()
 	h.ServeHTTP(v, r)
-	if v.Code != http.StatusOK || !strings.Contains(v.Body.String(), "NeverLauncher") {
+	if v.Code != http.StatusOK || !strings.Contains(v.Body.String(), "Launcher") {
 		t.Fatalf("root metadata=%d %s", v.Code, v.Body.String())
 	}
 	metadata := decodeMap119(t, v.Body)

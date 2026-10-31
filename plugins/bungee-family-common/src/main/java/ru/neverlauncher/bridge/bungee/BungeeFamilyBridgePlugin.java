@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.bungee;
+package ru.launcher.bridge.bungee;
 
 import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.ProxyServer;
@@ -14,13 +14,13 @@ import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.scheduler.ScheduledTask;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
-import ru.neverlauncher.bridge.common.BridgeDefaults;
-import ru.neverlauncher.bridge.common.BridgeControlCommand;
-import ru.neverlauncher.bridge.common.BridgeControlResult;
-import ru.neverlauncher.bridge.common.BridgeRuntimeDescriptor;
-import ru.neverlauncher.bridge.common.BridgePlatformTelemetry;
-import ru.neverlauncher.bridge.common.JoinValidationResult;
-import ru.neverlauncher.bridge.proxy.ProxyBridgeRuntime;
+import ru.launcher.bridge.common.BridgeDefaults;
+import ru.launcher.bridge.common.BridgeControlCommand;
+import ru.launcher.bridge.common.BridgeControlResult;
+import ru.launcher.bridge.common.BridgeRuntimeDescriptor;
+import ru.launcher.bridge.common.BridgePlatformTelemetry;
+import ru.launcher.bridge.common.JoinValidationResult;
+import ru.launcher.bridge.proxy.ProxyBridgeRuntime;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -50,7 +50,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         ProxyServer proxy = getProxy();
         BungeeFamilyPlatform actual = BungeeFamilyPlatform.detect(proxy);
         if (actual != expectedPlatform) {
-            throw new IllegalStateException("NeverLauncher " + expectedPlatform.displayName() + " Bridge cannot run on detected platform " + actual.displayName() + "; install neverlauncher-" + actual.id() + "-bridge instead");
+            throw new IllegalStateException("Launcher " + expectedPlatform.displayName() + " Bridge cannot run on detected platform " + actual.displayName() + "; install launcher-" + actual.id() + "-bridge instead");
         }
         try {
             Path configPath = getDataFolder().toPath().resolve("config.yml");
@@ -81,7 +81,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
             next.startControlChannel(this::executeControl);
             scheduleTelemetry(proxy, next);
         } catch (Exception e) {
-            throw new IllegalStateException("NeverLauncher ServerBridge initialization failed: " + e.getMessage(), e);
+            throw new IllegalStateException("Launcher ServerBridge initialization failed: " + e.getMessage(), e);
         }
         proxy.getPluginManager().registerListener(this, this);
         proxy.getPluginManager().registerCommand(this, new BridgeCommand());
@@ -138,7 +138,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         ProxyBridgeRuntime current = runtime;
         if (current == null) {
             event.setCancelled(true);
-            event.setCancelReason(TextComponent.fromLegacyText("NeverLauncher ServerBridge is not ready"));
+            event.setCancelReason(TextComponent.fromLegacyText("Launcher ServerBridge is not ready"));
             return;
         }
         event.registerIntent(this);
@@ -161,9 +161,9 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                 if (!finalResult.allowed) {
                     event.setCancelled(true);
                     event.setCancelReason(TextComponent.fromLegacyText(finalResult.userMessage()));
-                    getLogger().info("neverlauncher.join.denied username=" + username + " reason=" + finalResult.reason + " platform=" + expectedPlatform.id());
+                    getLogger().info("launcher.join.denied username=" + username + " reason=" + finalResult.reason + " platform=" + expectedPlatform.id());
                 } else {
-                    getLogger().info("neverlauncher.join.allowed username=" + username + " serverId=" + current.serverId() + " platform=" + expectedPlatform.id());
+                    getLogger().info("launcher.join.allowed username=" + username + " serverId=" + current.serverId() + " platform=" + expectedPlatform.id());
                 }
             } finally {
                 event.completeIntent(this);
@@ -179,8 +179,8 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
         if (current == null || !current.confirmAuthenticatedPlayer(username, uuid)) {
             event.setCancelled(true);
             event.setCancelReason(TextComponent.fromLegacyText(
-                "NeverLauncher authenticated Minecraft UUID does not match the launcher session"));
-            getLogger().warning("neverlauncher.join.uuid-denied username=" + username + " platform=" + expectedPlatform.id());
+                "Launcher authenticated Minecraft UUID does not match the launcher session"));
+            getLogger().warning("launcher.join.uuid-denied username=" + username + " platform=" + expectedPlatform.id());
         }
     }
 
@@ -235,8 +235,8 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                     if (!decision.allowed) {
                         inFlightHandoffs.remove(playerKey, token);
                         player.sendMessage(TextComponent.fromLegacyText(
-                            "NeverLauncher handoff denied: " + decision.reason));
-                        getLogger().info("neverlauncher.handoff.denied username=" + username +
+                            "Launcher handoff denied: " + decision.reason));
+                        getLogger().info("launcher.handoff.denied username=" + username +
                             " target=" + target + " reason=" + decision.reason);
                         return;
                     }
@@ -244,7 +244,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                     // connect. Never silently try another server with this ticket.
                     if (getProxy().getServerInfo(target) != serverInfo) {
                         inFlightHandoffs.remove(playerKey, token);
-                        player.sendMessage(TextComponent.fromLegacyText("NeverLauncher target topology changed"));
+                        player.sendMessage(TextComponent.fromLegacyText("Launcher target topology changed"));
                         return;
                     }
                     preparedHandoffs.put(key, System.currentTimeMillis() + 30_000L);
@@ -252,19 +252,19 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                         player.connect(serverInfo, (success, throwable) -> {
                             preparedHandoffs.remove(key);
                             inFlightHandoffs.remove(playerKey, token);
-                            if (!success) getLogger().warning("neverlauncher.handoff.connect-failed username=" +
+                            if (!success) getLogger().warning("launcher.handoff.connect-failed username=" +
                                 username + " target=" + target);
                         }, reason);
                     } catch (RuntimeException failure) {
                         preparedHandoffs.remove(key);
                         inFlightHandoffs.remove(playerKey, token);
-                        getLogger().warning("neverlauncher.handoff.connect-error target=" + target +
+                        getLogger().warning("launcher.handoff.connect-error target=" + target +
                             " error=" + failure.getMessage());
                     }
                 }, 0L, TimeUnit.MILLISECONDS);
             } catch (RuntimeException failure) {
                 inFlightHandoffs.remove(playerKey, token);
-                getLogger().warning("neverlauncher.handoff.schedule-error target=" + target);
+                getLogger().warning("launcher.handoff.schedule-error target=" + target);
             }
         });
     }
@@ -304,7 +304,7 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
                 return BridgeControlResult.ok(Map.of("recipients", Integer.toString(recipients)));
             }
             case "server.shutdown" -> {
-                String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by NeverLauncher"), 512);
+                String reason = safeLine(payload.getOrDefault("reason", "Shutdown requested by Launcher"), 512);
                 getProxy().getScheduler().schedule(this, () -> getProxy().stop(reason), 1500L, TimeUnit.MILLISECONDS);
                 return BridgeControlResult.accepted(Map.of("scheduled", "true", "graceMillis", "1500"));
             }
@@ -346,45 +346,45 @@ public abstract class BungeeFamilyBridgePlugin extends Plugin implements Listene
 
     private final class BridgeCommand extends Command {
         private BridgeCommand() {
-            super("nlbridge", "neverlauncher.bridge.status");
+            super("nlbridge", "launcher.bridge.status");
         }
 
         @Override
         public void execute(CommandSender sender, String[] args) {
             ProxyBridgeRuntime current = runtime;
             if (current == null) {
-                sender.sendMessage(TextComponent.fromLegacyText("NeverLauncher ServerBridge is not initialized"));
+                sender.sendMessage(TextComponent.fromLegacyText("Launcher ServerBridge is not initialized"));
                 return;
             }
             String sub = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
             switch (sub) {
-                case "status" -> sender.sendMessage(TextComponent.fromLegacyText("NeverLauncher " + expectedPlatform.displayName() + " Bridge " + BridgeDefaults.VERSION + " serverId=" + current.serverId() + " backend=" + current.backendUrl() + " heartbeat=" + current.heartbeatStatus()));
+                case "status" -> sender.sendMessage(TextComponent.fromLegacyText("Launcher " + expectedPlatform.displayName() + " Bridge " + BridgeDefaults.VERSION + " serverId=" + current.serverId() + " backend=" + current.backendUrl() + " heartbeat=" + current.heartbeatStatus()));
                 case "test" -> {
-                    if (!sender.hasPermission("neverlauncher.bridge.admin")) {
-                        sender.sendMessage(TextComponent.fromLegacyText("Недостаточно прав: neverlauncher.bridge.admin"));
+                    if (!sender.hasPermission("launcher.bridge.admin")) {
+                        sender.sendMessage(TextComponent.fromLegacyText("Недостаточно прав: launcher.bridge.admin"));
                         return;
                     }
                     current.triggerHeartbeat();
-                    sender.sendMessage(TextComponent.fromLegacyText("NeverLauncher heartbeat queued; last=" + current.heartbeatStatus()));
+                    sender.sendMessage(TextComponent.fromLegacyText("Launcher heartbeat queued; last=" + current.heartbeatStatus()));
                 }
                 case "reload" -> {
-                    if (!sender.hasPermission("neverlauncher.bridge.reload")) {
-                        sender.sendMessage(TextComponent.fromLegacyText("Недостаточно прав: neverlauncher.bridge.reload"));
+                    if (!sender.hasPermission("launcher.bridge.reload")) {
+                        sender.sendMessage(TextComponent.fromLegacyText("Недостаточно прав: launcher.bridge.reload"));
                         return;
                     }
                     try {
                         current.reload();
-                        sender.sendMessage(TextComponent.fromLegacyText("NeverLauncher bridge configuration reloaded; serverId=" + current.serverId() + " nodeKeyFingerprint=" + current.fingerprint()));
+                        sender.sendMessage(TextComponent.fromLegacyText("Launcher bridge configuration reloaded; serverId=" + current.serverId() + " nodeKeyFingerprint=" + current.fingerprint()));
                     } catch (Exception e) {
-                        sender.sendMessage(TextComponent.fromLegacyText("NeverLauncher reload failed; previous runtime kept active: " + e.getMessage()));
+                        sender.sendMessage(TextComponent.fromLegacyText("Launcher reload failed; previous runtime kept active: " + e.getMessage()));
                     }
                 }
                 case "diagnostics" -> {
-                    if (!sender.hasPermission("neverlauncher.bridge.diagnostics")) {
-                        sender.sendMessage(TextComponent.fromLegacyText("Недостаточно прав: neverlauncher.bridge.diagnostics"));
+                    if (!sender.hasPermission("launcher.bridge.diagnostics")) {
+                        sender.sendMessage(TextComponent.fromLegacyText("Недостаточно прав: launcher.bridge.diagnostics"));
                         return;
                     }
-                    sender.sendMessage(TextComponent.fromLegacyText("NeverLauncher diagnostics: detected=" + BungeeFamilyPlatform.detect(getProxy()).id() + ", " + current.diagnostics()));
+                    sender.sendMessage(TextComponent.fromLegacyText("Launcher diagnostics: detected=" + BungeeFamilyPlatform.detect(getProxy()).id() + ", " + current.diagnostics()));
                 }
                 default -> sender.sendMessage(TextComponent.fromLegacyText("Команды: /nlbridge status | test | reload | diagnostics"));
             }

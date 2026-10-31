@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 const serverBridgePlayerSessionControlActor0197 = "serverbridge-player-session"
@@ -90,7 +90,7 @@ func (r *SQLRepository) invalidatePlayerSessionRowTx0197(ctx context.Context, tx
 	if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=$2 WHERE session_correlation_id=$1 AND status='active'`, correlationID, now.UTC()); err != nil {
 		return false, err
 	}
-	kickReason := "NeverLauncher session invalidated"
+	kickReason := "Launcher session invalidated"
 	if strings.TrimSpace(reason) != "" {
 		kickReason += ": " + strings.TrimSpace(reason)
 	}
@@ -253,7 +253,7 @@ func (r *SQLRepository) consumePlayerTransferTx0197(ctx context.Context, tx *sql
 		return err
 	}
 	if oldBackend != "" && oldBackend != h.TargetNodeID {
-		if err = r.queuePlayerKickTx0197(ctx, tx, correlationID, username, oldBackend, oldBackendRuntime, oldBackendEpoch, "NeverLauncher backend transfer completed", now); err != nil {
+		if err = r.queuePlayerKickTx0197(ctx, tx, correlationID, username, oldBackend, oldBackendRuntime, oldBackendEpoch, "Launcher backend transfer completed", now); err != nil {
 			return err
 		}
 	}

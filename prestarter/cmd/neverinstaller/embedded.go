@@ -26,7 +26,7 @@ func unpackEmbedded() (string, bool, error) {
 	if len(reader.File) == 0 {
 		return "", false, nil
 	}
-	tmp, err := os.MkdirTemp("", "neverlauncher-verified-installer-*")
+	tmp, err := os.MkdirTemp("", "launcher-verified-installer-*")
 	if err != nil {
 		return "", false, err
 	}

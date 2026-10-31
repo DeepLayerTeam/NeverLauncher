@@ -1,4 +1,4 @@
-name: NeverLauncher CI
+name: Launcher CI
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: neverlauncher-ci-${{ github.workflow }}-${{ github.ref }}
+  group: launcher-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -113,7 +113,7 @@ jobs:
         run: |
           go test -race ./...
           go vet ./...
-          go build -trimpath -o /tmp/nl ./cmd/neverlauncher
+          go build -trimpath -o /tmp/nl ./cmd/launcher
           /tmp/nl update self-test
           /tmp/nl update component-self-test
           /tmp/nl update stabilization-self-test
@@ -124,7 +124,7 @@ jobs:
         run: |
           go test -race ./...
           go vet ./...
-          go build -trimpath ./cmd/neverlauncher-api
+          go build -trimpath ./cmd/launcher-api
       - name: Federation E2E release matrix
         run: python3 scripts/test/federation-e2e.py
 
@@ -161,10 +161,10 @@ jobs:
           npm run test:launch-modes
       - name: Type-check Extensions TypeScript SDKs
         run: |
-          apps/admin/node_modules/.bin/tsc --noEmit --strict --target ES2020 --module ESNext --moduleResolution Bundler --lib ES2020,DOM sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/admin/typescript/neverlauncher-admin.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/typescript/neverlauncher-desktop.ts
+          apps/admin/node_modules/.bin/tsc --noEmit --strict --target ES2020 --module ESNext --moduleResolution Bundler --lib ES2020,DOM sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/admin/typescript/launcher-admin.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/typescript/launcher-desktop.ts
 
   rust-desktop:
-    name: NeverRuntime and Tauri
+    name: Runtime and Tauri
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
@@ -188,16 +188,16 @@ jobs:
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev
       - name: Normalize Rust source formatting
         run: |
-          cargo fmt --manifest-path runtime/neverruntime/Cargo.toml
+          cargo fmt --manifest-path runtime/runtime/Cargo.toml
           cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - name: NeverRuntime + Guard Linux test and clippy
+      - name: Runtime + Guard Linux test and clippy
         run: |
           python3 scripts/smoke/offline/linux-production-implementation-0137.py
           python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_linux -- --nocapture
-          cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
-          cargo build --release --manifest-path runtime/neverruntime/Cargo.toml
+          cargo test --manifest-path runtime/runtime/Cargo.toml
+          cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_linux -- --nocapture
+          cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings
+          cargo build --release --manifest-path runtime/runtime/Cargo.toml
       - name: Build Desktop Tauri
         working-directory: apps/desktop
         run: |
@@ -217,8 +217,8 @@ jobs:
           python3 scripts/guard_ci/matrix.py result \
             --targets guard-ci/targets.json \
             --target-id guard-linux-amd64 \
-            --package "${DIR}/neverlauncher-desktop-${VERSION}-linux-amd64.zip" \
-            --launcher "${DIR}/neverlauncher-desktop-linux-amd64" \
+            --package "${DIR}/launcher-desktop-${VERSION}-linux-amd64.zip" \
+            --launcher "${DIR}/launcher-desktop-linux-amd64" \
             --guard "${DIR}/guard-linux-amd64" \
             --manifest "${DIR}/LINUX_PACKAGE_MANIFEST.json" \
             --allowlist "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json" \
@@ -228,10 +228,10 @@ jobs:
       - name: Upload Linux Guard package
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-linux-guard-${{ github.sha }}
+          name: launcher-linux-guard-${{ github.sha }}
           path: |
-            dist/release-*/neverlauncher-desktop-*-linux-amd64.zip
-            dist/release-*/neverlauncher-desktop-linux-amd64
+            dist/release-*/launcher-desktop-*-linux-amd64.zip
+            dist/release-*/launcher-desktop-linux-amd64
             dist/release-*/guard-linux-amd64
             dist/release-*/LINUX_PACKAGE_MANIFEST.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_LINUX.json
@@ -297,27 +297,27 @@ jobs:
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
           DIR="dist/release-${VERSION}"
-          test -s "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}"
-          test -s "${DIR}/neverlauncher-api-linux-${{ matrix.arch }}"
-          test -s "${DIR}/neverlauncher-desktop-linux-${{ matrix.arch }}"
+          test -s "${DIR}/launcher-cli-linux-${{ matrix.arch }}"
+          test -s "${DIR}/launcher-api-linux-${{ matrix.arch }}"
+          test -s "${DIR}/launcher-desktop-linux-${{ matrix.arch }}"
           test -s "${DIR}/guard-linux-${{ matrix.arch }}"
-          test -s "${DIR}/neverruntime-linux-${{ matrix.arch }}"
-          test -s "${DIR}/neverlauncher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
-          python3 scripts/release/secret-scan.py "${DIR}/neverlauncher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
-          "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}" update self-test
-          "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}" update component-self-test
-          "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}" update stabilization-self-test
+          test -s "${DIR}/runtime-linux-${{ matrix.arch }}"
+          test -s "${DIR}/launcher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
+          python3 scripts/release/secret-scan.py "${DIR}/launcher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
+          "${DIR}/launcher-cli-linux-${{ matrix.arch }}" update self-test
+          "${DIR}/launcher-cli-linux-${{ matrix.arch }}" update component-self-test
+          "${DIR}/launcher-cli-linux-${{ matrix.arch }}" update stabilization-self-test
       - name: Upload native Linux production artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-linux-production-${{ matrix.arch }}-${{ github.sha }}
+          name: launcher-linux-production-${{ matrix.arch }}-${{ github.sha }}
           path: |
-            dist/release-*/neverlauncher-cli-linux-${{ matrix.arch }}
-            dist/release-*/neverlauncher-api-linux-${{ matrix.arch }}
-            dist/release-*/neverlauncher-desktop-linux-${{ matrix.arch }}
+            dist/release-*/launcher-cli-linux-${{ matrix.arch }}
+            dist/release-*/launcher-api-linux-${{ matrix.arch }}
+            dist/release-*/launcher-desktop-linux-${{ matrix.arch }}
             dist/release-*/guard-linux-${{ matrix.arch }}
-            dist/release-*/neverruntime-linux-${{ matrix.arch }}
-            dist/release-*/neverlauncher-linux-${{ matrix.arch }}-*.tar.gz
+            dist/release-*/runtime-linux-${{ matrix.arch }}
+            dist/release-*/launcher-linux-${{ matrix.arch }}-*.tar.gz
             dist/release-*/LINUX_PACKAGE_MANIFEST_*.json
           if-no-files-found: error
           retention-days: 14
@@ -366,7 +366,7 @@ jobs:
           go test ./internal/dbmigrate -run 'TestGuardAttestationV2Migration01810' -count=1
           cd ../..
           python scripts/smoke/offline/guard-ci-release-certification-0139.py
-          cargo fmt --manifest-path runtime/neverruntime/Cargo.toml
+          cargo fmt --manifest-path runtime/runtime/Cargo.toml
           cargo fmt --manifest-path runtime/guard-sensor/Cargo.toml
           cargo fmt --manifest-path runtime/guard-memory-probe/Cargo.toml
           cargo fmt --manifest-path runtime/guard-thread-probe/Cargo.toml
@@ -383,15 +383,15 @@ jobs:
           $env:NEVERGUARD_DEBUG_PROBE_EXE = (Resolve-Path "runtime/guard-debug-probe/target/debug/guard-debug-probe.exe").Path
           $env:NEVERGUARD_JVM_PROBE_DLL = (Resolve-Path "runtime/guard-jvm-probe/target/debug/guard_jvm_probe.dll").Path
           $env:NEVERGUARD_EXPECTED_JAVA_MAJOR = "21"
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib integrity::tests -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_windows -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_attestation_v2::tests -- --nocapture
-          cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib -- --nocapture
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib integrity::tests -- --nocapture
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib attestation::tests -- --nocapture
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib windows_policy::tests -- --nocapture
+          cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_windows -- --nocapture
+          cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat -- --nocapture
+          cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_sensor_windows -- --nocapture
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib windows_attestation_v2::tests -- --nocapture
+          cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings
           cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings
           cargo clippy --manifest-path runtime/guard-memory-probe/Cargo.toml --all-targets -- -D warnings
           cargo clippy --manifest-path runtime/guard-thread-probe/Cargo.toml --all-targets -- -D warnings
@@ -401,7 +401,7 @@ jobs:
         shell: pwsh
         run: |
           Push-Location cli
-          go build -trimpath -o "$env:RUNNER_TEMP\nl-updater-selftest.exe" ./cmd/neverlauncher
+          go build -trimpath -o "$env:RUNNER_TEMP\nl-updater-selftest.exe" ./cmd/launcher
           Pop-Location
           & "$env:RUNNER_TEMP\nl-updater-selftest.exe" update self-test
           & "$env:RUNNER_TEMP\nl-updater-selftest.exe" update component-self-test
@@ -414,30 +414,30 @@ jobs:
         run: |
           $Version = (Get-Content VERSION -Raw).Trim()
           $Dir = "dist/release-$Version"
-          python scripts/guard_ci/matrix.py result --targets guard-ci/targets.json --target-id guard-windows-amd64 --package "$Dir/neverlauncher-desktop-$Version-windows-amd64.zip" --launcher "$Dir/neverlauncher-desktop-windows-amd64.exe" --guard "$Dir/guard-windows-amd64.exe" --manifest "$Dir/WINDOWS_PACKAGE_MANIFEST.json" --allowlist "$Dir/GUARD_RELEASE_ALLOWLIST_WINDOWS.json" --signing-mode unsigned-development-ci --commit "$env:GITHUB_SHA" --run-id "$env:GITHUB_RUN_ID" --repository "$env:GITHUB_REPOSITORY" --output guard-ci-result/windows/guard-ci-result.json
+          python scripts/guard_ci/matrix.py result --targets guard-ci/targets.json --target-id guard-windows-amd64 --package "$Dir/launcher-desktop-$Version-windows-amd64.zip" --launcher "$Dir/launcher-desktop-windows-amd64.exe" --guard "$Dir/guard-windows-amd64.exe" --manifest "$Dir/WINDOWS_PACKAGE_MANIFEST.json" --allowlist "$Dir/GUARD_RELEASE_ALLOWLIST_WINDOWS.json" --signing-mode unsigned-development-ci --commit "$env:GITHUB_SHA" --run-id "$env:GITHUB_RUN_ID" --repository "$env:GITHUB_REPOSITORY" --output guard-ci-result/windows/guard-ci-result.json
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-windows-guard-${{ github.sha }}
+          name: launcher-windows-guard-${{ github.sha }}
           path: |
-            dist/release-*/neverlauncher-desktop-*-windows-amd64.zip
-            dist/release-*/neverlauncher-desktop-windows-amd64.exe
+            dist/release-*/launcher-desktop-*-windows-amd64.zip
+            dist/release-*/launcher-desktop-windows-amd64.exe
             dist/release-*/guard-windows-amd64.exe
             dist/release-*/WINDOWS_PACKAGE_MANIFEST.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_WINDOWS.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json
-            dist/release-*/neverlauncher-cli-windows-x64.exe
-            dist/release-*/neverlauncher-cli-windows-arm64.exe
-            dist/release-*/neverlauncher-desktop-windows-x64.exe
-            dist/release-*/neverlauncher-desktop-windows-arm64.exe
+            dist/release-*/launcher-cli-windows-x64.exe
+            dist/release-*/launcher-cli-windows-arm64.exe
+            dist/release-*/launcher-desktop-windows-x64.exe
+            dist/release-*/launcher-desktop-windows-arm64.exe
             dist/release-*/guard-windows-x64.exe
             dist/release-*/guard-windows-arm64.exe
             dist/release-*/guard-sensor-windows-x64.dll
             dist/release-*/guard-sensor-windows-arm64.dll
-            dist/release-*/neverruntime-windows-x64.exe
-            dist/release-*/neverruntime-windows-arm64.exe
-            dist/release-*/neverlauncher-desktop-*-windows-x64.zip
-            dist/release-*/neverlauncher-desktop-*-windows-arm64.zip
+            dist/release-*/runtime-windows-x64.exe
+            dist/release-*/runtime-windows-arm64.exe
+            dist/release-*/launcher-desktop-*-windows-x64.zip
+            dist/release-*/launcher-desktop-*-windows-arm64.zip
             dist/release-*/WINDOWS_PACKAGE_MANIFEST_X64.json
             dist/release-*/WINDOWS_PACKAGE_MANIFEST_ARM64.json
             dist/release-*/WINDOWS_SIGNING_EVIDENCE.json
@@ -472,18 +472,18 @@ jobs:
         run: |
           python3 scripts/smoke/offline/macos-production-implementation-0138.py
           python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
-          cargo fmt --manifest-path runtime/neverruntime/Cargo.toml
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib integrity::tests -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests -- --nocapture
-          cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
-          cargo build --manifest-path runtime/neverruntime/Cargo.toml --bin guard
+          cargo fmt --manifest-path runtime/runtime/Cargo.toml
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib -- --nocapture
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib integrity::tests -- --nocapture
+          cargo test --manifest-path runtime/runtime/Cargo.toml --lib attestation::tests -- --nocapture
+          cargo clippy --manifest-path runtime/runtime/Cargo.toml --all-targets -- -D warnings
+          cargo build --manifest-path runtime/runtime/Cargo.toml --bin guard
       - name: Signed macOS Guard integration test
         shell: bash
         run: |
-          TEST_BIN="$(cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_macos --no-run --message-format=json | python3 -c 'import json,sys; xs=[]; [xs.append(x.get("executable")) for line in sys.stdin for x in [json.loads(line)] if x.get("reason")=="compiler-artifact" and x.get("target",{}).get("name")=="guard_macos" and x.get("executable")]; print(xs[-1])')"
+          TEST_BIN="$(cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_macos --no-run --message-format=json | python3 -c 'import json,sys; xs=[]; [xs.append(x.get("executable")) for line in sys.stdin for x in [json.loads(line)] if x.get("reason")=="compiler-artifact" and x.get("target",{}).get("name")=="guard_macos" and x.get("executable")]; print(xs[-1])')"
           test -n "${TEST_BIN}"
-          codesign --force --sign - --options runtime --timestamp=none runtime/neverruntime/target/debug/guard
+          codesign --force --sign - --options runtime --timestamp=none runtime/runtime/target/debug/guard
           codesign --force --sign - --options runtime --timestamp=none "${TEST_BIN}"
           "${TEST_BIN}" --nocapture
       - name: Build Desktop frontend
@@ -501,8 +501,8 @@ jobs:
           python3 scripts/guard_ci/matrix.py result \
             --targets guard-ci/targets.json \
             --target-id guard-macos-universal \
-            --package "${DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip" \
-            --launcher "${DIR}/neverlauncher-desktop-macos-universal" \
+            --package "${DIR}/launcher-desktop-${VERSION}-macos-universal.zip" \
+            --launcher "${DIR}/launcher-desktop-macos-universal" \
             --guard "${DIR}/guard-macos-universal" \
             --manifest "${DIR}/MACOS_PACKAGE_MANIFEST.json" \
             --allowlist "${DIR}/GUARD_RELEASE_ALLOWLIST_MACOS.json" \
@@ -512,10 +512,10 @@ jobs:
       - name: Upload macOS package
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-macos-guard-${{ github.sha }}
+          name: launcher-macos-guard-${{ github.sha }}
           path: |
-            dist/release-*/neverlauncher-desktop-*-macos-universal.zip
-            dist/release-*/neverlauncher-desktop-macos-universal
+            dist/release-*/launcher-desktop-*-macos-universal.zip
+            dist/release-*/launcher-desktop-macos-universal
             dist/release-*/guard-macos-universal
             dist/release-*/MACOS_PACKAGE_MANIFEST.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_MACOS.json
@@ -553,7 +553,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          (cd cli && go build -trimpath -o /tmp/nl ./cmd/neverlauncher)
+          (cd cli && go build -trimpath -o /tmp/nl ./cmd/launcher)
           /tmp/nl update self-test
           /tmp/nl update component-self-test
           /tmp/nl update stabilization-self-test
@@ -572,18 +572,18 @@ jobs:
       - name: Upload macOS x64 + ARM64 delivery candidates
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-macos-production-${{ github.sha }}
+          name: launcher-macos-production-${{ github.sha }}
           path: |
-            dist/release-*/neverlauncher-cli-macos-x64
-            dist/release-*/neverlauncher-cli-macos-arm64
-            dist/release-*/neverlauncher-desktop-macos-x64
-            dist/release-*/neverlauncher-desktop-macos-arm64
+            dist/release-*/launcher-cli-macos-x64
+            dist/release-*/launcher-cli-macos-arm64
+            dist/release-*/launcher-desktop-macos-x64
+            dist/release-*/launcher-desktop-macos-arm64
             dist/release-*/guard-macos-x64
             dist/release-*/guard-macos-arm64
-            dist/release-*/neverruntime-macos-x64
-            dist/release-*/neverruntime-macos-arm64
-            dist/release-*/neverlauncher-desktop-*-macos-x64.zip
-            dist/release-*/neverlauncher-desktop-*-macos-arm64.zip
+            dist/release-*/runtime-macos-x64
+            dist/release-*/runtime-macos-arm64
+            dist/release-*/launcher-desktop-*-macos-x64.zip
+            dist/release-*/launcher-desktop-*-macos-arm64.zip
             dist/release-*/MACOS_PACKAGE_MANIFEST_X64.json
             dist/release-*/MACOS_PACKAGE_MANIFEST_ARM64.json
             dist/release-*/MACOS_NOTARIZATION_EVIDENCE.json
@@ -625,7 +625,7 @@ jobs:
       - name: Upload Guard certification evidence
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-guard-ci-matrix-${{ github.run_id }}
+          name: launcher-guard-ci-matrix-${{ github.run_id }}
           path: |
             guard-ci-public/matrix.json
             guard-ci-public/matrix.md
@@ -664,7 +664,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: ci-postgres-password
           REDIS_PASSWORD: 0123456789abcdef0123456789abcdef
-          NEVERLAUNCHER_PUBLIC_URL: https://neverlauncher.invalid
+          NEVERLAUNCHER_PUBLIC_URL: https://launcher.invalid
           NEVERLAUNCHER_AUTH_TOKEN_SECRET: ci-auth-token-secret-0123456789abcdef
           NEVERLAUNCHER_CORS_ALLOWED_ORIGINS: https://launcher.invalid
           NEVERLAUNCHER_WEBAUTHN_RP_ID: launcher.invalid
@@ -677,8 +677,8 @@ jobs:
       - name: Build API and Admin production images
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
-          docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" --build-arg NEVERLAUNCHER_SOURCE_COMMIT="$GITHUB_SHA" -f services/api/Dockerfile -t neverlauncher-api:ci .
-          docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" --build-arg NEVERLAUNCHER_SOURCE_COMMIT="$GITHUB_SHA" -f apps/admin/Dockerfile -t neverlauncher-admin:ci .
+          docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" --build-arg NEVERLAUNCHER_SOURCE_COMMIT="$GITHUB_SHA" -f services/api/Dockerfile -t launcher-api:ci .
+          docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" --build-arg NEVERLAUNCHER_SOURCE_COMMIT="$GITHUB_SHA" -f apps/admin/Dockerfile -t launcher-admin:ci .
 
   managed-jre-production:
     name: Managed Java II Java 8/16/17/21/25 production E2E + Temurin 21 delivery
@@ -695,8 +695,8 @@ jobs:
           go-version-file: services/api/go.mod
           cache-dependency-path: cli/go.sum
       - uses: dtolnay/rust-toolchain@stable
-      - name: Build NeverRuntime for Managed Java II
-        run: cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime
+      - name: Build Runtime for Managed Java II
+        run: cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime
       - name: Managed Java II Java 8/16/17/21/25 production E2E
         shell: bash
         run: |
@@ -720,14 +720,14 @@ jobs:
           set -euo pipefail
           VERSION="$(tr -d '[:space:]' < VERSION)"
           OUT="managed-jre-artifacts"
-          (cd cli && go build -trimpath -o /tmp/nl-managed-jre ./cmd/neverlauncher)
+          (cd cli && go build -trimpath -o /tmp/nl-managed-jre ./cmd/launcher)
           /tmp/nl-managed-jre delivery manifest --bundle "${OUT}" --version "${VERSION}"
           /tmp/nl-managed-jre delivery verify-jre --bundle "${OUT}" --version "${VERSION}"
           python3 scripts/smoke/offline/managed-jre-distribution-0155.py
       - name: Upload exact-commit Managed JRE production assets
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-managed-jre-${{ github.sha }}
+          name: launcher-managed-jre-${{ github.sha }}
           path: managed-jre-artifacts/
           if-no-files-found: error
           retention-days: 30
@@ -808,12 +808,12 @@ jobs:
       - name: ServerBridge 3 Zero-Patch Provisioning 0.19.9 gate
         run: |
           python3 scripts/smoke/offline/serverbridge-zero-patch-provisioning-0199.py
-          (cd cli && go test -run 'TestServerBridge(Detect|Install|DryRun|ReleaseTargetCohort)' ./cmd/neverlauncher)
+          (cd cli && go test -run 'TestServerBridge(Detect|Install|DryRun|ReleaseTargetCohort)' ./cmd/launcher)
       - name: ServerBridge Host 0.19.10 gate
         run: |
           python3 scripts/smoke/offline/serverbridge-host-01910.py
-          (cd cli && go test -run 'TestServerBridgeHost' ./cmd/neverlauncher)
-          (cd cli && GOOS=windows GOARCH=amd64 go test -c ./cmd/neverlauncher -o /tmp/neverlauncher-host-windows.test.exe)
+          (cd cli && go test -run 'TestServerBridgeHost' ./cmd/launcher)
+          (cd cli && GOOS=windows GOARCH=amd64 go test -c ./cmd/launcher -o /tmp/launcher-host-windows.test.exe)
       - name: ServerBridge HA Control Plane 0.19.11 gate
         run: |
           python3 scripts/smoke/offline/serverbridge-ha-control-plane-01911.py
@@ -828,36 +828,36 @@ jobs:
         run: |
           python3 scripts/smoke/offline/serverbridge3-ga-0200.py
           (cd services/api && go test -run 'TestServerBridgeGA0200' ./internal/httpapi)
-          (cd cli && go test -run 'TestServerBridge.*0200|TestVerifyServerBridge3GACertification0200' ./cmd/neverlauncher ./internal/dbmigrate)
+          (cd cli && go test -run 'TestServerBridge.*0200|TestVerifyServerBridge3GACertification0200' ./cmd/launcher ./internal/dbmigrate)
       - name: Extensions Core 0.20.1 gate
         run: |
           python3 scripts/smoke/offline/extensions-core-0201.py
           (cd services/api && go test -run 'TestExtensionsCoreHTTP0201|TestExtensionMemoryRepository' ./internal/httpapi ./internal/repository ./internal/dbmigrate)
-          (cd cli && go test -run 'TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/neverlauncher ./internal/dbmigrate)
+          (cd cli && go test -run 'TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/launcher ./internal/dbmigrate)
       - name: Extensions Extension Package 0.20.2 gate
         run: |
           python3 scripts/smoke/offline/extensions-package-0202.py
-          (cd cli && go test -run 'TestExtensionPackage.*0202|TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/neverlauncher)
-          (cd cli && go vet ./cmd/neverlauncher)
+          (cd cli && go test -run 'TestExtensionPackage.*0202|TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/launcher)
+          (cd cli && go vet ./cmd/launcher)
       - name: Extensions Registry 0.20.3 gate
         run: |
           python3 scripts/smoke/offline/extensions-registry-0203.py
           (cd services/api && go test -run 'TestExtensionsRegistry.*0203|TestVerifyRegistryPackageAcceptsOlderCLISBOM0203|TestExtensionRegistryMemoryProductionLifecycle0203|TestExtensionsRegistryMigration0203' ./internal/httpapi ./internal/extensionpackage ./internal/repository ./internal/dbmigrate)
-          (cd cli && go test -run 'TestExtensionRegistry.*0203|TestExtensionPackage.*0202' ./cmd/neverlauncher ./internal/dbmigrate)
-          (cd cli && go vet ./cmd/neverlauncher)
+          (cd cli && go test -run 'TestExtensionRegistry.*0203|TestExtensionPackage.*0202' ./cmd/launcher ./internal/dbmigrate)
+          (cd cli && go vet ./cmd/launcher)
       - name: Extensions Install Lifecycle 0.20.4 gate
         run: |
           python3 scripts/smoke/offline/extensions-install-lifecycle-0204.py
           (cd services/api && go test -run 'TestExtensionLifecycle.*0204|TestExtractPayloadFile0204|TestExtensionsInstallLifecycleMigration0204' ./internal/extensionpackage ./internal/repository ./internal/dbmigrate ./internal/extensionlifecycle)
-          (cd cli && go test -run 'TestExtensionLifecycle.*0204' ./cmd/neverlauncher ./internal/dbmigrate)
-          (cd cli && go vet ./cmd/neverlauncher)
+          (cd cli && go test -run 'TestExtensionLifecycle.*0204' ./cmd/launcher ./internal/dbmigrate)
+          (cd cli && go vet ./cmd/launcher)
       - name: Extensions Extension Host 1 0.20.5 gate
         run: |
           python3 scripts/smoke/offline/extensions-host-0205.py
           (cd services/api && go test -run 'TestExtensionHost.*0205|TestSafeEntrypointRejectsSymlink0205|TestSanitizedEnvironmentNeverForwardsSecrets0205|TestStartRequiresEnabledState0205' ./internal/extensionhost)
           (cd services/api && go test -run 'TestExtensionHostAdmin.*0205' ./internal/httpapi)
-          (cd cli && go test -run 'TestExtensionHostCLI0205|TestExtensionLifecycle.*0204' ./cmd/neverlauncher)
-          (cd cli && go vet ./cmd/neverlauncher)
+          (cd cli && go test -run 'TestExtensionHostCLI0205|TestExtensionLifecycle.*0204' ./cmd/launcher)
+          (cd cli && go vet ./cmd/launcher)
       - name: Extensions Events & Hooks 0.20.6 gate
         run: |
           python3 scripts/smoke/offline/extensions-events-0206.py
@@ -874,8 +874,8 @@ jobs:
           (cd services/api && go test -run 'TestEventSubscriptionPermissionBoundary0206|TestExtensionHost.*0205|TestForbiddenOutboundIP0207' ./internal/extensionhost)
           (cd services/api && go test -run 'TestExtensionsCapabilitySecurityMigration0207' ./internal/dbmigrate)
           (cd services/api && go vet ./internal/extensionsecurity ./internal/extensionhost)
-          (cd cli && go test -run 'TestExtensionSecurityCLI0207' ./cmd/neverlauncher && go test ./internal/dbmigrate)
-          (cd cli && go vet ./cmd/neverlauncher)
+          (cd cli && go test -run 'TestExtensionSecurityCLI0207' ./cmd/launcher && go test ./internal/dbmigrate)
+          (cd cli && go vet ./cmd/launcher)
           python3 scripts/contracts/validate-openapi.py
       - name: Extensions Admin Extensions 0.20.8 gate
         run: |
@@ -883,8 +883,8 @@ jobs:
           (cd services/api && go test -run 'TestAdminContributions0208' ./internal/repository)
           (cd services/api && go test -run 'TestAdminHTMLHardening0208|TestSafeAdminEntrypoint0208|TestAdminProjectScope0208|TestAdminEntrypointServedFromEnabledVerifiedInstall0208' ./internal/httpapi)
           (cd services/api && go vet ./internal/repository ./internal/httpapi)
-          (cd cli && go test -run 'TestCanonicalAdminContributions0208' ./cmd/neverlauncher)
-          (cd cli && go vet ./cmd/neverlauncher)
+          (cd cli && go test -run 'TestCanonicalAdminContributions0208' ./cmd/launcher)
+          (cd cli && go vet ./cmd/launcher)
           npm ci --prefix apps/admin
           npm run build --prefix apps/admin
           python3 scripts/contracts/validate-openapi.py
@@ -894,8 +894,8 @@ jobs:
           (cd services/api && go test -run 'TestDesktop.*0209|TestCLIExtension.*0209|TestLifecycleStopTerminatesTransientCLI0209' ./internal/httpapi ./internal/extensionhost)
           (cd services/api && go test -run 'TestDesktopAndCLIContributions0209|TestCanonicalFourTargetManifest0209' ./internal/repository)
           (cd services/api && go vet ./internal/httpapi ./internal/extensionhost ./internal/repository)
-          (cd cli && go test -run '0209|ExtensionPackageFourTargets0209' ./cmd/neverlauncher)
-          (cd cli && go vet ./cmd/neverlauncher)
+          (cd cli && go test -run '0209|ExtensionPackageFourTargets0209' ./cmd/launcher)
+          (cd cli && go vet ./cmd/launcher)
           npm ci --prefix apps/desktop
           npm run build --prefix apps/desktop
           cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
@@ -908,7 +908,7 @@ jobs:
           (cd sdk/backend/go && go test ./... && go vet ./...)
           (cd sdk/cli/go && go test ./... && go vet ./...)
           cargo check --manifest-path sdk/desktop/rust/Cargo.toml
-          (cd cli && go test -run '02010|ExtensionPackageFourTargets0209' ./cmd/neverlauncher && go vet ./cmd/neverlauncher && go build -trimpath -o /tmp/nl-sdk ./cmd/neverlauncher)
+          (cd cli && go test -run '02010|ExtensionPackageFourTargets0209' ./cmd/launcher && go vet ./cmd/launcher && go build -trimpath -o /tmp/nl-sdk ./cmd/launcher)
           /tmp/nl-sdk extension test examples/extensions/backend-health --sdk-root sdk
           /tmp/nl-sdk extension test examples/extensions/cli-status --sdk-root sdk
           /tmp/nl-sdk extension test examples/extensions/admin-dashboard --sdk-root sdk
@@ -921,7 +921,7 @@ jobs:
           python3 scripts/smoke/offline/extensions-dependencies-updates-02011.py
           (cd services/api && go test -run '02011' ./internal/extensionresolver ./internal/extensionupdates ./internal/repository ./internal/dbmigrate)
           (cd services/api && go vet ./internal/extensionresolver ./internal/extensionupdates ./internal/repository)
-          (cd cli && go test -run '02011' ./cmd/neverlauncher ./internal/dbmigrate && go vet ./cmd/neverlauncher)
+          (cd cli && go test -run '02011' ./cmd/launcher ./internal/dbmigrate && go vet ./cmd/launcher)
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/api/openapi-operations-generated.json
@@ -929,16 +929,16 @@ jobs:
         run: |
           python3 scripts/smoke/offline/extensions-trust-recovery-certification-02012.py
           python3 scripts/compatibility/extensions_trust_02012.py validate
-          (cd services/api && go test -run '02012|TestExtensionHostCrashLoopDetection0205' ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/neverlauncher-api)
-          (cd services/api && go vet ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/httpapi ./cmd/neverlauncher-api)
-          (cd cli && go test -run '02012' ./cmd/neverlauncher ./internal/dbmigrate && go vet ./cmd/neverlauncher)
+          (cd services/api && go test -run '02012|TestExtensionHostCrashLoopDetection0205' ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/launcher-api)
+          (cd services/api && go vet ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/httpapi ./cmd/launcher-api)
+          (cd cli && go test -run '02012' ./cmd/launcher ./internal/dbmigrate && go vet ./cmd/launcher)
           python3 scripts/contracts/validate-openapi.py
       - name: Extensions GA 0.21.0 gate
         run: |
           python3 scripts/smoke/offline/extensions-ga-0210.py
           python3 scripts/compatibility/extensions_ga_0210.py validate
           (cd services/api && go test ./internal/extensioncontract ./internal/extensionga)
-          (cd cli && go test ./cmd/neverlauncher -run '0210|ExtensionUpgradeSource')
+          (cd cli && go test ./cmd/launcher -run '0210|ExtensionUpgradeSource')
           (cd sdk/backend/go && go test ./...)
           (cd sdk/cli/go && go test ./...)
           python3 scripts/contracts/validate-openapi.py
@@ -951,13 +951,13 @@ jobs:
           python3 scripts/compatibility/honest_validation_trust_0212.py validate --online
           (cd services/api && go test -run '0211|0212|Authorization|ProjectAuthorization' ./internal/authorization ./internal/httpapi ./internal/dbmigrate ./internal/repository ./internal/extensionhost)
           (cd services/api && go vet ./internal/authorization ./internal/httpapi ./internal/repository ./internal/extensionhost)
-          (cd cli && go test ./internal/dbmigrate ./cmd/neverlauncher -run '0212|Runtime|Pipeline' && go vet ./internal/dbmigrate ./cmd/neverlauncher)
+          (cd cli && go test ./internal/dbmigrate ./cmd/launcher -run '0212|Runtime|Pipeline' && go vet ./internal/dbmigrate ./cmd/launcher)
       - name: Durable Boundaries & Certification 0.21.3 gate
         run: |
           python3 scripts/compatibility/durable_boundaries_0213.py validate
           (cd services/api && go test -run '0213|Authorization|ProjectAuthorization' ./internal/authorization ./internal/httpapi ./internal/dbmigrate ./internal/repository)
-          (cd services/api && go vet ./internal/authorization ./internal/httpapi ./internal/repository ./cmd/neverlauncher-api)
-          (cd cli && go test ./internal/dbmigrate ./cmd/neverlauncher -run '0213|Migration' && go vet ./internal/dbmigrate ./cmd/neverlauncher)
+          (cd services/api && go vet ./internal/authorization ./internal/httpapi ./internal/repository ./cmd/launcher-api)
+          (cd cli && go test ./internal/dbmigrate ./cmd/launcher -run '0213|Migration' && go vet ./internal/dbmigrate ./cmd/launcher)
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/api/openapi-operations-generated.json
@@ -988,7 +988,7 @@ jobs:
           set -euo pipefail
           (
             cd cli
-            GOTOOLCHAIN=local go test -json -race -count=1 -timeout 240s ./cmd/neverlauncher \
+            GOTOOLCHAIN=local go test -json -race -count=1 -timeout 240s ./cmd/launcher \
               -run '^(TestRemoteFault.*04112|TestHostLifecycle0414(RealJVMStartStopRestartAndSIGTERM|RealJVMAutoRecoveryAfterCrash|RealJVMCrashLoopIsBounded|ActualCLIAndRemoteEffects|StopWhileJavaCrashIsInBackoff)|TestWorldBackup(CreateVerifyRestore02810|GateBlocksStartAndSecondBackup04110|GateFailsClosedAndRecoversOffline04110))$'
           ) > e2e/runtime/network-faults-0420.go-test.jsonl
           python3 scripts/ga/record_network_faults_0420.py \
@@ -1027,7 +1027,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-minecraft-client-e2e-evidence
+          name: launcher-minecraft-client-e2e-evidence
           path: |
             e2e/runtime/result.json
             e2e/runtime/world-backup-0290.json
@@ -1067,14 +1067,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-forge-neoforge-migration-e2e-evidence
+          name: launcher-forge-neoforge-migration-e2e-evidence
           path: e2e/forge-neoforge-migration-result/
           if-no-files-found: ignore
       - name: Upload ServerBridge HA hardening migration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-serverbridge-ha-hardening-e2e-evidence
+          name: launcher-serverbridge-ha-hardening-e2e-evidence
           path: e2e/serverbridge-ha-migration-result/
           if-no-files-found: ignore
           retention-days: 14
@@ -1082,7 +1082,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-topology-handoff-migration-e2e-evidence
+          name: launcher-topology-handoff-migration-e2e-evidence
           path: e2e/topology-handoff-migration-result/
           if-no-files-found: ignore
           retention-days: 14
@@ -1090,7 +1090,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-device-trust-protocol-e2e-evidence
+          name: launcher-device-trust-protocol-e2e-evidence
           path: |
             e2e/device-trust-result/
             e2e/device-trust-migration-result/
@@ -1100,7 +1100,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-guard-migration-e2e-evidence
+          name: launcher-guard-migration-e2e-evidence
           path: e2e/guard-migration-result/
           if-no-files-found: ignore
           retention-days: 14
@@ -1108,7 +1108,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-serverbridge-v2-migration-e2e-evidence
+          name: launcher-serverbridge-v2-migration-e2e-evidence
           path: e2e/serverbridge-v2-migration-result/
           if-no-files-found: ignore
           retention-days: 14
@@ -1116,7 +1116,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-serverbridge-crypto-identity-migration-e2e-evidence
+          name: launcher-serverbridge-crypto-identity-migration-e2e-evidence
           path: e2e/serverbridge-crypto-migration-result/
           if-no-files-found: ignore
           retention-days: 14
@@ -1124,7 +1124,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-one-time-join-ticket-migration-e2e-evidence
+          name: launcher-one-time-join-ticket-migration-e2e-evidence
           path: e2e/one-time-join-migration-result/
           if-no-files-found: ignore
           retention-days: 14
@@ -1132,7 +1132,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-proxy-family-migration-e2e-evidence
+          name: launcher-proxy-family-migration-e2e-evidence
           path: e2e/proxy-family-migration-result/
           if-no-files-found: ignore
           retention-days: 14
@@ -1167,7 +1167,7 @@ jobs:
           cargo build --manifest-path runtime/guard-thread-probe/Cargo.toml
           cargo build --manifest-path runtime/guard-debug-probe/Cargo.toml
           cargo build --manifest-path runtime/guard-jvm-probe/Cargo.toml
-          cargo build --manifest-path runtime/neverruntime/Cargo.toml --tests
+          cargo build --manifest-path runtime/runtime/Cargo.toml --tests
       - name: Execute live Windows attack simulation and compatibility certification
         shell: pwsh
         run: |
@@ -1234,13 +1234,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/smoke/offline/guard-windows-protection-rc-01812.py
-          (cd cli && go test ./cmd/neverlauncher -run 'TestWindowsProtection' -count=1)
+          (cd cli && go test ./cmd/launcher -run 'TestWindowsProtection' -count=1)
       - name: Validate 0.19.0 Windows Protection GA production gate
         shell: bash
         run: |
           set -euo pipefail
           python3 scripts/smoke/offline/guard-windows-protection-ga-0190.py
-          (cd cli && go test ./cmd/neverlauncher -run 'TestWindowsProtectionGA' -count=1)
+          (cd cli && go test ./cmd/launcher -run 'TestWindowsProtectionGA' -count=1)
       - name: Upload Windows adversarial certificate
         if: always()
         uses: actions/upload-artifact@v4
@@ -1284,7 +1284,7 @@ jobs:
           cache-dependency-path: cli/go.sum
       - name: Verify CLI cannot sign 0.36.1 or later without new operator approval
         working-directory: cli
-        run: go test ./cmd/neverlauncher -run '^(TestGA0361|TestRehearsal0365)' -count=1 -timeout=2m
+        run: go test ./cmd/launcher -run '^(TestGA0361|TestRehearsal0365)' -count=1 -timeout=2m
 
   storage-parity-0371:
     name: Storage inventory and real SQLite/PostgreSQL parity 0.37.1
@@ -1294,13 +1294,13 @@ jobs:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_DB: neverlauncher_storage_parity
-          POSTGRES_USER: neverlauncher_parity
+          POSTGRES_DB: launcher_storage_parity
+          POSTGRES_USER: launcher_parity
           POSTGRES_PASSWORD: parity-ephemeral-only
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U neverlauncher_parity -d neverlauncher_storage_parity"
+          --health-cmd "pg_isready -U launcher_parity -d launcher_storage_parity"
           --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
       - uses: actions/checkout@v4
@@ -1328,7 +1328,7 @@ jobs:
       - name: Run identical real-database contracts against both backends
         working-directory: services/api
         env:
-          NEVERLAUNCHER_PARITY_POSTGRES_DSN: postgres://neverlauncher_parity:parity-ephemeral-only@127.0.0.1:5432/neverlauncher_storage_parity?sslmode=disable
+          NEVERLAUNCHER_PARITY_POSTGRES_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable
           NEVERLAUNCHER_STORAGE_PARITY_REQUIRED: '1'
           NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/storage-parity-0371
         run: |
@@ -1344,7 +1344,7 @@ jobs:
           set -euo pipefail
           test -z "$(gofmt -l internal/repository/sqlite_http*_0372.go)"
           go test -race -count=1 -timeout=10m -run '^TestSQLiteHTTP' ./internal/repository
-          go test -race -count=1 -timeout=10m -run '^TestSQLiteHTTPRepositoryBootstrap0372$' ./cmd/neverlauncher-api
+          go test -race -count=1 -timeout=10m -run '^TestSQLiteHTTPRepositoryBootstrap0372$' ./cmd/launcher-api
       - name: Verify SQLite 0.37.3 auth, passkeys, sessions and Bridge durability
         working-directory: services/api
         env:
@@ -1385,13 +1385,13 @@ jobs:
         working-directory: services/api
         env:
           TMPDIR: ${{ runner.temp }}/storage-parity-0371
-          NEVERLAUNCHER_PG_TEST_DSN: postgres://neverlauncher_parity:parity-ephemeral-only@127.0.0.1:5432/neverlauncher_storage_parity?sslmode=disable
+          NEVERLAUNCHER_PG_TEST_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable
         run: |
           set -euo pipefail
-          test -z "$(gofmt -l internal/sqlitepg cmd/neverlauncher-sqlite)"
-          go test -race -count=1 -timeout=25m ./internal/sqlitepg ./cmd/neverlauncher-sqlite
-          go vet ./internal/sqlitepg ./cmd/neverlauncher-sqlite
-          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-sqlite-0377" ./cmd/neverlauncher-sqlite
+          test -z "$(gofmt -l internal/sqlitepg cmd/launcher-sqlite)"
+          go test -race -count=1 -timeout=25m ./internal/sqlitepg ./cmd/launcher-sqlite
+          go vet ./internal/sqlitepg ./cmd/launcher-sqlite
+          go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite-0377" ./cmd/launcher-sqlite
       - name: Verify minimal offline SQLite plus project files backup and restore (0.37.6)
         shell: bash
         run: |
@@ -1444,7 +1444,7 @@ jobs:
           cd services/api
           go mod verify
           go build -trimpath -ldflags "-X main.version=$(cat ../../VERSION) -X main.commit=${GITHUB_SHA}" \
-            -o "$RUNNER_TEMP/nl-live-api-0378" ./cmd/neverlauncher-api
+            -o "$RUNNER_TEMP/nl-live-api-0378" ./cmd/launcher-api
       - name: Create isolated test-only configuration policies (no signing evidence)
         shell: bash
         run: |
@@ -1452,7 +1452,7 @@ jobs:
           python3 - <<'PYCODE'
           import hashlib,json,os,pathlib
           directory=pathlib.Path(os.environ['RUNNER_TEMP'])/'nl-0378-policies'
-          fingerprint=hashlib.sha256(b'NeverLauncher E2E NON-RELEASE fixture no signing').hexdigest()
+          fingerprint=hashlib.sha256(b'Launcher E2E NON-RELEASE fixture no signing').hexdigest()
           guard={'schemaVersion':'2.0','releases':{'0.1.0':{'protocolVersion':4,
             'platforms':{'linux':{'signingMode':'integrity-only','artifacts':[
               {'guardSha256':fingerprint,'launcherSha256':fingerprint}]}}}}}
@@ -1522,7 +1522,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-required-ci-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: launcher-required-ci-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: required-ci-evidence.json
           if-no-files-found: error
           retention-days: 90

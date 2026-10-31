@@ -1,4 +1,4 @@
--- NeverLauncher 0.14.5: семейство прокси Velocity/BungeeCord/Waterfall. Расширяет
+-- Launcher 0.14.5: семейство прокси Velocity/BungeeCord/Waterfall. Расширяет
 -- постоянный инвариант типа узла ServerBridge для совместимых с Bungee прокси,
 -- сохраняя Protocol v2, Ed25519-идентичность и одноразовые разрешения.
 

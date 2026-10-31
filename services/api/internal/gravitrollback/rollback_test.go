@@ -1,7 +1,7 @@
 package gravitrollback
 
 import (
-	gr "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitrehearsal"
+	gr "gitflic.ru/skif4er/launcher/services/api/internal/gravitrehearsal"
 	"strings"
 	"testing"
 )

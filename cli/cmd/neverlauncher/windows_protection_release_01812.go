@@ -20,7 +20,7 @@ const (
 	windowsProtectionReleaseFile01812      = "WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json"
 	windowsProtectionReleaseSchema01812    = "1.0"
 	windowsProtectionReleaseStatus01812    = "windows-protection-release-candidate"
-	windowsProtectionRepository01812       = "DeepLayerTeam/NeverLauncher"
+	windowsProtectionRepository01812       = "DeepLayerTeam/Launcher"
 )
 
 var sha256RE01812 = regexp.MustCompile(`^[0-9a-f]{64}$`)
@@ -105,7 +105,7 @@ func validateWindowsAdversarialCertificate01812(cert windowsAdversarialCertifica
 	if err != nil {
 		return err
 	}
-	if cert.SchemaVersion != "1.0" || cert.Kind != "neverlauncher-windows-adversarial-certification" || cert.ProductVersion != ver {
+	if cert.SchemaVersion != "1.0" || cert.Kind != "launcher-windows-adversarial-certification" || cert.ProductVersion != ver {
 		return errors.New("Windows adversarial certificate identity mismatch")
 	}
 	if !strings.EqualFold(cert.Repository, windowsProtectionRepository01812) {
@@ -201,8 +201,8 @@ func windowsProtectionArtifactNames01812(ver string) []string {
 		windowsDeliveryAllowlistFile0152,
 		"WINDOWS_PACKAGE_MANIFEST_X64.json",
 		"WINDOWS_PACKAGE_MANIFEST_ARM64.json",
-		"neverlauncher-desktop-" + ver + "-windows-x64.zip",
-		"neverlauncher-desktop-" + ver + "-windows-arm64.zip",
+		"launcher-desktop-" + ver + "-windows-x64.zip",
+		"launcher-desktop-" + ver + "-windows-arm64.zip",
 	}
 	for _, arch := range []string{"x64", "arm64"} {
 		artifacts := expectedWindowsSignedArtifactsForVersion0157(ver, arch)
@@ -246,7 +246,7 @@ func windowsProtectionArtifacts01812(dir, ver string) ([]windowsProtectionArtifa
 
 func windowsProtectionBoundaryDigest01812(ver, commit, repository, runID, adversarialRoot string, artifacts []windowsProtectionArtifact01812, capabilities []string) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "NeverLauncher Windows Protection RC\n%s\n%s\n%s\n%s\n%s\naggressive\n", ver, strings.ToLower(commit), repository, runID, strings.ToLower(adversarialRoot))
+	fmt.Fprintf(h, "Launcher Windows Protection RC\n%s\n%s\n%s\n%s\n%s\naggressive\n", ver, strings.ToLower(commit), repository, runID, strings.ToLower(adversarialRoot))
 	for _, capability := range capabilities {
 		fmt.Fprintf(h, "capability %s\n", capability)
 	}
@@ -293,7 +293,7 @@ func buildWindowsProtectionReleaseDocument01812(dir, ver, expectedCommit string)
 		"publishedWindowsBytesBound":           true,
 	}
 	return windowsProtectionReleaseCertificate01812{
-		SchemaVersion: windowsProtectionReleaseSchema01812, Product: "NeverLauncher", Version: ver,
+		SchemaVersion: windowsProtectionReleaseSchema01812, Product: "Launcher", Version: ver,
 		Status: windowsProtectionReleaseStatus01812, ProtectionProfile: "aggressive", SourceCommit: commit,
 		Repository: adversarial.Repository, AdversarialRunID: adversarial.RunID, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		AdversarialCertificateSHA256: adversarialHash, AdversarialEvidenceRootSHA256: strings.ToLower(adversarial.EvidenceRootSHA256),

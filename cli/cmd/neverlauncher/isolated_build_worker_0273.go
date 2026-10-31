@@ -154,7 +154,7 @@ func runIsolatedProcessor0273(ctx context.Context, pc forgeProcessorContext, ind
 	if err != nil {
 		return "", err
 	}
-	logs := filepath.Join(root, ".neverlauncher", "worker-logs")
+	logs := filepath.Join(root, ".launcher", "worker-logs")
 	if err := os.MkdirAll(logs, 0o700); err != nil {
 		return "", err
 	}
@@ -165,7 +165,7 @@ func runIsolatedProcessor0273(ctx context.Context, pc forgeProcessorContext, ind
 	}
 	defer log.Close()
 	limited := &boundedWorkerLog0273{out: log}
-	tmp, err := os.MkdirTemp(filepath.Join(root, ".neverlauncher"), "worker-tmp-")
+	tmp, err := os.MkdirTemp(filepath.Join(root, ".launcher"), "worker-tmp-")
 	if err != nil {
 		return logPath, err
 	}

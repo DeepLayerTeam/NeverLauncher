@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func TestIssuerScopedIdentityMemory0291(t *testing.T) {
@@ -85,7 +85,7 @@ func TestCredentialCannotCrossIssuerMemory0291(t *testing.T) {
 func TestMinecraftUUIDImmutableMemory0291(t *testing.T) {
 	r := NewMemoryRepository("http://test.invalid")
 	const uuid = "11111111-2222-4333-8444-555555555555"
-	profile, err := r.SaveMinecraftProfile(model.MinecraftProfile{UserID: "admin", UUID: uuid, Name: "Example", Issuer: "neverlauncher", Realm: "local", Subject: uuid})
+	profile, err := r.SaveMinecraftProfile(model.MinecraftProfile{UserID: "admin", UUID: uuid, Name: "Example", Issuer: "launcher", Realm: "local", Subject: uuid})
 	if err != nil {
 		t.Fatal(err)
 	}

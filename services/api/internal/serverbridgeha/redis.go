@@ -104,7 +104,7 @@ func (r *RedisCoordinator) TouchChannel(ctx context.Context, p ChannelPresence, 
 	if ttl < 5*time.Second {
 		ttl = 5 * time.Second
 	}
-	key := "neverlauncher:serverbridge:ha:channel:" + safePart(p.ServerID) + ":" + safePart(p.RuntimeID) + ":" + safePart(p.ChannelID)
+	key := "launcher:serverbridge:ha:channel:" + safePart(p.ServerID) + ":" + safePart(p.RuntimeID) + ":" + safePart(p.ChannelID)
 	value := strings.Join([]string{safePart(p.ReplicaID), strconv.FormatInt(p.ResumeAfter, 10), safePart(p.BackendAddress)}, "|")
 	_, err := r.command(ctx, "SET", key, value, "PX", strconv.FormatInt(ttl.Milliseconds(), 10))
 	return err
@@ -144,7 +144,7 @@ func (r *RedisCoordinator) ReleaseCommandLease(ctx context.Context, serverID, co
 }
 
 func commandKey(serverID, commandID string) string {
-	return "neverlauncher:serverbridge:ha:command:" + safePart(serverID) + ":" + safePart(commandID)
+	return "launcher:serverbridge:ha:command:" + safePart(serverID) + ":" + safePart(commandID)
 }
 func leaseValue(owner, token string) string { return safePart(owner) + "|" + safePart(token) }
 func safePart(v string) string {

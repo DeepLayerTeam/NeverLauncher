@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 type fixtureConnector struct{}
@@ -16,7 +16,7 @@ func (fixtureConnector) Metadata() authconnector.Metadata {
 }
 func (fixtureConnector) Health(context.Context) error { return nil }
 func (fixtureConnector) AuthenticatePassword(context.Context, authconnector.PasswordRequest) (authconnector.Authentication, error) {
-	return authconnector.Authentication{Identity: authconnector.Identity{Subject: "admin", Email: "admin@neverlauncher.local"}, AuthMethods: []string{"password"}}, nil
+	return authconnector.Authentication{Identity: authconnector.Identity{Subject: "admin", Email: "admin@launcher.local"}, AuthMethods: []string{"password"}}, nil
 }
 
 func TestAuthenticatePasswordResolvesCanonicalUser(t *testing.T) {
@@ -25,7 +25,7 @@ func TestAuthenticatePasswordResolvesCanonicalUser(t *testing.T) {
 	if err := core.Register(fixtureConnector{}); err != nil {
 		t.Fatal(err)
 	}
-	result, err := core.AuthenticatePassword(context.Background(), "local", authconnector.PasswordRequest{Identifier: "admin@neverlauncher.local", Secret: "admin"})
+	result, err := core.AuthenticatePassword(context.Background(), "local", authconnector.PasswordRequest{Identifier: "admin@launcher.local", Secret: "admin"})
 	if err != nil {
 		t.Fatal(err)
 	}

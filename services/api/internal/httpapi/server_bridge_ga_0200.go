@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/authorization"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/authorization"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 const (
@@ -72,10 +72,10 @@ func serverBridgeProtocolMode0200(protocol int) string {
 }
 
 func markServerBridgeProtocolResponse0200(w http.ResponseWriter, protocol int) {
-	w.Header().Set("X-NeverLauncher-ServerBridge-Protocol", serverBridgeProtocolMode0200(protocol))
+	w.Header().Set("X-Launcher-ServerBridge-Protocol", serverBridgeProtocolMode0200(protocol))
 	if protocol == serverBridgeProtocolV2 {
 		w.Header().Set("Deprecation", "true")
-		w.Header().Set("X-NeverLauncher-ServerBridge-Migrate-To", "3")
+		w.Header().Set("X-Launcher-ServerBridge-Migrate-To", "3")
 	}
 }
 

@@ -161,7 +161,7 @@ public class Launch {
 	if err != nil {
 		t.Fatal(err)
 	}
-	putLegacyTestFile0278(t, root, ".neverlauncher/install-plan.json", b)
+	putLegacyTestFile0278(t, root, ".launcher/install-plan.json", b)
 	shim := filepath.Join(t.TempDir(), "java8")
 	script := fmt.Sprintf("#!/bin/sh\nif [ \"$1\" = '-version' ]; then echo 'java version \"1.8.0_402\"' >&2; exit 0; fi\nexec %q \"$@\"\n", java)
 	if err := os.WriteFile(shim, []byte(script), 0755); err != nil {

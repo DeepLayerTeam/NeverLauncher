@@ -206,7 +206,7 @@ fn reject_debug_state(indicators: DebugIndicators) -> Result<(), String> {
 
 fn snapshot_for_state(state: &DebugInstrumentationState) -> DebugInstrumentationSnapshot {
     let mut digest = Sha256::new();
-    digest.update(b"NeverLauncher Debug & Instrumentation Guard state v1\0");
+    digest.update(b"Launcher Debug & Instrumentation Guard state v1\0");
     digest.update([u8::from(state.last.debugger_present)]);
     digest.update([u8::from(state.last.remote_debugger_present)]);
     digest.update([u8::from(state.last.debug_port_present)]);

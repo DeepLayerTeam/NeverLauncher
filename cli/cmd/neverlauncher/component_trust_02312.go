@@ -87,7 +87,7 @@ func acceptComponentTrust02312(root, manifestPath string) error {
 	if e != nil {
 		return e
 	}
-	_, e = AcceptTrustPolicy(filepath.Join(root, ".neverlauncher", "component-trust"), componentSetRootKey02312, raw, time.Now().UTC())
+	_, e = AcceptTrustPolicy(filepath.Join(root, ".launcher", "component-trust"), componentSetRootKey02312, raw, time.Now().UTC())
 	return e
 }
 
@@ -101,6 +101,6 @@ func checkComponentTrustSet02312(root, manifestPath string, m componentUpdateMan
 }
 
 func componentTrustSignaturePayload02312(raw []byte, env componentSignature02312) []byte {
-	prefix := "NeverLauncher-Component-v2\n" + env.KeyID + "\n" + strconv.FormatUint(env.TrustEpoch, 10) + "\n" + env.PolicySHA256 + "\n" + env.ManifestSHA256 + "\n" + env.SignedAt + "\n"
+	prefix := "Launcher-Component-v2\n" + env.KeyID + "\n" + strconv.FormatUint(env.TrustEpoch, 10) + "\n" + env.PolicySHA256 + "\n" + env.ManifestSHA256 + "\n" + env.SignedAt + "\n"
 	return append([]byte(prefix), raw...)
 }

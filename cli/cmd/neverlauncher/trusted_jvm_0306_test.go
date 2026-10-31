@@ -58,7 +58,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 	if _, err = trustedInstall0306(root, packagePath, publicKey); err != nil {
 		t.Fatal(err)
 	}
-	insideKey := filepath.Join(root, ".neverlauncher", "mutable-anchor.key")
+	insideKey := filepath.Join(root, ".launcher", "mutable-anchor.key")
 	if err := os.WriteFile(insideKey, []byte(hex.EncodeToString(pub)), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -72,13 +72,13 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer cleanup()
-	if len(jvm) != 1 || !strings.HasPrefix(jvm[0], "-javaagent:") || main != "ru.neverlauncher.trusted.MinecraftMain" {
+	if len(jvm) != 1 || !strings.HasPrefix(jvm[0], "-javaagent:") || main != "ru.launcher.trusted.MinecraftMain" {
 		t.Fatalf("invalid launch: %v %s", jvm, main)
 	}
 	marker := filepath.Join(t.TempDir(), "hooks.log")
 	game := filepath.Join(t.TempDir(), "game.log")
 	classpath := filepath.Join(example, "build", "game.jar")
-	commandArgs := append([]string{"-Dneverlauncher.trusted.test.log=" + marker, "-Dneverlauncher.trusted.game.log=" + game}, jvm...)
+	commandArgs := append([]string{"-Dlauncher.trusted.test.log=" + marker, "-Dlauncher.trusted.game.log=" + game}, jvm...)
 	commandArgs = append(commandArgs, "-cp", classpath, main, "hello world", "arg2")
 	command := exec.Command("java", commandArgs...)
 	output, err := command.CombinedOutput()
@@ -115,7 +115,7 @@ func TestTrustedJVM0306SignedLifecycleAndRealMinecraftHooks(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !strings.Contains(string(argv), "-javaagent:") || !strings.Contains(string(argv), "ru.neverlauncher.trusted.MinecraftMain") {
+		if !strings.Contains(string(argv), "-javaagent:") || !strings.Contains(string(argv), "ru.launcher.trusted.MinecraftMain") {
 			t.Fatalf("legacy launcher did not execute trusted integration: %s", argv)
 		}
 	}

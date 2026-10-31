@@ -3,7 +3,7 @@ package sqlconnector
 import (
 	"errors"
 	"fmt"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector/configmigration"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector/configmigration"
 	"os"
 	"regexp"
 	"strings"

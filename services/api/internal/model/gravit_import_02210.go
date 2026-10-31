@@ -65,7 +65,7 @@ func ConvertGravitProfile02210(source []byte, projectID, profileID, profileName,
 		return GravitImportResult02210{}, errors.New("empty Gravit ClientProfile")
 	}
 	sum := sha256.Sum256(source)
-	out := GravitImportResult02210{Format: "neverlauncher.gravit-import-report.v1", SourceSHA256: hex.EncodeToString(sum[:]), Servers: []GravitServer02210{}, Fields: []GravitFieldResult02210{}, Summary: map[string]int{"mapped": 0, "transformed": 0, "manual": 0, "blocked": 0}}
+	out := GravitImportResult02210{Format: "launcher.gravit-import-report.v1", SourceSHA256: hex.EncodeToString(sum[:]), Servers: []GravitServer02210{}, Fields: []GravitFieldResult02210{}, Summary: map[string]int{"mapped": 0, "transformed": 0, "manual": 0, "blocked": 0}}
 	report := func(field, status, target, reason string) {
 		out.Fields = append(out.Fields, GravitFieldResult02210{field, status, target, reason})
 		out.Summary[status]++

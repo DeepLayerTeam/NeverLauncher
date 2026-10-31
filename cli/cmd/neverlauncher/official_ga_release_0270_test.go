@@ -18,7 +18,7 @@ func TestOfficialMinecraftGAReceipt0270(t *testing.T) {
 	}
 	makeReceipt := func(status string, objects []map[string]string) {
 		t.Helper()
-		raw, err := json.Marshal(map[string]any{"schemaVersion": "neverlauncher.official-minecraft.ga-receipt.v1", "productVersion": "0.27.0", "commit": commit, "status": status, "targets": objects})
+		raw, err := json.Marshal(map[string]any{"schemaVersion": "launcher.official-minecraft.ga-receipt.v1", "productVersion": "0.27.0", "commit": commit, "status": status, "targets": objects})
 		if err != nil {
 			t.Fatal(err)
 		}

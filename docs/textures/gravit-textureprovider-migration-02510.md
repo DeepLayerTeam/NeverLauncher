@@ -1,12 +1,12 @@
-# NeverLauncher 0.25.10 — Gravit TextureProvider Migration
+# Launcher 0.25.10 — Gravit TextureProvider Migration
 
-This version imports **real** GravitLauncher/TextureProvider texture records into the existing NeverLauncher local-project texture pipeline. It reads either the official upstream PostgreSQL table (`textures`) or an offline JSON export. No Gravit credentials, sessions or upstream access tokens are imported. The command is operator-only; there is no public migration endpoint.
+This version imports **real** GravitLauncher/TextureProvider texture records into the existing Launcher local-project texture pipeline. It reads either the official upstream PostgreSQL table (`textures`) or an offline JSON export. No Gravit credentials, sessions or upstream access tokens are imported. The command is operator-only; there is no public migration endpoint.
 
 ## Source format and identity mapping
 
 Supported upstream PostgreSQL fields are `id UUID`, `user_uuid UUID`, `texture_type` (`SKIN` / `CAPE`), `file_hash` (SHA-1 or SHA-256 of the **original PNG**), `file_url`, and optional `metadata.model` (`slim` or `default`). The schema matches the upstream TextureProvider table in `migrations/001_initial.sql` at `GravitLauncher/TextureProvider`. Supported JSON exports are arrays of objects with those snake_case properties. JSON may additionally provide `object_key` (relative to the trusted source root/bucket).
 
-NeverLauncher makes **no** username-based, user-ID-derived, or official-UUID identity guesses. It imports a row only if `user_uuid` equals an existing `minecraft_profiles.uuid` with `issuer=neverlauncher, realm=local`, or an administrator explicitly maps a verified legacy UUID to an existing local UUID. Mapping is a JSON array:
+Launcher makes **no** username-based, user-ID-derived, or official-UUID identity guesses. It imports a row only if `user_uuid` equals an existing `minecraft_profiles.uuid` with `issuer=launcher, realm=local`, or an administrator explicitly maps a verified legacy UUID to an existing local UUID. Mapping is a JSON array:
 
 ```json
 [
@@ -18,7 +18,7 @@ This is an **operator assertion**, not proof from the legacy source: review acco
 
 ## Prepare and execute
 
-Apply the normal NeverLauncher migrations **through 0073_texture_gravit_import_02510** before running this command. Back up the target database and local/S3 bucket first; verify quotas and cape entitlements. Set the same target environment variables used by the API (`NEVERLAUNCHER_DATABASE_DSN`, `NEVERLAUNCHER_STORAGE_DRIVER`, `NEVERLAUNCHER_STORAGE_LOCAL_PATH` or `NEVERLAUNCHER_STORAGE_S3_*`).
+Apply the normal Launcher migrations **through 0073_texture_gravit_import_02510** before running this command. Back up the target database and local/S3 bucket first; verify quotas and cape entitlements. Set the same target environment variables used by the API (`NEVERLAUNCHER_DATABASE_DSN`, `NEVERLAUNCHER_STORAGE_DRIVER`, `NEVERLAUNCHER_STORAGE_LOCAL_PATH` or `NEVERLAUNCHER_STORAGE_S3_*`).
 
 Example: source PostgreSQL + local source files. Do not put DSNs with credentials in shell history or log output: prefer preconfigured environment-file secrets.
 
@@ -26,7 +26,7 @@ Example: source PostgreSQL + local source files. Do not put DSNs with credential
 cd services/api
 # The source key template MUST reflect the actual legacy storage layout.
 # Gravit may use hash.png, skins/<hash>.png, or other layouts.
-export NEVERLAUNCHER_DATABASE_DSN='postgres://.../neverlauncher'
+export NEVERLAUNCHER_DATABASE_DSN='postgres://.../launcher'
 export GRAVIT_SOURCE_DSN='postgres://.../texture_provider'
 go run ./cmd/gravit-textures-import-02510 \
   --source-id gravit-prod-01 --source-dsn "$GRAVIT_SOURCE_DSN" \
@@ -35,7 +35,7 @@ go run ./cmd/gravit-textures-import-02510 \
   --dry-run --report ./gravit-dry-run.json
 ```
 
-The dry run validates *real file bytes*, verifies source digest, decodes/normalizes PNG and checks target identities. It neither writes the destination blob nor updates target assignments. When satisfied, rerun without `--dry-run` using another report path. Existing NeverLauncher selections are **never overwritten by default**; add `--replace` only after explicit approval (with CAS checking; concurrent updates are rejected). Record and review all `quarantined`, `unmatched`, `skipped-existing` and `blocked` items.
+The dry run validates *real file bytes*, verifies source digest, decodes/normalizes PNG and checks target identities. It neither writes the destination blob nor updates target assignments. When satisfied, rerun without `--dry-run` using another report path. Existing Launcher selections are **never overwritten by default**; add `--replace` only after explicit approval (with CAS checking; concurrent updates are rejected). Record and review all `quarantined`, `unmatched`, `skipped-existing` and `blocked` items.
 
 For offline JSON, use `--source-json /path/to/export.json` instead of `--source-dsn`. Export the actual `textures` rows as JSON from the source database; do not export secrets. For S3 source, set `GRAVIT_S3_ENDPOINT`, `GRAVIT_S3_BUCKET`, `GRAVIT_S3_REGION`, `GRAVIT_S3_ACCESS_KEY`, `GRAVIT_S3_SECRET_KEY`, optionally `GRAVIT_S3_PATH_STYLE`, and pass `--source-s3` rather than `--source-root`. This reads S3 **directly with authenticated SigV4**, from the configured bucket; `file_url` from legacy records is never fetched. All relative object keys are validated, and keys do not control S3 host or credentials.
 

@@ -1,4 +1,4 @@
-package ru.neverlauncher.sdk.core;
+package ru.launcher.sdk.core;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

@@ -1,4 +1,4 @@
-name: NeverLauncher 0.35.11 Real Performance Regression
+name: Launcher 0.35.11 Real Performance Regression
 on:
   workflow_dispatch:
   push:
@@ -6,14 +6,14 @@ on:
       - 'scripts/performance/**'
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src/main.tsx'
-      - 'runtime/neverruntime/**'
+      - 'runtime/runtime/**'
       - '.github/workflows/performance-03511.yml'
   pull_request:
     paths:
       - 'scripts/performance/**'
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src/main.tsx'
-      - 'runtime/neverruntime/**'
+      - 'runtime/runtime/**'
       - '.github/workflows/performance-03511.yml'
 permissions:
   contents: read
@@ -45,16 +45,16 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install psutil==7.2.2
       - uses: dtolnay/rust-toolchain@stable
-      - name: Compile actual NeverRuntime and signed certification fixture
-        run: cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime --example cert_sign_fixture
+      - name: Compile actual Runtime and signed certification fixture
+        run: cargo build --release --manifest-path runtime/runtime/Cargo.toml --bin runtime --example cert_sign_fixture
       - name: Real 10k-file verification and 32/64 MiB native HTTP downloads
         shell: bash
         run: |
           ext=''
           if [[ '${{ runner.os }}' == 'Windows' ]]; then ext='.exe'; fi
           python scripts/performance/benchmark_03511.py \
-            --runtime "runtime/neverruntime/target/release/neverruntime${ext}" \
-            --signer "runtime/neverruntime/target/release/examples/cert_sign_fixture${ext}" \
+            --runtime "runtime/runtime/target/release/runtime${ext}" \
+            --signer "runtime/runtime/target/release/examples/cert_sign_fixture${ext}" \
             --verify-files 10000 --download-mib 32 64 --repetitions 3 \
             --output performance-native-${{ runner.os }}.json
       - uses: actions/upload-artifact@v4
@@ -86,7 +86,7 @@ jobs:
       - name: Build real Desktop native binary
         run: cargo build --release --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Measure first and subsequent process launches under Xvfb
-        run: dbus-run-session -- xvfb-run -a python scripts/performance/benchmark_03511.py --desktop apps/desktop/src-tauri/target/release/neverlauncher-desktop --download-mib --repetitions 3 --output performance-desktop-linux.json
+        run: dbus-run-session -- xvfb-run -a python scripts/performance/benchmark_03511.py --desktop apps/desktop/src-tauri/target/release/launcher-desktop --download-mib --repetitions 3 --output performance-desktop-linux.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

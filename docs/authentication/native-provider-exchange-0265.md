@@ -1,4 +1,4 @@
-# NeverLauncher 0.26.5 — Native Microsoft → Xbox Live → XSTS → Minecraft
+# Launcher 0.26.5 — Native Microsoft → Xbox Live → XSTS → Minecraft
 
 This release moves the **token exchange itself** from the Go Backend into the trusted Rust/Tauri Desktop process. It is a functional implementation; **external Minecraft Services approval and live game-server entry are not claimed**.
 
@@ -10,7 +10,7 @@ This release moves the **token exchange itself** from the Go Backend into the tr
 4. The trusted process verifies the Xbox user hash across both responses, Minecraft bearer/token type/lifetime, Java profile UUID and valid player name. A live Java profile is authoritative; an empty entitlement list alone is not proof of no Game Pass entitlement.
 5. The native OS credential store holds the Microsoft refresh token, Minecraft bearer, Minecraft bearer expiry and immutable registered Client ID (`schema=2`). Neither bearer nor OAuth code/verifier is serialised through Tauri IPC; the renderer gets a profile or a Device Code **user** code only.
 6. Before **status**, **texture modifications** or **launch**, Tauri revalidates the Never session/configuration. Expired Minecraft bearers are reacquired by refreshing Microsoft, then performing the entire Xbox/XSTS/Minecraft chain. Refresh-token rotation is saved before further provider calls. UUID changes after refresh are rejected.
-7. Native official credentials flow only to NeverRuntime for real game launch (`user_type=msa`, official UUID). NeverRuntime's command preview continues to redact bearer tokens. No local offline/Yggdrasil session is promoted into official identity.
+7. Native official credentials flow only to Runtime for real game launch (`user_type=msa`, official UUID). Runtime's command preview continues to redact bearer tokens. No local offline/Yggdrasil session is promoted into official identity.
 
 ## Existing installations
 

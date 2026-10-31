@@ -4,7 +4,7 @@ import "testing"
 
 func TestCanonicalIssuer0291(t *testing.T) {
 	checks := []struct{ provider, issuer, want string }{
-		{"local", "", "neverlauncher"},
+		{"local", "", "launcher"},
 		{"HTTP", "", "provider:http"},
 		{"oidc", "https://Login.Example/tenant/v2.0", "https://Login.Example/tenant/v2.0"},
 	}

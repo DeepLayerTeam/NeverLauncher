@@ -9,11 +9,11 @@ use sha2::{Digest, Sha256};
 use zeroize::{Zeroize, Zeroizing};
 use rand::RngCore;
 use base64::Engine as _;
-use neverruntime::MinecraftLaunchCredentials;
+use runtime::MinecraftLaunchCredentials;
 use tokio::sync::watch;
 use crate::{official_browser_0263, official_exchange_0265::{NativeProvider, MicrosoftGrant, ProviderError, now}};
 
-const SERVICE: &str = "NeverLauncher Official Minecraft 0.26.2"; // preserve existing vault slots
+const SERVICE: &str = "Launcher Official Minecraft 0.26.2"; // preserve existing vault slots
 const PREFIX: &str = "/api/v1/minecraft/official";
 const RESPONSE_LIMIT: usize = 256 * 1024;
 const MAX_ACCOUNTS: usize = 16;
@@ -146,7 +146,7 @@ fn scope(backend: &str, session_id: &str) -> Result<(Url, String), String> {
     }
     let origin = url.origin().ascii_serialization();
     let mut digest = Sha256::new();
-    digest.update(b"neverlauncher/official-identity/0262\0");
+    digest.update(b"launcher/official-identity/0262\0");
     digest.update(origin.as_bytes());
     digest.update(b"\0");
     digest.update(session_id.as_bytes());
@@ -431,12 +431,12 @@ impl IdentityManager {
     pub fn new() -> Result<Self, String> {
         let client = Client::builder().timeout(Duration::from_secs(80))
             .redirect(reqwest::redirect::Policy::none())
-            .user_agent(concat!("NeverLauncher/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!("Launcher/", env!("CARGO_PKG_VERSION")))
             .build().map_err(|_| "Не удалось инициализировать защищённый HTTP-клиент".to_string())?;
         Ok(Self { client, provider: NativeProvider::new()?, native_pending: Mutex::new(HashMap::new()), pending: Mutex::new(HashMap::new()), browser: Mutex::new(HashMap::new()), vault_lock: tokio::sync::Mutex::new(()) })
     }
     async fn request(&self, base: &Url, access: &str, route: &str, method: Method, ticket: Option<&str>, body: Option<Value>, skin: Option<(Vec<u8>, String)>) -> Result<Response, String> {
-        if access.len() < 16 || access.len() > 8192 { return Err("Необходимо войти в NeverLauncher".into()); }
+        if access.len() < 16 || access.len() > 8192 { return Err("Необходимо войти в Launcher".into()); }
         let url = base.join(&format!("{PREFIX}{route}")).map_err(|_| "Некорректный official API URL".to_string())?;
         let mut req = self.client.request(method, url).bearer_auth(access);
         if let Some(ticket) = ticket { req = req.header("X-Official-Minecraft-Session", ticket); }

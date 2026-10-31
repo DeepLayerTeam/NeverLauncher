@@ -18,14 +18,14 @@ MACHINES = {
     "arm64": (183, "EM_AARCH64"),
 }
 COMPONENTS = {
-    "cli": ("neverlauncher-cli-linux-{arch}", "neverlauncher/neverlauncher-cli"),
-    "api": ("neverlauncher-api-linux-{arch}", "neverlauncher/neverlauncher-api"),
+    "cli": ("launcher-cli-linux-{arch}", "launcher/launcher-cli"),
+    "api": ("launcher-api-linux-{arch}", "launcher/launcher-api"),
     "desktop-launcher": (
-        "neverlauncher-desktop-linux-{arch}",
-        "neverlauncher/neverlauncher-desktop",
+        "launcher-desktop-linux-{arch}",
+        "launcher/launcher-desktop",
     ),
-    "guard": ("guard-linux-{arch}", "neverlauncher/guard"),
-    "runtime": ("neverruntime-linux-{arch}", "neverlauncher/neverruntime"),
+    "guard": ("guard-linux-{arch}", "launcher/guard"),
+    "runtime": ("runtime-linux-{arch}", "launcher/runtime"),
 }
 
 
@@ -70,7 +70,7 @@ def tar_info(name: str, size: int, mode: int) -> tarfile.TarInfo:
 
 def write_package(out: Path, version: str, arch: str) -> None:
     _, machine_name = MACHINES[arch]
-    package_name = f"neverlauncher-linux-{arch}-{version}.tar.gz"
+    package_name = f"launcher-linux-{arch}-{version}.tar.gz"
     manifest_name = f"LINUX_PACKAGE_MANIFEST_{arch.upper()}.json"
     artifacts: list[dict[str, object]] = []
     payloads: list[tuple[Path, str]] = []
@@ -99,7 +99,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
     artifacts.sort(key=lambda item: str(item["component"]))
     manifest = {
         "schemaVersion": "1.0",
-        "product": "NeverLauncher",
+        "product": "Launcher",
         "productVersion": version,
         "platform": "linux",
         "architecture": arch,
@@ -126,8 +126,8 @@ def write_package(out: Path, version: str, arch: str) -> None:
         update_components.append(
             {
                 "component": update_name,
-                "sourcePath": str(item["packagePath"]).removeprefix("neverlauncher/"),
-                "targetPath": str(item["packagePath"]).removeprefix("neverlauncher/"),
+                "sourcePath": str(item["packagePath"]).removeprefix("launcher/"),
+                "targetPath": str(item["packagePath"]).removeprefix("launcher/"),
                 "sha256": item["sha256"],
                 "size": item["size"],
                 "executable": True,
@@ -135,7 +135,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
         )
     update_manifest = {
         "schemaVersion": "1.0",
-        "product": "NeverLauncher",
+        "product": "Launcher",
         "productVersion": version,
         "platform": "linux",
         "architecture": arch,
@@ -156,8 +156,8 @@ def write_package(out: Path, version: str, arch: str) -> None:
     update_manifest["supportFiles"].append(
         {
             "component": "updater",
-            "sourcePath": "neverlauncher-cli",
-            "targetPath": "neverlauncher-cli",
+            "sourcePath": "launcher-cli",
+            "targetPath": "launcher-cli",
             "sha256": by_component["cli"]["sha256"],
             "size": by_component["cli"]["size"],
             "executable": True,
@@ -186,7 +186,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
                         )
                 tf.addfile(
                     tar_info(
-                        "neverlauncher/LINUX_PACKAGE_MANIFEST.json",
+                        "launcher/LINUX_PACKAGE_MANIFEST.json",
                         len(manifest_bytes),
                         0o644,
                     ),
@@ -194,7 +194,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
                 )
                 tf.addfile(
                     tar_info(
-                        "neverlauncher/COMPONENT_UPDATE_MANIFEST.json",
+                        "launcher/COMPONENT_UPDATE_MANIFEST.json",
                         len(update_manifest_bytes),
                         0o644,
                     ),
@@ -203,7 +203,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
                 if component_sig is not None:
                     tf.addfile(
                         tar_info(
-                            "neverlauncher/COMPONENT_SET_SIGNATURE.json",
+                            "launcher/COMPONENT_SET_SIGNATURE.json",
                             len(component_sig),
                             0o644,
                         ),
@@ -212,7 +212,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
                 if delegated_sig is not None and delegated_policy is not None:
                     tf.addfile(
                         tar_info(
-                            "neverlauncher/COMPONENT_SET_SIGNATURE_V2.json",
+                            "launcher/COMPONENT_SET_SIGNATURE_V2.json",
                             len(delegated_sig),
                             0o644,
                         ),
@@ -220,7 +220,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
                     )
                     tf.addfile(
                         tar_info(
-                            "neverlauncher/COMPONENT_TRUST_POLICY.json",
+                            "launcher/COMPONENT_TRUST_POLICY.json",
                             len(delegated_policy),
                             0o644,
                         ),
@@ -244,7 +244,7 @@ def write_package(out: Path, version: str, arch: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Build deterministic NeverLauncher Linux production tar.gz package"
+        description="Build deterministic Launcher Linux production tar.gz package"
     )
     parser.add_argument("--out", required=True)
     parser.add_argument("--version", required=True)

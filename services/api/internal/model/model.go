@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-// Project описывает Minecraft-проект, который использует NeverLauncher.
+// Project описывает Minecraft-проект, который использует Launcher.
 type Project struct {
 	ID             string    `json:"id"`
 	Name           string    `json:"name"`
@@ -794,7 +794,7 @@ type ServerBridgeTransferHop struct {
 
 // ServerBridgeTopologyEdge фиксирует наблюдавшийся маршрут прокси → серверная часть. Связи
 // определяются по аутентифицированным передачам; администраторам не требуется изменять
-// настройки прокси или сервера для поддержки параллельного графа маршрутизации NeverLauncher.
+// настройки прокси или сервера для поддержки параллельного графа маршрутизации Launcher.
 type ServerBridgeTopologyEdge struct {
 	SourceNodeID         string    `json:"sourceNodeId"`
 	TargetNodeID         string    `json:"targetNodeId"`

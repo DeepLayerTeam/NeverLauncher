@@ -15,8 +15,8 @@ import (
 	"sort"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 // Build workspaces are private to the operator; uploaded bytes are stored in
@@ -118,7 +118,7 @@ func (s Server) workspaceCreate0226(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	req.Settings.ToolVersions["neverlauncher-api"] = s.Version
+	req.Settings.ToolVersions["launcher-api"] = s.Version
 	if req.Settings.Minecraft.Version == "" {
 		writeError(w, 400, "Minecraft version required")
 		return
@@ -230,7 +230,7 @@ func (s Server) workspaceCipher0226() (cipher.AEAD, error) {
 		return nil, err
 	}
 	seed := key.Seed()
-	material := sha256.Sum256(append([]byte("NeverLauncher build workspace encryption v1\x00"), seed...))
+	material := sha256.Sum256(append([]byte("Launcher build workspace encryption v1\x00"), seed...))
 	block, err := aes.NewCipher(material[:])
 	if err != nil {
 		return nil, err

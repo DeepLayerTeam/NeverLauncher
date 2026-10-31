@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.vanilla;
+package ru.launcher.bridge.vanilla;
 
 public final class VanillaRconReadback0416Test {
     private static void check(boolean result,String name) {if(!result)throw new AssertionError(name);}

@@ -37,12 +37,12 @@ require(
         "xcrun stapler staple",
         "xcrun stapler validate",
         "/usr/sbin/spctl --assess --type execute",
-        "neverlauncher-desktop-${VERSION}-macos-${arch}.zip",
+        "launcher-desktop-${VERSION}-macos-${arch}.zip",
         "macos-package.py",
         "developer-id-notarized",
         "adhoc-development",
         'HELPERS_DIR="${APP_ROOT}/Contents/Helpers"',
-        'codesign --verify --strict --verbose=2 "${MACOS_DIR}/neverlauncher-desktop"',
+        'codesign --verify --strict --verbose=2 "${MACOS_DIR}/launcher-desktop"',
         'codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"',
     ],
     "macOS production builder",
@@ -50,9 +50,9 @@ require(
 require(
     builder,
     [
-        'cp "${ROOT_DIR}/runtime/neverruntime/target/${RUST_TARGET}/release/guard" "${HELPERS_DIR}/guard"',
-        'cp "${GO_CLI}" "${HELPERS_DIR}/neverlauncher-cli"',
-        'codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"',
+        'cp "${ROOT_DIR}/runtime/runtime/target/${RUST_TARGET}/release/guard" "${HELPERS_DIR}/guard"',
+        'cp "${GO_CLI}" "${HELPERS_DIR}/launcher-cli"',
+        'codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.launcher "${APP_ROOT}"',
         'codesign --verify --deep --strict --verbose=2 "${APP_ROOT}"',
     ],
     "inside-out macOS signing",
@@ -71,16 +71,16 @@ if (
     )
 if (
     'file="${MACOS_DIR}/${binary}"' in builder
-    or 'codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${MACOS_DIR}/neverlauncher-desktop"'
+    or 'codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.launcher "${MACOS_DIR}/launcher-desktop"'
     in builder
 ):
     raise SystemExit(
         "macOS builder must not sign the bundle main executable as a standalone nested step"
     )
-helper_sign = builder.find("for binary in guard neverruntime neverlauncher-cli; do")
+helper_sign = builder.find("for binary in guard runtime launcher-cli; do")
 manifest_build = builder.find('macos-package.py" manifest')
 app_sign = builder.find(
-    'codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"'
+    'codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.launcher "${APP_ROOT}"'
 )
 if min(helper_sign, manifest_build, app_sign) < 0 or not (
     helper_sign < manifest_build < app_sign
@@ -101,15 +101,15 @@ require(
         "GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json",
         "notarytool result is not Accepted",
         "Contents/Helpers/guard",
-        "Contents/Helpers/neverruntime",
-        "Contents/Helpers/neverlauncher-cli",
+        "Contents/Helpers/runtime",
+        "Contents/Helpers/launcher-cli",
         "require_signature: bool = True",
         'require_signature=(component != "desktop-launcher")',
     ],
     "macOS package helper",
 )
 
-verifier = read("cli/cmd/neverlauncher/macos_delivery.go")
+verifier = read("cli/cmd/launcher/macos_delivery.go")
 require(
     verifier,
     [
@@ -129,7 +129,7 @@ require(
     "macOS delivery verifier",
 )
 
-release = read("cli/cmd/neverlauncher/release_commands.go")
+release = read("cli/cmd/launcher/release_commands.go")
 require(
     release,
     [
@@ -148,7 +148,7 @@ require(
     [
         "NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR",
         "MACOS_DUAL_ARCH_REQUIRED",
-        "neverlauncher-desktop-${VERSION}-macos-${arch}.zip",
+        "launcher-desktop-${VERSION}-macos-${arch}.zip",
         "MACOS_NOTARIZATION_EVIDENCE.json",
     ],
     "release staging",
@@ -160,7 +160,7 @@ require(
     [
         "macos-production:",
         "build-macos-production.sh --allow-ad-hoc",
-        "neverlauncher-macos-production-${{ github.sha }}",
+        "launcher-macos-production-${{ github.sha }}",
     ],
     "CI macOS delivery boundary",
 )
@@ -189,7 +189,7 @@ require(
         "macos-production-notarized:",
         "uses: ./.github/workflows/macos-production-delivery.yml",
         "secrets: inherit",
-        "neverlauncher-macos-notarized-${{ github.sha }}",
+        "launcher-macos-notarized-${{ github.sha }}",
         "path: macos-production-artifacts",
         "NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts",
         "needs: [base-ci, windows-production-signed, macos-production-notarized]",
@@ -198,16 +198,16 @@ require(
 )
 if (
     "macos-production-notarized:" in ci
-    or "neverlauncher-macos-notarized-${{ github.sha }}" in ci
+    or "launcher-macos-notarized-${{ github.sha }}" in ci
 ):
     raise SystemExit(
         "ordinary main CI must not require Apple production notarization credentials"
     )
 
 subprocess.run(
-    ["go", "test", "./cmd/neverlauncher", "-run", "TestMacOS", "-count=1"],
+    ["go", "test", "./cmd/launcher", "-run", "TestMacOS", "-count=1"],
     cwd=ROOT / "cli",
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} notarized macOS x64 + ARM64 gate: OK")
+print(f"Launcher {VERSION} notarized macOS x64 + ARM64 gate: OK")

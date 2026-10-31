@@ -57,7 +57,7 @@ func TestMirrorWorkspace0405ModpackLibrariesAuthlibAndRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	ws := mirrorWorkspace0274{
-		SchemaVersion: "neverlauncher.mirror-workspace.v1", Minecraft: "fixture-1", Loader: "vanilla", Modpack: "input.mrpack",
+		SchemaVersion: "launcher.mirror-workspace.v1", Minecraft: "fixture-1", Loader: "vanilla", Modpack: "input.mrpack",
 		Mods:          []mirrorArtifact0274{{Path: "mods/extra.jar", File: "extra.jar", SHA256: mirrorSHA0274(extraBytes)}},
 		Libraries:     []mirrorWorkspaceLibrary0405{{Coordinate: "example:library:1.0", File: "library.jar", SHA256: mirrorSHA0274(libraryBytes)}},
 		Compatibility: "authlib.json",
@@ -150,7 +150,7 @@ func TestMirrorWorkspace0405AuthlibPatchDeliveredAndVerified(t *testing.T) {
 		}
 	}
 	ws := mirrorWorkspace0274{
-		SchemaVersion: "neverlauncher.mirror-workspace.v1", Minecraft: "fixture-1", Loader: "vanilla",
+		SchemaVersion: "launcher.mirror-workspace.v1", Minecraft: "fixture-1", Loader: "vanilla",
 		Libraries: []mirrorWorkspaceLibrary0405{{Coordinate: "com.mojang:authlib:4.0", File: "base.jar", SHA256: mirrorSHA0274(base)}},
 		AuthlibPatches: []mirrorWorkspaceAuthlibPatch0405{{
 			Target: "libraries/com/mojang/authlib/4.0/authlib-4.0.jar", Patch: "patch.jar",
@@ -216,7 +216,7 @@ func TestMirrorWorkspace0405RegisteredLibraryRunsOnJVM(t *testing.T) {
 		t.Fatal(err)
 	}
 	ws := mirrorWorkspace0274{
-		SchemaVersion: "neverlauncher.mirror-workspace.v1", Minecraft: "fixture-1", Loader: "vanilla",
+		SchemaVersion: "launcher.mirror-workspace.v1", Minecraft: "fixture-1", Loader: "vanilla",
 		Libraries: []mirrorWorkspaceLibrary0405{{Coordinate: "workspace:fixture:1.0", File: "workspace-library.jar", SHA256: sha}},
 	}
 	data, _ := json.Marshal(ws)
@@ -263,7 +263,7 @@ func TestMirrorWorkspace0405CurseOverridesWithoutAPIKey(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(folder, "pack.zip"), contents, 0600); err != nil {
 		t.Fatal(err)
 	}
-	workspace := mirrorWorkspace0274{SchemaVersion: "neverlauncher.mirror-workspace.v1", Minecraft: "fixture-1", Loader: "vanilla", Modpack: "pack.zip"}
+	workspace := mirrorWorkspace0274{SchemaVersion: "launcher.mirror-workspace.v1", Minecraft: "fixture-1", Loader: "vanilla", Modpack: "pack.zip"}
 	wsBytes, _ := json.Marshal(workspace)
 	wsFile := filepath.Join(folder, "workspace.json")
 	if err := os.WriteFile(wsFile, wsBytes, 0600); err != nil {

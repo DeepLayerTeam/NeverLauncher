@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/DeepLayerTeam/NeverLauncher/prestarter/installer"
+	"github.com/DeepLayerTeam/Launcher/prestarter/installer"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -23,16 +23,16 @@ func rootDir() (string, error) {
 	switch runtime.GOOS {
 	case "windows":
 		if p := os.Getenv("LOCALAPPDATA"); filepath.IsAbs(p) {
-			return filepath.Join(p, "NeverLauncher"), nil
+			return filepath.Join(p, "Launcher"), nil
 		}
-		return filepath.Join(home, "AppData", "Local", "NeverLauncher"), nil
+		return filepath.Join(home, "AppData", "Local", "Launcher"), nil
 	case "darwin":
-		return filepath.Join(home, "Library", "Application Support", "NeverLauncher"), nil
+		return filepath.Join(home, "Library", "Application Support", "Launcher"), nil
 	default:
 		if p := os.Getenv("XDG_DATA_HOME"); filepath.IsAbs(p) {
-			return filepath.Join(p, "NeverLauncher"), nil
+			return filepath.Join(p, "Launcher"), nil
 		}
-		return filepath.Join(home, ".local", "share", "NeverLauncher"), nil
+		return filepath.Join(home, ".local", "share", "Launcher"), nil
 	}
 }
 func main() {

@@ -4,7 +4,7 @@ on:
     paths:
       - 'services/api/internal/deployment/**'
       - 'services/api/internal/config/**'
-      - 'services/api/cmd/neverlauncher-api/**'
+      - 'services/api/cmd/launcher-api/**'
       - 'services/api/internal/httpapi/rate_limit.go'
       - 'services/api/go.mod'
       - 'services/api/go.sum'
@@ -32,16 +32,16 @@ jobs:
           go version
           go mod download
           go mod verify
-          test -z "$(gofmt -l internal/deployment internal/config/config.go cmd/neverlauncher-api/main.go)"
+          test -z "$(gofmt -l internal/deployment internal/config/config.go cmd/launcher-api/main.go)"
       - name: Topology and real cross-process OS lock tests
         run: |
           set -euo pipefail
           go test -race -count=1 -timeout=5m ./internal/deployment ./internal/config
-          go vet ./internal/deployment ./internal/config ./cmd/neverlauncher-api
+          go vet ./internal/deployment ./internal/config ./cmd/launcher-api
       - name: Compile production API (real drivers)
         run: |
           set -euo pipefail
-          go build -trimpath -o "$RUNNER_TEMP/neverlauncher-api-328" ./cmd/neverlauncher-api
-          NEVERLAUNCHER_ENV=production NEVERLAUNCHER_DEPLOYMENT_MODE=single-node "$RUNNER_TEMP/neverlauncher-api-328" diagnose deployment > "$RUNNER_TEMP/diagnose-single.json" && exit 1 || test $? -eq 2
+          go build -trimpath -o "$RUNNER_TEMP/launcher-api-328" ./cmd/launcher-api
+          NEVERLAUNCHER_ENV=production NEVERLAUNCHER_DEPLOYMENT_MODE=single-node "$RUNNER_TEMP/launcher-api-328" diagnose deployment > "$RUNNER_TEMP/diagnose-single.json" && exit 1 || test $? -eq 2
           grep -q '"configurationValid":false' "$RUNNER_TEMP/diagnose-single.json"
           grep -q 'SQLite-only HTTP repository is not implemented' "$RUNNER_TEMP/diagnose-single.json"

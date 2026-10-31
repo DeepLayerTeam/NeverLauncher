@@ -3,7 +3,7 @@ package model
 import "time"
 
 // ExtensionTarget — отдельная исполняемая или интерфейсная
-// цель из канонического neverlauncher-extension.json.
+// цель из канонического launcher-extension.json.
 type ExtensionTarget struct {
 	Kind       string `json:"kind"`
 	Entrypoint string `json:"entrypoint"`
@@ -43,7 +43,7 @@ type ExtensionAdminAction struct {
 
 // ExtensionAdminContributions — декларативные привязки слотов.
 // Исполняемый интерфейс остаётся в изолированном iframe цели Admin;
-// значения никогда не внедряют JS в сборку Admin NeverLauncher.
+// значения никогда не внедряют JS в сборку Admin Launcher.
 type ExtensionAdminContributions struct {
 	Pages            []ExtensionAdminPage       `json:"pages,omitempty"`
 	Navigation       []ExtensionAdminNavigation `json:"navigation,omitempty"`
@@ -111,7 +111,7 @@ type ExtensionConflict struct {
 }
 
 // ExtensionManifest — канонический манифест Extensions,
-// введённый в 0.20.1. Он заменяет новые neverlauncher-plugin.json,
+// введённый в 0.20.1. Он заменяет новые launcher-plugin.json,
 // сохраняя импорт старого формата через CLI.
 type ExtensionManifest struct {
 	SchemaVersion string                         `json:"schemaVersion"`

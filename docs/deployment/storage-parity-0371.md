@@ -1,4 +1,4 @@
-# NeverLauncher 0.37.1 — проверяемая карта зависимостей и реальные контракты хранилищ
+# Launcher 0.37.1 — проверяемая карта зависимостей и реальные контракты хранилищ
 
 ## Что поставляется
 
@@ -24,7 +24,7 @@
 
 | Место | Конкретная оставшаяся зависимость |
 | --- | --- |
-| `services/api/cmd/neverlauncher-api/main.go` | HTTP bootstrap выбирает память/SQLRepository; SQLite Core нельзя выдавать за Repository |
+| `services/api/cmd/launcher-api/main.go` | HTTP bootstrap выбирает память/SQLRepository; SQLite Core нельзя выдавать за Repository |
 | `services/api/internal/deployment/mode.go` | `single-node` явно блокируется до гарантий полного SQLite HTTP backend |
 | `services/api/internal/httpapi/installation.go` | Установка и первичная настройка открывают SQL-подключение напрямую |
 | `services/api/internal/httpapi/auth_core_postgres_111.go` | Отдельные операции авторизации и сессий реализованы через PostgreSQL |

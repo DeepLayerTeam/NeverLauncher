@@ -69,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -eu
-          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/private.pem"
           openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
           "$RUNNER_TEMP/nl" extension pack examples/extensions/gravit-compat/build/package --output "$RUNNER_TEMP/gravit-port.nlext" --private-key "$RUNNER_TEMP/private.pem"

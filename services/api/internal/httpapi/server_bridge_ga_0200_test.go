@@ -22,11 +22,11 @@ func TestServerBridgeGA0200ProtocolV3IsFrozen(t *testing.T) {
 func TestServerBridgeGA0200ProtocolV2DeprecationHeaders(t *testing.T) {
 	res := httptest.NewRecorder()
 	markServerBridgeProtocolResponse0200(res, 2)
-	if res.Header().Get("Deprecation") != "true" || res.Header().Get("X-NeverLauncher-ServerBridge-Migrate-To") != "3" {
+	if res.Header().Get("Deprecation") != "true" || res.Header().Get("X-Launcher-ServerBridge-Migrate-To") != "3" {
 		t.Fatalf("Protocol v2 response is missing deprecation/migration headers: %#v", res.Header())
 	}
-	if res.Header().Get("X-NeverLauncher-ServerBridge-Protocol") != "compatibility-deprecated" {
-		t.Fatalf("unexpected protocol mode header: %q", res.Header().Get("X-NeverLauncher-ServerBridge-Protocol"))
+	if res.Header().Get("X-Launcher-ServerBridge-Protocol") != "compatibility-deprecated" {
+		t.Fatalf("unexpected protocol mode header: %q", res.Header().Get("X-Launcher-ServerBridge-Protocol"))
 	}
 }
 

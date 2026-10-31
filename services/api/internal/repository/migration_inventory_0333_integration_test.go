@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	gd "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitdetector"
-	inv "gitflic.ru/skif4er/neverlauncher/services/api/internal/gravitinventory"
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	gd "gitflic.ru/skif4er/launcher/services/api/internal/gravitdetector"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 func inventoryFixture0333(t *testing.T, content string) inv.Inventory {
@@ -104,10 +104,10 @@ func TestMigrationInventoryTransactional0333(t *testing.T) {
 	if e != nil || updated.Revision != original.Revision+1 {
 		t.Fatalf("revision not incremented %v", e)
 	}
-	if _, e = repo.SaveMigrationCompatibility0332(ctx, run.ID, gd.Report{Format: "neverlauncher.gravit-compatibility.v1", SourceSHA256: first.SourceSHA256, Status: "manual", VersionStatus: "unverified", CutoverAllowed: false}); !errors.Is(e, mw.ErrConflict) {
+	if _, e = repo.SaveMigrationCompatibility0332(ctx, run.ID, gd.Report{Format: "launcher.gravit-compatibility.v1", SourceSHA256: first.SourceSHA256, Status: "manual", VersionStatus: "unverified", CutoverAllowed: false}); !errors.Is(e, mw.ErrConflict) {
 		t.Fatalf("compat source repin accepted: %v", e)
 	}
-	if _, e = repo.SaveMigrationCompatibility0332(ctx, run.ID, gd.Report{Format: "neverlauncher.gravit-compatibility.v1", SourceSHA256: changed.SourceSHA256, Status: "manual", VersionStatus: "unverified", CutoverAllowed: false}); e != nil {
+	if _, e = repo.SaveMigrationCompatibility0332(ctx, run.ID, gd.Report{Format: "launcher.gravit-compatibility.v1", SourceSHA256: changed.SourceSHA256, Status: "manual", VersionStatus: "unverified", CutoverAllowed: false}); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = repo.SaveMigrationInventory0333(ctx, run.ID, first); !errors.Is(e, mw.ErrConflict) {

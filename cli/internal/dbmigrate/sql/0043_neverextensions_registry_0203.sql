@@ -1,4 +1,4 @@
--- NeverLauncher 0.20.3: производственный закрытый или локальный реестр
+-- Launcher 0.20.3: производственный закрытый или локальный реестр
 -- Extensions. Метаданные нормализованы вокруг неизменяемых версий расширений
 -- и подписанных .nlext, адресуемых по содержимому. Изменяемое состояние ограничено
 -- активацией издателей и ключей, указателями каналов и метаданными отзыва.
@@ -45,14 +45,14 @@ CREATE TABLE IF NOT EXISTS extension_registry_versions (
 CREATE TABLE IF NOT EXISTS extension_registry_compatibility (
     extension_id TEXT NOT NULL,
     version TEXT NOT NULL,
-    min_neverlauncher TEXT NOT NULL DEFAULT '',
-    max_neverlauncher TEXT NOT NULL DEFAULT '',
+    min_launcher TEXT NOT NULL DEFAULT '',
+    max_launcher TEXT NOT NULL DEFAULT '',
     supported_os JSONB NOT NULL DEFAULT '[]'::jsonb,
     supported_architectures JSONB NOT NULL DEFAULT '[]'::jsonb,
     PRIMARY KEY (extension_id, version),
     FOREIGN KEY (extension_id, version) REFERENCES extension_registry_versions(extension_id, version) ON DELETE CASCADE,
-    CONSTRAINT extension_registry_compatibility_min_0203 CHECK (min_neverlauncher='' OR min_neverlauncher ~ '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'),
-    CONSTRAINT extension_registry_compatibility_max_0203 CHECK (max_neverlauncher='' OR max_neverlauncher ~ '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'),
+    CONSTRAINT extension_registry_compatibility_min_0203 CHECK (min_launcher='' OR min_launcher ~ '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'),
+    CONSTRAINT extension_registry_compatibility_max_0203 CHECK (max_launcher='' OR max_launcher ~ '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'),
     CONSTRAINT extension_registry_compatibility_os_0203 CHECK (jsonb_typeof(supported_os)='array'),
     CONSTRAINT extension_registry_compatibility_arch_0203 CHECK (jsonb_typeof(supported_architectures)='array')
 );
@@ -100,7 +100,7 @@ CREATE INDEX IF NOT EXISTS idx_extension_registry_artifacts_sha256_0203
 CREATE INDEX IF NOT EXISTS idx_extension_registry_publishers_active_0203
     ON extension_registry_publishers(id) WHERE active;
 
-CREATE OR REPLACE FUNCTION neverlauncher_registry_version_guard_0203()
+CREATE OR REPLACE FUNCTION launcher_registry_version_guard_0203()
 RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE manifest_publisher TEXT;
 BEGIN
@@ -127,9 +127,9 @@ $$;
 DROP TRIGGER IF EXISTS trg_extension_registry_versions_guard_0203 ON extension_registry_versions;
 CREATE TRIGGER trg_extension_registry_versions_guard_0203
 BEFORE INSERT OR UPDATE ON extension_registry_versions
-FOR EACH ROW EXECUTE FUNCTION neverlauncher_registry_version_guard_0203();
+FOR EACH ROW EXECUTE FUNCTION launcher_registry_version_guard_0203();
 
-CREATE OR REPLACE FUNCTION neverlauncher_registry_immutable_guard_0203()
+CREATE OR REPLACE FUNCTION launcher_registry_immutable_guard_0203()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     RAISE EXCEPTION 'Extensions registry artifact/compatibility rows are immutable';
@@ -138,13 +138,13 @@ $$;
 DROP TRIGGER IF EXISTS trg_extension_registry_artifacts_immutable_0203 ON extension_registry_artifacts;
 CREATE TRIGGER trg_extension_registry_artifacts_immutable_0203
 BEFORE UPDATE OR DELETE ON extension_registry_artifacts
-FOR EACH ROW EXECUTE FUNCTION neverlauncher_registry_immutable_guard_0203();
+FOR EACH ROW EXECUTE FUNCTION launcher_registry_immutable_guard_0203();
 DROP TRIGGER IF EXISTS trg_extension_registry_compatibility_immutable_0203 ON extension_registry_compatibility;
 CREATE TRIGGER trg_extension_registry_compatibility_immutable_0203
 BEFORE UPDATE OR DELETE ON extension_registry_compatibility
-FOR EACH ROW EXECUTE FUNCTION neverlauncher_registry_immutable_guard_0203();
+FOR EACH ROW EXECUTE FUNCTION launcher_registry_immutable_guard_0203();
 
-CREATE OR REPLACE FUNCTION neverlauncher_registry_channel_guard_0203()
+CREATE OR REPLACE FUNCTION launcher_registry_channel_guard_0203()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF EXISTS(SELECT 1 FROM extension_registry_versions WHERE extension_id=NEW.extension_id AND version=NEW.version AND yanked_at IS NOT NULL) THEN
@@ -156,11 +156,11 @@ $$;
 DROP TRIGGER IF EXISTS trg_extension_registry_channels_guard_0203 ON extension_registry_channels;
 CREATE TRIGGER trg_extension_registry_channels_guard_0203
 BEFORE INSERT OR UPDATE ON extension_registry_channels
-FOR EACH ROW EXECUTE FUNCTION neverlauncher_registry_channel_guard_0203();
+FOR EACH ROW EXECUTE FUNCTION launcher_registry_channel_guard_0203();
 
 COMMENT ON TABLE extension_registry_publishers IS 'Extensions private/local registry publisher identities (0.20.3).';
 COMMENT ON TABLE extension_registry_publisher_keys IS 'Trusted Ed25519 publisher keys used to verify signed .nlext artifacts.';
 COMMENT ON TABLE extension_registry_versions IS 'Published immutable extension versions with irreversible yank state.';
-COMMENT ON TABLE extension_registry_compatibility IS 'Immutable NeverLauncher/platform compatibility metadata for published versions.';
-COMMENT ON TABLE extension_registry_artifacts IS 'Content-addressed verified .nlext artifact metadata; bytes live in configured NeverLauncher storage.';
+COMMENT ON TABLE extension_registry_compatibility IS 'Immutable Launcher/platform compatibility metadata for published versions.';
+COMMENT ON TABLE extension_registry_artifacts IS 'Content-addressed verified .nlext artifact metadata; bytes live in configured Launcher storage.';
 COMMENT ON TABLE extension_registry_channels IS 'Mutable registry channel pointers such as stable/beta/dev.';

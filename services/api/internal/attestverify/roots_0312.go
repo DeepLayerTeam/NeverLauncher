@@ -41,7 +41,7 @@ type Store struct {
 	revokedAK map[string]bool
 }
 
-const rootSchema = "neverlauncher/tpm-ak-trust-roots/v1"
+const rootSchema = "launcher/tpm-ak-trust-roots/v1"
 
 // Load reads a fresh snapshot on each verification and status check. Replacing
 // the file atomically allows root overlap/rotation and immediate revocation;

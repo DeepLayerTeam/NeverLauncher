@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 public final class BridgeDefaults {
     public static final String VERSION = BridgeVersion.VERSION;
@@ -28,16 +28,16 @@ public final class BridgeDefaults {
     public static final String FEATURE_RUNTIME_BINDING_V3 = "security.runtime-instance-binding-v3";
     public static final String FEATURE_ONLINE_KEY_ROTATION = "security.online-key-rotation-v1";
     public static final String SECURITY_PROFILE = "serverbridge3-security-01912";
-    public static final String VELOCITY_ID = "neverlauncher-velocity-bridge";
-    public static final String BUNGEECORD_ID = "neverlauncher-bungeecord-bridge";
-    public static final String WATERFALL_ID = "neverlauncher-waterfall-bridge";
-    public static final String BUKKIT_ID = "neverlauncher-bukkit-bridge";
-    public static final String SPIGOT_ID = "neverlauncher-spigot-bridge";
-    public static final String PAPER_ID = "neverlauncher-paper-bridge";
-    public static final String PURPUR_ID = "neverlauncher-purpur-bridge";
-    public static final String FOLIA_ID = "neverlauncher-folia-bridge";
-    public static final String QUILT_ID = "neverlauncher-quilt-bridge";
-    public static final String SPONGE_ID = "neverlauncher-sponge-bridge";
-    public static final String VANILLA_ID = "neverlauncher-vanilla-bridge";
+    public static final String VELOCITY_ID = "launcher-velocity-bridge";
+    public static final String BUNGEECORD_ID = "launcher-bungeecord-bridge";
+    public static final String WATERFALL_ID = "launcher-waterfall-bridge";
+    public static final String BUKKIT_ID = "launcher-bukkit-bridge";
+    public static final String SPIGOT_ID = "launcher-spigot-bridge";
+    public static final String PAPER_ID = "launcher-paper-bridge";
+    public static final String PURPUR_ID = "launcher-purpur-bridge";
+    public static final String FOLIA_ID = "launcher-folia-bridge";
+    public static final String QUILT_ID = "launcher-quilt-bridge";
+    public static final String SPONGE_ID = "launcher-sponge-bridge";
+    public static final String VANILLA_ID = "launcher-vanilla-bridge";
     private BridgeDefaults() {}
 }

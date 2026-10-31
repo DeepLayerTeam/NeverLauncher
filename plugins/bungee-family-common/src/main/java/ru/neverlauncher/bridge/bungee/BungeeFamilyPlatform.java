@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.bungee;
+package ru.launcher.bridge.bungee;
 
 import net.md_5.bungee.api.ProxyServer;
 

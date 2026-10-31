@@ -236,7 +236,7 @@ func repairClientInstallation(packagePath, storageDir, clientDir string, include
 }
 
 func clientStateRollbackSpec0156(clientDir, snapshotID string) (updaterFileSpec0156, bool, error) {
-	path := filepath.Join(clientDir, ".neverlauncher", "client-state.json")
+	path := filepath.Join(clientDir, ".launcher", "client-state.json")
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return updaterFileSpec0156{}, false, nil
@@ -256,7 +256,7 @@ func clientStateRollbackSpec0156(clientDir, snapshotID string) (updaterFileSpec0
 	}
 	updated = append(updated, '\n')
 	size, sum := updaterBytesMetadata0156(updated)
-	return updaterFileSpec0156{Path: ".neverlauncher/client-state.json", Data: updated, Size: size, SHA256: sum}, true, nil
+	return updaterFileSpec0156{Path: ".launcher/client-state.json", Data: updated, Size: size, SHA256: sum}, true, nil
 }
 
 func cleanupClientInstallation(packagePath, clientDir string) (map[string]any, error) {
@@ -268,7 +268,7 @@ func cleanupClientInstallation(packagePath, clientDir string) (map[string]any, e
 		return map[string]any{"schemaVersion": cliSchemaVersion, "toolVersion": version, "status": "clean", "quarantined": []string{}, "verify": verify}, nil
 	}
 	stamp := time.Now().UTC().Format("20060102T150405.000000000Z")
-	quarantine := filepath.Join(clientDir, ".neverlauncher", "quarantine", stamp)
+	quarantine := filepath.Join(clientDir, ".launcher", "quarantine", stamp)
 	moved := []string{}
 	tracked := map[string]bool{}
 	for _, rel := range currentStatePaths(clientDir) {
@@ -306,7 +306,7 @@ func cleanupClientInstallation(packagePath, clientDir string) (map[string]any, e
 }
 
 func rollbackClientInstallation(clientDir, target string) (map[string]any, error) {
-	snapshotRoot := filepath.Join(clientDir, ".neverlauncher", "snapshots")
+	snapshotRoot := filepath.Join(clientDir, ".launcher", "snapshots")
 	targetDir, snap, err := loadClientSnapshot(snapshotRoot, target)
 	if err != nil {
 		return nil, err
@@ -342,7 +342,7 @@ func rollbackClientInstallation(clientDir, target string) (map[string]any, error
 		wanted[rel] = true
 	}
 
-	stateRel := ".neverlauncher/client-state.json"
+	stateRel := ".launcher/client-state.json"
 	if snap.HadState {
 		stateSrc := filepath.Join(targetDir, "client-state.json")
 		sum, size, err := hashFile(stateSrc)
@@ -438,7 +438,7 @@ func snapshotClientVersion0156(targetDir string) string {
 
 func createClientSnapshot(clientDir string) (string, error) {
 	id := time.Now().UTC().Format("20060102T150405.000000000Z")
-	dir := filepath.Join(clientDir, ".neverlauncher", "snapshots", id)
+	dir := filepath.Join(clientDir, ".launcher", "snapshots", id)
 	filesRoot := filepath.Join(dir, "files")
 	if err := os.MkdirAll(filesRoot, 0o755); err != nil {
 		return "", err
@@ -452,7 +452,7 @@ func createClientSnapshot(clientDir string) (string, error) {
 	}
 	list := make([]string, 0, len(paths))
 	for rel := range paths {
-		if rel == "" || strings.HasPrefix(rel, ".neverlauncher/") {
+		if rel == "" || strings.HasPrefix(rel, ".launcher/") {
 			continue
 		}
 		src := filepath.Join(clientDir, filepath.FromSlash(rel))
@@ -464,7 +464,7 @@ func createClientSnapshot(clientDir string) (string, error) {
 		}
 	}
 	sort.Strings(list)
-	statePath := filepath.Join(clientDir, ".neverlauncher", "client-state.json")
+	statePath := filepath.Join(clientDir, ".launcher", "client-state.json")
 	hadState := false
 	if st, err := os.Stat(statePath); err == nil && !st.IsDir() {
 		if err := copyFileAtomic(statePath, filepath.Join(dir, "client-state.json")); err != nil {
@@ -514,7 +514,7 @@ func loadClientSnapshot(root, target string) (string, clientLifecycleSnapshot, e
 }
 
 func currentStatePaths(clientDir string) []string {
-	raw, err := os.ReadFile(filepath.Join(clientDir, ".neverlauncher", "client-state.json"))
+	raw, err := os.ReadFile(filepath.Join(clientDir, ".launcher", "client-state.json"))
 	if err != nil {
 		return nil
 	}
@@ -537,7 +537,7 @@ func currentStatePaths(clientDir string) []string {
 }
 
 func attachRollbackSnapshot(clientDir, snapshotID string) error {
-	path := filepath.Join(clientDir, ".neverlauncher", "client-state.json")
+	path := filepath.Join(clientDir, ".launcher", "client-state.json")
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return err

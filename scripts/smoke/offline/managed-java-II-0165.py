@@ -22,49 +22,65 @@ def require(text: str, needles: list[str], label: str) -> None:
         raise SystemExit(f"{label}: missing {missing}")
 
 
-runtime = read("runtime/neverruntime/src/managed_java.rs")
-require(runtime, [
-    "MANAGED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25]",
-    "assets/latest/{major}/hotspot",
-    "assets/feature_releases/{major}/ga",
-    'for image_type in ["jre", "jdk"]',
-    "validate_managed_java_major",
-    "archive_sha256",
-    "ensure_archive",
-    "validate_installed_runtime",
-    "runtime record java path вышел за Managed Java root через symlink",
-], "NeverRuntime Managed Java II")
+runtime = read("runtime/runtime/src/managed_java.rs")
+require(
+    runtime,
+    [
+        "MANAGED_JAVA_MAJORS: [u32; 5] = [8, 16, 17, 21, 25]",
+        "assets/latest/{major}/hotspot",
+        "assets/feature_releases/{major}/ga",
+        'for image_type in ["jre", "jdk"]',
+        "validate_managed_java_major",
+        "archive_sha256",
+        "ensure_archive",
+        "validate_installed_runtime",
+        "runtime record java path вышел за Managed Java root через symlink",
+    ],
+    "Runtime Managed Java II",
+)
 
-runtime_cli = read("runtime/neverruntime/src/bin/neverruntime.rs")
-require(runtime_cli, ["--major <8|16|17|21|25>", "ensure_managed_java"], "NeverRuntime Java CLI")
+runtime_cli = read("runtime/runtime/src/bin/runtime.rs")
+require(
+    runtime_cli,
+    ["--major <8|16|17|21|25>", "ensure_managed_java"],
+    "Runtime Java CLI",
+)
 
 e2e = read("e2e/scripts/run-managed-java-II-e2e.sh")
-require(e2e, [
-    "for major in 8 16 17 21 25",
-    "java ensure",
-    'assert data["cached"] is False',
-    'assert second["cached"] is True',
-    'subprocess.run([java, "-version"]',
-    "MANAGED_JAVA_II_EVIDENCE.json",
-], "Managed Java II executable E2E")
+require(
+    e2e,
+    [
+        "for major in 8 16 17 21 25",
+        "java ensure",
+        'assert data["cached"] is False',
+        'assert second["cached"] is True',
+        'subprocess.run([java, "-version"]',
+        "MANAGED_JAVA_II_EVIDENCE.json",
+    ],
+    "Managed Java II executable E2E",
+)
 
 ci = read(".github/workflows/ci.yml")
-require(ci, [
-    "Managed Java II Java 8/16/17/21/25 production E2E",
-    "run-managed-java-II-e2e.sh",
-    "MANAGED_JAVA_II_EVIDENCE.json",
-], "Managed Java II CI wiring")
+require(
+    ci,
+    [
+        "Managed Java II Java 8/16/17/21/25 production E2E",
+        "run-managed-java-II-e2e.sh",
+        "MANAGED_JAVA_II_EVIDENCE.json",
+    ],
+    "Managed Java II CI wiring",
+)
 
 preflight = read("scripts/release/preflight.sh")
 require(preflight, ["managed-java-II-0165.py"], "Managed Java II preflight")
 
-release = read("cli/cmd/neverlauncher/release_commands.go")
+release = read("cli/cmd/launcher/release_commands.go")
 require(release, ["managed-java-II-8-16-17-21-25"], "Managed Java II release gate")
 
 subprocess.run(
-    ["go", "test", "./cmd/neverlauncher", "-run", "TestManagedJavaII", "-count=1"],
+    ["go", "test", "./cmd/launcher", "-run", "TestManagedJavaII", "-count=1"],
     cwd=ROOT / "cli",
     check=True,
 )
 
-print(f"NeverLauncher {VERSION} Managed Java II gate: OK")
+print(f"Launcher {VERSION} Managed Java II gate: OK")

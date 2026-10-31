@@ -1,4 +1,4 @@
-# NeverLauncher 0.26.1 — Own-app Microsoft → Xbox → Minecraft provider POC
+# Launcher 0.26.1 — Own-app Microsoft → Xbox → Minecraft provider POC
 
 ## What is actually implemented
 
@@ -85,7 +85,7 @@ Example successful **report structure** (illustrative only, NOT a real pass):
 
 ```json
 {
-  "schema": "neverlauncher.official-provider-poc.v1",
+  "schema": "launcher.official-provider-poc.v1",
   "version": "0.26.1",
   "oauthFlow": "browser",
   "provider": "fixed_official_microsoft_xbox_minecraft_hosts",
@@ -126,7 +126,7 @@ successful live provider calls; an editable JSON report is not signed evidence.
 cd services/api
 go test -race ./internal/officialminecraft ./cmd/official-provider-poc
 go vet ./internal/officialminecraft ./cmd/official-provider-poc
-go build -o /tmp/neverlauncher-official-provider-poc ./cmd/official-provider-poc
+go build -o /tmp/launcher-official-provider-poc ./cmd/official-provider-poc
 ```
 
 The unit tests mock network responses to verify cryptographic/HTTP input

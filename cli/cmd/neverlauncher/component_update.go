@@ -21,7 +21,7 @@ import (
 )
 
 const componentUpdateManifestFile0157 = "COMPONENT_UPDATE_MANIFEST.json"
-const componentUpdateStateFile0157 = ".neverlauncher/component-update-state.json"
+const componentUpdateStateFile0157 = ".launcher/component-update-state.json"
 const componentTreeSchema0157 = "1.0"
 
 type componentUpdateArtifact0157 struct {
@@ -102,7 +102,7 @@ func validateComponentRelativePath0157(value string) error {
 	if err := validateUpdaterPath0156(value); err != nil {
 		return err
 	}
-	if strings.HasPrefix(strings.ToLower(value), ".neverlauncher/updater/") {
+	if strings.HasPrefix(strings.ToLower(value), ".launcher/updater/") {
 		return fmt.Errorf("component path conflicts with updater control directory: %s", value)
 	}
 	return nil
@@ -124,7 +124,7 @@ func readComponentUpdateManifest0157(path string) (componentUpdateManifest0157, 
 }
 
 func validateComponentUpdateManifest0157(manifest componentUpdateManifest0157, manifestDir string, allowDevelopment bool) error {
-	if (manifest.SchemaVersion != "1.0" && manifest.SchemaVersion != "2.0") || manifest.Product != "NeverLauncher" || strings.TrimSpace(manifest.ProductVersion) == "" {
+	if (manifest.SchemaVersion != "1.0" && manifest.SchemaVersion != "2.0") || manifest.Product != "Launcher" || strings.TrimSpace(manifest.ProductVersion) == "" {
 		return errors.New("component update manifest identity/schema mismatch")
 	}
 	if componentCoordinationRequired02310(manifest.ProductVersion) {
@@ -769,7 +769,7 @@ func safeComponentTreePath0157(u *transactionalUpdater0156, rel string) (string,
 		return "", fmt.Errorf("unsafe component tree path %q", rel)
 	}
 	clean := filepath.ToSlash(filepath.Clean(filepath.FromSlash(rel)))
-	if clean != rel || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.HasPrefix(strings.ToLower(clean), ".neverlauncher/") {
+	if clean != rel || clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.HasPrefix(strings.ToLower(clean), ".launcher/") {
 		return "", fmt.Errorf("unsafe component tree path %q", rel)
 	}
 	return filepath.Join(u.root, filepath.FromSlash(clean)), nil
@@ -1079,7 +1079,7 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 	}
 	// Распаковывайте смежные пакеты в управляющем каталоге обновления назначения, чтобы все последующие промежуточные операции и переименования
 	// происходили в одной файловой системе. По той же причине macOS требует окончательный корневой каталог перед распаковкой через ditto.
-	probeDir, err := os.MkdirTemp("", "neverlauncher-component-probe-")
+	probeDir, err := os.MkdirTemp("", "launcher-component-probe-")
 	if err != nil {
 		return nil, err
 	}
@@ -1185,7 +1185,7 @@ func applyComponentPackage0157(packagePath, expectedSHA, deliveryPath, explicitR
 }
 
 func runComponentUpdaterSelfTest0157() (map[string]any, error) {
-	root, err := os.MkdirTemp("", "neverlauncher-component-selftest-")
+	root, err := os.MkdirTemp("", "launcher-component-selftest-")
 	if err != nil {
 		return nil, err
 	}
@@ -1198,13 +1198,13 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 	if err := os.MkdirAll(bundle, 0o755); err != nil {
 		return nil, err
 	}
-	for name, value := range map[string]string{"neverlauncher-desktop": "old-desktop", "guard": "old-guard", "neverruntime": "old-runtime"} {
+	for name, value := range map[string]string{"launcher-desktop": "old-desktop", "guard": "old-guard", "runtime": "old-runtime"} {
 		if err := os.WriteFile(filepath.Join(live, name), []byte(value), 0o755); err != nil {
 			return nil, err
 		}
 	}
 	components := []componentUpdateArtifact0157{}
-	for _, row := range []struct{ component, name, data string }{{"desktop", "neverlauncher-desktop", "new-desktop"}, {"guard", "guard", "new-guard"}, {"runtime", "neverruntime", "new-runtime"}} {
+	for _, row := range []struct{ component, name, data string }{{"desktop", "launcher-desktop", "new-desktop"}, {"guard", "guard", "new-guard"}, {"runtime", "runtime", "new-runtime"}} {
 		path := filepath.Join(bundle, row.name)
 		if err := os.WriteFile(path, []byte(row.data), 0o755); err != nil {
 			return nil, err
@@ -1218,7 +1218,7 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 	target, _ := currentDeliveryTarget()
 	var helpers []componentUpdateArtifact0157
 	if componentCoordinationRequired02310(version) {
-		helperPath := filepath.Join(bundle, "neverlauncher-cli")
+		helperPath := filepath.Join(bundle, "launcher-cli")
 		if err := os.WriteFile(helperPath, []byte("new-updater"), 0o755); err != nil {
 			return nil, err
 		}
@@ -1226,7 +1226,7 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 		if err != nil {
 			return nil, err
 		}
-		helpers = append(helpers, componentUpdateArtifact0157{Component: "updater", SourcePath: "neverlauncher-cli", TargetPath: "neverlauncher-cli", SHA256: h, Size: sz, Executable: true})
+		helpers = append(helpers, componentUpdateArtifact0157{Component: "updater", SourcePath: "launcher-cli", TargetPath: "launcher-cli", SHA256: h, Size: sz, Executable: true})
 		if target.Platform == "windows" {
 			sensorPath := filepath.Join(bundle, "guard-sensor.dll")
 			if err := os.WriteFile(sensorPath, []byte("new-sensor"), 0o755); err != nil {
@@ -1239,7 +1239,7 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 			components = append(components, componentUpdateArtifact0157{Component: "sensor", SourcePath: "guard-sensor.dll", TargetPath: "guard-sensor.dll", SHA256: h, Size: sz, Executable: true})
 		}
 	}
-	manifest := componentUpdateManifest0157{SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: version, Platform: target.Platform, Architecture: target.Architecture, Layout: "adjacent-files", TrustMode: "development-self-test", Components: components, SupportFiles: helpers}
+	manifest := componentUpdateManifest0157{SchemaVersion: "1.0", Product: "Launcher", ProductVersion: version, Platform: target.Platform, Architecture: target.Architecture, Layout: "adjacent-files", TrustMode: "development-self-test", Components: components, SupportFiles: helpers}
 	if componentSecurityRequired02311(version) {
 		manifest.SecurityGeneration = 1
 	}
@@ -1249,7 +1249,7 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 	if err := writeJSONFile(filepath.Join(bundle, componentUpdateManifestFile0157), manifest); err != nil {
 		return nil, err
 	}
-	report, err := applyComponentPackage0157(bundle, "", "", live, filepath.Join(live, "neverlauncher-desktop"), 0, false, true)
+	report, err := applyComponentPackage0157(bundle, "", "", live, filepath.Join(live, "launcher-desktop"), 0, false, true)
 	if err != nil {
 		return nil, err
 	}
@@ -1262,10 +1262,10 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 	// На каждом CI-агенте проверяйте откат полной замены приложения. Дерево искусственное, но журнал,
 	// переименования и механизм восстановления точно соответствуют производственному процессу macOS.
 	treeRoot := filepath.Join(root, "tree-root")
-	if err := os.MkdirAll(filepath.Join(treeRoot, "NeverLauncher.app", "Contents", "MacOS"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(treeRoot, "Launcher.app", "Contents", "MacOS"), 0o755); err != nil {
 		return nil, err
 	}
-	oldDesktop := filepath.Join(treeRoot, "NeverLauncher.app", "Contents", "MacOS", "neverlauncher-desktop")
+	oldDesktop := filepath.Join(treeRoot, "Launcher.app", "Contents", "MacOS", "launcher-desktop")
 	if err := os.WriteFile(oldDesktop, []byte("old-tree-desktop"), 0o755); err != nil {
 		return nil, err
 	}
@@ -1273,14 +1273,14 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	stage := filepath.Join(treeUpdater.controlDir, "self-test-incoming", "NeverLauncher.app")
+	stage := filepath.Join(treeUpdater.controlDir, "self-test-incoming", "Launcher.app")
 	if err := os.MkdirAll(filepath.Join(stage, "Contents", "MacOS"), 0o755); err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(filepath.Join(stage, "Contents", "MacOS", "neverlauncher-desktop"), []byte("new-tree-desktop"), 0o755); err != nil {
+	if err := os.WriteFile(filepath.Join(stage, "Contents", "MacOS", "launcher-desktop"), []byte("new-tree-desktop"), 0o755); err != nil {
 		return nil, err
 	}
-	if _, err := applyComponentTree0157(treeUpdater, "NeverLauncher.app", stage, "0.15.6", version, func(string) error {
+	if _, err := applyComponentTree0157(treeUpdater, "Launcher.app", stage, "0.15.6", version, func(string) error {
 		return errors.New("forced component tree post-verify failure")
 	}); err == nil {
 		return nil, errors.New("component tree self-test expected automatic rollback")

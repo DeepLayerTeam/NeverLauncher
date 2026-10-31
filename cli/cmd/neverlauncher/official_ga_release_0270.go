@@ -48,7 +48,7 @@ func verifyOfficialGAReceipt0270(dir, version, expectedCommit string) error {
 	if err := json.Unmarshal(raw, &receipt); err != nil {
 		return fmt.Errorf("official GA receipt JSON: %w", err)
 	}
-	if receipt.SchemaVersion != "neverlauncher.official-minecraft.ga-receipt.v1" || receipt.ProductVersion != version || receipt.Commit != expectedCommit || receipt.Status != "passed" || len(receipt.Targets) != 6 {
+	if receipt.SchemaVersion != "launcher.official-minecraft.ga-receipt.v1" || receipt.ProductVersion != version || receipt.Commit != expectedCommit || receipt.Status != "passed" || len(receipt.Targets) != 6 {
 		return errors.New("official GA receipt failed release/commit/status binding")
 	}
 	expected := map[string]bool{"windows-amd64": false, "windows-arm64": false, "linux-amd64": false, "linux-arm64": false, "darwin-amd64": false, "darwin-arm64": false}

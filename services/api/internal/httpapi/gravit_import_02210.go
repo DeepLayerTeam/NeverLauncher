@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 type gravitImportRequest02210 struct {
@@ -83,7 +83,7 @@ func (s Server) gravitImport02210(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Use actual server version, not untrusted source's claimed tooling.
-	settings := repository.BuildSettings{Minecraft: result.Settings.Minecraft, Runtime: result.Settings.Runtime, Directories: result.Settings.Directories, FileRules: result.Settings.FileRules, ToolVersions: map[string]string{"neverlauncher-api": s.Version, "gravit-static-import": "0.22.10"}}
+	settings := repository.BuildSettings{Minecraft: result.Settings.Minecraft, Runtime: result.Settings.Runtime, Directories: result.Settings.Directories, FileRules: result.Settings.FileRules, ToolVersions: map[string]string{"launcher-api": s.Version, "gravit-static-import": "0.22.10"}}
 	var id [16]byte
 	if _, err = rand.Read(id[:]); err != nil {
 		writeError(w, 500, "unable to allocate workspace ID")

@@ -313,7 +313,7 @@ func Prepare(o Options) (*Handle, error) {
 		err = e
 		return nil, err
 	}
-	cmd := exec.Command(exe, "--neverlauncher-extension-sandbox-0319")
+	cmd := exec.Command(exe, "--launcher-extension-sandbox-0319")
 	cmd.Env = []string{marker + "=1", "PATH=/usr/bin:/bin"}
 	cmd.ExtraFiles = []*os.File{configFile, guestFile, readyWriter}
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -442,14 +442,14 @@ func init() {
 		return
 	}
 	switch {
-	case mode == "1" && os.Args[1] == "--neverlauncher-extension-sandbox-0319":
+	case mode == "1" && os.Args[1] == "--launcher-extension-sandbox-0319":
 		if e := childMain(); e != nil {
 			_, _ = fmt.Fprintln(os.NewFile(5, "ready"), "error:", e)
 			_, _ = fmt.Fprintln(os.Stderr, "extension sandbox:", e)
 			os.Exit(126)
 		}
 		os.Exit(0)
-	case mode == "proxy" && os.Args[1] == "--neverlauncher-extension-proxy-0319":
+	case mode == "proxy" && os.Args[1] == "--launcher-extension-proxy-0319":
 		if e := proxyMain(); e != nil {
 			_, _ = fmt.Fprintln(os.Stderr, "extension sandbox IPC:", e)
 			os.Exit(127)
@@ -530,7 +530,7 @@ func childMain() error {
 		return e
 	}
 	defer readyRead.Close()
-	proxy := exec.Command("/proc/self/exe", "--neverlauncher-extension-proxy-0319")
+	proxy := exec.Command("/proc/self/exe", "--launcher-extension-proxy-0319")
 	proxy.Env = []string{marker + "=proxy", "PATH=/usr/bin:/bin"}
 	proxy.ExtraFiles = []*os.File{guest, listenerFile, readyWrite}
 	proxy.Stdout = os.Stderr

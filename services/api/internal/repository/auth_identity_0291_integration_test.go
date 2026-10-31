@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // Requires a disposable real PostgreSQL database with migration privileges.
@@ -75,7 +75,7 @@ func TestCanonicalIssuerPostgres0291(t *testing.T) {
 	if _, err := b.SaveAuthIdentity(model.AuthIdentity{UserID: users[1], Provider: "oidc-0291", Issuer: one.Issuer, Subject: "same"}); err == nil {
 		t.Fatal("subject reassignment accepted")
 	}
-	profile, err := a.SaveMinecraftProfile(model.MinecraftProfile{UserID: users[0], UUID: "0d011234-aaaa-4bbb-8ccc-123400002911", Name: "IssuerTest0291", Issuer: "neverlauncher", Realm: "local", Subject: "0d011234-aaaa-4bbb-8ccc-123400002911"})
+	profile, err := a.SaveMinecraftProfile(model.MinecraftProfile{UserID: users[0], UUID: "0d011234-aaaa-4bbb-8ccc-123400002911", Name: "IssuerTest0291", Issuer: "launcher", Realm: "local", Subject: "0d011234-aaaa-4bbb-8ccc-123400002911"})
 	if err != nil {
 		t.Fatal(err)
 	}

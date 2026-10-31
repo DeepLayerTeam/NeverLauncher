@@ -32,7 +32,7 @@ func loaderPayloadCachePaths(root, sha string) (recordRel, payloadRel, recordPat
 	if !compatibilitySHA256RE.MatchString(sha) {
 		return "", "", "", "", errors.New("loader payload cache требует валидный SHA-256")
 	}
-	baseRel := filepath.ToSlash(filepath.Join(".neverlauncher", "loader-cache", "sha256", sha[:2], sha))
+	baseRel := filepath.ToSlash(filepath.Join(".launcher", "loader-cache", "sha256", sha[:2], sha))
 	recordRel = baseRel + ".json"
 	payloadRel = baseRel + ".payload"
 	recordPath, err = secureClientDestination(root, recordRel)
@@ -281,7 +281,7 @@ func downloadPinnedSHA256Artifact(ctx context.Context, client *http.Client, root
 	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
 		return vanillaDownloadedFile{}, err
 	}
-	response, err := compatibilityGET(ctx, client, source, "NeverLauncher/"+version+" LoaderHardening")
+	response, err := compatibilityGET(ctx, client, source, "Launcher/"+version+" LoaderHardening")
 	if err != nil {
 		return vanillaDownloadedFile{}, err
 	}

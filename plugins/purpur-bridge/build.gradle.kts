@@ -7,14 +7,14 @@ dependencies {
 }
 tasks.jar {
     dependsOn(configurations.runtimeClasspath.get().buildDependencies)
-    archiveBaseName.set("neverlauncher-purpur-bridge")
+    archiveBaseName.set("launcher-purpur-bridge")
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest { attributes["paperweight-mappings-namespace"] = "mojang" }
     from({ configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } })
 }
 tasks.processResources {
-    inputs.property("neverLauncherVersion", project.version.toString())
+    inputs.property("LauncherVersion", project.version.toString())
     filesMatching("plugin.yml") {
         expand("version" to project.version.toString())
     }

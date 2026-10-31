@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 // The policy is operator-controlled server configuration, not a client manifest.
@@ -72,7 +72,7 @@ func guardRuntimePolicyDigest0317(profiles []guardRuntimeProfile0317) string {
 		return ""
 	}
 	var b strings.Builder
-	b.WriteString("NeverLauncher Guard Runtime Policy v1\n")
+	b.WriteString("Launcher Guard Runtime Policy v1\n")
 	for _, p := range profiles {
 		fmt.Fprintf(&b, "%d:%s:%s:%s\n", p.JavaMajor, p.ModuleSetSHA256, p.CodeSetSHA256, p.HookSetSHA256)
 	}

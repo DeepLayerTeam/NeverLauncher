@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/fileauth"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/localpassword"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauth"
+	"gitflic.ru/skif4er/launcher/services/api/internal/localpassword"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
 )
 
 const localConnectorVersion0120 = "1.0.0"
@@ -19,7 +19,7 @@ const localConnectorVersion0120 = "1.0.0"
 type localAuthConnector112 struct{ repo repository.Repository }
 
 func (c localAuthConnector112) Metadata() authconnector.Metadata {
-	return authconnector.Metadata{ID: "local", DisplayName: "NeverLauncher Local", Version: localConnectorVersion0120, Capabilities: []authconnector.Capability{authconnector.CapabilityPasswordAuth, authconnector.CapabilityUserLookup, authconnector.CapabilityEmail, authconnector.CapabilityProfile, authconnector.CapabilityRoles}}
+	return authconnector.Metadata{ID: "local", DisplayName: "Launcher Local", Version: localConnectorVersion0120, Capabilities: []authconnector.Capability{authconnector.CapabilityPasswordAuth, authconnector.CapabilityUserLookup, authconnector.CapabilityEmail, authconnector.CapabilityProfile, authconnector.CapabilityRoles}}
 }
 func (c localAuthConnector112) Health(ctx context.Context) error {
 	if c.repo == nil {

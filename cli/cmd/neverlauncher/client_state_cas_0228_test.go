@@ -14,7 +14,7 @@ func TestClientStateCASPreventsStaleUpdate0228(t *testing.T) {
 	if err != nil || before != "absent" {
 		t.Fatalf("empty state: %s %v", before, err)
 	}
-	dir := filepath.Join(root, ".neverlauncher")
+	dir := filepath.Join(root, ".launcher")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestClientStateCASPreventsStaleUpdate0228(t *testing.T) {
 
 func TestClientStateActivationHappensAfterVerifiedFiles0228(t *testing.T) {
 	root := t.TempDir()
-	control := filepath.Join(root, ".neverlauncher")
+	control := filepath.Join(root, ".launcher")
 	if err := os.MkdirAll(control, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestClientStateActivationHappensAfterVerifiedFiles0228(t *testing.T) {
 		Root: root, Namespace: "client-package", ExpectedStateSHA256: old,
 		Files: []updaterFileSpec0156{
 			{Path: "managed/data.bin", Data: payload, Size: payloadSize, SHA256: payloadSHA},
-			{Path: ".neverlauncher/client-state.json", Data: newPointer, Size: stateSize, SHA256: stateSHA},
+			{Path: ".launcher/client-state.json", Data: newPointer, Size: stateSize, SHA256: stateSHA},
 		},
 		Verify: func() error {
 			raw, readErr := os.ReadFile(pointer)

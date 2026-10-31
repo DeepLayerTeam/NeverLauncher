@@ -20,7 +20,7 @@ def version_tuple(value):
 
 if version_tuple((root / "VERSION").read_text().strip()) < (0, 13, 7):
     raise SystemExit("VERSION is older than 0.13.7")
-policy = read("runtime/neverruntime/src/linux_policy.rs")
+policy = read("runtime/runtime/src/linux_policy.rs")
 require(
     policy,
     [
@@ -34,7 +34,7 @@ require(
     ],
     "Linux runtime policy",
 )
-ipc = read("runtime/neverruntime/src/linux_guard.rs")
+ipc = read("runtime/runtime/src/linux_guard.rs")
 require(
     ipc,
     [
@@ -51,7 +51,7 @@ require(
     ],
     "Linux authenticated IPC",
 )
-integrity = read("runtime/neverruntime/src/integrity.rs")
+integrity = read("runtime/runtime/src/integrity.rs")
 require(
     integrity,
     [
@@ -62,7 +62,7 @@ require(
     ],
     "Linux integrity evidence",
 )
-att = read("runtime/neverruntime/src/attestation.rs")
+att = read("runtime/runtime/src/attestation.rs")
 require(
     att,
     ["guard/linux-guard-attestation/v1", "Guard Attestation Core Linux v1"],
@@ -114,4 +114,4 @@ require(
 )
 preflight = read("scripts/release/preflight.sh")
 require(preflight, ["linux-production-implementation-0137.py"], "preflight Linux gate")
-print("NeverLauncher 0.13.7 Linux production implementation gate: OK")
+print("Launcher 0.13.7 Linux production implementation gate: OK")

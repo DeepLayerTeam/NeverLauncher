@@ -57,8 +57,8 @@ func TestGA0361AuthenticatesSixRealArtifactBytesAndSignedTraces(t *testing.T) {
 	version := "0.36.1"
 	commit := strings.Repeat("a", 40)
 	now := time.Now().UTC()
-	approval := gaApproval0361{Schema: "neverlauncher.ga.targets.v2", Version: version, Commit: commit, Issued: now.Add(-time.Hour).Format("2006-01-02T15:04:05Z"), Expires: now.Add(time.Hour).Format("2006-01-02T15:04:05Z")}
-	receipt := gaReceipt0361{Schema: "neverlauncher.ga.verified-targets.v2", Version: version, Commit: commit, Status: "approved-for-release-signing", PublicKeySHA: gaSHA0361(operatorPub)}
+	approval := gaApproval0361{Schema: "launcher.ga.targets.v2", Version: version, Commit: commit, Issued: now.Add(-time.Hour).Format("2006-01-02T15:04:05Z"), Expires: now.Add(time.Hour).Format("2006-01-02T15:04:05Z")}
+	receipt := gaReceipt0361{Schema: "launcher.ga.verified-targets.v2", Version: version, Commit: commit, Status: "approved-for-release-signing", PublicKeySHA: gaSHA0361(operatorPub)}
 	for _, target := range gaTargetNames0361 {
 		binary, packageName := gaTargetPaths0361(version, target)
 		binData := []byte("real-executable:" + target)
@@ -75,7 +75,7 @@ func TestGA0361AuthenticatesSixRealArtifactBytesAndSignedTraces(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, check := range gaCheckNames0361 {
-			trace := gaTrace0361{Schema: "neverlauncher.ga.execution.v2", Version: version, Commit: commit, Target: target, Kind: check, Status: "passed", Actual: true, Simulated: false, ArtifactSHA: row.BinarySHA, ExecutionID: "protected-run-012345"}
+			trace := gaTrace0361{Schema: "launcher.ga.execution.v2", Version: version, Commit: commit, Target: target, Kind: check, Status: "passed", Actual: true, Simulated: false, ArtifactSHA: row.BinarySHA, ExecutionID: "protected-run-012345"}
 			raw, err := json.Marshal(trace)
 			if err != nil {
 				t.Fatal(err)
@@ -127,7 +127,7 @@ func TestGA0361AuthenticatesSixRealArtifactBytesAndSignedTraces(t *testing.T) {
 	if err := verifyGATargets0361(bundle, version, commit, releasePub); err != nil {
 		t.Fatalf("valid signed six-target exact-byte verification rejected: %v", err)
 	}
-	file := filepath.Join(bundle, "neverlauncher-desktop-windows-x64.exe")
+	file := filepath.Join(bundle, "launcher-desktop-windows-x64.exe")
 	if err := os.WriteFile(file, []byte("tampered"), 0600); err != nil {
 		t.Fatal(err)
 	}

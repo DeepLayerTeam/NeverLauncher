@@ -1,4 +1,4 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;

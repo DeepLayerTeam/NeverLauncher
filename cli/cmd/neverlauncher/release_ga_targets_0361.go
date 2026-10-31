@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-const gaTargetsDomain0361 = "neverlauncher.ga.targets.v2\x00"
+const gaTargetsDomain0361 = "launcher.ga.targets.v2\x00"
 
 var gaTargetNames0361 = []string{"windows-x64", "windows-arm64", "linux-x64", "linux-arm64", "darwin-x64", "darwin-arm64"}
 var gaCheckNames0361 = []string{"nativeInstall", "desktopLaunch", "minecraftLaunch", "serverJoin", "releaseRollback", "security", "performance", "operations", "osSignature"}
@@ -186,11 +186,11 @@ func gaTargetPaths0361(version, target string) (string, string) {
 	osname, arch := pair[0], pair[1]
 	switch osname {
 	case "windows":
-		return "neverlauncher-desktop-windows-" + arch + ".exe", "neverlauncher-desktop-" + version + "-windows-" + arch + ".zip"
+		return "launcher-desktop-windows-" + arch + ".exe", "launcher-desktop-" + version + "-windows-" + arch + ".zip"
 	case "linux":
-		return "neverlauncher-desktop-linux-" + arch, "neverlauncher-linux-" + arch + "-" + version + ".tar.gz"
+		return "launcher-desktop-linux-" + arch, "launcher-linux-" + arch + "-" + version + ".tar.gz"
 	case "darwin":
-		return "neverlauncher-desktop-macos-" + arch, "neverlauncher-desktop-" + version + "-macos-" + arch + ".zip"
+		return "launcher-desktop-macos-" + arch, "launcher-desktop-" + version + "-macos-" + arch + ".zip"
 	}
 	return "", ""
 }
@@ -244,7 +244,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 	if err := gaDecode0361(approvalRaw, &approval); err != nil {
 		return err
 	}
-	if approval.Schema != "neverlauncher.ga.targets.v2" || approval.Version != version || approval.Commit != commit || len(approval.Targets) != 6 {
+	if approval.Schema != "launcher.ga.targets.v2" || approval.Version != version || approval.Commit != commit || len(approval.Targets) != 6 {
 		return errors.New("GA signature does not bind this exact version, commit and six targets")
 	}
 	issued, err := time.Parse("2006-01-02T15:04:05Z", approval.Issued)
@@ -278,7 +278,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 	if err := gaDecode0361(receiptRaw, &receipt); err != nil {
 		return err
 	}
-	if receipt.Schema != "neverlauncher.ga.verified-targets.v2" || receipt.Status != "approved-for-release-signing" || receipt.Version != version || receipt.Commit != commit || receipt.ApprovalSHA != gaSHA0361(approvalRaw) || receipt.PublicKeySHA != gaSHA0361(keyBytes) || len(receipt.Targets) != 6 {
+	if receipt.Schema != "launcher.ga.verified-targets.v2" || receipt.Status != "approved-for-release-signing" || receipt.Version != version || receipt.Commit != commit || receipt.ApprovalSHA != gaSHA0361(approvalRaw) || receipt.PublicKeySHA != gaSHA0361(keyBytes) || len(receipt.Targets) != 6 {
 		return errors.New("GA verified receipt inconsistent with independent approval")
 	}
 	seen := map[string]bool{}
@@ -331,7 +331,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 			if err := gaDecode0361(raw, &trace); err != nil {
 				return err
 			}
-			if trace.Schema != "neverlauncher.ga.execution.v2" || trace.Version != version || trace.Commit != commit || trace.Target != t.Target || trace.Kind != check || trace.Status != "passed" || !trace.Actual || trace.Simulated || trace.ArtifactSHA != t.BinarySHA || !gaExecutionID0361.MatchString(trace.ExecutionID) {
+			if trace.Schema != "launcher.ga.execution.v2" || trace.Version != version || trace.Commit != commit || trace.Target != t.Target || trace.Kind != check || trace.Status != "passed" || !trace.Actual || trace.Simulated || trace.ArtifactSHA != t.BinarySHA || !gaExecutionID0361.MatchString(trace.ExecutionID) {
 				return fmt.Errorf("GA check not real or wrong binary: %s/%s", t.Target, check)
 			}
 		}
@@ -344,7 +344,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 	if err != nil {
 		return err
 	}
-	permitted := map[string]bool{"neverlauncher-desktop-" + version + "-windows-amd64.zip": true, "neverlauncher-desktop-" + version + "-macos-universal.zip": true}
+	permitted := map[string]bool{"launcher-desktop-" + version + "-windows-amd64.zip": true, "launcher-desktop-" + version + "-macos-universal.zip": true}
 	for _, t := range gaTargetNames0361 {
 		b, p := gaTargetPaths0361(version, t)
 		permitted[b] = true
@@ -352,7 +352,7 @@ func verifyGATargets0361(dir, version, commit string, releaseSigner ed25519.Publ
 	}
 	for _, item := range items {
 		name := item.Name()
-		if (strings.HasPrefix(name, "neverlauncher-desktop-windows-") || strings.HasPrefix(name, "neverlauncher-desktop-linux-") || strings.HasPrefix(name, "neverlauncher-desktop-macos-") || strings.HasPrefix(name, "neverlauncher-linux-") || strings.HasPrefix(name, "neverlauncher-desktop-"+version+"-windows-") || strings.HasPrefix(name, "neverlauncher-desktop-"+version+"-macos-")) && !permitted[name] && (strings.HasSuffix(name, ".zip") || strings.HasSuffix(name, ".tar.gz") || strings.HasSuffix(name, "-riscv64") || strings.HasSuffix(name, "-riscv64.exe")) {
+		if (strings.HasPrefix(name, "launcher-desktop-windows-") || strings.HasPrefix(name, "launcher-desktop-linux-") || strings.HasPrefix(name, "launcher-desktop-macos-") || strings.HasPrefix(name, "launcher-linux-") || strings.HasPrefix(name, "launcher-desktop-"+version+"-windows-") || strings.HasPrefix(name, "launcher-desktop-"+version+"-macos-")) && !permitted[name] && (strings.HasSuffix(name, ".zip") || strings.HasSuffix(name, ".tar.gz") || strings.HasSuffix(name, "-riscv64") || strings.HasSuffix(name, "-riscv64.exe")) {
 			return fmt.Errorf("unapproved target artifact: %s", name)
 		}
 	}

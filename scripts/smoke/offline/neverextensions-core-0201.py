@@ -20,7 +20,7 @@ version = tuple(int(part) for part in read("VERSION").strip().split(".")[:3])
 if version < (0, 20, 1):
     raise SystemExit("VERSION must be >= 0.20.1")
 
-schema = json.loads(read("schemas/neverlauncher-extension.schema.json"))
+schema = json.loads(read("schemas/launcher-extension.schema.json"))
 if schema.get("properties", {}).get("schemaVersion", {}).get("const") != "2.0":
     raise SystemExit("canonical extension schema must be 2.0")
 
@@ -55,16 +55,16 @@ require(
     ],
 )
 require(
-    "cli/cmd/neverlauncher/extension_commands_0201.go",
+    "cli/cmd/launcher/extension_commands_0201.go",
     [
-        "neverlauncher-extension.json",
+        "launcher-extension.json",
         "import-legacy",
-        "neverlauncher-plugin.json",
+        "launcher-plugin.json",
         "DisallowUnknownFields",
     ],
 )
 require(
-    "cli/cmd/neverlauncher/release_commands.go",
+    "cli/cmd/launcher/release_commands.go",
     [
         '"extension_versions"',
         '"extension_permissions"',
@@ -73,8 +73,8 @@ require(
     ],
 )
 if "registry_entries" in read(
-    "cli/cmd/neverlauncher/release_commands.go"
-) or "desktop_packages" in read("cli/cmd/neverlauncher/release_commands.go"):
+    "cli/cmd/launcher/release_commands.go"
+) or "desktop_packages" in read("cli/cmd/launcher/release_commands.go"):
     raise SystemExit("productionTables still contains nonexistent extension-era tables")
 
 print("Extensions Core 0.20.1 production gate: OK")

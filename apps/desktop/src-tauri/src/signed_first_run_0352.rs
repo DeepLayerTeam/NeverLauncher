@@ -130,10 +130,10 @@ fn verified_policy(dir:&Path,root:&[u8],now:OffsetDateTime)->Result<Policy,Strin
     if env.schema_version!="1.0"{return Err("Неподдерживаемая версия trust policy".into())}
     let payload=STANDARD.decode(&env.payload).map_err(|_|"Некорректный payload trust policy")?;
     if payload.len()>96*1024{return Err("Trust policy слишком велик".into())}
-    let mut msg=b"NeverLauncher-Trust-Policy-v1\n".to_vec();msg.extend_from_slice(&payload);
+    let mut msg=b"Launcher-Trust-Policy-v1\n".to_vec();msg.extend_from_slice(&payload);
     verify(&msg,root,&env.root_signature)?;
     let policy:Policy=serde_json::from_slice(&payload).map_err(|_|"Некорректная структура trust policy")?;
-    if policy.schema_version!="1.0"||policy.domain!="neverlauncher.trust.v1"||policy.epoch==0||policy.keys.is_empty()||policy.keys.len()>128 {
+    if policy.schema_version!="1.0"||policy.domain!="launcher.trust.v1"||policy.epoch==0||policy.keys.is_empty()||policy.keys.len()>128 {
         return Err("Некорректный домен или epoch trust policy".into())
     }
     let issued=time_value(&policy.issued_at)?;let expires=time_value(&policy.expires_at)?;
@@ -177,7 +177,7 @@ fn verify_signed(raw:&[u8], policy_dir:&Path, root_hex:&str, now:OffsetDateTime)
             .ok_or("Bootstrap signer не активен в root-signed policy")?;
         if signed_at<time_value(&key.not_before)?||signed_at>now+time::Duration::minutes(5){return Err("Bootstrap подписан вне разрешённого интервала".into())}
         signing_key=bytes_hex(&key.public_key,32)?;
-        signed_bytes=format!("NeverLauncher-Bootstrap-v2\n{}\n{}\n{}\n",env.key_id,env.trust_epoch,env.signed_at).into_bytes();
+        signed_bytes=format!("Launcher-Bootstrap-v2\n{}\n{}\n{}\n",env.key_id,env.trust_epoch,env.signed_at).into_bytes();
         signed_bytes.extend_from_slice(&payload);
     }
     verify(&signed_bytes,&signing_key,&env.signature)?;
@@ -196,7 +196,7 @@ fn verify_signed(raw:&[u8], policy_dir:&Path, root_hex:&str, now:OffsetDateTime)
     }
     // Config is signed by the operator; only its verified fields are authoritative.
     if let Some(ref brand)=cfg.branding {validate_brand0355(brand)?;}
-    let display=cfg.branding.as_ref().map(|b|b.display_name.clone()).unwrap_or_else(||"NeverLauncher".into());
+    let display=cfg.branding.as_ref().map(|b|b.display_name.clone()).unwrap_or_else(||"Launcher".into());
     let _=&cfg.installer_targets;
     let digest=hex::encode(Sha256::digest(&payload));
     Ok(Provisioning0352{backend_url:cfg.backend_url,project_id:cfg.project_id,profile_id:cfg.profile_id,

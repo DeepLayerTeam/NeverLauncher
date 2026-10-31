@@ -13,16 +13,16 @@ if set(d.get('requiredScenarios') or [])!=scenarios or d.get('coverage')!='all-r
 print(f'ServerBridge security E2E matrix: {len(expected)} targets x {len(scenarios)} scenarios')
 PY
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-mkdir -p "$TMP/gen/ru/neverlauncher/bridge/common" "$TMP/classes"
+mkdir -p "$TMP/gen/ru/launcher/bridge/common" "$TMP/classes"
 VERSION="$(tr -d '\r\n' < "$ROOT/VERSION")"
-cat > "$TMP/gen/ru/neverlauncher/bridge/common/BridgeVersion.java" <<JAVA
-package ru.neverlauncher.bridge.common;
+cat > "$TMP/gen/ru/launcher/bridge/common/BridgeVersion.java" <<JAVA
+package ru.launcher.bridge.common;
 public final class BridgeVersion { public static final String VERSION = "$VERSION"; private BridgeVersion() {} }
 JAVA
 mapfile -t COMMON < <(find "$ROOT/plugins/bridge-common/src/main/java" -name '*.java' -type f | sort)
-javac --release 17 -d "$TMP/classes" "$TMP/gen/ru/neverlauncher/bridge/common/BridgeVersion.java" "${COMMON[@]}" "$ROOT/e2e/java/ru/neverlauncher/bridge/common/ServerBridgeSecurityCertification01912Harness.java"
+javac --release 17 -d "$TMP/classes" "$TMP/gen/ru/launcher/bridge/common/BridgeVersion.java" "${COMMON[@]}" "$ROOT/e2e/java/ru/launcher/bridge/common/ServerBridgeSecurityCertification01912Harness.java"
 TARGETS=(velocity bungeecord waterfall bukkit spigot paper purpur folia fabric quilt forge neoforge sponge vanilla)
 for target in "${TARGETS[@]}"; do
-  java -cp "$TMP/classes" ru.neverlauncher.bridge.common.ServerBridgeSecurityCertification01912Harness "$target"
+  java -cp "$TMP/classes" ru.launcher.bridge.common.ServerBridgeSecurityCertification01912Harness "$target"
 done
 printf 'ServerBridge security E2E executed: %d targets x 10 scenarios\n' "${#TARGETS[@]}"

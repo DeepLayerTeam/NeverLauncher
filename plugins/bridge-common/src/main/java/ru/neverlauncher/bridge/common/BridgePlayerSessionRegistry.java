@@ -1,10 +1,10 @@
-package ru.neverlauncher.bridge.common;
+package ru.launcher.bridge.common;
 
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Реестр связей времени выполнения для логического жизненного цикла игрока NeverLauncher
+ * Реестр связей времени выполнения для логического жизненного цикла игрока Launcher
  * -> proxy -> backend. Связи — непрозрачные 256-битные идентификаторы, выданные бэкендом;
  * неверные значения никогда не передаются в сообщения передачи или событий.
  */

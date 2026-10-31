@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/federation"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/authconnector"
-	"gitflic.ru/skif4er/neverlauncher/services/api/pkg/protection"
+	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/authconnector"
+	"gitflic.ru/skif4er/launcher/services/api/pkg/protection"
 )
 
 const oidcTransactionTTL115 = 10 * time.Minute
@@ -257,7 +257,7 @@ func (s Server) sealOIDCTransaction115(tx oidcTransaction115) (string, error) {
 	if _, err := rand.Read(nonce); err != nil {
 		return "", err
 	}
-	sealed := aead.Seal(nil, nonce, raw, []byte("NeverLauncher/OIDC/0.11.5"))
+	sealed := aead.Seal(nil, nonce, raw, []byte("Launcher/OIDC/0.11.5"))
 	return base64.RawURLEncoding.EncodeToString(append(nonce, sealed...)), nil
 }
 func (s Server) openOIDCTransaction115(token string) (oidcTransaction115, error) {
@@ -273,7 +273,7 @@ func (s Server) openOIDCTransaction115(token string) (oidcTransaction115, error)
 	if len(raw) <= aead.NonceSize() {
 		return tx, errors.New("short OIDC transaction")
 	}
-	plain, err := aead.Open(nil, raw[:aead.NonceSize()], raw[aead.NonceSize():], []byte("NeverLauncher/OIDC/0.11.5"))
+	plain, err := aead.Open(nil, raw[:aead.NonceSize()], raw[aead.NonceSize():], []byte("Launcher/OIDC/0.11.5"))
 	if err != nil {
 		return tx, err
 	}
@@ -293,7 +293,7 @@ func (s Server) oidcAEAD115() (cipher.AEAD, error) {
 	if secret == "" {
 		return nil, errors.New("auth token secret is empty")
 	}
-	key := sha256.Sum256([]byte("NeverLauncher/OIDC/transaction/v1\x00" + secret))
+	key := sha256.Sum256([]byte("Launcher/OIDC/transaction/v1\x00" + secret))
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		return nil, err

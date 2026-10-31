@@ -1,4 +1,4 @@
--- NeverLauncher 0.21.1: основа авторизации и границы идентичностей.
+-- Launcher 0.21.1: основа авторизации и границы идентичностей.
 -- project_user_roles становится авторитетным хранилищем участников проекта.
 -- Старый JSON users.project_roles остаётся только проекцией для совместимости.
 
@@ -129,12 +129,12 @@ FOR EACH ROW EXECUTE FUNCTION nl_sync_user_project_roles_0211();
 -- Метаданные идентичности GameProfile. Существующие UUID не меняются и
 -- помечаются как полученные старым способом. Новые профили используют
 -- сохранённые случайные UUIDv4, не зависящие от ID пользователей Never.
-ALTER TABLE IF EXISTS minecraft_profiles ADD COLUMN IF NOT EXISTS issuer TEXT NOT NULL DEFAULT 'neverlauncher';
+ALTER TABLE IF EXISTS minecraft_profiles ADD COLUMN IF NOT EXISTS issuer TEXT NOT NULL DEFAULT 'launcher';
 ALTER TABLE IF EXISTS minecraft_profiles ADD COLUMN IF NOT EXISTS realm TEXT NOT NULL DEFAULT 'local';
 ALTER TABLE IF EXISTS minecraft_profiles ADD COLUMN IF NOT EXISTS subject TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS minecraft_profiles ADD COLUMN IF NOT EXISTS identity_version TEXT NOT NULL DEFAULT 'legacy-user-derived-v2';
 UPDATE minecraft_profiles
-SET issuer=COALESCE(NULLIF(issuer,''),'neverlauncher'),
+SET issuer=COALESCE(NULLIF(issuer,''),'launcher'),
     realm=COALESCE(NULLIF(realm,''),'local'),
     subject=COALESCE(NULLIF(subject,''),uuid),
     identity_version=COALESCE(NULLIF(identity_version,''),'legacy-user-derived-v2');

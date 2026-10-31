@@ -15,8 +15,8 @@ import (
 	"time"
 )
 
-const trustPolicyDomain02312 = "neverlauncher.trust.v1"
-const trustPolicyPrefix02312 = "NeverLauncher-Trust-Policy-v1\n"
+const trustPolicyDomain02312 = "launcher.trust.v1"
+const trustPolicyPrefix02312 = "Launcher-Trust-Policy-v1\n"
 
 type TrustKey struct {
 	ID          string `json:"id"`
@@ -296,6 +296,6 @@ func bootstrapSignaturePayload02312(raw []byte, env Envelope) []byte {
 	if env.SchemaVersion != "2.0" {
 		return raw
 	}
-	header := "NeverLauncher-Bootstrap-v2\n" + env.KeyID + "\n" + strconv.FormatUint(env.TrustEpoch, 10) + "\n" + env.SignedAt + "\n"
+	header := "Launcher-Bootstrap-v2\n" + env.KeyID + "\n" + strconv.FormatUint(env.TrustEpoch, 10) + "\n" + env.SignedAt + "\n"
 	return append([]byte(header), raw...)
 }

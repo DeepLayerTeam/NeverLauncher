@@ -22,7 +22,7 @@ def require(text: str, needles: list[str], label: str) -> None:
         raise SystemExit(f"{label}: missing {missing}")
 
 
-delivery = read("cli/cmd/neverlauncher/delivery_manifest.go")
+delivery = read("cli/cmd/launcher/delivery_manifest.go")
 require(
     delivery,
     [
@@ -39,7 +39,7 @@ require(
     ],
     "delivery implementation",
 )
-release = read("cli/cmd/neverlauncher/release_commands.go")
+release = read("cli/cmd/launcher/release_commands.go")
 require(
     release,
     [
@@ -50,33 +50,68 @@ require(
     ],
     "release integration",
 )
-main = read("cli/cmd/neverlauncher/main.go")
+main = read("cli/cmd/launcher/main.go")
 require(main, ['case "delivery":', "handleDelivery(args[1:])"], "CLI routing")
 release_gate = read("scripts/smoke/release-required/release-bundle.sh")
-require(release_gate, ["DELIVERY_MANIFEST.json", "release publish-check"], "publish gate")
+require(
+    release_gate, ["DELIVERY_MANIFEST.json", "release publish-check"], "publish gate"
+)
 
-with tempfile.TemporaryDirectory(prefix="neverlauncher-0151-") as tmp_raw:
+with tempfile.TemporaryDirectory(prefix="launcher-0151-") as tmp_raw:
     tmp = Path(tmp_raw)
     binary = tmp / "nl"
     bundle = tmp / "bundle"
     bundle.mkdir()
     subprocess.run(
-        ["go", "build", "-trimpath", "-ldflags", f"-X main.version={VERSION}", "-o", str(binary), "./cmd/neverlauncher"],
+        [
+            "go",
+            "build",
+            "-trimpath",
+            "-ldflags",
+            f"-X main.version={VERSION}",
+            "-o",
+            str(binary),
+            "./cmd/launcher",
+        ],
         cwd=ROOT / "cli",
         check=True,
     )
-    linux_cli_name = "neverlauncher-cli-linux-x64" if parts >= (0, 15, 3) else "neverlauncher-cli-linux-amd64"
+    linux_cli_name = (
+        "launcher-cli-linux-x64" if parts >= (0, 15, 3) else "launcher-cli-linux-amd64"
+    )
     payloads = {
         linux_cli_name: b"linux-x64-cli\n",
-        f"neverlauncher-desktop-{VERSION}-windows-arm64.exe": b"windows-arm64-desktop\n",
-        "neverlauncher-desktop-macos-universal": b"macos-universal-desktop\n",
-        f"neverlauncher-paper-bridge-{VERSION}.jar": b"platform-neutral-jar\n",
+        f"launcher-desktop-{VERSION}-windows-arm64.exe": b"windows-arm64-desktop\n",
+        "launcher-desktop-macos-universal": b"macos-universal-desktop\n",
+        f"launcher-paper-bridge-{VERSION}.jar": b"platform-neutral-jar\n",
     }
     for name, payload in payloads.items():
         (bundle / name).write_bytes(payload)
 
-    subprocess.run([str(binary), "delivery", "manifest", "--bundle", str(bundle), "--version", VERSION], check=True)
-    subprocess.run([str(binary), "delivery", "verify", "--bundle", str(bundle), "--version", VERSION], check=True)
+    subprocess.run(
+        [
+            str(binary),
+            "delivery",
+            "manifest",
+            "--bundle",
+            str(bundle),
+            "--version",
+            VERSION,
+        ],
+        check=True,
+    )
+    subprocess.run(
+        [
+            str(binary),
+            "delivery",
+            "verify",
+            "--bundle",
+            str(bundle),
+            "--version",
+            VERSION,
+        ],
+        check=True,
+    )
     resolved = subprocess.check_output(
         [
             str(binary),
@@ -97,12 +132,25 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-0151-") as tmp_raw:
     if data.get("target") != {"platform": "windows", "architecture": "arm64"}:
         raise SystemExit(f"canonical target mismatch: {data.get('target')}")
     artifacts = data.get("artifacts", [])
-    if len(artifacts) != 1 or artifacts[0].get("name") != f"neverlauncher-desktop-{VERSION}-windows-arm64.exe":
-        raise SystemExit(f"delivery resolver selected unexpected artifacts: {artifacts}")
+    if (
+        len(artifacts) != 1
+        or artifacts[0].get("name") != f"launcher-desktop-{VERSION}-windows-arm64.exe"
+    ):
+        raise SystemExit(
+            f"delivery resolver selected unexpected artifacts: {artifacts}"
+        )
 
     (bundle / linux_cli_name).write_bytes(b"tampered\n")
     tampered = subprocess.run(
-        [str(binary), "delivery", "verify", "--bundle", str(bundle), "--version", VERSION],
+        [
+            str(binary),
+            "delivery",
+            "verify",
+            "--bundle",
+            str(bundle),
+            "--version",
+            VERSION,
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -110,4 +158,4 @@ with tempfile.TemporaryDirectory(prefix="neverlauncher-0151-") as tmp_raw:
     if tampered.returncode == 0:
         raise SystemExit("delivery verification accepted a tampered artifact")
 
-print(f"NeverLauncher {VERSION} Delivery Manifest + platform/architecture gate: OK")
+print(f"Launcher {VERSION} Delivery Manifest + platform/architecture gate: OK")

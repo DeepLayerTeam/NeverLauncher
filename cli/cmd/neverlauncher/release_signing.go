@@ -74,7 +74,7 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 			return errors.New("release and independent GA keys must be different")
 		}
 	}
-	// Enforce independent exact-byte GA inside `neverlauncher release sign` as
+	// Enforce independent exact-byte GA inside `launcher release sign` as
 	// well as the production workflow: direct CLI calls cannot skip this gate.
 	if gaTargetsRequired0361(bundleVersion) {
 		manifestRaw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
@@ -164,7 +164,7 @@ func verifyReleaseSignature(dir, publicKeyPath string) error {
 	}
 	var envelope releaseSignatureEnvelope
 	if err := json.Unmarshal(sigRaw, &envelope); err != nil {
-		return fmt.Errorf("SHA256SUMS.sig не является NeverLauncher Ed25519 signature envelope: %w", err)
+		return fmt.Errorf("SHA256SUMS.sig не является Launcher Ed25519 signature envelope: %w", err)
 	}
 	if envelope.Algorithm != "Ed25519" || envelope.SignedFile != "SHA256SUMS" {
 		return fmt.Errorf("неподдерживаемая release signature: algorithm=%q signedFile=%q", envelope.Algorithm, envelope.SignedFile)

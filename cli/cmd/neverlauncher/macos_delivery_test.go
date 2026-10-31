@@ -41,10 +41,10 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 			t.Fatal(err)
 		}
 		components := []struct{ component, name, bundle string }{
-			{"cli", "neverlauncher-cli-macos-" + arch, "NeverLauncher.app/Contents/Helpers/neverlauncher-cli"},
-			{"desktop-launcher", "neverlauncher-desktop-macos-" + arch, "NeverLauncher.app/Contents/MacOS/neverlauncher-desktop"},
-			{"guard", "guard-macos-" + arch, "NeverLauncher.app/Contents/Helpers/guard"},
-			{"runtime", "neverruntime-macos-" + arch, "NeverLauncher.app/Contents/Helpers/neverruntime"},
+			{"cli", "launcher-cli-macos-" + arch, "Launcher.app/Contents/Helpers/launcher-cli"},
+			{"desktop-launcher", "launcher-desktop-macos-" + arch, "Launcher.app/Contents/MacOS/launcher-desktop"},
+			{"guard", "guard-macos-" + arch, "Launcher.app/Contents/Helpers/guard"},
+			{"runtime", "runtime-macos-" + arch, "Launcher.app/Contents/Helpers/runtime"},
 		}
 		var artifacts []MacOSPackageArtifact0154
 		payloadByPath := map[string][]byte{}
@@ -63,7 +63,7 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 			payloadByPath[row.bundle] = data
 		}
 		pkgName, manifestName := expectedMacOSPackage0154(ver, arch)
-		manifest := MacOSPackageManifest0154{SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: ver, Platform: "macos", Architecture: arch, CPUType: cpuText, RustTarget: rustTarget, PackageFormat: "zip", PackageArtifact: pkgName, BundleIdentifier: "ru.skif4er.neverlauncher", MinimumSystemVersion: "12.0", HashBindingMode: "final-artifact-sha256", Artifacts: artifacts}
+		manifest := MacOSPackageManifest0154{SchemaVersion: "1.0", Product: "Launcher", ProductVersion: ver, Platform: "macos", Architecture: arch, CPUType: cpuText, RustTarget: rustTarget, PackageFormat: "zip", PackageArtifact: pkgName, BundleIdentifier: "ru.skif4er.launcher", MinimumSystemVersion: "12.0", HashBindingMode: "final-artifact-sha256", Artifacts: artifacts}
 		embeddedManifest := manifest
 		embeddedManifest.HashBindingMode = "codesign+external-release-policy"
 		embeddedManifest.Artifacts = append([]MacOSPackageArtifact0154(nil), artifacts...)
@@ -106,7 +106,7 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 			t.Fatal(err)
 		}
 		embeddedRaw = append(embeddedRaw, '\n')
-		w, err := zw.Create("NeverLauncher.app/Contents/Resources/MACOS_PACKAGE_MANIFEST.json")
+		w, err := zw.Create("Launcher.app/Contents/Resources/MACOS_PACKAGE_MANIFEST.json")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -119,13 +119,13 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 				byComponent[artifact.Component] = artifact
 			}
 			update := componentUpdateManifest0157{
-				SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: ver, Platform: "macos", Architecture: arch,
-				Layout: "macos-app-bundle", TrustMode: signingMode, BundleName: "NeverLauncher.app",
+				SchemaVersion: "1.0", Product: "Launcher", ProductVersion: ver, Platform: "macos", Architecture: arch,
+				Layout: "macos-app-bundle", TrustMode: signingMode, BundleName: "Launcher.app",
 			}
 			for _, row := range []struct{ public, source, path string }{
-				{"desktop", "desktop-launcher", "Contents/MacOS/neverlauncher-desktop"},
+				{"desktop", "desktop-launcher", "Contents/MacOS/launcher-desktop"},
 				{"guard", "guard", "Contents/Helpers/guard"},
-				{"runtime", "runtime", "Contents/Helpers/neverruntime"},
+				{"runtime", "runtime", "Contents/Helpers/runtime"},
 			} {
 				artifact := byComponent[row.source]
 				update.Components = append(update.Components, componentUpdateArtifact0157{Component: row.public, SourcePath: row.path, TargetPath: row.path, SHA256: artifact.SHA256, Size: artifact.Size, Executable: true})
@@ -134,7 +134,7 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 			if err != nil {
 				t.Fatal(err)
 			}
-			uw, err := zw.Create("NeverLauncher.app/Contents/Resources/" + componentUpdateManifestFile0157)
+			uw, err := zw.Create("Launcher.app/Contents/Resources/" + componentUpdateManifestFile0157)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -172,7 +172,7 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 		}
 		allow = append(allow, map[string]any{"architecture": arch, "guardSha256": guard, "launcherSha256": launcher, "notarized": notarized})
 	}
-	evidence := MacOSNotarizationEvidence0154{SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: ver, Platform: "macos", SigningMode: signingMode, TeamID: teamID, GeneratedAt: "2026-09-24T19:33:35Z", Targets: targets}
+	evidence := MacOSNotarizationEvidence0154{SchemaVersion: "1.0", Product: "Launcher", ProductVersion: ver, Platform: "macos", SigningMode: signingMode, TeamID: teamID, GeneratedAt: "2026-09-24T19:33:35Z", Targets: targets}
 	if err := writeJSONFile(filepath.Join(dir, macOSNotarizationEvidenceFile0154), evidence); err != nil {
 		t.Fatal(err)
 	}

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
 func (s Server) telemetryEvent(w http.ResponseWriter, r *http.Request) {

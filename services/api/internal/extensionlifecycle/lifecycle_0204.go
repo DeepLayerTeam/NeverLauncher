@@ -19,12 +19,12 @@ import (
 	"strings"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpackage"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensionpolicy"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/extensiontrust"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/storage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionpackage"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensionpolicy"
+	"gitflic.ru/skif4er/launcher/services/api/internal/extensiontrust"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/storage"
 )
 
 const operationLockTTL0204 = 4 * time.Hour

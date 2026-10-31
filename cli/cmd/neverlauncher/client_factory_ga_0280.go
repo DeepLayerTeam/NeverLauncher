@@ -16,7 +16,7 @@ import (
 
 // The GA gate is deliberately separate from build/verify/export. A successful
 // materialization or a fixture certificate must never imply a public release.
-const factoryGASchema0280 = "neverlauncher.factory.ga-join-attestation.v1"
+const factoryGASchema0280 = "launcher.factory.ga-join-attestation.v1"
 
 var factoryCommit0280 = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
@@ -141,7 +141,7 @@ func factoryVerifyJoin0280(evidence, attestation, publicKey, ver, commit string)
 	return e, sha, nil
 }
 func factoryVerifyGA0280(matrix, clientPub, joinEvidence, joinAttestation, joinPub, ver, commit string) (factoryGAReport0280, error) {
-	report := factoryGAReport0280{Schema: "neverlauncher.factory.ga-report.v1", Status: "blocked", Version: ver, Commit: commit}
+	report := factoryGAReport0280{Schema: "launcher.factory.ga-report.v1", Status: "blocked", Version: ver, Commit: commit}
 	if ver != "0.28.0" || !factoryCommit0280.MatchString(commit) {
 		return report, errors.New("GA requires exact v0.28.0 and commit SHA")
 	}

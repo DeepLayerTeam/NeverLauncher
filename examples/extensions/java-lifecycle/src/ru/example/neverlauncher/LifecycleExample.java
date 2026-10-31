@@ -1,6 +1,6 @@
-package ru.example.neverlauncher;
+package ru.example.launcher;
 
-import ru.neverlauncher.sdk.core.*;
+import ru.launcher.sdk.core.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Real lifecycle example. The backend supervises this JVM as an ordinary Extensions process. */

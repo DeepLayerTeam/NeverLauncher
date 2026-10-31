@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/dbmigrate"
+	"gitflic.ru/skif4er/launcher/services/api/internal/dbmigrate"
 )
 
 func (s Server) ready(w http.ResponseWriter, r *http.Request) {
@@ -118,18 +118,18 @@ func (s Server) metrics(w http.ResponseWriter, r *http.Request) {
 	// Capacity collector samples SQL out of band; metrics must never fan out
 	// into full-table ORM reads on a request path.
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-	_, _ = fmt.Fprintf(w, "# HELP neverlauncher_info Backend identity\n# TYPE neverlauncher_info gauge\nneverlauncher_info{version=%q,storage=%q,repository=%q} 1\n", s.Version, s.Storage.Driver(), s.Config.RepositoryDriver)
+	_, _ = fmt.Fprintf(w, "# HELP launcher_info Backend identity\n# TYPE launcher_info gauge\nlauncher_info{version=%q,storage=%q,repository=%q} 1\n", s.Version, s.Storage.Driver(), s.Config.RepositoryDriver)
 	if s.Capacity != nil {
 		s.Capacity.Prometheus(w)
 	}
 
 	if s.State != nil && s.State.ServerBridge != nil && s.State.ServerBridge.backendV2() != nil {
 		if ha, err := s.State.ServerBridge.haStatus0149(); err == nil {
-			_, _ = fmt.Fprintf(w, "# HELP neverlauncher_serverbridge_nodes_active Active ServerBridge nodes\n# TYPE neverlauncher_serverbridge_nodes_active gauge\nneverlauncher_serverbridge_nodes_active %d\n", ha.NodesActive)
-			_, _ = fmt.Fprintf(w, "# HELP neverlauncher_serverbridge_nodes_fresh Fresh ServerBridge nodes\n# TYPE neverlauncher_serverbridge_nodes_fresh gauge\nneverlauncher_serverbridge_nodes_fresh %d\n", ha.NodesFresh)
-			_, _ = fmt.Fprintf(w, "# HELP neverlauncher_serverbridge_topology_fresh Fresh runtime-learned topology edges\n# TYPE neverlauncher_serverbridge_topology_fresh gauge\nneverlauncher_serverbridge_topology_fresh %d\n", ha.TopologyFresh)
-			_, _ = fmt.Fprintf(w, "# HELP neverlauncher_serverbridge_handoffs_active Active one-time handoffs\n# TYPE neverlauncher_serverbridge_handoffs_active gauge\nneverlauncher_serverbridge_handoffs_active %d\n", ha.ActiveHandoffs)
-			_, _ = fmt.Fprintf(w, "# HELP neverlauncher_serverbridge_expired_nonce_backlog Expired replay nonces waiting for HA maintenance\n# TYPE neverlauncher_serverbridge_expired_nonce_backlog gauge\nneverlauncher_serverbridge_expired_nonce_backlog %d\n", ha.ExpiredNonceBacklog)
+			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_nodes_active Active ServerBridge nodes\n# TYPE launcher_serverbridge_nodes_active gauge\nlauncher_serverbridge_nodes_active %d\n", ha.NodesActive)
+			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_nodes_fresh Fresh ServerBridge nodes\n# TYPE launcher_serverbridge_nodes_fresh gauge\nlauncher_serverbridge_nodes_fresh %d\n", ha.NodesFresh)
+			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_topology_fresh Fresh runtime-learned topology edges\n# TYPE launcher_serverbridge_topology_fresh gauge\nlauncher_serverbridge_topology_fresh %d\n", ha.TopologyFresh)
+			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_handoffs_active Active one-time handoffs\n# TYPE launcher_serverbridge_handoffs_active gauge\nlauncher_serverbridge_handoffs_active %d\n", ha.ActiveHandoffs)
+			_, _ = fmt.Fprintf(w, "# HELP launcher_serverbridge_expired_nonce_backlog Expired replay nonces waiting for HA maintenance\n# TYPE launcher_serverbridge_expired_nonce_backlog gauge\nlauncher_serverbridge_expired_nonce_backlog %d\n", ha.ExpiredNonceBacklog)
 		}
 	}
 }

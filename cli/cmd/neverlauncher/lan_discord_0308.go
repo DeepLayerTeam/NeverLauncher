@@ -16,8 +16,8 @@ import (
 	"syscall"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/cli/internal/discordrpc"
-	"gitflic.ru/skif4er/neverlauncher/cli/internal/lanmdns"
+	"gitflic.ru/skif4er/launcher/cli/internal/discordrpc"
+	"gitflic.ru/skif4er/launcher/cli/internal/lanmdns"
 )
 
 func handleLAN0308(args []string) error {
@@ -26,7 +26,7 @@ func handleLAN0308(args []string) error {
 	}
 	cmd := args[0]
 	f := flag.NewFlagSet("lan "+cmd, flag.ContinueOnError)
-	name := f.String("instance", "NeverLauncher", "DNS-SD instance (ASCII)")
+	name := f.String("instance", "Launcher", "DNS-SD instance (ASCII)")
 	endpoint := f.String("url", "", "HTTPS backend endpoint")
 	fingerprint := f.String("fingerprint", "", "SHA-256 TLS certificate fingerprint (hex)")
 	pin := f.String("pin", "", "independently configured pinned certificate fingerprint")
@@ -85,7 +85,7 @@ func handleDiscord0308(args []string) error {
 	f := flag.NewFlagSet("discord presence", flag.ContinueOnError)
 	applicationID := f.String("application-id", "", "Discord developer application ID")
 	state := f.String("state", "In launcher", "Activity state")
-	details := f.String("details", "NeverLauncher", "Activity details")
+	details := f.String("details", "Launcher", "Activity details")
 	interactive := f.Bool("interactive", false, "read newline-separated JSON activities on stdin; null clears")
 	duration := f.Duration("duration", 0, "session duration, 0=until interrupted")
 	buttons := f.String("buttons-json", "", "JSON activity buttons (max two)")

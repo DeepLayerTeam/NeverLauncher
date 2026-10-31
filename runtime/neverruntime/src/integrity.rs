@@ -556,7 +556,7 @@ mod windows_impl {
         non_system.dedup_by(|left, right| left.eq_ignore_ascii_case(right));
 
         let mut digest = Sha256::new();
-        digest.update(b"NeverLauncher Guard module-set v1\0");
+        digest.update(b"Launcher Guard module-set v1\0");
         for record in &records {
             digest.update((record.len() as u32).to_le_bytes());
             digest.update(record.as_bytes());
@@ -693,7 +693,7 @@ mod tests {
     fn sample_process(pid: u32, name: &str) -> ProcessIntegrityEvidence {
         ProcessIntegrityEvidence {
             pid,
-            image_path: format!(r"C:\NeverLauncher\{name}.exe"),
+            image_path: format!(r"C:\Launcher\{name}.exe"),
             image_sha256: "11".repeat(32),
             image_size: 123,
             image_modified_unix_ms: 456,
@@ -737,7 +737,7 @@ mod tests {
                 parent_matches: true,
             },
             guard: sample_process(11, "guard"),
-            launcher: sample_process(10, "neverlauncher-desktop"),
+            launcher: sample_process(10, "launcher-desktop"),
             evidence_sha256: String::new(),
             session_proof: "44".repeat(32),
         };
@@ -940,7 +940,7 @@ mod macos_impl {
     fn module_set(path: &Path, image_hash: &str) -> ModuleSetEvidence {
         let normalized = path.to_string_lossy();
         let mut digest = Sha256::new();
-        digest.update(b"NeverLauncher Guard macOS signed-image-set v1\0");
+        digest.update(b"Launcher Guard macOS signed-image-set v1\0");
         digest.update((normalized.len() as u64).to_le_bytes());
         digest.update(normalized.as_bytes());
         digest.update(hex::decode(image_hash).unwrap_or_default());

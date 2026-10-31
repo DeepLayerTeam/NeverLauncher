@@ -1,4 +1,4 @@
-//go:build !neverlauncher_nopgx
+//go:build !launcher_nopgx
 
 package repository
 
@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	mw "gitflic.ru/skif4er/neverlauncher/services/api/internal/migrationworkflow"
+	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
 func TestMigrationReportPostgres03313(t *testing.T) {

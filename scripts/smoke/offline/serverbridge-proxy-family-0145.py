@@ -21,139 +21,273 @@ api_migration = read("services/api/internal/dbmigrate/sql/0025_proxy_family_0145
 cli_migration = read("cli/internal/dbmigrate/sql/0025_proxy_family_0145.sql")
 if api_migration != cli_migration:
     raise SystemExit("0.14.5 API/CLI proxy-family migrations differ")
-require(api_migration, [
-    "server_bridge_nodes_v2_kind_check",
-    "'velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia'",
-], "0.14.5 PostgreSQL migration")
+require(
+    api_migration,
+    [
+        "server_bridge_nodes_v2_kind_check",
+        "'velocity','bungeecord','waterfall','bukkit','spigot','paper','purpur','folia'",
+    ],
+    "0.14.5 PostgreSQL migration",
+)
 
 settings = read("settings.gradle.kts")
-require(settings, [
-    'maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")',
-    'include("plugins:proxy-family-common")',
-    'include("plugins:bungee-family-common")',
-    'include("plugins:velocity-bridge")',
-    'include("plugins:bungeecord-bridge")',
-    'include("plugins:waterfall-bridge")',
-], "Gradle proxy-family modules")
+require(
+    settings,
+    [
+        'maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")',
+        'include("plugins:proxy-family-common")',
+        'include("plugins:bungee-family-common")',
+        'include("plugins:velocity-bridge")',
+        'include("plugins:bungeecord-bridge")',
+        'include("plugins:waterfall-bridge")',
+    ],
+    "Gradle proxy-family modules",
+)
 
-runtime = read("plugins/proxy-family-common/src/main/java/ru/neverlauncher/bridge/proxy/ProxyBridgeRuntime.java")
-require(runtime, [
-    "ScheduledExecutorService",
-    "Executors.newSingleThreadScheduledExecutor",
-    "NeverLauncherApiClient",
-    "NodeIdentity.loadOrCreate",
-    "BridgeIntegrity.artifactSha256",
-    "nodePublicKey=",
-    "validateJoinAsync",
-    "triggerHeartbeat",
-    "heartbeatExecutor.shutdownNow()",
-    "validationExecutor.shutdownNow()",
-    "new ArrayBlockingQueue<>(256)",
-    "new ThreadPoolExecutor.AbortPolicy()",
-], "shared production proxy runtime")
+runtime = read(
+    "plugins/proxy-family-common/src/main/java/ru/launcher/bridge/proxy/ProxyBridgeRuntime.java"
+)
+require(
+    runtime,
+    [
+        "ScheduledExecutorService",
+        "Executors.newSingleThreadScheduledExecutor",
+        "LauncherApiClient",
+        "NodeIdentity.loadOrCreate",
+        "BridgeIntegrity.artifactSha256",
+        "nodePublicKey=",
+        "validateJoinAsync",
+        "triggerHeartbeat",
+        "heartbeatExecutor.shutdownNow()",
+        "validationExecutor.shutdownNow()",
+        "new ArrayBlockingQueue<>(256)",
+        "new ThreadPoolExecutor.AbortPolicy()",
+    ],
+    "shared production proxy runtime",
+)
 
-velocity = read("plugins/velocity-bridge/src/main/java/ru/neverlauncher/bridge/velocity/NeverLauncherVelocityBridge.java")
-require(velocity, [
-    "ProxyBridgeRuntime",
-    "EventTask.async",
-    "ProxyShutdownEvent",
-    '"velocity"',
-], "Velocity proxy adapter")
+velocity = read(
+    "plugins/velocity-bridge/src/main/java/ru/launcher/bridge/velocity/LauncherVelocityBridge.java"
+)
+require(
+    velocity,
+    [
+        "ProxyBridgeRuntime",
+        "EventTask.async",
+        "ProxyShutdownEvent",
+        '"velocity"',
+    ],
+    "Velocity proxy adapter",
+)
 
-bungee_runtime = read("plugins/bungee-family-common/src/main/java/ru/neverlauncher/bridge/bungee/BungeeFamilyBridgePlugin.java")
-require(bungee_runtime, [
-    "PreLoginEvent",
-    "event.registerIntent(this)",
-    "event.completeIntent(this)",
-    "validateJoinAsync",
-    "BungeeFamilyPlatform.detect",
-    "actual != expectedPlatform",
-    "registerCommand",
-    "unregisterCommands",
-], "Bungee-family runtime")
-platform = read("plugins/bungee-family-common/src/main/java/ru/neverlauncher/bridge/bungee/BungeeFamilyPlatform.java")
-require(platform, ['BUNGEECORD("bungeecord"', 'WATERFALL("waterfall"', 'brand.contains("waterfall")', 'brand.contains("bungeecord")'], "Bungee runtime discriminator")
+bungee_runtime = read(
+    "plugins/bungee-family-common/src/main/java/ru/launcher/bridge/bungee/BungeeFamilyBridgePlugin.java"
+)
+require(
+    bungee_runtime,
+    [
+        "PreLoginEvent",
+        "event.registerIntent(this)",
+        "event.completeIntent(this)",
+        "validateJoinAsync",
+        "BungeeFamilyPlatform.detect",
+        "actual != expectedPlatform",
+        "registerCommand",
+        "unregisterCommands",
+    ],
+    "Bungee-family runtime",
+)
+platform = read(
+    "plugins/bungee-family-common/src/main/java/ru/launcher/bridge/bungee/BungeeFamilyPlatform.java"
+)
+require(
+    platform,
+    [
+        'BUNGEECORD("bungeecord"',
+        'WATERFALL("waterfall"',
+        'brand.contains("waterfall")',
+        'brand.contains("bungeecord")',
+    ],
+    "Bungee runtime discriminator",
+)
 
 for kind, class_name, expected in (
-    ("bungeecord", "ru/neverlauncher/bridge/bungeecord/NeverLauncherBungeeCordBridge.java", "BungeeFamilyPlatform.BUNGEECORD"),
-    ("waterfall", "ru/neverlauncher/bridge/waterfall/NeverLauncherWaterfallBridge.java", "BungeeFamilyPlatform.WATERFALL"),
+    (
+        "bungeecord",
+        "ru/launcher/bridge/bungeecord/LauncherBungeeCordBridge.java",
+        "BungeeFamilyPlatform.BUNGEECORD",
+    ),
+    (
+        "waterfall",
+        "ru/launcher/bridge/waterfall/LauncherWaterfallBridge.java",
+        "BungeeFamilyPlatform.WATERFALL",
+    ),
 ):
     module = f"plugins/{kind}-bridge"
     java = read(f"{module}/src/main/java/{class_name}")
     descriptor = read(f"{module}/src/main/resources/bungee.yml")
     build = read(f"{module}/build.gradle.kts")
     require(java, ["extends BungeeFamilyBridgePlugin", expected], f"{kind} adapter")
-    require(descriptor, ["main:", 'version: "${version}"', "NeverLauncher"], f"{kind} descriptor")
-    require(build, ['implementation(project(":plugins:bungee-family-common"))', 'net.md-5:bungeecord-api:1.21-R0.5-SNAPSHOT'], f"{kind} Gradle build")
+    require(
+        descriptor, ["main:", 'version: "${version}"', "Launcher"], f"{kind} descriptor"
+    )
+    require(
+        build,
+        [
+            'implementation(project(":plugins:bungee-family-common"))',
+            "net.md-5:bungeecord-api:1.21-R0.5-SNAPSHOT",
+        ],
+        f"{kind} Gradle build",
+    )
 
 backend = read("services/api/internal/httpapi/server_bridge.go")
 integrity = read("services/api/internal/httpapi/serverbridge_integrity_0135.go")
 manifest = read("services/api/internal/httpapi/bridge_plugins.go")
-require(backend, ['case "velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia"'], "Backend server kind enforcement")
-require(integrity, ["BungeeCordSHA256", "WaterfallSHA256", 'case "bungeecord":', 'case "waterfall":'], "Backend proxy artifact integrity policy")
+require(
+    backend,
+    [
+        'case "velocity", "bungeecord", "waterfall", "bukkit", "spigot", "paper", "purpur", "folia"'
+    ],
+    "Backend server kind enforcement",
+)
+require(
+    integrity,
+    ["BungeeCordSHA256", "WaterfallSHA256", 'case "bungeecord":', 'case "waterfall":'],
+    "Backend proxy artifact integrity policy",
+)
 for kind in ("velocity", "bungeecord", "waterfall"):
-    require(manifest, [f'{{"id": "{kind}"', f'neverlauncher-{kind}-bridge-', f'"serverType": "{kind}"'], f"{kind} manifest/compatibility")
+    require(
+        manifest,
+        [
+            f'{{"id": "{kind}"',
+            f"launcher-{kind}-bridge-",
+            f'"serverType": "{kind}"',
+        ],
+        f"{kind} manifest/compatibility",
+    )
 
 build = read("scripts/build/bridge-plugins.sh")
 for kind in ("velocity", "bungeecord", "waterfall"):
-    require(build, [f":plugins:{kind}-bridge:clean", f'neverlauncher-{kind}-bridge-${{VERSION}}.jar'], f"{kind} production build")
-require(build, ["bungeeCordSha256", "waterfallSha256", "ProxyBridgeRuntime.class", "BungeeFamilyBridgePlugin.class", "bungee.yml"], "proxy release build/integrity")
+    require(
+        build,
+        [
+            f":plugins:{kind}-bridge:clean",
+            f"launcher-{kind}-bridge-${{VERSION}}.jar",
+        ],
+        f"{kind} production build",
+    )
+require(
+    build,
+    [
+        "bungeeCordSha256",
+        "waterfallSha256",
+        "ProxyBridgeRuntime.class",
+        "BungeeFamilyBridgePlugin.class",
+        "bungee.yml",
+    ],
+    "proxy release build/integrity",
+)
 
 config = read("services/api/internal/config/config.go")
-require(config, ["bridgeReleaseRequiresProxyFamily0145", "BungeeCordSHA256", "WaterfallSHA256", "для 0.14.5+"], "production configuration validation")
+require(
+    config,
+    [
+        "bridgeReleaseRequiresProxyFamily0145",
+        "BungeeCordSHA256",
+        "WaterfallSHA256",
+        "для 0.14.5+",
+    ],
+    "production configuration validation",
+)
 
 openapi_gen = read("scripts/contracts/generate_openapi.py")
-require(openapi_gen, ['enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]'], "OpenAPI proxy-family enum")
+require(
+    openapi_gen,
+    [
+        'enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]'
+    ],
+    "OpenAPI proxy-family enum",
+)
 
 tests = read("services/api/internal/httpapi/serverbridge_proxy_family_0145_test.go")
-require(tests, [
-    "TestServerBridgeProxyFamilyKinds0145",
-    "TestServerBridgeProxyFamilyIntegrityAllowlist0145",
-    "TestBridgePluginsManifestIncludesProxyFamily0145",
-], "proxy-family backend regressions")
+require(
+    tests,
+    [
+        "TestServerBridgeProxyFamilyKinds0145",
+        "TestServerBridgeProxyFamilyIntegrityAllowlist0145",
+        "TestBridgePluginsManifestIncludesProxyFamily0145",
+    ],
+    "proxy-family backend regressions",
+)
 
 runtime_e2e = read("e2e/scripts/run-minecraft-e2e.sh")
 compose_e2e = read("e2e/docker-compose.minecraft-e2e.yml")
-require(runtime_e2e, [
-    "compose up -d velocity paper",
-    "flow_for_server velocity-e2e-p3",
-    "certify_aux_bridge bungeecord-e2e-p3",
-    "certify_aux_bridge waterfall-e2e-p3",
-    'wait_bridge_heartbeat "$service"',
-    'capture_health_evidence "$service"',
-    'velocity|bungeecord|waterfall)',
-    'NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5',
-    'wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"',
-    "neverlauncher-bungeecord-bridge.jar",
-    "neverlauncher-waterfall-bridge.jar",
-    "proxyFamilyRuntime:true",
-], "real proxy runtime E2E")
-require(compose_e2e, [
-    "TYPE: BUNGEECORD", "TYPE: WATERFALL",
-    '- "25570:25577"',
-    "./runtime/plugins/bungeecord:/plugins:ro", "./runtime/plugins/waterfall:/plugins:ro",
-], "Velocity/BungeeCord/Waterfall Docker E2E")
+require(
+    runtime_e2e,
+    [
+        "compose up -d velocity paper",
+        "flow_for_server velocity-e2e-p3",
+        "certify_aux_bridge bungeecord-e2e-p3",
+        "certify_aux_bridge waterfall-e2e-p3",
+        'wait_bridge_heartbeat "$service"',
+        'capture_health_evidence "$service"',
+        "velocity|bungeecord|waterfall)",
+        "NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5",
+        'wait_log "$service" "launcher.join.denied username=$PLAYER_USERNAME"',
+        "launcher-bungeecord-bridge.jar",
+        "launcher-waterfall-bridge.jar",
+        "proxyFamilyRuntime:true",
+    ],
+    "real proxy runtime E2E",
+)
+require(
+    compose_e2e,
+    [
+        "TYPE: BUNGEECORD",
+        "TYPE: WATERFALL",
+        '- "25570:25577"',
+        "./runtime/plugins/bungeecord:/plugins:ro",
+        "./runtime/plugins/waterfall:/plugins:ro",
+    ],
+    "Velocity/BungeeCord/Waterfall Docker E2E",
+)
 if '- "25570:25565"' in compose_e2e:
-    raise SystemExit("Velocity E2E host port 25570 is mapped to 25565, but Velocity 3.4 runtime binds 25577")
+    raise SystemExit(
+        "Velocity E2E host port 25570 is mapped to 25565, but Velocity 3.4 runtime binds 25577"
+    )
 
 
-allow_marker = 'wait_log "$service" "neverlauncher.join.allowed username=$PLAYER_USERNAME"'
-deny_marker = 'wait_log "$service" "neverlauncher.join.denied username=$PLAYER_USERNAME"'
-cooldown_marker = 'NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5'
-if not (runtime_e2e.index(allow_marker) < runtime_e2e.index(cooldown_marker) < runtime_e2e.index(deny_marker)):
-    raise SystemExit("proxy E2E reconnect cooldown is not between allow and deny network assertions")
+allow_marker = 'wait_log "$service" "launcher.join.allowed username=$PLAYER_USERNAME"'
+deny_marker = 'wait_log "$service" "launcher.join.denied username=$PLAYER_USERNAME"'
+cooldown_marker = "NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5"
+if not (
+    runtime_e2e.index(allow_marker)
+    < runtime_e2e.index(cooldown_marker)
+    < runtime_e2e.index(deny_marker)
+):
+    raise SystemExit(
+        "proxy E2E reconnect cooldown is not between allow and deny network assertions"
+    )
 
 migration_e2e = read("e2e/scripts/run-proxy-family-migration-e2e.sh")
-require(migration_e2e, [
-    "0024_bukkit_family_0144",
-    "0025_proxy_family_0145",
-    "for kind in velocity bungeecord waterfall",
-    "invalid proxy kind bypassed PostgreSQL constraint",
-], "0.14.4 -> 0.14.5 migration E2E")
+require(
+    migration_e2e,
+    [
+        "0024_bukkit_family_0144",
+        "0025_proxy_family_0145",
+        "for kind in velocity bungeecord waterfall",
+        "invalid proxy kind bypassed PostgreSQL constraint",
+    ],
+    "0.14.4 -> 0.14.5 migration E2E",
+)
 
 preflight = read("scripts/release/preflight.sh")
 ci = read(".github/workflows/ci.yml")
 for text, label in ((preflight, "preflight"), (ci, "CI")):
-    require(text, ["serverbridge-proxy-family-0145.py", "run-proxy-family-migration-e2e.sh"], f"0.14.5 {label} wiring")
+    require(
+        text,
+        ["serverbridge-proxy-family-0145.py", "run-proxy-family-migration-e2e.sh"],
+        f"0.14.5 {label} wiring",
+    )
 
-print(f"NeverLauncher 0.14.5 Proxy family gate: OK ({version})")
+print(f"Launcher 0.14.5 Proxy family gate: OK ({version})")

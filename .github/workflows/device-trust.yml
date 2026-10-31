@@ -1,4 +1,4 @@
-name: NeverLauncher Device Trust Matrix
+name: Launcher Device Trust Matrix
 
 on:
   push:
@@ -14,7 +14,7 @@ concurrency:
   # Повторный ручной или плановый запуск не должен отменять уже работающую матрицу:
   # отмена заданий на нативных платформах делает публичную аттестацию неполной.
   # Сериализуйте запуски одного типа события и коммита, не создавая фиктивных PASS.
-  group: neverlauncher-device-trust-${{ github.ref }}-${{ github.event_name }}-${{ github.sha }}
+  group: launcher-device-trust-${{ github.ref }}-${{ github.event_name }}-${{ github.sha }}
   cancel-in-progress: false
 
 env:
@@ -156,7 +156,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-device-trust-matrix-${{ github.run_id }}
+          name: launcher-device-trust-matrix-${{ github.run_id }}
           path: |
             device-trust-public/matrix.json
             device-trust-public/matrix.md

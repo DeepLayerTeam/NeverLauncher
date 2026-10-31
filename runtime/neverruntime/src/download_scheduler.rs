@@ -10,7 +10,7 @@ use std::{collections::{HashMap, VecDeque}, path::{Path, PathBuf}, sync::{Arc, M
     sync::atomic::{AtomicU64, AtomicUsize, Ordering}, time::{Duration, Instant}};
 use tokio::{fs, sync::{OwnedSemaphorePermit, Semaphore, watch}, task::JoinSet};
 
-pub const DOWNLOAD_PROGRESS_EVENT: &str = "neverlauncher-download-progress";
+pub const DOWNLOAD_PROGRESS_EVENT: &str = "launcher-download-progress";
 // Cap aggregate transfers across concurrent Desktop/Repair invocations in this process.
 // The per-run scheduler may request stricter limits but cannot exceed these ceilings.
 const PROCESS_GLOBAL_LIMIT: usize = 6;
@@ -623,7 +623,7 @@ mod tests {
             "runtime": { "java": { "majorVersion": 21, "distribution": "temurin" } },
             "files": entries,
         })).unwrap();
-        let root = std::env::temp_dir().join(format!("neverruntime-parallel-test-{:016x}", rand::random::<u64>()));
+        let root = std::env::temp_dir().join(format!("runtime-parallel-test-{:016x}", rand::random::<u64>()));
         fs::create_dir_all(&root).await.unwrap();
         let events = Arc::new(Mutex::new(Vec::<DownloadProgress>::new()));
         let observed = Arc::clone(&events);

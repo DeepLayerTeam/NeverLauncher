@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
-	"gitflic.ru/skif4er/neverlauncher/services/api/internal/repository"
+	"gitflic.ru/skif4er/launcher/services/api/internal/model"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 func TestServerBridgeControlValidation0195(t *testing.T) {
@@ -37,7 +37,7 @@ func TestServerBridgeControlValidation0195(t *testing.T) {
 func TestSessionBoundKickPayload0418(t *testing.T) {
 	correlation := "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
 	payload, err := validateServerBridgeControlRequest0195("player.kick", map[string]string{
-		"username": "Steve", "reason": "NeverLauncher session invalidated", "sessionCorrelationId": correlation,
+		"username": "Steve", "reason": "Launcher session invalidated", "sessionCorrelationId": correlation,
 	})
 	if err != nil || payload["sessionCorrelationId"] != correlation {
 		t.Fatalf("valid session-specific kick was rejected: %v", err)
