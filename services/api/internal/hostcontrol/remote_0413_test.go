@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -37,6 +38,11 @@ func TestRemoteLifecycle0413(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]any{"nodeId": "nodeA", "status": map[string]any{"configured": true, "processAlive": true, "supervisorAlive": true, "observedStatus": "running", "sessionId": session}})
 			return
 		}
+		if r.URL.Path == "/v1/host/receipts/operation-12345678901" && r.Method == http.MethodGet {
+			sum := sha256.Sum256([]byte("operation-12345678901"))
+			json.NewEncoder(w).Encode(map[string]any{"keyHash": hex.EncodeToString(sum[:]), "action": "restart", "state": "succeeded"})
+			return
+		}
 		if r.URL.Path == "/v1/host/commands" && r.Header.Get("Idempotency-Key") == "operation-12345678901" {
 			count.Add(1)
 			session = "new"
@@ -44,7 +50,8 @@ func TestRemoteLifecycle0413(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]any{"keyHash": hex.EncodeToString(sum[:]), "action": "restart", "state": "succeeded"})
 			return
 		}
-		http.Error(w, "unknown", 404)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]any{"error": "unknown"})
 	}))
 	defer server.Close()
 	cert := server.TLS.Certificates[0].Certificate[0]
@@ -73,6 +80,16 @@ func TestRemoteLifecycle0413(t *testing.T) {
 	}
 	if !Verified("restart", before, after, receipt) || count.Load() != 1 {
 		t.Fatalf("not verified: %+v %+v", receipt, after)
+	}
+	recovered, err := client.ReadReceipt04112(context.Background(), "restart", "operation-12345678901")
+	if err != nil || recovered.State != "succeeded" || count.Load() != 1 {
+		t.Fatalf("read-only lost ACK recovery failed: %+v %v count=%d", recovered, err, count.Load())
+	}
+	if _, err = client.ReadReceipt04112(context.Background(), "stop", "operation-12345678901"); err == nil {
+		t.Fatal("accepted receipt for wrong action")
+	}
+	if _, err = client.ReadReceipt04112(context.Background(), "restart", "unknown-receipt-04112"); !errors.Is(err, ErrReceiptNotFound04112) {
+		t.Fatalf("unknown receipt returned %v", err)
 	}
 	if Verified("restart", after, after, receipt) {
 		t.Fatal("same-session restart accepted")

@@ -39,7 +39,8 @@ func hostReady0413(action string, op repository.HostOperation0413, node bridgeSe
 	if action == "stop" {
 		return true
 	}
-	return node.Status == "active" && node.RuntimeEpoch > 0 && node.RuntimeID != "" && node.RuntimeID != op.BaselineRuntimeID && node.LastHeartbeatAt.After(op.CreatedAt)
+	now := time.Now().UTC()
+	return node.Status == "active" && node.RuntimeEpoch > op.BaselineRuntimeEpoch && node.RuntimeID != "" && node.RuntimeID != op.BaselineRuntimeID && node.LastHeartbeatAt.After(op.CreatedAt) && node.LastHeartbeatAt.After(now.Add(-90*time.Second)) && !node.LastHeartbeatAt.After(now.Add(30*time.Second))
 }
 func hostOperationWireKey0413(operationID string) string { return "nl-host-" + operationID }
 func (s Server) hostOperationPreflight0413(w http.ResponseWriter, r *http.Request) (bridgeServerRecord, repository.HostOperation0413, hostOperationRepo0413, bool) {
@@ -234,27 +235,43 @@ func (s Server) serverBridgeHostGet0413(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusServiceUnavailable, "host_operation_journal_unavailable")
 		return
 	}
-	// A refresh is READ-ONLY at RemoteControl; it never replays the action.
-	if r.URL.Query().Get("refresh") == "1" && op.State == "accepted" {
+	// Reconcile only by inspecting the RemoteControl's durable receipt and
+	// independently observing the OS/bridge state. This path MUST NOT POST a
+	// command. A lost ACK or crashed Backend remains indeterminate unless the
+	// agent can prove it executed the exact original operation.
+	if r.URL.Query().Get("refresh") == "1" && (op.State == "accepted" || op.State == "indeterminate") {
 		target, loadErr := hostcontrol.LoadTarget(s.Config.ServerBridgeHostTargetsFile0413, op.ServerID)
 		if loadErr == nil && target.NodeID == op.RemoteNodeID {
 			client, clientErr := hostcontrol.NewClient(target)
 			if clientErr == nil {
-				after, statusErr := client.Status(ctx)
-				if statusErr == nil {
+				receipt, receiptErr := client.ReadReceipt04112(ctx, op.Action, hostOperationWireKey0413(op.ID))
+				if receiptErr == nil && receipt.State == "succeeded" {
 					var before hostcontrol.Status
-					var receipt hostcontrol.Receipt
-					if json.Unmarshal(op.HostBefore, &before) == nil && json.Unmarshal(op.RemoteReceipt, &receipt) == nil && hostcontrol.Verified(op.Action, before, after, receipt) {
-						latest, nodeErr := s.State.ServerBridge.getNode0142(op.ServerID)
-						if nodeErr == nil {
-							node = latest
-						}
-						if hostReady0413(op.Action, op, node) {
+					if json.Unmarshal(op.HostBefore, &before) == nil && before.NodeID == op.RemoteNodeID {
+						after, statusErr := client.Status(ctx)
+						if statusErr == nil && hostcontrol.Verified(op.Action, before, after, receipt) {
+							latest, nodeErr := s.State.ServerBridge.getNode0142(op.ServerID)
+							if nodeErr == nil {
+								node = latest
+							}
 							op.HostAfter, _ = json.Marshal(after)
-							op.State = "succeeded"
+							op.RemoteReceipt, _ = json.Marshal(receipt)
+							originalState := op.State
+							op.State = "accepted"
+							if hostReady0413(op.Action, op, node) {
+								op.State = "succeeded"
+							}
 							op.Error = ""
-							if updated, updateErr := rp.FinishHostOperation0413(ctx, op, "accepted"); updateErr == nil {
+							allowed := originalState
+							if updated, updateErr := rp.FinishHostOperation0413(ctx, op, allowed); updateErr == nil {
 								op = updated
+							} else if errors.Is(updateErr, repository.ErrConflict) {
+								if current, getErr := rp.GetHostOperation0413(ctx, op.ServerID, op.ID); getErr == nil {
+									op = current
+								}
+							} else {
+								writeError(w, http.StatusServiceUnavailable, "host_operation_outcome_recording_unavailable")
+								return
 							}
 						}
 					}

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.41.12 — Host control fault fencing and read-only ACK recovery
+
+- RemoteControl enforces an OS kernel process lock across stale lease recovery to prevent competing remote listeners; unknown previous receipts block unrelated commands.
+- Read-only authenticated host receipt lookup enables lost-ACK inspection without resending the physical action.
+- PostgreSQL holds both indeterminate and accepted (not yet verified) operations under per-server and per-physical-host uniqueness fences (including aliases mapped to the same RemoteControl node).
+- Crash, timeout, replay, concurrent command, and restarted-agent tests cover the new guards. Kernel singleton fences use flock on Unix and LockFileEx on Windows; Windows cross-compilation is verified, but live Windows execution is not.
+
+
 ## 0.41.11 — Admin control of real Minecraft network and Host Supervisor
 
 - **Executable Admin control:** Host Supervisor start, stop and restart are now available in the project ServerBridge workspace using the existing verified Backend → PostgreSQL → pinned-TLS RemoteControl → real OS/JVM path. No browser shell, manifest-only handlers or optimistic "started" acknowledgements. Only globally authorized `host:process` operators can see the controls; Backend separately enforces that permission and fresh MFA.

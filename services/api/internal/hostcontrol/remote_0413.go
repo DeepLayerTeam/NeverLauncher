@@ -209,6 +209,39 @@ func (c *Client) Execute(ctx context.Context, action, key string) (Receipt, erro
 	return r, nil
 }
 
+// ReadReceipt04112 retrieves only the *already durable* RemoteControl ACK.
+// It does not send a new action, even when the original POST timed out.
+var ErrReceiptNotFound04112 = errors.New("remote host receipt not found")
+
+func (c *Client) ReadReceipt04112(ctx context.Context, action, key string) (Receipt, error) {
+	if action != "start" && action != "stop" && action != "restart" {
+		return Receipt{}, errors.New("invalid host action")
+	}
+	if len(key) < 16 || len(key) > 128 {
+		return Receipt{}, errors.New("invalid receipt key")
+	}
+	code, b, err := c.request(ctx, http.MethodGet, "/v1/host/receipts/"+url.PathEscape(key), "", nil)
+	if err != nil {
+		return Receipt{}, err
+	}
+	if code == http.StatusNotFound {
+		return Receipt{}, ErrReceiptNotFound04112
+	}
+	if code != http.StatusOK {
+		return Receipt{}, fmt.Errorf("host receipt HTTP %d", code)
+	}
+	var receipt Receipt
+	if err = json.Unmarshal(b, &receipt); err != nil {
+		return Receipt{}, err
+	}
+	hash := sha256.Sum256([]byte(key))
+	if receipt.Action != action || receipt.KeyHash != hex.EncodeToString(hash[:]) ||
+		(receipt.State != "indeterminate" && receipt.State != "succeeded") {
+		return Receipt{}, errors.New("host receipt identity or outcome mismatch")
+	}
+	return receipt, nil
+}
+
 // Success is based on observed host state, not merely a successful HTTP POST.
 // A restart must change the Host Supervisor session when a prior session existed.
 func Verified(action string, before, after Status, receipt Receipt) bool {

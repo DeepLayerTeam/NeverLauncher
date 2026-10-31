@@ -105,6 +105,19 @@ func remoteRandom0284(n int) ([]byte, error) {
 // durable idempotency key. A stale lock is recoverable only after the precise
 // OS process identity has disappeared.
 func remoteAcquireLease0284(dir, nodeID string) (func(), error) {
+	// A permanent inode is locked by the kernel for the listener lifetime.
+	// Without this, two challengers can both rename the same stale JSON lock
+	// and start listeners on different ports (split brain).
+	unlockFence, err := remoteKernelFence04112(dir)
+	if err != nil {
+		return nil, err
+	}
+	owned := false
+	defer func() {
+		if !owned {
+			unlockFence()
+		}
+	}()
 	path := filepath.Join(dir, "agent.lock")
 	own := remoteLease0284{PID: os.Getpid(), Identity: hostOwnIdentity0282(), NodeID: nodeID}
 	if own.Identity == "" {
@@ -133,7 +146,9 @@ func remoteAcquireLease0284(dir, nodeID string) (func(), error) {
 			if err = remoteSyncDir0284(dir); err != nil {
 				return nil, err
 			}
+			owned = true
 			return func() {
+				defer unlockFence()
 				var actual remoteLease0284
 				if readJSONFile01910(path, &actual) == nil && actual == own {
 					_ = os.Remove(path)
@@ -453,6 +468,35 @@ func remoteReadReceipt0284(path string) (remoteReceipt0284, error) {
 	return r, err
 }
 func remotePersistReceipt0284(path string, r remoteReceipt0284) error { return remoteSave0284(path, r) }
+
+// A different idempotency key must never bypass an interrupted/uncertain
+// host action. The directory is private and guarded by the singleton agent;
+// malformed or unreadable receipts fail closed instead of being ignored.
+func remoteUnresolvedCommand04112(dir string) (bool, error) {
+	entries, err := os.ReadDir(filepath.Join(dir, "commands"))
+	if err != nil {
+		return false, err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") || len(entry.Name()) != 69 {
+			return false, fmt.Errorf("unexpected command journal entry: %s", entry.Name())
+		}
+		path := filepath.Join(dir, "commands", entry.Name())
+		receipt, err := remoteReadReceipt0284(path)
+		if err != nil {
+			return false, fmt.Errorf("read command journal: %w", err)
+		}
+		if receipt.KeyHash != strings.TrimSuffix(entry.Name(), ".json") || receipt.Digest == "" || receipt.Subject == "" ||
+			(receipt.Action != "start" && receipt.Action != "stop" && receipt.Action != "restart") ||
+			(receipt.State != "succeeded" && receipt.State != "indeterminate") {
+			return false, errors.New("invalid command journal entry; manual recovery required")
+		}
+		if receipt.State == "indeterminate" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
 func remoteHostStatus0284(root string) json.RawMessage {
 	paths := hostPaths01910(root)
 	result := map[string]any{"schemaVersion": "1.0", "configured": false, "observedStatus": "not-started"}
@@ -624,6 +668,17 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet && r.URL.Path == "/v1/host/status" {
 		scope = "host.status"
 	}
+	// Receipt inspection is strictly read-only: never dispatch an action to
+	// recover a dropped ACK. Scope and original token subject are rechecked.
+	receiptKey := ""
+	if r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/host/receipts/") {
+		receiptKey = strings.TrimPrefix(r.URL.Path, "/v1/host/receipts/")
+		if !remoteIdempotency0284.MatchString(receiptKey) {
+			write(http.StatusBadRequest, map[string]string{"error": "invalid receipt key"})
+			return
+		}
+		scope = "host.status"
+	}
 	if r.Method == http.MethodPost && r.URL.Path == "/v1/host/commands" {
 		r.Body = http.MaxBytesReader(w, r.Body, 1024)
 		decoder := json.NewDecoder(r.Body)
@@ -647,6 +702,28 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !remoteScopeContains0284(claims, scope) {
 		_ = remoteAuditLog0284(a.dir, event)
 		write(http.StatusForbidden, map[string]string{"error": "insufficient scope"})
+		return
+	}
+	if receiptKey != "" {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		path := remoteReceiptFile0284(a.dir, receiptKey)
+		receipt, readErr := remoteReadReceipt0284(path)
+		if errors.Is(readErr, os.ErrNotExist) {
+			write(http.StatusNotFound, map[string]string{"error": "receipt not found"})
+			return
+		}
+		if readErr != nil || receipt.KeyHash != strings.TrimSuffix(filepath.Base(path), ".json") || receipt.Subject != claims.Subject ||
+			!remoteScopeContains0284(claims, "host."+receipt.Action) {
+			write(http.StatusForbidden, map[string]string{"error": "receipt unavailable or not authorized"})
+			return
+		}
+		event.Outcome = "receipt-read"
+		if remoteAuditLog0284(a.dir, event) != nil {
+			write(http.StatusServiceUnavailable, map[string]string{"error": "audit unavailable"})
+			return
+		}
+		write(http.StatusOK, receipt)
 		return
 	}
 	if action == "" {
@@ -694,6 +771,18 @@ func (a *remoteAgent0284) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if !errors.Is(readErr, os.ErrNotExist) {
 		write(http.StatusServiceUnavailable, map[string]string{"error": "command journal unavailable"})
+		return
+	}
+	// Check all previous receipts, not only the current idempotency key.
+	// If a crash happened after an irreversible effect, newer keys cannot
+	// silently issue a second dangerous action.
+	unknown, guardErr := remoteUnresolvedCommand04112(a.dir)
+	if guardErr != nil {
+		write(http.StatusServiceUnavailable, map[string]string{"error": "command journal integrity unavailable"})
+		return
+	}
+	if unknown {
+		write(http.StatusConflict, map[string]string{"error": "previous host command indeterminate; operator reconciliation required"})
 		return
 	}
 	event.Outcome = "accepted"

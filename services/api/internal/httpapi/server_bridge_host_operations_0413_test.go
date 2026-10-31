@@ -45,6 +45,14 @@ func TestHostControlBridgeCorrelation0413(t *testing.T) {
 	if hostReady0413("start", op, node) {
 		t.Fatal("stale bridge heartbeat accepted")
 	}
+	node.LastHeartbeatAt = time.Now().Add(-3 * time.Minute)
+	if hostReady0413("start", op, node) {
+		t.Fatal("stale yet once-fresh heartbeat accepted")
+	}
+	node.LastHeartbeatAt = time.Now().Add(45 * time.Second)
+	if hostReady0413("restart", op, node) {
+		t.Fatal("future heartbeat accepted")
+	}
 	if !hostReady0413("stop", op, node) {
 		t.Fatal("a stopped host does not require its JVM plugin to remain online")
 	}
