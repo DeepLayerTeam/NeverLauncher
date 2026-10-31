@@ -11,6 +11,7 @@ import struct
 import tarfile
 
 from component_set_sign import signed_set, sign_delegated_set
+from guard_manifest_sign_0437 import sign_manifest
 from pathlib import Path
 
 MACHINES = {
@@ -114,6 +115,12 @@ def write_package(out: Path, version: str, arch: str) -> None:
     manifest_path = out / manifest_name
     manifest_path.write_bytes(manifest_bytes)
     os.chmod(manifest_path, 0o644)
+    guard_signature = (sign_manifest(manifest_bytes)
+        if tuple(int(x) for x in version.split(".")[:3]) >= (0, 43, 7) else None)
+    if guard_signature is not None:
+        signature_path = out / (manifest_name + ".ed25519")
+        signature_path.write_bytes(guard_signature)
+        os.chmod(signature_path, 0o644)
 
     by_component = {item["component"]: item for item in artifacts}
     update_components = []
@@ -163,6 +170,15 @@ def write_package(out: Path, version: str, arch: str) -> None:
             "executable": True,
         }
     )
+    if guard_signature is not None:
+        update_manifest["supportFiles"].append({
+            "component": "guard-manifest-signature",
+            "sourcePath": "LINUX_PACKAGE_MANIFEST.json.ed25519",
+            "targetPath": "LINUX_PACKAGE_MANIFEST.json.ed25519",
+            "sha256": hashlib.sha256(guard_signature).hexdigest(),
+            "size": len(guard_signature),
+            "executable": False,
+        })
     update_manifest_bytes, component_sig = signed_set(update_manifest)
     # The production updater verifies the delegated component signature
     # against the pinned root-signed policy. Ship these alongside the exact
@@ -192,6 +208,12 @@ def write_package(out: Path, version: str, arch: str) -> None:
                     ),
                     io.BytesIO(manifest_bytes),
                 )
+                if guard_signature is not None:
+                    tf.addfile(
+                        tar_info("launcher/LINUX_PACKAGE_MANIFEST.json.ed25519",
+                                 len(guard_signature), 0o644),
+                        io.BytesIO(guard_signature),
+                    )
                 tf.addfile(
                     tar_info(
                         "launcher/COMPONENT_UPDATE_MANIFEST.json",

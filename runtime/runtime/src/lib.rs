@@ -956,6 +956,7 @@ pub async fn certify_vanilla_compatibility(
     writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать certification log handle: {e}"))?;
+    managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);
@@ -1125,6 +1126,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     writeln!(log_file, "--- process output ---").map_err(|e| e.to_string())?;
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
+    managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);

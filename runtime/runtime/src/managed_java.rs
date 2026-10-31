@@ -755,6 +755,42 @@ async fn ensure_managed_archive(runtime_root: &Path, source_url: &str,
     Ok(archive)
 }
 
+/// Re-verify the complete installed JVM immediately before creating the game
+/// process. A cached result from an earlier launch-plan validation is not a
+/// security decision: files may have been changed between plan and spawn.
+pub async fn revalidate_managed_java_before_spawn(java_executable: &str) -> Result<(), String> {
+    let java = Path::new(java_executable);
+    if !java.is_absolute() {
+        // "java" resolved from PATH is permitted only by the explicit signed
+        // profile policy; it is not represented as a managed JVM.
+        return Ok(());
+    }
+    for directory in java.ancestors().take(8) {
+        let record_path = directory.join(".runtime.json");
+        if !record_path.exists() { continue; }
+        let raw = fs::read(&record_path).await
+            .map_err(|e| format!("managed Java record inaccessible before launch: {e}"))?;
+        let record: ManagedJavaRecord = serde_json::from_slice(&raw)
+            .map_err(|e| format!("managed Java record damaged before launch: {e}"))?;
+        let verified = validate_installed_runtime(directory, record.major_version,
+            &record.distribution, true).await?
+            .ok_or_else(|| "managed Java installation changed after launch planning".to_string())?;
+        if std::fs::canonicalize(&verified.java_executable).map_err(|e|e.to_string())?
+            != std::fs::canonicalize(java).map_err(|e|e.to_string())? {
+            return Err("managed Java executable differs from verified runtime inventory".into());
+        }
+        return Ok(());
+    }
+    // A managed runtime with a deleted metadata file must not silently become
+    // a trusted custom Java path.
+    if let Ok(root) = managed_runtime_root() {
+        if java.starts_with(&root) {
+            return Err("managed Java record missing before launch".into());
+        }
+    }
+    Ok(())
+}
+
 pub async fn select_java_executable(
     custom_path: Option<String>,
     required_major: u32,

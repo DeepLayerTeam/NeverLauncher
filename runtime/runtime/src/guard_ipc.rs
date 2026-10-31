@@ -265,7 +265,7 @@ impl GuardSupervisor {
         Self {
             inner: Arc::new(Mutex::new(None)),
             executable: Some(executable),
-            require_package_manifest: false,
+            require_package_manifest: !cfg!(debug_assertions),
             protection_profile: None,
         }
     }
@@ -283,7 +283,7 @@ impl GuardSupervisor {
         Self {
             inner: Arc::new(Mutex::new(None)),
             executable: Some(executable),
-            require_package_manifest: false,
+            require_package_manifest: !cfg!(debug_assertions),
             protection_profile: Some(protection_profile),
         }
     }
@@ -310,6 +310,10 @@ impl GuardSupervisor {
                 if let Ok(status) = send_command(handle, "status").await {
                     let mut status = parse_status(status)?;
                     validate_status_profile(&status, handle.protection_profile)?;
+                    if status.pid != handle.child.id().ok_or("Guard running PID unavailable")?
+                        || status.parent_pid != std::process::id() {
+                        return Err("Guard Windows running process identity mismatch".into());
+                    }
                     status.lifetime_job_enforced = true;
                     status.package_manifest_verified = handle.package_manifest_verified;
                     return Ok(status);
@@ -426,6 +430,10 @@ impl GuardSupervisor {
             .map_err(|err| format!("Guard release identity query failed: {err}"))?;
         let mut status = parse_status(status_value)?;
         validate_status_profile(&status, protection_profile)?;
+        if status.pid != guard_pid || status.parent_pid != parent_pid
+            || status.started_at_unix != _handshake_status.started_at_unix {
+            return Err("Guard Windows status process identity mismatch".into());
+        }
         status.lifetime_job_enforced = true;
         status.package_manifest_verified = package_manifest_verified;
         let policy_value = send_command(&mut handle, "process-policy")
@@ -966,6 +974,10 @@ fn validate_release_identity(status: &GuardStatus, expected_platform: &str) -> R
             GUARD_PROTOCOL_VERSION,
             status.protocol_version
         ));
+    }
+    if status.state != "ready" || !status.authenticated || !status.process_policy_enforced
+        || !status.hardening_enforced || !status.secure_pipe_acl {
+        return Err("Guard Windows mandatory runtime trust state failed".to_string());
     }
     if status.windows_protection_core_version != GUARD_WINDOWS_PROTECTION_CORE_VERSION
         || status.windows_capability_model_version != GUARD_WINDOWS_CAPABILITY_MODEL_VERSION

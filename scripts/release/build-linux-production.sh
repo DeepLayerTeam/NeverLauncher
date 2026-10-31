@@ -32,6 +32,11 @@ if [[ -n "${EXPECTED_ARCH}" && "${EXPECTED_ARCH}" != "${ARCH}" ]]; then
   exit 2
 fi
 
+# Rust embeds the production verification key. An empty build-time key is
+# never allowed to create binaries later advertised as production-ready.
+[[ "${LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-}" =~ ^[a-fA-F0-9]{64}$ ]] || {
+  echo "Linux production Guard requires LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY before Cargo compilation" >&2; exit 2;
+}
 require() { command -v "$1" >/dev/null 2>&1 || { echo "$1 is required" >&2; exit 1; }; }
 for tool in go cargo npm python3; do require "${tool}"; done
 mkdir -p "${OUT_DIR}"

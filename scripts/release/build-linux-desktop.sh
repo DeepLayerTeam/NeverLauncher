@@ -6,6 +6,9 @@ OUT_DIR="${1:-${ROOT_DIR}/dist/release-${VERSION}}"
 PACKAGE_DIR="${OUT_DIR}/linux-desktop-package"
 ARCH="$(uname -m)"
 [[ "${ARCH}" == "x86_64" ]] || { echo "Linux production package currently requires x86_64, got ${ARCH}" >&2; exit 2; }
+[[ "${LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-}" =~ ^[a-fA-F0-9]{64}$ ]] || {
+  echo "Linux Guard production build requires the compile-time Ed25519 public key" >&2; exit 2;
+}
 command -v cargo >/dev/null || { echo "cargo is required" >&2; exit 1; }
 command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
 
@@ -39,6 +42,8 @@ cat > "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json" <<EOF
 }
 EOF
 chmod 0600 "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json"
+python3 "${ROOT_DIR}/scripts/release/guard_manifest_sign_0437.py" --manifest "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json"
+cp "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json.ed25519" "${OUT_DIR}/LINUX_PACKAGE_MANIFEST.json.ed25519"
 cat > "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json" <<EOF
 {"schemaVersion":"2.0","releases":{"${VERSION}":{"protocolVersion":4,"platforms":{"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"${GUARD_HASH}","launcherSha256":"${DESKTOP_HASH}"}]}}}}}
 EOF

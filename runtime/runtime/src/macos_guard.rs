@@ -113,13 +113,13 @@ pub struct GuardSupervisor { inner: Arc<Mutex<Option<GuardHandle>>>, executable:
 impl Default for GuardSupervisor { fn default()->Self{Self::new()} }
 impl GuardSupervisor {
     pub fn new()->Self { Self{inner:Arc::new(Mutex::new(None)),executable:None,require_package_manifest:!cfg!(debug_assertions)} }
-    pub fn with_executable(executable:PathBuf)->Self { Self{inner:Arc::new(Mutex::new(None)),executable:Some(executable),require_package_manifest:false} }
+    pub fn with_executable(executable:PathBuf)->Self { Self{inner:Arc::new(Mutex::new(None)),executable:Some(executable),require_package_manifest:!cfg!(debug_assertions)} }
 
     pub async fn ensure_started(&self)->Result<GuardStatus,String>{
         let mut state=self.inner.lock().await;
         if let Some(handle)=state.as_mut(){
             if handle.child.try_wait().map_err(|e|format!("Guard process check failed: {e}"))?.is_none(){
-                if let Ok(value)=send_command(handle,"status","").await { let mut s=parse_status(value)?; s.lifetime_job_enforced=true; s.package_manifest_verified=handle.package_manifest_verified; return Ok(s); }
+                if let Ok(value)=send_command(handle,"status","").await { let mut s=parse_status(value)?; if s.pid!=handle.child.id().ok_or("Guard child PID missing")?||s.parent_pid!=std::process::id(){return Err("Guard running process identity mismatch".into())} s.lifetime_job_enforced=true; s.package_manifest_verified=handle.package_manifest_verified; return Ok(s); }
             }
         }
         if let Some(mut stale)=state.take(){ let _=stale.child.kill().await; }
@@ -143,7 +143,7 @@ impl GuardSupervisor {
         secret.zeroize();
         let mut handle=GuardHandle{child,stream,session_key,next_sequence:1,package_manifest_verified:manifest_ok,socket_path:endpoint};
         let status_value=send_command(&mut handle,"status","").await.map_err(|e|format!("Guard release identity query failed: {e}"))?;
-        let mut status=parse_status(status_value)?; status.lifetime_job_enforced=true; status.package_manifest_verified=manifest_ok;
+        let mut status=parse_status(status_value)?; if status.pid!=guard_pid||status.parent_pid!=parent_pid||status.started_at_unix!=_handshake_status.started_at_unix{return Err("Guard status process identity mismatch".into())} status.lifetime_job_enforced=true; status.package_manifest_verified=manifest_ok;
         *state=Some(handle); Ok(status)
     }
     pub async fn status(&self)->Result<GuardStatus,String>{self.ensure_started().await}
@@ -295,12 +295,17 @@ fn verify_peer(stream:&UnixStream,expected_pid:u32,expected_uid:u32)->Result<(),
     Ok(())
 }
 
+fn ready_matches_challenge(ch:&ServerChallenge,ready:&ServerReady)->bool {
+    ready.kind=="ready"&&ready.protocol_version==GUARD_PROTOCOL_VERSION
+        &&ready.guard_pid==ch.guard_pid&&ready.started_at_unix==ch.started_at_unix
+}
+
 async fn client_authenticate(mut s:UnixStream,endpoint:&Path,client_pid:u32,guard_pid:u32,secret:&[u8;32])->Result<(UnixStream,[u8;32],GuardStatus),String>{
     let cn=random32(); write_frame(&mut s,&ClientHello{kind:"client-hello".into(),protocol_version:GUARD_PROTOCOL_VERSION,client_pid,client_nonce:hex::encode(cn)}).await?;
     let ch:ServerChallenge=read_frame(&mut s).await?; if ch.kind!="server-challenge"||ch.protocol_version!=GUARD_PROTOCOL_VERSION||ch.guard_pid!=guard_pid{return Err("Guard server challenge mismatch".into())}
     let sn=decode32(&ch.server_nonce,"serverNonce")?; let ep=endpoint.to_string_lossy(); let handshake=HandshakeContext{endpoint:&ep,client_pid,guard_pid,started:ch.started_at_unix,client_nonce:&cn,server_nonce:&sn}; let expected=proof(secret,b"server-proof",&handshake); if !ct_eq(&expected,&hex::decode(&ch.server_proof).map_err(|_|"invalid server proof")?){return Err("Guard server authentication failed".into())}
     let cp=proof(secret,b"client-proof",&handshake); write_frame(&mut s,&ClientAuthentication{kind:"client-auth".into(),client_proof:hex::encode(cp)}).await?;
-    let key=session_key(secret,&handshake); let ready:ServerReady=read_frame(&mut s).await?; if ready.kind!="ready"||ready.protocol_version!=GUARD_PROTOCOL_VERSION{return Err("Guard ready mismatch".into())}
+    let key=session_key(secret,&handshake); let ready:ServerReady=read_frame(&mut s).await?; if !ready_matches_challenge(&ch,&ready){return Err("Guard ready process identity mismatch".into())}
     let expected=ready_proof(&key,ReadyProofState{pid:ready.guard_pid,started:ready.started_at_unix,policy_version:ready.process_policy_version,policy_enforced:ready.process_policy_enforced,hardening_version:ready.hardening_version,hardening_enforced:ready.hardening_enforced,secure_acl:ready.secure_pipe_acl}); if !ct_eq(&expected,&hex::decode(&ready.ready_proof).map_err(|_|"invalid ready proof")?){return Err("Guard ready proof invalid".into())}
     if ready.process_policy_version!=GUARD_MACOS_PROCESS_POLICY_VERSION||!ready.process_policy_enforced||ready.hardening_version!=GUARD_MACOS_HARDENING_VERSION||!ready.hardening_enforced||!ready.secure_pipe_acl{return Err("Guard macOS policy/hardening not enforced".into())}
     Ok((s,key,GuardStatus{state:"ready".into(),product_version:env!("CARGO_PKG_VERSION").into(),platform:"macos-universal".into(),pid:guard_pid,parent_pid:client_pid,protocol_version:GUARD_PROTOCOL_VERSION,authenticated:true,process_policy_version:ready.process_policy_version,process_policy_enforced:true,hardening_version:ready.hardening_version,hardening_enforced:true,windows_protection_core_version:0,windows_capability_model_version:0,windows_protection_profile:String::new(),secure_pipe_acl:true,lifetime_job_enforced:true,package_manifest_verified:false,started_at_unix:ch.started_at_unix,message:"Guard macOS authenticated Unix IPC ready".into()}))
@@ -314,7 +319,7 @@ async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Valu
     if resp.protocol_version!=GUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("Guard response binding mismatch".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"invalid response mac")?){return Err("Guard response MAC invalid".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("Guard response JSON invalid: {e}"))
 }
 fn parse_status(v:Value)->Result<GuardStatus,String>{let s:GuardStatus=serde_json::from_value(v).map_err(|e|format!("Guard status invalid: {e}"))?;validate_release_identity(&s)?;Ok(s)}
-fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Guard release version mismatch: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="macos-universal"{return Err(format!("Guard platform mismatch: expected macos-universal, got {}",s.platform))}if s.protocol_version!=GUARD_PROTOCOL_VERSION{return Err(format!("Guard protocol mismatch: Desktop={} Guard={}",GUARD_PROTOCOL_VERSION,s.protocol_version))}Ok(())}
+fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Guard release version mismatch: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="macos-universal"{return Err(format!("Guard platform mismatch: expected macos-universal, got {}",s.platform))}if s.protocol_version!=GUARD_PROTOCOL_VERSION{return Err(format!("Guard protocol mismatch: Desktop={} Guard={}",GUARD_PROTOCOL_VERSION,s.protocol_version))}if s.state!="ready"||!s.authenticated||!s.process_policy_enforced||!s.hardening_enforced||!s.secure_pipe_acl||!s.lifetime_job_enforced{return Err("Guard status failed mandatory runtime trust checks".into())}Ok(())}
 fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let m=p.macos.as_ref().ok_or("macOS process policy details missing")?;if p.schema!=GUARD_MACOS_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!m.core_dumps_disabled||!m.debugger_attach_denied||!m.code_signature_valid||!m.hardened_runtime||!m.library_validation||!m.dyld_environment_sanitized||!m.parent_exit_watch||!m.private_umask{return Err("Guard macOS process policy rejected".into())}Ok(())}
 fn validate_evidence(h:&GuardHandle,e:&GuardIntegrityEvidence)->Result<(),String>{validate_evidence_shape(e)?;let d=recompute_evidence_sha256(e)?;if !ct_eq(&d,&hex::decode(&e.evidence_sha256).map_err(|_|"invalid evidence digest")?){return Err("evidence digest mismatch".into())};let p=integrity_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&e.session_proof).map_err(|_|"invalid evidence proof")?){return Err("evidence session proof mismatch".into())}Ok(())}
 fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&GuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=GUARD_MACOS_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("macOS Guard Attestation binding mismatch".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"invalid attestation digest")?){return Err("attestation digest mismatch".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"invalid attestation proof")?){return Err("attestation session proof mismatch".into())}Ok(())}
@@ -327,7 +332,7 @@ pub async fn run_macos_guard_server(endpoint:PathBuf,parent_pid:u32)->Result<(),
     let started=now_unix()?; let deadline=Instant::now()+Duration::from_secs(STARTUP_AUTH_WINDOW_SECS);
     loop { let remaining=deadline.saturating_duration_since(Instant::now()); if remaining.is_zero(){secret.zeroize();return Err("Guard startup authentication window expired".into())}; let (stream,_)=timeout(remaining,listener.accept()).await.map_err(|_|"Guard accept timeout".to_string())?.map_err(|e|e.to_string())?;
         if verify_peer(&stream,parent_pid,current_uid()).is_err(){continue}
-        match server_authenticate(stream,&endpoint,parent_pid,started,&secret,&policy,&hard).await {Ok((stream,key))=>{secret.zeroize();let r=serve_commands(stream,key,parent_pid,started,policy,hard).await;let _=std::fs::remove_file(&endpoint);return r},Err(_)=>continue}
+        match timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),server_authenticate(stream,&endpoint,parent_pid,started,&secret,&policy,&hard)).await {Ok(Ok((stream,key)))=>{secret.zeroize();let r=serve_commands(stream,key,parent_pid,started,policy,hard).await;let _=std::fs::remove_file(&endpoint);return r},_=>continue}
     }
 }
 fn policy_report()->Result<GuardProcessPolicyReport,String>{let l=guard_policy_report(true)?;Ok(GuardProcessPolicyReport{schema:GUARD_MACOS_PROCESS_POLICY_SCHEMA.into(),policy_version:1,pid:std::process::id(),enforced:true,dynamic_code_prohibited:false,extension_points_disabled:false,strict_handle_checks:false,remote_images_blocked:false,low_mandatory_label_images_blocked:false,prefer_system32_images:false,child_process_creation_blocked:false,linux:None,macos:Some(l),windows:None})}
@@ -494,3 +499,21 @@ fn hmac(key:&[u8],msg:&[u8])->[u8;32]{let mut m=Hmac::<Sha256>::new_from_slice(k
 fn proof(k:&[u8;32],l:&[u8],c:&HandshakeContext<'_>)->[u8;32]{hmac(k,&transcript(l,c))}fn session_key(k:&[u8;32],c:&HandshakeContext<'_>)->[u8;32]{proof(k,b"session-key",c)}
 fn ready_proof(k:&[u8;32],s:ReadyProofState)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"Launcher Guard IPC ready v4\0");d.extend_from_slice(&s.pid.to_le_bytes());d.extend_from_slice(&s.started.to_le_bytes());d.extend_from_slice(&s.policy_version.to_le_bytes());d.push(u8::from(s.policy_enforced));d.extend_from_slice(&s.hardening_version.to_le_bytes());d.push(u8::from(s.hardening_enforced));d.push(u8::from(s.secure_acl));hmac(k,&d)}
 fn request_mac(k:&[u8;32],seq:u64,id:&str,c:&str,p:&str)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"Launcher Guard IPC request v4\0");d.extend_from_slice(&seq.to_le_bytes());prefix(&mut d,id.as_bytes());prefix(&mut d,c.as_bytes());prefix(&mut d,p.as_bytes());hmac(k,&d)}fn response_mac(k:&[u8;32],seq:u64,id:&str,ok:bool,p:&str)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"Launcher Guard IPC response v4\0");d.extend_from_slice(&seq.to_le_bytes());prefix(&mut d,id.as_bytes());d.push(u8::from(ok));prefix(&mut d,p.as_bytes());hmac(k,&d)}fn integrity_proof(k:&[u8;32],d:&[u8;32])->[u8;32]{let mut x=b"Launcher Guard integrity evidence session v1\0".to_vec();x.extend_from_slice(d);hmac(k,&x)}fn attestation_proof(k:&[u8;32],d:&[u8;32])->[u8;32]{let mut x=b"Launcher Guard remote attestation session v1\0".to_vec();x.extend_from_slice(d);hmac(k,&x)}fn ct_eq(a:&[u8],b:&[u8])->bool{a.len()==b.len()&&bool::from(a.ct_eq(b))}fn now_unix()->Result<u64,String>{SystemTime::now().duration_since(UNIX_EPOCH).map(|d|d.as_secs()).map_err(|e|e.to_string())}
+
+
+#[cfg(test)]
+mod integrity_0437_tests {
+    use super::*;
+    #[test]
+    fn ready_must_bind_exact_guard_pid_and_start_time() {
+        let ch=ServerChallenge {kind:"server-challenge".into(),protocol_version:GUARD_PROTOCOL_VERSION,
+            guard_pid:1973,started_at_unix:333,server_nonce:"0".repeat(64),server_proof:"0".repeat(64)};
+        let mut ready=ServerReady {kind:"ready".into(),protocol_version:GUARD_PROTOCOL_VERSION,
+            guard_pid:1973,started_at_unix:333,process_policy_version:1,process_policy_enforced:true,
+            hardening_version:1,hardening_enforced:true,secure_pipe_acl:true,ready_proof:"0".repeat(64)};
+        assert!(ready_matches_challenge(&ch,&ready));
+        ready.guard_pid+=1;assert!(!ready_matches_challenge(&ch,&ready));
+        ready.guard_pid-=1;ready.started_at_unix+=1;assert!(!ready_matches_challenge(&ch,&ready));
+        ready.started_at_unix-=1;ready.protocol_version+=1;assert!(!ready_matches_challenge(&ch,&ready));
+    }
+}

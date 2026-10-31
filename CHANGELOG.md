@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.43.7 — NeverGuard process identity and guarded Java launch integrity
+
+- Linux package manifests now carry a domain-separated Ed25519 detached signature, signed with the existing production component-release signing key. The Desktop verifies it using the *build-time pinned* public key before accepting the package SHA-256 table; missing/modified/re-signed manifests and release builds without the pinned verification key fail closed. The package and update support-file lists include the signature so normal component updates preserve the trust chain. This does not imply hardware-backed attestation of the Linux host.
+- Linux production Guard is launched from an already opened, manifest-hash-verified executable descriptor via `/proc/self/fd`, with `FD_CLOEXEC` cleared only in the forked child. Replacing the Guard pathname after package verification can no longer redirect the actual executed image.
+- Linux/macOS Guard authenticated IPC rejects a `ready` message whose PID or creation timestamp differs from the server's already authenticated challenge, including when a MAC can be recomputed for that alternate identity. Authenticate each accepted Unix-socket peer within a bounded handshake timeout; pending connections cannot indefinitely monopolize the one-shot Guard server. Check subsequent Guard status against the observed child and Desktop PIDs and hardening flags.
+- Windows Supervisor verifies Guard status process/parent PID, authenticated state and active hardening. Lifetime Job enforcement remains a Supervisor-owned assertion, not a value trusted from the Guard process. In production, explicit `with_executable` constructors on all three operating systems retain mandatory package verification; test-only overrides work in debug builds.
+- Immediately before both normal game launch and Vanilla certification, revalidate a managed Java installation against its actual `.runtime.json` inventory and JVM self-test. Deleted metadata in the managed-runtime root is a hard refusal. Explicitly approved custom/system Java remain subject to their existing signed-profile policy rather than being presented as managed-Java proofs.
+- Add negative Rust tests for mismatched IPC-ready identity and an actual Linux inode replacement after an open executable handle. CI and cross-platform production signing/hardware validation remain required; this source change alone does not constitute a certified release.
+
+**Verification boundary:** local Rust compiler and Cargo are not installed; Rust compilation, the tests above, signed final package verification, and actual six-platform games/Guard runs are unverified. The existing fail-closed release process remains mandatory.
+
+
 ## 0.43.6 — TPM2 Certify, signed clock safety and session-bound PCR Quote
 
 - Enforce the TPM2 signed `TPMS_CLOCK_INFO.safe == TPM_YES` in both the real Certify and PCR Quote verifiers. A replayed or cryptographically re-signed attestation in an unsafe clock state cannot grant hardware or measured-boot assurance. Native Windows/Linux binary parsers reject the same unsafe TPM output.

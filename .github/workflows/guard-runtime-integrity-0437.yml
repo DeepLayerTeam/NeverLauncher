@@ -1,0 +1,30 @@
+name: Guard runtime integrity 0.43.7
+on:
+  push:
+    paths:
+      - 'runtime/runtime/**'
+      - '.github/workflows/guard-runtime-integrity-0437.yml'
+  pull_request:
+    paths:
+      - 'runtime/runtime/**'
+      - '.github/workflows/guard-runtime-integrity-0437.yml'
+jobs:
+  guard-runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run executable Guard integrity regressions
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib integrity_0437_tests
+      - name: Compile Guard process boundary
+        run: cargo check --manifest-path runtime/runtime/Cargo.toml --bin guard
+      - name: Install signing-test dependency
+        if: runner.os == 'Linux'
+        run: python3 -m pip install 'cryptography>=42,<47'
+      - name: Verify real Linux package-signing and tar delivery
+        if: runner.os == 'Linux'
+        run: python3 scripts/release/test_guard_manifest_sign_0437.py -q
