@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.42.10 — Live extension trust enforcement, bounded capabilities and outbound network isolation
+
+- **Running extensions:** Broker permissions now revalidate durable emergency-disable, package quarantine, installation version/generation/enabled state, and signed registry publisher/key trust before privileged operations. Revoked processes are terminated without automatic restart; the Supervisor monitor also terminates idle revoked instances. A final trust check before process exec closes a previously unguarded preparation window. This does not imply that trusted Java extensions run inside an OS sandbox.
+- **Broker deadlines:** HTTP capability operations now receive a context that expires with the configured capability timeout, instead of allowing background work to continue with the original uncancelled request context. Downstream operations that ignore context are not thereby guaranteed to stop.
+- **Outbound HTTPS:** Blocked additional special-use routing ranges, including CGNAT, benchmarking, documentation and common IPv6 translation/tunnel prefixes; validated forwarded header names and denied transport/framing overrides. DNS answers remain pinned to the verified destination address during dial.
+- **Tests and verification:** Added live grant-revocation, emergency-disable, quarantine, stale-installation, idle-monitor and HTTP bearer-token regression cases. The actual outbound address/header functions passed isolated `go test -race` on Go 1.23.2; the full Backend Go package and live JVM/platform sandbox tests remain unverified because the project requires Go 1.27.3 and external dependencies unavailable locally. Corrected stale CLI workflow paths and Go toolchain selection.
+
+**Trust boundary:** NeverGuard protects client/game launch according to its existing platform profiles; it does **not** enforce Backend Java Extension Host filesystem/process isolation. Isolated native extensions use the platform sandbox when available, and are rejected if it cannot be established. Java Host remains a separate **trusted** process and must not be advertised as untrusted-code sandboxing.
+
+
 ## 0.42.9 — Discord IPC recovery, mDNS interface selection, Sentry delivery on shutdown
 
 - **Discord:** The CLI Rich Presence session now reconnects and replays an idempotent `SET_ACTIVITY` after a lost desktop IPC connection (never after an explicit Discord RPC rejection). Interactive sessions refresh their current state every 60 seconds, restoring presence after an idle Discord restart. The existing Desktop refresh and opt-in behavior remain intact. An end-to-end Unix socket fixture verifies two real IPC connections and recovery after a dropped acknowledgement.

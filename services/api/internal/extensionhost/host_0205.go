@@ -650,6 +650,15 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 		}
 		return s.abortUnstarted0422(st, errRecoveryRevoked0422)
 	}
+	// Revalidate immediately before exec, closing the installation-to-exec
+	// window if the operator quarantined or disabled the package during JVM
+	// command/sandbox preparation.
+	if trustErr := s.enforceLiveTrust04210(ctx, st); trustErr != nil {
+		if isolatedHandle != nil {
+			isolatedHandle.Close()
+		}
+		return s.abortUnstarted0422(st, fmt.Errorf("extension trust changed before process exec: %w", trustErr))
+	}
 	if err := cmd.Start(); err != nil {
 		if isolatedHandle != nil {
 			isolatedHandle.Close()
@@ -1276,6 +1285,17 @@ func (s *Supervisor) monitorOnce(now time.Time) {
 		if state != "running" && state != "starting" {
 			continue
 		}
+		trustContext := s.ctx
+		if trustContext == nil {
+			trustContext = context.Background()
+		}
+		trustCtx, trustCancel := context.WithTimeout(trustContext, s.cfg.CapabilityTimeout)
+		trustErr := s.enforceLiveTrust04210(trustCtx, st)
+		trustCancel()
+		if trustErr != nil {
+			s.denyRevokedHost04210(st, trustErr)
+			continue
+		}
 		if !hello.IsZero() && now.Sub(hb) > s.cfg.HeartbeatTimeout {
 			s.failProcess(st, "heartbeat timeout", false)
 			continue
@@ -1569,6 +1589,12 @@ func (s *Supervisor) permissionAllowed0207(ctx context.Context, st *processState
 		if projectID != st.key.ScopeID {
 			return false, nil
 		}
+	}
+	if err := s.enforceLiveTrust04210(ctx, st); err != nil {
+		// Do not let a previously authenticated process keep using its bearer
+		// token after a persistent disable, quarantine or publisher revocation.
+		s.denyRevokedHost04210(st, err)
+		return false, err
 	}
 	return security.Allowed(ctx, st.key.ExtensionID, st.install.CurrentVersion, st.key.Scope, st.key.ScopeID, permission, projectID)
 }
@@ -1872,10 +1898,12 @@ func (s *Supervisor) handleCapability(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// A broker deadline must cancel the operation itself, not only the HTTP
+	// response. The repository/storage/HTTP implementations receive this context.
+	capCtx, capCancel := context.WithTimeout(r.Context(), s.cfg.CapabilityTimeout)
+	defer capCancel()
 	resultCh := make(chan capabilityResult0205, 1)
-	go func() { resultCh <- s.executeCapability(r.Context(), st, capName, req) }()
-	timer := time.NewTimer(s.cfg.CapabilityTimeout)
-	defer timer.Stop()
+	go func() { resultCh <- s.executeCapability(capCtx, st, capName, req) }()
 	select {
 	case result := <-resultCh:
 		privileged := capName != "host.health" && capName != "extension.self"
@@ -1890,7 +1918,7 @@ func (s *Supervisor) handleCapability(w http.ResponseWriter, r *http.Request) {
 			s.auditCapability0207(st, capName, true, strconv.Itoa(result.status))
 		}
 		jsonResponse(w, result.status, result.value)
-	case <-timer.C:
+	case <-capCtx.Done():
 		if capName != "host.health" && capName != "extension.self" {
 			s.auditCapability0207(st, capName, false, "timeout")
 		}

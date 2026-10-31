@@ -9,13 +9,63 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"time"
 )
 
+// Addresses that are globally unicast according to net.IP can still belong
+// to carrier NAT, benchmark, documentation or protocol-translation ranges.
+// Do not allow an extension to reach host services via special-use routing.
+var blockedOutboundPrefixes04210 = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"), netip.MustParsePrefix("100.64.0.0/10"),
+	netip.MustParsePrefix("192.0.0.0/24"), netip.MustParsePrefix("192.0.2.0/24"),
+	netip.MustParsePrefix("192.88.99.0/24"), netip.MustParsePrefix("198.18.0.0/15"),
+	netip.MustParsePrefix("198.51.100.0/24"), netip.MustParsePrefix("203.0.113.0/24"),
+	netip.MustParsePrefix("224.0.0.0/4"), netip.MustParsePrefix("240.0.0.0/4"),
+	netip.MustParsePrefix("2001:db8::/32"), netip.MustParsePrefix("2002::/16"),
+	netip.MustParsePrefix("64:ff9b::/96"), netip.MustParsePrefix("64:ff9b:1::/48"),
+}
+
 func forbiddenOutboundIP0207(ip net.IP) bool {
-	return ip == nil || ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast()
+	if ip == nil {
+		return true
+	}
+	addr, ok := netip.AddrFromSlice(ip)
+	if !ok {
+		return true
+	}
+	addr = addr.Unmap()
+	if !addr.IsGlobalUnicast() || addr.IsPrivate() || addr.IsLoopback() || addr.IsLinkLocalUnicast() || addr.IsMulticast() || addr.IsUnspecified() {
+		return true
+	}
+	for _, p := range blockedOutboundPrefixes04210 {
+		if p.Contains(addr) {
+			return true
+		}
+	}
+	return false
+}
+
+// Disallow transport/framing headers that could alter the request the broker
+// validated, or conflict with the pinned HTTPS connection's destination.
+func outboundHeaderAllowed04210(name string) bool {
+	if name == "" || name == "Host" || name == "Connection" || name == "Transfer-Encoding" ||
+		name == "Upgrade" || name == "Trailer" || name == "Te" || name == "Content-Length" ||
+		strings.HasPrefix(name, "Proxy-") {
+		return false
+	}
+	// Only RFC 7230 token characters can name a forwarded HTTP field.
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' ||
+			strings.ContainsRune("!#$%&'*+-.^_`|~", rune(c)) {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func (s *Supervisor) secureHTTPFetch0207(ctx context.Context, method, rawURL string, headers map[string]string, bodyBase64 string) (map[string]any, int, error) {
@@ -69,7 +119,7 @@ func (s *Supervisor) secureHTTPFetch0207(ctx context.Context, method, rawURL str
 	}
 	for k, v := range headers {
 		canonical := http.CanonicalHeaderKey(strings.TrimSpace(k))
-		if canonical == "Host" || canonical == "Connection" || strings.HasPrefix(canonical, "Proxy-") {
+		if !outboundHeaderAllowed04210(canonical) {
 			return nil, http.StatusBadRequest, fmt.Errorf("header %s is not allowed", canonical)
 		}
 		if len(v) > 8192 {
