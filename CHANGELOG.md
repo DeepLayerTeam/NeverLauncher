@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.43.11 — macOS signed App Sandbox single-process execution
+
+- Fixed the helper builder and CI references to the actual Swift/entitlements sources; signed builds now include a fixed code-signing identifier, Developer ID verification and Hardened Runtime validation.
+- Removed the unconditional macOS sandbox refusal. The runtime starts only an approved signed helper from a non-writable path, checks child App Sandbox before reporting readiness, and passes a backend-liveness FD to stop orphaned extensions.
+- Added live descendant monitoring, rejection of multi-process resource policies, inherited CPU/address-space limits and real native x64/ARM64 tests requiring signing credentials and physical runners.
+- Unsupported strict aggregate process-tree guarantees remain explicitly out of scope: libproc polling is not a kernel process-count cap, and successful cross-builds do not certify either platform.
+
 ## 0.43.10 — Windows x64/ARM64 sandbox containment and native runtime proof
 
 - For isolated native Windows extensions, verify the actual AppContainer process token and SID **and** read back live Job Object membership, required `KILL_ON_JOB_CLOSE`, process count, memory limits, hard CPU quota and absence of breakaway permissions **while the target is suspended**. Missing or changed enforcement terminates the new Job and prevents resume; successful Win32 API calls are not treated as sufficient proof.

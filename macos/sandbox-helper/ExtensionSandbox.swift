@@ -2,6 +2,12 @@
 import Foundation
 import Darwin
 import CryptoKit
+import Dispatch
+
+// libproc enumerates immediate children; follow recursively to detect a native
+// extension creating any extra process, including one changing process groups.
+@_silgen_name("proc_listchildpids")
+private func listChildPIDs(_ ppid: pid_t, _ buffer: UnsafeMutableRawPointer?, _ bytes: Int32) -> Int32
 
 // This binary MUST be Developer-ID signed with only app-sandbox=true. Never
 // launch it without verifying its signature and entitlement set in the parent.
@@ -20,6 +26,7 @@ private struct Request: Decodable {
     let memoryBytes: Int64
     let cpuPercent: Int
     let timeoutSeconds: Int
+    let maxProcesses: Int
 }
 
 private enum SandboxError: Error {
@@ -100,11 +107,12 @@ private func spawn(_ path: String, _ scratch: String, _ request: Request) throws
     if request.args.count > 128 || request.args.contains(where: { $0.contains("\0") || $0.utf8.count > 16384 }) {
         throw SandboxError.invalid("invalid-arguments")
     }
-    if request.memoryBytes < 64 << 20 || request.cpuPercent < 1 || request.cpuPercent > 100 || request.timeoutSeconds < 1 {
+    if request.memoryBytes < 64 << 20 || request.cpuPercent < 1 || request.cpuPercent > 100 || request.timeoutSeconds < 1 || request.maxProcesses != 1 {
         throw SandboxError.invalid("invalid-limits")
     }
-    // POSIX resource limits are inherited by children. Aggregate process-tree
-    // limits are NOT claimed; that requires a separate capability in 0.31.13.
+    // Resource limits are inherited by descendants. Combined resource usage
+    // cannot be bounded atomically on macOS without a privileged supervisor;
+    // only a single-process policy is supported and child creation is fatal.
     try limit(RLIMIT_AS, UInt64(request.memoryBytes))
     let cpu = max(1, (request.timeoutSeconds * request.cpuPercent + 99) / 100)
     try limit(RLIMIT_CPU, UInt64(cpu))
@@ -124,6 +132,7 @@ private func spawn(_ path: String, _ scratch: String, _ request: Request) throws
     // untrusted child. FD4 is the sole intentionally inherited IPC endpoint.
     _ = fcntl(3, F_SETFD, FD_CLOEXEC)
     _ = fcntl(5, F_SETFD, FD_CLOEXEC)
+    _ = fcntl(6, F_SETFD, FD_CLOEXEC)
     // Go's ExtraFiles passes the broker socket as FD4. The kernel-enforced
     // static App Sandbox is inherited across posix_spawn, including descendants.
     if fcntl(4, F_SETFD, 0) != 0 { throw SandboxError.invalid("host-ipc-fd-unavailable") }
@@ -134,6 +143,32 @@ private func spawn(_ path: String, _ scratch: String, _ request: Request) throws
     if result != 0 || child < 1 { throw SandboxError.invalid("sandboxed-spawn-failed-\(result)") }
     return child
 }
+
+private func children(of parent: pid_t) -> [pid_t]? {
+    let capacity = 4096
+    var pids = [pid_t](repeating: 0, count: capacity)
+    // libproc's proc_listchildpids returns the number of PIDs, NOT bytes
+    // (unlike proc_listpids). Treat a full buffer as an overflow and deny.
+    let count = pids.withUnsafeMutableBytes { raw -> Int32 in
+        listChildPIDs(parent, raw.baseAddress, Int32(raw.count))
+    }
+    if count < 0 || Int(count) >= capacity { return nil }
+    return Array(pids.prefix(Int(count))).filter { $0 > 0 }
+}
+
+// FD6 is held open by the Go supervisor. Losing the parent is fatal, even if
+// its process group has already vanished. Readiness is never reported before
+// the child has proved it inherited the kernel's App Sandbox.
+private func parentAlive() -> Bool {
+    var fd = pollfd(fd: 6, events: Int16(POLLHUP | POLLERR | POLLNVAL), revents: 0)
+    let status = poll(&fd, 1, 0)
+    return status == 0
+}
+private func enforceChildBoundary(_ child: pid_t) -> Bool {
+    guard parentAlive(), let direct = children(of: getpid()), direct.count == 1, direct[0] == child,
+          let grandChildren = children(of: child), grandChildren.isEmpty else { return false }
+    return true
+}
 private func run() throws {
     try ensureSandbox()
     let header = try readHeader(3)
@@ -141,15 +176,42 @@ private func run() throws {
     let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     if digest != header.sha256 { throw SandboxError.invalid("executable-sha256-mismatch") }
     let (path, scratch) = try stage(data)
+    defer { _ = try? FileManager.default.removeItem(at: URL(fileURLWithPath: (path as NSString).deletingLastPathComponent)) }
     let pid = try spawn(path, scratch, header)
+    // The signature of this helper is not enough: verify that the *child*
+    // itself has inherited the deny-by-default App Sandbox policy.
+    let childDenied = "/Users/Shared".withCString { sandboxCheck(pid, "file-write-data", 1, $0) }
+    guard childDenied != 0 && enforceChildBoundary(pid) else {
+        _ = kill(pid, SIGKILL)
+        throw SandboxError.invalid("child-sandbox-or-process-boundary-unverified")
+    }
     let signal = Array("ready \(pid)\n".utf8)
     guard signal.withUnsafeBytes({ write(5, $0.baseAddress, $0.count) }) == signal.count else {
         _ = kill(pid, SIGKILL)
         throw SandboxError.invalid("ready-channel-failed")
     }
     var status: Int32 = 0
-    while waitpid(pid, &status, 0) < 0 { if errno != EINTR { break } }
+    var violated = false
+    while true {
+        // WNOHANG permits continuous enforcement instead of waiting for a
+        // compromised extension indefinitely. Guard against a detached child:
+        // inspecting only the process group is not sufficient on macOS.
+        let waited = waitpid(pid, &status, WNOHANG)
+        if waited == pid { break }
+        if waited < 0 { if errno == EINTR { continue }; violated = true; break }
+        if !enforceChildBoundary(pid) {
+            violated = true
+            if let descendants = children(of: pid) {
+                for descendant in descendants { _ = kill(descendant, SIGKILL) }
+            }
+            _ = kill(pid, SIGKILL)
+            while waitpid(pid, &status, 0) < 0 && errno == EINTR {}
+            break
+        }
+        usleep(20_000) // 20 ms, not a substitute for a kernel process-count cap.
+    }
     _ = try? FileManager.default.removeItem(at: URL(fileURLWithPath: (path as NSString).deletingLastPathComponent))
+    if violated { exit(126) }
     if (status & 0x7f) == 0 { exit((status >> 8) & 0xff) }
     exit(128)
 }

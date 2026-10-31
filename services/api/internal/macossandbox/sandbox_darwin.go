@@ -48,19 +48,20 @@ type payloadHeader struct {
 	MemoryBytes    int64    `json:"memoryBytes"`
 	CPUPercent     int      `json:"cpuPercent"`
 	TimeoutSeconds int      `json:"timeoutSeconds"`
+	MaxProcesses   int      `json:"maxProcesses"`
 }
 type Handle struct {
-	Cmd                                                             *exec.Cmd
-	guest, hostFile, configRead, configWrite, readyRead, readyWrite *os.File
-	server                                                          *http.Server
-	httpConn                                                        net.Conn
-	id                                                              string
-	data                                                            []byte
-	header                                                          []byte
-	pid                                                             int
-	timer                                                           *time.Timer
-	mu                                                              sync.Mutex
-	closed                                                          bool
+	Cmd                                                                                  *exec.Cmd
+	guest, hostFile, configRead, configWrite, readyRead, readyWrite, liveRead, liveWrite *os.File
+	server                                                                               *http.Server
+	httpConn                                                                             net.Conn
+	id                                                                                   string
+	data                                                                                 []byte
+	header                                                                               []byte
+	pid                                                                                  int
+	timer                                                                                *time.Timer
+	mu                                                                                   sync.Mutex
+	closed                                                                               bool
 }
 
 func (h *Handle) HostPipe() string {
@@ -88,16 +89,29 @@ func (h *Handle) Close() {
 		pid = h.Cmd.Process.Pid
 	}
 	h.mu.Unlock()
+	// Closing the liveness pipe first lets the helper kill its child and
+	// discovered descendants (including children that changed process group).
+	// Allow a short cooperative cleanup interval before the unconditional kill.
+	if h.liveWrite != nil {
+		_ = h.liveWrite.Close()
+	}
 	if pid > 0 {
+		deadline := time.Now().Add(150 * time.Millisecond)
+		for time.Now().Before(deadline) {
+			if e := syscall.Kill(pid, 0); e == syscall.ESRCH {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 		_ = syscall.Kill(-pid, syscall.SIGKILL)
-	} // helper and descendants share process group
+	} // fallback for an unresponsive helper / process group
 	if h.server != nil {
 		_ = h.server.Close()
 	}
 	if h.httpConn != nil {
 		_ = h.httpConn.Close()
 	}
-	for _, f := range []*os.File{h.guest, h.hostFile, h.configRead, h.configWrite, h.readyRead, h.readyWrite} {
+	for _, f := range []*os.File{h.guest, h.hostFile, h.configRead, h.configWrite, h.readyRead, h.readyWrite, h.liveRead, h.liveWrite} {
 		if f != nil {
 			_ = f.Close()
 		}
@@ -127,6 +141,25 @@ func helperPath() (string, error) {
 	if !fi.Mode().IsRegular() || fi.Mode().Perm()&0o022 != 0 {
 		return "", errors.New("sandbox-macos-helper-not-regular-or-is-group-writable")
 	}
+	// A signed binary in an attacker-writable directory can be replaced between
+	// verification and exec. Refuse symlinks and untrusted ancestors, not only
+	// writable executable files.
+	for dir := filepath.Dir(p); ; dir = filepath.Dir(dir) {
+		info, e := os.Lstat(dir)
+		if e != nil {
+			return "", e
+		}
+		if !info.IsDir() || info.Mode().Perm()&0o022 != 0 {
+			return "", errors.New("sandbox-macos-untrusted-helper-directory")
+		}
+		if dir == filepath.Dir(dir) {
+			break
+		}
+	}
+	stat, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok || stat.Uid != 0 && stat.Uid != uint32(os.Geteuid()) {
+		return "", errors.New("sandbox-macos-helper-untrusted-owner")
+	}
 	return p, nil
 }
 func signedHelper() (string, error) {
@@ -140,7 +173,7 @@ func signedHelper() (string, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	req := `anchor apple generic and certificate leaf[subject.OU] = "` + team + `"`
+	req := `identifier "ru.skif4er.launcher.extension-sandbox" and anchor apple generic and certificate leaf[subject.OU] = "` + team + `"`
 	if b, e := exec.CommandContext(ctx, "/usr/bin/codesign", "--verify", "--strict", "--verbose=2", "--test-requirement", req, p).CombinedOutput(); e != nil {
 		return "", fmt.Errorf("sandbox-macos-helper-signature: %w: %.300s", e, b)
 	}
@@ -176,17 +209,25 @@ func signedHelper() (string, error) {
 			return "", fmt.Errorf("sandbox-macos-helper-overprivileged-entitlement: %s", k)
 		}
 	}
+	ctx3, cancel3 := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel3()
+	details, e := exec.CommandContext(ctx3, "/usr/bin/codesign", "--display", "--verbose=4", p).CombinedOutput()
+	if e != nil || !bytes.Contains(details, []byte("flags=")) || !bytes.Contains(details, []byte("runtime")) {
+		return "", errors.New("sandbox-macos-helper-hardened-runtime-required")
+	}
 	return p, nil
 }
 func Available() error {
 	if _, err := signedHelper(); err != nil {
 		return err
 	}
-	return errors.New("macos-aggregate-process-tree-resource-boundary-unavailable")
+	return nil // Signed, specifically identified App Sandbox helper is installed.
 }
 func Prepare(o Options) (_ *Handle, err error) {
-	// RLIMIT_AS and RLIMIT_CPU apply per process; process groups are escapable.
-	// Refuse isolated mode until an OS-verifiable aggregate descendant boundary exists.
+	// macOS does not provide an unprivileged cgroup/Job Object equivalent.
+	// Supported mode is ONE child, with inherited sandbox, finite RLIMITs,
+	// live descendant detection and a parent-liveness watchdog. Never silently
+	// accept a multi-process policy with unverified aggregate limits.
 	if err := Available(); err != nil {
 		return nil, err
 	}
@@ -196,8 +237,8 @@ func Prepare(o Options) (_ *Handle, err error) {
 	if e := ValidateGrants(o.Policy.FilesystemRead, o.Policy.FilesystemWrite, o.Policy.NetworkOutbound, o.Policy.Secrets); e != nil {
 		return nil, e
 	}
-	if o.Policy.MaxMemoryBytes < 64<<20 || o.Policy.MaxProcesses < 1 || o.Policy.MaxCPUPercent < 1 || o.Policy.MaxCPUPercent > 100 || o.Policy.TimeoutSeconds < 1 {
-		return nil, errors.New("sandbox-macos-finite-resource-policy-required")
+	if o.Policy.MaxMemoryBytes < 64<<20 || o.Policy.MaxProcesses != 1 || o.Policy.MaxCPUPercent < 1 || o.Policy.MaxCPUPercent > 100 || o.Policy.TimeoutSeconds < 1 {
+		return nil, errors.New("sandbox-macos-unsupported-resource-policy")
 	}
 	if !IsInside(o.PayloadRoot, o.Entrypoint) {
 		return nil, errors.New("sandbox-macos-entrypoint-must-be-within-package")
@@ -244,7 +285,7 @@ func Prepare(o Options) (_ *Handle, err error) {
 		return nil, e
 	}
 	digest := sha256.Sum256(executable)
-	header, e := json.Marshal(payloadHeader{Size: len(executable), SHA256: hex.EncodeToString(digest[:]), Args: o.Args, Environment: o.Environment, MemoryBytes: o.Policy.MaxMemoryBytes, CPUPercent: o.Policy.MaxCPUPercent, TimeoutSeconds: o.Policy.TimeoutSeconds})
+	header, e := json.Marshal(payloadHeader{Size: len(executable), SHA256: hex.EncodeToString(digest[:]), Args: o.Args, Environment: o.Environment, MemoryBytes: o.Policy.MaxMemoryBytes, CPUPercent: o.Policy.MaxCPUPercent, TimeoutSeconds: o.Policy.TimeoutSeconds, MaxProcesses: o.Policy.MaxProcesses})
 	if e != nil {
 		return nil, e
 	}
@@ -273,9 +314,14 @@ func Prepare(o Options) (_ *Handle, err error) {
 		err = e
 		return nil, err
 	}
+	h.liveRead, h.liveWrite, e = os.Pipe()
+	if e != nil {
+		err = e
+		return nil, err
+	}
 	h.Cmd = exec.Command(helper)
 	h.Cmd.Env = []string{"PATH=/usr/bin:/bin", "LANG=C"}
-	h.Cmd.ExtraFiles = []*os.File{h.configRead, h.guest, h.readyWrite}
+	h.Cmd.ExtraFiles = []*os.File{h.configRead, h.guest, h.readyWrite, h.liveRead}
 	h.Cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	conn, e := net.FileConn(h.hostFile)
 	if e != nil {
@@ -316,6 +362,7 @@ func (h *Handle) Started() error {
 	_ = h.configRead.Close()
 	_ = h.guest.Close()
 	_ = h.readyWrite.Close()
+	_ = h.liveRead.Close()
 	send := make(chan error, 1)
 	go func() {
 		_, e := h.configWrite.Write(h.header)

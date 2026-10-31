@@ -1,6 +1,6 @@
 # 0.31.12 — macOS Signed App Sandbox helper
 
-Native macOS isolated execution is **not** a general-purpose sandbox for every
+Updated for 0.43.11: native macOS isolated execution is **not** a general-purpose sandbox for every
 extension package. This stage supports **self-contained, single-file Mach-O**
 `backend` and `cli` targets on macOS x86-64 / Apple Silicon. Java callback
 runtimes, scripts, bundled runtime files, universal Mach-O wrappers and other
@@ -40,14 +40,24 @@ unsupported layouts are denied; no transition to `trusted` occurs.
 - Host API validates exact one-instance IPC identity, normal authorization,
   policy permissions, and child PID. Closed broker socket never falls back to
   plain loopback for an isolated macOS instance.
-- `RLIMIT_AS` and `RLIMIT_CPU` apply per process; a deadline kills the managed
-  process group. **macOS does not provide cgroup v2/Job Object-equivalent
-  aggregate process count, CPU or memory limits with this design**. The
-  `maxProcesses` policy is not an OS-enforced tree limit in 0.31.12, and a
-  child that deliberately detaches a process group may evade lifetime cleanup,
-  but must still inherit App Sandbox restrictions. This limitation must be
-  validated and addressed in the next resource enforcement stage before claiming
-  full H12 compatibility. No absolute user-mode anti-tamper guarantees.
+- The signed helper is identified by a *fixed code-signing identifier*,
+  Apple Team ID and Hardened Runtime, with a minimal App Sandbox entitlement.
+  The executable and all path ancestors must be non-writable by other users.
+- The helper checks the child's **actual** inherited App Sandbox via
+  `sandbox_check(childPID, ...)` before reporting readiness; all unsupported
+  policies and missing signatures fail closed.
+- 0.43.11 supports **maxProcesses=1 only**. Descendants are monitored with
+  libproc at 20 ms intervals and trigger termination. An additional FD owned
+  by the backend provides a liveness watchdog even when the backend crashes.
+  `RLIMIT_AS` and `RLIMIT_CPU` are inherited by the child. The deadline kills
+  its process group; the helper checks for descendants even if they detach.
+- **Process enumeration is detection, not a kernel-enforced hard cap.** A very
+  short-lived or deliberately detached grandchild may evade a sampling interval.
+  macOS has no equivalent of cgroup v2/Job Object in this unprivileged design,
+  and aggregate descendant CPU/memory guarantees are not claimed. Where strict
+  process-tree limits are mandatory, operators must use a different OS-level
+  isolation mechanism rather than relabel this policy as fully certified.
+  No absolute user-mode anti-tamper guarantees.
 
 ## Mandatory macOS acceptance
 

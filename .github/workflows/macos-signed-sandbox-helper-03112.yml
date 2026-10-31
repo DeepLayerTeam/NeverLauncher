@@ -28,8 +28,8 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - name: Swift compile and verify entitlements plist
         run: |
-          xcrun swiftc -O ../../macos/sandbox-helper/NeverExtensionSandbox.swift -o /tmp/NeverExtensionSandbox -lsandbox
-          plutil -lint ../../macos/sandbox-helper/NeverExtensionSandbox.entitlements
+          xcrun swiftc -O ../../macos/sandbox-helper/ExtensionSandbox.swift -o /tmp/NeverExtensionSandbox -lsandbox -lproc
+          plutil -lint ../../macos/sandbox-helper/ExtensionSandbox.entitlements
       - name: Test and cross-build core Go packages
         run: |
           go test -race ./internal/macossandbox ./internal/extensionhost ./internal/extensionpolicy ./internal/extensionbroker
