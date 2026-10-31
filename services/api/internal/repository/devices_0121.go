@@ -135,6 +135,9 @@ func (r *MemoryRepository) SaveTrustedDevice(ctx context.Context, device model.T
 	}
 	r.deviceMu.Lock()
 	defer r.deviceMu.Unlock()
+	if device.Status != "active" || device.TrustState != "verified" {
+		return model.TrustedDevice{}, fmt.Errorf("%w: device enrollment must be active", ErrConflict)
+	}
 	for _, existing := range r.trustedDevices {
 		if existing.KeyFingerprint == device.KeyFingerprint && existing.ID != device.ID {
 			return model.TrustedDevice{}, fmt.Errorf("%w: device key fingerprint is already registered", ErrConflict)
@@ -151,6 +154,14 @@ func (r *MemoryRepository) SaveTrustedDevice(ctx context.Context, device model.T
 		}
 		if existing.UserID != device.UserID {
 			return model.TrustedDevice{}, fmt.Errorf("%w: device id is already owned by another user", ErrConflict)
+		}
+		// A revoked key is a permanent tombstone. Registration and stale
+		// writers must never reactivate it or replace its public key.
+		if existing.Status != "active" || existing.TrustState != "verified" ||
+			device.Status != "active" || device.TrustState != "verified" ||
+			existing.PublicKey != device.PublicKey || existing.KeyFingerprint != device.KeyFingerprint ||
+			existing.KeyAlgorithm != device.KeyAlgorithm {
+			return model.TrustedDevice{}, fmt.Errorf("%w: trusted device key is immutable or revoked", ErrConflict)
 		}
 		device.CreatedAt = existing.CreatedAt
 		r.trustedDevices[i] = device
@@ -412,6 +423,9 @@ func (r *SQLRepository) SaveTrustedDevice(ctx context.Context, device model.Trus
 	if err != nil {
 		return model.TrustedDevice{}, err
 	}
+	if device.Status != "active" || device.TrustState != "verified" {
+		return model.TrustedDevice{}, fmt.Errorf("%w: device enrollment must be active", ErrConflict)
+	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -422,7 +436,11 @@ func (r *SQLRepository) SaveTrustedDevice(ctx context.Context, device model.Trus
 	device.UpdatedAt = now
 	res, err := r.db.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,key_binding,hardware_provider,attestation_state,attestation_method,attested_at,attestation_expires_at,public_key,key_fingerprint,platform,client_version,created_at,updated_at,last_seen_at,last_verified_at,last_ip,last_user_agent,revoked_at,revoked_reason)
 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULLIF($12,'0001-01-01T00:00:00Z')::timestamptz,NULLIF($13,'0001-01-01T00:00:00Z')::timestamptz,$14,$15,$16,$17,$18,$19,NULLIF($20,'0001-01-01T00:00:00Z')::timestamptz,NULLIF($21,'0001-01-01T00:00:00Z')::timestamptz,$22,$23,NULLIF($24,'0001-01-01T00:00:00Z')::timestamptz,$25)
-ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,status=EXCLUDED.status,trust_state=EXCLUDED.trust_state,assurance=EXCLUDED.assurance,key_algorithm=EXCLUDED.key_algorithm,key_binding=EXCLUDED.key_binding,hardware_provider=EXCLUDED.hardware_provider,attestation_state=EXCLUDED.attestation_state,attestation_method=EXCLUDED.attestation_method,attested_at=EXCLUDED.attested_at,attestation_expires_at=EXCLUDED.attestation_expires_at,public_key=EXCLUDED.public_key,key_fingerprint=EXCLUDED.key_fingerprint,platform=EXCLUDED.platform,client_version=EXCLUDED.client_version,updated_at=EXCLUDED.updated_at,last_seen_at=EXCLUDED.last_seen_at,last_verified_at=EXCLUDED.last_verified_at,last_ip=EXCLUDED.last_ip,last_user_agent=EXCLUDED.last_user_agent,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason WHERE trusted_devices.user_id=EXCLUDED.user_id`, device.ID, device.UserID, device.Name, device.Status, device.TrustState, device.Assurance, device.KeyAlgorithm, device.KeyBinding, device.HardwareProvider, device.AttestationState, device.AttestationMethod, device.AttestedAt.UTC().Format(time.RFC3339), device.AttestationExpiresAt.UTC().Format(time.RFC3339), device.PublicKey, device.KeyFingerprint, device.Platform, device.ClientVersion, device.CreatedAt, device.UpdatedAt, device.LastSeenAt.UTC().Format(time.RFC3339), device.LastVerifiedAt.UTC().Format(time.RFC3339), device.LastIP, device.LastUserAgent, device.RevokedAt.UTC().Format(time.RFC3339), device.RevokedReason)
+ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,status=EXCLUDED.status,trust_state=EXCLUDED.trust_state,assurance=EXCLUDED.assurance,key_algorithm=EXCLUDED.key_algorithm,key_binding=EXCLUDED.key_binding,hardware_provider=EXCLUDED.hardware_provider,attestation_state=EXCLUDED.attestation_state,attestation_method=EXCLUDED.attestation_method,attested_at=EXCLUDED.attested_at,attestation_expires_at=EXCLUDED.attestation_expires_at,public_key=EXCLUDED.public_key,key_fingerprint=EXCLUDED.key_fingerprint,platform=EXCLUDED.platform,client_version=EXCLUDED.client_version,updated_at=EXCLUDED.updated_at,last_seen_at=EXCLUDED.last_seen_at,last_verified_at=EXCLUDED.last_verified_at,last_ip=EXCLUDED.last_ip,last_user_agent=EXCLUDED.last_user_agent,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason AND trusted_devices.status='active' AND trusted_devices.trust_state='verified' AND
+    EXCLUDED.status='active' AND EXCLUDED.trust_state='verified' AND
+    trusted_devices.public_key=EXCLUDED.public_key AND
+    trusted_devices.key_fingerprint=EXCLUDED.key_fingerprint AND
+    trusted_devices.key_algorithm=EXCLUDED.key_algorithm`, device.ID, device.UserID, device.Name, device.Status, device.TrustState, device.Assurance, device.KeyAlgorithm, device.KeyBinding, device.HardwareProvider, device.AttestationState, device.AttestationMethod, device.AttestedAt.UTC().Format(time.RFC3339), device.AttestationExpiresAt.UTC().Format(time.RFC3339), device.PublicKey, device.KeyFingerprint, device.Platform, device.ClientVersion, device.CreatedAt, device.UpdatedAt, device.LastSeenAt.UTC().Format(time.RFC3339), device.LastVerifiedAt.UTC().Format(time.RFC3339), device.LastIP, device.LastUserAgent, device.RevokedAt.UTC().Format(time.RFC3339), device.RevokedReason)
 	if err != nil {
 		// key_fingerprint уникален глобально. При конкурентной либо уже
 		// существующей регистрации возвращайте конфликт уровня репозитория, а
@@ -520,16 +538,11 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 		return model.DeviceRevocationResult{}, ErrNotFound
 	}
 	result := model.DeviceRevocationResult{AlreadyRevoked: status == "revoked", CascadeHandled: true}
-	if !result.AlreadyRevoked {
-		if _, err := tx.ExecContext(ctx, `UPDATE trusted_devices SET status='revoked',trust_state='revoked',assurance='proof-of-possession',attestation_state='revoked',revoked_at=$2,revoked_reason=$3,updated_at=$2 WHERE id=$1`, deviceID, now, reason); err != nil {
-			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: mark device revoked: %w", err)
-		}
-	}
-	if res, err := tx.ExecContext(ctx, `UPDATE device_challenges SET consumed_at=$2 WHERE device_id=$1 AND consumed_at IS NULL`, deviceID, now); err != nil {
-		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: consume outstanding challenges: %w", err)
-	} else if n, err := res.RowsAffected(); err == nil {
-		result.InvalidatedChallenges = int(n)
-	}
+	// Lock and record the affected parent sessions *before* changing device
+	// status. The global revocation trigger synchronously revokes those sessions,
+	// Minecraft tokens and bridge tickets during the device UPDATE. Querying
+	// afterward would return no active rows and incorrectly report zero
+	// revocations to callers that must invalidate replica-local bridge joins.
 	rows, err := tx.QueryContext(ctx, `SELECT id,refresh_family_id FROM auth_sessions WHERE user_id=$1 AND trusted_device_id=$2 AND status='active' FOR UPDATE`, owner, deviceID)
 	if err != nil {
 		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: lock bound sessions: %w", err)
@@ -549,6 +562,19 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: iterate bound sessions: %w", err)
 	}
 	rows.Close()
+	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM minecraft_sessions mc JOIN auth_sessions s ON s.id=mc.session_id WHERE s.user_id=$1 AND s.trusted_device_id=$2 AND s.status='active' AND mc.status='active'`, owner, deviceID).Scan(&result.RevokedMinecraftSessions); err != nil {
+		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: count active game credentials: %w", err)
+	}
+	if !result.AlreadyRevoked {
+		if _, err := tx.ExecContext(ctx, `UPDATE trusted_devices SET status='revoked',trust_state='revoked',assurance='proof-of-possession',attestation_state='revoked',revoked_at=$2,revoked_reason=$3,updated_at=$2 WHERE id=$1`, deviceID, now, reason); err != nil {
+			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: mark device revoked: %w", err)
+		}
+	}
+	if res, err := tx.ExecContext(ctx, `UPDATE device_challenges SET consumed_at=$2 WHERE device_id=$1 AND consumed_at IS NULL`, deviceID, now); err != nil {
+		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: consume outstanding challenges: %w", err)
+	} else if n, err := res.RowsAffected(); err == nil {
+		result.InvalidatedChallenges = int(n)
+	}
 	families := map[string]struct{}{}
 	for _, a := range affected {
 		if _, err := tx.ExecContext(ctx, `UPDATE auth_sessions SET status='revoked',revoked_at=$2,revoked_reason=$3,risk_state='compromised',risk_reasons=risk_reasons || jsonb_build_array($3::text),risk_score=100,risk_action='revoke',risk_evaluated_at=$2,risk_updated_at=$2,device_trust_state='revoked' WHERE id=$1 AND status='active'`, a.session, now, reason); err != nil {
@@ -563,10 +589,8 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 				return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke refresh tokens for family %s: %w", a.family, err)
 			}
 		}
-		if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE session_id=$1 AND status='active'`, a.session, now, reason); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE session_id=$1 AND status='active'`, a.session, now, reason); err != nil {
 			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke minecraft sessions for %s: %w", a.session, err)
-		} else if n, err := res.RowsAffected(); err == nil {
-			result.RevokedMinecraftSessions += int(n)
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO auth_events(user_id,session_id,family_id,event_type,details,created_at) VALUES($1,$2,$3,'trusted-device-revoked',jsonb_build_object('deviceId',$4::text,'reason',$5::text),$6)`, owner, a.session, a.family, deviceID, reason, now); err != nil {
 			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: insert auth event for %s: %w", a.session, err)
@@ -601,22 +625,13 @@ func (r *SQLRepository) RevokeTrustedDevice(ctx context.Context, userID, deviceI
 	if err != nil {
 		return model.DeviceRevocationResult{}, err
 	}
+	device, err := scanTrustedDevice0121(tx.QueryRowContext(ctx, `SELECT `+trustedDeviceColumns0121+` FROM trusted_devices WHERE id=$1`, strings.TrimSpace(deviceID)))
+	if err != nil {
+		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: read committed device: %w", err)
+	}
+	result.Device = device
 	if err := tx.Commit(); err != nil {
 		return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: commit: %w", err)
-	}
-	owner := strings.TrimSpace(userID)
-	if owner == "" {
-		device, err := r.GetTrustedDeviceByID(deviceID)
-		if err != nil {
-			return model.DeviceRevocationResult{}, err
-		}
-		result.Device = device
-	} else {
-		device, err := r.GetTrustedDevice(owner, deviceID)
-		if err != nil {
-			return model.DeviceRevocationResult{}, err
-		}
-		result.Device = device
 	}
 	return result, nil
 }

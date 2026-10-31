@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.43.4 — Permanent revocation for device keys, Never sessions and Minecraft credentials
+
+- A revoked trusted-device identity and its public key fingerprint are immutable: in-memory/SQLite repository writes, PostgreSQL upserts, and direct SQL updates cannot reactivate a tombstone or swap an enrolled public key. Rotation and recovery retain their dedicated new-key path.
+- An already revoked Minecraft access token cannot be reactivated by a stale `SaveMinecraftSession` call or SQL UPDATE. Credential identity, Never parent session, trusted device and binding epoch are immutable after issuance; retries with unchanged active identity remain possible.
+- Bearer verification and refresh re-check the authoritative device record as well as the session binding. This denies revoked hardware even if revocation was committed by a separate worker before the local memory cascade has completed. SQL device revocation counts and locks affected sessions before its global trigger fires, returns the actual invalidated session IDs for ServerBridge, and does not report an error after a successful commit due to a second database read.
+- New SQL migration 0113 is supplied identically in CLI and Backend migration catalogs; tests exercise memory tombstones, stale Bearer use, and cross-connection PostgreSQL cascading revocation. The existing global session revocation CI runs the new tests against a real PostgreSQL service.
+
+**Verification boundary:** Local syntax, archive consistency and static checks do not establish a certified release. Full Go tests require the project Go 1.27.3 toolchain and external PostgreSQL, unavailable in this environment. Hardware, gaming and signed six-platform release acceptance remain blocked until independently verified by CI.
+
+
 ## 0.43.3 — HWID risk: sticky hardware change, review consistency and safe re-baselining
 
 - Once an opt-in HWID continuity change is observed, replaying the old device hint no longer clears the elevated session risk. Expired/missing observations and temporary store failures do not silently clear an already recorded session risk; a verified confirmation is required. HWID remains a weak, voluntary risk signal, not a ban or hardware attestation.

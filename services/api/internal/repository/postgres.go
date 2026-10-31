@@ -1770,11 +1770,24 @@ func (r *SQLRepository) SaveMinecraftSession(item model.MinecraftSession) (model
 		item.BindingEpoch = 1
 	}
 	item.TrustedDeviceID = strings.TrimSpace(item.TrustedDeviceID)
-	_, err := r.db.Exec(`INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,guard_evidence_sha256,guard_sha256,launcher_sha256,launcher_version,integrity_verified_at,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason)
+	result, err := r.db.Exec(`INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,guard_evidence_sha256,guard_sha256,launcher_sha256,launcher_version,integrity_verified_at,status,created_at,last_seen_at,expires_at,revoked_at,revoked_reason)
 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
-ON CONFLICT (id) DO UPDATE SET trusted_device_id=EXCLUDED.trusted_device_id,binding_epoch=EXCLUDED.binding_epoch,client_token=EXCLUDED.client_token,integrity_verified=EXCLUDED.integrity_verified,guard_attestation_sha256=EXCLUDED.guard_attestation_sha256,guard_evidence_sha256=EXCLUDED.guard_evidence_sha256,guard_sha256=EXCLUDED.guard_sha256,launcher_sha256=EXCLUDED.launcher_sha256,launcher_version=EXCLUDED.launcher_version,integrity_verified_at=EXCLUDED.integrity_verified_at,status=EXCLUDED.status,last_seen_at=EXCLUDED.last_seen_at,expires_at=EXCLUDED.expires_at,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason`, item.ID, item.UserID, item.SessionID, item.ProfileUUID, nullText(item.TrustedDeviceID), item.BindingEpoch, item.ClientToken, item.AccessTokenHash, item.IntegrityVerified, item.GuardAttestationSHA256, item.GuardEvidenceSHA256, item.GuardSHA256, item.LauncherSHA256, item.LauncherVersion, nullTime(item.IntegrityVerifiedAt), item.Status, item.CreatedAt, item.LastSeenAt, item.ExpiresAt, nullTime(item.RevokedAt), item.RevokedReason)
+ON CONFLICT (id) DO UPDATE SET trusted_device_id=EXCLUDED.trusted_device_id,binding_epoch=EXCLUDED.binding_epoch,client_token=EXCLUDED.client_token,integrity_verified=EXCLUDED.integrity_verified,guard_attestation_sha256=EXCLUDED.guard_attestation_sha256,guard_evidence_sha256=EXCLUDED.guard_evidence_sha256,guard_sha256=EXCLUDED.guard_sha256,launcher_sha256=EXCLUDED.launcher_sha256,launcher_version=EXCLUDED.launcher_version,integrity_verified_at=EXCLUDED.integrity_verified_at,status=EXCLUDED.status,last_seen_at=EXCLUDED.last_seen_at,expires_at=EXCLUDED.expires_at,revoked_at=EXCLUDED.revoked_at,revoked_reason=EXCLUDED.revoked_reason
+WHERE minecraft_sessions.status='active' AND EXCLUDED.status='active' AND
+    minecraft_sessions.user_id=EXCLUDED.user_id AND
+    minecraft_sessions.session_id=EXCLUDED.session_id AND
+    minecraft_sessions.profile_uuid=EXCLUDED.profile_uuid AND
+    minecraft_sessions.access_token_hash=EXCLUDED.access_token_hash AND
+    minecraft_sessions.trusted_device_id IS NOT DISTINCT FROM EXCLUDED.trusted_device_id AND
+    minecraft_sessions.binding_epoch=EXCLUDED.binding_epoch`, item.ID, item.UserID, item.SessionID, item.ProfileUUID, nullText(item.TrustedDeviceID), item.BindingEpoch, item.ClientToken, item.AccessTokenHash, item.IntegrityVerified, item.GuardAttestationSHA256, item.GuardEvidenceSHA256, item.GuardSHA256, item.LauncherSHA256, item.LauncherVersion, nullTime(item.IntegrityVerifiedAt), item.Status, item.CreatedAt, item.LastSeenAt, item.ExpiresAt, nullTime(item.RevokedAt), item.RevokedReason)
 	if err != nil {
 		return model.MinecraftSession{}, err
+	}
+	if affected, err := result.RowsAffected(); err != nil || affected != 1 {
+		if err != nil {
+			return model.MinecraftSession{}, err
+		}
+		return model.MinecraftSession{}, ErrConflict
 	}
 	return r.getMinecraftSessionByID(item.ID)
 }

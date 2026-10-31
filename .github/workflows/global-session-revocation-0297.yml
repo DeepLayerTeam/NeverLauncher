@@ -51,8 +51,8 @@ jobs:
         working-directory: cli
         run: go build ./cmd/... && go test -count=1 ./internal/dbmigrate
       - name: Validate migrations and actual cross-replica revocations
-        run: go test -count=1 -timeout=10m ./internal/dbmigrate ./internal/repository -run 'TestGlobalSessionRevocationPostgres0297|TestEvaluateAppliedSealedCatalog|TestCanonicalIssuerPostgres0291'
+        run: go test -count=1 -timeout=10m ./internal/dbmigrate ./internal/repository -run 'TestGlobalSessionRevocationPostgres0297|TestRevocationTerminalPostgres0434|TestRevokedDeviceKeyCannotBeResurrected0434|TestRevokedMinecraftTokenCannotBeResurrected0434|TestEvaluateAppliedSealedCatalog|TestCanonicalIssuerPostgres0291'
       - name: Exercise HTTP role-revoke enforcement
-        run: go test -race -count=1 -timeout=10m ./internal/httpapi -run 'TestRoleUpdateRevokesLiveNeverToken0297|TestCompromisedRiskRevokesSessionAndRefreshMemory0297|TestSecurityHardening902TOTPAndPasswordReset'
+        run: go test -race -count=1 -timeout=10m ./internal/httpapi -run 'TestRoleUpdateRevokesLiveNeverToken0297|TestCompromisedRiskRevokesSessionAndRefreshMemory0297|TestDirectDeviceRevocationDeniesStaleAccessAndRefresh0434|TestSecurityHardening902TOTPAndPasswordReset'
       - name: Static analysis
         run: go vet ./internal/dbmigrate ./internal/repository ./internal/httpapi

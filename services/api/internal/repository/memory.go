@@ -1400,6 +1400,12 @@ func (r *MemoryRepository) SaveMinecraftSession(item model.MinecraftSession) (mo
 	}
 	for i, existing := range r.minecraftSessions {
 		if existing.ID == item.ID {
+			if existing.Status != "active" || item.Status != "active" ||
+				existing.UserID != item.UserID || existing.NeverSessionID != item.NeverSessionID ||
+				existing.ProfileUUID != item.ProfileUUID || existing.AccessTokenHash != item.AccessTokenHash ||
+				existing.TrustedDeviceID != item.TrustedDeviceID || existing.BindingEpoch != item.BindingEpoch {
+				return model.MinecraftSession{}, ErrConflict
+			}
 			r.minecraftSessions[i] = item
 			return item, nil
 		}

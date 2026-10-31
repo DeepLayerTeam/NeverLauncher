@@ -214,6 +214,11 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if preview.TrustedDeviceID != "" {
+		device, err := s.Repo.GetTrustedDevice(preview.UserID, preview.TrustedDeviceID)
+		if err != nil || device.Status != "active" || device.TrustState != "verified" || preview.DeviceTrustState != "verified" {
+			writeError(w, http.StatusUnauthorized, "device trust revoked")
+			return
+		}
 		if err := s.verifyRefreshDeviceProof0126(r, req.RefreshToken, strings.TrimSpace(req.DeviceID), strings.TrimSpace(req.DeviceSignature), preview); err != nil {
 			s.Repo.AddAuditEvent(model.AuditEvent{ID: "auth-refresh-device-proof-failed-" + time.Now().UTC().Format("20060102150405.000000000"), Actor: preview.Email, Action: "auth:refresh:device-proof-failed", Target: preview.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 			writeJSON(w, http.StatusPreconditionRequired, map[string]any{"error": map[string]any{"code": http.StatusPreconditionRequired, "message": "refresh привязанной сессии требует подпись текущим device key", "deviceProofRequired": true, "deviceId": preview.TrustedDeviceID, "bindingEpoch": preview.BindingEpoch}})
@@ -257,6 +262,14 @@ func (s Server) authRefresh(w http.ResponseWriter, r *http.Request) {
 	if !live || !sameDeviceBinding0432(currentBinding, session) {
 		writeError(w, http.StatusUnauthorized, "device binding changed during refresh")
 		return
+	}
+	if session.TrustedDeviceID != "" {
+		device, err := s.Repo.GetTrustedDevice(session.UserID, session.TrustedDeviceID)
+		if err != nil || device.Status != "active" || device.TrustState != "verified" {
+			s.State.AuthSessions.revoke(session.ID, "device-revoked-during-refresh")
+			writeError(w, http.StatusUnauthorized, "device trust revoked during refresh")
+			return
+		}
 	}
 	accessToken, err := s.issueAccessTokenForSession(user, session)
 	if err != nil {

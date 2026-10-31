@@ -347,6 +347,12 @@ func (s Server) verifyAdminToken(token string) (authClaims, error) {
 	if !sessionBindingClaimsMatch0126(claims, session) {
 		return authClaims{}, errAuthRequired
 	}
+	if session.TrustedDeviceID != "" {
+		device, err := s.Repo.GetTrustedDevice(claims.Sub, session.TrustedDeviceID)
+		if err != nil || device.Status != "active" || device.TrustState != "verified" || session.DeviceTrustState != "verified" {
+			return authClaims{}, errAuthRequired
+		}
+	}
 	if !s.evaluateProtection0298(context.Background(), protection.Request{Stage: protection.BeforeAuth, UserID: claims.Sub, SessionID: claims.SessionID, DeviceID: session.TrustedDeviceID, RoleID: claims.RoleID}).Allowed() {
 		return authClaims{}, errAuthRequired
 	}
