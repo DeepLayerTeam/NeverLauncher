@@ -39,7 +39,7 @@ jobs:
     env:
       LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -96,7 +96,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -134,7 +134,7 @@ jobs:
       MIGRATION_GA_SIGNING_KEY_B64: ${{ secrets.MIGRATION_GA_SIGNING_KEY_B64 }}
       MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64: ${{ secrets.MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64 }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod

@@ -57,7 +57,7 @@ jobs:
       LAUNCHER_SQL_TEST_MARIADB_DSN: auth:integration-only@tcp(localhost:3307)/auth?tls=false
       LAUNCHER_SQL_REQUIRE_ALL: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
