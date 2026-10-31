@@ -21,7 +21,7 @@ repositories {
 val bridgeRuntime = configurations.create("bridgeRuntime")
 
 dependencies {
-    implementation(minecraft.dependency("net.minecraftforge:forge:1.21.1-52.1.16"))
+    implementation(minecraft.dependency("net.minecraftforge:forge:26.3-66.1.0"))
     implementation(project(":plugins:modloader-family-common"))
     add(bridgeRuntime.name, project(":plugins:modloader-family-common"))
 }
