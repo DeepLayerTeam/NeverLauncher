@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -86,6 +87,8 @@ type event struct {
 	Message   string
 }
 type Reporter struct {
+	mu                   sync.RWMutex
+	closed               bool
 	dest                 destination
 	release, environment string
 	events               chan event
@@ -112,6 +115,11 @@ func (r *Reporter) Capture(category, component, message string) {
 	if r == nil {
 		return
 	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.closed {
+		return
+	}
 	if !regexp.MustCompile(`^[A-Za-z0-9_.-]{1,64}$`).MatchString(category) || !regexp.MustCompile(`^[A-Za-z0-9_.-]{1,64}$`).MatchString(component) {
 		return
 	}
@@ -120,11 +128,24 @@ func (r *Reporter) Capture(category, component, message string) {
 	default:
 	}
 }
+
+// loop flushes events accepted before shutdown, with a strict upper bound.
+// The caller cannot wait indefinitely when the remote ingest is unavailable.
 func (r *Reporter) loop() {
 	defer close(r.done)
 	for {
 		select {
 		case <-r.stop:
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			for ctx.Err() == nil {
+				select {
+				case e := <-r.events:
+					_ = r.send(ctx, e)
+				default:
+					return
+				}
+			}
 			return
 		case e := <-r.events:
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -133,6 +154,7 @@ func (r *Reporter) loop() {
 		}
 	}
 }
+
 func (r *Reporter) send(ctx context.Context, e event) error {
 	var idBytes [16]byte
 	if _, err := rand.Read(idBytes[:]); err != nil {
@@ -150,21 +172,51 @@ func (r *Reporter) send(ctx context.Context, e event) error {
 	data.WriteByte('\n')
 	data.Write(body)
 	data.WriteByte('\n')
-	req, err := http.NewRequestWithContext(ctx, "POST", r.dest.ingest, data)
-	if err != nil {
-		return err
+	// Retry only transient ingest failures. The event_id remains stable so
+	// Sentry can deduplicate a request whose acknowledgement was lost.
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		req, err := http.NewRequestWithContext(ctx, "POST", r.dest.ingest, bytes.NewReader(data.Bytes()))
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", "application/x-sentry-envelope")
+		req.Header.Set("X-Sentry-Auth", fmt.Sprintf("Sentry sentry_version=7,sentry_client=launcher.go/0.30.9,sentry_key=%s", r.dest.key))
+		resp, err := r.client.Do(req)
+		wait := 200 * time.Millisecond
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				return nil
+			}
+			lastErr = fmt.Errorf("Sentry ingest HTTP %d", resp.StatusCode)
+			if resp.StatusCode != http.StatusTooManyRequests && resp.StatusCode != http.StatusBadGateway && resp.StatusCode != http.StatusServiceUnavailable && resp.StatusCode != http.StatusGatewayTimeout {
+				return lastErr
+			}
+			if seconds, e := strconv.Atoi(resp.Header.Get("Retry-After")); e == nil && seconds > 0 {
+				wait = time.Duration(seconds) * time.Second
+			}
+		} else {
+			lastErr = err
+		}
+		if attempt == 2 {
+			break
+		}
+		if wait > time.Second {
+			wait = time.Second
+		}
+		timer := time.NewTimer(wait)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
 	}
-	req.Header.Set("Content-Type", "application/x-sentry-envelope")
-	req.Header.Set("X-Sentry-Auth", fmt.Sprintf("Sentry sentry_version=7,sentry_client=launcher.go/0.30.9,sentry_key=%s", r.dest.key))
-	resp, err := r.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("Sentry ingest HTTP %d", resp.StatusCode)
-	}
-	return nil
+	return lastErr
 }
 
 // Wrap captures HTTP panics and 5xx status codes without request metadata and re-panics
@@ -213,7 +265,13 @@ func (w *statusWriter) Flush() {
 func (w *statusWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 func (r *Reporter) Close() {
 	if r != nil {
-		r.once.Do(func() { close(r.stop); <-r.done })
+		r.once.Do(func() {
+			r.mu.Lock()
+			r.closed = true
+			close(r.stop)
+			r.mu.Unlock()
+			<-r.done
+		})
 	}
 }
 

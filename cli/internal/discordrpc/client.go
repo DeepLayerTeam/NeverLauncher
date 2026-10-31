@@ -22,6 +22,9 @@ import (
 
 const maxFrame = 1 << 20
 
+// ErrDisconnected denotes a dropped desktop IPC session, not an RPC rejection.
+var ErrDisconnected = errors.New("Discord desktop IPC disconnected")
+
 var snowflake = regexp.MustCompile(`^[0-9]{17,20}$`)
 
 type Button struct {
@@ -219,7 +222,7 @@ func (c *Client) SetActivity(ctx context.Context, activity *Activity) error {
 			return err
 		}
 		if op == 2 {
-			return errors.New("Discord disconnected")
+			return ErrDisconnected
 		}
 		if string(p["nonce"]) != `"`+nonce+`"` {
 			continue

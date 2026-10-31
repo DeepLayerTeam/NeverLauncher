@@ -165,20 +165,24 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 	}
 	defer conn.Close()
 	_ = conn.SetReadBuffer(65536)
-	sender, err := net.DialUDP("udp4", nil, &net.UDPAddr{IP: net.ParseIP("224.0.0.251"), Port: 5353})
+	// Bind outgoing multicast to the same interface as the published HTTPS endpoint.
+	// Otherwise multi-homed hosts can advertise on an unrelated network.
+	sender, err := net.DialUDP("udp4", &net.UDPAddr{IP: addr}, &net.UDPAddr{IP: net.ParseIP("224.0.0.251"), Port: 5353})
 	if err != nil {
 		return err
 	}
 	defer sender.Close()
-	send := func(b []byte) { _, _ = sender.Write(b) }
-	send(packet)
+	send := func(b []byte) error { _, e := sender.Write(b); return e }
+	if err := send(packet); err != nil {
+		return fmt.Errorf("mDNS initial advertisement: %w", err)
+	}
 	ticker := time.NewTicker(50 * time.Second)
 	defer ticker.Stop()
 	buf := make([]byte, maxMessage)
 	for {
 		if ctx.Err() != nil {
 			goodbye, _ := announceMessage(name, port, fingerprint, ips, 0)
-			send(goodbye)
+			_ = send(goodbye)
 			return nil
 		}
 		_ = conn.SetReadDeadline(time.Now().Add(350 * time.Millisecond))
@@ -199,10 +203,12 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 		select {
 		case <-ctx.Done():
 			goodbye, _ := announceMessage(name, port, fingerprint, ips, 0)
-			send(goodbye)
+			_ = send(goodbye)
 			return nil
 		case <-ticker.C:
-			send(packet)
+			if err := send(packet); err != nil {
+				return fmt.Errorf("mDNS refresh advertisement: %w", err)
+			}
 		default:
 		}
 	}
@@ -210,6 +216,9 @@ func Publish(ctx context.Context, name string, port int, fingerprint string, lis
 
 // ParseAdvertisement parses a DNS-SD reply, not an assertion of trust.
 func ParseAdvertisement(p []byte) ([]Endpoint, error) {
+	if len(p) < 12 || (binary.BigEndian.Uint16(p[2:4])&0x800f) != 0x8000 {
+		return nil, errors.New("mDNS advertisement must be a successful DNS response")
+	}
 	_, rr, err := parsePacket(p)
 	if err != nil {
 		return nil, err
@@ -222,7 +231,7 @@ func ParseAdvertisement(p []byte) ([]Endpoint, error) {
 	txt := map[string]map[string]string{}
 	ips := map[string][]string{}
 	for _, r := range rr {
-		if r.ttl == 0 {
+		if r.ttl == 0 || (r.class&0x7fff) != 1 {
 			continue
 		}
 		switch r.typ {
@@ -274,6 +283,10 @@ func ParseAdvertisement(p []byte) ([]Endpoint, error) {
 			continue
 		}
 		for _, ip := range ips[strings.ToLower(sv.host)] {
+			parsed := net.ParseIP(ip)
+			if parsed == nil || parsed.IsUnspecified() || parsed.IsLoopback() || parsed.IsMulticast() || parsed.IsLinkLocalUnicast() || parsed.To4() == nil || parsed.Equal(net.IPv4bcast) {
+				continue
+			}
 			out = append(out, Endpoint{Instance: strings.TrimSuffix(inst, "."+Service), Host: sv.host, Address: ip, Port: sv.port, Fingerprint: strings.ToLower(fp)})
 		}
 	}

@@ -105,7 +105,7 @@ func handleDiscord0308(args []string) error {
 		ctx, cancel = context.WithTimeout(ctx, *duration)
 		defer cancel()
 	}
-	client, err := discordrpc.Connect(ctx, *applicationID)
+	client, err := discordrpc.NewSession(ctx, *applicationID)
 	if err != nil {
 		return err
 	}
@@ -131,6 +131,9 @@ func handleDiscord0308(args []string) error {
 	// remains alive. Each update is acknowledged; there is no mock background task.
 	lines := make(chan string)
 	readErr := make(chan error, 1)
+	refresh := time.NewTicker(60 * time.Second)
+	defer refresh.Stop()
+	current := &initial
 	go func() {
 		scan := bufio.NewScanner(os.Stdin)
 		scan.Buffer(make([]byte, 4096), 1<<16)
@@ -151,6 +154,12 @@ func handleDiscord0308(args []string) error {
 		select {
 		case <-ctx.Done():
 			return nil
+		case <-refresh.C:
+			// Reassert the current state so a restarted Discord client recovers
+			// even if the launcher has not emitted another state transition.
+			if err := client.SetActivity(ctx, current); err != nil {
+				fmt.Fprintf(os.Stderr, "Discord presence refresh failed: %v\n", err)
+			}
 		case err := <-readErr:
 			clean, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			_ = client.SetActivity(clean, nil)
@@ -174,6 +183,7 @@ func handleDiscord0308(args []string) error {
 			if err := client.SetActivity(ctx, activity); err != nil {
 				return err
 			}
+			current = activity
 		}
 	}
 }

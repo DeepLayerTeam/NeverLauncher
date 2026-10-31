@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.42.9 — Discord IPC recovery, mDNS interface selection, Sentry delivery on shutdown
+
+- **Discord:** The CLI Rich Presence session now reconnects and replays an idempotent `SET_ACTIVITY` after a lost desktop IPC connection (never after an explicit Discord RPC rejection). Interactive sessions refresh their current state every 60 seconds, restoring presence after an idle Discord restart. The existing Desktop refresh and opt-in behavior remain intact. An end-to-end Unix socket fixture verifies two real IPC connections and recovery after a dropped acknowledgement.
+- **mDNS:** The LAN publisher binds its UDP sender to the advertised local interface address, reports initial/periodic multicast send failures, and continues to send a TTL-zero goodbye on shutdown. Discovery only accepts successful DNS answers and usable IPv4 class-IN records; it still treats all discovery as unauthenticated until a separately configured TLS pin verifies the endpoint.
+- **Sentry:** The Backend queues accepted diagnostic events and flushes them with a five-second shutdown bound, retries only transient ingestion/transport errors (up to three total attempts), respects bounded Retry-After and reuses the same event ID for deduplication. Payload redaction, opt-in requirements and queue limits are preserved. New mock-ingest tests assert retry and shutdown delivery through real HTTP.
+- Updated CLI, Backend and Desktop CI workflow paths to current directories, added transport/recovery regression tests and an operations guide. Version metadata synchronized to 0.42.9. Local Go/CLI unit, race, loopback IPC/HTTPS and real same-host UDP multicast publish/discover tests passed, but do not prove live Discord, cross-host multicast, external Sentry tenancy, native Windows/macOS execution or the mandatory final-package release matrix.
+
+
 ## 0.42.8 — RemoteControl administration, systemd shutdown, TLS certificate issuance and release signing validation
 
 - Added an executable `nl server-bridge host remote tls-init` workflow that creates a new private directory containing distinct Ed25519 CA, HTTPS server and mTLS client certificates, including validated IP/DNS SANs, strict file permissions, X.509 verification, limited lifetime and non-overwrite enforcement. Sensitive CA/client keys remain operator-side and must not be deployed to the game host.
