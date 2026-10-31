@@ -27,7 +27,7 @@ dependencies {
     // Используйте Yarn-маппинги Minecraft 1.21.1, соответствующие исходникам
     // моста. Здесь альфа QFAPI предназначена для 1.21.0 и разрешает несовместимые
     // классы Minecraft. Fabric API реализует события, используемые адаптером.
-    modImplementation("net.fabricmc.fabric-api:fabric-api:0.116.17+1.21.1")
+    modImplementation("net.fabricmc.fabric-api:fabric-api:0.141.6+")
     compileOnly("org.spongepowered:mixin:0.8.7")
 
     implementation(project(":plugins:bridge-common"))
