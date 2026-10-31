@@ -22,7 +22,7 @@ func TestWindowsProtectionGARequired0190(t *testing.T) {
 }
 
 func TestWindowsProtectionGABoundaryBindsRCAndArtifacts0190(t *testing.T) {
-	artifacts := []windowsProtectionArtifact01812{{Name: "neverguard.exe", Size: 17, SHA256: strings.Repeat("a", 64)}}
+	artifacts := []windowsProtectionArtifact01812{{Name: "guard.exe", Size: 17, SHA256: strings.Repeat("a", 64)}}
 	caps := []string{"aggressive-protection-profile", "production-ga-user-mode-boundary"}
 	first := windowsProtectionGABoundaryDigest0190("0.19.0", testSourceCommit01511, windowsProtectionRepository01812, strings.Repeat("b", 64), strings.Repeat("c", 64), strings.Repeat("d", 64), strings.Repeat("e", 64), artifacts, caps)
 	second := windowsProtectionGABoundaryDigest0190("0.19.0", testSourceCommit01511, windowsProtectionRepository01812, strings.Repeat("f", 64), strings.Repeat("c", 64), strings.Repeat("d", 64), strings.Repeat("e", 64), artifacts, caps)
@@ -55,9 +55,9 @@ func TestWindowsProtectionGACapabilities0190(t *testing.T) {
 func writeGAPackage0190(t *testing.T, dir, ver, arch string, driver bool) {
 	t.Helper()
 	packageName, manifestName := expectedWindowsPackage0152(ver, arch)
-	artifactName := "neverguard-sensor.dll"
+	artifactName := "guard-sensor.dll"
 	if driver {
-		artifactName = "neverguard-driver.sys"
+		artifactName = "guard-driver.sys"
 	}
 	manifest := map[string]any{"artifacts": []map[string]string{{"name": artifactName, "component": "sensor"}}}
 	raw, err := json.Marshal(manifest)

@@ -36,7 +36,7 @@ func signedBundle(t *testing.T, root string, offline bool) Options {
 	manifest := []byte("profile manifest")
 	java := []byte("java manifest")
 	tpath := prestarter.Target{OS: runtime.GOOS, Arch: runtime.GOARCH}
-	for _, role := range []string{"neverruntime", "desktop", "neverguard"} {
+	for _, role := range []string{"neverruntime", "desktop", "guard"} {
 		tpath.Components = append(tpath.Components, prestarter.Component{Name: role, Artifact: artifact(componentData)})
 	}
 	cfg := prestarter.Config{SchemaVersion: "1.0", ProjectID: "Project", ProfileID: "profile", Channel: "stable", ProfilePublicKey: strings.Repeat("a", 64), Manifest: artifact(manifest), JavaManifest: artifact(java), Targets: []prestarter.Target{tpath}, Branding: &prestarter.Branding{DisplayName: "Project Launcher", Publisher: "Project"}, InstallerTargets: []prestarter.InstallerTarget{{OS: runtime.GOOS, Arch: runtime.GOARCH, Prestarter: artifact(script)}}}

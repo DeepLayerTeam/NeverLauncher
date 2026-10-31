@@ -35,7 +35,7 @@ func handleExtensionSDK02010(command string, args []string) error {
 	case "dev":
 		return extensionDev02010(args)
 	default:
-		return fmt.Errorf("unknown NeverExtensions SDK command %q", command)
+		return fmt.Errorf("unknown Extensions SDK command %q", command)
 	}
 }
 
@@ -180,13 +180,13 @@ import (
   "syscall"
   "time"
 
-  neverextensions "gitflic.ru/skif4er/neverlauncher/sdk/backend/go"
+  extensions "gitflic.ru/skif4er/neverlauncher/sdk/backend/go"
 )
 
 func main() {
   ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
   defer stop()
-  client, err := neverextensions.NewFromEnvironment()
+  client, err := extensions.NewFromEnvironment()
   if err != nil { panic(err) }
   callback, err := client.StartCallbackServer(nil, nil)
   if err != nil { panic(err) }
@@ -209,12 +209,12 @@ func cliTemplate02010() string {
 import (
   "context"
   "fmt"
-  neverextensions "gitflic.ru/skif4er/neverlauncher/sdk/cli/go"
+  extensions "gitflic.ru/skif4er/neverlauncher/sdk/cli/go"
 )
 
 func main() {
-  neverextensions.Main(neverextensions.NewApp(
-    neverextensions.Command{Name:"status", Run: func(ctx context.Context, client *neverextensions.Client, args []string) error {
+  extensions.Main(extensions.NewApp(
+    extensions.Command{Name:"status", Run: func(ctx context.Context, client *extensions.Client, args []string) error {
       var result map[string]any
       if err := client.Capability(ctx, "extension.self", nil, &result); err != nil { return err }
       fmt.Printf("%s %v\n", client.Environment().ExtensionId, result["version"])
@@ -226,7 +226,7 @@ func main() {
 }
 
 func uiTemplate02010(kind, name string) string {
-	protocol := "neverextensions." + kind + "-rpc.v1"
+	protocol := "extensions." + kind + "-rpc.v1"
 	extra := ""
 	if kind == "desktop" {
 		extra = `<button id="platform">Platform</button><script>document.getElementById('platform').onclick=()=>rpc('tauri.platform',{}).then(v=>document.getElementById('out').textContent=JSON.stringify(v,null,2)).catch(e=>document.getElementById('out').textContent=String(e));</script>`
@@ -663,7 +663,7 @@ func extensionDev02010(args []string) error {
 	}
 	select {
 	case <-host.hello:
-		fmt.Fprintf(os.Stderr, "NeverExtensions dev host: %s target authenticated (%s)\n", targetName, host.url())
+		fmt.Fprintf(os.Stderr, "Extensions dev host: %s target authenticated (%s)\n", targetName, host.url())
 	case <-time.After(10 * time.Second):
 		_ = cmd.Process.Kill()
 		return errors.New("extension did not authenticate to local Host Protocol within 10s")
@@ -731,7 +731,7 @@ func serveUIDev02010(ctx context.Context, root string, target CanonicalExtension
 	if err != nil {
 		return err
 	}
-	protocol := "neverextensions." + target.Kind + "-rpc.v1"
+	protocol := "extensions." + target.Kind + "-rpc.v1"
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /extension", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -749,7 +749,7 @@ func serveUIDev02010(ctx context.Context, root string, target CanonicalExtension
 		defer cancel()
 		_ = server.Shutdown(shutdown)
 	}()
-	fmt.Fprintf(os.Stderr, "NeverExtensions %s dev host: http://%s/\n", target.Kind, ln.Addr())
+	fmt.Fprintf(os.Stderr, "Extensions %s dev host: http://%s/\n", target.Kind, ln.Addr())
 	err = server.Serve(ln)
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil

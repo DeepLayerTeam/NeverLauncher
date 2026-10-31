@@ -19,7 +19,7 @@ public final class LauncherModulesManager {
         if(active)throw new IllegalStateException("event registration is closed after module init");
         Objects.requireNonNull(callback);
         HostEvent annotation=type.getAnnotation(HostEvent.class);
-        if(annotation==null)throw new UnsupportedOperationException("Gravit event is not mapped to NeverExtensions: "+type.getName());
+        if(annotation==null)throw new UnsupportedOperationException("Gravit event is not mapped to Extensions: "+type.getName());
         if(!annotation.type().matches("[a-z][a-z0-9.-]{1,127}")||!Set.of("async","sync").contains(annotation.mode()))throw new IllegalArgumentException("invalid host event mapping");
         try{type.getConstructor(RuntimeEvents.Envelope.class);}catch(NoSuchMethodException e){throw new IllegalArgumentException("ported event missing envelope constructor",e);}
         pending.computeIfAbsent(annotation.type()+":"+annotation.mode(),x->new ArrayList<>()).add(new Registration<>(type,callback));

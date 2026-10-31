@@ -43,7 +43,7 @@ const helpText = `NeverLauncher CLI
   discord presence                    local Discord IPC Rich Presence and activity actions
   devtools jar analyze|strip-debug; component test; auth serve  isolated test tooling (no production credentials)
   module-parity audit [--run-tests] [--module M01,...]    audit real M01-M19 sources and regression tests
-  extension init|dev|test|build|template|validate|import-legacy|pack|sign|verify|inspect|registry|updates|trust|quarantine|emergency|recovery|ga|upgrade-source|installed|status|install|enable|disable|update|rollback|uninstall|host|cli|capabilities|permissions|permission-grant|permission-revoke|secrets|secret-set|secret-delete  NeverExtensions tooling
+  extension init|dev|test|build|template|validate|import-legacy|pack|sign|verify|inspect|registry|updates|trust|quarantine|emergency|recovery|ga|upgrade-source|installed|status|install|enable|disable|update|rollback|uninstall|host|cli|capabilities|permissions|permission-grant|permission-revoke|secrets|secret-set|secret-delete  Extensions tooling
   x <namespace> <command>            выполнить namespaced CLI extension через Extension Host Protocol
   plugin ...                      legacy compatibility alias
   server-bridge detect|install|enroll|status|upgrade|migrate-v3|rollback|host  Zero-Patch provisioning + host supervisor

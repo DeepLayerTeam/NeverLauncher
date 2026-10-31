@@ -21,13 +21,13 @@ certification_exe_suffix() {
 certification_prepare_windows_sensor() {
   local target_os="$1" root="$2" runtime_bin="$3"
   [[ "$target_os" == "windows" ]] || return 0
-  local sensor_manifest="$root/runtime/neverguard-sensor/Cargo.toml"
-  local sensor_dll="$root/runtime/neverguard-sensor/target/debug/neverguard_sensor.dll"
-  local destination="$(dirname "$runtime_bin")/neverguard-sensor.dll"
+  local sensor_manifest="$root/runtime/guard-sensor/Cargo.toml"
+  local sensor_dll="$root/runtime/guard-sensor/target/debug/guard_sensor.dll"
+  local destination="$(dirname "$runtime_bin")/guard-sensor.dll"
   cargo build --quiet --manifest-path "$sensor_manifest" --lib
-  [[ -s "$sensor_dll" ]] || { echo "[certification] built NeverGuard Sensor DLL missing: $sensor_dll" >&2; return 1; }
+  [[ -s "$sensor_dll" ]] || { echo "[certification] built Guard Sensor DLL missing: $sensor_dll" >&2; return 1; }
   cp "$sensor_dll" "$destination"
-  [[ -s "$destination" ]] || { echo "[certification] NeverGuard Sensor DLL copy failed" >&2; return 1; }
+  [[ -s "$destination" ]] || { echo "[certification] Guard Sensor DLL copy failed" >&2; return 1; }
 }
 
 certification_run_client() {
@@ -54,7 +54,7 @@ certification_run_client() {
       "$runtime_bin" "$@" > "$output" || second_rc=$?
       # Сохраняйте второй отчёт, даже если нативный процесс снова завершился с ошибкой;
       # никогда не оставляйте старый успешный retry.json как свидетельство неудачного запуска.
-      python3 - "$output" "${output%.json}.first-attempt.json" "$(dirname "$output")/certification-retry.json" <<'PYRETRY' 
+      python3 - "$output" "${output%.json}.first-attempt.json" "$(dirname "$output")/certification-retry.json" <<'PYRETRY'
 import hashlib, json, sys
 last, first, output = sys.argv[1:]
 with open(first, 'rb') as f:

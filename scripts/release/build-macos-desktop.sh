@@ -27,7 +27,7 @@ fi
 rustup target add aarch64-apple-darwin x86_64-apple-darwin
 for target in aarch64-apple-darwin x86_64-apple-darwin; do
   cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
-  cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bin neverguard
+  cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bin guard
 done
 
 PACKAGE_ROOT="${OUT_DIR}/macos-desktop-package"
@@ -41,10 +41,10 @@ lipo -create \
   "${ROOT_DIR}/apps/desktop/src-tauri/target/x86_64-apple-darwin/release/neverlauncher-desktop" \
   -output "${MACOS_DIR}/neverlauncher-desktop"
 lipo -create \
-  "${ROOT_DIR}/runtime/neverruntime/target/aarch64-apple-darwin/release/neverguard" \
-  "${ROOT_DIR}/runtime/neverruntime/target/x86_64-apple-darwin/release/neverguard" \
-  -output "${MACOS_DIR}/neverguard"
-chmod 0755 "${MACOS_DIR}/neverlauncher-desktop" "${MACOS_DIR}/neverguard"
+  "${ROOT_DIR}/runtime/neverruntime/target/aarch64-apple-darwin/release/guard" \
+  "${ROOT_DIR}/runtime/neverruntime/target/x86_64-apple-darwin/release/guard" \
+  -output "${MACOS_DIR}/guard"
+chmod 0755 "${MACOS_DIR}/neverlauncher-desktop" "${MACOS_DIR}/guard"
 
 cat > "${APP}/Contents/Info.plist" <<EOF_PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -67,12 +67,12 @@ if [[ "${MODE}" == "production" ]]; then TIMESTAMP_ARG="--timestamp"; else TIMES
 
 # Сначала подпишите вложенные исполняемые файлы. Затем окончательные подписанные байты
 # закрепляются в манифесте пакета, а внешняя подпись приложения защищает сам манифест.
-codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher.guard "${MACOS_DIR}/neverguard"
+codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher.guard "${MACOS_DIR}/guard"
 codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${MACOS_DIR}/neverlauncher-desktop"
 DESKTOP_HASH="$(shasum -a 256 "${MACOS_DIR}/neverlauncher-desktop" | awk '{print $1}')"
-GUARD_HASH="$(shasum -a 256 "${MACOS_DIR}/neverguard" | awk '{print $1}')"
+GUARD_HASH="$(shasum -a 256 "${MACOS_DIR}/guard" | awk '{print $1}')"
 DESKTOP_SIZE="$(stat -f '%z' "${MACOS_DIR}/neverlauncher-desktop")"
-GUARD_SIZE="$(stat -f '%z' "${MACOS_DIR}/neverguard")"
+GUARD_SIZE="$(stat -f '%z' "${MACOS_DIR}/guard")"
 
 cat > "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json" <<EOF_MANIFEST
 {
@@ -98,7 +98,7 @@ chmod 0644 "${APP}/Contents/Info.plist" "${RES_DIR}/MACOS_PACKAGE_MANIFEST.json"
 codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" "${APP}"
 codesign --verify --deep --strict --verbose=2 "${APP}"
 if [[ "${MODE}" == "production" ]]; then
-  for signed in "${MACOS_DIR}/neverguard" "${MACOS_DIR}/neverlauncher-desktop"; do
+  for signed in "${MACOS_DIR}/guard" "${MACOS_DIR}/neverlauncher-desktop"; do
     codesign -dv --verbose=4 "${signed}" 2>&1 | grep -F "TeamIdentifier=${TEAM_ID}" >/dev/null || { echo "signing team mismatch for ${signed}" >&2; exit 1; }
     codesign -dv --verbose=4 "${signed}" 2>&1 | grep -E 'flags=.*runtime' >/dev/null || { echo "Hardened Runtime flag missing for ${signed}" >&2; exit 1; }
   done
@@ -125,9 +125,9 @@ SIGNING_MODE="adhoc-development"
 # манифест защищается подписью пакета и связью code-signing с внешней
 # политикой выпуска, чтобы избежать циклического самохеширования.
 DESKTOP_HASH="$(shasum -a 256 "${MACOS_DIR}/neverlauncher-desktop" | awk '{print $1}')"
-GUARD_HASH="$(shasum -a 256 "${MACOS_DIR}/neverguard" | awk '{print $1}')"
+GUARD_HASH="$(shasum -a 256 "${MACOS_DIR}/guard" | awk '{print $1}')"
 DESKTOP_SIZE="$(stat -f '%z' "${MACOS_DIR}/neverlauncher-desktop")"
-GUARD_SIZE="$(stat -f '%z' "${MACOS_DIR}/neverguard")"
+GUARD_SIZE="$(stat -f '%z' "${MACOS_DIR}/guard")"
 cat > "${OUT_DIR}/MACOS_PACKAGE_MANIFEST.json" <<EOF_FINAL_MANIFEST
 {
   "schemaVersion":"1.0",
@@ -151,10 +151,10 @@ cat > "${OUT_DIR}/GUARD_RELEASE_ALLOWLIST_MACOS.json" <<EOF_ALLOW
 {"schemaVersion":"2.0","releases":{"${VERSION}":{"protocolVersion":4,"platforms":{"macos":{"signingMode":"${SIGNING_MODE}","artifacts":[{"guardSha256":"${GUARD_HASH}","launcherSha256":"${DESKTOP_HASH}"}]}}}}}
 EOF_ALLOW
 cp "${MACOS_DIR}/neverlauncher-desktop" "${OUT_DIR}/neverlauncher-desktop-macos-universal"
-cp "${MACOS_DIR}/neverguard" "${OUT_DIR}/neverguard-macos-universal"
+cp "${MACOS_DIR}/guard" "${OUT_DIR}/guard-macos-universal"
 FINAL_ZIP="${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
 rm -f "${FINAL_ZIP}"
 cp "${TMP_ZIP}" "${FINAL_ZIP}"
 [[ "${MODE}" == production ]] && rm -f "${TMP_ZIP}"
-shasum -a 256 "${FINAL_ZIP}" "${OUT_DIR}/neverlauncher-desktop-macos-universal" "${OUT_DIR}/neverguard-macos-universal"
+shasum -a 256 "${FINAL_ZIP}" "${OUT_DIR}/neverlauncher-desktop-macos-universal" "${OUT_DIR}/guard-macos-universal"
 echo "macOS ${MODE} package created: ${FINAL_ZIP}"

@@ -15,22 +15,22 @@ extern "system" {
 
 #[no_mangle]
 #[inline(never)]
-pub extern "C" fn neverguard_memory_probe_target() -> u32 {
+pub extern "C" fn guard_memory_probe_target() -> u32 {
     0x4E47_4D49
 }
 
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn JNI_OnLoad(_vm: *mut c_void, _reserved: *mut c_void) -> i32 {
-    // Дождитесь, пока NeverGuard заметит и зафиксирует исходное состояние нового
+    // Дождитесь, пока Guard заметит и зафиксирует исходное состояние нового
     // образа. Затем фикстура изменяет неиспользуемый байт экспортируемого кода и
     // восстанавливает исходную защиту страницы. Memory Integrity должна обнаружить
     // изменение при следующем хешировании исполняемого образа и строго отказать.
     let spawned = thread::Builder::new()
-        .name("neverguard-memory-tamper-probe".to_string())
+        .name("guard-memory-tamper-probe".to_string())
         .spawn(|| {
             thread::sleep(Duration::from_millis(3200));
-            let target = neverguard_memory_probe_target as *mut c_void;
+            let target = guard_memory_probe_target as *mut c_void;
             let mut old_protect = 0u32;
             if unsafe { VirtualProtect(target, 1, PAGE_EXECUTE_READWRITE, &mut old_protect) } == 0 {
                 return;

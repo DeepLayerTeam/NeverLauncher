@@ -17,7 +17,7 @@ type HmacSha256 = Hmac<Sha256>;
 
 pub const CONTINUOUS_GUARD_VERSION: u32 = 1;
 const CONTINUOUS_GUARD_ACK_MAGIC: &[u8; 8] = b"NGCGAK01";
-const CONTINUOUS_GUARD_ACK_DOMAIN: &[u8] = b"neverguard-continuous-guard-ack-v1";
+const CONTINUOUS_GUARD_ACK_DOMAIN: &[u8] = b"guard-continuous-guard-ack-v1";
 const CONTINUOUS_GUARD_ACK_PREFIX_LEN: usize = 64;
 const CONTINUOUS_GUARD_ACK_PACKET_LEN: usize = 96;
 // The Guard parent allows 15 seconds per authenticated event read. Under

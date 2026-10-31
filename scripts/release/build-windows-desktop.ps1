@@ -20,7 +20,7 @@ if ([string]::IsNullOrWhiteSpace($OutDir)) {
 }
 $OutDir = [System.IO.Path]::GetFullPath($OutDir)
 $RuntimeManifest = Join-Path $Root "runtime\neverruntime\Cargo.toml"
-$SensorManifest = Join-Path $Root "runtime\neverguard-sensor\Cargo.toml"
+$SensorManifest = Join-Path $Root "runtime\guard-sensor\Cargo.toml"
 $DesktopManifest = Join-Path $Root "apps\desktop\src-tauri\Cargo.toml"
 
 if ([string]::IsNullOrWhiteSpace($CodeSigningCertificateThumbprint)) {
@@ -222,24 +222,24 @@ try {
         New-Item -ItemType Directory -Force -Path $PackageDir | Out-Null
 
         Invoke-Checked { rustup target add $Target.RustTarget } "rustup target add $($Target.RustTarget)"
-        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $RuntimeManifest --bin neverguard --bin neverruntime } "NeverGuard/NeverRuntime $Arch release build"
-        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $SensorManifest } "NeverGuard Sensor $Arch release build"
+        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $RuntimeManifest --bin guard --bin neverruntime } "Guard/NeverRuntime $Arch release build"
+        Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $SensorManifest } "Guard Sensor $Arch release build"
         Invoke-Checked { cargo build --release --target $Target.RustTarget --manifest-path $DesktopManifest } "Desktop $Arch native release build"
 
         $DesktopSource = Join-Path $Root "apps\desktop\src-tauri\target\$($Target.RustTarget)\release\neverlauncher-desktop.exe"
-        $GuardSource = Join-Path $Root "runtime\neverruntime\target\$($Target.RustTarget)\release\neverguard.exe"
+        $GuardSource = Join-Path $Root "runtime\neverruntime\target\$($Target.RustTarget)\release\guard.exe"
         $RuntimeSource = Join-Path $Root "runtime\neverruntime\target\$($Target.RustTarget)\release\neverruntime.exe"
-        $SensorSource = Join-Path $Root "runtime\neverguard-sensor\target\$($Target.RustTarget)\release\neverguard_sensor.dll"
+        $SensorSource = Join-Path $Root "runtime\guard-sensor\target\$($Target.RustTarget)\release\guard_sensor.dll"
         if (-not (Test-Path $DesktopSource -PathType Leaf)) { throw "Desktop $Arch artifact missing: $DesktopSource" }
-        if (-not (Test-Path $GuardSource -PathType Leaf)) { throw "NeverGuard $Arch artifact missing: $GuardSource" }
+        if (-not (Test-Path $GuardSource -PathType Leaf)) { throw "Guard $Arch artifact missing: $GuardSource" }
         if (-not (Test-Path $RuntimeSource -PathType Leaf)) { throw "NeverRuntime $Arch artifact missing: $RuntimeSource" }
-        if (-not (Test-Path $SensorSource -PathType Leaf)) { throw "NeverGuard Sensor $Arch artifact missing: $SensorSource" }
+        if (-not (Test-Path $SensorSource -PathType Leaf)) { throw "Guard Sensor $Arch artifact missing: $SensorSource" }
 
         $DesktopPackageName = "neverlauncher-desktop.exe"
         $DesktopPackagePath = Join-Path $PackageDir $DesktopPackageName
-        $GuardPackagePath = Join-Path $PackageDir "neverguard.exe"
+        $GuardPackagePath = Join-Path $PackageDir "guard.exe"
         $RuntimePackagePath = Join-Path $PackageDir "neverruntime.exe"
-        $SensorPackagePath = Join-Path $PackageDir "neverguard-sensor.dll"
+        $SensorPackagePath = Join-Path $PackageDir "guard-sensor.dll"
         Copy-Item $DesktopSource $DesktopPackagePath -Force
         Copy-Item $GuardSource $GuardPackagePath -Force
         Copy-Item $RuntimeSource $RuntimePackagePath -Force
@@ -278,9 +278,9 @@ try {
         }
 
         $DesktopRecord = Get-ArtifactRecord $DesktopPackagePath $DesktopPackageName "desktop-launcher" $Arch $Target.MachineText $DesktopSignature $SignedProduction
-        $GuardRecord = Get-ArtifactRecord $GuardPackagePath "neverguard.exe" "guard" $Arch $Target.MachineText $GuardSignature $SignedProduction
+        $GuardRecord = Get-ArtifactRecord $GuardPackagePath "guard.exe" "guard" $Arch $Target.MachineText $GuardSignature $SignedProduction
         $RuntimeRecord = Get-ArtifactRecord $RuntimePackagePath "neverruntime.exe" "runtime" $Arch $Target.MachineText $RuntimeSignature $SignedProduction
-        $SensorRecord = Get-ArtifactRecord $SensorPackagePath "neverguard-sensor.dll" "sensor" $Arch $Target.MachineText $SensorSignature $SignedProduction
+        $SensorRecord = Get-ArtifactRecord $SensorPackagePath "guard-sensor.dll" "sensor" $Arch $Target.MachineText $SensorSignature $SignedProduction
         $CliPackagePath = Join-Path $PackageDir "neverlauncher-cli.exe"
         Copy-Item $CliRootPath $CliPackagePath -Force
         $CliPackageSignature = if ($SignedProduction) { Get-AuthenticodeSignature $CliPackagePath } else { $null }
@@ -293,18 +293,18 @@ try {
             rustTarget = $Target.RustTarget
             peMachine = $Target.MachineText
             neverGuardProtocolVersion = 4
-            processBoundary = "separate-neverguard-executable"
+            processBoundary = "separate-guard-executable"
             authenticatedIpc = "windows-named-pipe+current-user-system-acl+hmac-sha256-v4"
             windowsProductionHardeningVersion = 1
             securePipeAcl = "LocalSystem+current-user"
             launcherLifetimeBoundary = "job-object-kill-on-close"
-            packageVerification = "sha256+pe-machine+authenticode-before-neverguard-spawn"
+            packageVerification = "sha256+pe-machine+authenticode-before-guard-spawn"
             sensorVerification = "sha256+pe-machine+authenticode-before-agentpath"
             authenticodeRequired = $SignedProduction
             signingMode = $(if ($SignedProduction) { "authenticode-rfc3161" } else { "unsigned-development" })
             signerThumbprint = $(if ($SignedProduction) { $SigningContext.Certificate.Thumbprint.ToLowerInvariant() } else { "" })
             timestampServer = $(if ($SignedProduction) { $TimestampServer } else { "" })
-            requiredAdjacentArtifacts = @("neverguard.exe", "neverguard-sensor.dll", "neverruntime.exe", "neverlauncher-cli.exe")
+            requiredAdjacentArtifacts = @("guard.exe", "guard-sensor.dll", "neverruntime.exe", "neverlauncher-cli.exe")
             artifacts = @($DesktopRecord, $GuardRecord, $SensorRecord, $RuntimeRecord, $CliPackageRecord)
         }
         $PackageManifestPath = Join-Path $PackageDir "WINDOWS_PACKAGE_MANIFEST.json"
@@ -325,9 +325,9 @@ try {
             trustMode = $(if ($SignedProduction) { "authenticode-rfc3161" } else { "unsigned-development" })
             components = @(
                 [ordered]@{ component = "desktop"; sourcePath = "neverlauncher-desktop.exe"; targetPath = "neverlauncher-desktop.exe"; sha256 = $DesktopRecord.sha256; size = $DesktopRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $DesktopRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $DesktopRecord.timestampSignerThumbprint } else { "" }) },
-                [ordered]@{ component = "guard"; sourcePath = "neverguard.exe"; targetPath = "neverguard.exe"; sha256 = $GuardRecord.sha256; size = $GuardRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $GuardRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $GuardRecord.timestampSignerThumbprint } else { "" }) },
+                [ordered]@{ component = "guard"; sourcePath = "guard.exe"; targetPath = "guard.exe"; sha256 = $GuardRecord.sha256; size = $GuardRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $GuardRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $GuardRecord.timestampSignerThumbprint } else { "" }) },
                 [ordered]@{ component = "runtime"; sourcePath = "neverruntime.exe"; targetPath = "neverruntime.exe"; sha256 = $RuntimeRecord.sha256; size = $RuntimeRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $RuntimeRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $RuntimeRecord.timestampSignerThumbprint } else { "" }) },
-                [ordered]@{ component = "sensor"; sourcePath = "neverguard-sensor.dll"; targetPath = "neverguard-sensor.dll"; sha256 = $SensorRecord.sha256; size = $SensorRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $SensorRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $SensorRecord.timestampSignerThumbprint } else { "" }) }
+                [ordered]@{ component = "sensor"; sourcePath = "guard-sensor.dll"; targetPath = "guard-sensor.dll"; sha256 = $SensorRecord.sha256; size = $SensorRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $SensorRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $SensorRecord.timestampSignerThumbprint } else { "" }) }
             )
             supportFiles = @(
                 [ordered]@{ component = "updater"; sourcePath = "neverlauncher-cli.exe"; targetPath = "neverlauncher-cli.exe"; sha256 = $CliPackageRecord.sha256; size = $CliPackageRecord.size; executable = $true; signerThumbprint = $(if ($SignedProduction) { $CliPackageRecord.signerThumbprint } else { "" }); timestampSignerThumbprint = $(if ($SignedProduction) { $CliPackageRecord.timestampSignerThumbprint } else { "" }) },
@@ -350,9 +350,9 @@ try {
         if (-not (Test-Path $ZipPath -PathType Leaf)) { throw "Windows $Arch package was not created: $ZipPath" }
 
         $DesktopRootName = "neverlauncher-desktop-windows-$Arch.exe"
-        $GuardRootName = "neverguard-windows-$Arch.exe"
+        $GuardRootName = "guard-windows-$Arch.exe"
         $RuntimeRootName = "neverruntime-windows-$Arch.exe"
-        $SensorRootName = "neverguard-sensor-windows-$Arch.dll"
+        $SensorRootName = "guard-sensor-windows-$Arch.dll"
         $DesktopRootPath = Join-Path $OutDir $DesktopRootName
         $GuardRootPath = Join-Path $OutDir $GuardRootName
         $RuntimeRootPath = Join-Path $OutDir $RuntimeRootName
@@ -417,10 +417,10 @@ try {
     # сертификации со старым контрактом схемы и платформы;
     # намеренно исключён из DELIVERY_MANIFEST.json для 0.15.2+.
     $LegacyDesktopRoot = Join-Path $OutDir "neverlauncher-desktop-windows-amd64.exe"
-    $LegacyGuardRoot = Join-Path $OutDir "neverguard-windows-amd64.exe"
+    $LegacyGuardRoot = Join-Path $OutDir "guard-windows-amd64.exe"
     $LegacyCliRoot = Join-Path $OutDir "neverlauncher-cli-windows-amd64.exe"
     Copy-Item (Join-Path $OutDir "neverlauncher-desktop-windows-x64.exe") $LegacyDesktopRoot -Force
-    Copy-Item (Join-Path $OutDir "neverguard-windows-x64.exe") $LegacyGuardRoot -Force
+    Copy-Item (Join-Path $OutDir "guard-windows-x64.exe") $LegacyGuardRoot -Force
     Copy-Item (Join-Path $OutDir "neverlauncher-cli-windows-x64.exe") $LegacyCliRoot -Force
 
     $LegacyPackageDir = Join-Path $OutDir "windows-amd64-guard-ci-package"
@@ -428,7 +428,7 @@ try {
     New-Item -ItemType Directory -Force -Path $LegacyPackageDir | Out-Null
     $LegacyDesktopName = "neverlauncher-desktop-$Version-windows-amd64.exe"
     $LegacyDesktopPackage = Join-Path $LegacyPackageDir $LegacyDesktopName
-    $LegacyGuardPackage = Join-Path $LegacyPackageDir "neverguard.exe"
+    $LegacyGuardPackage = Join-Path $LegacyPackageDir "guard.exe"
     Copy-Item $LegacyDesktopRoot $LegacyDesktopPackage -Force
     Copy-Item $LegacyGuardRoot $LegacyGuardPackage -Force
     $LegacyDesktopItem = Get-Item $LegacyDesktopPackage
@@ -440,17 +440,17 @@ try {
         productVersion = $Version
         platform = "windows-amd64"
         neverGuardProtocolVersion = 4
-        processBoundary = "separate-neverguard-executable"
+        processBoundary = "separate-guard-executable"
         authenticatedIpc = "windows-named-pipe+current-user-system-acl+hmac-sha256-v4"
         windowsProductionHardeningVersion = 1
         securePipeAcl = "LocalSystem+current-user"
         launcherLifetimeBoundary = "job-object-kill-on-close"
-        packageVerification = "sha256+pe-machine+authenticode-before-neverguard-spawn"
+        packageVerification = "sha256+pe-machine+authenticode-before-guard-spawn"
         authenticodeRequired = $SignedProduction
-        requiredAdjacentArtifacts = @("neverguard.exe")
+        requiredAdjacentArtifacts = @("guard.exe")
         artifacts = @(
             [ordered]@{ name = $LegacyDesktopName; size = $LegacyDesktopItem.Length; sha256 = $LegacyDesktopHash },
-            [ordered]@{ name = "neverguard.exe"; size = $LegacyGuardItem.Length; sha256 = $LegacyGuardHash }
+            [ordered]@{ name = "guard.exe"; size = $LegacyGuardItem.Length; sha256 = $LegacyGuardHash }
         )
     }
     Write-JsonNoBom (Join-Path $LegacyPackageDir "WINDOWS_PACKAGE_MANIFEST.json") $LegacyManifest

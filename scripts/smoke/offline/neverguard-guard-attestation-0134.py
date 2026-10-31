@@ -24,143 +24,207 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 4):
-    raise SystemExit(f"NeverGuard Guard Attestation gate requires >=0.13.4, got {version}")
+    raise SystemExit(f"Guard Guard Attestation gate requires >=0.13.4, got {version}")
 
 attestation = read("runtime/neverruntime/src/attestation.rs")
-require(attestation, [
-    'neverguard/windows-guard-attestation/v1',
-    'NeverLauncher Guard Attestation Core v1',
-    'challenge_sha256',
-    'recompute_attestation_sha256',
-    'process_policy',
-    'evidence_sha256',
-    'session_proof',
-], "NeverGuard challenge-bound attestation")
+require(
+    attestation,
+    [
+        "guard/windows-guard-attestation/v1",
+        "NeverLauncher Guard Attestation Core v1",
+        "challenge_sha256",
+        "recompute_attestation_sha256",
+        "process_policy",
+        "evidence_sha256",
+        "session_proof",
+    ],
+    "Guard challenge-bound attestation",
+)
 
 guard = read("runtime/neverruntime/src/guard_ipc.rs")
-require(guard, [
-    'NEVERGUARD_PROTOCOL_VERSION: u32 = 4',
-    'send_command_with_payload',
-    '"guard-attestation"',
-    'GuardAttestationRequest',
-    'NeverGuardRemoteAttestation',
-    'attestation_session_proof',
-    'validate_remote_attestation',
-], "NeverGuard authenticated attestation IPC")
+require(
+    guard,
+    [
+        "NEVERGUARD_PROTOCOL_VERSION: u32 = 4",
+        "send_command_with_payload",
+        '"guard-attestation"',
+        "GuardAttestationRequest",
+        "GuardRemoteAttestation",
+        "attestation_session_proof",
+        "validate_remote_attestation",
+    ],
+    "Guard authenticated attestation IPC",
+)
 
 desktop = read("apps/desktop/src-tauri/src/main.rs")
-require(desktop, [
-    'neverguard_guard_attestation',
-    '.remote_attestation(',
-    'sign_guard_attestation',
-    'hardware_bound',
-], "Desktop Guard Attestation command")
+require(
+    desktop,
+    [
+        "guard_guard_attestation",
+        ".remote_attestation(",
+        "sign_guard_attestation",
+        "hardware_bound",
+    ],
+    "Desktop Guard Attestation command",
+)
 
 device_keys = read("apps/desktop/src-tauri/src/device_keys.rs")
-require(device_keys, [
-    'NeverLauncher Guard Attestation Device Binding v1',
-    'purpose=guard-attest',
-    'sign_guard_attestation',
-    'attestation-sha256=',
-    'evidence-sha256=',
-], "Hardware device-key Guard binding")
+require(
+    device_keys,
+    [
+        "NeverLauncher Guard Attestation Device Binding v1",
+        "purpose=guard-attest",
+        "sign_guard_attestation",
+        "attestation-sha256=",
+        "evidence-sha256=",
+    ],
+    "Hardware device-key Guard binding",
+)
 
 frontend = read("apps/desktop/src/main.tsx")
-require(frontend, [
-    'createGuardLaunchTicket',
-    '/guard-attest/begin',
-    'neverguard_guard_attestation',
-    '/guard-attest/complete',
-    'guardAttestationTicket',
-], "Desktop end-to-end Guard verification flow")
+require(
+    frontend,
+    [
+        "createGuardLaunchTicket",
+        "/guard-attest/begin",
+        "guard_guard_attestation",
+        "/guard-attest/complete",
+        "guardAttestationTicket",
+    ],
+    "Desktop end-to-end Guard verification flow",
+)
 
-guard_purpose_migration_api = read("services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
-guard_purpose_migration_cli = read("cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql")
+guard_purpose_migration_api = read(
+    "services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql"
+)
+guard_purpose_migration_cli = read(
+    "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql"
+)
 if guard_purpose_migration_api != guard_purpose_migration_cli:
     raise SystemExit("0.16.1 API/CLI Guard challenge-purpose migration differs")
-require(guard_purpose_migration_api, [
-    'device_challenges_purpose_check',
-    'guard-attest-v1',
-    'guard-launch-v1',
-    'key-rotate',
-    'key-recover',
-], "PostgreSQL Guard challenge-purpose schema")
+require(
+    guard_purpose_migration_api,
+    [
+        "device_challenges_purpose_check",
+        "guard-attest-v1",
+        "guard-launch-v1",
+        "key-rotate",
+        "key-recover",
+    ],
+    "PostgreSQL Guard challenge-purpose schema",
+)
 
 guard_migration_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
-require(guard_migration_e2e, [
-    '0031_guard_attestation_challenge_purposes_0161',
-    'dtmig-guard-attest',
-    'guard-attest-v1',
-    'dtmig-guard-launch',
-    'guard-launch-v1',
-    'guardPurposeMigrationSealed:true',
-], "PostgreSQL Guard challenge-purpose migration E2E")
+require(
+    guard_migration_e2e,
+    [
+        "0031_guard_attestation_challenge_purposes_0161",
+        "dtmig-guard-attest",
+        "guard-attest-v1",
+        "dtmig-guard-launch",
+        "guard-launch-v1",
+        "guardPurposeMigrationSealed:true",
+    ],
+    "PostgreSQL Guard challenge-purpose migration E2E",
+)
 
 backend = read("services/api/internal/httpapi/guard_attestation_0134.go")
-require(backend, [
-    'guardAttestationChallengeTTL0134',
-    'canonicalGuardAttestationTime0134',
-    'Truncate(time.Microsecond)',
-    'guardLaunchTicketTTL0134',
-    'SaveDeviceChallenge',
-    'ConsumeDeviceChallenge',
-    'validateGuardAttestation0134',
-    'verifyDeviceSignature0123',
-    'NeverGuard/Desktop release hash is not allowlisted',
-    'guard-launch-v1',
-    'consumeGuardLaunchTicket0134',
-    'isWindowsDevicePlatform0134',
-], "Backend Guard verification and anti-replay")
+require(
+    backend,
+    [
+        "guardAttestationChallengeTTL0134",
+        "canonicalGuardAttestationTime0134",
+        "Truncate(time.Microsecond)",
+        "guardLaunchTicketTTL0134",
+        "SaveDeviceChallenge",
+        "ConsumeDeviceChallenge",
+        "validateGuardAttestation0134",
+        "verifyDeviceSignature0123",
+        "Guard/Desktop release hash is not allowlisted",
+        "guard-launch-v1",
+        "consumeGuardLaunchTicket0134",
+        "isWindowsDevicePlatform0134",
+    ],
+    "Backend Guard verification and anti-replay",
+)
 
 minecraft = read("services/api/internal/httpapi/minecraft_auth_119.go")
-require(minecraft, [
-    'GuardAttestationTicket',
-    'guardAttestationRequiredForSession0134',
-    'consumeGuardLaunchTicket0134',
-], "Minecraft session Guard-ticket enforcement")
+require(
+    minecraft,
+    [
+        "GuardAttestationTicket",
+        "guardAttestationRequiredForSession0134",
+        "consumeGuardLaunchTicket0134",
+    ],
+    "Minecraft session Guard-ticket enforcement",
+)
 
 config = read("services/api/internal/config/config.go")
-require(config, [
-    'GuardReleaseAllowlistJSON',
-    'NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON',
-    'обязателен в production',
-], "Production release allowlist configuration")
+require(
+    config,
+    [
+        "GuardReleaseAllowlistJSON",
+        "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON",
+        "обязателен в production",
+    ],
+    "Production release allowlist configuration",
+)
 
 backend_test = read("services/api/internal/httpapi/guard_attestation_0134_test.go")
-require(backend_test, [
-    'TestGuardAttestationBackendVerificationAndOneTimeLaunchTicket0134',
-    'guardAttestationTicket',
-    'http.StatusCreated',
-    'http.StatusPreconditionFailed',
-    'TestGuardAttestationRejectsReleaseHashOutsideAllowlist0134',
-], "Backend Guard Attestation E2E tests")
+require(
+    backend_test,
+    [
+        "TestGuardAttestationBackendVerificationAndOneTimeLaunchTicket0134",
+        "guardAttestationTicket",
+        "http.StatusCreated",
+        "http.StatusPreconditionFailed",
+        "TestGuardAttestationRejectsReleaseHashOutsideAllowlist0134",
+    ],
+    "Backend Guard Attestation E2E tests",
+)
 
-integration = read("runtime/neverruntime/tests/neverguard_windows.rs")
-require(integration, [
-    '.remote_attestation(',
-    'NEVERGUARD_REMOTE_ATTESTATION_SCHEMA',
-    'attestation.attestation_sha256.len()',
-], "Windows NeverGuard remote-attestation integration test")
+integration = read("runtime/neverruntime/tests/guard_windows.rs")
+require(
+    integration,
+    [
+        ".remote_attestation(",
+        "NEVERGUARD_REMOTE_ATTESTATION_SCHEMA",
+        "attestation.attestation_sha256.len()",
+    ],
+    "Windows Guard remote-attestation integration test",
+)
 
 release = read("scripts/release/build-windows-desktop.ps1")
-require(release, [
-    'neverGuardProtocolVersion = 4',
-    'windows-named-pipe+current-user-system-acl+hmac-sha256-v4',
-    'GUARD_RELEASE_ALLOWLIST.json',
-    'guardSha256',
-    'launcherSha256',
-], "Windows release allowlist generation")
+require(
+    release,
+    [
+        "neverGuardProtocolVersion = 4",
+        "windows-named-pipe+current-user-system-acl+hmac-sha256-v4",
+        "GUARD_RELEASE_ALLOWLIST.json",
+        "guardSha256",
+        "launcherSha256",
+    ],
+    "Windows release allowlist generation",
+)
 
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
-if "neverguard-guard-attestation-0134.py" not in ci:
-    raise SystemExit("NeverGuard 0.13.4 Guard Attestation gate is not wired into CI")
-if "neverguard-guard-attestation-0134.py" not in preflight:
-    raise SystemExit("NeverGuard 0.13.4 Guard Attestation gate is not wired into release preflight")
-require(ci, [
-    'cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests',
-    'cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows',
-], "Windows Guard Attestation native CI")
+if "guard-guard-attestation-0134.py" not in ci:
+    raise SystemExit("Guard 0.13.4 Guard Attestation gate is not wired into CI")
+if "guard-guard-attestation-0134.py" not in preflight:
+    raise SystemExit(
+        "Guard 0.13.4 Guard Attestation gate is not wired into release preflight"
+    )
+require(
+    ci,
+    [
+        "cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests",
+        "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_windows",
+    ],
+    "Windows Guard Attestation native CI",
+)
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
-print(f"[NeverLauncher] NeverGuard Guard Attestation + Backend verification 0.13.4 gate OK: {version}")
+print(
+    f"[NeverLauncher] Guard Guard Attestation + Backend verification 0.13.4 gate OK: {version}"
+)

@@ -210,7 +210,7 @@ func (s Server) extensionInstall0204(w http.ResponseWriter, r *http.Request) {
 }
 func (s Server) extensionEnable0204(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
 		return
 	}
 	req, err := decodeLifecycleWrite0204(r)

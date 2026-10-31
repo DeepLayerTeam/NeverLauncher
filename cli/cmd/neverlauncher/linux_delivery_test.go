@@ -41,7 +41,7 @@ func writeLinuxTargetFixture0153(t *testing.T, dir, ver, arch string) {
 		"cli":              "neverlauncher/neverlauncher-cli",
 		"api":              "neverlauncher/neverlauncher-api",
 		"desktop-launcher": "neverlauncher/neverlauncher-desktop",
-		"guard":            "neverlauncher/neverguard",
+		"guard":            "neverlauncher/guard",
 		"runtime":          "neverlauncher/neverruntime",
 	}
 	components := make([]string, 0, len(packagePaths))
@@ -155,7 +155,7 @@ func TestLinuxProductionEvidence0153VerifiesBothArchitectures(t *testing.T) {
 func TestLinuxProductionEvidence0153RejectsTamperedArtifact(t *testing.T) {
 	ver := "0.15.3"
 	dir := prepareLinuxBundleFixture0153(t, ver)
-	path := filepath.Join(dir, "neverguard-linux-arm64")
+	path := filepath.Join(dir, "guard-linux-arm64")
 	if err := os.WriteFile(path, fakeLinuxELF0153("arm64", 99), 0o755); err != nil {
 		t.Fatal(err)
 	}

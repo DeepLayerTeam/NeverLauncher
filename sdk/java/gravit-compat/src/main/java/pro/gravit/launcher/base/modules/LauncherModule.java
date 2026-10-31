@@ -1,11 +1,11 @@
 package pro.gravit.launcher.base.modules;
 import java.util.*;
 
-/** Gravit module lifecycle/event API subset, backed by a real NeverExtensions host. */
+/** Gravit module lifecycle/event API subset, backed by a real Extensions host. */
 public abstract class LauncherModule {
     public static class Event {
         public boolean isCancel(){return false;}
-        public void cancel(){throw new UnsupportedOperationException("Gravit cancellation is not mapped to NeverExtensions async events");}
+        public void cancel(){throw new UnsupportedOperationException("Gravit cancellation is not mapped to Extensions async events");}
     }
     @FunctionalInterface public interface EventHandler<T extends Event> { void event(T e); }
     public enum InitStatus { CREATED, PRE_INIT_WAIT, PRE_INIT, INIT_WAIT, INIT, FINISH }

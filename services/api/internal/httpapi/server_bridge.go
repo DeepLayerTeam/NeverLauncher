@@ -306,7 +306,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 		req.IdentityRealm = "official"
 		required, guardErr := s.guardAttestationRequiredForSession0134(claims)
 		if guardErr != nil {
-			writeError(w, http.StatusPreconditionFailed, "NeverGuard policy unavailable")
+			writeError(w, http.StatusPreconditionFailed, "Guard policy unavailable")
 			return
 		}
 		var snapshot *minecraftIntegritySnapshot0135
@@ -345,7 +345,7 @@ func (s Server) sessionJoin(w http.ResponseWriter, r *http.Request) {
 	}
 	var verifiedGuardTicket model.DeviceChallenge
 	if planPolicyRequired02412() && !continuousRequired {
-		writeError(w, http.StatusPreconditionFailed, "verified plan policy requires continuous NeverGuard attestation")
+		writeError(w, http.StatusPreconditionFailed, "verified plan policy requires continuous Guard attestation")
 		return
 	}
 	if continuousRequired {

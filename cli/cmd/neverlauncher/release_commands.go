@@ -319,7 +319,7 @@ func releaseDoctor() error {
 		"scripts/guard_ci/matrix.py",
 		"scripts/guard_ci/stage_release.py",
 		"scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py",
-		"scripts/smoke/offline/neverguard-release-0140.py",
+		"scripts/smoke/offline/guard-release-0140.py",
 		"scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py",
 		"scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py",
 		"scripts/smoke/offline/signed-windows-x64-arm64-0152.py",
@@ -333,7 +333,7 @@ func releaseDoctor() error {
 		"scripts/smoke/offline/migration-stabilization-01510.py",
 		"scripts/smoke/offline/production-release-candidate-01511.py",
 		"scripts/smoke/offline/production-delivery-release-0160.py",
-		"scripts/smoke/offline/neverguard-windows-protection-rc-01812.py",
+		"scripts/smoke/offline/guard-windows-protection-rc-01812.py",
 		".github/workflows/public-production-delivery.yml",
 		"scripts/release/managed-jre-distribution.py",
 		"scripts/release/build-linux-production.sh",
@@ -381,7 +381,7 @@ func releaseDoctor() error {
 		"device-trust-targets":           {"python3", "scripts/device_trust/matrix.py", "validate", "--targets", "device-trust/targets.json"},
 		"guard-ci-targets":               {"python3", "scripts/guard_ci/matrix.py", "validate", "--targets", "guard-ci/targets.json"},
 		"guard-stabilization":            {"python3", "scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py"},
-		"neverguard-release":             {"python3", "scripts/smoke/offline/neverguard-release-0140.py"},
+		"guard-release":             {"python3", "scripts/smoke/offline/guard-release-0140.py"},
 		"serverbridge-identity":          {"python3", "scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py"},
 		"delivery-manifest":              {"python3", "scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"},
 		"windows-dual-signing":           {"python3", "scripts/smoke/offline/signed-windows-x64-arm64-0152.py"},
@@ -394,7 +394,7 @@ func releaseDoctor() error {
 		"migration-stabilization":        {"python3", "scripts/smoke/offline/migration-stabilization-01510.py"},
 		"production-release-candidate":   {"python3", "scripts/smoke/offline/production-release-candidate-01511.py"},
 		"production-delivery-release":    {"python3", "scripts/smoke/offline/production-delivery-release-0160.py"},
-		"windows-protection-rc":          {"python3", "scripts/smoke/offline/neverguard-windows-protection-rc-01812.py"},
+		"windows-protection-rc":          {"python3", "scripts/smoke/offline/guard-windows-protection-rc-01812.py"},
 	} {
 		cmd := exec.Command(command[0], command[1:]...)
 		output, err := cmd.CombinedOutput()
@@ -1321,14 +1321,14 @@ func releaseArtifacts(ver string) []string {
 			"neverlauncher-cli-windows-arm64.exe",
 			"neverlauncher-desktop-windows-x64.exe",
 			"neverlauncher-desktop-windows-arm64.exe",
-			"neverguard-windows-x64.exe",
-			"neverguard-windows-arm64.exe",
+			"guard-windows-x64.exe",
+			"guard-windows-arm64.exe",
 		)
 		if componentTransactionalUpdateRequired0157(ver) {
 			artifacts = append(artifacts, "neverruntime-windows-x64.exe", "neverruntime-windows-arm64.exe")
 		}
-		if neverguardSensorRequired0182(ver) {
-			artifacts = append(artifacts, "neverguard-sensor-windows-x64.dll", "neverguard-sensor-windows-arm64.dll")
+		if guardSensorRequired0182(ver) {
+			artifacts = append(artifacts, "guard-sensor-windows-x64.dll", "guard-sensor-windows-arm64.dll")
 		}
 		artifacts = append(artifacts,
 			"neverlauncher-desktop-"+ver+"-windows-x64.zip",
@@ -1406,10 +1406,10 @@ func releaseDescription(ver string) string {
 		extra += "\n- начиная с 0.15.1 подписанный DELIVERY_MANIFEST.json фиксирует SHA-256/size каждого delivery artifact и каноническую platform/architecture пару (windows/linux/macos + x64/arm64/universal); release verify повторно проверяет inventory fail-closed;"
 	}
 	if windowsSigningRequired0152(ver) {
-		extra += "\n- начиная с 0.15.2 publish-check требует реальные Windows x64+ARM64 PE для CLI/Desktop/NeverGuard, Authenticode SHA-256 + RFC3161 timestamp и WINDOWS_SIGNING_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json и package ZIP;"
+		extra += "\n- начиная с 0.15.2 publish-check требует реальные Windows x64+ARM64 PE для CLI/Desktop/Guard, Authenticode SHA-256 + RFC3161 timestamp и WINDOWS_SIGNING_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json и package ZIP;"
 	}
 	if linuxProductionRequired0153(ver) {
-		extra += "\n- начиная с 0.15.3 publish-check требует нативно собранные Linux x64+ARM64 CLI/API/Desktop/NeverGuard/NeverRuntime, проверяет ELF e_machine, deterministic tar.gz, embedded package manifests и их привязку к DELIVERY_MANIFEST.json;"
+		extra += "\n- начиная с 0.15.3 publish-check требует нативно собранные Linux x64+ARM64 CLI/API/Desktop/Guard/NeverRuntime, проверяет ELF e_machine, deterministic tar.gz, embedded package manifests и их привязку к DELIVERY_MANIFEST.json;"
 	}
 	if macOSProductionRequired0154(ver) {
 		extra += "\n- начиная с 0.15.4 publish-check требует отдельные macOS x64+ARM64 Mach-O, Developer ID Application + Hardened Runtime, Accepted Apple notarization, stapled ticket, Gatekeeper acceptance и MACOS_NOTARIZATION_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json;"

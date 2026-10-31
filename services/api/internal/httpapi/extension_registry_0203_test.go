@@ -29,7 +29,7 @@ func registryHTTPServer0203(t *testing.T) (http.Handler, *repository.MemoryRepos
 	return handler, repo, store
 }
 
-func TestNeverExtensionsRegistryHTTP0203(t *testing.T) {
+func TestExtensionsRegistryHTTP0203(t *testing.T) {
 	h, _, _ := registryHTTPServer0203(t)
 	token := extensionAdminToken0201(t, h)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/extension-registry/publishers", strings.NewReader(`{"id":"deeplayer.team","name":"DeepLayer Team"}`))
@@ -64,7 +64,7 @@ func TestNeverExtensionsRegistryHTTP0203(t *testing.T) {
 	}
 }
 
-func TestNeverExtensionsRegistryInstallRejectsUnverifiedStorage0203(t *testing.T) {
+func TestExtensionsRegistryInstallRejectsUnverifiedStorage0203(t *testing.T) {
 	h, repo, store := registryHTTPServer0203(t)
 	token := extensionAdminToken0201(t, h)
 	ctx := context.Background()
@@ -84,7 +84,7 @@ func TestNeverExtensionsRegistryInstallRejectsUnverifiedStorage0203(t *testing.T
 	badBytes := []byte("not a signed nlext")
 	badDigest := sha256.Sum256(badBytes)
 	sha := hex.EncodeToString(badDigest[:])
-	storageProject, storageVersion, storagePath := "neverextensions-registry", "example.registry-extension-1.0.0", sha+".nlext"
+	storageProject, storageVersion, storagePath := "extensions-registry", "example.registry-extension-1.0.0", sha+".nlext"
 	if _, _, err := store.Save(storageProject, storageVersion, storagePath, bytes.NewReader(badBytes)); err != nil {
 		t.Fatal(err)
 	}

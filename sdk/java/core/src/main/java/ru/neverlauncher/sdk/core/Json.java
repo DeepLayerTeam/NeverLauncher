@@ -2,7 +2,7 @@ package ru.neverlauncher.sdk.core;
 
 import java.util.*;
 
-/** Bounded, dependency-free JSON reader for the NeverExtensions control plane. */
+/** Bounded, dependency-free JSON reader for the Extensions control plane. */
 public final class Json {
     private Json() {}
     public static Object parse(String input) {

@@ -19,21 +19,21 @@ EXPECTED_TARGETS = {
     "guard-linux-amd64": {
         "package": f"neverlauncher-desktop-{VERSION}-linux-amd64.zip",
         "launcher": "neverlauncher-desktop-linux-amd64",
-        "guard": "neverguard-linux-amd64",
+        "guard": "guard-linux-amd64",
         "manifest": "LINUX_PACKAGE_MANIFEST.json",
         "allowlist": "GUARD_RELEASE_ALLOWLIST_LINUX.json",
     },
     "guard-windows-amd64": {
         "package": f"neverlauncher-desktop-{VERSION}-windows-amd64.zip",
         "launcher": "neverlauncher-desktop-windows-amd64.exe",
-        "guard": "neverguard-windows-amd64.exe",
+        "guard": "guard-windows-amd64.exe",
         "manifest": "WINDOWS_PACKAGE_MANIFEST.json",
         "allowlist": "GUARD_RELEASE_ALLOWLIST_WINDOWS.json",
     },
     "guard-macos-universal": {
         "package": f"neverlauncher-desktop-{VERSION}-macos-universal.zip",
         "launcher": "neverlauncher-desktop-macos-universal",
-        "guard": "neverguard-macos-universal",
+        "guard": "guard-macos-universal",
         "manifest": "MACOS_PACKAGE_MANIFEST.json",
         "allowlist": "GUARD_RELEASE_ALLOWLIST_MACOS.json",
     },
@@ -57,7 +57,11 @@ def load_matrix(path: Path, expected_commit: str) -> dict[str, Any]:
         matrix = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
         fail(f"invalid Guard CI matrix: {exc}")
-    if not isinstance(matrix, dict) or matrix.get("schemaVersion") != "1.0" or matrix.get("productVersion") != VERSION:
+    if (
+        not isinstance(matrix, dict)
+        or matrix.get("schemaVersion") != "1.0"
+        or matrix.get("productVersion") != VERSION
+    ):
         fail(f"Guard CI matrix must use schemaVersion=1.0 and productVersion={VERSION}")
     if matrix.get("status") != "passed" or matrix.get("errors") not in ([], None):
         fail("Guard CI matrix is not fail-closed passed")
@@ -67,7 +71,9 @@ def load_matrix(path: Path, expected_commit: str) -> dict[str, Any]:
     if not commit or not run_id or not repository:
         fail("Guard CI matrix is missing repository/commit/runId")
     if expected_commit and commit != expected_commit:
-        fail(f"Guard CI matrix commit mismatch: expected {expected_commit}, got {commit}")
+        fail(
+            f"Guard CI matrix commit mismatch: expected {expected_commit}, got {commit}"
+        )
     rows = matrix.get("targets")
     if not isinstance(rows, list) or len(rows) != len(EXPECTED_TARGETS):
         fail("Guard CI matrix must contain exactly three certified platform targets")
@@ -84,11 +90,16 @@ def expected_artifacts(matrix: dict[str, Any]) -> dict[str, tuple[str, int, str,
         if target_id not in EXPECTED_TARGETS or target_id in seen_targets:
             fail(f"unexpected or duplicate Guard CI target: {target_id!r}")
         seen_targets.add(target_id)
-        if result.get("schemaVersion") != "1.0" or result.get("productVersion") != VERSION:
+        if (
+            result.get("schemaVersion") != "1.0"
+            or result.get("productVersion") != VERSION
+        ):
             fail(f"Guard CI target version/schema mismatch: {target_id}")
         if result.get("status") != "passed" or result.get("exitCode") != 0:
             fail(f"Guard CI target is not passed: {target_id}")
-        if str(result.get("commit", "")) != str(matrix.get("commit", "")) or str(result.get("runId", "")) != str(matrix.get("runId", "")):
+        if str(result.get("commit", "")) != str(matrix.get("commit", "")) or str(
+            result.get("runId", "")
+        ) != str(matrix.get("runId", "")):
             fail(f"Guard CI target commit/run mismatch: {target_id}")
         artifacts = result.get("artifacts")
         if not isinstance(artifacts, dict) or set(artifacts) != set(ROLES):
@@ -102,14 +113,22 @@ def expected_artifacts(matrix: dict[str, Any]) -> dict[str, tuple[str, int, str,
             digest = str(item.get("sha256", "")).lower()
             size = item.get("size")
             if name != canonical[role]:
-                fail(f"non-canonical certified artifact name for {target_id}/{role}: {name!r}")
-            if not SHA256_RE.fullmatch(digest) or not isinstance(size, int) or size <= 0:
+                fail(
+                    f"non-canonical certified artifact name for {target_id}/{role}: {name!r}"
+                )
+            if (
+                not SHA256_RE.fullmatch(digest)
+                or not isinstance(size, int)
+                or size <= 0
+            ):
                 fail(f"invalid certified artifact hash/size for {target_id}/{role}")
             if name in expected:
                 fail(f"duplicate certified artifact name: {name!r}")
             expected[name] = (digest, size, target_id, role)
     if seen_targets != set(EXPECTED_TARGETS):
-        fail("Guard CI matrix does not contain the complete Linux/Windows/macOS target set")
+        fail(
+            "Guard CI matrix does not contain the complete Linux/Windows/macOS target set"
+        )
     return expected
 
 
@@ -130,7 +149,9 @@ def copy_verified(src: Path, dst: Path, digest: str, size: int, context: str) ->
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Stage exact Guard CI-certified artifacts into a release bundle")
+    parser = argparse.ArgumentParser(
+        description="Stage exact Guard CI-certified artifacts into a release bundle"
+    )
     parser.add_argument("--matrix", type=Path, required=True)
     parser.add_argument("--artifacts-root", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
@@ -143,7 +164,9 @@ def main() -> int:
         if not path.is_file() or path.name not in expected:
             continue
         if path.name in found:
-            fail(f"duplicate staged source for {path.name}: {found[path.name]} and {path}")
+            fail(
+                f"duplicate staged source for {path.name}: {found[path.name]} and {path}"
+            )
         found[path.name] = path
     missing = sorted(set(expected) - set(found))
     if missing:
@@ -151,7 +174,9 @@ def main() -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     for name in sorted(expected):
         digest, size, target_id, role = expected[name]
-        copy_verified(found[name], args.out / name, digest, size, f"{target_id}/{role}/{name}")
+        copy_verified(
+            found[name], args.out / name, digest, size, f"{target_id}/{role}/{name}"
+        )
     print(f"Staged {len(expected)} exact Guard CI-certified artifacts into {args.out}")
     return 0
 

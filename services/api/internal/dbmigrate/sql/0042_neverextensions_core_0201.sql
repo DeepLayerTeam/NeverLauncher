@@ -1,5 +1,5 @@
 -- NeverLauncher 0.20.1: каноническое постоянное ядро
--- NeverExtensions. Миграция вводит нормализованную производственную
+-- Extensions. Миграция вводит нормализованную производственную
 -- модель манифеста neverlauncher-extension.json. Поведение
 -- реестра и запуска здесь не определяется: таблицы служат
 -- авторитетным хранилищем идентичности расширения, неизменяемых
@@ -85,17 +85,17 @@ CREATE INDEX IF NOT EXISTS idx_extension_installs_enabled_0201
     ON extension_installs(scope, scope_id, extension_id)
     WHERE enabled;
 
-COMMENT ON TABLE extensions IS 'NeverExtensions canonical extension identities (0.20.1).';
+COMMENT ON TABLE extensions IS 'Extensions canonical extension identities (0.20.1).';
 COMMENT ON TABLE extension_versions IS 'Immutable canonical neverlauncher-extension.json versions with SHA-256 digest.';
 COMMENT ON TABLE extension_permissions IS 'Normalized requested permissions for one immutable extension version.';
 COMMENT ON TABLE extension_dependencies IS 'Normalized extension dependencies for one immutable extension version.';
-COMMENT ON TABLE extension_installs IS 'Persisted desired install selection; lifecycle activation is introduced by later NeverExtensions releases.';
+COMMENT ON TABLE extension_installs IS 'Persisted desired install selection; lifecycle activation is introduced by later Extensions releases.';
 
 CREATE OR REPLACE FUNCTION neverlauncher_extension_identity_guard_0201()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF NEW.id IS DISTINCT FROM OLD.id OR NEW.publisher IS DISTINCT FROM OLD.publisher THEN
-        RAISE EXCEPTION 'NeverExtensions identity id/publisher is immutable';
+        RAISE EXCEPTION 'Extensions identity id/publisher is immutable';
     END IF;
     RETURN NEW;
 END;
@@ -116,7 +116,7 @@ BEGIN
        OR NEW.manifest IS DISTINCT FROM OLD.manifest
        OR NEW.manifest_sha256 IS DISTINCT FROM OLD.manifest_sha256
        OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
-        RAISE EXCEPTION 'NeverExtensions extension version is immutable';
+        RAISE EXCEPTION 'Extensions extension version is immutable';
     END IF;
     RETURN NEW;
 END;

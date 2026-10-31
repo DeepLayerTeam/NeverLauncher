@@ -22,7 +22,7 @@ Admin 0.21.10 connects existing backend actions to interactive workflows. It doe
 - Users with `users:manage` additionally see trusted device records. Device revocation is irreversible, requires a nonempty reason, explicit confirmation and the backend phishing-resistant step-up. The backend invalidates associated sessions and challenges; the UI reports counts from the actual response.
 - Read permissions are checked by the Backend on every request. UI action hiding is not a security boundary.
 
-## NeverExtensions
+## Extensions
 
 - Registry signing, installation, host lifecycle, enable/disable, update, rollback and uninstall use existing real backend routes.
 - Mutating actions show the exact extension/version/scope and require confirmation. Operation responses are retained in the UI, while the refreshed manager reflects current state. Errors explain reauthentication/permissions/reload and link to audit; never infer that a transport error means no side effect.

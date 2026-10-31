@@ -1,13 +1,13 @@
 [package]
-name = "neverguard-sensor"
-version = "0.42.0"
-description = "NeverGuard early JVM sensor for Windows"
+name = "guard-sensor"
+version = "0.42.1"
+description = "Guard early JVM sensor for Windows"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
 edition = "2021"
 
 [lib]
-name = "neverguard_sensor"
+name = "guard_sensor"
 crate-type = ["cdylib"]
 path = "src/lib.rs"
 

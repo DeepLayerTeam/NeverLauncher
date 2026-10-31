@@ -61,7 +61,7 @@ func writeWindowsPackageFixture0152(t *testing.T, dir, ver, arch string, desktop
 		"neverGuardProtocolVersion": 4,
 		"artifacts": []map[string]any{
 			{"name": "neverlauncher-desktop-" + ver + "-windows-" + arch + ".exe", "component": "desktop-launcher", "architecture": arch, "sha256": digestBytes0152(desktop), "size": len(desktop)},
-			{"name": "neverguard.exe", "component": "guard", "architecture": arch, "sha256": digestBytes0152(guard), "size": len(guard)},
+			{"name": "guard.exe", "component": "guard", "architecture": arch, "sha256": digestBytes0152(guard), "size": len(guard)},
 		},
 	}
 	manifestRaw, err := json.MarshalIndent(manifest, "", "  ")
@@ -81,7 +81,7 @@ func writeWindowsPackageFixture0152(t *testing.T, dir, ver, arch string, desktop
 	for name, data := range map[string][]byte{
 		"WINDOWS_PACKAGE_MANIFEST.json":                              manifestRaw,
 		"neverlauncher-desktop-" + ver + "-windows-" + arch + ".exe": desktop,
-		"neverguard.exe": guard,
+		"guard.exe": guard,
 	} {
 		w, err := zw.Create(name)
 		if err != nil {
@@ -227,7 +227,7 @@ func TestWindowsSigningEvidenceTamperFailsClosed0152(t *testing.T) {
 	if err := writeDeliveryManifest0151(dir, ver); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(dir, "neverguard-windows-arm64.exe")
+	path := filepath.Join(dir, "guard-windows-arm64.exe")
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -250,18 +250,18 @@ func TestWindowsSigningRequiredFrom0152(t *testing.T) {
 	}
 }
 
-func TestNeverGuardSensorRequiredFrom0182(t *testing.T) {
+func TestGuardSensorRequiredFrom0182(t *testing.T) {
 	for _, ver := range []string{"0.18.0", "0.18.1"} {
-		if neverguardSensorRequired0182(ver) {
-			t.Fatalf("%s must not require NeverGuard Sensor delivery", ver)
+		if guardSensorRequired0182(ver) {
+			t.Fatalf("%s must not require Guard Sensor delivery", ver)
 		}
 	}
 	for _, ver := range []string{"0.18.2", "0.18.3", "0.19.0", "1.0.0"} {
-		if !neverguardSensorRequired0182(ver) {
-			t.Fatalf("%s must require NeverGuard Sensor delivery", ver)
+		if !guardSensorRequired0182(ver) {
+			t.Fatalf("%s must require Guard Sensor delivery", ver)
 		}
 		artifacts := expectedWindowsSignedArtifactsForVersion0157(ver, "x64")
-		if artifacts["sensor"] != "neverguard-sensor-windows-x64.dll" {
+		if artifacts["sensor"] != "guard-sensor-windows-x64.dll" {
 			t.Fatalf("%s sensor artifact mismatch: %#v", ver, artifacts)
 		}
 	}

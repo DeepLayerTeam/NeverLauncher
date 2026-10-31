@@ -30,14 +30,14 @@ const JNI_OK: i32 = 0;
 const JNI_ERR: i32 = -1;
 const SENSOR_PROTOCOL_VERSION: u32 = 3;
 const SENSOR_MAGIC: &[u8; 8] = b"NGSENS04";
-const SENSOR_DOMAIN: &[u8] = b"neverguard-sensor-startup-v3";
+const SENSOR_DOMAIN: &[u8] = b"guard-sensor-startup-v3";
 const SENSOR_PIPE_ENV: &str = "NEVERGUARD_SENSOR_PIPE";
 const SENSOR_SECRET_ENV: &str = "NEVERGUARD_SENSOR_SECRET";
 
 const MODULE_GUARD_ARM_MAGIC: &[u8; 8] = b"NGARM004";
-const MODULE_GUARD_ARM_DOMAIN: &[u8] = b"neverguard-module-guard-arm-v2";
+const MODULE_GUARD_ARM_DOMAIN: &[u8] = b"guard-module-guard-arm-v2";
 const MODULE_EVENT_MAGIC: &[u8; 8] = b"NGMOD004";
-const MODULE_EVENT_DOMAIN: &[u8] = b"neverguard-module-event-v2";
+const MODULE_EVENT_DOMAIN: &[u8] = b"guard-module-event-v2";
 const MODULE_EVENT_REASON_LOADED: u32 = 1;
 const MODULE_EVENT_REASON_UNLOADED: u32 = 2;
 const MODULE_EVENT_REASON_HEARTBEAT: u32 = 3;
@@ -637,7 +637,7 @@ fn debug_instrumentation_tamper_event(message: &str) -> RawModuleEvent {
 #[track_caller]
 fn guard_fail_closed_abort() -> ! {
     let site = std::panic::Location::caller();
-    eprintln!("NeverGuard Sensor fail-closed abort: {}:{}", site.file(), site.line());
+    eprintln!("Guard Sensor fail-closed abort: {}:{}", site.file(), site.line());
     std::process::abort();
 }
 
@@ -685,7 +685,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
     .is_err()
     {
         channel.secret.zeroize();
-        eprintln!("NeverGuard Sensor startup heartbeat write failed");
+        eprintln!("Guard Sensor startup heartbeat write failed");
         std::process::abort();
     }
 
@@ -765,7 +765,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 Ok(snapshot) if snapshot.active && snapshot.healthy => {}
                 Ok(_) => {
                     let tamper = debug_instrumentation_tamper_event(
-                        "NeverGuard Debug & Instrumentation Guard became inactive/unhealthy",
+                        "Guard Debug & Instrumentation Guard became inactive/unhealthy",
                     );
                     let _ = write_module_event(
                         &mut channel.stream,
@@ -800,7 +800,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 }
                 Ok(_) => {
                     let tamper = thread_process_tamper_event(
-                        "NeverGuard Thread & Process Integrity became inactive/unhealthy",
+                        "Guard Thread & Process Integrity became inactive/unhealthy",
                     );
                     let _ = write_module_event(
                         &mut channel.stream,
@@ -850,7 +850,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 }
                 Ok(_) => {
                     let tamper = jvm_aware_tamper_event(
-                        "NeverGuard JVM-Aware Protection became inactive/unhealthy",
+                        "Guard JVM-Aware Protection became inactive/unhealthy",
                     );
                     let _ = write_module_event(
                         &mut channel.stream,
@@ -865,7 +865,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 Err(err) => {
                     // Keep the exact reason in CI stdout even if the parent
                     // fails to consume the signed tamper packet before abort.
-                    eprintln!("NeverGuard JVM-Aware violation: {}", err.chars().take(240).collect::<String>());
+                    eprintln!("Guard JVM-Aware violation: {}", err.chars().take(240).collect::<String>());
                     let tamper = jvm_aware_tamper_event(&err);
                     let _ = write_module_event(
                         &mut channel.stream,
@@ -959,7 +959,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 sequence,
                 event_chain,
             ) {
-                eprintln!("NeverGuard Continuous Guard ACK violation: {}", err.chars().take(240).collect::<String>());
+                eprintln!("Guard Continuous Guard ACK violation: {}", err.chars().take(240).collect::<String>());
                 let tamper = continuous_guard::tamper_event(
                     MODULE_EVENT_REASON_CONTINUOUS_TAMPER,
                     &err,
@@ -1044,7 +1044,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                     }
                 }
                 Ok(_) => {
-                    let tamper = memory_tamper_event("NeverGuard Memory Integrity became inactive/unhealthy");
+                    let tamper = memory_tamper_event("Guard Memory Integrity became inactive/unhealthy");
                     let _ = write_module_event(
                         &mut channel.stream,
                         &channel.secret,
@@ -1105,7 +1105,7 @@ fn module_worker(mut channel: SensorChannel, mut sequence: u64, mut guard_sequen
                 }
                 Ok(_) => {
                     let tamper = debug_instrumentation_tamper_event(
-                        "NeverGuard Debug & Instrumentation Guard became inactive/unhealthy",
+                        "Guard Debug & Instrumentation Guard became inactive/unhealthy",
                     );
                     let _ = write_module_event(
                         &mut channel.stream,
@@ -1226,7 +1226,7 @@ pub extern "system" fn Agent_OnLoad(
             // Сохраняйте строгую блокировку при ошибках, но выводите достаточно сведений
             // для диагностики раннего EOF MEMORY_READY родительского процесса в Windows CI.
             eprintln!(
-                "NeverGuard Sensor Memory Integrity refused readiness: active={} healthy={} executable_regions={} image_code_regions={}",
+                "Guard Sensor Memory Integrity refused readiness: active={} healthy={} executable_regions={} image_code_regions={}",
                 snapshot.active, snapshot.healthy, snapshot.executable_regions, snapshot.image_code_regions
             );
             memory_integrity::shutdown();
@@ -1237,7 +1237,7 @@ pub extern "system" fn Agent_OnLoad(
             return JNI_ERR;
         }
         Err(err) => {
-            eprintln!("NeverGuard Sensor Memory Integrity initialization failed: {err}");
+            eprintln!("Guard Sensor Memory Integrity initialization failed: {err}");
             memory_integrity::shutdown();
             let _ = hook_engine::shutdown_restore();
             jvm_awareness::shutdown();
@@ -1418,7 +1418,7 @@ pub extern "system" fn Agent_OnLoad(
         return JNI_ERR;
     }
     match thread::Builder::new()
-        .name("neverguard-module-guard".to_string())
+        .name("guard-module-guard".to_string())
         .spawn(move || module_worker(channel, sequence, guard_sequence))
     {
         Ok(handle) => match MODULE_WORKER_HANDLE.lock() {

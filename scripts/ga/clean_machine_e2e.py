@@ -6,6 +6,7 @@ manifest signature verification, real Java provisioning, sync and game launch.
 This must run inside a disposable OS VM with a graphical session and a signed
 offline-capable Minecraft profile; not on a developer workstation.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -21,10 +22,19 @@ import time
 
 
 def checked(command, timeout=900, env=None):
-    result = subprocess.run(list(map(str, command)), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            text=True, errors="replace", timeout=timeout, env=env)
+    result = subprocess.run(
+        list(map(str, command)),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        errors="replace",
+        timeout=timeout,
+        env=env,
+    )
     if result.returncode:
-        raise RuntimeError(f"{command[0]} exited {result.returncode}: {result.stderr[-1000:]}")
+        raise RuntimeError(
+            f"{command[0]} exited {result.returncode}: {result.stderr[-1000:]}"
+        )
     return result.stdout
 
 
@@ -46,14 +56,27 @@ def resolve_installed_runtime(root: Path):
         release = rec.get("release", "")
         if not re.fullmatch(r"[a-zA-Z0-9._-]+", release) or ".." in release:
             continue
-        path = launcher / "releases" / release / ("neverruntime.exe" if os.name == "nt" else "neverruntime")
+        path = (
+            launcher
+            / "releases"
+            / release
+            / ("neverruntime.exe" if os.name == "nt" else "neverruntime")
+        )
         if path.is_file() and not path.is_symlink():
             return path
     raise RuntimeError("no native NeverRuntime in activated Prestarter release")
 
 
-def real_clean_install(*, installer: Path, root: Path, signed_manifest: Path,
-                       public_key: str, java_major: int, username: str, benchmark_commit: str):
+def real_clean_install(
+    *,
+    installer: Path,
+    root: Path,
+    signed_manifest: Path,
+    public_key: str,
+    java_major: int,
+    username: str,
+    benchmark_commit: str,
+):
     if not re.fullmatch("[0-9a-f]{64}", public_key):
         raise ValueError("pinned public key is required")
     if not re.fullmatch("[a-zA-Z0-9_]{3,16}", username):
@@ -70,27 +93,48 @@ def real_clean_install(*, installer: Path, root: Path, signed_manifest: Path,
     osname = platform.system()
     if osname == "Linux":
         if os.geteuid() != 0:
-            raise RuntimeError("dpkg clean-machine installation requires root inside disposable VM")
+            raise RuntimeError(
+                "dpkg clean-machine installation requires root inside disposable VM"
+            )
         checked(["dpkg", "--install", installer], timeout=600)
-        checked(["/usr/bin/neverlauncher", "install", "--root", root, "--no-start"], timeout=1200)
+        checked(
+            ["/usr/bin/neverlauncher", "install", "--root", root, "--no-start"],
+            timeout=1200,
+        )
     elif osname == "Darwin":
         checked(["installer", "-pkg", installer, "-target", "/"], timeout=600)
-        checked(["/Applications/NeverLauncher.app/Contents/MacOS/NeverLauncher", "install",
-                 "--root", root, "--no-start"], timeout=1200)
+        checked(
+            [
+                "/Applications/NeverLauncher.app/Contents/MacOS/NeverLauncher",
+                "install",
+                "--root",
+                root,
+                "--no-start",
+            ],
+            timeout=1200,
+        )
     elif osname == "Windows":
         checked([installer, "install", "--root", root, "--no-start"], timeout=1200)
         # The native Rust CLI can launch Minecraft on Windows but bypasses the
-        # Desktop -> NeverGuard authenticated supervisor boundary. Certification
+        # Desktop -> Guard authenticated supervisor boundary. Certification
         # MUST instead use a separate real Desktop/Guard GUI E2E on Windows.
-        raise RuntimeError("Windows game-launch certification requires external Desktop/NeverGuard GUI E2E; direct NeverRuntime launch is not a valid security test")
+        raise RuntimeError(
+            "Windows game-launch certification requires external Desktop/Guard GUI E2E; direct NeverRuntime launch is not a valid security test"
+        )
     else:
         raise RuntimeError("unsupported GA OS")
     runtime = resolve_installed_runtime(root)
     runtime_help = from_runtime(runtime, "--help")
     if runtime_help.get("version") != "0.24.0":
         raise RuntimeError("installed runtime is not 0.24.0")
-    verification = from_runtime(runtime, "verify", "--manifest", signed_manifest,
-                                "--pinned-public-key", public_key)
+    verification = from_runtime(
+        runtime,
+        "verify",
+        "--manifest",
+        signed_manifest,
+        "--pinned-public-key",
+        public_key,
+    )
     if verification.get("status") != "ready":
         raise RuntimeError("signed Minecraft profile was not verified")
     data = json.loads(signed_manifest.read_text())
@@ -99,36 +143,75 @@ def real_clean_install(*, installer: Path, root: Path, signed_manifest: Path,
         raise RuntimeError("Java major differs from the signed profile")
     java = from_runtime(runtime, "java", "ensure", "--major", str(java_major))
     java_path = Path(java.get("javaExecutable", ""))
-    if java.get("majorVersion") != java_major or not java_path.is_file() or java_path.is_symlink():
+    if (
+        java.get("majorVersion") != java_major
+        or not java_path.is_file()
+        or java_path.is_symlink()
+    ):
         raise RuntimeError("real Managed Java was not installed")
     checked([java_path, "-version"], timeout=40)
     game_root = root / "profiles" / data["projectId"] / data["profileId"]
-    result = from_runtime(runtime, "sync-local", "--manifest", signed_manifest,
-                          "--root", game_root, "--pinned-public-key", public_key, timeout=1500)
+    result = from_runtime(
+        runtime,
+        "sync-local",
+        "--manifest",
+        signed_manifest,
+        "--root",
+        game_root,
+        "--pinned-public-key",
+        public_key,
+        timeout=1500,
+    )
     if result.get("status") != "ready":
         raise RuntimeError("game file installation failed")
-    launched = from_runtime(runtime, "launch", "--manifest", signed_manifest,
-                            "--pinned-public-key", public_key, "--root", game_root,
-                            "--java", java_path, "--username", username,
-                            "--max-runtime-seconds", "90", timeout=120)
+    launched = from_runtime(
+        runtime,
+        "launch",
+        "--manifest",
+        signed_manifest,
+        "--pinned-public-key",
+        public_key,
+        "--root",
+        game_root,
+        "--java",
+        java_path,
+        "--username",
+        username,
+        "--max-runtime-seconds",
+        "90",
+        timeout=120,
+    )
     log_path = Path(launched.get("log_path", ""))
     if not log_path.is_file() or not log_path.is_relative_to(game_root):
         raise RuntimeError("Minecraft has no installed runtime log")
     log = log_path.read_text(encoding="utf-8", errors="replace")
     # A Java -version process or a dummy executable cannot pass this check.
-    if not any(marker in log for marker in ("LWJGL version", "OpenGL", "Setting user:", "Minecraft")):
-        raise RuntimeError("no recognizable Minecraft initialization evidence in real process log")
+    if not any(
+        marker in log
+        for marker in ("LWJGL version", "OpenGL", "Setting user:", "Minecraft")
+    ):
+        raise RuntimeError(
+            "no recognizable Minecraft initialization evidence in real process log"
+        )
     if not launched.get("timed_out") and not launched.get("success"):
         raise RuntimeError("Minecraft process crashed before successfully exiting")
-    return {"schemaVersion":"neverlauncher.ga.clean-machine.v1", "productVersion":"0.24.0",
-            "commit":benchmark_commit, "status":"passed", "simulated":False,
-            "platform":osname, "architecture":platform.machine(),
-            "installerSha256":hashlib.sha256(installer.read_bytes()).hexdigest(),
-            "runtimeSha256":hashlib.sha256(runtime.read_bytes()).hexdigest(),
-            "javaSha256":hashlib.sha256(java_path.read_bytes()).hexdigest(),
-            "javaMajor":java_major, "minecraftVersion":data.get("minecraft",{}).get("version"),
-            "logSha256":hashlib.sha256(log_path.read_bytes()).hexdigest(),
-            "launcherExitCode":launched.get("exit_code"), "launchTimedOut":launched.get("timed_out")}
+    return {
+        "schemaVersion": "neverlauncher.ga.clean-machine.v1",
+        "productVersion": "0.24.0",
+        "commit": benchmark_commit,
+        "status": "passed",
+        "simulated": False,
+        "platform": osname,
+        "architecture": platform.machine(),
+        "installerSha256": hashlib.sha256(installer.read_bytes()).hexdigest(),
+        "runtimeSha256": hashlib.sha256(runtime.read_bytes()).hexdigest(),
+        "javaSha256": hashlib.sha256(java_path.read_bytes()).hexdigest(),
+        "javaMajor": java_major,
+        "minecraftVersion": data.get("minecraft", {}).get("version"),
+        "logSha256": hashlib.sha256(log_path.read_bytes()).hexdigest(),
+        "launcherExitCode": launched.get("exit_code"),
+        "launchTimedOut": launched.get("timed_out"),
+    }
 
 
 def main():
@@ -143,13 +226,30 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
-        report = real_clean_install(installer=args.installer.resolve(), root=args.install_root.resolve(),
-          signed_manifest=args.signed_manifest.resolve(), public_key=args.trusted_game_public_key,
-          java_major=args.java_major, username=args.username, benchmark_commit=args.commit)
-    except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
-        report = {"status":"failed", "productVersion":"0.24.0", "commit":args.commit, "error":str(exc)}
+        report = real_clean_install(
+            installer=args.installer.resolve(),
+            root=args.install_root.resolve(),
+            signed_manifest=args.signed_manifest.resolve(),
+            public_key=args.trusted_game_public_key,
+            java_major=args.java_major,
+            username=args.username,
+            benchmark_commit=args.commit,
+        )
+    except (
+        OSError,
+        ValueError,
+        RuntimeError,
+        subprocess.TimeoutExpired,
+        json.JSONDecodeError,
+    ) as exc:
+        report = {
+            "status": "failed",
+            "productVersion": "0.24.0",
+            "commit": args.commit,
+            "error": str(exc),
+        }
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2, sort_keys=True)+"\n")
+    args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(f"real clean-machine GA test: {report['status']}")
     return 0 if report["status"] == "passed" else 1
 

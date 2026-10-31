@@ -12,19 +12,25 @@ def read(path: str) -> str:
 def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
-        raise SystemExit(f"[NeverLauncher] Module Guard 0.18.3 gate: {label} missing {missing}")
+        raise SystemExit(
+            f"[NeverLauncher] Module Guard 0.18.3 gate: {label} missing {missing}"
+        )
 
 
 def main() -> int:
     version = read("VERSION").strip()
-    if tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 3):
-        raise SystemExit(f"[NeverLauncher] Module Guard 0.18.3 gate: VERSION is {version}")
+    if tuple(
+        int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
+    ) < (0, 18, 3):
+        raise SystemExit(
+            f"[NeverLauncher] Module Guard 0.18.3 gate: VERSION is {version}"
+        )
 
-    sensor = read("runtime/neverguard-sensor/src/lib.rs")
+    sensor = read("runtime/guard-sensor/src/lib.rs")
     parent = read("runtime/neverruntime/src/windows_module_guard.rs")
     bootstrap = read("runtime/neverruntime/src/windows_sensor.rs")
     supervisor = read("runtime/neverruntime/src/supervisor.rs")
-    integration = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
+    integration = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
     ci = read(".github/workflows/ci.yml")
     preflight = read("scripts/release/preflight.sh")
 
@@ -98,11 +104,11 @@ def main() -> int:
     require(
         integration,
         [
-            "neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat",
+            "guard_module_guard_tracks_real_jvm_dll_load_and_heartbeat",
             "System.load(args[0])",
             "report.load_events >= 1",
             "report.heartbeat_count >= 1",
-            "neverguard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roots",
+            "guard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roots",
             "unsigned module outside trusted roots must be fail-closed",
             "report.violation_count >= 1",
         ],
@@ -111,22 +117,29 @@ def main() -> int:
     require(
         ci,
         [
-            "python scripts/smoke/offline/neverguard-module-guard-0183.py",
-            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_sensor_windows -- --nocapture",
-            "cargo clippy --manifest-path runtime/neverguard-sensor/Cargo.toml --all-targets -- -D warnings",
+            "python scripts/smoke/offline/guard-module-guard-0183.py",
+            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows -- --nocapture",
+            "cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings",
             "cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings",
         ],
         "Windows CI compile/integration/clippy enforcement",
     )
-    if "neverguard-module-guard-0183.py" not in preflight:
-        raise SystemExit("[NeverLauncher] Module Guard 0.18.3 gate: preflight wiring missing")
+    if "guard-module-guard-0183.py" not in preflight:
+        raise SystemExit(
+            "[NeverLauncher] Module Guard 0.18.3 gate: preflight wiring missing"
+        )
 
     for path, body in [
-        ("runtime/neverguard-sensor/src/lib.rs", sensor),
+        ("runtime/guard-sensor/src/lib.rs", sensor),
         ("runtime/neverruntime/src/windows_module_guard.rs", parent),
         ("runtime/neverruntime/src/windows_sensor.rs", bootstrap),
     ]:
-        for forbidden in ("todo!()", "unimplemented!()", "TODO: stub", "foundation placeholder"):
+        for forbidden in (
+            "todo!()",
+            "unimplemented!()",
+            "TODO: stub",
+            "foundation placeholder",
+        ):
             if forbidden in body:
                 raise SystemExit(
                     f"[NeverLauncher] Module Guard 0.18.3 gate: placeholder {forbidden!r} in {path}"

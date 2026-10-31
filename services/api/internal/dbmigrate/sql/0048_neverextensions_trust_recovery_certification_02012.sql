@@ -60,6 +60,6 @@ BEGIN
 END;
 $$;
 
-COMMENT ON TABLE extension_trust_policy IS 'NeverExtensions registry-wide publisher allow policy (0.20.12).';
+COMMENT ON TABLE extension_trust_policy IS 'Extensions registry-wide publisher allow policy (0.20.12).';
 COMMENT ON TABLE extension_quarantine IS 'Persistent fail-closed quarantine for suspicious or revoked extension artifacts.';
-COMMENT ON TABLE extension_emergency_disables IS 'Persistent NeverExtensions emergency kill-switch and crash-loop protection state.';
+COMMENT ON TABLE extension_emergency_disables IS 'Persistent Extensions emergency kill-switch and crash-loop protection state.';

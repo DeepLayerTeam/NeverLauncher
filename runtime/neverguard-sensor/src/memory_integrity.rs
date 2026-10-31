@@ -233,19 +233,19 @@ pub fn initialize() -> Result<MemoryIntegritySnapshot, String> {
     let snapshot = snapshot_for_regions(&state, &regions);
     *MEMORY_STATE
         .lock()
-        .map_err(|_| "NeverGuard Memory Integrity state lock poisoned".to_string())? = Some(state);
+        .map_err(|_| "Guard Memory Integrity state lock poisoned".to_string())? = Some(state);
     Ok(snapshot)
 }
 
 pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
     let mut guard = MEMORY_STATE
         .lock()
-        .map_err(|_| "NeverGuard Memory Integrity state lock poisoned".to_string())?;
+        .map_err(|_| "Guard Memory Integrity state lock poisoned".to_string())?;
     let state = guard
         .as_mut()
-        .ok_or_else(|| "NeverGuard Memory Integrity is not initialized".to_string())?;
+        .ok_or_else(|| "Guard Memory Integrity is not initialized".to_string())?;
     if !state.active || !state.healthy {
-        return Err("NeverGuard Memory Integrity is not active/healthy".to_string());
+        return Err("Guard Memory Integrity is not active/healthy".to_string());
     }
 
     drain_transitions(state)?;
@@ -268,14 +268,14 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
                     if baseline.protect != current.protect {
                         state.healthy = false;
                         return Err(format!(
-                            "NeverGuard Memory Integrity executable image protection drift at 0x{:X}: 0x{:X} -> 0x{:X}",
+                            "Guard Memory Integrity executable image protection drift at 0x{:X}: 0x{:X} -> 0x{:X}",
                             current.base, baseline.protect, current.protect
                         ));
                     }
                     if baseline.digest != current.digest {
                         state.healthy = false;
                         return Err(format!(
-                            "NeverGuard Memory Integrity code-page drift at 0x{:X} ({} bytes)",
+                            "Guard Memory Integrity code-page drift at 0x{:X} ({} bytes)",
                             current.base, current.size
                         ));
                     }
@@ -305,7 +305,7 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
                     if !range_allowed(region, &state.allowed_dynamic) {
                         state.healthy = false;
                         return Err(format!(
-                            "NeverGuard Memory Integrity detected executable private memory without observed VirtualAlloc/VirtualProtect provenance at 0x{:X} ({} bytes)",
+                            "Guard Memory Integrity detected executable private memory without observed VirtualAlloc/VirtualProtect provenance at 0x{:X} ({} bytes)",
                             region.base, region.size
                         ));
                     }
@@ -315,7 +315,7 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
                 if !range_allowed(region, &state.allowed_mapped) {
                     state.healthy = false;
                     return Err(format!(
-                        "NeverGuard Memory Integrity detected new executable mapped memory at 0x{:X} ({} bytes)",
+                        "Guard Memory Integrity detected new executable mapped memory at 0x{:X} ({} bytes)",
                         region.base, region.size
                     ));
                 }
@@ -336,12 +336,12 @@ pub fn reconcile_and_verify() -> Result<MemoryIntegritySnapshot, String> {
 pub fn drain_pending_transitions() -> Result<(), String> {
     let mut guard = MEMORY_STATE
         .lock()
-        .map_err(|_| "NeverGuard Memory Integrity state lock poisoned".to_string())?;
+        .map_err(|_| "Guard Memory Integrity state lock poisoned".to_string())?;
     let state = guard
         .as_mut()
-        .ok_or_else(|| "NeverGuard Memory Integrity is not initialized".to_string())?;
+        .ok_or_else(|| "Guard Memory Integrity is not initialized".to_string())?;
     if !state.active || !state.healthy {
-        return Err("NeverGuard Memory Integrity is not active/healthy".to_string());
+        return Err("Guard Memory Integrity is not active/healthy".to_string());
     }
     drain_transitions(state)
 }
@@ -407,7 +407,7 @@ fn enumerate_executable_regions() -> Result<Vec<ExecutableRegion>, String> {
         let base = info.base_address as usize;
         let size = info.region_size;
         if size == 0 {
-            return Err("NeverGuard Memory Integrity VirtualQuery returned zero region size".to_string());
+            return Err("Guard Memory Integrity VirtualQuery returned zero region size".to_string());
         }
         if info.state == MEM_COMMIT
             && is_executable(info.protect)
@@ -423,9 +423,9 @@ fn enumerate_executable_regions() -> Result<Vec<ExecutableRegion>, String> {
         }
         let next = base
             .checked_add(size)
-            .ok_or_else(|| "NeverGuard Memory Integrity address-space overflow".to_string())?;
+            .ok_or_else(|| "Guard Memory Integrity address-space overflow".to_string())?;
         if next <= cursor {
-            return Err("NeverGuard Memory Integrity VirtualQuery did not advance".to_string());
+            return Err("Guard Memory Integrity VirtualQuery did not advance".to_string());
         }
         cursor = next;
     }
@@ -435,7 +435,7 @@ fn enumerate_executable_regions() -> Result<Vec<ExecutableRegion>, String> {
 fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, String> {
     if region.size > MAX_HASHABLE_IMAGE_REGION {
         return Err(format!(
-            "NeverGuard Memory Integrity executable image region exceeds hash limit at 0x{:X}: {} bytes",
+            "Guard Memory Integrity executable image region exceeds hash limit at 0x{:X}: {} bytes",
             region.base, region.size
         ));
     }
@@ -493,7 +493,7 @@ fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, Str
             {
                 buffer.fill(0);
                 return Err(format!(
-                    "NeverGuard Memory Integrity executable image mapping changed during read at 0x{:X}",
+                    "Guard Memory Integrity executable image mapping changed during read at 0x{:X}",
                     region.base + offset
                 ));
             }
@@ -503,7 +503,7 @@ fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, Str
         if !copied_all {
             buffer.fill(0);
             return Err(format!(
-                "NeverGuard Memory Integrity executable image unreadable at 0x{:X}: {}",
+                "Guard Memory Integrity executable image unreadable at 0x{:X}: {}",
                 region.base + offset, last_error
             ));
         }
@@ -530,7 +530,7 @@ fn hash_image_region(region: &ExecutableRegion) -> Result<ImageCodeBaseline, Str
         || after.kind != MEM_IMAGE
     {
         return Err(format!(
-            "NeverGuard Memory Integrity executable image mapping changed while hashing at 0x{:X}",
+            "Guard Memory Integrity executable image mapping changed while hashing at 0x{:X}",
             region.base
         ));
     }
@@ -555,7 +555,7 @@ fn pin_image(address: usize) -> Result<PinnedModule, String> {
     };
     if ok == 0 || module.is_null() {
         return Err(format!(
-            "NeverGuard Memory Integrity cannot retain executable image at 0x{address:X}: {}",
+            "Guard Memory Integrity cannot retain executable image at 0x{address:X}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -567,7 +567,7 @@ fn drain_transitions(state: &mut MemoryIntegrityState) -> Result<(), String> {
     if dropped != 0 {
         state.healthy = false;
         return Err(format!(
-            "NeverGuard Memory Integrity transition ring overflow: dropped {dropped} events"
+            "Guard Memory Integrity transition ring overflow: dropped {dropped} events"
         ));
     }
     let mut updated_dynamic = false;
@@ -725,7 +725,7 @@ fn snapshot_for_regions(
     }
     map_rows.sort_unstable();
     let mut map_digest = Sha256::new();
-    map_digest.update(b"NeverGuard Memory Integrity executable-map v1\0");
+    map_digest.update(b"Guard Memory Integrity executable-map v1\0");
     for row in map_rows {
         map_digest.update((row.len() as u32).to_le_bytes());
         map_digest.update(row.as_bytes());
@@ -747,7 +747,7 @@ fn snapshot_for_regions(
     code_rows.sort_unstable();
     // Отделяйте домен хеша набора кода от сырых байтов образа фиксированным
     // SHA-256-тегом. На дайджест влияют и тег, и измеренные области.
-    let code_domain = Sha256::digest(b"NeverGuard Memory Integrity code-set v1\0");
+    let code_domain = Sha256::digest(b"Guard Memory Integrity code-set v1\0");
     let mut code_digest = Sha256::new();
     code_digest.update(code_domain);
     for row in code_rows {

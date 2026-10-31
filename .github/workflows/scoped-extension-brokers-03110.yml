@@ -1,4 +1,4 @@
-name: Scoped NeverExtensions Brokers 0.31.10
+name: Scoped Extensions Brokers 0.31.10
 on:
   push:
     paths:

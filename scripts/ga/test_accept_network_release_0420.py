@@ -105,6 +105,20 @@ class AcceptanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'commit'):
             fault.validate(self.write_go_log(), '', '0.42.0')
 
+    def test_future_patch_retains_network_gate_and_requires_matching_live_evidence(self):
+        self.assertTrue(fault.network_gate_version('0.42.1'))
+        self.assertTrue(fault.network_gate_version('0.43.0'))
+        self.assertFalse(fault.network_gate_version('0.41.13'))
+        self.assertFalse(fault.network_gate_version('0.42.1-not-valid!'))
+        self.assertEqual(fault.validate(self.write_go_log(), 'a'*40, '0.42.1')['version'], '0.42.1')
+        (self.root / 'VERSION').write_text('0.42.1')
+        (self.root / 'serverbridge').mkdir()
+        (self.root / 'serverbridge/targets.json').write_text(json.dumps({
+            'productVersion': '0.42.1', 'targets': [{'id': name} for name in accept.TARGETS],
+        }))
+        with self.assertRaises(accept.ReleaseBlocked):
+            accept.accept(self.root, self.release, self.root / 'absent', 'a'*40)
+
     def test_no_release_acceptance_without_live_evidence(self):
         (self.root / 'VERSION').write_text('0.42.0')
         (self.root / 'serverbridge').mkdir()

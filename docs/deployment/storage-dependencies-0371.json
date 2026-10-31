@@ -1439,7 +1439,7 @@
       ]
     },
     {
-      "path": ".github/workflows/neverextensions-ga-0210.yml",
+      "path": ".github/workflows/extensions-ga-0210.yml",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -1449,7 +1449,7 @@
       ]
     },
     {
-      "path": ".github/workflows/neverextensions-trust-recovery-02012.yml",
+      "path": ".github/workflows/extensions-trust-recovery-02012.yml",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -3784,7 +3784,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.13.10: миграция NeverGuard, совместимость и стабилизация."
+          "evidence": "-- NeverLauncher 0.13.10: миграция Guard, совместимость и стабилизация."
         }
       ]
     },
@@ -4634,7 +4634,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0042_neverextensions_core_0201.sql",
+      "path": "cli/internal/dbmigrate/sql/0042_extensions_core_0201.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4724,7 +4724,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0043_neverextensions_registry_0203.sql",
+      "path": "cli/internal/dbmigrate/sql/0043_extensions_registry_0203.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -4844,12 +4844,12 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0044_neverextensions_install_lifecycle_0204.sql",
+      "path": "cli/internal/dbmigrate/sql/0044_extensions_install_lifecycle_0204.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.4: производственный жизненный цикл установки NeverExtensions."
+          "evidence": "-- NeverLauncher 0.20.4: производственный жизненный цикл установки Extensions."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -4884,7 +4884,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0045_neverextensions_events_hooks_0206.sql",
+      "path": "cli/internal/dbmigrate/sql/0045_extensions_events_hooks_0206.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5044,7 +5044,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0046_neverextensions_capability_security_0207.sql",
+      "path": "cli/internal/dbmigrate/sql/0046_extensions_capability_security_0207.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5094,7 +5094,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0047_neverextensions_dependencies_updates_02011.sql",
+      "path": "cli/internal/dbmigrate/sql/0047_extensions_dependencies_updates_02011.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5194,7 +5194,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0048_neverextensions_trust_recovery_certification_02012.sql",
+      "path": "cli/internal/dbmigrate/sql/0048_extensions_trust_recovery_certification_02012.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -5274,12 +5274,12 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0049_neverextensions_ga_0210.sql",
+      "path": "cli/internal/dbmigrate/sql/0049_extensions_ga_0210.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.21.0: контракт GA для NeverExtensions и отметка обновления 0.20"
+          "evidence": "-- NeverLauncher 0.21.0: контракт GA для Extensions и отметка обновления 0.20"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -7299,7 +7299,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 2,
-          "evidence": "\"\"\"Build a valid Linux NeverGuard attestation for the PostgreSQL protocol E2E."
+          "evidence": "\"\"\"Build a valid Linux Guard attestation for the PostgreSQL protocol E2E."
         }
       ]
     },
@@ -9299,7 +9299,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 24,
-          "evidence": "GUARD_HASH=\"$(sha256sum \"${PACKAGE_DIR}/neverguard\" | awk '{print $1}')\""
+          "evidence": "GUARD_HASH=\"$(sha256sum \"${PACKAGE_DIR}/guard\" | awk '{print $1}')\""
         }
       ]
     },
@@ -9344,7 +9344,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 73,
-          "evidence": "GUARD_HASH=\"$(shasum -a 256 \"${MACOS_DIR}/neverguard\" | awk '{print $1}')\""
+          "evidence": "GUARD_HASH=\"$(shasum -a 256 \"${MACOS_DIR}/guard\" | awk '{print $1}')\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -9354,7 +9354,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 128,
-          "evidence": "GUARD_HASH=\"$(shasum -a 256 \"${MACOS_DIR}/neverguard\" | awk '{print $1}')\""
+          "evidence": "GUARD_HASH=\"$(shasum -a 256 \"${MACOS_DIR}/guard\" | awk '{print $1}')\""
         }
       ]
     },
@@ -9629,7 +9629,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/neverextensions-events-0206.py",
+      "path": "scripts/smoke/offline/extensions-events-0206.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -9654,7 +9654,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/neverextensions-install-lifecycle-0204.py",
+      "path": "scripts/smoke/offline/extensions-install-lifecycle-0204.py",
       "findings": [
         {
           "category": "postgresql-sql-dialect",
@@ -9669,7 +9669,7 @@
       ]
     },
     {
-      "path": "scripts/smoke/offline/neverguard-guard-attestation-0134.py",
+      "path": "scripts/smoke/offline/guard-guard-attestation-0134.py",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -12429,7 +12429,7 @@
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.13.10: миграция NeverGuard, совместимость и стабилизация."
+          "evidence": "-- NeverLauncher 0.13.10: миграция Guard, совместимость и стабилизация."
         }
       ]
     },
@@ -13279,7 +13279,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0042_neverextensions_core_0201.sql",
+      "path": "services/api/internal/dbmigrate/sql/0042_extensions_core_0201.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13369,7 +13369,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0043_neverextensions_registry_0203.sql",
+      "path": "services/api/internal/dbmigrate/sql/0043_extensions_registry_0203.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13489,12 +13489,12 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0044_neverextensions_install_lifecycle_0204.sql",
+      "path": "services/api/internal/dbmigrate/sql/0044_extensions_install_lifecycle_0204.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.20.4: производственный жизненный цикл установки NeverExtensions."
+          "evidence": "-- NeverLauncher 0.20.4: производственный жизненный цикл установки Extensions."
         },
         {
           "category": "postgresql-sql-dialect",
@@ -13529,7 +13529,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0045_neverextensions_events_hooks_0206.sql",
+      "path": "services/api/internal/dbmigrate/sql/0045_extensions_events_hooks_0206.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13689,7 +13689,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0046_neverextensions_capability_security_0207.sql",
+      "path": "services/api/internal/dbmigrate/sql/0046_extensions_capability_security_0207.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13739,7 +13739,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0047_neverextensions_dependencies_updates_02011.sql",
+      "path": "services/api/internal/dbmigrate/sql/0047_extensions_dependencies_updates_02011.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13839,7 +13839,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0048_neverextensions_trust_recovery_certification_02012.sql",
+      "path": "services/api/internal/dbmigrate/sql/0048_extensions_trust_recovery_certification_02012.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -13919,12 +13919,12 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0049_neverextensions_ga_0210.sql",
+      "path": "services/api/internal/dbmigrate/sql/0049_extensions_ga_0210.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
           "line": 1,
-          "evidence": "-- NeverLauncher 0.21.0: контракт GA для NeverExtensions и отметка обновления 0.20"
+          "evidence": "-- NeverLauncher 0.21.0: контракт GA для Extensions и отметка обновления 0.20"
         },
         {
           "category": "postgresql-sql-dialect",

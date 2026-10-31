@@ -13,7 +13,7 @@ use crate::{
 pub const NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION: u32 = 1;
 pub const NEVERGUARD_WINDOWS_HARDENING_VERSION: u32 = 1;
 pub const NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA: &str =
-    "neverguard/windows-runtime-process-policy/v1";
+    "guard/windows-runtime-process-policy/v1";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -85,12 +85,12 @@ pub fn validate_windows_guard_policy_report(
         || policy.policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
         || !policy.enforced
     {
-        return Err("NeverGuard Windows process policy schema/version/enforcement mismatch".to_string());
+        return Err("Guard Windows process policy schema/version/enforcement mismatch".to_string());
     }
     let details = policy
         .windows
         .as_ref()
-        .ok_or_else(|| "NeverGuard Windows process policy is missing Protection Core details".to_string())?;
+        .ok_or_else(|| "Guard Windows process policy is missing Protection Core details".to_string())?;
     if details.core_schema != NEVERGUARD_WINDOWS_PROTECTION_CORE_SCHEMA
         || details.core_version != NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION
         || details.capability_model_version != NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION
@@ -101,7 +101,7 @@ pub fn validate_windows_guard_policy_report(
         || !details.requirements_satisfied
         || !details.capabilities.requirements_satisfied()
     {
-        return Err("NeverGuard Windows Protection Core profile/capability verification failed".to_string());
+        return Err("Guard Windows Protection Core profile/capability verification failed".to_string());
     }
 
     let requirements = details.requirements;
@@ -121,7 +121,7 @@ pub fn validate_windows_guard_policy_report(
     ] {
         if actual & required != required {
             return Err(format!(
-                "NeverGuard Windows {name} policy does not satisfy profile {expected_profile}: required=0x{required:08x}, actual=0x{actual:08x}"
+                "Guard Windows {name} policy does not satisfy profile {expected_profile}: required=0x{required:08x}, actual=0x{actual:08x}"
             ));
         }
     }
@@ -147,12 +147,12 @@ pub fn validate_windows_guard_policy_report(
             || !capability.satisfied
         {
             return Err(format!(
-                "NeverGuard Windows capability {name} does not satisfy profile {expected_profile}"
+                "Guard Windows capability {name} does not satisfy profile {expected_profile}"
             ));
         }
     }
     if !capabilities.guard_lifetime_job_bound || capabilities.architecture.trim().is_empty() {
-        return Err("NeverGuard Windows capability model is incomplete".to_string());
+        return Err("Guard Windows capability model is incomplete".to_string());
     }
     Ok(())
 }
@@ -249,12 +249,12 @@ mod windows_impl {
         pub fn verify_process_tree(&self, root_pid: u32) -> Result<RuntimeProcessTreeSnapshot, String> {
             if root_pid != self.report.pid {
                 return Err(format!(
-                    "NeverGuard process-tree root mismatch: policy={}, requested={root_pid}",
+                    "Guard process-tree root mismatch: policy={}, requested={root_pid}",
                     self.report.pid
                 ));
             }
             if self.report.breakaway_allowed || !self.report.assigned_to_job {
-                return Err("NeverGuard process-tree verification requires a non-breakaway Job Object".to_string());
+                return Err("Guard process-tree verification requires a non-breakaway Job Object".to_string());
             }
             verify_process_tree_for_job(self._job.raw(), root_pid)
         }
@@ -278,10 +278,10 @@ mod windows_impl {
             .windows
             .as_ref()
             .map(|details| details.profile)
-            .ok_or_else(|| "NeverGuard Windows policy is missing Protection Core details".to_string())?;
+            .ok_or_else(|| "Guard Windows policy is missing Protection Core details".to_string())?;
         if actual_profile != profile {
             return Err(format!(
-                "NeverGuard Windows Protection Core already initialized with profile {actual_profile}, requested {profile}"
+                "Guard Windows Protection Core already initialized with profile {actual_profile}, requested {profile}"
             ));
         }
         Ok(report)
@@ -300,7 +300,7 @@ mod windows_impl {
                 .windows
                 .as_ref()
                 .map(|details| details.profile)
-                .ok_or_else(|| "NeverGuard Windows policy is missing Protection Core details".to_string())?;
+                .ok_or_else(|| "Guard Windows policy is missing Protection Core details".to_string())?;
             let hardening = ensure_windows_production_hardening()?;
             return Ok(build_core_report(profile, process_policy, hardening));
         }
@@ -312,7 +312,7 @@ mod windows_impl {
         profile: WindowsProtectionProfile,
     ) -> Result<WindowsProtectionCoreReport, String> {
         // Применяйте глобальную защиту heap и DLL до профильных ограничений
-        // и создания Tokio runtime процессом neverguard.exe. Это сохраняет
+        // и создания Tokio runtime процессом guard.exe. Это сохраняет
         // производственный порядок и учитывает требования каждого профиля.
         let hardening = ensure_windows_production_hardening()?;
         let process_policy = ensure_guard_process_policy_with_profile(profile)?;
@@ -385,15 +385,15 @@ mod windows_impl {
     pub fn bind_guard_to_launcher_job(child: &mut Child) -> Result<GuardLifetimeJob, String> {
         let pid = child
             .id()
-            .ok_or_else(|| "NeverGuard PID unavailable for suspended lifetime boundary".to_string())?;
+            .ok_or_else(|| "Guard PID unavailable for suspended lifetime boundary".to_string())?;
         let process_handle = child
             .raw_handle()
-            .ok_or_else(|| "NeverGuard process handle unavailable for lifetime job".to_string())?
+            .ok_or_else(|| "Guard process handle unavailable for lifetime job".to_string())?
             as HANDLE;
         let job_handle = unsafe { CreateJobObjectW(null(), null()) };
         if job_handle.is_null() {
             return Err(format!(
-                "NeverGuard lifetime Job Object creation failed: {}",
+                "Guard lifetime Job Object creation failed: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -410,14 +410,14 @@ mod windows_impl {
         };
         if set_ok == 0 {
             return Err(format!(
-                "NeverGuard lifetime Job Object policy setup failed: {}",
+                "Guard lifetime Job Object policy setup failed: {}",
                 std::io::Error::last_os_error()
             ));
         }
         let assign_ok = unsafe { AssignProcessToJobObject(job.raw(), process_handle) };
         if assign_ok == 0 {
             return Err(format!(
-                "NeverGuard process cannot be assigned to launcher lifetime Job Object: {}",
+                "Guard process cannot be assigned to launcher lifetime Job Object: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -425,7 +425,7 @@ mod windows_impl {
         let membership_ok = unsafe { IsProcessInJob(process_handle, job.raw(), &mut in_job) };
         if membership_ok == 0 || in_job == 0 {
             return Err(format!(
-                "NeverGuard launcher lifetime Job Object verification failed: {}",
+                "Guard launcher lifetime Job Object verification failed: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -489,7 +489,7 @@ mod windows_impl {
 
         if !capabilities.requirements_satisfied() {
             return Err(format!(
-                "NeverGuard Windows protection profile {profile} cannot be enforced by this host capability set"
+                "Guard Windows protection profile {profile} cannot be enforced by this host capability set"
             ));
         }
 
@@ -553,7 +553,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard failed to enforce Windows {name} process policy: {}",
+                "Guard failed to enforce Windows {name} process policy: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -585,7 +585,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard failed to query Windows {name} process policy: {}",
+                "Guard failed to query Windows {name} process policy: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -603,12 +603,12 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard failed to query current Windows Job Object membership: {}",
+                "Guard failed to query current Windows Job Object membership: {}",
                 std::io::Error::last_os_error()
             ));
         }
         if in_job == 0 {
-            return Err("NeverGuard Windows Protection Core requires launcher Job Object lifetime binding".to_string());
+            return Err("Guard Windows Protection Core requires launcher Job Object lifetime binding".to_string());
         }
         Ok(true)
     }
@@ -626,7 +626,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard cannot enumerate runtime Job Object members: {}",
+                "Guard cannot enumerate runtime Job Object members: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -634,14 +634,14 @@ mod windows_impl {
         let listed = u32::from_ne_bytes(buffer[4..8].try_into().expect("fixed header")) as usize;
         if assigned > listed || listed > MAX_JOB_PROCESS_IDS {
             return Err(format!(
-                "NeverGuard Job Object process list is incomplete: assigned={assigned}, listed={listed}"
+                "Guard Job Object process list is incomplete: assigned={assigned}, listed={listed}"
             ));
         }
         let required = 8usize
             .checked_add(listed.saturating_mul(size_of::<usize>()))
-            .ok_or_else(|| "NeverGuard Job Object process-list size overflow".to_string())?;
+            .ok_or_else(|| "Guard Job Object process-list size overflow".to_string())?;
         if required > buffer.len() {
-            return Err("NeverGuard Job Object process list exceeds verification buffer".to_string());
+            return Err("Guard Job Object process list exceeds verification buffer".to_string());
         }
         let mut result = HashSet::with_capacity(listed);
         for index in 0..listed {
@@ -650,9 +650,9 @@ mod windows_impl {
                 std::ptr::read_unaligned(buffer.as_ptr().add(offset) as *const usize)
             };
             let pid = u32::try_from(raw)
-                .map_err(|_| format!("NeverGuard Job Object PID does not fit u32: {raw}"))?;
+                .map_err(|_| format!("Guard Job Object PID does not fit u32: {raw}"))?;
             if pid == 0 || !result.insert(pid) {
-                return Err(format!("NeverGuard Job Object process list contains invalid/duplicate PID {pid}"));
+                return Err(format!("Guard Job Object process list contains invalid/duplicate PID {pid}"));
             }
         }
         Ok(result)
@@ -662,7 +662,7 @@ mod windows_impl {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "NeverGuard process-tree snapshot failed: {}",
+                "Guard process-tree snapshot failed: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -686,12 +686,12 @@ mod windows_impl {
             has_entry = unsafe { Process32NextW(snapshot.0, &mut entry) } != 0;
         }
         if !parent_by_pid.contains_key(&root_pid) {
-            return Err(format!("NeverGuard runtime root PID {root_pid} disappeared from process snapshot"));
+            return Err(format!("Guard runtime root PID {root_pid} disappeared from process snapshot"));
         }
         let job_members = job_process_ids(job)?;
         if !job_members.contains(&root_pid) {
             return Err(format!(
-                "NeverGuard process-tree integrity violation: runtime root PID {root_pid} is missing from Job Object"
+                "Guard process-tree integrity violation: runtime root PID {root_pid} is missing from Job Object"
             ));
         }
 
@@ -716,7 +716,7 @@ mod windows_impl {
             if process.is_null() {
                 if pid == root_pid {
                     return Err(format!(
-                        "NeverGuard cannot open runtime root PID {pid} for Job Object verification: {}",
+                        "Guard cannot open runtime root PID {pid} for Job Object verification: {}",
                         std::io::Error::last_os_error()
                     ));
                 }
@@ -735,13 +735,13 @@ mod windows_impl {
                 let error = std::io::Error::last_os_error();
                 unsafe { let _ = CloseHandle(process); }
                 return Err(format!(
-                    "NeverGuard cannot check process liveness for PID {pid}: {error}"
+                    "Guard cannot check process liveness for PID {pid}: {error}"
                 ));
             }
             if exit_code != STILL_ACTIVE_EXIT_CODE {
                 unsafe { let _ = CloseHandle(process); }
                 if pid == root_pid {
-                    return Err(format!("NeverGuard runtime root PID {pid} terminated during Job Object verification"));
+                    return Err(format!("Guard runtime root PID {pid} terminated during Job Object verification"));
                 }
                 continue;
             }
@@ -751,7 +751,7 @@ mod windows_impl {
                 let error = std::io::Error::last_os_error();
                 unsafe { let _ = CloseHandle(process); }
                 return Err(format!(
-                    "NeverGuard Job Object membership query failed for PID {pid}: {error}"
+                    "Guard Job Object membership query failed for PID {pid}: {error}"
                 ));
             }
             if in_job == 0 {
@@ -763,7 +763,7 @@ mod windows_impl {
                     let error = std::io::Error::last_os_error();
                     unsafe { let _ = CloseHandle(process); }
                     return Err(format!(
-                        "NeverGuard process liveness recheck failed for PID {pid}: {error}"
+                        "Guard process liveness recheck failed for PID {pid}: {error}"
                     ));
                 }
                 unsafe { let _ = CloseHandle(process); }
@@ -771,7 +771,7 @@ mod windows_impl {
                     continue;
                 }
                 return Err(format!(
-                    "NeverGuard process-tree integrity violation: descendant PID {pid} escaped runtime Job Object"
+                    "Guard process-tree integrity violation: descendant PID {pid} escaped runtime Job Object"
                 ));
             }
             unsafe { let _ = CloseHandle(process); }
@@ -853,7 +853,7 @@ mod windows_impl {
         let assign_ok = unsafe { AssignProcessToJobObject(job.raw(), process_handle) };
         if assign_ok == 0 {
             return Err(format!(
-                "Windows runtime process cannot be assigned to NeverGuard Job Object: {}",
+                "Windows runtime process cannot be assigned to Guard Job Object: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -996,31 +996,31 @@ impl RuntimeProcessPolicyGuard {
 
 #[cfg(not(windows))]
 pub fn ensure_guard_process_policy() -> Result<GuardProcessPolicyReport, String> {
-    Err("NeverGuard 0.13.4 Windows process policy enforcement доступен только для Windows".to_string())
+    Err("Guard 0.13.4 Windows process policy enforcement доступен только для Windows".to_string())
 }
 
 #[cfg(not(windows))]
 pub fn ensure_windows_production_hardening() -> Result<WindowsProductionHardeningReport, String> {
-    Err("NeverGuard 0.13.6 Windows production hardening доступен только для Windows".to_string())
+    Err("Guard 0.13.6 Windows production hardening доступен только для Windows".to_string())
 }
 
 #[cfg(not(windows))]
 pub fn ensure_guard_process_policy_with_profile(
     _profile: WindowsProtectionProfile,
 ) -> Result<GuardProcessPolicyReport, String> {
-    Err("NeverGuard Windows Protection Core доступен только для Windows".to_string())
+    Err("Guard Windows Protection Core доступен только для Windows".to_string())
 }
 
 #[cfg(not(windows))]
 pub fn ensure_windows_protection_core() -> Result<WindowsProtectionCoreReport, String> {
-    Err("NeverGuard Windows Protection Core доступен только для Windows".to_string())
+    Err("Guard Windows Protection Core доступен только для Windows".to_string())
 }
 
 #[cfg(not(windows))]
 pub fn ensure_windows_protection_core_with_profile(
     _profile: WindowsProtectionProfile,
 ) -> Result<WindowsProtectionCoreReport, String> {
-    Err("NeverGuard Windows Protection Core доступен только для Windows".to_string())
+    Err("Guard Windows Protection Core доступен только для Windows".to_string())
 }
 
 #[cfg(not(windows))]
@@ -1030,7 +1030,7 @@ pub fn prepare_guard_command(_command: &mut tokio::process::Command) {}
 pub fn bind_guard_to_launcher_job(
     _child: &mut tokio::process::Child,
 ) -> Result<GuardLifetimeJob, String> {
-    Err("NeverGuard 0.13.6 launcher lifetime Job Object доступен только для Windows".to_string())
+    Err("Guard 0.13.6 launcher lifetime Job Object доступен только для Windows".to_string())
 }
 
 #[cfg(not(windows))]
@@ -1052,7 +1052,7 @@ mod tests {
         assert_eq!(NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION, 1);
         assert_eq!(
             NEVERGUARD_WINDOWS_PROCESS_POLICY_SCHEMA,
-            "neverguard/windows-runtime-process-policy/v1"
+            "guard/windows-runtime-process-policy/v1"
         );
     }
 

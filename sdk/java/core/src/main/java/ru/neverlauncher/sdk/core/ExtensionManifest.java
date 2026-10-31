@@ -6,7 +6,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
-/** Reads the actual NeverExtensions 2.0 signed-package manifest format; does not replace package signature verification. */
+/** Reads the actual Extensions 2.0 signed-package manifest format; does not replace package signature verification. */
 public record ExtensionManifest(String id, String name, SemVer version, String versionText, String publisher, String api,
         List<Target> targets, Set<String> permissions, List<String> hooks,
         List<Dependency> dependencies, List<Conflict> conflicts) {

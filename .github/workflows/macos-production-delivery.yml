@@ -136,8 +136,8 @@ jobs:
             dist/release-*/neverlauncher-cli-macos-arm64
             dist/release-*/neverlauncher-desktop-macos-x64
             dist/release-*/neverlauncher-desktop-macos-arm64
-            dist/release-*/neverguard-macos-x64
-            dist/release-*/neverguard-macos-arm64
+            dist/release-*/guard-macos-x64
+            dist/release-*/guard-macos-arm64
             dist/release-*/neverruntime-macos-x64
             dist/release-*/neverruntime-macos-arm64
             dist/release-*/neverlauncher-desktop-*-macos-x64.zip

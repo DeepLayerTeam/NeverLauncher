@@ -3,7 +3,7 @@
   "info": {
     "title": "NeverLauncher API",
     "version": "1.0.0",
-    "description": "Канонический production API NeverLauncher 0.42.0. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API NeverLauncher 0.42.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -22458,7 +22458,7 @@
         "properties": {
           "protocol": {
             "type": "string",
-            "const": "neverextensions.desktop-rpc.v1"
+            "const": "extensions.desktop-rpc.v1"
           },
           "id": {
             "type": "string",
@@ -25070,7 +25070,7 @@
           },
           "guardAttestationTicket": {
             "type": "string",
-            "description": "Single-use NeverGuard 0.13.4 launch ticket required when Guard Attestation enforcement is enabled"
+            "description": "Single-use Guard 0.13.4 launch ticket required when Guard Attestation enforcement is enabled"
           }
         }
       },

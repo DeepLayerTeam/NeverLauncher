@@ -48,11 +48,11 @@ The command emits a policy envelope with `schemaVersion`, base64 of the exact si
 
 ## Execution path
 
-1. Desktop launches verified Minecraft and completes Continuous NeverGuard v2 attestation. The Backend produces a one-time Guard ticket containing the attestation digest, runtime PID, hashes and session/device bindings.
+1. Desktop launches verified Minecraft and completes Continuous Guard v2 attestation. The Backend produces a one-time Guard ticket containing the attestation digest, runtime PID, hashes and session/device bindings.
 2. Authenticated Desktop requests `POST /api/v1/server-bridge/plan-challenge` for server/project/profile/channel; Backend checks authorized project, Device Trust, pinned policy, generates an unpredictable 60-second challenge, and stores it in `device_challenges` (PostgreSQL or in-memory development).
 3. Native Tauri reads the signed, installed active release from NeverRuntime; `verified_active_selection_02410` validates all managed files. It recomputes the exact native resolved-download plan and signs a domain-separated proof with the currently bound **hardware P-256 device key**. Arbitrary client-provided component lists and plan hashes are not accepted by the native signing command.
 4. `POST /api/v1/session/join` submits this proof together with the one-time Continuous Guard ticket. The API verifies the policy, target, session, device/binding epoch, exact allowlist tuple, Guard attestation digest and P-256 signature; atomically consumes the one-use plan challenge. Only then does the existing ServerBridge issue a one-time join ticket.
-5. The registered node cryptographically authenticates `validate-join`; existing checks for session, NeverGuard, trust, release integrity, one-time redemption and routing still run. On policy rotation, unredeemed tickets minted before `issuedAt` are invalidated.
+5. The registered node cryptographically authenticates `validate-join`; existing checks for session, Guard, trust, release integrity, one-time redemption and routing still run. On policy rotation, unredeemed tickets minted before `issuedAt` are invalidated.
 
 ## Limits and threat model
 

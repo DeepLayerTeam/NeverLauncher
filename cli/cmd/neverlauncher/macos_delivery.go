@@ -117,7 +117,7 @@ func expectedMacOSArtifacts0154(arch string) map[string]string {
 	return map[string]string{
 		"cli":              "neverlauncher-cli-macos-" + arch,
 		"desktop-launcher": "neverlauncher-desktop-macos-" + arch,
-		"guard":            "neverguard-macos-" + arch,
+		"guard":            "guard-macos-" + arch,
 		"runtime":          "neverruntime-macos-" + arch,
 	}
 }
@@ -126,7 +126,7 @@ func expectedMacOSBundlePaths0154() map[string]string {
 	return map[string]string{
 		"cli":              "NeverLauncher.app/Contents/Helpers/neverlauncher-cli",
 		"desktop-launcher": "NeverLauncher.app/Contents/MacOS/neverlauncher-desktop",
-		"guard":            "NeverLauncher.app/Contents/Helpers/neverguard",
+		"guard":            "NeverLauncher.app/Contents/Helpers/guard",
 		"runtime":          "NeverLauncher.app/Contents/Helpers/neverruntime",
 	}
 }
@@ -417,7 +417,7 @@ func verifyMacOSPackageArchive0154(dir, ver, arch string, manifest MacOSPackageM
 			byComponent[row.Component] = row
 		}
 		aliases := map[string]string{"desktop": "desktop-launcher", "guard": "guard", "runtime": "runtime"}
-		expectedPath := map[string]string{"desktop": "Contents/MacOS/neverlauncher-desktop", "guard": "Contents/Helpers/neverguard", "runtime": "Contents/Helpers/neverruntime"}
+		expectedPath := map[string]string{"desktop": "Contents/MacOS/neverlauncher-desktop", "guard": "Contents/Helpers/guard", "runtime": "Contents/Helpers/neverruntime"}
 		seen := map[string]bool{}
 		for _, row := range update.Components {
 			sourceComponent, known := aliases[row.Component]

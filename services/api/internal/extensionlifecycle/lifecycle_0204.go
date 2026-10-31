@@ -132,7 +132,7 @@ func stagingRoot0204(root string, scope Scope, id string) string {
 	return filepath.Join(extensionDir0204(root, scope, id), ".staging")
 }
 func stateLockPath0204(root string, scope Scope, id string) string {
-	return filepath.Join(extensionDir0204(root, scope, id), "neverextensions.lock.json")
+	return filepath.Join(extensionDir0204(root, scope, id), "extensions.lock.json")
 }
 func operationLockPath0204(root string, scope Scope, id string) string {
 	return filepath.Join(extensionDir0204(root, scope, id), ".lifecycle.lock")

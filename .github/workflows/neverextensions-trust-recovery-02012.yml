@@ -1,4 +1,4 @@
-name: NeverExtensions Trust Recovery 0.20.12
+name: Extensions Trust Recovery 0.20.12
 
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
           python-version: '3.x'
       - name: Validate certification target definition
         shell: bash
-        run: python3 scripts/compatibility/neverextensions_trust_02012.py validate
+        run: python3 scripts/compatibility/extensions_trust_02012.py validate
       - name: Trust, malicious-package and crash-loop E2E
         shell: bash
         run: |
@@ -62,7 +62,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: neverextensions-trust-evidence-${{ matrix.target }}
+          name: extensions-trust-evidence-${{ matrix.target }}
           path: evidence/${{ matrix.target }}.json
 
   public-matrix:
@@ -72,15 +72,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: neverextensions-trust-evidence-*
+          pattern: extensions-trust-evidence-*
           path: evidence-raw
           merge-multiple: true
       - name: Aggregate fail-closed public matrix
         run: |
-          python3 scripts/compatibility/neverextensions_trust_02012.py aggregate --evidence-dir evidence-raw --out-json NEVEREXTENSIONS_TRUST_COMPATIBILITY.json --out-md NEVEREXTENSIONS_TRUST_COMPATIBILITY.md
+          python3 scripts/compatibility/extensions_trust_02012.py aggregate --evidence-dir evidence-raw --out-json NEVEREXTENSIONS_TRUST_COMPATIBILITY.json --out-md NEVEREXTENSIONS_TRUST_COMPATIBILITY.md
       - uses: actions/upload-artifact@v4
         with:
-          name: neverextensions-0.20.12-public-compatibility-matrix
+          name: extensions-0.20.12-public-compatibility-matrix
           path: |
             NEVEREXTENSIONS_TRUST_COMPATIBILITY.json
             NEVEREXTENSIONS_TRUST_COMPATIBILITY.md

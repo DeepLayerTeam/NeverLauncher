@@ -53,12 +53,12 @@ echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build CLI/API"
   GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${NEVERLAUNCHER_SOURCE_COMMIT:-${GITHUB_SHA:-unknown}}" -o "${OUT_DIR}/neverlauncher-api-linux-${ARCH}" ./cmd/neverlauncher-api
 )
 
-echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build Desktop/NeverGuard/NeverRuntime natively"
+echo "[NeverLauncher ${VERSION}] Linux ${ARCH}: build Desktop/Guard/NeverRuntime natively"
 cargo build --release --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
 cargo build --release --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bins
 
 install -m 0755 "${ROOT_DIR}/apps/desktop/src-tauri/target/release/neverlauncher-desktop" "${OUT_DIR}/neverlauncher-desktop-linux-${ARCH}"
-install -m 0755 "${ROOT_DIR}/runtime/neverruntime/target/release/neverguard" "${OUT_DIR}/neverguard-linux-${ARCH}"
+install -m 0755 "${ROOT_DIR}/runtime/neverruntime/target/release/guard" "${OUT_DIR}/guard-linux-${ARCH}"
 install -m 0755 "${ROOT_DIR}/runtime/neverruntime/target/release/neverruntime" "${OUT_DIR}/neverruntime-linux-${ARCH}"
 chmod 0755 \
   "${OUT_DIR}/neverlauncher-cli-linux-${ARCH}" \

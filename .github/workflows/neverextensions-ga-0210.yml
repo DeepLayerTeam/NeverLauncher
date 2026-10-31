@@ -1,4 +1,4 @@
-name: NeverExtensions GA 0.21.0
+name: Extensions GA 0.21.0
 
 on:
   push:
@@ -47,12 +47,12 @@ jobs:
       - name: Validate GA source contract
         shell: bash
         run: |
-          python3 scripts/compatibility/neverextensions_ga_0210.py validate
-          python3 scripts/smoke/offline/neverextensions-ga-0210.py
+          python3 scripts/compatibility/extensions_ga_0210.py validate
+          python3 scripts/smoke/offline/extensions-ga-0210.py
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/version/manage.py check
 
-      - name: Backend NeverExtensions GA tests
+      - name: Backend Extensions GA tests
         shell: bash
         run: |
           (cd services/api && go test ./internal/extensioncontract ./internal/extensionpackage ./internal/extensiontrust ./internal/extensionsecurity ./internal/extensionresolver ./internal/extensionupdates ./internal/extensionlifecycle ./internal/extensionhost ./internal/extensionga ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/neverlauncher-api)
@@ -91,7 +91,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: neverextensions-ga-evidence-${{ matrix.target }}
+          name: extensions-ga-evidence-${{ matrix.target }}
           path: evidence/${{ matrix.target }}.json
 
   certificate:
@@ -108,15 +108,15 @@ jobs:
           python-version: '3.x'
       - uses: actions/download-artifact@v4
         with:
-          pattern: neverextensions-ga-evidence-*
+          pattern: extensions-ga-evidence-*
           path: evidence-raw
           merge-multiple: true
       - name: Build fail-closed public matrix and certificate
         run: |
-          python3 scripts/compatibility/neverextensions_ga_0210.py aggregate --evidence-dir evidence-raw --out-json NEVEREXTENSIONS_GA_COMPATIBILITY.json --out-md NEVEREXTENSIONS_GA_COMPATIBILITY.md --out-certificate NEVEREXTENSIONS_GA_CERTIFICATE.json
+          python3 scripts/compatibility/extensions_ga_0210.py aggregate --evidence-dir evidence-raw --out-json NEVEREXTENSIONS_GA_COMPATIBILITY.json --out-md NEVEREXTENSIONS_GA_COMPATIBILITY.md --out-certificate NEVEREXTENSIONS_GA_CERTIFICATE.json
       - uses: actions/upload-artifact@v4
         with:
-          name: neverextensions-0.21.0-ga-certification
+          name: extensions-0.21.0-ga-certification
           path: |
             NEVEREXTENSIONS_GA_COMPATIBILITY.json
             NEVEREXTENSIONS_GA_COMPATIBILITY.md

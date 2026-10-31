@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate the checked-in OpenAPI 3.1 contract for the canonical NeverLauncher API v1."""
+
 from __future__ import annotations
 import json, re
 from pathlib import Path
@@ -8,528 +9,3208 @@ ROOT = Path(__file__).resolve().parents[2]
 ROUTES = ROOT / "services/api/internal/httpapi"
 OUT = ROOT / "schemas/openapi.yaml"
 PRODUCT_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-route_re = re.compile(r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles/minecraft(?:/[^" ]+)?|/api/user/profile/[^" ]+|/authserver/[^" ]+|/sessionserver/session/minecraft/[^" ]+|/(?:health|ready|metrics))')
-files = [ROUTES / "handler.go"] + sorted(p for p in ROUTES.glob("routes_*.go") if "legacy" not in p.name) + [ROUTES / "migration_0331.go",ROUTES / "migration_compat_0332.go", ROUTES / "migration_inventory_0333.go", ROUTES / "migration_identity_0334.go", ROUTES / "migration_auth_0335.go"]
+route_re = re.compile(
+    r'"(GET|POST|PUT|PATCH|DELETE) (/api/v1/[^" ]+|/api/profiles/minecraft(?:/[^" ]+)?|/api/user/profile/[^" ]+|/authserver/[^" ]+|/sessionserver/session/minecraft/[^" ]+|/(?:health|ready|metrics))'
+)
+files = (
+    [ROUTES / "handler.go"]
+    + sorted(p for p in ROUTES.glob("routes_*.go") if "legacy" not in p.name)
+    + [
+        ROUTES / "migration_0331.go",
+        ROUTES / "migration_compat_0332.go",
+        ROUTES / "migration_inventory_0333.go",
+        ROUTES / "migration_identity_0334.go",
+        ROUTES / "migration_auth_0335.go",
+    ]
+)
 routes = []
 for file in files:
     for method, path in route_re.findall(file.read_text()):
         path = path.replace("{path...}", "{path}")
         routes.append((method.lower(), path))
-routes = sorted(set(routes), key=lambda x:(x[1],x[0]))
+routes = sorted(set(routes), key=lambda x: (x[1], x[0]))
 
 public_prefixes = (
-    "/health", "/ready", "/metrics", "/api/v1/status", "/api/v1/diagnostics/", "/api/v1/runtime/", "/api/v1/loaders",
-    "/api/v1/install/wizard", "/api/v1/install/profiles", "/api/v1/install/readiness", "/api/v1/projects", "/api/v1/files/",
+    "/health",
+    "/ready",
+    "/metrics",
+    "/api/v1/status",
+    "/api/v1/diagnostics/",
+    "/api/v1/runtime/",
+    "/api/v1/loaders",
+    "/api/v1/install/wizard",
+    "/api/v1/install/profiles",
+    "/api/v1/install/readiness",
+    "/api/v1/projects",
+    "/api/v1/files/",
 )
-public_exact = {"/api/v1/server-bridge/matrix", "/api/v1/server-bridge/capabilities", "/api/v1/install/bootstrap-admin", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/providers", "/api/v1/admin/login", "/api/v1/textures/{uuid}", "/api/v1/textures/blob/{digest}"}
-node_signed_paths = {"/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff", "/api/v1/server-bridge/audit-event", "/api/v1/server-bridge/servers/{serverId}/events", "/api/v1/server-bridge/servers/{serverId}/control/poll", "/api/v1/server-bridge/servers/{serverId}/control/ack", "/api/v1/server-bridge/servers/{serverId}/routes", "/api/v1/session/has-joined"}
-node_signature_security = {"NodeId": [], "NodeKeyFingerprint": [], "NodeTimestamp": [], "NodeNonce": [], "NodeSignature": []}
+public_exact = {
+    "/api/v1/server-bridge/matrix",
+    "/api/v1/server-bridge/capabilities",
+    "/api/v1/install/bootstrap-admin",
+    "/api/v1/auth/login",
+    "/api/v1/auth/refresh",
+    "/api/v1/auth/providers",
+    "/api/v1/admin/login",
+    "/api/v1/textures/{uuid}",
+    "/api/v1/textures/blob/{digest}",
+}
+node_signed_paths = {
+    "/api/v1/server-bridge/validate-join",
+    "/api/v1/server-bridge/handoff",
+    "/api/v1/server-bridge/audit-event",
+    "/api/v1/server-bridge/servers/{serverId}/events",
+    "/api/v1/server-bridge/servers/{serverId}/control/poll",
+    "/api/v1/server-bridge/servers/{serverId}/control/ack",
+    "/api/v1/server-bridge/servers/{serverId}/routes",
+    "/api/v1/session/has-joined",
+}
+node_signature_security = {
+    "NodeId": [],
+    "NodeKeyFingerprint": [],
+    "NodeTimestamp": [],
+    "NodeNonce": [],
+    "NodeSignature": [],
+}
+
 
 def is_public(method, path):
-    if path.startswith("/authserver/") or path.startswith("/sessionserver/session/minecraft/") or path.startswith("/api/profiles/minecraft"): return True
-    if path in public_exact: return True
-    if path.startswith("/api/v1/auth/oidc/"): return True
-    if method == "get" and any(path.startswith(p) for p in public_prefixes): return True
+    if (
+        path.startswith("/authserver/")
+        or path.startswith("/sessionserver/session/minecraft/")
+        or path.startswith("/api/profiles/minecraft")
+    ):
+        return True
+    if path in public_exact:
+        return True
+    if path.startswith("/api/v1/auth/oidc/"):
+        return True
+    if method == "get" and any(path.startswith(p) for p in public_prefixes):
+        return True
     return False
 
+
 def security_for(method, path):
-    if path == "/api/v1/install/bootstrap-admin": return [{"BootstrapToken": []}]
-    if is_public(method,path): return []
-    if path.endswith("/heartbeat") or path in node_signed_paths: return [node_signature_security]
+    if path == "/api/v1/install/bootstrap-admin":
+        return [{"BootstrapToken": []}]
+    if is_public(method, path):
+        return []
+    if path.endswith("/heartbeat") or path in node_signed_paths:
+        return [node_signature_security]
     return [{"BearerAuth": []}]
 
+
 def tags_for(path):
-    if path in ("/health","/ready","/metrics","/api/v1/status"): return ["operations"]
-    for token, tag in [("/authserver/","minecraft-auth"),("/sessionserver/","minecraft-auth"),("/api/profiles/minecraft","minecraft-auth"),("/api/user/profile/","minecraft-auth"),("/minecraft/","minecraft-auth"),("/auth/","auth"),("/install/","install"),("/server-bridge/","bridge"),("/session/","bridge"),("/textures/","bridge"),("/projects","projects"),("/files/","packages"),("/admin/","admin"),("/runtime/","runtime"),("/loaders","runtime"),("/operations/","operations"),("/telemetry/","operations"),("/crash-reports","operations"),("/diagnostics/","operations")]:
-        if token in path: return [tag]
+    if path in ("/health", "/ready", "/metrics", "/api/v1/status"):
+        return ["operations"]
+    for token, tag in [
+        ("/authserver/", "minecraft-auth"),
+        ("/sessionserver/", "minecraft-auth"),
+        ("/api/profiles/minecraft", "minecraft-auth"),
+        ("/api/user/profile/", "minecraft-auth"),
+        ("/minecraft/", "minecraft-auth"),
+        ("/auth/", "auth"),
+        ("/install/", "install"),
+        ("/server-bridge/", "bridge"),
+        ("/session/", "bridge"),
+        ("/textures/", "bridge"),
+        ("/projects", "projects"),
+        ("/files/", "packages"),
+        ("/admin/", "admin"),
+        ("/runtime/", "runtime"),
+        ("/loaders", "runtime"),
+        ("/operations/", "operations"),
+        ("/telemetry/", "operations"),
+        ("/crash-reports", "operations"),
+        ("/diagnostics/", "operations"),
+    ]:
+        if token in path:
+            return [tag]
     return ["api"]
 
-def op_id(method,path):
-    x = path.strip("/").replace("api/v1/","")
-    x = re.sub(r"\{([^}]+)\}", lambda m: "by_"+m.group(1), x)
-    x = re.sub(r"[^A-Za-z0-9]+","_",x).strip("_")
+
+def op_id(method, path):
+    x = path.strip("/").replace("api/v1/", "")
+    x = re.sub(r"\{([^}]+)\}", lambda m: "by_" + m.group(1), x)
+    x = re.sub(r"[^A-Za-z0-9]+", "_", x).strip("_")
     return method + "_" + x
 
+
 def path_parameters(path):
-    out=[]
-    for name in re.findall(r"\{([^}]+)\}",path):
-        schema={"type":"string","minLength":1}
-        out.append({"name":name,"in":"path","required":True,"schema":schema})
+    out = []
+    for name in re.findall(r"\{([^}]+)\}", path):
+        schema = {"type": "string", "minLength": 1}
+        out.append({"name": name, "in": "path", "required": True, "schema": schema})
     if path.endswith("/manifest"):
-        out.append({"name":"channel","in":"query","required":False,"schema":{"type":"string","default":"stable"}})
+        out.append(
+            {
+                "name": "channel",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string", "default": "stable"},
+            }
+        )
     if path.endswith("/export") and "/profiles/" in path:
-        out.append({"name":"revision","in":"query","required":False,"schema":{"type":"integer","minimum":1}})
+        out.append(
+            {
+                "name": "revision",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "integer", "minimum": 1},
+            }
+        )
     if path.endswith("/diff") and "/profiles/" in path:
-        for k in ("fromRevision","toRevision"):
-            out.append({"name":k,"in":"query","required":False,"schema":{"type":"integer","minimum":1}})
-        out.append({"name":"againstProfileId","in":"query","required":False,"schema":{"type":"string"}})
+        for k in ("fromRevision", "toRevision"):
+            out.append(
+                {
+                    "name": k,
+                    "in": "query",
+                    "required": False,
+                    "schema": {"type": "integer", "minimum": 1},
+                }
+            )
+        out.append(
+            {
+                "name": "againstProfileId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            }
+        )
     if path.endswith("/files") and path.startswith("/api/v1/projects/"):
-        out.append({"name":"versionId","in":"query","required":False,"schema":{"type":"string"}})
+        out.append(
+            {
+                "name": "versionId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            }
+        )
     if path == "/sessionserver/session/minecraft/profile/{uuid}":
-        out.append({"name":"unsigned","in":"query","required":False,"schema":{"type":"boolean","default":True}})
+        out.append(
+            {
+                "name": "unsigned",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "boolean", "default": True},
+            }
+        )
     if path == "/api/v1/session/has-joined":
-        out += [{"name":"username","in":"query","required":False,"schema":{"type":"string"}},{"name":"serverId","in":"query","required":False,"schema":{"type":"string"}}]
+        out += [
+            {
+                "name": "username",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "serverId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+        ]
     if path == "/api/v1/operations/recover":
         out += [
-          {"name":"projectId","in":"query","required":True,"schema":{"type":"string","minLength":1,"maxLength":128}},
-          {"name":"kind","in":"query","required":True,"schema":{"type":"string","enum":["package-publish","channel-rollback"]}},
-          {"name":"idempotencyKey","in":"query","required":True,"description":"Original key; lookup never retries a mutation and is restricted to the original actor and current project permission.","schema":{"type":"string","minLength":8,"maxLength":240}},
+            {
+                "name": "projectId",
+                "in": "query",
+                "required": True,
+                "schema": {"type": "string", "minLength": 1, "maxLength": 128},
+            },
+            {
+                "name": "kind",
+                "in": "query",
+                "required": True,
+                "schema": {
+                    "type": "string",
+                    "enum": ["package-publish", "channel-rollback"],
+                },
+            },
+            {
+                "name": "idempotencyKey",
+                "in": "query",
+                "required": True,
+                "description": "Original key; lookup never retries a mutation and is restricted to the original actor and current project permission.",
+                "schema": {"type": "string", "minLength": 8, "maxLength": 240},
+            },
         ]
     if path == "/api/v1/server-bridge/capabilities":
         out += [
-          {"name":"protocols","in":"query","required":False,"description":"Comma-separated protocol versions offered by the bridge, highest preference first.","schema":{"type":"string","example":"3,2"}},
-          {"name":"features","in":"query","required":False,"description":"Comma-separated Protocol v3 feature identifiers supported by the bridge.","schema":{"type":"string","example":"protocol.capability-negotiation,protocol.feature-flags"}},
+            {
+                "name": "protocols",
+                "in": "query",
+                "required": False,
+                "description": "Comma-separated protocol versions offered by the bridge, highest preference first.",
+                "schema": {"type": "string", "example": "3,2"},
+            },
+            {
+                "name": "features",
+                "in": "query",
+                "required": False,
+                "description": "Comma-separated Protocol v3 feature identifiers supported by the bridge.",
+                "schema": {
+                    "type": "string",
+                    "example": "protocol.capability-negotiation,protocol.feature-flags",
+                },
+            },
         ]
     if path == "/api/v1/server-bridge/servers/{serverId}/control/poll":
         out += [
-          {"name":"runtimeId","in":"query","required":True,"schema":{"type":"string","pattern":"^[0-9a-f]{64}$"}},
-          {"name":"channelId","in":"query","required":True,"description":"Stable 128-bit control-channel id persisted by the active runtime across Backend endpoint failover.","schema":{"type":"string","pattern":"^[0-9a-f]{32}$"}},
-          {"name":"resumeAfter","in":"query","required":True,"description":"Highest delivery sequence durably acknowledged by this runtime channel.","schema":{"type":"integer","minimum":0}},
+            {
+                "name": "runtimeId",
+                "in": "query",
+                "required": True,
+                "schema": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            },
+            {
+                "name": "channelId",
+                "in": "query",
+                "required": True,
+                "description": "Stable 128-bit control-channel id persisted by the active runtime across Backend endpoint failover.",
+                "schema": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+            },
+            {
+                "name": "resumeAfter",
+                "in": "query",
+                "required": True,
+                "description": "Highest delivery sequence durably acknowledged by this runtime channel.",
+                "schema": {"type": "integer", "minimum": 0},
+            },
         ]
     if path == "/sessionserver/session/minecraft/hasJoined":
-        out += [{"name":"username","in":"query","required":True,"schema":{"type":"string","minLength":1}},{"name":"serverId","in":"query","required":True,"schema":{"type":"string","minLength":1}},{"name":"ip","in":"query","required":False,"schema":{"type":"string"}}]
+        out += [
+            {
+                "name": "username",
+                "in": "query",
+                "required": True,
+                "schema": {"type": "string", "minLength": 1},
+            },
+            {
+                "name": "serverId",
+                "in": "query",
+                "required": True,
+                "schema": {"type": "string", "minLength": 1},
+            },
+            {
+                "name": "ip",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+        ]
     if path.endswith("/oidc/{providerId}/start"):
-        out += [{"name":"redirectUri","in":"query","required":False,"schema":{"type":"string","format":"uri"}},{"name":"deviceId","in":"query","required":False,"schema":{"type":"string"}}]
+        out += [
+            {
+                "name": "redirectUri",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string", "format": "uri"},
+            },
+            {
+                "name": "deviceId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+        ]
     if path.endswith("/oidc/{providerId}/callback"):
-        out += [{"name":"code","in":"query","required":False,"schema":{"type":"string"}},{"name":"state","in":"query","required":False,"schema":{"type":"string"}},{"name":"error","in":"query","required":False,"schema":{"type":"string"}}]
+        out += [
+            {
+                "name": "code",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "state",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "error",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+        ]
     if path == "/api/v1/auth/devices":
-        out += [{"name":"status","in":"query","required":False,"schema":{"type":"string","enum":["active","revoked"]}}]
+        out += [
+            {
+                "name": "status",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string", "enum": ["active", "revoked"]},
+            }
+        ]
     if path == "/api/v1/admin/auth/devices":
         out += [
-          {"name":"userId","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"status","in":"query","required":False,"schema":{"type":"string","enum":["active","revoked"]}},
+            {
+                "name": "userId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "status",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string", "enum": ["active", "revoked"]},
+            },
         ]
     if path == "/api/v1/admin/auth/sessions":
         out += [
-          {"name":"userId","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"providerId","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"status","in":"query","required":False,"schema":{"type":"string","enum":["active","revoked"]}},
-          {"name":"riskState","in":"query","required":False,"schema":{"type":"string","enum":["normal","elevated","compromised"]}},
+            {
+                "name": "userId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "providerId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "status",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string", "enum": ["active", "revoked"]},
+            },
+            {
+                "name": "riskState",
+                "in": "query",
+                "required": False,
+                "schema": {
+                    "type": "string",
+                    "enum": ["normal", "elevated", "compromised"],
+                },
+            },
         ]
     if path == "/api/v1/admin/extension-registry/extensions":
         out += [
-          {"name":"q","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"channel","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"launcherVersion","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"os","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"arch","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"includeYanked","in":"query","required":False,"schema":{"type":"boolean","default":False}},
+            {
+                "name": "q",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "channel",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "launcherVersion",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "os",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "arch",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "includeYanked",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "boolean", "default": False},
+            },
         ]
     if path == "/api/v1/admin/extension-installs":
         out += [
-          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"]}},
-          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+            {
+                "name": "scope",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string", "enum": ["global", "project"]},
+            },
+            {
+                "name": "scopeId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
         ]
     if path == "/api/v1/admin/extension-installs/{extensionId}":
         out += [
-          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
-          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"historyLimit","in":"query","required":False,"schema":{"type":"integer","minimum":1,"maximum":200,"default":50}},
+            {
+                "name": "scope",
+                "in": "query",
+                "required": False,
+                "schema": {
+                    "type": "string",
+                    "enum": ["global", "project"],
+                    "default": "global",
+                },
+            },
+            {
+                "name": "scopeId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "historyLimit",
+                "in": "query",
+                "required": False,
+                "schema": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 50,
+                },
+            },
         ]
     if path == "/api/v1/admin/extensions/{extensionId}/permissions":
         out += [
-          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
-          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"version","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"fromVersion","in":"query","required":False,"schema":{"type":"string"}},
+            {
+                "name": "scope",
+                "in": "query",
+                "required": False,
+                "schema": {
+                    "type": "string",
+                    "enum": ["global", "project"],
+                    "default": "global",
+                },
+            },
+            {
+                "name": "scopeId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "version",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "fromVersion",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
         ]
     if path == "/api/v1/admin/extensions/{extensionId}/permissions/{permission}":
         out += [
-          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
-          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+            {
+                "name": "scope",
+                "in": "query",
+                "required": False,
+                "schema": {
+                    "type": "string",
+                    "enum": ["global", "project"],
+                    "default": "global",
+                },
+            },
+            {
+                "name": "scopeId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
         ]
     if path == "/api/v1/admin/extensions/{extensionId}/secrets":
         out += [
-          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"]}},
-          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+            {
+                "name": "scope",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string", "enum": ["global", "project"]},
+            },
+            {
+                "name": "scopeId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
         ]
     if path == "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}":
         out += [
-          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
-          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+            {
+                "name": "scope",
+                "in": "query",
+                "required": False,
+                "schema": {
+                    "type": "string",
+                    "enum": ["global", "project"],
+                    "default": "global",
+                },
+            },
+            {
+                "name": "scopeId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
         ]
-    if path in {"/api/v1/desktop/extensions/{extensionId}/ui", "/api/v1/desktop/extensions/{extensionId}/rpc"}:
+    if path in {
+        "/api/v1/desktop/extensions/{extensionId}/ui",
+        "/api/v1/desktop/extensions/{extensionId}/rpc",
+    }:
         out += [
-          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
-          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+            {
+                "name": "scope",
+                "in": "query",
+                "required": False,
+                "schema": {
+                    "type": "string",
+                    "enum": ["global", "project"],
+                    "default": "global",
+                },
+            },
+            {
+                "name": "scopeId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
         ]
     if path.startswith("/api/v1/admin/textures/"):
-        out.append({"name":"projectId","in":"query","required":False,"description":"Empty or absent = global local Minecraft policy; project ID = project-scoped policy.","schema":{"type":"string","maxLength":128}})
-        if path=="/api/v1/admin/textures/exceptions":
-            out.append({"name":"userId","in":"query","required":False,"schema":{"type":"string","maxLength":128}})
+        out.append(
+            {
+                "name": "projectId",
+                "in": "query",
+                "required": False,
+                "description": "Empty or absent = global local Minecraft policy; project ID = project-scoped policy.",
+                "schema": {"type": "string", "maxLength": 128},
+            }
+        )
+        if path == "/api/v1/admin/textures/exceptions":
+            out.append(
+                {
+                    "name": "userId",
+                    "in": "query",
+                    "required": False,
+                    "schema": {"type": "string", "maxLength": 128},
+                }
+            )
     if path == "/api/v1/admin/extension-events/subscriptions":
         out += [
-          {"name":"extensionId","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"]}},
-          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+            {
+                "name": "extensionId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "scope",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string", "enum": ["global", "project"]},
+            },
+            {
+                "name": "scopeId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
         ]
     if path == "/api/v1/admin/extension-events/dead-letters":
         out += [
-          {"name":"extensionId","in":"query","required":False,"schema":{"type":"string"}},
-          {"name":"limit","in":"query","required":False,"schema":{"type":"integer","minimum":1,"maximum":1000,"default":100}},
+            {
+                "name": "extensionId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+            {
+                "name": "limit",
+                "in": "query",
+                "required": False,
+                "schema": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000,
+                    "default": 100,
+                },
+            },
         ]
     if path.startswith("/api/v1/admin/extension-hosts/{extensionId}"):
         out += [
-          {"name":"scope","in":"query","required":False,"schema":{"type":"string","enum":["global","project"],"default":"global"}},
-          {"name":"scopeId","in":"query","required":False,"schema":{"type":"string"}},
+            {
+                "name": "scope",
+                "in": "query",
+                "required": False,
+                "schema": {
+                    "type": "string",
+                    "enum": ["global", "project"],
+                    "default": "global",
+                },
+            },
+            {
+                "name": "scopeId",
+                "in": "query",
+                "required": False,
+                "schema": {"type": "string"},
+            },
         ]
         if path.endswith("/logs"):
-          out.append({"name":"limit","in":"query","required":False,"schema":{"type":"integer","minimum":1,"maximum":100000,"default":1000}})
+            out.append(
+                {
+                    "name": "limit",
+                    "in": "query",
+                    "required": False,
+                    "schema": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000,
+                        "default": 1000,
+                    },
+                }
+            )
     return out
 
-ref=lambda name:{"$ref":f"#/components/schemas/{name}"}
+
+ref = lambda name: {"$ref": f"#/components/schemas/{name}"}
+
 
 def body_schema(path):
-    exact={
-      "/api/v1/admin/projects/{projectId}/profiles/{profileId}/clone":"ProfileCloneRequest0225",
-      "/api/v1/admin/projects/{projectId}/profiles/import":"ProfileImportRequest0225",
-      "/api/v1/admin/projects/{projectId}/profiles/from-preset":"ProfilePresetCreateRequest0225",
-      "/api/v1/diagnostics/validate":"DiagnosticsReportRequest",
-      "/api/v1/install/bootstrap-admin":"BootstrapAdminRequest", "/api/v1/install/first-project":"FirstProjectRequest",
-      "/api/v1/admin/login":"LoginRequest", "/api/v1/auth/login":"LoginRequest", "/api/v1/auth/refresh":"RefreshRequest",
-      "/api/v1/auth/oidc/{providerId}/begin":"OIDCBeginRequest", "/api/v1/auth/oidc/{providerId}/complete":"OIDCCompleteRequest",
-      "/api/v1/auth/providers/{providerId}/link/begin":"OIDCBeginRequest", "/api/v1/auth/providers/{providerId}/link/complete":"OIDCCompleteRequest",
-      "/api/v1/auth/sessions/revoke":"RevokeSessionsRequest", "/api/v1/auth/sessions/logout-all":"RevokeSessionsRequest",
-      "/api/v1/auth/sessions/{sessionId}":"RenameSessionRequest",
-      "/api/v1/auth/devices/register/begin":"DeviceRegisterBeginRequest",
-      "/api/v1/auth/devices/register/complete":"DeviceProofCompleteRequest",
-      "/api/v1/auth/devices/{deviceId}/verify/begin":"FreeFormObject",
-      "/api/v1/auth/devices/{deviceId}/verify/complete":"DeviceProofCompleteRequest",
-      "/api/v1/auth/devices/{deviceId}/attest/begin":"FreeFormObject",
-      "/api/v1/auth/devices/{deviceId}/attest/complete":"DeviceProofCompleteRequest",
-      "/api/v1/auth/devices/{deviceId}/guard-attest/begin":"GuardAttestationBeginRequest",
-      "/api/v1/auth/devices/{deviceId}/guard-attest/complete":"GuardAttestationCompleteRequest",
-      "/api/v1/auth/devices/{deviceId}/guard-attest-v2/begin":"GuardAttestationBeginRequest",
-      "/api/v1/auth/devices/{deviceId}/guard-attest-v2/complete":"GuardAttestationV2CompleteRequest",
-      "/api/v1/auth/devices/{deviceId}":"TrustedDeviceRenameRequest",
-      "/api/v1/auth/devices/{deviceId}/revoke":"TrustedDeviceRevokeRequest",
-      "/api/v1/auth/devices/revoke-others":"TrustedDeviceRevokeRequest",
-      "/api/v1/admin/auth/devices/{deviceId}/revoke":"TrustedDeviceRevokeRequest",
-      "/api/v1/admin/auth/sessions/revoke":"AdminSessionRevokeRequest",
-      "/api/v1/admin/users":"UserWriteRequest", "/api/v1/admin/projects":"ProjectWriteRequest",
-      "/api/v1/admin/extension-registry/publishers":"ExtensionRegistryPublisherWrite",
-      "/api/v1/admin/extension-registry/publishers/{publisherId}/keys":"ExtensionRegistryPublisherKeyWrite",
-      "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/yank":"ExtensionRegistryYankWrite",
-      "/api/v1/admin/extension-registry/extensions/{extensionId}/channels/{channel}":"ExtensionRegistryChannelWrite",
-      "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install":"ExtensionRegistryInstallWrite",
-      "/api/v1/admin/extension-installs/{extensionId}/install":"ExtensionLifecycleWrite",
-      "/api/v1/admin/extension-installs/{extensionId}/enable":"ExtensionLifecycleWrite",
-      "/api/v1/admin/extension-installs/{extensionId}/disable":"ExtensionLifecycleWrite",
-      "/api/v1/admin/extension-installs/{extensionId}/uninstall":"ExtensionLifecycleWrite",
-      "/api/v1/admin/extension-installs/{extensionId}/update":"ExtensionLifecycleWrite",
-      "/api/v1/admin/extension-installs/{extensionId}/rollback":"ExtensionLifecycleWrite",
-      "/api/v1/admin/extensions/{extensionId}/permissions":"ExtensionPermissionGrantWrite",
-      "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}":"ExtensionSecretWrite",
-      "/api/v1/desktop/extensions/{extensionId}/rpc":"DesktopExtensionRPCRequest0209",
-      "/api/v1/admin/extension-cli/{extensionId}/invoke":"ExtensionCLIInvokeRequest0209",
-      "/api/v1/admin/projects/import":"FreeFormObject",
-      "/api/v1/server-bridge/servers/register":"ServerRegisterRequest", "/api/v1/server-bridge/servers/{serverId}/rotate-identity":"RotateNodeIdentityRequest", "/api/v1/server-bridge/validate-join":"ValidateJoinRequest",
-      "/api/v1/server-bridge/handoff":"BridgeHandoffRequest", "/api/v1/server-bridge/audit-event":"BridgeAuditEventRequest", "/api/v1/server-bridge/servers/{serverId}/events":"ServerBridgeEventBatchV3",
-      "/api/v1/server-bridge/servers/{serverId}/control":"ServerBridgeControlCreateV3", "/api/v1/server-bridge/servers/{serverId}/control/ack":"ServerBridgeControlAckRequestV3",
-      "/api/v1/session/join":"JoinRequest", "/api/v1/session/has-joined":"HasJoinedRequest", "/api/v1/session/invalidate":"InvalidateRequest",
-      "/api/v1/telemetry/events":"TelemetryRequest", "/api/v1/crash-reports":"CrashReportRequest",
-      "/api/v1/minecraft/session":"MinecraftSessionRequest",
-      "/authserver/authenticate":"YggdrasilAuthenticateRequest", "/authserver/refresh":"YggdrasilRefreshRequest", "/authserver/validate":"YggdrasilTokenRequest", "/authserver/invalidate":"YggdrasilTokenRequest", "/authserver/signout":"YggdrasilSignoutRequest",
-      "/sessionserver/session/minecraft/join":"YggdrasilJoinRequest",
+    exact = {
+        "/api/v1/admin/projects/{projectId}/profiles/{profileId}/clone": "ProfileCloneRequest0225",
+        "/api/v1/admin/projects/{projectId}/profiles/import": "ProfileImportRequest0225",
+        "/api/v1/admin/projects/{projectId}/profiles/from-preset": "ProfilePresetCreateRequest0225",
+        "/api/v1/diagnostics/validate": "DiagnosticsReportRequest",
+        "/api/v1/install/bootstrap-admin": "BootstrapAdminRequest",
+        "/api/v1/install/first-project": "FirstProjectRequest",
+        "/api/v1/admin/login": "LoginRequest",
+        "/api/v1/auth/login": "LoginRequest",
+        "/api/v1/auth/refresh": "RefreshRequest",
+        "/api/v1/auth/oidc/{providerId}/begin": "OIDCBeginRequest",
+        "/api/v1/auth/oidc/{providerId}/complete": "OIDCCompleteRequest",
+        "/api/v1/auth/providers/{providerId}/link/begin": "OIDCBeginRequest",
+        "/api/v1/auth/providers/{providerId}/link/complete": "OIDCCompleteRequest",
+        "/api/v1/auth/sessions/revoke": "RevokeSessionsRequest",
+        "/api/v1/auth/sessions/logout-all": "RevokeSessionsRequest",
+        "/api/v1/auth/sessions/{sessionId}": "RenameSessionRequest",
+        "/api/v1/auth/devices/register/begin": "DeviceRegisterBeginRequest",
+        "/api/v1/auth/devices/register/complete": "DeviceProofCompleteRequest",
+        "/api/v1/auth/devices/{deviceId}/verify/begin": "FreeFormObject",
+        "/api/v1/auth/devices/{deviceId}/verify/complete": "DeviceProofCompleteRequest",
+        "/api/v1/auth/devices/{deviceId}/attest/begin": "FreeFormObject",
+        "/api/v1/auth/devices/{deviceId}/attest/complete": "DeviceProofCompleteRequest",
+        "/api/v1/auth/devices/{deviceId}/guard-attest/begin": "GuardAttestationBeginRequest",
+        "/api/v1/auth/devices/{deviceId}/guard-attest/complete": "GuardAttestationCompleteRequest",
+        "/api/v1/auth/devices/{deviceId}/guard-attest-v2/begin": "GuardAttestationBeginRequest",
+        "/api/v1/auth/devices/{deviceId}/guard-attest-v2/complete": "GuardAttestationV2CompleteRequest",
+        "/api/v1/auth/devices/{deviceId}": "TrustedDeviceRenameRequest",
+        "/api/v1/auth/devices/{deviceId}/revoke": "TrustedDeviceRevokeRequest",
+        "/api/v1/auth/devices/revoke-others": "TrustedDeviceRevokeRequest",
+        "/api/v1/admin/auth/devices/{deviceId}/revoke": "TrustedDeviceRevokeRequest",
+        "/api/v1/admin/auth/sessions/revoke": "AdminSessionRevokeRequest",
+        "/api/v1/admin/users": "UserWriteRequest",
+        "/api/v1/admin/projects": "ProjectWriteRequest",
+        "/api/v1/admin/extension-registry/publishers": "ExtensionRegistryPublisherWrite",
+        "/api/v1/admin/extension-registry/publishers/{publisherId}/keys": "ExtensionRegistryPublisherKeyWrite",
+        "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/yank": "ExtensionRegistryYankWrite",
+        "/api/v1/admin/extension-registry/extensions/{extensionId}/channels/{channel}": "ExtensionRegistryChannelWrite",
+        "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install": "ExtensionRegistryInstallWrite",
+        "/api/v1/admin/extension-installs/{extensionId}/install": "ExtensionLifecycleWrite",
+        "/api/v1/admin/extension-installs/{extensionId}/enable": "ExtensionLifecycleWrite",
+        "/api/v1/admin/extension-installs/{extensionId}/disable": "ExtensionLifecycleWrite",
+        "/api/v1/admin/extension-installs/{extensionId}/uninstall": "ExtensionLifecycleWrite",
+        "/api/v1/admin/extension-installs/{extensionId}/update": "ExtensionLifecycleWrite",
+        "/api/v1/admin/extension-installs/{extensionId}/rollback": "ExtensionLifecycleWrite",
+        "/api/v1/admin/extensions/{extensionId}/permissions": "ExtensionPermissionGrantWrite",
+        "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}": "ExtensionSecretWrite",
+        "/api/v1/desktop/extensions/{extensionId}/rpc": "DesktopExtensionRPCRequest0209",
+        "/api/v1/admin/extension-cli/{extensionId}/invoke": "ExtensionCLIInvokeRequest0209",
+        "/api/v1/admin/projects/import": "FreeFormObject",
+        "/api/v1/server-bridge/servers/register": "ServerRegisterRequest",
+        "/api/v1/server-bridge/servers/{serverId}/rotate-identity": "RotateNodeIdentityRequest",
+        "/api/v1/server-bridge/validate-join": "ValidateJoinRequest",
+        "/api/v1/server-bridge/handoff": "BridgeHandoffRequest",
+        "/api/v1/server-bridge/audit-event": "BridgeAuditEventRequest",
+        "/api/v1/server-bridge/servers/{serverId}/events": "ServerBridgeEventBatchV3",
+        "/api/v1/server-bridge/servers/{serverId}/control": "ServerBridgeControlCreateV3",
+        "/api/v1/server-bridge/servers/{serverId}/control/ack": "ServerBridgeControlAckRequestV3",
+        "/api/v1/session/join": "JoinRequest",
+        "/api/v1/session/has-joined": "HasJoinedRequest",
+        "/api/v1/session/invalidate": "InvalidateRequest",
+        "/api/v1/telemetry/events": "TelemetryRequest",
+        "/api/v1/crash-reports": "CrashReportRequest",
+        "/api/v1/minecraft/session": "MinecraftSessionRequest",
+        "/authserver/authenticate": "YggdrasilAuthenticateRequest",
+        "/authserver/refresh": "YggdrasilRefreshRequest",
+        "/authserver/validate": "YggdrasilTokenRequest",
+        "/authserver/invalidate": "YggdrasilTokenRequest",
+        "/authserver/signout": "YggdrasilSignoutRequest",
+        "/sessionserver/session/minecraft/join": "YggdrasilJoinRequest",
     }
-    if path == "/api/v1/admin/textures/policy":return ref("TextureAdminPolicyChange0259")
-    if path == "/api/v1/admin/textures/exceptions/{userId}":return ref("TextureAdminExceptionChange0259")
-    if path == "/api/v1/me/textures/{kind}":return ref("TextureSelectionPatch0251")
-    if path == "/api/v1/me/textures/{kind}/import":return ref("TextureURLImport0254")
-    if path in exact:return ref(exact[path])
-    if path.endswith("/heartbeat"):return ref("HeartbeatRequest")
-    if path.endswith("/password"):return ref("PasswordResetRequest")
-    if path.endswith("/profiles"):return ref("ProfileWriteRequest")
-    if "/profiles/" in path and path.startswith("/api/v1/admin/projects/"):return ref("ProfileWriteRequest")
-    if path.endswith("/channels"):return ref("ChannelWriteRequest")
-    if "/channels/" in path and path.startswith("/api/v1/admin/projects/"):return ref("ChannelWriteRequest")
-    if path.startswith("/api/v1/admin/projects/") and path.count("/")==5 and not path.endswith("/publish"):return ref("ProjectWriteRequest")
-    if path.startswith("/api/v1/admin/users/") and path.count("/")==5:return ref("UserWriteRequest")
-    if path.endswith("/manifest"):return ref("ManifestRuntimeUpdateRequest")
-    if path.endswith("/versions"):return ref("CreateVersionRequest")
-    if path.endswith("/publish"):return ref("PublishRequest")
+    if path == "/api/v1/admin/textures/policy":
+        return ref("TextureAdminPolicyChange0259")
+    if path == "/api/v1/admin/textures/exceptions/{userId}":
+        return ref("TextureAdminExceptionChange0259")
+    if path == "/api/v1/me/textures/{kind}":
+        return ref("TextureSelectionPatch0251")
+    if path == "/api/v1/me/textures/{kind}/import":
+        return ref("TextureURLImport0254")
+    if path in exact:
+        return ref(exact[path])
+    if path.endswith("/heartbeat"):
+        return ref("HeartbeatRequest")
+    if path.endswith("/password"):
+        return ref("PasswordResetRequest")
+    if path.endswith("/profiles"):
+        return ref("ProfileWriteRequest")
+    if "/profiles/" in path and path.startswith("/api/v1/admin/projects/"):
+        return ref("ProfileWriteRequest")
+    if path.endswith("/channels"):
+        return ref("ChannelWriteRequest")
+    if "/channels/" in path and path.startswith("/api/v1/admin/projects/"):
+        return ref("ChannelWriteRequest")
+    if (
+        path.startswith("/api/v1/admin/projects/")
+        and path.count("/") == 5
+        and not path.endswith("/publish")
+    ):
+        return ref("ProjectWriteRequest")
+    if path.startswith("/api/v1/admin/users/") and path.count("/") == 5:
+        return ref("UserWriteRequest")
+    if path.endswith("/manifest"):
+        return ref("ManifestRuntimeUpdateRequest")
+    if path.endswith("/versions"):
+        return ref("CreateVersionRequest")
+    if path.endswith("/publish"):
+        return ref("PublishRequest")
     return ref("FreeFormObject")
 
-def request_body_required(method,path):
-    if method not in ("post","put","patch"): return False
-    optional={
-      "/api/v1/auth/logout", "/api/v1/admin/logout", "/api/v1/auth/sessions/revoke", "/api/v1/auth/sessions/logout-all",
-      "/api/v1/auth/sessions/revoke-others", "/api/v1/auth/providers/{providerId}/logout",
-      "/api/v1/auth/devices/{deviceId}/revoke", "/api/v1/auth/devices/revoke-others", "/api/v1/admin/auth/devices/{deviceId}/revoke",
-      "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
-      "/api/v1/admin/extension-hosts/{extensionId}/start", "/api/v1/admin/extension-hosts/{extensionId}/stop", "/api/v1/admin/extension-hosts/{extensionId}/restart",
-      "/api/v1/session/has-joined", "/api/v1/session/invalidate", "/api/v1/session/invalidate-all",
-      "/api/v1/admin/extension-hosts/{extensionId}/start", "/api/v1/admin/extension-hosts/{extensionId}/stop", "/api/v1/admin/extension-hosts/{extensionId}/restart",
+
+def request_body_required(method, path):
+    if method not in ("post", "put", "patch"):
+        return False
+    optional = {
+        "/api/v1/auth/logout",
+        "/api/v1/admin/logout",
+        "/api/v1/auth/sessions/revoke",
+        "/api/v1/auth/sessions/logout-all",
+        "/api/v1/auth/sessions/revoke-others",
+        "/api/v1/auth/providers/{providerId}/logout",
+        "/api/v1/auth/devices/{deviceId}/revoke",
+        "/api/v1/auth/devices/revoke-others",
+        "/api/v1/admin/auth/devices/{deviceId}/revoke",
+        "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
+        "/api/v1/admin/extension-hosts/{extensionId}/start",
+        "/api/v1/admin/extension-hosts/{extensionId}/stop",
+        "/api/v1/admin/extension-hosts/{extensionId}/restart",
+        "/api/v1/session/has-joined",
+        "/api/v1/session/invalidate",
+        "/api/v1/session/invalidate-all",
+        "/api/v1/admin/extension-hosts/{extensionId}/start",
+        "/api/v1/admin/extension-hosts/{extensionId}/stop",
+        "/api/v1/admin/extension-hosts/{extensionId}/restart",
     }
-    if (path.endswith("/disable") or path.endswith("/enable")) and not path.startswith("/api/v1/admin/extension-installs/"):
+    if (path.endswith("/disable") or path.endswith("/enable")) and not path.startswith(
+        "/api/v1/admin/extension-installs/"
+    ):
         return False
     if path.endswith("/versions/{versionId}/publish"):
         return False
     return path not in optional
 
-def request_body_allowed(method,path):
-    if method not in ("post","put","patch"): return False
-    no_body={
-      "/api/v1/auth/logout","/api/v1/admin/logout","/api/v1/session/invalidate-all",
-      "/api/v1/auth/sessions/revoke-others","/api/v1/auth/providers/{providerId}/logout",
-      "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
-      "/api/v1/admin/extension-hosts/{extensionId}/start", "/api/v1/admin/extension-hosts/{extensionId}/stop", "/api/v1/admin/extension-hosts/{extensionId}/restart",
+
+def request_body_allowed(method, path):
+    if method not in ("post", "put", "patch"):
+        return False
+    no_body = {
+        "/api/v1/auth/logout",
+        "/api/v1/admin/logout",
+        "/api/v1/session/invalidate-all",
+        "/api/v1/auth/sessions/revoke-others",
+        "/api/v1/auth/providers/{providerId}/logout",
+        "/api/v1/admin/auth/providers/{providerId}/sessions/revoke",
+        "/api/v1/admin/extension-hosts/{extensionId}/start",
+        "/api/v1/admin/extension-hosts/{extensionId}/stop",
+        "/api/v1/admin/extension-hosts/{extensionId}/restart",
     }
-    if path in no_body or ((path.endswith("/disable") or path.endswith("/enable")) and not path.startswith("/api/v1/admin/extension-installs/")) or path.endswith("/versions/{versionId}/publish"):
+    if (
+        path in no_body
+        or (
+            (path.endswith("/disable") or path.endswith("/enable"))
+            and not path.startswith("/api/v1/admin/extension-installs/")
+        )
+        or path.endswith("/versions/{versionId}/publish")
+    ):
         return False
     return True
 
-def success_status(method,path):
-    if path == "/api/user/profile/{uuid}/{kind}": return "204"
-    if method=="delete" and path in {"/api/v1/admin/extensions/{extensionId}/permissions/{permission}", "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}"}: return "204"
-    if method=="put" and path == "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}": return "201"
-    if method=="post" and path == "/api/v1/admin/extensions/{extensionId}/permissions": return "201"
-    if path.endswith("/oidc/{providerId}/start"): return "302"
-    if path in {"/api/v1/telemetry/events","/api/v1/crash-reports"}: return "202"
-    created={
-      "/api/v1/install/bootstrap-admin","/api/v1/install/first-project","/api/v1/admin/users","/api/v1/admin/projects",
-      "/api/v1/server-bridge/servers/register","/api/v1/server-bridge/handoff","/api/v1/server-bridge/servers/{serverId}/control",
-      "/api/v1/admin/extension-registry/publishers","/api/v1/admin/extension-registry/publishers/{publisherId}/keys","/api/v1/admin/extension-registry/publish","/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install","/api/v1/admin/extension-installs/{extensionId}/install",
+
+def success_status(method, path):
+    if path == "/api/user/profile/{uuid}/{kind}":
+        return "204"
+    if method == "delete" and path in {
+        "/api/v1/admin/extensions/{extensionId}/permissions/{permission}",
+        "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}",
+    }:
+        return "204"
+    if (
+        method == "put"
+        and path == "/api/v1/admin/extensions/{extensionId}/secrets/{secretName}"
+    ):
+        return "201"
+    if (
+        method == "post"
+        and path == "/api/v1/admin/extensions/{extensionId}/permissions"
+    ):
+        return "201"
+    if path.endswith("/oidc/{providerId}/start"):
+        return "302"
+    if path in {"/api/v1/telemetry/events", "/api/v1/crash-reports"}:
+        return "202"
+    created = {
+        "/api/v1/install/bootstrap-admin",
+        "/api/v1/install/first-project",
+        "/api/v1/admin/users",
+        "/api/v1/admin/projects",
+        "/api/v1/server-bridge/servers/register",
+        "/api/v1/server-bridge/handoff",
+        "/api/v1/server-bridge/servers/{serverId}/control",
+        "/api/v1/admin/extension-registry/publishers",
+        "/api/v1/admin/extension-registry/publishers/{publisherId}/keys",
+        "/api/v1/admin/extension-registry/publish",
+        "/api/v1/admin/extension-registry/extensions/{extensionId}/versions/{version}/install",
+        "/api/v1/admin/extension-installs/{extensionId}/install",
     }
-    if method=="post" and path in {"/api/v1/admin/projects/{projectId}/profiles/import","/api/v1/admin/projects/{projectId}/profiles/from-preset","/api/v1/admin/projects/{projectId}/profiles/{profileId}/clone"}: return "201"
-    if method=="post" and (path in created or path.endswith("/versions") or path.endswith("/files") or path.endswith("/profiles") or path.endswith("/channels") or path.endswith("/admin/projects/{projectId}/publish")):
+    if method == "post" and path in {
+        "/api/v1/admin/projects/{projectId}/profiles/import",
+        "/api/v1/admin/projects/{projectId}/profiles/from-preset",
+        "/api/v1/admin/projects/{projectId}/profiles/{profileId}/clone",
+    }:
+        return "201"
+    if method == "post" and (
+        path in created
+        or path.endswith("/versions")
+        or path.endswith("/files")
+        or path.endswith("/profiles")
+        or path.endswith("/channels")
+        or path.endswith("/admin/projects/{projectId}/publish")
+    ):
         return "201"
     return "200"
 
-def response_schema(path, method):
-    if path in ("/health","/api/v1/status"):return ref("ServiceStatus")
-    if path == "/ready":return ref("Readiness")
-    if path == "/metrics": return {"type":"string"}
-    if path.endswith("/manifest") and method=="get":return ref("Manifest")
-    if path.startswith("/api/v1/files/"): return {"type":"string","format":"binary"}
-    if path.endswith("/artifact") and "/extension-registry/" in path: return {"type":"string","format":"binary"}
-    if path.endswith("/versions") and method=="post":return ref("ReleaseVersion")
-    if path == "/api/v1/admin/extension-registry/publish" and method=="post": return {"type":"object","additionalProperties":True}
-    if path.endswith("/publish") and method=="post":return ref("ReleaseVersion")
-    if path == "/api/v1/admin/profile-presets":return {"type":"object","properties":{"items":{"type":"array","items":ref("ProfilePreset0225")}}}
-    if path.endswith("/export") and "/profiles/" in path:return ref("PortableProfile0225")
-    if path.endswith("/diff") and "/profiles/" in path:return ref("ProfileDifference0225")
-    if path == "/api/v1/admin/login":return ref("AdminSession")
-    if path == "/api/v1/admin/textures/policy": return ref("TextureAdminPolicy0259")
-    if path == "/api/v1/me/textures/{kind}" and method == "patch":return ref("TextureAssignmentResponse0251")
-    if path == "/api/v1/me/textures" and method == "get":return ref("TextureMineResponse0251")
-    if path == "/api/v1/me/textures/{kind}/history" and method == "get":return ref("TextureHistoryResponse0251")
-    if path in ("/api/v1/me/textures/{kind}/upload", "/api/v1/me/textures/{kind}/import") and method == "post":return ref("TextureUploadResponse0252")
-    if path == "/api/v1/server-bridge/capabilities":return ref("ServerBridgeCapabilitiesResponse")
-    if path in ("/api/v1/server-bridge/overview", "/api/v1/server-bridge/projects/{projectId}/overview"):return ref("ServerBridgeOverviewResponseGA")
-    if path == "/api/v1/server-bridge/servers/{serverId}/events" and method == "post":return ref("ServerBridgeEventAckV3")
-    if path == "/api/v1/server-bridge/servers/{serverId}/control" and method == "post":return ref("ServerBridgeControlCommandResponseV3")
-    if path == "/api/v1/server-bridge/servers/{serverId}/control/{commandId}" and method == "get":return ref("ServerBridgeControlCommandResponseV3")
-    if path == "/api/v1/server-bridge/servers/{serverId}/control/poll" and method == "get":return ref("ServerBridgeControlDeliveryV3")
-    if path == "/api/v1/server-bridge/servers/{serverId}/control/ack" and method == "post":return ref("ServerBridgeControlAckResponseV3")
-    if path == "/api/v1/server-bridge/servers/{serverId}/routes" and method == "get":return ref("ServerBridgeRoutesResponseV3")
-    return {"type":"object","additionalProperties":True}
 
-paths={}
-for method,path in routes:
-    op={"operationId":op_id(method,path),"tags":tags_for(path),"summary":f"{method.upper()} {path}","responses":{}}
+def response_schema(path, method):
+    if path in ("/health", "/api/v1/status"):
+        return ref("ServiceStatus")
+    if path == "/ready":
+        return ref("Readiness")
+    if path == "/metrics":
+        return {"type": "string"}
+    if path.endswith("/manifest") and method == "get":
+        return ref("Manifest")
+    if path.startswith("/api/v1/files/"):
+        return {"type": "string", "format": "binary"}
+    if path.endswith("/artifact") and "/extension-registry/" in path:
+        return {"type": "string", "format": "binary"}
+    if path.endswith("/versions") and method == "post":
+        return ref("ReleaseVersion")
+    if path == "/api/v1/admin/extension-registry/publish" and method == "post":
+        return {"type": "object", "additionalProperties": True}
+    if path.endswith("/publish") and method == "post":
+        return ref("ReleaseVersion")
+    if path == "/api/v1/admin/profile-presets":
+        return {
+            "type": "object",
+            "properties": {
+                "items": {"type": "array", "items": ref("ProfilePreset0225")}
+            },
+        }
+    if path.endswith("/export") and "/profiles/" in path:
+        return ref("PortableProfile0225")
+    if path.endswith("/diff") and "/profiles/" in path:
+        return ref("ProfileDifference0225")
+    if path == "/api/v1/admin/login":
+        return ref("AdminSession")
+    if path == "/api/v1/admin/textures/policy":
+        return ref("TextureAdminPolicy0259")
+    if path == "/api/v1/me/textures/{kind}" and method == "patch":
+        return ref("TextureAssignmentResponse0251")
+    if path == "/api/v1/me/textures" and method == "get":
+        return ref("TextureMineResponse0251")
+    if path == "/api/v1/me/textures/{kind}/history" and method == "get":
+        return ref("TextureHistoryResponse0251")
+    if (
+        path
+        in ("/api/v1/me/textures/{kind}/upload", "/api/v1/me/textures/{kind}/import")
+        and method == "post"
+    ):
+        return ref("TextureUploadResponse0252")
+    if path == "/api/v1/server-bridge/capabilities":
+        return ref("ServerBridgeCapabilitiesResponse")
+    if path in (
+        "/api/v1/server-bridge/overview",
+        "/api/v1/server-bridge/projects/{projectId}/overview",
+    ):
+        return ref("ServerBridgeOverviewResponseGA")
+    if path == "/api/v1/server-bridge/servers/{serverId}/events" and method == "post":
+        return ref("ServerBridgeEventAckV3")
+    if path == "/api/v1/server-bridge/servers/{serverId}/control" and method == "post":
+        return ref("ServerBridgeControlCommandResponseV3")
+    if (
+        path == "/api/v1/server-bridge/servers/{serverId}/control/{commandId}"
+        and method == "get"
+    ):
+        return ref("ServerBridgeControlCommandResponseV3")
+    if (
+        path == "/api/v1/server-bridge/servers/{serverId}/control/poll"
+        and method == "get"
+    ):
+        return ref("ServerBridgeControlDeliveryV3")
+    if (
+        path == "/api/v1/server-bridge/servers/{serverId}/control/ack"
+        and method == "post"
+    ):
+        return ref("ServerBridgeControlAckResponseV3")
+    if path == "/api/v1/server-bridge/servers/{serverId}/routes" and method == "get":
+        return ref("ServerBridgeRoutesResponseV3")
+    return {"type": "object", "additionalProperties": True}
+
+
+paths = {}
+for method, path in routes:
+    op = {
+        "operationId": op_id(method, path),
+        "tags": tags_for(path),
+        "summary": f"{method.upper()} {path}",
+        "responses": {},
+    }
     if path == "/api/user/profile/{uuid}/{kind}":
-        op["description"]="Yggdrasil/authlib-injector profile-owned texture PUT/DELETE; requires Minecraft Bearer session token, uses the normalized PNG service, returns 204 on success."
+        op["description"] = (
+            "Yggdrasil/authlib-injector profile-owned texture PUT/DELETE; requires Minecraft Bearer session token, uses the normalized PNG service, returns 204 on success."
+        )
     if path == "/api/v1/session/join":
-        op["description"] = "NeverLauncher 0.14.3 One-Time Join Tickets: issues a short-lived identity-bound ServerBridge authorization that can be redeemed exactly once by the active cryptographic node identity."
+        op["description"] = (
+            "NeverLauncher 0.14.3 One-Time Join Tickets: issues a short-lived identity-bound ServerBridge authorization that can be redeemed exactly once by the active cryptographic node identity."
+        )
     elif path == "/sessionserver/session/minecraft/hasJoined":
-        op["description"] = "Consumes a Yggdrasil-compatible one-time join authorization. The first valid hasJoined succeeds; replay returns no join."
+        op["description"] = (
+            "Consumes a Yggdrasil-compatible one-time join authorization. The first valid hasJoined succeeds; replay returns no join."
+        )
     if path.startswith("/api/v1/minecraft/official/"):
-        op["description"] = "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session."
-    params=path_parameters(path)
+        op["description"] = (
+            "Official Microsoft/Xbox/Minecraft Java operations (0.25.7). Never/Yggdrasil identities and texture blobs are never used. A Never Bearer is always required; linked operations additionally require the AES-GCM official session scoped to the current Never session."
+        )
+    params = path_parameters(path)
     if path.startswith("/api/v1/me/textures/"):
         for param in params:
-            if param["name"]=="kind": param["schema"]={"type":"string","enum":["skin","cape"]}
-    if path.startswith("/api/v1/minecraft/official/") and not path.endswith("/device/start"):
-        params.append({"name":"X-Official-Minecraft-Session","in":"header","required":True,"schema":{"type":"string","minLength":1},"description":"Opaque encrypted device flow or linked Minecraft session (NOT an access token)."})
-    if params: op["parameters"]=params
-    sec=security_for(method,path)
-    if sec: op["security"]=sec
-    elif sec==[]: op["security"]=[]
-    if request_body_allowed(method,path) and not path.endswith("/files") and path not in ("/api/v1/minecraft/official/device/start", "/api/v1/minecraft/official/device/poll", "/api/v1/minecraft/official/launch-credentials", "/api/v1/minecraft/official/skin","/api/v1/admin/extension-registry/publish", "/api/v1/me/textures/{kind}/upload", "/api/user/profile/{uuid}/{kind}"):
-        op["requestBody"]={"required":request_body_required(method,path),"content":{"application/json":{"schema":body_schema(path)}}}
-    if path == "/api/profiles/minecraft" and method=="post":
-        op["requestBody"]={"required":True,"content":{"application/json":{"schema":{"type":"array","maxItems":100,"items":{"type":"string","minLength":3,"maxLength":16}}}}}
-    if path == "/api/user/profile/{uuid}/{kind}" and method=="put":
-        op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":{"type":"object","required":["file"],"properties":{"file":{"type":"string","format":"binary"},"model":{"type":"string","enum":["","slim"]}}}}}}
-    if path == "/api/v1/minecraft/official/skin" and method == "post":
-        op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":{"type":"object","required":["file","variant"],"properties":{"file":{"type":"string","format":"binary"},"variant":{"type":"string","enum":["classic","slim"]}}}}}}
-    if path == "/api/v1/minecraft/official/cape" and method == "put":
-        op["requestBody"]={"required":True,"content":{"application/json":{"schema":{"type":"object","required":["capeId"],"properties":{"capeId":{"type":"string","minLength":1}}}}}}
-    if path == "/api/v1/me/textures/{kind}/upload" and method=="post":
-        op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":ref("TextureUploadMultipart0252")}}}
-    if path.endswith("/files") and method=="post":
-        op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":{"type":"object","required":["file"],"properties":{"path":{"type":"string"},"file":{"type":"string","format":"binary"}}}}}}
-    if path == "/api/v1/admin/extension-registry/publish" and method=="post":
-        op["requestBody"]={"required":True,"content":{"multipart/form-data":{"schema":{"type":"object","required":["artifact"],"properties":{"artifact":{"type":"string","format":"binary"},"publisher":{"type":"string"},"channels":{"type":"string"},"minNeverLauncher":{"type":"string"},"maxNeverLauncher":{"type":"string"},"os":{"type":"string"},"arch":{"type":"string"}}}}}}
-    success=success_status(method,path)
-    binary_response = path.startswith("/api/v1/files/") or path in ("/api/v1/textures/blob/{digest}", "/api/v1/me/textures/{kind}/image") or (path.endswith("/artifact") and "/extension-registry/" in path)
-    ctype="text/plain" if path=="/metrics" else ("image/png" if path in ("/api/v1/textures/blob/{digest}", "/api/v1/me/textures/{kind}/image") else ("application/octet-stream" if binary_response else "application/json"))
-    if success == "204":
-        op["responses"][success]={"description":"Success"}
-    else:
-        op["responses"][success]={"description":"Success","content":{ctype:{"schema":({"type":"string","format":"binary"} if ctype=="image/png" else response_schema(path,method))}}}
-    if path == "/api/v1/minecraft/official/device/poll" and method == "post":
-        op["responses"]["202"]={"description":"Microsoft authorization pending; use returned flow and Retry-After."}
-    if path.startswith("/api/v1/minecraft/official/"):
-        op["responses"]["403"]={"description":"Official Minecraft ownership, account or cape not authorized."}
-        op["responses"]["429"]={"description":"Microsoft polling or Minecraft service rate limit exceeded."}
-        op["responses"]["502"]={"description":"Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."}
-    if path == "/api/profiles/minecraft" and method=="post":
-        op["responses"]["200"]["content"]["application/json"]["schema"]={"type":"array","items":{"type":"object","required":["id","name"],"properties":{"id":{"type":"string","pattern":"^[0-9a-f]{32}$"},"name":{"type":"string"}}}}
-    if path == "/api/user/profile/{uuid}/{kind}":
-        op["responses"]["403"]={"description":"Upload or cape permission denied"}
-        op["responses"]["409"]={"$ref":"#/components/responses/Conflict"}
-        op["responses"]["413"]={"description":"PNG too large or project quota exceeded"}
-        op["responses"]["422"]={"description":"Invalid Minecraft PNG"}
-        op["responses"]["503"]={"$ref":"#/components/responses/ServiceUnavailable"}
-    if path in ("/api/v1/me/textures/{kind}/upload", "/api/v1/me/textures/{kind}/import"):
-        op["responses"]["409"]={"$ref":"#/components/responses/Conflict"}
-        op["responses"]["413"]={"description":"Image exceeds upload or project limit"}
-        op["responses"]["422"]={"description":"PNG cannot be decoded or has invalid Minecraft dimensions"}
-        op["responses"]["403"]={"description":"Texture upload denied by project policy"}
-    if path == "/api/v1/me/textures/{kind}/import":
-        op["responses"]["429"]={"description":"Import rate or concurrency limit exceeded"}
-        op["responses"]["502"]={"description":"Remote origin failed the bounded HTTPS fetch"}
-    if path.startswith("/api/v1/me/textures"):
-        op["responses"]["503"]={"$ref":"#/components/responses/ServiceUnavailable"}
-        if method=="patch":
-            op["responses"]["403"]={"description":"Foreign Minecraft profile"}
-            op["responses"]["404"]={"description":"Assignment does not exist"}
-            op["responses"]["409"]={"$ref":"#/components/responses/Conflict"}
-    if path == "/api/v1/server-bridge/servers/{serverId}/control" and method == "post":
-        op["responses"]["200"]={"description":"Idempotent replay of the same queued command","content":{"application/json":{"schema":ref("ServerBridgeControlCommandResponseV3")}}}
-    if path == "/api/v1/server-bridge/servers/{serverId}/control/poll" and method == "get":
-        op["responses"]["204"]={"description":"No command currently available for this runtime"}
+            if param["name"] == "kind":
+                param["schema"] = {"type": "string", "enum": ["skin", "cape"]}
+    if path.startswith("/api/v1/minecraft/official/") and not path.endswith(
+        "/device/start"
+    ):
+        params.append(
+            {
+                "name": "X-Official-Minecraft-Session",
+                "in": "header",
+                "required": True,
+                "schema": {"type": "string", "minLength": 1},
+                "description": "Opaque encrypted device flow or linked Minecraft session (NOT an access token).",
+            }
+        )
+    if params:
+        op["parameters"] = params
+    sec = security_for(method, path)
     if sec:
-        op["responses"]["401"]={"$ref":"#/components/responses/Unauthorized"}
-    if method in ("post","put","patch"):
-        op["responses"]["400"]={"$ref":"#/components/responses/BadRequest"}
+        op["security"] = sec
+    elif sec == []:
+        op["security"] = []
+    if (
+        request_body_allowed(method, path)
+        and not path.endswith("/files")
+        and path
+        not in (
+            "/api/v1/minecraft/official/device/start",
+            "/api/v1/minecraft/official/device/poll",
+            "/api/v1/minecraft/official/launch-credentials",
+            "/api/v1/minecraft/official/skin",
+            "/api/v1/admin/extension-registry/publish",
+            "/api/v1/me/textures/{kind}/upload",
+            "/api/user/profile/{uuid}/{kind}",
+        )
+    ):
+        op["requestBody"] = {
+            "required": request_body_required(method, path),
+            "content": {"application/json": {"schema": body_schema(path)}},
+        }
+    if path == "/api/profiles/minecraft" and method == "post":
+        op["requestBody"] = {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "array",
+                        "maxItems": 100,
+                        "items": {"type": "string", "minLength": 3, "maxLength": 16},
+                    }
+                }
+            },
+        }
+    if path == "/api/user/profile/{uuid}/{kind}" and method == "put":
+        op["requestBody"] = {
+            "required": True,
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["file"],
+                        "properties": {
+                            "file": {"type": "string", "format": "binary"},
+                            "model": {"type": "string", "enum": ["", "slim"]},
+                        },
+                    }
+                }
+            },
+        }
+    if path == "/api/v1/minecraft/official/skin" and method == "post":
+        op["requestBody"] = {
+            "required": True,
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["file", "variant"],
+                        "properties": {
+                            "file": {"type": "string", "format": "binary"},
+                            "variant": {"type": "string", "enum": ["classic", "slim"]},
+                        },
+                    }
+                }
+            },
+        }
+    if path == "/api/v1/minecraft/official/cape" and method == "put":
+        op["requestBody"] = {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["capeId"],
+                        "properties": {"capeId": {"type": "string", "minLength": 1}},
+                    }
+                }
+            },
+        }
+    if path == "/api/v1/me/textures/{kind}/upload" and method == "post":
+        op["requestBody"] = {
+            "required": True,
+            "content": {
+                "multipart/form-data": {"schema": ref("TextureUploadMultipart0252")}
+            },
+        }
+    if path.endswith("/files") and method == "post":
+        op["requestBody"] = {
+            "required": True,
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["file"],
+                        "properties": {
+                            "path": {"type": "string"},
+                            "file": {"type": "string", "format": "binary"},
+                        },
+                    }
+                }
+            },
+        }
+    if path == "/api/v1/admin/extension-registry/publish" and method == "post":
+        op["requestBody"] = {
+            "required": True,
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["artifact"],
+                        "properties": {
+                            "artifact": {"type": "string", "format": "binary"},
+                            "publisher": {"type": "string"},
+                            "channels": {"type": "string"},
+                            "minNeverLauncher": {"type": "string"},
+                            "maxNeverLauncher": {"type": "string"},
+                            "os": {"type": "string"},
+                            "arch": {"type": "string"},
+                        },
+                    }
+                }
+            },
+        }
+    success = success_status(method, path)
+    binary_response = (
+        path.startswith("/api/v1/files/")
+        or path
+        in ("/api/v1/textures/blob/{digest}", "/api/v1/me/textures/{kind}/image")
+        or (path.endswith("/artifact") and "/extension-registry/" in path)
+    )
+    ctype = (
+        "text/plain"
+        if path == "/metrics"
+        else (
+            "image/png"
+            if path
+            in ("/api/v1/textures/blob/{digest}", "/api/v1/me/textures/{kind}/image")
+            else ("application/octet-stream" if binary_response else "application/json")
+        )
+    )
+    if success == "204":
+        op["responses"][success] = {"description": "Success"}
+    else:
+        op["responses"][success] = {
+            "description": "Success",
+            "content": {
+                ctype: {
+                    "schema": (
+                        {"type": "string", "format": "binary"}
+                        if ctype == "image/png"
+                        else response_schema(path, method)
+                    )
+                }
+            },
+        }
+    if path == "/api/v1/minecraft/official/device/poll" and method == "post":
+        op["responses"]["202"] = {
+            "description": "Microsoft authorization pending; use returned flow and Retry-After."
+        }
+    if path.startswith("/api/v1/minecraft/official/"):
+        op["responses"]["403"] = {
+            "description": "Official Minecraft ownership, account or cape not authorized."
+        }
+        op["responses"]["429"] = {
+            "description": "Microsoft polling or Minecraft service rate limit exceeded."
+        }
+        op["responses"]["502"] = {
+            "description": "Microsoft, Xbox Live or Minecraft Services unavailable or returned an invalid response."
+        }
+    if path == "/api/profiles/minecraft" and method == "post":
+        op["responses"]["200"]["content"]["application/json"]["schema"] = {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["id", "name"],
+                "properties": {
+                    "id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+                    "name": {"type": "string"},
+                },
+            },
+        }
+    if path == "/api/user/profile/{uuid}/{kind}":
+        op["responses"]["403"] = {"description": "Upload or cape permission denied"}
+        op["responses"]["409"] = {"$ref": "#/components/responses/Conflict"}
+        op["responses"]["413"] = {
+            "description": "PNG too large or project quota exceeded"
+        }
+        op["responses"]["422"] = {"description": "Invalid Minecraft PNG"}
+        op["responses"]["503"] = {"$ref": "#/components/responses/ServiceUnavailable"}
+    if path in (
+        "/api/v1/me/textures/{kind}/upload",
+        "/api/v1/me/textures/{kind}/import",
+    ):
+        op["responses"]["409"] = {"$ref": "#/components/responses/Conflict"}
+        op["responses"]["413"] = {
+            "description": "Image exceeds upload or project limit"
+        }
+        op["responses"]["422"] = {
+            "description": "PNG cannot be decoded or has invalid Minecraft dimensions"
+        }
+        op["responses"]["403"] = {
+            "description": "Texture upload denied by project policy"
+        }
+    if path == "/api/v1/me/textures/{kind}/import":
+        op["responses"]["429"] = {
+            "description": "Import rate or concurrency limit exceeded"
+        }
+        op["responses"]["502"] = {
+            "description": "Remote origin failed the bounded HTTPS fetch"
+        }
+    if path.startswith("/api/v1/me/textures"):
+        op["responses"]["503"] = {"$ref": "#/components/responses/ServiceUnavailable"}
+        if method == "patch":
+            op["responses"]["403"] = {"description": "Foreign Minecraft profile"}
+            op["responses"]["404"] = {"description": "Assignment does not exist"}
+            op["responses"]["409"] = {"$ref": "#/components/responses/Conflict"}
+    if path == "/api/v1/server-bridge/servers/{serverId}/control" and method == "post":
+        op["responses"]["200"] = {
+            "description": "Idempotent replay of the same queued command",
+            "content": {
+                "application/json": {
+                    "schema": ref("ServerBridgeControlCommandResponseV3")
+                }
+            },
+        }
+    if (
+        path == "/api/v1/server-bridge/servers/{serverId}/control/poll"
+        and method == "get"
+    ):
+        op["responses"]["204"] = {
+            "description": "No command currently available for this runtime"
+        }
+    if sec:
+        op["responses"]["401"] = {"$ref": "#/components/responses/Unauthorized"}
+    if method in ("post", "put", "patch"):
+        op["responses"]["400"] = {"$ref": "#/components/responses/BadRequest"}
     node_signed = path.endswith("/heartbeat") or path in node_signed_paths
     if node_signed:
-        op["responses"]["409"]={"$ref":"#/components/responses/Conflict"}
-        op["responses"]["503"]={"$ref":"#/components/responses/ServiceUnavailable"}
+        op["responses"]["409"] = {"$ref": "#/components/responses/Conflict"}
+        op["responses"]["503"] = {"$ref": "#/components/responses/ServiceUnavailable"}
         if method != "get":
-            op["responses"]["413"]={"$ref":"#/components/responses/PayloadTooLarge"}
-    if path in ("/api/v1/server-bridge/capabilities", "/api/v1/server-bridge/validate-join", "/api/v1/server-bridge/handoff", "/api/v1/server-bridge/servers/{serverId}/events") or path.endswith("/heartbeat"):
-        op["responses"]["426"]={"$ref":"#/components/responses/UpgradeRequired"}
-    paths.setdefault(path,{})[method]=op
+            op["responses"]["413"] = {"$ref": "#/components/responses/PayloadTooLarge"}
+    if path in (
+        "/api/v1/server-bridge/capabilities",
+        "/api/v1/server-bridge/validate-join",
+        "/api/v1/server-bridge/handoff",
+        "/api/v1/server-bridge/servers/{serverId}/events",
+    ) or path.endswith("/heartbeat"):
+        op["responses"]["426"] = {"$ref": "#/components/responses/UpgradeRequired"}
+    paths.setdefault(path, {})[method] = op
 
-schemas={
-"TextureAdminPolicy0259":{"type":"object","required":["projectId","revision","allowPlayerSkins","allowPlayerCapes","defaultSkinModel","fallbackSkinModel","maxBytesPerPlayer","maxBlobsPerPlayer"],"properties":{"projectId":{"type":"string"},"revision":{"type":"integer","minimum":0},"allowPlayerSkins":{"type":"boolean"},"allowPlayerCapes":{"type":"boolean"},"defaultSkinModel":{"type":"string","enum":["classic","slim"]},"fallbackSkinModel":{"type":"string","enum":["classic","slim"]},"defaultSkinDigest":{"type":"string","pattern":"^$|^[0-9a-f]{64}$"},"defaultCapeDigest":{"type":"string","pattern":"^$|^[0-9a-f]{64}$"},"fallbackSkinDigest":{"type":"string","pattern":"^$|^[0-9a-f]{64}$"},"fallbackCapeDigest":{"type":"string","pattern":"^$|^[0-9a-f]{64}$"},"maxBytesPerPlayer":{"type":"integer","minimum":1024,"maximum":1073741824},"maxBlobsPerPlayer":{"type":"integer","minimum":1,"maximum":10000}}},
-"TextureAdminPolicyChange0259":{"type":"object","additionalProperties":False,"required":["expectedRevision","policy","reason"],"properties":{"expectedRevision":{"type":"integer","minimum":0},"policy":ref("TextureAdminPolicy0259"),"reason":{"type":"string","minLength":3,"maxLength":500}}},
-"TextureAdminExceptionChange0259":{"type":"object","additionalProperties":False,"required":["kind","decision","reason"],"properties":{"userId":{"type":"string"},"kind":{"type":"string","enum":["skin","cape"]},"decision":{"type":"string","enum":["allow","deny","inherit"]},"reason":{"type":"string","minLength":3,"maxLength":500}}},
-"TextureURLImport0254":{"type":"object","additionalProperties":False,"required":["url","expectedRevision"],"properties":{"url":{"type":"string","format":"uri","maxLength":2048,"description":"Public HTTPS URL (DNS hostname, TCP 443 only), no redirects, max 4 MiB PNG."},"expectedRevision":{"type":"integer","minimum":0},"model":{"type":"string","enum":["classic","slim"],"default":"classic"},"visibility":{"type":"string","enum":["public","private","unlisted"],"default":"public"},"profileUuid":{"type":"string","description":"Optional ownership assertion; never an identity selector"}}},
-"TextureUploadMultipart0252":{"type":"object","required":["file","expectedRevision"],"properties":{"file":{"type":"string","format":"binary","description":"Fully decoded and normalized Minecraft PNG; at most 4 MiB compressed and 1024x1024 pixels."},"expectedRevision":{"type":"integer","minimum":0,"description":"0 for first assignment; otherwise latest revision"},"model":{"type":"string","enum":["classic","slim"],"default":"classic"},"visibility":{"type":"string","enum":["public","private","unlisted"],"default":"public"},"profileUuid":{"type":"string","description":"Optional owner assertion, never used to determine identity"}}},
-"TextureUploadResponse0252":{"type":"object","properties":{"apiVersion":{"type":"string"},"data":{"type":"object","properties":{"assignment":ref("TextureAssignment0251"),"digest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"width":{"type":"integer"},"height":{"type":"integer"},"bytes":{"type":"integer"},"previewUrl":{"type":"string"}}}}},
-"TextureSelectionPatch0251":{"type":"object","required":["expectedRevision","model","visibility","active"],"properties":{"profileUuid":{"type":"string","description":"Optional caller assertion; server derives the actual UUID from the authenticated account."},"expectedRevision":{"type":"integer","minimum":1},"model":{"type":"string","enum":["classic","slim"]},"visibility":{"type":"string","enum":["public","private","unlisted"]},"active":{"type":"boolean"}},"additionalProperties":False},
-"TextureAssignment0251":{"type":"object","required":["id","realm","profileUuid","userId","projectId","launcherProfileId","kind","source","model","visibility","revision","active","updatedAt"],"properties":{"id":{"type":"integer"},"realm":{"const":"local-project"},"profileUuid":{"type":"string"},"userId":{"type":"string"},"projectId":{"type":"string"},"launcherProfileId":{"type":"string"},"kind":{"type":"string","enum":["skin","cape"]},"blobDigest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"externalUrl":{"type":"string"},"source":{"type":"string","enum":["managed-upload","imported","remote-reference","official"]},"model":{"type":"string","enum":["classic","slim"]},"visibility":{"type":"string","enum":["public","private","unlisted"]},"revision":{"type":"integer","minimum":1},"active":{"type":"boolean"},"updatedAt":{"type":"string","format":"date-time"}}},
-"TextureAssignmentResponse0251":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":ref("TextureAssignment0251")}},
-"TextureMineResponse0251":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":{"type":"object","required":["realm","profileUuid","profileName","items"],"properties":{"realm":{"const":"local-project"},"profileUuid":{"type":"string"},"profileName":{"type":"string"},"items":{"type":"array","items":ref("TextureAssignment0251")}}}}},
-"TextureHistoryResponse0251":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":{"type":"array","items":{"type":"object","required":["assignmentId","revision","snapshot","actorUserId","event","reason","createdAt"],"properties":{"assignmentId":{"type":"integer"},"revision":{"type":"integer"},"snapshot":{"type":"object"},"actorUserId":{"type":"string"},"event":{"type":"string"},"reason":{"type":"string"},"createdAt":{"type":"string","format":"date-time"}}}}}},
-"Error":{"type":"object","required":["error"],"properties":{"error":{"type":"object","required":["code","message"],"properties":{"code":{"type":"integer"},"message":{"type":"string"}},"additionalProperties":False}},"additionalProperties":False},
-"ExtensionRegistryPublisherWrite":{"type":"object","required":["id","name"],"properties":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9._-]{2,127}$"},"name":{"type":"string","minLength":1,"maxLength":160},"active":{"type":"boolean"}},"additionalProperties":False},
-"ExtensionRegistryPublisherKeyWrite":{"type":"object","required":["publicKeyBase64"],"properties":{"publicKeyBase64":{"type":"string","description":"Raw 32-byte Ed25519 public key encoded as standard Base64."},"active":{"type":"boolean"}},"additionalProperties":False},
-"ExtensionRegistryYankWrite":{"type":"object","required":["reason"],"properties":{"reason":{"type":"string","minLength":1,"maxLength":500}},"additionalProperties":False},
-"ExtensionRegistryChannelWrite":{"type":"object","required":["version"],"properties":{"version":{"type":"string","minLength":1}},"additionalProperties":False},
-"ExtensionRegistryInstallWrite":{"type":"object","properties":{"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string"}},"additionalProperties":False},
-"ExtensionLifecycleWrite":{"type":"object","properties":{"version":{"type":"string","description":"Exact registry version for install/update."},"channel":{"type":"string","description":"Registry channel used when version is omitted; defaults to stable for install/update."},"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string","description":"Required when scope=project."}},"additionalProperties":False},
-"ExtensionPermissionGrantWrite":{"type":"object","required":["permission"],"properties":{"version":{"type":"string"},"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string"},"permission":{"type":"string","pattern":"^[a-z0-9][a-z0-9._:-]{1,127}$"},"reason":{"type":"string","maxLength":1000}},"additionalProperties":False},
-"ExtensionSecretWrite":{"type":"object","required":["valueBase64"],"properties":{"scope":{"type":"string","enum":["global","project"],"default":"global"},"scopeId":{"type":"string"},"valueBase64":{"type":"string","description":"Secret plaintext encoded as standard Base64; never returned by list/read admin APIs."}},"additionalProperties":False},
-"DesktopExtensionRPCRequest0209":{"type":"object","required":["protocol","id","method"],"properties":{"protocol":{"type":"string","const":"neverextensions.desktop-rpc.v1"},"id":{"type":"string","minLength":1,"maxLength":160},"method":{"type":"string","minLength":1,"maxLength":64},"params":{"type":"object","additionalProperties":True}},"additionalProperties":False},
-"ExtensionCLIInvokeRequest0209":{"type":"object","required":["scope","command"],"properties":{"scope":{"type":"string","enum":["global","project"]},"scopeId":{"type":"string"},"command":{"type":"string","minLength":1,"maxLength":64},"args":{"type":"array","maxItems":127,"items":{"type":"string","maxLength":16384}}},"additionalProperties":False},
-"ServiceStatus":{"type":"object","required":["name","version","status","environment","storage"],"properties":{"name":{"type":"string"},"version":{"type":"string"},"status":{"type":"string"},"environment":{"type":"string"},"message":{"type":"string"},"storage":{"type":"string"}}},
-"Readiness":{"type":"object","required":["status"],"properties":{"status":{"type":"string"},"checks":{"type":"array","items":{"type":"object","additionalProperties":True}}},"additionalProperties":True},
-"LoginRequest":{"type":"object","required":["password"],"anyOf":[{"required":["identifier"]},{"required":["email"]}],"properties":{"identifier":{"type":"string","minLength":1},"email":{"type":"string","format":"email"},"password":{"type":"string","minLength":1},"providerId":{"type":"string","default":"local"},"totp":{"type":"string"},"recoveryCode":{"type":"string"},"deviceId":{"type":"string"}}},
-"RefreshRequest":{"type":"object","required":["refreshToken"],"properties":{"refreshToken":{"type":"string","minLength":1},"deviceId":{"type":"string","description":"Required for a session already bound to a trusted device"},"deviceSignature":{"type":"string","description":"base64url signature by the current trusted-device key over the canonical NeverLauncher Session Device Binding v1 refresh payload"}}},
-"OIDCBeginRequest":{"type":"object","properties":{"redirectUri":{"type":"string","format":"uri"},"deviceId":{"type":"string"}}},
-"OIDCCompleteRequest":{"type":"object","required":["code","state","transaction"],"properties":{"code":{"type":"string","minLength":1},"state":{"type":"string","minLength":1},"transaction":{"type":"string","minLength":1},"deviceId":{"type":"string"},"totp":{"type":"string"},"recoveryCode":{"type":"string"}}},
-"BootstrapAdminRequest":{"type":"object","required":["email","password"],"properties":{"email":{"type":"string","format":"email"},"displayName":{"type":"string"},"password":{"type":"string","minLength":12},"actor":{"type":"string"}}},
-"FirstProjectRequest":{"type":"object","properties":{"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"},"version":{"type":"string"},"actor":{"type":"string"}}},
-"Project":{"type":"object","required":["id","name","defaultChannel"],"properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"homepage":{"type":"string"},"repository":{"type":"string"},"defaultChannel":{"type":"string"}}},
-"Profile":{"type":"object","required":["id","projectId","name","loader"],"properties":{"id":{"type":"string"},"projectId":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"loader":{"type":"string"},"preset":{"type":"string"},"isDefault":{"type":"boolean"}}},
-"ReleaseChannel":{"type":"object","required":["id","projectId","name"],"properties":{"id":{"type":"string"},"projectId":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"protected":{"type":"boolean"}}},
-"Signature":{"type":"object","required":["algorithm","publicKey","signature","signedAt"],"properties":{"algorithm":{"const":"Ed25519"},"publicKey":{"type":"string","pattern":"^[0-9a-fA-F]{64}$"},"signature":{"type":"string","pattern":"^[0-9a-fA-F]{128}$"},"signedAt":{"type":"string","format":"date-time"}}},
-"ManifestFile":{"type":"object","required":["path","size","sha256","url","required","executable"],"properties":{"path":{"type":"string"},"size":{"type":"integer","minimum":0},"sha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$"},"url":{"type":"string","format":"uri"},"required":{"type":"boolean"},"executable":{"type":"boolean"},"targetOs":{"type":"array","items":{"type":"string"}}}},
-"CatalogComponent0241":{"type":"object","required":["id","name","files"],"properties":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9._-]{0,127}$"},"name":{"type":"string","minLength":1,"maxLength":256},"files":{"type":"array","minItems":1,"maxItems":8192,"items":{"type":"string"}}},"additionalProperties":False},
-"ComponentCatalog0241":{"type":"object","required":["schemaVersion","revision","digest","components"],"properties":{"schemaVersion":{"const":"1.0"},"revision":{"type":"integer","minimum":1},"digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"components":{"type":"array","maxItems":4096,"items":ref("CatalogComponent0241")}},"additionalProperties":False},
-"Manifest":{"type":"object","required":["schemaVersion","projectId","profileId","channel","version","createdAt","minecraft","runtime","files","signature"],"properties":{"schemaVersion":{"type":"string","enum":["1.0","2.0","3.0"]},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"},"version":{"type":"string"},"createdAt":{"type":"string"},"minecraft":{"type":"object","additionalProperties":True},"runtime":{"type":"object","additionalProperties":True},"directories":{"type":"object","additionalProperties":True},"files":{"type":"array","items":ref("ManifestFile")},"componentCatalog":ref("ComponentCatalog0241"),"signature":ref("Signature")}},
-"ReleaseVersion":{"type":"object","required":["id","projectId","profileId","channel","version","status","manifest"],"properties":{"id":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"},"version":{"type":"string"},"status":{"type":"string"},"manifest":ref("Manifest"),"publishedAt":{"type":"string","format":"date-time"}}},
-"AdminSession":{"type":"object","required":["token","user","expiresAt"],"properties":{"token":{"type":"string"},"refreshToken":{"type":"string"},"sessionId":{"type":"string"},"user":{"type":"object","additionalProperties":True},"expiresAt":{"type":"string","format":"date-time"},"refreshExpiresAt":{"type":"string","format":"date-time"}}},
-"CreateVersionRequest":{"type":"object","required":["version"],"properties":{"profileId":{"type":"string","default":"vanilla"},"channel":{"type":"string","default":"dev"},"version":{"type":"string","minLength":1},"manifestSchemaVersion":{"type":"string","enum":["2.0","3.0"],"default":"2.0"}}},
-"PublishRequest":{"type":"object","properties":{"profileId":{"type":"string"},"channel":{"type":"string"},"version":{"type":"string"}}},
-"ManifestRuntimeUpdateRequest":{"type":"object","properties":{"minecraft":{"type":"object","additionalProperties":True},"runtime":{"type":"object","additionalProperties":True},"directories":{"type":"object","additionalProperties":True},"componentCatalog":{"type":"object","required":["components"],"properties":{"components":{"type":"array","items":ref("CatalogComponent0241")}},"additionalProperties":False}}},
-"ServerRegisterRequest":{"type":"object","required":["id","kind","projectId","keyAlgorithm","publicKey"],"properties":{"id":{"type":"string","minLength":1},"name":{"type":"string"},"kind":{"type":"string","enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]},"projectId":{"type":"string","minLength":1},"profileId":{"type":"string"},"fingerprint":{"type":"string"},"keyAlgorithm":{"type":"string","const":"ed25519"},"publicKey":{"type":"string","pattern":"^[A-Za-z0-9_-]{43}$","description":"Raw 32-byte Ed25519 public key encoded as unpadded base64url. The private key never leaves the ServerBridge node."}},"additionalProperties":False},
-"RotateNodeIdentityRequest":{"type":"object","required":["keyAlgorithm","publicKey"],"properties":{"keyAlgorithm":{"type":"string","const":"ed25519"},"publicKey":{"type":"string","pattern":"^[A-Za-z0-9_-]{43}$","description":"Replacement raw Ed25519 public key encoded as unpadded base64url."}},"additionalProperties":False},
-"JoinRequest":{"type":"object","required":["username","serverId","projectId","profileId"],"properties":{"username":{"type":"string","minLength":3,"maxLength":16,"pattern":"^[A-Za-z0-9_]+$"},"serverId":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string","default":"stable"},"minecraftAccessToken":{"type":"string","description":"Minecraft access token whose integrity-verified session is bound to this ServerBridge join when Guard enforcement applies"},"continuousGuardTicket":{"type":"string","description":"Single-use Attestation v2 ticket required for integrity-enforced Windows ServerBridge join"}}},
-"InvalidateRequest":{"type":"object","properties":{"serverId":{"type":"string"},"reason":{"type":"string"}}},
-"RevokeSessionsRequest":{"type":"object","properties":{"allExceptCurrent":{"type":"boolean"}}},
-"RenameSessionRequest":{"type":"object","required":["device"],"properties":{"device":{"type":"string","minLength":1,"maxLength":96}}},
-"AdminSessionRevokeRequest":{"type":"object","properties":{"userId":{"type":"string"},"providerId":{"type":"string"},"riskState":{"type":"string","enum":["normal","elevated","compromised"]},"reason":{"type":"string","maxLength":256}},"anyOf":[{"required":["userId"]},{"required":["providerId"]},{"required":["riskState"]}]},
-"DeviceRegisterBeginRequest":{"type":"object","required":["name"],"properties":{"name":{"type":"string","minLength":1,"maxLength":96},"platform":{"type":"string","maxLength":48},"clientVersion":{"type":"string","maxLength":96},"keyAlgorithm":{"type":"string","enum":["ed25519","p256"],"default":"ed25519"},"keyBinding":{"type":"string","enum":["software","hardware"],"default":"software"},"hardwareProvider":{"type":"string","maxLength":96}}},
-"DeviceProofCompleteRequest":{"type":"object","required":["challengeId","challenge","signature"],"properties":{"challengeId":{"type":"string","minLength":1},"deviceId":{"type":"string"},"challenge":{"type":"string","minLength":1},"publicKey":{"type":"string","description":"Device public key encoded as base64url: raw Ed25519 (32 bytes) or uncompressed SEC1 P-256 (65 bytes)"},"signature":{"type":"string","description":"Device proof signature encoded as base64url: Ed25519 (64 bytes) or raw P-256 IEEE P1363 r||s (64 bytes)"}}},
-"TrustedDeviceRenameRequest":{"type":"object","required":["name"],"properties":{"name":{"type":"string","minLength":1,"maxLength":96}}},
-"TrustedDeviceRevokeRequest":{"type":"object","properties":{"reason":{"type":"string","minLength":1,"maxLength":160}},"additionalProperties":False},
-"PasswordResetRequest":{"type":"object","required":["password"],"properties":{"password":{"type":"string","minLength":12}}},
-"ProjectWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"homepage":{"type":"string"},"repository":{"type":"string"},"defaultChannel":{"type":"string"}}},
-"ProfileSnapshot0225":{"type":"object","required":["schemaVersion","revision","digest","spec"],"properties":{"schemaVersion":{"const":"2.0"},"revision":{"type":"integer","minimum":1},"digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"spec":{"type":"object","required":["projectId","id","name","description","loader","preset","isDefault"],"properties":{"projectId":{"type":"string"},"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"loader":{"type":"string"},"preset":{"type":"string"},"isDefault":{"type":"boolean"}},"additionalProperties":False}},"additionalProperties":False},
-"PortableProfile0225":{"type":"object","required":["format","snapshot"],"properties":{"format":{"const":"neverlauncher.profile.v1"},"snapshot":ref("ProfileSnapshot0225")},"additionalProperties":False},
-"ProfileCloneRequest0225":{"type":"object","required":["id"],"properties":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9_.-]{0,63}$"},"name":{"type":"string","minLength":1,"maxLength":120},"sourceRevision":{"type":"integer","minimum":1}},"additionalProperties":False},
-"ProfileImportRequest0225":{"type":"object","required":["id","name","bundle"],"properties":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9_.-]{0,63}$"},"name":{"type":"string","minLength":1,"maxLength":120},"bundle":ref("PortableProfile0225")},"additionalProperties":False},
-"ProfilePresetCreateRequest0225":{"type":"object","required":["id","presetId"],"properties":{"id":{"type":"string","pattern":"^[a-z0-9][a-z0-9_.-]{0,63}$"},"name":{"type":"string","maxLength":120},"presetId":{"type":"string"}},"additionalProperties":False},
-"ProfilePreset0225":{"type":"object","required":["id","name","description","loader","preset"],"properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"loader":{"type":"string"},"preset":{"type":"string"}},"additionalProperties":False},
-"ProfileDifference0225":{"type":"object","required":["from","to","changes","equal"],"properties":{"from":ref("ProfileSnapshot0225"),"to":ref("ProfileSnapshot0225"),"changes":{"type":"array","items":{"type":"object","required":["field","from","to"],"properties":{"field":{"type":"string"},"from":{},"to":{}},"additionalProperties":False}},"equal":{"type":"boolean"}}},
-"ProfileWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"loader":{"type":"string"},"preset":{"type":"string"},"isDefault":{"type":"boolean"}}},
-"ChannelWriteRequest":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"description":{"type":"string"},"protected":{"type":"boolean"}}},
-"UserWriteRequest":{"type":"object","properties":{"email":{"type":"string","format":"email"},"displayName":{"type":"string"},"roleId":{"type":"string"},"password":{"type":"string"},"projectRoles":{"type":"object","additionalProperties":{"type":"string"}}}},
-"DiagnosticsReportRequest":{"type":"object","required":["schemaVersion","generatedAt","launcherVersion"],"properties":{"schemaVersion":{"type":"string"},"generatedAt":{"type":"string"},"launcherVersion":{"type":"string"},"os":{"type":"string"},"arch":{"type":"string"},"backendUrl":{"type":"string"},"status":{"type":"string"},"checks":{"type":"object","additionalProperties":{"type":"string"}}}},
-"ServerBridgeCapabilitiesResponse":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":{"type":"object","required":["schemaVersion","toolVersion","release","status","preferredProtocolVersion","minimumProtocolVersion","supportedProtocolVersions","negotiatedProtocolVersion","features","featureFlags","requiredFeatures","rollingUpgrade","protocolV3Frozen","protocolV3FeatureDigest","protocolV3Status","legacyProtocolV2Supported","legacyProtocolV2Mode","legacyProtocolV2Deprecated","migrationCommand","capabilityNegotiationActive","securityProfile","securityCapabilityDigest","activeSigningPublicKey","activeSigningKeyFingerprint","previousSigningPublicKey","previousSigningKeyFingerprint","capabilitySignature","previousCapabilitySignature"],"properties":{"schemaVersion":{"type":"string"},"toolVersion":{"type":"string"},"release":{"const":"ServerBridge 3"},"status":{"type":"string","enum":["negotiated","serverbridge_no_compatible_protocol"]},"preferredProtocolVersion":{"const":3},"minimumProtocolVersion":{"const":2},"supportedProtocolVersions":{"type":"array","items":{"type":"integer","enum":[2,3]},"minItems":2,"uniqueItems":True},"negotiatedProtocolVersion":{"type":"integer","enum":[0,2,3]},"features":{"type":"array","items":{"type":"string"},"uniqueItems":True},"featureFlags":{"type":"object","additionalProperties":{"type":"boolean"}},"requiredFeatures":{"type":"object","additionalProperties":{"type":"array","items":{"type":"string"}}},"rollingUpgrade":{"const":True},"protocolV3Frozen":{"const":True},"protocolV3FeatureDigest":{"const":"098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc"},"protocolV3Status":{"const":"ga-frozen"},"legacyProtocolV2Supported":{"const":True},"legacyProtocolV2Mode":{"const":"compatibility-deprecated"},"legacyProtocolV2Deprecated":{"const":True},"migrationCommand":{"const":"nl server-bridge migrate-v3"},"capabilityNegotiationActive":{"const":True},"securityProfile":{"const":"serverbridge3-security-01912"},"securityCapabilityDigest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"activeSigningPublicKey":{"type":"string","pattern":"^[A-Za-z0-9_-]{43}$"},"activeSigningKeyFingerprint":{"type":"string","pattern":"^[0-9a-f]{64}$"},"previousSigningPublicKey":{"type":"string"},"previousSigningKeyFingerprint":{"type":"string"},"capabilitySignature":{"type":"string","minLength":1},"previousCapabilitySignature":{"type":"string"},"reason":{"type":"string"}},"additionalProperties":False}},"additionalProperties":False},
-"ServerBridgeOverviewResponseGA":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":{"type":"object","required":["schemaVersion","toolVersion","release","protocol","metrics","nodes","topology","control","audit","generatedAt"],"properties":{"schemaVersion":{"const":"3.0-ga"},"toolVersion":{"type":"string"},"release":{"const":"ServerBridge 3 GA"},"protocol":{"type":"object","required":["version","status","frozen","featureDigest","v2Mode"],"properties":{"version":{"const":3},"status":{"const":"ga-frozen"},"frozen":{"const":True},"featureDigest":{"const":"098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc"},"v2Mode":{"const":"compatibility-deprecated"}},"additionalProperties":False},"metrics":{"type":"object","additionalProperties":True},"nodes":{"type":"array","items":{"type":"object","additionalProperties":True}},"topology":{"type":"array","items":{"type":"object","additionalProperties":True}},"control":{"type":"array","items":{"type":"object","additionalProperties":True}},"audit":{"type":"array","items":{"type":"object","additionalProperties":True}},"generatedAt":{"type":"string","format":"date-time"}},"additionalProperties":False}},"additionalProperties":False},
-"HeartbeatRequestV2":{"type":"object","required":["protocolVersion","serverId","serverType","pluginVersion","pluginSha256"],"properties":{"protocolVersion":{"type":"integer","const":2},"serverId":{"type":"string"},"serverType":{"type":"string","enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"SHA-256 of the running ServerBridge JAR"},"hostname":{"type":"string"},"playersOnline":{"type":"integer","minimum":0}},"additionalProperties":False},
-"ServerBridgeRuntimeIdentityV3":{"type":"object","required":["runtimeId","startedAt","startedAtUnixMillis","uptimeSeconds","processId","hostname","nodeName","minecraftVersion","javaVersion","javaVendor","javaVmName","platform","loaderName","loaderVersion","serverBrand","capabilities","nodeKeyFingerprint","identitySignature"],"properties":{"runtimeId":{"type":"string","pattern":"^[0-9a-f]{64}$"},"startedAt":{"type":"string","format":"date-time"},"startedAtUnixMillis":{"type":"integer","minimum":1},"uptimeSeconds":{"type":"integer","minimum":0},"processId":{"type":"integer","minimum":1},"hostname":{"type":"string","minLength":1,"maxLength":255},"nodeName":{"type":"string","minLength":1,"maxLength":255},"minecraftVersion":{"type":"string","minLength":1,"maxLength":128},"javaVersion":{"type":"string","minLength":1,"maxLength":128},"javaVendor":{"type":"string","maxLength":128},"javaVmName":{"type":"string","maxLength":128},"platform":{"type":"string","enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]},"loaderName":{"type":"string","minLength":1,"maxLength":128},"loaderVersion":{"type":"string","maxLength":128},"serverBrand":{"type":"string","minLength":1,"maxLength":512},"capabilities":{"type":"array","items":{"type":"string","minLength":1,"maxLength":128},"minItems":1,"maxItems":64,"uniqueItems":True},"nodeKeyFingerprint":{"type":"string","pattern":"^[0-9a-f]{64}$"},"identitySignature":{"type":"string","minLength":1}},"additionalProperties":False},
-"ServerBridgeTelemetryV3":{"type":"object","required":["sequence","sampledAtUnixMillis","windowMillis","runtimeId","tickHealth","playersOnline","playersMax","heapUsedBytes","heapCommittedBytes","heapMaxBytes","nonHeapUsedBytes","nonHeapCommittedBytes","gcCollections","gcCollectionTimeMillis","gcCollectionsDelta","gcCollectionTimeDeltaMillis","threadCount","daemonThreadCount","peakThreadCount","samplingBudgetExceeded","metrics"],"properties":{"sequence":{"type":"integer","minimum":1},"sampledAtUnixMillis":{"type":"integer","minimum":1},"windowMillis":{"type":"integer","minimum":0,"maximum":600000},"runtimeId":{"type":"string","pattern":"^[0-9a-f]{64}$"},"tps":{"type":"number","minimum":0,"maximum":1000},"mspt":{"type":"number","minimum":0,"maximum":600000},"tickHealth":{"type":"string","enum":["unavailable","healthy","degraded","overloaded"]},"playersOnline":{"type":"integer","minimum":0,"maximum":1000000},"playersMax":{"type":"integer","minimum":0,"maximum":1000000},"heapUsedBytes":{"type":"integer","minimum":0},"heapCommittedBytes":{"type":"integer","minimum":0},"heapMaxBytes":{"type":"integer","minimum":0},"nonHeapUsedBytes":{"type":"integer","minimum":0},"nonHeapCommittedBytes":{"type":"integer","minimum":0},"gcCollections":{"type":"integer","minimum":0},"gcCollectionTimeMillis":{"type":"integer","minimum":0},"gcCollectionsDelta":{"type":"integer","minimum":0},"gcCollectionTimeDeltaMillis":{"type":"integer","minimum":0},"threadCount":{"type":"integer","minimum":0,"maximum":1000000},"daemonThreadCount":{"type":"integer","minimum":0,"maximum":1000000},"peakThreadCount":{"type":"integer","minimum":0,"maximum":1000000},"loadedWorlds":{"type":"integer","minimum":0,"maximum":100000},"loadedDimensions":{"type":"integer","minimum":0,"maximum":100000},"loadedChunks":{"type":"integer","minimum":0},"entityCount":{"type":"integer","minimum":0},"samplingBudgetExceeded":{"type":"boolean"},"metrics":{"type":"array","items":{"type":"string","minLength":1,"maxLength":96},"minItems":1,"maxItems":64,"uniqueItems":True}},"additionalProperties":False},
-"ServerBridgeRoutingSnapshotV3":{"type":"object","required":["runtimeId","observedAtUnixMillis","state","acceptingConnections","playersOnline","capacityMax","health","signature"],"properties":{"runtimeId":{"type":"string","pattern":"^[0-9a-f]{64}$"},"observedAtUnixMillis":{"type":"integer","minimum":1},"state":{"type":"string","enum":["ready","maintenance","draining"]},"acceptingConnections":{"type":"boolean"},"playersOnline":{"type":"integer","minimum":0,"maximum":1000000},"capacityMax":{"type":"integer","minimum":0,"maximum":1000000},"health":{"type":"string","enum":["healthy","degraded","unhealthy"]},"signature":{"type":"string","minLength":1}},"additionalProperties":False},
-"ServerBridgeRouteTargetV3":{"type":"object","required":["nodeId","backendName","kind","runtimeId","runtimeEpoch","health","state","playersOnline","capacityMax","availableSlots","routingRevision","routingDigest","observedAt","lastHeartbeatAt"],"properties":{"nodeId":{"type":"string"},"backendName":{"type":"string"},"kind":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"runtimeId":{"type":"string","pattern":"^[0-9a-f]{64}$"},"runtimeEpoch":{"type":"integer","minimum":1},"health":{"type":"string","enum":["healthy","degraded"]},"state":{"const":"ready"},"playersOnline":{"type":"integer","minimum":0},"capacityMax":{"type":"integer","minimum":0},"availableSlots":{"type":"integer","minimum":0},"routingRevision":{"type":"integer","minimum":1},"routingDigest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"observedAt":{"type":"string","format":"date-time"},"lastHeartbeatAt":{"type":"string","format":"date-time"}},"additionalProperties":True},
-"ServerBridgeRoutesResponseV3":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":{"type":"object","required":["schemaVersion","toolVersion","sourceNodeId","freshnessSeconds","items"],"properties":{"schemaVersion":{"type":"string"},"toolVersion":{"type":"string"},"sourceNodeId":{"type":"string"},"freshnessSeconds":{"const":90},"items":{"type":"array","maxItems":1024,"items":ref("ServerBridgeRouteTargetV3")}},"additionalProperties":False}},"additionalProperties":False},
-"HeartbeatRequestV3":{"type":"object","required":["protocolVersion","features","serverId","serverType","pluginVersion","pluginSha256"],"properties":{"protocolVersion":{"type":"integer","const":3},"features":{"type":"array","items":{"type":"string"},"minItems":2,"uniqueItems":True},"serverId":{"type":"string"},"serverType":{"type":"string","enum":["velocity","bungeecord","waterfall","bukkit","spigot","paper","purpur","folia","fabric","quilt","forge","neoforge","sponge","vanilla"]},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"SHA-256 of the running ServerBridge JAR"},"runtime":ref("ServerBridgeRuntimeIdentityV3"),"telemetry":ref("ServerBridgeTelemetryV3"),"routing":ref("ServerBridgeRoutingSnapshotV3"),"hostname":{"type":"string"},"playersOnline":{"type":"integer","minimum":0}},"additionalProperties":False},
-"HeartbeatRequest":{"oneOf":[ref("HeartbeatRequestV2"),ref("HeartbeatRequestV3")]},
-"ServerBridgeEventV3":{"type":"object","required":["sequence","eventId","runtimeId","type","occurredAtUnixMillis","payload","payloadSha256","signature"],"properties":{"sequence":{"type":"integer","minimum":1},"eventId":{"type":"string","minLength":1,"maxLength":128,"pattern":"^[A-Za-z0-9._:-]+$"},"runtimeId":{"type":"string","pattern":"^[0-9a-f]{64}$"},"type":{"type":"string","enum":["server.startup","server.ready","server.shutdown","server.crash","server.error","player.login","player.join","player.quit","player.kick","world.load","world.unload","proxy.connect","proxy.switch"]},"occurredAtUnixMillis":{"type":"integer","minimum":1},"payload":{"type":"object","maxProperties":32,"additionalProperties":{"type":"string","maxLength":1024}},"payloadSha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"securityProfile":{"type":"string","enum":["serverbridge3-security-01912"]},"securityCapabilityDigest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"nodeKeyFingerprint":{"type":"string","pattern":"^[0-9a-f]{64}$"},"signature":{"type":"string","minLength":1}},"additionalProperties":False},
-"ServerBridgeEventBatchV3":{"type":"object","required":["protocolVersion","features","serverId","runtimeId","events"],"properties":{"protocolVersion":{"type":"integer","const":3},"features":{"type":"array","items":{"type":"string"},"minItems":3,"uniqueItems":True},"serverId":{"type":"string","minLength":1},"runtimeId":{"type":"string","pattern":"^[0-9a-f]{64}$"},"events":{"type":"array","minItems":1,"maxItems":64,"items":ref("ServerBridgeEventV3")}},"additionalProperties":False},
-"ServerBridgeEventAckV3":{"type":"object","required":["apiVersion","data"],"properties":{"apiVersion":{"type":"string"},"data":{"type":"object","required":["protocolVersion","status","serverId","runtimeId","runtimeEpoch","ackSequence","inserted"],"properties":{"protocolVersion":{"const":3},"status":{"const":"events-acknowledged"},"serverId":{"type":"string"},"runtimeId":{"type":"string","pattern":"^[0-9a-f]{64}$"},"runtimeEpoch":{"type":"integer","minimum":1},"ackSequence":{"type":"integer","minimum":0},"inserted":{"type":"integer","minimum":0,"maximum":64}},"additionalProperties":True}},"additionalProperties":True},
-"BridgeHandoffRequestV2":{"type":"object","required":["protocolVersion","username","targetServer"],"properties":{"protocolVersion":{"type":"integer","const":2},"username":{"type":"string","minLength":1},"targetServer":{"type":"string","minLength":1}},"additionalProperties":False},
-"BridgeHandoffRequestV3":{"type":"object","required":["protocolVersion","features","username","targetServer"],"properties":{"protocolVersion":{"type":"integer","const":3},"features":{"type":"array","items":{"type":"string"},"minItems":2,"uniqueItems":True},"username":{"type":"string","minLength":1},"targetServer":{"type":"string","minLength":1},"sessionCorrelationId":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Player Session Integration 3 correlation proof; required when session.player-lifecycle-v3 is negotiated"}},"additionalProperties":False},
-"BridgeHandoffRequest":{"oneOf":[ref("BridgeHandoffRequestV2"),ref("BridgeHandoffRequestV3")]},
-"BridgeAuditEventRequest":{"type":"object","required":["serverId","event"],"properties":{"serverId":{"type":"string"},"event":{"type":"string"},"player":{"type":"string"},"uuid":{"type":"string"},"details":{"type":"object","additionalProperties":True}}},
-"HasJoinedRequest":{"type":"object","properties":{"username":{"type":"string"},"serverId":{"type":"string"}}},
-"TelemetryRequest":{"type":"object","required":["projectId","event"],"properties":{"projectId":{"type":"string"},"profileId":{"type":"string"},"launcherVersion":{"type":"string"},"profileVersion":{"type":"string"},"event":{"type":"string"},"status":{"type":"string"}}},
-"CrashReportRequest":{"type":"object","required":["projectId","message"],"properties":{"projectId":{"type":"string"},"profileId":{"type":"string"},"launcherVersion":{"type":"string"},"profileVersion":{"type":"string"},"message":{"type":"string"},"log":{"type":"string"}}},
-"GuardAttestationBeginRequest":{"type":"object","required":["launcherVersion"],"properties":{"launcherVersion":{"type":"string","minLength":1,"maxLength":64}},"additionalProperties":False},
-"GuardAttestationCompleteRequest":{"type":"object","required":["challengeId","challenge","challengeExpiresAt","launcherVersion","attestation","signature"],"properties":{"challengeId":{"type":"string","minLength":1},"challenge":{"type":"string","minLength":1},"challengeExpiresAt":{"type":"string","format":"date-time"},"launcherVersion":{"type":"string","minLength":1,"maxLength":64},"attestation":{"type":"object","additionalProperties":True},"signature":{"type":"string","minLength":1}},"additionalProperties":False},
-"GuardAttestationV2CompleteRequest":{"type":"object","required":["challengeId","challenge","challengeExpiresAt","launcherVersion","attestation","signature"],"properties":{"challengeId":{"type":"string","minLength":1},"challenge":{"type":"string","minLength":1},"challengeExpiresAt":{"type":"string","format":"date-time"},"launcherVersion":{"type":"string","minLength":1,"maxLength":64},"attestation":{"type":"object","description":"Windows Guard Attestation v2 containing base v1 attestation and fresh Continuous Guard evidence","additionalProperties":True},"signature":{"type":"string","minLength":1}},"additionalProperties":False},
-"MinecraftSessionRequest":{"type":"object","properties":{"clientToken":{"type":"string"},"guardAttestationTicket":{"type":"string","description":"Single-use NeverGuard 0.13.4 launch ticket required when Guard Attestation enforcement is enabled"}}},
-"YggdrasilAuthenticateRequest":{"type":"object","required":["username","password"],"properties":{"username":{"type":"string"},"password":{"type":"string"},"clientToken":{"type":"string"},"requestUser":{"type":"boolean"},"providerId":{"type":"string"},"totp":{"type":"string"},"recoveryCode":{"type":"string"}}},
-"YggdrasilRefreshRequest":{"type":"object","required":["accessToken"],"properties":{"accessToken":{"type":"string"},"clientToken":{"type":"string"},"requestUser":{"type":"boolean"},"selectedProfile":{"type":"object","additionalProperties":True}}},
-"YggdrasilTokenRequest":{"type":"object","required":["accessToken"],"properties":{"accessToken":{"type":"string"},"clientToken":{"type":"string"}}},
-"YggdrasilSignoutRequest":{"type":"object","required":["username","password"],"properties":{"username":{"type":"string"},"password":{"type":"string"},"providerId":{"type":"string"}}},
-"YggdrasilJoinRequest":{"type":"object","required":["accessToken","selectedProfile","serverId"],"properties":{"accessToken":{"type":"string"},"selectedProfile":{"type":"string"},"serverId":{"type":"string"}}},
-"FreeFormObject":{"type":"object","additionalProperties":True},
-"ValidateJoinRequestV2":{"type":"object","required":["protocolVersion","serverId","username","pluginVersion","pluginSha256"],"properties":{"protocolVersion":{"type":"integer","const":2},"serverId":{"type":"string"},"username":{"type":"string"},"uuid":{"type":"string"},"serverHash":{"type":"string"},"ip":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"Current ServerBridge JAR SHA-256; must match the accepted heartbeat measurement"}},"additionalProperties":False},
-"ValidateJoinRequestV3":{"type":"object","required":["protocolVersion","features","serverId","username","pluginVersion","pluginSha256"],"properties":{"protocolVersion":{"type":"integer","const":3},"features":{"type":"array","items":{"type":"string"},"minItems":2,"uniqueItems":True},"serverId":{"type":"string"},"username":{"type":"string"},"uuid":{"type":"string"},"serverHash":{"type":"string"},"ip":{"type":"string"},"projectId":{"type":"string"},"profileId":{"type":"string"},"channel":{"type":"string"},"pluginVersion":{"type":"string"},"pluginSha256":{"type":"string","pattern":"^[0-9a-fA-F]{64}$","description":"Current ServerBridge JAR SHA-256; must match the accepted heartbeat measurement"}},"additionalProperties":False},
-"ValidateJoinRequest":{"oneOf":[ref("ValidateJoinRequestV2"),ref("ValidateJoinRequestV3")]}
+schemas = {
+    "TextureAdminPolicy0259": {
+        "type": "object",
+        "required": [
+            "projectId",
+            "revision",
+            "allowPlayerSkins",
+            "allowPlayerCapes",
+            "defaultSkinModel",
+            "fallbackSkinModel",
+            "maxBytesPerPlayer",
+            "maxBlobsPerPlayer",
+        ],
+        "properties": {
+            "projectId": {"type": "string"},
+            "revision": {"type": "integer", "minimum": 0},
+            "allowPlayerSkins": {"type": "boolean"},
+            "allowPlayerCapes": {"type": "boolean"},
+            "defaultSkinModel": {"type": "string", "enum": ["classic", "slim"]},
+            "fallbackSkinModel": {"type": "string", "enum": ["classic", "slim"]},
+            "defaultSkinDigest": {"type": "string", "pattern": "^$|^[0-9a-f]{64}$"},
+            "defaultCapeDigest": {"type": "string", "pattern": "^$|^[0-9a-f]{64}$"},
+            "fallbackSkinDigest": {"type": "string", "pattern": "^$|^[0-9a-f]{64}$"},
+            "fallbackCapeDigest": {"type": "string", "pattern": "^$|^[0-9a-f]{64}$"},
+            "maxBytesPerPlayer": {
+                "type": "integer",
+                "minimum": 1024,
+                "maximum": 1073741824,
+            },
+            "maxBlobsPerPlayer": {"type": "integer", "minimum": 1, "maximum": 10000},
+        },
+    },
+    "TextureAdminPolicyChange0259": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["expectedRevision", "policy", "reason"],
+        "properties": {
+            "expectedRevision": {"type": "integer", "minimum": 0},
+            "policy": ref("TextureAdminPolicy0259"),
+            "reason": {"type": "string", "minLength": 3, "maxLength": 500},
+        },
+    },
+    "TextureAdminExceptionChange0259": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["kind", "decision", "reason"],
+        "properties": {
+            "userId": {"type": "string"},
+            "kind": {"type": "string", "enum": ["skin", "cape"]},
+            "decision": {"type": "string", "enum": ["allow", "deny", "inherit"]},
+            "reason": {"type": "string", "minLength": 3, "maxLength": 500},
+        },
+    },
+    "TextureURLImport0254": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["url", "expectedRevision"],
+        "properties": {
+            "url": {
+                "type": "string",
+                "format": "uri",
+                "maxLength": 2048,
+                "description": "Public HTTPS URL (DNS hostname, TCP 443 only), no redirects, max 4 MiB PNG.",
+            },
+            "expectedRevision": {"type": "integer", "minimum": 0},
+            "model": {
+                "type": "string",
+                "enum": ["classic", "slim"],
+                "default": "classic",
+            },
+            "visibility": {
+                "type": "string",
+                "enum": ["public", "private", "unlisted"],
+                "default": "public",
+            },
+            "profileUuid": {
+                "type": "string",
+                "description": "Optional ownership assertion; never an identity selector",
+            },
+        },
+    },
+    "TextureUploadMultipart0252": {
+        "type": "object",
+        "required": ["file", "expectedRevision"],
+        "properties": {
+            "file": {
+                "type": "string",
+                "format": "binary",
+                "description": "Fully decoded and normalized Minecraft PNG; at most 4 MiB compressed and 1024x1024 pixels.",
+            },
+            "expectedRevision": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "0 for first assignment; otherwise latest revision",
+            },
+            "model": {
+                "type": "string",
+                "enum": ["classic", "slim"],
+                "default": "classic",
+            },
+            "visibility": {
+                "type": "string",
+                "enum": ["public", "private", "unlisted"],
+                "default": "public",
+            },
+            "profileUuid": {
+                "type": "string",
+                "description": "Optional owner assertion, never used to determine identity",
+            },
+        },
+    },
+    "TextureUploadResponse0252": {
+        "type": "object",
+        "properties": {
+            "apiVersion": {"type": "string"},
+            "data": {
+                "type": "object",
+                "properties": {
+                    "assignment": ref("TextureAssignment0251"),
+                    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                    "width": {"type": "integer"},
+                    "height": {"type": "integer"},
+                    "bytes": {"type": "integer"},
+                    "previewUrl": {"type": "string"},
+                },
+            },
+        },
+    },
+    "TextureSelectionPatch0251": {
+        "type": "object",
+        "required": ["expectedRevision", "model", "visibility", "active"],
+        "properties": {
+            "profileUuid": {
+                "type": "string",
+                "description": "Optional caller assertion; server derives the actual UUID from the authenticated account.",
+            },
+            "expectedRevision": {"type": "integer", "minimum": 1},
+            "model": {"type": "string", "enum": ["classic", "slim"]},
+            "visibility": {"type": "string", "enum": ["public", "private", "unlisted"]},
+            "active": {"type": "boolean"},
+        },
+        "additionalProperties": False,
+    },
+    "TextureAssignment0251": {
+        "type": "object",
+        "required": [
+            "id",
+            "realm",
+            "profileUuid",
+            "userId",
+            "projectId",
+            "launcherProfileId",
+            "kind",
+            "source",
+            "model",
+            "visibility",
+            "revision",
+            "active",
+            "updatedAt",
+        ],
+        "properties": {
+            "id": {"type": "integer"},
+            "realm": {"const": "local-project"},
+            "profileUuid": {"type": "string"},
+            "userId": {"type": "string"},
+            "projectId": {"type": "string"},
+            "launcherProfileId": {"type": "string"},
+            "kind": {"type": "string", "enum": ["skin", "cape"]},
+            "blobDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "externalUrl": {"type": "string"},
+            "source": {
+                "type": "string",
+                "enum": ["managed-upload", "imported", "remote-reference", "official"],
+            },
+            "model": {"type": "string", "enum": ["classic", "slim"]},
+            "visibility": {"type": "string", "enum": ["public", "private", "unlisted"]},
+            "revision": {"type": "integer", "minimum": 1},
+            "active": {"type": "boolean"},
+            "updatedAt": {"type": "string", "format": "date-time"},
+        },
+    },
+    "TextureAssignmentResponse0251": {
+        "type": "object",
+        "required": ["apiVersion", "data"],
+        "properties": {
+            "apiVersion": {"type": "string"},
+            "data": ref("TextureAssignment0251"),
+        },
+    },
+    "TextureMineResponse0251": {
+        "type": "object",
+        "required": ["apiVersion", "data"],
+        "properties": {
+            "apiVersion": {"type": "string"},
+            "data": {
+                "type": "object",
+                "required": ["realm", "profileUuid", "profileName", "items"],
+                "properties": {
+                    "realm": {"const": "local-project"},
+                    "profileUuid": {"type": "string"},
+                    "profileName": {"type": "string"},
+                    "items": {"type": "array", "items": ref("TextureAssignment0251")},
+                },
+            },
+        },
+    },
+    "TextureHistoryResponse0251": {
+        "type": "object",
+        "required": ["apiVersion", "data"],
+        "properties": {
+            "apiVersion": {"type": "string"},
+            "data": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": [
+                        "assignmentId",
+                        "revision",
+                        "snapshot",
+                        "actorUserId",
+                        "event",
+                        "reason",
+                        "createdAt",
+                    ],
+                    "properties": {
+                        "assignmentId": {"type": "integer"},
+                        "revision": {"type": "integer"},
+                        "snapshot": {"type": "object"},
+                        "actorUserId": {"type": "string"},
+                        "event": {"type": "string"},
+                        "reason": {"type": "string"},
+                        "createdAt": {"type": "string", "format": "date-time"},
+                    },
+                },
+            },
+        },
+    },
+    "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+            "error": {
+                "type": "object",
+                "required": ["code", "message"],
+                "properties": {
+                    "code": {"type": "integer"},
+                    "message": {"type": "string"},
+                },
+                "additionalProperties": False,
+            }
+        },
+        "additionalProperties": False,
+    },
+    "ExtensionRegistryPublisherWrite": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+            "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+            "name": {"type": "string", "minLength": 1, "maxLength": 160},
+            "active": {"type": "boolean"},
+        },
+        "additionalProperties": False,
+    },
+    "ExtensionRegistryPublisherKeyWrite": {
+        "type": "object",
+        "required": ["publicKeyBase64"],
+        "properties": {
+            "publicKeyBase64": {
+                "type": "string",
+                "description": "Raw 32-byte Ed25519 public key encoded as standard Base64.",
+            },
+            "active": {"type": "boolean"},
+        },
+        "additionalProperties": False,
+    },
+    "ExtensionRegistryYankWrite": {
+        "type": "object",
+        "required": ["reason"],
+        "properties": {"reason": {"type": "string", "minLength": 1, "maxLength": 500}},
+        "additionalProperties": False,
+    },
+    "ExtensionRegistryChannelWrite": {
+        "type": "object",
+        "required": ["version"],
+        "properties": {"version": {"type": "string", "minLength": 1}},
+        "additionalProperties": False,
+    },
+    "ExtensionRegistryInstallWrite": {
+        "type": "object",
+        "properties": {
+            "scope": {
+                "type": "string",
+                "enum": ["global", "project"],
+                "default": "global",
+            },
+            "scopeId": {"type": "string"},
+        },
+        "additionalProperties": False,
+    },
+    "ExtensionLifecycleWrite": {
+        "type": "object",
+        "properties": {
+            "version": {
+                "type": "string",
+                "description": "Exact registry version for install/update.",
+            },
+            "channel": {
+                "type": "string",
+                "description": "Registry channel used when version is omitted; defaults to stable for install/update.",
+            },
+            "scope": {
+                "type": "string",
+                "enum": ["global", "project"],
+                "default": "global",
+            },
+            "scopeId": {
+                "type": "string",
+                "description": "Required when scope=project.",
+            },
+        },
+        "additionalProperties": False,
+    },
+    "ExtensionPermissionGrantWrite": {
+        "type": "object",
+        "required": ["permission"],
+        "properties": {
+            "version": {"type": "string"},
+            "scope": {
+                "type": "string",
+                "enum": ["global", "project"],
+                "default": "global",
+            },
+            "scopeId": {"type": "string"},
+            "permission": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._:-]{1,127}$",
+            },
+            "reason": {"type": "string", "maxLength": 1000},
+        },
+        "additionalProperties": False,
+    },
+    "ExtensionSecretWrite": {
+        "type": "object",
+        "required": ["valueBase64"],
+        "properties": {
+            "scope": {
+                "type": "string",
+                "enum": ["global", "project"],
+                "default": "global",
+            },
+            "scopeId": {"type": "string"},
+            "valueBase64": {
+                "type": "string",
+                "description": "Secret plaintext encoded as standard Base64; never returned by list/read admin APIs.",
+            },
+        },
+        "additionalProperties": False,
+    },
+    "DesktopExtensionRPCRequest0209": {
+        "type": "object",
+        "required": ["protocol", "id", "method"],
+        "properties": {
+            "protocol": {"type": "string", "const": "extensions.desktop-rpc.v1"},
+            "id": {"type": "string", "minLength": 1, "maxLength": 160},
+            "method": {"type": "string", "minLength": 1, "maxLength": 64},
+            "params": {"type": "object", "additionalProperties": True},
+        },
+        "additionalProperties": False,
+    },
+    "ExtensionCLIInvokeRequest0209": {
+        "type": "object",
+        "required": ["scope", "command"],
+        "properties": {
+            "scope": {"type": "string", "enum": ["global", "project"]},
+            "scopeId": {"type": "string"},
+            "command": {"type": "string", "minLength": 1, "maxLength": 64},
+            "args": {
+                "type": "array",
+                "maxItems": 127,
+                "items": {"type": "string", "maxLength": 16384},
+            },
+        },
+        "additionalProperties": False,
+    },
+    "ServiceStatus": {
+        "type": "object",
+        "required": ["name", "version", "status", "environment", "storage"],
+        "properties": {
+            "name": {"type": "string"},
+            "version": {"type": "string"},
+            "status": {"type": "string"},
+            "environment": {"type": "string"},
+            "message": {"type": "string"},
+            "storage": {"type": "string"},
+        },
+    },
+    "Readiness": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+            "status": {"type": "string"},
+            "checks": {
+                "type": "array",
+                "items": {"type": "object", "additionalProperties": True},
+            },
+        },
+        "additionalProperties": True,
+    },
+    "LoginRequest": {
+        "type": "object",
+        "required": ["password"],
+        "anyOf": [{"required": ["identifier"]}, {"required": ["email"]}],
+        "properties": {
+            "identifier": {"type": "string", "minLength": 1},
+            "email": {"type": "string", "format": "email"},
+            "password": {"type": "string", "minLength": 1},
+            "providerId": {"type": "string", "default": "local"},
+            "totp": {"type": "string"},
+            "recoveryCode": {"type": "string"},
+            "deviceId": {"type": "string"},
+        },
+    },
+    "RefreshRequest": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+            "refreshToken": {"type": "string", "minLength": 1},
+            "deviceId": {
+                "type": "string",
+                "description": "Required for a session already bound to a trusted device",
+            },
+            "deviceSignature": {
+                "type": "string",
+                "description": "base64url signature by the current trusted-device key over the canonical NeverLauncher Session Device Binding v1 refresh payload",
+            },
+        },
+    },
+    "OIDCBeginRequest": {
+        "type": "object",
+        "properties": {
+            "redirectUri": {"type": "string", "format": "uri"},
+            "deviceId": {"type": "string"},
+        },
+    },
+    "OIDCCompleteRequest": {
+        "type": "object",
+        "required": ["code", "state", "transaction"],
+        "properties": {
+            "code": {"type": "string", "minLength": 1},
+            "state": {"type": "string", "minLength": 1},
+            "transaction": {"type": "string", "minLength": 1},
+            "deviceId": {"type": "string"},
+            "totp": {"type": "string"},
+            "recoveryCode": {"type": "string"},
+        },
+    },
+    "BootstrapAdminRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+            "email": {"type": "string", "format": "email"},
+            "displayName": {"type": "string"},
+            "password": {"type": "string", "minLength": 12},
+            "actor": {"type": "string"},
+        },
+    },
+    "FirstProjectRequest": {
+        "type": "object",
+        "properties": {
+            "projectId": {"type": "string"},
+            "profileId": {"type": "string"},
+            "channel": {"type": "string"},
+            "version": {"type": "string"},
+            "actor": {"type": "string"},
+        },
+    },
+    "Project": {
+        "type": "object",
+        "required": ["id", "name", "defaultChannel"],
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "homepage": {"type": "string"},
+            "repository": {"type": "string"},
+            "defaultChannel": {"type": "string"},
+        },
+    },
+    "Profile": {
+        "type": "object",
+        "required": ["id", "projectId", "name", "loader"],
+        "properties": {
+            "id": {"type": "string"},
+            "projectId": {"type": "string"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "loader": {"type": "string"},
+            "preset": {"type": "string"},
+            "isDefault": {"type": "boolean"},
+        },
+    },
+    "ReleaseChannel": {
+        "type": "object",
+        "required": ["id", "projectId", "name"],
+        "properties": {
+            "id": {"type": "string"},
+            "projectId": {"type": "string"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "protected": {"type": "boolean"},
+        },
+    },
+    "Signature": {
+        "type": "object",
+        "required": ["algorithm", "publicKey", "signature", "signedAt"],
+        "properties": {
+            "algorithm": {"const": "Ed25519"},
+            "publicKey": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+            "signature": {"type": "string", "pattern": "^[0-9a-fA-F]{128}$"},
+            "signedAt": {"type": "string", "format": "date-time"},
+        },
+    },
+    "ManifestFile": {
+        "type": "object",
+        "required": ["path", "size", "sha256", "url", "required", "executable"],
+        "properties": {
+            "path": {"type": "string"},
+            "size": {"type": "integer", "minimum": 0},
+            "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+            "url": {"type": "string", "format": "uri"},
+            "required": {"type": "boolean"},
+            "executable": {"type": "boolean"},
+            "targetOs": {"type": "array", "items": {"type": "string"}},
+        },
+    },
+    "CatalogComponent0241": {
+        "type": "object",
+        "required": ["id", "name", "files"],
+        "properties": {
+            "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"},
+            "name": {"type": "string", "minLength": 1, "maxLength": 256},
+            "files": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 8192,
+                "items": {"type": "string"},
+            },
+        },
+        "additionalProperties": False,
+    },
+    "ComponentCatalog0241": {
+        "type": "object",
+        "required": ["schemaVersion", "revision", "digest", "components"],
+        "properties": {
+            "schemaVersion": {"const": "1.0"},
+            "revision": {"type": "integer", "minimum": 1},
+            "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "components": {
+                "type": "array",
+                "maxItems": 4096,
+                "items": ref("CatalogComponent0241"),
+            },
+        },
+        "additionalProperties": False,
+    },
+    "Manifest": {
+        "type": "object",
+        "required": [
+            "schemaVersion",
+            "projectId",
+            "profileId",
+            "channel",
+            "version",
+            "createdAt",
+            "minecraft",
+            "runtime",
+            "files",
+            "signature",
+        ],
+        "properties": {
+            "schemaVersion": {"type": "string", "enum": ["1.0", "2.0", "3.0"]},
+            "projectId": {"type": "string"},
+            "profileId": {"type": "string"},
+            "channel": {"type": "string"},
+            "version": {"type": "string"},
+            "createdAt": {"type": "string"},
+            "minecraft": {"type": "object", "additionalProperties": True},
+            "runtime": {"type": "object", "additionalProperties": True},
+            "directories": {"type": "object", "additionalProperties": True},
+            "files": {"type": "array", "items": ref("ManifestFile")},
+            "componentCatalog": ref("ComponentCatalog0241"),
+            "signature": ref("Signature"),
+        },
+    },
+    "ReleaseVersion": {
+        "type": "object",
+        "required": [
+            "id",
+            "projectId",
+            "profileId",
+            "channel",
+            "version",
+            "status",
+            "manifest",
+        ],
+        "properties": {
+            "id": {"type": "string"},
+            "projectId": {"type": "string"},
+            "profileId": {"type": "string"},
+            "channel": {"type": "string"},
+            "version": {"type": "string"},
+            "status": {"type": "string"},
+            "manifest": ref("Manifest"),
+            "publishedAt": {"type": "string", "format": "date-time"},
+        },
+    },
+    "AdminSession": {
+        "type": "object",
+        "required": ["token", "user", "expiresAt"],
+        "properties": {
+            "token": {"type": "string"},
+            "refreshToken": {"type": "string"},
+            "sessionId": {"type": "string"},
+            "user": {"type": "object", "additionalProperties": True},
+            "expiresAt": {"type": "string", "format": "date-time"},
+            "refreshExpiresAt": {"type": "string", "format": "date-time"},
+        },
+    },
+    "CreateVersionRequest": {
+        "type": "object",
+        "required": ["version"],
+        "properties": {
+            "profileId": {"type": "string", "default": "vanilla"},
+            "channel": {"type": "string", "default": "dev"},
+            "version": {"type": "string", "minLength": 1},
+            "manifestSchemaVersion": {
+                "type": "string",
+                "enum": ["2.0", "3.0"],
+                "default": "2.0",
+            },
+        },
+    },
+    "PublishRequest": {
+        "type": "object",
+        "properties": {
+            "profileId": {"type": "string"},
+            "channel": {"type": "string"},
+            "version": {"type": "string"},
+        },
+    },
+    "ManifestRuntimeUpdateRequest": {
+        "type": "object",
+        "properties": {
+            "minecraft": {"type": "object", "additionalProperties": True},
+            "runtime": {"type": "object", "additionalProperties": True},
+            "directories": {"type": "object", "additionalProperties": True},
+            "componentCatalog": {
+                "type": "object",
+                "required": ["components"],
+                "properties": {
+                    "components": {
+                        "type": "array",
+                        "items": ref("CatalogComponent0241"),
+                    }
+                },
+                "additionalProperties": False,
+            },
+        },
+    },
+    "ServerRegisterRequest": {
+        "type": "object",
+        "required": ["id", "kind", "projectId", "keyAlgorithm", "publicKey"],
+        "properties": {
+            "id": {"type": "string", "minLength": 1},
+            "name": {"type": "string"},
+            "kind": {
+                "type": "string",
+                "enum": [
+                    "velocity",
+                    "bungeecord",
+                    "waterfall",
+                    "bukkit",
+                    "spigot",
+                    "paper",
+                    "purpur",
+                    "folia",
+                    "fabric",
+                    "quilt",
+                    "forge",
+                    "neoforge",
+                    "sponge",
+                    "vanilla",
+                ],
+            },
+            "projectId": {"type": "string", "minLength": 1},
+            "profileId": {"type": "string"},
+            "fingerprint": {"type": "string"},
+            "keyAlgorithm": {"type": "string", "const": "ed25519"},
+            "publicKey": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{43}$",
+                "description": "Raw 32-byte Ed25519 public key encoded as unpadded base64url. The private key never leaves the ServerBridge node.",
+            },
+        },
+        "additionalProperties": False,
+    },
+    "RotateNodeIdentityRequest": {
+        "type": "object",
+        "required": ["keyAlgorithm", "publicKey"],
+        "properties": {
+            "keyAlgorithm": {"type": "string", "const": "ed25519"},
+            "publicKey": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{43}$",
+                "description": "Replacement raw Ed25519 public key encoded as unpadded base64url.",
+            },
+        },
+        "additionalProperties": False,
+    },
+    "JoinRequest": {
+        "type": "object",
+        "required": ["username", "serverId", "projectId", "profileId"],
+        "properties": {
+            "username": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 16,
+                "pattern": "^[A-Za-z0-9_]+$",
+            },
+            "serverId": {"type": "string"},
+            "projectId": {"type": "string"},
+            "profileId": {"type": "string"},
+            "channel": {"type": "string", "default": "stable"},
+            "minecraftAccessToken": {
+                "type": "string",
+                "description": "Minecraft access token whose integrity-verified session is bound to this ServerBridge join when Guard enforcement applies",
+            },
+            "continuousGuardTicket": {
+                "type": "string",
+                "description": "Single-use Attestation v2 ticket required for integrity-enforced Windows ServerBridge join",
+            },
+        },
+    },
+    "InvalidateRequest": {
+        "type": "object",
+        "properties": {"serverId": {"type": "string"}, "reason": {"type": "string"}},
+    },
+    "RevokeSessionsRequest": {
+        "type": "object",
+        "properties": {"allExceptCurrent": {"type": "boolean"}},
+    },
+    "RenameSessionRequest": {
+        "type": "object",
+        "required": ["device"],
+        "properties": {"device": {"type": "string", "minLength": 1, "maxLength": 96}},
+    },
+    "AdminSessionRevokeRequest": {
+        "type": "object",
+        "properties": {
+            "userId": {"type": "string"},
+            "providerId": {"type": "string"},
+            "riskState": {
+                "type": "string",
+                "enum": ["normal", "elevated", "compromised"],
+            },
+            "reason": {"type": "string", "maxLength": 256},
+        },
+        "anyOf": [
+            {"required": ["userId"]},
+            {"required": ["providerId"]},
+            {"required": ["riskState"]},
+        ],
+    },
+    "DeviceRegisterBeginRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+            "name": {"type": "string", "minLength": 1, "maxLength": 96},
+            "platform": {"type": "string", "maxLength": 48},
+            "clientVersion": {"type": "string", "maxLength": 96},
+            "keyAlgorithm": {
+                "type": "string",
+                "enum": ["ed25519", "p256"],
+                "default": "ed25519",
+            },
+            "keyBinding": {
+                "type": "string",
+                "enum": ["software", "hardware"],
+                "default": "software",
+            },
+            "hardwareProvider": {"type": "string", "maxLength": 96},
+        },
+    },
+    "DeviceProofCompleteRequest": {
+        "type": "object",
+        "required": ["challengeId", "challenge", "signature"],
+        "properties": {
+            "challengeId": {"type": "string", "minLength": 1},
+            "deviceId": {"type": "string"},
+            "challenge": {"type": "string", "minLength": 1},
+            "publicKey": {
+                "type": "string",
+                "description": "Device public key encoded as base64url: raw Ed25519 (32 bytes) or uncompressed SEC1 P-256 (65 bytes)",
+            },
+            "signature": {
+                "type": "string",
+                "description": "Device proof signature encoded as base64url: Ed25519 (64 bytes) or raw P-256 IEEE P1363 r||s (64 bytes)",
+            },
+        },
+    },
+    "TrustedDeviceRenameRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 96}},
+    },
+    "TrustedDeviceRevokeRequest": {
+        "type": "object",
+        "properties": {"reason": {"type": "string", "minLength": 1, "maxLength": 160}},
+        "additionalProperties": False,
+    },
+    "PasswordResetRequest": {
+        "type": "object",
+        "required": ["password"],
+        "properties": {"password": {"type": "string", "minLength": 12}},
+    },
+    "ProjectWriteRequest": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "homepage": {"type": "string"},
+            "repository": {"type": "string"},
+            "defaultChannel": {"type": "string"},
+        },
+    },
+    "ProfileSnapshot0225": {
+        "type": "object",
+        "required": ["schemaVersion", "revision", "digest", "spec"],
+        "properties": {
+            "schemaVersion": {"const": "2.0"},
+            "revision": {"type": "integer", "minimum": 1},
+            "digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "spec": {
+                "type": "object",
+                "required": [
+                    "projectId",
+                    "id",
+                    "name",
+                    "description",
+                    "loader",
+                    "preset",
+                    "isDefault",
+                ],
+                "properties": {
+                    "projectId": {"type": "string"},
+                    "id": {"type": "string"},
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "loader": {"type": "string"},
+                    "preset": {"type": "string"},
+                    "isDefault": {"type": "boolean"},
+                },
+                "additionalProperties": False,
+            },
+        },
+        "additionalProperties": False,
+    },
+    "PortableProfile0225": {
+        "type": "object",
+        "required": ["format", "snapshot"],
+        "properties": {
+            "format": {"const": "neverlauncher.profile.v1"},
+            "snapshot": ref("ProfileSnapshot0225"),
+        },
+        "additionalProperties": False,
+    },
+    "ProfileCloneRequest0225": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+            "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"},
+            "name": {"type": "string", "minLength": 1, "maxLength": 120},
+            "sourceRevision": {"type": "integer", "minimum": 1},
+        },
+        "additionalProperties": False,
+    },
+    "ProfileImportRequest0225": {
+        "type": "object",
+        "required": ["id", "name", "bundle"],
+        "properties": {
+            "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"},
+            "name": {"type": "string", "minLength": 1, "maxLength": 120},
+            "bundle": ref("PortableProfile0225"),
+        },
+        "additionalProperties": False,
+    },
+    "ProfilePresetCreateRequest0225": {
+        "type": "object",
+        "required": ["id", "presetId"],
+        "properties": {
+            "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"},
+            "name": {"type": "string", "maxLength": 120},
+            "presetId": {"type": "string"},
+        },
+        "additionalProperties": False,
+    },
+    "ProfilePreset0225": {
+        "type": "object",
+        "required": ["id", "name", "description", "loader", "preset"],
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "loader": {"type": "string"},
+            "preset": {"type": "string"},
+        },
+        "additionalProperties": False,
+    },
+    "ProfileDifference0225": {
+        "type": "object",
+        "required": ["from", "to", "changes", "equal"],
+        "properties": {
+            "from": ref("ProfileSnapshot0225"),
+            "to": ref("ProfileSnapshot0225"),
+            "changes": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["field", "from", "to"],
+                    "properties": {"field": {"type": "string"}, "from": {}, "to": {}},
+                    "additionalProperties": False,
+                },
+            },
+            "equal": {"type": "boolean"},
+        },
+    },
+    "ProfileWriteRequest": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "loader": {"type": "string"},
+            "preset": {"type": "string"},
+            "isDefault": {"type": "boolean"},
+        },
+    },
+    "ChannelWriteRequest": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "protected": {"type": "boolean"},
+        },
+    },
+    "UserWriteRequest": {
+        "type": "object",
+        "properties": {
+            "email": {"type": "string", "format": "email"},
+            "displayName": {"type": "string"},
+            "roleId": {"type": "string"},
+            "password": {"type": "string"},
+            "projectRoles": {
+                "type": "object",
+                "additionalProperties": {"type": "string"},
+            },
+        },
+    },
+    "DiagnosticsReportRequest": {
+        "type": "object",
+        "required": ["schemaVersion", "generatedAt", "launcherVersion"],
+        "properties": {
+            "schemaVersion": {"type": "string"},
+            "generatedAt": {"type": "string"},
+            "launcherVersion": {"type": "string"},
+            "os": {"type": "string"},
+            "arch": {"type": "string"},
+            "backendUrl": {"type": "string"},
+            "status": {"type": "string"},
+            "checks": {"type": "object", "additionalProperties": {"type": "string"}},
+        },
+    },
+    "ServerBridgeCapabilitiesResponse": {
+        "type": "object",
+        "required": ["apiVersion", "data"],
+        "properties": {
+            "apiVersion": {"type": "string"},
+            "data": {
+                "type": "object",
+                "required": [
+                    "schemaVersion",
+                    "toolVersion",
+                    "release",
+                    "status",
+                    "preferredProtocolVersion",
+                    "minimumProtocolVersion",
+                    "supportedProtocolVersions",
+                    "negotiatedProtocolVersion",
+                    "features",
+                    "featureFlags",
+                    "requiredFeatures",
+                    "rollingUpgrade",
+                    "protocolV3Frozen",
+                    "protocolV3FeatureDigest",
+                    "protocolV3Status",
+                    "legacyProtocolV2Supported",
+                    "legacyProtocolV2Mode",
+                    "legacyProtocolV2Deprecated",
+                    "migrationCommand",
+                    "capabilityNegotiationActive",
+                    "securityProfile",
+                    "securityCapabilityDigest",
+                    "activeSigningPublicKey",
+                    "activeSigningKeyFingerprint",
+                    "previousSigningPublicKey",
+                    "previousSigningKeyFingerprint",
+                    "capabilitySignature",
+                    "previousCapabilitySignature",
+                ],
+                "properties": {
+                    "schemaVersion": {"type": "string"},
+                    "toolVersion": {"type": "string"},
+                    "release": {"const": "ServerBridge 3"},
+                    "status": {
+                        "type": "string",
+                        "enum": ["negotiated", "serverbridge_no_compatible_protocol"],
+                    },
+                    "preferredProtocolVersion": {"const": 3},
+                    "minimumProtocolVersion": {"const": 2},
+                    "supportedProtocolVersions": {
+                        "type": "array",
+                        "items": {"type": "integer", "enum": [2, 3]},
+                        "minItems": 2,
+                        "uniqueItems": True,
+                    },
+                    "negotiatedProtocolVersion": {"type": "integer", "enum": [0, 2, 3]},
+                    "features": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "uniqueItems": True,
+                    },
+                    "featureFlags": {
+                        "type": "object",
+                        "additionalProperties": {"type": "boolean"},
+                    },
+                    "requiredFeatures": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                    },
+                    "rollingUpgrade": {"const": True},
+                    "protocolV3Frozen": {"const": True},
+                    "protocolV3FeatureDigest": {
+                        "const": "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc"
+                    },
+                    "protocolV3Status": {"const": "ga-frozen"},
+                    "legacyProtocolV2Supported": {"const": True},
+                    "legacyProtocolV2Mode": {"const": "compatibility-deprecated"},
+                    "legacyProtocolV2Deprecated": {"const": True},
+                    "migrationCommand": {"const": "nl server-bridge migrate-v3"},
+                    "capabilityNegotiationActive": {"const": True},
+                    "securityProfile": {"const": "serverbridge3-security-01912"},
+                    "securityCapabilityDigest": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$",
+                    },
+                    "activeSigningPublicKey": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{43}$",
+                    },
+                    "activeSigningKeyFingerprint": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$",
+                    },
+                    "previousSigningPublicKey": {"type": "string"},
+                    "previousSigningKeyFingerprint": {"type": "string"},
+                    "capabilitySignature": {"type": "string", "minLength": 1},
+                    "previousCapabilitySignature": {"type": "string"},
+                    "reason": {"type": "string"},
+                },
+                "additionalProperties": False,
+            },
+        },
+        "additionalProperties": False,
+    },
+    "ServerBridgeOverviewResponseGA": {
+        "type": "object",
+        "required": ["apiVersion", "data"],
+        "properties": {
+            "apiVersion": {"type": "string"},
+            "data": {
+                "type": "object",
+                "required": [
+                    "schemaVersion",
+                    "toolVersion",
+                    "release",
+                    "protocol",
+                    "metrics",
+                    "nodes",
+                    "topology",
+                    "control",
+                    "audit",
+                    "generatedAt",
+                ],
+                "properties": {
+                    "schemaVersion": {"const": "3.0-ga"},
+                    "toolVersion": {"type": "string"},
+                    "release": {"const": "ServerBridge 3 GA"},
+                    "protocol": {
+                        "type": "object",
+                        "required": [
+                            "version",
+                            "status",
+                            "frozen",
+                            "featureDigest",
+                            "v2Mode",
+                        ],
+                        "properties": {
+                            "version": {"const": 3},
+                            "status": {"const": "ga-frozen"},
+                            "frozen": {"const": True},
+                            "featureDigest": {
+                                "const": "098bcd1e6f0f57044404edf994b32482ebc70e77054f4f91ff35e848c9d6fdbc"
+                            },
+                            "v2Mode": {"const": "compatibility-deprecated"},
+                        },
+                        "additionalProperties": False,
+                    },
+                    "metrics": {"type": "object", "additionalProperties": True},
+                    "nodes": {
+                        "type": "array",
+                        "items": {"type": "object", "additionalProperties": True},
+                    },
+                    "topology": {
+                        "type": "array",
+                        "items": {"type": "object", "additionalProperties": True},
+                    },
+                    "control": {
+                        "type": "array",
+                        "items": {"type": "object", "additionalProperties": True},
+                    },
+                    "audit": {
+                        "type": "array",
+                        "items": {"type": "object", "additionalProperties": True},
+                    },
+                    "generatedAt": {"type": "string", "format": "date-time"},
+                },
+                "additionalProperties": False,
+            },
+        },
+        "additionalProperties": False,
+    },
+    "HeartbeatRequestV2": {
+        "type": "object",
+        "required": [
+            "protocolVersion",
+            "serverId",
+            "serverType",
+            "pluginVersion",
+            "pluginSha256",
+        ],
+        "properties": {
+            "protocolVersion": {"type": "integer", "const": 2},
+            "serverId": {"type": "string"},
+            "serverType": {
+                "type": "string",
+                "enum": [
+                    "velocity",
+                    "bungeecord",
+                    "waterfall",
+                    "bukkit",
+                    "spigot",
+                    "paper",
+                    "purpur",
+                    "folia",
+                    "fabric",
+                    "quilt",
+                    "forge",
+                    "neoforge",
+                    "sponge",
+                    "vanilla",
+                ],
+            },
+            "pluginVersion": {"type": "string"},
+            "pluginSha256": {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{64}$",
+                "description": "SHA-256 of the running ServerBridge JAR",
+            },
+            "hostname": {"type": "string"},
+            "playersOnline": {"type": "integer", "minimum": 0},
+        },
+        "additionalProperties": False,
+    },
+    "ServerBridgeRuntimeIdentityV3": {
+        "type": "object",
+        "required": [
+            "runtimeId",
+            "startedAt",
+            "startedAtUnixMillis",
+            "uptimeSeconds",
+            "processId",
+            "hostname",
+            "nodeName",
+            "minecraftVersion",
+            "javaVersion",
+            "javaVendor",
+            "javaVmName",
+            "platform",
+            "loaderName",
+            "loaderVersion",
+            "serverBrand",
+            "capabilities",
+            "nodeKeyFingerprint",
+            "identitySignature",
+        ],
+        "properties": {
+            "runtimeId": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "startedAt": {"type": "string", "format": "date-time"},
+            "startedAtUnixMillis": {"type": "integer", "minimum": 1},
+            "uptimeSeconds": {"type": "integer", "minimum": 0},
+            "processId": {"type": "integer", "minimum": 1},
+            "hostname": {"type": "string", "minLength": 1, "maxLength": 255},
+            "nodeName": {"type": "string", "minLength": 1, "maxLength": 255},
+            "minecraftVersion": {"type": "string", "minLength": 1, "maxLength": 128},
+            "javaVersion": {"type": "string", "minLength": 1, "maxLength": 128},
+            "javaVendor": {"type": "string", "maxLength": 128},
+            "javaVmName": {"type": "string", "maxLength": 128},
+            "platform": {
+                "type": "string",
+                "enum": [
+                    "velocity",
+                    "bungeecord",
+                    "waterfall",
+                    "bukkit",
+                    "spigot",
+                    "paper",
+                    "purpur",
+                    "folia",
+                    "fabric",
+                    "quilt",
+                    "forge",
+                    "neoforge",
+                    "sponge",
+                    "vanilla",
+                ],
+            },
+            "loaderName": {"type": "string", "minLength": 1, "maxLength": 128},
+            "loaderVersion": {"type": "string", "maxLength": 128},
+            "serverBrand": {"type": "string", "minLength": 1, "maxLength": 512},
+            "capabilities": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1, "maxLength": 128},
+                "minItems": 1,
+                "maxItems": 64,
+                "uniqueItems": True,
+            },
+            "nodeKeyFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "identitySignature": {"type": "string", "minLength": 1},
+        },
+        "additionalProperties": False,
+    },
+    "ServerBridgeTelemetryV3": {
+        "type": "object",
+        "required": [
+            "sequence",
+            "sampledAtUnixMillis",
+            "windowMillis",
+            "runtimeId",
+            "tickHealth",
+            "playersOnline",
+            "playersMax",
+            "heapUsedBytes",
+            "heapCommittedBytes",
+            "heapMaxBytes",
+            "nonHeapUsedBytes",
+            "nonHeapCommittedBytes",
+            "gcCollections",
+            "gcCollectionTimeMillis",
+            "gcCollectionsDelta",
+            "gcCollectionTimeDeltaMillis",
+            "threadCount",
+            "daemonThreadCount",
+            "peakThreadCount",
+            "samplingBudgetExceeded",
+            "metrics",
+        ],
+        "properties": {
+            "sequence": {"type": "integer", "minimum": 1},
+            "sampledAtUnixMillis": {"type": "integer", "minimum": 1},
+            "windowMillis": {"type": "integer", "minimum": 0, "maximum": 600000},
+            "runtimeId": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "tps": {"type": "number", "minimum": 0, "maximum": 1000},
+            "mspt": {"type": "number", "minimum": 0, "maximum": 600000},
+            "tickHealth": {
+                "type": "string",
+                "enum": ["unavailable", "healthy", "degraded", "overloaded"],
+            },
+            "playersOnline": {"type": "integer", "minimum": 0, "maximum": 1000000},
+            "playersMax": {"type": "integer", "minimum": 0, "maximum": 1000000},
+            "heapUsedBytes": {"type": "integer", "minimum": 0},
+            "heapCommittedBytes": {"type": "integer", "minimum": 0},
+            "heapMaxBytes": {"type": "integer", "minimum": 0},
+            "nonHeapUsedBytes": {"type": "integer", "minimum": 0},
+            "nonHeapCommittedBytes": {"type": "integer", "minimum": 0},
+            "gcCollections": {"type": "integer", "minimum": 0},
+            "gcCollectionTimeMillis": {"type": "integer", "minimum": 0},
+            "gcCollectionsDelta": {"type": "integer", "minimum": 0},
+            "gcCollectionTimeDeltaMillis": {"type": "integer", "minimum": 0},
+            "threadCount": {"type": "integer", "minimum": 0, "maximum": 1000000},
+            "daemonThreadCount": {"type": "integer", "minimum": 0, "maximum": 1000000},
+            "peakThreadCount": {"type": "integer", "minimum": 0, "maximum": 1000000},
+            "loadedWorlds": {"type": "integer", "minimum": 0, "maximum": 100000},
+            "loadedDimensions": {"type": "integer", "minimum": 0, "maximum": 100000},
+            "loadedChunks": {"type": "integer", "minimum": 0},
+            "entityCount": {"type": "integer", "minimum": 0},
+            "samplingBudgetExceeded": {"type": "boolean"},
+            "metrics": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1, "maxLength": 96},
+                "minItems": 1,
+                "maxItems": 64,
+                "uniqueItems": True,
+            },
+        },
+        "additionalProperties": False,
+    },
+    "ServerBridgeRoutingSnapshotV3": {
+        "type": "object",
+        "required": [
+            "runtimeId",
+            "observedAtUnixMillis",
+            "state",
+            "acceptingConnections",
+            "playersOnline",
+            "capacityMax",
+            "health",
+            "signature",
+        ],
+        "properties": {
+            "runtimeId": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "observedAtUnixMillis": {"type": "integer", "minimum": 1},
+            "state": {"type": "string", "enum": ["ready", "maintenance", "draining"]},
+            "acceptingConnections": {"type": "boolean"},
+            "playersOnline": {"type": "integer", "minimum": 0, "maximum": 1000000},
+            "capacityMax": {"type": "integer", "minimum": 0, "maximum": 1000000},
+            "health": {"type": "string", "enum": ["healthy", "degraded", "unhealthy"]},
+            "signature": {"type": "string", "minLength": 1},
+        },
+        "additionalProperties": False,
+    },
+    "ServerBridgeRouteTargetV3": {
+        "type": "object",
+        "required": [
+            "nodeId",
+            "backendName",
+            "kind",
+            "runtimeId",
+            "runtimeEpoch",
+            "health",
+            "state",
+            "playersOnline",
+            "capacityMax",
+            "availableSlots",
+            "routingRevision",
+            "routingDigest",
+            "observedAt",
+            "lastHeartbeatAt",
+        ],
+        "properties": {
+            "nodeId": {"type": "string"},
+            "backendName": {"type": "string"},
+            "kind": {"type": "string"},
+            "projectId": {"type": "string"},
+            "profileId": {"type": "string"},
+            "runtimeId": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "runtimeEpoch": {"type": "integer", "minimum": 1},
+            "health": {"type": "string", "enum": ["healthy", "degraded"]},
+            "state": {"const": "ready"},
+            "playersOnline": {"type": "integer", "minimum": 0},
+            "capacityMax": {"type": "integer", "minimum": 0},
+            "availableSlots": {"type": "integer", "minimum": 0},
+            "routingRevision": {"type": "integer", "minimum": 1},
+            "routingDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "observedAt": {"type": "string", "format": "date-time"},
+            "lastHeartbeatAt": {"type": "string", "format": "date-time"},
+        },
+        "additionalProperties": True,
+    },
+    "ServerBridgeRoutesResponseV3": {
+        "type": "object",
+        "required": ["apiVersion", "data"],
+        "properties": {
+            "apiVersion": {"type": "string"},
+            "data": {
+                "type": "object",
+                "required": [
+                    "schemaVersion",
+                    "toolVersion",
+                    "sourceNodeId",
+                    "freshnessSeconds",
+                    "items",
+                ],
+                "properties": {
+                    "schemaVersion": {"type": "string"},
+                    "toolVersion": {"type": "string"},
+                    "sourceNodeId": {"type": "string"},
+                    "freshnessSeconds": {"const": 90},
+                    "items": {
+                        "type": "array",
+                        "maxItems": 1024,
+                        "items": ref("ServerBridgeRouteTargetV3"),
+                    },
+                },
+                "additionalProperties": False,
+            },
+        },
+        "additionalProperties": False,
+    },
+    "HeartbeatRequestV3": {
+        "type": "object",
+        "required": [
+            "protocolVersion",
+            "features",
+            "serverId",
+            "serverType",
+            "pluginVersion",
+            "pluginSha256",
+        ],
+        "properties": {
+            "protocolVersion": {"type": "integer", "const": 3},
+            "features": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 2,
+                "uniqueItems": True,
+            },
+            "serverId": {"type": "string"},
+            "serverType": {
+                "type": "string",
+                "enum": [
+                    "velocity",
+                    "bungeecord",
+                    "waterfall",
+                    "bukkit",
+                    "spigot",
+                    "paper",
+                    "purpur",
+                    "folia",
+                    "fabric",
+                    "quilt",
+                    "forge",
+                    "neoforge",
+                    "sponge",
+                    "vanilla",
+                ],
+            },
+            "pluginVersion": {"type": "string"},
+            "pluginSha256": {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{64}$",
+                "description": "SHA-256 of the running ServerBridge JAR",
+            },
+            "runtime": ref("ServerBridgeRuntimeIdentityV3"),
+            "telemetry": ref("ServerBridgeTelemetryV3"),
+            "routing": ref("ServerBridgeRoutingSnapshotV3"),
+            "hostname": {"type": "string"},
+            "playersOnline": {"type": "integer", "minimum": 0},
+        },
+        "additionalProperties": False,
+    },
+    "HeartbeatRequest": {
+        "oneOf": [ref("HeartbeatRequestV2"), ref("HeartbeatRequestV3")]
+    },
+    "ServerBridgeEventV3": {
+        "type": "object",
+        "required": [
+            "sequence",
+            "eventId",
+            "runtimeId",
+            "type",
+            "occurredAtUnixMillis",
+            "payload",
+            "payloadSha256",
+            "signature",
+        ],
+        "properties": {
+            "sequence": {"type": "integer", "minimum": 1},
+            "eventId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9._:-]+$",
+            },
+            "runtimeId": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "type": {
+                "type": "string",
+                "enum": [
+                    "server.startup",
+                    "server.ready",
+                    "server.shutdown",
+                    "server.crash",
+                    "server.error",
+                    "player.login",
+                    "player.join",
+                    "player.quit",
+                    "player.kick",
+                    "world.load",
+                    "world.unload",
+                    "proxy.connect",
+                    "proxy.switch",
+                ],
+            },
+            "occurredAtUnixMillis": {"type": "integer", "minimum": 1},
+            "payload": {
+                "type": "object",
+                "maxProperties": 32,
+                "additionalProperties": {"type": "string", "maxLength": 1024},
+            },
+            "payloadSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "securityProfile": {
+                "type": "string",
+                "enum": ["serverbridge3-security-01912"],
+            },
+            "securityCapabilityDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "nodeKeyFingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "signature": {"type": "string", "minLength": 1},
+        },
+        "additionalProperties": False,
+    },
+    "ServerBridgeEventBatchV3": {
+        "type": "object",
+        "required": ["protocolVersion", "features", "serverId", "runtimeId", "events"],
+        "properties": {
+            "protocolVersion": {"type": "integer", "const": 3},
+            "features": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 3,
+                "uniqueItems": True,
+            },
+            "serverId": {"type": "string", "minLength": 1},
+            "runtimeId": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "events": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 64,
+                "items": ref("ServerBridgeEventV3"),
+            },
+        },
+        "additionalProperties": False,
+    },
+    "ServerBridgeEventAckV3": {
+        "type": "object",
+        "required": ["apiVersion", "data"],
+        "properties": {
+            "apiVersion": {"type": "string"},
+            "data": {
+                "type": "object",
+                "required": [
+                    "protocolVersion",
+                    "status",
+                    "serverId",
+                    "runtimeId",
+                    "runtimeEpoch",
+                    "ackSequence",
+                    "inserted",
+                ],
+                "properties": {
+                    "protocolVersion": {"const": 3},
+                    "status": {"const": "events-acknowledged"},
+                    "serverId": {"type": "string"},
+                    "runtimeId": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                    "runtimeEpoch": {"type": "integer", "minimum": 1},
+                    "ackSequence": {"type": "integer", "minimum": 0},
+                    "inserted": {"type": "integer", "minimum": 0, "maximum": 64},
+                },
+                "additionalProperties": True,
+            },
+        },
+        "additionalProperties": True,
+    },
+    "BridgeHandoffRequestV2": {
+        "type": "object",
+        "required": ["protocolVersion", "username", "targetServer"],
+        "properties": {
+            "protocolVersion": {"type": "integer", "const": 2},
+            "username": {"type": "string", "minLength": 1},
+            "targetServer": {"type": "string", "minLength": 1},
+        },
+        "additionalProperties": False,
+    },
+    "BridgeHandoffRequestV3": {
+        "type": "object",
+        "required": ["protocolVersion", "features", "username", "targetServer"],
+        "properties": {
+            "protocolVersion": {"type": "integer", "const": 3},
+            "features": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 2,
+                "uniqueItems": True,
+            },
+            "username": {"type": "string", "minLength": 1},
+            "targetServer": {"type": "string", "minLength": 1},
+            "sessionCorrelationId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "description": "Player Session Integration 3 correlation proof; required when session.player-lifecycle-v3 is negotiated",
+            },
+        },
+        "additionalProperties": False,
+    },
+    "BridgeHandoffRequest": {
+        "oneOf": [ref("BridgeHandoffRequestV2"), ref("BridgeHandoffRequestV3")]
+    },
+    "BridgeAuditEventRequest": {
+        "type": "object",
+        "required": ["serverId", "event"],
+        "properties": {
+            "serverId": {"type": "string"},
+            "event": {"type": "string"},
+            "player": {"type": "string"},
+            "uuid": {"type": "string"},
+            "details": {"type": "object", "additionalProperties": True},
+        },
+    },
+    "HasJoinedRequest": {
+        "type": "object",
+        "properties": {"username": {"type": "string"}, "serverId": {"type": "string"}},
+    },
+    "TelemetryRequest": {
+        "type": "object",
+        "required": ["projectId", "event"],
+        "properties": {
+            "projectId": {"type": "string"},
+            "profileId": {"type": "string"},
+            "launcherVersion": {"type": "string"},
+            "profileVersion": {"type": "string"},
+            "event": {"type": "string"},
+            "status": {"type": "string"},
+        },
+    },
+    "CrashReportRequest": {
+        "type": "object",
+        "required": ["projectId", "message"],
+        "properties": {
+            "projectId": {"type": "string"},
+            "profileId": {"type": "string"},
+            "launcherVersion": {"type": "string"},
+            "profileVersion": {"type": "string"},
+            "message": {"type": "string"},
+            "log": {"type": "string"},
+        },
+    },
+    "GuardAttestationBeginRequest": {
+        "type": "object",
+        "required": ["launcherVersion"],
+        "properties": {
+            "launcherVersion": {"type": "string", "minLength": 1, "maxLength": 64}
+        },
+        "additionalProperties": False,
+    },
+    "GuardAttestationCompleteRequest": {
+        "type": "object",
+        "required": [
+            "challengeId",
+            "challenge",
+            "challengeExpiresAt",
+            "launcherVersion",
+            "attestation",
+            "signature",
+        ],
+        "properties": {
+            "challengeId": {"type": "string", "minLength": 1},
+            "challenge": {"type": "string", "minLength": 1},
+            "challengeExpiresAt": {"type": "string", "format": "date-time"},
+            "launcherVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+            "attestation": {"type": "object", "additionalProperties": True},
+            "signature": {"type": "string", "minLength": 1},
+        },
+        "additionalProperties": False,
+    },
+    "GuardAttestationV2CompleteRequest": {
+        "type": "object",
+        "required": [
+            "challengeId",
+            "challenge",
+            "challengeExpiresAt",
+            "launcherVersion",
+            "attestation",
+            "signature",
+        ],
+        "properties": {
+            "challengeId": {"type": "string", "minLength": 1},
+            "challenge": {"type": "string", "minLength": 1},
+            "challengeExpiresAt": {"type": "string", "format": "date-time"},
+            "launcherVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+            "attestation": {
+                "type": "object",
+                "description": "Windows Guard Attestation v2 containing base v1 attestation and fresh Continuous Guard evidence",
+                "additionalProperties": True,
+            },
+            "signature": {"type": "string", "minLength": 1},
+        },
+        "additionalProperties": False,
+    },
+    "MinecraftSessionRequest": {
+        "type": "object",
+        "properties": {
+            "clientToken": {"type": "string"},
+            "guardAttestationTicket": {
+                "type": "string",
+                "description": "Single-use Guard 0.13.4 launch ticket required when Guard Attestation enforcement is enabled",
+            },
+        },
+    },
+    "YggdrasilAuthenticateRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+            "username": {"type": "string"},
+            "password": {"type": "string"},
+            "clientToken": {"type": "string"},
+            "requestUser": {"type": "boolean"},
+            "providerId": {"type": "string"},
+            "totp": {"type": "string"},
+            "recoveryCode": {"type": "string"},
+        },
+    },
+    "YggdrasilRefreshRequest": {
+        "type": "object",
+        "required": ["accessToken"],
+        "properties": {
+            "accessToken": {"type": "string"},
+            "clientToken": {"type": "string"},
+            "requestUser": {"type": "boolean"},
+            "selectedProfile": {"type": "object", "additionalProperties": True},
+        },
+    },
+    "YggdrasilTokenRequest": {
+        "type": "object",
+        "required": ["accessToken"],
+        "properties": {
+            "accessToken": {"type": "string"},
+            "clientToken": {"type": "string"},
+        },
+    },
+    "YggdrasilSignoutRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+            "username": {"type": "string"},
+            "password": {"type": "string"},
+            "providerId": {"type": "string"},
+        },
+    },
+    "YggdrasilJoinRequest": {
+        "type": "object",
+        "required": ["accessToken", "selectedProfile", "serverId"],
+        "properties": {
+            "accessToken": {"type": "string"},
+            "selectedProfile": {"type": "string"},
+            "serverId": {"type": "string"},
+        },
+    },
+    "FreeFormObject": {"type": "object", "additionalProperties": True},
+    "ValidateJoinRequestV2": {
+        "type": "object",
+        "required": [
+            "protocolVersion",
+            "serverId",
+            "username",
+            "pluginVersion",
+            "pluginSha256",
+        ],
+        "properties": {
+            "protocolVersion": {"type": "integer", "const": 2},
+            "serverId": {"type": "string"},
+            "username": {"type": "string"},
+            "uuid": {"type": "string"},
+            "serverHash": {"type": "string"},
+            "ip": {"type": "string"},
+            "projectId": {"type": "string"},
+            "profileId": {"type": "string"},
+            "channel": {"type": "string"},
+            "pluginVersion": {"type": "string"},
+            "pluginSha256": {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{64}$",
+                "description": "Current ServerBridge JAR SHA-256; must match the accepted heartbeat measurement",
+            },
+        },
+        "additionalProperties": False,
+    },
+    "ValidateJoinRequestV3": {
+        "type": "object",
+        "required": [
+            "protocolVersion",
+            "features",
+            "serverId",
+            "username",
+            "pluginVersion",
+            "pluginSha256",
+        ],
+        "properties": {
+            "protocolVersion": {"type": "integer", "const": 3},
+            "features": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 2,
+                "uniqueItems": True,
+            },
+            "serverId": {"type": "string"},
+            "username": {"type": "string"},
+            "uuid": {"type": "string"},
+            "serverHash": {"type": "string"},
+            "ip": {"type": "string"},
+            "projectId": {"type": "string"},
+            "profileId": {"type": "string"},
+            "channel": {"type": "string"},
+            "pluginVersion": {"type": "string"},
+            "pluginSha256": {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{64}$",
+                "description": "Current ServerBridge JAR SHA-256; must match the accepted heartbeat measurement",
+            },
+        },
+        "additionalProperties": False,
+    },
+    "ValidateJoinRequest": {
+        "oneOf": [ref("ValidateJoinRequestV2"), ref("ValidateJoinRequestV3")]
+    },
 }
 
-spec={
- "openapi":"3.1.1",
- "info":{"title":"NeverLauncher API","version":"1.0.0","description":f"Канонический production API NeverLauncher {PRODUCT_VERSION}. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."},
- "servers":[{"url":"/","description":"Текущий Backend NeverLauncher"}],
- "tags":[{"name":x} for x in ["auth","minecraft-auth","install","projects","packages","admin","runtime","bridge","operations"]],
- "paths":paths,
- "components":{"securitySchemes":{"BearerAuth":{"type":"http","scheme":"bearer"},"NodeId":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Id","description":"ServerBridge node id included in the Ed25519 canonical request."},"NodeKeyFingerprint":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Key-Fingerprint","description":"Lowercase SHA-256 fingerprint of the registered raw Ed25519 public key."},"NodeTimestamp":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Timestamp","description":"Unix timestamp in seconds; must be within the ServerBridge signing window."},"NodeNonce":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Nonce","description":"Fresh unpadded base64url nonce, consumed once by PostgreSQL replay protection."},"NodeSignature":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Node-Signature","description":"Unpadded base64url Ed25519 signature over the legacy Node-v1 domain or the Protocol v3 canonical signing domain negotiated by the bridge."},"BootstrapToken":{"type":"apiKey","in":"header","name":"X-NeverLauncher-Bootstrap-Token"}},"schemas":schemas,"responses":{"BadRequest":{"description":"Invalid request","content":{"application/json":{"schema":ref("Error")}}},"Unauthorized":{"description":"Authentication required, node signature invalid, or signed request outside the accepted timestamp window","content":{"application/json":{"schema":ref("Error")}}},"Conflict":{"description":"The signed node request nonce or one-time join ticket has already been consumed","content":{"application/json":{"schema":ref("Error")}}},"PayloadTooLarge":{"description":"The signed request body exceeds the ServerBridge authentication limit","content":{"application/json":{"schema":ref("Error")}}},"ServiceUnavailable":{"description":"Required ServerBridge persistence or nonce replay protection is unavailable","content":{"application/json":{"schema":ref("Error")}}},"UpgradeRequired":{"description":"No compatible ServerBridge Protocol v2/v3 contract or required v3 feature set was negotiated","content":{"application/json":{"schema":ref("Error")}}}}}
+spec = {
+    "openapi": "3.1.1",
+    "info": {
+        "title": "NeverLauncher API",
+        "version": "1.0.0",
+        "description": f"Канонический production API NeverLauncher {PRODUCT_VERSION}. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт.",
+    },
+    "servers": [{"url": "/", "description": "Текущий Backend NeverLauncher"}],
+    "tags": [
+        {"name": x}
+        for x in [
+            "auth",
+            "minecraft-auth",
+            "install",
+            "projects",
+            "packages",
+            "admin",
+            "runtime",
+            "bridge",
+            "operations",
+        ]
+    ],
+    "paths": paths,
+    "components": {
+        "securitySchemes": {
+            "BearerAuth": {"type": "http", "scheme": "bearer"},
+            "NodeId": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-NeverLauncher-Node-Id",
+                "description": "ServerBridge node id included in the Ed25519 canonical request.",
+            },
+            "NodeKeyFingerprint": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-NeverLauncher-Node-Key-Fingerprint",
+                "description": "Lowercase SHA-256 fingerprint of the registered raw Ed25519 public key.",
+            },
+            "NodeTimestamp": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-NeverLauncher-Node-Timestamp",
+                "description": "Unix timestamp in seconds; must be within the ServerBridge signing window.",
+            },
+            "NodeNonce": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-NeverLauncher-Node-Nonce",
+                "description": "Fresh unpadded base64url nonce, consumed once by PostgreSQL replay protection.",
+            },
+            "NodeSignature": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-NeverLauncher-Node-Signature",
+                "description": "Unpadded base64url Ed25519 signature over the legacy Node-v1 domain or the Protocol v3 canonical signing domain negotiated by the bridge.",
+            },
+            "BootstrapToken": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-NeverLauncher-Bootstrap-Token",
+            },
+        },
+        "schemas": schemas,
+        "responses": {
+            "BadRequest": {
+                "description": "Invalid request",
+                "content": {"application/json": {"schema": ref("Error")}},
+            },
+            "Unauthorized": {
+                "description": "Authentication required, node signature invalid, or signed request outside the accepted timestamp window",
+                "content": {"application/json": {"schema": ref("Error")}},
+            },
+            "Conflict": {
+                "description": "The signed node request nonce or one-time join ticket has already been consumed",
+                "content": {"application/json": {"schema": ref("Error")}},
+            },
+            "PayloadTooLarge": {
+                "description": "The signed request body exceeds the ServerBridge authentication limit",
+                "content": {"application/json": {"schema": ref("Error")}},
+            },
+            "ServiceUnavailable": {
+                "description": "Required ServerBridge persistence or nonce replay protection is unavailable",
+                "content": {"application/json": {"schema": ref("Error")}},
+            },
+            "UpgradeRequired": {
+                "description": "No compatible ServerBridge Protocol v2/v3 contract or required v3 feature set was negotiated",
+                "content": {"application/json": {"schema": ref("Error")}},
+            },
+        },
+    },
 }
 # MIG01/MIG02 have explicitly typed, reviewed operations. Generate the shared
 # API normally and overlay only this small, versioned contract extension.
-migration_extension = json.loads((ROOT / "schemas/openapi-migration-center.json").read_text(encoding="utf-8"))
+migration_extension = json.loads(
+    (ROOT / "schemas/openapi-migration-center.json").read_text(encoding="utf-8")
+)
 spec["paths"].update(migration_extension["paths"])
 spec["components"]["schemas"].update(migration_extension["schemas"])
-OUT.write_text(json.dumps(spec,ensure_ascii=False,indent=2)+"\n")
+OUT.write_text(json.dumps(spec, ensure_ascii=False, indent=2) + "\n")
 print(f"generated {OUT}: {len(routes)} operations")

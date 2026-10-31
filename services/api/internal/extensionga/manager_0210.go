@@ -136,7 +136,7 @@ func (m *Manager) validateInstall(ctx context.Context, install model.ExtensionIn
 func (m *Manager) run(ctx context.Context, mutate bool) (Report, error) {
 	report := Report{SchemaVersion: "1.0", GeneratedAt: time.Now().UTC(), Contract: extensioncontract.Frozen(), Issues: []Issue{}}
 	if m == nil || m.Repo == nil || m.Lifecycle == nil {
-		return report, errors.New("NeverExtensions GA manager is not configured")
+		return report, errors.New("Extensions GA manager is not configured")
 	}
 	installs, err := m.Repo.ListExtensionInstallStates(ctx, "", "")
 	if err != nil {
@@ -171,7 +171,7 @@ func (m *Manager) run(ctx context.Context, mutate bool) (Report, error) {
 		}
 		issue := Issue{ExtensionID: install.ExtensionID, Scope: install.Scope, ScopeID: install.ScopeID, Version: install.CurrentVersion, Code: code, Message: msg}
 		if mutate && (install.CurrentState == model.ExtensionInstallStateEnabled || install.Enabled) {
-			reason := fmt.Sprintf("NeverExtensions GA reconciliation failed [%s]: %s", code, msg)
+			reason := fmt.Sprintf("Extensions GA reconciliation failed [%s]: %s", code, msg)
 			if _, e := m.Repo.SetExtensionEmergencyDisable(ctx, model.ExtensionEmergencyDisable{ExtensionID: install.ExtensionID, Scope: install.Scope, ScopeID: install.ScopeID, Reason: reason, Source: "ga-reconcile"}); e != nil {
 				issue.Message += "; emergency-disable persistence failed: " + e.Error()
 			} else if _, e := m.Lifecycle.Disable(ctx, install.ExtensionID, extensionlifecycle.Scope{Scope: install.Scope, ScopeID: install.ScopeID}); e != nil {
@@ -179,7 +179,7 @@ func (m *Manager) run(ctx context.Context, mutate bool) (Report, error) {
 			} else {
 				issue.Disabled = true
 				report.Disabled++
-				m.Repo.AddAuditEvent(model.AuditEvent{Actor: "system:neverextensions-ga", Action: "extension:ga:reconcile:disable", Target: install.ExtensionID + ":" + install.Scope + ":" + install.ScopeID + ":" + code, UserAgent: "NeverExtensions GA/0.21.0", CreatedAt: time.Now().UTC()})
+				m.Repo.AddAuditEvent(model.AuditEvent{Actor: "system:extensions-ga", Action: "extension:ga:reconcile:disable", Target: install.ExtensionID + ":" + install.Scope + ":" + install.ScopeID + ":" + code, UserAgent: "Extensions GA/0.21.0", CreatedAt: time.Now().UTC()})
 			}
 		}
 		report.Issues = append(report.Issues, issue)

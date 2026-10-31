@@ -3,7 +3,7 @@ use std::path::Path;
 
 pub const NEVERGUARD_MACOS_PROCESS_POLICY_VERSION: u32 = 1;
 pub const NEVERGUARD_MACOS_HARDENING_VERSION: u32 = 1;
-pub const NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA: &str = "neverguard/macos-runtime-process-policy/v1";
+pub const NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA: &str = "guard/macos-runtime-process-policy/v1";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -232,7 +232,7 @@ mod imp {
             unsafe { libc::close(kq); }
             return Err(err);
         }
-        std::thread::Builder::new().name("neverguard-parent-watch".into()).spawn(move || {
+        std::thread::Builder::new().name("guard-parent-watch".into()).spawn(move || {
             let mut event: libc::kevent = unsafe { std::mem::zeroed() };
             loop {
                 let rc = unsafe { libc::kevent(kq, std::ptr::null(), 0, &mut event, 1, std::ptr::null()) };

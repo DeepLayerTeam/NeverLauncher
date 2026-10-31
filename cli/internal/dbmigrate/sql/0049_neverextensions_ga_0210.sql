@@ -1,4 +1,4 @@
--- NeverLauncher 0.21.0: контракт GA для NeverExtensions и отметка обновления 0.20
+-- NeverLauncher 0.21.0: контракт GA для Extensions и отметка обновления 0.20
 -- -> 0.21. Подписанные пакеты 0.20 неизменяемы и сохраняют api='3.7'; среда
 -- сопоставляет его с Extension API v1. Для новых публикаций обязательно api='1.0'.
 
@@ -29,9 +29,9 @@ BEGIN
       FROM extension_versions
      WHERE btrim(api) NOT IN ('1.0','1.0.0','3.7','3.7.0','v1','v1.0','v1.0.0');
     IF unsupported_count > 0 THEN
-        RAISE EXCEPTION 'NeverExtensions 0.21.0 upgrade blocked: % extension_versions rows use unsupported API values', unsupported_count;
+        RAISE EXCEPTION 'Extensions 0.21.0 upgrade blocked: % extension_versions rows use unsupported API values', unsupported_count;
     END IF;
 END;
 $$;
 
-COMMENT ON TABLE extension_ga_contract IS 'Frozen NeverExtensions GA contract and 0.20 compatibility alias state (0.21.0).';
+COMMENT ON TABLE extension_ga_contract IS 'Frozen Extensions GA contract and 0.20 compatibility alias state (0.21.0).';

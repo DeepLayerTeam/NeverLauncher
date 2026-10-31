@@ -495,7 +495,7 @@ jobs:
       - name: Download certified Linux Guard artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-linux-neverguard-${{ github.sha }}
+          name: neverlauncher-linux-guard-${{ github.sha }}
           path: guard-platform-artifacts/linux
       - name: Download native Linux x64 + ARM64 production artifacts
         uses: actions/download-artifact@v4
@@ -521,12 +521,12 @@ jobs:
       - name: Download certified Windows Guard artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-windows-neverguard-${{ github.sha }}
+          name: neverlauncher-windows-guard-${{ github.sha }}
           path: guard-platform-artifacts/windows
       - name: Download certified macOS Guard artifacts
         uses: actions/download-artifact@v4
         with:
-          name: neverlauncher-macos-neverguard-${{ github.sha }}
+          name: neverlauncher-macos-guard-${{ github.sha }}
           path: guard-platform-artifacts/macos
       - name: Download Guard CI matrix
         uses: actions/download-artifact@v4
@@ -536,7 +536,7 @@ jobs:
       - name: Download exact-commit Windows adversarial certificate
         uses: actions/download-artifact@v4
         with:
-          name: neverguard-windows-adversarial-certificate-${{ github.sha }}
+          name: guard-windows-adversarial-certificate-${{ github.sha }}
           path: windows-adversarial-certificate
       - name: Wait for exact-commit Compatibility + Device Trust certifications
         env:
@@ -831,7 +831,7 @@ jobs:
           jq -e '.loaderCompatibilityReleaseCertified == true and .loaderCompatibilityGA == true and (.loaderCompatibilityReleaseCertificateSha256 | length == 64) and (.loaderCompatibilityGASupportSha256 | length == 64)' "${DIR}/RELEASE_MANIFEST.json" >/dev/null
           jq -e '.schemaVersion == "2.0" and .trustDomain == "neverlauncher.release.v2" and .trustEpoch >= 1' "${DIR}/SHA256SUMS.sig" >/dev/null
           test -s "${DIR}/neverlauncher-desktop-linux-amd64"
-          test -s "${DIR}/neverguard-linux-amd64"
+          test -s "${DIR}/guard-linux-amd64"
           test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json"
           test -s "${DIR}/neverlauncher-cli-linux-x64"
           test -s "${DIR}/neverlauncher-cli-linux-arm64"
@@ -839,8 +839,8 @@ jobs:
           test -s "${DIR}/neverlauncher-api-linux-arm64"
           test -s "${DIR}/neverlauncher-desktop-linux-x64"
           test -s "${DIR}/neverlauncher-desktop-linux-arm64"
-          test -s "${DIR}/neverguard-linux-x64"
-          test -s "${DIR}/neverguard-linux-arm64"
+          test -s "${DIR}/guard-linux-x64"
+          test -s "${DIR}/guard-linux-arm64"
           test -s "${DIR}/neverruntime-linux-x64"
           test -s "${DIR}/neverruntime-linux-arm64"
           test -s "${DIR}/neverlauncher-linux-x64-${VERSION}.tar.gz"
@@ -850,16 +850,16 @@ jobs:
           test -s "${DIR}/LINUX_PRODUCTION_EVIDENCE.json"
           test -s "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX_DELIVERY.json"
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-amd64.zip"
-          test -s "${DIR}/neverguard-windows-amd64.exe"
+          test -s "${DIR}/guard-windows-amd64.exe"
           test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST.json"
           test -s "${DIR}/neverlauncher-cli-windows-x64.exe"
           test -s "${DIR}/neverlauncher-cli-windows-arm64.exe"
           test -s "${DIR}/neverlauncher-desktop-windows-x64.exe"
           test -s "${DIR}/neverlauncher-desktop-windows-arm64.exe"
-          test -s "${DIR}/neverguard-windows-x64.exe"
-          test -s "${DIR}/neverguard-windows-arm64.exe"
-          test -s "${DIR}/neverguard-sensor-windows-x64.dll"
-          test -s "${DIR}/neverguard-sensor-windows-arm64.dll"
+          test -s "${DIR}/guard-windows-x64.exe"
+          test -s "${DIR}/guard-windows-arm64.exe"
+          test -s "${DIR}/guard-sensor-windows-x64.dll"
+          test -s "${DIR}/guard-sensor-windows-arm64.dll"
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-x64.zip"
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-windows-arm64.zip"
           test -s "${DIR}/WINDOWS_PACKAGE_MANIFEST_X64.json"
@@ -874,14 +874,14 @@ jobs:
           jq -e '.status == "windows-protection-ga" and .releaseStage == "ga" and .protectionModel == "user-mode" and .protectionProfile == "aggressive" and .enforcementMode == "fail-closed" and .scenarioExecutions == 55 and (.javaMajors == [8,16,17,21,25]) and (.boundarySha256 | length == 64) and (.certificateId | startswith("sha256:")) and .invariants.kernelDriverAbsent == true and .invariants.userModeProtectionBoundary == true and .invariants.continuousAttestationV2Required == true and .invariants.oneTimeServerJoinTicketRequired == true' "${DIR}/WINDOWS_PROTECTION_GA_CERTIFICATE.json" >/dev/null
           jq -e '.windowsProtectionGACertified == true and (.windowsProtectionGACertificateSha256 | length == 64)' "${DIR}/RELEASE_MANIFEST.json" >/dev/null
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip"
-          test -s "${DIR}/neverguard-macos-universal"
+          test -s "${DIR}/guard-macos-universal"
           test -s "${DIR}/MACOS_PACKAGE_MANIFEST.json"
           test -s "${DIR}/neverlauncher-cli-macos-x64"
           test -s "${DIR}/neverlauncher-cli-macos-arm64"
           test -s "${DIR}/neverlauncher-desktop-macos-x64"
           test -s "${DIR}/neverlauncher-desktop-macos-arm64"
-          test -s "${DIR}/neverguard-macos-x64"
-          test -s "${DIR}/neverguard-macos-arm64"
+          test -s "${DIR}/guard-macos-x64"
+          test -s "${DIR}/guard-macos-arm64"
           test -s "${DIR}/neverruntime-macos-x64"
           test -s "${DIR}/neverruntime-macos-arm64"
           test -s "${DIR}/neverlauncher-desktop-${VERSION}-macos-x64.zip"

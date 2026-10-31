@@ -43,7 +43,7 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 		components := []struct{ component, name, bundle string }{
 			{"cli", "neverlauncher-cli-macos-" + arch, "NeverLauncher.app/Contents/Helpers/neverlauncher-cli"},
 			{"desktop-launcher", "neverlauncher-desktop-macos-" + arch, "NeverLauncher.app/Contents/MacOS/neverlauncher-desktop"},
-			{"guard", "neverguard-macos-" + arch, "NeverLauncher.app/Contents/Helpers/neverguard"},
+			{"guard", "guard-macos-" + arch, "NeverLauncher.app/Contents/Helpers/guard"},
 			{"runtime", "neverruntime-macos-" + arch, "NeverLauncher.app/Contents/Helpers/neverruntime"},
 		}
 		var artifacts []MacOSPackageArtifact0154
@@ -124,7 +124,7 @@ func writeMacOSFixture0154(t *testing.T, dir, ver, signingMode, teamID string, n
 			}
 			for _, row := range []struct{ public, source, path string }{
 				{"desktop", "desktop-launcher", "Contents/MacOS/neverlauncher-desktop"},
-				{"guard", "guard", "Contents/Helpers/neverguard"},
+				{"guard", "guard", "Contents/Helpers/guard"},
 				{"runtime", "runtime", "Contents/Helpers/neverruntime"},
 			} {
 				artifact := byComponent[row.source]
@@ -273,7 +273,7 @@ func TestMacOSProductionEvidenceRejectsTamper0154(t *testing.T) {
 	dir := t.TempDir()
 	ver := "0.15.4"
 	writeMacOSFixture0154(t, dir, ver, "developer-id-notarized", "ABCDE12345", true)
-	path := filepath.Join(dir, "neverguard-macos-arm64")
+	path := filepath.Join(dir, "guard-macos-arm64")
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0)
 	if err != nil {
 		t.Fatal(err)

@@ -10,20 +10,20 @@ command -v cargo >/dev/null || { echo "cargo is required" >&2; exit 1; }
 command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
 
 cargo build --release --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
-cargo build --release --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bin neverguard
+cargo build --release --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bin guard
 DESKTOP_SRC="${ROOT_DIR}/apps/desktop/src-tauri/target/release/neverlauncher-desktop"
-GUARD_SRC="${ROOT_DIR}/runtime/neverruntime/target/release/neverguard"
-[[ -x "${DESKTOP_SRC}" && -x "${GUARD_SRC}" ]] || { echo "Desktop/NeverGuard release binaries missing" >&2; exit 1; }
+GUARD_SRC="${ROOT_DIR}/runtime/neverruntime/target/release/guard"
+[[ -x "${DESKTOP_SRC}" && -x "${GUARD_SRC}" ]] || { echo "Desktop/Guard release binaries missing" >&2; exit 1; }
 
 rm -rf "${PACKAGE_DIR}"
 mkdir -p "${PACKAGE_DIR}" "${OUT_DIR}"
 install -m 0755 "${DESKTOP_SRC}" "${PACKAGE_DIR}/neverlauncher-desktop"
-install -m 0755 "${GUARD_SRC}" "${PACKAGE_DIR}/neverguard"
+install -m 0755 "${GUARD_SRC}" "${PACKAGE_DIR}/guard"
 
 DESKTOP_HASH="$(sha256sum "${PACKAGE_DIR}/neverlauncher-desktop" | awk '{print $1}')"
-GUARD_HASH="$(sha256sum "${PACKAGE_DIR}/neverguard" | awk '{print $1}')"
+GUARD_HASH="$(sha256sum "${PACKAGE_DIR}/guard" | awk '{print $1}')"
 DESKTOP_SIZE="$(stat -c %s "${PACKAGE_DIR}/neverlauncher-desktop")"
-GUARD_SIZE="$(stat -c %s "${PACKAGE_DIR}/neverguard")"
+GUARD_SIZE="$(stat -c %s "${PACKAGE_DIR}/guard")"
 cat > "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json" <<EOF
 {
   "schemaVersion": "1.0",
@@ -34,7 +34,7 @@ cat > "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json" <<EOF
   "linuxProductionHardeningVersion": 1,
   "artifacts": [
     {"name":"neverlauncher-desktop","size":${DESKTOP_SIZE},"sha256":"${DESKTOP_HASH}"},
-    {"name":"neverguard","size":${GUARD_SIZE},"sha256":"${GUARD_HASH}"}
+    {"name":"guard","size":${GUARD_SIZE},"sha256":"${GUARD_HASH}"}
   ]
 }
 EOF
@@ -47,8 +47,8 @@ cp "${PACKAGE_DIR}/LINUX_PACKAGE_MANIFEST.json" "${OUT_DIR}/LINUX_PACKAGE_MANIFE
 chmod 0644 "${OUT_DIR}/LINUX_PACKAGE_MANIFEST.json"
 
 cp "${PACKAGE_DIR}/neverlauncher-desktop" "${OUT_DIR}/neverlauncher-desktop-linux-amd64"
-cp "${PACKAGE_DIR}/neverguard" "${OUT_DIR}/neverguard-linux-amd64"
-chmod 0755 "${OUT_DIR}/neverlauncher-desktop-linux-amd64" "${OUT_DIR}/neverguard-linux-amd64"
+cp "${PACKAGE_DIR}/guard" "${OUT_DIR}/guard-linux-amd64"
+chmod 0755 "${OUT_DIR}/neverlauncher-desktop-linux-amd64" "${OUT_DIR}/guard-linux-amd64"
 python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${PACKAGE_DIR}" "${OUT_DIR}/neverlauncher-desktop-${VERSION}-linux-amd64.zip" --prefix neverlauncher
 
 echo "${PACKAGE_DIR}"

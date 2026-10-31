@@ -1,12 +1,12 @@
 # NeverLauncher Java SDK Core / Runtime 0.31.0
 
-A **working Java 17+** SDK for the existing NeverExtensions API `1.0` / Manifest `2.0` / local Go Extension Host Protocol `1.0`. The SDK does not introduce another manifest, server API or registry. No Maven dependency download is needed to build its jar.
+A **working Java 17+** SDK for the existing Extensions API `1.0` / Manifest `2.0` / local Go Extension Host Protocol `1.0`. The SDK does not introduce another manifest, server API or registry. No Maven dependency download is needed to build its jar.
 
 ## Build and run tests
 
 ```bash
 sh sdk/java/core/build.sh test
-# Output: sdk/java/core/build/neverlauncher-java-sdk-core-0.31.0.jar
+# Output: sdk/java/core/build/neverlauncher-java-sdk-core-$(cat VERSION).jar
 sh examples/extensions/java-lifecycle/build.sh
 python3 examples/extensions/java-lifecycle/test-runner.py  # Linux/macOS, requires Java on PATH
 ```
@@ -19,7 +19,7 @@ Implement `ru.neverlauncher.sdk.core.Extension` with `start(ExtensionContext)` a
 
 A Linux/macOS backend target is an executable launcher script (see `examples/extensions/java-lifecycle/backend/bin/java-lifecycle`). The existing Go supervisor launches it with the active package payload directory as working directory, injecting the `NEVERLAUNCHER_EXTENSION_*` environment variables. The extension process **must not be launched as a general network-facing service**; the SDK accepts only the loopback host origin. `ExtensionRunner` supports typed subscriptions and callback dispatch. For first-class JAR launch, use the 0.30.4 Java Extension Host described below.
 
-## Packaging with existing NeverExtensions CLI
+## Packaging with existing Extensions CLI
 
 ```bash
 sh examples/extensions/java-lifecycle/build.sh
@@ -28,12 +28,12 @@ nl extension pack examples/extensions/java-lifecycle/build/package \
 nl extension verify java-lifecycle.nlext --public-key /secure/location/ed25519-verify.pem
 ```
 
-Register the publisher public signing key in the **existing** registry/trust policy, then publish and install using the existing NeverExtensions workflow. `pack` can produce unsigned artifacts, but unsigned artifacts must not be trusted or installed. **Never** include private keys in a package or extension repository. Build metadata (`+...`) is preserved when checking exact package identity against the host.
+Register the publisher public signing key in the **existing** registry/trust policy, then publish and install using the existing Extensions workflow. `pack` can produce unsigned artifacts, but unsigned artifacts must not be trusted or installed. **Never** include private keys in a package or extension repository. Build metadata (`+...`) is preserved when checking exact package identity against the host.
 
 ## Actual behavior and limitations
 
 - Manifest parser verifies schema, identity, target paths, dependency constraints and conflicting entries, with bounded JSON. The Go package verifier and signing/trust policy remain authoritative. Reading a manifest through this SDK does **not** verify a package signature.
-- `SemVer` uses SemVer 2.0 precedence and NeverExtensions Go-style `^`, `~`, `>=`, `<=`, `>`, `<`, `=`, `x`, `*`, whitespace-AND and `||` version ranges. Invalid constraints are rejected instead of silently matching.
+- `SemVer` uses SemVer 2.0 precedence and Extensions Go-style `^`, `~`, `>=`, `<=`, `>`, `<`, `=`, `x`, `*`, whitespace-AND and `||` version ranges. Invalid constraints are rejected instead of silently matching.
 - `DependencyResolver.resolve(available, roots)` picks highest compatible versions, supports required/optional transitive dependencies, conflicts, backtracking and deterministic dependency-first startup order; cycles and unsatisfiable graphs fail. This local planner **does not** fetch packages or supersede the authoritative Go registry resolver.
 - `Cancellation` supports cooperative cancellation, child scopes and exactly-once listeners; `Deadline` uses a monotonic clock; `ExtensionLifecycle` uses bounded waits, thread interruption and explicit transition states. Java cannot forcibly terminate an arbitrary noncooperative callback in the same JVM. The existing Go process supervisor is the final execution boundary.
 - SDK Java code is **not** isolated or sandboxed within its own JVM; permissions are enforced by the existing Go host broker. No arbitrary JavaFX/LaunchServer/Gravit JAR compatibility is claimed.
@@ -57,7 +57,7 @@ python3 examples/extensions/java-runtime/test-runner.py
 # Prepare a signable package with existing nl extension pack/sign/verify commands.
 ```
 
-`Java SDK Runtime` operates on the **existing** NeverExtensions host process, permissions, signing and local event protocol. Go-host state is not OS-isolated from untrusted programs running under the same filesystem user; deployments requiring hostile-code isolation must use an OS sandbox/container/user boundary and access control for `data/extensions`. JVM is not a sandbox. The 0.30.4 Java Extension Host supports direct JAR targets on Windows, macOS and Linux. Legacy POSIX example launchers remain available; do not rely on a JVM security sandbox.
+`Java SDK Runtime` operates on the **existing** Extensions host process, permissions, signing and local event protocol. Go-host state is not OS-isolated from untrusted programs running under the same filesystem user; deployments requiring hostile-code isolation must use an OS sandbox/container/user boundary and access control for `data/extensions`. JVM is not a sandbox. The 0.30.4 Java Extension Host supports direct JAR targets on Windows, macOS and Linux. Legacy POSIX example launchers remain available; do not rely on a JVM security sandbox.
 
 
 ## Java Extension Host (0.30.4)
@@ -70,7 +70,7 @@ Main-Class: ru.neverlauncher.sdk.host.JavaExtensionHost
 NeverLauncher-Extension-Class: org.example.MyExtension
 ```
 
-NeverLauncher Go validates the JAR before execution, launches it as `java -jar <entrypoint>` using an administrator-configured Java executable or `java` from PATH, and passes **only** sanitized NeverExtensions environment variables. The JAR must be within the signed `.nlext` package, with its `backend` target entrypoint declared in the signed manifest. Before hello, the Java host fetches the **authoritative manifest** from the authenticated Go `GET /v1/manifest`; no copied manifest in the payload is required or trusted. A Java target is considered healthy only after an authenticated `POST /v1/ready`, sent **after** `Extension.start()` succeeds. `hello` alone does not mark Java startup as complete.
+NeverLauncher Go validates the JAR before execution, launches it as `java -jar <entrypoint>` using an administrator-configured Java executable or `java` from PATH, and passes **only** sanitized Extensions environment variables. The JAR must be within the signed `.nlext` package, with its `backend` target entrypoint declared in the signed manifest. Before hello, the Java host fetches the **authoritative manifest** from the authenticated Go `GET /v1/manifest`; no copied manifest in the payload is required or trusted. A Java target is considered healthy only after an authenticated `POST /v1/ready`, sent **after** `Extension.start()` succeeds. `hello` alone does not mark Java startup as complete.
 
 The JVM opens an authenticated loopback callback server. The existing Java→Go broker/host remains the sole way to access backend capabilities. Go→JVM RPC is `POST /v1/rpc`, with a versioned envelope, a per-request nonce, a maximum 64 KiB body/response, explicit method allowlist (`health`, `command.invoke`, `event.deliver`, `hook.deliver`) and a maximum 1.8s deadline. Java callback handlers run in bounded thread pools/queues; a noncooperative callback can exhaust them, but Go does not wait indefinitely. The Go supervisor periodically issues concurrent liveness probes and terminates an unresponsive JVM after three consecutive RPC health failures, even when regular heartbeats continue. Existing process tree memory/process limits, restart backoff and crash-loop handling still apply. All event and command permissions continue to be enforced in the Go broker and Java's declared CLI command registry.
 
@@ -85,3 +85,41 @@ nl extension pack examples/extensions/java-host/build/package --output /tmp/java
 Java 17+ is required on the backend host. The Java runtime itself is an external administrator dependency: deployments can pin its absolute executable path using the Go `extensionhost.Config.JavaExecutable` field. A fat JAR is not sandboxed and runs with its process user's permissions. Publisher signing only proves package provenance, not harmlessness; hostile packages require an OS-level sandbox/container/service account boundary. Go unit/integration tests and the CI Java-host E2E workflow must pass for release certification. No arbitrary Gravit/LaunchServer JAR compatibility is implied.
 
 The `java-host` sample includes a deliberately noncooperative `hang` command strictly for supervisor resilience tests. Do not deploy this sample in production.
+
+## 0.42.1: Host/SDK 1.0 binary and wire compatibility
+
+`Host Protocol` and `Extension API` remain `1.0` when the product version changes.
+The authenticated JSON `POST /v1/hello` request retains all 0.42.0 fields,
+including `protocolVersion`, `extensionApiVersion`, `instanceId`, `extensionId`,
+and `pid`, with an optional `callbackUrl`. Extensions built against 0.42.0
+continue to use that exact wire request.
+
+After the host returns its signed-instance identity and negotiated list, the
+Java SDK refuses undeclared or non-granted broker operations **locally before
+sending HTTP requests**. For a host-dependent startup prerequisite, call
+`host.connect(callbackUrl, Set.of("runtime.config.get"))`; absent capabilities
+cause `HostSession.CompatibilityError` with code `HOST_CAPABILITY_UNAVAILABLE`.
+This overload also works with 0.42.0 hosts because it does not alter the wire
+request. Java code that calls only `connect()` or `connect(callbackUrl)` remains
+source/binary compatible, and still gets runtime capability checks per call.
+
+The SDK validates the independent `eventProtocolVersion`, available event names,
+heartbeat period and response identity. Missing event types cannot be subscribed
+to. `HostSession.HostError.code()` exposes structured reason codes emitted by
+0.42.1 Go; old plaintext Go errors continue to expose `HOST_HTTP_<status>`.
+Repeated hello requests and capability calls before hello are rejected. A
+managed Java extension class is initialized and constructed only **after** a
+successful authenticated hello, before lifecycle `start()`; `ready` requires a
+positive acknowledgement from the Go supervisor.
+
+Go now advertises `runtime.config.delete` and `runtime.storage.delete` only
+when the existing `storage:write` permission is effectively granted; broker
+checks remain authoritative on every operation (including after revocation).
+The Go supervisor returns `409` with `error` and `code` for incompatible
+protocol/API, process identity, unsupported callback and hello replay. None of
+these changes adds a public endpoint or weakens permission checks.
+
+Run `sh sdk/java/core/build.sh test` for real loopback HTTP compatibility
+regressions, including the original 0.42.0 hello envelope. Full integration
+against a production Go host still requires Go 1.27.3 and the existing release
+matrix; a JVM HTTP fixture alone is not release certification.

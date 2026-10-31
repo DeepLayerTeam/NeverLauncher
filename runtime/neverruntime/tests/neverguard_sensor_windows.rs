@@ -30,7 +30,7 @@ fn java_tools() -> (PathBuf, PathBuf) {
 fn sensor_path() -> PathBuf {
     let sensor = PathBuf::from(
         std::env::var("NEVERGUARD_SENSOR_TEST_DLL")
-            .expect("NEVERGUARD_SENSOR_TEST_DLL must point to built neverguard_sensor.dll"),
+            .expect("NEVERGUARD_SENSOR_TEST_DLL must point to built guard_sensor.dll"),
     );
     assert!(sensor.is_file(), "sensor DLL missing: {}", sensor.display());
     sensor
@@ -39,7 +39,7 @@ fn sensor_path() -> PathBuf {
 fn memory_probe_path() -> PathBuf {
     let probe = PathBuf::from(
         std::env::var("NEVERGUARD_MEMORY_PROBE_DLL")
-            .expect("NEVERGUARD_MEMORY_PROBE_DLL must point to built neverguard_memory_probe.dll"),
+            .expect("NEVERGUARD_MEMORY_PROBE_DLL must point to built guard_memory_probe.dll"),
     );
     assert!(probe.is_file(), "memory probe DLL missing: {}", probe.display());
     probe
@@ -48,7 +48,7 @@ fn memory_probe_path() -> PathBuf {
 fn thread_probe_path() -> PathBuf {
     let probe = PathBuf::from(
         std::env::var("NEVERGUARD_THREAD_PROBE_DLL")
-            .expect("NEVERGUARD_THREAD_PROBE_DLL must point to built neverguard_thread_probe.dll"),
+            .expect("NEVERGUARD_THREAD_PROBE_DLL must point to built guard_thread_probe.dll"),
     );
     assert!(probe.is_file(), "thread probe DLL missing: {}", probe.display());
     probe
@@ -57,7 +57,7 @@ fn thread_probe_path() -> PathBuf {
 fn debug_probe_path() -> PathBuf {
     let probe = PathBuf::from(
         std::env::var("NEVERGUARD_DEBUG_PROBE_EXE")
-            .expect("NEVERGUARD_DEBUG_PROBE_EXE must point to built neverguard-debug-probe.exe"),
+            .expect("NEVERGUARD_DEBUG_PROBE_EXE must point to built guard-debug-probe.exe"),
     );
     assert!(probe.is_file(), "debug probe EXE missing: {}", probe.display());
     probe
@@ -67,7 +67,7 @@ fn debug_probe_path() -> PathBuf {
 fn jvm_probe_path() -> PathBuf {
     let probe = PathBuf::from(
         std::env::var("NEVERGUARD_JVM_PROBE_DLL")
-            .expect("NEVERGUARD_JVM_PROBE_DLL must point to built neverguard_jvm_probe.dll"),
+            .expect("NEVERGUARD_JVM_PROBE_DLL must point to built guard_jvm_probe.dll"),
     );
     assert!(probe.is_file(), "JVM-aware probe DLL missing: {}", probe.display());
     probe
@@ -79,7 +79,7 @@ fn unique_test_root(label: &str) -> PathBuf {
         .expect("clock")
         .as_nanos();
     std::env::temp_dir().join(format!(
-        "neverguard-module-guard-{label}-{}-{nanos}",
+        "guard-module-guard-{label}-{}-{nanos}",
         std::process::id()
     ))
 }
@@ -273,14 +273,14 @@ fn expected_java_major() -> u32 {
 }
 
 #[tokio::test]
-async fn neverguard_sensor_agentpath_loads_before_jvm_startup() {
+async fn guard_sensor_agentpath_loads_before_jvm_startup() {
     let (java, _) = java_tools();
     let sensor = sensor_path();
 
     let mut command = Command::new(java);
     command.current_dir(std::env::current_dir().expect("current dir"));
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare NeverGuard Sensor agentpath");
+        .expect("prepare Guard Sensor agentpath");
     command.arg("-version");
     prepare_runtime_command(&mut command);
 
@@ -368,7 +368,7 @@ async fn neverguard_sensor_agentpath_loads_before_jvm_startup() {
 }
 
 #[tokio::test]
-async fn neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
+async fn guard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     let (java, javac) = java_tools();
     let sensor = sensor_path();
     let root = unique_test_root("track");
@@ -381,7 +381,7 @@ async fn neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare NeverGuard Sensor agentpath");
+        .expect("prepare Guard Sensor agentpath");
     command
         .arg("-cp")
         .arg(&trusted)
@@ -446,7 +446,7 @@ async fn neverguard_module_guard_tracks_real_jvm_dll_load_and_heartbeat() {
 }
 
 #[tokio::test]
-async fn neverguard_continuous_guard_cross_checks_sensor_and_guard_heartbeat() {
+async fn guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat() {
     let (java, javac) = java_tools();
     let sensor = sensor_path();
     let root = unique_test_root("continuous-guard");
@@ -459,7 +459,7 @@ async fn neverguard_continuous_guard_cross_checks_sensor_and_guard_heartbeat() {
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare NeverGuard Continuous Guard Sensor");
+        .expect("prepare Guard Continuous Guard Sensor");
     command
         .arg("-cp")
         .arg(&trusted)
@@ -493,7 +493,7 @@ async fn neverguard_continuous_guard_cross_checks_sensor_and_guard_heartbeat() {
 }
 
 #[tokio::test]
-async fn neverguard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roots() {
+async fn guard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roots() {
     let (java, javac) = java_tools();
     let sensor = sensor_path();
     let root = unique_test_root("block");
@@ -508,7 +508,7 @@ async fn neverguard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roo
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare NeverGuard Sensor agentpath");
+        .expect("prepare Guard Sensor agentpath");
     command
         .arg("-cp")
         .arg(&trusted)
@@ -541,7 +541,7 @@ async fn neverguard_module_guard_fail_closed_on_unsigned_dll_outside_trusted_roo
 
 
 #[tokio::test]
-async fn neverguard_memory_integrity_fail_closed_on_executable_image_code_page_drift() {
+async fn guard_memory_integrity_fail_closed_on_executable_image_code_page_drift() {
     let (java, javac) = java_tools();
     let sensor = sensor_path();
     let memory_probe = memory_probe_path();
@@ -555,7 +555,7 @@ async fn neverguard_memory_integrity_fail_closed_on_executable_image_code_page_d
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare NeverGuard Sensor agentpath");
+        .expect("prepare Guard Sensor agentpath");
     command
         .arg("-cp")
         .arg(&trusted)
@@ -588,7 +588,7 @@ async fn neverguard_memory_integrity_fail_closed_on_executable_image_code_page_d
 }
 
 #[tokio::test]
-async fn neverguard_thread_process_integrity_tracks_job_bound_descendant_processes() {
+async fn guard_thread_process_integrity_tracks_job_bound_descendant_processes() {
     let (java, javac) = java_tools();
     let sensor = sensor_path();
     let root = unique_test_root("process-tree");
@@ -598,7 +598,7 @@ async fn neverguard_thread_process_integrity_tracks_job_bound_descendant_process
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare NeverGuard Sensor agentpath");
+        .expect("prepare Guard Sensor agentpath");
     command.arg("-cp").arg(&trusted).arg("ProcessTreeProbe");
     prepare_runtime_command(&mut command);
 
@@ -631,7 +631,7 @@ async fn neverguard_thread_process_integrity_tracks_job_bound_descendant_process
 }
 
 #[tokio::test]
-async fn neverguard_thread_integrity_fail_closed_on_private_executable_thread_start() {
+async fn guard_thread_integrity_fail_closed_on_private_executable_thread_start() {
     let (java, javac) = java_tools();
     let sensor = sensor_path();
     let thread_probe = thread_probe_path();
@@ -645,7 +645,7 @@ async fn neverguard_thread_integrity_fail_closed_on_private_executable_thread_st
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare NeverGuard Sensor agentpath");
+        .expect("prepare Guard Sensor agentpath");
     command
         .arg("-cp")
         .arg(&trusted)
@@ -683,7 +683,7 @@ async fn neverguard_thread_integrity_fail_closed_on_private_executable_thread_st
 
 
 #[tokio::test]
-async fn neverguard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable() {
+async fn guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable() {
     let (java, _) = java_tools();
     let sensor = sensor_path();
 
@@ -726,12 +726,12 @@ async fn neverguard_debug_instrumentation_guard_rejects_startup_agents_and_enfor
         .collect::<Vec<_>>();
     assert!(
         args.iter().any(|arg| arg == "-XX:+DisableAttachMechanism"),
-        "NeverGuard must enforce DisableAttachMechanism: {args:?}"
+        "Guard must enforce DisableAttachMechanism: {args:?}"
     );
 }
 
 #[tokio::test]
-async fn neverguard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach() {
+async fn guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach() {
     let (java, javac) = java_tools();
     let sensor = sensor_path();
     let debugger = debug_probe_path();
@@ -742,7 +742,7 @@ async fn neverguard_debug_instrumentation_guard_fail_closed_on_live_debugger_att
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare NeverGuard Sensor agentpath");
+        .expect("prepare Guard Sensor agentpath");
     command.arg("-cp").arg(&trusted).arg("DebugBoundaryProbe");
     prepare_runtime_command(&mut command);
 
@@ -789,7 +789,7 @@ async fn neverguard_debug_instrumentation_guard_fail_closed_on_live_debugger_att
 
 
 #[tokio::test]
-async fn neverguard_jvm_aware_protection_accepts_certified_hotspot_jit() {
+async fn guard_jvm_aware_protection_accepts_certified_hotspot_jit() {
     let (java, javac) = java_tools();
     let sensor = sensor_path();
     let root = unique_test_root("jvm-aware-jit");
@@ -799,7 +799,7 @@ async fn neverguard_jvm_aware_protection_accepts_certified_hotspot_jit() {
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare NeverGuard Sensor agentpath");
+        .expect("prepare Guard Sensor agentpath");
     command
         .arg("-Xbatch")
         .arg("-XX:CompileThreshold=100")
@@ -835,7 +835,7 @@ async fn neverguard_jvm_aware_protection_accepts_certified_hotspot_jit() {
 }
 
 #[tokio::test]
-async fn neverguard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation() {
+async fn guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation() {
     let (java, javac) = java_tools();
     let sensor = sensor_path();
     let probe = jvm_probe_path();
@@ -849,7 +849,7 @@ async fn neverguard_jvm_aware_protection_fail_closed_on_foreign_executable_priva
     let mut command = Command::new(java);
     command.current_dir(&trusted);
     let mut bootstrap = prepare_sensor_command_with_path(&mut command, sensor)
-        .expect("prepare NeverGuard Sensor agentpath");
+        .expect("prepare Guard Sensor agentpath");
     command
         .arg("-cp")
         .arg(&trusted)

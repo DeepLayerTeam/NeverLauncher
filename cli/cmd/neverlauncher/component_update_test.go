@@ -19,7 +19,7 @@ func devComponentManifest0157(t *testing.T, bundle string) componentUpdateManife
 	}
 	for _, row := range []struct{ component, name, body string }{
 		{"desktop", "neverlauncher-desktop", "desktop-new"},
-		{"guard", "neverguard", "guard-new"},
+		{"guard", "guard", "guard-new"},
 		{"runtime", "neverruntime", "runtime-new"},
 	} {
 		path := filepath.Join(bundle, row.name)
@@ -41,7 +41,7 @@ func devComponentManifest0157(t *testing.T, bundle string) componentUpdateManife
 func TestComponentUpdateAdjacentCommit0157(t *testing.T) {
 	root := t.TempDir()
 	bundle := t.TempDir()
-	for _, name := range []string{"neverlauncher-desktop", "neverguard", "neverruntime"} {
+	for _, name := range []string{"neverlauncher-desktop", "guard", "neverruntime"} {
 		if err := os.WriteFile(filepath.Join(root, name), []byte("old-"+name), 0o755); err != nil {
 			t.Fatal(err)
 		}

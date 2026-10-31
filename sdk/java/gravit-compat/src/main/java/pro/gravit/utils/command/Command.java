@@ -1,6 +1,6 @@
 package pro.gravit.utils.command;
 import java.util.*;
-/** Callable Gravit-shaped command; execution delegates to the signed NeverExtensions CLI. */
+/** Callable Gravit-shaped command; execution delegates to the signed Extensions CLI. */
 public abstract class Command {
     public final Map<String,Command> childCommands=new HashMap<>();
     public abstract String getArgsDescription();

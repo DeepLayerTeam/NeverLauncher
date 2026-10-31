@@ -98,7 +98,7 @@ func expectedLinuxArtifacts0153(arch string) map[string]string {
 		"cli":              "neverlauncher-cli-linux-" + arch,
 		"api":              "neverlauncher-api-linux-" + arch,
 		"desktop-launcher": "neverlauncher-desktop-linux-" + arch,
-		"guard":            "neverguard-linux-" + arch,
+		"guard":            "guard-linux-" + arch,
 		"runtime":          "neverruntime-linux-" + arch,
 	}
 }

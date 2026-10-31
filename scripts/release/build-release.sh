@@ -517,10 +517,10 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
       "neverlauncher-cli-windows-arm64.exe" \
       "neverlauncher-desktop-windows-x64.exe" \
       "neverlauncher-desktop-windows-arm64.exe" \
-      "neverguard-windows-x64.exe" \
-      "neverguard-windows-arm64.exe" \
-      "neverguard-sensor-windows-x64.dll" \
-      "neverguard-sensor-windows-arm64.dll" \
+      "guard-windows-x64.exe" \
+      "guard-windows-arm64.exe" \
+      "guard-sensor-windows-x64.dll" \
+      "guard-sensor-windows-arm64.dll" \
       "neverruntime-windows-x64.exe" \
       "neverruntime-windows-arm64.exe" \
       "neverlauncher-desktop-${VERSION}-windows-x64.zip" \
@@ -546,7 +546,7 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
         "neverlauncher-cli-linux-${arch}" \
         "neverlauncher-api-linux-${arch}" \
         "neverlauncher-desktop-linux-${arch}" \
-        "neverguard-linux-${arch}" \
+        "guard-linux-${arch}" \
         "neverruntime-linux-${arch}" \
         "neverlauncher-linux-${arch}-${VERSION}.tar.gz" \
         "LINUX_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
@@ -557,7 +557,7 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
         "${OUT_DIR}/neverlauncher-cli-linux-${arch}" \
         "${OUT_DIR}/neverlauncher-api-linux-${arch}" \
         "${OUT_DIR}/neverlauncher-desktop-linux-${arch}" \
-        "${OUT_DIR}/neverguard-linux-${arch}" \
+        "${OUT_DIR}/guard-linux-${arch}" \
         "${OUT_DIR}/neverruntime-linux-${arch}"
     done
   fi
@@ -569,7 +569,7 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
       for artifact in \
         "neverlauncher-cli-macos-${arch}" \
         "neverlauncher-desktop-macos-${arch}" \
-        "neverguard-macos-${arch}" \
+        "guard-macos-${arch}" \
         "neverruntime-macos-${arch}" \
         "neverlauncher-desktop-${VERSION}-macos-${arch}.zip" \
         "MACOS_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
@@ -579,7 +579,7 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
       chmod 0755 \
         "${OUT_DIR}/neverlauncher-cli-macos-${arch}" \
         "${OUT_DIR}/neverlauncher-desktop-macos-${arch}" \
-        "${OUT_DIR}/neverguard-macos-${arch}" \
+        "${OUT_DIR}/guard-macos-${arch}" \
         "${OUT_DIR}/neverruntime-macos-${arch}"
     done
     for artifact in MACOS_NOTARIZATION_EVIDENCE.json GUARD_RELEASE_ALLOWLIST_MACOS_DELIVERY.json; do
@@ -588,12 +588,12 @@ if [[ -n "${GUARD_CI_MATRIX}" ]]; then
     done
   fi
 else
-  log "Сборка Linux Desktop + NeverGuard production package"
+  log "Сборка Linux Desktop + Guard production package"
   bash "${ROOT_DIR}/scripts/release/build-linux-desktop.sh" "${OUT_DIR}"
 fi
 for required_guard_artifact in \
   "neverlauncher-desktop-linux-amd64" \
-  "neverguard-linux-amd64" \
+  "guard-linux-amd64" \
   "GUARD_RELEASE_ALLOWLIST_LINUX.json" \
   "LINUX_PACKAGE_MANIFEST.json" \
   "neverlauncher-desktop-${VERSION}-linux-amd64.zip"; do
@@ -602,12 +602,12 @@ done
 if [[ -n "${GUARD_CI_MATRIX}" ]]; then
   for required_guard_artifact in \
     "neverlauncher-desktop-windows-amd64.exe" \
-    "neverguard-windows-amd64.exe" \
+    "guard-windows-amd64.exe" \
     "WINDOWS_PACKAGE_MANIFEST.json" \
     "GUARD_RELEASE_ALLOWLIST_WINDOWS.json" \
     "neverlauncher-desktop-${VERSION}-windows-amd64.zip" \
     "neverlauncher-desktop-macos-universal" \
-    "neverguard-macos-universal" \
+    "guard-macos-universal" \
     "MACOS_PACKAGE_MANIFEST.json" \
     "GUARD_RELEASE_ALLOWLIST_MACOS.json" \
     "neverlauncher-desktop-${VERSION}-macos-universal.zip"; do
@@ -621,10 +621,10 @@ if [[ "${WINDOWS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     "neverlauncher-cli-windows-arm64.exe" \
     "neverlauncher-desktop-windows-x64.exe" \
     "neverlauncher-desktop-windows-arm64.exe" \
-    "neverguard-windows-x64.exe" \
-    "neverguard-windows-arm64.exe" \
-    "neverguard-sensor-windows-x64.dll" \
-    "neverguard-sensor-windows-arm64.dll" \
+    "guard-windows-x64.exe" \
+    "guard-windows-arm64.exe" \
+    "guard-sensor-windows-x64.dll" \
+    "guard-sensor-windows-arm64.dll" \
     "neverruntime-windows-x64.exe" \
     "neverruntime-windows-arm64.exe" \
     "neverlauncher-desktop-${VERSION}-windows-x64.zip" \
@@ -643,7 +643,7 @@ if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
       "neverlauncher-cli-linux-${arch}" \
       "neverlauncher-api-linux-${arch}" \
       "neverlauncher-desktop-linux-${arch}" \
-      "neverguard-linux-${arch}" \
+      "guard-linux-${arch}" \
       "neverruntime-linux-${arch}" \
       "neverlauncher-linux-${arch}-${VERSION}.tar.gz" \
       "LINUX_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
@@ -656,7 +656,7 @@ if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
     for required_macos_delivery in \
       "neverlauncher-cli-macos-${arch}" \
       "neverlauncher-desktop-macos-${arch}" \
-      "neverguard-macos-${arch}" \
+      "guard-macos-${arch}" \
       "neverruntime-macos-${arch}" \
       "neverlauncher-desktop-${VERSION}-macos-${arch}.zip" \
       "MACOS_PACKAGE_MANIFEST_$(tr '[:lower:]' '[:upper:]' <<<"${arch}").json"; do
@@ -729,10 +729,10 @@ cp "${ROOT_DIR}/artifacts/plugins/PLUGIN_MANIFEST.json" "${OUT_DIR}/BRIDGE_PLUGI
 cp "${ROOT_DIR}/artifacts/plugins/SERVERBRIDGE3_CERTIFICATION.json" "${OUT_DIR}/SERVERBRIDGE3_CERTIFICATION.json"
 
 # GA network acceptance consumes the exact JARs copied into OUT_DIR, not build
-# intermediates. It refuses to declare 0.42.0 production-ready until all
-# fourteen live Minecraft/Proxy targets and real restore evidence exist.
-if [[ "${VERSION}" == "0.42.0" ]]; then
-  log "0.42.0: verify exact final ServerBridge payload and full live network cycle"
+# intermediates. This gate stays required for every release from 0.42.0
+# onward; changing VERSION must never silently skip the 14-target live proof.
+if [[ "$(printf '%s\n' '0.42.0' "${VERSION}" | sort -V | head -n1)" == "0.42.0" ]]; then
+  log "${VERSION}: verify exact final ServerBridge payload and full live network cycle"
   python3 "${ROOT_DIR}/scripts/ga/accept_network_release_0420.py" \
     --root "${ROOT_DIR}" --release "${OUT_DIR}" \
     --runtime "${NEVERLAUNCHER_NETWORK_LIVE_EVIDENCE_DIR:-${ROOT_DIR}/e2e/runtime}" \

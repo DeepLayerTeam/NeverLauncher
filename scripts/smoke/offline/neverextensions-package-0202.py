@@ -40,8 +40,16 @@ for command in ('"pack"', '"sign"', '"verify"', '"inspect"'):
     require(command in commands, f"extension CLI missing {command}")
 
 package_schema = json.loads(read("schemas/neverlauncher-extension-package.schema.json"))
-signature_schema = json.loads(read("schemas/neverlauncher-extension-signature.schema.json"))
-require(package_schema["properties"]["formatVersion"]["const"] == "1.0", "package schema formatVersion mismatch")
-require(signature_schema["properties"]["algorithm"]["const"] == "Ed25519", "signature schema algorithm mismatch")
+signature_schema = json.loads(
+    read("schemas/neverlauncher-extension-signature.schema.json")
+)
+require(
+    package_schema["properties"]["formatVersion"]["const"] == "1.0",
+    "package schema formatVersion mismatch",
+)
+require(
+    signature_schema["properties"]["algorithm"]["const"] == "Ed25519",
+    "signature schema algorithm mismatch",
+)
 
-print("NeverExtensions Extension Package 0.20.2 production gate: OK")
+print("Extensions Extension Package 0.20.2 production gate: OK")

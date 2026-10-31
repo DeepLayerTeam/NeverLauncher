@@ -1,6 +1,6 @@
 # NeverLauncher
 
-**NeverLauncher** — открытая платформа управления и доставки Minecraft-клиентов: серверное API, веб-панель, настольный лаунчер, CLI, собственный runtime, NeverGuard, ServerBridge и NeverExtensions. Репозиторий содержит код продукта, инфраструктуру развертывания и тестовые матрицы; это не готовый Minecraft-сервер или дистрибутив игры.
+**NeverLauncher** — открытая платформа управления и доставки Minecraft-клиентов: серверное API, веб-панель, настольный лаунчер, CLI, собственный runtime, Guard, ServerBridge и Extensions. Репозиторий содержит код продукта, инфраструктуру развертывания и тестовые матрицы; это не готовый Minecraft-сервер или дистрибутив игры.
 
 - **Текущая версия исходников:** [`VERSION`](VERSION). Другие модули синхронизируются с этим файлом; не изменяйте версию вручную в отдельных пакетах.
 - **Лицензия:** [Apache License 2.0](LICENSE), дополнительные сведения — [NOTICE](NOTICE).
@@ -16,9 +16,9 @@
 | Admin | `apps/admin/` | Веб-интерфейс управления |
 | Desktop | `apps/desktop/` | React + Tauri: конфигурация, проверка файлов и запуск клиентов |
 | CLI `nl` | `cli/` | Установка, администрирование, манифесты, диагностика, сборка и проверка релизов |
-| NeverRuntime / NeverGuard | `runtime/` | Minecraft/JRE runtime, загрузки, контроль целостности и защитные механизмы |
+| NeverRuntime / Guard | `runtime/` | Minecraft/JRE runtime, загрузки, контроль целостности и защитные механизмы |
 | ServerBridge | `plugins/`, `serverbridge/` | Интеграции Minecraft-серверов и прокси, управление узлами |
-| NeverExtensions | `neverextensions/`, `sdk/`, `examples/extensions/` | Расширения и SDK |
+| Extensions | `extensions/`, `sdk/`, `examples/extensions/` | Расширения и SDK |
 | Контракты и проверки | `schemas/`, `compatibility/`, `device-trust/`, `e2e/`, `scripts/` | OpenAPI, проверка версий, матрицы и выпускные проверки |
 
 ## Быстрый старт для разработчиков
@@ -45,7 +45,7 @@ python3 scripts/contracts/validate-openapi.py
 
 ## Документация
 
-Начните с [индекса документации](docs/README.md). Полезные разделы: [архитектура](ARCHITECTURE.md), [авторизация](docs/authentication/providers.md), [клиенты](docs/clients/profiles-and-launch.md), [ServerBridge](docs/servers/serverbridge.md), [NeverExtensions](docs/extensions/overview.md), [безопасность](docs/security/trust-model.md), [CLI](docs/reference/cli.md), [API](docs/reference/api.md) и [диагностика](docs/troubleshooting/common.md).
+Начните с [индекса документации](docs/README.md). Полезные разделы: [архитектура](ARCHITECTURE.md), [авторизация](docs/authentication/providers.md), [клиенты](docs/clients/profiles-and-launch.md), [ServerBridge](docs/servers/serverbridge.md), [Extensions](docs/extensions/overview.md), [безопасность](docs/security/trust-model.md), [CLI](docs/reference/cli.md), [API](docs/reference/api.md) и [диагностика](docs/troubleshooting/common.md).
 
 ## Проверки и ограничения
 

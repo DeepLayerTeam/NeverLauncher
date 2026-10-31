@@ -1,6 +1,6 @@
 //go:build windows
 
-package neverextensions
+package extensions
 
 import (
 	"context"

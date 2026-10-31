@@ -17,8 +17,8 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-const desktopBridgeProtocol0209 = "neverextensions.desktop-rpc.v1"
-const cliProtocol0209 = "neverextensions.cli.v1"
+const desktopBridgeProtocol0209 = "extensions.desktop-rpc.v1"
+const cliProtocol0209 = "extensions.cli.v1"
 
 type desktopExtensionCatalogItem0209 struct {
 	ExtensionID   string                              `json:"extensionId"`
@@ -193,7 +193,7 @@ func (s Server) desktopExtensionCatalog0209(w http.ResponseWriter, r *http.Reque
 
 func (s Server) desktopExtensionEntrypoint0209(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
 		return
 	}
 	scope, scopeID := securityScope0207(r)
@@ -232,7 +232,7 @@ func (s Server) desktopExtensionEntrypoint0209(w http.ResponseWriter, r *http.Re
 
 func (s Server) desktopExtensionRPC0209(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
 		return
 	}
 	scope, scopeID := securityScope0207(r)
@@ -394,7 +394,7 @@ func (s Server) extensionCLICatalog0209(w http.ResponseWriter, r *http.Request) 
 
 func (s Server) extensionCLIInvoke0209(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
 		return
 	}
 	if s.ExtensionHost == nil {

@@ -175,7 +175,7 @@ func expectedGuardArtifactNames0139(osName, ver string) map[string]string {
 		return map[string]string{
 			"package":   "neverlauncher-desktop-" + ver + "-linux-amd64.zip",
 			"launcher":  "neverlauncher-desktop-linux-amd64",
-			"guard":     "neverguard-linux-amd64",
+			"guard":     "guard-linux-amd64",
 			"manifest":  "LINUX_PACKAGE_MANIFEST.json",
 			"allowlist": "GUARD_RELEASE_ALLOWLIST_LINUX.json",
 		}
@@ -183,7 +183,7 @@ func expectedGuardArtifactNames0139(osName, ver string) map[string]string {
 		return map[string]string{
 			"package":   "neverlauncher-desktop-" + ver + "-windows-amd64.zip",
 			"launcher":  "neverlauncher-desktop-windows-amd64.exe",
-			"guard":     "neverguard-windows-amd64.exe",
+			"guard":     "guard-windows-amd64.exe",
 			"manifest":  "WINDOWS_PACKAGE_MANIFEST.json",
 			"allowlist": "GUARD_RELEASE_ALLOWLIST_WINDOWS.json",
 		}
@@ -191,7 +191,7 @@ func expectedGuardArtifactNames0139(osName, ver string) map[string]string {
 		return map[string]string{
 			"package":   "neverlauncher-desktop-" + ver + "-macos-universal.zip",
 			"launcher":  "neverlauncher-desktop-macos-universal",
-			"guard":     "neverguard-macos-universal",
+			"guard":     "guard-macos-universal",
 			"manifest":  "MACOS_PACKAGE_MANIFEST.json",
 			"allowlist": "GUARD_RELEASE_ALLOWLIST_MACOS.json",
 		}
@@ -315,7 +315,7 @@ func validateGuardCIEvidence(matrixRaw, targetsRaw []byte, ver, expectedCommit s
 			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s содержит неверные release/security claims", id)
 		}
 		if neverGuardReleasePolicyV2Required0140(ver) && (fmt.Sprint(result.Claims["releasePolicySchema"]) != "2.0" || result.Claims["releaseIdentityAuthenticated"] != true) {
-			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не подтверждает NeverGuard 0.14 release identity", id)
+			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не подтверждает Guard 0.14 release identity", id)
 		}
 		if result.Claims["packageManifestBound"] != true || result.Claims["artifactSetComplete"] != true {
 			return releaseGuardCICertification{}, fmt.Errorf("Guard CI target %s не подтверждает package manifest/artifact set", id)

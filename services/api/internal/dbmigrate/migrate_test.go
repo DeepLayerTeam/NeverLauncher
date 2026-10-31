@@ -552,8 +552,8 @@ func TestServerBridge3GAMigration0200(t *testing.T) {
 	}
 }
 
-func TestNeverExtensionsRegistryMigration0203(t *testing.T) {
-	b, err := os.ReadFile("sql/0043_neverextensions_registry_0203.sql")
+func TestExtensionsRegistryMigration0203(t *testing.T) {
+	b, err := os.ReadFile("sql/0043_extensions_registry_0203.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -578,8 +578,8 @@ func TestNeverExtensionsRegistryMigration0203(t *testing.T) {
 	}
 }
 
-func TestNeverExtensionsInstallLifecycleMigration0204(t *testing.T) {
-	b, err := os.ReadFile("sql/0044_neverextensions_install_lifecycle_0204.sql")
+func TestExtensionsInstallLifecycleMigration0204(t *testing.T) {
+	b, err := os.ReadFile("sql/0044_extensions_install_lifecycle_0204.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -595,8 +595,8 @@ func TestNeverExtensionsInstallLifecycleMigration0204(t *testing.T) {
 	}
 }
 
-func TestNeverExtensionsEventsHooksMigration0206(t *testing.T) {
-	b, err := os.ReadFile("sql/0045_neverextensions_events_hooks_0206.sql")
+func TestExtensionsEventsHooksMigration0206(t *testing.T) {
+	b, err := os.ReadFile("sql/0045_extensions_events_hooks_0206.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -615,8 +615,8 @@ func TestNeverExtensionsEventsHooksMigration0206(t *testing.T) {
 	}
 }
 
-func TestNeverExtensionsCapabilitySecurityMigration0207(t *testing.T) {
-	b, err := os.ReadFile("sql/0046_neverextensions_capability_security_0207.sql")
+func TestExtensionsCapabilitySecurityMigration0207(t *testing.T) {
+	b, err := os.ReadFile("sql/0046_extensions_capability_security_0207.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -631,8 +631,8 @@ func TestNeverExtensionsCapabilitySecurityMigration0207(t *testing.T) {
 	}
 }
 
-func TestNeverExtensionsDependenciesUpdatesMigration02011(t *testing.T) {
-	b, err := os.ReadFile("sql/0047_neverextensions_dependencies_updates_02011.sql")
+func TestExtensionsDependenciesUpdatesMigration02011(t *testing.T) {
+	b, err := os.ReadFile("sql/0047_extensions_dependencies_updates_02011.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -647,8 +647,8 @@ func TestNeverExtensionsDependenciesUpdatesMigration02011(t *testing.T) {
 	}
 }
 
-func TestNeverExtensionsTrustRecoveryCertificationMigration02012(t *testing.T) {
-	b, err := os.ReadFile("sql/0048_neverextensions_trust_recovery_certification_02012.sql")
+func TestExtensionsTrustRecoveryCertificationMigration02012(t *testing.T) {
+	b, err := os.ReadFile("sql/0048_extensions_trust_recovery_certification_02012.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -663,8 +663,8 @@ func TestNeverExtensionsTrustRecoveryCertificationMigration02012(t *testing.T) {
 	}
 }
 
-func TestNeverExtensionsGAMigration0210(t *testing.T) {
-	b, err := os.ReadFile("sql/0049_neverextensions_ga_0210.sql")
+func TestExtensionsGAMigration0210(t *testing.T) {
+	b, err := os.ReadFile("sql/0049_extensions_ga_0210.sql")
 	if err != nil {
 		t.Fatal(err)
 	}

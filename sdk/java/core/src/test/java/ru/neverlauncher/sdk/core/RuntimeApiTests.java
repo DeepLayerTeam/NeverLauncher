@@ -29,7 +29,7 @@ public final class RuntimeApiTests {
                 String path=x.getRequestURI().getPath();
                 // Use a single read of the request body for all paths.
                 // Input is reparsed below by dedicated route handler for clarity.
-                if(path.equals("/v1/hello")){respond(x,200,Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId","run-1","heartbeatTimeoutSeconds",6,"capabilities",List.of("runtime.config.get","runtime.config.put","secret.get")));return;}
+                if(path.equals("/v1/hello")){respond(x,200,Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId","run-1","heartbeatTimeoutSeconds",6,"capabilities",List.of("runtime.config.get","runtime.config.put","runtime.config.delete","runtime.storage.get","runtime.storage.put","runtime.storage.delete","secret.get"),"eventProtocolVersion","1.0","events",List.of("release.published")));return;}
                 if(path.equals("/v1/heartbeat")){respond(x,200,Map.of("ok",true));return;}
                 respond(x,404,Map.of("error","not found"));
             }catch(Exception ex){respond(x,500,Map.of("error",ex.toString()));}

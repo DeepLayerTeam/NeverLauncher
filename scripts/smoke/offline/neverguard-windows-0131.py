@@ -24,71 +24,107 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 1):
-    raise SystemExit(f"NeverGuard Windows gate requires >=0.13.1, got {version}")
+    raise SystemExit(f"Guard Windows gate requires >=0.13.1, got {version}")
 
 cargo = read("runtime/neverruntime/Cargo.toml")
-require(cargo, ['name = "neverguard"', 'path = "src/bin/neverguard.rs"', '"net"', 'rand = "0.8"', 'hmac = "0.12"', 'subtle = "2"', 'zeroize = "1"'], "NeverRuntime Cargo")
+require(
+    cargo,
+    [
+        'name = "guard"',
+        'path = "src/bin/guard.rs"',
+        '"net"',
+        'rand = "0.8"',
+        'hmac = "0.12"',
+        'subtle = "2"',
+        'zeroize = "1"',
+    ],
+    "NeverRuntime Cargo",
+)
 
 guard = read("runtime/neverruntime/src/guard_ipc.rs")
-require(guard, [
-    r'\\.\pipe\NeverLauncher.Guard.',
-    "first_pipe_instance(true)",
-    "reject_remote_clients(true)",
-    "max_instances(1)",
-    "BOOTSTRAP_SECRET_LEN",
-    "stdin",
-    'b"server"',
-    'b"client"',
-    'b"session-key"',
-    "hmac_sha256",
-    "constant_time_eq",
-    "request_mac",
-    "response_mac",
-    "expected_sequence",
-    "replay/out-of-order request rejected",
-    "IPC_COMMAND_TIMEOUT_SECS",
-    "IPC_STARTUP_AUTH_WINDOW_SECS",
-    "server.disconnect()",
-    "zeroize",
-], "NeverGuard authenticated IPC")
+require(
+    guard,
+    [
+        r"\\.\pipe\NeverLauncher.Guard.",
+        "first_pipe_instance(true)",
+        "reject_remote_clients(true)",
+        "max_instances(1)",
+        "BOOTSTRAP_SECRET_LEN",
+        "stdin",
+        'b"server"',
+        'b"client"',
+        'b"session-key"',
+        "hmac_sha256",
+        "constant_time_eq",
+        "request_mac",
+        "response_mac",
+        "expected_sequence",
+        "replay/out-of-order request rejected",
+        "IPC_COMMAND_TIMEOUT_SECS",
+        "IPC_STARTUP_AUTH_WINDOW_SECS",
+        "server.disconnect()",
+        "zeroize",
+    ],
+    "Guard authenticated IPC",
+)
 
-binary = read("runtime/neverruntime/src/bin/neverguard.rs")
-require(binary, ["--pipe", "--parent-pid", "run_windows_guard_server"], "NeverGuard process entrypoint")
+binary = read("runtime/neverruntime/src/bin/guard.rs")
+require(
+    binary,
+    ["--pipe", "--parent-pid", "run_windows_guard_server"],
+    "Guard process entrypoint",
+)
 
 desktop = read("apps/desktop/src-tauri/src/main.rs")
-require(desktop, [
-    "NeverGuardSupervisor",
-    ".manage(NeverGuardSupervisor::new())",
-    "neverguard.ensure_started().await?",
-    "neverguard.ping().await?",
-    "launch заблокирован: NeverGuard Windows boundary",
-    "neverguard_status",
-], "Desktop fail-closed NeverGuard launch")
+require(
+    desktop,
+    [
+        "GuardSupervisor",
+        ".manage(GuardSupervisor::new())",
+        "guard.ensure_started().await?",
+        "guard.ping().await?",
+        "launch заблокирован: Guard Windows boundary",
+        "guard_status",
+    ],
+    "Desktop fail-closed Guard launch",
+)
 
-integration = read("runtime/neverruntime/tests/neverguard_windows.rs")
-require(integration, [
-    'env!("CARGO_BIN_EXE_neverguard")',
-    "ensure_started().await",
-    "authenticated",
-    "supervisor.ping().await",
-    "supervisor.shutdown().await",
-], "NeverGuard Windows integration test")
+integration = read("runtime/neverruntime/tests/guard_windows.rs")
+require(
+    integration,
+    [
+        'env!("CARGO_BIN_EXE_guard")',
+        "ensure_started().await",
+        "authenticated",
+        "supervisor.ping().await",
+        "supervisor.shutdown().await",
+    ],
+    "Guard Windows integration test",
+)
 
 package = read("scripts/release/build-windows-desktop.ps1")
-require(package, [
-    "neverguard.exe",
-    "neverlauncher-desktop-$Version-windows-amd64.exe",
-    "cargo build --release",
-    "WINDOWS_PACKAGE_MANIFEST.json",
-    "Compress-Archive",
-], "Windows release packaging")
+require(
+    package,
+    [
+        "guard.exe",
+        "neverlauncher-desktop-$Version-windows-amd64.exe",
+        "cargo build --release",
+        "WINDOWS_PACKAGE_MANIFEST.json",
+        "Compress-Archive",
+    ],
+    "Windows release packaging",
+)
 
 ci = read(".github/workflows/ci.yml")
-require(ci, [
-    "neverguard-windows:",
-    "neverguard_windows",
-    "build-windows-desktop.ps1",
-], "NeverGuard Windows CI")
+require(
+    ci,
+    [
+        "guard-windows:",
+        "guard_windows",
+        "build-windows-desktop.ps1",
+    ],
+    "Guard Windows CI",
+)
 
 # Документация безопасности Markdown необязательна; выполнение правил проверено выше.
-print(f"[NeverLauncher] NeverGuard Windows authenticated IPC gate OK: {version}")
+print(f"[NeverLauncher] Guard Windows authenticated IPC gate OK: {version}")

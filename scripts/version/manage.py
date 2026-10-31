@@ -10,7 +10,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION_FILE = ROOT / "VERSION"
-SEMVER_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
+SEMVER_RE = re.compile(
+    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
+)
 
 
 class VersionError(RuntimeError):
@@ -34,7 +36,6 @@ def render_json(path: Path, version: str) -> str:
     return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
 
 
-
 def render_product_version_json(path: Path, version: str) -> str:
     data = json.loads(path.read_text(encoding="utf-8"))
     if "productVersion" not in data:
@@ -42,17 +43,27 @@ def render_product_version_json(path: Path, version: str) -> str:
     data["productVersion"] = version
     return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
 
+
 def replace_package_version(text: str, version: str, path: Path) -> str:
-    updated, count = re.subn(r'(?m)^(version\s*=\s*)"[^"]+"\s*$', rf'\1"{version}"', text, count=1)
+    updated, count = re.subn(
+        r'(?m)^(version\s*=\s*)"[^"]+"\s*$', rf'\1"{version}"', text, count=1
+    )
     if count != 1:
         raise VersionError(f"{path.relative_to(ROOT)}: не найден package version")
     return updated
 
 
 def replace_env_image_tag(text: str, version: str, path: Path) -> str:
-    updated, count = re.subn(r"(?m)^NEVERLAUNCHER_IMAGE_TAG=.*$", f"NEVERLAUNCHER_IMAGE_TAG={version}", text, count=1)
+    updated, count = re.subn(
+        r"(?m)^NEVERLAUNCHER_IMAGE_TAG=.*$",
+        f"NEVERLAUNCHER_IMAGE_TAG={version}",
+        text,
+        count=1,
+    )
     if count != 1:
-        raise VersionError(f"{path.relative_to(ROOT)}: не найден NEVERLAUNCHER_IMAGE_TAG")
+        raise VersionError(
+            f"{path.relative_to(ROOT)}: не найден NEVERLAUNCHER_IMAGE_TAG"
+        )
     return updated
 
 
@@ -70,31 +81,44 @@ def desired_files(version: str) -> dict[Path, str]:
 
     for rel in (
         "runtime/neverruntime/Cargo.toml",
-        "runtime/neverguard-sensor/Cargo.toml",
-        "runtime/neverguard-memory-probe/Cargo.toml",
-        "runtime/neverguard-thread-probe/Cargo.toml",
-        "runtime/neverguard-debug-probe/Cargo.toml",
-        "runtime/neverguard-jvm-probe/Cargo.toml",
+        "runtime/guard-sensor/Cargo.toml",
+        "runtime/guard-memory-probe/Cargo.toml",
+        "runtime/guard-thread-probe/Cargo.toml",
+        "runtime/guard-debug-probe/Cargo.toml",
+        "runtime/guard-jvm-probe/Cargo.toml",
         "apps/desktop/src-tauri/Cargo.toml",
     ):
         path = ROOT / rel
-        result[path] = replace_package_version(path.read_text(encoding="utf-8"), version, path)
+        result[path] = replace_package_version(
+            path.read_text(encoding="utf-8"), version, path
+        )
 
     device_trust_targets = ROOT / "device-trust/targets.json"
-    result[device_trust_targets] = render_product_version_json(device_trust_targets, version)
+    result[device_trust_targets] = render_product_version_json(
+        device_trust_targets, version
+    )
 
     guard_ci_targets = ROOT / "guard-ci/targets.json"
     result[guard_ci_targets] = render_product_version_json(guard_ci_targets, version)
 
     serverbridge_targets = ROOT / "serverbridge/targets.json"
-    result[serverbridge_targets] = render_product_version_json(serverbridge_targets, version)
+    result[serverbridge_targets] = render_product_version_json(
+        serverbridge_targets, version
+    )
 
     serverbridge_hybrid_targets = ROOT / "serverbridge/hybrid-targets.json"
-    result[serverbridge_hybrid_targets] = render_product_version_json(serverbridge_hybrid_targets, version)
+    result[serverbridge_hybrid_targets] = render_product_version_json(
+        serverbridge_hybrid_targets, version
+    )
 
-    for rel in ("deploy/production/env.production.example", "cli/cmd/neverlauncher/templates/production/env.production.example"):
+    for rel in (
+        "deploy/production/env.production.example",
+        "cli/cmd/neverlauncher/templates/production/env.production.example",
+    ):
         path = ROOT / rel
-        result[path] = replace_env_image_tag(path.read_text(encoding="utf-8"), version, path)
+        result[path] = replace_env_image_tag(
+            path.read_text(encoding="utf-8"), version, path
+        )
     return result
 
 
@@ -130,9 +154,16 @@ def command_check() -> int:
 def command_sync() -> int:
     version = read_version()
     changed = sync(version, check_only=False)
-    subprocess.run([sys.executable, str(ROOT / "scripts/contracts/generate_openapi.py")], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts/contracts/generate_openapi.py")],
+        cwd=ROOT,
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
     if changed:
-        print(f"Synced VERSION={version} into {len(changed)} required metadata files (+ generated OpenAPI):")
+        print(
+            f"Synced VERSION={version} into {len(changed)} required metadata files (+ generated OpenAPI):"
+        )
         for rel in changed:
             print(f" - {rel}")
     else:
@@ -146,13 +177,20 @@ def command_set(value: str) -> int:
         raise VersionError(f"invalid SemVer: {value!r}")
     VERSION_FILE.write_text(value + "\n", encoding="utf-8")
     sync(value, check_only=False)
-    subprocess.run([sys.executable, str(ROOT / "scripts/contracts/generate_openapi.py")], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts/contracts/generate_openapi.py")],
+        cwd=ROOT,
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
     print(f"NeverLauncher version set to {value}; VERSION is the canonical source")
     return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NeverLauncher canonical version manager")
+    parser = argparse.ArgumentParser(
+        description="NeverLauncher canonical version manager"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("get")
     sub.add_parser("check")

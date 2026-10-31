@@ -429,7 +429,7 @@ func ValidateProduction(cfg Config) error {
 			Releases      map[string]guardRelease `json:"releases"`
 		}
 		if err := json.Unmarshal([]byte(guardAllowlistRaw), &document); err != nil || document.SchemaVersion != "2.0" || len(document.Releases) == 0 {
-			problems = append(problems, "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON должен быть NeverGuard release policy schemaVersion=2.0")
+			problems = append(problems, "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON должен быть Guard release policy schemaVersion=2.0")
 		} else {
 			for version, release := range document.Releases {
 				if strings.TrimSpace(version) == "" || release.ProtocolVersion != 4 || len(release.Platforms) == 0 {
@@ -668,7 +668,7 @@ func ValidateProduction(cfg Config) error {
 	}
 	if cfg.ExtensionEventsEnabled {
 		if !cfg.ExtensionHostEnabled {
-			problems = append(problems, "NeverExtensions Events требует NEVERLAUNCHER_EXTENSION_HOST_ENABLED=true")
+			problems = append(problems, "Extensions Events требует NEVERLAUNCHER_EXTENSION_HOST_ENABLED=true")
 		}
 		if cfg.ExtensionEventsWorkerIntervalMilliseconds < 50 || cfg.ExtensionEventsWorkerIntervalMilliseconds > 60000 {
 			problems = append(problems, "extension events worker interval должен быть 50..60000 ms")

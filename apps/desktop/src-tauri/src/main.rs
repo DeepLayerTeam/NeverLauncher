@@ -17,7 +17,7 @@ mod official_verification_0266;
 use neverruntime::{
     self, CleanUnusedResult, DownloadResult, FileCheckResult, GuardProcessPolicyReport, JavaInfoResult,
     LaunchHistoryEntry, LaunchPlan, ManagedJavaResult, Manifest, MinecraftLaunchCredentials,
-    NeverGuardIntegrityEvidence, NeverGuardRemoteAttestation, NeverGuardRemoteAttestationV2, NeverGuardStatus, NeverGuardSupervisor,
+    GuardIntegrityEvidence, GuardRemoteAttestation, GuardRemoteAttestationV2, GuardStatus, GuardSupervisor,
     ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
 };
 #[cfg(target_os = "linux")]
@@ -103,7 +103,7 @@ fn desktop_extension_platform_info() -> DesktopExtensionPlatformInfo0209 {
         os: std::env::consts::OS.to_string(),
         arch: std::env::consts::ARCH.to_string(),
         launcher_version: env!("CARGO_PKG_VERSION").to_string(),
-        bridge_protocol: "neverextensions.desktop-rpc.v1".to_string(),
+        bridge_protocol: "extensions.desktop-rpc.v1".to_string(),
     }
 }
 
@@ -111,7 +111,7 @@ fn desktop_extension_platform_info() -> DesktopExtensionPlatformInfo0209 {
 #[serde(rename_all = "camelCase")]
 struct GuardAttestationSubmission {
     launcher_version: String,
-    attestation: NeverGuardRemoteAttestation,
+    attestation: GuardRemoteAttestation,
     signature: String,
     fingerprint: String,
     key_algorithm: String,
@@ -125,7 +125,7 @@ struct GuardAttestationSubmission {
 #[serde(rename_all = "camelCase")]
 struct GuardAttestationV2Submission {
     launcher_version: String,
-    attestation: NeverGuardRemoteAttestationV2,
+    attestation: GuardRemoteAttestationV2,
     signature: String,
     fingerprint: String,
     key_algorithm: String,
@@ -1441,17 +1441,17 @@ async fn preview_component_changes_0247_inner_0392(
 async fn launch_minecraft(
     request: LaunchMinecraftRequest,
     supervisor: tauri::State<'_, ProcessSupervisor>,
-    neverguard: tauri::State<'_, NeverGuardSupervisor>,
+    guard: tauri::State<'_, GuardSupervisor>,
     official_manager: tauri::State<'_, official_identity_0262::IdentityManager>,
 ) -> Result<ProcessStatus, String> {
     let auth=component_permissions_for_manifest_0392(&request.manifest,&request.pinned_public_key).await?;
     neverruntime::component_catalog_0241::with_verified_component_scope_0392(auth,
-        launch_minecraft_inner_0392(request,supervisor,neverguard,official_manager)).await
+        launch_minecraft_inner_0392(request,supervisor,guard,official_manager)).await
 }
 async fn launch_minecraft_inner_0392(
     request: LaunchMinecraftRequest,
     supervisor: tauri::State<'_, ProcessSupervisor>,
-    neverguard: tauri::State<'_, NeverGuardSupervisor>,
+    guard: tauri::State<'_, GuardSupervisor>,
     official_manager: tauri::State<'_, official_identity_0262::IdentityManager>,
 ) -> Result<ProcessStatus, String> {
     let LaunchMinecraftRequest {
@@ -1460,7 +1460,7 @@ async fn launch_minecraft_inner_0392(
     validate_launch_realm_0269(auth_mode, minecraft_credentials.as_ref(), official_identity.is_some(), preferences.as_ref())?;
     if preferences.as_ref().is_some_and(|p|p.offline) {
         // Check owner policy and the exact cached signed release before
-        // interacting with NeverGuard. The supervisor performs the final
+        // interacting with Guard. The supervisor performs the final
         // SHA-256 validation under its release lease immediately before spawn;
         // do not hash the same multi-GiB client a redundant third time.
         let cached = load_cached_desktop_manifest(root.clone(), pinned_public_key.clone(),
@@ -1474,14 +1474,14 @@ async fn launch_minecraft_inner_0392(
     }
     #[cfg(windows)]
     {
-        let status = neverguard.ensure_started().await?;
+        let status = guard.ensure_started().await?;
         if !status.authenticated || status.state != "ready" {
-            return Err("launch заблокирован: NeverGuard Windows boundary не authenticated/ready".to_string());
+            return Err("launch заблокирован: Guard Windows boundary не authenticated/ready".to_string());
         }
         if !status.process_policy_enforced
             || status.process_policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
         {
-            return Err("launch заблокирован: NeverGuard Windows runtime/process policy не enforced".to_string());
+            return Err("launch заблокирован: Guard Windows runtime/process policy не enforced".to_string());
         }
         if !status.hardening_enforced
             || status.hardening_version != NEVERGUARD_WINDOWS_HARDENING_VERSION
@@ -1489,73 +1489,73 @@ async fn launch_minecraft_inner_0392(
             || !status.lifetime_job_enforced
             || (!cfg!(debug_assertions) && !status.package_manifest_verified)
         {
-            return Err("launch заблокирован: NeverGuard Windows production hardening verification failed".to_string());
+            return Err("launch заблокирован: Guard Windows production hardening verification failed".to_string());
         }
-        neverguard.ping().await?;
-        let process_policy = neverguard
+        guard.ping().await?;
+        let process_policy = guard
             .process_policy()
             .await
-            .map_err(|err| format!("launch заблокирован: NeverGuard Windows process policy verification failed: {err}"))?;
+            .map_err(|err| format!("launch заблокирован: Guard Windows process policy verification failed: {err}"))?;
         if !process_policy.enforced
             || process_policy.policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
         {
-            return Err("launch заблокирован: NeverGuard Windows process policy report rejected".to_string());
+            return Err("launch заблокирован: Guard Windows process policy report rejected".to_string());
         }
-        neverguard
+        guard
             .integrity_evidence()
             .await
-            .map_err(|err| format!("launch заблокирован: NeverGuard Windows Integrity Evidence v1 недоступен: {err}"))?;
+            .map_err(|err| format!("launch заблокирован: Guard Windows Integrity Evidence v1 недоступен: {err}"))?;
     }
     #[cfg(target_os = "linux")]
     {
-        let status = neverguard.ensure_started().await?;
+        let status = guard.ensure_started().await?;
         if !status.authenticated || status.state != "ready" {
-            return Err("launch заблокирован: NeverGuard Linux boundary не authenticated/ready".to_string());
+            return Err("launch заблокирован: Guard Linux boundary не authenticated/ready".to_string());
         }
         if !status.process_policy_enforced || status.process_policy_version != NEVERGUARD_LINUX_PROCESS_POLICY_VERSION {
-            return Err("launch заблокирован: NeverGuard Linux runtime/process policy не enforced".to_string());
+            return Err("launch заблокирован: Guard Linux runtime/process policy не enforced".to_string());
         }
         if !status.hardening_enforced || status.hardening_version != NEVERGUARD_LINUX_HARDENING_VERSION
             || !status.secure_pipe_acl || !status.lifetime_job_enforced
             || (!cfg!(debug_assertions) && !status.package_manifest_verified)
         {
-            return Err("launch заблокирован: NeverGuard Linux production hardening verification failed".to_string());
+            return Err("launch заблокирован: Guard Linux production hardening verification failed".to_string());
         }
-        neverguard.ping().await?;
-        let policy = neverguard.process_policy().await
-            .map_err(|err| format!("launch заблокирован: NeverGuard Linux process policy verification failed: {err}"))?;
+        guard.ping().await?;
+        let policy = guard.process_policy().await
+            .map_err(|err| format!("launch заблокирован: Guard Linux process policy verification failed: {err}"))?;
         if !policy.enforced || policy.policy_version != NEVERGUARD_LINUX_PROCESS_POLICY_VERSION || policy.linux.is_none() {
-            return Err("launch заблокирован: NeverGuard Linux process policy report rejected".to_string());
+            return Err("launch заблокирован: Guard Linux process policy report rejected".to_string());
         }
-        neverguard.integrity_evidence().await
-            .map_err(|err| format!("launch заблокирован: NeverGuard Linux Integrity Evidence v1 недоступен: {err}"))?;
+        guard.integrity_evidence().await
+            .map_err(|err| format!("launch заблокирован: Guard Linux Integrity Evidence v1 недоступен: {err}"))?;
     }
     #[cfg(target_os = "macos")]
     {
-        let status = neverguard.ensure_started().await?;
+        let status = guard.ensure_started().await?;
         if !status.authenticated || status.state != "ready" {
-            return Err("launch заблокирован: NeverGuard macOS boundary не authenticated/ready".to_string());
+            return Err("launch заблокирован: Guard macOS boundary не authenticated/ready".to_string());
         }
         if !status.process_policy_enforced || status.process_policy_version != NEVERGUARD_MACOS_PROCESS_POLICY_VERSION {
-            return Err("launch заблокирован: NeverGuard macOS runtime/process policy не enforced".to_string());
+            return Err("launch заблокирован: Guard macOS runtime/process policy не enforced".to_string());
         }
         if !status.hardening_enforced || status.hardening_version != NEVERGUARD_MACOS_HARDENING_VERSION
             || !status.secure_pipe_acl || !status.lifetime_job_enforced
             || (!cfg!(debug_assertions) && !status.package_manifest_verified)
         {
-            return Err("launch заблокирован: NeverGuard macOS production hardening verification failed".to_string());
+            return Err("launch заблокирован: Guard macOS production hardening verification failed".to_string());
         }
-        neverguard.ping().await?;
-        let policy = neverguard.process_policy().await
-            .map_err(|err| format!("launch заблокирован: NeverGuard macOS process policy verification failed: {err}"))?;
+        guard.ping().await?;
+        let policy = guard.process_policy().await
+            .map_err(|err| format!("launch заблокирован: Guard macOS process policy verification failed: {err}"))?;
         if !policy.enforced || policy.policy_version != NEVERGUARD_MACOS_PROCESS_POLICY_VERSION || policy.macos.is_none() {
-            return Err("launch заблокирован: NeverGuard macOS process policy report rejected".to_string());
+            return Err("launch заблокирован: Guard macOS process policy report rejected".to_string());
         }
-        neverguard.integrity_evidence().await
-            .map_err(|err| format!("launch заблокирован: NeverGuard macOS Integrity Evidence v1 недоступен: {err}"))?;
+        guard.integrity_evidence().await
+            .map_err(|err| format!("launch заблокирован: Guard macOS Integrity Evidence v1 недоступен: {err}"))?;
     }
     #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
-    let _ = &neverguard;
+    let _ = &guard;
 
     neverruntime::transactional_release::ensure_active_preset(&manifest, &PathBuf::from(&root), &pinned_public_key, component_preset.as_deref()).await?;
     // Never accept MSA tokens from JS. Only the native manager can acquire official
@@ -1591,13 +1591,13 @@ async fn launch_minecraft_inner_0392(
 }
 
 #[tauri::command]
-async fn neverguard_guard_attestation(
+async fn guard_guard_attestation(
     request: GuardAttestationRequest,
-    neverguard: tauri::State<'_, NeverGuardSupervisor>,
+    guard: tauri::State<'_, GuardSupervisor>,
 ) -> Result<GuardAttestationSubmission, String> {
     #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
     {
-        let _ = (request, neverguard);
+        let _ = (request, guard);
         return Err("Guard Attestation production implementation доступна только для Windows, Linux и macOS".to_string());
     }
     #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
@@ -1606,7 +1606,7 @@ async fn neverguard_guard_attestation(
             backend_url, user_id, device_id, session_id, binding_epoch, launcher_version,
             challenge_id, challenge, challenge_expires_at,
         } = request;
-        let attestation = neverguard.remote_attestation(&challenge_id, &challenge).await?;
+        let attestation = guard.remote_attestation(&challenge_id, &challenge).await?;
         let evidence_sha256 = attestation.evidence.evidence_sha256.clone();
         let guard_sha256 = attestation.evidence.guard.image_sha256.clone();
         let launcher_sha256 = attestation.evidence.launcher.image_sha256.clone();
@@ -1649,14 +1649,14 @@ async fn neverguard_guard_attestation(
 
 
 #[tauri::command]
-async fn neverguard_guard_attestation_v2(
+async fn guard_guard_attestation_v2(
     request: GuardAttestationV2Request,
-    neverguard: tauri::State<'_, NeverGuardSupervisor>,
+    guard: tauri::State<'_, GuardSupervisor>,
     supervisor: tauri::State<'_, ProcessSupervisor>,
 ) -> Result<GuardAttestationV2Submission, String> {
     #[cfg(not(windows))]
     {
-        let _ = (request, neverguard, supervisor);
+        let _ = (request, guard, supervisor);
         Err("Guard Attestation v2 continuous evidence доступна только для Windows".to_string())
     }
     #[cfg(windows)]
@@ -1668,7 +1668,7 @@ async fn neverguard_guard_attestation_v2(
         let process_status = supervisor.status(&process_id).await
             .map_err(|err| format!("Guard Attestation v2 runtime status недоступен: {err}"))?;
         let continuous_evidence = neverruntime::collect_windows_continuous_evidence_v2(&process_id, &process_status)?;
-        let base_attestation = neverguard.remote_attestation(&challenge_id, &challenge).await?;
+        let base_attestation = guard.remote_attestation(&challenge_id, &challenge).await?;
         let attestation = neverruntime::build_windows_attestation_v2(
             challenge_id.clone(),
             &challenge,
@@ -1802,7 +1802,7 @@ fn validate_update_sha256(value: &str) -> Result<String, String> {
 async fn install_launcher_update(
     package_path: String,
     expected_sha256: String,
-    neverguard: tauri::State<'_, NeverGuardSupervisor>,
+    guard: tauri::State<'_, GuardSupervisor>,
     app: tauri::AppHandle,
 ) -> Result<LauncherUpdateScheduleResult, String> {
     let expected_sha256 = validate_update_sha256(&expected_sha256)?;
@@ -1832,7 +1832,7 @@ async fn install_launcher_update(
     let staged_helper = create_staged_updater_helper02310(&helper, bin_dir)?;
     // Guard удерживает дескрипторы и IPC, из-за которых Windows может считать исполняемый файл занятым.
     // Остановите его до того, как внешний помощник начнёт ожидание Desktop и выполнение транзакции.
-    neverguard.shutdown().await.map_err(|e| format!("не удалось остановить NeverGuard перед обновлением: {e}"))?;
+    guard.shutdown().await.map_err(|e| format!("не удалось остановить Guard перед обновлением: {e}"))?;
 
     let parent_pid = std::process::id().to_string();
     let mut command = Command::new(&staged_helper);
@@ -1872,16 +1872,16 @@ async fn install_launcher_update(
 }
 
 #[tauri::command]
-async fn neverguard_status(neverguard: tauri::State<'_, NeverGuardSupervisor>) -> Result<NeverGuardStatus, String> {
-    neverguard.status().await
+async fn guard_status(guard: tauri::State<'_, GuardSupervisor>) -> Result<GuardStatus, String> {
+    guard.status().await
 }
 #[tauri::command]
-async fn neverguard_integrity_evidence(neverguard: tauri::State<'_, NeverGuardSupervisor>) -> Result<NeverGuardIntegrityEvidence, String> {
-    neverguard.integrity_evidence().await
+async fn guard_integrity_evidence(guard: tauri::State<'_, GuardSupervisor>) -> Result<GuardIntegrityEvidence, String> {
+    guard.integrity_evidence().await
 }
 #[tauri::command]
-async fn neverguard_process_policy(neverguard: tauri::State<'_, NeverGuardSupervisor>) -> Result<GuardProcessPolicyReport, String> {
-    neverguard.process_policy().await
+async fn guard_process_policy(guard: tauri::State<'_, GuardSupervisor>) -> Result<GuardProcessPolicyReport, String> {
+    guard.process_policy().await
 }
 #[tauri::command]
 async fn runtime_process_status(process_id: String, supervisor: tauri::State<'_, ProcessSupervisor>) -> Result<ProcessStatus, String> { supervisor.status(&process_id).await }
@@ -2072,9 +2072,9 @@ fn main() {
         .manage(discord_presence_0308::DiscordPresence::default())
         .manage(diagnostics_bundle_03510::DiagnosticsSession03510::default())
         .manage(ProcessSupervisor::new())
-        .manage(NeverGuardSupervisor::new())
+        .manage(GuardSupervisor::new())
         .setup(|app| { println!("NeverLauncher Desktop {} / NeverRuntime", env!("CARGO_PKG_VERSION")); let _=app.handle(); Ok(()) })
-        .invoke_handler(tauri::generate_handler![benchmark_ui_ready_03511,preview_release_requirements_0359,preview_player_conflicts_0359,preserve_player_conflicts_0359,player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_prepare_join_0397,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,load_signed_provisioning_0352,save_desktop_config,complete_first_run_0352,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,prepare_offline_launch_0358,verify_manifest_signature,check_files,validate_desktop_settings,diagnostics_bundle_03510::preview_diagnostics_bundle_03510,diagnostics_bundle_03510::export_diagnostics_bundle_03510,open_game_directory,open_external_https_0356,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,neverguard_status,neverguard_integrity_evidence,neverguard_process_policy,neverguard_guard_attestation,neverguard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,desktop_native_ui_info_0357,desktop_window_action_0357,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
+        .invoke_handler(tauri::generate_handler![benchmark_ui_ready_03511,preview_release_requirements_0359,preview_player_conflicts_0359,preserve_player_conflicts_0359,player_migration_discover_0339,player_migration_preview_0339,player_migration_adopt_0339,official_identity_0262::official_identity_prepare_join_0397,official_identity_0262::official_identity_links_0268,official_identity_0262::official_identity_link_0268,official_identity_0262::official_identity_unlink_0268,official_identity_0262::official_identity_accounts_0267,official_identity_0262::official_identity_select_0267,official_identity_0262::official_identity_refresh_0267,official_identity_0262::official_identity_logout_0267,official_identity_0262::official_identity_browser_login_0263,official_identity_0262::official_identity_begin_0262,official_identity_0262::official_identity_poll_0262,official_identity_0262::official_identity_wait_device_0264,official_identity_0262::official_identity_status_0262,official_identity_0262::official_identity_texture_0262,official_identity_0262::official_identity_cancel_0262,official_identity_0262::official_identity_disconnect_0262,load_desktop_config,load_signed_provisioning_0352,save_desktop_config,complete_first_run_0352,reset_desktop_binding,store_auth_session,load_auth_session,delete_auth_session,ensure_device_key,device_key_status,macos_trust_status_0316,windows_tpm_certify_0313,linux_tpm_certify_0314,measured_boot_quote_0315,hwid_risk_0299::hardware_risk_signal_0299,sign_device_payload,attest_device_payload,stage_device_key_replacement,staged_device_key_status,sign_staged_device_replacement,sign_current_device_replacement,commit_staged_device_key,abort_staged_device_key,bind_device_key,sign_session_refresh,reset_device_key,delete_device_key,load_manifest,preview_components_0244,preview_component_changes_0247,installed_component_choice_0247,save_installed_component_choice_0247,active_selection_02410,attest_verified_component_plan_02412,export_component_selection_02410,preview_component_migration_02410,preview_import_component_selection_02410,cache_desktop_manifest,load_cached_desktop_manifest,prepare_offline_launch_0358,verify_manifest_signature,check_files,validate_desktop_settings,diagnostics_bundle_03510::preview_diagnostics_bundle_03510,diagnostics_bundle_03510::export_diagnostics_bundle_03510,open_game_directory,open_external_https_0356,download_missing_files,repair_client,pending_download_job,control_download_job,resume_download_job,rollback_client_release,recover_client_release,clean_unused_files,prepare_profile_directory,check_java,ensure_managed_java,ensure_profile_managed_java,build_launch_plan,launch_minecraft,guard_status,guard_integrity_evidence,guard_process_policy,guard_guard_attestation,guard_guard_attestation_v2,install_launcher_update,runtime_process_status,runtime_processes,stop_runtime_process,load_launch_history,desktop_extension_platform_info,desktop_native_ui_info_0357,desktop_window_action_0357,discord_presence_0308::discord_presence_set,discord_presence_0308::discord_presence_clear,sentry_diagnostics_0309::desktop_sentry_consent,sentry_diagnostics_0309::desktop_sentry_report])
         .run(tauri::generate_context!()).expect("ошибка запуска Tauri-приложения");
 }
 

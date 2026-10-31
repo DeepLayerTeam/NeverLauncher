@@ -59,7 +59,7 @@ trap cleanup EXIT
 rustup target add x86_64-apple-darwin aarch64-apple-darwin
 for target in x86_64-apple-darwin aarch64-apple-darwin; do
   cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/apps/desktop/src-tauri/Cargo.toml"
-  cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bin neverguard --bin neverruntime
+  cargo build --release --target "${target}" --manifest-path "${ROOT_DIR}/runtime/neverruntime/Cargo.toml" --bin guard --bin neverruntime
 done
 
 NOTARY_X64=""
@@ -83,7 +83,7 @@ for arch in x64 arm64; do
   RES_DIR="${APP_ROOT}/Contents/Resources"
   mkdir -p "${MACOS_DIR}" "${HELPERS_DIR}" "${RES_DIR}"
   cp "${ROOT_DIR}/apps/desktop/src-tauri/target/${RUST_TARGET}/release/neverlauncher-desktop" "${MACOS_DIR}/neverlauncher-desktop"
-  cp "${ROOT_DIR}/runtime/neverruntime/target/${RUST_TARGET}/release/neverguard" "${HELPERS_DIR}/neverguard"
+  cp "${ROOT_DIR}/runtime/neverruntime/target/${RUST_TARGET}/release/guard" "${HELPERS_DIR}/guard"
   cp "${ROOT_DIR}/runtime/neverruntime/target/${RUST_TARGET}/release/neverruntime" "${HELPERS_DIR}/neverruntime"
   cp "${GO_CLI}" "${HELPERS_DIR}/neverlauncher-cli"
   chmod 0755 "${MACOS_DIR}/neverlauncher-desktop" "${HELPERS_DIR}/"*
@@ -108,9 +108,9 @@ EOF_PLIST
   # Contents/MacOS/neverlauncher-desktop напрямую внутри .app: codesign воспринимает
   # основной исполняемый файл как сам пакет и требует предварительной подписи всех
   # помощников. Итоговая подпись APP_ROOT подписывает и запечатывает основной файл.
-  for binary in neverguard neverruntime neverlauncher-cli; do
+  for binary in guard neverruntime neverlauncher-cli; do
     case "${binary}" in
-      neverguard) identifier="ru.skif4er.neverlauncher.guard" ;;
+      guard) identifier="ru.skif4er.neverlauncher.guard" ;;
       neverruntime) identifier="ru.skif4er.neverlauncher.runtime" ;;
       neverlauncher-cli) identifier="ru.skif4er.neverlauncher.cli" ;;
       *) echo "unsupported macOS helper identifier mapping: ${binary}" >&2; exit 1 ;;
@@ -139,7 +139,7 @@ EOF_PLIST
   # подпишет основной исполняемый файл и защитит уже подписанные Helpers и Resources.
   codesign --force --sign "${SIGN_IDENTITY}" --options runtime "${TIMESTAMP_ARG}" --identifier ru.skif4er.neverlauncher "${APP_ROOT}"
   codesign --verify --strict --verbose=2 "${MACOS_DIR}/neverlauncher-desktop"
-  for binary in neverguard neverruntime neverlauncher-cli; do
+  for binary in guard neverruntime neverlauncher-cli; do
     codesign --verify --strict --verbose=2 "${HELPERS_DIR}/${binary}"
   done
   codesign --verify --deep --strict --verbose=2 "${APP_ROOT}"
@@ -204,7 +204,7 @@ for arch in x64 arm64; do
   REQUIRED_ARTIFACTS=(
     "neverlauncher-cli-macos-${arch}"
     "neverlauncher-desktop-macos-${arch}"
-    "neverguard-macos-${arch}"
+    "guard-macos-${arch}"
     "neverruntime-macos-${arch}"
     "neverlauncher-desktop-${VERSION}-macos-${arch}.zip"
     "MACOS_PACKAGE_MANIFEST_${MANIFEST_SUFFIX}.json"
@@ -215,7 +215,7 @@ for arch in x64 arm64; do
   shasum -a 256 \
     "${OUT_DIR}/neverlauncher-cli-macos-${arch}" \
     "${OUT_DIR}/neverlauncher-desktop-macos-${arch}" \
-    "${OUT_DIR}/neverguard-macos-${arch}" \
+    "${OUT_DIR}/guard-macos-${arch}" \
     "${OUT_DIR}/neverruntime-macos-${arch}" \
     "${OUT_DIR}/neverlauncher-desktop-${VERSION}-macos-${arch}.zip"
 done

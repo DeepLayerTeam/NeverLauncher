@@ -514,7 +514,7 @@ func (s Server) quarantineRejectedUpload02012(ctx context.Context, tmpPath, uplo
 		return entry, err
 	}
 	defer f.Close()
-	entry.StorageProject = "neverextensions-quarantine"
+	entry.StorageProject = "extensions-quarantine"
 	entry.StorageVersion = time.Now().UTC().Format("2006-01-02")
 	entry.StoragePath = id + ".nlext"
 	_, size, err := s.Storage.Save(entry.StorageProject, entry.StorageVersion, entry.StoragePath, f)

@@ -160,7 +160,7 @@ func validateComponentUpdateManifest0157(manifest componentUpdateManifest0157, m
 		return errors.New("macos-app-bundle layout is valid only on macOS")
 	}
 	expected := map[string]bool{"desktop": false, "guard": false, "runtime": false}
-	if platform == "windows" && neverguardSensorRequired0182(manifest.ProductVersion) {
+	if platform == "windows" && guardSensorRequired0182(manifest.ProductVersion) {
 		expected["sensor"] = false
 	}
 	if len(manifest.Components) != len(expected) {
@@ -1198,13 +1198,13 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 	if err := os.MkdirAll(bundle, 0o755); err != nil {
 		return nil, err
 	}
-	for name, value := range map[string]string{"neverlauncher-desktop": "old-desktop", "neverguard": "old-guard", "neverruntime": "old-runtime"} {
+	for name, value := range map[string]string{"neverlauncher-desktop": "old-desktop", "guard": "old-guard", "neverruntime": "old-runtime"} {
 		if err := os.WriteFile(filepath.Join(live, name), []byte(value), 0o755); err != nil {
 			return nil, err
 		}
 	}
 	components := []componentUpdateArtifact0157{}
-	for _, row := range []struct{ component, name, data string }{{"desktop", "neverlauncher-desktop", "new-desktop"}, {"guard", "neverguard", "new-guard"}, {"runtime", "neverruntime", "new-runtime"}} {
+	for _, row := range []struct{ component, name, data string }{{"desktop", "neverlauncher-desktop", "new-desktop"}, {"guard", "guard", "new-guard"}, {"runtime", "neverruntime", "new-runtime"}} {
 		path := filepath.Join(bundle, row.name)
 		if err := os.WriteFile(path, []byte(row.data), 0o755); err != nil {
 			return nil, err
@@ -1228,7 +1228,7 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 		}
 		helpers = append(helpers, componentUpdateArtifact0157{Component: "updater", SourcePath: "neverlauncher-cli", TargetPath: "neverlauncher-cli", SHA256: h, Size: sz, Executable: true})
 		if target.Platform == "windows" {
-			sensorPath := filepath.Join(bundle, "neverguard-sensor.dll")
+			sensorPath := filepath.Join(bundle, "guard-sensor.dll")
 			if err := os.WriteFile(sensorPath, []byte("new-sensor"), 0o755); err != nil {
 				return nil, err
 			}
@@ -1236,7 +1236,7 @@ func runComponentUpdaterSelfTest0157() (map[string]any, error) {
 			if err != nil {
 				return nil, err
 			}
-			components = append(components, componentUpdateArtifact0157{Component: "sensor", SourcePath: "neverguard-sensor.dll", TargetPath: "neverguard-sensor.dll", SHA256: h, Size: sz, Executable: true})
+			components = append(components, componentUpdateArtifact0157{Component: "sensor", SourcePath: "guard-sensor.dll", TargetPath: "guard-sensor.dll", SHA256: h, Size: sz, Executable: true})
 		}
 	}
 	manifest := componentUpdateManifest0157{SchemaVersion: "1.0", Product: "NeverLauncher", ProductVersion: version, Platform: target.Platform, Architecture: target.Architecture, Layout: "adjacent-files", TrustMode: "development-self-test", Components: components, SupportFiles: helpers}

@@ -42,17 +42,17 @@ jobs:
           python3 scripts/smoke/offline/device-trust-e2e-matrix-0129.py
           python3 scripts/smoke/offline/device-trust-migration-stabilization-01210.py
           python3 scripts/smoke/offline/device-trust-release-0130.py
-          python3 scripts/smoke/offline/neverguard-windows-0131.py
-          python3 scripts/smoke/offline/neverguard-integrity-evidence-0132.py
-          python3 scripts/smoke/offline/neverguard-process-policy-0133.py
-          python3 scripts/smoke/offline/neverguard-guard-attestation-0134.py
+          python3 scripts/smoke/offline/guard-windows-0131.py
+          python3 scripts/smoke/offline/guard-integrity-evidence-0132.py
+          python3 scripts/smoke/offline/guard-process-policy-0133.py
+          python3 scripts/smoke/offline/guard-guard-attestation-0134.py
           python3 scripts/smoke/offline/minecraft-serverbridge-integrity-0135.py
           python3 scripts/smoke/offline/windows-production-hardening-0136.py
           python3 scripts/smoke/offline/linux-production-implementation-0137.py
           python3 scripts/smoke/offline/macos-production-implementation-0138.py
           python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
           python3 scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py
-          python3 scripts/smoke/offline/neverguard-release-0140.py
+          python3 scripts/smoke/offline/guard-release-0140.py
           python3 scripts/smoke/offline/serverbridge-protocol-v2-0141.py
           python3 scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py
           python3 scripts/smoke/offline/serverbridge-one-time-join-tickets-0143.py
@@ -102,7 +102,7 @@ jobs:
           python3 scripts/smoke/offline/loader-compatibility-rc-01711.py
           python3 scripts/smoke/offline/loader-compatibility-ga-0180.py
           python3 scripts/smoke/offline/windows-protection-core-II-0181.py
-          python3 scripts/smoke/offline/neverguard-sensor-0182.py
+          python3 scripts/smoke/offline/guard-sensor-0182.py
           python3 scripts/device_trust/matrix.py validate --targets device-trust/targets.json
           python3 scripts/device_trust/test_matrix.py
           python3 scripts/serverbridge/matrix.py validate --targets serverbridge/targets.json
@@ -159,7 +159,7 @@ jobs:
           npm run test:auth-experience
           npm run test:update-migration
           npm run test:launch-modes
-      - name: Type-check NeverExtensions TypeScript SDKs
+      - name: Type-check Extensions TypeScript SDKs
         run: |
           apps/admin/node_modules/.bin/tsc --noEmit --strict --target ES2020 --module ESNext --moduleResolution Bundler --lib ES2020,DOM sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/admin/typescript/neverlauncher-admin.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/typescript/neverlauncher-desktop.ts
 
@@ -190,12 +190,12 @@ jobs:
         run: |
           cargo fmt --manifest-path runtime/neverruntime/Cargo.toml
           cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml
-      - name: NeverRuntime + NeverGuard Linux test and clippy
+      - name: NeverRuntime + Guard Linux test and clippy
         run: |
           python3 scripts/smoke/offline/linux-production-implementation-0137.py
           python3 scripts/smoke/offline/guard-ci-release-certification-0139.py
           cargo test --manifest-path runtime/neverruntime/Cargo.toml
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_linux -- --nocapture
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_linux -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
           cargo build --release --manifest-path runtime/neverruntime/Cargo.toml
       - name: Build Desktop Tauri
@@ -206,7 +206,7 @@ jobs:
           cargo test --manifest-path src-tauri/Cargo.toml
           cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
           cargo build --release --manifest-path src-tauri/Cargo.toml
-      - name: Build Linux Desktop + NeverGuard production package
+      - name: Build Linux Desktop + Guard production package
         run: bash scripts/release/build-linux-desktop.sh
       - name: Emit Linux Guard CI evidence
         shell: bash
@@ -219,20 +219,20 @@ jobs:
             --target-id guard-linux-amd64 \
             --package "${DIR}/neverlauncher-desktop-${VERSION}-linux-amd64.zip" \
             --launcher "${DIR}/neverlauncher-desktop-linux-amd64" \
-            --guard "${DIR}/neverguard-linux-amd64" \
+            --guard "${DIR}/guard-linux-amd64" \
             --manifest "${DIR}/LINUX_PACKAGE_MANIFEST.json" \
             --allowlist "${DIR}/GUARD_RELEASE_ALLOWLIST_LINUX.json" \
             --signing-mode none-linux-integrity \
             --commit "${GITHUB_SHA}" --run-id "${GITHUB_RUN_ID}" --repository "${GITHUB_REPOSITORY}" \
             --output guard-ci-result/linux/guard-ci-result.json
-      - name: Upload Linux NeverGuard package
+      - name: Upload Linux Guard package
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-linux-neverguard-${{ github.sha }}
+          name: neverlauncher-linux-guard-${{ github.sha }}
           path: |
             dist/release-*/neverlauncher-desktop-*-linux-amd64.zip
             dist/release-*/neverlauncher-desktop-linux-amd64
-            dist/release-*/neverguard-linux-amd64
+            dist/release-*/guard-linux-amd64
             dist/release-*/LINUX_PACKAGE_MANIFEST.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_LINUX.json
           if-no-files-found: error
@@ -300,7 +300,7 @@ jobs:
           test -s "${DIR}/neverlauncher-cli-linux-${{ matrix.arch }}"
           test -s "${DIR}/neverlauncher-api-linux-${{ matrix.arch }}"
           test -s "${DIR}/neverlauncher-desktop-linux-${{ matrix.arch }}"
-          test -s "${DIR}/neverguard-linux-${{ matrix.arch }}"
+          test -s "${DIR}/guard-linux-${{ matrix.arch }}"
           test -s "${DIR}/neverruntime-linux-${{ matrix.arch }}"
           test -s "${DIR}/neverlauncher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
           python3 scripts/release/secret-scan.py "${DIR}/neverlauncher-linux-${{ matrix.arch }}-${VERSION}.tar.gz"
@@ -315,15 +315,15 @@ jobs:
             dist/release-*/neverlauncher-cli-linux-${{ matrix.arch }}
             dist/release-*/neverlauncher-api-linux-${{ matrix.arch }}
             dist/release-*/neverlauncher-desktop-linux-${{ matrix.arch }}
-            dist/release-*/neverguard-linux-${{ matrix.arch }}
+            dist/release-*/guard-linux-${{ matrix.arch }}
             dist/release-*/neverruntime-linux-${{ matrix.arch }}
             dist/release-*/neverlauncher-linux-${{ matrix.arch }}-*.tar.gz
             dist/release-*/LINUX_PACKAGE_MANIFEST_*.json
           if-no-files-found: error
           retention-days: 14
 
-  neverguard-windows:
-    name: NeverGuard Windows x64 + ARM64 delivery boundary
+  guard-windows:
+    name: Guard Windows x64 + ARM64 delivery boundary
     runs-on: windows-2022
     timeout-minutes: 50
     steps:
@@ -348,55 +348,55 @@ jobs:
         with:
           components: rustfmt,clippy
           targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
-      - name: NeverGuard Windows integration test
+      - name: Guard Windows integration test
         run: |
           python scripts/smoke/offline/windows-production-hardening-0136.py
           python scripts/smoke/offline/windows-protection-core-II-0181.py
-          python scripts/smoke/offline/neverguard-sensor-0182.py
-          python scripts/smoke/offline/neverguard-module-guard-0183.py
-          python scripts/smoke/offline/neverguard-aggressive-hook-engine-0184.py
-          python scripts/smoke/offline/neverguard-memory-integrity-0185.py
-          python scripts/smoke/offline/neverguard-thread-process-integrity-0186.py
-          python scripts/smoke/offline/neverguard-debug-instrumentation-0187.py
-          python scripts/smoke/offline/neverguard-jvm-aware-protection-0188.py
-          python scripts/smoke/offline/neverguard-continuous-guard-0189.py
-          python scripts/smoke/offline/neverguard-attestation-v2-01810.py
+          python scripts/smoke/offline/guard-sensor-0182.py
+          python scripts/smoke/offline/guard-module-guard-0183.py
+          python scripts/smoke/offline/guard-aggressive-hook-engine-0184.py
+          python scripts/smoke/offline/guard-memory-integrity-0185.py
+          python scripts/smoke/offline/guard-thread-process-integrity-0186.py
+          python scripts/smoke/offline/guard-debug-instrumentation-0187.py
+          python scripts/smoke/offline/guard-jvm-aware-protection-0188.py
+          python scripts/smoke/offline/guard-continuous-guard-0189.py
+          python scripts/smoke/offline/guard-attestation-v2-01810.py
           cd services/api
           go test ./internal/httpapi -run 'TestGuardAttestationV2' -count=1
           go test ./internal/dbmigrate -run 'TestGuardAttestationV2Migration01810' -count=1
           cd ../..
           python scripts/smoke/offline/guard-ci-release-certification-0139.py
           cargo fmt --manifest-path runtime/neverruntime/Cargo.toml
-          cargo fmt --manifest-path runtime/neverguard-sensor/Cargo.toml
-          cargo fmt --manifest-path runtime/neverguard-memory-probe/Cargo.toml
-          cargo fmt --manifest-path runtime/neverguard-thread-probe/Cargo.toml
-          cargo fmt --manifest-path runtime/neverguard-debug-probe/Cargo.toml
-          cargo fmt --manifest-path runtime/neverguard-jvm-probe/Cargo.toml
-          cargo build --manifest-path runtime/neverguard-sensor/Cargo.toml
-          cargo build --manifest-path runtime/neverguard-memory-probe/Cargo.toml
-          cargo build --manifest-path runtime/neverguard-thread-probe/Cargo.toml
-          cargo build --manifest-path runtime/neverguard-debug-probe/Cargo.toml
-          cargo build --manifest-path runtime/neverguard-jvm-probe/Cargo.toml
-          $env:NEVERGUARD_SENSOR_TEST_DLL = (Resolve-Path "runtime/neverguard-sensor/target/debug/neverguard_sensor.dll").Path
-          $env:NEVERGUARD_MEMORY_PROBE_DLL = (Resolve-Path "runtime/neverguard-memory-probe/target/debug/neverguard_memory_probe.dll").Path
-          $env:NEVERGUARD_THREAD_PROBE_DLL = (Resolve-Path "runtime/neverguard-thread-probe/target/debug/neverguard_thread_probe.dll").Path
-          $env:NEVERGUARD_DEBUG_PROBE_EXE = (Resolve-Path "runtime/neverguard-debug-probe/target/debug/neverguard-debug-probe.exe").Path
-          $env:NEVERGUARD_JVM_PROBE_DLL = (Resolve-Path "runtime/neverguard-jvm-probe/target/debug/neverguard_jvm_probe.dll").Path
+          cargo fmt --manifest-path runtime/guard-sensor/Cargo.toml
+          cargo fmt --manifest-path runtime/guard-memory-probe/Cargo.toml
+          cargo fmt --manifest-path runtime/guard-thread-probe/Cargo.toml
+          cargo fmt --manifest-path runtime/guard-debug-probe/Cargo.toml
+          cargo fmt --manifest-path runtime/guard-jvm-probe/Cargo.toml
+          cargo build --manifest-path runtime/guard-sensor/Cargo.toml
+          cargo build --manifest-path runtime/guard-memory-probe/Cargo.toml
+          cargo build --manifest-path runtime/guard-thread-probe/Cargo.toml
+          cargo build --manifest-path runtime/guard-debug-probe/Cargo.toml
+          cargo build --manifest-path runtime/guard-jvm-probe/Cargo.toml
+          $env:NEVERGUARD_SENSOR_TEST_DLL = (Resolve-Path "runtime/guard-sensor/target/debug/guard_sensor.dll").Path
+          $env:NEVERGUARD_MEMORY_PROBE_DLL = (Resolve-Path "runtime/guard-memory-probe/target/debug/guard_memory_probe.dll").Path
+          $env:NEVERGUARD_THREAD_PROBE_DLL = (Resolve-Path "runtime/guard-thread-probe/target/debug/guard_thread_probe.dll").Path
+          $env:NEVERGUARD_DEBUG_PROBE_EXE = (Resolve-Path "runtime/guard-debug-probe/target/debug/guard-debug-probe.exe").Path
+          $env:NEVERGUARD_JVM_PROBE_DLL = (Resolve-Path "runtime/guard-jvm-probe/target/debug/guard_jvm_probe.dll").Path
           $env:NEVERGUARD_EXPECTED_JAVA_MAJOR = "21"
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib integrity::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_sensor_windows neverguard_continuous_guard_cross_checks_sensor_and_guard_heartbeat -- --nocapture
-          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_sensor_windows -- --nocapture
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_windows -- --nocapture
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat -- --nocapture
+          cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_attestation_v2::tests -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
-          cargo clippy --manifest-path runtime/neverguard-sensor/Cargo.toml --all-targets -- -D warnings
-          cargo clippy --manifest-path runtime/neverguard-memory-probe/Cargo.toml --all-targets -- -D warnings
-          cargo clippy --manifest-path runtime/neverguard-thread-probe/Cargo.toml --all-targets -- -D warnings
-          cargo clippy --manifest-path runtime/neverguard-debug-probe/Cargo.toml --all-targets -- -D warnings
-          cargo clippy --manifest-path runtime/neverguard-jvm-probe/Cargo.toml --all-targets -- -D warnings
+          cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings
+          cargo clippy --manifest-path runtime/guard-memory-probe/Cargo.toml --all-targets -- -D warnings
+          cargo clippy --manifest-path runtime/guard-thread-probe/Cargo.toml --all-targets -- -D warnings
+          cargo clippy --manifest-path runtime/guard-debug-probe/Cargo.toml --all-targets -- -D warnings
+          cargo clippy --manifest-path runtime/guard-jvm-probe/Cargo.toml --all-targets -- -D warnings
       - name: Unified transactional updater self-test
         shell: pwsh
         run: |
@@ -414,15 +414,15 @@ jobs:
         run: |
           $Version = (Get-Content VERSION -Raw).Trim()
           $Dir = "dist/release-$Version"
-          python scripts/guard_ci/matrix.py result --targets guard-ci/targets.json --target-id guard-windows-amd64 --package "$Dir/neverlauncher-desktop-$Version-windows-amd64.zip" --launcher "$Dir/neverlauncher-desktop-windows-amd64.exe" --guard "$Dir/neverguard-windows-amd64.exe" --manifest "$Dir/WINDOWS_PACKAGE_MANIFEST.json" --allowlist "$Dir/GUARD_RELEASE_ALLOWLIST_WINDOWS.json" --signing-mode unsigned-development-ci --commit "$env:GITHUB_SHA" --run-id "$env:GITHUB_RUN_ID" --repository "$env:GITHUB_REPOSITORY" --output guard-ci-result/windows/guard-ci-result.json
+          python scripts/guard_ci/matrix.py result --targets guard-ci/targets.json --target-id guard-windows-amd64 --package "$Dir/neverlauncher-desktop-$Version-windows-amd64.zip" --launcher "$Dir/neverlauncher-desktop-windows-amd64.exe" --guard "$Dir/guard-windows-amd64.exe" --manifest "$Dir/WINDOWS_PACKAGE_MANIFEST.json" --allowlist "$Dir/GUARD_RELEASE_ALLOWLIST_WINDOWS.json" --signing-mode unsigned-development-ci --commit "$env:GITHUB_SHA" --run-id "$env:GITHUB_RUN_ID" --repository "$env:GITHUB_REPOSITORY" --output guard-ci-result/windows/guard-ci-result.json
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-windows-neverguard-${{ github.sha }}
+          name: neverlauncher-windows-guard-${{ github.sha }}
           path: |
             dist/release-*/neverlauncher-desktop-*-windows-amd64.zip
             dist/release-*/neverlauncher-desktop-windows-amd64.exe
-            dist/release-*/neverguard-windows-amd64.exe
+            dist/release-*/guard-windows-amd64.exe
             dist/release-*/WINDOWS_PACKAGE_MANIFEST.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_WINDOWS.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json
@@ -430,10 +430,10 @@ jobs:
             dist/release-*/neverlauncher-cli-windows-arm64.exe
             dist/release-*/neverlauncher-desktop-windows-x64.exe
             dist/release-*/neverlauncher-desktop-windows-arm64.exe
-            dist/release-*/neverguard-windows-x64.exe
-            dist/release-*/neverguard-windows-arm64.exe
-            dist/release-*/neverguard-sensor-windows-x64.dll
-            dist/release-*/neverguard-sensor-windows-arm64.dll
+            dist/release-*/guard-windows-x64.exe
+            dist/release-*/guard-windows-arm64.exe
+            dist/release-*/guard-sensor-windows-x64.dll
+            dist/release-*/guard-sensor-windows-arm64.dll
             dist/release-*/neverruntime-windows-x64.exe
             dist/release-*/neverruntime-windows-arm64.exe
             dist/release-*/neverlauncher-desktop-*-windows-x64.zip
@@ -449,8 +449,8 @@ jobs:
           path: guard-ci-result/windows/guard-ci-result.json
           if-no-files-found: error
 
-  neverguard-macos:
-    name: NeverGuard macOS production implementation
+  guard-macos:
+    name: Guard macOS production implementation
     runs-on: macos-14
     timeout-minutes: 45
     steps:
@@ -477,13 +477,13 @@ jobs:
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib integrity::tests -- --nocapture
           cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib attestation::tests -- --nocapture
           cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings
-          cargo build --manifest-path runtime/neverruntime/Cargo.toml --bin neverguard
-      - name: Signed macOS NeverGuard integration test
+          cargo build --manifest-path runtime/neverruntime/Cargo.toml --bin guard
+      - name: Signed macOS Guard integration test
         shell: bash
         run: |
-          TEST_BIN="$(cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_macos --no-run --message-format=json | python3 -c 'import json,sys; xs=[]; [xs.append(x.get("executable")) for line in sys.stdin for x in [json.loads(line)] if x.get("reason")=="compiler-artifact" and x.get("target",{}).get("name")=="neverguard_macos" and x.get("executable")]; print(xs[-1])')"
+          TEST_BIN="$(cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_macos --no-run --message-format=json | python3 -c 'import json,sys; xs=[]; [xs.append(x.get("executable")) for line in sys.stdin for x in [json.loads(line)] if x.get("reason")=="compiler-artifact" and x.get("target",{}).get("name")=="guard_macos" and x.get("executable")]; print(xs[-1])')"
           test -n "${TEST_BIN}"
-          codesign --force --sign - --options runtime --timestamp=none runtime/neverruntime/target/debug/neverguard
+          codesign --force --sign - --options runtime --timestamp=none runtime/neverruntime/target/debug/guard
           codesign --force --sign - --options runtime --timestamp=none "${TEST_BIN}"
           "${TEST_BIN}" --nocapture
       - name: Build Desktop frontend
@@ -503,7 +503,7 @@ jobs:
             --target-id guard-macos-universal \
             --package "${DIR}/neverlauncher-desktop-${VERSION}-macos-universal.zip" \
             --launcher "${DIR}/neverlauncher-desktop-macos-universal" \
-            --guard "${DIR}/neverguard-macos-universal" \
+            --guard "${DIR}/guard-macos-universal" \
             --manifest "${DIR}/MACOS_PACKAGE_MANIFEST.json" \
             --allowlist "${DIR}/GUARD_RELEASE_ALLOWLIST_MACOS.json" \
             --signing-mode adhoc-ci \
@@ -512,11 +512,11 @@ jobs:
       - name: Upload macOS package
         uses: actions/upload-artifact@v4
         with:
-          name: neverlauncher-macos-neverguard-${{ github.sha }}
+          name: neverlauncher-macos-guard-${{ github.sha }}
           path: |
             dist/release-*/neverlauncher-desktop-*-macos-universal.zip
             dist/release-*/neverlauncher-desktop-macos-universal
-            dist/release-*/neverguard-macos-universal
+            dist/release-*/guard-macos-universal
             dist/release-*/MACOS_PACKAGE_MANIFEST.json
             dist/release-*/GUARD_RELEASE_ALLOWLIST_MACOS.json
           if-no-files-found: error
@@ -578,8 +578,8 @@ jobs:
             dist/release-*/neverlauncher-cli-macos-arm64
             dist/release-*/neverlauncher-desktop-macos-x64
             dist/release-*/neverlauncher-desktop-macos-arm64
-            dist/release-*/neverguard-macos-x64
-            dist/release-*/neverguard-macos-arm64
+            dist/release-*/guard-macos-x64
+            dist/release-*/guard-macos-arm64
             dist/release-*/neverruntime-macos-x64
             dist/release-*/neverruntime-macos-arm64
             dist/release-*/neverlauncher-desktop-*-macos-x64.zip
@@ -593,7 +593,7 @@ jobs:
 
   guard-certification:
     name: Cross-platform Guard CI matrix certification
-    needs: [rust-desktop, neverguard-windows, neverguard-macos]
+    needs: [rust-desktop, guard-windows, guard-macos]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -734,7 +734,7 @@ jobs:
 
   production-e2e:
     name: PostgreSQL + Redis + actual Minecraft Client E2E
-    needs: [storage-parity-0371, go-contracts, web, rust-desktop, bridge, containers, linux-production, macos-production, neverguard-windows, neverguard-macos, guard-certification, managed-jre-production]
+    needs: [storage-parity-0371, go-contracts, web, rust-desktop, bridge, containers, linux-production, macos-production, guard-windows, guard-macos, guard-certification, managed-jre-production]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -769,7 +769,7 @@ jobs:
         run: bash e2e/scripts/run-durable-boundaries-0213-e2e.sh
       - name: Device Trust 0.12.9 to 0.12.10 migration E2E
         run: bash e2e/scripts/run-device-trust-migration-e2e.sh
-      - name: NeverGuard 0.13.9 to 0.13.10 migration E2E
+      - name: Guard 0.13.9 to 0.13.10 migration E2E
         run: bash e2e/scripts/run-guard-migration-e2e.sh
       - name: ServerBridge 0.14.0 to 0.14.2 migration E2E
         run: bash e2e/scripts/run-serverbridge-v2-migration-e2e.sh
@@ -829,57 +829,57 @@ jobs:
           python3 scripts/smoke/offline/serverbridge3-ga-0200.py
           (cd services/api && go test -run 'TestServerBridgeGA0200' ./internal/httpapi)
           (cd cli && go test -run 'TestServerBridge.*0200|TestVerifyServerBridge3GACertification0200' ./cmd/neverlauncher ./internal/dbmigrate)
-      - name: NeverExtensions Core 0.20.1 gate
+      - name: Extensions Core 0.20.1 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-core-0201.py
-          (cd services/api && go test -run 'TestNeverExtensionsCoreHTTP0201|TestExtensionMemoryRepository' ./internal/httpapi ./internal/repository ./internal/dbmigrate)
+          python3 scripts/smoke/offline/extensions-core-0201.py
+          (cd services/api && go test -run 'TestExtensionsCoreHTTP0201|TestExtensionMemoryRepository' ./internal/httpapi ./internal/repository ./internal/dbmigrate)
           (cd cli && go test -run 'TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/neverlauncher ./internal/dbmigrate)
-      - name: NeverExtensions Extension Package 0.20.2 gate
+      - name: Extensions Extension Package 0.20.2 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-package-0202.py
+          python3 scripts/smoke/offline/extensions-package-0202.py
           (cd cli && go test -run 'TestExtensionPackage.*0202|TestCanonicalExtensionManifestValidate0201|TestImportLegacyPluginManifest0201' ./cmd/neverlauncher)
           (cd cli && go vet ./cmd/neverlauncher)
-      - name: NeverExtensions Registry 0.20.3 gate
+      - name: Extensions Registry 0.20.3 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-registry-0203.py
-          (cd services/api && go test -run 'TestNeverExtensionsRegistry.*0203|TestVerifyRegistryPackageAcceptsOlderCLISBOM0203|TestExtensionRegistryMemoryProductionLifecycle0203|TestNeverExtensionsRegistryMigration0203' ./internal/httpapi ./internal/extensionpackage ./internal/repository ./internal/dbmigrate)
+          python3 scripts/smoke/offline/extensions-registry-0203.py
+          (cd services/api && go test -run 'TestExtensionsRegistry.*0203|TestVerifyRegistryPackageAcceptsOlderCLISBOM0203|TestExtensionRegistryMemoryProductionLifecycle0203|TestExtensionsRegistryMigration0203' ./internal/httpapi ./internal/extensionpackage ./internal/repository ./internal/dbmigrate)
           (cd cli && go test -run 'TestExtensionRegistry.*0203|TestExtensionPackage.*0202' ./cmd/neverlauncher ./internal/dbmigrate)
           (cd cli && go vet ./cmd/neverlauncher)
-      - name: NeverExtensions Install Lifecycle 0.20.4 gate
+      - name: Extensions Install Lifecycle 0.20.4 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-install-lifecycle-0204.py
-          (cd services/api && go test -run 'TestExtensionLifecycle.*0204|TestExtractPayloadFile0204|TestNeverExtensionsInstallLifecycleMigration0204' ./internal/extensionpackage ./internal/repository ./internal/dbmigrate ./internal/extensionlifecycle)
+          python3 scripts/smoke/offline/extensions-install-lifecycle-0204.py
+          (cd services/api && go test -run 'TestExtensionLifecycle.*0204|TestExtractPayloadFile0204|TestExtensionsInstallLifecycleMigration0204' ./internal/extensionpackage ./internal/repository ./internal/dbmigrate ./internal/extensionlifecycle)
           (cd cli && go test -run 'TestExtensionLifecycle.*0204' ./cmd/neverlauncher ./internal/dbmigrate)
           (cd cli && go vet ./cmd/neverlauncher)
-      - name: NeverExtensions Extension Host 1 0.20.5 gate
+      - name: Extensions Extension Host 1 0.20.5 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-host-0205.py
+          python3 scripts/smoke/offline/extensions-host-0205.py
           (cd services/api && go test -run 'TestExtensionHost.*0205|TestSafeEntrypointRejectsSymlink0205|TestSanitizedEnvironmentNeverForwardsSecrets0205|TestStartRequiresEnabledState0205' ./internal/extensionhost)
           (cd services/api && go test -run 'TestExtensionHostAdmin.*0205' ./internal/httpapi)
           (cd cli && go test -run 'TestExtensionHostCLI0205|TestExtensionLifecycle.*0204' ./cmd/neverlauncher)
           (cd cli && go vet ./cmd/neverlauncher)
-      - name: NeverExtensions Events & Hooks 0.20.6 gate
+      - name: Extensions Events & Hooks 0.20.6 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-events-0206.py
+          python3 scripts/smoke/offline/extensions-events-0206.py
           (cd services/api && go test -run 'TestEventBus.*0206|TestSyncHook.*0206|TestAsyncDelivery.*0206|TestSubscription.*0206|TestTypedProjectPayload.*0206|TestDeliveryLeaseFencing.*0206|TestDisabledInstall.*0206' ./internal/eventbus)
           (cd services/api && go test -run 'TestEventSubscriptionPermissionBoundary0206|TestValidateCallbackURLLoopbackOnly0206' ./internal/extensionhost)
-          (cd services/api && go test -run 'TestNeverExtensionsEventsHooksMigration0206' ./internal/dbmigrate)
+          (cd services/api && go test -run 'TestExtensionsEventsHooksMigration0206' ./internal/dbmigrate)
           (cd services/api && go vet ./internal/eventbus ./internal/extensionhost)
           (cd cli && go test ./internal/dbmigrate)
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions Permissions & Capability Security 0.20.7 gate
+      - name: Extensions Permissions & Capability Security 0.20.7 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-capability-security-0207.py
+          python3 scripts/smoke/offline/extensions-capability-security-0207.py
           (cd services/api && go test -run 'TestDenyByDefaultGrantRevokeAndDiff0207|TestProjectScopedGrant0207|TestSecretsEncryptedAuthenticated0207' ./internal/extensionsecurity)
           (cd services/api && go test -run 'TestEventSubscriptionPermissionBoundary0206|TestExtensionHost.*0205|TestForbiddenOutboundIP0207' ./internal/extensionhost)
-          (cd services/api && go test -run 'TestNeverExtensionsCapabilitySecurityMigration0207' ./internal/dbmigrate)
+          (cd services/api && go test -run 'TestExtensionsCapabilitySecurityMigration0207' ./internal/dbmigrate)
           (cd services/api && go vet ./internal/extensionsecurity ./internal/extensionhost)
           (cd cli && go test -run 'TestExtensionSecurityCLI0207' ./cmd/neverlauncher && go test ./internal/dbmigrate)
           (cd cli && go vet ./cmd/neverlauncher)
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions Admin Extensions 0.20.8 gate
+      - name: Extensions Admin Extensions 0.20.8 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-admin-0208.py
+          python3 scripts/smoke/offline/extensions-admin-0208.py
           (cd services/api && go test -run 'TestAdminContributions0208' ./internal/repository)
           (cd services/api && go test -run 'TestAdminHTMLHardening0208|TestSafeAdminEntrypoint0208|TestAdminProjectScope0208|TestAdminEntrypointServedFromEnabledVerifiedInstall0208' ./internal/httpapi)
           (cd services/api && go vet ./internal/repository ./internal/httpapi)
@@ -888,9 +888,9 @@ jobs:
           npm ci --prefix apps/admin
           npm run build --prefix apps/admin
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions Desktop & CLI Extensions 0.20.9 gate
+      - name: Extensions Desktop & CLI Extensions 0.20.9 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-desktop-cli-0209.py
+          python3 scripts/smoke/offline/extensions-desktop-cli-0209.py
           (cd services/api && go test -run 'TestDesktop.*0209|TestCLIExtension.*0209|TestLifecycleStopTerminatesTransientCLI0209' ./internal/httpapi ./internal/extensionhost)
           (cd services/api && go test -run 'TestDesktopAndCLIContributions0209|TestCanonicalFourTargetManifest0209' ./internal/repository)
           (cd services/api && go vet ./internal/httpapi ./internal/extensionhost ./internal/repository)
@@ -900,9 +900,9 @@ jobs:
           npm run build --prefix apps/desktop
           cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions SDK 0.20.10 gate
+      - name: Extensions SDK 0.20.10 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-sdk-02010.py
+          python3 scripts/smoke/offline/extensions-sdk-02010.py
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk/backend/go/types_generated.go sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/generated.ts sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/desktop/rust/src/generated.rs sdk/api/openapi-operations-generated.json
           (cd sdk/backend/go && go test ./... && go vet ./...)
@@ -916,27 +916,27 @@ jobs:
           /tmp/nl-sdk extension dev examples/extensions/backend-health --target backend --sdk-root sdk --duration 2s
           /tmp/nl-sdk extension dev examples/extensions/cli-status --target cli --sdk-root sdk --duration 5s -- status
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions Dependencies & Updates 0.20.11 gate
+      - name: Extensions Dependencies & Updates 0.20.11 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-dependencies-updates-02011.py
+          python3 scripts/smoke/offline/extensions-dependencies-updates-02011.py
           (cd services/api && go test -run '02011' ./internal/extensionresolver ./internal/extensionupdates ./internal/repository ./internal/dbmigrate)
           (cd services/api && go vet ./internal/extensionresolver ./internal/extensionupdates ./internal/repository)
           (cd cli && go test -run '02011' ./cmd/neverlauncher ./internal/dbmigrate && go vet ./cmd/neverlauncher)
           python3 scripts/contracts/validate-openapi.py
           python3 scripts/sdk/generate-types.py
           git diff --exit-code -- sdk/backend/go/openapi_generated.go sdk/backend/go/api_types_generated.go sdk/cli/go/openapi_generated.go sdk/cli/go/api_types_generated.go sdk/admin/typescript/openapi-generated.ts sdk/admin/typescript/api-types-generated.ts sdk/admin/typescript/api-requests-generated.ts sdk/desktop/typescript/openapi-generated.ts sdk/desktop/typescript/api-types-generated.ts sdk/desktop/typescript/api-requests-generated.ts sdk/api/openapi-operations-generated.json
-      - name: NeverExtensions Trust, Recovery & Certification 0.20.12 gate
+      - name: Extensions Trust, Recovery & Certification 0.20.12 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-trust-recovery-certification-02012.py
-          python3 scripts/compatibility/neverextensions_trust_02012.py validate
+          python3 scripts/smoke/offline/extensions-trust-recovery-certification-02012.py
+          python3 scripts/compatibility/extensions_trust_02012.py validate
           (cd services/api && go test -run '02012|TestExtensionHostCrashLoopDetection0205' ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/dbmigrate ./internal/httpapi ./cmd/neverlauncher-api)
           (cd services/api && go vet ./internal/extensiontrust ./internal/extensionpackage ./internal/extensionlifecycle ./internal/extensionhost ./internal/repository ./internal/httpapi ./cmd/neverlauncher-api)
           (cd cli && go test -run '02012' ./cmd/neverlauncher ./internal/dbmigrate && go vet ./cmd/neverlauncher)
           python3 scripts/contracts/validate-openapi.py
-      - name: NeverExtensions GA 0.21.0 gate
+      - name: Extensions GA 0.21.0 gate
         run: |
-          python3 scripts/smoke/offline/neverextensions-ga-0210.py
-          python3 scripts/compatibility/neverextensions_ga_0210.py validate
+          python3 scripts/smoke/offline/extensions-ga-0210.py
+          python3 scripts/compatibility/extensions_ga_0210.py validate
           (cd services/api && go test ./internal/extensioncontract ./internal/extensionga)
           (cd cli && go test ./cmd/neverlauncher -run '0210|ExtensionUpgradeSource')
           (cd sdk/backend/go && go test ./...)
@@ -981,12 +981,11 @@ jobs:
           python3 -m unittest discover -s scripts/ga -p 'test_verify_player_cycle_0398.py' -v
       - name: Materialize -> publish -> sync -> launch actual Minecraft -> join -> revoke -> deny
         run: bash e2e/scripts/run-minecraft-e2e.sh
-      - name: 0.42.0 exact Go race/fault evidence and mandatory 14-target live Minecraft gate
+      - name: 0.42+ exact Go race/fault evidence and mandatory 14-target live Minecraft gate
         if: ${{ always() && success() }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$(cat VERSION)" != "0.42.0" ]]; then exit 0; fi
           (
             cd cli
             GOTOOLCHAIN=local go test -json -race -count=1 -timeout 240s ./cmd/neverlauncher \
@@ -994,7 +993,7 @@ jobs:
           ) > e2e/runtime/network-faults-0420.go-test.jsonl
           python3 scripts/ga/record_network_faults_0420.py \
             --log e2e/runtime/network-faults-0420.go-test.jsonl \
-            --source-commit "$GITHUB_SHA" --version 0.42.0 \
+            --source-commit "$GITHUB_SHA" --version "$(cat VERSION)" \
             --out e2e/runtime/network-faults-0420.json
           python3 serverbridge/live_matrix_04113.py --root . --scope all \
             --runtime e2e/runtime --out e2e/runtime/live-matrix-all-0420.json
@@ -1097,7 +1096,7 @@ jobs:
             e2e/device-trust-migration-result/
           if-no-files-found: ignore
           retention-days: 14
-      - name: Upload NeverGuard migration evidence
+      - name: Upload Guard migration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -1138,8 +1137,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  neverguard-windows-adversarial:
-    name: NeverGuard Windows adversarial Java ${{ matrix.java }}
+  guard-windows-adversarial:
+    name: Guard Windows adversarial Java ${{ matrix.java }}
     runs-on: windows-2022
     timeout-minutes: 60
     strategy:
@@ -1160,14 +1159,14 @@ jobs:
         with:
           components: rustfmt,clippy
           targets: x86_64-pc-windows-msvc
-      - name: Build NeverGuard Sensor and adversarial fixtures
+      - name: Build Guard Sensor and adversarial fixtures
         shell: pwsh
         run: |
-          cargo build --manifest-path runtime/neverguard-sensor/Cargo.toml
-          cargo build --manifest-path runtime/neverguard-memory-probe/Cargo.toml
-          cargo build --manifest-path runtime/neverguard-thread-probe/Cargo.toml
-          cargo build --manifest-path runtime/neverguard-debug-probe/Cargo.toml
-          cargo build --manifest-path runtime/neverguard-jvm-probe/Cargo.toml
+          cargo build --manifest-path runtime/guard-sensor/Cargo.toml
+          cargo build --manifest-path runtime/guard-memory-probe/Cargo.toml
+          cargo build --manifest-path runtime/guard-thread-probe/Cargo.toml
+          cargo build --manifest-path runtime/guard-debug-probe/Cargo.toml
+          cargo build --manifest-path runtime/guard-jvm-probe/Cargo.toml
           cargo build --manifest-path runtime/neverruntime/Cargo.toml --tests
       - name: Execute live Windows attack simulation and compatibility certification
         shell: pwsh
@@ -1175,11 +1174,11 @@ jobs:
           $out = "guard-ci-result/windows-adversarial/java-${{ matrix.java }}/windows-adversarial-result.json"
           python scripts/guard_ci/windows_adversarial.py run `
             --java-major "${{ matrix.java }}" `
-            --sensor (Resolve-Path "runtime/neverguard-sensor/target/debug/neverguard_sensor.dll").Path `
-            --memory-probe (Resolve-Path "runtime/neverguard-memory-probe/target/debug/neverguard_memory_probe.dll").Path `
-            --thread-probe (Resolve-Path "runtime/neverguard-thread-probe/target/debug/neverguard_thread_probe.dll").Path `
-            --debug-probe (Resolve-Path "runtime/neverguard-debug-probe/target/debug/neverguard-debug-probe.exe").Path `
-            --jvm-probe (Resolve-Path "runtime/neverguard-jvm-probe/target/debug/neverguard_jvm_probe.dll").Path `
+            --sensor (Resolve-Path "runtime/guard-sensor/target/debug/guard_sensor.dll").Path `
+            --memory-probe (Resolve-Path "runtime/guard-memory-probe/target/debug/guard_memory_probe.dll").Path `
+            --thread-probe (Resolve-Path "runtime/guard-thread-probe/target/debug/guard_thread_probe.dll").Path `
+            --debug-probe (Resolve-Path "runtime/guard-debug-probe/target/debug/guard-debug-probe.exe").Path `
+            --jvm-probe (Resolve-Path "runtime/guard-jvm-probe/target/debug/guard_jvm_probe.dll").Path `
             --repository "$env:GITHUB_REPOSITORY" `
             --commit "$env:GITHUB_SHA" `
             --run-id "$env:GITHUB_RUN_ID" `
@@ -1187,21 +1186,21 @@ jobs:
       - name: Validate 0.18.11 adversarial CI production gate
         shell: pwsh
         run: |
-          python scripts/smoke/offline/neverguard-windows-adversarial-ci-01811.py
+          python scripts/smoke/offline/guard-windows-adversarial-ci-01811.py
           python scripts/guard_ci/test_windows_adversarial.py
       - name: Upload per-Java adversarial evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverguard-windows-adversarial-java-${{ matrix.java }}-${{ github.sha }}
+          name: guard-windows-adversarial-java-${{ matrix.java }}-${{ github.sha }}
           path: guard-ci-result/windows-adversarial/java-${{ matrix.java }}/windows-adversarial-result.json
           if-no-files-found: error
           retention-days: 30
 
-  neverguard-windows-adversarial-certificate:
-    name: NeverGuard Windows adversarial certification
+  guard-windows-adversarial-certificate:
+    name: Guard Windows adversarial certification
     if: always()
-    needs: [neverguard-windows-adversarial]
+    needs: [guard-windows-adversarial]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -1211,7 +1210,7 @@ jobs:
       - name: Download per-Java adversarial evidence
         uses: actions/download-artifact@v4
         with:
-          pattern: neverguard-windows-adversarial-java-*
+          pattern: guard-windows-adversarial-java-*
           path: guard-ci-result/windows-adversarial/results
       - name: Aggregate and certify Windows adversarial matrix
         shell: bash
@@ -1234,19 +1233,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/smoke/offline/neverguard-windows-protection-rc-01812.py
+          python3 scripts/smoke/offline/guard-windows-protection-rc-01812.py
           (cd cli && go test ./cmd/neverlauncher -run 'TestWindowsProtection' -count=1)
       - name: Validate 0.19.0 Windows Protection GA production gate
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/smoke/offline/neverguard-windows-protection-ga-0190.py
+          python3 scripts/smoke/offline/guard-windows-protection-ga-0190.py
           (cd cli && go test ./cmd/neverlauncher -run 'TestWindowsProtectionGA' -count=1)
       - name: Upload Windows adversarial certificate
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: neverguard-windows-adversarial-certificate-${{ github.sha }}
+          name: guard-windows-adversarial-certificate-${{ github.sha }}
           path: |
             guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.json
             guard-ci-result/windows-adversarial/certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.md
@@ -1497,7 +1496,7 @@ jobs:
   required-ci:
     name: REQUIRED CI — all jobs SUCCESS for exact commit
     if: ${{ always() }}
-    needs: [minimal-live-e2e-0378, storage-parity-0371, go-contracts, web, rust-desktop, linux-production, neverguard-windows, neverguard-macos, macos-production, guard-certification, bridge, containers, managed-jre-production, production-e2e, neverguard-windows-adversarial, neverguard-windows-adversarial-certificate, release-ga-policy]
+    needs: [minimal-live-e2e-0378, storage-parity-0371, go-contracts, web, rust-desktop, linux-production, guard-windows, guard-macos, macos-production, guard-certification, bridge, containers, managed-jre-production, production-e2e, guard-windows-adversarial, guard-windows-adversarial-certificate, release-ga-policy]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

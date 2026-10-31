@@ -2,7 +2,7 @@
 
 ## Источники
 
-Workflows: `.github/workflows/ci.yml`, `compatibility.yml`, `device-trust.yml`, `security.yml`, `neverextensions-ga-0210.yml`, `production-release-candidate.yml` и delivery workflows. Проверяйте **точный SHA и job log**, а не только общий счётчик checks.
+Workflows: `.github/workflows/ci.yml`, `compatibility.yml`, `device-trust.yml`, `security.yml`, `extensions-ga-0210.yml`, `production-release-candidate.yml` и delivery workflows. Проверяйте **точный SHA и job log**, а не только общий счётчик checks.
 
 ## Порядок расследования
 

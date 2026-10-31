@@ -3,7 +3,7 @@ package ru.example.neverlauncher;
 import ru.neverlauncher.sdk.core.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Real lifecycle example. The backend supervises this JVM as an ordinary NeverExtensions process. */
+/** Real lifecycle example. The backend supervises this JVM as an ordinary Extensions process. */
 public final class LifecycleExample implements Extension {
     private final AtomicBoolean started=new AtomicBoolean();
     @Override public void start(ExtensionContext context) throws Exception {

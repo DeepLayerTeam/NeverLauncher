@@ -24,60 +24,74 @@ def version_tuple(value: str) -> tuple[int, int, int]:
 
 version = read("VERSION").strip()
 if version_tuple(version) < (0, 13, 6):
-    raise SystemExit(f"Windows production hardening gate requires >=0.13.6, got {version}")
+    raise SystemExit(
+        f"Windows production hardening gate requires >=0.13.6, got {version}"
+    )
 
 policy = read("runtime/neverruntime/src/windows_policy.rs")
-require(policy, [
-    "NEVERGUARD_WINDOWS_HARDENING_VERSION: u32 = 1",
-    "HeapSetInformation",
-    "HeapEnableTerminationOnCorruption",
-    "SetDllDirectoryW",
-    "SetDefaultDllDirectories",
-    "LOAD_LIBRARY_SEARCH_APPLICATION_DIR",
-    "LOAD_LIBRARY_SEARCH_SYSTEM32",
-    "prepare_guard_command",
-    "CREATE_SUSPENDED",
-    "bind_guard_to_launcher_job",
-    "JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
-    "AssignProcessToJobObject",
-    "IsProcessInJob",
-    "ensure_windows_production_hardening",
-], "Windows process/lifetime hardening")
+require(
+    policy,
+    [
+        "NEVERGUARD_WINDOWS_HARDENING_VERSION: u32 = 1",
+        "HeapSetInformation",
+        "HeapEnableTerminationOnCorruption",
+        "SetDllDirectoryW",
+        "SetDefaultDllDirectories",
+        "LOAD_LIBRARY_SEARCH_APPLICATION_DIR",
+        "LOAD_LIBRARY_SEARCH_SYSTEM32",
+        "prepare_guard_command",
+        "CREATE_SUSPENDED",
+        "bind_guard_to_launcher_job",
+        "JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
+        "AssignProcessToJobObject",
+        "IsProcessInJob",
+        "ensure_windows_production_hardening",
+    ],
+    "Windows process/lifetime hardening",
+)
 
 guard = read("runtime/neverruntime/src/guard_ipc.rs")
-require(guard, [
-    "NEVERGUARD_PROTOCOL_VERSION: u32 = 4",
-    "create_secure_pipe_server",
-    "ConvertStringSecurityDescriptorToSecurityDescriptorW",
-    "current_windows_user_sid_string",
-    "D:P(A;;GA;;;SY)(A;;GA;;;{user_sid})",
-    "ConvertSidToStringSidW",
-    "create_with_security_attributes_raw",
-    "reject_remote_clients(true)",
-    "hardening_version",
-    "hardening_enforced",
-    "secure_pipe_acl",
-    "lifetime_job_enforced",
-    "package_manifest_verified",
-    "verify_windows_package_manifest",
-    "symlink_metadata",
-    "Windows package artifact SHA-256 mismatch",
-    "production Windows package manifest must require Authenticode",
-    "verify_windows_authenticode_trust",
-    "NeverLauncher NeverGuard IPC ready v4",
-], "NeverGuard hardened IPC/package boundary")
+require(
+    guard,
+    [
+        "NEVERGUARD_PROTOCOL_VERSION: u32 = 4",
+        "create_secure_pipe_server",
+        "ConvertStringSecurityDescriptorToSecurityDescriptorW",
+        "current_windows_user_sid_string",
+        "D:P(A;;GA;;;SY)(A;;GA;;;{user_sid})",
+        "ConvertSidToStringSidW",
+        "create_with_security_attributes_raw",
+        "reject_remote_clients(true)",
+        "hardening_version",
+        "hardening_enforced",
+        "secure_pipe_acl",
+        "lifetime_job_enforced",
+        "package_manifest_verified",
+        "verify_windows_package_manifest",
+        "symlink_metadata",
+        "Windows package artifact SHA-256 mismatch",
+        "production Windows package manifest must require Authenticode",
+        "verify_windows_authenticode_trust",
+        "NeverLauncher Guard IPC ready v4",
+    ],
+    "Guard hardened IPC/package boundary",
+)
 
 desktop = read("apps/desktop/src-tauri/src/main.rs")
-require(desktop, [
-    "ensure_windows_production_hardening()",
-    "NEVERGUARD_WINDOWS_HARDENING_VERSION",
-    "status.secure_pipe_acl",
-    "status.lifetime_job_enforced",
-    "status.package_manifest_verified",
-    "Windows production hardening verification failed",
-], "Desktop fail-closed production hardening")
+require(
+    desktop,
+    [
+        "ensure_windows_production_hardening()",
+        "NEVERGUARD_WINDOWS_HARDENING_VERSION",
+        "status.secure_pipe_acl",
+        "status.lifetime_job_enforced",
+        "status.package_manifest_verified",
+        "Windows production hardening verification failed",
+    ],
+    "Desktop fail-closed production hardening",
+)
 
-binary = read("runtime/neverruntime/src/bin/neverguard.rs")
+binary = read("runtime/neverruntime/src/bin/guard.rs")
 legacy_pre_runtime = (
     "ensure_windows_production_hardening" in binary
     and "ensure_guard_process_policy" in binary
@@ -88,33 +102,41 @@ core_v2_pre_runtime = (
 )
 if not (legacy_pre_runtime or core_v2_pre_runtime):
     raise SystemExit(
-        "NeverGuard pre-runtime hardening missing: legacy hardening/policy pair or Protection Core II initializer"
+        "Guard pre-runtime hardening missing: legacy hardening/policy pair or Protection Core II initializer"
     )
 
 release = read("scripts/release/build-windows-desktop.ps1")
-require(release, [
-    "CodeSigningCertificateThumbprint",
-    "RequireCodeSigning",
-    "AllowUnsignedDevelopmentPackage",
-    "$SigningRequired = $RequireCodeSigning -or (-not $AllowUnsignedDevelopmentPackage)",
-    "Sign-And-VerifyAuthenticode",
-    "signtool sign",
-    "signtool verify",
-    "Get-AuthenticodeSignature",
-    "neverGuardProtocolVersion = 4",
-    "windows-named-pipe+current-user-system-acl+hmac-sha256-v4",
-    "authenticodeRequired = $SignedProduction",
-    "requireAuthenticode = $SignedProduction",
-    "packageVerification = \"sha256+pe-machine+authenticode-before-neverguard-spawn\"",
-], "Windows signed release pipeline")
+require(
+    release,
+    [
+        "CodeSigningCertificateThumbprint",
+        "RequireCodeSigning",
+        "AllowUnsignedDevelopmentPackage",
+        "$SigningRequired = $RequireCodeSigning -or (-not $AllowUnsignedDevelopmentPackage)",
+        "Sign-And-VerifyAuthenticode",
+        "signtool sign",
+        "signtool verify",
+        "Get-AuthenticodeSignature",
+        "neverGuardProtocolVersion = 4",
+        "windows-named-pipe+current-user-system-acl+hmac-sha256-v4",
+        "authenticodeRequired = $SignedProduction",
+        "requireAuthenticode = $SignedProduction",
+        'packageVerification = "sha256+pe-machine+authenticode-before-guard-spawn"',
+    ],
+    "Windows signed release pipeline",
+)
 
-integration = read("runtime/neverruntime/tests/neverguard_windows.rs")
-require(integration, [
-    "NEVERGUARD_WINDOWS_HARDENING_VERSION",
-    "status.hardening_enforced",
-    "status.secure_pipe_acl",
-    "status.lifetime_job_enforced",
-], "Windows native hardening integration")
+integration = read("runtime/neverruntime/tests/guard_windows.rs")
+require(
+    integration,
+    [
+        "NEVERGUARD_WINDOWS_HARDENING_VERSION",
+        "status.hardening_enforced",
+        "status.secure_pipe_acl",
+        "status.lifetime_job_enforced",
+    ],
+    "Windows native hardening integration",
+)
 
 ci = read(".github/workflows/ci.yml")
 preflight = read("scripts/release/preflight.sh")
@@ -122,12 +144,16 @@ if "windows-production-hardening-0136.py" not in ci:
     raise SystemExit("0.13.6 hardening gate is not wired into CI")
 if "windows-production-hardening-0136.py" not in preflight:
     raise SystemExit("0.13.6 hardening gate is not wired into release preflight")
-require(ci, [
-    "cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests",
-    "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_windows",
-    "cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings",
-    "build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage",
-], "Windows native CI")
+require(
+    ci,
+    [
+        "cargo test --manifest-path runtime/neverruntime/Cargo.toml --lib windows_policy::tests",
+        "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_windows",
+        "cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings",
+        "build-windows-desktop.ps1 -AllowUnsignedDevelopmentPackage",
+    ],
+    "Windows native CI",
+)
 
 # Документация безопасности Markdown необязательна; соблюдение требований проверено выше.
 print(f"[NeverLauncher] Windows production hardening 0.13.6 gate OK: {version}")

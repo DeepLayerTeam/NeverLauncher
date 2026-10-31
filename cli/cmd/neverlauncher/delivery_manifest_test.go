@@ -39,7 +39,7 @@ func TestDeliveryManifestBuildVerifyAndResolve0151(t *testing.T) {
 	dir := t.TempDir()
 	files := map[string]string{
 		"neverlauncher-desktop-linux-amd64":              "linux launcher",
-		"neverguard-linux-amd64":                         "linux guard",
+		"guard-linux-amd64":                         "linux guard",
 		"neverlauncher-desktop-0.15.1-windows-arm64.exe": "windows arm launcher",
 		"neverlauncher-desktop-macos-universal":          "mac universal launcher",
 		"neverlauncher-paper-bridge-0.15.1.jar":          "paper bridge",
@@ -142,8 +142,8 @@ func TestReleaseBuildEmbedsDeliveryManifest0151(t *testing.T) {
 	}
 }
 
-func TestDeliveryManifestClassifiesNeverGuardSensor0182(t *testing.T) {
-	name := "neverguard-sensor-windows-arm64.dll"
+func TestDeliveryManifestClassifiesGuardSensor0182(t *testing.T) {
+	name := "guard-sensor-windows-arm64.dll"
 	if got := deliveryArtifactComponent(name); got != "sensor" {
 		t.Fatalf("sensor component=%q", got)
 	}

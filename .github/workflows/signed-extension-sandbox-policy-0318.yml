@@ -1,4 +1,4 @@
-name: NeverExtensions Signed Sandbox Policy 0.31.8
+name: Extensions Signed Sandbox Policy 0.31.8
 on:
   push:
     paths:

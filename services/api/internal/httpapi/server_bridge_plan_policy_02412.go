@@ -153,7 +153,7 @@ func (s Server) verifyPlanForJoin02412(r *http.Request, claims authClaims, req b
 	// This release requires a freshly completed continuous Guard v2 attestation.
 	// A user-supplied list of mods, plan digest or P-256 signature alone is NEVER sufficient.
 	if guardTicket.ID == "" || metadataString0121(guardTicket.Metadata, "attestationSha256") != e.GuardAttestationSHA256 {
-		return errors.New("verified plan is not bound to current continuous NeverGuard evidence")
+		return errors.New("verified plan is not bound to current continuous Guard evidence")
 	}
 	if e.ChallengeID == "" || e.Challenge == "" || len(e.Challenge) > 160 || len(e.ChallengeID) > 160 || strings.ContainsAny(planEvidencePayload02412(*e), "\r") {
 		return errors.New("invalid verified plan challenge")

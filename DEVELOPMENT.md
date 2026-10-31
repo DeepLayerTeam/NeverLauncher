@@ -5,7 +5,7 @@
 - Go 1.23.x — версия runner в основном CI (модули указывают минимум Go 1.22).
 - Python 3 для контрактов, верификации и матриц.
 - Node.js/npm, TypeScript и Vite для `apps/admin` и `apps/desktop` (ориентируйтесь на lockfiles).
-- Rust/Cargo и системные зависимости Tauri для Desktop/NeverRuntime/NeverGuard.
+- Rust/Cargo и системные зависимости Tauri для Desktop/NeverRuntime/Guard.
 - JDK, Gradle и Gradle-plugin toolchains для серверных Java-мостов; корневой Gradle wrapper в текущем архиве отсутствует.
 - Docker Compose/PostgreSQL/Redis — для интеграционных сценариев.
 

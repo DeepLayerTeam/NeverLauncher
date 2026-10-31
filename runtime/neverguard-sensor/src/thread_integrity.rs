@@ -148,7 +148,7 @@ impl Drop for PinnedModule {
 pub fn initialize() -> Result<ThreadIntegritySnapshot, String> {
     let current = enumerate_threads()?;
     if current.is_empty() {
-        return Err("NeverGuard Thread Integrity found no JVM threads at startup".to_string());
+        return Err("Guard Thread Integrity found no JVM threads at startup".to_string());
     }
     let baseline_threads = current.len().min(u32::MAX as usize) as u32;
     let state = ThreadIntegrityState {
@@ -163,7 +163,7 @@ pub fn initialize() -> Result<ThreadIntegritySnapshot, String> {
     let snapshot = snapshot_for_state(&state);
     *THREAD_STATE
         .lock()
-        .map_err(|_| "NeverGuard Thread Integrity state lock poisoned".to_string())? = Some(state);
+        .map_err(|_| "Guard Thread Integrity state lock poisoned".to_string())? = Some(state);
     Ok(snapshot)
 }
 
@@ -171,12 +171,12 @@ pub fn reconcile_and_verify() -> Result<ThreadIntegritySnapshot, String> {
     let observed = enumerate_threads()?;
     let mut guard = THREAD_STATE
         .lock()
-        .map_err(|_| "NeverGuard Thread Integrity state lock poisoned".to_string())?;
+        .map_err(|_| "Guard Thread Integrity state lock poisoned".to_string())?;
     let state = guard
         .as_mut()
-        .ok_or_else(|| "NeverGuard Thread Integrity is not initialized".to_string())?;
+        .ok_or_else(|| "Guard Thread Integrity is not initialized".to_string())?;
     if !state.active || !state.healthy {
-        return Err("NeverGuard Thread Integrity is not active/healthy".to_string());
+        return Err("Guard Thread Integrity is not active/healthy".to_string());
     }
 
     for (thread_id, record) in &observed {
@@ -217,7 +217,7 @@ fn enumerate_threads() -> Result<HashMap<u32, ThreadRecord>, String> {
     let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0) };
     if snapshot == INVALID_HANDLE_VALUE || snapshot.is_null() {
         return Err(format!(
-            "NeverGuard Thread Integrity thread snapshot failed: {}",
+            "Guard Thread Integrity thread snapshot failed: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -229,7 +229,7 @@ fn enumerate_threads() -> Result<HashMap<u32, ThreadRecord>, String> {
     let mut has_entry = unsafe { Thread32First(snapshot.0, &mut entry) } != 0;
     if !has_entry {
         return Err(format!(
-            "NeverGuard Thread Integrity cannot enumerate threads: {}",
+            "Guard Thread Integrity cannot enumerate threads: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -244,7 +244,7 @@ fn enumerate_threads() -> Result<HashMap<u32, ThreadRecord>, String> {
         has_entry = unsafe { Thread32Next(snapshot.0, &mut entry) } != 0;
     }
     if result.is_empty() {
-        return Err("NeverGuard Thread Integrity observed zero live JVM threads".to_string());
+        return Err("Guard Thread Integrity observed zero live JVM threads".to_string());
     }
     Ok(result)
 }
@@ -286,7 +286,7 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
             return Ok(None);
         }
         return Err(format!(
-            "NeverGuard Thread Integrity cannot query Win32 start address for live TID {thread_id}: NTSTATUS=0x{:08X}",
+            "Guard Thread Integrity cannot query Win32 start address for live TID {thread_id}: NTSTATUS=0x{:08X}",
             status as u32
         ));
     }
@@ -301,7 +301,7 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
     };
     if queried == 0 {
         return Err(format!(
-            "NeverGuard Thread Integrity cannot query start memory for TID {thread_id}: {}",
+            "Guard Thread Integrity cannot query start memory for TID {thread_id}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -310,13 +310,13 @@ fn inspect_thread(thread_id: u32) -> Result<Option<ThreadRecord>, String> {
         || memory.protect & (PAGE_GUARD | PAGE_NOACCESS) != 0
     {
         return Err(format!(
-            "NeverGuard Thread Integrity suspicious runtime transition: TID {thread_id} start 0x{:X} is not committed executable memory (state=0x{:X}, protect=0x{:X})",
+            "Guard Thread Integrity suspicious runtime transition: TID {thread_id} start 0x{:X} is not committed executable memory (state=0x{:X}, protect=0x{:X})",
             start_address as usize, memory.state, memory.protect
         ));
     }
     if memory.kind != MEM_IMAGE {
         return Err(format!(
-            "NeverGuard Thread Integrity suspicious runtime transition: TID {thread_id} starts from non-image executable memory at 0x{:X} (type=0x{:X})",
+            "Guard Thread Integrity suspicious runtime transition: TID {thread_id} starts from non-image executable memory at 0x{:X} (type=0x{:X})",
             start_address as usize, memory.kind
         ));
     }
@@ -342,7 +342,7 @@ fn module_path_for_address(address: usize) -> Result<String, String> {
     };
     if ok == 0 || module.is_null() {
         return Err(format!(
-            "NeverGuard Thread Integrity cannot resolve start module for 0x{address:X}: {}",
+            "Guard Thread Integrity cannot resolve start module for 0x{address:X}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -357,7 +357,7 @@ fn module_path_for_address(address: usize) -> Result<String, String> {
     } as usize;
     if len == 0 || len >= buffer.len() {
         return Err(format!(
-            "NeverGuard Thread Integrity cannot obtain start module path for 0x{address:X}: {}",
+            "Guard Thread Integrity cannot obtain start module path for 0x{address:X}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -366,7 +366,7 @@ fn module_path_for_address(address: usize) -> Result<String, String> {
         .replace('/', "\\")
         .to_ascii_lowercase();
     if value.is_empty() {
-        return Err("NeverGuard Thread Integrity resolved an empty start module path".to_string());
+        return Err("Guard Thread Integrity resolved an empty start module path".to_string());
     }
     Ok(value)
 }

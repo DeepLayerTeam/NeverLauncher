@@ -28,7 +28,7 @@ func fakeArtifact(data []byte, uri string) Artifact {
 }
 func identityConfig(parts map[string][]byte) Config {
 	t := Target{OS: runtime.GOOS, Arch: runtime.GOARCH}
-	for _, name := range []string{"neverruntime", "desktop", "neverguard"} {
+	for _, name := range []string{"neverruntime", "desktop", "guard"} {
 		t.Components = append(t.Components, Component{Name: name, Artifact: fakeArtifact(parts[name], "https://example.invalid/"+name)})
 	}
 	return Config{SchemaVersion: "1.0", ProjectID: "hello", ProfileID: "vanilla", Channel: "stable", ProfilePublicKey: strings.Repeat("a", 64), Manifest: fakeArtifact(parts["profile-manifest.json"], "https://example.invalid/profile-manifest.json"), JavaManifest: fakeArtifact(parts["managed-jre/manifest.json"], "https://example.invalid/java-manifest.json"), Targets: []Target{t}}
@@ -53,7 +53,7 @@ func baseParts() map[string][]byte {
 	return map[string][]byte{
 		"neverruntime":              []byte("#!/bin/sh\ncase \"$1\" in\nverify) echo '{\"status\":\"ready\"}' ;;\njava) echo '{\"javaExecutable\":\"/verified/runtime/bin/java\",\"majorVersion\":21,\"distribution\":\"temurin\"}' ;;\nsync-local) echo '{\"status\":\"ready\"}' ;;\nlaunch) echo '{\"status\":\"ready\",\"success\":true}' ;;\n*) exit 7 ;;\nesac\n"),
 		"desktop":                   []byte("#!/bin/sh\nexit 0\n"),
-		"neverguard":                []byte("#!/bin/sh\nexit 0\n"),
+		"guard":                []byte("#!/bin/sh\nexit 0\n"),
 		"profile-manifest.json":     []byte(`{"projectId":"hello","profileId":"vanilla","channel":"stable","runtime":{"java":{"majorVersion":21,"distribution":"temurin"},"launch":{"offlineMode":true}}}`),
 		"managed-jre/manifest.json": []byte(`{"schemaVersion":"1.0","targets":[]}`),
 	}
@@ -155,7 +155,7 @@ func TestOfflineFreshInstallAndVerifiedRecovery(t *testing.T) {
 		t.Fatal(e)
 	}
 	os.WriteFile(userFile, []byte("player save"), 0600)
-	component := filepath.Join(recordDir, "releases", state.Release, ComponentName("neverguard"))
+	component := filepath.Join(recordDir, "releases", state.Release, ComponentName("guard"))
 	if e = os.WriteFile(component, []byte("corrupted"), 0700); e != nil {
 		t.Fatal(e)
 	}

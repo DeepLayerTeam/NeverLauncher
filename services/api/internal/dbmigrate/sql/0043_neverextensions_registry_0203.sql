@@ -1,5 +1,5 @@
 -- NeverLauncher 0.20.3: производственный закрытый или локальный реестр
--- NeverExtensions. Метаданные нормализованы вокруг неизменяемых версий расширений
+-- Extensions. Метаданные нормализованы вокруг неизменяемых версий расширений
 -- и подписанных .nlext, адресуемых по содержимому. Изменяемое состояние ограничено
 -- активацией издателей и ключей, указателями каналов и метаданными отзыва.
 
@@ -116,10 +116,10 @@ BEGIN
        OR NEW.version IS DISTINCT FROM OLD.version
        OR NEW.publisher_id IS DISTINCT FROM OLD.publisher_id
        OR NEW.published_at IS DISTINCT FROM OLD.published_at THEN
-        RAISE EXCEPTION 'NeverExtensions registry publication identity is immutable';
+        RAISE EXCEPTION 'Extensions registry publication identity is immutable';
     END IF;
     IF OLD.yanked_at IS NOT NULL AND (NEW.yanked_at IS NULL OR NEW.yank_reason IS DISTINCT FROM OLD.yank_reason) THEN
-        RAISE EXCEPTION 'NeverExtensions yank state is irreversible';
+        RAISE EXCEPTION 'Extensions yank state is irreversible';
     END IF;
     RETURN NEW;
 END;
@@ -132,7 +132,7 @@ FOR EACH ROW EXECUTE FUNCTION neverlauncher_registry_version_guard_0203();
 CREATE OR REPLACE FUNCTION neverlauncher_registry_immutable_guard_0203()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-    RAISE EXCEPTION 'NeverExtensions registry artifact/compatibility rows are immutable';
+    RAISE EXCEPTION 'Extensions registry artifact/compatibility rows are immutable';
 END;
 $$;
 DROP TRIGGER IF EXISTS trg_extension_registry_artifacts_immutable_0203 ON extension_registry_artifacts;
@@ -148,7 +148,7 @@ CREATE OR REPLACE FUNCTION neverlauncher_registry_channel_guard_0203()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF EXISTS(SELECT 1 FROM extension_registry_versions WHERE extension_id=NEW.extension_id AND version=NEW.version AND yanked_at IS NOT NULL) THEN
-        RAISE EXCEPTION 'channel cannot point to yanked NeverExtensions version';
+        RAISE EXCEPTION 'channel cannot point to yanked Extensions version';
     END IF;
     RETURN NEW;
 END;
@@ -158,7 +158,7 @@ CREATE TRIGGER trg_extension_registry_channels_guard_0203
 BEFORE INSERT OR UPDATE ON extension_registry_channels
 FOR EACH ROW EXECUTE FUNCTION neverlauncher_registry_channel_guard_0203();
 
-COMMENT ON TABLE extension_registry_publishers IS 'NeverExtensions private/local registry publisher identities (0.20.3).';
+COMMENT ON TABLE extension_registry_publishers IS 'Extensions private/local registry publisher identities (0.20.3).';
 COMMENT ON TABLE extension_registry_publisher_keys IS 'Trusted Ed25519 publisher keys used to verify signed .nlext artifacts.';
 COMMENT ON TABLE extension_registry_versions IS 'Published immutable extension versions with irreversible yank state.';
 COMMENT ON TABLE extension_registry_compatibility IS 'Immutable NeverLauncher/platform compatibility metadata for published versions.';

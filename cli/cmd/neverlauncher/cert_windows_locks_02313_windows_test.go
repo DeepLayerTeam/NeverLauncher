@@ -12,7 +12,7 @@ import (
 // The updater must fail safely without modifying a locked live binary.
 func TestLockedWindowsExecutablePreservesOldRelease02313(t *testing.T) {
     dir := t.TempDir()
-    dst := filepath.Join(dir, "neverguard.exe")
+    dst := filepath.Join(dir, "guard.exe")
     src := filepath.Join(dir, "newguard.exe")
     userFile := filepath.Join(dir, "profiles", "world", "level.dat")
     if err := os.MkdirAll(filepath.Dir(userFile), 0755); err != nil { t.Fatal(err) }
@@ -32,7 +32,7 @@ func TestLockedWindowsExecutablePreservesOldRelease02313(t *testing.T) {
     updater, err := newTransactionalUpdater0156(dir)
     if err != nil { t.Fatal(err) }
     _, err = updater.apply(updaterRequest0156{Root:dir, Namespace:"cert-win-lock",
-        Files: []updaterFileSpec0156{updaterTestSpec0156(t, "neverguard.exe", src, true)}})
+        Files: []updaterFileSpec0156{updaterTestSpec0156(t, "guard.exe", src, true)}})
     closer.Call(h)
     if err == nil { t.Fatal("updater committed despite exclusive lock on live executable") }
     raw, err := os.ReadFile(dst)

@@ -281,20 +281,20 @@ func main() {
 
 	secretKey, err := extensionsecurity.ParseKey(cfg.ExtensionSecretsKey)
 	if err != nil {
-		log.Fatalf("NeverExtensions secrets key: %v", err)
+		log.Fatalf("Extensions secrets key: %v", err)
 	}
 	extSecurity, err := extensionsecurity.New(repo, secretKey)
 	if err != nil {
-		log.Fatalf("NeverExtensions capability security initialization failed: %v", err)
+		log.Fatalf("Extensions capability security initialization failed: %v", err)
 	}
 	gaManager := extensionga.New(cfg.ExtensionRoot, cfg.ExtensionBackupRetention, repo, store)
 	if !noExtensions {
 		report, reconcileErr := gaManager.Reconcile(context.Background())
 		if reconcileErr != nil {
-			log.Fatalf("NeverExtensions GA reconciliation failed: %v", reconcileErr)
+			log.Fatalf("Extensions GA reconciliation failed: %v", reconcileErr)
 		}
 		if len(report.Issues) > 0 {
-			log.Printf("NeverExtensions GA reconciliation checked=%d healthy=%d disabled=%d issues=%d", report.Checked, report.Healthy, report.Disabled, len(report.Issues))
+			log.Printf("Extensions GA reconciliation checked=%d healthy=%d disabled=%d issues=%d", report.Checked, report.Healthy, report.Disabled, len(report.Issues))
 		}
 	}
 
@@ -310,12 +310,12 @@ func main() {
 			BatchSize:      cfg.ExtensionEventsBatchSize,
 		}, repo)
 		if err != nil {
-			log.Fatalf("NeverExtensions event bus initialization failed: %v", err)
+			log.Fatalf("Extensions event bus initialization failed: %v", err)
 		}
 		if sinkRepo, ok := repo.(interface{ SetAuditEventSink(func(model.AuditEvent)) }); ok {
 			sinkRepo.SetAuditEventSink(func(a model.AuditEvent) {
 				if err := events.AuditCreated(context.Background(), a); err != nil {
-					log.Printf("NeverExtensions audit event publish failed: %v", err)
+					log.Printf("Extensions audit event publish failed: %v", err)
 				}
 			})
 		}
@@ -372,13 +372,13 @@ func main() {
 		for _, reconcileErr := range host.Reconcile(context.Background()) {
 			log.Printf("extension host reconcile: %v", reconcileErr)
 		}
-		log.Printf("NeverExtensions Host protocol=%s isolation=%s", host.ProtocolURL(), host.ResourceIsolation())
+		log.Printf("Extensions Host protocol=%s isolation=%s", host.ProtocolURL(), host.ResourceIsolation())
 	}
 
 	if events != nil {
 		events.Start(context.Background())
 		defer events.Close()
-		log.Printf("NeverExtensions Event Bus protocol=%s", eventbus.ProtocolVersion)
+		log.Printf("Extensions Event Bus protocol=%s", eventbus.ProtocolVersion)
 	}
 
 	server := httpapi.Server{
@@ -405,7 +405,7 @@ func main() {
 	log.Printf("Durable control-plane active: publish jobs, fenced package leases and outbox recovery enabled")
 
 	if noExtensions {
-		log.Printf("NeverExtensions Safe Mode active: --no-extensions; extension host/event execution is disabled")
+		log.Printf("Extensions Safe Mode active: --no-extensions; extension host/event execution is disabled")
 	}
 	log.Printf(
 		"NeverLauncher API %s слушает %s repository=%s storage=%s environment=%s",

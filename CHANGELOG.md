@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.42.1 — Java SDK / Extension API / Host Protocol compatibility
+
+- Kept Extension API, Manifest and Host Protocol at their published versions. Java hello remains wire-compatible with 0.42.0; new SDK clients can require capabilities during real authenticated hello before extension startup. Runtime broker calls now fail locally when the capability is unavailable or the session was not negotiated.
+- Added strict host hello identity, heartbeat, event-protocol, event-catalog and capability negotiation validation. Structured Go Host HTTP 409 reason codes are surfaced in `HostSession.HostError.code()`. A duplicate authenticated hello is rejected without resetting process state.
+- Fixed Go's advertised capability list: `runtime.config.delete` and `runtime.storage.delete` are now exposed under the existing effective `storage:write` permission. No permission enforcement is removed from the actual broker.
+- Moved Java extension class initialization and object construction after authenticated hello, so incompatible hosts cannot trigger extension startup constructors/static initializers. Preserved old source and binary Java entrypoints and the successful `ready` acknowledgement.
+- Added executable Java loopback-host compatibility regression cases and Go HTTP handler protocol/replay regression cases; kept actual Java subprocess/backend/CLI examples and existing release acceptance test paths.
+- Preserved the mandatory 0.42.0 fourteen-target ServerBridge exact-byte live gate for 0.42.1 and subsequent versions. Production signing remains blocked without fresh, source-commit-bound Minecraft/JVM/Proxy, host-fault and world restore evidence; version changes cannot silently bypass the gate.
+- **Validation boundary:** Java SDK tests (42 core, 29 broker/event/command, 26 protocol compatibility), 10 Gravit adapter checks and actual Java example subprocess tests passed on Linux/OpenJDK 21. Python negative release regressions passed. Go 1.27.3 compiler and real multi-OS/14-target Minecraft evidence were unavailable here; this patch is **not production-certified**.
+
+
 ## 0.42.0 — Final executable network release acceptance (production blocked until real 14-target E2E)
 
 - Fixed the actual `build-release.sh` ServerBridge cohort: all fourteen built platform JARs (including Quilt, Sponge, Vanilla) now enter the final distribution; no missing adapter silently ships.

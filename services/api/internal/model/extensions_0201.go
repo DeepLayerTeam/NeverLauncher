@@ -104,13 +104,13 @@ type ExtensionDependency struct {
 }
 
 // ExtensionConflict объявляет несовместимый диапазон версий расширения.
-// Version использует грамматику диапазонов NeverExtensions SemVer из 0.20.11.
+// Version использует грамматику диапазонов Extensions SemVer из 0.20.11.
 type ExtensionConflict struct {
 	ID      string `json:"id"`
 	Version string `json:"version"`
 }
 
-// ExtensionManifest — канонический манифест NeverExtensions,
+// ExtensionManifest — канонический манифест Extensions,
 // введённый в 0.20.1. Он заменяет новые neverlauncher-plugin.json,
 // сохраняя импорт старого формата через CLI.
 type ExtensionManifest struct {

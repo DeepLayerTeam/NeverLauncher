@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Build a valid Linux NeverGuard attestation for the PostgreSQL protocol E2E.
+"""Build a valid Linux Guard attestation for the PostgreSQL protocol E2E.
 
 This is a protocol fixture, not a provenance claim: the backend still verifies
 challenge freshness, the P-256 device signature, exact allowlisted Guard/Desktop
 hash pair, process-boundary fields, evidence/attestation digests and one-time
 launch-ticket consumption.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -25,7 +26,9 @@ def compact(value: object) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
-def process(pid: int, image_hash: str, module_hash: str, parent_death_signal: bool) -> dict:
+def process(
+    pid: int, image_hash: str, module_hash: str, parent_death_signal: bool
+) -> dict:
     return {
         "pid": pid,
         "imagePath": "/opt/neverlauncher/e2e-binary",
@@ -65,17 +68,31 @@ def process(pid: int, image_hash: str, module_hash: str, parent_death_signal: bo
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    for name in ("challenge-id", "challenge", "challenge-expires-at", "launcher-version", "user-id", "device-id", "session-id", "binding-epoch", "fingerprint"):
+    for name in (
+        "challenge-id",
+        "challenge",
+        "challenge-expires-at",
+        "launcher-version",
+        "user-id",
+        "device-id",
+        "session-id",
+        "binding-epoch",
+        "fingerprint",
+    ):
         ap.add_argument(f"--{name}", required=True)
     a = ap.parse_args()
 
     now = int(time.time())
     evidence_core = {
-        "schema": "neverguard/linux-integrity-evidence/v1",
+        "schema": "guard/linux-integrity-evidence/v1",
         "evidenceVersion": 1,
         "evidenceId": "b" * 32,
         "collectedAtUnix": now,
-        "boundary": {"expectedParentPid": 200, "observedParentPid": 200, "parentMatches": True},
+        "boundary": {
+            "expectedParentPid": 200,
+            "observedParentPid": 200,
+            "parentMatches": True,
+        },
         "guard": process(201, GUARD_HASH, GUARD_MODULES, True),
         "launcher": process(200, LAUNCHER_HASH, LAUNCHER_MODULES, False),
     }
@@ -85,7 +102,7 @@ def main() -> None:
     evidence["sessionProof"] = EVIDENCE_SESSION_PROOF
 
     process_policy = {
-        "schema": "neverguard/linux-runtime-process-policy/v1",
+        "schema": "guard/linux-runtime-process-policy/v1",
         "policyVersion": 1,
         "pid": 201,
         "enforced": True,
@@ -107,7 +124,7 @@ def main() -> None:
     }
     challenge_sha = hashlib.sha256(a.challenge.encode("utf-8")).hexdigest()
     attestation = {
-        "schema": "neverguard/linux-guard-attestation/v1",
+        "schema": "guard/linux-guard-attestation/v1",
         "attestationVersion": 1,
         "challengeId": a.challenge_id,
         "challengeSha256": challenge_sha,
@@ -158,7 +175,13 @@ def main() -> None:
         f"launcher-sha256={LAUNCHER_HASH}\n"
         f"challenge-expires-at={a.challenge_expires_at.strip()}\n"
     )
-    print(json.dumps({"attestation": attestation, "signingPayload": signing_payload}, ensure_ascii=False, separators=(",", ":")))
+    print(
+        json.dumps(
+            {"attestation": attestation, "signingPayload": signing_payload},
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+    )
 
 
 if __name__ == "__main__":

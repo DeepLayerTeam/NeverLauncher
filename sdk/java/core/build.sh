@@ -16,5 +16,6 @@ if [ "${1:-}" = test ]; then
   "$JAVAC" --release 17 -encoding UTF-8 -cp build/classes -d build/test-classes @build/tests.txt
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.neverlauncher.sdk.core.CoreTests
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.neverlauncher.sdk.core.RuntimeApiTests
+  "$JAVA" -cp build/classes${cpsep}build/test-classes ru.neverlauncher.sdk.core.HostCompatibility0421Tests
   "$JAVA" -cp build/classes${cpsep}build/test-classes ru.neverlauncher.sdk.core.SentryDiagnosticsTests
 fi

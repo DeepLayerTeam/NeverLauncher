@@ -174,9 +174,9 @@ func deliveryArtifactTarget(name string) DeliveryTarget {
 func deliveryArtifactComponent(name string) string {
 	lower := strings.ToLower(name)
 	switch {
-	case strings.HasPrefix(lower, "neverguard-sensor-"):
+	case strings.HasPrefix(lower, "guard-sensor-"):
 		return "sensor"
-	case strings.HasPrefix(lower, "neverguard-"):
+	case strings.HasPrefix(lower, "guard-"):
 		return "guard"
 	case strings.HasPrefix(lower, "neverlauncher-desktop-web-"):
 		return "desktop-web"

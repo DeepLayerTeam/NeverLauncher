@@ -12,22 +12,28 @@ def read(path: str) -> str:
 def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
-        raise SystemExit(f"[NeverLauncher] Memory Integrity 0.18.5 gate: {label} missing {missing}")
+        raise SystemExit(
+            f"[NeverLauncher] Memory Integrity 0.18.5 gate: {label} missing {missing}"
+        )
 
 
 def main() -> int:
     version = read("VERSION").strip()
-    if tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 5):
-        raise SystemExit(f"[NeverLauncher] Memory Integrity 0.18.5 gate: VERSION is {version}")
+    if tuple(
+        int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
+    ) < (0, 18, 5):
+        raise SystemExit(
+            f"[NeverLauncher] Memory Integrity 0.18.5 gate: VERSION is {version}"
+        )
 
-    memory = read("runtime/neverguard-sensor/src/memory_integrity.rs")
-    hooks = read("runtime/neverguard-sensor/src/hook_engine.rs")
-    sensor = read("runtime/neverguard-sensor/src/lib.rs")
+    memory = read("runtime/guard-sensor/src/memory_integrity.rs")
+    hooks = read("runtime/guard-sensor/src/hook_engine.rs")
+    sensor = read("runtime/guard-sensor/src/lib.rs")
     parent = read("runtime/neverruntime/src/windows_module_guard.rs")
     report = read("runtime/neverruntime/src/windows_memory_integrity.rs")
     exports = read("runtime/neverruntime/src/lib.rs")
-    integration = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
-    probe = read("runtime/neverguard-memory-probe/src/lib.rs")
+    integration = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
+    probe = read("runtime/guard-memory-probe/src/lib.rs")
     ci = read(".github/workflows/ci.yml")
     preflight = read("scripts/release/preflight.sh")
 
@@ -52,9 +58,16 @@ def main() -> int:
         ],
         "real executable-memory scan/code-page baseline/provenance engine",
     )
-    for forbidden in ("WriteProcessMemory", "VirtualAllocEx", "CreateRemoteThread", "NtWriteVirtualMemory"):
+    for forbidden in (
+        "WriteProcessMemory",
+        "VirtualAllocEx",
+        "CreateRemoteThread",
+        "NtWriteVirtualMemory",
+    ):
         if forbidden in memory:
-            raise SystemExit(f"[NeverLauncher] Memory Integrity 0.18.5 gate: cross-process primitive forbidden: {forbidden}")
+            raise SystemExit(
+                f"[NeverLauncher] Memory Integrity 0.18.5 gate: cross-process primitive forbidden: {forbidden}"
+            )
 
     require(
         hooks,
@@ -106,45 +119,58 @@ def main() -> int:
         ],
         "runtime Memory Integrity evidence",
     )
-    require(exports, ["pub mod windows_memory_integrity;", "WindowsMemoryIntegrityReport"], "runtime exports")
+    require(
+        exports,
+        ["pub mod windows_memory_integrity;", "WindowsMemoryIntegrityReport"],
+        "runtime exports",
+    )
     require(
         integration,
         [
             "NEVERGUARD_MEMORY_INTEGRITY_VERSION",
             "report.module_guard.memory_integrity.active",
             "report.memory_integrity.integrity_check_count >= 2",
-            "neverguard_memory_integrity_fail_closed_on_executable_image_code_page_drift",
+            "guard_memory_integrity_fail_closed_on_executable_image_code_page_drift",
             "executable image code-page drift must be fail-closed",
         ],
         "real Windows JVM Memory Integrity regressions",
     )
     require(
         probe,
-        ["JNI_OnLoad", "VirtualProtect", "write_volatile", "neverguard_memory_probe_target"],
+        ["JNI_OnLoad", "VirtualProtect", "write_volatile", "guard_memory_probe_target"],
         "adversarial in-process code-drift fixture",
     )
     require(
         ci,
         [
-            "python scripts/smoke/offline/neverguard-memory-integrity-0185.py",
-            "cargo build --manifest-path runtime/neverguard-memory-probe/Cargo.toml",
+            "python scripts/smoke/offline/guard-memory-integrity-0185.py",
+            "cargo build --manifest-path runtime/guard-memory-probe/Cargo.toml",
             "NEVERGUARD_MEMORY_PROBE_DLL",
-            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_sensor_windows -- --nocapture",
-            "cargo clippy --manifest-path runtime/neverguard-memory-probe/Cargo.toml --all-targets -- -D warnings",
+            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows -- --nocapture",
+            "cargo clippy --manifest-path runtime/guard-memory-probe/Cargo.toml --all-targets -- -D warnings",
         ],
         "Windows compilation/adversarial integration/clippy CI",
     )
-    if "neverguard-memory-integrity-0185.py" not in preflight:
-        raise SystemExit("[NeverLauncher] Memory Integrity 0.18.5 gate: preflight wiring missing")
+    if "guard-memory-integrity-0185.py" not in preflight:
+        raise SystemExit(
+            "[NeverLauncher] Memory Integrity 0.18.5 gate: preflight wiring missing"
+        )
 
     for path, body in [
-        ("runtime/neverguard-sensor/src/memory_integrity.rs", memory),
-        ("runtime/neverguard-sensor/src/lib.rs", sensor),
+        ("runtime/guard-sensor/src/memory_integrity.rs", memory),
+        ("runtime/guard-sensor/src/lib.rs", sensor),
         ("runtime/neverruntime/src/windows_module_guard.rs", parent),
     ]:
-        for forbidden in ("todo!()", "unimplemented!()", "TODO: stub", "foundation placeholder"):
+        for forbidden in (
+            "todo!()",
+            "unimplemented!()",
+            "TODO: stub",
+            "foundation placeholder",
+        ):
             if forbidden in body:
-                raise SystemExit(f"[NeverLauncher] Memory Integrity 0.18.5 gate: placeholder {forbidden!r} in {path}")
+                raise SystemExit(
+                    f"[NeverLauncher] Memory Integrity 0.18.5 gate: placeholder {forbidden!r} in {path}"
+                )
 
     print("[NeverLauncher] Memory Integrity 0.18.5 gate: OK")
     return 0

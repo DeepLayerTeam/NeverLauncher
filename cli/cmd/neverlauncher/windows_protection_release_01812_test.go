@@ -57,10 +57,10 @@ func TestValidateWindowsAdversarialCertificate01812(t *testing.T) {
 }
 
 func TestWindowsProtectionBoundaryDigest01812BindsArtifactsAndCapabilities(t *testing.T) {
-	artifacts := []windowsProtectionArtifact01812{{Name: "neverguard.exe", Size: 7, SHA256: strings.Repeat("1", 64)}}
+	artifacts := []windowsProtectionArtifact01812{{Name: "guard.exe", Size: 7, SHA256: strings.Repeat("1", 64)}}
 	capabilities := []string{"aggressive-protection-profile", "continuous-attestation-v2"}
 	first := windowsProtectionBoundaryDigest01812("0.18.12", testSourceCommit01511, windowsProtectionRepository01812, "42", strings.Repeat("2", 64), artifacts, capabilities)
-	second := windowsProtectionBoundaryDigest01812("0.18.12", testSourceCommit01511, windowsProtectionRepository01812, "42", strings.Repeat("2", 64), []windowsProtectionArtifact01812{{Name: "neverguard.exe", Size: 8, SHA256: strings.Repeat("1", 64)}}, capabilities)
+	second := windowsProtectionBoundaryDigest01812("0.18.12", testSourceCommit01511, windowsProtectionRepository01812, "42", strings.Repeat("2", 64), []windowsProtectionArtifact01812{{Name: "guard.exe", Size: 8, SHA256: strings.Repeat("1", 64)}}, capabilities)
 	if first == second || len(first) != 64 {
 		t.Fatal("Windows Protection RC boundary does not bind artifact size")
 	}

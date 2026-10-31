@@ -42,7 +42,7 @@ func releaseBOMRequired03214(ver string) bool {
 }
 
 // Enumerate the actual build inputs of Backend/API, CLI, Desktop, Admin,
-// NeverGuard probes, NeverRuntime and every published ServerBridge plugin.
+// Guard probes, NeverRuntime and every published ServerBridge plugin.
 func bomSources03214() map[string]string {
 	m := map[string]string{
 		"backend-api":                "services/api/go.mod",
@@ -62,11 +62,11 @@ func bomSources03214() map[string]string {
 		"desktop-native":             "apps/desktop/src-tauri/Cargo.toml",
 		"desktop-tauri-config":       "apps/desktop/src-tauri/tauri.conf.json",
 		"neverruntime":               "runtime/neverruntime/Cargo.toml",
-		"neverguard-sensor":          "runtime/neverguard-sensor/Cargo.toml",
-		"neverguard-memory-probe":    "runtime/neverguard-memory-probe/Cargo.toml",
-		"neverguard-thread-probe":    "runtime/neverguard-thread-probe/Cargo.toml",
-		"neverguard-debug-probe":     "runtime/neverguard-debug-probe/Cargo.toml",
-		"neverguard-jvm-probe":       "runtime/neverguard-jvm-probe/Cargo.toml",
+		"guard-sensor":          "runtime/guard-sensor/Cargo.toml",
+		"guard-memory-probe":    "runtime/guard-memory-probe/Cargo.toml",
+		"guard-thread-probe":    "runtime/guard-thread-probe/Cargo.toml",
+		"guard-debug-probe":     "runtime/guard-debug-probe/Cargo.toml",
+		"guard-jvm-probe":       "runtime/guard-jvm-probe/Cargo.toml",
 		"serverbridge-certification": "serverbridge/targets.json",
 		"guard-certification":        "guard-ci/targets.json",
 		"device-trust-certification": "device-trust/targets.json",

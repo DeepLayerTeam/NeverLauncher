@@ -18,7 +18,7 @@ import (
 	"gitflic.ru/skif4er/neverlauncher/services/api/internal/model"
 )
 
-const adminBridgeProtocol0208 = "neverextensions.admin-rpc.v1"
+const adminBridgeProtocol0208 = "extensions.admin-rpc.v1"
 const maxAdminEntrypointBytes0208 = int64(2 << 20)
 
 type adminExtensionCatalogItem0208 struct {
@@ -214,7 +214,7 @@ func hardenAdminHTML0208(raw string) string {
 
 func (s Server) adminExtensionEntrypoint0208(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
 		return
 	}
 	id := r.PathValue("extensionId")
@@ -254,7 +254,7 @@ func (s Server) adminExtensionEntrypoint0208(w http.ResponseWriter, r *http.Requ
 
 func (s Server) adminExtensionRPC0208(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionSafeMode {
-		writeError(w, http.StatusServiceUnavailable, "NeverExtensions Safe Mode is active (--no-extensions)")
+		writeError(w, http.StatusServiceUnavailable, "Extensions Safe Mode is active (--no-extensions)")
 		return
 	}
 	id := strings.ToLower(strings.TrimSpace(r.PathValue("extensionId")))

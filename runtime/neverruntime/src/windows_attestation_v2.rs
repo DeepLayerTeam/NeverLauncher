@@ -5,10 +5,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const NEVERGUARD_WINDOWS_CONTINUOUS_EVIDENCE_VERSION: u32 = 2;
 pub const NEVERGUARD_WINDOWS_CONTINUOUS_EVIDENCE_SCHEMA: &str =
-    "neverguard/windows-continuous-evidence/v2";
+    "guard/windows-continuous-evidence/v2";
 pub const NEVERGUARD_WINDOWS_REMOTE_ATTESTATION_V2_VERSION: u32 = 2;
 pub const NEVERGUARD_WINDOWS_REMOTE_ATTESTATION_V2_SCHEMA: &str =
-    "neverguard/windows-guard-attestation/v2";
+    "guard/windows-guard-attestation/v2";
 const CONTINUOUS_EVIDENCE_MAX_STALENESS_MS: u64 = 5_000;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -59,13 +59,13 @@ pub struct WindowsContinuousEvidenceV2 {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct NeverGuardRemoteAttestationV2 {
+pub struct GuardRemoteAttestationV2 {
     pub schema: String,
     pub attestation_version: u32,
     pub challenge_id: String,
     pub challenge_sha256: String,
     pub collected_at_unix_ms: u64,
-    pub base_attestation: crate::NeverGuardRemoteAttestation,
+    pub base_attestation: crate::GuardRemoteAttestation,
     pub continuous_evidence: WindowsContinuousEvidenceV2,
     pub attestation_sha256: String,
 }
@@ -83,7 +83,7 @@ fn now_unix_ms() -> Result<u64, String> {
 
 fn require_hash(label: &str, value: &str) -> Result<(), String> {
     if !is_sha256_hex(value) {
-        return Err(format!("NeverGuard Attestation v2 {label} malformed"));
+        return Err(format!("Guard Attestation v2 {label} malformed"));
     }
     Ok(())
 }
@@ -161,13 +161,13 @@ pub fn validate_continuous_evidence_v2(
         || evidence.process_id.trim().is_empty()
         || evidence.runtime_pid == 0
     {
-        return Err("NeverGuard Attestation v2 continuous evidence schema/identity mismatch".to_string());
+        return Err("Guard Attestation v2 continuous evidence schema/identity mismatch".to_string());
     }
     if evidence.sensor_protocol_version != crate::NEVERGUARD_SENSOR_PROTOCOL_VERSION
         || evidence.module_guard_version != crate::NEVERGUARD_MODULE_GUARD_VERSION
         || evidence.continuous_guard_version != crate::NEVERGUARD_CONTINUOUS_GUARD_VERSION
     {
-        return Err("NeverGuard Attestation v2 continuous component version mismatch".to_string());
+        return Err("Guard Attestation v2 continuous component version mismatch".to_string());
     }
     if !evidence.sensor_authenticated
         || !evidence.sensor_loaded_before_main
@@ -180,7 +180,7 @@ pub fn validate_continuous_evidence_v2(
         || !evidence.jvm_aware_healthy
         || !evidence.continuous_guard_healthy
     {
-        return Err("NeverGuard Attestation v2 continuous protection is not healthy".to_string());
+        return Err("Guard Attestation v2 continuous protection is not healthy".to_string());
     }
     if evidence.module_event_count == 0
         || evidence.module_last_sequence == 0
@@ -190,12 +190,12 @@ pub fn validate_continuous_evidence_v2(
         || evidence.last_sensor_sequence == 0
         || evidence.last_guard_sequence == 0
     {
-        return Err("NeverGuard Attestation v2 continuous counters are not armed".to_string());
+        return Err("Guard Attestation v2 continuous counters are not armed".to_string());
     }
     if evidence.sensor_heartbeat_count != evidence.guard_heartbeat_count
         || evidence.sensor_heartbeat_count != evidence.cross_check_count
     {
-        return Err("NeverGuard Attestation v2 Sensor/Guard heartbeat counters diverged".to_string());
+        return Err("Guard Attestation v2 Sensor/Guard heartbeat counters diverged".to_string());
     }
     if evidence.java_major != 8
         && evidence.java_major != 16
@@ -203,7 +203,7 @@ pub fn validate_continuous_evidence_v2(
         && evidence.java_major != 21
         && evidence.java_major != 25
     {
-        return Err("NeverGuard Attestation v2 Java major is not certified".to_string());
+        return Err("Guard Attestation v2 Java major is not certified".to_string());
     }
     for (label, value) in [
         ("moduleEventChainSha256", evidence.module_event_chain_sha256.as_str()),
@@ -227,11 +227,11 @@ pub fn validate_continuous_evidence_v2(
         || now_ms.saturating_sub(evidence.last_sensor_heartbeat_unix_ms) > CONTINUOUS_EVIDENCE_MAX_STALENESS_MS
         || now_ms.saturating_sub(evidence.last_guard_heartbeat_unix_ms) > CONTINUOUS_EVIDENCE_MAX_STALENESS_MS
     {
-        return Err("NeverGuard Attestation v2 continuous evidence is stale".to_string());
+        return Err("Guard Attestation v2 continuous evidence is stale".to_string());
     }
     let expected = recompute_continuous_evidence_sha256(evidence);
     if !expected.eq_ignore_ascii_case(&evidence.evidence_sha256) {
-        return Err("NeverGuard Attestation v2 continuous evidence digest mismatch".to_string());
+        return Err("Guard Attestation v2 continuous evidence digest mismatch".to_string());
     }
     Ok(())
 }
@@ -241,14 +241,14 @@ pub fn collect_windows_continuous_evidence_v2(
     status: &ProcessStatus,
 ) -> Result<WindowsContinuousEvidenceV2, String> {
     if status.id != process_id || status.state != "running" {
-        return Err("NeverGuard Attestation v2 requires the requested running runtime process".to_string());
+        return Err("Guard Attestation v2 requires the requested running runtime process".to_string());
     }
-    let runtime_pid = status.pid.ok_or_else(|| "NeverGuard Attestation v2 runtime PID unavailable".to_string())?;
+    let runtime_pid = status.pid.ok_or_else(|| "Guard Attestation v2 runtime PID unavailable".to_string())?;
     let sensor: &WindowsSensorReport = status.windows_sensor.as_ref().ok_or_else(|| {
-        "NeverGuard Attestation v2 requires authenticated Windows Sensor evidence".to_string()
+        "Guard Attestation v2 requires authenticated Windows Sensor evidence".to_string()
     })?;
     if sensor.pid != runtime_pid {
-        return Err("NeverGuard Attestation v2 Sensor/runtime PID mismatch".to_string());
+        return Err("Guard Attestation v2 Sensor/runtime PID mismatch".to_string());
     }
     let module = &sensor.module_guard;
     let hook = &module.hook_engine;
@@ -265,7 +265,7 @@ pub fn collect_windows_continuous_evidence_v2(
         || !jvm.active || !jvm.certified_major || jvm.violation_count != 0 || jvm.foreign_executable_transition_count != 0 || jvm.unknown_executable_transition_count != 0
         || !continuous.active || continuous.violation_count != 0
     {
-        return Err("NeverGuard Attestation v2 runtime protection reports a violation".to_string());
+        return Err("Guard Attestation v2 runtime protection reports a violation".to_string());
     }
     let collected_at_unix_ms = now_unix_ms()?;
     let mut evidence = WindowsContinuousEvidenceV2 {
@@ -316,7 +316,7 @@ pub fn collect_windows_continuous_evidence_v2(
     Ok(evidence)
 }
 
-pub fn windows_attestation_v2_core(attestation: &NeverGuardRemoteAttestationV2) -> String {
+pub fn windows_attestation_v2_core(attestation: &GuardRemoteAttestationV2) -> String {
     format!(
         concat!(
             "NeverLauncher Guard Attestation Core Windows v2\n",
@@ -338,26 +338,26 @@ pub fn windows_attestation_v2_core(attestation: &NeverGuardRemoteAttestationV2) 
     )
 }
 
-pub fn recompute_windows_attestation_v2_sha256(attestation: &NeverGuardRemoteAttestationV2) -> String {
+pub fn recompute_windows_attestation_v2_sha256(attestation: &GuardRemoteAttestationV2) -> String {
     hex::encode(Sha256::digest(windows_attestation_v2_core(attestation).as_bytes()))
 }
 
 pub fn build_windows_attestation_v2(
     challenge_id: String,
     challenge: &str,
-    base_attestation: crate::NeverGuardRemoteAttestation,
+    base_attestation: crate::GuardRemoteAttestation,
     continuous_evidence: WindowsContinuousEvidenceV2,
-) -> Result<NeverGuardRemoteAttestationV2, String> {
+) -> Result<GuardRemoteAttestationV2, String> {
     if challenge_id.trim().is_empty() || challenge_id.len() > 160 || challenge.is_empty() || challenge.len() > 4096 {
-        return Err("NeverGuard Attestation v2 challenge malformed".to_string());
+        return Err("Guard Attestation v2 challenge malformed".to_string());
     }
     if base_attestation.challenge_id != challenge_id
         || base_attestation.challenge_sha256 != crate::attestation::challenge_sha256(challenge)
     {
-        return Err("NeverGuard Attestation v2 base attestation challenge mismatch".to_string());
+        return Err("Guard Attestation v2 base attestation challenge mismatch".to_string());
     }
     validate_continuous_evidence_v2(&continuous_evidence, continuous_evidence.collected_at_unix_ms)?;
-    let mut attestation = NeverGuardRemoteAttestationV2 {
+    let mut attestation = GuardRemoteAttestationV2 {
         schema: NEVERGUARD_WINDOWS_REMOTE_ATTESTATION_V2_SCHEMA.to_string(),
         attestation_version: NEVERGUARD_WINDOWS_REMOTE_ATTESTATION_V2_VERSION,
         challenge_id,

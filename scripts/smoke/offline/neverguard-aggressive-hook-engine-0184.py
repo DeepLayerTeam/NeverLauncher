@@ -12,20 +12,26 @@ def read(path: str) -> str:
 def require(body: str, needles: list[str], label: str) -> None:
     missing = [needle for needle in needles if needle not in body]
     if missing:
-        raise SystemExit(f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: {label} missing {missing}")
+        raise SystemExit(
+            f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: {label} missing {missing}"
+        )
 
 
 def main() -> int:
     version = read("VERSION").strip()
-    if tuple(int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]) < (0, 18, 4):
-        raise SystemExit(f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: VERSION is {version}")
+    if tuple(
+        int(part) for part in version.split("-")[0].split("+")[0].split(".")[:3]
+    ) < (0, 18, 4):
+        raise SystemExit(
+            f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: VERSION is {version}"
+        )
 
-    engine = read("runtime/neverguard-sensor/src/hook_engine.rs")
-    sensor = read("runtime/neverguard-sensor/src/lib.rs")
+    engine = read("runtime/guard-sensor/src/hook_engine.rs")
+    sensor = read("runtime/guard-sensor/src/lib.rs")
     parent = read("runtime/neverruntime/src/windows_module_guard.rs")
     report = read("runtime/neverruntime/src/windows_hook_engine.rs")
     bootstrap = read("runtime/neverruntime/src/windows_sensor.rs")
-    integration = read("runtime/neverruntime/tests/neverguard_sensor_windows.rs")
+    integration = read("runtime/neverruntime/tests/guard_sensor_windows.rs")
     ci = read(".github/workflows/ci.yml")
     preflight = read("scripts/release/preflight.sh")
 
@@ -62,17 +68,22 @@ def main() -> int:
         [
             'name: "NtAllocateVirtualMemory"',
             'name: "NtProtectVirtualMemory"',
-            'fn hook_nt_allocate_virtual_memory(',
-            'fn hook_nt_protect_virtual_memory(',
+            "fn hook_nt_allocate_virtual_memory(",
+            "fn hook_nt_protect_virtual_memory(",
             'import_dll.eq_ignore_ascii_case("ntdll.dll")',
-            'status >= 0 && is_current_process_handle(process)',
-            'fn is_current_process_handle(process: *mut c_void) -> bool',
-            'record_virtual_alloc(address, size, protect)',
-            'record_virtual_protect(address, size, protect)',
+            "status >= 0 && is_current_process_handle(process)",
+            "fn is_current_process_handle(process: *mut c_void) -> bool",
+            "record_virtual_alloc(address, size, protect)",
+            "record_virtual_protect(address, size, protect)",
         ],
         "current-process NT memory provenance with NTSTATUS fail-closed",
     )
-    for forbidden in ("SetWindowsHookEx", "WriteProcessMemory", "CreateRemoteThread", "NtWriteVirtualMemory"):
+    for forbidden in (
+        "SetWindowsHookEx",
+        "WriteProcessMemory",
+        "CreateRemoteThread",
+        "NtWriteVirtualMemory",
+    ):
         if forbidden in engine:
             raise SystemExit(
                 f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: cross/global-process primitive forbidden: {forbidden}"
@@ -131,7 +142,7 @@ def main() -> int:
         [
             "NEVERGUARD_SENSOR_PROTOCOL_VERSION: u32 = 3",
             "NGSENS04",
-            "neverguard-sensor-startup-v3",
+            "guard-sensor-startup-v3",
             "authenticate_sensor_or_kill",
         ],
         "protocol-v3 fail-closed bootstrap",
@@ -151,22 +162,29 @@ def main() -> int:
     require(
         ci,
         [
-            "python scripts/smoke/offline/neverguard-aggressive-hook-engine-0184.py",
-            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test neverguard_sensor_windows -- --nocapture",
-            "cargo clippy --manifest-path runtime/neverguard-sensor/Cargo.toml --all-targets -- -D warnings",
+            "python scripts/smoke/offline/guard-aggressive-hook-engine-0184.py",
+            "cargo test --manifest-path runtime/neverruntime/Cargo.toml --test guard_sensor_windows -- --nocapture",
+            "cargo clippy --manifest-path runtime/guard-sensor/Cargo.toml --all-targets -- -D warnings",
             "cargo clippy --manifest-path runtime/neverruntime/Cargo.toml --all-targets -- -D warnings",
         ],
         "Windows compilation/integration/clippy CI",
     )
-    if "neverguard-aggressive-hook-engine-0184.py" not in preflight:
-        raise SystemExit("[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: preflight wiring missing")
+    if "guard-aggressive-hook-engine-0184.py" not in preflight:
+        raise SystemExit(
+            "[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: preflight wiring missing"
+        )
 
     for path, body in [
-        ("runtime/neverguard-sensor/src/hook_engine.rs", engine),
-        ("runtime/neverguard-sensor/src/lib.rs", sensor),
+        ("runtime/guard-sensor/src/hook_engine.rs", engine),
+        ("runtime/guard-sensor/src/lib.rs", sensor),
         ("runtime/neverruntime/src/windows_module_guard.rs", parent),
     ]:
-        for forbidden in ("todo!()", "unimplemented!()", "TODO: stub", "foundation placeholder"):
+        for forbidden in (
+            "todo!()",
+            "unimplemented!()",
+            "TODO: stub",
+            "foundation placeholder",
+        ):
             if forbidden in body:
                 raise SystemExit(
                     f"[NeverLauncher] Aggressive Hook Engine I 0.18.4 gate: placeholder {forbidden!r} in {path}"

@@ -155,7 +155,7 @@ impl ProcessSupervisor {
         command.args(&plan.jvm_args);
         #[cfg(windows)]
         let mut sensor_bootstrap = crate::windows_sensor::prepare_sensor_command(&mut command)
-            .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
+            .map_err(|err| format!("launch заблокирован: Guard Sensor prepare failed: {err}"))?;
         crate::apply_launch_command_0223(&mut command, &plan);
         command
             .stdin(Stdio::null())
@@ -179,7 +179,7 @@ impl ProcessSupervisor {
         let windows_sensor_session = Some(
             crate::windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
                 .await
-                .map_err(|err| format!("launch заблокирован: NeverGuard Sensor/Module Guard authentication failed: {err}"))?,
+                .map_err(|err| format!("launch заблокирован: Guard Sensor/Module Guard authentication failed: {err}"))?,
         );
         #[cfg(windows)]
         let windows_sensor = windows_sensor_session.as_ref().map(|session| session.report());

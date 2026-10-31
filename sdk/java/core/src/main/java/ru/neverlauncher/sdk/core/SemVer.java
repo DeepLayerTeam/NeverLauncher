@@ -4,7 +4,7 @@ import java.math.BigInteger;
 import java.util.*;
 import java.util.regex.*;
 
-/** NeverExtensions SemVer ordering and constraint matching compatible with the Go resolver. */
+/** Extensions SemVer ordering and constraint matching compatible with the Go resolver. */
 public record SemVer(int major, int minor, int patch, List<String> prerelease) implements Comparable<SemVer> {
     private static final Pattern VERSION = Pattern.compile("^v?(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:\\.(0|[1-9][0-9]*))?(?:-([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$");
     public SemVer { if(major<0||minor<0||patch<0)throw new IllegalArgumentException("negative SemVer");prerelease=List.copyOf(prerelease); }

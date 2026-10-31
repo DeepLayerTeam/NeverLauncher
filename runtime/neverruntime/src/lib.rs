@@ -40,23 +40,23 @@ pub mod macos_policy;
 pub mod linux_guard;
 #[cfg(target_os = "macos")]
 pub mod macos_guard;
-pub use attestation::{GuardAttestationRequest, NeverGuardRemoteAttestation, NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION};
+pub use attestation::{GuardAttestationRequest, GuardRemoteAttestation, NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION};
 pub use compatibility::{resolve_compatibility, CompatibilityContext, CompatibilityEnvironment, CompatibilityResolution, ResolvedLibrary, ResolvedNative};
 pub use managed_java::{ensure_managed_java, ensure_managed_java_from_distribution, select_java_executable, ManagedJavaResult};
 pub use integrity::{
     verify_windows_authenticode_trust, AuthenticodeEvidence, BoundaryEvidence, LinuxProcessSecurityEvidence, MacOSProcessSecurityEvidence, ModuleSetEvidence,
-    NeverGuardIntegrityEvidence, ProcessIntegrityEvidence, ProcessMitigationEvidence, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
+    GuardIntegrityEvidence, ProcessIntegrityEvidence, ProcessMitigationEvidence, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
     NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA, NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA, NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
 };
-pub use guard_ipc::{neverguard_executable_name, run_windows_guard_server, validate_neverguard_path, NeverGuardStatus, NEVERGUARD_PROTOCOL_VERSION};
+pub use guard_ipc::{guard_executable_name, run_windows_guard_server, validate_guard_path, GuardStatus, NEVERGUARD_PROTOCOL_VERSION};
 #[cfg(windows)]
-pub use guard_ipc::NeverGuardSupervisor;
+pub use guard_ipc::GuardSupervisor;
 #[cfg(target_os = "linux")]
-pub use linux_guard::{run_linux_guard_server, NeverGuardSupervisor};
+pub use linux_guard::{run_linux_guard_server, GuardSupervisor};
 #[cfg(target_os = "macos")]
-pub use macos_guard::{run_macos_guard_server, NeverGuardSupervisor};
+pub use macos_guard::{run_macos_guard_server, GuardSupervisor};
 #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
-pub use guard_ipc::NeverGuardSupervisor;
+pub use guard_ipc::GuardSupervisor;
 pub use supervisor::{ProcessStatus, ProcessSupervisor};
 pub use windows_policy::{
     ensure_guard_process_policy, ensure_guard_process_policy_with_profile,
@@ -95,7 +95,7 @@ pub use windows_continuous_guard::{
 pub use windows_attestation_v2::{
     build_windows_attestation_v2, collect_windows_continuous_evidence_v2,
     recompute_continuous_evidence_sha256, recompute_windows_attestation_v2_sha256,
-    validate_continuous_evidence_v2, NeverGuardRemoteAttestationV2,
+    validate_continuous_evidence_v2, GuardRemoteAttestationV2,
     WindowsContinuousEvidenceV2, NEVERGUARD_WINDOWS_CONTINUOUS_EVIDENCE_SCHEMA,
     NEVERGUARD_WINDOWS_CONTINUOUS_EVIDENCE_VERSION, NEVERGUARD_WINDOWS_REMOTE_ATTESTATION_V2_SCHEMA,
     NEVERGUARD_WINDOWS_REMOTE_ATTESTATION_V2_VERSION,
@@ -961,7 +961,7 @@ pub async fn certify_vanilla_compatibility(
     command.args(&plan.jvm_args);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
-        .map_err(|err| format!("Vanilla certification заблокирован NeverGuard Sensor: {err}"))?;
+        .map_err(|err| format!("Vanilla certification заблокирован Guard Sensor: {err}"))?;
     apply_launch_command_0223(&mut command, &plan);
     command
         .stdin(Stdio::null())
@@ -976,7 +976,7 @@ pub async fn certify_vanilla_compatibility(
     #[cfg(windows)]
     let _sensor_session = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
         .await
-        .map_err(|err| format!("Vanilla certification заблокирован NeverGuard Sensor: {err}"))?;
+        .map_err(|err| format!("Vanilla certification заблокирован Guard Sensor: {err}"))?;
     let (status, timed_out) = match timeout(Duration::from_secs(max_runtime_seconds), child.wait()).await {
         Ok(result) => (Some(result.map_err(|err| format!("не удалось дождаться Vanilla runtime: {err}"))?), false),
         Err(_) => {
@@ -1006,7 +1006,7 @@ pub async fn certify_vanilla_compatibility(
             .map_err(|e| format!("cannot write certification exit diagnostics: {e}"))?;
     }
     let exit_code = status.and_then(|value| value.code());
-    // 0xE3 — специальный код завершения NeverGuard при строгом отказе.
+    // 0xE3 — специальный код завершения Guard при строгом отказе.
     // Добавляйте его краткую причину в артефакт сертификации клиента
     // вместо пустого журнала, чтобы ошибки Windows-агента были понятны.
     #[cfg(windows)]
@@ -1018,14 +1018,14 @@ pub async fn certify_vanilla_compatibility(
         if !guard.last_violation.is_empty() {
             let bounded = guard.last_violation.chars().take(1024).collect::<String>();
             let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
-                .map_err(|e| format!("cannot append NeverGuard certification diagnostics: {e}"))?;
-            writeln!(diagnostics, "--- NeverGuard fail-closed ---\n{bounded}")
-                .map_err(|e| format!("cannot write NeverGuard certification diagnostics: {e}"))?;
+                .map_err(|e| format!("cannot append Guard certification diagnostics: {e}"))?;
+            writeln!(diagnostics, "--- Guard fail-closed ---\n{bounded}")
+                .map_err(|e| format!("cannot write Guard certification diagnostics: {e}"))?;
         } else if exit_code == Some(0xE3) {
             let mut diagnostics = std::fs::OpenOptions::new().append(true).open(&log_path)
-                .map_err(|e| format!("cannot append NeverGuard certification diagnostics: {e}"))?;
-            writeln!(diagnostics, "--- NeverGuard fail-closed ---\nGuard terminated the runtime without a recorded violation")
-                .map_err(|e| format!("cannot write NeverGuard certification diagnostics: {e}"))?;
+                .map_err(|e| format!("cannot append Guard certification diagnostics: {e}"))?;
+            writeln!(diagnostics, "--- Guard fail-closed ---\nGuard terminated the runtime without a recorded violation")
+                .map_err(|e| format!("cannot write Guard certification diagnostics: {e}"))?;
         }
     }
     let finished_at = now_unix()?;
@@ -1130,7 +1130,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     command.args(&plan.jvm_args);
     #[cfg(windows)]
     let mut sensor_bootstrap = windows_sensor::prepare_sensor_command(&mut command)
-        .map_err(|err| format!("launch заблокирован: NeverGuard Sensor prepare failed: {err}"))?;
+        .map_err(|err| format!("launch заблокирован: Guard Sensor prepare failed: {err}"))?;
     apply_launch_command_0223(&mut command, &plan);
     command
         .stdin(Stdio::null())
@@ -1147,7 +1147,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     #[cfg(windows)]
     let _sensor_session = windows_sensor::authenticate_sensor_or_kill(sensor_bootstrap, &mut child)
         .await
-        .map_err(|err| format!("launch заблокирован: NeverGuard Sensor authentication failed: {err}"))?;
+        .map_err(|err| format!("launch заблокирован: Guard Sensor authentication failed: {err}"))?;
 
     let (status, timed_out) = if let Some(seconds) = max_runtime_seconds.filter(|seconds| *seconds > 0) {
         match timeout(Duration::from_secs(seconds), child.wait()).await {
@@ -1333,7 +1333,7 @@ pub(crate) async fn create_launch_plan_with_credentials(manifest: &Manifest, roo
     }
     // Manifest JVM args are appended after Mojang resolution. Repin the
     // extraction root here so a later manifest override cannot redirect the
-    // LWJGL loader outside the client's NeverGuard-certified native cache.
+    // LWJGL loader outside the client's Guard-certified native cache.
     #[cfg(windows)]
     if strategy == "compatibility" || strategy == "mojang" {
         compatibility::pin_windows_lwjgl_extract_path(

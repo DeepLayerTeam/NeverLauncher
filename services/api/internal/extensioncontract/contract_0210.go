@@ -15,7 +15,7 @@ const (
 	LegacyExtensionAPIVersion = "3.7"
 )
 
-// Контракт — зафиксированная поверхность совместимости NeverExtensions 0.21 GA.
+// Контракт — зафиксированная поверхность совместимости Extensions 0.21 GA.
 type Contract struct {
 	PackageFormatName     string   `json:"packageFormatName"`
 	PackageFormatVersion  string   `json:"packageFormatVersion"`
@@ -59,7 +59,7 @@ func IsLegacyAPIVersion(raw string) bool {
 func RequireGAAPIVersion(raw string) error {
 	raw = strings.TrimSpace(raw)
 	if raw != ExtensionAPIVersion {
-		return fmt.Errorf("new NeverExtensions publications require Extension API %s; got %q", ExtensionAPIVersion, raw)
+		return fmt.Errorf("new Extensions publications require Extension API %s; got %q", ExtensionAPIVersion, raw)
 	}
 	return nil
 }

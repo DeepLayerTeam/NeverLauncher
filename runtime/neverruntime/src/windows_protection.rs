@@ -4,7 +4,7 @@ use std::{fmt, str::FromStr};
 pub const NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION: u32 = 2;
 pub const NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION: u32 = 1;
 pub const NEVERGUARD_WINDOWS_PROTECTION_CORE_SCHEMA: &str =
-    "neverguard/windows-protection-core/v1";
+    "guard/windows-protection-core/v1";
 pub const NEVERGUARD_WINDOWS_PROTECTION_PROFILE_ENV: &str =
     "NEVERGUARD_WINDOWS_PROTECTION_PROFILE";
 
@@ -47,7 +47,7 @@ impl FromStr for WindowsProtectionProfile {
             "compat" => Ok(Self::Compat),
             "aggressive" => Ok(Self::Aggressive),
             other => Err(format!(
-                "unsupported NeverGuard Windows protection profile {other:?}; expected audit, compat or aggressive"
+                "unsupported Guard Windows protection profile {other:?}; expected audit, compat or aggressive"
             )),
         }
     }

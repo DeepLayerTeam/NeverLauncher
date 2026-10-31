@@ -31,9 +31,15 @@ REQUIRED = (
 HEX_COMMIT = re.compile(r'^[a-f0-9]{40}$|^[a-f0-9]{64}$')
 
 
+def network_gate_version(version: str) -> bool:
+    """The 0.42.0 live gate stays mandatory for all subsequent product versions."""
+    match = re.fullmatch(r'(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?', version)
+    return match is not None and tuple(map(int, match.groups()[:3])) >= (0, 42, 0)
+
+
 def validate(log: Path, commit: str, version: str) -> dict:
-    if not HEX_COMMIT.fullmatch(commit) or version != '0.42.0':
-        raise ValueError('exact 0.42.0 commit identity required')
+    if not HEX_COMMIT.fullmatch(commit) or not network_gate_version(version):
+        raise ValueError('exact source commit and supported product version >= 0.42.0 required')
     if not log.is_file() or log.is_symlink() or not 0 < log.stat().st_size <= 64*1024*1024:
         raise ValueError('real go test JSON log missing/invalid')
     raw = log.read_bytes()
@@ -72,7 +78,7 @@ def main() -> int:
     try:
         result = validate(args.log, args.source_commit, args.version)
     except (ValueError, OSError, json.JSONDecodeError) as error:
-        parser.exit(2, f'0.42.0 HOST FAULT CERTIFICATION BLOCKED: {error}\n')
+        parser.exit(2, f'{args.version} HOST FAULT CERTIFICATION BLOCKED: {error}\n')
     args.out.parent.mkdir(parents=True, exist_ok=True)
     temp = args.out.with_suffix('.json.tmp')
     temp.write_text(json.dumps(result, indent=2) + '\n')

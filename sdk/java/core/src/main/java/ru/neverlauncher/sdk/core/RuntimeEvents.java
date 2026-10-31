@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Typed, validated callbacks delivered by the existing NeverExtensions EventBus. */
+/** Typed, validated callbacks delivered by the existing Extensions EventBus. */
 public final class RuntimeEvents implements AutoCloseable {
     @FunctionalInterface public interface Decoder<T>{T decode(Object json)throws Exception;}
     @FunctionalInterface public interface Listener<T>{void onEvent(Envelope<T> event)throws Exception;}
@@ -17,6 +17,7 @@ public final class RuntimeEvents implements AutoCloseable {
     public <T> long subscribe(String eventType,String mode,JsonSchema schema,Decoder<T> decoder,Listener<T> listener)throws IOException,InterruptedException {
         if(!eventType.matches("[a-z][a-z0-9.-]{1,127}")||!Set.of("async","sync").contains(mode))throw new IllegalArgumentException("invalid event subscription");
         Objects.requireNonNull(decoder);Objects.requireNonNull(listener);
+        host.requireEvent(eventType);
         String key=eventType+":"+mode;
         if(handlers.putIfAbsent(key,new Binding<>(schema,decoder,listener))!=null)throw new IllegalArgumentException("duplicate event subscription: "+key);
         try{

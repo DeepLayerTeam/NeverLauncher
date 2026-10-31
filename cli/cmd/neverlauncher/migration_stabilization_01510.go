@@ -399,7 +399,7 @@ func runMigrationStabilizationSelfTest01510() (map[string]any, error) {
 	}
 	components := []componentUpdateArtifact0157{
 		{Component: "desktop", TargetPath: "neverlauncher-desktop", SHA256: strings.Repeat("1", 64), Size: 1, Executable: true},
-		{Component: "guard", TargetPath: "neverguard", SHA256: strings.Repeat("2", 64), Size: 1, Executable: true},
+		{Component: "guard", TargetPath: "guard", SHA256: strings.Repeat("2", 64), Size: 1, Executable: true},
 		{Component: "runtime", TargetPath: "neverruntime", SHA256: strings.Repeat("3", 64), Size: 1, Executable: true},
 	}
 	legacyState := componentUpdateState0157{SchemaVersion: "1.0", ToolVersion: "0.15.9", Version: "0.15.9", Platform: target.Platform, Architecture: target.Architecture, UpdatedAt: time.Now().UTC().Format(time.RFC3339Nano), Components: components}

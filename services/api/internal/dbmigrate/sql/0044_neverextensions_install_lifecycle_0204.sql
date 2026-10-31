@@ -1,4 +1,4 @@
--- NeverLauncher 0.20.4: производственный жизненный цикл установки NeverExtensions.
+-- NeverLauncher 0.20.4: производственный жизненный цикл установки Extensions.
 -- Строки установки 0.20.1/0.20.3 описывали лишь желаемое состояние; они
 -- преобразуются в desired=disabled/current=absent, поскольку до этого выпуска
 -- файлы расширений ещё не подготавливались и не активировались на диске.
@@ -120,5 +120,5 @@ CREATE TRIGGER trg_extension_installs_state_guard_0204
 BEFORE INSERT OR UPDATE ON extension_installs
 FOR EACH ROW EXECUTE FUNCTION neverlauncher_extension_install_state_guard_0204();
 
-COMMENT ON TABLE extension_installs IS 'NeverExtensions 0.20.4 persistent desired/current install lifecycle state.';
-COMMENT ON TABLE extension_install_revisions IS 'Append-only successful NeverExtensions lifecycle transitions and rollback backup references.';
+COMMENT ON TABLE extension_installs IS 'Extensions 0.20.4 persistent desired/current install lifecycle state.';
+COMMENT ON TABLE extension_install_revisions IS 'Append-only successful Extensions lifecycle transitions and rollback backup references.';

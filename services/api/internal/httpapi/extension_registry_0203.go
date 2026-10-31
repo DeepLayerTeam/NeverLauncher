@@ -295,13 +295,13 @@ func (s Server) extensionRegistryPublish0203(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if err := extensioncontract.RequireGAAPIVersion(verified.Manifest.API); err != nil {
-		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "NeverExtensions GA contract rejected publication: "+err.Error(), &model.ExtensionRegistryVersion{ExtensionID: verified.Manifest.ID, Version: verified.Manifest.Version, PublisherID: publisherID, Manifest: verified.Manifest, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: verified.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: verified.KeyFingerprint}})
+		_, _ = s.quarantineRejectedUpload02012(r.Context(), tmpPath, uploadSHA, "Extensions GA contract rejected publication: "+err.Error(), &model.ExtensionRegistryVersion{ExtensionID: verified.Manifest.ID, Version: verified.Manifest.Version, PublisherID: publisherID, Manifest: verified.Manifest, Artifact: model.ExtensionRegistryArtifact{PackageIdentity: verified.PackageIdentity, SHA256: uploadSHA, SignatureKeyFingerprint: verified.KeyFingerprint}})
 		s.audit(r, s.adminActor(r), "extension:registry:reject-contract", verified.Manifest.ID+"@"+verified.Manifest.Version+":"+verified.Manifest.API)
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	identityHex := strings.TrimPrefix(verified.PackageIdentity, "sha256:")
-	storageProject := "neverextensions-registry"
+	storageProject := "extensions-registry"
 	storageVersion := verified.Manifest.ID + "-" + verified.Manifest.Version
 	storagePath := identityHex + ".nlext"
 	tmp, err := os.Open(tmpPath)

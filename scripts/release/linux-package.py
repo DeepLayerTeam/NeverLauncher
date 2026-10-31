@@ -20,8 +20,11 @@ MACHINES = {
 COMPONENTS = {
     "cli": ("neverlauncher-cli-linux-{arch}", "neverlauncher/neverlauncher-cli"),
     "api": ("neverlauncher-api-linux-{arch}", "neverlauncher/neverlauncher-api"),
-    "desktop-launcher": ("neverlauncher-desktop-linux-{arch}", "neverlauncher/neverlauncher-desktop"),
-    "guard": ("neverguard-linux-{arch}", "neverlauncher/neverguard"),
+    "desktop-launcher": (
+        "neverlauncher-desktop-linux-{arch}",
+        "neverlauncher/neverlauncher-desktop",
+    ),
+    "guard": ("guard-linux-{arch}", "neverlauncher/guard"),
     "runtime": ("neverruntime-linux-{arch}", "neverlauncher/neverruntime"),
 }
 
@@ -47,7 +50,9 @@ def inspect_elf(path: Path, expected_arch: str) -> str:
         raise SystemExit(f"{path}: unsupported ELF type {elf_type}")
     expected_machine, machine_name = MACHINES[expected_arch]
     if machine != expected_machine:
-        raise SystemExit(f"{path}: ELF machine={machine}, expected {expected_machine} ({machine_name})")
+        raise SystemExit(
+            f"{path}: ELF machine={machine}, expected {expected_machine} ({machine_name})"
+        )
     return machine_name
 
 
@@ -77,16 +82,18 @@ def write_package(out: Path, version: str, arch: str) -> None:
             raise SystemExit(f"missing Linux production artifact: {path}")
         machine = inspect_elf(path, arch)
         digest, size = sha256_file(path)
-        artifacts.append({
-            "name": name,
-            "packagePath": package_path,
-            "component": component,
-            "architecture": arch,
-            "elfMachine": machine,
-            "sha256": digest,
-            "size": size,
-            "mode": "0755",
-        })
+        artifacts.append(
+            {
+                "name": name,
+                "packagePath": package_path,
+                "component": component,
+                "architecture": arch,
+                "elfMachine": machine,
+                "sha256": digest,
+                "size": size,
+                "mode": "0755",
+            }
+        )
         payloads.append((path, package_path))
 
     artifacts.sort(key=lambda item: str(item["component"]))
@@ -101,23 +108,31 @@ def write_package(out: Path, version: str, arch: str) -> None:
         "packageArtifact": package_name,
         "artifacts": artifacts,
     }
-    manifest_bytes = (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    manifest_bytes = (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode(
+        "utf-8"
+    )
     manifest_path = out / manifest_name
     manifest_path.write_bytes(manifest_bytes)
     os.chmod(manifest_path, 0o644)
 
     by_component = {item["component"]: item for item in artifacts}
     update_components = []
-    for component, update_name in (("desktop-launcher", "desktop"), ("guard", "guard"), ("runtime", "runtime")):
+    for component, update_name in (
+        ("desktop-launcher", "desktop"),
+        ("guard", "guard"),
+        ("runtime", "runtime"),
+    ):
         item = by_component[component]
-        update_components.append({
-            "component": update_name,
-            "sourcePath": str(item["packagePath"]).removeprefix("neverlauncher/"),
-            "targetPath": str(item["packagePath"]).removeprefix("neverlauncher/"),
-            "sha256": item["sha256"],
-            "size": item["size"],
-            "executable": True,
-        })
+        update_components.append(
+            {
+                "component": update_name,
+                "sourcePath": str(item["packagePath"]).removeprefix("neverlauncher/"),
+                "targetPath": str(item["packagePath"]).removeprefix("neverlauncher/"),
+                "sha256": item["sha256"],
+                "size": item["size"],
+                "executable": True,
+            }
+        )
     update_manifest = {
         "schemaVersion": "1.0",
         "product": "NeverLauncher",
@@ -127,51 +142,110 @@ def write_package(out: Path, version: str, arch: str) -> None:
         "layout": "adjacent-files",
         "trustMode": "sha256-delivery",
         "components": update_components,
-        "supportFiles": [{
-            "component": "package-manifest",
-            "sourcePath": "LINUX_PACKAGE_MANIFEST.json",
-            "targetPath": "LINUX_PACKAGE_MANIFEST.json",
-            "sha256": hashlib.sha256(manifest_bytes).hexdigest(),
-            "size": len(manifest_bytes),
-            "executable": False,
-        }],
+        "supportFiles": [
+            {
+                "component": "package-manifest",
+                "sourcePath": "LINUX_PACKAGE_MANIFEST.json",
+                "targetPath": "LINUX_PACKAGE_MANIFEST.json",
+                "sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+                "size": len(manifest_bytes),
+                "executable": False,
+            }
+        ],
     }
-    update_manifest["supportFiles"].append({
-        "component": "updater", "sourcePath": "neverlauncher-cli", "targetPath": "neverlauncher-cli",
-        "sha256": by_component["cli"]["sha256"], "size": by_component["cli"]["size"], "executable": True,
-    })
+    update_manifest["supportFiles"].append(
+        {
+            "component": "updater",
+            "sourcePath": "neverlauncher-cli",
+            "targetPath": "neverlauncher-cli",
+            "sha256": by_component["cli"]["sha256"],
+            "size": by_component["cli"]["size"],
+            "executable": True,
+        }
+    )
     update_manifest_bytes, component_sig = signed_set(update_manifest)
     # The production updater verifies the delegated component signature
     # against the pinned root-signed policy. Ship these alongside the exact
     # update manifest, not only the historical component signature.
     delegated_sig = None
     delegated_policy = None
-    if tuple(int(x) for x in version.split('.')[:3]) >= (0, 41, 0):
+    if tuple(int(x) for x in version.split(".")[:3]) >= (0, 41, 0):
         delegated_sig, delegated_policy = sign_delegated_set(update_manifest_bytes)
 
     package_path = out / package_name
     tmp = package_path.with_suffix(package_path.suffix + ".tmp")
     with tmp.open("wb") as raw:
-        with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0, compresslevel=9) as gz:
+        with gzip.GzipFile(
+            filename="", mode="wb", fileobj=raw, mtime=0, compresslevel=9
+        ) as gz:
             with tarfile.open(fileobj=gz, mode="w") as tf:
                 for path, package_entry in sorted(payloads, key=lambda item: item[1]):
                     with path.open("rb") as f:
-                        tf.addfile(tar_info(package_entry, path.stat().st_size, 0o755), f)
-                tf.addfile(tar_info("neverlauncher/LINUX_PACKAGE_MANIFEST.json", len(manifest_bytes), 0o644), io.BytesIO(manifest_bytes))
-                tf.addfile(tar_info("neverlauncher/COMPONENT_UPDATE_MANIFEST.json", len(update_manifest_bytes), 0o644), io.BytesIO(update_manifest_bytes))
+                        tf.addfile(
+                            tar_info(package_entry, path.stat().st_size, 0o755), f
+                        )
+                tf.addfile(
+                    tar_info(
+                        "neverlauncher/LINUX_PACKAGE_MANIFEST.json",
+                        len(manifest_bytes),
+                        0o644,
+                    ),
+                    io.BytesIO(manifest_bytes),
+                )
+                tf.addfile(
+                    tar_info(
+                        "neverlauncher/COMPONENT_UPDATE_MANIFEST.json",
+                        len(update_manifest_bytes),
+                        0o644,
+                    ),
+                    io.BytesIO(update_manifest_bytes),
+                )
                 if component_sig is not None:
-                    tf.addfile(tar_info("neverlauncher/COMPONENT_SET_SIGNATURE.json", len(component_sig), 0o644), io.BytesIO(component_sig))
+                    tf.addfile(
+                        tar_info(
+                            "neverlauncher/COMPONENT_SET_SIGNATURE.json",
+                            len(component_sig),
+                            0o644,
+                        ),
+                        io.BytesIO(component_sig),
+                    )
                 if delegated_sig is not None and delegated_policy is not None:
-                    tf.addfile(tar_info("neverlauncher/COMPONENT_SET_SIGNATURE_V2.json", len(delegated_sig), 0o644), io.BytesIO(delegated_sig))
-                    tf.addfile(tar_info("neverlauncher/COMPONENT_TRUST_POLICY.json", len(delegated_policy), 0o644), io.BytesIO(delegated_policy))
+                    tf.addfile(
+                        tar_info(
+                            "neverlauncher/COMPONENT_SET_SIGNATURE_V2.json",
+                            len(delegated_sig),
+                            0o644,
+                        ),
+                        io.BytesIO(delegated_sig),
+                    )
+                    tf.addfile(
+                        tar_info(
+                            "neverlauncher/COMPONENT_TRUST_POLICY.json",
+                            len(delegated_policy),
+                            0o644,
+                        ),
+                        io.BytesIO(delegated_policy),
+                    )
     os.replace(tmp, package_path)
     os.chmod(package_path, 0o644)
     digest, size = sha256_file(package_path)
-    print(json.dumps({"package": package_name, "sha256": digest, "size": size, "manifest": manifest_name}, separators=(",", ":")))
+    print(
+        json.dumps(
+            {
+                "package": package_name,
+                "sha256": digest,
+                "size": size,
+                "manifest": manifest_name,
+            },
+            separators=(",", ":"),
+        )
+    )
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build deterministic NeverLauncher Linux production tar.gz package")
+    parser = argparse.ArgumentParser(
+        description="Build deterministic NeverLauncher Linux production tar.gz package"
+    )
     parser.add_argument("--out", required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--architecture", required=True, choices=sorted(MACHINES))

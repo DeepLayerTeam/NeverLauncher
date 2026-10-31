@@ -142,7 +142,8 @@ def verify_e2e_files(runtime: Path, version: str, commit: str) -> None:
 
 def accept(root: Path, release: Path, runtime: Path, commit: str) -> dict:
     version = (root / 'VERSION').read_text(encoding='utf-8').strip()
-    require(version == '0.42.0', 'this final network gate is only for 0.42.0')
+    from scripts.ga.record_network_faults_0420 import network_gate_version
+    require(network_gate_version(version), 'network gate requires version >= 0.42.0')
     require(COMMIT.fullmatch(commit) is not None, 'real source commit SHA required')
     hashes = verify_final_jars(root, release, version)
     matrix = certify(root, runtime, 'all')
@@ -180,7 +181,7 @@ def main() -> int:
     try:
         outcome = accept(args.root, args.release, args.runtime, args.source_commit)
     except (ReleaseBlocked, OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
-        print(f'0.42.0 PRODUCTION RELEASE BLOCKED: {exc}', file=sys.stderr)
+        print(f'NETWORK PRODUCTION RELEASE BLOCKED: {exc}', file=sys.stderr)
         return 2
     serialized = json.dumps(outcome, indent=2, ensure_ascii=False, sort_keys=True) + '\n'
     if args.out:

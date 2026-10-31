@@ -22,7 +22,7 @@ public final class GravitCompatExtension implements Extension {
         if(!LauncherModule.class.isAssignableFrom(type)||java.lang.reflect.Modifier.isAbstract(type.getModifiers()))throw new SecurityException("class is not a concrete LauncherModule");
         module=(LauncherModule)type.getDeclaredConstructor().newInstance();
         LauncherModulesManager manager=new LauncherModulesManager(context.runtime());
-        // Dependencies must be ported to NeverExtensions manifest: do not silently resolve Gravit internal modules.
+        // Dependencies must be ported to Extensions manifest: do not silently resolve Gravit internal modules.
         for(String dependency:module.getModuleInfo().dependencies) {
             if(dependency==null||!dependency.isBlank())throw new UnsupportedOperationException("Gravit internal dependency requires an explicit port: "+dependency);
         }

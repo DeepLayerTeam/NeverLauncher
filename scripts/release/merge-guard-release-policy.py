@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Merge platform NeverGuard release-policy fragments into one production policy.
+"""Merge platform Guard release-policy fragments into one production policy.
 
 The command is intentionally fail-closed: all three platforms must be present for
 0.14.x, hashes must be canonical SHA-256, Windows must require Authenticode, and
 macOS must originate from the Developer ID + notarization production path.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -45,7 +46,9 @@ def load_fragment(path: Path, expected_platform: str) -> dict:
         die(f"{path}: malformed {expected_platform} policy")
     expected_signing, auth_required = PLATFORMS[expected_platform]
     if policy.get("signingMode") != expected_signing:
-        die(f"{path}: production {expected_platform} signingMode must be {expected_signing}")
+        die(
+            f"{path}: production {expected_platform} signingMode must be {expected_signing}"
+        )
     artifacts = policy.get("artifacts")
     if not isinstance(artifacts, list) or not artifacts or len(artifacts) > 32:
         die(f"{path}: artifacts must contain 1..32 exact pairs")
@@ -94,7 +97,9 @@ def main() -> int:
         },
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(merged, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(merged, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     print(args.output)
     return 0
 

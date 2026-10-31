@@ -263,10 +263,10 @@ func (c Config) Validate() error {
 		seen[id] = true
 		found := map[string]bool{}
 		if len(t.Components) != 3 {
-			return fmt.Errorf("%s: require exactly neverruntime, desktop, neverguard components", id)
+			return fmt.Errorf("%s: require exactly neverruntime, desktop, guard components", id)
 		}
 		for _, a := range t.Components {
-			if a.Name != "neverruntime" && a.Name != "desktop" && a.Name != "neverguard" {
+			if a.Name != "neverruntime" && a.Name != "desktop" && a.Name != "guard" {
 				return fmt.Errorf("invalid component role: %s", a.Name)
 			}
 			if found[a.Name] {
@@ -277,7 +277,7 @@ func (c Config) Validate() error {
 				return fmt.Errorf("%s: %w", a.Name, e)
 			}
 		}
-		for _, role := range []string{"neverruntime", "desktop", "neverguard"} {
+		for _, role := range []string{"neverruntime", "desktop", "guard"} {
 			if !found[role] {
 				return fmt.Errorf("missing component %s", role)
 			}
@@ -323,8 +323,8 @@ func ComponentName(role string) string {
 		return "neverruntime" + exeSuffix()
 	case "desktop":
 		return "neverlauncher-desktop" + exeSuffix()
-	case "neverguard":
-		return "neverguard" + exeSuffix()
+	case "guard":
+		return "guard" + exeSuffix()
 	}
 	panic("unvalidated component role")
 }

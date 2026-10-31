@@ -10,7 +10,7 @@
 
 ## Offline
 
-Offline поддерживается **только** для signed Manifest v2, где `runtime.launch.offlineMode` явно разрешён издателем. Manifest записывается как кеш локально после pinned-Ed25519 verification и повторно проверяется при загрузке и непосредственно перед offline launch. `projectId/profileId/channel/version/signature` должны совпадать с кешем. Runtime повторно проверяет целостность файлов перед запуском. Offline не выдаёт Minecraft session, Guard launch ticket и ServerBridge join. Он не предоставляет доступ к защищённым online-серверам и не обходит NeverGuard process hardening.
+Offline поддерживается **только** для signed Manifest v2, где `runtime.launch.offlineMode` явно разрешён издателем. Manifest записывается как кеш локально после pinned-Ed25519 verification и повторно проверяется при загрузке и непосредственно перед offline launch. `projectId/profileId/channel/version/signature` должны совпадать с кешем. Runtime повторно проверяет целостность файлов перед запуском. Offline не выдаёт Minecraft session, Guard launch ticket и ServerBridge join. Он не предоставляет доступ к защищённым online-серверам и не обходит Guard process hardening.
 
 ## Ограничения сертификации
 

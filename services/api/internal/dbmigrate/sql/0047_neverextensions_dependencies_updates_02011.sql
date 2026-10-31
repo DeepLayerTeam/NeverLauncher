@@ -64,6 +64,6 @@ CREATE TABLE IF NOT EXISTS extension_update_transactions (
 CREATE INDEX IF NOT EXISTS idx_extension_update_transactions_scope_02011 ON extension_update_transactions(scope,scope_id,started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_extension_update_transactions_status_02011 ON extension_update_transactions(status,started_at DESC);
 
-COMMENT ON TABLE extension_update_pins IS 'NeverExtensions exact scoped version pins (0.20.11).';
+COMMENT ON TABLE extension_update_pins IS 'Extensions exact scoped version pins (0.20.11).';
 COMMENT ON TABLE extension_update_leases IS 'Cross-replica update lease preventing overlapping multi-extension updates in one scope.';
 COMMENT ON TABLE extension_update_transactions IS 'Durable compensation-backed multi-extension update transaction journal.';

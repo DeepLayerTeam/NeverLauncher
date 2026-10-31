@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub const NEVERGUARD_LINUX_PROCESS_POLICY_VERSION: u32 = 1;
 pub const NEVERGUARD_LINUX_HARDENING_VERSION: u32 = 1;
-pub const NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA: &str = "neverguard/linux-runtime-process-policy/v1";
+pub const NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA: &str = "guard/linux-runtime-process-policy/v1";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

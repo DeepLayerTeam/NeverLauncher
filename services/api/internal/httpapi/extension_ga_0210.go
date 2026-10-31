@@ -8,7 +8,7 @@ import (
 
 func (s Server) extensionGAStatus0210(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionGA == nil {
-		writeError(w, http.StatusServiceUnavailable, "NeverExtensions GA manager is unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Extensions GA manager is unavailable")
 		return
 	}
 	report, err := s.ExtensionGA.Validate(r.Context())
@@ -28,7 +28,7 @@ func (s Server) extensionGAStatus0210(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) extensionGAReconcile0210(w http.ResponseWriter, r *http.Request) {
 	if s.ExtensionGA == nil {
-		writeError(w, http.StatusServiceUnavailable, "NeverExtensions GA manager is unavailable")
+		writeError(w, http.StatusServiceUnavailable, "Extensions GA manager is unavailable")
 		return
 	}
 	report, err := s.ExtensionGA.Reconcile(r.Context())

@@ -138,9 +138,9 @@ mod imp {
 
     const SENSOR_PROTOCOL_VERSION: u32 = 3;
     const MODULE_GUARD_ARM_MAGIC: &[u8; 8] = b"NGARM004";
-    const MODULE_GUARD_ARM_DOMAIN: &[u8] = b"neverguard-module-guard-arm-v2";
+    const MODULE_GUARD_ARM_DOMAIN: &[u8] = b"guard-module-guard-arm-v2";
     const MODULE_EVENT_MAGIC: &[u8; 8] = b"NGMOD004";
-    const MODULE_EVENT_DOMAIN: &[u8] = b"neverguard-module-event-v2";
+    const MODULE_EVENT_DOMAIN: &[u8] = b"guard-module-event-v2";
     const MODULE_EVENT_REASON_LOADED: u32 = 1;
     const MODULE_EVENT_REASON_UNLOADED: u32 = 2;
     const MODULE_EVENT_REASON_HEARTBEAT: u32 = 3;
@@ -166,7 +166,7 @@ mod imp {
     const MODULE_EVENT_REASON_CONTINUOUS_TAMPER: u32 = 23;
     const CONTINUOUS_GUARD_VERSION: u32 = 1;
     const CONTINUOUS_GUARD_ACK_MAGIC: &[u8; 8] = b"NGCGAK01";
-    const CONTINUOUS_GUARD_ACK_DOMAIN: &[u8] = b"neverguard-continuous-guard-ack-v1";
+    const CONTINUOUS_GUARD_ACK_DOMAIN: &[u8] = b"guard-continuous-guard-ack-v1";
     const CONTINUOUS_GUARD_ACK_PREFIX_LEN: usize = 64;
     const CONTINUOUS_GUARD_ACK_PACKET_LEN: usize = 96;
     const MODULE_EVENT_FLAG_PATH_TRUNCATED: u32 = 1;
@@ -235,7 +235,7 @@ mod imp {
                 .get_current_dir()
                 .map(PathBuf::from)
                 .or_else(|| std::env::current_dir().ok())
-                .ok_or_else(|| "NeverGuard Module Guard cannot resolve JVM working directory".to_string())?;
+                .ok_or_else(|| "Guard Module Guard cannot resolve JVM working directory".to_string())?;
 
             let java_executable = resolve_program_path(command.as_std().get_program(), &current_dir);
 
@@ -262,7 +262,7 @@ mod imp {
                 }
             }
             if trusted_roots.is_empty() {
-                return Err("NeverGuard Module Guard trusted root set is empty".to_string());
+                return Err("Guard Module Guard trusted root set is empty".to_string());
             }
             Ok(Self { trusted_roots })
         }
@@ -369,18 +369,18 @@ mod imp {
         let mut ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut ready_packet))
             .await
-            .map_err(|_| "NeverGuard Hook Engine ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard Hook Engine ready proof read failed: {err}"))?;
+            .map_err(|_| "Guard Hook Engine ready proof timed out".to_string())?
+            .map_err(|err| format!("Guard Hook Engine ready proof read failed: {err}"))?;
         let ready_event = parse_event_packet(&ready_packet, &secret, pid, 1)?;
         if ready_event.reason != MODULE_EVENT_REASON_HOOK_READY {
             return Err(format!(
-                "NeverGuard Hook Engine expected HOOK_READY as first event, got {}",
+                "Guard Hook Engine expected HOOK_READY as first event, got {}",
                 ready_event.reason
             ));
         }
         let hook_digest = hook_digest_from_event(&ready_event)?;
         if ready_event.flags == 0 || ready_event.size_of_image == 0 {
-            return Err("NeverGuard Hook Engine armed with zero hooked modules/slots".to_string());
+            return Err("Guard Hook Engine armed with zero hooked modules/slots".to_string());
         }
         let mut ready_chain = [0u8; 32];
         if let Ok(bytes) = hex::decode(&initial_chain) {
@@ -410,18 +410,18 @@ mod imp {
         let mut memory_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut memory_ready_packet))
             .await
-            .map_err(|_| "NeverGuard Memory Integrity ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard Memory Integrity ready proof read failed: {err}"))?;
+            .map_err(|_| "Guard Memory Integrity ready proof timed out".to_string())?
+            .map_err(|err| format!("Guard Memory Integrity ready proof read failed: {err}"))?;
         let memory_ready_event = parse_event_packet(&memory_ready_packet, &secret, pid, 2)?;
         if memory_ready_event.reason != MODULE_EVENT_REASON_MEMORY_READY {
             return Err(format!(
-                "NeverGuard Memory Integrity expected MEMORY_READY as second event, got {}",
+                "Guard Memory Integrity expected MEMORY_READY as second event, got {}",
                 memory_ready_event.reason
             ));
         }
         let memory_ready = memory_report_from_event(&memory_ready_event)?;
         if memory_ready.executable_region_count == 0 || memory_ready.image_code_region_count == 0 {
-            return Err("NeverGuard Memory Integrity armed with zero executable/image code coverage".to_string());
+            return Err("Guard Memory Integrity armed with zero executable/image code coverage".to_string());
         }
         continuous_chain = advance_continuous_event_chain(continuous_chain, &memory_ready_packet);
         ready_chain = advance_event_chain(
@@ -443,19 +443,19 @@ mod imp {
         let mut thread_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut thread_ready_packet))
             .await
-            .map_err(|_| "NeverGuard Thread & Process Integrity ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard Thread & Process Integrity ready proof read failed: {err}"))?;
+            .map_err(|_| "Guard Thread & Process Integrity ready proof timed out".to_string())?
+            .map_err(|err| format!("Guard Thread & Process Integrity ready proof read failed: {err}"))?;
         let thread_ready_event = parse_event_packet(&thread_ready_packet, &secret, pid, 3)?;
         if thread_ready_event.reason != MODULE_EVENT_REASON_THREAD_PROCESS_READY {
             return Err(format!(
-                "NeverGuard Thread & Process Integrity expected THREAD_PROCESS_READY as third event, got {}",
+                "Guard Thread & Process Integrity expected THREAD_PROCESS_READY as third event, got {}",
                 thread_ready_event.reason
             ));
         }
         let process_tree = runtime_policy.verify_process_tree(pid)?;
         let mut thread_ready = thread_process_report_from_event(&thread_ready_event)?;
         if thread_ready.current_thread_count == 0 || thread_ready.baseline_thread_count == 0 {
-            return Err("NeverGuard Thread & Process Integrity armed with zero thread coverage".to_string());
+            return Err("Guard Thread & Process Integrity armed with zero thread coverage".to_string());
         }
         thread_ready.active = true;
         thread_ready.healthy = true;
@@ -486,12 +486,12 @@ mod imp {
         let mut debug_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut debug_ready_packet))
             .await
-            .map_err(|_| "NeverGuard Debug & Instrumentation Guard ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard Debug & Instrumentation Guard ready proof read failed: {err}"))?;
+            .map_err(|_| "Guard Debug & Instrumentation Guard ready proof timed out".to_string())?
+            .map_err(|err| format!("Guard Debug & Instrumentation Guard ready proof read failed: {err}"))?;
         let debug_ready_event = parse_event_packet(&debug_ready_packet, &secret, pid, 4)?;
         if debug_ready_event.reason != MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY {
             return Err(format!(
-                "NeverGuard Debug & Instrumentation Guard expected DEBUG_INSTRUMENTATION_READY as fourth event, got {}",
+                "Guard Debug & Instrumentation Guard expected DEBUG_INSTRUMENTATION_READY as fourth event, got {}",
                 debug_ready_event.reason
             ));
         }
@@ -502,7 +502,7 @@ mod imp {
             || debug_ready.debug_object_present
             || !debug_ready.debug_flags_no_debug_inherit
         {
-            return Err("NeverGuard Debug & Instrumentation Guard armed with active debugger state".to_string());
+            return Err("Guard Debug & Instrumentation Guard armed with active debugger state".to_string());
         }
         continuous_chain = advance_continuous_event_chain(continuous_chain, &debug_ready_packet);
         ready_chain = advance_event_chain(
@@ -526,19 +526,19 @@ mod imp {
         let mut jvm_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut jvm_ready_packet))
             .await
-            .map_err(|_| "NeverGuard JVM-Aware Protection ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard JVM-Aware Protection ready proof read failed: {err}"))?;
+            .map_err(|_| "Guard JVM-Aware Protection ready proof timed out".to_string())?
+            .map_err(|err| format!("Guard JVM-Aware Protection ready proof read failed: {err}"))?;
         let jvm_ready_event = parse_event_packet(&jvm_ready_packet, &secret, pid, 5)?;
         if jvm_ready_event.reason != MODULE_EVENT_REASON_JVM_AWARE_READY {
             return Err(format!(
-                "NeverGuard JVM-Aware Protection expected JVM_AWARE_READY as fifth event, got {}",
+                "Guard JVM-Aware Protection expected JVM_AWARE_READY as fifth event, got {}",
                 jvm_ready_event.reason
             ));
         }
         let jvm_ready = jvm_aware_report_from_event(&jvm_ready_event)?;
         if !jvm_ready.certified_major || !crate::NEVERGUARD_CERTIFIED_JAVA_MAJORS.contains(&jvm_ready.java_major) {
             return Err(format!(
-                "NeverGuard JVM-Aware Protection rejected uncertified Java major {}",
+                "Guard JVM-Aware Protection rejected uncertified Java major {}",
                 jvm_ready.java_major
             ));
         }
@@ -563,12 +563,12 @@ mod imp {
         let mut continuous_ready_packet = [0u8; MODULE_EVENT_PACKET_LEN];
         timeout(MODULE_STREAM_TIMEOUT, server.read_exact(&mut continuous_ready_packet))
             .await
-            .map_err(|_| "NeverGuard Continuous Guard ready proof timed out".to_string())?
-            .map_err(|err| format!("NeverGuard Continuous Guard ready proof read failed: {err}"))?;
+            .map_err(|_| "Guard Continuous Guard ready proof timed out".to_string())?
+            .map_err(|err| format!("Guard Continuous Guard ready proof read failed: {err}"))?;
         let continuous_ready_event = parse_event_packet(&continuous_ready_packet, &secret, pid, 6)?;
         if continuous_ready_event.reason != MODULE_EVENT_REASON_CONTINUOUS_READY {
             return Err(format!(
-                "NeverGuard Continuous Guard expected CONTINUOUS_READY as sixth event, got {}",
+                "Guard Continuous Guard expected CONTINUOUS_READY as sixth event, got {}",
                 continuous_ready_event.reason
             ));
         }
@@ -576,11 +576,11 @@ mod imp {
             || continuous_ready_event.base_address != 0
             || continuous_ready_event.size_of_image != 0
         {
-            return Err("NeverGuard Continuous Guard ready metadata mismatch".to_string());
+            return Err("Guard Continuous Guard ready metadata mismatch".to_string());
         }
         let continuous_pre_digest = continuous_digest_from_event(&continuous_ready_event)?;
         if continuous_pre_digest != hex::encode(continuous_chain) {
-            return Err("NeverGuard Continuous Guard startup event-chain mismatch".to_string());
+            return Err("Guard Continuous Guard startup event-chain mismatch".to_string());
         }
         continuous_chain = advance_continuous_event_chain(continuous_chain, &continuous_ready_packet);
         ready_chain = advance_event_chain(
@@ -772,14 +772,14 @@ mod imp {
                     }
                 }
                 MODULE_EVENT_REASON_HOOK_READY => {
-                    Err("NeverGuard Hook Engine emitted duplicate HOOK_READY".to_string())
+                    Err("Guard Hook Engine emitted duplicate HOOK_READY".to_string())
                 }
                 MODULE_EVENT_REASON_HOOK_HEARTBEAT => {
                     match hook_digest_from_event(&event) {
                         Err(err) => Err(err),
                         Ok(digest) if event.flags == 0 || event.size_of_image == 0 => {
                             let _ = digest;
-                            Err("NeverGuard Hook Engine heartbeat reported zero coverage".to_string())
+                            Err("Guard Hook Engine heartbeat reported zero coverage".to_string())
                         }
                         Ok(digest) => {
                             module_hash = digest.clone();
@@ -802,19 +802,19 @@ mod imp {
                 MODULE_EVENT_REASON_HOOK_TAMPER => {
                     let detail = event.path.to_string_lossy();
                     Err(if detail.is_empty() {
-                        "NeverGuard Hook Engine integrity violation".to_string()
+                        "Guard Hook Engine integrity violation".to_string()
                     } else {
-                        format!("NeverGuard Hook Engine integrity violation: {detail}")
+                        format!("Guard Hook Engine integrity violation: {detail}")
                     })
                 }
                 MODULE_EVENT_REASON_MEMORY_READY => {
-                    Err("NeverGuard Memory Integrity emitted duplicate MEMORY_READY".to_string())
+                    Err("Guard Memory Integrity emitted duplicate MEMORY_READY".to_string())
                 }
                 MODULE_EVENT_REASON_MEMORY_HEARTBEAT => {
                     match memory_report_from_event(&event) {
                         Err(err) => Err(err),
                         Ok(memory) if memory.executable_region_count == 0 || memory.image_code_region_count == 0 => {
-                            Err("NeverGuard Memory Integrity heartbeat reported zero coverage".to_string())
+                            Err("Guard Memory Integrity heartbeat reported zero coverage".to_string())
                         }
                         Ok(mut memory) => {
                             module_hash = memory.code_set_sha256.clone();
@@ -835,24 +835,24 @@ mod imp {
                 MODULE_EVENT_REASON_MEMORY_TAMPER => {
                     let detail = event.path.to_string_lossy();
                     Err(if detail.is_empty() {
-                        "NeverGuard Memory Integrity runtime tampering detected".to_string()
+                        "Guard Memory Integrity runtime tampering detected".to_string()
                     } else {
-                        format!("NeverGuard Memory Integrity runtime tampering detected: {detail}")
+                        format!("Guard Memory Integrity runtime tampering detected: {detail}")
                     })
                 }
                 MODULE_EVENT_REASON_THREAD_PROCESS_READY => {
-                    Err("NeverGuard Thread & Process Integrity emitted duplicate THREAD_PROCESS_READY".to_string())
+                    Err("Guard Thread & Process Integrity emitted duplicate THREAD_PROCESS_READY".to_string())
                 }
                 MODULE_EVENT_REASON_THREAD_PROCESS_HEARTBEAT => {
                     match thread_process_report_from_event(&event) {
                         Err(err) => Err(err),
                         Ok(thread_report) if thread_report.current_thread_count == 0 => {
-                            Err("NeverGuard Thread & Process Integrity heartbeat reported zero live threads".to_string())
+                            Err("Guard Thread & Process Integrity heartbeat reported zero live threads".to_string())
                         }
                         Ok(mut thread_report) => {
                             match runtime_policy.verify_process_tree(pid) {
                                 Err(err) => Err(format!(
-                                    "NeverGuard Thread & Process Integrity process-tree verification failed: {err}"
+                                    "Guard Thread & Process Integrity process-tree verification failed: {err}"
                                 )),
                                 Ok(tree) => {
                                     module_hash = thread_report.thread_set_sha256.clone();
@@ -886,15 +886,15 @@ mod imp {
                 MODULE_EVENT_REASON_THREAD_PROCESS_TAMPER => {
                     let detail = event.path.to_string_lossy();
                     Err(if detail.is_empty() {
-                        "NeverGuard Thread & Process Integrity suspicious runtime transition detected".to_string()
+                        "Guard Thread & Process Integrity suspicious runtime transition detected".to_string()
                     } else {
                         format!(
-                            "NeverGuard Thread & Process Integrity suspicious runtime transition detected: {detail}"
+                            "Guard Thread & Process Integrity suspicious runtime transition detected: {detail}"
                         )
                     })
                 }
                 MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_READY => {
-                    Err("NeverGuard Debug & Instrumentation Guard emitted duplicate DEBUG_INSTRUMENTATION_READY".to_string())
+                    Err("Guard Debug & Instrumentation Guard emitted duplicate DEBUG_INSTRUMENTATION_READY".to_string())
                 }
                 MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_HEARTBEAT => {
                     match debug_instrumentation_report_from_event(&event) {
@@ -918,15 +918,15 @@ mod imp {
                 MODULE_EVENT_REASON_DEBUG_INSTRUMENTATION_TAMPER => {
                     let detail = event.path.to_string_lossy();
                     Err(if detail.is_empty() {
-                        "NeverGuard Debug & Instrumentation Guard unwanted debug/instrumentation boundary detected".to_string()
+                        "Guard Debug & Instrumentation Guard unwanted debug/instrumentation boundary detected".to_string()
                     } else {
                         format!(
-                            "NeverGuard Debug & Instrumentation Guard unwanted debug/instrumentation boundary detected: {detail}"
+                            "Guard Debug & Instrumentation Guard unwanted debug/instrumentation boundary detected: {detail}"
                         )
                     })
                 }
                 MODULE_EVENT_REASON_JVM_AWARE_READY => {
-                    Err("NeverGuard JVM-Aware Protection emitted duplicate JVM_AWARE_READY".to_string())
+                    Err("Guard JVM-Aware Protection emitted duplicate JVM_AWARE_READY".to_string())
                 }
                 MODULE_EVENT_REASON_JVM_AWARE_HEARTBEAT => {
                     match jvm_aware_report_from_event(&event) {
@@ -946,29 +946,29 @@ mod imp {
                 MODULE_EVENT_REASON_JVM_AWARE_TAMPER => {
                     let detail = event.path.to_string_lossy();
                     Err(if detail.is_empty() {
-                        "NeverGuard JVM-Aware Protection rejected non-JVM executable-memory transition".to_string()
+                        "Guard JVM-Aware Protection rejected non-JVM executable-memory transition".to_string()
                     } else {
                         format!(
-                            "NeverGuard JVM-Aware Protection rejected non-JVM executable-memory transition: {detail}"
+                            "Guard JVM-Aware Protection rejected non-JVM executable-memory transition: {detail}"
                         )
                     })
                 }
                 MODULE_EVENT_REASON_CONTINUOUS_READY => {
-                    Err("NeverGuard Continuous Guard emitted duplicate CONTINUOUS_READY".to_string())
+                    Err("Guard Continuous Guard emitted duplicate CONTINUOUS_READY".to_string())
                 }
                 MODULE_EVENT_REASON_CONTINUOUS_HEARTBEAT => {
                     if event.flags != CONTINUOUS_GUARD_VERSION || event.size_of_image != 0 {
-                        Err("NeverGuard Continuous Guard heartbeat metadata mismatch".to_string())
+                        Err("Guard Continuous Guard heartbeat metadata mismatch".to_string())
                     } else if event.base_address != guard_sequence {
                         Err(format!(
-                            "NeverGuard Continuous Guard guard-sequence mismatch: expected {guard_sequence}, got {}",
+                            "Guard Continuous Guard guard-sequence mismatch: expected {guard_sequence}, got {}",
                             event.base_address
                         ))
                     } else {
                         match continuous_digest_from_event(&event) {
                             Err(err) => Err(err),
                             Ok(digest) if digest != hex::encode(continuous_chain_before) => {
-                                Err("NeverGuard Continuous Guard event-chain cross-check mismatch".to_string())
+                                Err("Guard Continuous Guard event-chain cross-check mismatch".to_string())
                             }
                             Ok(digest) => {
                                 module_hash = digest;
@@ -980,9 +980,9 @@ mod imp {
                 MODULE_EVENT_REASON_CONTINUOUS_TAMPER => {
                     let detail = event.path.to_string_lossy();
                     Err(if detail.is_empty() {
-                        "NeverGuard Continuous Guard Sensor/Guard cross-check failed".to_string()
+                        "Guard Continuous Guard Sensor/Guard cross-check failed".to_string()
                     } else {
-                        format!("NeverGuard Continuous Guard Sensor/Guard cross-check failed: {detail}")
+                        format!("Guard Continuous Guard Sensor/Guard cross-check failed: {detail}")
                     })
                 }
                 MODULE_EVENT_REASON_OVERFLOW => {
@@ -1008,7 +1008,7 @@ mod imp {
                 let next_guard_sequence = match guard_sequence.checked_add(1) {
                     Some(value) => value,
                     None => {
-                        fail_closed(&state, pid, "NeverGuard Continuous Guard guard-sequence overflow", 0);
+                        fail_closed(&state, pid, "Guard Continuous Guard guard-sequence overflow", 0);
                         return;
                     }
                 };
@@ -1067,7 +1067,7 @@ mod imp {
     fn hook_digest_from_event(event: &ParsedEvent) -> Result<String, String> {
         let digest = event.path.to_string_lossy().to_string();
         if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err("NeverGuard Hook Engine invalid hook-set digest".to_string());
+            return Err("Guard Hook Engine invalid hook-set digest".to_string());
         }
         Ok(digest.to_ascii_lowercase())
     }
@@ -1076,30 +1076,30 @@ mod imp {
         let payload = event.path.to_string_lossy();
         let mut fields = payload.split('|');
         let code_set_sha256 = validate_memory_digest(
-            fields.next().ok_or_else(|| "NeverGuard Memory Integrity missing code-set digest".to_string())?,
+            fields.next().ok_or_else(|| "Guard Memory Integrity missing code-set digest".to_string())?,
             "code-set",
         )?;
         let executable_map_sha256 = validate_memory_digest(
-            fields.next().ok_or_else(|| "NeverGuard Memory Integrity missing executable-map digest".to_string())?,
+            fields.next().ok_or_else(|| "Guard Memory Integrity missing executable-map digest".to_string())?,
             "executable-map",
         )?;
         let dynamic_executable_region_count = fields
             .next()
-            .ok_or_else(|| "NeverGuard Memory Integrity missing dynamic-region count".to_string())?
+            .ok_or_else(|| "Guard Memory Integrity missing dynamic-region count".to_string())?
             .parse::<u32>()
-            .map_err(|_| "NeverGuard Memory Integrity invalid dynamic-region count".to_string())?;
+            .map_err(|_| "Guard Memory Integrity invalid dynamic-region count".to_string())?;
         let rwx_region_count = fields
             .next()
-            .ok_or_else(|| "NeverGuard Memory Integrity missing RWX-region count".to_string())?
+            .ok_or_else(|| "Guard Memory Integrity missing RWX-region count".to_string())?
             .parse::<u32>()
-            .map_err(|_| "NeverGuard Memory Integrity invalid RWX-region count".to_string())?;
+            .map_err(|_| "Guard Memory Integrity invalid RWX-region count".to_string())?;
         let observed_transition_count = fields
             .next()
-            .ok_or_else(|| "NeverGuard Memory Integrity missing transition count".to_string())?
+            .ok_or_else(|| "Guard Memory Integrity missing transition count".to_string())?
             .parse::<u64>()
-            .map_err(|_| "NeverGuard Memory Integrity invalid transition count".to_string())?;
+            .map_err(|_| "Guard Memory Integrity invalid transition count".to_string())?;
         if fields.next().is_some() {
-            return Err("NeverGuard Memory Integrity malformed evidence payload".to_string());
+            return Err("Guard Memory Integrity malformed evidence payload".to_string());
         }
         Ok(crate::WindowsMemoryIntegrityReport {
             version: crate::NEVERGUARD_MEMORY_INTEGRITY_VERSION,
@@ -1127,36 +1127,36 @@ mod imp {
         let thread_set_sha256 = validate_thread_process_digest(
             fields
                 .next()
-                .ok_or_else(|| "NeverGuard Thread & Process Integrity missing thread-set digest".to_string())?,
+                .ok_or_else(|| "Guard Thread & Process Integrity missing thread-set digest".to_string())?,
             "thread-set",
         )?;
         let thread_origin_set_sha256 = validate_thread_process_digest(
             fields
                 .next()
-                .ok_or_else(|| "NeverGuard Thread & Process Integrity missing origin-set digest".to_string())?,
+                .ok_or_else(|| "Guard Thread & Process Integrity missing origin-set digest".to_string())?,
             "origin-set",
         )?;
         let retired_thread_count = fields
             .next()
-            .ok_or_else(|| "NeverGuard Thread & Process Integrity missing retired-thread count".to_string())?
+            .ok_or_else(|| "Guard Thread & Process Integrity missing retired-thread count".to_string())?
             .parse::<u64>()
-            .map_err(|_| "NeverGuard Thread & Process Integrity invalid retired-thread count".to_string())?;
+            .map_err(|_| "Guard Thread & Process Integrity invalid retired-thread count".to_string())?;
         let suspicious_thread_count = fields
             .next()
-            .ok_or_else(|| "NeverGuard Thread & Process Integrity missing suspicious-thread count".to_string())?
+            .ok_or_else(|| "Guard Thread & Process Integrity missing suspicious-thread count".to_string())?
             .parse::<u32>()
-            .map_err(|_| "NeverGuard Thread & Process Integrity invalid suspicious-thread count".to_string())?;
+            .map_err(|_| "Guard Thread & Process Integrity invalid suspicious-thread count".to_string())?;
         let integrity_check_count = fields
             .next()
-            .ok_or_else(|| "NeverGuard Thread & Process Integrity missing check count".to_string())?
+            .ok_or_else(|| "Guard Thread & Process Integrity missing check count".to_string())?
             .parse::<u64>()
-            .map_err(|_| "NeverGuard Thread & Process Integrity invalid check count".to_string())?;
+            .map_err(|_| "Guard Thread & Process Integrity invalid check count".to_string())?;
         if fields.next().is_some() {
-            return Err("NeverGuard Thread & Process Integrity malformed evidence payload".to_string());
+            return Err("Guard Thread & Process Integrity malformed evidence payload".to_string());
         }
         if suspicious_thread_count != 0 {
             return Err(format!(
-                "NeverGuard Thread & Process Integrity reported {suspicious_thread_count} suspicious threads"
+                "Guard Thread & Process Integrity reported {suspicious_thread_count} suspicious threads"
             ));
         }
         Ok(crate::WindowsThreadProcessIntegrityReport {
@@ -1189,7 +1189,7 @@ mod imp {
     ) -> Result<crate::WindowsDebugInstrumentationReport, String> {
         let state_sha256 = event.path.to_string_lossy().to_string();
         if state_sha256.len() != 64 || !state_sha256.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err("NeverGuard Debug & Instrumentation Guard invalid state digest".to_string());
+            return Err("Guard Debug & Instrumentation Guard invalid state digest".to_string());
         }
         let debugger_present = event.flags & 0x01 != 0;
         let remote_debugger_present = event.flags & 0x02 != 0;
@@ -1203,7 +1203,7 @@ mod imp {
             || !debug_flags_no_debug_inherit
         {
             return Err(format!(
-                "NeverGuard Debug & Instrumentation Guard detected debugger state: flags=0x{:X}",
+                "Guard Debug & Instrumentation Guard detected debugger state: flags=0x{:X}",
                 event.flags
             ));
         }
@@ -1233,51 +1233,51 @@ mod imp {
         let jvm_path_sha256 = validate_jvm_aware_digest(
             fields
                 .next()
-                .ok_or_else(|| "NeverGuard JVM-Aware Protection missing jvm path digest".to_string())?,
+                .ok_or_else(|| "Guard JVM-Aware Protection missing jvm path digest".to_string())?,
             "jvm-path",
         )?;
         let state_sha256 = validate_jvm_aware_digest(
             fields
                 .next()
-                .ok_or_else(|| "NeverGuard JVM-Aware Protection missing state digest".to_string())?,
+                .ok_or_else(|| "Guard JVM-Aware Protection missing state digest".to_string())?,
             "state",
         )?;
         let integrity_check_count = fields
             .next()
-            .ok_or_else(|| "NeverGuard JVM-Aware Protection missing integrity-check count".to_string())?
+            .ok_or_else(|| "Guard JVM-Aware Protection missing integrity-check count".to_string())?
             .parse::<u64>()
-            .map_err(|_| "NeverGuard JVM-Aware Protection invalid integrity-check count".to_string())?;
+            .map_err(|_| "Guard JVM-Aware Protection invalid integrity-check count".to_string())?;
         let baseline_private_executable_region_count = fields
             .next()
-            .ok_or_else(|| "NeverGuard JVM-Aware Protection missing baseline private executable-region count".to_string())?
+            .ok_or_else(|| "Guard JVM-Aware Protection missing baseline private executable-region count".to_string())?
             .parse::<u32>()
-            .map_err(|_| "NeverGuard JVM-Aware Protection invalid baseline private executable-region count".to_string())?;
+            .map_err(|_| "Guard JVM-Aware Protection invalid baseline private executable-region count".to_string())?;
         let foreign_executable_transition_count = fields
             .next()
-            .ok_or_else(|| "NeverGuard JVM-Aware Protection missing foreign transition count".to_string())?
+            .ok_or_else(|| "Guard JVM-Aware Protection missing foreign transition count".to_string())?
             .parse::<u64>()
-            .map_err(|_| "NeverGuard JVM-Aware Protection invalid foreign transition count".to_string())?;
+            .map_err(|_| "Guard JVM-Aware Protection invalid foreign transition count".to_string())?;
         let unknown_executable_transition_count = fields
             .next()
-            .ok_or_else(|| "NeverGuard JVM-Aware Protection missing unknown transition count".to_string())?
+            .ok_or_else(|| "Guard JVM-Aware Protection missing unknown transition count".to_string())?
             .parse::<u64>()
-            .map_err(|_| "NeverGuard JVM-Aware Protection invalid unknown transition count".to_string())?;
+            .map_err(|_| "Guard JVM-Aware Protection invalid unknown transition count".to_string())?;
         if fields.next().is_some() {
-            return Err("NeverGuard JVM-Aware Protection malformed evidence payload".to_string());
+            return Err("Guard JVM-Aware Protection malformed evidence payload".to_string());
         }
         let java_major = event.flags;
         let certified_major = crate::NEVERGUARD_CERTIFIED_JAVA_MAJORS.contains(&java_major);
         if !certified_major {
             return Err(format!(
-                "NeverGuard JVM-Aware Protection reported unsupported Java major {java_major}"
+                "Guard JVM-Aware Protection reported unsupported Java major {java_major}"
             ));
         }
         if event.size_of_image == 0 {
-            return Err("NeverGuard JVM-Aware Protection reported zero jvm.dll image size".to_string());
+            return Err("Guard JVM-Aware Protection reported zero jvm.dll image size".to_string());
         }
         if foreign_executable_transition_count != 0 || unknown_executable_transition_count != 0 {
             return Err(format!(
-                "NeverGuard JVM-Aware Protection reported untrusted executable transitions: foreign={foreign_executable_transition_count}, unknown={unknown_executable_transition_count}"
+                "Guard JVM-Aware Protection reported untrusted executable transitions: foreign={foreign_executable_transition_count}, unknown={unknown_executable_transition_count}"
             ));
         }
         Ok(crate::WindowsJvmAwareProtectionReport {
@@ -1302,7 +1302,7 @@ mod imp {
     fn validate_jvm_aware_digest(value: &str, label: &str) -> Result<String, String> {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err(format!(
-                "NeverGuard JVM-Aware Protection invalid {label} digest"
+                "Guard JVM-Aware Protection invalid {label} digest"
             ));
         }
         Ok(value.to_ascii_lowercase())
@@ -1311,7 +1311,7 @@ mod imp {
     fn validate_thread_process_digest(value: &str, label: &str) -> Result<String, String> {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err(format!(
-                "NeverGuard Thread & Process Integrity invalid {label} digest"
+                "Guard Thread & Process Integrity invalid {label} digest"
             ));
         }
         Ok(value.to_ascii_lowercase())
@@ -1319,7 +1319,7 @@ mod imp {
 
     fn validate_memory_digest(value: &str, label: &str) -> Result<String, String> {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err(format!("NeverGuard Memory Integrity invalid {label} digest"));
+            return Err(format!("Guard Memory Integrity invalid {label} digest"));
         }
         Ok(value.to_ascii_lowercase())
     }
@@ -1677,7 +1677,7 @@ mod imp {
         let mut debugged = 0i32;
         let success = unsafe { CheckRemoteDebuggerPresent(handle.raw(), &mut debugged) };
         if success != 0 && debugged != 0 {
-            "NeverGuard Debug & Instrumentation Guard live debugger attached; sensor stream interrupted".to_string()
+            "Guard Debug & Instrumentation Guard live debugger attached; sensor stream interrupted".to_string()
         } else {
             default_reason.to_string()
         }

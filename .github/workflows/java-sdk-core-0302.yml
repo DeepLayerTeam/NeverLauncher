@@ -35,7 +35,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/java-example"
           javac --release 17 -cp sdk/java/core/build/classes -d "$RUNNER_TEMP/java-example" examples/extensions/java-lifecycle/src/ru/example/neverlauncher/LifecycleExample.java
-      - name: Check manifest matches shipping NeverExtensions schema
+      - name: Check manifest matches shipping Extensions schema
         shell: bash
         run: python3 -m json.tool examples/extensions/java-lifecycle/neverlauncher-extension.json >/dev/null
       - name: Verify produced SDK artifact

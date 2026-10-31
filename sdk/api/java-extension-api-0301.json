@@ -77,7 +77,7 @@
   ],
   "rules": [
     "Java backend extensions execute out-of-process only, via the established local authenticated host API.",
-    "NeverExtensions manifest 2.0 signing and capability authorization remain authoritative.",
+    "Extensions manifest 2.0 signing and capability authorization remain authoritative.",
     "Trusted Minecraft JVM plugins are separate explicitly approved full-access code, never implicitly sandboxed.",
     "No Gravit JavaFX/LaunchServer internal API compatibility is claimed."
   ]

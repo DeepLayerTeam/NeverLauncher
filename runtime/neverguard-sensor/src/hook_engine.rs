@@ -163,7 +163,7 @@ fn pin_module(base: usize) -> Result<PinnedModule, String> {
     };
     if ok == 0 || module.is_null() {
         return Err(format!(
-            "NeverGuard Hook Engine cannot retain module at 0x{base:X}: {}",
+            "Guard Hook Engine cannot retain module at 0x{base:X}: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -307,9 +307,9 @@ pub fn initialize() -> Result<HookEngineSnapshot, String> {
     resolve_canonical_targets()?;
     let mut state = ENGINE_STATE
         .lock()
-        .map_err(|_| "NeverGuard Hook Engine state lock poisoned".to_string())?;
+        .map_err(|_| "Guard Hook Engine state lock poisoned".to_string())?;
     if state.active {
-        return Err("NeverGuard Hook Engine already active".to_string());
+        return Err("Guard Hook Engine already active".to_string());
     }
     state.records.clear();
     state.seen_modules.clear();
@@ -317,7 +317,7 @@ pub fn initialize() -> Result<HookEngineSnapshot, String> {
     reconcile_locked(&mut state)?;
     if state.records.is_empty() {
         restore_records(&mut state.records);
-        return Err("NeverGuard Hook Engine found no eligible JVM/native IAT targets".to_string());
+        return Err("Guard Hook Engine found no eligible JVM/native IAT targets".to_string());
     }
     state.active = true;
     state.healthy = true;
@@ -328,9 +328,9 @@ pub fn initialize() -> Result<HookEngineSnapshot, String> {
 pub fn reconcile_and_verify() -> Result<HookEngineSnapshot, String> {
     let mut state = ENGINE_STATE
         .lock()
-        .map_err(|_| "NeverGuard Hook Engine state lock poisoned".to_string())?;
+        .map_err(|_| "Guard Hook Engine state lock poisoned".to_string())?;
     if !state.active || !state.healthy {
-        return Err("NeverGuard Hook Engine is not active/healthy".to_string());
+        return Err("Guard Hook Engine is not active/healthy".to_string());
     }
     reconcile_locked(&mut state)?;
     verify_locked(&mut state)?;
@@ -340,7 +340,7 @@ pub fn reconcile_and_verify() -> Result<HookEngineSnapshot, String> {
 pub fn shutdown_restore() -> Result<(), String> {
     let mut state = ENGINE_STATE
         .lock()
-        .map_err(|_| "NeverGuard Hook Engine state lock poisoned".to_string())?;
+        .map_err(|_| "Guard Hook Engine state lock poisoned".to_string())?;
     let mut errors = Vec::new();
     for record in state.records.iter().rev() {
         let Ok(_module_pin) = pin_module(record.module_base) else {
@@ -370,13 +370,13 @@ fn resolve_canonical_targets() -> Result<(), String> {
     let ntdll = wide_null("ntdll.dll");
     let ntdll = unsafe { GetModuleHandleW(ntdll.as_ptr()) };
     if kernel32.is_null() || ntdll.is_null() {
-        return Err("NeverGuard Hook Engine cannot resolve kernel32.dll/ntdll.dll".to_string());
+        return Err("Guard Hook Engine cannot resolve kernel32.dll/ntdll.dll".to_string());
     }
     for spec in hook_specs() {
         let module = if spec.name.starts_with("Nt") { ntdll } else { kernel32 };
         let address = unsafe { GetProcAddress(module, spec.c_name.as_ptr().cast()) };
         if address.is_null() && !spec.optional {
-            return Err(format!("NeverGuard Hook Engine cannot resolve {}", spec.name));
+            return Err(format!("Guard Hook Engine cannot resolve {}", spec.name));
         }
         spec.canonical.store(address, Ordering::Release);
     }
@@ -408,7 +408,7 @@ fn reconcile_locked(state: &mut HookEngineState) -> Result<(), String> {
                     restore_records(&mut applied);
                     state.healthy = false;
                     return Err(format!(
-                        "NeverGuard Hook Engine detected pre-existing IAT target drift for {} in {}",
+                        "Guard Hook Engine detected pre-existing IAT target drift for {} in {}",
                         record.hook_name, record.module_path
                     ));
                 }
@@ -444,7 +444,7 @@ fn reconcile_after_library_load(module: *mut c_void) {
     // and pin its exact native image before normal IAT reconciliation; the
     // JVM-Aware heartbeat fails closed if this registration is rejected.
     if let Err(err) = crate::jvm_awareness::register_loaded_native_dispatcher(module) {
-        eprintln!("NeverGuard JVM-Aware native registration rejected: {err}");
+        eprintln!("Guard JVM-Aware native registration rejected: {err}");
     }
     // Hook reconciliation itself may require OS loader operations. Never wait
     // recursively for ENGINE_STATE from inside a LoadLibrary callback.
@@ -458,7 +458,7 @@ fn reconcile_after_library_load(module: *mut c_void) {
         // Do not let a failed patch silently grant executable-memory origin.
         // The worker's mandatory Hook Engine heartbeat fails closed.
         state.healthy = false;
-        eprintln!("NeverGuard Hook Engine post-load reconciliation failed: {err}");
+        eprintln!("Guard Hook Engine post-load reconciliation failed: {err}");
     }
 }
 
@@ -471,7 +471,7 @@ fn verify_locked(state: &mut HookEngineState) -> Result<(), String> {
         if current != record.replacement {
             state.healthy = false;
             return Err(format!(
-                "NeverGuard Hook Engine IAT integrity violation for {} in {}",
+                "Guard Hook Engine IAT integrity violation for {} in {}",
                 record.hook_name, record.module_path
             ));
         }
@@ -511,7 +511,7 @@ fn hook_set_digest(records: &[HookRecord]) -> String {
         .collect::<Vec<_>>();
     rows.sort_unstable();
     let mut digest = Sha256::new();
-    digest.update(b"NeverGuard Aggressive Hook Engine I hook-set v1\0");
+    digest.update(b"Guard Aggressive Hook Engine I hook-set v1\0");
     for row in rows {
         digest.update((row.len() as u32).to_le_bytes());
         digest.update(row.as_bytes());
@@ -524,15 +524,15 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
     let size = module.size;
     let dos_signature = read_u16(base, size, 0)?;
     if dos_signature != IMAGE_DOS_SIGNATURE {
-        return Err(format!("NeverGuard Hook Engine invalid DOS header in {}", module.path));
+        return Err(format!("Guard Hook Engine invalid DOS header in {}", module.path));
     }
     let nt_offset = read_u32(base, size, 0x3C)? as usize;
     if read_u32(base, size, nt_offset)? != IMAGE_NT_SIGNATURE {
-        return Err(format!("NeverGuard Hook Engine invalid PE header in {}", module.path));
+        return Err(format!("Guard Hook Engine invalid PE header in {}", module.path));
     }
     let optional = nt_offset
         .checked_add(24)
-        .ok_or_else(|| "NeverGuard Hook Engine PE optional-header overflow".to_string())?;
+        .ok_or_else(|| "Guard Hook Engine PE optional-header overflow".to_string())?;
     let magic = read_u16(base, size, optional)?;
     let (data_directory, pointer_size, ordinal_mask) = match magic {
         IMAGE_NT_OPTIONAL_HDR64_MAGIC => (optional + 112, 8usize, 0x8000_0000_0000_0000u64),
@@ -541,13 +541,13 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
     };
     if pointer_size != size_of::<usize>() {
         return Err(format!(
-            "NeverGuard Hook Engine module/process architecture mismatch in {}",
+            "Guard Hook Engine module/process architecture mismatch in {}",
             module.path
         ));
     }
     let import_entry = data_directory
         .checked_add(IMAGE_DIRECTORY_ENTRY_IMPORT * 8)
-        .ok_or_else(|| "NeverGuard Hook Engine import-directory overflow".to_string())?;
+        .ok_or_else(|| "Guard Hook Engine import-directory overflow".to_string())?;
     let import_rva = read_u32(base, size, import_entry)? as usize;
     let import_size = read_u32(base, size, import_entry + 4)? as usize;
     if import_rva == 0 || import_size == 0 {
@@ -587,7 +587,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
         loop {
             let lookup_offset = original_first_thunk
                 .checked_add(index.saturating_mul(pointer_size))
-                .ok_or_else(|| "NeverGuard Hook Engine thunk overflow".to_string())?;
+                .ok_or_else(|| "Guard Hook Engine thunk overflow".to_string())?;
             let thunk = read_pointer_value(base, size, lookup_offset, pointer_size)?;
             if thunk == 0 {
                 break;
@@ -604,13 +604,13 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
                     let expected = unsafe { GetProcAddress(imported_module, spec.c_name.as_ptr().cast()) };
                     if expected.is_null() {
                         return Err(format!(
-                            "NeverGuard Hook Engine cannot resolve imported {} from {}",
+                            "Guard Hook Engine cannot resolve imported {} from {}",
                             spec.name, import_dll
                         ));
                     }
                     let slot_rva = first_thunk
                         .checked_add(index.saturating_mul(pointer_size))
-                        .ok_or_else(|| "NeverGuard Hook Engine IAT slot overflow".to_string())?;
+                        .ok_or_else(|| "Guard Hook Engine IAT slot overflow".to_string())?;
                     checked_range(size, slot_rva, pointer_size)?;
                     candidates.push(HookRecord {
                         module_base: module.base,
@@ -626,7 +626,7 @@ fn collect_hook_candidates(module: &ProcessModule) -> Result<Vec<HookRecord>, St
             }
             index = index.saturating_add(1);
             if index > 65_536 {
-                return Err(format!("NeverGuard Hook Engine excessive import table in {}", module.path));
+                return Err(format!("Guard Hook Engine excessive import table in {}", module.path));
             }
         }
         descriptor_offset += 20;
@@ -642,7 +642,7 @@ fn read_hook_slot(slot: usize) -> usize {
 
 fn patch_pointer(slot: usize, value: usize) -> Result<(), String> {
     if slot % std::mem::align_of::<AtomicUsize>() != 0 {
-        return Err("NeverGuard Hook Engine unaligned IAT slot".to_string());
+        return Err("Guard Hook Engine unaligned IAT slot".to_string());
     }
     let mut old_protect = 0u32;
     let ok = unsafe {
@@ -655,7 +655,7 @@ fn patch_pointer(slot: usize, value: usize) -> Result<(), String> {
     };
     if ok == 0 {
         return Err(format!(
-            "NeverGuard Hook Engine VirtualProtect(IAT) failed: {}",
+            "Guard Hook Engine VirtualProtect(IAT) failed: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -680,7 +680,7 @@ fn patch_pointer(slot: usize, value: usize) -> Result<(), String> {
     };
     if restore_ok == 0 || flush_ok == 0 {
         return Err(format!(
-            "NeverGuard Hook Engine failed to restore/flush IAT protection: {}",
+            "Guard Hook Engine failed to restore/flush IAT protection: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -713,7 +713,7 @@ fn enumerate_modules() -> Result<Vec<ProcessModule>, String> {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard Hook Engine module enumeration failed: {}",
+                "Guard Hook Engine module enumeration failed: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -744,7 +744,7 @@ fn enumerate_modules() -> Result<Vec<ProcessModule>, String> {
                 || info.base_of_dll.is_null()
                 || info.size_of_image == 0
             {
-                return Err("NeverGuard Hook Engine module information query failed".to_string());
+                return Err("Guard Hook Engine module information query failed".to_string());
             }
             let path = module_path(module)?;
             result.push(ProcessModule {
@@ -762,7 +762,7 @@ fn module_path(module: *mut c_void) -> Result<String, String> {
     let length = unsafe { GetModuleFileNameW(module, buffer.as_mut_ptr(), buffer.len() as u32) } as usize;
     if length == 0 || length >= buffer.len() {
         return Err(format!(
-            "NeverGuard Hook Engine cannot resolve module path: {}",
+            "Guard Hook Engine cannot resolve module path: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -798,9 +798,9 @@ fn supported_import_dll(name: &str) -> bool {
 fn checked_range(size: usize, offset: usize, length: usize) -> Result<(), String> {
     let end = offset
         .checked_add(length)
-        .ok_or_else(|| "NeverGuard Hook Engine PE range overflow".to_string())?;
+        .ok_or_else(|| "Guard Hook Engine PE range overflow".to_string())?;
     if offset > size || end > size {
-        Err("NeverGuard Hook Engine PE range outside mapped image".to_string())
+        Err("Guard Hook Engine PE range outside mapped image".to_string())
     } else {
         Ok(())
     }
@@ -826,7 +826,7 @@ fn read_pointer_value(base: usize, size: usize, offset: usize, pointer_size: usi
             checked_range(size, offset, 4)?;
             Ok(unsafe { std::ptr::read_unaligned((base + offset) as *const u32) } as u64)
         }
-        _ => Err("NeverGuard Hook Engine unsupported pointer size".to_string()),
+        _ => Err("Guard Hook Engine unsupported pointer size".to_string()),
     }
 }
 
@@ -838,14 +838,14 @@ fn read_ascii(base: usize, size: usize, offset: usize, max: usize) -> Result<Str
         let value = unsafe { *((base + offset + index) as *const u8) };
         if value == 0 {
             return String::from_utf8(bytes)
-                .map_err(|_| "NeverGuard Hook Engine invalid non-ASCII import name".to_string());
+                .map_err(|_| "Guard Hook Engine invalid non-ASCII import name".to_string());
         }
         if !value.is_ascii() {
-            return Err("NeverGuard Hook Engine invalid import name".to_string());
+            return Err("Guard Hook Engine invalid import name".to_string());
         }
         bytes.push(value);
     }
-    Err("NeverGuard Hook Engine unterminated import name".to_string())
+    Err("Guard Hook Engine unterminated import name".to_string())
 }
 
 fn wide_null(value: &str) -> Vec<u16> {

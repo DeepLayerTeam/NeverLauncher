@@ -1,6 +1,6 @@
 //go:build darwin
 
-package neverextensions
+package extensions
 
 import (
 	"context"

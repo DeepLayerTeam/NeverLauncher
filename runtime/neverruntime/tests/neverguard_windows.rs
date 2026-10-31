@@ -1,7 +1,7 @@
 #![cfg(windows)]
 
 use neverruntime::{
-    NeverGuardSupervisor, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
+    GuardSupervisor, NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA,
     NEVERGUARD_INTEGRITY_EVIDENCE_VERSION, NEVERGUARD_PROTOCOL_VERSION,
     NEVERGUARD_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION,
     WindowsProtectionProfile, NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION,
@@ -11,11 +11,11 @@ use neverruntime::{
 use std::path::PathBuf;
 
 #[tokio::test]
-async fn neverguard_process_boundary_authenticates_and_shuts_down() {
-    let executable = PathBuf::from(env!("CARGO_BIN_EXE_neverguard"));
-    let supervisor = NeverGuardSupervisor::with_executable(executable);
+async fn guard_process_boundary_authenticates_and_shuts_down() {
+    let executable = PathBuf::from(env!("CARGO_BIN_EXE_guard"));
+    let supervisor = GuardSupervisor::with_executable(executable);
 
-    let status = supervisor.ensure_started().await.expect("NeverGuard must start");
+    let status = supervisor.ensure_started().await.expect("Guard must start");
     assert_eq!(status.state, "ready");
     assert!(status.authenticated);
     assert_eq!(status.parent_pid, std::process::id());
@@ -133,14 +133,14 @@ async fn neverguard_process_boundary_authenticates_and_shuts_down() {
 }
 
 #[tokio::test]
-async fn neverguard_compat_profile_enforces_its_runtime_capabilities() {
-    let executable = PathBuf::from(env!("CARGO_BIN_EXE_neverguard"));
-    let supervisor = NeverGuardSupervisor::with_executable_and_profile(
+async fn guard_compat_profile_enforces_its_runtime_capabilities() {
+    let executable = PathBuf::from(env!("CARGO_BIN_EXE_guard"));
+    let supervisor = GuardSupervisor::with_executable_and_profile(
         executable,
         WindowsProtectionProfile::Compat,
     );
 
-    let status = supervisor.ensure_started().await.expect("compat NeverGuard must start");
+    let status = supervisor.ensure_started().await.expect("compat Guard must start");
     assert_eq!(status.windows_protection_profile, "compat");
     let policy = supervisor
         .process_policy()
@@ -162,14 +162,14 @@ async fn neverguard_compat_profile_enforces_its_runtime_capabilities() {
 }
 
 #[tokio::test]
-async fn neverguard_audit_profile_measures_without_claiming_remote_trust() {
-    let executable = PathBuf::from(env!("CARGO_BIN_EXE_neverguard"));
-    let supervisor = NeverGuardSupervisor::with_executable_and_profile(
+async fn guard_audit_profile_measures_without_claiming_remote_trust() {
+    let executable = PathBuf::from(env!("CARGO_BIN_EXE_guard"));
+    let supervisor = GuardSupervisor::with_executable_and_profile(
         executable,
         WindowsProtectionProfile::Audit,
     );
 
-    let status = supervisor.ensure_started().await.expect("audit NeverGuard must start");
+    let status = supervisor.ensure_started().await.expect("audit Guard must start");
     assert_eq!(status.windows_protection_profile, "audit");
     let policy = supervisor
         .process_policy()

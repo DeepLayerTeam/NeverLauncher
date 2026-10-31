@@ -1,6 +1,6 @@
 #![cfg(target_os = "linux")]
 
-use neverruntime::{NeverGuardSupervisor, NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA};
+use neverruntime::{GuardSupervisor, NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA, NEVERGUARD_LINUX_PROCESS_POLICY_SCHEMA};
 use std::{os::unix::fs::PermissionsExt, path::PathBuf};
 
 fn private_runtime_dir() -> PathBuf {
@@ -12,13 +12,13 @@ fn private_runtime_dir() -> PathBuf {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn linux_neverguard_authenticated_boundary_and_attestation() {
+async fn linux_guard_authenticated_boundary_and_attestation() {
     let runtime_dir = private_runtime_dir();
     std::env::set_var("XDG_RUNTIME_DIR", &runtime_dir);
-    let guard = PathBuf::from(env!("CARGO_BIN_EXE_neverguard"));
-    let supervisor = NeverGuardSupervisor::with_executable(guard);
+    let guard = PathBuf::from(env!("CARGO_BIN_EXE_guard"));
+    let supervisor = GuardSupervisor::with_executable(guard);
 
-    let status = supervisor.ensure_started().await.expect("start NeverGuard");
+    let status = supervisor.ensure_started().await.expect("start Guard");
     assert!(status.authenticated && status.process_policy_enforced && status.hardening_enforced);
     assert!(status.secure_pipe_acl && status.lifetime_job_enforced);
     supervisor.ping().await.expect("authenticated ping");
@@ -39,6 +39,6 @@ async fn linux_neverguard_authenticated_boundary_and_attestation() {
     assert_eq!(attestation.evidence.evidence_sha256.len(), 64);
     assert_eq!(attestation.attestation_sha256.len(), 64);
 
-    supervisor.shutdown().await.expect("shutdown NeverGuard");
+    supervisor.shutdown().await.expect("shutdown Guard");
     let _ = std::fs::remove_dir_all(runtime_dir);
 }

@@ -139,11 +139,11 @@ func Run(ctx context.Context, opts Options) error {
 	if e != nil {
 		return e
 	}
-	// On Windows the production Desktop enforces NeverGuard's authenticated
+	// On Windows the production Desktop enforces Guard's authenticated
 	// supervisor boundary before game launch. Do not offer a lower-security
 	// direct CLI path that bypasses this boundary.
 	if opts.LaunchProfile && runtime.GOOS == "windows" {
-		return errors.New("Windows profile launch must be initiated in Desktop (NeverGuard supervisor required)")
+		return errors.New("Windows profile launch must be initiated in Desktop (Guard supervisor required)")
 	}
 	if opts.Username != "" && !validUsername(opts.Username) {
 		return errors.New("invalid offline Minecraft username")

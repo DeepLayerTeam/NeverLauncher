@@ -19,8 +19,8 @@ const (
 	guardContinuousJoinTTL01810         = 45 * time.Second
 	guardAttestationV2Purpose01810      = "guard-attest-v2"
 	guardContinuousJoinPurpose01810     = "guard-continuous-join-v2"
-	guardAttestationV2Schema01810       = "neverguard/windows-guard-attestation/v2"
-	guardContinuousEvidenceSchema01810  = "neverguard/windows-continuous-evidence/v2"
+	guardAttestationV2Schema01810       = "guard/windows-guard-attestation/v2"
+	guardContinuousEvidenceSchema01810  = "guard/windows-continuous-evidence/v2"
 	guardAttestationV2Version01810      = uint32(2)
 	guardContinuousEvidenceVersion01810 = uint32(2)
 	guardContinuousMaxStaleness01810    = 5 * time.Second
@@ -442,7 +442,7 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 	// challenge, so its state cannot be replayed across a policy update.
 	runtimePolicyDigest, err := verifyGuardRuntimePolicy0317(policy, device.Platform, req.Attestation.ContinuousEvidence)
 	if err != nil {
-		writeError(w, http.StatusPreconditionFailed, "NeverGuard runtime denied: "+err.Error())
+		writeError(w, http.StatusPreconditionFailed, "Guard runtime denied: "+err.Error())
 		return
 	}
 	ticketID, err := randomToken("ngctid")
@@ -475,7 +475,7 @@ func (s Server) authGuardAttestationV2Complete01810(w http.ResponseWriter, r *ht
 		writeError(w, http.StatusInternalServerError, "не удалось сохранить Continuous Guard ticket")
 		return
 	}
-	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-attestation-v2"), Actor: claims.Sub, Action: "neverguard:attestation-v2:verified", Target: deviceID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
+	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-attestation-v2"), Actor: claims.Sub, Action: "guard:attestation-v2:verified", Target: deviceID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: now})
 	writeJSON(w, http.StatusOK, map[string]any{"apiVersion": apiContractVersion, "data": map[string]any{
 		"verified": true, "attestationVersion": 2, "attestationSha256": req.Attestation.AttestationSHA256,
 		"continuousEvidenceSha256": req.Attestation.ContinuousEvidence.EvidenceSHA256, "runtimePid": req.Attestation.ContinuousEvidence.RuntimePID,

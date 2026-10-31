@@ -1,9 +1,9 @@
 #![cfg(target_os = "macos")]
 
 use crate::{
-    attestation::{challenge_sha256, recompute_attestation_sha256, validate_attestation_shape, GuardAttestationRequest, NeverGuardRemoteAttestation, NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION},
-    guard_ipc::{NeverGuardStatus, NEVERGUARD_PROTOCOL_VERSION},
-    integrity::{collect_macos_integrity_evidence, recompute_evidence_sha256, validate_evidence_shape, NeverGuardIntegrityEvidence},
+    attestation::{challenge_sha256, recompute_attestation_sha256, validate_attestation_shape, GuardAttestationRequest, GuardRemoteAttestation, NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA, NEVERGUARD_REMOTE_ATTESTATION_VERSION},
+    guard_ipc::{GuardStatus, NEVERGUARD_PROTOCOL_VERSION},
+    integrity::{collect_macos_integrity_evidence, recompute_evidence_sha256, validate_evidence_shape, GuardIntegrityEvidence},
     macos_policy::{ensure_macos_production_hardening, guard_policy_report, install_parent_exit_watch, prepare_guard_command, verify_macos_code_signature, MacOSProductionHardeningReport, NEVERGUARD_MACOS_HARDENING_VERSION, NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA, NEVERGUARD_MACOS_PROCESS_POLICY_VERSION},
     windows_policy::GuardProcessPolicyReport,
 };
@@ -109,52 +109,52 @@ struct GuardHandle { child: Child, stream: UnixStream, session_key: [u8;32], nex
 impl Drop for GuardHandle { fn drop(&mut self){ self.session_key.zeroize(); let _=std::fs::remove_file(&self.socket_path); } }
 
 #[derive(Clone)]
-pub struct NeverGuardSupervisor { inner: Arc<Mutex<Option<GuardHandle>>>, executable: Option<PathBuf>, require_package_manifest: bool }
-impl Default for NeverGuardSupervisor { fn default()->Self{Self::new()} }
-impl NeverGuardSupervisor {
+pub struct GuardSupervisor { inner: Arc<Mutex<Option<GuardHandle>>>, executable: Option<PathBuf>, require_package_manifest: bool }
+impl Default for GuardSupervisor { fn default()->Self{Self::new()} }
+impl GuardSupervisor {
     pub fn new()->Self { Self{inner:Arc::new(Mutex::new(None)),executable:None,require_package_manifest:!cfg!(debug_assertions)} }
     pub fn with_executable(executable:PathBuf)->Self { Self{inner:Arc::new(Mutex::new(None)),executable:Some(executable),require_package_manifest:false} }
 
-    pub async fn ensure_started(&self)->Result<NeverGuardStatus,String>{
+    pub async fn ensure_started(&self)->Result<GuardStatus,String>{
         let mut state=self.inner.lock().await;
         if let Some(handle)=state.as_mut(){
-            if handle.child.try_wait().map_err(|e|format!("NeverGuard process check failed: {e}"))?.is_none(){
+            if handle.child.try_wait().map_err(|e|format!("Guard process check failed: {e}"))?.is_none(){
                 if let Ok(value)=send_command(handle,"status","").await { let mut s=parse_status(value)?; s.lifetime_job_enforced=true; s.package_manifest_verified=handle.package_manifest_verified; return Ok(s); }
             }
         }
         if let Some(mut stale)=state.take(){ let _=stale.child.kill().await; }
         let executable=self.executable.clone().unwrap_or(resolve_guard_executable()?);
-        crate::guard_ipc::validate_neverguard_path(&executable)?;
+        crate::guard_ipc::validate_guard_path(&executable)?;
         validate_secure_file(&executable, true)?;
         let manifest_ok=if self.require_package_manifest { verify_macos_package_manifest(&executable)?; true } else { false };
         let parent_pid=std::process::id(); let endpoint=make_endpoint(parent_pid)?; let mut secret=random32();
         let mut command=Command::new(&executable);
         command.arg("--socket").arg(&endpoint).arg("--parent-pid").arg(parent_pid.to_string()).stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null()).kill_on_drop(true);
         prepare_guard_command(&mut command);
-        let mut child=command.spawn().map_err(|e|format!("failed to spawn NeverGuard {}: {e}",executable.display()))?;
-        let guard_pid=child.id().ok_or_else(||"NeverGuard PID unavailable".to_string())?;
-        let mut stdin=child.stdin.take().ok_or_else(||"NeverGuard bootstrap stdin unavailable".to_string())?;
-        if let Err(e)=stdin.write_all(&secret).await { secret.zeroize(); let _=child.kill().await; return Err(format!("NeverGuard bootstrap write failed: {e}")); }
+        let mut child=command.spawn().map_err(|e|format!("failed to spawn Guard {}: {e}",executable.display()))?;
+        let guard_pid=child.id().ok_or_else(||"Guard PID unavailable".to_string())?;
+        let mut stdin=child.stdin.take().ok_or_else(||"Guard bootstrap stdin unavailable".to_string())?;
+        if let Err(e)=stdin.write_all(&secret).await { secret.zeroize(); let _=child.kill().await; return Err(format!("Guard bootstrap write failed: {e}")); }
         let _=stdin.shutdown().await;
         let stream=match connect_socket(&endpoint,guard_pid).await {Ok(v)=>v,Err(e)=>{secret.zeroize();let _=child.kill().await;return Err(e)}};
         let (stream,session_key,_handshake_status)=match timeout(Duration::from_secs(HANDSHAKE_TIMEOUT_SECS),client_authenticate(stream,&endpoint,parent_pid,guard_pid,&secret)).await {
-            Ok(Ok(v))=>v, Ok(Err(e))=>{secret.zeroize();let _=child.kill().await;return Err(e)}, Err(_)=>{secret.zeroize();let _=child.kill().await;return Err("NeverGuard macOS authenticated IPC handshake timeout".into())}
+            Ok(Ok(v))=>v, Ok(Err(e))=>{secret.zeroize();let _=child.kill().await;return Err(e)}, Err(_)=>{secret.zeroize();let _=child.kill().await;return Err("Guard macOS authenticated IPC handshake timeout".into())}
         };
         secret.zeroize();
         let mut handle=GuardHandle{child,stream,session_key,next_sequence:1,package_manifest_verified:manifest_ok,socket_path:endpoint};
-        let status_value=send_command(&mut handle,"status","").await.map_err(|e|format!("NeverGuard release identity query failed: {e}"))?;
+        let status_value=send_command(&mut handle,"status","").await.map_err(|e|format!("Guard release identity query failed: {e}"))?;
         let mut status=parse_status(status_value)?; status.lifetime_job_enforced=true; status.package_manifest_verified=manifest_ok;
         *state=Some(handle); Ok(status)
     }
-    pub async fn status(&self)->Result<NeverGuardStatus,String>{self.ensure_started().await}
-    pub async fn ping(&self)->Result<(),String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("NeverGuard missing")?; let v=send_command(h,"ping","").await?; if v.get("pong").and_then(Value::as_bool)==Some(true){Ok(())}else{Err("invalid NeverGuard ping".into())} }
-    pub async fn process_policy(&self)->Result<GuardProcessPolicyReport,String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("NeverGuard missing")?; let v=send_command(h,"process-policy","").await?; let p:GuardProcessPolicyReport=serde_json::from_value(v).map_err(|e|e.to_string())?; validate_policy(&p)?; Ok(p) }
-    pub async fn integrity_evidence(&self)->Result<NeverGuardIntegrityEvidence,String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("NeverGuard missing")?; let v=send_command(h,"integrity-evidence","").await?; let e:NeverGuardIntegrityEvidence=serde_json::from_value(v).map_err(|e|e.to_string())?; validate_evidence(h,&e)?; Ok(e) }
-    pub async fn remote_attestation(&self,challenge_id:&str,challenge:&str)->Result<NeverGuardRemoteAttestation,String>{
-        if challenge_id.trim().is_empty()||challenge_id.len()>160||challenge.is_empty()||challenge.len()>4096{return Err("NeverGuard attestation challenge malformed".into())}
+    pub async fn status(&self)->Result<GuardStatus,String>{self.ensure_started().await}
+    pub async fn ping(&self)->Result<(),String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"ping","").await?; if v.get("pong").and_then(Value::as_bool)==Some(true){Ok(())}else{Err("invalid Guard ping".into())} }
+    pub async fn process_policy(&self)->Result<GuardProcessPolicyReport,String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"process-policy","").await?; let p:GuardProcessPolicyReport=serde_json::from_value(v).map_err(|e|e.to_string())?; validate_policy(&p)?; Ok(p) }
+    pub async fn integrity_evidence(&self)->Result<GuardIntegrityEvidence,String>{ self.ensure_started().await?; let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"integrity-evidence","").await?; let e:GuardIntegrityEvidence=serde_json::from_value(v).map_err(|e|e.to_string())?; validate_evidence(h,&e)?; Ok(e) }
+    pub async fn remote_attestation(&self,challenge_id:&str,challenge:&str)->Result<GuardRemoteAttestation,String>{
+        if challenge_id.trim().is_empty()||challenge_id.len()>160||challenge.is_empty()||challenge.len()>4096{return Err("Guard attestation challenge malformed".into())}
         self.ensure_started().await?; let payload=serde_json::to_string(&GuardAttestationRequest{challenge_id:challenge_id.into(),challenge:challenge.into()}).map_err(|e|e.to_string())?;
-        let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("NeverGuard missing")?; let v=send_command(h,"guard-attestation",&payload).await?;
-        let a:NeverGuardRemoteAttestation=serde_json::from_value(v).map_err(|e|e.to_string())?; validate_attestation(h,challenge_id,challenge,&a)?; Ok(a)
+        let mut s=self.inner.lock().await; let h=s.as_mut().ok_or("Guard missing")?; let v=send_command(h,"guard-attestation",&payload).await?;
+        let a:GuardRemoteAttestation=serde_json::from_value(v).map_err(|e|e.to_string())?; validate_attestation(h,challenge_id,challenge,&a)?; Ok(a)
     }
     pub async fn shutdown(&self)->Result<(),String>{ let mut s=self.inner.lock().await; let Some(mut h)=s.take() else{return Ok(())}; let _=send_command(&mut h,"shutdown","").await; match timeout(Duration::from_secs(2),h.child.wait()).await{Ok(Ok(_))=>Ok(()),_=>{h.child.kill().await.map_err(|e|e.to_string())?;Ok(())}} }
 }
@@ -175,15 +175,15 @@ fn runtime_dir()->Result<PathBuf,String>{
 fn make_endpoint(pid:u32)->Result<PathBuf,String>{
     let mut r=[0u8;8];OsRng.fill_bytes(&mut r);
     let endpoint=runtime_dir()?.join(format!("guard-{pid}-{}.sock",hex::encode(r)));
-    if endpoint.as_os_str().len()>100{return Err("macOS NeverGuard Unix socket path exceeds sockaddr_un limit".into())}
+    if endpoint.as_os_str().len()>100{return Err("macOS Guard Unix socket path exceeds sockaddr_un limit".into())}
     Ok(endpoint)
 }
 fn validate_endpoint(path:&Path)->Result<(),String>{
     let base=runtime_dir()?.canonicalize().map_err(|e|e.to_string())?;
     let parent=path.parent().ok_or("socket parent missing")?.canonicalize().map_err(|e|e.to_string())?;
-    if parent!=base{return Err("NeverGuard socket outside private macOS runtime directory".into())}
+    if parent!=base{return Err("Guard socket outside private macOS runtime directory".into())}
     let name=path.file_name().and_then(|v|v.to_str()).ok_or("socket filename invalid")?;
-    if !name.starts_with("guard-")||!name.ends_with(".sock")||name.len()>96{return Err("NeverGuard socket name malformed".into())}
+    if !name.starts_with("guard-")||!name.ends_with(".sock")||name.len()>96{return Err("Guard socket name malformed".into())}
     Ok(())
 }
 fn validate_secure_file(path:&Path,executable:bool)->Result<(),String>{
@@ -229,9 +229,9 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     if manifest.product_version!=env!("CARGO_PKG_VERSION")||manifest.bundle_identifier!="ru.skif4er.neverlauncher"||(!legacy&&!canonical){return Err("macOS package manifest identity/hardening mismatch".into())}
     if canonical {
         let helpers=app.join("Contents/Helpers").canonicalize().map_err(|e|format!("resolve app Helpers directory failed: {e}"))?;
-        if guard_dir!=helpers{return Err("NeverGuard must run from the signed .app/Contents/Helpers directory".into())}
+        if guard_dir!=helpers{return Err("Guard must run from the signed .app/Contents/Helpers directory".into())}
     } else if desktop_dir!=guard_dir {
-        return Err("legacy Desktop and NeverGuard must be in the same app bundle MacOS directory".into())
+        return Err("legacy Desktop and Guard must be in the same app bundle MacOS directory".into())
     }
     let external_hash_binding = match manifest.hash_binding_mode.as_str() {
         "" => false,
@@ -242,7 +242,7 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     if canonical {
         for (component,path,expected_bundle_path) in [
             ("desktop-launcher",desktop.as_path(),"NeverLauncher.app/Contents/MacOS/neverlauncher-desktop"),
-            ("guard",guard,"NeverLauncher.app/Contents/Helpers/neverguard"),
+            ("guard",guard,"NeverLauncher.app/Contents/Helpers/guard"),
         ] {
             let artifact=manifest.artifacts.iter().find(|a|a.component==component).ok_or_else(||format!("macOS package artifact missing: {component}"))?;
             if artifact.bundle_path!=expected_bundle_path{return Err(format!("macOS package bundle path mismatch for {component}"))}
@@ -277,55 +277,55 @@ fn resolve_guard_executable()->Result<PathBuf,String>{
     let exe=std::env::current_exe().map_err(|e|e.to_string())?;
     let macos=exe.parent().ok_or("desktop MacOS directory missing")?;
     let contents=macos.parent().ok_or("desktop Contents directory missing")?;
-    let helper=contents.join("Helpers").join("neverguard");
+    let helper=contents.join("Helpers").join("guard");
     if helper.is_file(){return Ok(helper)}
     // Резервный путь для разработческих схем до 0.16.1;
     // каноническая проверка пакета выше требует Contents/Helpers.
-    Ok(macos.join("neverguard"))
+    Ok(macos.join("guard"))
 }
 
 async fn connect_socket(path:&Path,guard_pid:u32)->Result<UnixStream,String>{
-    let deadline=Instant::now()+Duration::from_secs(CONNECT_TIMEOUT_SECS); loop{match UnixStream::connect(path).await{Ok(s)=>{verify_peer(&s,guard_pid,current_uid())?;return Ok(s)},Err(e)=>{if Instant::now()>=deadline{return Err(format!("NeverGuard Unix socket connect failed: {e}"))}sleep(Duration::from_millis(40)).await}}
+    let deadline=Instant::now()+Duration::from_secs(CONNECT_TIMEOUT_SECS); loop{match UnixStream::connect(path).await{Ok(s)=>{verify_peer(&s,guard_pid,current_uid())?;return Ok(s)},Err(e)=>{if Instant::now()>=deadline{return Err(format!("Guard Unix socket connect failed: {e}"))}sleep(Duration::from_millis(40)).await}}
     }
 }
 fn verify_peer(stream:&UnixStream,expected_pid:u32,expected_uid:u32)->Result<(),String>{
     let cred=stream.peer_cred().map_err(|e|format!("macOS Unix peer credential query failed: {e}"))?;
     let pid=cred.pid().ok_or_else(||"macOS Unix peer PID unavailable".to_string())?;
-    if pid as u32!=expected_pid||cred.uid()!=expected_uid{return Err(format!("NeverGuard peer credential mismatch pid={pid} uid={}",cred.uid()))}
+    if pid as u32!=expected_pid||cred.uid()!=expected_uid{return Err(format!("Guard peer credential mismatch pid={pid} uid={}",cred.uid()))}
     Ok(())
 }
 
-async fn client_authenticate(mut s:UnixStream,endpoint:&Path,client_pid:u32,guard_pid:u32,secret:&[u8;32])->Result<(UnixStream,[u8;32],NeverGuardStatus),String>{
+async fn client_authenticate(mut s:UnixStream,endpoint:&Path,client_pid:u32,guard_pid:u32,secret:&[u8;32])->Result<(UnixStream,[u8;32],GuardStatus),String>{
     let cn=random32(); write_frame(&mut s,&ClientHello{kind:"client-hello".into(),protocol_version:NEVERGUARD_PROTOCOL_VERSION,client_pid,client_nonce:hex::encode(cn)}).await?;
-    let ch:ServerChallenge=read_frame(&mut s).await?; if ch.kind!="server-challenge"||ch.protocol_version!=NEVERGUARD_PROTOCOL_VERSION||ch.guard_pid!=guard_pid{return Err("NeverGuard server challenge mismatch".into())}
-    let sn=decode32(&ch.server_nonce,"serverNonce")?; let ep=endpoint.to_string_lossy(); let handshake=HandshakeContext{endpoint:&ep,client_pid,guard_pid,started:ch.started_at_unix,client_nonce:&cn,server_nonce:&sn}; let expected=proof(secret,b"server-proof",&handshake); if !ct_eq(&expected,&hex::decode(&ch.server_proof).map_err(|_|"invalid server proof")?){return Err("NeverGuard server authentication failed".into())}
+    let ch:ServerChallenge=read_frame(&mut s).await?; if ch.kind!="server-challenge"||ch.protocol_version!=NEVERGUARD_PROTOCOL_VERSION||ch.guard_pid!=guard_pid{return Err("Guard server challenge mismatch".into())}
+    let sn=decode32(&ch.server_nonce,"serverNonce")?; let ep=endpoint.to_string_lossy(); let handshake=HandshakeContext{endpoint:&ep,client_pid,guard_pid,started:ch.started_at_unix,client_nonce:&cn,server_nonce:&sn}; let expected=proof(secret,b"server-proof",&handshake); if !ct_eq(&expected,&hex::decode(&ch.server_proof).map_err(|_|"invalid server proof")?){return Err("Guard server authentication failed".into())}
     let cp=proof(secret,b"client-proof",&handshake); write_frame(&mut s,&ClientAuthentication{kind:"client-auth".into(),client_proof:hex::encode(cp)}).await?;
-    let key=session_key(secret,&handshake); let ready:ServerReady=read_frame(&mut s).await?; if ready.kind!="ready"||ready.protocol_version!=NEVERGUARD_PROTOCOL_VERSION{return Err("NeverGuard ready mismatch".into())}
-    let expected=ready_proof(&key,ReadyProofState{pid:ready.guard_pid,started:ready.started_at_unix,policy_version:ready.process_policy_version,policy_enforced:ready.process_policy_enforced,hardening_version:ready.hardening_version,hardening_enforced:ready.hardening_enforced,secure_acl:ready.secure_pipe_acl}); if !ct_eq(&expected,&hex::decode(&ready.ready_proof).map_err(|_|"invalid ready proof")?){return Err("NeverGuard ready proof invalid".into())}
-    if ready.process_policy_version!=NEVERGUARD_MACOS_PROCESS_POLICY_VERSION||!ready.process_policy_enforced||ready.hardening_version!=NEVERGUARD_MACOS_HARDENING_VERSION||!ready.hardening_enforced||!ready.secure_pipe_acl{return Err("NeverGuard macOS policy/hardening not enforced".into())}
-    Ok((s,key,NeverGuardStatus{state:"ready".into(),product_version:env!("CARGO_PKG_VERSION").into(),platform:"macos-universal".into(),pid:guard_pid,parent_pid:client_pid,protocol_version:NEVERGUARD_PROTOCOL_VERSION,authenticated:true,process_policy_version:ready.process_policy_version,process_policy_enforced:true,hardening_version:ready.hardening_version,hardening_enforced:true,windows_protection_core_version:0,windows_capability_model_version:0,windows_protection_profile:String::new(),secure_pipe_acl:true,lifetime_job_enforced:true,package_manifest_verified:false,started_at_unix:ch.started_at_unix,message:"NeverGuard macOS authenticated Unix IPC ready".into()}))
+    let key=session_key(secret,&handshake); let ready:ServerReady=read_frame(&mut s).await?; if ready.kind!="ready"||ready.protocol_version!=NEVERGUARD_PROTOCOL_VERSION{return Err("Guard ready mismatch".into())}
+    let expected=ready_proof(&key,ReadyProofState{pid:ready.guard_pid,started:ready.started_at_unix,policy_version:ready.process_policy_version,policy_enforced:ready.process_policy_enforced,hardening_version:ready.hardening_version,hardening_enforced:ready.hardening_enforced,secure_acl:ready.secure_pipe_acl}); if !ct_eq(&expected,&hex::decode(&ready.ready_proof).map_err(|_|"invalid ready proof")?){return Err("Guard ready proof invalid".into())}
+    if ready.process_policy_version!=NEVERGUARD_MACOS_PROCESS_POLICY_VERSION||!ready.process_policy_enforced||ready.hardening_version!=NEVERGUARD_MACOS_HARDENING_VERSION||!ready.hardening_enforced||!ready.secure_pipe_acl{return Err("Guard macOS policy/hardening not enforced".into())}
+    Ok((s,key,GuardStatus{state:"ready".into(),product_version:env!("CARGO_PKG_VERSION").into(),platform:"macos-universal".into(),pid:guard_pid,parent_pid:client_pid,protocol_version:NEVERGUARD_PROTOCOL_VERSION,authenticated:true,process_policy_version:ready.process_policy_version,process_policy_enforced:true,hardening_version:ready.hardening_version,hardening_enforced:true,windows_protection_core_version:0,windows_capability_model_version:0,windows_protection_profile:String::new(),secure_pipe_acl:true,lifetime_job_enforced:true,package_manifest_verified:false,started_at_unix:ch.started_at_unix,message:"Guard macOS authenticated Unix IPC ready".into()}))
 }
 
 async fn send_command(h:&mut GuardHandle,command:&str,payload:&str)->Result<Value,String>{
     let seq=h.next_sequence; let id=random_id(); let mac=request_mac(&h.session_key,seq,&id,command,payload); let req=RequestEnvelope{protocol_version:NEVERGUARD_PROTOCOL_VERSION,sequence:seq,request_id:id.clone(),command:command.into(),payload:payload.into(),mac:hex::encode(mac)};
-    timeout(Duration::from_secs(COMMAND_TIMEOUT_SECS),write_frame(&mut h.stream,&req)).await.map_err(|_|"NeverGuard IPC write timeout".to_string())??;
+    timeout(Duration::from_secs(COMMAND_TIMEOUT_SECS),write_frame(&mut h.stream,&req)).await.map_err(|_|"Guard IPC write timeout".to_string())??;
     let response_timeout = if matches!(command, "integrity-evidence" | "guard-attestation") { EVIDENCE_COMMAND_TIMEOUT_SECS } else { COMMAND_TIMEOUT_SECS };
-    let resp:ResponseEnvelope=timeout(Duration::from_secs(response_timeout),read_frame(&mut h.stream)).await.map_err(|_|format!("NeverGuard IPC read timeout for {command}"))??;
-    if resp.protocol_version!=NEVERGUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("NeverGuard response binding mismatch".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"invalid response mac")?){return Err("NeverGuard response MAC invalid".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("NeverGuard response JSON invalid: {e}"))
+    let resp:ResponseEnvelope=timeout(Duration::from_secs(response_timeout),read_frame(&mut h.stream)).await.map_err(|_|format!("Guard IPC read timeout for {command}"))??;
+    if resp.protocol_version!=NEVERGUARD_PROTOCOL_VERSION||resp.sequence!=seq||resp.request_id!=id{return Err("Guard response binding mismatch".into())}; let expected=response_mac(&h.session_key,seq,&id,resp.ok,&resp.payload); if !ct_eq(&expected,&hex::decode(&resp.mac).map_err(|_|"invalid response mac")?){return Err("Guard response MAC invalid".into())}; h.next_sequence=h.next_sequence.checked_add(1).ok_or("IPC sequence exhausted")?; if !resp.ok{return Err(resp.payload)}; serde_json::from_str(&resp.payload).map_err(|e|format!("Guard response JSON invalid: {e}"))
 }
-fn parse_status(v:Value)->Result<NeverGuardStatus,String>{let s:NeverGuardStatus=serde_json::from_value(v).map_err(|e|format!("NeverGuard status invalid: {e}"))?;validate_release_identity(&s)?;Ok(s)}
-fn validate_release_identity(s:&NeverGuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("NeverGuard release version mismatch: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="macos-universal"{return Err(format!("NeverGuard platform mismatch: expected macos-universal, got {}",s.platform))}if s.protocol_version!=NEVERGUARD_PROTOCOL_VERSION{return Err(format!("NeverGuard protocol mismatch: Desktop={} Guard={}",NEVERGUARD_PROTOCOL_VERSION,s.protocol_version))}Ok(())}
-fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let m=p.macos.as_ref().ok_or("macOS process policy details missing")?;if p.schema!=NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!m.core_dumps_disabled||!m.debugger_attach_denied||!m.code_signature_valid||!m.hardened_runtime||!m.library_validation||!m.dyld_environment_sanitized||!m.parent_exit_watch||!m.private_umask{return Err("NeverGuard macOS process policy rejected".into())}Ok(())}
-fn validate_evidence(h:&GuardHandle,e:&NeverGuardIntegrityEvidence)->Result<(),String>{validate_evidence_shape(e)?;let d=recompute_evidence_sha256(e)?;if !ct_eq(&d,&hex::decode(&e.evidence_sha256).map_err(|_|"invalid evidence digest")?){return Err("evidence digest mismatch".into())};let p=integrity_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&e.session_proof).map_err(|_|"invalid evidence proof")?){return Err("evidence session proof mismatch".into())}Ok(())}
-fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&NeverGuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("macOS Guard Attestation binding mismatch".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"invalid attestation digest")?){return Err("attestation digest mismatch".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"invalid attestation proof")?){return Err("attestation session proof mismatch".into())}Ok(())}
+fn parse_status(v:Value)->Result<GuardStatus,String>{let s:GuardStatus=serde_json::from_value(v).map_err(|e|format!("Guard status invalid: {e}"))?;validate_release_identity(&s)?;Ok(s)}
+fn validate_release_identity(s:&GuardStatus)->Result<(),String>{if s.product_version!=env!("CARGO_PKG_VERSION"){return Err(format!("Guard release version mismatch: Desktop={} Guard={}",env!("CARGO_PKG_VERSION"),s.product_version))}if s.platform!="macos-universal"{return Err(format!("Guard platform mismatch: expected macos-universal, got {}",s.platform))}if s.protocol_version!=NEVERGUARD_PROTOCOL_VERSION{return Err(format!("Guard protocol mismatch: Desktop={} Guard={}",NEVERGUARD_PROTOCOL_VERSION,s.protocol_version))}Ok(())}
+fn validate_policy(p:&GuardProcessPolicyReport)->Result<(),String>{let m=p.macos.as_ref().ok_or("macOS process policy details missing")?;if p.schema!=NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA||p.policy_version!=1||!p.enforced||!m.core_dumps_disabled||!m.debugger_attach_denied||!m.code_signature_valid||!m.hardened_runtime||!m.library_validation||!m.dyld_environment_sanitized||!m.parent_exit_watch||!m.private_umask{return Err("Guard macOS process policy rejected".into())}Ok(())}
+fn validate_evidence(h:&GuardHandle,e:&GuardIntegrityEvidence)->Result<(),String>{validate_evidence_shape(e)?;let d=recompute_evidence_sha256(e)?;if !ct_eq(&d,&hex::decode(&e.evidence_sha256).map_err(|_|"invalid evidence digest")?){return Err("evidence digest mismatch".into())};let p=integrity_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&e.session_proof).map_err(|_|"invalid evidence proof")?){return Err("evidence session proof mismatch".into())}Ok(())}
+fn validate_attestation(h:&GuardHandle,id:&str,challenge:&str,a:&GuardRemoteAttestation)->Result<(),String>{validate_attestation_shape(a)?;if a.schema!=NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA||a.challenge_id!=id||a.challenge_sha256!=challenge_sha256(challenge){return Err("macOS Guard Attestation binding mismatch".into())};validate_evidence(h,&a.evidence)?;validate_policy(&a.process_policy)?;let d=recompute_attestation_sha256(a)?;if !ct_eq(&d,&hex::decode(&a.attestation_sha256).map_err(|_|"invalid attestation digest")?){return Err("attestation digest mismatch".into())};let p=attestation_proof(&h.session_key,&d);if !ct_eq(&p,&hex::decode(&a.session_proof).map_err(|_|"invalid attestation proof")?){return Err("attestation session proof mismatch".into())}Ok(())}
 
 pub async fn run_macos_guard_server(endpoint:PathBuf,parent_pid:u32)->Result<(),String>{
-    validate_endpoint(&endpoint)?; let hard=ensure_macos_production_hardening()?; let observed=crate::integrity::observed_macos_parent_pid(std::process::id())?; if observed!=parent_pid{return Err(format!("NeverGuard macOS parent mismatch expected={parent_pid} observed={observed}"));} install_parent_exit_watch(parent_pid)?; let policy=policy_report()?;
+    validate_endpoint(&endpoint)?; let hard=ensure_macos_production_hardening()?; let observed=crate::integrity::observed_macos_parent_pid(std::process::id())?; if observed!=parent_pid{return Err(format!("Guard macOS parent mismatch expected={parent_pid} observed={observed}"));} install_parent_exit_watch(parent_pid)?; let policy=policy_report()?;
     let mut secret=[0u8;SECRET_LEN]; { let mut bootstrap_stdin=std::io::stdin(); std::io::Read::read_exact(&mut bootstrap_stdin,&mut secret).map_err(|e|format!("bootstrap secret read failed: {e}"))?; }
-    if endpoint.exists(){return Err("NeverGuard Unix socket already exists".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("bind {} failed: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
-    let m=std::fs::symlink_metadata(&endpoint).map_err(|e|e.to_string())?; if !m.file_type().is_socket()||m.uid()!=current_uid()||(m.mode()&0o077)!=0{return Err("NeverGuard Unix socket ACL verification failed".into())}
+    if endpoint.exists(){return Err("Guard Unix socket already exists".into())} let listener=UnixListener::bind(&endpoint).map_err(|e|format!("bind {} failed: {e}",endpoint.display()))?; std::fs::set_permissions(&endpoint,std::fs::Permissions::from_mode(0o600)).map_err(|e|e.to_string())?;
+    let m=std::fs::symlink_metadata(&endpoint).map_err(|e|e.to_string())?; if !m.file_type().is_socket()||m.uid()!=current_uid()||(m.mode()&0o077)!=0{return Err("Guard Unix socket ACL verification failed".into())}
     let started=now_unix()?; let deadline=Instant::now()+Duration::from_secs(STARTUP_AUTH_WINDOW_SECS);
-    loop { let remaining=deadline.saturating_duration_since(Instant::now()); if remaining.is_zero(){secret.zeroize();return Err("NeverGuard startup authentication window expired".into())}; let (stream,_)=timeout(remaining,listener.accept()).await.map_err(|_|"NeverGuard accept timeout".to_string())?.map_err(|e|e.to_string())?;
+    loop { let remaining=deadline.saturating_duration_since(Instant::now()); if remaining.is_zero(){secret.zeroize();return Err("Guard startup authentication window expired".into())}; let (stream,_)=timeout(remaining,listener.accept()).await.map_err(|_|"Guard accept timeout".to_string())?.map_err(|e|e.to_string())?;
         if verify_peer(&stream,parent_pid,current_uid()).is_err(){continue}
         match server_authenticate(stream,&endpoint,parent_pid,started,&secret,&policy,&hard).await {Ok((stream,key))=>{secret.zeroize();let r=serve_commands(stream,key,parent_pid,started,policy,hard).await;let _=std::fs::remove_file(&endpoint);return r},Err(_)=>continue}
     }
@@ -337,10 +337,10 @@ async fn server_authenticate(mut s:UnixStream,endpoint:&Path,parent_pid:u32,star
 async fn build_integrity_evidence(
     parent_pid: u32,
     key: &[u8; 32],
-) -> Result<NeverGuardIntegrityEvidence, String> {
+) -> Result<GuardIntegrityEvidence, String> {
     let mut evidence = tokio::task::spawn_blocking(move || collect_macos_integrity_evidence(parent_pid))
         .await
-        .map_err(|err| format!("NeverGuard integrity worker failed: {err}"))??;
+        .map_err(|err| format!("Guard integrity worker failed: {err}"))??;
     let digest = recompute_evidence_sha256(&evidence)?;
     evidence.session_proof = hex::encode(integrity_proof(key, &digest));
     validate_evidence_shape(&evidence)?;
@@ -352,11 +352,11 @@ async fn build_guard_attestation(
     key: &[u8; 32],
     policy: &GuardProcessPolicyReport,
     payload: &str,
-) -> Result<NeverGuardRemoteAttestation, String> {
+) -> Result<GuardRemoteAttestation, String> {
     let request: GuardAttestationRequest = serde_json::from_str(payload)
         .map_err(|err| format!("attestation request invalid: {err}"))?;
     let evidence = build_integrity_evidence(parent_pid, key).await?;
-    let mut attestation = NeverGuardRemoteAttestation {
+    let mut attestation = GuardRemoteAttestation {
         schema: NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA.into(),
         attestation_version: NEVERGUARD_REMOTE_ATTESTATION_VERSION,
         challenge_id: request.challenge_id,
@@ -406,7 +406,7 @@ async fn serve_commands(
             "ping" => (true, json!({"pong": true}).to_string(), false),
             "status" => (
                 true,
-                serde_json::to_string(&NeverGuardStatus {
+                serde_json::to_string(&GuardStatus {
                     state: "ready".into(),
                     product_version: env!("CARGO_PKG_VERSION").into(),
                     platform: "macos-universal".into(),
@@ -425,36 +425,36 @@ async fn serve_commands(
                     lifetime_job_enforced: true,
                     package_manifest_verified: false,
                     started_at_unix: started,
-                    message: "NeverGuard macOS production boundary ready".into(),
+                    message: "Guard macOS production boundary ready".into(),
                 })
-                .map_err(|err| format!("NeverGuard status serialization failed: {err}"))?,
+                .map_err(|err| format!("Guard status serialization failed: {err}"))?,
                 false,
             ),
             "process-policy" => (
                 true,
                 serde_json::to_string(&policy)
-                    .map_err(|err| format!("NeverGuard process policy serialization failed: {err}"))?,
+                    .map_err(|err| format!("Guard process policy serialization failed: {err}"))?,
                 false,
             ),
             "integrity-evidence" => match build_integrity_evidence(parent_pid, &key).await {
                 Ok(evidence) => (
                     true,
                     serde_json::to_string(&evidence)
-                        .map_err(|err| format!("NeverGuard integrity serialization failed: {err}"))?,
+                        .map_err(|err| format!("Guard integrity serialization failed: {err}"))?,
                     false,
                 ),
-                Err(err) => (false, format!("NeverGuard integrity evidence failed: {err}"), false),
+                Err(err) => (false, format!("Guard integrity evidence failed: {err}"), false),
             },
             "guard-attestation" => {
                 match build_guard_attestation(parent_pid, &key, &policy, &request.payload).await {
                     Ok(attestation) => (
                         true,
                         serde_json::to_string(&attestation).map_err(|err| {
-                            format!("NeverGuard attestation serialization failed: {err}")
+                            format!("Guard attestation serialization failed: {err}")
                         })?,
                         false,
                     ),
-                    Err(err) => (false, format!("NeverGuard attestation failed: {err}"), false),
+                    Err(err) => (false, format!("Guard attestation failed: {err}"), false),
                 }
             }
             "shutdown" => (true, json!({"shutdown": true}).to_string(), true),
@@ -489,8 +489,8 @@ struct HandshakeContext<'a>{endpoint:&'a str,client_pid:u32,guard_pid:u32,starte
 #[derive(Clone, Copy)]
 struct ReadyProofState{pid:u32,started:u64,policy_version:u32,policy_enforced:bool,hardening_version:u32,hardening_enforced:bool,secure_acl:bool}
 fn prefix(o:&mut Vec<u8>,v:&[u8]){o.extend_from_slice(&(v.len() as u32).to_le_bytes());o.extend_from_slice(v)}
-fn transcript(label:&[u8],c:&HandshakeContext<'_>)->Vec<u8>{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher NeverGuard IPC v4\0");prefix(&mut d,label);prefix(&mut d,c.endpoint.as_bytes());d.extend_from_slice(&c.client_pid.to_le_bytes());d.extend_from_slice(&c.guard_pid.to_le_bytes());d.extend_from_slice(&c.started.to_le_bytes());d.extend_from_slice(c.client_nonce);d.extend_from_slice(c.server_nonce);d}
+fn transcript(label:&[u8],c:&HandshakeContext<'_>)->Vec<u8>{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher Guard IPC v4\0");prefix(&mut d,label);prefix(&mut d,c.endpoint.as_bytes());d.extend_from_slice(&c.client_pid.to_le_bytes());d.extend_from_slice(&c.guard_pid.to_le_bytes());d.extend_from_slice(&c.started.to_le_bytes());d.extend_from_slice(c.client_nonce);d.extend_from_slice(c.server_nonce);d}
 fn hmac(key:&[u8],msg:&[u8])->[u8;32]{let mut m=Hmac::<Sha256>::new_from_slice(key).unwrap();m.update(msg);let x=m.finalize().into_bytes();let mut o=[0u8;32];o.copy_from_slice(&x);o}
 fn proof(k:&[u8;32],l:&[u8],c:&HandshakeContext<'_>)->[u8;32]{hmac(k,&transcript(l,c))}fn session_key(k:&[u8;32],c:&HandshakeContext<'_>)->[u8;32]{proof(k,b"session-key",c)}
-fn ready_proof(k:&[u8;32],s:ReadyProofState)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher NeverGuard IPC ready v4\0");d.extend_from_slice(&s.pid.to_le_bytes());d.extend_from_slice(&s.started.to_le_bytes());d.extend_from_slice(&s.policy_version.to_le_bytes());d.push(u8::from(s.policy_enforced));d.extend_from_slice(&s.hardening_version.to_le_bytes());d.push(u8::from(s.hardening_enforced));d.push(u8::from(s.secure_acl));hmac(k,&d)}
-fn request_mac(k:&[u8;32],seq:u64,id:&str,c:&str,p:&str)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher NeverGuard IPC request v4\0");d.extend_from_slice(&seq.to_le_bytes());prefix(&mut d,id.as_bytes());prefix(&mut d,c.as_bytes());prefix(&mut d,p.as_bytes());hmac(k,&d)}fn response_mac(k:&[u8;32],seq:u64,id:&str,ok:bool,p:&str)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher NeverGuard IPC response v4\0");d.extend_from_slice(&seq.to_le_bytes());prefix(&mut d,id.as_bytes());d.push(u8::from(ok));prefix(&mut d,p.as_bytes());hmac(k,&d)}fn integrity_proof(k:&[u8;32],d:&[u8;32])->[u8;32]{let mut x=b"NeverLauncher NeverGuard integrity evidence session v1\0".to_vec();x.extend_from_slice(d);hmac(k,&x)}fn attestation_proof(k:&[u8;32],d:&[u8;32])->[u8;32]{let mut x=b"NeverLauncher NeverGuard remote attestation session v1\0".to_vec();x.extend_from_slice(d);hmac(k,&x)}fn ct_eq(a:&[u8],b:&[u8])->bool{a.len()==b.len()&&bool::from(a.ct_eq(b))}fn now_unix()->Result<u64,String>{SystemTime::now().duration_since(UNIX_EPOCH).map(|d|d.as_secs()).map_err(|e|e.to_string())}
+fn ready_proof(k:&[u8;32],s:ReadyProofState)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher Guard IPC ready v4\0");d.extend_from_slice(&s.pid.to_le_bytes());d.extend_from_slice(&s.started.to_le_bytes());d.extend_from_slice(&s.policy_version.to_le_bytes());d.push(u8::from(s.policy_enforced));d.extend_from_slice(&s.hardening_version.to_le_bytes());d.push(u8::from(s.hardening_enforced));d.push(u8::from(s.secure_acl));hmac(k,&d)}
+fn request_mac(k:&[u8;32],seq:u64,id:&str,c:&str,p:&str)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher Guard IPC request v4\0");d.extend_from_slice(&seq.to_le_bytes());prefix(&mut d,id.as_bytes());prefix(&mut d,c.as_bytes());prefix(&mut d,p.as_bytes());hmac(k,&d)}fn response_mac(k:&[u8;32],seq:u64,id:&str,ok:bool,p:&str)->[u8;32]{let mut d=Vec::new();d.extend_from_slice(b"NeverLauncher Guard IPC response v4\0");d.extend_from_slice(&seq.to_le_bytes());prefix(&mut d,id.as_bytes());d.push(u8::from(ok));prefix(&mut d,p.as_bytes());hmac(k,&d)}fn integrity_proof(k:&[u8;32],d:&[u8;32])->[u8;32]{let mut x=b"NeverLauncher Guard integrity evidence session v1\0".to_vec();x.extend_from_slice(d);hmac(k,&x)}fn attestation_proof(k:&[u8;32],d:&[u8;32])->[u8;32]{let mut x=b"NeverLauncher Guard remote attestation session v1\0".to_vec();x.extend_from_slice(d);hmac(k,&x)}fn ct_eq(a:&[u8],b:&[u8])->bool{a.len()==b.len()&&bool::from(a.ct_eq(b))}fn now_unix()->Result<u64,String>{SystemTime::now().duration_since(UNIX_EPOCH).map(|d|d.as_secs()).map_err(|e|e.to_string())}

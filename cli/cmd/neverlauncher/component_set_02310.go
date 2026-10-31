@@ -117,7 +117,7 @@ func verifySignedComponentSet02310(manifestPath string, manifest componentUpdate
 
 // Fail closed on protocol mismatches *before* the first live file is touched.
 // The minimum verified protocol requirements are derived from the actual
-// NeverGuard v4, sensor v3 and updater v2 wire implementations.
+// Guard v4, sensor v3 and updater v2 wire implementations.
 func validateComponentProtocols02310(manifest componentUpdateManifest0157) error {
 	if manifest.ComponentSet == nil || manifest.ComponentSet.SchemaVersion != "1.0" {
 		return errors.New("component-set protocol matrix missing")

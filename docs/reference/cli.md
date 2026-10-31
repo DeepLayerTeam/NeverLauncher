@@ -20,7 +20,7 @@ go build -o nl ./cmd/neverlauncher
 | `diagnostics` | `nl diagnostics collect ...` | Логи, анонимизация, отчёты |
 | `runtime` | `nl runtime vanilla-install ...` | Vanilla/loader materializers |
 | `server-bridge` | `nl server-bridge status ...` | Регистрация, host и состояние узлов |
-| `extension` | `nl extension status ...` | Управление NeverExtensions |
+| `extension` | `nl extension status ...` | Управление Extensions |
 | `install` | `nl install readiness ...` | Первоначальная установка |
 | `db` | `nl db status ...` | Миграции и repository |
 | `backup` | `nl backup status ...` | Создание/проверка/восстановление |

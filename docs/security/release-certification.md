@@ -23,7 +23,7 @@ python3 scripts/smoke/offline/repository-policy.py
 
 ## Принцип честной сертификации
 
-Отсутствующее, просроченное, подменённое, не относящееся к SHA или неуспешное evidence **запрещает** маркировку как certified. PASS нельзя получать путём исключения обязательного теста или отключения NeverGuard. Особенно внимательно проверяйте `.github/workflows/compatibility.yml`, `.github/workflows/device-trust.yml`, `.github/workflows/neverextensions-ga-0210.yml`, `.github/workflows/production-release-candidate.yml`.
+Отсутствующее, просроченное, подменённое, не относящееся к SHA или неуспешное evidence **запрещает** маркировку как certified. PASS нельзя получать путём исключения обязательного теста или отключения Guard. Особенно внимательно проверяйте `.github/workflows/compatibility.yml`, `.github/workflows/device-trust.yml`, `.github/workflows/extensions-ga-0210.yml`, `.github/workflows/production-release-candidate.yml`.
 
 См. [troubleshooting/ci](../troubleshooting/ci.md) и [COMPATIBILITY.md](../../COMPATIBILITY.md).
 

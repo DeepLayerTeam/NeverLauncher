@@ -321,7 +321,7 @@ func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Reque
 	var guardTicket model.DeviceChallenge
 	guardRequired, err := s.guardAttestationRequiredForSession0134(claims)
 	if err != nil {
-		writeError(w, http.StatusPreconditionFailed, "не удалось определить NeverGuard policy для trusted device")
+		writeError(w, http.StatusPreconditionFailed, "не удалось определить Guard policy для trusted device")
 		return
 	}
 	var integritySnapshot *minecraftIntegritySnapshot0135
@@ -350,7 +350,7 @@ func (s Server) minecraftSessionExchange119(w http.ResponseWriter, r *http.Reque
 	}
 	s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("minecraft-session"), Actor: user.Email, Action: "minecraft:session:issued", Target: session.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	if guardTicket.ID != "" {
-		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-launch"), Actor: user.Email, Action: "neverguard:launch-ticket:consumed", Target: guardTicket.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
+		s.Repo.AddAuditEvent(model.AuditEvent{ID: bridgeAuditID910("guard-launch"), Actor: user.Email, Action: "guard:launch-ticket:consumed", Target: guardTicket.ID, IP: clientIP(r), UserAgent: r.UserAgent(), CreatedAt: time.Now().UTC()})
 	}
 	property, propertyErr := s.minecraftTexture119(r.Context(), profile)
 	if propertyErr != nil {

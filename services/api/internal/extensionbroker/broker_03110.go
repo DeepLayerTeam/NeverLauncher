@@ -1,7 +1,7 @@
 //go:build linux
 
 // Package extensionbroker implements host-side, scoped filesystem and network
-// gates for OS-isolated NeverExtensions. It does not expose host paths or FDs.
+// gates for OS-isolated Extensions. It does not expose host paths or FDs.
 package extensionbroker
 
 import (

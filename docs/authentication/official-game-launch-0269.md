@@ -51,7 +51,7 @@ flags: the injector is derived from a signed, locally verified JAR.
    auto-enter; verify rejection. In an allowed signed offline profile, verify
    local single-player works and protected online-mode access is not presented
    as authenticated.
-6. Verify the above on Windows/Linux/macOS with the production NeverGuard
+6. Verify the above on Windows/Linux/macOS with the production Guard
    process policy and hardware device trust. Test launch logs and crash reports
    for leaked bearer tokens.
 

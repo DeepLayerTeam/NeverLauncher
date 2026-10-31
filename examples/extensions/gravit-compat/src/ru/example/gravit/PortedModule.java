@@ -21,7 +21,7 @@ public final class PortedModule extends LauncherModule implements AutoCloseable 
             @Override public void invoke(String... args)throws Exception {
                 if(args.length!=0)throw new IllegalArgumentException("status takes no arguments");
                 Object state=ctx.extension().runtime().storage().get("last-release",null).orElse(Map.of());
-                // Gravit's void invoke() is bridged to a structured NeverExtensions CLI response.
+                // Gravit's void invoke() is bridged to a structured Extensions CLI response.
                 CommandHandler.respond(Map.of("latestRelease",state));
             }
         });

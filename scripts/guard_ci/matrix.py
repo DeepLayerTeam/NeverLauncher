@@ -19,12 +19,29 @@ ALLOWED_OS = {"linux", "windows", "macos"}
 ALLOWED_ARCH = {"x86_64", "universal"}
 ARTIFACT_ROLES = ("package", "launcher", "guard", "manifest", "allowlist")
 COMMON_CHECKS = {
-    "rustFormat", "guardUnitTests", "guardIntegrationTest", "clippy", "releaseBuild",
-    "packageManifestVerified", "artifactHashesVerified", "authenticatedIpcV4",
-    "runtimePolicyEnforced", "releasePackageBuilt", "guardRelease0139", "neverGuardRelease0140",
+    "rustFormat",
+    "guardUnitTests",
+    "guardIntegrationTest",
+    "clippy",
+    "releaseBuild",
+    "packageManifestVerified",
+    "artifactHashesVerified",
+    "authenticatedIpcV4",
+    "runtimePolicyEnforced",
+    "releasePackageBuilt",
+    "guardRelease0139",
+    "neverGuardRelease0140",
 }
-OS_CHECK = {"linux": "linuxProductionGate", "windows": "windowsProductionGate", "macos": "macosProductionGate"}
-EXPECTED_PLATFORM = {"linux": "linux-amd64", "windows": "windows-amd64", "macos": "macos-universal"}
+OS_CHECK = {
+    "linux": "linuxProductionGate",
+    "windows": "windowsProductionGate",
+    "macos": "macosProductionGate",
+}
+EXPECTED_PLATFORM = {
+    "linux": "linux-amd64",
+    "windows": "windows-amd64",
+    "macos": "macos-universal",
+}
 GENERIC_LIMITATION = "ci-certifies-build-test-artifacts-not-vendor-signing-credentials"
 
 
@@ -58,14 +75,31 @@ def artifact_record(path: Path) -> dict[str, Any]:
 
 def load_targets(path: Path) -> dict[str, Any]:
     payload = load_json(path)
-    if not isinstance(payload, dict) or set(payload) != {"schemaVersion", "productVersion", "targets"}:
+    if not isinstance(payload, dict) or set(payload) != {
+        "schemaVersion",
+        "productVersion",
+        "targets",
+    }:
         die("guard CI targets must contain only schemaVersion/productVersion/targets")
-    if payload.get("schemaVersion") != "1.0" or payload.get("productVersion") != PRODUCT_VERSION:
-        die(f"guard CI targets must use schemaVersion=1.0 and productVersion={PRODUCT_VERSION}")
+    if (
+        payload.get("schemaVersion") != "1.0"
+        or payload.get("productVersion") != PRODUCT_VERSION
+    ):
+        die(
+            f"guard CI targets must use schemaVersion=1.0 and productVersion={PRODUCT_VERSION}"
+        )
     rows = payload.get("targets")
     if not isinstance(rows, list) or not rows:
         die("guard CI targets must contain a non-empty targets array")
-    allowed = {"id", "runner", "os", "arch", "required", "ciSigningMode", "requiredChecks"}
+    allowed = {
+        "id",
+        "runner",
+        "os",
+        "arch",
+        "required",
+        "ciSigningMode",
+        "requiredChecks",
+    }
     seen: set[str] = set()
     normalized: list[dict[str, Any]] = []
     required_os: set[str] = set()
@@ -93,7 +127,11 @@ def load_targets(path: Path) -> dict[str, Any]:
             die(f"{target_id}: macOS certification must be universal")
         if not runner or not signing or not isinstance(required, bool):
             die(f"{target_id}: runner/ciSigningMode/required are mandatory")
-        if not isinstance(checks, list) or not checks or any(not isinstance(v, str) or not CHECK_RE.fullmatch(v) for v in checks):
+        if (
+            not isinstance(checks, list)
+            or not checks
+            or any(not isinstance(v, str) or not CHECK_RE.fullmatch(v) for v in checks)
+        ):
             die(f"{target_id}: requiredChecks must be a non-empty string array")
         if len(checks) != len(set(checks)):
             die(f"{target_id}: duplicate requiredChecks")
@@ -102,15 +140,26 @@ def load_targets(path: Path) -> dict[str, Any]:
             die(f"{target_id}: weakened Guard baseline, missing {', '.join(missing)}")
         if required:
             required_os.add(os_name)
-        normalized.append({
-            "id": target_id, "runner": runner, "os": os_name, "arch": arch,
-            "required": required, "ciSigningMode": signing, "requiredChecks": checks,
-        })
+        normalized.append(
+            {
+                "id": target_id,
+                "runner": runner,
+                "os": os_name,
+                "arch": arch,
+                "required": required,
+                "ciSigningMode": signing,
+                "requiredChecks": checks,
+            }
+        )
     if required_os != ALLOWED_OS:
-        die(f"required Guard CI coverage must be linux/windows/macos, got {sorted(required_os)}")
-    return {"schemaVersion": "1.0", "productVersion": PRODUCT_VERSION, "targets": normalized}
-
-
+        die(
+            f"required Guard CI coverage must be linux/windows/macos, got {sorted(required_os)}"
+        )
+    return {
+        "schemaVersion": "1.0",
+        "productVersion": PRODUCT_VERSION,
+        "targets": normalized,
+    }
 
 
 def expected_artifact_names(os_name: str) -> dict[str, str]:
@@ -118,7 +167,7 @@ def expected_artifact_names(os_name: str) -> dict[str, str]:
         return {
             "package": f"neverlauncher-desktop-{PRODUCT_VERSION}-linux-amd64.zip",
             "launcher": "neverlauncher-desktop-linux-amd64",
-            "guard": "neverguard-linux-amd64",
+            "guard": "guard-linux-amd64",
             "manifest": "LINUX_PACKAGE_MANIFEST.json",
             "allowlist": "GUARD_RELEASE_ALLOWLIST_LINUX.json",
         }
@@ -126,7 +175,7 @@ def expected_artifact_names(os_name: str) -> dict[str, str]:
         return {
             "package": f"neverlauncher-desktop-{PRODUCT_VERSION}-windows-amd64.zip",
             "launcher": "neverlauncher-desktop-windows-amd64.exe",
-            "guard": "neverguard-windows-amd64.exe",
+            "guard": "guard-windows-amd64.exe",
             "manifest": "WINDOWS_PACKAGE_MANIFEST.json",
             "allowlist": "GUARD_RELEASE_ALLOWLIST_WINDOWS.json",
         }
@@ -134,80 +183,147 @@ def expected_artifact_names(os_name: str) -> dict[str, str]:
         return {
             "package": f"neverlauncher-desktop-{PRODUCT_VERSION}-macos-universal.zip",
             "launcher": "neverlauncher-desktop-macos-universal",
-            "guard": "neverguard-macos-universal",
+            "guard": "guard-macos-universal",
             "manifest": "MACOS_PACKAGE_MANIFEST.json",
             "allowlist": "GUARD_RELEASE_ALLOWLIST_MACOS.json",
         }
     die(f"unsupported Guard CI OS: {os_name}")
 
+
 def manifest_hashes(os_name: str, manifest: dict[str, Any]) -> tuple[str, str, str]:
     expected_platform = EXPECTED_PLATFORM[os_name]
-    if manifest.get("schemaVersion") != "1.0" or manifest.get("productVersion") != PRODUCT_VERSION:
+    if (
+        manifest.get("schemaVersion") != "1.0"
+        or manifest.get("productVersion") != PRODUCT_VERSION
+    ):
         die("package manifest version/schema mismatch")
     if manifest.get("platform") != expected_platform:
-        die(f"package manifest platform mismatch: expected {expected_platform!r}, got {manifest.get('platform')!r}")
+        die(
+            f"package manifest platform mismatch: expected {expected_platform!r}, got {manifest.get('platform')!r}"
+        )
     if int(manifest.get("neverGuardProtocolVersion", 0)) != 4:
-        die("package manifest does not enforce NeverGuard protocol v4")
+        die("package manifest does not enforce Guard protocol v4")
     if os_name in {"linux", "windows"}:
         rows = manifest.get("artifacts")
         if not isinstance(rows, list) or len(rows) < 2:
             die("package manifest artifacts are missing")
-        by_name = {str(row.get("name", "")): row for row in rows if isinstance(row, dict)}
+        by_name = {
+            str(row.get("name", "")): row for row in rows if isinstance(row, dict)
+        }
         if os_name == "linux":
             desktop = by_name.get("neverlauncher-desktop")
-            guard = by_name.get("neverguard")
+            guard = by_name.get("guard")
         else:
-            guard = by_name.get("neverguard.exe")
-            desktop = next((row for name, row in by_name.items() if name.startswith("neverlauncher-desktop-") and name.endswith(".exe")), None)
+            guard = by_name.get("guard.exe")
+            desktop = next(
+                (
+                    row
+                    for name, row in by_name.items()
+                    if name.startswith("neverlauncher-desktop-")
+                    and name.endswith(".exe")
+                ),
+                None,
+            )
         if not isinstance(desktop, dict) or not isinstance(guard, dict):
-            die("package manifest does not contain Desktop/NeverGuard records")
-        return str(desktop.get("sha256", "")).lower(), str(guard.get("sha256", "")).lower(), expected_platform
-    return str(manifest.get("desktopSha256", "")).lower(), str(manifest.get("guardSha256", "")).lower(), expected_platform
+            die("package manifest does not contain Desktop/Guard records")
+        return (
+            str(desktop.get("sha256", "")).lower(),
+            str(guard.get("sha256", "")).lower(),
+            expected_platform,
+        )
+    return (
+        str(manifest.get("desktopSha256", "")).lower(),
+        str(manifest.get("guardSha256", "")).lower(),
+        expected_platform,
+    )
 
 
-def verify_package_metadata(target: dict[str, Any], artifacts: dict[str, dict[str, Any]], manifest_path: Path, allowlist_path: Path) -> dict[str, Any]:
+def verify_package_metadata(
+    target: dict[str, Any],
+    artifacts: dict[str, dict[str, Any]],
+    manifest_path: Path,
+    allowlist_path: Path,
+) -> dict[str, Any]:
     manifest = load_json(manifest_path)
     if not isinstance(manifest, dict):
         die("package manifest must be an object")
     desktop_hash, guard_hash, package_platform = manifest_hashes(target["os"], manifest)
-    if desktop_hash != artifacts["launcher"]["sha256"] or guard_hash != artifacts["guard"]["sha256"]:
-        die("package manifest SHA-256 does not match emitted Desktop/NeverGuard artifacts")
+    if (
+        desktop_hash != artifacts["launcher"]["sha256"]
+        or guard_hash != artifacts["guard"]["sha256"]
+    ):
+        die("package manifest SHA-256 does not match emitted Desktop/Guard artifacts")
     allowlist = load_json(allowlist_path)
-    expected_policy_platform = {"linux": "linux", "windows": "windows", "macos": "macos"}[target["os"]]
+    expected_policy_platform = {
+        "linux": "linux",
+        "windows": "windows",
+        "macos": "macos",
+    }[target["os"]]
     signing_mode = ""
     if isinstance(allowlist, dict) and allowlist.get("schemaVersion") == "2.0":
         release = allowlist.get("releases", {}).get(PRODUCT_VERSION, {})
         if not isinstance(release, dict) or release.get("protocolVersion") != 4:
-            die("Guard release policy v2 does not contain current productVersion/protocolVersion")
+            die(
+                "Guard release policy v2 does not contain current productVersion/protocolVersion"
+            )
         platform_policy = release.get("platforms", {}).get(expected_policy_platform, {})
         if not isinstance(platform_policy, dict):
             die("Guard release policy v2 does not contain expected platform")
         signing_mode = str(platform_policy.get("signingMode", ""))
         pairs = platform_policy.get("artifacts", [])
-        exact_pair = any(isinstance(row, dict) and str(row.get("guardSha256", "")).lower() == guard_hash and str(row.get("launcherSha256", "")).lower() == desktop_hash for row in pairs)
+        exact_pair = any(
+            isinstance(row, dict)
+            and str(row.get("guardSha256", "")).lower() == guard_hash
+            and str(row.get("launcherSha256", "")).lower() == desktop_hash
+            for row in pairs
+        )
         if not exact_pair:
-            die("Guard release policy v2 is not bound to emitted Desktop/NeverGuard artifact pair")
-    elif isinstance(allowlist, dict) and isinstance(allowlist.get(PRODUCT_VERSION), dict):
+            die(
+                "Guard release policy v2 is not bound to emitted Desktop/Guard artifact pair"
+            )
+    elif isinstance(allowlist, dict) and isinstance(
+        allowlist.get(PRODUCT_VERSION), dict
+    ):
         row = allowlist[PRODUCT_VERSION]
         guard_values = [str(v).lower() for v in row.get("guardSha256", [])]
         launcher_values = [str(v).lower() for v in row.get("launcherSha256", [])]
         if guard_hash not in guard_values or desktop_hash not in launcher_values:
-            die("Guard release allowlist is not bound to emitted Desktop/NeverGuard hashes")
+            die("Guard release allowlist is not bound to emitted Desktop/Guard hashes")
         signing_mode = "legacy"
     else:
         die("Guard release allowlist does not contain current productVersion")
     for digest in (desktop_hash, guard_hash):
         if not SHA256_RE.fullmatch(digest):
             die("invalid SHA-256 in package metadata")
-    return {"packagePlatform": package_platform, "guardProtocolVersion": 4, "releasePolicySchema": "2.0" if allowlist.get("schemaVersion") == "2.0" else "1.0", "releaseSigningMode": signing_mode}
+    return {
+        "packagePlatform": package_platform,
+        "guardProtocolVersion": 4,
+        "releasePolicySchema": "2.0"
+        if allowlist.get("schemaVersion") == "2.0"
+        else "1.0",
+        "releaseSigningMode": signing_mode,
+    }
 
 
-def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str, run_id: str, repository: str) -> list[str]:
+def verify_result(
+    target: dict[str, Any],
+    result: dict[str, Any],
+    *,
+    commit: str,
+    run_id: str,
+    repository: str,
+) -> list[str]:
     errors: list[str] = []
     expected = {
-        "schemaVersion": "1.0", "productVersion": PRODUCT_VERSION, "targetId": target["id"],
-        "runner": target["runner"], "os": target["os"], "arch": target["arch"],
-        "commit": commit, "runId": run_id, "repository": repository,
+        "schemaVersion": "1.0",
+        "productVersion": PRODUCT_VERSION,
+        "targetId": target["id"],
+        "runner": target["runner"],
+        "os": target["os"],
+        "arch": target["arch"],
+        "commit": commit,
+        "runId": run_id,
+        "repository": repository,
     }
     for key, value in expected.items():
         if str(result.get(key, "")) != str(value):
@@ -225,7 +341,9 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
                 errors.append(f"required check {check} is not true")
     artifacts = result.get("artifacts")
     if not isinstance(artifacts, dict) or set(artifacts) != set(ARTIFACT_ROLES):
-        errors.append("artifacts must contain exactly package/launcher/guard/manifest/allowlist")
+        errors.append(
+            "artifacts must contain exactly package/launcher/guard/manifest/allowlist"
+        )
     else:
         names: set[str] = set()
         for role in ARTIFACT_ROLES:
@@ -239,13 +357,21 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
             if not name or Path(name).name != name or name in names:
                 errors.append(f"artifact {role} has unsafe/duplicate name")
             names.add(name)
-            if not SHA256_RE.fullmatch(digest) or not isinstance(size, int) or size <= 0:
+            if (
+                not SHA256_RE.fullmatch(digest)
+                or not isinstance(size, int)
+                or size <= 0
+            ):
                 errors.append(f"artifact {role} has invalid digest/size")
     claims = result.get("claims")
     if not isinstance(claims, dict):
         errors.append("claims are missing")
     else:
-        if claims.get("guardProtocolVersion") != 4 or claims.get("releaseCertification") != PRODUCT_VERSION or claims.get("releasePolicySchema") != "2.0":
+        if (
+            claims.get("guardProtocolVersion") != 4
+            or claims.get("releaseCertification") != PRODUCT_VERSION
+            or claims.get("releasePolicySchema") != "2.0"
+        ):
             errors.append("Guard protocol/release certification claim mismatch")
         if claims.get("packagePlatform") != EXPECTED_PLATFORM[target["os"]]:
             errors.append("packagePlatform claim mismatch")
@@ -253,7 +379,10 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
             errors.append("ciSigningMode claim mismatch")
         if claims.get("vendorSigningProvenance") != "not-certified-by-ci":
             errors.append("vendor signing provenance must not be overclaimed")
-        if claims.get("packageManifestBound") is not True or claims.get("artifactSetComplete") is not True:
+        if (
+            claims.get("packageManifestBound") is not True
+            or claims.get("artifactSetComplete") is not True
+        ):
             errors.append("artifact/package manifest claims must be true")
     limitations = result.get("limitations")
     if not isinstance(limitations, list) or GENERIC_LIMITATION not in limitations:
@@ -263,7 +392,9 @@ def verify_result(target: dict[str, Any], result: dict[str, Any], *, commit: str
 
 def command_validate(args: argparse.Namespace) -> int:
     payload = load_targets(args.targets)
-    print(f"Guard CI targets OK: {len(payload['targets'])} targets for {PRODUCT_VERSION}")
+    print(
+        f"Guard CI targets OK: {len(payload['targets'])} targets for {PRODUCT_VERSION}"
+    )
     return 0
 
 
@@ -281,41 +412,70 @@ def command_result(args: argparse.Namespace) -> int:
     if args.signing_mode != target["ciSigningMode"]:
         die(f"{args.target_id}: signing mode mismatch")
     paths = {
-        "package": args.package, "launcher": args.launcher, "guard": args.guard,
-        "manifest": args.manifest, "allowlist": args.allowlist,
+        "package": args.package,
+        "launcher": args.launcher,
+        "guard": args.guard,
+        "manifest": args.manifest,
+        "allowlist": args.allowlist,
     }
     expected_names = expected_artifact_names(target["os"])
     for role, path in paths.items():
         if path.name != expected_names[role]:
-            die(f"{target['id']}: non-canonical {role} artifact name: expected {expected_names[role]!r}, got {path.name!r}")
+            die(
+                f"{target['id']}: non-canonical {role} artifact name: expected {expected_names[role]!r}, got {path.name!r}"
+            )
     artifacts = {role: artifact_record(path) for role, path in paths.items()}
     meta = verify_package_metadata(target, artifacts, args.manifest, args.allowlist)
     checks = {name: True for name in target["requiredChecks"]}
     result = {
-        "schemaVersion": "1.0", "productVersion": PRODUCT_VERSION, "targetId": target["id"],
-        "runner": target["runner"], "os": target["os"], "arch": target["arch"],
-        "runtimeArch": platform.machine().lower() or "unknown", "repository": args.repository, "commit": args.commit, "runId": args.run_id,
-        "status": "passed", "exitCode": 0, "checks": checks, "artifacts": artifacts,
+        "schemaVersion": "1.0",
+        "productVersion": PRODUCT_VERSION,
+        "targetId": target["id"],
+        "runner": target["runner"],
+        "os": target["os"],
+        "arch": target["arch"],
+        "runtimeArch": platform.machine().lower() or "unknown",
+        "repository": args.repository,
+        "commit": args.commit,
+        "runId": args.run_id,
+        "status": "passed",
+        "exitCode": 0,
+        "checks": checks,
+        "artifacts": artifacts,
         "claims": {
-            "guardProtocolVersion": meta["guardProtocolVersion"], "releaseCertification": PRODUCT_VERSION,
-            "releasePolicySchema": meta["releasePolicySchema"], "releaseSigningMode": meta["releaseSigningMode"],
+            "guardProtocolVersion": meta["guardProtocolVersion"],
+            "releaseCertification": PRODUCT_VERSION,
+            "releasePolicySchema": meta["releasePolicySchema"],
+            "releaseSigningMode": meta["releaseSigningMode"],
             "releaseIdentityAuthenticated": True,
-            "packagePlatform": meta["packagePlatform"], "ciSigningMode": args.signing_mode,
-            "vendorSigningProvenance": "not-certified-by-ci", "packageManifestBound": True,
+            "packagePlatform": meta["packagePlatform"],
+            "ciSigningMode": args.signing_mode,
+            "vendorSigningProvenance": "not-certified-by-ci",
+            "packageManifestBound": True,
             "artifactSetComplete": True,
         },
         "limitations": [GENERIC_LIMITATION],
     }
-    errors = verify_result(target, result, commit=args.commit, run_id=args.run_id, repository=args.repository)
+    errors = verify_result(
+        target,
+        result,
+        commit=args.commit,
+        run_id=args.run_id,
+        repository=args.repository,
+    )
     if errors:
         die("generated Guard CI result failed self-validation: " + "; ".join(errors))
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(f"Guard CI result PASS: {target['id']} -> {args.output}")
     return 0
 
 
-def discover_results(root: Path) -> tuple[dict[str, tuple[Path, dict[str, Any]]], list[str]]:
+def discover_results(
+    root: Path,
+) -> tuple[dict[str, tuple[Path, dict[str, Any]]], list[str]]:
     found: dict[str, tuple[Path, dict[str, Any]]] = {}
     errors: list[str] = []
     if not root.exists():
@@ -326,7 +486,11 @@ def discover_results(root: Path) -> tuple[dict[str, tuple[Path, dict[str, Any]]]
         except (OSError, json.JSONDecodeError) as exc:
             errors.append(f"{path}: invalid result JSON: {exc}")
             continue
-        target_id = str(payload.get("targetId", "")).strip() if isinstance(payload, dict) else ""
+        target_id = (
+            str(payload.get("targetId", "")).strip()
+            if isinstance(payload, dict)
+            else ""
+        )
         if not ID_RE.fullmatch(target_id):
             errors.append(f"{path}: invalid targetId")
             continue
@@ -337,18 +501,39 @@ def discover_results(root: Path) -> tuple[dict[str, tuple[Path, dict[str, Any]]]
     return found, errors
 
 
-def render_markdown(targets: list[dict[str, Any]], records: dict[str, dict[str, Any]], commit: str, run_id: str, repository: str) -> str:
+def render_markdown(
+    targets: list[dict[str, Any]],
+    records: dict[str, dict[str, Any]],
+    commit: str,
+    run_id: str,
+    repository: str,
+) -> str:
     lines = [
-        f"# NeverLauncher {PRODUCT_VERSION} Guard CI certification", "",
-        "| Target | Runner | Platform | Runtime arch | Status | Package SHA-256 |", "|---|---|---|---|---|---|",
+        f"# NeverLauncher {PRODUCT_VERSION} Guard CI certification",
+        "",
+        "| Target | Runner | Platform | Runtime arch | Status | Package SHA-256 |",
+        "|---|---|---|---|---|---|",
     ]
     for target in targets:
         record = records[target["id"]]
-        package = record.get("artifacts", {}).get("package", {}) if isinstance(record.get("artifacts"), dict) else {}
+        package = (
+            record.get("artifacts", {}).get("package", {})
+            if isinstance(record.get("artifacts"), dict)
+            else {}
+        )
         digest = str(package.get("sha256", "—"))
-        lines.append(f"| `{target['id']}` | `{target['runner']}` | `{target['os']}/{target['arch']}` | `{record.get('runtimeArch', '—')}` | **{record.get('status', 'missing').upper()}** | `{digest}` |")
-    lines += ["", f"Commit: `{commit}`  ", f"GitHub Actions run: `{run_id}`  ", f"Repository: `{repository}`", "",
-              "Certification binds the exact CI-built package, Desktop, NeverGuard, package manifest and release allowlist hashes for Linux, Windows and macOS. It deliberately does not claim possession or provenance of production Authenticode/Developer ID credentials.", ""]
+        lines.append(
+            f"| `{target['id']}` | `{target['runner']}` | `{target['os']}/{target['arch']}` | `{record.get('runtimeArch', '—')}` | **{record.get('status', 'missing').upper()}** | `{digest}` |"
+        )
+    lines += [
+        "",
+        f"Commit: `{commit}`  ",
+        f"GitHub Actions run: `{run_id}`  ",
+        f"Repository: `{repository}`",
+        "",
+        "Certification binds the exact CI-built package, Desktop, Guard, package manifest and release allowlist hashes for Linux, Windows and macOS. It deliberately does not claim possession or provenance of production Authenticode/Developer ID credentials.",
+        "",
+    ]
     return "\n".join(lines)
 
 
@@ -365,10 +550,20 @@ def command_aggregate(args: argparse.Namespace) -> int:
         if found is None:
             if target["required"]:
                 errors.append(f"missing required Guard CI result: {target['id']}")
-            records[target["id"]] = {"targetId": target["id"], "status": "missing", "checks": {}}
+            records[target["id"]] = {
+                "targetId": target["id"],
+                "status": "missing",
+                "checks": {},
+            }
             continue
         path, result = found
-        result_errors = verify_result(target, result, commit=args.commit, run_id=args.run_id, repository=args.repository)
+        result_errors = verify_result(
+            target,
+            result,
+            commit=args.commit,
+            run_id=args.run_id,
+            repository=args.repository,
+        )
         record = dict(result)
         record["evidenceSha256"] = sha256_file(path)
         if isinstance(result.get("artifacts"), dict):
@@ -376,34 +571,57 @@ def command_aggregate(args: argparse.Namespace) -> int:
                 item = result["artifacts"].get(role, {})
                 name = str(item.get("name", "")) if isinstance(item, dict) else ""
                 if name in artifact_names:
-                    result_errors.append(f"artifact filename collision across platforms: {name}")
+                    result_errors.append(
+                        f"artifact filename collision across platforms: {name}"
+                    )
                 artifact_names.add(name)
         if result_errors:
             record["status"] = "invalid"
             errors.extend(f"{target['id']}: {item}" for item in result_errors)
         records[target["id"]] = record
-    required_pass = all(records[row["id"]].get("status") == "passed" for row in targets if row["required"])
+    required_pass = all(
+        records[row["id"]].get("status") == "passed"
+        for row in targets
+        if row["required"]
+    )
     status = "passed" if not errors and required_pass else "failed"
     matrix = {
-        "schemaVersion": "1.0", "productVersion": PRODUCT_VERSION,
+        "schemaVersion": "1.0",
+        "productVersion": PRODUCT_VERSION,
         "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "repository": args.repository, "commit": args.commit, "runId": args.run_id,
-        "status": status, "targets": [records[row["id"]] for row in targets], "errors": errors,
-        "generatorRuntime": {"python": platform.python_version(), "platform": platform.platform()},
+        "repository": args.repository,
+        "commit": args.commit,
+        "runId": args.run_id,
+        "status": status,
+        "targets": [records[row["id"]] for row in targets],
+        "errors": errors,
+        "generatorRuntime": {
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+        },
     }
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    (args.output_dir / "matrix.json").write_text(json.dumps(matrix, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (args.output_dir / "matrix.md").write_text(render_markdown(targets, records, args.commit, args.run_id, args.repository), encoding="utf-8")
+    (args.output_dir / "matrix.json").write_text(
+        json.dumps(matrix, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    (args.output_dir / "matrix.md").write_text(
+        render_markdown(targets, records, args.commit, args.run_id, args.repository),
+        encoding="utf-8",
+    )
     if errors:
         for item in errors:
             print(f"Guard CI matrix: {item}")
         return 1
-    print(f"Guard CI matrix PASS: {len(targets)} targets, commit={args.commit}, run={args.run_id}")
+    print(
+        f"Guard CI matrix PASS: {len(targets)} targets, commit={args.commit}, run={args.run_id}"
+    )
     return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NeverLauncher cross-platform NeverGuard CI certification matrix")
+    parser = argparse.ArgumentParser(
+        description="NeverLauncher cross-platform Guard CI certification matrix"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("validate")
     p.add_argument("--targets", type=Path, required=True)

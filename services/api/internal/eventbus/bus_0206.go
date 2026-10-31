@@ -122,7 +122,7 @@ type Bus struct {
 func New(cfg Config, repo repository.Repository) (*Bus, error) {
 	store, ok := repo.(repository.ExtensionEventStore)
 	if !ok {
-		return nil, errors.New("repository does not implement durable NeverExtensions event store")
+		return nil, errors.New("repository does not implement durable Extensions event store")
 	}
 	return &Bus{cfg: cfg.normalized(), store: store}, nil
 }
@@ -285,7 +285,7 @@ func (b *Bus) processBatch(ctx context.Context) {
 	}
 	items, err := b.store.LeaseExtensionEventDeliveries(ctx, b.cfg.BatchSize, time.Now().UTC().Add(b.cfg.LeaseDuration))
 	if err != nil {
-		log.Printf("NeverExtensions event lease failed: %v", err)
+		log.Printf("Extensions event lease failed: %v", err)
 		return
 	}
 	for _, env := range items {
@@ -295,19 +295,19 @@ func (b *Bus) processBatch(ctx context.Context) {
 		now := time.Now().UTC()
 		if err == nil {
 			if ackErr := b.store.CompleteExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, now); ackErr != nil {
-				log.Printf("NeverExtensions event ack failed delivery=%d: %v", env.Delivery.ID, ackErr)
+				log.Printf("Extensions event ack failed delivery=%d: %v", env.Delivery.ID, ackErr)
 			}
 			continue
 		}
 		if env.Delivery.AttemptCount >= b.cfg.MaxAttempts {
 			if dlqErr := b.store.DeadLetterExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, err.Error(), now); dlqErr != nil {
-				log.Printf("NeverExtensions DLQ failed delivery=%d: %v", env.Delivery.ID, dlqErr)
+				log.Printf("Extensions DLQ failed delivery=%d: %v", env.Delivery.ID, dlqErr)
 			}
 			continue
 		}
 		delay := b.retryDelay(env.Delivery.AttemptCount)
 		if retryErr := b.store.RetryExtensionEventDelivery(ctx, env.Delivery.ID, env.Delivery.LeaseToken, now.Add(delay), err.Error()); retryErr != nil {
-			log.Printf("NeverExtensions retry scheduling failed delivery=%d: %v", env.Delivery.ID, retryErr)
+			log.Printf("Extensions retry scheduling failed delivery=%d: %v", env.Delivery.ID, retryErr)
 		}
 	}
 }

@@ -9,13 +9,13 @@ import (
 	"syscall"
 	"time"
 
-	neverextensions "gitflic.ru/skif4er/neverlauncher/sdk/backend/go"
+	extensions "gitflic.ru/skif4er/neverlauncher/sdk/backend/go"
 )
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	client, err := neverextensions.NewFromEnvironment()
+	client, err := extensions.NewFromEnvironment()
 	if err != nil {
 		panic(err)
 	}

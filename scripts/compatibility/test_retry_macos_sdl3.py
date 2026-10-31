@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Native SDL 3 startup retry eligibility must remain narrowly fail-closed."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -25,10 +26,16 @@ class MacOSSDL3RetryTest(unittest.TestCase):
         self.log = self.logs / "neverruntime-vanilla-certification-fabric-26.3.log"
         self.report = Path(self.temp.name) / "fabric-certification.json"
         self.payload = {
-            "status": "failed", "success": False, "timedOut": False,
-            "exitCode": None, "detectedJavaMajor": 25, "logPath": str(self.log),
+            "status": "failed",
+            "success": False,
+            "timedOut": False,
+            "exitCode": None,
+            "detectedJavaMajor": 25,
+            "logPath": str(self.log),
         }
-        self.log.write_text("SDL revision: SDL-3.4.14-62f10da\n--- runtime exit --- code=None signal=Some(6)\n")
+        self.log.write_text(
+            "SDL revision: SDL-3.4.14-62f10da\n--- runtime exit --- code=None signal=Some(6)\n"
+        )
         self.save()
 
     def save(self) -> None:
@@ -38,9 +45,13 @@ class MacOSSDL3RetryTest(unittest.TestCase):
         self.assertTrue(MOD.is_retryable(self.report, self.root))
 
     def test_never_retry_passed_or_normal_crash(self) -> None:
-        for k, v in (("status", "passed"), ("success", True),
-                     ("timedOut", True), ("exitCode", 255),
-                     ("detectedJavaMajor", 21)):
+        for k, v in (
+            ("status", "passed"),
+            ("success", True),
+            ("timedOut", True),
+            ("exitCode", 255),
+            ("detectedJavaMajor", 21),
+        ):
             original = self.payload[k]
             self.payload[k] = v
             self.save()
@@ -49,9 +60,13 @@ class MacOSSDL3RetryTest(unittest.TestCase):
         self.save()
 
     def test_reject_wrong_signal_and_security_abort(self) -> None:
-        self.log.write_text("SDL revision: SDL-3.4\n--- runtime exit --- code=None signal=Some(11)\n")
+        self.log.write_text(
+            "SDL revision: SDL-3.4\n--- runtime exit --- code=None signal=Some(11)\n"
+        )
         self.assertFalse(MOD.is_retryable(self.report, self.root))
-        self.log.write_text("SDL revision: SDL-3.4\nNeverGuard fail-closed\n--- runtime exit --- code=None signal=Some(6)\n")
+        self.log.write_text(
+            "SDL revision: SDL-3.4\nGuard fail-closed\n--- runtime exit --- code=None signal=Some(6)\n"
+        )
         self.assertFalse(MOD.is_retryable(self.report, self.root))
 
     def test_path_escape_and_symlink_are_rejected(self) -> None:

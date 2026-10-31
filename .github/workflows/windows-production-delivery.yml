@@ -83,10 +83,10 @@ jobs:
             dist/release-*/neverlauncher-cli-windows-arm64.exe
             dist/release-*/neverlauncher-desktop-windows-x64.exe
             dist/release-*/neverlauncher-desktop-windows-arm64.exe
-            dist/release-*/neverguard-windows-x64.exe
-            dist/release-*/neverguard-windows-arm64.exe
-            dist/release-*/neverguard-sensor-windows-x64.dll
-            dist/release-*/neverguard-sensor-windows-arm64.dll
+            dist/release-*/guard-windows-x64.exe
+            dist/release-*/guard-windows-arm64.exe
+            dist/release-*/guard-sensor-windows-x64.dll
+            dist/release-*/guard-sensor-windows-arm64.dll
             dist/release-*/neverruntime-windows-x64.exe
             dist/release-*/neverruntime-windows-arm64.exe
             dist/release-*/neverlauncher-desktop-*-windows-x64.zip

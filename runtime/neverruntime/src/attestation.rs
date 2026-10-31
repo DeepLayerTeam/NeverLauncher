@@ -1,12 +1,12 @@
-use crate::integrity::NeverGuardIntegrityEvidence;
+use crate::integrity::GuardIntegrityEvidence;
 use crate::windows_policy::GuardProcessPolicyReport;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 pub const NEVERGUARD_REMOTE_ATTESTATION_VERSION: u32 = 1;
-pub const NEVERGUARD_REMOTE_ATTESTATION_SCHEMA: &str = "neverguard/windows-guard-attestation/v1";
-pub const NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA: &str = "neverguard/linux-guard-attestation/v1";
-pub const NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA: &str = "neverguard/macos-guard-attestation/v1";
+pub const NEVERGUARD_REMOTE_ATTESTATION_SCHEMA: &str = "guard/windows-guard-attestation/v1";
+pub const NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA: &str = "guard/linux-guard-attestation/v1";
+pub const NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA: &str = "guard/macos-guard-attestation/v1";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -17,13 +17,13 @@ pub struct GuardAttestationRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct NeverGuardRemoteAttestation {
+pub struct GuardRemoteAttestation {
     pub schema: String,
     pub attestation_version: u32,
     pub challenge_id: String,
     pub challenge_sha256: String,
     pub collected_at_unix: u64,
-    pub evidence: NeverGuardIntegrityEvidence,
+    pub evidence: GuardIntegrityEvidence,
     pub process_policy: GuardProcessPolicyReport,
     pub attestation_sha256: String,
     pub session_proof: String,
@@ -33,7 +33,7 @@ pub(crate) fn challenge_sha256(challenge: &str) -> String {
     hex::encode(Sha256::digest(challenge.as_bytes()))
 }
 
-pub(crate) fn canonical_attestation_core(attestation: &NeverGuardRemoteAttestation) -> Result<String, String> {
+pub(crate) fn canonical_attestation_core(attestation: &GuardRemoteAttestation) -> Result<String, String> {
     validate_attestation_shape(attestation)?;
     if attestation.schema == NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA {
         let linux = attestation.process_policy.linux.as_ref().ok_or_else(|| "Linux Guard Attestation missing Linux process policy details".to_string())?;
@@ -102,7 +102,7 @@ pub(crate) fn canonical_attestation_core(attestation: &NeverGuardRemoteAttestati
     ))
 }
 
-pub(crate) fn recompute_attestation_sha256(attestation: &NeverGuardRemoteAttestation) -> Result<[u8; 32], String> {
+pub(crate) fn recompute_attestation_sha256(attestation: &GuardRemoteAttestation) -> Result<[u8; 32], String> {
     let mut clone = attestation.clone();
     clone.attestation_sha256.clear();
     clone.session_proof.clear();
@@ -112,16 +112,16 @@ pub(crate) fn recompute_attestation_sha256(attestation: &NeverGuardRemoteAttesta
     Ok(out)
 }
 
-pub(crate) fn validate_attestation_shape(attestation: &NeverGuardRemoteAttestation) -> Result<(), String> {
+pub(crate) fn validate_attestation_shape(attestation: &GuardRemoteAttestation) -> Result<(), String> {
     if (attestation.schema != NEVERGUARD_REMOTE_ATTESTATION_SCHEMA
         && attestation.schema != NEVERGUARD_LINUX_REMOTE_ATTESTATION_SCHEMA
         && attestation.schema != NEVERGUARD_MACOS_REMOTE_ATTESTATION_SCHEMA)
         || attestation.attestation_version != NEVERGUARD_REMOTE_ATTESTATION_VERSION
     {
-        return Err("NeverGuard remote attestation schema/version mismatch".to_string());
+        return Err("Guard remote attestation schema/version mismatch".to_string());
     }
     if attestation.challenge_id.is_empty() || attestation.challenge_id.len() > 160 {
-        return Err("NeverGuard remote attestation challengeId malformed".to_string());
+        return Err("Guard remote attestation challengeId malformed".to_string());
     }
     for (label, value) in [
         ("challengeSha256", attestation.challenge_sha256.as_str()),
@@ -131,14 +131,14 @@ pub(crate) fn validate_attestation_shape(attestation: &NeverGuardRemoteAttestati
         if !value.is_empty()
             && (value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()))
         {
-            return Err(format!("NeverGuard remote attestation {label} malformed"));
+            return Err(format!("Guard remote attestation {label} malformed"));
         }
     }
     if !attestation.process_policy.enforced {
-        return Err("NeverGuard remote attestation process policy is not enforced".to_string());
+        return Err("Guard remote attestation process policy is not enforced".to_string());
     }
     if attestation.collected_at_unix != attestation.evidence.collected_at_unix {
-        return Err("NeverGuard remote attestation collection timestamp mismatch".to_string());
+        return Err("Guard remote attestation collection timestamp mismatch".to_string());
     }
     Ok(())
 }
@@ -173,14 +173,14 @@ mod tests {
         }
     }
 
-    fn sample() -> NeverGuardRemoteAttestation {
-        NeverGuardRemoteAttestation {
+    fn sample() -> GuardRemoteAttestation {
+        GuardRemoteAttestation {
             schema: NEVERGUARD_REMOTE_ATTESTATION_SCHEMA.to_string(),
             attestation_version: 1,
             challenge_id: "challenge-1".to_string(),
             challenge_sha256: "11".repeat(32),
             collected_at_unix: 100,
-            evidence: NeverGuardIntegrityEvidence {
+            evidence: GuardIntegrityEvidence {
                 schema: NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA.to_string(),
                 evidence_version: NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
                 evidence_id: "a".repeat(32),

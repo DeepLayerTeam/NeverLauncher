@@ -1,4 +1,4 @@
-# NeverGuard 0.31.7 — runtime allowlist and server-side enforcement
+# Guard 0.31.7 — runtime allowlist and server-side enforcement
 
 The server does **not** infer a protected JVM from a locally hardware-backed
 Device Key, a TPM Certify result or a PCR quote. These mechanisms verify
@@ -65,7 +65,7 @@ Guard runtime assurance or `strict` profile on that basis alone.
 
 ## Operational recovery and negative tests
 
-- On `412 NeverGuard runtime denied`, inspect approved JVM version/module
+- On `412 Guard runtime denied`, inspect approved JVM version/module
   set. Do **not** permit an unrecognized set automatically.
 - On `Continuous Guard runtime policy changed after attestation`, restart
   attestation after the administrator has reviewed/approved a new module set.

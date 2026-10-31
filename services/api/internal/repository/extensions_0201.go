@@ -24,7 +24,7 @@ var (
 	extensionPermission0201 = regexp.MustCompile(`^[a-z0-9][a-z0-9._:-]{1,127}$`)
 )
 
-// NormalizeExtensionManifest проверяет и нормализует манифест NeverExtensions.
+// NormalizeExtensionManifest проверяет и нормализует манифест Extensions.
 // Проверка реестра и пакета использует ту же нормализацию, что и хранилище,
 // чтобы идентичность пакета совпадала с идентичностью записи базы данных.
 func NormalizeExtensionManifest(in model.ExtensionManifest) (model.ExtensionManifest, string, error) {

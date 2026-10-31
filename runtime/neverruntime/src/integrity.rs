@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 pub const NEVERGUARD_INTEGRITY_EVIDENCE_VERSION: u32 = 1;
-pub const NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA: &str = "neverguard/windows-integrity-evidence/v1";
-pub const NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA: &str = "neverguard/linux-integrity-evidence/v1";
-pub const NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA: &str = "neverguard/macos-integrity-evidence/v1";
+pub const NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA: &str = "guard/windows-integrity-evidence/v1";
+pub const NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA: &str = "guard/linux-integrity-evidence/v1";
+pub const NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA: &str = "guard/macos-integrity-evidence/v1";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -88,7 +88,7 @@ pub struct BoundaryEvidence {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct NeverGuardIntegrityEvidence {
+pub struct GuardIntegrityEvidence {
     pub schema: String,
     pub evidence_version: u32,
     pub evidence_id: String,
@@ -114,7 +114,7 @@ struct IntegrityEvidenceCore<'a> {
 }
 
 #[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
-fn core_bytes(evidence: &NeverGuardIntegrityEvidence) -> Result<Vec<u8>, String> {
+fn core_bytes(evidence: &GuardIntegrityEvidence) -> Result<Vec<u8>, String> {
     serde_json::to_vec(&IntegrityEvidenceCore {
         schema: &evidence.schema,
         evidence_version: evidence.evidence_version,
@@ -124,12 +124,12 @@ fn core_bytes(evidence: &NeverGuardIntegrityEvidence) -> Result<Vec<u8>, String>
         guard: &evidence.guard,
         launcher: &evidence.launcher,
     })
-    .map_err(|err| format!("NeverGuard integrity evidence serialization failed: {err}"))
+    .map_err(|err| format!("Guard integrity evidence serialization failed: {err}"))
 }
 
 #[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
 pub(crate) fn recompute_evidence_sha256(
-    evidence: &NeverGuardIntegrityEvidence,
+    evidence: &GuardIntegrityEvidence,
 ) -> Result<[u8; 32], String> {
     let digest = Sha256::digest(core_bytes(evidence)?);
     let mut out = [0u8; 32];
@@ -138,17 +138,17 @@ pub(crate) fn recompute_evidence_sha256(
 }
 
 #[cfg(any(windows, target_os = "linux", target_os = "macos", test))]
-pub(crate) fn validate_evidence_shape(evidence: &NeverGuardIntegrityEvidence) -> Result<(), String> {
+pub(crate) fn validate_evidence_shape(evidence: &GuardIntegrityEvidence) -> Result<(), String> {
     let schema_ok = evidence.schema == NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA
         || evidence.schema == NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA
         || evidence.schema == NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA;
     if !schema_ok || evidence.evidence_version != NEVERGUARD_INTEGRITY_EVIDENCE_VERSION {
-        return Err("NeverGuard integrity evidence schema/version mismatch".to_string());
+        return Err("Guard integrity evidence schema/version mismatch".to_string());
     }
     if evidence.evidence_id.len() != 32
         || !evidence.evidence_id.bytes().all(|value| value.is_ascii_hexdigit())
     {
-        return Err("NeverGuard integrity evidence id malformed".to_string());
+        return Err("Guard integrity evidence id malformed".to_string());
     }
     for (label, value) in [
         ("evidenceSha256", evidence.evidence_sha256.as_str()),
@@ -165,26 +165,26 @@ pub(crate) fn validate_evidence_shape(evidence: &NeverGuardIntegrityEvidence) ->
         ),
     ] {
         if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err(format!("NeverGuard integrity evidence {label} malformed"));
+            return Err(format!("Guard integrity evidence {label} malformed"));
         }
     }
     if evidence.guard.pid == 0 || evidence.launcher.pid == 0 {
-        return Err("NeverGuard integrity evidence contains zero PID".to_string());
+        return Err("Guard integrity evidence contains zero PID".to_string());
     }
     if !evidence.boundary.parent_matches
         || evidence.boundary.expected_parent_pid != evidence.boundary.observed_parent_pid
         || evidence.launcher.pid != evidence.boundary.expected_parent_pid
     {
-        return Err("NeverGuard integrity evidence process boundary mismatch".to_string());
+        return Err("Guard integrity evidence process boundary mismatch".to_string());
     }
     if evidence.schema == NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA {
         let guard = evidence.guard.linux.as_ref().ok_or_else(|| "Linux integrity evidence missing guard security state".to_string())?;
         let launcher = evidence.launcher.linux.as_ref().ok_or_else(|| "Linux integrity evidence missing launcher security state".to_string())?;
         if !guard.no_new_privs || !guard.dumpable_disabled || !guard.parent_death_signal {
-            return Err("Linux NeverGuard security state is not enforced".to_string());
+            return Err("Linux Guard security state is not enforced".to_string());
         }
         if guard.uid != launcher.uid || guard.gid != launcher.gid {
-            return Err("Linux NeverGuard/launcher uid/gid boundary mismatch".to_string());
+            return Err("Linux Guard/launcher uid/gid boundary mismatch".to_string());
         }
     }
     if evidence.schema == NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA {
@@ -195,7 +195,7 @@ pub(crate) fn validate_evidence_shape(evidence: &NeverGuardIntegrityEvidence) ->
             return Err("macOS code-signing/Hardened Runtime state is not enforced".to_string());
         }
         if guard.uid != launcher.uid || guard.gid != launcher.gid {
-            return Err("macOS NeverGuard/launcher uid/gid boundary mismatch".to_string());
+            return Err("macOS Guard/launcher uid/gid boundary mismatch".to_string());
         }
     }
     Ok(())
@@ -256,7 +256,7 @@ mod windows_impl {
             };
             if handle.is_null() {
                 return Err(format!(
-                    "NeverGuard cannot open process {pid}: {}",
+                    "Guard cannot open process {pid}: {}",
                     std::io::Error::last_os_error()
                 ));
             }
@@ -282,7 +282,7 @@ mod windows_impl {
         let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "NeverGuard process snapshot failed: {}",
+                "Guard process snapshot failed: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -299,18 +299,18 @@ mod windows_impl {
             has_entry = unsafe { Process32NextW(snapshot.raw(), &mut entry) } != 0;
         }
         Err(format!(
-            "NeverGuard process {process_id} not found in process snapshot"
+            "Guard process {process_id} not found in process snapshot"
         ))
     }
 
     pub(super) fn collect(
         expected_parent_pid: u32,
-    ) -> Result<NeverGuardIntegrityEvidence, String> {
+    ) -> Result<GuardIntegrityEvidence, String> {
         let guard_pid = std::process::id();
         let observed_parent_pid = observed_parent_pid(guard_pid)?;
         if observed_parent_pid != expected_parent_pid {
             return Err(format!(
-                "NeverGuard actual parent PID mismatch: expected {expected_parent_pid}, observed {observed_parent_pid}"
+                "Guard actual parent PID mismatch: expected {expected_parent_pid}, observed {observed_parent_pid}"
             ));
         }
 
@@ -320,7 +320,7 @@ mod windows_impl {
         let mut evidence_id_bytes = [0u8; 16];
         OsRng.fill_bytes(&mut evidence_id_bytes);
 
-        let mut evidence = NeverGuardIntegrityEvidence {
+        let mut evidence = GuardIntegrityEvidence {
             schema: NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA.to_string(),
             evidence_version: NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
             evidence_id: hex::encode(evidence_id_bytes),
@@ -344,7 +344,7 @@ mod windows_impl {
         let image_path = process_image_path(process.raw())?;
         let metadata = std::fs::metadata(&image_path).map_err(|err| {
             format!(
-                "NeverGuard cannot stat process image {}: {err}",
+                "Guard cannot stat process image {}: {err}",
                 image_path.display()
             )
         })?;
@@ -378,7 +378,7 @@ mod windows_impl {
         };
         if ok == 0 || size == 0 {
             return Err(format!(
-                "NeverGuard QueryFullProcessImageNameW failed: {}",
+                "Guard QueryFullProcessImageNameW failed: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -396,7 +396,7 @@ mod windows_impl {
         };
         if ok == 0 {
             return Err(format!(
-                "NeverGuard GetProcessTimes failed: {}",
+                "Guard GetProcessTimes failed: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -495,7 +495,7 @@ mod windows_impl {
         };
         if snapshot == INVALID_HANDLE_VALUE {
             return Err(format!(
-                "NeverGuard module snapshot failed for PID {pid}: {}",
+                "Guard module snapshot failed for PID {pid}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -507,7 +507,7 @@ mod windows_impl {
         let mut has_entry = unsafe { Module32FirstW(snapshot.raw(), &mut entry) } != 0;
         if !has_entry {
             return Err(format!(
-                "NeverGuard module enumeration failed for PID {pid}: {}",
+                "Guard module enumeration failed for PID {pid}: {}",
                 std::io::Error::last_os_error()
             ));
         }
@@ -522,7 +522,7 @@ mod windows_impl {
                 let normalized = normalize_path(&path);
                 let metadata = std::fs::metadata(&path).map_err(|err| {
                     format!(
-                        "NeverGuard cannot stat loaded module {} for PID {pid}: {err}",
+                        "Guard cannot stat loaded module {} for PID {pid}: {err}",
                         path.display()
                     )
                 })?;
@@ -556,7 +556,7 @@ mod windows_impl {
         non_system.dedup_by(|left, right| left.eq_ignore_ascii_case(right));
 
         let mut digest = Sha256::new();
-        digest.update(b"NeverLauncher NeverGuard module-set v1\0");
+        digest.update(b"NeverLauncher Guard module-set v1\0");
         for record in &records {
             digest.update((record.len() as u32).to_le_bytes());
             digest.update(record.as_bytes());
@@ -582,14 +582,14 @@ mod windows_impl {
 
     fn sha256_file(path: &Path) -> Result<String, String> {
         let file = File::open(path)
-            .map_err(|err| format!("NeverGuard cannot open {} for hashing: {err}", path.display()))?;
+            .map_err(|err| format!("Guard cannot open {} for hashing: {err}", path.display()))?;
         let mut reader = BufReader::with_capacity(128 * 1024, file);
         let mut digest = Sha256::new();
         let mut buffer = [0u8; 128 * 1024];
         loop {
             let read = reader
                 .read(&mut buffer)
-                .map_err(|err| format!("NeverGuard cannot hash {}: {err}", path.display()))?;
+                .map_err(|err| format!("Guard cannot hash {}: {err}", path.display()))?;
             if read == 0 {
                 break;
             }
@@ -677,7 +677,7 @@ pub fn verify_windows_authenticode_trust(_path: &std::path::Path) -> Result<(), 
 #[cfg(windows)]
 pub(crate) fn collect_windows_integrity_evidence(
     expected_parent_pid: u32,
-) -> Result<NeverGuardIntegrityEvidence, String> {
+) -> Result<GuardIntegrityEvidence, String> {
     windows_impl::collect(expected_parent_pid)
 }
 
@@ -725,8 +725,8 @@ mod tests {
         }
     }
 
-    fn sample_evidence() -> NeverGuardIntegrityEvidence {
-        let mut evidence = NeverGuardIntegrityEvidence {
+    fn sample_evidence() -> GuardIntegrityEvidence {
+        let mut evidence = GuardIntegrityEvidence {
             schema: NEVERGUARD_INTEGRITY_EVIDENCE_SCHEMA.to_string(),
             evidence_version: NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
             evidence_id: "33".repeat(16),
@@ -736,7 +736,7 @@ mod tests {
                 observed_parent_pid: 10,
                 parent_matches: true,
             },
-            guard: sample_process(11, "neverguard"),
+            guard: sample_process(11, "guard"),
             launcher: sample_process(10, "neverlauncher-desktop"),
             evidence_sha256: String::new(),
             session_proof: "44".repeat(32),
@@ -838,11 +838,11 @@ mod linux_impl {
         let modified=meta.modified().ok().and_then(|v|v.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_millis() as u64).unwrap_or(0);
         Ok(ProcessIntegrityEvidence{ pid, image_path:image.to_string_lossy().into_owned(), image_sha256:sha256_file(&image)?, image_size:meta.len(), image_modified_unix_ms:modified, process_created_filetime:process_start_ticks(pid)?, authenticode:AuthenticodeEvidence{trusted:false,status:"not-applicable-linux".into()}, mitigations:ProcessMitigationEvidence{dep:None,aslr:None,dynamic_code:None,extension_point_disable:None,control_flow_guard:None,binary_signature:None,image_load:None,child_process:None,user_shadow_stack:None,sehop:None,query_failures:vec![]}, modules:modules(pid,&image)?, linux:Some(security(pid)?), macos:None, })
     }
-    pub fn collect(expected_parent_pid:u32)->Result<NeverGuardIntegrityEvidence,String>{
-        let guard_pid=std::process::id(); let observed=observed_parent_pid(guard_pid)?; if observed!=expected_parent_pid { return Err(format!("Linux NeverGuard parent mismatch: expected {expected_parent_pid}, observed {observed}")); }
+    pub fn collect(expected_parent_pid:u32)->Result<GuardIntegrityEvidence,String>{
+        let guard_pid=std::process::id(); let observed=observed_parent_pid(guard_pid)?; if observed!=expected_parent_pid { return Err(format!("Linux Guard parent mismatch: expected {expected_parent_pid}, observed {observed}")); }
         let mut id=[0u8;16]; OsRng.fill_bytes(&mut id);
         let collected=SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e|e.to_string())?.as_secs();
-        let mut evidence=NeverGuardIntegrityEvidence{ schema:NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA.into(), evidence_version:1, evidence_id:hex::encode(id), collected_at_unix:collected, boundary:BoundaryEvidence{expected_parent_pid,observed_parent_pid:observed,parent_matches:true}, guard:process(guard_pid)?, launcher:process(expected_parent_pid)?, evidence_sha256:String::new(), session_proof:String::new() };
+        let mut evidence=GuardIntegrityEvidence{ schema:NEVERGUARD_LINUX_INTEGRITY_EVIDENCE_SCHEMA.into(), evidence_version:1, evidence_id:hex::encode(id), collected_at_unix:collected, boundary:BoundaryEvidence{expected_parent_pid,observed_parent_pid:observed,parent_matches:true}, guard:process(guard_pid)?, launcher:process(expected_parent_pid)?, evidence_sha256:String::new(), session_proof:String::new() };
         evidence.evidence_sha256=hex::encode(recompute_evidence_sha256(&evidence)?);
         Ok(evidence)
     }
@@ -850,7 +850,7 @@ mod linux_impl {
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) fn collect_linux_integrity_evidence(expected_parent_pid:u32)->Result<NeverGuardIntegrityEvidence,String>{ linux_impl::collect(expected_parent_pid) }
+pub(crate) fn collect_linux_integrity_evidence(expected_parent_pid:u32)->Result<GuardIntegrityEvidence,String>{ linux_impl::collect(expected_parent_pid) }
 #[cfg(target_os = "linux")]
 pub(crate) fn observed_linux_parent_pid(pid:u32)->Result<u32,String>{ linux_impl::parent(pid) }
 
@@ -940,7 +940,7 @@ mod macos_impl {
     fn module_set(path: &Path, image_hash: &str) -> ModuleSetEvidence {
         let normalized = path.to_string_lossy();
         let mut digest = Sha256::new();
-        digest.update(b"NeverLauncher NeverGuard macOS signed-image-set v1\0");
+        digest.update(b"NeverLauncher Guard macOS signed-image-set v1\0");
         digest.update((normalized.len() as u64).to_le_bytes());
         digest.update(normalized.as_bytes());
         digest.update(hex::decode(image_hash).unwrap_or_default());
@@ -977,14 +977,14 @@ mod macos_impl {
         })
     }
 
-    pub fn collect(expected_parent_pid: u32) -> Result<NeverGuardIntegrityEvidence, String> {
+    pub fn collect(expected_parent_pid: u32) -> Result<GuardIntegrityEvidence, String> {
         let guard_pid = std::process::id();
         let observed = bsd_info(guard_pid)?.pbi_ppid;
-        if observed != expected_parent_pid { return Err(format!("macOS NeverGuard parent mismatch: expected {expected_parent_pid}, observed {observed}")); }
+        if observed != expected_parent_pid { return Err(format!("macOS Guard parent mismatch: expected {expected_parent_pid}, observed {observed}")); }
         let mut evidence_id = [0u8; 16];
         OsRng.fill_bytes(&mut evidence_id);
         let collected_at_unix = SystemTime::now().duration_since(UNIX_EPOCH).map_err(|err| err.to_string())?.as_secs();
-        let mut evidence = NeverGuardIntegrityEvidence {
+        let mut evidence = GuardIntegrityEvidence {
             schema: NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA.to_string(),
             evidence_version: NEVERGUARD_INTEGRITY_EVIDENCE_VERSION,
             evidence_id: hex::encode(evidence_id),
@@ -1003,6 +1003,6 @@ mod macos_impl {
 }
 
 #[cfg(target_os = "macos")]
-pub(crate) fn collect_macos_integrity_evidence(expected_parent_pid: u32) -> Result<NeverGuardIntegrityEvidence, String> { macos_impl::collect(expected_parent_pid) }
+pub(crate) fn collect_macos_integrity_evidence(expected_parent_pid: u32) -> Result<GuardIntegrityEvidence, String> { macos_impl::collect(expected_parent_pid) }
 #[cfg(target_os = "macos")]
 pub(crate) fn observed_macos_parent_pid(pid: u32) -> Result<u32, String> { macos_impl::parent(pid) }

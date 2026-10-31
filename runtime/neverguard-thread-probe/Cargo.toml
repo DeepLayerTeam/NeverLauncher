@@ -1,14 +1,14 @@
 [package]
-name = "neverguard-thread-probe"
-version = "0.42.0"
-description = "Windows-only NeverGuard Thread Integrity adversarial integration fixture"
+name = "guard-thread-probe"
+version = "0.42.1"
+description = "Windows-only Guard Thread Integrity adversarial integration fixture"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
 edition = "2021"
 publish = false
 
 [lib]
-name = "neverguard_thread_probe"
+name = "guard_thread_probe"
 crate-type = ["cdylib"]
 path = "src/lib.rs"
 

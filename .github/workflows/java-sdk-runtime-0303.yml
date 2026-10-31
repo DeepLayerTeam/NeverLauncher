@@ -61,7 +61,7 @@ jobs:
           python3 examples/extensions/java-runtime/test-runner.py
           sh examples/extensions/java-lifecycle/build.sh
           python3 examples/extensions/java-lifecycle/test-runner.py
-      - name: Pack signed NeverExtensions Java backend/CLI example and verify Ed25519
+      - name: Pack signed Extensions Java backend/CLI example and verify Ed25519
         run: |
           (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/extension-key.pem"

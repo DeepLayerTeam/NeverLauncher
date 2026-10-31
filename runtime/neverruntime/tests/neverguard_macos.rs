@@ -1,17 +1,17 @@
 #![cfg(target_os = "macos")]
 
 use neverruntime::{
-    NeverGuardSupervisor, NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA,
+    GuardSupervisor, NEVERGUARD_MACOS_INTEGRITY_EVIDENCE_SCHEMA,
     NEVERGUARD_MACOS_PROCESS_POLICY_SCHEMA,
 };
 use std::path::PathBuf;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn macos_neverguard_authenticated_boundary_and_attestation() {
-    let guard = PathBuf::from(env!("CARGO_BIN_EXE_neverguard"));
-    let supervisor = NeverGuardSupervisor::with_executable(guard);
+async fn macos_guard_authenticated_boundary_and_attestation() {
+    let guard = PathBuf::from(env!("CARGO_BIN_EXE_guard"));
+    let supervisor = GuardSupervisor::with_executable(guard);
 
-    let status = supervisor.ensure_started().await.expect("start NeverGuard");
+    let status = supervisor.ensure_started().await.expect("start Guard");
     assert!(status.authenticated && status.process_policy_enforced && status.hardening_enforced);
     assert!(status.secure_pipe_acl && status.lifetime_job_enforced);
     supervisor.ping().await.expect("authenticated ping");
@@ -34,5 +34,5 @@ async fn macos_neverguard_authenticated_boundary_and_attestation() {
     assert_eq!(attestation.evidence.evidence_sha256.len(), 64);
     assert_eq!(attestation.attestation_sha256.len(), 64);
 
-    supervisor.shutdown().await.expect("shutdown NeverGuard");
+    supervisor.shutdown().await.expect("shutdown Guard");
 }

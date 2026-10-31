@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub const NEVERGUARD_SENSOR_PROTOCOL_VERSION: u32 = 3;
-pub const NEVERGUARD_SENSOR_FILE_NAME: &str = "neverguard-sensor.dll";
+pub const NEVERGUARD_SENSOR_FILE_NAME: &str = "guard-sensor.dll";
 pub const NEVERGUARD_SENSOR_PIPE_ENV: &str = "NEVERGUARD_SENSOR_PIPE";
 pub const NEVERGUARD_SENSOR_SECRET_ENV: &str = "NEVERGUARD_SENSOR_SECRET";
 
@@ -40,7 +40,7 @@ mod imp {
 
     type HmacSha256 = Hmac<Sha256>;
     const SENSOR_MAGIC: &[u8; 8] = b"NGSENS04";
-    const SENSOR_DOMAIN: &[u8] = b"neverguard-sensor-startup-v3";
+    const SENSOR_DOMAIN: &[u8] = b"guard-sensor-startup-v3";
     const SENSOR_PIPE_PREFIX: &str = r"\\.\pipe\NeverLauncher.Guard.Sensor.";
     const SENSOR_STARTUP_TIMEOUT_SECS: u64 = 12;
     const DISABLE_ATTACH_MECHANISM_ARG: &str = "-XX:+DisableAttachMechanism";
@@ -85,16 +85,16 @@ mod imp {
 
     fn resolve_sensor_path() -> Result<PathBuf, String> {
         let current = std::env::current_exe()
-            .map_err(|err| format!("не удалось определить executable для NeverGuard Sensor: {err}"))?;
+            .map_err(|err| format!("не удалось определить executable для Guard Sensor: {err}"))?;
         let parent = current
             .parent()
-            .ok_or_else(|| "NeverGuard Sensor: executable не имеет parent directory".to_string())?;
+            .ok_or_else(|| "Guard Sensor: executable не имеет parent directory".to_string())?;
         let path = parent.join(NEVERGUARD_SENSOR_FILE_NAME);
         let metadata = std::fs::symlink_metadata(&path).map_err(|err| {
-            format!("NeverGuard Sensor отсутствует рядом с launcher/runtime {}: {err}", path.display())
+            format!("Guard Sensor отсутствует рядом с launcher/runtime {}: {err}", path.display())
         })?;
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
-            return Err("NeverGuard Sensor должен быть непустым regular non-symlink DLL".to_string());
+            return Err("Guard Sensor должен быть непустым regular non-symlink DLL".to_string());
         }
         Ok(path)
     }
@@ -158,7 +158,7 @@ mod imp {
         for arg in command.as_std().get_args() {
             if let Some(label) = forbidden_instrumentation_token(&arg.to_string_lossy()) {
                 return Err(format!(
-                    "NeverGuard Debug & Instrumentation Guard rejected startup instrumentation option {label}"
+                    "Guard Debug & Instrumentation Guard rejected startup instrumentation option {label}"
                 ));
             }
         }
@@ -166,7 +166,7 @@ mod imp {
             if let Some(value) = effective_command_env(command, name) {
                 if let Some(label) = java_options_contains_forbidden(&value) {
                     return Err(format!(
-                        "NeverGuard Debug & Instrumentation Guard rejected {label} from {name}"
+                        "Guard Debug & Instrumentation Guard rejected {label} from {name}"
                     ));
                 }
             }
@@ -180,19 +180,19 @@ mod imp {
     ) -> Result<WindowsSensorBootstrap, String> {
         validate_startup_instrumentation_boundary(command)?;
         let metadata = std::fs::symlink_metadata(&sensor_path).map_err(|err| {
-            format!("NeverGuard Sensor DLL is unavailable {}: {err}", sensor_path.display())
+            format!("Guard Sensor DLL is unavailable {}: {err}", sensor_path.display())
         })?;
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
-            return Err("NeverGuard Sensor должен быть непустым regular non-symlink DLL".to_string());
+            return Err("Guard Sensor должен быть непустым regular non-symlink DLL".to_string());
         }
         #[cfg(not(debug_assertions))]
         verify_windows_authenticode_trust(&sensor_path)
-            .map_err(|err| format!("NeverGuard Sensor Authenticode verification failed: {err}"))?;
+            .map_err(|err| format!("Guard Sensor Authenticode verification failed: {err}"))?;
 
         let module_guard_policy = policy_for_command(command, &sensor_path)?;
         let endpoint = sensor_endpoint();
         let server = create_secure_pipe_server(&endpoint)
-            .map_err(|err| format!("NeverGuard Sensor startup pipe creation failed: {err}"))?;
+            .map_err(|err| format!("Guard Sensor startup pipe creation failed: {err}"))?;
         let mut secret = [0u8; 32];
         OsRng.fill_bytes(&mut secret);
 
@@ -232,31 +232,31 @@ mod imp {
             let mut server = self
                 .server
                 .take()
-                .ok_or_else(|| "NeverGuard Sensor startup pipe already consumed".to_string())?;
+                .ok_or_else(|| "Guard Sensor startup pipe already consumed".to_string())?;
             timeout(Duration::from_secs(SENSOR_STARTUP_TIMEOUT_SECS), server.connect())
                 .await
-                .map_err(|_| "NeverGuard Sensor did not load before JVM startup timeout".to_string())?
-                .map_err(|err| format!("NeverGuard Sensor startup pipe connect failed: {err}"))?;
+                .map_err(|_| "Guard Sensor did not load before JVM startup timeout".to_string())?
+                .map_err(|err| format!("Guard Sensor startup pipe connect failed: {err}"))?;
 
             let mut packet = [0u8; 48];
             timeout(Duration::from_secs(3), server.read_exact(&mut packet))
                 .await
-                .map_err(|_| "NeverGuard Sensor startup authentication timed out".to_string())?
-                .map_err(|err| format!("NeverGuard Sensor startup packet read failed: {err}"))?;
+                .map_err(|_| "Guard Sensor startup authentication timed out".to_string())?
+                .map_err(|err| format!("Guard Sensor startup packet read failed: {err}"))?;
 
             if &packet[..8] != SENSOR_MAGIC {
                 packet.zeroize();
-                return Err("NeverGuard Sensor startup packet magic mismatch".to_string());
+                return Err("Guard Sensor startup packet magic mismatch".to_string());
             }
             let protocol = u32::from_le_bytes(packet[8..12].try_into().expect("slice length"));
             let pid = u32::from_le_bytes(packet[12..16].try_into().expect("slice length"));
             if protocol != NEVERGUARD_SENSOR_PROTOCOL_VERSION || pid != expected_pid {
                 packet.zeroize();
-                return Err("NeverGuard Sensor startup packet protocol/PID mismatch".to_string());
+                return Err("Guard Sensor startup packet protocol/PID mismatch".to_string());
             }
 
             let mut mac = HmacSha256::new_from_slice(&self.secret)
-                .map_err(|_| "NeverGuard Sensor HMAC initialization failed".to_string())?;
+                .map_err(|_| "Guard Sensor HMAC initialization failed".to_string())?;
             mac.update(SENSOR_DOMAIN);
             mac.update(&protocol.to_le_bytes());
             mac.update(&pid.to_le_bytes());
@@ -264,13 +264,13 @@ mod imp {
             let authenticated: bool = expected[..].ct_eq(&packet[16..]).into();
             packet.zeroize();
             if !authenticated {
-                return Err("NeverGuard Sensor startup authentication failed".to_string());
+                return Err("Guard Sensor startup authentication failed".to_string());
             }
 
             let runtime_policy = self
                 .runtime_policy
                 .take()
-                .ok_or_else(|| "NeverGuard Thread & Process Integrity requires runtime Job Object policy binding".to_string())?;
+                .ok_or_else(|| "Guard Thread & Process Integrity requires runtime Job Object policy binding".to_string())?;
             let mut module_secret = [0u8; 32];
             std::mem::swap(&mut module_secret, &mut self.secret);
             let module_guard = arm_module_guard(
@@ -281,7 +281,7 @@ mod imp {
                 runtime_policy,
             )
             .await
-            .map_err(|err| format!("NeverGuard Module Guard arm failed: {err}"))?;
+            .map_err(|err| format!("Guard Module Guard arm failed: {err}"))?;
 
             Ok(WindowsSensorSession {
                 protocol_version: protocol,
@@ -305,7 +305,7 @@ mod imp {
             None => {
                 let _ = child.start_kill();
                 let _ = timeout(Duration::from_secs(3), child.wait()).await;
-                return Err("runtime PID недоступен для NeverGuard Sensor".to_string());
+                return Err("runtime PID недоступен для Guard Sensor".to_string());
             }
         };
         match bootstrap.authenticate(pid).await {

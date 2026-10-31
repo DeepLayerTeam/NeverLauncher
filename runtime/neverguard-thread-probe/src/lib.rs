@@ -69,7 +69,7 @@ pub extern "system" fn JNI_OnLoad(_vm: *mut c_void, _reserved: *mut c_void) -> i
     // Тогда более поздний VirtualAlloc имеет законное происхождение для Memory
     // Integrity; конкретное нарушение — адрес начала потока в коде MEM_PRIVATE.
     let _ = thread::Builder::new()
-        .name("neverguard-thread-probe".to_string())
+        .name("guard-thread-probe".to_string())
         .spawn(|| {
             thread::sleep(Duration::from_secs(3));
             unsafe { create_private_executable_thread() };

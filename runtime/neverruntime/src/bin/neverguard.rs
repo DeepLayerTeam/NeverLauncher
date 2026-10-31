@@ -18,26 +18,26 @@ fn main() -> ExitCode {
         let profile = match windows_protection_profile(&args) {
             Ok(profile) => profile,
             Err(err) => {
-                eprintln!("neverguard: {err}");
+                eprintln!("guard: {err}");
                 return ExitCode::FAILURE;
             }
         };
         if let Err(err) = ensure_windows_protection_core_with_profile(profile) {
-            eprintln!("neverguard: {err}");
+            eprintln!("guard: {err}");
             return ExitCode::FAILURE;
         }
     }
     #[cfg(target_os = "linux")]
     if !show_help {
         if let Err(err) = ensure_linux_production_hardening() {
-            eprintln!("neverguard: {err}");
+            eprintln!("guard: {err}");
             return ExitCode::FAILURE;
         }
     }
     #[cfg(target_os = "macos")]
     if !show_help {
         if let Err(err) = ensure_macos_production_hardening() {
-            eprintln!("neverguard: {err}");
+            eprintln!("guard: {err}");
             return ExitCode::FAILURE;
         }
     }
@@ -48,14 +48,14 @@ fn main() -> ExitCode {
     {
         Ok(runtime) => runtime,
         Err(err) => {
-            eprintln!("neverguard: failed to initialize async runtime: {err}");
+            eprintln!("guard: failed to initialize async runtime: {err}");
             return ExitCode::FAILURE;
         }
     };
     match runtime.block_on(run(args)) {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
-            eprintln!("neverguard: {err}");
+            eprintln!("guard: {err}");
             ExitCode::FAILURE
         }
     }
@@ -65,17 +65,17 @@ async fn run(args: Vec<String>) -> Result<(), String> {
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         #[cfg(windows)]
         println!(
-            "NeverGuard {}\nUsage: neverguard --pipe <local named pipe> --parent-pid <pid> [--protection-profile audit|compat|aggressive]\nBootstrap secret: exactly 32 raw bytes on stdin.",
+            "Guard {}\nUsage: guard --pipe <local named pipe> --parent-pid <pid> [--protection-profile audit|compat|aggressive]\nBootstrap secret: exactly 32 raw bytes on stdin.",
             env!("CARGO_PKG_VERSION")
         );
         #[cfg(target_os = "linux")]
         println!(
-            "NeverGuard {}\nUsage: neverguard --socket <private unix socket> --parent-pid <pid>\nBootstrap secret: exactly 32 raw bytes on stdin.",
+            "Guard {}\nUsage: guard --socket <private unix socket> --parent-pid <pid>\nBootstrap secret: exactly 32 raw bytes on stdin.",
             env!("CARGO_PKG_VERSION")
         );
         #[cfg(target_os = "macos")]
         println!(
-            "NeverGuard {}\nUsage: neverguard --socket <private unix socket> --parent-pid <pid>\nBootstrap secret: exactly 32 raw bytes on stdin.",
+            "Guard {}\nUsage: guard --socket <private unix socket> --parent-pid <pid>\nBootstrap secret: exactly 32 raw bytes on stdin.",
             env!("CARGO_PKG_VERSION")
         );
         return Ok(());
@@ -109,7 +109,7 @@ async fn run(args: Vec<String>) -> Result<(), String> {
     #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
     {
         let _ = parent_pid;
-        Err("NeverGuard production implementation is available on Windows, Linux and macOS".into())
+        Err("Guard production implementation is available on Windows, Linux and macOS".into())
     }
 }
 

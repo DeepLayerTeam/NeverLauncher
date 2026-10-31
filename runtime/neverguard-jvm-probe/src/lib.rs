@@ -24,7 +24,7 @@ pub extern "system" fn JNI_OnLoad(_vm: *mut c_void, _reserved: *mut c_void) -> i
     // таблицу IAT. После этого выделение памяти идёт из собственного нативного
     // потока фикстуры, и в стеке вызовов VirtualAlloc нет кадров jvm.dll.
     let _ = thread::Builder::new()
-        .name("neverguard-jvm-aware-probe".to_string())
+        .name("guard-jvm-aware-probe".to_string())
         .spawn(|| {
             thread::sleep(Duration::from_millis(3200));
             let memory = unsafe {

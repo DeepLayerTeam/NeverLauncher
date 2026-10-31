@@ -440,7 +440,7 @@ pub async fn resolve_compatibility(
     // LWJGL 3 prefers native resources on the classpath and can extract
     // lwjgl.dll even when java.library.path points at a verified flat copy.
     // Keep extraction inside the pinned client root, never in a user-global
-    // temp directory. NeverGuard rechecks extracted bytes against the signed
+    // temp directory. Guard rechecks extracted bytes against the signed
     // package's native copy before trusting any executable-memory calls.
     pin_windows_lwjgl_extract_path(
         &mut jvm_args,

@@ -12,7 +12,7 @@ body:
     id: component
     attributes:
       label: Компонент
-      description: 'Например: Backend, Admin, Desktop, CLI, NeverRuntime, NeverGuard, ServerBridge, NeverExtensions или CI.'
+      description: 'Например: Backend, Admin, Desktop, CLI, NeverRuntime, Guard, ServerBridge, Extensions или CI.'
       placeholder: 'Например: NeverRuntime / Fabric'
     validations:
       required: true

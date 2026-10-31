@@ -106,7 +106,7 @@ func registerWindowsHardwareDevice0134(t *testing.T, h http.Handler, access stri
 	t.Helper()
 	publicKey := elliptic.Marshal(elliptic.P256(), priv.PublicKey.X, priv.PublicKey.Y)
 	code, beginOut := deviceTrustRequest0121(t, h, http.MethodPost, "/api/v1/auth/devices/register/begin", access, map[string]any{
-		"name": "NeverGuard Windows attestation workstation", "platform": "Win32", "clientVersion": "0.13.4",
+		"name": "Guard Windows attestation workstation", "platform": "Win32", "clientVersion": "0.13.4",
 		"keyAlgorithm": "p256", "keyBinding": "hardware", "hardwareProvider": "test-windows-hardware-p256",
 	})
 	if code != http.StatusOK {
@@ -219,7 +219,7 @@ func TestGuardAttestationRejectsReleaseHashOutsideAllowlist0134(t *testing.T) {
 	policy := guardReleasePolicy0134{GuardSHA256: []string{strings.Repeat("1", 64)}, LauncherSHA256: []string{testLauncherHash0134}, RequireAuthenticode: true}
 	a := makeGuardAttestation0134(t, "challenge-id", "challenge-secret")
 	if err := validateGuardAttestation0134(a, "challenge-id", "challenge-secret", policy, "windows", time.Now().UTC(), time.Now().UTC().Add(-time.Second)); err == nil {
-		t.Fatal("non-allowlisted NeverGuard image hash was accepted")
+		t.Fatal("non-allowlisted Guard image hash was accepted")
 	}
 }
 
@@ -385,6 +385,6 @@ func TestGuardReleasePolicyProductionSigningRequirements0140(t *testing.T) {
 	policy := `{"schemaVersion":"2.0","releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"unsigned-development","artifacts":[{"guardSha256":"` + guardHash + `","launcherSha256":"` + launcherHash + `","requireAuthenticode":false}]}}}}}`
 	s := Server{Version: "0.14.0", Config: config.Config{Environment: "production", GuardReleaseAllowlistJSON: policy}}
 	if _, err := s.guardReleasePolicies0134(); err == nil {
-		t.Fatal("production Backend accepted unsigned Windows NeverGuard policy")
+		t.Fatal("production Backend accepted unsigned Windows Guard policy")
 	}
 }

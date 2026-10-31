@@ -1236,6 +1236,12 @@ type helloRequest struct {
 	CallbackURL         string `json:"callbackUrl,omitempty"`
 }
 
+// The SDK 1.0 compatibility failures are machine-readable. Older clients
+// still understand the HTTP status; no existing hello field is removed.
+func helloConflict0421(w http.ResponseWriter, code string) {
+	jsonResponse(w, http.StatusConflict, map[string]string{"error": "host hello rejected", "code": code})
+}
+
 func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 	st, ok := s.authenticate(w, r)
 	if !ok {
@@ -1247,11 +1253,11 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.ProtocolVersion != ProtocolVersion || strings.ToLower(strings.TrimSpace(req.ExtensionID)) != st.key.ExtensionID || req.InstanceID != st.instanceID {
-		http.Error(w, "host identity/protocol mismatch", 409)
+		helloConflict0421(w, "HOST_PROTOCOL_MISMATCH")
 		return
 	}
 	if !extensioncontract.SupportsHostHello(st.manifest.API, req.ExtensionAPIVersion) {
-		http.Error(w, "extension API mismatch", http.StatusConflict)
+		helloConflict0421(w, "HOST_EXTENSION_API_MISMATCH")
 		return
 	}
 	callbackURL, err := validateCallbackURL0206(req.CallbackURL)
@@ -1269,14 +1275,19 @@ func (s *Supervisor) handleHello(w http.ResponseWriter, r *http.Request) {
 	}
 	if st.sandbox != nil && req.CallbackURL != "" {
 		st.mu.Unlock()
-		http.Error(w, "sandbox-callback-broker-unavailable", http.StatusConflict)
+		helloConflict0421(w, "HOST_CALLBACK_UNAVAILABLE")
 		return
 	}
 	if (st.sandbox == nil && req.PID != 0 && expectedPID != 0 && req.PID != expectedPID) ||
 		(st.sandbox != nil && st.sandbox.linux != nil && req.PID != 1) ||
 		(st.sandbox != nil && (st.sandbox.windows != nil || st.sandbox.macos != nil) && (expectedPID == 0 || req.PID != expectedPID)) {
 		st.mu.Unlock()
-		http.Error(w, "pid mismatch", 409)
+		helloConflict0421(w, "HOST_PROCESS_IDENTITY_MISMATCH")
+		return
+	}
+	if !st.helloAt.IsZero() {
+		st.mu.Unlock()
+		helloConflict0421(w, "HOST_HELLO_ALREADY_COMPLETED")
 		return
 	}
 	now := time.Now().UTC()
@@ -1398,7 +1409,7 @@ func (s *Supervisor) permissionAllowed0207(ctx context.Context, st *processState
 func (s *Supervisor) allowedCapabilities(st *processState) []string {
 	caps := []string{"extension.self", "host.health"}
 	checks := []struct{ permission, capability string }{
-		{"storage:read", "runtime.config.get"}, {"storage:write", "runtime.config.put"}, {"storage:read", "runtime.storage.get"}, {"storage:write", "runtime.storage.put"},
+		{"storage:read", "runtime.config.get"}, {"storage:write", "runtime.config.put"}, {"storage:write", "runtime.config.delete"}, {"storage:read", "runtime.storage.get"}, {"storage:write", "runtime.storage.put"}, {"storage:write", "runtime.storage.delete"},
 		{"project:read", "project.get"}, {"release:read", "release.list"}, {"storage:read", "storage.read"},
 		{"telemetry:write", "telemetry.emit"}, {"http:outbound", "http.fetch"}, {"secrets:read", "secret.get"},
 		{"storage:read", "fs.read"}, {"storage:write", "fs.write"},
@@ -1679,7 +1690,7 @@ func (s *Supervisor) auditCapability0207(st *processState, capability string, al
 	if detail != "" {
 		target += ":" + detail
 	}
-	s.repo.AddAuditEvent(model.AuditEvent{Actor: "extension:" + st.key.ExtensionID, Action: action, Target: target, UserAgent: "NeverExtensions Host/" + ProtocolVersion, CreatedAt: time.Now().UTC()})
+	s.repo.AddAuditEvent(model.AuditEvent{Actor: "extension:" + st.key.ExtensionID, Action: action, Target: target, UserAgent: "Extensions Host/" + ProtocolVersion, CreatedAt: time.Now().UTC()})
 }
 
 func (s *Supervisor) handleCapability(w http.ResponseWriter, r *http.Request) {

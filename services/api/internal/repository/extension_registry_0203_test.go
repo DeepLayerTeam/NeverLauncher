@@ -46,7 +46,7 @@ func registryTestPublication0203(t *testing.T, version string, fingerprint strin
 			Version:                 version,
 			SHA256:                  sha,
 			Size:                    int64(100 + marker),
-			StorageProject:          "neverextensions-registry",
+			StorageProject:          "extensions-registry",
 			StorageVersion:          "example.registry-extension-" + version,
 			StoragePath:             sha + ".nlext",
 			SignatureKeyFingerprint: fingerprint,

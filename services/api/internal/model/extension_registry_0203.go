@@ -3,7 +3,7 @@ package model
 import "time"
 
 // ExtensionRegistryPublisher — идентичность, которой разрешено публиковать
-// подписанные .nlext в закрытый/локальный реестр NeverExtensions.
+// подписанные .nlext в закрытый/локальный реестр Extensions.
 type ExtensionRegistryPublisher struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`

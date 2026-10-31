@@ -16,9 +16,9 @@ body:
         - Панель администрирования
         - Настольный лаунчер
         - Совместимость Minecraft / NeverRuntime
-        - NeverGuard / безопасность
+        - Guard / безопасность
         - ServerBridge
-        - NeverExtensions / SDK
+        - Extensions / SDK
         - Установщик / CLI / выпуск релиза
         - Документация / инструменты разработчика
         - Другое

@@ -14,7 +14,7 @@
 
 ## Расширение не стартует
 
-Проверьте signature/registry, explicit grants, host limits, секреты и audit events. Quarantine/disabled state нельзя игнорировать. См. [NeverExtensions](../extensions/overview.md).
+Проверьте signature/registry, explicit grants, host limits, секреты и audit events. Quarantine/disabled state нельзя игнорировать. См. [Extensions](../extensions/overview.md).
 
 ## Диагностика без секретов
 

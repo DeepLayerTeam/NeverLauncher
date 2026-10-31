@@ -140,7 +140,7 @@ jobs:
   # This workflow is an executable per-platform test matrix, not an authority to
   # approve 0.25.0. Full certification requires six independently collected
   # evidence records, actual Minecraft launch on each required target, live
-  # NeverGuard/ServerBridge integration and separate signed clean-machine GA gate.
+  # Guard/ServerBridge integration and separate signed clean-machine GA gate.
 
   aggregate-certification:
     if: always() && github.event_name == 'workflow_dispatch'
@@ -162,7 +162,7 @@ jobs:
           pattern: components-02413-*
           path: dist/platform-evidence-02413
           merge-multiple: false
-      - name: Enforce all six targets, real Minecraft and NeverGuard/Bridge evidence
+      - name: Enforce all six targets, real Minecraft and Guard/Bridge evidence
         shell: bash
         run: |
           set -euo pipefail

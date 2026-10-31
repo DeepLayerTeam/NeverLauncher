@@ -8,7 +8,7 @@
       "additionalProperties": false,
       "required": ["protocol", "type", "id", "method"],
       "properties": {
-        "protocol": { "const": "neverextensions.desktop-rpc.v1" },
+        "protocol": { "const": "extensions.desktop-rpc.v1" },
         "type": { "const": "rpc.request" },
         "id": { "type": "string", "minLength": 1, "maxLength": 160 },
         "method": { "type": "string", "minLength": 1, "maxLength": 64 },
@@ -20,7 +20,7 @@
       "additionalProperties": false,
       "required": ["protocol", "type", "id"],
       "properties": {
-        "protocol": { "const": "neverextensions.desktop-rpc.v1" },
+        "protocol": { "const": "extensions.desktop-rpc.v1" },
         "type": { "const": "rpc.response" },
         "id": { "type": "string", "minLength": 1, "maxLength": 160 },
         "result": {},
@@ -32,7 +32,7 @@
       "additionalProperties": false,
       "required": ["protocol", "type", "extensionId", "version", "pageId"],
       "properties": {
-        "protocol": { "const": "neverextensions.desktop-rpc.v1" },
+        "protocol": { "const": "extensions.desktop-rpc.v1" },
         "type": { "const": "host.context" },
         "extensionId": { "type": "string" },
         "version": { "type": "string" },
@@ -47,7 +47,7 @@
       "additionalProperties": false,
       "required": ["protocol", "type", "actionId", "pageId"],
       "properties": {
-        "protocol": { "const": "neverextensions.desktop-rpc.v1" },
+        "protocol": { "const": "extensions.desktop-rpc.v1" },
         "type": { "const": "host.action" },
         "actionId": { "type": "string" },
         "pageId": { "type": "string" }

@@ -1,4 +1,4 @@
-name: NeverExtensions Resource Enforcement 0.31.13
+name: Extensions Resource Enforcement 0.31.13
 on:
   push:
     paths:

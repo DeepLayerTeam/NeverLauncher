@@ -104,7 +104,7 @@ func TestExtensionMemoryRepositoryInstallStateReferencesExistingVersion0201(t *t
 	}
 }
 
-func TestNeverExtensionsCore0201Postgres(t *testing.T) {
+func TestExtensionsCore0201Postgres(t *testing.T) {
 	dsn := os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
 		dsn = os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")

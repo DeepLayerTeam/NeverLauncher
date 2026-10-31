@@ -8,10 +8,19 @@
       "additionalProperties": false,
       "required": ["protocol", "type", "id", "method", "params"],
       "properties": {
-        "protocol": { "const": "neverextensions.admin-rpc.v1" },
+        "protocol": { "const": "extensions.admin-rpc.v1" },
         "type": { "const": "rpc.request" },
         "id": { "type": "string", "minLength": 1, "maxLength": 160 },
-        "method": { "enum": ["context.get", "projects.list", "releases.list", "audit.list", "storage.info", "telemetry.emit"] },
+        "method": {
+          "enum": [
+            "context.get",
+            "projects.list",
+            "releases.list",
+            "audit.list",
+            "storage.info",
+            "telemetry.emit"
+          ]
+        },
         "params": { "type": "object" }
       }
     },
@@ -20,7 +29,7 @@
       "additionalProperties": false,
       "required": ["protocol", "type", "id"],
       "properties": {
-        "protocol": { "const": "neverextensions.admin-rpc.v1" },
+        "protocol": { "const": "extensions.admin-rpc.v1" },
         "type": { "const": "rpc.response" },
         "id": { "type": "string", "minLength": 1, "maxLength": 160 },
         "result": {},
@@ -32,7 +41,7 @@
       "additionalProperties": false,
       "required": ["protocol", "type", "context"],
       "properties": {
-        "protocol": { "const": "neverextensions.admin-rpc.v1" },
+        "protocol": { "const": "extensions.admin-rpc.v1" },
         "type": { "const": "host.context" },
         "context": { "type": "object", "additionalProperties": true }
       }
@@ -42,7 +51,7 @@
       "additionalProperties": false,
       "required": ["protocol", "type", "actionId", "pageId"],
       "properties": {
-        "protocol": { "const": "neverextensions.admin-rpc.v1" },
+        "protocol": { "const": "extensions.admin-rpc.v1" },
         "type": { "const": "host.action" },
         "actionId": { "type": "string" },
         "pageId": { "type": "string" }

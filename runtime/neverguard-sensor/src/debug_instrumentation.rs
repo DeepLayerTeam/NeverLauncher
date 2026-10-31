@@ -70,7 +70,7 @@ pub fn initialize() -> Result<DebugInstrumentationSnapshot, String> {
     let snapshot = snapshot_for_state(&state);
     *DEBUG_STATE
         .lock()
-        .map_err(|_| "NeverGuard Debug & Instrumentation Guard state lock poisoned".to_string())? =
+        .map_err(|_| "Guard Debug & Instrumentation Guard state lock poisoned".to_string())? =
         Some(state);
     Ok(snapshot)
 }
@@ -80,12 +80,12 @@ pub fn reconcile_and_verify() -> Result<DebugInstrumentationSnapshot, String> {
     reject_debug_state(indicators)?;
     let mut guard = DEBUG_STATE
         .lock()
-        .map_err(|_| "NeverGuard Debug & Instrumentation Guard state lock poisoned".to_string())?;
+        .map_err(|_| "Guard Debug & Instrumentation Guard state lock poisoned".to_string())?;
     let state = guard
         .as_mut()
-        .ok_or_else(|| "NeverGuard Debug & Instrumentation Guard is not initialized".to_string())?;
+        .ok_or_else(|| "Guard Debug & Instrumentation Guard is not initialized".to_string())?;
     if !state.active || !state.healthy {
-        return Err("NeverGuard Debug & Instrumentation Guard is not active/healthy".to_string());
+        return Err("Guard Debug & Instrumentation Guard is not active/healthy".to_string());
     }
     state.last = indicators;
     state.integrity_check_count = state.integrity_check_count.saturating_add(1);
@@ -103,7 +103,7 @@ fn query_debug_indicators() -> Result<DebugIndicators, String> {
     // размера, принадлежащими вызывающему коду. Память чужих процессов не читается и не изменяется.
     let process = unsafe { GetCurrentProcess() };
     if process.is_null() {
-        return Err("NeverGuard Debug & Instrumentation Guard cannot obtain current process handle".to_string());
+        return Err("Guard Debug & Instrumentation Guard cannot obtain current process handle".to_string());
     }
 
     let debugger_present = unsafe { IsDebuggerPresent() } != 0;
@@ -112,7 +112,7 @@ fn query_debug_indicators() -> Result<DebugIndicators, String> {
     let remote_ok = unsafe { CheckRemoteDebuggerPresent(process, &mut remote_present) } != 0;
     if !remote_ok {
         return Err(format!(
-            "NeverGuard Debug & Instrumentation Guard CheckRemoteDebuggerPresent failed: {}",
+            "Guard Debug & Instrumentation Guard CheckRemoteDebuggerPresent failed: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -173,13 +173,13 @@ fn query_process_information(
             return Ok(());
         }
         return Err(format!(
-            "NeverGuard Debug & Instrumentation Guard {label} query failed: NTSTATUS=0x{:08X}",
+            "Guard Debug & Instrumentation Guard {label} query failed: NTSTATUS=0x{:08X}",
             status as u32
         ));
     }
     if returned != 0 && returned > output_len {
         return Err(format!(
-            "NeverGuard Debug & Instrumentation Guard {label} returned oversized state"
+            "Guard Debug & Instrumentation Guard {label} returned oversized state"
         ));
     }
     Ok(())
@@ -193,7 +193,7 @@ fn reject_debug_state(indicators: DebugIndicators) -> Result<(), String> {
         || !indicators.debug_flags_no_debug_inherit
     {
         return Err(format!(
-            "NeverGuard Debug & Instrumentation Guard detected debugger boundary: local={}, remote={}, port={}, object={}, noDebugInherit={}",
+            "Guard Debug & Instrumentation Guard detected debugger boundary: local={}, remote={}, port={}, object={}, noDebugInherit={}",
             indicators.debugger_present,
             indicators.remote_debugger_present,
             indicators.debug_port_present,

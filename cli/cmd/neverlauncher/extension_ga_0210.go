@@ -154,7 +154,7 @@ func extensionUpgradeSource0210(args []string) error {
 
 func atomicWriteCLI0210(path string, data []byte, mode fs.FileMode) error {
 	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, ".neverextensions-ga-*.tmp")
+	tmp, err := os.CreateTemp(dir, ".extensions-ga-*.tmp")
 	if err != nil {
 		return err
 	}

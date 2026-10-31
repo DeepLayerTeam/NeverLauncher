@@ -17,24 +17,31 @@ sys.modules[spec.name] = mod
 spec.loader.exec_module(mod)
 
 
-def synthetic_result(java_major: int, repository: str = "DeepLayerTeam/NeverLauncher", commit: str = "a" * 40, run_id: str = "123"):
+def synthetic_result(
+    java_major: int,
+    repository: str = "DeepLayerTeam/NeverLauncher",
+    commit: str = "a" * 40,
+    run_id: str = "123",
+):
     artifacts = {}
     for name in ["sensor", "memoryProbe", "threadProbe", "debugProbe", "jvmProbe"]:
         artifacts[name] = {"name": name, "size": 1, "sha256": "1" * 64}
     scenarios = []
     for scenario in mod.SCENARIOS:
-        scenarios.append({
-            "id": scenario.id,
-            "kind": scenario.kind,
-            "test": scenario.test_name,
-            "description": scenario.description,
-            "status": "passed",
-            "exitCode": 0,
-            "timedOut": False,
-            "durationMs": 1,
-            "outputSha256": "2" * 64,
-            "outputBytes": 1,
-        })
+        scenarios.append(
+            {
+                "id": scenario.id,
+                "kind": scenario.kind,
+                "test": scenario.test_name,
+                "description": scenario.description,
+                "status": "passed",
+                "exitCode": 0,
+                "timedOut": False,
+                "durationMs": 1,
+                "outputSha256": "2" * 64,
+                "outputBytes": 1,
+            }
+        )
     payload = {
         "schemaVersion": mod.SCHEMA_VERSION,
         "kind": "neverlauncher-windows-adversarial-result",
@@ -48,8 +55,12 @@ def synthetic_result(java_major: int, repository: str = "DeepLayerTeam/NeverLaun
         "rustcVersionOutputSha256": "4" * 64,
         "artifacts": artifacts,
         "scenarios": scenarios,
-        "compatibilityScenarioCount": sum(1 for row in scenarios if row["kind"] == "compatibility"),
-        "adversarialScenarioCount": sum(1 for row in scenarios if row["kind"] == "adversarial"),
+        "compatibilityScenarioCount": sum(
+            1 for row in scenarios if row["kind"] == "compatibility"
+        ),
+        "adversarialScenarioCount": sum(
+            1 for row in scenarios if row["kind"] == "adversarial"
+        ),
         "allRequiredScenariosPassed": True,
         "status": "passed",
     }
@@ -59,9 +70,15 @@ def synthetic_result(java_major: int, repository: str = "DeepLayerTeam/NeverLaun
 
 class WindowsAdversarialTests(unittest.TestCase):
     def test_module_guard_first_heartbeat_is_an_authenticated_sensor_event(self):
-        source = (Path(__file__).resolve().parents[2] / "runtime/neverguard-sensor/src/lib.rs").read_text(encoding="utf-8")
-        worker = source.split("fn module_worker(", 1)[1].split("/// JVM native-agent entry point.", 1)[0]
-        initial = worker.split("let startup_heartbeat = RawModuleEvent {", 1)[1].split("    loop {", 1)[0]
+        source = (
+            Path(__file__).resolve().parents[2] / "runtime/guard-sensor/src/lib.rs"
+        ).read_text(encoding="utf-8")
+        worker = source.split("fn module_worker(", 1)[1].split(
+            "/// JVM native-agent entry point.", 1
+        )[0]
+        initial = worker.split("let startup_heartbeat = RawModuleEvent {", 1)[1].split(
+            "    loop {", 1
+        )[0]
         self.assertIn("reason: MODULE_EVENT_REASON_HEARTBEAT", initial)
         self.assertIn("write_module_event(", initial)
         self.assertIn("&channel.secret,", initial)
@@ -71,12 +88,25 @@ class WindowsAdversarialTests(unittest.TestCase):
 
     def test_valid_result_is_accepted(self):
         payload = synthetic_result(21)
-        self.assertEqual([], mod.validate_result(payload, repository=payload["repository"], commit=payload["commit"], run_id=payload["runId"]))
+        self.assertEqual(
+            [],
+            mod.validate_result(
+                payload,
+                repository=payload["repository"],
+                commit=payload["commit"],
+                run_id=payload["runId"],
+            ),
+        )
 
     def test_tampered_scenario_is_rejected(self):
         payload = synthetic_result(21)
         payload["scenarios"][5]["status"] = "failed"
-        errors = mod.validate_result(payload, repository=payload["repository"], commit=payload["commit"], run_id=payload["runId"])
+        errors = mod.validate_result(
+            payload,
+            repository=payload["repository"],
+            commit=payload["commit"],
+            run_id=payload["runId"],
+        )
         self.assertTrue(any("scenario failed" in err for err in errors))
         self.assertTrue(any("evidenceRootSha256 mismatch" in err for err in errors))
 
@@ -86,7 +116,9 @@ class WindowsAdversarialTests(unittest.TestCase):
             for major in mod.CERTIFIED_JAVA_MAJORS[:-1]:
                 directory = root / f"java-{major}"
                 directory.mkdir()
-                (directory / "windows-adversarial-result.json").write_text(json.dumps(synthetic_result(major)), encoding="utf-8")
+                (directory / "windows-adversarial-result.json").write_text(
+                    json.dumps(synthetic_result(major)), encoding="utf-8"
+                )
             found, errors = mod.discover_results(root)
             self.assertEqual([], errors)
             self.assertNotIn(mod.CERTIFIED_JAVA_MAJORS[-1], found)
@@ -103,14 +135,30 @@ class WindowsAdversarialTests(unittest.TestCase):
                 directory = results / f"java-{major}"
                 directory.mkdir(parents=True)
                 (directory / "windows-adversarial-result.json").write_text(
-                    json.dumps(synthetic_result(major, repository, commit, run_id)), encoding="utf-8"
+                    json.dumps(synthetic_result(major, repository, commit, run_id)),
+                    encoding="utf-8",
                 )
-            args = SimpleNamespace(results_root=results, repository=repository, commit=commit, run_id=run_id, output_dir=output)
+            args = SimpleNamespace(
+                results_root=results,
+                repository=repository,
+                commit=commit,
+                run_id=run_id,
+                output_dir=output,
+            )
             self.assertEqual(0, mod.cmd_aggregate(args))
-            certificate = json.loads((output / "WINDOWS_ADVERSARIAL_CERTIFICATE.json").read_text(encoding="utf-8"))
+            certificate = json.loads(
+                (output / "WINDOWS_ADVERSARIAL_CERTIFICATE.json").read_text(
+                    encoding="utf-8"
+                )
+            )
             self.assertEqual(list(mod.CERTIFIED_JAVA_MAJORS), certificate["javaMajors"])
-            self.assertEqual(len(mod.SCENARIOS) * len(mod.CERTIFIED_JAVA_MAJORS), certificate["scenarioExecutions"])
-            self.assertTrue(certificate["invariants"]["allAdversarialScenariosDetected"])
+            self.assertEqual(
+                len(mod.SCENARIOS) * len(mod.CERTIFIED_JAVA_MAJORS),
+                certificate["scenarioExecutions"],
+            )
+            self.assertTrue(
+                certificate["invariants"]["allAdversarialScenariosDetected"]
+            )
             self.assertTrue(certificate["invariants"]["sensorAndFixtureHashesBound"])
 
 

@@ -1,6 +1,6 @@
 //go:build !windows && !darwin
 
-package neverextensions
+package extensions
 
 import (
 	"context"

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "feature": "NeverExtensions Trust, Recovery & Certification",
+  "feature": "Extensions Trust, Recovery & Certification",
   "targets": [
     {"id":"linux","runner":"ubuntu-latest","os":"linux","required":true},
     {"id":"windows","runner":"windows-latest","os":"windows","required":true},

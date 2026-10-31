@@ -6,12 +6,12 @@ package main
 import (
   "context"
   "fmt"
-  neverextensions "gitflic.ru/skif4er/neverlauncher/sdk/cli/go"
+  extensions "gitflic.ru/skif4er/neverlauncher/sdk/cli/go"
 )
 
 func main() {
-  neverextensions.Main(neverextensions.NewApp(
-    neverextensions.Command{Name:"status", Run: func(ctx context.Context, client *neverextensions.Client, args []string) error {
+  extensions.Main(extensions.NewApp(
+    extensions.Command{Name:"status", Run: func(ctx context.Context, client *extensions.Client, args []string) error {
       var result map[string]any
       if err := client.Capability(ctx, "extension.self", nil, &result); err != nil { return err }
       fmt.Printf("%s %v\n", client.Environment().ExtensionId, result["version"])

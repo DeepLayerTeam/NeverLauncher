@@ -8,7 +8,7 @@ RUN cd cli && CGO_ENABLED=0 go build -trimpath -o /build/neverlauncher ./cmd/nev
 FROM rust:1.91 AS runtime
 WORKDIR /build
 COPY runtime/neverruntime/ ./runtime/neverruntime/
-RUN cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime --bin neverguard
+RUN cargo build --release --manifest-path runtime/neverruntime/Cargo.toml --bin neverruntime --bin guard
 
 FROM eclipse-temurin:21-jre-noble
 ARG SOURCE_SHA
@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 COPY --from=cli /build/neverlauncher /opt/neverlauncher
 COPY --from=runtime /build/runtime/neverruntime/target/release/neverruntime /opt/neverruntime
-COPY --from=runtime /build/runtime/neverruntime/target/release/neverguard /opt/neverguard
+COPY --from=runtime /build/runtime/neverruntime/target/release/guard /opt/guard
 COPY e2e/scripts/run-staged-package-0342.py /opt/staged/run-staged-package-0342.py
 COPY e2e/scripts/staged_readiness_0343.py /opt/staged/staged_readiness_0343.py
 COPY e2e/scripts/runtime_capabilities_03410.py /opt/staged/runtime_capabilities_03410.py

@@ -26,7 +26,7 @@ func extensionAdminToken0201(t *testing.T, h http.Handler) string {
 	return session.Token
 }
 
-func TestNeverExtensionsCoreHTTP0201(t *testing.T) {
+func TestExtensionsCoreHTTP0201(t *testing.T) {
 	h := p1CanonicalServer(t)
 	token := extensionAdminToken0201(t, h)
 	manifest := `{

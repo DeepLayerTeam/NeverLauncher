@@ -207,42 +207,42 @@ static LAST_UNKNOWN_CALLER: AtomicUsize = AtomicUsize::new(0);
 
 pub fn initialize(java_vm: *mut c_void) -> Result<JvmAwareSnapshot, String> {
     if java_vm.is_null() {
-        return Err("NeverGuard JVM-Aware Protection received null JavaVM".to_string());
+        return Err("Guard JVM-Aware Protection received null JavaVM".to_string());
     }
     let identity = inspect_jvm_identity()?;
     if !CERTIFIED_JAVA_MAJORS.contains(&identity.java_major) {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection unsupported Java major {}; certified majors are 8/16/17/21/25",
+            "Guard JVM-Aware Protection unsupported Java major {}; certified majors are 8/16/17/21/25",
             identity.java_major
         ));
     }
     let end = identity
         .module_base
         .checked_add(identity.module_size as usize)
-        .ok_or_else(|| "NeverGuard JVM-Aware Protection jvm.dll address range overflow".to_string())?;
+        .ok_or_else(|| "Guard JVM-Aware Protection jvm.dll address range overflow".to_string())?;
 
     let (sensor_base, sensor_end) = current_sensor_image_range()?;
     let system_dispatchers = resolve_system_dispatchers()?;
     if let Some(existing) = TRUSTED_SYSTEM_DISPATCHERS.get() {
         if existing != &system_dispatchers {
-            return Err("NeverGuard JVM-Aware Protection system module identity drift".to_string());
+            return Err("Guard JVM-Aware Protection system module identity drift".to_string());
         }
     } else {
         TRUSTED_SYSTEM_DISPATCHERS
             .set(system_dispatchers)
-            .map_err(|_| "NeverGuard JVM-Aware Protection system dispatcher initialization race".to_string())?;
+            .map_err(|_| "Guard JVM-Aware Protection system dispatcher initialization race".to_string())?;
     }
 
     let launch_root = std::env::current_dir()
         .and_then(std::fs::canonicalize)
-        .map_err(|err| format!("NeverGuard JVM-Aware cannot resolve native launch root: {err}"))?;
+        .map_err(|err| format!("Guard JVM-Aware cannot resolve native launch root: {err}"))?;
     if let Some(existing) = VERIFIED_NATIVE_LAUNCH_ROOT.get() {
         if existing != &launch_root {
-            return Err("NeverGuard JVM-Aware native launch root changed".to_string());
+            return Err("Guard JVM-Aware native launch root changed".to_string());
         }
     } else {
         VERIFIED_NATIVE_LAUNCH_ROOT.set(launch_root)
-            .map_err(|_| "NeverGuard JVM-Aware native launch root initialization race".to_string())?;
+            .map_err(|_| "Guard JVM-Aware native launch root initialization race".to_string())?;
     }
     RUNTIME_NATIVE_LOAD_FAILED.store(false, Ordering::Release);
 
@@ -270,7 +270,7 @@ pub fn initialize(java_vm: *mut c_void) -> Result<JvmAwareSnapshot, String> {
     let snapshot = snapshot_for_state(&state);
     *JVM_STATE
         .lock()
-        .map_err(|_| "NeverGuard JVM-Aware Protection state lock poisoned".to_string())? =
+        .map_err(|_| "Guard JVM-Aware Protection state lock poisoned".to_string())? =
         Some(state);
     Ok(snapshot)
 }
@@ -295,25 +295,25 @@ fn is_verified_lwjgl_caller(address: usize) -> bool {
 
 fn check_verified_lwjgl_image(native: &VerifiedNativeImage) -> Result<(), String> {
     let bytes = std::fs::read(&native.canonical_path)
-        .map_err(|err| format!("NeverGuard JVM-Aware LWJGL image disappeared: {err}"))?;
+        .map_err(|err| format!("Guard JVM-Aware LWJGL image disappeared: {err}"))?;
     let mut digest = [0u8; 32];
     digest.copy_from_slice(&Sha256::digest(&bytes));
     if digest != native.file_sha256 {
-        return Err("NeverGuard JVM-Aware LWJGL image content changed".to_string());
+        return Err("Guard JVM-Aware LWJGL image content changed".to_string());
     }
     Ok(())
 }
 
 pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
     if RUNTIME_NATIVE_LOAD_FAILED.load(Ordering::Acquire) {
-        return Err("NeverGuard JVM-Aware rejected unexpected LWJGL native image".to_string());
+        return Err("Guard JVM-Aware rejected unexpected LWJGL native image".to_string());
     }
     if let Some(native) = VERIFIED_LWJGL_IMAGE.get() {
         // Each image is loader-pinned; rehash disk bytes on every heartbeat.
         check_verified_lwjgl_image(native)?;
     }
     for native in ADDITIONAL_LWJGL_IMAGES.lock()
-        .map_err(|_| "NeverGuard JVM-Aware native image registry lock poisoned".to_string())?
+        .map_err(|_| "Guard JVM-Aware native image registry lock poisoned".to_string())?
         .iter()
     {
         check_verified_lwjgl_image(native)?;
@@ -327,7 +327,7 @@ pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
     if foreign != 0 {
         let caller = LAST_FOREIGN_CALLER.load(Ordering::Acquire);
         return Err(format!(
-            "NeverGuard JVM-Aware Protection rejected {foreign} executable MEM_PRIVATE transition(s) outside jvm.dll provenance; last caller=0x{caller:X}, module={}",
+            "Guard JVM-Aware Protection rejected {foreign} executable MEM_PRIVATE transition(s) outside jvm.dll provenance; last caller=0x{caller:X}, module={}",
             caller_module_basename(caller)
         ));
     }
@@ -335,7 +335,7 @@ pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
     if unknown != 0 {
         let caller = LAST_UNKNOWN_CALLER.load(Ordering::Acquire);
         return Err(format!(
-            "NeverGuard JVM-Aware Protection rejected {unknown} executable MEM_PRIVATE transition(s) with unknown JVM provenance; last caller=0x{caller:X}, module={}",
+            "Guard JVM-Aware Protection rejected {unknown} executable MEM_PRIVATE transition(s) with unknown JVM provenance; last caller=0x{caller:X}, module={}",
             caller_module_basename(caller)
         ));
     }
@@ -343,12 +343,12 @@ pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
     let current = inspect_jvm_identity()?;
     let mut guard = JVM_STATE
         .lock()
-        .map_err(|_| "NeverGuard JVM-Aware Protection state lock poisoned".to_string())?;
+        .map_err(|_| "Guard JVM-Aware Protection state lock poisoned".to_string())?;
     let state = guard
         .as_mut()
-        .ok_or_else(|| "NeverGuard JVM-Aware Protection is not initialized".to_string())?;
+        .ok_or_else(|| "Guard JVM-Aware Protection is not initialized".to_string())?;
     if !state.active || !state.healthy || !JVM_ACTIVE.load(Ordering::Acquire) {
-        return Err("NeverGuard JVM-Aware Protection is not active/healthy".to_string());
+        return Err("Guard JVM-Aware Protection is not active/healthy".to_string());
     }
     if current.java_major != state.identity.java_major
         || current.module_base != state.identity.module_base
@@ -356,7 +356,7 @@ pub fn reconcile_and_verify() -> Result<JvmAwareSnapshot, String> {
         || current.path_sha256 != state.identity.path_sha256
     {
         state.healthy = false;
-        return Err("NeverGuard JVM-Aware Protection jvm.dll identity drift detected".to_string());
+        return Err("Guard JVM-Aware Protection jvm.dll identity drift detected".to_string());
     }
     state.integrity_check_count = state.integrity_check_count.saturating_add(1);
     Ok(snapshot_for_state(state))
@@ -398,7 +398,7 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
     let mut directory = [0u16; MAX_MODULE_PATH];
     let len = unsafe { GetSystemDirectoryW(directory.as_mut_ptr(), directory.len() as u32) } as usize;
     if len == 0 || len >= directory.len() {
-        return Err("NeverGuard JVM-Aware Protection cannot resolve System32".to_string());
+        return Err("Guard JVM-Aware Protection cannot resolve System32".to_string());
     }
     let system_root = String::from_utf16_lossy(&directory[..len])
         .trim_end_matches('\\')
@@ -413,28 +413,28 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
     // from introducing an unclassified dispatcher in the middle of JIT work.
     let jvm_module = unsafe { GetModuleHandleW(wide_null("jvm.dll").as_ptr()) };
     if jvm_module.is_null() {
-        return Err("NeverGuard JVM-Aware Protection cannot locate jvm.dll for OpenGL provenance".to_string());
+        return Err("Guard JVM-Aware Protection cannot locate jvm.dll for OpenGL provenance".to_string());
     }
     let jvm_path = module_path(jvm_module)?;
     let jvm_dir = std::path::Path::new(&jvm_path).parent()
-        .ok_or_else(|| "NeverGuard JVM-Aware Protection invalid jvm.dll directory".to_string())?;
+        .ok_or_else(|| "Guard JVM-Aware Protection invalid jvm.dll directory".to_string())?;
     let jvm_dir_name = jvm_dir.file_name().and_then(|name| name.to_str()).unwrap_or("");
     let jvm_bin = jvm_dir.parent()
-        .ok_or_else(|| "NeverGuard JVM-Aware Protection missing JVM bin directory".to_string())?;
+        .ok_or_else(|| "Guard JVM-Aware Protection missing JVM bin directory".to_string())?;
     if !(jvm_dir_name.eq_ignore_ascii_case("server") || jvm_dir_name.eq_ignore_ascii_case("client"))
         || !jvm_bin.file_name().and_then(|name| name.to_str()).unwrap_or("").eq_ignore_ascii_case("bin")
     {
-        return Err("NeverGuard JVM-Aware Protection unexpected JVM directory layout".to_string());
+        return Err("Guard JVM-Aware Protection unexpected JVM directory layout".to_string());
     }
     let runtime_opengl = jvm_bin.join("opengl32.dll");
     let runtime_opengl_metadata = std::fs::symlink_metadata(&runtime_opengl);
     let runtime_opengl_exists = match runtime_opengl_metadata {
         Ok(ref metadata) if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 => {
-            return Err("NeverGuard JVM-Aware Protection rejected non-regular Java runtime OpenGL image".to_string());
+            return Err("Guard JVM-Aware Protection rejected non-regular Java runtime OpenGL image".to_string());
         }
         Ok(_) => true,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => false,
-        Err(err) => return Err(format!("NeverGuard JVM-Aware Protection cannot inspect Java runtime OpenGL image: {err}")),
+        Err(err) => return Err(format!("Guard JVM-Aware Protection cannot inspect Java runtime OpenGL image: {err}")),
     };
     for name in ["ntdll.dll", "kernel32.dll", "kernelbase.dll", "ucrtbase.dll", "opengl32.dll"] {
         let wide = wide_null(name);
@@ -457,33 +457,33 @@ fn resolve_system_dispatchers() -> Result<Vec<(usize, usize)>, String> {
         };
         if module.is_null() {
             if name == "opengl32.dll" {
-                return Err(format!("NeverGuard JVM-Aware Protection cannot load verified OpenGL dispatcher: {}", std::io::Error::last_os_error()));
+                return Err(format!("Guard JVM-Aware Protection cannot load verified OpenGL dispatcher: {}", std::io::Error::last_os_error()));
             }
             continue;
         }
         let mut path = [0u16; MAX_MODULE_PATH];
         let count = unsafe { GetModuleFileNameW(module, path.as_mut_ptr(), path.len() as u32) } as usize;
         if count == 0 || count >= path.len() {
-            return Err(format!("NeverGuard JVM-Aware Protection cannot identify {name}"));
+            return Err(format!("Guard JVM-Aware Protection cannot identify {name}"));
         }
         let loaded_path = String::from_utf16_lossy(&path[..count]).replace('/', "\\").to_ascii_lowercase();
         if loaded_path != expected_path {
-            return Err(format!("NeverGuard JVM-Aware Protection unexpected dispatcher image location: {name}"));
+            return Err(format!("Guard JVM-Aware Protection unexpected dispatcher image location: {name}"));
         }
         let mut info = ModuleInfo::default();
         let ok = unsafe {
             K32GetModuleInformation(GetCurrentProcess(), module, &mut info, size_of::<ModuleInfo>() as u32)
         };
         if ok == 0 || info.size_of_image == 0 {
-            return Err(format!("NeverGuard JVM-Aware Protection cannot inspect {name}"));
+            return Err(format!("Guard JVM-Aware Protection cannot inspect {name}"));
         }
         let base = info.base_of_dll as usize;
         let end = base.checked_add(info.size_of_image as usize)
-            .ok_or_else(|| format!("NeverGuard JVM-Aware Protection {name} image overflow"))?;
+            .ok_or_else(|| format!("Guard JVM-Aware Protection {name} image overflow"))?;
         ranges.push((base, end));
     }
     if ranges.is_empty() {
-        return Err("NeverGuard JVM-Aware Protection no verified dispatchers".to_string());
+        return Err("Guard JVM-Aware Protection no verified dispatchers".to_string());
     }
     Ok(ranges)
 }
@@ -537,9 +537,9 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
         // Serialize duplicate LoadLibrary notifications and registration from
         // the heartbeat path. No locks are acquired by VirtualAlloc hooks.
         let _registration_guard = LWJGL_REGISTRATION_LOCK.lock()
-            .map_err(|_| "NeverGuard JVM-Aware native registration lock poisoned".to_string())?;
+            .map_err(|_| "Guard JVM-Aware native registration lock poisoned".to_string())?;
         let launch_root = VERIFIED_NATIVE_LAUNCH_ROOT.get()
-            .ok_or_else(|| "NeverGuard JVM-Aware missing pinned native launch root".to_string())?;
+            .ok_or_else(|| "Guard JVM-Aware missing pinned native launch root".to_string())?;
         let native_root = launch_root.join("natives").join("windows")
             .join(std::env::consts::ARCH);
         // The materialized Mojang LWJGL classifier preserves its archive
@@ -550,7 +550,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
         let classifier_arch = match std::env::consts::ARCH {
             "x86_64" => "x64",
             "aarch64" => "arm64",
-            arch => return Err(format!("NeverGuard JVM-Aware unsupported LWJGL architecture: {arch}")),
+            arch => return Err(format!("Guard JVM-Aware unsupported LWJGL architecture: {arch}")),
         };
         let extract_root = launch_root.join(".neverlauncher").join("lwjgl-extract")
             .join("windows").join(std::env::consts::ARCH);
@@ -563,7 +563,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
             extract_root.join("lwjgl.dll"),
         ];
         let canonical_path = std::fs::canonicalize(&loaded)
-            .map_err(|err| format!("NeverGuard JVM-Aware cannot canonicalize LWJGL: {err}"))?;
+            .map_err(|err| format!("Guard JVM-Aware cannot canonicalize LWJGL: {err}"))?;
         // LWJGL 3 extracts to <pinned-root>/<version>/<platform>/lwjgl.dll
         // (e.g. 3.4.3+4/x64). Derive only this exact layout from the actual
         // loader-reported path. Arbitrary descendants are never trusted.
@@ -596,23 +596,23 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
             while component != launch_root.as_path() {
                 match std::fs::symlink_metadata(component) {
                     Ok(metadata) if metadata.file_type().is_symlink() => {
-                        return Err("NeverGuard JVM-Aware rejected reparse/symlink native path".to_string());
+                        return Err("Guard JVM-Aware rejected reparse/symlink native path".to_string());
                     }
                     Ok(_) => {},
                     Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
                         safe = false;
                         break;
                     }
-                    Err(err) => return Err(format!("NeverGuard JVM-Aware native path inspection failed: {err}")),
+                    Err(err) => return Err(format!("Guard JVM-Aware native path inspection failed: {err}")),
                 }
                 component = component.parent()
-                    .ok_or_else(|| "NeverGuard JVM-Aware invalid native directory ancestry".to_string())?;
+                    .ok_or_else(|| "Guard JVM-Aware invalid native directory ancestry".to_string())?;
             }
             if !safe { continue; }
             let expected_path = std::fs::canonicalize(expected)
-                .map_err(|err| format!("NeverGuard JVM-Aware cannot find expected native: {err}"))?;
+                .map_err(|err| format!("Guard JVM-Aware cannot find expected native: {err}"))?;
             if !expected_path.starts_with(launch_root) {
-                return Err("NeverGuard JVM-Aware native path escapes the launch root".to_string());
+                return Err("Guard JVM-Aware native path escapes the launch root".to_string());
             }
             if canonical_path.to_string_lossy().eq_ignore_ascii_case(&expected_path.to_string_lossy()) {
                 matched = Some(candidate_index);
@@ -623,23 +623,23 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
             let location = canonical_path.strip_prefix(launch_root)
                 .map(|relative| relative.to_string_lossy().chars().take(180).collect::<String>())
                 .unwrap_or_else(|_| "outside pinned client root".to_string());
-            format!("NeverGuard JVM-Aware LWJGL loaded outside certified natives directory ({location})")
+            format!("Guard JVM-Aware LWJGL loaded outside certified natives directory ({location})")
         })?;
         let metadata = std::fs::symlink_metadata(&loaded)
-            .map_err(|err| format!("NeverGuard JVM-Aware cannot inspect LWJGL native: {err}"))?;
+            .map_err(|err| format!("Guard JVM-Aware cannot inspect LWJGL native: {err}"))?;
         if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() == 0 {
-            return Err("NeverGuard JVM-Aware LWJGL native is not a regular file".to_string());
+            return Err("Guard JVM-Aware LWJGL native is not a regular file".to_string());
         }
         let mut info = ModuleInfo::default();
         if unsafe { K32GetModuleInformation(GetCurrentProcess(), module, &mut info,
             size_of::<ModuleInfo>() as u32) } == 0 || info.size_of_image == 0 {
-            return Err("NeverGuard JVM-Aware cannot inspect loaded LWJGL image".to_string());
+            return Err("Guard JVM-Aware cannot inspect loaded LWJGL image".to_string());
         }
         let base = info.base_of_dll as usize;
         let end = base.checked_add(info.size_of_image as usize)
-            .ok_or_else(|| "NeverGuard JVM-Aware LWJGL module address overflow".to_string())?;
+            .ok_or_else(|| "Guard JVM-Aware LWJGL module address overflow".to_string())?;
         let bytes = std::fs::read(&canonical_path)
-            .map_err(|err| format!("NeverGuard JVM-Aware cannot hash LWJGL image: {err}"))?;
+            .map_err(|err| format!("Guard JVM-Aware cannot hash LWJGL image: {err}"))?;
         let mut file_sha256 = [0u8; 32];
         file_sha256.copy_from_slice(&Sha256::digest(&bytes));
         if matched == 2 || matched == 3 {
@@ -651,27 +651,27 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
             let mut current = certified.as_path();
             while current != launch_root.as_path() {
                 let metadata = std::fs::symlink_metadata(current)
-                    .map_err(|err| format!("NeverGuard JVM-Aware cannot inspect certified LWJGL component: {err}"))?;
+                    .map_err(|err| format!("Guard JVM-Aware cannot inspect certified LWJGL component: {err}"))?;
                 if metadata.file_type().is_symlink() {
-                    return Err("NeverGuard JVM-Aware certified LWJGL path contains reparse/symlink".to_string());
+                    return Err("Guard JVM-Aware certified LWJGL path contains reparse/symlink".to_string());
                 }
                 current = current.parent().ok_or_else(||
-                    "NeverGuard JVM-Aware invalid certified LWJGL ancestry".to_string())?;
+                    "Guard JVM-Aware invalid certified LWJGL ancestry".to_string())?;
             }
             let canonical_certified = std::fs::canonicalize(certified)
-                .map_err(|err| format!("NeverGuard JVM-Aware cannot canonicalize certified LWJGL: {err}"))?;
+                .map_err(|err| format!("Guard JVM-Aware cannot canonicalize certified LWJGL: {err}"))?;
             if !canonical_certified.starts_with(launch_root) {
-                return Err("NeverGuard JVM-Aware certified LWJGL escapes pinned client root".to_string());
+                return Err("Guard JVM-Aware certified LWJGL escapes pinned client root".to_string());
             }
             let metadata = std::fs::metadata(&canonical_certified)
-                .map_err(|err| format!("NeverGuard JVM-Aware certified LWJGL metadata failed: {err}"))?;
+                .map_err(|err| format!("Guard JVM-Aware certified LWJGL metadata failed: {err}"))?;
             if !metadata.is_file() || metadata.len() == 0 {
-                return Err("NeverGuard JVM-Aware certified LWJGL is not a regular file".to_string());
+                return Err("Guard JVM-Aware certified LWJGL is not a regular file".to_string());
             }
             let expected_digest = Sha256::digest(std::fs::read(&canonical_certified)
-                .map_err(|err| format!("NeverGuard JVM-Aware cannot hash certified LWJGL: {err}"))?);
+                .map_err(|err| format!("Guard JVM-Aware cannot hash certified LWJGL: {err}"))?);
             if file_sha256.as_slice() != expected_digest.as_slice() {
-                return Err("NeverGuard JVM-Aware extracted LWJGL differs from certified package image".to_string());
+                return Err("Guard JVM-Aware extracted LWJGL differs from certified package image".to_string());
             }
         }
         // A second LWJGL mapping may be loaded by another classloader.
@@ -683,31 +683,31 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
                 return Ok(());
             }
             if existing.file_sha256 != file_sha256 || existing.base == base {
-                return Err("NeverGuard JVM-Aware unexpected LWJGL module replacement".to_string());
+                return Err("Guard JVM-Aware unexpected LWJGL module replacement".to_string());
             }
         }
         let mut additional = ADDITIONAL_LWJGL_IMAGES.lock()
-            .map_err(|_| "NeverGuard JVM-Aware additional native registry lock poisoned".to_string())?;
+            .map_err(|_| "Guard JVM-Aware additional native registry lock poisoned".to_string())?;
         if additional.iter().any(|image| image.base == base && image.end == end
             && image.canonical_path == canonical_path && image.file_sha256 == file_sha256) {
             return Ok(());
         }
         if additional.iter().any(|image| image.base == base) {
-            return Err("NeverGuard JVM-Aware unexpected LWJGL module replacement".to_string());
+            return Err("Guard JVM-Aware unexpected LWJGL module replacement".to_string());
         }
         if VERIFIED_LWJGL_IMAGE.get().is_some() && additional.len() >= MAX_ADDITIONAL_LWJGL_IMAGES {
-            return Err("NeverGuard JVM-Aware too many verified LWJGL modules".to_string());
+            return Err("Guard JVM-Aware too many verified LWJGL modules".to_string());
         }
         // Permanently pin each validated DLL before publishing its range.
         let mut pinned = std::ptr::null_mut();
         if unsafe { GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
             base as *const u16, &mut pinned) } == 0 || pinned != module {
-            return Err("NeverGuard JVM-Aware cannot pin verified LWJGL module".to_string());
+            return Err("Guard JVM-Aware cannot pin verified LWJGL module".to_string());
         }
         let verified = VerifiedNativeImage { base, end, canonical_path, file_sha256 };
         if VERIFIED_LWJGL_IMAGE.get().is_none() {
             VERIFIED_LWJGL_IMAGE.set(verified)
-                .map_err(|_| "NeverGuard JVM-Aware LWJGL registration race".to_string())
+                .map_err(|_| "Guard JVM-Aware LWJGL registration race".to_string())
         } else {
             let index = additional.len();
             additional.push(verified);
@@ -722,7 +722,7 @@ pub fn register_loaded_native_dispatcher(module: *mut c_void) -> Result<(), Stri
     result
 }
 
-/// Захватывает цепочку вызовов внутри обёртки IAT NeverGuard. Реализация памяти
+/// Захватывает цепочку вызовов внутри обёртки IAT Guard. Реализация памяти
 /// HotSpot для Windows вызывает VirtualAlloc/VirtualProtect из jvm.dll, поэтому
 /// допустимый JIT-переход или изменение кеша кода должны иметь прямой внешний
 /// вызов из неизменяемого диапазона образа jvm.dll. Операция не выделяет память.
@@ -855,7 +855,7 @@ fn current_sensor_image_range() -> Result<(usize, usize), String> {
     let flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
     if unsafe { GetModuleHandleExW(flags, address, &mut module) } == 0 || module.is_null() {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot resolve Sensor module: {}",
+            "Guard JVM-Aware Protection cannot resolve Sensor module: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -872,14 +872,14 @@ fn current_sensor_image_range() -> Result<(usize, usize), String> {
         || info.size_of_image == 0
     {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot query Sensor module information: {}",
+            "Guard JVM-Aware Protection cannot query Sensor module information: {}",
             std::io::Error::last_os_error()
         ));
     }
     let base = info.base_of_dll as usize;
     let end = base
         .checked_add(info.size_of_image as usize)
-        .ok_or_else(|| "NeverGuard JVM-Aware Protection Sensor address range overflow".to_string())?;
+        .ok_or_else(|| "Guard JVM-Aware Protection Sensor address range overflow".to_string())?;
     Ok((base, end))
 }
 
@@ -901,7 +901,7 @@ fn count_private_executable_regions() -> Result<u32, String> {
         let base = info.base_address as usize;
         let size = info.region_size;
         if size == 0 {
-            return Err("NeverGuard JVM-Aware Protection VirtualQuery returned zero region size".to_string());
+            return Err("Guard JVM-Aware Protection VirtualQuery returned zero region size".to_string());
         }
         if info.state == MEM_COMMIT
             && info.kind == MEM_PRIVATE
@@ -912,9 +912,9 @@ fn count_private_executable_regions() -> Result<u32, String> {
         }
         let next = base
             .checked_add(size)
-            .ok_or_else(|| "NeverGuard JVM-Aware Protection address-space overflow".to_string())?;
+            .ok_or_else(|| "Guard JVM-Aware Protection address-space overflow".to_string())?;
         if next <= cursor {
-            return Err("NeverGuard JVM-Aware Protection VirtualQuery did not advance".to_string());
+            return Err("Guard JVM-Aware Protection VirtualQuery did not advance".to_string());
         }
         cursor = next;
     }
@@ -925,7 +925,7 @@ fn inspect_jvm_identity() -> Result<JvmIdentity, String> {
     let jvm_name = wide_null("jvm.dll");
     let module = unsafe { GetModuleHandleW(jvm_name.as_ptr()) };
     if module.is_null() {
-        return Err("NeverGuard JVM-Aware Protection cannot locate loaded jvm.dll".to_string());
+        return Err("Guard JVM-Aware Protection cannot locate loaded jvm.dll".to_string());
     }
 
     let mut info = ModuleInfo::default();
@@ -941,7 +941,7 @@ fn inspect_jvm_identity() -> Result<JvmIdentity, String> {
         || info.size_of_image == 0
     {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot query jvm.dll module information: {}",
+            "Guard JVM-Aware Protection cannot query jvm.dll module information: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -964,7 +964,7 @@ fn module_path(module: *mut c_void) -> Result<String, String> {
         as usize;
     if length == 0 || length >= buffer.len() {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot resolve jvm.dll path: {}",
+            "Guard JVM-Aware Protection cannot resolve jvm.dll path: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -977,7 +977,7 @@ fn file_java_major(path: &str) -> Result<u32, String> {
     let size = unsafe { GetFileVersionInfoSizeW(path_w.as_ptr(), &mut handle) };
     if size == 0 {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot read jvm.dll version resource: {}",
+            "Guard JVM-Aware Protection cannot read jvm.dll version resource: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -987,7 +987,7 @@ fn file_java_major(path: &str) -> Result<u32, String> {
     } == 0
     {
         return Err(format!(
-            "NeverGuard JVM-Aware Protection cannot load jvm.dll version resource: {}",
+            "Guard JVM-Aware Protection cannot load jvm.dll version resource: {}",
             std::io::Error::last_os_error()
         ));
     }
@@ -1005,11 +1005,11 @@ fn file_java_major(path: &str) -> Result<u32, String> {
         || value.is_null()
         || value_len < size_of::<VsFixedFileInfo>() as u32
     {
-        return Err("NeverGuard JVM-Aware Protection jvm.dll has no fixed version information".to_string());
+        return Err("Guard JVM-Aware Protection jvm.dll has no fixed version information".to_string());
     }
     let info = unsafe { &*(value as *const VsFixedFileInfo) };
     if info.signature != VS_FFI_SIGNATURE {
-        return Err("NeverGuard JVM-Aware Protection invalid jvm.dll version signature".to_string());
+        return Err("Guard JVM-Aware Protection invalid jvm.dll version signature".to_string());
     }
     let mut major = info.file_version_ms >> 16;
     let minor = info.file_version_ms & 0xFFFF;
@@ -1026,7 +1026,7 @@ fn file_java_major(path: &str) -> Result<u32, String> {
         }
     }
     if major == 0 {
-        return Err("NeverGuard JVM-Aware Protection cannot determine Java major from jvm.dll".to_string());
+        return Err("Guard JVM-Aware Protection cannot determine Java major from jvm.dll".to_string());
     }
     Ok(major)
 }
@@ -1037,7 +1037,7 @@ fn snapshot_for_state(state: &JvmAwareState) -> JvmAwareSnapshot {
     let foreign = FOREIGN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
     let unknown = UNKNOWN_EXECUTABLE_TRANSITIONS.load(Ordering::Acquire);
     let mut digest = Sha256::new();
-    digest.update(b"NeverGuard JVM-Aware Protection state v1\0");
+    digest.update(b"Guard JVM-Aware Protection state v1\0");
     digest.update(state.identity.java_major.to_le_bytes());
     digest.update((state.identity.module_base as u64).to_le_bytes());
     digest.update(state.identity.module_size.to_le_bytes());

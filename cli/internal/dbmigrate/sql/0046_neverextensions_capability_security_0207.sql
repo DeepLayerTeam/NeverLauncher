@@ -44,5 +44,5 @@ CREATE TABLE IF NOT EXISTS extension_secrets (
 CREATE INDEX IF NOT EXISTS idx_extension_secrets_lookup_0207
     ON extension_secrets(extension_id, scope, scope_id, name);
 
-COMMENT ON TABLE extension_permission_grants IS 'Explicit NeverExtensions capability approvals. Manifest permission declarations do not grant access.';
+COMMENT ON TABLE extension_permission_grants IS 'Explicit Extensions capability approvals. Manifest permission declarations do not grant access.';
 COMMENT ON TABLE extension_secrets IS 'AES-256-GCM encrypted extension secrets; plaintext is available only through the authenticated capability broker.';

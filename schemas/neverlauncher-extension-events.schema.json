@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://neverlauncher.local/schemas/neverlauncher-extension-events.schema.json",
-  "title": "NeverExtensions Event Envelope",
+  "title": "Extensions Event Envelope",
   "type": "object",
   "additionalProperties": false,
   "required": ["sequence", "id", "type", "schemaVersion", "aggregateType", "aggregateId", "orderingKey", "idempotencyKey", "source", "payload", "payloadSha256", "occurredAt", "createdAt"],

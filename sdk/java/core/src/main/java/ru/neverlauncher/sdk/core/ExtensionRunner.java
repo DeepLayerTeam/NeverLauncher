@@ -8,7 +8,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Production entrypoint for NeverExtensions backend or short-lived CLI Java targets. */
+/** Production entrypoint for Extensions backend or short-lived CLI Java targets. */
 public final class ExtensionRunner {
     private ExtensionRunner() {}
     public static void main(String[] args) throws Exception {
@@ -41,38 +41,46 @@ public final class ExtensionRunner {
         String kind=argv==null?"backend":"cli";
         if(manifest.targets().stream().noneMatch(t->t.kind().equals(kind)))throw new IllegalArgumentException("Java extension requires "+kind+" target");
         if(!kind.equals(env.getOrDefault("NEVERLAUNCHER_EXTENSION_TARGET","backend")))throw new IllegalArgumentException("host target mismatch");
-        Class<?> type=Class.forName(className);
+        // Loading without initialization prevents extension static initializers
+        // from running until the authenticated host has negotiated the API.
+        Class<?> type=Class.forName(className,false,ExtensionRunner.class.getClassLoader());
         if(!Extension.class.isAssignableFrom(type))throw new IllegalArgumentException("class does not implement Extension: "+className);
-        Extension extension=(Extension)type.getDeclaredConstructor().newInstance();
         Set<String> declared=declaredCommands(source);
         if(argv!=null&&!declared.contains(argv[0]))throw new SecurityException("undeclared CLI command");
+        java.util.concurrent.atomic.AtomicReference<ExtensionLifecycle> lifecycleRef=new java.util.concurrent.atomic.AtomicReference<>();
         try(HostSession host=HostSession.fromEnvironment(env,manifest);
             RuntimeServices services=new RuntimeServices(host,declared);
-            ExtensionLifecycle lifecycle=new ExtensionLifecycle(extension,manifest,services);
-            RuntimeCallbackServer callback=new RuntimeCallbackServer(required(env,"NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN"),services,()->lifecycle.state().name())) {
-            CountDownLatch stopping=new CountDownLatch(1);
-            AtomicBoolean shuttingDown=new AtomicBoolean();
-            Thread shutdown=new Thread(()->{
-                try{shuttingDown.set(true);lifecycle.stop(Duration.ofSeconds(3));}catch(Exception ignored){/* host supervisor can kill */}
-                finally{host.close();stopping.countDown();}
-            },"neverext-shutdown-hook");
-            Runtime.getRuntime().addShutdownHook(shutdown);
-            try {
-                host.connect(callback.url());
-                lifecycle.start(Duration.ofSeconds(8));
-                if(managed&&argv==null)host.ready();
-                if(argv!=null){
-                    Object response=services.commands().invoke(argv[0],Map.of("args",Arrays.asList(Arrays.copyOfRange(argv,1,argv.length))));
-                    System.out.println(Json.encode(response));
+            RuntimeCallbackServer callback=new RuntimeCallbackServer(required(env,"NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN"),services,
+                ()->{ExtensionLifecycle current=lifecycleRef.get();return current==null?"STARTING":current.state().name();})) {
+            // No extension constructor, static initializer or start() is invoked
+            // if the host rejects the version, identity or advertised features.
+            host.connect(callback.url());
+            Extension extension=(Extension)type.getDeclaredConstructor().newInstance();
+            try(ExtensionLifecycle lifecycle=new ExtensionLifecycle(extension,manifest,services)) {
+                lifecycleRef.set(lifecycle);
+                CountDownLatch stopping=new CountDownLatch(1);
+                AtomicBoolean shuttingDown=new AtomicBoolean();
+                Thread shutdown=new Thread(()->{
+                    try{shuttingDown.set(true);lifecycle.stop(Duration.ofSeconds(3));}catch(Exception ignored){/* host supervisor can kill */}
+                    finally{host.close();stopping.countDown();}
+                },"neverext-shutdown-hook");
+                Runtime.getRuntime().addShutdownHook(shutdown);
+                try {
+                    lifecycle.start(Duration.ofSeconds(8));
+                    if(managed&&argv==null)host.ready();
+                    if(argv!=null){
+                        Object response=services.commands().invoke(argv[0],Map.of("args",Arrays.asList(Arrays.copyOfRange(argv,1,argv.length))));
+                        System.out.println(Json.encode(response));
+                        lifecycle.stop(Duration.ofSeconds(3));
+                        return response;
+                    }
+                    while(host.healthy()&&!stopping.await(1,TimeUnit.SECONDS)){}
+                    if(!host.healthy()&&!shuttingDown.get())throw new IllegalStateException("extension host heartbeat failed");
                     lifecycle.stop(Duration.ofSeconds(3));
-                    return response;
+                    return null;
+                } finally {
+                    try{Runtime.getRuntime().removeShutdownHook(shutdown);}catch(IllegalStateException ignored){/* JVM shutting down */}
                 }
-                while(host.healthy()&&!stopping.await(1,TimeUnit.SECONDS)){}
-                if(!host.healthy()&&!shuttingDown.get())throw new IllegalStateException("extension host heartbeat failed");
-                lifecycle.stop(Duration.ofSeconds(3));
-                return null;
-            } finally {
-                try{Runtime.getRuntime().removeShutdownHook(shutdown);}catch(IllegalStateException ignored){/* JVM shutting down */}
             }
         }
     }

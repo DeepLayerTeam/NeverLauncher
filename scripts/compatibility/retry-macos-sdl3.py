@@ -4,6 +4,7 @@
 This is a *retry eligibility* check, never a compatibility success check. A
 second real client launch must pass the unchanged launcher certification.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,9 +19,13 @@ def is_retryable(report_path: Path, client_root: Path) -> bool:
         report = json.loads(report_path.read_text(encoding="utf-8"))
         if not isinstance(report, dict):
             return False
-        if (report.get("status") != "failed" or report.get("success") is not False
-                or report.get("timedOut") is not False or report.get("exitCode") is not None
-                or report.get("detectedJavaMajor") != 25):
+        if (
+            report.get("status") != "failed"
+            or report.get("success") is not False
+            or report.get("timedOut") is not False
+            or report.get("exitCode") is not None
+            or report.get("detectedJavaMajor") != 25
+        ):
             return False
         root = (client_root / "logs").resolve(strict=True)
         log_path = Path(report.get("logPath", ""))
@@ -35,7 +40,7 @@ def is_retryable(report_path: Path, client_root: Path) -> bool:
         return (
             "SDL revision: SDL-3." in tail
             and "--- runtime exit --- code=None signal=Some(6)" in tail
-            and "NeverGuard fail-closed" not in tail
+            and "Guard fail-closed" not in tail
         )
     except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
         return False

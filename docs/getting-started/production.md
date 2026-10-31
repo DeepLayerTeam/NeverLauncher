@@ -7,7 +7,7 @@
 - Linux/Docker Engine/Compose; PostgreSQL и Redis предусмотрены в `deploy/production/docker-compose.yml`.
 - Публичное доменное имя и **TLS-терминация** на reverse proxy/ingress. Не передавайте bearer-токены через HTTP.
 - Защищённое хранение секретов, план резервного копирования и обновления сертификатов.
-- Подписанные release-артефакты, manifest signing private key, допустимые хеши NeverGuard и ServerBridge.
+- Подписанные release-артефакты, manifest signing private key, допустимые хеши Guard и ServerBridge.
 
 ## Подготовка
 

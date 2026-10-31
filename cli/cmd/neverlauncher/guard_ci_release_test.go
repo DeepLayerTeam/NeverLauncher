@@ -102,7 +102,7 @@ func TestGuardCICertificationRoundTrip0139(t *testing.T) {
 	if err := verifyGuardCICertificationInBundle(out, "0.13.9"); err != nil {
 		t.Fatal(err)
 	}
-	guardPath := filepath.Join(out, "neverguard-windows-amd64.exe")
+	guardPath := filepath.Join(out, "guard-windows-amd64.exe")
 	if err := os.WriteFile(guardPath, []byte("tampered\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

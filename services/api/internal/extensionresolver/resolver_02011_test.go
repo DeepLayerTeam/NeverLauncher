@@ -26,7 +26,7 @@ func newRegistryFixture02011(t *testing.T) registryFixture02011 {
 	if _, err := r.SaveExtensionRegistryPublisher(ctx, model.ExtensionRegistryPublisher{ID: "publisher.test", Name: "Test Publisher", Active: true}); err != nil {
 		t.Fatal(err)
 	}
-	seed := sha256.Sum256([]byte("neverextensions-02011-test-key"))
+	seed := sha256.Sum256([]byte("extensions-02011-test-key"))
 	priv := ed25519.NewKeyFromSeed(seed[:])
 	pub := priv.Public().(ed25519.PublicKey)
 	d := sha256.Sum256(pub)

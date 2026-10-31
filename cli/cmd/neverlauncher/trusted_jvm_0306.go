@@ -1,7 +1,7 @@
 package main
 
 // Trusted JVM plugins have unrestricted access to the Minecraft process.
-// They are not NeverExtensions sandbox workers. No unverified JAR is ever
+// They are not Extensions sandbox workers. No unverified JAR is ever
 // forwarded to Java, and the trust anchor must live outside the client tree.
 import (
 	"archive/zip"

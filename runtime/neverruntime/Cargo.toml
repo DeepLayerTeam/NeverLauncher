@@ -1,6 +1,6 @@
 [package]
 name = "neverruntime"
-version = "0.42.0"
+version = "0.42.1"
 description = "NeverRuntime core library for NeverLauncher"
 authors = ["Дмитрий \"SkiF4er\" Ефимов"]
 license = "Apache-2.0"
@@ -15,8 +15,8 @@ name = "neverruntime"
 path = "src/bin/neverruntime.rs"
 
 [[bin]]
-name = "neverguard"
-path = "src/bin/neverguard.rs"
+name = "guard"
+path = "src/bin/guard.rs"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

@@ -82,7 +82,7 @@ func TestExtensionPackageFourTargets0209(t *testing.T) {
 
 func TestSDKTemplatesDesktopAndCLI0209(t *testing.T) {
 	desktop := sdkTemplate("desktop")
-	if !strings.Contains(desktop, "neverextensions.desktop-rpc.v1") || !strings.Contains(desktop, "tauri.platform") || !strings.Contains(desktop, "parent.postMessage") {
+	if !strings.Contains(desktop, "extensions.desktop-rpc.v1") || !strings.Contains(desktop, "tauri.platform") || !strings.Contains(desktop, "parent.postMessage") {
 		t.Fatalf("desktop scaffold is not a runnable sandbox client: %s", desktop)
 	}
 	cli := sdkTemplate("cli")

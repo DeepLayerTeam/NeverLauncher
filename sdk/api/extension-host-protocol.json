@@ -2,8 +2,8 @@
   "schemaVersion": "1.0",
   "hostProtocolVersion": "1.0",
   "extensionApiVersion": "1.0",
-  "adminProtocolVersion": "neverextensions.admin-rpc.v1",
-  "desktopProtocolVersion": "neverextensions.desktop-rpc.v1",
+  "adminProtocolVersion": "extensions.admin-rpc.v1",
+  "desktopProtocolVersion": "extensions.desktop-rpc.v1",
   "types": {
     "HostEnvironment": {
       "extensionId": "string",

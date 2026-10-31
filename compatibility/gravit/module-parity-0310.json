@@ -89,7 +89,7 @@
       "id": "M06",
       "upstreamModule": "LauncherGuard",
       "status": "partial",
-      "equivalent": "Attestation and NeverGuard integration for launcher protection.",
+      "equivalent": "Attestation and Guard integration for launcher protection.",
       "sourceRefs": [
         "services/api/internal/httpapi/guard_attestation_v2_01810.go"
       ],

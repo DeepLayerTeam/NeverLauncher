@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const extensionCLIProtocol0209 = "neverextensions.cli.v1"
+const extensionCLIProtocol0209 = "extensions.cli.v1"
 
 type extensionCLICommand0209 struct {
 	Name        string `json:"name"`

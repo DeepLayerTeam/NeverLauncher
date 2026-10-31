@@ -22,6 +22,6 @@
 - **No secrets in logs:** токены/пароли/DSN необходимо редактировать до загрузки в CI или issue.
 - **Vendor provenance != proof of possession:** владение зарегистрированным ключом не означает автоматически подтверждённую аттестацию TPM/Secure Enclave.
 - **Auth federation != Minecraft ownership:** Microsoft OAuth/OIDC не заменяет отдельный lifecycle Minecraft Services.
-- **Cross-platform evidence:** проверки NeverGuard и system keyring должны учитывать реальные особенности платформ.
+- **Cross-platform evidence:** проверки Guard и system keyring должны учитывать реальные особенности платформ.
 
 Возможные уязвимости сообщаются согласно [SECURITY.md](../../SECURITY.md). Для релизной сертификации см. [release-certification.md](release-certification.md).
