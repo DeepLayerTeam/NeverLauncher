@@ -2,7 +2,7 @@
 """Independent host-side V04/V06 attestor. NEVER execute inside the worker.
 
 An operator-controlled, non-root host invokes ONLY the pre-approved OCI image
-by digest. The Ed25519 private key stays in this host process, never in OCI,
+by digest. The Ed25519 private key stays in this host process, in OCI,
 CI, Docker environment, network or mounted volumes. Only verified on-disk
 observations from this execution are signed, not uploaded JSON from callers.
 """
@@ -1103,7 +1103,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 and stat.st_size <= 16384,
                 "test-account credential file must be a regular owner-only file",
             )
-            # Mounted directly, never copied into generic work/output artifacts.
+            # Mounted directly, copied into generic work/output artifacts.
             args[args.index(cfg.image) : args.index(cfg.image)] = [
                 "--mount",
                 f"type=bind,src={path},dst={inside},readonly",
@@ -1168,7 +1168,7 @@ def execute_run(cfg, package_id, selection=None, issued_grant=None):
                 check=False,
             )
         # Retain only redacted, bounded host-only diagnostics with a digest and
-        # expiry; never make the raw stdout available to API, CI or operator UI.
+        # expiry; make the raw stdout available to API, CI or operator UI.
         if cfg.diagnostics_dir:
             retain_redacted_diagnostics(
                 worker_log,
@@ -1300,7 +1300,7 @@ def main():
     p.add_argument(
         "--operator-token-file",
         required=True,
-        help="0600 host-only credential file; never enters worker",
+        help="0600 host-only credential file; enters worker",
     )
     p.add_argument(
         "--signing-key",

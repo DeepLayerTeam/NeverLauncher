@@ -61,6 +61,11 @@ jobs:
     needs: [validate-release-ref]
     uses: ./.github/workflows/ci.yml
 
+  extensions-acceptance:
+    name: Required six-target Java extensions and Gravit E2E acceptance
+    needs: [validate-release-ref]
+    uses: ./.github/workflows/extension-real-acceptance-04212.yml
+
   auth-platform-protection-ga:
     name: 0.30.0 live federated authentication and protection gate
     needs: [base-ci]
@@ -111,7 +116,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     env:
-      NEVERLAUNCHER_GA_SOURCE_SHA: ${{ github.sha }}
+      LAUNCHER_GA_SOURCE_SHA: ${{ github.sha }}
       E2E_ADMIN_URL: ${{ vars.NL_E2E_ADMIN_URL }}
       E2E_API_URL: ${{ vars.NL_E2E_API_URL }}
       E2E_PROJECT_ID: ${{ vars.NL_E2E_PROJECT_ID }}
@@ -178,7 +183,7 @@ jobs:
           --health-timeout 5s
           --health-retries 15
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:launcher_test_ci_only@127.0.0.1:5432/launcher_profile_ga?sslmode=disable
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:launcher_test_ci_only@127.0.0.1:5432/launcher_profile_ga?sslmode=disable
     steps:
       - uses: actions/checkout@v4
         with:
@@ -259,7 +264,7 @@ jobs:
           test -s "$RUNNER_TEMP/rc-dr.env"
       - name: Real consistent backup, immutable verification, fresh restore and chaos
         env:
-          NEVERLAUNCHER_RC_DR_ISOLATED: YES
+          LAUNCHER_RC_DR_ISOLATED: YES
           RC_DR_SOURCE: ${{ vars.NL_RC_DR_SOURCE_PROJECT }}
           RC_DR_TARGET: ${{ vars.NL_RC_DR_TARGET_PROJECT }}
           RC_DR_SOURCE_URL: ${{ vars.NL_RC_DR_SOURCE_READY_URL }}
@@ -319,7 +324,7 @@ jobs:
           path: live-rc-03216
       - name: Verify complete installed GA evidence and RC integrity
         env:
-          TRUSTED_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY }}
+          TRUSTED_GA_PUBLIC_KEY: ${{ vars.LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVIDENCE_RUN_ID: ${{ inputs.single_node_ga_evidence_run_id }}
         run: |
@@ -369,7 +374,7 @@ jobs:
 
   release-bundle:
     name: Release candidate bundle
-    needs: [base-ci, production-rc-03216, current-source-rc-03514, protected-isolated-dr-03514, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
+    needs: [base-ci, extensions-acceptance, production-rc-03216, current-source-rc-03514, protected-isolated-dr-03514, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, auth-platform-protection-ga, server-control-ga, admin-ga-certification, profile-ga-certification, windows-production-signed, macos-production-notarized, certify-platform-signing]
     permissions:
       contents: read
       actions: read
@@ -381,6 +386,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Download all six real platform extension reports and certificate
+        uses: actions/download-artifact@v4
+        with:
+          name: extensions-04212-certificate
+          path: extension-acceptance
+      - name: Verify extension E2E certificate from this run and attempt
+        run: |
+          python3 e2e/extensions/aggregate_04212.py \
+            --evidence-dir extension-acceptance \
+            --commit "$GITHUB_SHA" --version "$(cat VERSION)" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --output "$RUNNER_TEMP/recomputed-extension-certificate.json"
+          cmp extension-acceptance/extension-acceptance-certificate.json \
+              "$RUNNER_TEMP/recomputed-extension-certificate.json"
       - name: Fetch exact-commit runtime GA preflight
         uses: actions/download-artifact@v4
         with:
@@ -419,7 +438,7 @@ jobs:
       - name: Require six exact platform attestations; verify pinned operator signature
         shell: bash
         env:
-          APPROVED_OPERATOR_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
+          APPROVED_OPERATOR_PUBLIC_KEY: ${{ vars.LAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
         run: |
           set -euo pipefail
           test -n "${APPROVED_OPERATOR_PUBLIC_KEY}" || { echo 'missing protected GA verification key' >&2; exit 2; }
@@ -456,8 +475,8 @@ jobs:
           path: client-factory-ga-0280-evidence
       - name: Verify signed Client Factory GA evidence without private keys
         env:
-          CLIENT_FACTORY_RUNTIME_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_FACTORY_RUNTIME_PUBLIC_KEY }}
-          CLIENT_FACTORY_JOIN_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_FACTORY_JOIN_PUBLIC_KEY }}
+          CLIENT_FACTORY_RUNTIME_PUBLIC_KEY: ${{ vars.LAUNCHER_FACTORY_RUNTIME_PUBLIC_KEY }}
+          CLIENT_FACTORY_JOIN_PUBLIC_KEY: ${{ vars.LAUNCHER_FACTORY_JOIN_PUBLIC_KEY }}
         run: |
           set -euo pipefail
           test -n "$CLIENT_FACTORY_RUNTIME_PUBLIC_KEY"
@@ -578,7 +597,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libtss2-dev openssl
-      - name: Load approved production release signing identity (never ephemeral)
+      - name: Load approved production release signing identity (ephemeral)
         shell: bash
         env:
           PRODUCTION_RELEASE_SIGNING_KEY: ${{ secrets.NL_PRODUCTION_RELEASE_PRIVATE_KEY_PEM }}
@@ -596,6 +615,23 @@ jobs:
           openssl pkey -in /tmp/launcher-release-private.pem -noout >/dev/null
           openssl pkey -pubin -in /tmp/launcher-release-root-public.pem -noout >/dev/null
           jq -e '.schemaVersion and .trustDomain' /tmp/launcher-release-trust-policy.json >/dev/null
+      - name: Load approved extension publisher identity for signed .nlext packages
+        shell: bash
+        env:
+          EXTENSION_PUBLISHER_SIGNING_KEY: ${{ secrets.NL_EXTENSION_PUBLISHER_PRIVATE_KEY_PEM }}
+          EXTENSION_PUBLISHER_PUBLIC_KEY: ${{ secrets.NL_EXTENSION_PUBLISHER_PUBLIC_KEY_PEM }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$EXTENSION_PUBLISHER_SIGNING_KEY"
+          test -n "$EXTENSION_PUBLISHER_PUBLIC_KEY"
+          printf '%s\n' "$EXTENSION_PUBLISHER_SIGNING_KEY" > "$RUNNER_TEMP/nl-extension-publisher-private.pem"
+          printf '%s\n' "$EXTENSION_PUBLISHER_PUBLIC_KEY" > "$RUNNER_TEMP/nl-extension-publisher-public.pem"
+          openssl pkey -in "$RUNNER_TEMP/nl-extension-publisher-private.pem" -noout >/dev/null
+          openssl pkey -pubin -in "$RUNNER_TEMP/nl-extension-publisher-public.pem" -noout >/dev/null
+          openssl pkey -in "$RUNNER_TEMP/nl-extension-publisher-private.pem" -pubout -out "$RUNNER_TEMP/extension-derived-publisher.pem"
+          openssl pkey -pubin -in "$RUNNER_TEMP/nl-extension-publisher-public.pem" -pubout -out "$RUNNER_TEMP/extension-normalized-publisher.pem"
+          cmp "$RUNNER_TEMP/extension-normalized-publisher.pem" "$RUNNER_TEMP/extension-derived-publisher.pem"
       - name: Download historical 0.25.0 Optional Components GA evidence packages
         if: inputs.optional_components_ga_evidence_run_id != ''
         uses: actions/download-artifact@v4
@@ -623,7 +659,7 @@ jobs:
           path: single-node-ga-approved
       - name: Pin independent GA verification key for release signing
         env:
-          TRUSTED_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY }}
+          TRUSTED_GA_PUBLIC_KEY: ${{ vars.LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY }}
         run: |
           set -euo pipefail
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$EVIDENCE_RUN_ID" > "$RUNNER_TEMP/ga-external-run.json"
@@ -690,36 +726,41 @@ jobs:
             --version "$(cat VERSION)" --commit "$GITHUB_SHA"
       - name: Build and cryptographically verify complete release bundle
         env:
-          NEVERLAUNCHER_GA036_EVIDENCE_DIR: ${{ github.workspace }}/ga-protected-approval
-          NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ga-operator.pub
-          NEVERLAUNCHER_GA_EVIDENCE_DIR: ${{ github.workspace }}/ga-protected-approval
-          NEVERLAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ga-operator.pub
-          NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/launcher-release-private.pem
-          NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE: /tmp/launcher-release-root-public.pem
-          NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE: /tmp/launcher-release-trust-policy.json
-          NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE: /tmp/launcher-release-trust-state.json
-          NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE: ${{ github.workspace }}/external-certifications/compatibility/matrix.json
-          NEVERLAUNCHER_COMPATIBILITY_TARGETS_FILE: ${{ github.workspace }}/compatibility/targets.json
-          NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE: ${{ github.workspace }}/external-certifications/device-trust/matrix.json
-          NEVERLAUNCHER_DEVICE_TRUST_TARGETS_FILE: ${{ github.workspace }}/device-trust/targets.json
-          NEVERLAUNCHER_GUARD_CI_MATRIX_FILE: ${{ github.workspace }}/guard-certification/matrix.json
-          NEVERLAUNCHER_GUARD_CI_TARGETS_FILE: ${{ github.workspace }}/guard-certification/targets.json
-          NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR: ${{ github.workspace }}/guard-platform-artifacts
-          NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR: ${{ github.workspace }}/windows-production-artifacts
-          NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts
-          NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts
-          NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts
-          NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE: ${{ github.workspace }}/windows-adversarial-certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.json
-          NEVERLAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
+          LAUNCHER_EXTENSION_ACCEPTANCE_EVIDENCE_DIR: ${{ github.workspace }}/extension-acceptance
+          LAUNCHER_EXTENSION_PUBLISHER_PRIVATE_KEY_FILE: ${{ runner.temp }}/nl-extension-publisher-private.pem
+          LAUNCHER_EXTENSION_PUBLISHER_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-extension-publisher-public.pem
+          LAUNCHER_EXTENSION_ACCEPTANCE_RUN_ID: ${{ github.run_id }}
+          LAUNCHER_EXTENSION_ACCEPTANCE_RUN_ATTEMPT: ${{ github.run_attempt }}
+          LAUNCHER_GA036_EVIDENCE_DIR: ${{ github.workspace }}/ga-protected-approval
+          LAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ga-operator.pub
+          LAUNCHER_GA_EVIDENCE_DIR: ${{ github.workspace }}/ga-protected-approval
+          LAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ga-operator.pub
+          LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE: /tmp/launcher-release-private.pem
+          LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE: /tmp/launcher-release-root-public.pem
+          LAUNCHER_RELEASE_TRUST_POLICY_FILE: /tmp/launcher-release-trust-policy.json
+          LAUNCHER_RELEASE_TRUST_STATE_FILE: /tmp/launcher-release-trust-state.json
+          LAUNCHER_COMPATIBILITY_MATRIX_FILE: ${{ github.workspace }}/external-certifications/compatibility/matrix.json
+          LAUNCHER_COMPATIBILITY_TARGETS_FILE: ${{ github.workspace }}/compatibility/targets.json
+          LAUNCHER_DEVICE_TRUST_MATRIX_FILE: ${{ github.workspace }}/external-certifications/device-trust/matrix.json
+          LAUNCHER_DEVICE_TRUST_TARGETS_FILE: ${{ github.workspace }}/device-trust/targets.json
+          LAUNCHER_GUARD_CI_MATRIX_FILE: ${{ github.workspace }}/guard-certification/matrix.json
+          LAUNCHER_GUARD_CI_TARGETS_FILE: ${{ github.workspace }}/guard-certification/targets.json
+          LAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR: ${{ github.workspace }}/guard-platform-artifacts
+          LAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR: ${{ github.workspace }}/windows-production-artifacts
+          LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts
+          LAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts
+          LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts
+          LAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE: ${{ github.workspace }}/windows-adversarial-certificate/WINDOWS_ADVERSARIAL_CERTIFICATE.json
+          LAUNCHER_SOURCE_COMMIT: ${{ github.sha }}
           NL_GA_OPERATOR_TOKEN: ${{ secrets.NL_GA_OPERATOR_TOKEN }}
           NL_GA_BACKEND_URL: ${{ vars.NL_GA_BACKEND_URL }}
           NL_GA_PACKAGE_ID: ${{ inputs.staged_package_id }}
-          NEVERLAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR: ${{ github.workspace }}/single-node-ga-approved
-          NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE: /tmp/launcher-single-node-ga.pub
-          NEVERLAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/optional-components-ga-0250
-          NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY }}
-          NEVERLAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/official-minecraft-ga-0270
-          NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY: ${{ vars.NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
+          LAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR: ${{ github.workspace }}/single-node-ga-approved
+          LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE: /tmp/launcher-single-node-ga.pub
+          LAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/optional-components-ga-0250
+          LAUNCHER_COMPONENT_GA_PUBLIC_KEY: ${{ vars.LAUNCHER_COMPONENT_GA_PUBLIC_KEY }}
+          LAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR: ${{ github.workspace }}/official-minecraft-ga-0270
+          LAUNCHER_OFFICIAL_GA_PUBLIC_KEY: ${{ vars.LAUNCHER_OFFICIAL_GA_PUBLIC_KEY }}
         run: bash scripts/release/build-release.sh
       # Run the real minimal deployment against the exact Linux x64 API inside
       # the final, independently signed bundle. No rebuild or mock server here.
@@ -740,7 +781,7 @@ jobs:
           python3 - <<'PYCODE'
           import hashlib,json,os,pathlib
           folder=pathlib.Path(os.environ['RUNNER_TEMP'])/'nl-final-e2e-policies'
-          # These are validation configuration, never operator signing evidence.
+          # These are validation configuration, operator signing evidence.
           fixture=hashlib.sha256(b'Launcher E2E NON-RELEASE fixture no signing').hexdigest()
           guard={'schemaVersion':'2.0','releases':{'0.1.0':{'protocolVersion':4,
             'platforms':{'linux':{'signingMode':'integrity-only','artifacts':[
@@ -819,6 +860,17 @@ jobs:
           VERSION="$(tr -d '[:space:]' < VERSION)"
           DIR="dist/release-${VERSION}"
           test -s "${DIR}/SHA256SUMS.sig"
+          jq -e --arg version "$VERSION" --arg commit "$GITHUB_SHA" \
+            --arg run "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" \
+            '.schemaVersion == "launcher.extensions.release.v1" and .status == "passed" and
+             .version == $version and .sourceCommit == $commit and .runId == $run and
+             .runAttempt == $attempt and .targetCount == 6 and .modulesAudited == 19 and
+             .fullGravitBinaryCompatibility == false and (.signedPackages | length) == 2' \
+            "${DIR}/EXTENSION_RELEASE_CERTIFICATION_0430.json" >/dev/null
+          test -s "${DIR}/EXTENSION_ACCEPTANCE_EVIDENCE_0430.zip"
+          test -s "${DIR}/EXTENSION_PUBLISHER_PUBLIC_KEY_0430.pem"
+          test -s "${DIR}/launcher-example-java-host.nlext"
+          test -s "${DIR}/launcher-example-gravit-port.nlext"
           test -s "${DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json"
           jq -e --arg commit "$GITHUB_SHA" '.schemaVersion == "launcher.official-minecraft.ga-receipt.v1" and .status == "passed" and .commit == $commit and .productVersion == "0.27.0" and (.targets | length) == 6 and all(.targets[]; .status == "passed")' "${DIR}/OFFICIAL_MINECRAFT_GA_CERTIFICATION.json" >/dev/null
           test -s "${DIR}/PROVENANCE.json.sig"
@@ -932,7 +984,7 @@ jobs:
   required-production-ci:
     name: REQUIRED production pipeline — no skipped, cancelled or absent jobs
     if: ${{ always() }}
-    needs: [validate-release-ref, base-ci, auth-platform-protection-ga, server-control-ga, windows-production-signed, macos-production-notarized, admin-ga-certification, profile-ga-certification, certify-platform-signing, current-source-rc-03514, protected-isolated-dr-03514, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, release-bundle]
+    needs: [validate-release-ref, base-ci, extensions-acceptance, auth-platform-protection-ga, server-control-ga, windows-production-signed, macos-production-notarized, admin-ga-certification, profile-ga-certification, certify-platform-signing, current-source-rc-03514, protected-isolated-dr-03514, production-rc-03216, single-node-ga-0330, staged-package-runtime-0342, runtime-ga-0350, release-bundle]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

@@ -103,38 +103,38 @@ def generate(
     for part in ("config", "db", "storage", "backups", "extensions", "factory"):
         owned_directory(root / part)
     config = {
-        "NEVERLAUNCHER_ENV": "production",
-        "NEVERLAUNCHER_HTTP_ADDR": listen,
-        "NEVERLAUNCHER_PUBLIC_URL": public,
-        "NEVERLAUNCHER_DEPLOYMENT_MODE": "single-node",
-        "NEVERLAUNCHER_REPOSITORY_DRIVER": "sqlite",
-        "NEVERLAUNCHER_DATABASE_DSN": str(root / "db" / "http.sqlite"),
-        "NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH": str(
+        "LAUNCHER_ENV": "production",
+        "LAUNCHER_HTTP_ADDR": listen,
+        "LAUNCHER_PUBLIC_URL": public,
+        "LAUNCHER_DEPLOYMENT_MODE": "single-node",
+        "LAUNCHER_REPOSITORY_DRIVER": "sqlite",
+        "LAUNCHER_DATABASE_DSN": str(root / "db" / "http.sqlite"),
+        "LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH": str(
             root / "db" / "coordinator.sqlite"
         ),
-        "NEVERLAUNCHER_STORAGE_DRIVER": "local",
-        "NEVERLAUNCHER_STORAGE_LOCAL_PATH": str(root / "storage"),
-        "NEVERLAUNCHER_BACKUP_ROOT": str(root / "backups"),
-        "NEVERLAUNCHER_EXTENSION_ROOT": str(root / "extensions"),
-        "NEVERLAUNCHER_FACTORY_ROOT": str(root / "factory"),
-        "NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED": "false",
-        "NEVERLAUNCHER_RATE_LIMIT_ENABLED": "true",
-        "NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED": "true",
-        "NEVERLAUNCHER_RATE_LIMIT_GLOBAL_PER_MINUTE": "1200",
-        "NEVERLAUNCHER_RATE_LIMIT_AUTH_PER_MINUTE": "20",
-        "NEVERLAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE": "6000",
-        "NEVERLAUNCHER_PERSISTENT_SESSIONS": "true",
-        "NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION": "true",
-        "NEVERLAUNCHER_BOOTSTRAP_TOKEN": secrets.token_urlsafe(48),
-        "NEVERLAUNCHER_AUTH_TOKEN_SECRET": secrets.token_urlsafe(64),
-        "NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY": secrets.token_hex(32),
-        "NEVERLAUNCHER_EXTENSION_SECRETS_KEY": secrets.token_hex(32),
-        "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON": guard_policy,
-        "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON": bridge_policy,
-        "NEVERLAUNCHER_WEBAUTHN_RP_ID": url.hostname.lower(),
-        "NEVERLAUNCHER_WEBAUTHN_RP_NAME": "Launcher",
-        "NEVERLAUNCHER_WEBAUTHN_ORIGINS": public,
-        "NEVERLAUNCHER_CORS_ALLOWED_ORIGINS": public,
+        "LAUNCHER_STORAGE_DRIVER": "local",
+        "LAUNCHER_STORAGE_LOCAL_PATH": str(root / "storage"),
+        "LAUNCHER_BACKUP_ROOT": str(root / "backups"),
+        "LAUNCHER_EXTENSION_ROOT": str(root / "extensions"),
+        "LAUNCHER_FACTORY_ROOT": str(root / "factory"),
+        "LAUNCHER_SERVERBRIDGE_HA_REQUIRED": "false",
+        "LAUNCHER_RATE_LIMIT_ENABLED": "true",
+        "LAUNCHER_RATE_LIMIT_FAIL_CLOSED": "true",
+        "LAUNCHER_RATE_LIMIT_GLOBAL_PER_MINUTE": "1200",
+        "LAUNCHER_RATE_LIMIT_AUTH_PER_MINUTE": "20",
+        "LAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE": "6000",
+        "LAUNCHER_PERSISTENT_SESSIONS": "true",
+        "LAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION": "true",
+        "LAUNCHER_BOOTSTRAP_TOKEN": secrets.token_urlsafe(48),
+        "LAUNCHER_AUTH_TOKEN_SECRET": secrets.token_urlsafe(64),
+        "LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY": secrets.token_hex(32),
+        "LAUNCHER_EXTENSION_SECRETS_KEY": secrets.token_hex(32),
+        "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON": guard_policy,
+        "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON": bridge_policy,
+        "LAUNCHER_WEBAUTHN_RP_ID": url.hostname.lower(),
+        "LAUNCHER_WEBAUTHN_RP_NAME": "Launcher",
+        "LAUNCHER_WEBAUTHN_ORIGINS": public,
+        "LAUNCHER_CORS_ALLOWED_ORIGINS": public,
     }
     if any(
         "\n" in value or "\r" in value or "\x00" in value for value in config.values()
@@ -173,12 +173,12 @@ def read_env(file: Path):
         if "=" not in line:
             reject("invalid config line")
         key, value = line.split("=", 1)
-        if not key.startswith("NEVERLAUNCHER_") or key in values:
+        if not key.startswith("LAUNCHER_") or key in values:
             reject("invalid config key")
         values[key] = value
     if (
-        values.get("NEVERLAUNCHER_REPOSITORY_DRIVER") != "sqlite"
-        or values.get("NEVERLAUNCHER_DEPLOYMENT_MODE") != "single-node"
+        values.get("LAUNCHER_REPOSITORY_DRIVER") != "sqlite"
+        or values.get("LAUNCHER_DEPLOYMENT_MODE") != "single-node"
     ):
         reject("not a minimal SQLite config")
     return values
@@ -252,12 +252,12 @@ def main(argv=None):
     environment = {
         key: value
         for key, value in os.environ.items()
-        if not key.startswith("NEVERLAUNCHER_")
+        if not key.startswith("LAUNCHER_")
     }
     environment.update(read_env(args.env_file))
     # No inherited external Redis/PostgreSQL settings may change the selected topology.
-    environment.pop("NEVERLAUNCHER_REDIS_URL", None)
-    environment.pop("NEVERLAUNCHER_REDIS_ADDR", None)
+    environment.pop("LAUNCHER_REDIS_URL", None)
+    environment.pop("LAUNCHER_REDIS_ADDR", None)
     command = (
         [str(args.binary), "diagnose", "deployment"]
         if args.command == "check"

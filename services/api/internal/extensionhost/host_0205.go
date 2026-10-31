@@ -291,7 +291,7 @@ func New(cfg Config, repo repository.Repository, store storage.Storage) *Supervi
 	roots := cfg.SharedRoots
 	var rootsErr error
 	if roots == nil {
-		roots, rootsErr = extensionbroker.ParseRoots(os.Getenv("NEVERLAUNCHER_EXTENSION_SHARED_ROOTS_JSON"))
+		roots, rootsErr = extensionbroker.ParseRoots(os.Getenv("LAUNCHER_EXTENSION_SHARED_ROOTS_JSON"))
 	} else {
 		data, err := json.Marshal(roots)
 		if err != nil {
@@ -606,8 +606,8 @@ func (s *Supervisor) startInstallation0422(ctx context.Context, install model.Ex
 	}
 	cmd.Dir = payloadRoot
 	cmd.Env = sanitizedEnvironment(map[string]string{
-		"NEVERLAUNCHER_EXTENSION_HOST_URL": baseURL, "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": token, "NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "NEVERLAUNCHER_EXTENSION_API_VERSION": extensioncontract.ExtensionAPIVersion, "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": instance,
-		"NEVERLAUNCHER_EXTENSION_ID": install.ExtensionID, "NEVERLAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "NEVERLAUNCHER_EXTENSION_SCOPE": install.Scope, "NEVERLAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID, "NEVERLAUNCHER_EXTENSION_TARGET": "backend",
+		"LAUNCHER_EXTENSION_HOST_URL": baseURL, "LAUNCHER_EXTENSION_HOST_TOKEN": token, "LAUNCHER_EXTENSION_CALLBACK_TOKEN": callbackToken, "LAUNCHER_EXTENSION_HOST_PROTOCOL": ProtocolVersion, "LAUNCHER_EXTENSION_API_VERSION": extensioncontract.ExtensionAPIVersion, "LAUNCHER_EXTENSION_INSTANCE_ID": instance,
+		"LAUNCHER_EXTENSION_ID": install.ExtensionID, "LAUNCHER_EXTENSION_VERSION": install.CurrentVersion, "LAUNCHER_EXTENSION_SCOPE": install.Scope, "LAUNCHER_EXTENSION_SCOPE_ID": install.ScopeID, "LAUNCHER_EXTENSION_TARGET": "backend",
 	})
 	var isolatedHandle *extensionSandbox03111
 	if manifestVersion.Manifest.Sandbox != nil && manifestVersion.Manifest.Sandbox.Mode == "isolated" {

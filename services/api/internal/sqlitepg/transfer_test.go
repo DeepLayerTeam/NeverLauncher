@@ -55,9 +55,9 @@ func TestMissingCoreStateFailsClosed(t *testing.T) {
 }
 
 // Requires an actual PostgreSQL service and an ext4/XFS/Btrfs local volume.
-// NEVERLAUNCHER_PG_TEST_DSN must name an isolated test database.
+// LAUNCHER_PG_TEST_DSN must name an isolated test database.
 func TestPGStagingMigration(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_PG_TEST_DSN")
+	dsn := os.Getenv("LAUNCHER_PG_TEST_DSN")
 	if dsn == "" {
 		t.Skip("isolated PostgreSQL test DB not configured")
 	}
@@ -119,7 +119,7 @@ func TestPGStagingMigration(t *testing.T) {
 		{`INSERT INTO refresh_families(id,session_id,status,created_at,revoked_at) VALUES(?,?,'revoked',?,?)`, []any{"family-1", "session-1", now, now}},
 		{`INSERT INTO refresh_tokens(token_hash,family_id,status,created_at,expires_at,consumed_at) VALUES(?,?,'revoked',?,?,?)`, []any{hash, "family-1", now, now + 1e12, now}},
 		{`INSERT INTO access_tokens(token_hash,session_id,issued_at,expires_at,revoked_at) VALUES(?,?,?,?,?)`, []any{strings.Repeat("b", 64), "session-1", now, now + 1e12, now}},
-		{`INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,access_hash,status,created_at,expires_at,revoked_at,revoked_reason) VALUES(?,?,?,?,?,'revoked',?,?,?,?)`, []any{"mc-1", user.ID, "session-1", uuid, strings.Repeat("c", 64), now, now + 1e12, now, "security"}},
+		{`INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_hash,status,created_at,expires_at,revoked_at,revoked_reason) VALUES(?,?,?,?,?,'revoked',?,?,?,?)`, []any{"mc-1", user.ID, "session-1", uuid, strings.Repeat("c", 64), now, now + 1e12, now, "security"}},
 		{`INSERT INTO durable_scope_leases(scope_key,owner,lease_token,fencing_token,expires_at,updated_at) VALUES(?,?,?,?,?,?)`, []any{"scope-1", "worker-1", "", 42, now, now}},
 		{`INSERT INTO package_blobs(digest,data,size_bytes,created_at) VALUES(?,?,?,?)`, []any{hex.EncodeToString(packageHash[:]), packageBytes, len(packageBytes), now}},
 		{`INSERT INTO mfa_totp(user_id,status,secret_ciphertext,last_step,created_at,updated_at) VALUES(?,'pending',?,-1,?,?)`, []any{user.ID, []byte{0, 0, 254, 12, 7}, now, now}},

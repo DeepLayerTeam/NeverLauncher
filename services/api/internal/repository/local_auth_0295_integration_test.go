@@ -17,9 +17,9 @@ import (
 // A disposable PostgreSQL database proves atomic import, live identity lookup,
 // immutable game UUID, rollback, and CAS without any mocked SQL database.
 func TestFileAuthImportPostgres0295(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable NEVERLAUNCHER_TEST_POSTGRES_DSN")
+		t.Skip("requires disposable LAUNCHER_TEST_POSTGRES_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()

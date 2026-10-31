@@ -31,22 +31,22 @@ jobs:
           test -z "$(gofmt -l internal/sqlitecore internal/sqlitedurable cmd/launcher-sqlite)"
       - name: Require supported native filesystem; race + restart tests
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-durable
-          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-durable
+          LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
-          mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          mkdir -p "$LAUNCHER_SQLITE_TEST_ROOT"
+          chmod 0700 "$LAUNCHER_SQLITE_TEST_ROOT"
+          stat -f -c '%T' "$LAUNCHER_SQLITE_TEST_ROOT"
           go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
           go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Build production CLI and exercise real durable queue & outbox
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-durable
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-durable
         run: |
           set -euo pipefail
           go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
-          cd "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          cd "$LAUNCHER_SQLITE_TEST_ROOT"
           db="$PWD/durable.db"
           cli="$RUNNER_TEMP/launcher-sqlite"
           "$cli" core-init --db "$db" > init.json

@@ -17,9 +17,9 @@ import (
 // Exercises issuer isolation, credential persistence, and UUID protections on
 // the production SQL path rather than against a mock SQL driver.
 func TestCanonicalIssuerPostgres0291(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable NEVERLAUNCHER_TEST_POSTGRES_DSN")
+		t.Skip("requires disposable LAUNCHER_TEST_POSTGRES_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()

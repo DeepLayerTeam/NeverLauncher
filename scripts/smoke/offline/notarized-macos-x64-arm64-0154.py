@@ -146,7 +146,7 @@ staging = read("scripts/release/build-release.sh")
 require(
     staging,
     [
-        "NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR",
+        "LAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR",
         "MACOS_DUAL_ARCH_REQUIRED",
         "launcher-desktop-${VERSION}-macos-${arch}.zip",
         "MACOS_NOTARIZATION_EVIDENCE.json",
@@ -191,7 +191,7 @@ require(
         "secrets: inherit",
         "launcher-macos-notarized-${{ github.sha }}",
         "path: macos-production-artifacts",
-        "NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts",
+        "LAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/macos-production-artifacts",
         "needs: [base-ci, windows-production-signed, macos-production-notarized]",
     ],
     "production release macOS notarization wiring",

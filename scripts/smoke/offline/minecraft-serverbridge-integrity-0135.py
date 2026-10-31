@@ -127,7 +127,7 @@ require(
     plugin_policy,
     [
         "serverbridge-artifact-sha256-v1",
-        "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON",
+        "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON",
         "bridge_integrity_hash_rejected",
         "bridge_integrity_release_revoked",
         "bridge_integrity_heartbeat_required",
@@ -212,7 +212,7 @@ require(
     config,
     [
         "BridgeReleaseAllowlistJSON",
-        "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON",
+        "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON",
         "velocitySha256",
         "paperSha256",
         "purpurSha256",

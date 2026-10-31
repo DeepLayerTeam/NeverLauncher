@@ -1,1 +1,1 @@
-declare const __NEVERLAUNCHER_VERSION__: string;
+declare const __LAUNCHER_VERSION__: string;

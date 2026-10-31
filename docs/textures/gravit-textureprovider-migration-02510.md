@@ -18,7 +18,7 @@ This is an **operator assertion**, not proof from the legacy source: review acco
 
 ## Prepare and execute
 
-Apply the normal Launcher migrations **through 0073_texture_gravit_import_02510** before running this command. Back up the target database and local/S3 bucket first; verify quotas and cape entitlements. Set the same target environment variables used by the API (`NEVERLAUNCHER_DATABASE_DSN`, `NEVERLAUNCHER_STORAGE_DRIVER`, `NEVERLAUNCHER_STORAGE_LOCAL_PATH` or `NEVERLAUNCHER_STORAGE_S3_*`).
+Apply the normal Launcher migrations **through 0073_texture_gravit_import_02510** before running this command. Back up the target database and local/S3 bucket first; verify quotas and cape entitlements. Set the same target environment variables used by the API (`LAUNCHER_DATABASE_DSN`, `LAUNCHER_STORAGE_DRIVER`, `LAUNCHER_STORAGE_LOCAL_PATH` or `LAUNCHER_STORAGE_S3_*`).
 
 Example: source PostgreSQL + local source files. Do not put DSNs with credentials in shell history or log output: prefer preconfigured environment-file secrets.
 
@@ -26,7 +26,7 @@ Example: source PostgreSQL + local source files. Do not put DSNs with credential
 cd services/api
 # The source key template MUST reflect the actual legacy storage layout.
 # Gravit may use hash.png, skins/<hash>.png, or other layouts.
-export NEVERLAUNCHER_DATABASE_DSN='postgres://.../launcher'
+export LAUNCHER_DATABASE_DSN='postgres://.../launcher'
 export GRAVIT_SOURCE_DSN='postgres://.../texture_provider'
 go run ./cmd/gravit-textures-import-02510 \
   --source-id gravit-prod-01 --source-dsn "$GRAVIT_SOURCE_DSN" \

@@ -80,7 +80,7 @@ require(
         "serverBridgeRequestTimeout0149",
         "serverbridge",
         "RateLimitServerBridgePerMinute",
-        "NEVERLAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE",
+        "LAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE",
     ],
     "HTTP/rate hardening",
 )

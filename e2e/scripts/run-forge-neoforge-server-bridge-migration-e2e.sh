@@ -17,14 +17,14 @@ for cmd in docker psql go python3 sha256sum jq; do need "$cmd"; done
 docker compose version >/dev/null
 rm -rf "$RUNTIME_DIR" "$RESULT_DIR"; mkdir -p "$RUNTIME_DIR" "$RESULT_DIR"; chmod 0700 "$RUNTIME_DIR"
 cat > "$ENV_FILE" <<ENV
-NEVERLAUNCHER_E2E_AUTH_SECRET=$AUTH_SECRET
-NEVERLAUNCHER_E2E_BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN
-NEVERLAUNCHER_E2E_REDIS_PASSWORD=$REDIS_PASSWORD
-NEVERLAUNCHER_E2E_SIGNING_SEED=$SIGNING_SEED
+LAUNCHER_E2E_AUTH_SECRET=$AUTH_SECRET
+LAUNCHER_E2E_BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN
+LAUNCHER_E2E_REDIS_PASSWORD=$REDIS_PASSWORD
+LAUNCHER_E2E_SIGNING_SEED=$SIGNING_SEED
 ENV
 chmod 0600 "$ENV_FILE"
 compose(){ docker compose -p "$PROJECT_NAME" --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"; }
-cleanup(){ if [[ "${NEVERLAUNCHER_E2E_KEEP:-0}" != "1" ]]; then compose down -v --remove-orphans >/dev/null 2>&1 || true; rm -rf "$RUNTIME_DIR"; fi; }
+cleanup(){ if [[ "${LAUNCHER_E2E_KEEP:-0}" != "1" ]]; then compose down -v --remove-orphans >/dev/null 2>&1 || true; rm -rf "$RUNTIME_DIR"; fi; }
 trap cleanup EXIT
 compose up -d postgres redis volume-init
 for _ in $(seq 1 60); do psql "$DB_DSN" -Atqc 'select 1' >/dev/null 2>&1 && break; sleep 1; done

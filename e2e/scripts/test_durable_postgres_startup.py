@@ -56,7 +56,7 @@ class DurablePostgresStartupTests(unittest.TestCase):
             go = path / "go"
             go.write_text(
                 "#!/usr/bin/env bash\n"
-                "printf '%s\\n' \"${NEVERLAUNCHER_DURABLE_DSN:-}\" "
+                "printf '%s\\n' \"${LAUNCHER_DURABLE_DSN:-}\" "
                 '> "$MOCK_DSN_FILE"\n',
                 encoding="utf-8",
             )
@@ -71,9 +71,9 @@ class DurablePostgresStartupTests(unittest.TestCase):
                 GITHUB_RUN_ID="mock-durable-test",
             )
             if explicit_port:
-                environment["NEVERLAUNCHER_DURABLE_POSTGRES_PORT"] = explicit_port
+                environment["LAUNCHER_DURABLE_POSTGRES_PORT"] = explicit_port
             else:
-                environment.pop("NEVERLAUNCHER_DURABLE_POSTGRES_PORT", None)
+                environment.pop("LAUNCHER_DURABLE_POSTGRES_PORT", None)
             result = subprocess.run(
                 ["bash", str(SCRIPT)],
                 text=True,

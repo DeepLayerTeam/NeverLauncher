@@ -200,124 +200,124 @@ func bridgeReleaseRequiresUniversalAdapters0198(version string) bool {
 
 // Load читает конфигурацию из переменных окружения.
 func Load() Config {
-	environment := env("NEVERLAUNCHER_ENV", "dev")
-	redisAddr := normalizeRedisAddr(env("NEVERLAUNCHER_REDIS_ADDR", env("NEVERLAUNCHER_REDIS_URL", "localhost:6379")))
-	redisURL := env("NEVERLAUNCHER_REDIS_URL", "")
-	if redisURL == "" && !strings.EqualFold(strings.TrimSpace(env("NEVERLAUNCHER_REPOSITORY_DRIVER", "postgres")), "sqlite") {
+	environment := env("LAUNCHER_ENV", "dev")
+	redisAddr := normalizeRedisAddr(env("LAUNCHER_REDIS_ADDR", env("LAUNCHER_REDIS_URL", "localhost:6379")))
+	redisURL := env("LAUNCHER_REDIS_URL", "")
+	if redisURL == "" && !strings.EqualFold(strings.TrimSpace(env("LAUNCHER_REPOSITORY_DRIVER", "postgres")), "sqlite") {
 		redisURL = "redis://" + redisAddr + "/0"
 	}
 	production := IsProductionEnvironment(environment)
-	manifestSigningPrivateKey := env("NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY", "")
-	serverBridgeControlSigningPrivateKey := env("NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY", manifestSigningPrivateKey)
-	serverBridgeControlPreviousSigningPrivateKey := env("NEVERLAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY", "")
-	publicURL := env("NEVERLAUNCHER_PUBLIC_URL", "http://localhost:8080")
+	manifestSigningPrivateKey := env("LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY", "")
+	serverBridgeControlSigningPrivateKey := env("LAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY", manifestSigningPrivateKey)
+	serverBridgeControlPreviousSigningPrivateKey := env("LAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY", "")
+	publicURL := env("LAUNCHER_PUBLIC_URL", "http://localhost:8080")
 	webauthnRPID, webauthnOrigin := defaultWebAuthnScope(publicURL)
 	corsFallback := "http://localhost:5173,http://127.0.0.1:5173"
 	if production {
 		corsFallback = ""
 	}
 	return Config{
-		HTTPAddr:                                     env("NEVERLAUNCHER_HTTP_ADDR", "0.0.0.0:8080"),
+		HTTPAddr:                                     env("LAUNCHER_HTTP_ADDR", "0.0.0.0:8080"),
 		PublicURL:                                    publicURL,
-		MinecraftMicrosoftClientID:                   env("NEVERLAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID", ""),
-		YggdrasilSigningKeyFile:                      env("NEVERLAUNCHER_YGGDRASIL_RSA_KEY_FILE", ""),
-		YggdrasilTextureDomains:                      envCSV("NEVERLAUNCHER_YGGDRASIL_TEXTURE_DOMAINS"),
-		DatabaseDSN:                                  env("NEVERLAUNCHER_DATABASE_DSN", env("NEVERLAUNCHER_DATABASE_URL", "postgres://launcher:launcher@localhost:5432/launcher?sslmode=disable")),
-		RepositoryDriver:                             env("NEVERLAUNCHER_REPOSITORY_DRIVER", "postgres"),
-		SQLDriver:                                    env("NEVERLAUNCHER_SQL_DRIVER", "pgx"),
+		MinecraftMicrosoftClientID:                   env("LAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID", ""),
+		YggdrasilSigningKeyFile:                      env("LAUNCHER_YGGDRASIL_RSA_KEY_FILE", ""),
+		YggdrasilTextureDomains:                      envCSV("LAUNCHER_YGGDRASIL_TEXTURE_DOMAINS"),
+		DatabaseDSN:                                  env("LAUNCHER_DATABASE_DSN", env("LAUNCHER_DATABASE_URL", "postgres://launcher:launcher@localhost:5432/launcher?sslmode=disable")),
+		RepositoryDriver:                             env("LAUNCHER_REPOSITORY_DRIVER", "postgres"),
+		SQLDriver:                                    env("LAUNCHER_SQL_DRIVER", "pgx"),
 		RedisAddr:                                    redisAddr,
 		RedisURL:                                     redisURL,
-		SQLiteCoordinatorPath:                        env("NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", ""),
-		DeploymentMode:                               env("NEVERLAUNCHER_DEPLOYMENT_MODE", "auto"),
-		DeploymentLockPath:                           env("NEVERLAUNCHER_DEPLOYMENT_LOCK_PATH", ""),
-		ServerBridgeHARequired:                       envBool("NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED", production && env("NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", "") == ""),
-		ServerBridgeReplicaID:                        env("NEVERLAUNCHER_REPLICA_ID", ""),
-		TrustedProxyCIDRs:                            envCSV("NEVERLAUNCHER_TRUSTED_PROXY_CIDRS"),
-		RateLimitEnabled:                             envBool("NEVERLAUNCHER_RATE_LIMIT_ENABLED", true),
-		RateLimitGlobalPerMinute:                     envInt("NEVERLAUNCHER_RATE_LIMIT_GLOBAL_PER_MINUTE", 1200),
-		RateLimitAuthPerMinute:                       envInt("NEVERLAUNCHER_RATE_LIMIT_AUTH_PER_MINUTE", 20),
-		RateLimitServerBridgePerMinute:               envInt("NEVERLAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE", 6000),
-		RateLimitFailClosed:                          envBool("NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED", production),
-		StorageDriver:                                env("NEVERLAUNCHER_STORAGE_DRIVER", "local"),
-		StorageLocalPath:                             env("NEVERLAUNCHER_STORAGE_LOCAL_PATH", env("NEVERLAUNCHER_STORAGE_LOCAL_ROOT", "./data/storage")),
-		StorageS3Endpoint:                            env("NEVERLAUNCHER_STORAGE_S3_ENDPOINT", ""),
-		StorageS3Bucket:                              env("NEVERLAUNCHER_STORAGE_S3_BUCKET", ""),
-		StorageS3Region:                              env("NEVERLAUNCHER_STORAGE_S3_REGION", "ru-central1"),
-		StorageS3AccessKey:                           env("NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY", ""),
-		StorageS3SecretKey:                           env("NEVERLAUNCHER_STORAGE_S3_SECRET_KEY", ""),
-		StorageS3PublicURL:                           env("NEVERLAUNCHER_STORAGE_S3_PUBLIC_URL", ""),
-		StorageS3PathStyle:                           envBool("NEVERLAUNCHER_STORAGE_S3_PATH_STYLE", true),
-		StorageDeliveryMode:                          env("NEVERLAUNCHER_STORAGE_DELIVERY_MODE", "reverse-proxy"),
-		StorageCDNOrigin:                             env("NEVERLAUNCHER_STORAGE_CDN_ORIGIN", ""),
-		StorageMaxUploadBytes:                        envInt64("NEVERLAUNCHER_STORAGE_MAX_UPLOAD_BYTES", 512<<20),
-		BackupRoot:                                   env("NEVERLAUNCHER_BACKUP_ROOT", "./data/backups"),
-		ExtensionRoot:                                env("NEVERLAUNCHER_EXTENSION_ROOT", "./data/extensions"),
-		ExtensionBackupRetention:                     envInt("NEVERLAUNCHER_EXTENSION_BACKUP_RETENTION", 10),
-		ExtensionHostEnabled:                         envBool("NEVERLAUNCHER_EXTENSION_HOST_ENABLED", true),
-		ExtensionHostListen:                          env("NEVERLAUNCHER_EXTENSION_HOST_LISTEN", "127.0.0.1:0"),
-		ExtensionHostStartupTimeoutSeconds:           envInt("NEVERLAUNCHER_EXTENSION_HOST_STARTUP_TIMEOUT_SECONDS", 10),
-		ExtensionHostHeartbeatTimeoutSeconds:         envInt("NEVERLAUNCHER_EXTENSION_HOST_HEARTBEAT_TIMEOUT_SECONDS", 30),
-		ExtensionHostStopTimeoutSeconds:              envInt("NEVERLAUNCHER_EXTENSION_HOST_STOP_TIMEOUT_SECONDS", 5),
-		ExtensionHostCapabilityTimeoutSeconds:        envInt("NEVERLAUNCHER_EXTENSION_HOST_CAPABILITY_TIMEOUT_SECONDS", 3),
-		ExtensionHostMaxMemoryMB:                     envInt64("NEVERLAUNCHER_EXTENSION_HOST_MAX_MEMORY_MB", 512),
-		ExtensionHostMaxProcesses:                    envInt("NEVERLAUNCHER_EXTENSION_HOST_MAX_PROCESSES", 8),
-		ExtensionHostMaxLogBytes:                     envInt64("NEVERLAUNCHER_EXTENSION_HOST_MAX_LOG_BYTES", 4<<20),
-		ExtensionHostMaxLogEntries:                   envInt("NEVERLAUNCHER_EXTENSION_HOST_MAX_LOG_ENTRIES", 1000),
-		ExtensionHostMaxProtocolBodyBytes:            envInt64("NEVERLAUNCHER_EXTENSION_HOST_MAX_PROTOCOL_BODY_BYTES", 1<<20),
-		ExtensionHostMaxStorageReadBytes:             envInt64("NEVERLAUNCHER_EXTENSION_HOST_MAX_STORAGE_READ_BYTES", 1<<20),
-		ExtensionHostCrashLimit:                      envInt("NEVERLAUNCHER_EXTENSION_HOST_CRASH_LIMIT", 5),
-		ExtensionHostCrashWindowSeconds:              envInt("NEVERLAUNCHER_EXTENSION_HOST_CRASH_WINDOW_SECONDS", 600),
-		ExtensionHostRestartBackoffMilliseconds:      envInt("NEVERLAUNCHER_EXTENSION_HOST_RESTART_BACKOFF_MS", 1000),
-		ExtensionSecretsKey:                          env("NEVERLAUNCHER_EXTENSION_SECRETS_KEY", ""),
-		ExtensionHTTPMaxRequestBytes:                 envInt64("NEVERLAUNCHER_EXTENSION_HTTP_MAX_REQUEST_BYTES", 256<<10),
-		ExtensionHTTPMaxResponseBytes:                envInt64("NEVERLAUNCHER_EXTENSION_HTTP_MAX_RESPONSE_BYTES", 1<<20),
-		ExtensionHTTPTimeoutSeconds:                  envInt("NEVERLAUNCHER_EXTENSION_HTTP_TIMEOUT_SECONDS", 10),
-		ExtensionEventsEnabled:                       envBool("NEVERLAUNCHER_EXTENSION_EVENTS_ENABLED", true),
-		ExtensionEventsWorkerIntervalMilliseconds:    envInt("NEVERLAUNCHER_EXTENSION_EVENTS_WORKER_INTERVAL_MS", 250),
-		ExtensionEventsLeaseSeconds:                  envInt("NEVERLAUNCHER_EXTENSION_EVENTS_LEASE_SECONDS", 30),
-		ExtensionEventsHookTimeoutMilliseconds:       envInt("NEVERLAUNCHER_EXTENSION_EVENTS_HOOK_TIMEOUT_MS", 2000),
-		ExtensionEventsMaxAttempts:                   envInt("NEVERLAUNCHER_EXTENSION_EVENTS_MAX_ATTEMPTS", 8),
-		ExtensionEventsBaseRetryMilliseconds:         envInt("NEVERLAUNCHER_EXTENSION_EVENTS_BASE_RETRY_MS", 1000),
-		ExtensionEventsMaxRetrySeconds:               envInt("NEVERLAUNCHER_EXTENSION_EVENTS_MAX_RETRY_SECONDS", 300),
-		ExtensionEventsBatchSize:                     envInt("NEVERLAUNCHER_EXTENSION_EVENTS_BATCH_SIZE", 32),
-		CORSAllowedOrigins:                           envCSVDefault("NEVERLAUNCHER_CORS_ALLOWED_ORIGINS", corsFallback),
+		SQLiteCoordinatorPath:                        env("LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", ""),
+		DeploymentMode:                               env("LAUNCHER_DEPLOYMENT_MODE", "auto"),
+		DeploymentLockPath:                           env("LAUNCHER_DEPLOYMENT_LOCK_PATH", ""),
+		ServerBridgeHARequired:                       envBool("LAUNCHER_SERVERBRIDGE_HA_REQUIRED", production && env("LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH", "") == ""),
+		ServerBridgeReplicaID:                        env("LAUNCHER_REPLICA_ID", ""),
+		TrustedProxyCIDRs:                            envCSV("LAUNCHER_TRUSTED_PROXY_CIDRS"),
+		RateLimitEnabled:                             envBool("LAUNCHER_RATE_LIMIT_ENABLED", true),
+		RateLimitGlobalPerMinute:                     envInt("LAUNCHER_RATE_LIMIT_GLOBAL_PER_MINUTE", 1200),
+		RateLimitAuthPerMinute:                       envInt("LAUNCHER_RATE_LIMIT_AUTH_PER_MINUTE", 20),
+		RateLimitServerBridgePerMinute:               envInt("LAUNCHER_RATE_LIMIT_SERVERBRIDGE_PER_MINUTE", 6000),
+		RateLimitFailClosed:                          envBool("LAUNCHER_RATE_LIMIT_FAIL_CLOSED", production),
+		StorageDriver:                                env("LAUNCHER_STORAGE_DRIVER", "local"),
+		StorageLocalPath:                             env("LAUNCHER_STORAGE_LOCAL_PATH", env("LAUNCHER_STORAGE_LOCAL_ROOT", "./data/storage")),
+		StorageS3Endpoint:                            env("LAUNCHER_STORAGE_S3_ENDPOINT", ""),
+		StorageS3Bucket:                              env("LAUNCHER_STORAGE_S3_BUCKET", ""),
+		StorageS3Region:                              env("LAUNCHER_STORAGE_S3_REGION", "ru-central1"),
+		StorageS3AccessKey:                           env("LAUNCHER_STORAGE_S3_ACCESS_KEY", ""),
+		StorageS3SecretKey:                           env("LAUNCHER_STORAGE_S3_SECRET_KEY", ""),
+		StorageS3PublicURL:                           env("LAUNCHER_STORAGE_S3_PUBLIC_URL", ""),
+		StorageS3PathStyle:                           envBool("LAUNCHER_STORAGE_S3_PATH_STYLE", true),
+		StorageDeliveryMode:                          env("LAUNCHER_STORAGE_DELIVERY_MODE", "reverse-proxy"),
+		StorageCDNOrigin:                             env("LAUNCHER_STORAGE_CDN_ORIGIN", ""),
+		StorageMaxUploadBytes:                        envInt64("LAUNCHER_STORAGE_MAX_UPLOAD_BYTES", 512<<20),
+		BackupRoot:                                   env("LAUNCHER_BACKUP_ROOT", "./data/backups"),
+		ExtensionRoot:                                env("LAUNCHER_EXTENSION_ROOT", "./data/extensions"),
+		ExtensionBackupRetention:                     envInt("LAUNCHER_EXTENSION_BACKUP_RETENTION", 10),
+		ExtensionHostEnabled:                         envBool("LAUNCHER_EXTENSION_HOST_ENABLED", true),
+		ExtensionHostListen:                          env("LAUNCHER_EXTENSION_HOST_LISTEN", "127.0.0.1:0"),
+		ExtensionHostStartupTimeoutSeconds:           envInt("LAUNCHER_EXTENSION_HOST_STARTUP_TIMEOUT_SECONDS", 10),
+		ExtensionHostHeartbeatTimeoutSeconds:         envInt("LAUNCHER_EXTENSION_HOST_HEARTBEAT_TIMEOUT_SECONDS", 30),
+		ExtensionHostStopTimeoutSeconds:              envInt("LAUNCHER_EXTENSION_HOST_STOP_TIMEOUT_SECONDS", 5),
+		ExtensionHostCapabilityTimeoutSeconds:        envInt("LAUNCHER_EXTENSION_HOST_CAPABILITY_TIMEOUT_SECONDS", 3),
+		ExtensionHostMaxMemoryMB:                     envInt64("LAUNCHER_EXTENSION_HOST_MAX_MEMORY_MB", 512),
+		ExtensionHostMaxProcesses:                    envInt("LAUNCHER_EXTENSION_HOST_MAX_PROCESSES", 8),
+		ExtensionHostMaxLogBytes:                     envInt64("LAUNCHER_EXTENSION_HOST_MAX_LOG_BYTES", 4<<20),
+		ExtensionHostMaxLogEntries:                   envInt("LAUNCHER_EXTENSION_HOST_MAX_LOG_ENTRIES", 1000),
+		ExtensionHostMaxProtocolBodyBytes:            envInt64("LAUNCHER_EXTENSION_HOST_MAX_PROTOCOL_BODY_BYTES", 1<<20),
+		ExtensionHostMaxStorageReadBytes:             envInt64("LAUNCHER_EXTENSION_HOST_MAX_STORAGE_READ_BYTES", 1<<20),
+		ExtensionHostCrashLimit:                      envInt("LAUNCHER_EXTENSION_HOST_CRASH_LIMIT", 5),
+		ExtensionHostCrashWindowSeconds:              envInt("LAUNCHER_EXTENSION_HOST_CRASH_WINDOW_SECONDS", 600),
+		ExtensionHostRestartBackoffMilliseconds:      envInt("LAUNCHER_EXTENSION_HOST_RESTART_BACKOFF_MS", 1000),
+		ExtensionSecretsKey:                          env("LAUNCHER_EXTENSION_SECRETS_KEY", ""),
+		ExtensionHTTPMaxRequestBytes:                 envInt64("LAUNCHER_EXTENSION_HTTP_MAX_REQUEST_BYTES", 256<<10),
+		ExtensionHTTPMaxResponseBytes:                envInt64("LAUNCHER_EXTENSION_HTTP_MAX_RESPONSE_BYTES", 1<<20),
+		ExtensionHTTPTimeoutSeconds:                  envInt("LAUNCHER_EXTENSION_HTTP_TIMEOUT_SECONDS", 10),
+		ExtensionEventsEnabled:                       envBool("LAUNCHER_EXTENSION_EVENTS_ENABLED", true),
+		ExtensionEventsWorkerIntervalMilliseconds:    envInt("LAUNCHER_EXTENSION_EVENTS_WORKER_INTERVAL_MS", 250),
+		ExtensionEventsLeaseSeconds:                  envInt("LAUNCHER_EXTENSION_EVENTS_LEASE_SECONDS", 30),
+		ExtensionEventsHookTimeoutMilliseconds:       envInt("LAUNCHER_EXTENSION_EVENTS_HOOK_TIMEOUT_MS", 2000),
+		ExtensionEventsMaxAttempts:                   envInt("LAUNCHER_EXTENSION_EVENTS_MAX_ATTEMPTS", 8),
+		ExtensionEventsBaseRetryMilliseconds:         envInt("LAUNCHER_EXTENSION_EVENTS_BASE_RETRY_MS", 1000),
+		ExtensionEventsMaxRetrySeconds:               envInt("LAUNCHER_EXTENSION_EVENTS_MAX_RETRY_SECONDS", 300),
+		ExtensionEventsBatchSize:                     envInt("LAUNCHER_EXTENSION_EVENTS_BATCH_SIZE", 32),
+		CORSAllowedOrigins:                           envCSVDefault("LAUNCHER_CORS_ALLOWED_ORIGINS", corsFallback),
 		Environment:                                  environment,
-		ValidationAttestationPublicKey0345:           env("NEVERLAUNCHER_VALIDATION_ATTESTATION_PUBLIC_KEY", ""),
-		ValidationTrustedRunnerImageSHA2560345:       env("NEVERLAUNCHER_VALIDATION_RUNNER_IMAGE_SHA256", ""),
-		ValidationRequiredTargetsJSON0346:            env("NEVERLAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON", ""),
-		AuthTokenSecret:                              env("NEVERLAUNCHER_AUTH_TOKEN_SECRET", env("NEVERLAUNCHER_TOKEN_SECRET", env("NEVERLAUNCHER_JWT_SECRET", "dev-only-change-me"))),
-		AuthTokenTTLHours:                            envInt("NEVERLAUNCHER_AUTH_TOKEN_TTL_HOURS", 12),
-		AuthTokenIssuer:                              env("NEVERLAUNCHER_AUTH_TOKEN_ISSUER", strings.TrimRight(publicURL, "/")),
-		AuthTokenAudience:                            env("NEVERLAUNCHER_AUTH_TOKEN_AUDIENCE", "launcher-api"),
-		AuthTokenActiveKID:                           env("NEVERLAUNCHER_AUTH_TOKEN_ACTIVE_KID", "primary"),
-		AuthTokenKeysJSON:                            env("NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON", ""),
-		GuardReleaseAllowlistJSON:                    env("NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON", ""),
-		BridgeReleaseAllowlistJSON:                   env("NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON", ""),
-		MetricsEnabled:                               envBool("NEVERLAUNCHER_METRICS_ENABLED", true),
-		PersistentSessions:                           envBool("NEVERLAUNCHER_PERSISTENT_SESSIONS", true),
-		RequirePersistentStoreInProduction:           envBool("NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION", true),
-		DatabaseAutoMigrate:                          envBool("NEVERLAUNCHER_DATABASE_AUTO_MIGRATE", true),
-		BootstrapToken:                               env("NEVERLAUNCHER_BOOTSTRAP_TOKEN", ""),
+		ValidationAttestationPublicKey0345:           env("LAUNCHER_VALIDATION_ATTESTATION_PUBLIC_KEY", ""),
+		ValidationTrustedRunnerImageSHA2560345:       env("LAUNCHER_VALIDATION_RUNNER_IMAGE_SHA256", ""),
+		ValidationRequiredTargetsJSON0346:            env("LAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON", ""),
+		AuthTokenSecret:                              env("LAUNCHER_AUTH_TOKEN_SECRET", env("LAUNCHER_TOKEN_SECRET", env("LAUNCHER_JWT_SECRET", "dev-only-change-me"))),
+		AuthTokenTTLHours:                            envInt("LAUNCHER_AUTH_TOKEN_TTL_HOURS", 12),
+		AuthTokenIssuer:                              env("LAUNCHER_AUTH_TOKEN_ISSUER", strings.TrimRight(publicURL, "/")),
+		AuthTokenAudience:                            env("LAUNCHER_AUTH_TOKEN_AUDIENCE", "launcher-api"),
+		AuthTokenActiveKID:                           env("LAUNCHER_AUTH_TOKEN_ACTIVE_KID", "primary"),
+		AuthTokenKeysJSON:                            env("LAUNCHER_AUTH_TOKEN_KEYS_JSON", ""),
+		GuardReleaseAllowlistJSON:                    env("LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON", ""),
+		BridgeReleaseAllowlistJSON:                   env("LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON", ""),
+		MetricsEnabled:                               envBool("LAUNCHER_METRICS_ENABLED", true),
+		PersistentSessions:                           envBool("LAUNCHER_PERSISTENT_SESSIONS", true),
+		RequirePersistentStoreInProduction:           envBool("LAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION", true),
+		DatabaseAutoMigrate:                          envBool("LAUNCHER_DATABASE_AUTO_MIGRATE", true),
+		BootstrapToken:                               env("LAUNCHER_BOOTSTRAP_TOKEN", ""),
 		ManifestSigningPrivateKey:                    manifestSigningPrivateKey,
-		RuntimeValidationKeysJSON:                    env("NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON", ""),
-		ServerBridgeHostTargetsFile0413:              env("NEVERLAUNCHER_SERVER_BRIDGE_HOST_TARGETS_FILE", ""),
+		RuntimeValidationKeysJSON:                    env("LAUNCHER_RUNTIME_VALIDATION_KEYS_JSON", ""),
+		ServerBridgeHostTargetsFile0413:              env("LAUNCHER_SERVER_BRIDGE_HOST_TARGETS_FILE", ""),
 		ServerBridgeControlSigningPrivateKey:         serverBridgeControlSigningPrivateKey,
 		ServerBridgeControlPreviousSigningPrivateKey: serverBridgeControlPreviousSigningPrivateKey,
-		AuthRoutingJSON:                              env("NEVERLAUNCHER_AUTH_ROUTING_JSON", ""),
-		AuthRoutingFile:                              env("NEVERLAUNCHER_AUTH_ROUTING_FILE", ""),
-		AuthSQLProvidersJSON:                         env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),
-		AuthSQLProvidersFile:                         env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
-		AuthFileProvidersJSON:                        env("NEVERLAUNCHER_AUTH_FILE_PROVIDERS_JSON", ""),
-		AuthFileProvidersFile:                        env("NEVERLAUNCHER_AUTH_FILE_PROVIDERS_FILE", ""),
-		AuthHTTPProvidersJSON:                        env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON", ""),
-		AuthHTTPProvidersFile:                        env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE", ""),
-		AuthOIDCProvidersJSON:                        env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_JSON", ""),
-		AuthOIDCProvidersFile:                        env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_FILE", ""),
-		AuthMicrosoftProvidersJSON:                   env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON", ""),
-		AuthMicrosoftProvidersFile:                   env("NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE", ""),
-		WebAuthnRPID:                                 env("NEVERLAUNCHER_WEBAUTHN_RP_ID", webauthnRPID),
-		WebAuthnRPName:                               env("NEVERLAUNCHER_WEBAUTHN_RP_NAME", "Launcher"),
-		WebAuthnOrigins:                              envCSVDefault("NEVERLAUNCHER_WEBAUTHN_ORIGINS", webauthnOrigin),
+		AuthRoutingJSON:                              env("LAUNCHER_AUTH_ROUTING_JSON", ""),
+		AuthRoutingFile:                              env("LAUNCHER_AUTH_ROUTING_FILE", ""),
+		AuthSQLProvidersJSON:                         env("LAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),
+		AuthSQLProvidersFile:                         env("LAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
+		AuthFileProvidersJSON:                        env("LAUNCHER_AUTH_FILE_PROVIDERS_JSON", ""),
+		AuthFileProvidersFile:                        env("LAUNCHER_AUTH_FILE_PROVIDERS_FILE", ""),
+		AuthHTTPProvidersJSON:                        env("LAUNCHER_AUTH_HTTP_PROVIDERS_JSON", ""),
+		AuthHTTPProvidersFile:                        env("LAUNCHER_AUTH_HTTP_PROVIDERS_FILE", ""),
+		AuthOIDCProvidersJSON:                        env("LAUNCHER_AUTH_OIDC_PROVIDERS_JSON", ""),
+		AuthOIDCProvidersFile:                        env("LAUNCHER_AUTH_OIDC_PROVIDERS_FILE", ""),
+		AuthMicrosoftProvidersJSON:                   env("LAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON", ""),
+		AuthMicrosoftProvidersFile:                   env("LAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE", ""),
+		WebAuthnRPID:                                 env("LAUNCHER_WEBAUTHN_RP_ID", webauthnRPID),
+		WebAuthnRPName:                               env("LAUNCHER_WEBAUTHN_RP_NAME", "Launcher"),
+		WebAuthnOrigins:                              envCSVDefault("LAUNCHER_WEBAUTHN_ORIGINS", webauthnOrigin),
 	}
 }
 
@@ -370,23 +370,23 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "production PostgreSQL requires pgx driver")
 		}
 		if strings.TrimSpace(cfg.DatabaseDSN) == "" {
-			problems = append(problems, "NEVERLAUNCHER_DATABASE_DSN is required")
+			problems = append(problems, "LAUNCHER_DATABASE_DSN is required")
 		}
 	}
 	secret := strings.TrimSpace(cfg.AuthTokenSecret)
 	if len(secret) < 32 || secret == "dev-only-change-me" || strings.Contains(strings.ToUpper(secret), "CHANGE_ME") {
-		problems = append(problems, "NEVERLAUNCHER_AUTH_TOKEN_SECRET должен содержать не менее 32 случайных символов и не быть значением по умолчанию")
+		problems = append(problems, "LAUNCHER_AUTH_TOKEN_SECRET должен содержать не менее 32 случайных символов и не быть значением по умолчанию")
 	}
 	if controlKey := strings.TrimSpace(cfg.ServerBridgeControlSigningPrivateKey); controlKey != "" {
 		decoded, err := hex.DecodeString(controlKey)
 		if err != nil || len(decoded) != 32 {
-			problems = append(problems, "NEVERLAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY должен быть 64 hex символами Ed25519 seed")
+			problems = append(problems, "LAUNCHER_SERVERBRIDGE_CONTROL_SIGNING_PRIVATE_KEY должен быть 64 hex символами Ed25519 seed")
 		}
 	}
 	if previousKey := strings.TrimSpace(cfg.ServerBridgeControlPreviousSigningPrivateKey); previousKey != "" {
 		decoded, err := hex.DecodeString(previousKey)
 		if err != nil || len(decoded) != 32 {
-			problems = append(problems, "NEVERLAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY должен быть 64 hex символами Ed25519 seed")
+			problems = append(problems, "LAUNCHER_SERVERBRIDGE_CONTROL_PREVIOUS_SIGNING_PRIVATE_KEY должен быть 64 hex символами Ed25519 seed")
 		}
 		if strings.EqualFold(previousKey, strings.TrimSpace(cfg.ServerBridgeControlSigningPrivateKey)) {
 			problems = append(problems, "активный и previous ServerBridge control signing keys должны различаться")
@@ -395,14 +395,14 @@ func ValidateProduction(cfg Config) error {
 	if raw := strings.TrimSpace(cfg.AuthTokenKeysJSON); raw != "" {
 		keys := map[string]string{}
 		if err := json.Unmarshal([]byte(raw), &keys); err != nil {
-			problems = append(problems, "NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON должен быть JSON object kid->secret")
+			problems = append(problems, "LAUNCHER_AUTH_TOKEN_KEYS_JSON должен быть JSON object kid->secret")
 		} else {
 			active := strings.TrimSpace(cfg.AuthTokenActiveKID)
 			if active == "" {
 				active = "primary"
 			}
 			if strings.TrimSpace(keys[active]) == "" {
-				problems = append(problems, "active auth token kid отсутствует в NEVERLAUNCHER_AUTH_TOKEN_KEYS_JSON")
+				problems = append(problems, "active auth token kid отсутствует в LAUNCHER_AUTH_TOKEN_KEYS_JSON")
 			}
 			for kid, key := range keys {
 				if strings.TrimSpace(kid) == "" || len(strings.TrimSpace(key)) < 32 {
@@ -413,7 +413,7 @@ func ValidateProduction(cfg Config) error {
 	}
 	guardAllowlistRaw := strings.TrimSpace(cfg.GuardReleaseAllowlistJSON)
 	if guardAllowlistRaw == "" {
-		problems = append(problems, "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON обязателен в production")
+		problems = append(problems, "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON обязателен в production")
 	} else {
 		type guardArtifactPair struct {
 			GuardSHA256         string `json:"guardSha256"`
@@ -433,7 +433,7 @@ func ValidateProduction(cfg Config) error {
 			Releases      map[string]guardRelease `json:"releases"`
 		}
 		if err := json.Unmarshal([]byte(guardAllowlistRaw), &document); err != nil || document.SchemaVersion != "2.0" || len(document.Releases) == 0 {
-			problems = append(problems, "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON должен быть Guard release policy schemaVersion=2.0")
+			problems = append(problems, "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON должен быть Guard release policy schemaVersion=2.0")
 		} else {
 			for version, release := range document.Releases {
 				if strings.TrimSpace(version) == "" || release.ProtocolVersion != 4 || len(release.Platforms) == 0 {
@@ -482,10 +482,10 @@ func ValidateProduction(cfg Config) error {
 		haPolicySpecified := cfg.ServerBridgeHARequired || strings.TrimSpace(cfg.ServerBridgeReplicaID) != ""
 		if haPolicySpecified {
 			if !cfg.ServerBridgeHARequired {
-				problems = append(problems, "production требует NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED=true")
+				problems = append(problems, "production требует LAUNCHER_SERVERBRIDGE_HA_REQUIRED=true")
 			}
 			if strings.TrimSpace(cfg.RedisURL) == "" {
-				problems = append(problems, "NEVERLAUNCHER_REDIS_URL обязателен для ServerBridge HA fencing")
+				problems = append(problems, "LAUNCHER_REDIS_URL обязателен для ServerBridge HA fencing")
 			}
 		}
 	}
@@ -493,13 +493,13 @@ func ValidateProduction(cfg Config) error {
 	ratePolicySpecified := singleNode || strings.TrimSpace(cfg.RedisURL) != "" || cfg.RateLimitEnabled || cfg.RateLimitGlobalPerMinute != 0 || cfg.RateLimitAuthPerMinute != 0 || cfg.RateLimitServerBridgePerMinute != 0 || cfg.RateLimitFailClosed
 	if ratePolicySpecified {
 		if !cfg.RateLimitEnabled {
-			problems = append(problems, "production требует NEVERLAUNCHER_RATE_LIMIT_ENABLED=true")
+			problems = append(problems, "production требует LAUNCHER_RATE_LIMIT_ENABLED=true")
 		}
 		if !cfg.RateLimitFailClosed {
-			problems = append(problems, "production требует NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED=true")
+			problems = append(problems, "production требует LAUNCHER_RATE_LIMIT_FAIL_CLOSED=true")
 		}
 		if !singleNode && strings.TrimSpace(cfg.RedisURL) == "" {
-			problems = append(problems, "NEVERLAUNCHER_REDIS_URL обязателен для distributed production rate limiting")
+			problems = append(problems, "LAUNCHER_REDIS_URL обязателен для distributed production rate limiting")
 		}
 		if cfg.RateLimitGlobalPerMinute <= 0 || cfg.RateLimitAuthPerMinute <= 0 || cfg.RateLimitServerBridgePerMinute <= 0 {
 			problems = append(problems, "production rate-limit budgets global/auth/serverbridge должны быть > 0")
@@ -508,7 +508,7 @@ func ValidateProduction(cfg Config) error {
 
 	bridgeAllowlistRaw := strings.TrimSpace(cfg.BridgeReleaseAllowlistJSON)
 	if bridgeAllowlistRaw == "" {
-		problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON обязателен в production")
+		problems = append(problems, "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON обязателен в production")
 	} else {
 		type bridgeReleaseEntry struct {
 			VelocitySHA256   []string `json:"velocitySha256"`
@@ -543,15 +543,15 @@ func ValidateProduction(cfg Config) error {
 				Releases                 map[string]bridgeReleaseEntry `json:"releases"`
 			}
 			if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &document); err != nil || document.Release != "ServerBridge 3" || document.ProtocolVersion != 3 || document.MinimumProtocolVersion != 3 || document.SecurityProfile != "serverbridge3-security-01912" || !strings.EqualFold(document.SecurityCapabilityDigest, "088d7922033afa09c4489989fab5d71603e3425a08243a95588036f5c27505c4") || !serverBridgeSecurityFeaturesExact01912(document.RequiredFeatures) {
-				problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON ServerBridge 3 security certification metadata некорректна")
+				problems = append(problems, "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON ServerBridge 3 security certification metadata некорректна")
 			} else {
 				bridgeAllowlist = document.Releases
 			}
 		} else if err := json.Unmarshal([]byte(bridgeAllowlistRaw), &bridgeAllowlist); err != nil {
-			problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен быть legacy release map или ServerBridge 3 schemaVersion=3.0")
+			problems = append(problems, "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен быть legacy release map или ServerBridge 3 schemaVersion=3.0")
 		}
 		if len(bridgeAllowlist) == 0 {
-			problems = append(problems, "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен содержать непустой releases")
+			problems = append(problems, "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON должен содержать непустой releases")
 		} else {
 			for version, entry := range bridgeAllowlist {
 				if strings.TrimSpace(version) == "" || len(entry.VelocitySHA256) == 0 || len(entry.PaperSHA256) == 0 || len(entry.PurpurSHA256) == 0 {
@@ -614,19 +614,19 @@ func ValidateProduction(cfg Config) error {
 		publicURLValid = true
 	}
 	if !publicURLValid {
-		problems = append(problems, "NEVERLAUNCHER_PUBLIC_URL в production должен быть абсолютным HTTPS URL (HTTP loopback разрешён только для e2e-production)")
+		problems = append(problems, "LAUNCHER_PUBLIC_URL в production должен быть абсолютным HTTPS URL (HTTP loopback разрешён только для e2e-production)")
 	}
 	rpID := strings.ToLower(strings.TrimSpace(cfg.WebAuthnRPID))
 	if rpID == "" {
-		problems = append(problems, "NEVERLAUNCHER_WEBAUTHN_RP_ID обязателен")
+		problems = append(problems, "LAUNCHER_WEBAUTHN_RP_ID обязателен")
 	} else if strings.Contains(rpID, "://") || strings.ContainsAny(rpID, "/?#") || strings.Contains(rpID, ":") {
-		problems = append(problems, "NEVERLAUNCHER_WEBAUTHN_RP_ID должен быть hostname/domain без scheme, port и path")
+		problems = append(problems, "LAUNCHER_WEBAUTHN_RP_ID должен быть hostname/domain без scheme, port и path")
 	}
 	if strings.TrimSpace(cfg.WebAuthnRPName) == "" {
-		problems = append(problems, "NEVERLAUNCHER_WEBAUTHN_RP_NAME обязателен")
+		problems = append(problems, "LAUNCHER_WEBAUTHN_RP_NAME обязателен")
 	}
 	if len(cfg.WebAuthnOrigins) == 0 {
-		problems = append(problems, "NEVERLAUNCHER_WEBAUTHN_ORIGINS обязателен")
+		problems = append(problems, "LAUNCHER_WEBAUTHN_ORIGINS обязателен")
 	}
 	for _, origin := range cfg.WebAuthnOrigins {
 		u, parseErr := url.Parse(strings.TrimSpace(origin))
@@ -644,7 +644,7 @@ func ValidateProduction(cfg Config) error {
 		}
 	}
 	if len(cfg.CORSAllowedOrigins) == 0 {
-		problems = append(problems, "NEVERLAUNCHER_CORS_ALLOWED_ORIGINS обязателен в production")
+		problems = append(problems, "LAUNCHER_CORS_ALLOWED_ORIGINS обязателен в production")
 	}
 	for _, origin := range cfg.CORSAllowedOrigins {
 		origin = strings.TrimSpace(origin)
@@ -659,20 +659,20 @@ func ValidateProduction(cfg Config) error {
 	}
 	backupRoot := filepath.Clean(strings.TrimSpace(cfg.BackupRoot))
 	if strings.TrimSpace(cfg.BackupRoot) == "" || backupRoot == "." {
-		problems = append(problems, "NEVERLAUNCHER_BACKUP_ROOT обязателен")
+		problems = append(problems, "LAUNCHER_BACKUP_ROOT обязателен")
 	}
 	extensionRoot := filepath.Clean(strings.TrimSpace(cfg.ExtensionRoot))
 	if strings.TrimSpace(cfg.ExtensionRoot) == "" || extensionRoot == "." {
-		problems = append(problems, "NEVERLAUNCHER_EXTENSION_ROOT обязателен")
+		problems = append(problems, "LAUNCHER_EXTENSION_ROOT обязателен")
 	} else if pathsOverlap(extensionRoot, backupRoot) {
 		problems = append(problems, "extension root должен быть отделён от backup root")
 	}
 	if cfg.ExtensionBackupRetention < 1 || cfg.ExtensionBackupRetention > 100 {
-		problems = append(problems, "NEVERLAUNCHER_EXTENSION_BACKUP_RETENTION должен быть 1..100")
+		problems = append(problems, "LAUNCHER_EXTENSION_BACKUP_RETENTION должен быть 1..100")
 	}
 	if cfg.ExtensionEventsEnabled {
 		if !cfg.ExtensionHostEnabled {
-			problems = append(problems, "Extensions Events требует NEVERLAUNCHER_EXTENSION_HOST_ENABLED=true")
+			problems = append(problems, "Extensions Events требует LAUNCHER_EXTENSION_HOST_ENABLED=true")
 		}
 		if cfg.ExtensionEventsWorkerIntervalMilliseconds < 50 || cfg.ExtensionEventsWorkerIntervalMilliseconds > 60000 {
 			problems = append(problems, "extension events worker interval должен быть 50..60000 ms")
@@ -699,9 +699,9 @@ func ValidateProduction(cfg Config) error {
 	if cfg.ExtensionHostEnabled {
 		host, _, err := net.SplitHostPort(strings.TrimSpace(cfg.ExtensionHostListen))
 		if err != nil {
-			problems = append(problems, "NEVERLAUNCHER_EXTENSION_HOST_LISTEN должен быть host:port")
+			problems = append(problems, "LAUNCHER_EXTENSION_HOST_LISTEN должен быть host:port")
 		} else if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
-			problems = append(problems, "NEVERLAUNCHER_EXTENSION_HOST_LISTEN должен быть loopback-адресом")
+			problems = append(problems, "LAUNCHER_EXTENSION_HOST_LISTEN должен быть loopback-адресом")
 		}
 		if cfg.ExtensionHostStartupTimeoutSeconds < 1 || cfg.ExtensionHostStartupTimeoutSeconds > 300 {
 			problems = append(problems, "extension host startup timeout должен быть 1..300 секунд")
@@ -757,7 +757,7 @@ func ValidateProduction(cfg Config) error {
 	case "local", "":
 		storageRoot := filepath.Clean(strings.TrimSpace(cfg.StorageLocalPath))
 		if strings.TrimSpace(cfg.StorageLocalPath) == "" || storageRoot == "." {
-			problems = append(problems, "NEVERLAUNCHER_STORAGE_LOCAL_PATH обязателен для local storage")
+			problems = append(problems, "LAUNCHER_STORAGE_LOCAL_PATH обязателен для local storage")
 		} else if pathsOverlap(storageRoot, backupRoot) {
 			problems = append(problems, "backup root должен быть отделён от local storage root")
 		} else if strings.TrimSpace(cfg.ExtensionRoot) != "" && extensionRoot != "." && pathsOverlap(storageRoot, extensionRoot) {
@@ -768,7 +768,7 @@ func ValidateProduction(cfg Config) error {
 			problems = append(problems, "для S3 обязательны endpoint, bucket, access key и secret key")
 		}
 	default:
-		problems = append(problems, fmt.Sprintf("неподдерживаемый NEVERLAUNCHER_STORAGE_DRIVER=%q", cfg.StorageDriver))
+		problems = append(problems, fmt.Sprintf("неподдерживаемый LAUNCHER_STORAGE_DRIVER=%q", cfg.StorageDriver))
 	}
 	if len(problems) > 0 {
 		return errors.New("небезопасная production-конфигурация: " + strings.Join(problems, "; "))

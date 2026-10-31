@@ -36,11 +36,9 @@
       "equivalent": "Discord IPC SET_ACTIVITY (login/profile/play) and optional HTTPS activity button; no client dependency on Discord",
       "sourceRefs": [
         "cli/internal/discordrpc/client.go",
-        "cli/cmd/neverlauncher/lan_discord_0308.go"
+        "cli/cmd/launcher/lan_discord_0308.go"
       ],
-      "testRefs": [
-        "cli/internal/discordrpc/client_test.go"
-      ],
+      "testRefs": ["cli/internal/discordrpc/client_test.go"],
       "limitations": "0.42.9 Discord IPC recovery is locally tested; live Discord client, Social SDK and platform matrix are not verified."
     },
     {
@@ -52,9 +50,7 @@
         "services/api/internal/fileauth/database_0295.go",
         "services/api/internal/repository/local_auth_0295.go"
       ],
-      "testRefs": [
-        "services/api/internal/fileauth/database_0295_test.go"
-      ],
+      "testRefs": ["services/api/internal/fileauth/database_0295_test.go"],
       "limitations": "0.42.6 read-only live Database.json provider exists; write-back, Gravit role/token transfer and full production authorization are intentionally unsupported/unverified."
     },
     {
@@ -77,11 +73,9 @@
       "upstreamModule": "GenerateCertificate",
       "status": "partial",
       "equivalent": "Certificate verification and signed release workflows.",
-      "sourceRefs": [
-        "cli/cmd/neverlauncher/compatibility_release_certificate.go"
-      ],
+      "sourceRefs": ["cli/cmd/launcher/compatibility_release_certificate.go"],
       "testRefs": [
-        "cli/cmd/neverlauncher/compatibility_release_certificate_test.go"
+        "cli/cmd/launcher/compatibility_release_certificate_test.go"
       ],
       "limitations": "No full Gravit certificate generation workflow equivalence test."
     },
@@ -107,9 +101,7 @@
         "apps/desktop/src/main.tsx",
         "apps/desktop/src/desktop_experience_0229.ts"
       ],
-      "testRefs": [
-        "apps/desktop/tests/desktop_experience_0229.test.mjs"
-      ],
+      "testRefs": ["apps/desktop/tests/desktop_experience_0229.test.mjs"],
       "limitations": "JavaFX API hooks are not supported; visual startup/login/launch E2E needs verification."
     },
     {
@@ -117,12 +109,8 @@
       "upstreamModule": "MirrorHelper",
       "status": "partial",
       "equivalent": "MirrorHelper equivalents for verified asset operations, mod merges and authlib patching.",
-      "sourceRefs": [
-        "cli/cmd/neverlauncher/mirror_helper_parity_0274.go"
-      ],
-      "testRefs": [
-        "cli/cmd/neverlauncher/mirror_helper_parity_0274_test.go"
-      ],
+      "sourceRefs": ["cli/cmd/launcher/mirror_helper_parity_0274.go"],
+      "testRefs": ["cli/cmd/launcher/mirror_helper_parity_0274_test.go"],
       "limitations": "0.42.7 explicit installer cache repair exists; full loader/version/mirror command-by-command compatibility is not certified."
     },
     {
@@ -132,11 +120,9 @@
       "equivalent": "Official Minecraft sign-in and Mojang-profile integration.",
       "sourceRefs": [
         "apps/desktop/src/official_minecraft_0257.ts",
-        "cli/cmd/neverlauncher/official_ga_release_0270.go"
+        "cli/cmd/launcher/official_ga_release_0270.go"
       ],
-      "testRefs": [
-        "cli/cmd/neverlauncher/official_ga_release_0270_test.go"
-      ],
+      "testRefs": ["cli/cmd/launcher/official_ga_release_0270_test.go"],
       "limitations": "0.42.7 retries safe Minecraft GET calls; real account sign-in, entitlement/session join and JVM matrix remain unverified."
     },
     {
@@ -144,12 +130,8 @@
       "upstreamModule": "OpenSSLSignCode",
       "status": "partial",
       "equivalent": "Windows PE/code-signing verification and publication gates.",
-      "sourceRefs": [
-        "cli/cmd/neverlauncher/windows_signing.go"
-      ],
-      "testRefs": [
-        "cli/cmd/neverlauncher/windows_signing_test.go"
-      ],
+      "sourceRefs": ["cli/cmd/launcher/windows_signing.go"],
+      "testRefs": ["cli/cmd/launcher/windows_signing_test.go"],
       "limitations": "No OpenSSLSignCode-specific command/format parity."
     },
     {
@@ -157,12 +139,8 @@
       "upstreamModule": "Prestarter",
       "status": "partial",
       "equivalent": "Signed native prestarter bootstrap and verified rollback.",
-      "sourceRefs": [
-        "prestarter/prestarter.go"
-      ],
-      "testRefs": [
-        "prestarter/prestarter_test.go"
-      ],
+      "sourceRefs": ["prestarter/prestarter.go"],
+      "testRefs": ["prestarter/prestarter_test.go"],
       "limitations": "0.42.7 headless prestarter path works in local tests; bootstrap on all target OS/JVM/CPU combinations is not verified."
     },
     {
@@ -170,12 +148,8 @@
       "upstreamModule": "RemoteControl",
       "status": "partial",
       "equivalent": "Scoped HTTPS RemoteControl for server host via ServerBridge.",
-      "sourceRefs": [
-        "cli/cmd/neverlauncher/serverbridge_host_remote_0284.go"
-      ],
-      "testRefs": [
-        "cli/cmd/neverlauncher/serverbridge_host_remote_0284_test.go"
-      ],
+      "sourceRefs": ["cli/cmd/launcher/serverbridge_host_remote_0284.go"],
+      "testRefs": ["cli/cmd/launcher/serverbridge_host_remote_0284_test.go"],
       "limitations": "0.42.8 RemoteControl mTLS and graceful shutdown locally verified; generic Java LaunchServer reflection remains deliberately unsupported."
     },
     {
@@ -183,12 +157,8 @@
       "upstreamModule": "SentryProGuardUpload",
       "status": "partial",
       "equivalent": "Release-bound upload of obfuscation mappings with UUID check and protected source maps",
-      "sourceRefs": [
-        "scripts/diagnostics/upload_release_0309.py"
-      ],
-      "testRefs": [
-        "scripts/diagnostics/uploader_03011.test.mjs"
-      ],
+      "sourceRefs": ["scripts/diagnostics/upload_release_0309.py"],
+      "testRefs": ["scripts/diagnostics/uploader_03011.test.mjs"],
       "limitations": "Production Sentry Cloud credentials and successful real mapping upload are not tested."
     },
     {
@@ -198,11 +168,9 @@
       "equivalent": "Optional redacted Desktop JS/JVM Sentry diagnostics",
       "sourceRefs": [
         "apps/desktop/src/sentry_diagnostics_0309.ts",
-        "sdk/java/core/src/main/java/ru/neverlauncher/sdk/core/SentryDiagnostics.java"
+        "sdk/java/core/src/main/java/ru/launcher/sdk/core/SentryDiagnostics.java"
       ],
-      "testRefs": [
-        "scripts/desktop/desktop_diagnostics_03011.test.mjs"
-      ],
+      "testRefs": ["scripts/desktop/desktop_diagnostics_03011.test.mjs"],
       "limitations": "Production Rust desktop E2E, consent persistence and cloud receipt require verification."
     },
     {
@@ -210,12 +178,8 @@
       "upstreamModule": "Sentry server module",
       "status": "partial",
       "equivalent": "Backend HTTP Sentry reporting and redaction",
-      "sourceRefs": [
-        "services/api/internal/sentrydiag/sentry.go"
-      ],
-      "testRefs": [
-        "services/api/internal/sentrydiag/sentry_test.go"
-      ],
+      "sourceRefs": ["services/api/internal/sentrydiag/sentry.go"],
+      "testRefs": ["services/api/internal/sentrydiag/sentry_test.go"],
       "limitations": "0.42.9 Sentry retry and queue drain tested locally; real Sentry ingestion and full backend integration not verified."
     },
     {
@@ -224,10 +188,10 @@
       "status": "partial",
       "equivalent": "Linux host systemd notify/watchdog and service lifecycle.",
       "sourceRefs": [
-        "cli/cmd/neverlauncher/serverbridge_host_systemd_linux_02811.go"
+        "cli/cmd/launcher/serverbridge_host_systemd_linux_02811.go"
       ],
       "testRefs": [
-        "cli/cmd/neverlauncher/serverbridge_host_systemd_linux_02811_test.go"
+        "cli/cmd/launcher/serverbridge_host_systemd_linux_02811_test.go"
       ],
       "limitations": "Systemd service support is host-scoped; no generic LaunchServer Java module."
     },
@@ -240,9 +204,7 @@
         "cli/internal/devtools/jar.go",
         "cli/internal/devtools/auth.go"
       ],
-      "testRefs": [
-        "cli/internal/devtools/devtools_test.go"
-      ],
+      "testRefs": ["cli/internal/devtools/devtools_test.go"],
       "limitations": "Intentional policy exception: unsafe classloader access to production LaunchServer or auth credentials is not implemented; full equivalence intentionally impossible."
     },
     {
@@ -250,12 +212,8 @@
       "upstreamModule": "mDNSClientside",
       "status": "partial",
       "equivalent": "Explicit IPv4 multicast LAN discovery with separately pinned TLS certificate verification",
-      "sourceRefs": [
-        "cli/internal/lanmdns/discovery.go"
-      ],
-      "testRefs": [
-        "cli/internal/lanmdns/discovery_test.go"
-      ],
+      "sourceRefs": ["cli/internal/lanmdns/discovery.go"],
+      "testRefs": ["cli/internal/lanmdns/discovery_test.go"],
       "limitations": "0.42.9 mDNS discovery tested via real container multicast; IPv6, segmented LAN, and native Desktop LAN UX unverified."
     },
     {
@@ -267,9 +225,7 @@
         "cli/internal/lanmdns/dns.go",
         "cli/internal/lanmdns/discovery.go"
       ],
-      "testRefs": [
-        "cli/internal/lanmdns/discovery_test.go"
-      ],
+      "testRefs": ["cli/internal/lanmdns/discovery_test.go"],
       "limitations": "0.42.9 local multicast publication/discovery tested; cross-host networks, IPv6 and collision handling unverified."
     }
   ]

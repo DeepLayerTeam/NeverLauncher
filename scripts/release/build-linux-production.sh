@@ -46,11 +46,11 @@ echo "[Launcher ${VERSION}] Linux ${ARCH}: build frontend"
 echo "[Launcher ${VERSION}] Linux ${ARCH}: build CLI/API"
 (
   cd "${ROOT_DIR}/cli"
-  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.componentSetTrustedKey02310=${NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-} -X main.componentSetRootKey02312=${NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY:-}" -o "${OUT_DIR}/launcher-cli-linux-${ARCH}" ./cmd/launcher
+  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.componentSetTrustedKey02310=${LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-} -X main.componentSetRootKey02312=${LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY:-}" -o "${OUT_DIR}/launcher-cli-linux-${ARCH}" ./cmd/launcher
 )
 (
   cd "${ROOT_DIR}/services/api"
-  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${NEVERLAUNCHER_SOURCE_COMMIT:-${GITHUB_SHA:-unknown}}" -o "${OUT_DIR}/launcher-api-linux-${ARCH}" ./cmd/launcher-api
+  GOOS=linux GOARCH="${GOARCH}" CGO_ENABLED="${LAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${LAUNCHER_SOURCE_COMMIT:-${GITHUB_SHA:-unknown}}" -o "${OUT_DIR}/launcher-api-linux-${ARCH}" ./cmd/launcher-api
 )
 
 echo "[Launcher ${VERSION}] Linux ${ARCH}: build Desktop/Guard/Runtime natively"

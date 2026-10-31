@@ -336,7 +336,7 @@ func TestDesktopReceivesSignedFirstRunBinding(t *testing.T) {
 	}
 	root := t.TempDir()
 	parts := baseParts()
-	parts["desktop"] = []byte("#!/bin/sh\nprintf '%s' \"$NEVERLAUNCHER_CONFIG_DIR\" > \"$NEVERLAUNCHER_CONFIG_DIR/desktop-started\"\n")
+	parts["desktop"] = []byte("#!/bin/sh\nprintf '%s' \"$LAUNCHER_CONFIG_DIR\" > \"$LAUNCHER_CONFIG_DIR/desktop-started\"\n")
 	opts, cfg := makeOfflineFixture(t, root, parts)
 	// Desktop's unattended first-run contract requires the owner-signed backend.
 	// The historic offline fixture intentionally leaves it blank for CLI cases.

@@ -9,7 +9,7 @@ ROOT=$(tr -d '\r\n ' < "$ROOT_FILE")
 ROOT=$(printf '%s' "$ROOT" | tr 'A-F' 'a-f')
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../../apps/desktop"
-export NEVERLAUNCHER_BOOTSTRAP_ROOT_KEY="$ROOT"
+export LAUNCHER_BOOTSTRAP_ROOT_KEY="$ROOT"
 # The root is embedded in Rust via option_env! at compile time, not passed to
 # JavaScript or runtime environment. Requires the existing Tauri v2 toolchain.
 npm ci --ignore-scripts

@@ -67,7 +67,7 @@ func (s *sqliteAdapter) Close() error              { return s.repo.Close() }
 
 func sqliteFactory(t *testing.T) func() storage {
 	t.Helper()
-	base := os.Getenv("NEVERLAUNCHER_SQLITE_TEST_ROOT")
+	base := os.Getenv("LAUNCHER_SQLITE_TEST_ROOT")
 	if base == "" {
 		base = t.TempDir()
 	} else {
@@ -93,7 +93,7 @@ func sqliteFactory(t *testing.T) func() storage {
 }
 
 // runCommon is used unchanged against both real database implementations.
-// A restart is a fresh connection, never an in-memory snapshot replay.
+// A restart is a fresh connection, an in-memory snapshot replay.
 func runCommon(t *testing.T, open func() storage, scope string) {
 	t.Helper()
 	s := open()

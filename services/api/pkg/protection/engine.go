@@ -123,7 +123,7 @@ func (e *Engine) Evaluate(ctx context.Context, req Request) Decision {
 		scoped, cancel := context.WithTimeout(ctx, timeout)
 		// Handlers run synchronously: timeout-aware storage/network handlers must
 		// honor the context, without creating unbounded goroutines on timeout.
-		// Untrusted extension panics are failures, never successful authorizations.
+		// Untrusted extension panics are failures, successful authorizations.
 		decision, err := evaluateHandlerSafely(scoped, h.handler, req)
 		deadlineErr := scoped.Err()
 		cancel()

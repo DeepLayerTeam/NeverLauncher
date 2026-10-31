@@ -6,7 +6,7 @@ This release is an executable identity reconciliation step. It does **not** crea
 
 Provide the exact same protected ZIP that was previously inventoried using MIG03:
 
-- Gravit FileAuthSystem JSON at any path ending `FileAuthSystem/Database.json` or `FileAuth/Database.json` (case-insensitive, optional parent directories). This is the UUID-keyed map used by the upstream FileAuthSystem module. The file's password, permissions, roles, skin and cloak fields are discarded by the identity mapper. `Sessions.json` is never parsed as identity data.
+- Gravit FileAuthSystem JSON at any path ending `FileAuthSystem/Database.json` or `FileAuth/Database.json` (case-insensitive, optional parent directories). This is the UUID-keyed map used by the upstream FileAuthSystem module. The file's password, permissions, roles, skin and cloak fields are discarded by the identity mapper. `Sessions.json` is  parsed as identity data.
 - `sql-export/users.csv`, optionally under a parent directory. This is **not** a dump of SQL statements. It is a snapshot exported from the actual Gravit SQL users table, normalized to headers **`id,username,uuid`**, with an immutable, unique provider-local source ID. Extra columns, including password hashes, are ignored. Export the actual UUID from the game system: do not generate or recompute one using a nickname or the SQL row number. SQL column names can be customized in Gravit LaunchServer, so the administrator must map their configured SQL columns during export.
 
 The ZIP may contain both layouts. Duplicates or collisions across the two are reported and blocked. Unknown custom auth stores or providers are not silently interpreted as supported.
@@ -14,7 +14,7 @@ The ZIP may contain both layouts. Duplicates or collisions across the two are re
 ## Operator workflow
 
 ```sh
-nl migrate gravit create --backend https://never.example --token "$TOKEN" --project my-project --key migration-ticket-42
+nl migrate gravit create --backend https://.example --token "$TOKEN" --project my-project --key migration-ticket-42
 nl migrate gravit execute --backend https://never.example --token "$TOKEN" --run RUN_ID
 nl migrate gravit inventory --backend https://never.example --token "$TOKEN" --run RUN_ID --source /secure/gravit.zip
 nl migrate gravit map-identities --backend https://never.example --token "$TOKEN" --run RUN_ID --source /secure/gravit.zip --output /secure/uuid-map.json

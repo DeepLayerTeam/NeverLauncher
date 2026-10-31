@@ -1034,7 +1034,7 @@ func restorePostgresDump880(parent context.Context, dsn, dumpPath string) error 
 func postgresCommandEnvironment880(dsn string) ([]string, string, error) {
 	u, err := url.Parse(strings.TrimSpace(dsn))
 	if err != nil || (u.Scheme != "postgres" && u.Scheme != "postgresql") {
-		return nil, "", errors.New("NEVERLAUNCHER_DATABASE_DSN должен быть postgres:// или postgresql:// URL для backup/restore")
+		return nil, "", errors.New("LAUNCHER_DATABASE_DSN должен быть postgres:// или postgresql:// URL для backup/restore")
 	}
 	if u.Hostname() == "" || u.User == nil || u.User.Username() == "" {
 		return nil, "", errors.New("PostgreSQL DSN должен содержать host и user")

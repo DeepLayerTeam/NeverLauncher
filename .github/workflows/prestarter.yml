@@ -3,7 +3,7 @@ on:
   push:
     paths:
       - 'prestarter/**'
-      - 'runtime/neverruntime/src/bin/neverruntime.rs'
+      - 'runtime/runtime/src/bin/runtime.rs'
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src/main.tsx'
       - 'scripts/release/build-prestarter.sh'
@@ -11,7 +11,7 @@ on:
   pull_request:
     paths:
       - 'prestarter/**'
-      - 'runtime/neverruntime/src/bin/neverruntime.rs'
+      - 'runtime/runtime/src/bin/runtime.rs'
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src/main.tsx'
       - 'scripts/release/build-prestarter.sh'
@@ -47,5 +47,5 @@ jobs:
       - name: Verify all six OS and architecture builds
         env:
           # Test-only public key. Never publish these as trusted production release binaries.
-          NEVERLAUNCHER_PRESTARTER_ROOT_PUBLIC_KEY: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+          LAUNCHER_PRESTARTER_ROOT_PUBLIC_KEY: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         run: bash scripts/release/build-prestarter.sh

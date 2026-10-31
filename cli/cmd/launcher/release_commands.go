@@ -1,0 +1,1626 @@
+package main
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+)
+
+func handleRelease(args []string) error {
+	if len(args) == 0 {
+		return errors.New("доступные release-подкоманды: doctor, plan, build, package, verify, sign, candidate-verify, production-verify, windows-protection-verify, windows-protection-ga-verify, publish-plan, publish-check")
+	}
+	switch args[0] {
+	case "doctor":
+		return releaseDoctor()
+	case "plan":
+		ver := flagValue(args, "--version", version)
+		out := flagValue(args, "--output", "")
+		plan := releasePlan(ver)
+		if out != "" {
+			return writeJSONFile(out, plan)
+		}
+		printJSON(plan)
+		return nil
+	case "build", "package":
+		ver := flagValue(args, "--version", version)
+		out := flagValue(args, "--out", filepath.Join("dist", "release-"+ver))
+		if releaseVerificationV2Required0158(ver) {
+			policySource := flagValue(args, "--trust-policy", strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_TRUST_POLICY_FILE")))
+			if policySource == "" {
+				return errors.New("0.15.8+ release build требует --trust-policy или LAUNCHER_RELEASE_TRUST_POLICY_FILE")
+			}
+			if err := os.MkdirAll(out, 0o755); err != nil {
+				return err
+			}
+			raw, err := os.ReadFile(policySource)
+			if err != nil {
+				return err
+			}
+			if err := os.WriteFile(filepath.Join(out, releaseTrustPolicyFile0158), raw, 0o644); err != nil {
+				return err
+			}
+		}
+		if err := buildReleaseBundle(
+			ver, out, flagValue(args, "--source-root", "."),
+			flagValue(args, "--compatibility-matrix", ""),
+			flagValue(args, "--compatibility-targets", "compatibility/targets.json"),
+			flagValue(args, "--device-trust-matrix", ""),
+			flagValue(args, "--device-trust-targets", "device-trust/targets.json"),
+			flagValue(args, "--guard-ci-matrix", ""),
+			flagValue(args, "--guard-ci-targets", "guard-ci/targets.json"),
+			flagValue(args, "--source-commit", ""),
+			flagValue(args, "--public-base-url", strings.TrimSpace(os.Getenv("LAUNCHER_PUBLIC_RELEASE_BASE_URL"))),
+		); err != nil {
+			return err
+		}
+		fmt.Printf("Каталог release bundle подготовлен: %s\n", out)
+		return nil
+	case "verify", "publish-check":
+		if len(args) < 2 {
+			return errors.New("нужно указать каталог релиза")
+		}
+		publicKey := flagValue(args, "--public-key", "")
+		trustState := flagValue(args, "--trust-state", strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_TRUST_STATE_FILE")))
+		trustPolicy := flagValue(args, "--trust-policy", strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_TRUST_POLICY_FILE")))
+		if err := verifyReleaseBundleWithTrust(args[1], publicKey, trustState, trustPolicy); err != nil {
+			return err
+		}
+		if err := ensurePublicKeyNotRevoked(flagValue(args, "--registry-dir", ""), publicKey); err != nil {
+			return err
+		}
+		if args[0] == "publish-check" {
+			manifestVersion, err := releaseBundleVersion(args[1])
+			if err != nil {
+				return err
+			}
+			if rehearsalRequired0365(manifestVersion) {
+				raw, err := os.ReadFile(filepath.Join(args[1], "RELEASE_MANIFEST.json"))
+				if err != nil {
+					return err
+				}
+				var manifest struct {
+					SourceCommit string `json:"sourceCommit"`
+				}
+				if err := json.Unmarshal(raw, &manifest); err != nil {
+					return err
+				}
+				if err := verifyRehearsal0365(args[1], manifestVersion, manifest.SourceCommit); err != nil {
+					return fmt.Errorf("release rehearsal gate: %w", err)
+				}
+			}
+			if compatibilityCertificationRequired(manifestVersion) {
+				if err := verifyCompatibilityCertificationInBundle(args[1], manifestVersion); err != nil {
+					return fmt.Errorf("Minecraft compatibility certification: %w", err)
+				}
+			}
+			if deviceTrustCertificationRequired(manifestVersion) {
+				if err := verifyDeviceTrustCertificationInBundle(args[1], manifestVersion); err != nil {
+					return fmt.Errorf("Device Trust certification: %w", err)
+				}
+			}
+			if guardCICertificationRequired(manifestVersion) {
+				if err := verifyGuardCICertificationInBundle(args[1], manifestVersion); err != nil {
+					return fmt.Errorf("Cross-platform Guard CI certification: %w", err)
+				}
+			}
+			if serverBridge2CertificationRequired0150(manifestVersion) {
+				if err := verifyServerBridge2CertificationInBundle0150(args[1], manifestVersion); err != nil {
+					return fmt.Errorf("ServerBridge certification: %w", err)
+				}
+			}
+			if windowsSigningRequired0152(manifestVersion) {
+				if err := verifyWindowsSigningEvidence0152(args[1], manifestVersion, true); err != nil {
+					return fmt.Errorf("Windows x64/ARM64 Authenticode signing: %w", err)
+				}
+			}
+			if windowsProtectionReleaseRequired01812(manifestVersion) {
+				if err := verifyWindowsProtectionRelease01812(args[1], manifestVersion); err != nil {
+					return fmt.Errorf("Windows Protection RC certification: %w", err)
+				}
+			}
+			if linuxProductionRequired0153(manifestVersion) {
+				if err := verifyLinuxProductionEvidence0153(args[1], manifestVersion, true); err != nil {
+					return fmt.Errorf("Linux x64/ARM64 production packages: %w", err)
+				}
+			}
+			if macOSProductionRequired0154(manifestVersion) {
+				if err := verifyMacOSNotarizationEvidence0154(args[1], manifestVersion, true); err != nil {
+					return fmt.Errorf("macOS x64/ARM64 Developer ID notarization: %w", err)
+				}
+			}
+			if managedJREDistributionRequired0155(manifestVersion) {
+				if err := verifyManagedJREDistribution0155(args[1], manifestVersion, true); err != nil {
+					return fmt.Errorf("Managed JRE Distribution: %w", err)
+				}
+			}
+			if updaterVersionAtLeast0156(manifestVersion) {
+				report, err := runUpdaterSelfTest0156()
+				if err != nil {
+					return fmt.Errorf("Unified Transactional Updater Core self-test: %w", err)
+				}
+				if fmt.Sprint(report["status"]) != "ok" {
+					return fmt.Errorf("Unified Transactional Updater Core self-test status=%v", report["status"])
+				}
+			}
+			if componentTransactionalUpdateRequired0157(manifestVersion) {
+				report, err := runComponentUpdaterSelfTest0157()
+				if err != nil {
+					return fmt.Errorf("Desktop/Guard/Runtime transactional update self-test: %w", err)
+				}
+				if fmt.Sprint(report["status"]) != "ok" || fmt.Sprint(report["macosTreeRollback"]) != "ok" {
+					return fmt.Errorf("Desktop/Guard/Runtime transactional update self-test incomplete: %v", report)
+				}
+			}
+			if migrationStabilizationRequired01510(manifestVersion) {
+				report, err := runMigrationStabilizationSelfTest01510()
+				if err != nil {
+					return fmt.Errorf("0.15.10 migration + stabilization self-test: %w", err)
+				}
+				if fmt.Sprint(report["status"]) != "ok" {
+					return fmt.Errorf("0.15.10 migration + stabilization self-test status=%v", report["status"])
+				}
+			}
+			if productionReleaseCandidateRequired01511(manifestVersion) {
+				if err := verifyProductionReleaseCandidate01511(args[1], manifestVersion, true); err != nil {
+					return fmt.Errorf("0.15.11 production release candidate certification: %w", err)
+				}
+			}
+			if productionDeliveryReleaseRequired0160(manifestVersion) {
+				if err := verifyProductionDeliveryRelease0160(args[1], manifestVersion, true); err != nil {
+					return fmt.Errorf("0.16.0 Production Delivery Release certification: %w", err)
+				}
+			}
+			fmt.Println("Release publish-check пройден: Release Verification v2 + exact-commit certification + signed/notarized six-target delivery + Managed JRE + transactional updater + public matrix/E2E + Production Delivery Release + Windows Protection GA certification")
+			return nil
+		}
+		fmt.Println("Release bundle полностью проверен: required artifacts, SHA-256, Ed25519 release signature и provenance attestation")
+		return nil
+	case "candidate-verify":
+		if len(args) < 2 {
+			return errors.New("release candidate-verify требует путь к каталогу релиза")
+		}
+		manifestVersion, err := releaseBundleVersion(args[1])
+		if err != nil {
+			return err
+		}
+		if !productionReleaseCandidateRequired01511(manifestVersion) {
+			return fmt.Errorf("production release candidate certification требуется только для 0.15.11+, bundle=%s", manifestVersion)
+		}
+		if err := verifyProductionReleaseCandidate01511(args[1], manifestVersion, true); err != nil {
+			return err
+		}
+		fmt.Println("Production release candidate certification пройдена: exact source commit + full production cohort")
+		return nil
+	case "production-verify":
+		if len(args) < 2 {
+			return errors.New("release production-verify требует путь к каталогу релиза")
+		}
+		manifestVersion, err := releaseBundleVersion(args[1])
+		if err != nil {
+			return err
+		}
+		if !productionDeliveryReleaseRequired0160(manifestVersion) {
+			return fmt.Errorf("Production Delivery Release certification требуется только для 0.16.0+, bundle=%s", manifestVersion)
+		}
+		if err := verifyProductionDeliveryRelease0160(args[1], manifestVersion, true); err != nil {
+			return err
+		}
+		fmt.Println("Production Delivery Release certification пройдена: stable six-target GA boundary + immutable versioned public origin")
+		return nil
+	case "windows-protection-verify":
+		if len(args) < 2 {
+			return errors.New("release windows-protection-verify требует путь к каталогу релиза")
+		}
+		manifestVersion, err := releaseBundleVersion(args[1])
+		if err != nil {
+			return err
+		}
+		if !windowsProtectionReleaseRequired01812(manifestVersion) {
+			return fmt.Errorf("Windows Protection RC certification требуется только для 0.18.12+, bundle=%s", manifestVersion)
+		}
+		if err := verifyWindowsProtectionRelease01812(args[1], manifestVersion); err != nil {
+			return err
+		}
+		fmt.Println("Windows Protection RC certification пройдена: adversarial CI + signed x64/ARM64 production bytes + exact source commit")
+		return nil
+	case "windows-protection-ga-verify":
+		if len(args) < 2 {
+			return errors.New("release windows-protection-ga-verify требует путь к каталогу релиза")
+		}
+		manifestVersion, err := releaseBundleVersion(args[1])
+		if err != nil {
+			return err
+		}
+		if !windowsProtectionGARequired0190(manifestVersion) {
+			return fmt.Errorf("Windows Protection GA certification требуется только для 0.19.0+, bundle=%s", manifestVersion)
+		}
+		if err := verifyWindowsProtectionGA0190(args[1], manifestVersion); err != nil {
+			return err
+		}
+		fmt.Println("Windows Protection GA certification пройдена: fail-closed user-mode boundary + RC/adversarial/signed x64/ARM64 binding")
+		return nil
+	case "sign":
+		if len(args) < 2 {
+			return errors.New("release sign требует путь к каталогу релиза")
+		}
+		if err := signReleaseBundle(args[1], flagValue(args, "--private-key", "")); err != nil {
+			return err
+		}
+		fmt.Println("SHA256SUMS.sig создан с Ed25519 (Release Verification v2 для 0.15.8+)")
+		return nil
+	case "publish-plan":
+		ver := flagValue(args, "--version", version)
+		out := flagValue(args, "--output", "")
+		artifacts := append([]string{}, releaseArtifacts(ver)...)
+		if compatibilityCertificationRequired(ver) {
+			artifacts = append(artifacts, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
+		}
+		if deviceTrustCertificationRequired(ver) {
+			artifacts = append(artifacts, deviceTrustTargetsReleaseFile, deviceTrustMatrixReleaseFile, deviceTrustCertificationReleaseFile)
+		}
+		if guardCICertificationRequired(ver) {
+			artifacts = append(artifacts, guardCITargetsReleaseFile, guardCIMatrixReleaseFile, guardCICertificationReleaseFile)
+		}
+		plan := map[string]any{
+			"schemaVersion": "1.0",
+			"version":       ver,
+			"platform":      "release artifacts",
+			"steps": []string{
+				"проверить VERSION, исходники и release artifacts (Markdown документация необязательна)",
+				"запустить release doctor",
+				"собрать release bundle",
+				"проверить RELEASE_MANIFEST.json и SHA256SUMS",
+				"создать SHA256SUMS.sig",
+				"загрузить артефакты в release bundle",
+			},
+			"artifacts": artifacts,
+		}
+		if out != "" {
+			return writeJSONFile(out, plan)
+		}
+		printJSON(plan)
+		return nil
+	default:
+		return fmt.Errorf("неизвестная release-подкоманда: %s", args[0])
+	}
+}
+
+func releaseDoctor() error {
+	checks := map[string]string{}
+	required := []string{
+		"VERSION",
+		"schemas/openapi.yaml",
+		"scripts/contracts/validate-openapi.py",
+		"scripts/release/preflight.sh",
+		"scripts/smoke/offline/repository-policy.py",
+		"scripts/release/build-release.sh",
+		"scripts/release/source-package.py",
+		"scripts/release/secret-scan.py",
+		"scripts/release/zip-dir.py",
+		"scripts/smoke/release-required/release-bundle.sh",
+		"deploy/production/docker-compose.yml",
+		"apps/admin/Dockerfile",
+		"runtime/runtime/Cargo.toml",
+		"e2e/scripts/run-minecraft-e2e.sh",
+		"compatibility/targets.json",
+		"scripts/compatibility/matrix.py",
+		".github/workflows/compatibility.yml",
+		"guard-ci/targets.json",
+		"scripts/guard_ci/matrix.py",
+		"scripts/guard_ci/stage_release.py",
+		"scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py",
+		"scripts/smoke/offline/guard-release-0140.py",
+		"scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py",
+		"scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py",
+		"scripts/smoke/offline/signed-windows-x64-arm64-0152.py",
+		"scripts/smoke/offline/linux-x64-arm64-production-packages-0153.py",
+		"scripts/smoke/offline/notarized-macos-x64-arm64-0154.py",
+		"scripts/smoke/offline/managed-jre-distribution-0155.py",
+		"scripts/smoke/offline/unified-transactional-updater-core-0156.py",
+		"scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py",
+		"scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py",
+		"scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py",
+		"scripts/smoke/offline/migration-stabilization-01510.py",
+		"scripts/smoke/offline/production-release-candidate-01511.py",
+		"scripts/smoke/offline/production-delivery-release-0160.py",
+		"scripts/smoke/offline/guard-windows-protection-rc-01812.py",
+		".github/workflows/public-production-delivery.yml",
+		"scripts/release/managed-jre-distribution.py",
+		"scripts/release/build-linux-production.sh",
+		"scripts/release/linux-package.py",
+		"scripts/release/build-macos-production.sh",
+		"scripts/release/macos-package.py",
+		"scripts/release/merge-guard-release-policy.py",
+		"e2e/scripts/run-guard-migration-e2e.sh",
+	}
+	failed := false
+	for _, path := range required {
+		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			checks[path] = "ok"
+		} else {
+			checks[path] = "missing"
+			failed = true
+		}
+	}
+	canonicalVersion := ""
+	if data, err := os.ReadFile("VERSION"); err == nil {
+		canonicalVersion = strings.TrimSpace(string(data))
+	}
+	if canonicalVersion != "" {
+		checks["version-alignment"] = "ok"
+	} else {
+		checks["version-alignment"] = "missing"
+		failed = true
+	}
+	if data, err := os.ReadFile("schemas/openapi.yaml"); err == nil {
+		if problems := canonicalOpenAPIErrors(data); len(problems) == 0 {
+			checks["canonical-openapi"] = "ok"
+		} else {
+			checks["canonical-openapi"] = "invalid: " + strings.Join(problems, "; ")
+			failed = true
+		}
+	} else {
+		checks["canonical-openapi"] = "invalid: " + err.Error()
+		failed = true
+	}
+	for id, command := range map[string][]string{
+		"repository-policy":              {"python3", "scripts/smoke/offline/repository-policy.py"},
+		"version-alignment":              {"bash", "scripts/smoke/offline/version-alignment.sh"},
+		"openapi-validator":              {"python3", "scripts/contracts/validate-openapi.py"},
+		"compatibility-targets":          {"python3", "scripts/compatibility/matrix.py", "validate", "--targets", "compatibility/targets.json"},
+		"device-trust-targets":           {"python3", "scripts/device_trust/matrix.py", "validate", "--targets", "device-trust/targets.json"},
+		"guard-ci-targets":               {"python3", "scripts/guard_ci/matrix.py", "validate", "--targets", "guard-ci/targets.json"},
+		"guard-stabilization":            {"python3", "scripts/smoke/offline/guard-migration-compatibility-stabilization-01310.py"},
+		"guard-release":                  {"python3", "scripts/smoke/offline/guard-release-0140.py"},
+		"serverbridge-identity":          {"python3", "scripts/smoke/offline/serverbridge-crypto-node-identities-0142.py"},
+		"delivery-manifest":              {"python3", "scripts/smoke/offline/delivery-manifest-platform-architecture-0151.py"},
+		"windows-dual-signing":           {"python3", "scripts/smoke/offline/signed-windows-x64-arm64-0152.py"},
+		"macos-dual-notarization":        {"python3", "scripts/smoke/offline/notarized-macos-x64-arm64-0154.py"},
+		"managed-jre-distribution":       {"python3", "scripts/smoke/offline/managed-jre-distribution-0155.py"},
+		"transactional-updater-core":     {"python3", "scripts/smoke/offline/unified-transactional-updater-core-0156.py"},
+		"component-transactional-update": {"python3", "scripts/smoke/offline/desktop-guard-runtime-transactional-update-0157.py"},
+		"release-verification-v2":        {"python3", "scripts/smoke/offline/release-verification-v2-trust-lifecycle-0158.py"},
+		"public-production-delivery":     {"python3", "scripts/smoke/offline/public-production-delivery-matrix-e2e-0159.py"},
+		"migration-stabilization":        {"python3", "scripts/smoke/offline/migration-stabilization-01510.py"},
+		"production-release-candidate":   {"python3", "scripts/smoke/offline/production-release-candidate-01511.py"},
+		"production-delivery-release":    {"python3", "scripts/smoke/offline/production-delivery-release-0160.py"},
+		"windows-protection-rc":          {"python3", "scripts/smoke/offline/guard-windows-protection-rc-01812.py"},
+	} {
+		cmd := exec.Command(command[0], command[1:]...)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			checks[id] = "failed: " + strings.TrimSpace(string(output))
+			failed = true
+		} else {
+			checks[id] = "ok"
+		}
+	}
+	status := "repository-policy-ready"
+	if failed {
+		status = "failed"
+	}
+	reportedVersion := canonicalVersion
+	if reportedVersion == "" {
+		reportedVersion = version
+	}
+	printJSON(map[string]any{"version": reportedVersion, "status": status, "productionReady": false, "next": "LAUNCHER_PREFLIGHT_STRICT=1 ./scripts/release/preflight.sh", "checks": checks})
+	if failed {
+		return errors.New("release doctor обнаружил отсутствующие или несогласованные production-компоненты")
+	}
+	return nil
+}
+
+func releasePlan(ver string) map[string]any {
+	return map[string]any{
+		"schemaVersion": "1.0",
+		"version":       ver,
+		"createdAt":     time.Now().UTC().Format(time.RFC3339),
+		"mode":          "production-release-automation",
+		"artifacts":     releaseArtifacts(ver),
+		"checks":        []string{"release doctor", "go test cli", "go test backend", "release verify", "release sign", "release candidate-verify", "release production-verify", "release windows-protection-verify", "release windows-protection-ga-verify"},
+	}
+}
+
+func desktopBackendArgs(args []string) (backend, project, profile, channel, ver string) {
+	backend = strings.TrimRight(flagValue(args, "--backend", "http://127.0.0.1:8080"), "/")
+	project = flagValue(args, "--project", "")
+	profile = flagValue(args, "--profile", "")
+	channel = flagValue(args, "--channel", "stable")
+	ver = flagValue(args, "--version", "latest")
+	return
+}
+
+func desktopConfigModel(args []string) map[string]any {
+	_, project, profile, channel, _ := desktopBackendArgs(args)
+	return map[string]any{
+		"schemaVersion": "0.8.8",
+		"toolVersion":   version,
+		"mode":          "desktop-persisted-config",
+		"status":        "product-config",
+		"configPath":    "Launcher/config.json",
+		"projectId":     project,
+		"profileId":     profile,
+		"channel":       channel,
+		"fields":        []string{"backendUrl", "projectId", "profileId", "channel", "gameDirectory", "javaPath", "username", "memoryMb", "pinnedPublicKey"},
+		"secrets":       []string{"accessToken", "refreshToken", "password"},
+		"secretPolicy":  "tokens must be stored in secure storage; config.json never contains plaintext tokens",
+	}
+}
+
+func httpJSON(method, url string, body any) (map[string]any, error) {
+	return httpJSONWithAuth(method, url, body, "")
+}
+
+func httpJSONWithHeaders(method, url string, body any, headers map[string]string) (map[string]any, error) {
+	var reader io.Reader
+	if body != nil {
+		data, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		reader = strings.NewReader(string(data))
+	}
+	req, err := http.NewRequest(method, url, reader)
+	if err != nil {
+		return nil, err
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	for key, value := range headers {
+		if strings.TrimSpace(value) != "" {
+			req.Header.Set(key, value)
+		}
+	}
+	client := http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	payload := map[string]any{}
+	if len(strings.TrimSpace(string(data))) > 0 {
+		if err := json.Unmarshal(data, &payload); err != nil {
+			return nil, fmt.Errorf("invalid JSON response from %s: %w", url, err)
+		}
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return payload, fmt.Errorf("%s returned %s: %s", url, resp.Status, strings.TrimSpace(string(data)))
+	}
+	return payload, nil
+}
+
+func httpJSONWithAuth(method, url string, body any, token string) (map[string]any, error) {
+	headers := map[string]string{}
+	if strings.TrimSpace(token) != "" {
+		headers["Authorization"] = "Bearer " + strings.TrimSpace(token)
+	}
+	return httpJSONWithHeaders(method, url, body, headers)
+}
+
+func publishTransactionPlan(kind, subject, channel, releaseVersion string) map[string]any {
+	return map[string]any{
+		"schemaVersion": cliSchemaVersion,
+		"toolVersion":   version,
+		"kind":          kind,
+		"subject":       subject,
+		"channel":       channel,
+		"version":       releaseVersion,
+		"status":        "transaction-plan",
+		"transaction":   []string{"BEGIN", "lock project/channel", "validate profile and manifest", "insert version draft", "attach storage objects", "write audit event", "promote channel pointer", "COMMIT"},
+		"rollback":      []string{"ROLLBACK on validation error", "do not move channel pointer", "keep previous published version immutable"},
+	}
+}
+
+func productionTables() []string {
+	return []string{"schema_migrations", "projects", "profiles", "release_channels", "release_versions", "files", "storage_objects", "users", "roles", "admin_sessions", "project_user_roles", "audit_events", "telemetry_events", "crash_reports", "extensions", "extension_versions", "extension_permissions", "extension_dependencies", "extension_installs", "extension_registry_publishers", "extension_registry_publisher_keys", "extension_registry_versions", "extension_registry_compatibility", "extension_registry_artifacts", "extension_registry_channels", "extension_install_revisions", "extension_event_log", "extension_event_subscriptions", "extension_event_deliveries", "extension_event_dead_letters", "extension_permission_grants", "extension_secrets", "extension_update_pins", "extension_update_leases", "extension_update_transactions", "extension_trust_policy", "extension_quarantine", "extension_emergency_disables"}
+}
+
+func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibilityTargetsPath, deviceTrustMatrixPath, deviceTrustTargetsPath, guardCIMatrixPath, guardCITargetsPath, expectedCommit, publicBaseURL string) error {
+	if err := os.MkdirAll(out, 0o755); err != nil {
+		return err
+	}
+	if err := verifySingleNodeGA0330(out, ver, expectedCommit, ""); err != nil {
+		return fmt.Errorf("single-node GA build gate: %w", err)
+	}
+	if productionReleaseCandidateRequired01511(ver) {
+		if _, err := normalizeSourceCommit01511(expectedCommit); err != nil {
+			return err
+		}
+		missing := []string{}
+		if strings.TrimSpace(compatibilityMatrixPath) == "" {
+			missing = append(missing, "compatibility matrix")
+		}
+		if strings.TrimSpace(deviceTrustMatrixPath) == "" {
+			missing = append(missing, "device trust matrix")
+		}
+		if strings.TrimSpace(guardCIMatrixPath) == "" {
+			missing = append(missing, "guard CI matrix")
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("0.15.11+ production release candidate requires complete certification cohort: %s", strings.Join(missing, ", "))
+		}
+	}
+	if strings.TrimSpace(compatibilityMatrixPath) != "" {
+		if !filepath.IsAbs(compatibilityTargetsPath) {
+			compatibilityTargetsPath = filepath.Join(sourceRoot, compatibilityTargetsPath)
+		}
+		if err := embedCompatibilityCertification(out, compatibilityMatrixPath, compatibilityTargetsPath, ver, expectedCommit); err != nil {
+			return fmt.Errorf("compatibility certification: %w", err)
+		}
+	}
+	if strings.TrimSpace(deviceTrustMatrixPath) != "" {
+		if !filepath.IsAbs(deviceTrustTargetsPath) {
+			deviceTrustTargetsPath = filepath.Join(sourceRoot, deviceTrustTargetsPath)
+		}
+		if err := embedDeviceTrustCertification(out, deviceTrustMatrixPath, deviceTrustTargetsPath, ver, expectedCommit); err != nil {
+			return fmt.Errorf("Device Trust certification: %w", err)
+		}
+	}
+	if strings.TrimSpace(guardCIMatrixPath) != "" {
+		if !filepath.IsAbs(guardCITargetsPath) {
+			guardCITargetsPath = filepath.Join(sourceRoot, guardCITargetsPath)
+		}
+		if err := embedGuardCICertification(out, guardCIMatrixPath, guardCITargetsPath, ver, expectedCommit); err != nil {
+			return fmt.Errorf("Cross-platform Guard CI certification: %w", err)
+		}
+	}
+	sbom, err := dependencySBOM(sourceRoot, ver)
+	if err != nil {
+		return fmt.Errorf("dependency SBOM: %w", err)
+	}
+	if err := writeJSONFile(filepath.Join(out, "SBOM.spdx.json"), sbom); err != nil {
+		return err
+	}
+	provenance, err := slsaProvenance(sourceRoot, out, ver, expectedCommit)
+	if err != nil {
+		return fmt.Errorf("SLSA provenance: %w", err)
+	}
+	if err := writeJSONFile(filepath.Join(out, "PROVENANCE.json"), provenance); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(out, "RELEASE_NOTES.txt"), []byte(releaseDescription(ver)), 0o644); err != nil {
+		return err
+	}
+	if linuxProductionRequired0153(ver) {
+		if err := writeLinuxProductionEvidence0153(out, ver); err != nil {
+			return fmt.Errorf("Linux x64/ARM64 production evidence: %w", err)
+		}
+	}
+	if deliveryManifestRequired0151(ver) {
+		if err := writeDeliveryManifest0151(out, ver); err != nil {
+			return fmt.Errorf("delivery manifest: %w", err)
+		}
+		if err := verifyDeliveryManifest0151(out, ver); err != nil {
+			return fmt.Errorf("delivery manifest self-check: %w", err)
+		}
+	}
+	if publicProductionDeliveryRequired0159(ver) {
+		if err := writePublicProductionDeliveryMatrix0159(out, ver, publicBaseURL); err != nil {
+			return fmt.Errorf("Public Production Delivery Matrix: %w", err)
+		}
+		if err := verifyPublicProductionDeliveryMatrix0159(out, ver); err != nil {
+			return fmt.Errorf("Public Production Delivery Matrix self-check: %w", err)
+		}
+	}
+	if windowsSigningRequired0152(ver) {
+		if err := verifyWindowsSigningEvidence0152(out, ver, productionReleaseCandidateRequired01511(ver)); err != nil {
+			return fmt.Errorf("Windows x64/ARM64 delivery evidence: %w", err)
+		}
+	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		if err := writeWindowsProtectionRelease01812(out, ver, expectedCommit); err != nil {
+			return fmt.Errorf("Windows Protection RC certification: %w", err)
+		}
+		if err := verifyWindowsProtectionRelease01812(out, ver); err != nil {
+			return fmt.Errorf("Windows Protection RC self-check: %w", err)
+		}
+	}
+	if windowsProtectionGARequired0190(ver) {
+		if err := writeWindowsProtectionGA0190(out, ver); err != nil {
+			return fmt.Errorf("Windows Protection GA certification: %w", err)
+		}
+		if err := verifyWindowsProtectionGA0190(out, ver); err != nil {
+			return fmt.Errorf("Windows Protection GA self-check: %w", err)
+		}
+	}
+	if linuxProductionRequired0153(ver) {
+		if err := verifyLinuxProductionEvidence0153(out, ver, true); err != nil {
+			return fmt.Errorf("Linux x64/ARM64 production evidence: %w", err)
+		}
+	}
+	if macOSProductionRequired0154(ver) {
+		if err := verifyMacOSNotarizationEvidence0154(out, ver, productionReleaseCandidateRequired01511(ver)); err != nil {
+			return fmt.Errorf("macOS x64/ARM64 delivery evidence: %w", err)
+		}
+	}
+	if managedJREDistributionRequired0155(ver) {
+		if err := verifyManagedJREDistribution0155(out, ver, true); err != nil {
+			return fmt.Errorf("Managed JRE Distribution: %w", err)
+		}
+	}
+	if productionReleaseCandidateRequired01511(ver) {
+		if err := writeProductionReleaseCandidate01511(out, ver, expectedCommit, true); err != nil {
+			return fmt.Errorf("Production release candidate certification: %w", err)
+		}
+		if err := verifyProductionReleaseCandidate01511(out, ver, true); err != nil {
+			return fmt.Errorf("Production release candidate self-check: %w", err)
+		}
+	}
+	if productionDeliveryReleaseRequired0160(ver) {
+		if err := writeProductionDeliveryRelease0160(out, ver); err != nil {
+			return fmt.Errorf("Production Delivery Release certification: %w", err)
+		}
+		if err := verifyProductionDeliveryRelease0160(out, ver, true); err != nil {
+			return fmt.Errorf("Production Delivery Release self-check: %w", err)
+		}
+	}
+
+	if err := verifyOfficialGAReceipt0270(out, ver, expectedCommit); err != nil {
+		return fmt.Errorf("official Minecraft 0.27 GA gate: %w", err)
+	}
+	if singleNodeGARequired0330(ver) {
+		if err := verifySingleNodeGATestedArtifacts0330(out); err != nil {
+			return fmt.Errorf("0.33.0 tested release binary binding: %w", err)
+		}
+	}
+	if err := writeReleaseBOM03214(out, sourceRoot, ver); err != nil {
+		return fmt.Errorf("Release BOM: %w", err)
+	}
+	entries := releaseBundleEntries(ver, out)
+	requiredFiles := []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SBOM.spdx.json", "PROVENANCE.json", "RELEASE_NOTES.txt"}
+	checks := []string{"required-artifacts", "sha256", "ed25519-external-trust", "sbom", "provenance", "release-notes", "source-secret-scan"}
+	if releaseBOMRequired03214(ver) {
+		requiredFiles = append(requiredFiles, releaseBOMFile03214)
+		checks = append(checks, "pinned-release-bom-exact-byte-cohort")
+	}
+	if singleNodeGARequired0330(ver) {
+		requiredFiles = append(requiredFiles, singleNodeGAFiles0330...)
+		checks = append(checks, "independent-ed25519-single-node-ga-exact-commit")
+	}
+	if gaTargetsRequired0361(ver) {
+		requiredFiles = append(requiredFiles, "GA_VERIFIED_TARGETS.json", "GA_TARGET_APPROVAL.json", "GA_TARGET_APPROVAL.sig")
+		checks = append(checks, "independent-ed25519-exact-byte-six-target-ga")
+	}
+	if ver == "0.27.0" {
+		requiredFiles = append(requiredFiles, officialGACertification0270)
+		checks = append(checks, "six-target-live-official-minecraft-ed25519-ga")
+	}
+	if deliveryManifestRequired0151(ver) {
+		requiredFiles = append(requiredFiles, deliveryManifestFile0151)
+		checks = append(checks, "delivery-manifest-platform-architecture")
+	}
+	if windowsSigningRequired0152(ver) {
+		requiredFiles = append(requiredFiles, windowsSigningEvidenceFile0152)
+		checks = append(checks, "windows-x64-arm64-authenticode-evidence")
+	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		requiredFiles = append(requiredFiles, windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812)
+		checks = append(checks, "windows-protection-rc-adversarial-signed-production-boundary")
+	}
+	if windowsProtectionGARequired0190(ver) {
+		requiredFiles = append(requiredFiles, windowsProtectionGAFile0190)
+		checks = append(checks, "windows-protection-ga-fail-closed-user-mode-boundary")
+	}
+	if linuxProductionRequired0153(ver) {
+		requiredFiles = append(requiredFiles, linuxProductionEvidenceFile0153, linuxDeliveryAllowlistFile0153, "LINUX_PACKAGE_MANIFEST_X64.json", "LINUX_PACKAGE_MANIFEST_ARM64.json")
+		checks = append(checks, "linux-x64-arm64-production-packages")
+	}
+	if macOSProductionRequired0154(ver) {
+		requiredFiles = append(requiredFiles, macOSNotarizationEvidenceFile0154, macOSDeliveryAllowlistFile0154, "MACOS_PACKAGE_MANIFEST_X64.json", "MACOS_PACKAGE_MANIFEST_ARM64.json")
+		checks = append(checks, "macos-x64-arm64-developer-id-notarization")
+	}
+	if managedJREDistributionRequired0155(ver) {
+		requiredFiles = append(requiredFiles, managedJREArtifacts0155(ver)...)
+		checks = append(checks, "managed-jre-temurin21-six-target-distribution")
+	}
+	if managedJavaIIRequired0165(ver) {
+		requiredFiles = append(requiredFiles, managedJavaIIEvidenceFile0165)
+		checks = append(checks, "managed-java-II-8-16-17-21-25")
+	}
+	if updaterVersionAtLeast0156(ver) {
+		checks = append(checks, "unified-transactional-updater-core")
+	}
+	if componentTransactionalUpdateRequired0157(ver) {
+		checks = append(checks, "desktop-guard-runtime-transactional-update")
+	}
+	if releaseVerificationV2Required0158(ver) {
+		if _, err := loadReleaseTrustPolicy0158(filepath.Join(out, releaseTrustPolicyFile0158)); err != nil {
+			return fmt.Errorf("Release Verification v2 trust policy: %w", err)
+		}
+		requiredFiles = append(requiredFiles, releaseTrustPolicyFile0158)
+		checks = append(checks, "release-verification-v2-trust-lifecycle-anti-rollback")
+	}
+	if publicProductionDeliveryRequired0159(ver) {
+		requiredFiles = append(requiredFiles, publicProductionDeliveryMatrixFile0159)
+		checks = append(checks, "public-production-delivery-matrix-six-target-e2e")
+	}
+	if productionReleaseCandidateRequired01511(ver) {
+		requiredFiles = append(requiredFiles, productionReleaseCandidateFile01511)
+		checks = append(checks, "production-release-candidate-exact-source-cohort")
+	}
+	if productionDeliveryReleaseRequired0160(ver) {
+		requiredFiles = append(requiredFiles, productionDeliveryReleaseFile0160)
+		checks = append(checks, "production-delivery-release-stable-six-target-ga")
+	}
+	compatibilityCertified := false
+	loaderCompatibilityReleaseCertified := false
+	loaderCompatibilityReleaseCertificateSHA256 := ""
+	loaderCompatibilityGA := false
+	loaderCompatibilityGASupportSHA256 := ""
+	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
+		requiredFiles = append(requiredFiles, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
+		checks = append(checks, "minecraft-compatibility-certification")
+		if compatibilityIIGa0170Required(ver) {
+			checks = append(checks, "minecraft-compatibility-II-GA-wide-certified-vanilla-jre-base")
+		}
+		if compatibilityReleaseCertificate01711Required(ver) {
+			certificatePath := filepath.Join(out, loaderCompatibilityReleaseCertificateFile01711)
+			if _, err := os.Stat(certificatePath); err != nil {
+				return fmt.Errorf("Loader Compatibility RC 0.17.11 certificate missing: %w", err)
+			}
+			if err := verifyLoaderCompatibilityReleaseCertificate01711(out, ver); err != nil {
+				return fmt.Errorf("Loader Compatibility RC 0.17.11 self-check: %w", err)
+			}
+			var err error
+			loaderCompatibilityReleaseCertificateSHA256, _, err = hashFile(certificatePath)
+			if err != nil {
+				return err
+			}
+			requiredFiles = append(requiredFiles, loaderCompatibilityReleaseCertificateFile01711)
+			checks = append(checks, "loader-compatibility-rc-full-release-certificate")
+			loaderCompatibilityReleaseCertified = true
+			if compatibilityLoaderGA0180Required(ver) {
+				raw, err := os.ReadFile(certificatePath)
+				if err != nil {
+					return err
+				}
+				var ga loaderCompatibilityReleaseCertificate01711
+				if err := json.Unmarshal(raw, &ga); err != nil {
+					return fmt.Errorf("Loader Compatibility GA certificate invalid: %w", err)
+				}
+				if ga.Status != "ga-certified" || ga.ReleaseStage != "ga" || ga.RuntimeSupportEntries != len(loaderGASupportEntries0180()) || !compatibilitySHA256RE.MatchString(ga.RuntimeSupportSHA256) || !strings.EqualFold(ga.RuntimeSupportSHA256, loaderGASupportSHA2560180()) || !ga.Invariants["gaRuntimeSupportEnforced"] || !ga.Invariants["legacyForgeGA"] {
+					return errors.New("Loader Compatibility GA 0.18.0 certificate/runtime support binding invalid")
+				}
+				loaderCompatibilityGA = true
+				loaderCompatibilityGASupportSHA256 = ga.RuntimeSupportSHA256
+				checks = append(checks, "loader-compatibility-ga-runtime-enforced")
+			}
+		}
+		compatibilityCertified = true
+	}
+	deviceTrustCertified := false
+	if _, err := os.Stat(filepath.Join(out, deviceTrustCertificationReleaseFile)); err == nil {
+		requiredFiles = append(requiredFiles, deviceTrustTargetsReleaseFile, deviceTrustMatrixReleaseFile, deviceTrustCertificationReleaseFile)
+		checks = append(checks, "device-trust-certification")
+		deviceTrustCertified = true
+	}
+	guardCICertified := false
+	if _, err := os.Stat(filepath.Join(out, guardCICertificationReleaseFile)); err == nil {
+		requiredFiles = append(requiredFiles, guardCITargetsReleaseFile, guardCIMatrixReleaseFile, guardCICertificationReleaseFile)
+		checks = append(checks, "cross-platform-guard-ci-certification")
+		guardCICertified = true
+	}
+	manifest := map[string]any{
+		"schemaVersion":                       cliSchemaVersion,
+		"name":                                "Launcher",
+		"version":                             ver,
+		"createdAt":                           time.Now().UTC().Format(time.RFC3339),
+		"mode":                                "release-pipeline",
+		"artifacts":                           entries,
+		"checks":                              checks,
+		"requiredFiles":                       requiredFiles,
+		"compatibilityCertified":              compatibilityCertified,
+		"loaderCompatibilityReleaseCertified": loaderCompatibilityReleaseCertified,
+		"loaderCompatibilityGA":               loaderCompatibilityGA,
+		"deviceTrustCertified":                deviceTrustCertified,
+		"guardCICertified":                    guardCICertified,
+		"windowsProtectionReleaseCertified":   windowsProtectionReleaseRequired01812(ver),
+		"windowsProtectionGACertified":        windowsProtectionGARequired0190(ver),
+	}
+	if loaderCompatibilityReleaseCertified {
+		manifest["loaderCompatibilityReleaseCertificateSha256"] = loaderCompatibilityReleaseCertificateSHA256
+	}
+	if loaderCompatibilityGA {
+		manifest["loaderCompatibilityGASupportSha256"] = loaderCompatibilityGASupportSHA256
+	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		certHash, _, err := hashFile(filepath.Join(out, windowsProtectionReleaseFile01812))
+		if err != nil {
+			return err
+		}
+		adversarialHash, _, err := hashFile(filepath.Join(out, windowsAdversarialCertificateFile01811))
+		if err != nil {
+			return err
+		}
+		manifest["windowsProtectionReleaseCertificateSha256"] = certHash
+		manifest["windowsAdversarialCertificateSha256"] = adversarialHash
+	}
+	if windowsProtectionGARequired0190(ver) {
+		gaHash, _, err := hashFile(filepath.Join(out, windowsProtectionGAFile0190))
+		if err != nil {
+			return err
+		}
+		manifest["windowsProtectionGACertificateSha256"] = gaHash
+	}
+	if productionReleaseCandidateRequired01511(ver) {
+		commit, err := normalizeSourceCommit01511(expectedCommit)
+		if err != nil {
+			return err
+		}
+		manifest["sourceCommit"] = commit
+	}
+	if productionDeliveryReleaseRequired0160(ver) {
+		certHash, _, err := hashFile(filepath.Join(out, productionDeliveryReleaseFile0160))
+		if err != nil {
+			return err
+		}
+		manifest["channel"] = productionDeliveryReleaseChannel0160
+		manifest["releaseStatus"] = productionDeliveryReleaseStatus0160
+		manifest["productionDeliveryReleaseSha256"] = certHash
+	}
+	if err := writeJSONFile(filepath.Join(out, "RELEASE_MANIFEST.json"), manifest); err != nil {
+		return err
+	}
+
+	checksums, err := releaseChecksums(out)
+	if err != nil {
+		return err
+	}
+	if len(checksums) == 0 {
+		return errors.New("release bundle не содержит файлов для SHA256SUMS")
+	}
+	return os.WriteFile(filepath.Join(out, "SHA256SUMS"), []byte(strings.Join(checksums, "\n")+"\n"), 0o644)
+}
+
+func releaseBundleEntries(ver, out string) []map[string]any {
+	known := map[string]bool{}
+	var entries []map[string]any
+	requiredNames := append([]string{}, releaseArtifacts(ver)...)
+	if _, err := os.Stat(filepath.Join(out, compatibilityCertificationReleaseFile)); err == nil {
+		requiredNames = append(requiredNames, compatibilityTargetsReleaseFile, compatibilityMatrixReleaseFile, compatibilityCertificationReleaseFile)
+		if compatibilityReleaseCertificate01711Required(ver) {
+			requiredNames = append(requiredNames, loaderCompatibilityReleaseCertificateFile01711)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(out, deviceTrustCertificationReleaseFile)); err == nil {
+		requiredNames = append(requiredNames, deviceTrustTargetsReleaseFile, deviceTrustMatrixReleaseFile, deviceTrustCertificationReleaseFile)
+	}
+	if _, err := os.Stat(filepath.Join(out, guardCICertificationReleaseFile)); err == nil {
+		requiredNames = append(requiredNames, guardCITargetsReleaseFile, guardCIMatrixReleaseFile, guardCICertificationReleaseFile)
+		requiredNames = append(requiredNames, guardCIArtifactNamesFromBundle(out)...)
+	}
+	for _, name := range requiredNames {
+		known[name] = true
+		entry := map[string]any{"name": name, "required": true, "status": "missing"}
+		path := filepath.Join(out, name)
+		if st, err := os.Stat(path); err == nil && !st.IsDir() {
+			if sum, size, err := hashFile(path); err == nil {
+				entry["status"] = "present"
+				entry["size"] = size
+				entry["sha256"] = sum
+			}
+		}
+		entries = append(entries, entry)
+	}
+	if items, err := os.ReadDir(out); err == nil {
+		for _, item := range items {
+			name := item.Name()
+			if item.IsDir() || known[name] || name == "SHA256SUMS" || name == "SHA256SUMS.sig" {
+				continue
+			}
+			path := filepath.Join(out, name)
+			if sum, size, err := hashFile(path); err == nil {
+				entries = append(entries, map[string]any{"name": name, "required": false, "status": "present", "size": size, "sha256": sum})
+			}
+		}
+	}
+	return entries
+}
+
+func releaseChecksums(dir string) ([]string, error) {
+	items, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	var lines []string
+	for _, item := range items {
+		name := item.Name()
+		if item.IsDir() || name == "SHA256SUMS" || name == "SHA256SUMS.sig" {
+			continue
+		}
+		sum, _, err := hashFile(filepath.Join(dir, name))
+		if err != nil {
+			return nil, err
+		}
+		lines = append(lines, sum+"  "+name)
+	}
+	return lines, nil
+}
+
+func verifyReleaseBundleWithTrust(dir, publicKeyPath, trustStatePath, trustPolicyPath string) error {
+	manifestVersion, err := releaseBundleVersion(dir)
+	if err != nil {
+		return err
+	}
+	if migrationStabilizationRequired01510(manifestVersion) {
+		return withReleaseTrustStateLock01510(trustStatePath, func() error {
+			return verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, trustPolicyPath)
+		})
+	}
+	return verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, trustPolicyPath)
+}
+
+func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, trustPolicyPath string) error {
+	for _, name := range []string{"RELEASE_MANIFEST.json", "SHA256SUMS", "SHA256SUMS.sig", "RELEASE_NOTES.txt", "SBOM.spdx.json", "PROVENANCE.json", "PROVENANCE.json.sig"} {
+		if st, err := os.Stat(filepath.Join(dir, name)); err != nil || st.IsDir() {
+			return fmt.Errorf("не найден обязательный release file %s", name)
+		}
+	}
+	manifestRaw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
+	if err != nil {
+		return err
+	}
+	var manifest struct {
+		Version                                     string `json:"version"`
+		SourceCommit                                string `json:"sourceCommit"`
+		Channel                                     string `json:"channel"`
+		ReleaseStatus                               string `json:"releaseStatus"`
+		ProductionDeliveryReleaseSHA256             string `json:"productionDeliveryReleaseSha256"`
+		LoaderCompatibilityReleaseCertified         bool   `json:"loaderCompatibilityReleaseCertified"`
+		LoaderCompatibilityReleaseCertificateSHA256 string `json:"loaderCompatibilityReleaseCertificateSha256"`
+		LoaderCompatibilityGA                       bool   `json:"loaderCompatibilityGA"`
+		LoaderCompatibilityGASupportSHA256          string `json:"loaderCompatibilityGASupportSha256"`
+		WindowsProtectionReleaseCertified           bool   `json:"windowsProtectionReleaseCertified"`
+		WindowsProtectionReleaseCertificateSHA256   string `json:"windowsProtectionReleaseCertificateSha256"`
+		WindowsAdversarialCertificateSHA256         string `json:"windowsAdversarialCertificateSha256"`
+		WindowsProtectionGACertified                bool   `json:"windowsProtectionGACertified"`
+		WindowsProtectionGACertificateSHA256        string `json:"windowsProtectionGACertificateSha256"`
+		Artifacts                                   []struct {
+			Name     string `json:"name"`
+			Required bool   `json:"required"`
+			Status   string `json:"status"`
+			SHA256   string `json:"sha256"`
+			Size     int64  `json:"size"`
+		} `json:"artifacts"`
+		RequiredFiles []string `json:"requiredFiles"`
+	}
+	if err := json.Unmarshal(manifestRaw, &manifest); err != nil {
+		return fmt.Errorf("RELEASE_MANIFEST.json invalid: %w", err)
+	}
+	if strings.TrimSpace(manifest.Version) == "" {
+		return errors.New("RELEASE_MANIFEST.json не содержит version")
+	}
+	if err := verifySingleNodeGABundle0330(dir, manifest.Version, manifest.SourceCommit, ""); err != nil {
+		return fmt.Errorf("0.33.0 single-node GA: %w", err)
+	}
+	if manifest.Version == "0.27.0" {
+		if err := verifyOfficialGAReceipt0270(dir, manifest.Version, manifest.SourceCommit); err != nil {
+			return err
+		}
+		found := false
+		for _, required := range manifest.RequiredFiles {
+			if required == officialGACertification0270 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errors.New("official Minecraft GA certificate is not required by signed release manifest")
+		}
+	}
+	if deliveryManifestRequired0151(manifest.Version) {
+		if err := verifyDeliveryManifest0151(dir, manifest.Version); err != nil {
+			return fmt.Errorf("delivery manifest: %w", err)
+		}
+	}
+	if windowsSigningRequired0152(manifest.Version) {
+		if err := verifyWindowsSigningEvidence0152(dir, manifest.Version, false); err != nil {
+			return fmt.Errorf("Windows x64/ARM64 delivery evidence: %w", err)
+		}
+	}
+	if windowsProtectionReleaseRequired01812(manifest.Version) {
+		if !manifest.WindowsProtectionReleaseCertified {
+			return errors.New("RELEASE_MANIFEST is not Windows Protection RC certified")
+		}
+		certHash, _, err := hashFile(filepath.Join(dir, windowsProtectionReleaseFile01812))
+		if err != nil {
+			return err
+		}
+		adversarialHash, _, err := hashFile(filepath.Join(dir, windowsAdversarialCertificateFile01811))
+		if err != nil {
+			return err
+		}
+		if !sha256RE01812.MatchString(strings.ToLower(manifest.WindowsProtectionReleaseCertificateSHA256)) || !strings.EqualFold(certHash, manifest.WindowsProtectionReleaseCertificateSHA256) {
+			return errors.New("RELEASE_MANIFEST Windows Protection RC certificate hash mismatch")
+		}
+		if !sha256RE01812.MatchString(strings.ToLower(manifest.WindowsAdversarialCertificateSHA256)) || !strings.EqualFold(adversarialHash, manifest.WindowsAdversarialCertificateSHA256) {
+			return errors.New("RELEASE_MANIFEST Windows adversarial certificate hash mismatch")
+		}
+		if err := verifyWindowsProtectionRelease01812(dir, manifest.Version); err != nil {
+			return fmt.Errorf("Windows Protection RC certification: %w", err)
+		}
+	}
+	if windowsProtectionGARequired0190(manifest.Version) {
+		if !manifest.WindowsProtectionGACertified {
+			return errors.New("RELEASE_MANIFEST is not Windows Protection GA certified")
+		}
+		gaHash, _, err := hashFile(filepath.Join(dir, windowsProtectionGAFile0190))
+		if err != nil {
+			return err
+		}
+		if !sha256RE01812.MatchString(strings.ToLower(manifest.WindowsProtectionGACertificateSHA256)) || !strings.EqualFold(gaHash, manifest.WindowsProtectionGACertificateSHA256) {
+			return errors.New("RELEASE_MANIFEST Windows Protection GA certificate hash mismatch")
+		}
+		if err := verifyWindowsProtectionGA0190(dir, manifest.Version); err != nil {
+			return fmt.Errorf("Windows Protection GA certification: %w", err)
+		}
+	}
+	if linuxProductionRequired0153(manifest.Version) {
+		if err := verifyLinuxProductionEvidence0153(dir, manifest.Version, true); err != nil {
+			return fmt.Errorf("Linux x64/ARM64 production evidence: %w", err)
+		}
+	}
+	if macOSProductionRequired0154(manifest.Version) {
+		if err := verifyMacOSNotarizationEvidence0154(dir, manifest.Version, false); err != nil {
+			return fmt.Errorf("macOS x64/ARM64 delivery evidence: %w", err)
+		}
+	}
+	if managedJREDistributionRequired0155(manifest.Version) {
+		if err := verifyManagedJREDistribution0155(dir, manifest.Version, true); err != nil {
+			return fmt.Errorf("Managed JRE Distribution: %w", err)
+		}
+	}
+	if publicProductionDeliveryRequired0159(manifest.Version) {
+		if err := verifyPublicProductionDeliveryMatrix0159(dir, manifest.Version); err != nil {
+			return fmt.Errorf("Public Production Delivery Matrix: %w", err)
+		}
+	}
+	if productionReleaseCandidateRequired01511(manifest.Version) {
+		manifestCommit, err := normalizeSourceCommit01511(manifest.SourceCommit)
+		if err != nil {
+			return fmt.Errorf("RELEASE_MANIFEST sourceCommit: %w", err)
+		}
+		candidateCommit, err := verifyProductionReleaseCandidateDocument01511(dir, manifest.Version)
+		if err != nil {
+			return fmt.Errorf("Production release candidate document: %w", err)
+		}
+		if !strings.EqualFold(manifestCommit, candidateCommit) {
+			return fmt.Errorf("RELEASE_MANIFEST sourceCommit mismatch: manifest=%s candidate=%s", manifestCommit, candidateCommit)
+		}
+		if err := verifyProductionReleaseCandidate01511(dir, manifest.Version, true); err != nil {
+			return fmt.Errorf("Production release candidate certification: %w", err)
+		}
+	}
+	if productionDeliveryReleaseRequired0160(manifest.Version) {
+		if manifest.Channel != productionDeliveryReleaseChannel0160 || manifest.ReleaseStatus != productionDeliveryReleaseStatus0160 {
+			return errors.New("RELEASE_MANIFEST is not marked as stable Production Delivery Release")
+		}
+		actualCertHash, _, err := hashFile(filepath.Join(dir, productionDeliveryReleaseFile0160))
+		if err != nil {
+			return err
+		}
+		if !validDeliverySHA256(manifest.ProductionDeliveryReleaseSHA256) || !strings.EqualFold(actualCertHash, manifest.ProductionDeliveryReleaseSHA256) {
+			return errors.New("RELEASE_MANIFEST Production Delivery Release certificate hash mismatch")
+		}
+		productionCommit, err := verifyProductionDeliveryReleaseDocument0160(dir, manifest.Version)
+		if err != nil {
+			return fmt.Errorf("Production Delivery Release document: %w", err)
+		}
+		if !strings.EqualFold(manifest.SourceCommit, productionCommit) {
+			return errors.New("RELEASE_MANIFEST sourceCommit does not match Production Delivery Release certificate")
+		}
+		if err := verifyProductionDeliveryRelease0160(dir, manifest.Version, true); err != nil {
+			return fmt.Errorf("Production Delivery Release certification: %w", err)
+		}
+	}
+	if compatibilityLoaderGA0180Required(manifest.Version) {
+		if !manifest.LoaderCompatibilityReleaseCertified || !manifest.LoaderCompatibilityGA {
+			return errors.New("RELEASE_MANIFEST is not Loader Compatibility GA certified")
+		}
+		certificatePath := filepath.Join(dir, loaderCompatibilityReleaseCertificateFile01711)
+		actualCertHash, _, err := hashFile(certificatePath)
+		if err != nil {
+			return err
+		}
+		if !compatibilitySHA256RE.MatchString(strings.ToLower(manifest.LoaderCompatibilityReleaseCertificateSHA256)) || !strings.EqualFold(actualCertHash, manifest.LoaderCompatibilityReleaseCertificateSHA256) {
+			return errors.New("RELEASE_MANIFEST Loader Compatibility GA certificate hash mismatch")
+		}
+		if !compatibilitySHA256RE.MatchString(strings.ToLower(manifest.LoaderCompatibilityGASupportSHA256)) || !strings.EqualFold(manifest.LoaderCompatibilityGASupportSHA256, loaderGASupportSHA2560180()) {
+			return errors.New("RELEASE_MANIFEST Loader Compatibility GA runtime support hash mismatch")
+		}
+		if err := verifyLoaderCompatibilityReleaseCertificate01711(dir, manifest.Version); err != nil {
+			return fmt.Errorf("Loader Compatibility GA 0.18.0: %w", err)
+		}
+	}
+	for _, name := range manifest.RequiredFiles {
+		clean, err := safeReleaseRelativePath0158(name)
+		if err != nil {
+			return fmt.Errorf("requiredFiles path %q invalid: %w", name, err)
+		}
+		if st, err := os.Stat(filepath.Join(dir, clean)); err != nil || st.IsDir() {
+			return fmt.Errorf("requiredFiles содержит отсутствующий файл %s", name)
+		}
+	}
+	requiredCount := 0
+	for _, artifact := range manifest.Artifacts {
+		if !artifact.Required {
+			continue
+		}
+		requiredCount++
+		if artifact.Status != "present" {
+			return fmt.Errorf("required artifact %s имеет status=%s вместо present", artifact.Name, artifact.Status)
+		}
+		cleanArtifact, err := safeReleaseRelativePath0158(artifact.Name)
+		if err != nil {
+			return fmt.Errorf("required artifact path %q invalid: %w", artifact.Name, err)
+		}
+		path := filepath.Join(dir, cleanArtifact)
+		actual, size, err := hashFile(path)
+		if err != nil {
+			return fmt.Errorf("required artifact %s отсутствует или unreadable: %w", artifact.Name, err)
+		}
+		if artifact.Size > 0 && artifact.Size != size {
+			return fmt.Errorf("required artifact %s size mismatch: manifest=%d actual=%d", artifact.Name, artifact.Size, size)
+		}
+		if artifact.SHA256 == "" || !strings.EqualFold(artifact.SHA256, actual) {
+			return fmt.Errorf("required artifact %s sha256 mismatch", artifact.Name)
+		}
+	}
+	if requiredCount == 0 {
+		return errors.New("RELEASE_MANIFEST.json не содержит required artifacts")
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "SHA256SUMS"))
+	if err != nil {
+		return err
+	}
+	verified := 0
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.Fields(line)
+		if len(parts) < 2 {
+			return fmt.Errorf("некорректная строка SHA256SUMS: %s", line)
+		}
+		expected, name := parts[0], parts[1]
+		cleanName, err := safeReleaseRelativePath0158(name)
+		if err != nil {
+			return fmt.Errorf("SHA256SUMS path %q invalid: %w", name, err)
+		}
+		actual, _, err := hashFile(filepath.Join(dir, cleanName))
+		if err != nil {
+			return fmt.Errorf("не удалось проверить %s: %w", name, err)
+		}
+		if !strings.EqualFold(actual, expected) {
+			return fmt.Errorf("checksum mismatch для %s", name)
+		}
+		verified++
+	}
+	if verified == 0 {
+		return errors.New("SHA256SUMS не содержит проверяемых файлов")
+	}
+	if err := verifyReleaseBOM03214(dir, manifest.Version); err != nil {
+		return fmt.Errorf("release BOM verification: %w", err)
+	}
+	if err := verifyReleaseBOMBinding03214(dir, manifest.Version); err != nil {
+		return fmt.Errorf("release BOM signature boundary: %w", err)
+	}
+	if releaseVerificationV2Required0158(manifest.Version) {
+		ctx, err := verifyReleaseSignatureV20158(dir, publicKeyPath, trustStatePath, trustPolicyPath)
+		if err != nil {
+			return err
+		}
+		if err := commitTrustState0158(ctx); err != nil {
+			return fmt.Errorf("commit release trust state: %w", err)
+		}
+		return nil
+	}
+	return verifyReleaseSignature(dir, publicKeyPath)
+}
+
+func verifyReleaseBundleWithTrustState(dir, publicKeyPath, trustStatePath string) error {
+	return verifyReleaseBundleWithTrust(dir, publicKeyPath, trustStatePath, strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_TRUST_POLICY_FILE")))
+}
+
+func verifyReleaseBundle(dir, publicKeyPath string) error {
+	return verifyReleaseBundleWithTrust(dir, publicKeyPath, strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_TRUST_STATE_FILE")), strings.TrimSpace(os.Getenv("LAUNCHER_RELEASE_TRUST_POLICY_FILE")))
+}
+
+func releaseArtifacts(ver string) []string {
+	artifacts := []string{
+		"launcher-source-" + ver + ".zip",
+		"launcher-admin-web-" + ver + ".zip",
+		"launcher-desktop-web-" + ver + ".zip",
+		"launcher-desktop-package-" + ver + ".zip",
+		"launcher-velocity-bridge-" + ver + ".jar",
+		"launcher-bungeecord-bridge-" + ver + ".jar",
+		"launcher-waterfall-bridge-" + ver + ".jar",
+		"launcher-bukkit-bridge-" + ver + ".jar",
+		"launcher-spigot-bridge-" + ver + ".jar",
+		"launcher-paper-bridge-" + ver + ".jar",
+		"launcher-purpur-bridge-" + ver + ".jar",
+		"launcher-folia-bridge-" + ver + ".jar",
+		"launcher-fabric-bridge-" + ver + ".jar",
+		"launcher-forge-bridge-" + ver + ".jar",
+		"launcher-neoforge-bridge-" + ver + ".jar",
+		"BRIDGE_RELEASE_ALLOWLIST.json",
+		"BRIDGE_PLUGIN_MANIFEST.json",
+		serverBridge2CertificationReleaseFile,
+		"SBOM.spdx.json",
+		"PROVENANCE.json",
+		"RELEASE_NOTES.txt",
+	}
+	// Real executable Java extension packages and their raw six-target E2E
+	// receipts are mandatory signed release artifacts since 0.43.0.
+	if compatibilityVersionAtLeast(ver, 0, 43, 0) {
+		artifacts = append(artifacts,
+			"launcher-example-java-host.nlext",
+			"launcher-example-gravit-port.nlext",
+			"EXTENSION_RELEASE_CERTIFICATION_0430.json",
+			"EXTENSION_PUBLISHER_PUBLIC_KEY_0430.pem",
+			"EXTENSION_ACCEPTANCE_EVIDENCE_0430.zip",
+		)
+	}
+	if releaseBOMRequired03214(ver) {
+		artifacts = append(artifacts, releaseBOMFile03214)
+	}
+	if singleNodeGARequired0330(ver) {
+		artifacts = append(artifacts, singleNodeGAFiles0330...)
+	}
+	if gaTargetsRequired0361(ver) {
+		artifacts = append(artifacts, "GA_VERIFIED_TARGETS.json", "GA_TARGET_APPROVAL.json", "GA_TARGET_APPROVAL.sig")
+	}
+	if rehearsalRequired0365(ver) {
+		artifacts = append(artifacts, rehearsalReceipt0365)
+	}
+	if linuxProductionRequired0153(ver) {
+		artifacts = append(artifacts, linuxProductionArtifacts0153(ver)...)
+	} else {
+		artifacts = append(artifacts,
+			"launcher-cli-linux-amd64",
+			"launcher-api-linux-amd64",
+			"launcher-desktop-linux-amd64",
+			"runtime-linux-amd64",
+		)
+	}
+	if !windowsSigningRequired0152(ver) {
+		artifacts = append(artifacts, "launcher-cli-windows-amd64.exe")
+	}
+	if deliveryManifestRequired0151(ver) {
+		artifacts = append(artifacts, deliveryManifestFile0151)
+	}
+	if releaseVerificationV2Required0158(ver) {
+		artifacts = append(artifacts, releaseTrustPolicyFile0158)
+	}
+	if publicProductionDeliveryRequired0159(ver) {
+		artifacts = append(artifacts, publicProductionDeliveryMatrixFile0159)
+	}
+	if productionReleaseCandidateRequired01511(ver) {
+		artifacts = append(artifacts, productionReleaseCandidateFile01511)
+	}
+	if productionDeliveryReleaseRequired0160(ver) {
+		artifacts = append(artifacts, productionDeliveryReleaseFile0160)
+	}
+	if ver == "0.27.0" {
+		artifacts = append(artifacts, officialGACertification0270)
+	}
+	if windowsProtectionReleaseRequired01812(ver) {
+		artifacts = append(artifacts, windowsAdversarialCertificateFile01811, windowsProtectionReleaseFile01812)
+	}
+	if windowsProtectionGARequired0190(ver) {
+		artifacts = append(artifacts, windowsProtectionGAFile0190)
+	}
+	if windowsSigningRequired0152(ver) {
+		artifacts = append(artifacts,
+			"launcher-cli-windows-x64.exe",
+			"launcher-cli-windows-arm64.exe",
+			"launcher-desktop-windows-x64.exe",
+			"launcher-desktop-windows-arm64.exe",
+			"guard-windows-x64.exe",
+			"guard-windows-arm64.exe",
+		)
+		if componentTransactionalUpdateRequired0157(ver) {
+			artifacts = append(artifacts, "runtime-windows-x64.exe", "runtime-windows-arm64.exe")
+		}
+		if guardSensorRequired0182(ver) {
+			artifacts = append(artifacts, "guard-sensor-windows-x64.dll", "guard-sensor-windows-arm64.dll")
+		}
+		artifacts = append(artifacts,
+			"launcher-desktop-"+ver+"-windows-x64.zip",
+			"launcher-desktop-"+ver+"-windows-arm64.zip",
+			"WINDOWS_PACKAGE_MANIFEST_X64.json",
+			"WINDOWS_PACKAGE_MANIFEST_ARM64.json",
+			windowsDeliveryAllowlistFile0152,
+			windowsSigningEvidenceFile0152,
+		)
+	}
+	if macOSProductionRequired0154(ver) {
+		artifacts = append(artifacts, macOSProductionArtifacts0154(ver)...)
+	}
+	if managedJREDistributionRequired0155(ver) {
+		artifacts = append(artifacts, managedJREArtifacts0155(ver)...)
+	}
+	if managedJavaIIRequired0165(ver) {
+		artifacts = append(artifacts, managedJavaIIEvidenceFile0165)
+	}
+	if guardCICertificationRequired(ver) {
+		for _, osName := range []string{"linux", "windows", "macos"} {
+			names := expectedGuardArtifactNames0139(osName, ver)
+			for _, role := range []string{"package", "launcher", "guard", "manifest", "allowlist"} {
+				name := names[role]
+				found := false
+				for _, existing := range artifacts {
+					if existing == name {
+						found = true
+						break
+					}
+				}
+				if !found {
+					artifacts = append(artifacts, name)
+				}
+			}
+		}
+	}
+	return artifacts
+}
+
+func releaseBundleVersion(dir string) (string, error) {
+	raw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
+	if err != nil {
+		return "", err
+	}
+	var payload struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(payload.Version) == "" {
+		return "", errors.New("RELEASE_MANIFEST.json не содержит version")
+	}
+	return strings.TrimSpace(payload.Version), nil
+}
+
+func releaseDescription(ver string) string {
+	extra := ""
+	if compatibilityVersionAtLeast(ver, 0, 43, 0) {
+		extra += "\n- 0.43.0+: release includes two signed executable Java extension example packages and a six-target JVM/Gravit source-port acceptance ZIP; source-port is not arbitrary Gravit JAR binary compatibility."
+	}
+	if compatibilityCertificationRequired(ver) {
+		extra = "\n- официальный publish-check требует COMPATIBILITY_TARGETS/MATRIX/CERTIFICATION, привязанные к той же версии и source commit;"
+	}
+	if deviceTrustCertificationRequired(ver) {
+		extra += "\n- начиная с 0.13.0 официальный publish-check также требует DEVICE_TRUST_TARGETS/MATRIX/CERTIFICATION для того же product version и source commit;"
+	}
+	if guardCICertificationRequired(ver) {
+		extra += "\n- начиная с 0.13.9 publish-check требует cross-platform GUARD_CI_TARGETS/MATRIX/CERTIFICATION и повторно сверяет exact Windows/Linux/macOS Guard artifacts по SHA-256;"
+	}
+	if serverBridge3CertificationRequired0191(ver) {
+		extra += "\n- начиная с 0.19.1 publish-check требует SERVERBRIDGE3_CERTIFICATION.json (Protocol v3) и повторно сверяет все 11 platform JAR с exact-version BRIDGE_RELEASE_ALLOWLIST.json;"
+	} else if serverBridge2CertificationRequired0150(ver) {
+		extra += "\n- для 0.15.0–0.19.0 publish-check требует исторический SERVERBRIDGE2_CERTIFICATION.json и повторно сверяет все 11 platform JAR с exact-version BRIDGE_RELEASE_ALLOWLIST.json;"
+	}
+	if deliveryManifestRequired0151(ver) {
+		extra += "\n- начиная с 0.15.1 подписанный DELIVERY_MANIFEST.json фиксирует SHA-256/size каждого delivery artifact и каноническую platform/architecture пару (windows/linux/macos + x64/arm64/universal); release verify повторно проверяет inventory fail-closed;"
+	}
+	if windowsSigningRequired0152(ver) {
+		extra += "\n- начиная с 0.15.2 publish-check требует реальные Windows x64+ARM64 PE для CLI/Desktop/Guard, Authenticode SHA-256 + RFC3161 timestamp и WINDOWS_SIGNING_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json и package ZIP;"
+	}
+	if linuxProductionRequired0153(ver) {
+		extra += "\n- начиная с 0.15.3 publish-check требует нативно собранные Linux x64+ARM64 CLI/API/Desktop/Guard/Runtime, проверяет ELF e_machine, deterministic tar.gz, embedded package manifests и их привязку к DELIVERY_MANIFEST.json;"
+	}
+	if macOSProductionRequired0154(ver) {
+		extra += "\n- начиная с 0.15.4 publish-check требует отдельные macOS x64+ARM64 Mach-O, Developer ID Application + Hardened Runtime, Accepted Apple notarization, stapled ticket, Gatekeeper acceptance и MACOS_NOTARIZATION_EVIDENCE.json, связанный с DELIVERY_MANIFEST.json;"
+	}
+	if managedJREDistributionRequired0155(ver) {
+		extra += "\n- начиная с 0.15.5 publish-check требует Managed JRE Distribution: exact Temurin 21 vendor archives для Windows/Linux/macOS x64+ARM64, MANAGED_JRE_MANIFEST/EVIDENCE, проверку SHA-256/size/архитектуры bin/java и binding к DELIVERY_MANIFEST.json;"
+	}
+	if updaterVersionAtLeast0156(ver) {
+		extra += "\n- начиная с 0.15.6 client install/update/package-apply используют Unified Transactional Updater Core: verified same-filesystem staging, durable journal, crash recovery, automatic rollback и fail-closed post-verify; publish-check выполняет реальный updater self-test;"
+	}
+	if publicProductionDeliveryRequired0159(ver) {
+		extra += "\n- начиная с 0.15.9 PUBLIC_PRODUCTION_DELIVERY_MATRIX.json публикует точный six-target Windows/Linux/macOS x64+ARM64 inventory с HTTPS URL, SHA-256/size и Managed JRE binding; post-publish nl delivery public-e2e скачивает публичные bytes, сверяет matrix/delivery manifest и повторно выполняет Release Verification v2 end-to-end;"
+	}
+	if migrationStabilizationRequired01510(ver) {
+		extra += "\n- начиная с 0.15.10 migration stabilization сериализует Release Verification через persistent trust-state lock, мигрирует state 2.0→2.1 с same-version RELEASE_MANIFEST binding, переносит legacy macOS component state в canonical location и удаляет terminal updater staging/backup payload после durable rollback;"
+	}
+	if productionReleaseCandidateRequired01511(ver) {
+		extra += "\n- начиная с 0.15.11 Production Release Candidate требует полный exact-commit certification cohort, реальные vendor-signed/notarized Windows/macOS artifacts и PRODUCTION_RELEASE_CANDIDATE.json; candidate certification хэширует весь pre-sign release cohort и входит в Ed25519 signed SHA256SUMS boundary;"
+	}
+	if productionDeliveryReleaseRequired0160(ver) {
+		extra += "\n- начиная с 0.16.0 Production Delivery Release промотит прошедший exact-commit RC в stable GA boundary: PRODUCTION_DELIVERY_RELEASE.json связывает six-target delivery, vendor signing/notarization, Managed JRE, trust policy и immutable versioned public origin; документ сам входит в Release Verification v2 signature boundary;"
+	}
+	return fmt.Sprintf("# Launcher %s — Release Pipeline\n\n"+
+		"Launcher %s закрепляет воспроизводимый release pipeline для release artifacts.\n\n"+
+		"Основное:\n"+
+		"- единый build-release сценарий для CLI, Backend API, Admin Web, Desktop Web/native, Runtime и ServerBridge;\n"+
+		"- фактический SHA256SUMS вместо декларативных placeholder-комментариев;\n"+
+		"- SBOM.spdx.json, PROVENANCE.json и RELEASE_MANIFEST.json в каждом release bundle;\n"+
+		"- проверка release bundle через nl release verify;\n"+
+		"- Ed25519-подпись SHA256SUMS и отдельная signed SLSA provenance attestation с внешним trust anchor;\n"+
+		"- source package формируется только из git-tracked/allowlisted файлов и проходит secret scan.%s", ver, ver, extra)
+}
+
+func buildManifest(root, project, profile, ver string) (Manifest, error) {
+	var files []ManifestFile
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		sum, size, err := hashFile(path)
+		if err != nil {
+			return err
+		}
+		files = append(files, ManifestFile{Path: filepath.ToSlash(rel), Size: size, SHA256: sum, URL: "", Required: true})
+		return nil
+	})
+	if err != nil {
+		return Manifest{}, err
+	}
+	return Manifest{SchemaVersion: "1.0", ProjectID: project, ProfileID: profile, Channel: "stable", Version: ver, CreatedAt: time.Now().UTC().Format(time.RFC3339), Files: files}, nil
+}
+
+func buildManifestDiff(oldManifest, newManifest Manifest) ManifestDiff {
+	oldFiles := indexManifestFiles(oldManifest.Files)
+	newFiles := indexManifestFiles(newManifest.Files)
+	diff := ManifestDiff{FromVersion: oldManifest.Version, ToVersion: newManifest.Version}
+
+	for path, newFile := range newFiles {
+		oldFile, exists := oldFiles[path]
+		switch {
+		case !exists:
+			diff.Added = append(diff.Added, newFile)
+			diff.TotalDownloadSize += newFile.Size
+		case oldFile.SHA256 != newFile.SHA256 || oldFile.Size != newFile.Size:
+			diff.Changed = append(diff.Changed, newFile)
+			diff.TotalDownloadSize += newFile.Size
+		default:
+			diff.Unchanged = append(diff.Unchanged, path)
+		}
+	}
+	for path := range oldFiles {
+		if _, exists := newFiles[path]; !exists {
+			diff.Deleted = append(diff.Deleted, path)
+		}
+	}
+	return diff
+}
+
+func buildUpdatePlan(oldManifest, newManifest Manifest) UpdatePlan {
+	diff := buildManifestDiff(oldManifest, newManifest)
+	plan := UpdatePlan{
+		FromVersion:       oldManifest.Version,
+		ToVersion:         newManifest.Version,
+		Download:          append(diff.Added, diff.Changed...),
+		Delete:            diff.Deleted,
+		Keep:              diff.Unchanged,
+		Verify:            diff.Unchanged,
+		TotalDownloadSize: diff.TotalDownloadSize,
+		ResumeDownloads:   true,
+		MaxParallel:       4,
+	}
+	for _, file := range plan.Download {
+		plan.Verify = append(plan.Verify, file.Path)
+	}
+	return plan
+}
+
+func indexManifestFiles(files []ManifestFile) map[string]ManifestFile {
+	result := make(map[string]ManifestFile, len(files))
+	for _, file := range files {
+		result[file.Path] = file
+	}
+	return result
+}
+
+func readManifest(path string) (Manifest, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Manifest{}, err
+	}
+	var manifest Manifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return Manifest{}, err
+	}
+	if manifest.SchemaVersion == "3.0" {
+		return Manifest{}, errors.New("Manifest v3 component catalog requires native Runtime 0.24.1; legacy CLI updater cannot safely apply this release")
+	}
+	if manifest.ProjectID == "" || manifest.ProfileID == "" || manifest.Version == "" {
+		return Manifest{}, errors.New("manifest не содержит обязательные поля projectId, profileId или version")
+	}
+	return manifest, nil
+}
+
+func hashFile(path string) (string, int64, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", 0, err
+	}
+	defer f.Close()
+	h := sha256.New()
+	size, err := io.Copy(h, f)
+	if err != nil {
+		return "", 0, err
+	}
+	return hex.EncodeToString(h.Sum(nil)), size, nil
+}
+
+func writeJSONFile(path string, value any) error {
+	dir := filepath.Dir(path)
+	if dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+	}
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(data, '\n'), 0o644)
+}
+
+func printJSON(value any) {
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		fmt.Println("{}")
+		return
+	}
+	fmt.Println(string(data))
+}
+
+func flagValue(args []string, name, fallback string) string {
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == name {
+			return args[i+1]
+		}
+	}
+	for _, arg := range args {
+		if strings.HasPrefix(arg, name+"=") {
+			return strings.TrimPrefix(arg, name+"=")
+		}
+	}
+	return fallback
+}
+
+func flagBool(args []string, name string, fallback bool) bool {
+	value := strings.TrimSpace(strings.ToLower(flagValue(args, name, "")))
+	if value == "" {
+		for _, arg := range args {
+			if arg == name {
+				return true
+			}
+		}
+		return fallback
+	}
+	switch value {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return fallback
+	}
+}

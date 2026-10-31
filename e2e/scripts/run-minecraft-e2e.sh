@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT/e2e/docker-compose.minecraft-e2e.yml"
 RUNTIME_DIR="$ROOT/e2e/runtime"
 ENV_FILE="$RUNTIME_DIR/e2e.env"
-API="${NEVERLAUNCHER_E2E_API:-http://127.0.0.1:18080}"
+API="${LAUNCHER_E2E_API:-http://127.0.0.1:18080}"
 DB_DSN="postgres://launcher:launcher@127.0.0.1:55432/launcher?sslmode=disable"
 BOOTSTRAP_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
 AUTH_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
@@ -37,11 +37,11 @@ ADMIN_EMAIL="admin@launcher.local"
 ADMIN_PASSWORD="$(python3 -c 'import secrets; print("E2E-" + secrets.token_urlsafe(24))')"
 PLAYER_USERNAME="E2EPlayer"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
-MODE="${NEVERLAUNCHER_E2E_MODE:-full}"
-MINECRAFT_VERSION="${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-1.21.1}"
-LOADER="$(printf '%s' "${NEVERLAUNCHER_E2E_LOADER:-vanilla}" | tr '[:upper:]' '[:lower:]')"
-LOADER_VERSION_SELECTOR="${NEVERLAUNCHER_E2E_LOADER_VERSION:-}"
-PROFILE_ID="${NEVERLAUNCHER_E2E_PROFILE_ID:-$LOADER}"
+MODE="${LAUNCHER_E2E_MODE:-full}"
+MINECRAFT_VERSION="${LAUNCHER_E2E_MINECRAFT_VERSION:-1.21.1}"
+LOADER="$(printf '%s' "${LAUNCHER_E2E_LOADER:-vanilla}" | tr '[:upper:]' '[:lower:]')"
+LOADER_VERSION_SELECTOR="${LAUNCHER_E2E_LOADER_VERSION:-}"
+PROFILE_ID="${LAUNCHER_E2E_PROFILE_ID:-$LOADER}"
 FOLIA_MINECRAFT_VERSION="1.21.1"
 FOLIA_SOURCE_REPOSITORY="https://github.com/PaperMC/Folia.git"
 FOLIA_SOURCE_COMMIT="2e7bc0721af95196c85500c7bb136aeea0bc12ce"
@@ -83,14 +83,14 @@ need() { command -v "$1" >/dev/null 2>&1 || { echo "[e2e] required command missi
 for cmd in docker curl jq go cargo python3 gradle git mvn jar xvfb-run openssl psql; do need "$cmd"; done
 docker compose version >/dev/null
 
-JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"
+JAVA_BIN="${LAUNCHER_E2E_JAVA:-}"
 if [[ -z "$JAVA_BIN" && -n "${JAVA_HOME:-}" && -x "${JAVA_HOME}/bin/java" ]]; then
   JAVA_BIN="${JAVA_HOME}/bin/java"
 fi
 if [[ -z "$JAVA_BIN" ]]; then
   JAVA_BIN="$(command -v java || true)"
 fi
-[[ -n "$JAVA_BIN" && -x "$JAVA_BIN" ]] || { echo "[e2e] Java executable is unavailable; set NEVERLAUNCHER_E2E_JAVA or JAVA_HOME" >&2; exit 1; }
+[[ -n "$JAVA_BIN" && -x "$JAVA_BIN" ]] || { echo "[e2e] Java executable is unavailable; set LAUNCHER_E2E_JAVA or JAVA_HOME" >&2; exit 1; }
 "$JAVA_BIN" -version >/dev/null 2>&1 || { echo "[e2e] Java executable failed: $JAVA_BIN" >&2; exit 1; }
 
 rm -rf "$RUNTIME_DIR"
@@ -105,28 +105,28 @@ cat > "$GUARD_POLICY_OVERRIDE" <<YAML
 services:
   launcher-api:
     environment:
-      NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '$GUARD_RELEASE_ALLOWLIST_JSON'
+      LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '$GUARD_RELEASE_ALLOWLIST_JSON'
 YAML
 write_env_file() {
   cat > "$ENV_FILE" <<ENV
-NEVERLAUNCHER_E2E_AUTH_SECRET=$AUTH_SECRET
-NEVERLAUNCHER_E2E_BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN
-NEVERLAUNCHER_E2E_SIGNING_SEED=$SIGNING_SEED
-NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY=$CONTROL_PUBLIC_KEY
-NEVERLAUNCHER_E2E_REDIS_PASSWORD=$REDIS_PASSWORD
-NEVERLAUNCHER_E2E_RCON_PASSWORD=$RCON_PASSWORD
-NEVERLAUNCHER_E2E_PROFILE_ID=$PROFILE_ID
-NEVERLAUNCHER_E2E_BRIDGE_RELEASE_ALLOWLIST_JSON=$BRIDGE_ALLOWLIST_JSON
-NEVERLAUNCHER_E2E_HOST_UID=$(id -u)
-NEVERLAUNCHER_E2E_HOST_GID=$(id -g)
-NEVERLAUNCHER_E2E_VERSION=$VERSION
+LAUNCHER_E2E_AUTH_SECRET=$AUTH_SECRET
+LAUNCHER_E2E_BOOTSTRAP_TOKEN=$BOOTSTRAP_TOKEN
+LAUNCHER_E2E_SIGNING_SEED=$SIGNING_SEED
+LAUNCHER_E2E_CONTROL_PUBLIC_KEY=$CONTROL_PUBLIC_KEY
+LAUNCHER_E2E_REDIS_PASSWORD=$REDIS_PASSWORD
+LAUNCHER_E2E_RCON_PASSWORD=$RCON_PASSWORD
+LAUNCHER_E2E_PROFILE_ID=$PROFILE_ID
+LAUNCHER_E2E_BRIDGE_RELEASE_ALLOWLIST_JSON=$BRIDGE_ALLOWLIST_JSON
+LAUNCHER_E2E_HOST_UID=$(id -u)
+LAUNCHER_E2E_HOST_GID=$(id -g)
+LAUNCHER_E2E_VERSION=$VERSION
 ENV
 }
 write_env_file
 
 compose() { docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" -f "$GUARD_POLICY_OVERRIDE" "$@"; }
 cleanup() {
-  if [[ "${NEVERLAUNCHER_E2E_KEEP:-0}" != "1" ]]; then
+  if [[ "${LAUNCHER_E2E_KEEP:-0}" != "1" ]]; then
     compose down -v --remove-orphans >/dev/null 2>&1 || true
   fi
 }
@@ -359,9 +359,9 @@ materialize_pinned_spark_paper_dependency() {
 
   materialize_pinned_bytesocks_dependency
   cat > "$init_script" <<'GRADLE'
-def pinnedRepo = System.getenv("NEVERLAUNCHER_SPARK_BUILD_MAVEN_REPO")
+def pinnedRepo = System.getenv("LAUNCHER_SPARK_BUILD_MAVEN_REPO")
 if (pinnedRepo == null || pinnedRepo.trim().isEmpty()) {
-    throw new GradleException("NEVERLAUNCHER_SPARK_BUILD_MAVEN_REPO is required")
+    throw new GradleException("LAUNCHER_SPARK_BUILD_MAVEN_REPO is required")
 }
 gradle.beforeProject { project ->
     project.repositories {
@@ -400,7 +400,7 @@ GRADLE
   }
 
   (
-    export NEVERLAUNCHER_SPARK_BUILD_MAVEN_REPO="$bytesocks_repo"
+    export LAUNCHER_SPARK_BUILD_MAVEN_REPO="$bytesocks_repo"
     cd "$source_dir"
     ./gradlew --no-daemon --stacktrace --init-script "$init_script" :spark-paper:shadowJar
   )
@@ -445,9 +445,9 @@ materialize_pinned_folia_runtime() {
 
   materialize_pinned_spark_paper_dependency
   cat > "$init_script" <<'GRADLE'
-def pinnedRepo = System.getenv("NEVERLAUNCHER_FOLIA_BUILD_MAVEN_REPO")
+def pinnedRepo = System.getenv("LAUNCHER_FOLIA_BUILD_MAVEN_REPO")
 if (pinnedRepo == null || pinnedRepo.trim().isEmpty()) {
-    throw new GradleException("NEVERLAUNCHER_FOLIA_BUILD_MAVEN_REPO is required")
+    throw new GradleException("LAUNCHER_FOLIA_BUILD_MAVEN_REPO is required")
 }
 gradle.beforeProject { project ->
     project.repositories {
@@ -486,7 +486,7 @@ GRADLE
     export GIT_AUTHOR_EMAIL="launcher-e2e@invalid.local"
     export GIT_COMMITTER_NAME="Launcher E2E"
     export GIT_COMMITTER_EMAIL="launcher-e2e@invalid.local"
-    export NEVERLAUNCHER_FOLIA_BUILD_MAVEN_REPO="$build_maven_repo"
+    export LAUNCHER_FOLIA_BUILD_MAVEN_REPO="$build_maven_repo"
     cd "$source_dir"
     ./gradlew --no-daemon --stacktrace --init-script "$init_script" applyPatches
     ./gradlew --no-daemon --stacktrace --init-script "$init_script" createMojmapPaperclipJar
@@ -753,8 +753,8 @@ else
   # выделенный сервер с точной неизменяемой версией загрузчика выше и потребуйте
   # настоящего сетевого подключения от уже подготовленного клиента.
   LOADER_NATIVE_CLIENT_PROFILE_ID="$(jq -er --arg loader "$LOADER" '.[ $loader ].profileId' "$CLIENT_PACKAGE")"
-  export NEVERLAUNCHER_E2E_RESOLVED_LOADER_VERSION="$RESOLVED_LOADER_VERSION"
-  export NEVERLAUNCHER_E2E_LOADER_CLIENT_PROFILE_ID="$LOADER_NATIVE_CLIENT_PROFILE_ID"
+  export LAUNCHER_E2E_RESOLVED_LOADER_VERSION="$RESOLVED_LOADER_VERSION"
+  export LAUNCHER_E2E_LOADER_CLIENT_PROFILE_ID="$LOADER_NATIVE_CLIENT_PROFILE_ID"
   bash "$ROOT/e2e/scripts/run-loader-native-e2e.sh"
 fi
 
@@ -925,8 +925,8 @@ jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | 
 (
   cd "$ROOT"
   export LIBGL_ALWAYS_SOFTWARE=1
-  export NEVERLAUNCHER_RESOLUTION_WIDTH=854
-  export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
+  export LAUNCHER_RESOLUTION_WIDTH=854
+  export LAUNCHER_RESOLUTION_HEIGHT=480
   xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
     cargo run --quiet --manifest-path runtime/runtime/Cargo.toml --bin runtime -- launch \
       --manifest "$RUNTIME_DIR/manifest.json" \
@@ -934,7 +934,7 @@ jq -e '.data.oneTime == true and .data.ticketVersion == 2 and (.data.ticketId | 
       --root "$RUNTIME_DIR/client" \
       --java "$JAVA_BIN" \
       --username "$PLAYER_USERNAME" \
-      --max-runtime-seconds "${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-90}" \
+      --max-runtime-seconds "${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-90}" \
       > "$RUNTIME_DIR/runtime-launch-minecraft.json"
 )
 jq -e '.timedOut == true or .success == true' "$RUNTIME_DIR/runtime-launch-minecraft.json" >/dev/null
@@ -997,14 +997,14 @@ if [[ "$MODE" == "full" && "$(printf '%s\n' '0.36.4' "$VERSION" | sort -V | head
     (
       cd "$ROOT"
       export LIBGL_ALWAYS_SOFTWARE=1
-      export NEVERLAUNCHER_RESOLUTION_WIDTH=854
-      export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
+      export LAUNCHER_RESOLUTION_WIDTH=854
+      export LAUNCHER_RESOLUTION_HEIGHT=480
       xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
         cargo run --quiet --manifest-path runtime/runtime/Cargo.toml --bin runtime -- launch \
           --manifest "$manifest" --pinned-public-key "$PINNED_PUBLIC_KEY" \
           --root "$RUNTIME_DIR/cycle-client" --java "$JAVA_BIN" \
           --username "$PLAYER_USERNAME" \
-          --max-runtime-seconds "${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-90}" \
+          --max-runtime-seconds "${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-90}" \
           > "$RUNTIME_DIR/cycle-runtime-launch-${stage}.json"
     )
     jq -e '.success == true or .timedOut == true' "$RUNTIME_DIR/cycle-runtime-launch-${stage}.json" >/dev/null
@@ -1070,7 +1070,7 @@ if [[ "$MODE" == "full" ]]; then
         # Login Acknowledged как для разрешённого, так и для отклонённого сценария.
         allow_probe_mode=(
           --enter-configuration
-          --configuration-hold-seconds "${NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS:-8}"
+          --configuration-hold-seconds "${LAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS:-8}"
         )
         deny_probe_mode=("${allow_probe_mode[@]}")
         ;;
@@ -1085,7 +1085,7 @@ if [[ "$MODE" == "full" ]]; then
         allow_probe_mode=(
           --enter-configuration
           --drive-neoforge-configuration
-          --configuration-hold-seconds "${NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS:-8}"
+          --configuration-hold-seconds "${LAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS:-8}"
         )
         deny_probe_mode=(
           "${allow_probe_mode[@]}"
@@ -1108,14 +1108,14 @@ if [[ "$MODE" == "full" ]]; then
         # Прокси ограничивают переподключения по IP до обработчиков
         # PreLogin. Сохраняйте защиту и ждите производственное
         # окно, чтобы проба отказа дошла до Launcher.
-        sleep "${NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5}"
+        sleep "${LAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5}"
         ;;
       spigot|paper|purpur|folia)
         # Среды Bukkit/Paper применяют своё ограничение подключений до
         # AsyncPlayerPreLoginEvent. Сохраняйте защиту и ждите установленное
         # окно, чтобы проба отозванного сеанса дошла до обработчика
         # отказа Launcher, а не до ограничения Bukkit.
-        sleep "${NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5}"
+        sleep "${LAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5}"
         ;;
     esac
     python3 "$ROOT/e2e/scripts/minecraft-login-probe.py" --port "$port" --username "$PLAYER_USERNAME" "${deny_probe_mode[@]}" > "$RUNTIME_DIR/probe-$id-deny.txt"

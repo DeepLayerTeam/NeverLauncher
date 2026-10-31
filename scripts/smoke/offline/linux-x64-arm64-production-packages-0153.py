@@ -92,7 +92,7 @@ staging = read("scripts/release/build-release.sh")
 require(
     staging,
     [
-        "NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR",
+        "LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR",
         "LINUX_DUAL_ARCH_REQUIRED",
         "launcher-linux-${arch}-${VERSION}.tar.gz",
         "LINUX_PACKAGE_MANIFEST_$(tr",
@@ -122,7 +122,7 @@ require(
         "pattern: launcher-linux-production-*-${{ github.sha }}",
         "path: linux-production-artifacts",
         "merge-multiple: true",
-        "NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts",
+        "LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR: ${{ github.workspace }}/linux-production-artifacts",
     ],
     "production release Linux x64 + ARM64 staging",
 )

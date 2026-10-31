@@ -1,34 +1,50 @@
 """The production signer must not remove build output if 0.25.0 GA is absent."""
+
 from pathlib import Path
 import os
 import subprocess
 import tempfile
 import unittest
 
-ROOT=Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[2]
+
 
 class GAReleasePreflightTests(unittest.TestCase):
     def test_missing_independent_signed_evidence_fails_before_output_cleanup(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp)
-            output=root/'candidate'
+            root = Path(tmp)
+            output = root / "candidate"
             output.mkdir()
-            sentinel=output/'important-test-artifact'
-            sentinel.write_text('must not be deleted by failed verification')
-            env=os.environ.copy()
-            env.pop('NEVERLAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR',None)
-            env.pop('NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY',None)
-            result=subprocess.run(['bash',str(ROOT/'scripts/release/build-release.sh'),
-                                   '0.25.0',str(output)],env=env,capture_output=True,text=True,timeout=30)
-            self.assertNotEqual(result.returncode,0)
-            current=(ROOT/'VERSION').read_text().strip()
-            if current=='0.25.0':
-                self.assertIn('signed evidence',result.stderr)
+            sentinel = output / "important-test-artifact"
+            sentinel.write_text("must not be deleted by failed verification")
+            env = os.environ.copy()
+            env.pop("LAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR", None)
+            env.pop("LAUNCHER_COMPONENT_GA_PUBLIC_KEY", None)
+            result = subprocess.run(
+                [
+                    "bash",
+                    str(ROOT / "scripts/release/build-release.sh"),
+                    "0.25.0",
+                    str(output),
+                ],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            current = (ROOT / "VERSION").read_text().strip()
+            if current == "0.25.0":
+                self.assertIn("signed evidence", result.stderr)
             else:
                 # Modern signers reject the historical version *earlier*;
                 # this is stricter than the missing-evidence check and must
                 # likewise preserve existing output without deleting it.
-                self.assertIn('VERSION='+current,result.stderr)
-            self.assertEqual(sentinel.read_text(),'must not be deleted by failed verification')
+                self.assertIn("VERSION=" + current, result.stderr)
+            self.assertEqual(
+                sentinel.read_text(), "must not be deleted by failed verification"
+            )
 
-if __name__=='__main__':unittest.main()
+
+if __name__ == "__main__":
+    unittest.main()

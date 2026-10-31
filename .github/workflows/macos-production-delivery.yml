@@ -92,18 +92,18 @@ jobs:
             --key "$RUNNER_TEMP/AuthKey_${APPLE_NOTARY_KEY_ID}.p8" \
             --key-id "$APPLE_NOTARY_KEY_ID" \
             --issuer "$APPLE_NOTARY_ISSUER_ID"
-          echo "NEVERLAUNCHER_SIGNING_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+          echo "LAUNCHER_SIGNING_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
 
       - name: Install component-set signing dependency
         run: python3 -m pip install 'cryptography>=43,<47'
       - name: Build, sign, notarize and staple x64 + ARM64 packages
         shell: bash
         env:
-          NEVERLAUNCHER_MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}
-          NEVERLAUNCHER_MACOS_TEAM_ID: ${{ secrets.MACOS_TEAM_ID }}
-          NEVERLAUNCHER_MACOS_NOTARY_PROFILE: launcher-ci-notary
-          NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED: ${{ secrets.COMPONENT_SET_ED25519_SEED }}
-          NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ secrets.COMPONENT_SET_ED25519_PUBLIC_KEY }}
+          LAUNCHER_MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}
+          LAUNCHER_MACOS_TEAM_ID: ${{ secrets.MACOS_TEAM_ID }}
+          LAUNCHER_MACOS_NOTARY_PROFILE: launcher-ci-notary
+          LAUNCHER_COMPONENT_SET_ED25519_SEED: ${{ secrets.COMPONENT_SET_ED25519_SEED }}
+          LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ secrets.COMPONENT_SET_ED25519_PUBLIC_KEY }}
         run: bash scripts/release/build-macos-production.sh
 
       - name: Verify production evidence and delivery binding
@@ -123,8 +123,8 @@ jobs:
         shell: bash
         run: |
           rm -f "$RUNNER_TEMP/launcher-developer-id.p12" "$RUNNER_TEMP"/AuthKey_*.p8
-          if [[ -n "${NEVERLAUNCHER_SIGNING_KEYCHAIN:-}" ]]; then
-            security delete-keychain "$NEVERLAUNCHER_SIGNING_KEYCHAIN" || true
+          if [[ -n "${LAUNCHER_SIGNING_KEYCHAIN:-}" ]]; then
+            security delete-keychain "$LAUNCHER_SIGNING_KEYCHAIN" || true
           fi
 
       - name: Upload notarized macOS delivery

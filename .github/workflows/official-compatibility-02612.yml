@@ -10,7 +10,7 @@ on:
       - 'services/api/internal/officialminecraft/**'
       - 'services/api/cmd/official-provider-poc/**'
       - 'apps/desktop/**'
-      - 'runtime/neverruntime/**'
+      - 'runtime/runtime/**'
       - 'scripts/certification/official-game-join-02612.py'
       - 'scripts/certification/test_official_game_join_02612.py'
       - 'scripts/ga/official_minecraft_0270.py'
@@ -24,7 +24,7 @@ on:
       - 'services/api/internal/officialminecraft/**'
       - 'services/api/cmd/official-provider-poc/**'
       - 'apps/desktop/**'
-      - 'runtime/neverruntime/**'
+      - 'runtime/runtime/**'
       - 'scripts/certification/official-game-join-02612.py'
       - 'scripts/certification/test_official_game_join_02612.py'
       - 'scripts/ga/official_minecraft_0270.py'
@@ -102,7 +102,7 @@ jobs:
       - name: Test real native official identity paths
         run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml official_
       - name: Test launch mode isolation and runtime
-        run: cargo test --manifest-path runtime/neverruntime/Cargo.toml launch_identity_0269
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml launch_identity_0269
       - name: Rust compilation (native platform)
         run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
       - name: Install pinned Desktop dependencies

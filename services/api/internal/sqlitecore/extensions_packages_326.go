@@ -192,7 +192,7 @@ func extensionSignatureMessage(id, version, digest string) []byte {
 }
 
 // PublishExtensionPackage verifies the actual persisted bytes and a trusted
-// Ed25519 signature over the extension ID/version/digest tuple, never just a caller manifest.
+// Ed25519 signature over the extension ID/version/digest tuple, just a caller manifest.
 func (r *Repository) PublishExtensionPackage(ctx context.Context, input ExtensionPackage, actor string) (out ExtensionPackage, err error) {
 	if !durableFieldsNonempty(input.ExtensionID, input.Version, input.Publisher) || !isHex256(input.Digest) {
 		return out, errors.New("invalid extension package tuple")

@@ -33,8 +33,8 @@ jobs:
           stat -f -c '%T' "$RUNNER_TEMP/never-sqlite-dep00"
       - name: Real WAL crash, process fencing and transaction tests
         env:
-          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: "1"
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-dep00
+          LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: "1"
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-dep00
         run: go test -race -count=1 -v ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Build actual CLI
         run: go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite

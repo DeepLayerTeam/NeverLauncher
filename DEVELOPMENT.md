@@ -36,6 +36,6 @@ python3 scripts/guard_ci/matrix.py validate --targets guard-ci/targets.json
 2. Изменения API сопровождайте обновлением canonical OpenAPI и регрессионными тестами.
 3. Перед PR проверяйте `scripts/version/manage.py check`, `scripts/contracts/validate-openapi.py`, релевантные Go/Rust/TypeScript-тесты и offline gates.
 4. Не утверждайте успешность всей кроссплатформенной матрицы по локальному Linux-тесту.
-5. Для выпуска следуйте `scripts/release/preflight.sh`; `NEVERLAUNCHER_PREFLIGHT_STRICT=1` может требовать credentials, реального upstream и CI evidence.
+5. Для выпуска следуйте `scripts/release/preflight.sh`; `LAUNCHER_PREFLIGHT_STRICT=1` может требовать credentials, реального upstream и CI evidence.
 
 См. [развёрнутое руководство](docs/development/local-development.md), [соглашения о PR](CONTRIBUTING.md), [диагностику CI](docs/troubleshooting/ci.md).

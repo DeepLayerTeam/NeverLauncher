@@ -23,7 +23,7 @@ import (
 	"unsafe"
 )
 
-const marker = "NEVERLAUNCHER_INTERNAL_WIN_ISOLATION_03111"
+const marker = "LAUNCHER_INTERNAL_WIN_ISOLATION_03111"
 
 type Policy struct {
 	FilesystemRead, FilesystemWrite, NetworkOutbound, Secrets []string
@@ -342,7 +342,7 @@ func Prepare(o Options) (*Handle, error) {
 		return fail(e)
 	}
 	// Read/execute is granted ONLY to the signed immutable package; shared host
-	// directories are never ACL-granted. Shared files are accessed by the broker.
+	// directories are ACL-granted. Shared files are accessed by the broker.
 	if output, e := exec.Command("icacls.exe", o.PayloadRoot, "/grant", "*"+sid+":(OI)(CI)(RX)", "/T", "/C").CombinedOutput(); e != nil {
 		return fail(fmt.Errorf("package AppContainer ACL: %w: %s", e, string(output)))
 	}

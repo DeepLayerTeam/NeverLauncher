@@ -42,7 +42,7 @@ jobs:
       - name: Apply real PostgreSQL migrations
         working-directory: services/api
         env:
-          NEVERLAUNCHER_DATABASE_URL: postgres://never:integration-only@localhost:5432/never?sslmode=disable
+          LAUNCHER_DATABASE_URL: postgres://never:integration-only@localhost:5432/never?sslmode=disable
         run: |
           # Apply migration catalogue with the same repository implementation used by production.
           go test ./internal/dbmigrate -count=1
@@ -50,7 +50,7 @@ jobs:
       - name: Auth Provider Wizard unit, race and PostgreSQL integration tests
         working-directory: services/api
         env:
-          NEVERLAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
+          LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
         run: |
           go test -race -count=1 -timeout=8m ./internal/repository ./internal/federation ./internal/httpapi ./internal/sqlconnector -run '02910|TestProviderRouting|TestAuthenticatePassword'
           go vet ./internal/repository ./internal/federation ./internal/httpapi ./internal/sqlconnector

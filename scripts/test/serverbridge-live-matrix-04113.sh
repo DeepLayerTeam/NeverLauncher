@@ -14,7 +14,7 @@ docker info >/dev/null 2>&1 || { echo '[0.41.13] Docker daemon unavailable: live
 # builds production bridge JARs, sends network join/revoke requests, and runs
 # a real Mojang client JVM for Paper. The 0.41.13 extension records process,
 # image and independently hashed network/log evidence as each service runs.
-NEVERLAUNCHER_E2E_MODE=full bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
+LAUNCHER_E2E_MODE=full bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
 python3 "$ROOT/serverbridge/live_matrix_04113.py" --root "$ROOT" \
   --runtime "$ROOT/e2e/runtime" --scope "$target" \
   --out "$ROOT/e2e/runtime/live-matrix-${target}-04113.json"

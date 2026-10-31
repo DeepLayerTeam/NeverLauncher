@@ -3,15 +3,15 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNTIME_DIR="$ROOT/e2e/runtime"
-MINECRAFT_VERSION="${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-}"
-LOADER_SELECTOR="${NEVERLAUNCHER_E2E_LOADER_VERSION:-latest-stable}"
-JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"
-JAVA_MAJOR="${NEVERLAUNCHER_E2E_JAVA_MAJOR:-}"
-TARGET_ID="${NEVERLAUNCHER_COMPAT_TARGET_ID:-neoforge-certification}"
-TARGET_OS="${NEVERLAUNCHER_COMPAT_OS:-linux}"
-TARGET_ARCH="${NEVERLAUNCHER_COMPAT_ARCH:-x86_64}"
+MINECRAFT_VERSION="${LAUNCHER_E2E_MINECRAFT_VERSION:-}"
+LOADER_SELECTOR="${LAUNCHER_E2E_LOADER_VERSION:-latest-stable}"
+JAVA_BIN="${LAUNCHER_E2E_JAVA:-}"
+JAVA_MAJOR="${LAUNCHER_E2E_JAVA_MAJOR:-}"
+TARGET_ID="${LAUNCHER_COMPAT_TARGET_ID:-neoforge-certification}"
+TARGET_OS="${LAUNCHER_COMPAT_OS:-linux}"
+TARGET_ARCH="${LAUNCHER_COMPAT_ARCH:-x86_64}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
-MAX_RUNTIME_SECONDS="${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
+MAX_RUNTIME_SECONDS="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
 source "$ROOT/e2e/scripts/lib/certification-platform.sh"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[neoforge-cert] invalid Minecraft version" >&2; exit 2; }
@@ -24,7 +24,7 @@ mkdir -p "$RUNTIME_DIR/materialized-client"
 
 EXE_SUFFIX="$(certification_exe_suffix "$TARGET_OS")"
 NL_BIN="$RUNTIME_DIR/nl$EXE_SUFFIX"
-NEVERRUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime$EXE_SUFFIX"
+RUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime$EXE_SUFFIX"
 
 printf '[neoforge-cert] build CLI and Runtime\n'
 (
@@ -32,8 +32,8 @@ printf '[neoforge-cert] build CLI and Runtime\n'
   go build -o "$NL_BIN" ./cmd/launcher
 )
 cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
-certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$NEVERRUNTIME_BIN"
-[[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[neoforge-cert] Runtime binary is missing" >&2; exit 1; }
+certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$RUNTIME_BIN"
+[[ -f "$RUNTIME_BIN" ]] || { echo "[neoforge-cert] Runtime binary is missing" >&2; exit 1; }
 
 printf '[neoforge-cert] materialize NeoForge %s / %s\n' "$MINECRAFT_VERSION" "$LOADER_SELECTOR"
 materialize_loader_package() {
@@ -131,9 +131,9 @@ MAIN_CLASS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1],enco
 case "$RESOLVED_LOADER" in latest|latest-stable|stable|recommended) echo "[neoforge-cert] mutable loader selector leaked into resolved version" >&2; exit 1 ;; esac
 
 printf '[neoforge-cert] launch actual NeoForge client profile %s with Java %s\n' "$PROFILE_ID" "$JAVA_MAJOR"
-export NEVERLAUNCHER_RESOLUTION_WIDTH=854
-export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
-certification_run_client "$TARGET_OS" "$NEVERRUNTIME_BIN" "$RUNTIME_DIR/neoforge-certification.json" \
+export LAUNCHER_RESOLUTION_WIDTH=854
+export LAUNCHER_RESOLUTION_HEIGHT=480
+certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/neoforge-certification.json" \
   certify-vanilla \
     --root "$RUNTIME_DIR/materialized-client" \
     --version "$PROFILE_ID" \

@@ -353,12 +353,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     env = os.environ.copy()
     env.update(
         {
-            "NEVERGUARD_SENSOR_TEST_DLL": str(args.sensor.resolve()),
-            "NEVERGUARD_MEMORY_PROBE_DLL": str(args.memory_probe.resolve()),
-            "NEVERGUARD_THREAD_PROBE_DLL": str(args.thread_probe.resolve()),
-            "NEVERGUARD_DEBUG_PROBE_EXE": str(args.debug_probe.resolve()),
-            "NEVERGUARD_JVM_PROBE_DLL": str(args.jvm_probe.resolve()),
-            "NEVERGUARD_EXPECTED_JAVA_MAJOR": str(args.java_major),
+            "GUARD_SENSOR_TEST_DLL": str(args.sensor.resolve()),
+            "GUARD_MEMORY_PROBE_DLL": str(args.memory_probe.resolve()),
+            "GUARD_THREAD_PROBE_DLL": str(args.thread_probe.resolve()),
+            "GUARD_DEBUG_PROBE_EXE": str(args.debug_probe.resolve()),
+            "GUARD_JVM_PROBE_DLL": str(args.jvm_probe.resolve()),
+            "GUARD_EXPECTED_JAVA_MAJOR": str(args.java_major),
         }
     )
     java_version = command_output(

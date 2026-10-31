@@ -85,9 +85,9 @@ jobs:
         if: matrix.kind == 'protocol-e2e'
         shell: bash
         env:
-          NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: ${{ matrix.id }}
-          NEVERLAUNCHER_DEVICE_TRUST_COMMIT: ${{ github.sha }}
-          NEVERLAUNCHER_DEVICE_TRUST_RUN_ID: ${{ github.run_id }}
+          LAUNCHER_DEVICE_TRUST_TARGET_ID: ${{ matrix.id }}
+          LAUNCHER_DEVICE_TRUST_COMMIT: ${{ github.sha }}
+          LAUNCHER_DEVICE_TRUST_RUN_ID: ${{ github.run_id }}
         run: bash e2e/scripts/run-device-trust-e2e.sh
       - name: Compile Tauri key lifecycle and run native policy tests
         if: matrix.kind == 'native-tests'

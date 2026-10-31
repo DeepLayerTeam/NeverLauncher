@@ -422,7 +422,7 @@ func writeReport(path string, r *report) error {
 }
 
 func main() {
-	clientID := flag.String("client-id", os.Getenv("NEVERLAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID"), "OWN Entra public-client application UUID")
+	clientID := flag.String("client-id", os.Getenv("LAUNCHER_MINECRAFT_MICROSOFT_CLIENT_ID"), "OWN Entra public-client application UUID")
 	flow := flag.String("flow", "browser", "browser (authorization code + PKCE) or device")
 	output := flag.String("report", "", "new JSON report path (exclusive, mode 0600); default stdout")
 	timeout := flag.Duration("timeout", 15*time.Minute, "overall timeout")

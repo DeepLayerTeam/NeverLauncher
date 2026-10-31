@@ -3,14 +3,14 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNTIME_DIR="$ROOT/e2e/runtime"
-MINECRAFT_VERSION="${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-}"
-JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"
-JAVA_MAJOR="${NEVERLAUNCHER_E2E_JAVA_MAJOR:-}"
-TARGET_ID="${NEVERLAUNCHER_COMPAT_TARGET_ID:-vanilla-certification}"
-TARGET_OS="${NEVERLAUNCHER_COMPAT_OS:-}"
-TARGET_ARCH="${NEVERLAUNCHER_COMPAT_ARCH:-}"
+MINECRAFT_VERSION="${LAUNCHER_E2E_MINECRAFT_VERSION:-}"
+JAVA_BIN="${LAUNCHER_E2E_JAVA:-}"
+JAVA_MAJOR="${LAUNCHER_E2E_JAVA_MAJOR:-}"
+TARGET_ID="${LAUNCHER_COMPAT_TARGET_ID:-vanilla-certification}"
+TARGET_OS="${LAUNCHER_COMPAT_OS:-}"
+TARGET_ARCH="${LAUNCHER_COMPAT_ARCH:-}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
-MAX_RUNTIME_SECONDS="${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
+MAX_RUNTIME_SECONDS="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-30}"
 source "$ROOT/e2e/scripts/lib/certification-platform.sh"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[vanilla-cert] invalid Minecraft version" >&2; exit 2; }
@@ -31,7 +31,7 @@ mkdir -p "$RUNTIME_DIR/materialized-client"
 EXE_SUFFIX=""
 [[ "$TARGET_OS" == "windows" ]] && EXE_SUFFIX=".exe"
 NL_BIN="$RUNTIME_DIR/nl$EXE_SUFFIX"
-NEVERRUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime$EXE_SUFFIX"
+RUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime$EXE_SUFFIX"
 
 printf '[vanilla-cert] build CLI and Runtime for %s/%s\n' "$TARGET_OS" "$TARGET_ARCH"
 (
@@ -39,8 +39,8 @@ printf '[vanilla-cert] build CLI and Runtime for %s/%s\n' "$TARGET_OS" "$TARGET_
   go build -o "$NL_BIN" ./cmd/launcher
 )
 cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
-certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$NEVERRUNTIME_BIN"
-[[ -f "$NEVERRUNTIME_BIN" ]] || { echo "[vanilla-cert] Runtime binary is missing" >&2; exit 1; }
+certification_prepare_windows_sensor "$TARGET_OS" "$ROOT" "$RUNTIME_BIN"
+[[ -f "$RUNTIME_BIN" ]] || { echo "[vanilla-cert] Runtime binary is missing" >&2; exit 1; }
 
 printf '[vanilla-cert] materialize Mojang Vanilla %s for %s/%s\n' "$MINECRAFT_VERSION" "$TARGET_OS" "$TARGET_ARCH"
 "$NL_BIN" runtime vanilla-package \
@@ -109,12 +109,12 @@ OPTIONS
 fi
 
 printf '[vanilla-cert] launch actual Mojang client with Java %s on %s/%s\n' "$JAVA_MAJOR" "$TARGET_OS" "$TARGET_ARCH"
-export NEVERLAUNCHER_RESOLUTION_WIDTH=854
-export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
+export LAUNCHER_RESOLUTION_WIDTH=854
+export LAUNCHER_RESOLUTION_HEIGHT=480
 if [[ "$TARGET_OS" == "linux" ]]; then
   export LIBGL_ALWAYS_SOFTWARE=1
   xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
-    "$NEVERRUNTIME_BIN" certify-vanilla \
+    "$RUNTIME_BIN" certify-vanilla \
       --root "$RUNTIME_DIR/materialized-client" \
       --version "$MINECRAFT_VERSION" \
       --java "$JAVA_BIN" \
@@ -122,7 +122,7 @@ if [[ "$TARGET_OS" == "linux" ]]; then
       --max-runtime-seconds "$MAX_RUNTIME_SECONDS" \
       > "$RUNTIME_DIR/vanilla-certification.json"
 else
-  certification_run_client "$TARGET_OS" "$NEVERRUNTIME_BIN" "$RUNTIME_DIR/vanilla-certification.json" \
+  certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/vanilla-certification.json" \
     certify-vanilla \
     --root "$RUNTIME_DIR/materialized-client" \
     --version "$MINECRAFT_VERSION" \

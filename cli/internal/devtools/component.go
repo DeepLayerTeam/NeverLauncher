@@ -114,7 +114,7 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 				args = append(args, "--ro-bind", d, d)
 			}
 		}
-		args = append(args, "--ro-bind", jar, "/app/component.jar", "--chdir", "/work", "--setenv", "HOME", "/work", "--setenv", "TMPDIR", "/tmp", "--setenv", "NEVERLAUNCHER_DEVTOOLS_TEST_MODE", "1", "--", java)
+		args = append(args, "--ro-bind", jar, "/app/component.jar", "--chdir", "/work", "--setenv", "HOME", "/work", "--setenv", "TMPDIR", "/tmp", "--setenv", "LAUNCHER_DEVTOOLS_TEST_MODE", "1", "--", java)
 		args = append(args, javaCommandArgs("/app/component.jar", "/tmp", opt.HeapMB, opt.Args)...)
 		cmd = exec.CommandContext(ctx, bwrap, args...)
 	} else {
@@ -124,7 +124,7 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 	prepareComponentGroup(cmd)
 	// Never inherit operator tokens, cloud credentials, or arbitrary Java tool flags,
 	// including when the child process happens to be the bubblewrap launcher.
-	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + work, "TMPDIR=" + work, "LANG=C", "NEVERLAUNCHER_DEVTOOLS_TEST_MODE=1", "NEVERLAUNCHER_AUTH_TEST_ONLY=1"}
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + work, "TMPDIR=" + work, "LANG=C", "LAUNCHER_DEVTOOLS_TEST_MODE=1", "LAUNCHER_AUTH_TEST_ONLY=1"}
 	if runtime.GOOS == "windows" {
 		cmd.Env = append(cmd.Env, "SystemRoot="+os.Getenv("SystemRoot"))
 	}

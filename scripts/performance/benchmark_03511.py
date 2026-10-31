@@ -219,7 +219,7 @@ def signed_manifest(signer: Path, folder: Path, manifest: dict) -> tuple[Path, s
     signed = folder / "signed.json"
     unsigned.write_text(json.dumps(manifest, separators=(",", ":")), encoding="utf8")
     env = os.environ.copy()
-    env["NEVERLAUNCHER_CERT_TEST_SEED"] = SEED
+    env["LAUNCHER_CERT_TEST_SEED"] = SEED
     result = subprocess.run(
         [str(signer), str(unsigned), str(signed)],
         env=env,
@@ -541,7 +541,7 @@ def benchmark_startup(
     for index in range(repetitions + 1):
         marker = work / f"ui-ready-{index}.json"
         env = isolated_env(work / "desktop-home")
-        env["NEVERLAUNCHER_BENCH_READY_FILE"] = str(marker)
+        env["LAUNCHER_BENCH_READY_FILE"] = str(marker)
         start_wall = time.time_ns()
         start_mono = time.perf_counter_ns()
         with (
@@ -625,10 +625,10 @@ def benchmark_api(
         raise ValueError("absolute HTTP(S) endpoint without credentials/query required")
     if (
         parsed.hostname not in ("127.0.0.1", "localhost", "::1")
-        and os.getenv("NEVERLAUNCHER_BENCH_ALLOW_REMOTE") != "YES"
+        and os.getenv("LAUNCHER_BENCH_ALLOW_REMOTE") != "YES"
     ):
         raise ValueError(
-            "non-loopback targets require NEVERLAUNCHER_BENCH_ALLOW_REMOTE=YES, only on systems you control"
+            "non-loopback targets require LAUNCHER_BENCH_ALLOW_REMOTE=YES, only on systems you control"
         )
     if (
         workers < 1
@@ -639,7 +639,7 @@ def benchmark_api(
         raise ValueError(
             "workers must be 1..64 and requests per run must be workers..10000"
         )
-    token = os.getenv("NEVERLAUNCHER_BENCH_AUTH_TOKEN")
+    token = os.getenv("LAUNCHER_BENCH_AUTH_TOKEN")
     headers = {"Accept": "application/json", "User-Agent": "Launcher-Benchmark/0.35.11"}
     if token:
         headers["Authorization"] = f"Bearer {token}"

@@ -42,8 +42,8 @@ jobs:
       - name: Require exact release identity and protected signing keys
         env:
           EXPECTED_COMMIT: ${{ inputs.expected_commit }}
-          RUNTIME_SIGNING_B64: ${{ secrets.NEVERLAUNCHER_FACTORY_RUNTIME_PRIVATE_KEY_B64 }}
-          JOIN_SIGNING_B64: ${{ secrets.NEVERLAUNCHER_FACTORY_JOIN_PRIVATE_KEY_B64 }}
+          RUNTIME_SIGNING_B64: ${{ secrets.LAUNCHER_FACTORY_RUNTIME_PRIVATE_KEY_B64 }}
+          JOIN_SIGNING_B64: ${{ secrets.LAUNCHER_FACTORY_JOIN_PRIVATE_KEY_B64 }}
         run: |
           set -euo pipefail
           test "$(cat VERSION)" = '0.28.0'
@@ -92,10 +92,10 @@ jobs:
           (cd cli && go build -trimpath -o "$RUNNER_TEMP/client-factory-ga" ./cmd/launcher)
       - name: Real Client Factory five-family native GUI certification
         env:
-          NEVERLAUNCHER_CERT_PROCESSOR_SANDBOX: required
-          NEVERLAUNCHER_CERT_SIGNING_KEY: ${{ runner.temp }}/client-factory-keys/runtime.key
-          NEVERLAUNCHER_CERT_PUBLIC_KEY: ${{ runner.temp }}/client-factory-keys/runtime.pub
-          NEVERLAUNCHER_CERT_RUNTIME_BIN: ${{ github.workspace }}/runtime/runtime/target/release/runtime
+          LAUNCHER_CERT_PROCESSOR_SANDBOX: required
+          LAUNCHER_CERT_SIGNING_KEY: ${{ runner.temp }}/client-factory-keys/runtime.key
+          LAUNCHER_CERT_PUBLIC_KEY: ${{ runner.temp }}/client-factory-keys/runtime.pub
+          LAUNCHER_CERT_RUNTIME_BIN: ${{ github.workspace }}/runtime/runtime/target/release/runtime
         run: |
           set -euo pipefail
           mkdir -p e2e/client-factory-ga-0280
@@ -104,21 +104,21 @@ jobs:
             java_var="JAVA_HOME_${major}_X64"
             java="${!java_var}/bin/java"
             test -x "$java"
-            NEVERLAUNCHER_CERT_LOADER="$loader" NEVERLAUNCHER_CERT_MINECRAFT="$mc" \
-            NEVERLAUNCHER_CERT_JAVA="$java" NEVERLAUNCHER_CERT_TARGET='linux/x86_64' \
-            NEVERLAUNCHER_CERT_OUTPUT="e2e/client-factory-ga-0280/$loader" \
+            LAUNCHER_CERT_LOADER="$loader" LAUNCHER_CERT_MINECRAFT="$mc" \
+            LAUNCHER_CERT_JAVA="$java" LAUNCHER_CERT_TARGET='linux/x86_64' \
+            LAUNCHER_CERT_OUTPUT="e2e/client-factory-ga-0280/$loader" \
             bash e2e/scripts/run-client-factory-certification-02712.sh
           done
       - name: Actual Mojang server start and client join
         env:
-          NEVERLAUNCHER_E2E_MINECRAFT_VERSION: '1.17.1'
-          NEVERLAUNCHER_E2E_JAVA_MAJOR: '17'
-          NEVERLAUNCHER_COMPAT_OS: linux
-          NEVERLAUNCHER_COMPAT_ARCH: x86_64
-          NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: '55'
+          LAUNCHER_E2E_MINECRAFT_VERSION: '1.17.1'
+          LAUNCHER_E2E_JAVA_MAJOR: '17'
+          LAUNCHER_COMPAT_OS: linux
+          LAUNCHER_COMPAT_ARCH: x86_64
+          LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: '55'
         run: |
           set -euo pipefail
-          export NEVERLAUNCHER_E2E_JAVA="$JAVA_HOME_17_X64/bin/java"
+          export LAUNCHER_E2E_JAVA="$JAVA_HOME_17_X64/bin/java"
           bash e2e/scripts/run-vanilla-matching-e2e.sh
       - name: Sign real join result and require complete GA certificate matrix
         run: |

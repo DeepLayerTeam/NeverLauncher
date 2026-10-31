@@ -276,7 +276,7 @@ func TestSQLiteSchemaUpgrade322To323(t *testing.T) {
 	}
 }
 func TestNoSQLiteIntegrationOnOverlay(t *testing.T) {
-	if os.Getenv("NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1" {
+	if os.Getenv("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1" {
 		t.Skip("only run strict filesystem certification in native CI")
 	}
 }

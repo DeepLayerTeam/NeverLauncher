@@ -14,7 +14,7 @@ Stable remains **fail-closed** per 0.34.1. V07 is NOT approval to open stable.
 
 ## Required backend matrix change
 
-Each exact target in `NEVERLAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON` now MUST
+Each exact target in `LAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON` now MUST
 include `authenticationMode`: `official` or `custom`. A missing mode, a mock,
 or a target configured for a different mode is rejected. The entire configured
 matrix remains bound to staged manifest/files/source/build/Java/adapter/Guard/

@@ -1,5 +1,6 @@
-name: Extensions 0.42.12 - real JVM and signed package acceptance
+name: Extensions - six-platform real JVM and signed package acceptance
 on:
+  workflow_call:
   push:
   pull_request:
   workflow_dispatch:
@@ -46,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           cd cli
-          go build -o "$RUNNER_TEMP/nl${{ runner.os == 'Windows' && '.exe' || '' }}" ./cmd/neverlauncher
+          go build -o "$RUNNER_TEMP/nl${{ runner.os == 'Windows' && '.exe' || '' }}" ./cmd/launcher
       - name: Execute JVM E2E and negative signature tests
         shell: bash
         run: |
@@ -78,7 +79,7 @@ jobs:
       - name: Run Go supervisor, live permission revocation and real-JVM lifecycle
         working-directory: services/api
         env:
-          NEVERLAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
+          LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
         run: |
           go test -race -count=1 -timeout 6m ./internal/extensionhost
           go test -race -count=1 -timeout 4m ./internal/extensionjava ./internal/extensionlifecycle
@@ -108,10 +109,12 @@ jobs:
           test "$PLATFORM_RESULT" = success
           python3 e2e/extensions/aggregate_04212.py \
             --evidence-dir evidence --commit "$GITHUB_SHA" \
-            --output extension-04212-certificate.json
+            --version "$(cat VERSION)" --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --output evidence/extension-acceptance-certificate.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: extensions-04212-certificate
-          path: extension-04212-certificate.json
+          path: evidence/*.json
           if-no-files-found: warn

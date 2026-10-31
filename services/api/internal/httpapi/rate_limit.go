@@ -19,7 +19,7 @@ import (
 func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 	trusted, err := newTrustedProxySet(cfg.TrustedProxyCIDRs)
 	if err != nil {
-		return fmt.Errorf("invalid NEVERLAUNCHER_TRUSTED_PROXY_CIDRS: %w", err)
+		return fmt.Errorf("invalid LAUNCHER_TRUSTED_PROXY_CIDRS: %w", err)
 	}
 	s.TrustedProxies = trusted
 	s.ServerBridgeHARequired = cfg.ServerBridgeHARequired
@@ -87,7 +87,7 @@ func (s *RuntimeState) ConfigureProductRuntime(cfg config.Config) error {
 			return fmt.Errorf("Redis ServerBridge HA coordinator is required but unavailable: %w", coordErr)
 		}
 	} else if cfg.ServerBridgeHARequired {
-		return fmt.Errorf("Redis ServerBridge HA coordinator is required but NEVERLAUNCHER_REDIS_URL is empty")
+		return fmt.Errorf("Redis ServerBridge HA coordinator is required but LAUNCHER_REDIS_URL is empty")
 	}
 
 	s.RateLimitEnabled = cfg.RateLimitEnabled

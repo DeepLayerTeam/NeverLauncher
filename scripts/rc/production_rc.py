@@ -26,15 +26,15 @@ from certification_run import identity
 ROOT = Path(__file__).resolve().parents[2]
 API = ROOT / "services/api"
 REQUIRED_ENV = (
-    "NEVERLAUNCHER_SQLITE_TEST_ROOT",
-    "NEVERLAUNCHER_PG_TEST_DSN",
-    "NEVERLAUNCHER_GROWTH_TEST_PG_DSN",
-    "NEVERLAUNCHER_GROWTH_TEST_REDIS_URL",
-    "NEVERLAUNCHER_RC_S3_ENDPOINT",
-    "NEVERLAUNCHER_RC_S3_BUCKET",
-    "NEVERLAUNCHER_RC_S3_REGION",
-    "NEVERLAUNCHER_RC_S3_ACCESS_KEY",
-    "NEVERLAUNCHER_RC_S3_SECRET_KEY",
+    "LAUNCHER_SQLITE_TEST_ROOT",
+    "LAUNCHER_PG_TEST_DSN",
+    "LAUNCHER_GROWTH_TEST_PG_DSN",
+    "LAUNCHER_GROWTH_TEST_REDIS_URL",
+    "LAUNCHER_RC_S3_ENDPOINT",
+    "LAUNCHER_RC_S3_BUCKET",
+    "LAUNCHER_RC_S3_REGION",
+    "LAUNCHER_RC_S3_ACCESS_KEY",
+    "LAUNCHER_RC_S3_SECRET_KEY",
 )
 
 
@@ -207,9 +207,9 @@ def validate_preflight(env: dict[str, str]) -> str:
     missing = [k for k in REQUIRED_ENV if not env.get(k)]
     if missing:
         raise GateError("missing live dependencies: " + ", ".join(missing))
-    if env.get("NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1":
+    if env.get("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1":
         raise GateError("SQLite supported filesystem must be required, not skipped")
-    root = Path(env["NEVERLAUNCHER_SQLITE_TEST_ROOT"])
+    root = Path(env["LAUNCHER_SQLITE_TEST_ROOT"])
     if not root.is_absolute() or not root.is_dir() or root.is_symlink():
         raise GateError("SQLite test volume must be an existing absolute directory")
     if root.stat().st_mode & 0o077:
@@ -222,7 +222,7 @@ def run_gate(output: Path, env: dict[str, str]) -> None:
     canonical = (ROOT / "VERSION").read_text().strip()
     selected = suites_for_version(canonical)
     current_run = identity(canonical, env.get("GITHUB_SHA", ""), env, root=ROOT)
-    if rc_extended(canonical) and not env.get("NEVERLAUNCHER_TEST_POSTGRES_DSN"):
+    if rc_extended(canonical) and not env.get("LAUNCHER_TEST_POSTGRES_DSN"):
         raise GateError("real PostgreSQL immutable-stable certification DSN required")
     git_sha = env.get("GITHUB_SHA", "")
     if git_sha:

@@ -31,7 +31,7 @@ var (
 )
 
 // Auth operates on the existing persistent Repository. The encryption key is
-// supplied by the operator and is never written into the database.
+// supplied by the operator and is written into the database.
 type Auth struct {
 	repo *Repository
 	key  [32]byte
@@ -46,7 +46,7 @@ func (r *Repository) Auth(key []byte) (*Auth, error) {
 	return a, nil
 }
 
-// Tokens contains bearer secrets returned exactly once, never stored in cleartext.
+// Tokens contains bearer secrets returned exactly once, stored in cleartext.
 // Callers must transmit them only over an authenticated TLS channel.
 type Tokens struct {
 	SessionID        string    `json:"sessionId"`
@@ -88,7 +88,7 @@ func newID(prefix string) (string, error) {
 // LoginLocal verifies the same localpassword verifier as the PostgreSQL
 // authentication path. Password and optional second factor are checked again
 // inside the writer transaction, preventing password/role/epoch TOCTOU races.
-// It never issues a session with a user-supplied MFA claim.
+// It issues a session with a user-supplied MFA claim.
 func (a *Auth) LoginLocal(ctx context.Context, email, password, factor, device string) (Tokens, error) {
 	if email == "" || password == "" {
 		return Tokens{}, ErrAuthentication

@@ -68,8 +68,8 @@ require(
     runtime,
     [
         "ensure_managed_java_from_distribution",
-        "NEVERLAUNCHER_MANAGED_JRE_MANIFEST",
-        "NEVERLAUNCHER_MANAGED_JRE_MANIFEST_SHA256",
+        "LAUNCHER_MANAGED_JRE_MANIFEST",
+        "LAUNCHER_MANAGED_JRE_MANIFEST_SHA256",
         "remote Managed JRE manifest требует",
         "Managed JRE target must preserve exact vendor archive SHA-256",
         "ensure_local_archive",
@@ -94,7 +94,7 @@ staging = read("scripts/release/build-release.sh")
 require(
     staging,
     [
-        "NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR",
+        "LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR",
         "MANAGED_JRE_REQUIRED",
         "MANAGED_JRE_MANIFEST.json",
         "MANAGED_JRE_EVIDENCE.json",
@@ -133,7 +133,7 @@ require(
     [
         "Download Managed JRE six-target production assets",
         "path: managed-jre-artifacts",
-        "NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts",
+        "LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts",
     ],
     "Managed JRE production release staging",
 )

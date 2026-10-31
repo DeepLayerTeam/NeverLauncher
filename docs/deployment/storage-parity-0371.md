@@ -61,9 +61,9 @@ GO111MODULE=off go run ./scripts/storageparity -root .
 
 # Из services/api: реальные SQLite + PostgreSQL контракты
 # DSN должен указывать только на одноразовую тестовую БД!
-NEVERLAUNCHER_PARITY_POSTGRES_DSN='postgres://...test-database...' \
-NEVERLAUNCHER_STORAGE_PARITY_REQUIRED=1 \
-NEVERLAUNCHER_SQLITE_TEST_ROOT=/absolute/path/on/ext4 \
+LAUNCHER_PARITY_POSTGRES_DSN='postgres://...test-database...' \
+LAUNCHER_STORAGE_PARITY_REQUIRED=1 \
+LAUNCHER_SQLITE_TEST_ROOT=/absolute/path/on/ext4 \
 go test -race -count=1 -v ./internal/storageparity
 ```
 

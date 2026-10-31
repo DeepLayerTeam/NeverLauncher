@@ -7,7 +7,7 @@ This release extends the **enforced Linux x86-64** sandbox from 0.31.9. It does 
 Run API as a **dedicated unprivileged service user** with a delegated cgroup v2 subtree. Configure only the directories you intend to expose through the broker:
 
 ```sh
-NEVERLAUNCHER_EXTENSION_SHARED_ROOTS_JSON='{"reports":"/srv/launcher-extension-shares/reports"}'
+LAUNCHER_EXTENSION_SHARED_ROOTS_JSON='{"reports":"/srv/launcher-extension-shares/reports"}'
 ```
 
 Roots must be absolute pre-existing directories. Every path component must be a genuine directory (not a symlink); the root directory `/` is forbidden. The application fails closed for sandbox packages requesting an unmapped or invalid shared root, without falling back to `trusted`. Keep host secrets **outside** shared roots; the administrator mapping is trusted configuration, never package-controlled. The broker runs with the unprivileged API service's permissions.

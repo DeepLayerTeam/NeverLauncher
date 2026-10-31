@@ -40,8 +40,8 @@ type gameTrustPolicy02312 struct {
 func gameTrustUTC02312(s string) (time.Time, error) { return time.Parse("2006-01-02T15:04:05Z", s) }
 func currentGameTrust02312() (gameTrustPolicy02312, error) {
 	var p gameTrustPolicy02312
-	rootHex := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY"))
-	path := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_GAME_TRUST_POLICY_FILE"))
+	rootHex := strings.TrimSpace(os.Getenv("LAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY"))
+	path := strings.TrimSpace(os.Getenv("LAUNCHER_GAME_TRUST_POLICY_FILE"))
 	if rootHex == "" || path == "" {
 		return p, errors.New("trusted game policy path and provisioned root key required for production signing")
 	}
@@ -130,7 +130,7 @@ func authorizedGameSigningKey02312(policy gameTrustPolicy02312, pub string, sign
 	return fmt.Errorf("game signing key not delegated by root: %s", pub)
 }
 func (s Server) enforceGameTrustSigning02312(manifest *model.Manifest, private ed25519.PrivateKey) error {
-	configured := os.Getenv("NEVERLAUNCHER_GAME_TRUST_POLICY_FILE") != "" || os.Getenv("NEVERLAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY") != ""
+	configured := os.Getenv("LAUNCHER_GAME_TRUST_POLICY_FILE") != "" || os.Getenv("LAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY") != ""
 	production := strings.EqualFold(s.Config.Environment, "production") || strings.EqualFold(s.Config.Environment, "prod")
 	if !configured && !production {
 		return nil
@@ -147,7 +147,7 @@ func (s Server) enforceGameTrustSigning02312(manifest *model.Manifest, private e
 	return nil
 }
 func (s Server) enforceGameTrustVerify02312(manifest model.Manifest) error {
-	configured := os.Getenv("NEVERLAUNCHER_GAME_TRUST_POLICY_FILE") != "" || os.Getenv("NEVERLAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY") != ""
+	configured := os.Getenv("LAUNCHER_GAME_TRUST_POLICY_FILE") != "" || os.Getenv("LAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY") != ""
 	production := strings.EqualFold(s.Config.Environment, "production") || strings.EqualFold(s.Config.Environment, "prod")
 	if !configured && !production {
 		return nil

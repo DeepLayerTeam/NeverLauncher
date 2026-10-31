@@ -38,7 +38,7 @@ not embed SSH or run arbitrary remote shells.
 
 Every referenced file must have absolute path, be regular, non-symlink and
 private to its owner (0600). Point
-`NEVERLAUNCHER_SERVER_BRIDGE_HOST_TARGETS_FILE` to this registry. Backend TLS
+`LAUNCHER_SERVER_BRIDGE_HOST_TARGETS_FILE` to this registry. Backend TLS
 requires TLS 1.3 and verifies the host's CA, hostname/IP and RemoteControl
 node identity. Outbound proxies and redirects are disabled.
 

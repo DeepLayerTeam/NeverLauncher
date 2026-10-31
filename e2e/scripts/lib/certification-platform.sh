@@ -36,7 +36,7 @@ certification_run_client() {
   if [[ "$os_name" == "linux" ]]; then
     export LIBGL_ALWAYS_SOFTWARE=1
     xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' "$runtime_bin" "$@" > "$output"
-  elif [[ "$os_name" == "macos" && "${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-}" == "26.3" && ( "${NEVERLAUNCHER_E2E_LOADER:-}" == "fabric" || "${NEVERLAUNCHER_E2E_LOADER:-}" == "vanilla" || "${NEVERLAUNCHER_E2E_LOADER:-}" == "forge" ) ]]; then
+  elif [[ "$os_name" == "macos" && "${LAUNCHER_E2E_MINECRAFT_VERSION:-}" == "26.3" && ( "${LAUNCHER_E2E_LOADER:-}" == "fabric" || "${LAUNCHER_E2E_LOADER:-}" == "vanilla" || "${LAUNCHER_E2E_LOADER:-}" == "forge" ) ]]; then
     # Некоторые клиенты macOS 26.3 завершаются в SDL 3 до создания окна, включая
     # ForgeBootstrap на macOS x64. Повторяйте только при зафиксированном нативном SDL
     # SIGABRT; успешность требует настоящих свидетельств E2E. Повторно запускайте
@@ -49,7 +49,7 @@ certification_run_client() {
     local eligibility="$(dirname "$output")/../../scripts/compatibility/retry-macos-sdl3.py"
     if python3 "$eligibility" --report "$output" --client-root "$client_root"; then
       cp "$output" "${output%.json}.first-attempt.json"
-      printf '[certification] macOS SDL 3 SIGABRT: repeat full %s client certification once\n' "${NEVERLAUNCHER_E2E_LOADER:-}" >&2
+      printf '[certification] macOS SDL 3 SIGABRT: repeat full %s client certification once\n' "${LAUNCHER_E2E_LOADER:-}" >&2
       local second_rc=0
       "$runtime_bin" "$@" > "$output" || second_rc=$?
       # Сохраняйте второй отчёт, даже если нативный процесс снова завершился с ошибкой;

@@ -22,9 +22,9 @@ Initialize the server identity once and start the TLS listener with mutual TLS (
 nl server-bridge host remote init --server-root /srv/minecraft/survival
 nl server-bridge host remote serve --server-root /srv/minecraft/survival \
   --listen 10.10.0.21:9443 \
-  --tls-cert /etc/neverlauncher/remote/server.pem \
-  --tls-key /etc/neverlauncher/remote/server.key \
-  --client-ca /etc/neverlauncher/remote/ca.pem \
+  --tls-cert /etc/launcher/remote/server.pem \
+  --tls-key /etc/launcher/remote/server.key \
+  --client-ca /etc/launcher/remote/ca.pem \
   --allow-source 10.10.0.5/32
 ```
 

@@ -29,7 +29,7 @@ All endpoints require a current Launcher Bearer session and resolve `minecraft_p
 Example: select a previously uploaded skin from the private library:
 
 ```sh
-curl -fsS -X POST "$NEVERLAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/select" \
+curl -fsS -X POST "$LAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/select" \
  -H "Authorization: Bearer $USER_ACCESS_TOKEN" -H 'Content-Type: application/json' \
  -d '{"digest":"<64-lowercase-hex-sha256>","expectedRevision":2,"model":"slim","visibility":"public"}'
 ```
@@ -37,7 +37,7 @@ curl -fsS -X POST "$NEVERLAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/select" \
 Reset (retains PNG in gallery):
 
 ```sh
-curl -fsS -X POST "$NEVERLAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/reset" \
+curl -fsS -X POST "$LAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/reset" \
  -H "Authorization: Bearer $USER_ACCESS_TOKEN" -H 'Content-Type: application/json' \
  -d '{"expectedRevision":3}'
 ```

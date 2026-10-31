@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RUNTIME_BIN="${NEVERLAUNCHER_RUNTIME_BIN:-${ROOT_DIR}/runtime/runtime/target/release/runtime}"
-WORK_DIR="${NEVERLAUNCHER_MANAGED_JAVA_E2E_DIR:-${ROOT_DIR}/e2e/runtime/managed-java-II}"
+RUNTIME_BIN="${LAUNCHER_RUNTIME_BIN:-${ROOT_DIR}/runtime/runtime/target/release/runtime}"
+WORK_DIR="${LAUNCHER_MANAGED_JAVA_E2E_DIR:-${ROOT_DIR}/e2e/runtime/managed-java-II}"
 RUNTIME_ROOT="${WORK_DIR}/runtimes"
 EVIDENCE="${WORK_DIR}/MANAGED_JAVA_II_EVIDENCE.json"
 

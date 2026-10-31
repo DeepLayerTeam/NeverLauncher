@@ -84,7 +84,7 @@ build_release = read("scripts/release/build-release.sh")
 require(
     build_release,
     [
-        "NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR",
+        "LAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR",
         "WINDOWS_DUAL_ARCH_REQUIRED",
         "GUARD_RELEASE_ALLOWLIST_WINDOWS_DELIVERY.json",
         "WINDOWS_SIGNING_EVIDENCE.json",
@@ -116,7 +116,7 @@ require(
         "secrets: inherit",
         "launcher-windows-production-${{ github.sha }}",
         "path: windows-production-artifacts",
-        "NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR: ${{ github.workspace }}/windows-production-artifacts",
+        "LAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR: ${{ github.workspace }}/windows-production-artifacts",
         "needs: [base-ci, windows-production-signed, macos-production-notarized]",
     ],
     "production release Windows signing wiring",

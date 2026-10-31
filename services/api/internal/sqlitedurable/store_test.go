@@ -15,7 +15,7 @@ import (
 
 func testOptions(t *testing.T) Options {
 	t.Helper()
-	base := os.Getenv("NEVERLAUNCHER_SQLITE_TEST_ROOT")
+	base := os.Getenv("LAUNCHER_SQLITE_TEST_ROOT")
 	if base == "" {
 		base = t.TempDir()
 	} else {
@@ -31,7 +31,7 @@ func testOptions(t *testing.T) Options {
 	}
 	opt := Options{Path: filepath.Join(base, "sqlite.db")}
 	if err := verifyLocalPath(opt.Path); err != nil {
-		if os.Getenv("NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") == "1" {
+		if os.Getenv("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") == "1" {
 			t.Fatalf("SQLite FS certification failed: %v", err)
 		}
 		t.Skipf("SQLite integration requires verified ext4/xfs/btrfs mount: %v", err)
@@ -372,7 +372,7 @@ func TestRejectTmpfs(t *testing.T) {
 	if _, err := os.Stat("/dev/shm"); err != nil {
 		t.Skip("no tmpfs mount")
 	}
-	root, err := os.MkdirTemp("/dev/shm", "never-sqlite-negative-*")
+	root, err := os.MkdirTemp("/dev/shm", "sqlite-negative-*")
 	if err != nil {
 		t.Skipf("cannot create tmpfs test directory: %v", err)
 	}

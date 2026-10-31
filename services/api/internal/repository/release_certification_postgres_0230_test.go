@@ -17,9 +17,9 @@ import (
 // This is a mandatory database integration case in the 0.23 release workflow.
 // It must run against a real PostgreSQL instance, not an in-memory substitute.
 func TestGAWorkspacePostgresCASAndAtomicImport0230(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires NEVERLAUNCHER_TEST_POSTGRES_DSN; release workflow must set it")
+		t.Skip("requires LAUNCHER_TEST_POSTGRES_DSN; release workflow must set it")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()

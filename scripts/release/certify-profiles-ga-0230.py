@@ -142,9 +142,7 @@ def main() -> int:
         initial_output = ROOT / initial_output
     initial_output.unlink(missing_ok=True)
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-    sha = os.environ.get(
-        "GITHUB_SHA", os.environ.get("NEVERLAUNCHER_SOURCE_COMMIT", "")
-    )
+    sha = os.environ.get("GITHUB_SHA", os.environ.get("LAUNCHER_SOURCE_COMMIT", ""))
     if not legacy_profiles_supported(version) or not re.fullmatch(
         r"[a-fA-F0-9]{40}", sha
     ):
@@ -154,9 +152,9 @@ def main() -> int:
         )
         return 2
     expected_run = identity(version, sha, root=ROOT)
-    if not os.getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN"):
+    if not os.getenv("LAUNCHER_TEST_POSTGRES_DSN"):
         print(
-            "GA certification requires NEVERLAUNCHER_TEST_POSTGRES_DSN (real PostgreSQL)",
+            "GA certification requires LAUNCHER_TEST_POSTGRES_DSN (real PostgreSQL)",
             file=sys.stderr,
         )
         return 2

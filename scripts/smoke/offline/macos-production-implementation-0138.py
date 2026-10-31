@@ -81,7 +81,7 @@ require(
     desktop,
     [
         'target_os = "macos"',
-        "NEVERGUARD_MACOS_PROCESS_POLICY_VERSION",
+        "GUARD_MACOS_PROCESS_POLICY_VERSION",
         "ensure_macos_production_hardening",
         "Guard macOS production hardening verification failed",
     ],

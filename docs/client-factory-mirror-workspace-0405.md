@@ -35,7 +35,7 @@ nl runtime client-factory apply-workspace \
 nl runtime client-factory verify --client-dir ./output/client-1
 ```
 
-Для CurseForge-модпаков с требуемыми записями файлов нужен официальный API-ключ (`NEVERLAUNCHER_CURSEFORGE_API_KEY` или `--curseforge-api-key`). Для локального файла, отсутствующего на разрешённом CDN, используйте `--manual-dir`; файл всё равно должен пройти проверку по ожидаемым исходным хешам. CurseForge-паки только с ZIP overrides не требуют API-ключа. Для публикации собранного модпака другим пользователям используйте разрешительный список источников `--permissions-file` вместе с `--distribution redistributable`.
+Для CurseForge-модпаков с требуемыми записями файлов нужен официальный API-ключ (`LAUNCHER_CURSEFORGE_API_KEY` или `--curseforge-api-key`). Для локального файла, отсутствующего на разрешённом CDN, используйте `--manual-dir`; файл всё равно должен пройти проверку по ожидаемым исходным хешам. CurseForge-паки только с ZIP overrides не требуют API-ключа. Для публикации собранного модпака другим пользователям используйте разрешительный список источников `--permissions-file` вместе с `--distribution redistributable`.
 
 `compatibility.json` — обычный проверяемый `launcher.authlib-classloader.v1` запрос; загрузка стороннего Yggdrasil Java agent допускается **только** с `--allow-auth-agent true`. Подписанные или неподходящие JAR отклоняются. При необходимости трансформации authlib используйте в workspace:
 

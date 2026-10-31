@@ -9,7 +9,7 @@ SOURCE_COMMIT="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true
 }
 [[ "$(cat "$ROOT/VERSION")" == 0.42.0 ]] || { echo 'wrong source version' >&2; exit 2; }
 # The E2E runner wipes runtime; run fault tests AFTER it, not before.
-GITHUB_SHA="$SOURCE_COMMIT" NEVERLAUNCHER_E2E_MODE=full bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
+GITHUB_SHA="$SOURCE_COMMIT" LAUNCHER_E2E_MODE=full bash "$ROOT/e2e/scripts/run-minecraft-e2e.sh"
 mkdir -p "$ROOT/e2e/runtime"
 (
   cd "$ROOT/cli"

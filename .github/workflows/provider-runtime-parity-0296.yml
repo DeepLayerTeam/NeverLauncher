@@ -79,8 +79,8 @@ jobs:
         run: go test -race -count=1 -timeout=8m ./pkg/authconnector/... ./internal/httpapi ./internal/federation -run '0296|TestOIDCBeginCompleteCreatesCanonicalNeverSession|TestHTTPLoginUsesRegisteredExternalConnector112|TestFederationE2E01110CanonicalSessionMatrix'
       - name: Live SQL/PostgreSQL MySQL MariaDB legacy mapping login
         env:
-          NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable
-          NEVERLAUNCHER_SQL_TEST_MYSQL_DSN: auth:integration-only@tcp(localhost:3306)/auth?tls=false
-          NEVERLAUNCHER_SQL_TEST_MARIADB_DSN: auth:integration-only@tcp(localhost:3307)/auth?tls=false
-          NEVERLAUNCHER_SQL_REQUIRE_ALL: '1'
+          LAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable
+          LAUNCHER_SQL_TEST_MYSQL_DSN: auth:integration-only@tcp(localhost:3306)/auth?tls=false
+          LAUNCHER_SQL_TEST_MARIADB_DSN: auth:integration-only@tcp(localhost:3307)/auth?tls=false
+          LAUNCHER_SQL_REQUIRE_ALL: '1'
         run: go test -count=1 -timeout=8m ./internal/sqlconnector -run '^TestLiveSQLLegacyAuthentication0294$' -v

@@ -182,7 +182,7 @@ jobs:
           merge-multiple: true
       - name: Verify seven independently approved signed tiers for exact source and commit
         env:
-          TRUSTED_KEY: ${{ vars.NEVERLAUNCHER_SECURITY_GA_PUBLIC_KEY }}
+          TRUSTED_KEY: ${{ vars.LAUNCHER_SECURITY_GA_PUBLIC_KEY }}
         run: |
           python3 - <<'PY'
           import os, pathlib, subprocess, sys

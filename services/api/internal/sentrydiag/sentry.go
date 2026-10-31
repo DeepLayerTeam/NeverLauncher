@@ -277,5 +277,5 @@ func (r *Reporter) Close() {
 
 // EnabledFromEnvironment deliberately does not turn on reporting merely because a DSN exists.
 func EnabledFromEnvironment() bool {
-	return strings.EqualFold(os.Getenv("NEVERLAUNCHER_SENTRY_BACKEND_ENABLED"), "true")
+	return strings.EqualFold(os.Getenv("LAUNCHER_SENTRY_BACKEND_ENABLED"), "true")
 }

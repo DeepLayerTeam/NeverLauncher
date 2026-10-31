@@ -3,7 +3,7 @@
 ## Production upgrade
 
 1. Back up PostgreSQL and release object storage. Use the **0.22.1** API and CLI binaries together.
-2. Stop publishers and background workers, deploy the updated backend/runtime clients and apply API migrations using the existing `nl db migrate apply --dsn <postgres-dsn>` command, or start the 0.22.1 API with `NEVERLAUNCHER_DATABASE_AUTO_MIGRATE=true` (verify the exact variable in `services/api/internal/config/config.go`). The `0056_profile_manifest_schema_evolution_0221` SQL file is mirrored under `cli/internal/dbmigrate/sql`.
+2. Stop publishers and background workers, deploy the updated backend/runtime clients and apply API migrations using the existing `nl db migrate apply --dsn <postgres-dsn>` command, or start the 0.22.1 API with `LAUNCHER_DATABASE_AUTO_MIGRATE=true` (verify the exact variable in `services/api/internal/config/config.go`). The `0056_profile_manifest_schema_evolution_0221` SQL file is mirrored under `cli/internal/dbmigrate/sql`.
 3. Confirm `schema_migrations` has the `0056_...` checksum; check the backfill with:
 
    ```sql

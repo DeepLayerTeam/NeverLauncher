@@ -172,7 +172,7 @@ export function BackendOperations0289({
   }
   return (
     <section className="card wide">
-      <h2>Backend Operations · {__NEVERLAUNCHER_VERSION__}</h2>
+      <h2>Backend Operations · {__LAUNCHER_VERSION__}</h2>
       <p className="muted">
         Управление самим Backend, не Minecraft-серверами или процессами
         произвольного хоста. Требуется глобальное backend:control.

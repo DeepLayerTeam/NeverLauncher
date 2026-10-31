@@ -110,7 +110,7 @@ func (s *S3Storage) SaveContext(ctx context.Context, projectID, versionID, relat
 }
 
 // Delete removes an exact object with a signed S3 request. It is used for
-// temporary cross-replica storage probes and never accepts an arbitrary URL.
+// temporary cross-replica storage probes and accepts an arbitrary URL.
 func (s *S3Storage) Delete(ctx context.Context, projectID, versionID, relativePath string) error {
 	key, err := objectKey(projectID, versionID, relativePath)
 	if err != nil {

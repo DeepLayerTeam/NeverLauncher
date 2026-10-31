@@ -39,7 +39,7 @@ jobs:
       - name: Test Java archive/runtime compatibility with actual host classes
         working-directory: services/api
         env:
-          NEVERLAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
+          LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
         run: go test -race -count=1 ./internal/extensionjava
       - name: Live repository dependency and lifecycle transaction tests
         working-directory: services/api
@@ -47,15 +47,15 @@ jobs:
       - name: Real supervisor with JAR and regression
         working-directory: services/api
         env:
-          NEVERLAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
+          LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
         run: go test -race -count=1 -timeout 4m ./internal/extensionhost
       - name: Verify HTTP API compiles with new diagnostics integration
         working-directory: services/api
         run: go test -run '^TestDoesNotExist$' ./internal/httpapi
       - name: Test CLI diagnostics and signature verification
         run: |
-          (cd cli && go test -count=1 -run '^TestJavaManagerDiagnoseCLI0305$' ./cmd/neverlauncher)
-          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+          (cd cli && go test -count=1 -run '^TestJavaManagerDiagnoseCLI0305$' ./cmd/launcher)
+          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/private.pem"
           openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
           "$RUNNER_TEMP/nl" extension pack examples/extensions/java-host/build/package --output "$RUNNER_TEMP/test.nlext" --private-key "$RUNNER_TEMP/private.pem"

@@ -133,29 +133,29 @@ def read_env(path):
 
 def preflight(values, mode, *, docker):
     needed = [
-        "NEVERLAUNCHER_PUBLIC_URL",
-        "NEVERLAUNCHER_AUTH_TOKEN_SECRET",
-        "NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY",
-        "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON",
-        "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON",
-        "NEVERLAUNCHER_WEBAUTHN_RP_ID",
-        "NEVERLAUNCHER_WEBAUTHN_ORIGINS",
-        "NEVERLAUNCHER_CORS_ALLOWED_ORIGINS",
+        "LAUNCHER_PUBLIC_URL",
+        "LAUNCHER_AUTH_TOKEN_SECRET",
+        "LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY",
+        "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON",
+        "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON",
+        "LAUNCHER_WEBAUTHN_RP_ID",
+        "LAUNCHER_WEBAUTHN_ORIGINS",
+        "LAUNCHER_CORS_ALLOWED_ORIGINS",
     ]
     if docker:
-        needed += ["POSTGRES_PASSWORD", "NEVERLAUNCHER_IMAGE_TAG"]
+        needed += ["POSTGRES_PASSWORD", "LAUNCHER_IMAGE_TAG"]
         if mode == "network-ha":
             needed += [
                 "REDIS_PASSWORD",
-                "NEVERLAUNCHER_REPLICA_ID",
-                "NEVERLAUNCHER_STORAGE_S3_ENDPOINT",
-                "NEVERLAUNCHER_STORAGE_S3_BUCKET",
-                "NEVERLAUNCHER_STORAGE_S3_REGION",
-                "NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY",
-                "NEVERLAUNCHER_STORAGE_S3_SECRET_KEY",
+                "LAUNCHER_REPLICA_ID",
+                "LAUNCHER_STORAGE_S3_ENDPOINT",
+                "LAUNCHER_STORAGE_S3_BUCKET",
+                "LAUNCHER_STORAGE_S3_REGION",
+                "LAUNCHER_STORAGE_S3_ACCESS_KEY",
+                "LAUNCHER_STORAGE_S3_SECRET_KEY",
             ]
     else:
-        needed.append("NEVERLAUNCHER_DATABASE_DSN")
+        needed.append("LAUNCHER_DATABASE_DSN")
     missing = [
         key
         for key in needed
@@ -164,7 +164,7 @@ def preflight(values, mode, *, docker):
     ]
     if missing:
         fail("missing or placeholder production configuration: " + ", ".join(missing))
-    public = values["NEVERLAUNCHER_PUBLIC_URL"]
+    public = values["LAUNCHER_PUBLIC_URL"]
     url = urllib.parse.urlsplit(public)
     if (
         url.scheme != "https"
@@ -177,17 +177,17 @@ def preflight(values, mode, *, docker):
         or any(c.isspace() for c in public)
     ):
         fail("production PUBLIC_URL must be an HTTPS origin")
-    if values["NEVERLAUNCHER_WEBAUTHN_ORIGINS"] != public or public not in values[
-        "NEVERLAUNCHER_CORS_ALLOWED_ORIGINS"
+    if values["LAUNCHER_WEBAUTHN_ORIGINS"] != public or public not in values[
+        "LAUNCHER_CORS_ALLOWED_ORIGINS"
     ].split(","):
         fail("WebAuthn origins and CORS must contain the exact HTTPS public origin")
-    rp = values["NEVERLAUNCHER_WEBAUTHN_RP_ID"].lower()
+    rp = values["LAUNCHER_WEBAUTHN_RP_ID"].lower()
     hostname = url.hostname.lower()
     if not (hostname == rp or hostname.endswith("." + rp)):
         fail("WebAuthn relying-party ID does not match public hostname")
     for key in (
-        "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON",
-        "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON",
+        "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON",
+        "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON",
     ):
         try:
             policy = json.loads(values[key])
@@ -195,10 +195,10 @@ def preflight(values, mode, *, docker):
             fail(f"{key} must contain a nonempty JSON policy")
         if not isinstance(policy, (list, dict)) or not policy:
             fail(f"{key} must contain a nonempty JSON policy")
-    if len(values["NEVERLAUNCHER_AUTH_TOKEN_SECRET"]) < 32:
+    if len(values["LAUNCHER_AUTH_TOKEN_SECRET"]) < 32:
         fail("authentication signing secret is too short")
     if not re.fullmatch(
-        r"[0-9a-fA-F]{64}", values["NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY"]
+        r"[0-9a-fA-F]{64}", values["LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY"]
     ):
         fail("manifest signing key must be a 32-byte hex Ed25519 seed")
     if docker:
@@ -207,20 +207,18 @@ def preflight(values, mode, *, docker):
                 continue
             if not re.fullmatch(r"[A-Za-z0-9._~-]{24,}", values[key]):
                 fail(f"{key} must be URL-safe and at least 24 characters")
-    if not docker and values.get("NEVERLAUNCHER_REPOSITORY_DRIVER") != "postgres":
+    if not docker and values.get("LAUNCHER_REPOSITORY_DRIVER") != "postgres":
         fail(
             "native Backend must use PostgreSQL; SQLite-only HTTP repository is unsupported"
         )
-    if not docker and not values.get(
-        "NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH"
-    ):
+    if not docker and not values.get("LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH"):
         fail("native Standard requires a durable SQLite coordinator")
     if (
         mode == "standard"
-        and values.get("NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED", "").lower() == "true"
+        and values.get("LAUNCHER_SERVERBRIDGE_HA_REQUIRED", "").lower() == "true"
     ):
         fail("Standard mode cannot require HA")
-    if values.get("NEVERLAUNCHER_DEPLOYMENT_MODE", mode) not in ("", mode):
+    if values.get("LAUNCHER_DEPLOYMENT_MODE", mode) not in ("", mode):
         fail("env deployment mode conflicts with selected mode")
     if mode == "network-ha" and not docker:
         fail("native HA provisioning is not supported by this local-service installer")
@@ -277,7 +275,7 @@ def compose_run(args):
         if (
             args.action == "up"
             and state
-            and state.get("version") != values["NEVERLAUNCHER_IMAGE_TAG"]
+            and state.get("version") != values["LAUNCHER_IMAGE_TAG"]
             and not args.backup_confirmed
         ):
             fail(
@@ -295,7 +293,7 @@ def compose_run(args):
             )
             atomic_text(
                 state_file,
-                json.dumps({"mode": mode, "version": values["NEVERLAUNCHER_IMAGE_TAG"]})
+                json.dumps({"mode": mode, "version": values["LAUNCHER_IMAGE_TAG"]})
                 + "\n",
                 0o600,
             )
@@ -306,8 +304,8 @@ def compose_run(args):
             execute(base + ["ps"])
         elif args.action in ("down", "uninstall"):
             if args.action == "uninstall" and args.purge_data:
-                if args.confirm != "PURGE-NEVERLAUNCHER-VOLUMES":
-                    fail("purge requires --confirm PURGE-NEVERLAUNCHER-VOLUMES")
+                if args.confirm != "PURGE-LAUNCHER-VOLUMES":
+                    fail("purge requires --confirm PURGE-LAUNCHER-VOLUMES")
                 execute(base + ["down", "--remove-orphans", "--volumes"])
             else:
                 execute(base + ["down", "--remove-orphans"])
@@ -539,10 +537,10 @@ def native_install(args):
             for p in ("storage", "backups", "coordinator", "extensions", "factory")
         ]
         for name in (
-            "NEVERLAUNCHER_STORAGE_LOCAL_PATH",
-            "NEVERLAUNCHER_BACKUP_ROOT",
-            "NEVERLAUNCHER_EXTENSION_ROOT",
-            "NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH",
+            "LAUNCHER_STORAGE_LOCAL_PATH",
+            "LAUNCHER_BACKUP_ROOT",
+            "LAUNCHER_EXTENSION_ROOT",
+            "LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH",
         ):
             value = values.get(name, "")
             if name.endswith("SQLITE_PATH"):
@@ -634,8 +632,8 @@ def native_uninstall(args):
         if not any(INSTALL_ROOT.iterdir()):
             INSTALL_ROOT.rmdir()
         if args.purge_data:
-            if args.confirm != "PURGE-NEVERLAUNCHER-NATIVE-DATA":
-                fail("purge requires --confirm PURGE-NEVERLAUNCHER-NATIVE-DATA")
+            if args.confirm != "PURGE-LAUNCHER-NATIVE-DATA":
+                fail("purge requires --confirm PURGE-LAUNCHER-NATIVE-DATA")
             shutil.rmtree(STATE_ROOT)
         print(
             "Native service removed; external PostgreSQL and /etc secrets untouched; "
@@ -682,8 +680,8 @@ def main(argv=None):
         native_install(args)
     else:
         # Check destructive confirmation BEFORE any service or file mutation.
-        if args.purge_data and args.confirm != "PURGE-NEVERLAUNCHER-NATIVE-DATA":
-            fail("purge requires --confirm PURGE-NEVERLAUNCHER-NATIVE-DATA")
+        if args.purge_data and args.confirm != "PURGE-LAUNCHER-NATIVE-DATA":
+            fail("purge requires --confirm PURGE-LAUNCHER-NATIVE-DATA")
         native_uninstall(args)
 
 

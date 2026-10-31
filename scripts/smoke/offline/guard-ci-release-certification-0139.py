@@ -93,8 +93,8 @@ build_release = read("scripts/release/build-release.sh")
 require(
     build_release,
     [
-        "NEVERLAUNCHER_GUARD_CI_MATRIX_FILE",
-        "NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR",
+        "LAUNCHER_GUARD_CI_MATRIX_FILE",
+        "LAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR",
         "stage_release.py",
         "--guard-ci-matrix",
         "cross-platform Guard CI certification",

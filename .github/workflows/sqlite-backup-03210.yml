@@ -33,15 +33,15 @@ jobs:
           test -z "$(gofmt -l internal/sqlitedurable internal/sqlitecore cmd/launcher-sqlite)"
       - name: Verify local durable filesystem
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-backup-tests
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-backup-tests
         run: |
           set -euo pipefail
-          mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          fstype="$(stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT")"
+          mkdir -p "$LAUNCHER_SQLITE_TEST_ROOT"
+          chmod 0700 "$LAUNCHER_SQLITE_TEST_ROOT"
+          fstype="$(stat -f -c '%T' "$LAUNCHER_SQLITE_TEST_ROOT")"
           case "$fstype" in ext2/ext3|ext4|xfs|btrfs) ;; *) echo "Unsupported filesystem: $fstype"; exit 1 ;; esac
-          echo "NEVERLAUNCHER_SQLITE_TEST_ROOT=$NEVERLAUNCHER_SQLITE_TEST_ROOT" >> "$GITHUB_ENV"
-          echo 'NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS=1' >> "$GITHUB_ENV"
+          echo "LAUNCHER_SQLITE_TEST_ROOT=$LAUNCHER_SQLITE_TEST_ROOT" >> "$GITHUB_ENV"
+          echo 'LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS=1' >> "$GITHUB_ENV"
       - name: Integration, concurrency and source vet
         run: |
           set -euo pipefail

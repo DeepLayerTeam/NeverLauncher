@@ -21,11 +21,11 @@ use runtime::{
     ProcessStatus, ProcessSupervisor, RepairResult, SignatureCheckResult,
 };
 #[cfg(target_os = "linux")]
-use runtime::{NEVERGUARD_LINUX_HARDENING_VERSION, NEVERGUARD_LINUX_PROCESS_POLICY_VERSION};
+use runtime::{GUARD_LINUX_HARDENING_VERSION, GUARD_LINUX_PROCESS_POLICY_VERSION};
 #[cfg(target_os = "macos")]
-use runtime::{NEVERGUARD_MACOS_HARDENING_VERSION, NEVERGUARD_MACOS_PROCESS_POLICY_VERSION};
+use runtime::{GUARD_MACOS_HARDENING_VERSION, GUARD_MACOS_PROCESS_POLICY_VERSION};
 #[cfg(windows)]
-use runtime::{NEVERGUARD_WINDOWS_HARDENING_VERSION, NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION};
+use runtime::{GUARD_WINDOWS_HARDENING_VERSION, GUARD_WINDOWS_PROCESS_POLICY_VERSION};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{path::PathBuf, process::Stdio, time::{Duration, SystemTime, UNIX_EPOCH}};
@@ -446,7 +446,7 @@ struct DesktopConfig {
 struct DesktopBindingResult { status: String, config_path: String, game_directory: String, message: String }
 
 fn desktop_config_dir() -> Result<PathBuf, String> {
-    if let Ok(value) = std::env::var("NEVERLAUNCHER_CONFIG_DIR") { if !value.trim().is_empty() { return Ok(PathBuf::from(value)); } }
+    if let Ok(value) = std::env::var("LAUNCHER_CONFIG_DIR") { if !value.trim().is_empty() { return Ok(PathBuf::from(value)); } }
     if cfg!(windows) { if let Ok(value) = std::env::var("APPDATA") { return Ok(PathBuf::from(value).join("Launcher")); } }
     if cfg!(target_os = "macos") { if let Ok(value) = std::env::var("HOME") { return Ok(PathBuf::from(value).join("Library").join("Application Support").join("Launcher")); } }
     if let Ok(value) = std::env::var("XDG_CONFIG_HOME") { return Ok(PathBuf::from(value).join("Launcher")); }
@@ -457,7 +457,7 @@ fn desktop_config_path() -> Result<PathBuf, String> { Ok(desktop_config_dir()?.j
 // The file location may be configured by a previously verified Prestarter;
 // the Rust verifier still authenticates its content against pinnedPublicKey.
 fn initialize_desktop_game_trust_02312() -> Result<(),String> {
-    if std::env::var_os("NEVERLAUNCHER_GAME_TRUST_POLICY_FILE").is_some() {return Ok(())}
+    if std::env::var_os("LAUNCHER_GAME_TRUST_POLICY_FILE").is_some() {return Ok(())}
     let path=desktop_config_path()?;
     let bytes=match std::fs::read(&path) {Ok(b)=>b,Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Ok(()),Err(e)=>return Err(e.to_string())};
     let cfg:DesktopConfig=serde_json::from_slice(&bytes).map_err(|e|e.to_string())?;
@@ -466,7 +466,7 @@ fn initialize_desktop_game_trust_02312() -> Result<(),String> {
     if !target.is_absolute(){return Err("trust policy location must be absolute".into())}
     let meta=std::fs::symlink_metadata(&target).map_err(|e|e.to_string())?;
     if !meta.is_file() || meta.file_type().is_symlink() || meta.len()>128*1024 {return Err("unsafe trust policy source".into())}
-    std::env::set_var("NEVERLAUNCHER_GAME_TRUST_POLICY_FILE",&target);
+    std::env::set_var("LAUNCHER_GAME_TRUST_POLICY_FILE",&target);
     Ok(())
 }
 
@@ -1479,12 +1479,12 @@ async fn launch_minecraft_inner_0392(
             return Err("launch заблокирован: Guard Windows boundary не authenticated/ready".to_string());
         }
         if !status.process_policy_enforced
-            || status.process_policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
+            || status.process_policy_version != GUARD_WINDOWS_PROCESS_POLICY_VERSION
         {
             return Err("launch заблокирован: Guard Windows runtime/process policy не enforced".to_string());
         }
         if !status.hardening_enforced
-            || status.hardening_version != NEVERGUARD_WINDOWS_HARDENING_VERSION
+            || status.hardening_version != GUARD_WINDOWS_HARDENING_VERSION
             || !status.secure_pipe_acl
             || !status.lifetime_job_enforced
             || (!cfg!(debug_assertions) && !status.package_manifest_verified)
@@ -1497,7 +1497,7 @@ async fn launch_minecraft_inner_0392(
             .await
             .map_err(|err| format!("launch заблокирован: Guard Windows process policy verification failed: {err}"))?;
         if !process_policy.enforced
-            || process_policy.policy_version != NEVERGUARD_WINDOWS_PROCESS_POLICY_VERSION
+            || process_policy.policy_version != GUARD_WINDOWS_PROCESS_POLICY_VERSION
         {
             return Err("launch заблокирован: Guard Windows process policy report rejected".to_string());
         }
@@ -1512,10 +1512,10 @@ async fn launch_minecraft_inner_0392(
         if !status.authenticated || status.state != "ready" {
             return Err("launch заблокирован: Guard Linux boundary не authenticated/ready".to_string());
         }
-        if !status.process_policy_enforced || status.process_policy_version != NEVERGUARD_LINUX_PROCESS_POLICY_VERSION {
+        if !status.process_policy_enforced || status.process_policy_version != GUARD_LINUX_PROCESS_POLICY_VERSION {
             return Err("launch заблокирован: Guard Linux runtime/process policy не enforced".to_string());
         }
-        if !status.hardening_enforced || status.hardening_version != NEVERGUARD_LINUX_HARDENING_VERSION
+        if !status.hardening_enforced || status.hardening_version != GUARD_LINUX_HARDENING_VERSION
             || !status.secure_pipe_acl || !status.lifetime_job_enforced
             || (!cfg!(debug_assertions) && !status.package_manifest_verified)
         {
@@ -1524,7 +1524,7 @@ async fn launch_minecraft_inner_0392(
         guard.ping().await?;
         let policy = guard.process_policy().await
             .map_err(|err| format!("launch заблокирован: Guard Linux process policy verification failed: {err}"))?;
-        if !policy.enforced || policy.policy_version != NEVERGUARD_LINUX_PROCESS_POLICY_VERSION || policy.linux.is_none() {
+        if !policy.enforced || policy.policy_version != GUARD_LINUX_PROCESS_POLICY_VERSION || policy.linux.is_none() {
             return Err("launch заблокирован: Guard Linux process policy report rejected".to_string());
         }
         guard.integrity_evidence().await
@@ -1536,10 +1536,10 @@ async fn launch_minecraft_inner_0392(
         if !status.authenticated || status.state != "ready" {
             return Err("launch заблокирован: Guard macOS boundary не authenticated/ready".to_string());
         }
-        if !status.process_policy_enforced || status.process_policy_version != NEVERGUARD_MACOS_PROCESS_POLICY_VERSION {
+        if !status.process_policy_enforced || status.process_policy_version != GUARD_MACOS_PROCESS_POLICY_VERSION {
             return Err("launch заблокирован: Guard macOS runtime/process policy не enforced".to_string());
         }
-        if !status.hardening_enforced || status.hardening_version != NEVERGUARD_MACOS_HARDENING_VERSION
+        if !status.hardening_enforced || status.hardening_version != GUARD_MACOS_HARDENING_VERSION
             || !status.secure_pipe_acl || !status.lifetime_job_enforced
             || (!cfg!(debug_assertions) && !status.package_manifest_verified)
         {
@@ -1548,7 +1548,7 @@ async fn launch_minecraft_inner_0392(
         guard.ping().await?;
         let policy = guard.process_policy().await
             .map_err(|err| format!("launch заблокирован: Guard macOS process policy verification failed: {err}"))?;
-        if !policy.enforced || policy.policy_version != NEVERGUARD_MACOS_PROCESS_POLICY_VERSION || policy.macos.is_none() {
+        if !policy.enforced || policy.policy_version != GUARD_MACOS_PROCESS_POLICY_VERSION || policy.macos.is_none() {
             return Err("launch заблокирован: Guard macOS process policy report rejected".to_string());
         }
         guard.integrity_evidence().await
@@ -2021,7 +2021,7 @@ async fn player_migration_adopt_0339(
 fn benchmark_ui_ready_03511() -> Result<(), String> {
     use std::io::Write;
     use std::time::{SystemTime, UNIX_EPOCH};
-    let filename = match std::env::var_os("NEVERLAUNCHER_BENCH_READY_FILE") {
+    let filename = match std::env::var_os("LAUNCHER_BENCH_READY_FILE") {
         Some(name) => name,
         None => return Ok(()),
     };

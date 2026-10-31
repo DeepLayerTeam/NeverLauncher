@@ -288,8 +288,8 @@ jobs:
           seed = key.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption()).hex()
           pub = key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()
           with open(os.environ['GITHUB_ENV'], 'a') as env:
-              env.write('NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED='+seed+'\n')
-              env.write('NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY='+pub+'\n')
+              env.write('LAUNCHER_COMPONENT_SET_ED25519_SEED='+seed+'\n')
+              env.write('LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY='+pub+'\n')
           PY_SIGN
       - name: Build native Linux production package
         run: bash scripts/release/build-linux-production.sh "$(pwd)/dist/release-$(tr -d '[:space:]' < VERSION)" --expected-arch "${{ matrix.arch }}"
@@ -377,12 +377,12 @@ jobs:
           cargo build --manifest-path runtime/guard-thread-probe/Cargo.toml
           cargo build --manifest-path runtime/guard-debug-probe/Cargo.toml
           cargo build --manifest-path runtime/guard-jvm-probe/Cargo.toml
-          $env:NEVERGUARD_SENSOR_TEST_DLL = (Resolve-Path "runtime/guard-sensor/target/debug/guard_sensor.dll").Path
-          $env:NEVERGUARD_MEMORY_PROBE_DLL = (Resolve-Path "runtime/guard-memory-probe/target/debug/guard_memory_probe.dll").Path
-          $env:NEVERGUARD_THREAD_PROBE_DLL = (Resolve-Path "runtime/guard-thread-probe/target/debug/guard_thread_probe.dll").Path
-          $env:NEVERGUARD_DEBUG_PROBE_EXE = (Resolve-Path "runtime/guard-debug-probe/target/debug/guard-debug-probe.exe").Path
-          $env:NEVERGUARD_JVM_PROBE_DLL = (Resolve-Path "runtime/guard-jvm-probe/target/debug/guard_jvm_probe.dll").Path
-          $env:NEVERGUARD_EXPECTED_JAVA_MAJOR = "21"
+          $env:GUARD_SENSOR_TEST_DLL = (Resolve-Path "runtime/guard-sensor/target/debug/guard_sensor.dll").Path
+          $env:GUARD_MEMORY_PROBE_DLL = (Resolve-Path "runtime/guard-memory-probe/target/debug/guard_memory_probe.dll").Path
+          $env:GUARD_THREAD_PROBE_DLL = (Resolve-Path "runtime/guard-thread-probe/target/debug/guard_thread_probe.dll").Path
+          $env:GUARD_DEBUG_PROBE_EXE = (Resolve-Path "runtime/guard-debug-probe/target/debug/guard-debug-probe.exe").Path
+          $env:GUARD_JVM_PROBE_DLL = (Resolve-Path "runtime/guard-jvm-probe/target/debug/guard_jvm_probe.dll").Path
+          $env:GUARD_EXPECTED_JAVA_MAJOR = "21"
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib -- --nocapture
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib integrity::tests -- --nocapture
           cargo test --manifest-path runtime/runtime/Cargo.toml --lib attestation::tests -- --nocapture
@@ -664,21 +664,21 @@ jobs:
         env:
           POSTGRES_PASSWORD: ci-postgres-password
           REDIS_PASSWORD: 0123456789abcdef0123456789abcdef
-          NEVERLAUNCHER_PUBLIC_URL: https://launcher.invalid
-          NEVERLAUNCHER_AUTH_TOKEN_SECRET: ci-auth-token-secret-0123456789abcdef
-          NEVERLAUNCHER_CORS_ALLOWED_ORIGINS: https://launcher.invalid
-          NEVERLAUNCHER_WEBAUTHN_RP_ID: launcher.invalid
-          NEVERLAUNCHER_WEBAUTHN_ORIGINS: https://launcher.invalid
-          NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY: 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
-          NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '{"schemaVersion":"2.0","releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","requireAuthenticode":true}]},"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]},"macos":{"signingMode":"developer-id-notarized","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]}}}}}'
-          NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON: '{"0.13.5":{"velocitySha256":["cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],"paperSha256":["dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],"purpurSha256":["eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]}}'
-          NEVERLAUNCHER_IMAGE_TAG: 0.0.0-ci
+          LAUNCHER_PUBLIC_URL: https://launcher.invalid
+          LAUNCHER_AUTH_TOKEN_SECRET: ci-auth-token-secret-0123456789abcdef
+          LAUNCHER_CORS_ALLOWED_ORIGINS: https://launcher.invalid
+          LAUNCHER_WEBAUTHN_RP_ID: launcher.invalid
+          LAUNCHER_WEBAUTHN_ORIGINS: https://launcher.invalid
+          LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY: 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+          LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '{"schemaVersion":"2.0","releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","requireAuthenticode":true}]},"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]},"macos":{"signingMode":"developer-id-notarized","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]}}}}}'
+          LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON: '{"0.13.5":{"velocitySha256":["cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],"paperSha256":["dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],"purpurSha256":["eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]}}'
+          LAUNCHER_IMAGE_TAG: 0.0.0-ci
         run: docker compose -f deploy/production/docker-compose.yml config >/dev/null
       - name: Build API and Admin production images
         run: |
           VERSION="$(tr -d '[:space:]' < VERSION)"
-          docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" --build-arg NEVERLAUNCHER_SOURCE_COMMIT="$GITHUB_SHA" -f services/api/Dockerfile -t launcher-api:ci .
-          docker build --build-arg NEVERLAUNCHER_VERSION="$VERSION" --build-arg NEVERLAUNCHER_SOURCE_COMMIT="$GITHUB_SHA" -f apps/admin/Dockerfile -t launcher-admin:ci .
+          docker build --build-arg LAUNCHER_VERSION="$VERSION" --build-arg LAUNCHER_SOURCE_COMMIT="$GITHUB_SHA" -f services/api/Dockerfile -t launcher-api:ci .
+          docker build --build-arg LAUNCHER_VERSION="$VERSION" --build-arg LAUNCHER_SOURCE_COMMIT="$GITHUB_SHA" -f apps/admin/Dockerfile -t launcher-admin:ci .
 
   managed-jre-production:
     name: Managed Java II Java 8/16/17/21/25 production E2E + Temurin 21 delivery
@@ -969,9 +969,9 @@ jobs:
         run: bash e2e/scripts/run-serverbridge-migration-stabilization-e2e.sh
       - name: Device Trust PostgreSQL lifecycle E2E
         env:
-          NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64
-          NEVERLAUNCHER_DEVICE_TRUST_COMMIT: ${{ github.sha }}
-          NEVERLAUNCHER_DEVICE_TRUST_RUN_ID: ${{ github.run_id }}
+          LAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64
+          LAUNCHER_DEVICE_TRUST_COMMIT: ${{ github.sha }}
+          LAUNCHER_DEVICE_TRUST_RUN_ID: ${{ github.run_id }}
         run: bash e2e/scripts/run-device-trust-e2e.sh
       - name: Test fail-closed real-game lifecycle evidence and publisher counters
         run: |
@@ -1328,9 +1328,9 @@ jobs:
       - name: Run identical real-database contracts against both backends
         working-directory: services/api
         env:
-          NEVERLAUNCHER_PARITY_POSTGRES_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable
-          NEVERLAUNCHER_STORAGE_PARITY_REQUIRED: '1'
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/storage-parity-0371
+          LAUNCHER_PARITY_POSTGRES_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable
+          LAUNCHER_STORAGE_PARITY_REQUIRED: '1'
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/storage-parity-0371
         run: |
           set -euo pipefail
           go mod verify
@@ -1360,7 +1360,7 @@ jobs:
         working-directory: services/api
         env:
           TMPDIR: ${{ runner.temp }}/storage-parity-0371
-          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+          LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
           test -z "$(gofmt -l internal/repository/sqlite_http_stable_0374*.go internal/httpapi/rate_limit.go)"
@@ -1373,7 +1373,7 @@ jobs:
         working-directory: services/api
         env:
           TMPDIR: ${{ runner.temp }}/storage-parity-0371
-          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+          LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
           test -z "$(gofmt -l internal/repository/sqlite_http_install_0375*.go internal/deployment/minimal_0375*.go)"
@@ -1385,7 +1385,7 @@ jobs:
         working-directory: services/api
         env:
           TMPDIR: ${{ runner.temp }}/storage-parity-0371
-          NEVERLAUNCHER_PG_TEST_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable
+          LAUNCHER_PG_TEST_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable
         run: |
           set -euo pipefail
           test -z "$(gofmt -l internal/sqlitepg cmd/launcher-sqlite)"
@@ -1466,7 +1466,7 @@ jobs:
       - name: Real API install, HTTP, SIGTERM, SIGKILL, backup, restore, corruption refusal
         shell: bash
         env:
-          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+          LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
           python3 scripts/acceptance/minimal_live_e2e_0378.py \

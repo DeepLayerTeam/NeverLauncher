@@ -342,10 +342,10 @@ def main():
     # Platform/hardware obligations are distinct from unit tests. Evidence must
     # point to an independently executed verified report for this SAME commit.
     attachments = {
-        "real-java-clean-machine": "NEVERLAUNCHER_CERT_JAVA_EVIDENCE",
-        "signed-installer-clean-machine": "NEVERLAUNCHER_CERT_BOOTSTRAP_EVIDENCE",
-        "crash-power-loss": "NEVERLAUNCHER_CERT_POWERLOSS_EVIDENCE",
-        "windows-locked-executable": "NEVERLAUNCHER_CERT_WINDOWS_LOCK_EVIDENCE",
+        "real-java-clean-machine": "LAUNCHER_CERT_JAVA_EVIDENCE",
+        "signed-installer-clean-machine": "LAUNCHER_CERT_BOOTSTRAP_EVIDENCE",
+        "crash-power-loss": "LAUNCHER_CERT_POWERLOSS_EVIDENCE",
+        "windows-locked-executable": "LAUNCHER_CERT_WINDOWS_LOCK_EVIDENCE",
     }
     for case, variable in attachments.items():
         value = os.environ.get(variable)
@@ -372,7 +372,7 @@ def main():
             )
         except (OSError, ValueError) as err:
             suites.append({"id": case, "status": "failed", "reason": str(err)})
-    baseline = os.environ.get("NEVERLAUNCHER_BASELINE_0230_BIN")
+    baseline = os.environ.get("LAUNCHER_BASELINE_0230_BIN")
     runtime_bin = ROOT / (
         "runtime/runtime/target/debug/runtime" + (".exe" if os.name == "nt" else "")
     )

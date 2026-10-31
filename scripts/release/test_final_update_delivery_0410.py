@@ -135,13 +135,13 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
         policy_path = self.root / "root-signed-policy.json"
         policy_path.write_text(json.dumps(policy_doc))
         env = {
-            "NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION": "1",
-            "NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED": raw_priv(component),
-            "NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY": raw_pub(component),
-            "NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY": raw_pub(root_key),
-            "NEVERLAUNCHER_COMPONENT_TRUST_POLICY_FILE": str(policy_path),
-            "NEVERLAUNCHER_COMPONENT_DELEGATED_ED25519_SEED": raw_priv(delegated),
-            "NEVERLAUNCHER_COMPONENT_DELEGATED_KEY_ID": "component-test",
+            "LAUNCHER_COMPONENT_SECURITY_GENERATION": "1",
+            "LAUNCHER_COMPONENT_SET_ED25519_SEED": raw_priv(component),
+            "LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY": raw_pub(component),
+            "LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY": raw_pub(root_key),
+            "LAUNCHER_COMPONENT_TRUST_POLICY_FILE": str(policy_path),
+            "LAUNCHER_COMPONENT_DELEGATED_ED25519_SEED": raw_priv(delegated),
+            "LAUNCHER_COMPONENT_DELEGATED_KEY_ID": "component-test",
         }
         mock_env = patch.dict(os.environ, env)
         mock_env.start()
@@ -224,9 +224,7 @@ class FinalUpdateDeliveryTests(unittest.TestCase):
             release.verify_update_payload_0410(
                 mutated, manifest, "linux", "x64", VERSION
             )
-        with patch.dict(
-            os.environ, {"NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY": ""}
-        ):
+        with patch.dict(os.environ, {"LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY": ""}):
             with self.assertRaises(release.Blocked):
                 release.verify_update_payload_0410(
                     members, manifest, "linux", "x64", VERSION

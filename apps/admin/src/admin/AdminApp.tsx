@@ -134,7 +134,7 @@ type PackageForm = {
   path: string;
   sha256: string;
 };
-const TOOL_VERSION = __NEVERLAUNCHER_VERSION__;
+const TOOL_VERSION = __LAUNCHER_VERSION__;
 
 export function AdminApp() {
   const [backendUrl, setBackendUrl] = useState(

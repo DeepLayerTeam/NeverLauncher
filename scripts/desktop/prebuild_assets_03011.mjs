@@ -63,7 +63,7 @@ export async function scanDist03011(dist, allowSentryMaps = false) {
 export async function packDist03011(dist) {
   const manifest = await scanDist03011(
     dist,
-    process.env.NEVERLAUNCHER_SENTRY_RELEASE_BUILD === "1",
+    process.env.LAUNCHER_SENTRY_RELEASE_BUILD === "1",
   );
   const target = join(resolve(dist), INDEX);
   const tmp = target + `.tmp-${process.pid}`;

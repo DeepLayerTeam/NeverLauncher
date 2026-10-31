@@ -55,15 +55,13 @@ def replace_package_version(text: str, version: str, path: Path) -> str:
 
 def replace_env_image_tag(text: str, version: str, path: Path) -> str:
     updated, count = re.subn(
-        r"(?m)^NEVERLAUNCHER_IMAGE_TAG=.*$",
-        f"NEVERLAUNCHER_IMAGE_TAG={version}",
+        r"(?m)^LAUNCHER_IMAGE_TAG=.*$",
+        f"LAUNCHER_IMAGE_TAG={version}",
         text,
         count=1,
     )
     if count != 1:
-        raise VersionError(
-            f"{path.relative_to(ROOT)}: не найден NEVERLAUNCHER_IMAGE_TAG"
-        )
+        raise VersionError(f"{path.relative_to(ROOT)}: не найден LAUNCHER_IMAGE_TAG")
     return updated
 
 
@@ -80,12 +78,12 @@ def desired_files(version: str) -> dict[Path, str]:
         result[path] = render_json(path, version)
 
     for rel in (
-        "runtime/neverruntime/Cargo.toml",
-        "runtime/neverguard-sensor/Cargo.toml",
-        "runtime/neverguard-memory-probe/Cargo.toml",
-        "runtime/neverguard-thread-probe/Cargo.toml",
-        "runtime/neverguard-debug-probe/Cargo.toml",
-        "runtime/neverguard-jvm-probe/Cargo.toml",
+        "runtime/runtime/Cargo.toml",
+        "runtime/guard-sensor/Cargo.toml",
+        "runtime/guard-memory-probe/Cargo.toml",
+        "runtime/guard-thread-probe/Cargo.toml",
+        "runtime/guard-debug-probe/Cargo.toml",
+        "runtime/guard-jvm-probe/Cargo.toml",
         "apps/desktop/src-tauri/Cargo.toml",
     ):
         path = ROOT / rel
@@ -113,7 +111,7 @@ def desired_files(version: str) -> dict[Path, str]:
 
     for rel in (
         "deploy/production/env.production.example",
-        "cli/cmd/neverlauncher/templates/production/env.production.example",
+        "cli/cmd/launcher/templates/production/env.production.example",
     ):
         path = ROOT / rel
         result[path] = replace_env_image_tag(

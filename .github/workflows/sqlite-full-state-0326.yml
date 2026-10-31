@@ -33,13 +33,13 @@ jobs:
           test -z "$(gofmt -l internal/sqlitecore internal/sqlitedurable cmd/launcher-sqlite)"
       - name: SQLite WAL integration and concurrent state tests
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-sqlite-326
-          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-sqlite-326
+          LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
-          mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          mkdir -p "$LAUNCHER_SQLITE_TEST_ROOT"
+          chmod 0700 "$LAUNCHER_SQLITE_TEST_ROOT"
+          stat -f -c '%T' "$LAUNCHER_SQLITE_TEST_ROOT"
           go test -race -count=1 -timeout=15m ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
           go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Native build + schema 326 and backup-compatible startup check

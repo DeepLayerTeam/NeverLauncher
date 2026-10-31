@@ -38,7 +38,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         with Handler.lock:
             Handler.manifests += 1
-        content = (ROOT / "neverlauncher-extension.json").read_bytes()
+        content = (ROOT / "launcher-extension.json").read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(content)))
@@ -116,17 +116,17 @@ def env(server, target):
     settings = os.environ.copy()
     settings.update(
         {
-            "NEVERLAUNCHER_EXTENSION_HOST_URL": f"http://127.0.0.1:{server.server_port}",
-            "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": TOKEN,
-            "NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": CALLBACK,
-            "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": "1.0",
-            "NEVERLAUNCHER_EXTENSION_API_VERSION": "1.0",
-            "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": "java-host-123",
-            "NEVERLAUNCHER_EXTENSION_ID": "org.example.java-host",
-            "NEVERLAUNCHER_EXTENSION_VERSION": "0.1.0",
-            "NEVERLAUNCHER_EXTENSION_SCOPE": "global",
-            "NEVERLAUNCHER_EXTENSION_SCOPE_ID": "",
-            "NEVERLAUNCHER_EXTENSION_TARGET": target,
+            "LAUNCHER_EXTENSION_HOST_URL": f"http://127.0.0.1:{server.server_port}",
+            "LAUNCHER_EXTENSION_HOST_TOKEN": TOKEN,
+            "LAUNCHER_EXTENSION_CALLBACK_TOKEN": CALLBACK,
+            "LAUNCHER_EXTENSION_HOST_PROTOCOL": "1.0",
+            "LAUNCHER_EXTENSION_API_VERSION": "1.0",
+            "LAUNCHER_EXTENSION_INSTANCE_ID": "java-host-123",
+            "LAUNCHER_EXTENSION_ID": "org.example.java-host",
+            "LAUNCHER_EXTENSION_VERSION": "0.1.0",
+            "LAUNCHER_EXTENSION_SCOPE": "global",
+            "LAUNCHER_EXTENSION_SCOPE_ID": "",
+            "LAUNCHER_EXTENSION_TARGET": target,
         }
     )
     return settings
@@ -208,19 +208,26 @@ if __name__ == "__main__":
         # Actual JVM startup must fail closed: invalid host token or a protocol
         # incompatible with this host must never produce an additional ready.
         for case, changes in (
-            ("revoked-host-token", {"NEVERLAUNCHER_EXTENSION_HOST_TOKEN": "revoked"}),
-            ("unsupported-protocol", {"NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": "2.0"}),
-            ("missing-callback-token", {"NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": ""}),
+            ("revoked-host-token", {"LAUNCHER_EXTENSION_HOST_TOKEN": "revoked"}),
+            ("unsupported-protocol", {"LAUNCHER_EXTENSION_HOST_PROTOCOL": "2.0"}),
+            ("missing-callback-token", {"LAUNCHER_EXTENSION_CALLBACK_TOKEN": ""}),
         ):
             attempted = env(server, "backend")
             attempted.update(changes)
             ready_before = Handler.readies
             result = subprocess.run(
-                ["java", "-jar", str(jar.resolve())], cwd=STAGE, env=attempted,
-                capture_output=True, text=True, timeout=12,
+                ["java", "-jar", str(jar.resolve())],
+                cwd=STAGE,
+                env=attempted,
+                capture_output=True,
+                text=True,
+                timeout=12,
             )
             assert result.returncode != 0 and Handler.readies == ready_before, (
-                case, result.returncode, result.stderr, Handler.readies,
+                case,
+                result.returncode,
+                result.stderr,
+                Handler.readies,
             )
         print(
             "PASS: executable JVM-host JAR -> authenticated hello -> ready after start -> RPC health/command -> authorization/version/deadline -> CLI"

@@ -10,10 +10,10 @@ of attestation evidence for staged releases, and reports required-target coverag
 
 1. Apply PostgreSQL migration `0104_validation_freshness_0346.sql` (also mirrored
    to the CLI migration bundle). Ensure all API instances use the same DB.
-2. Keep `NEVERLAUNCHER_VALIDATION_ATTESTATION_PUBLIC_KEY` and
-   `NEVERLAUNCHER_VALIDATION_RUNNER_IMAGE_SHA256` from 0.34.5, in the Backend
+2. Keep `LAUNCHER_VALIDATION_ATTESTATION_PUBLIC_KEY` and
+   `LAUNCHER_VALIDATION_RUNNER_IMAGE_SHA256` from 0.34.5, in the Backend
    process; the private attestation key stays on the isolated host.
-3. Set `NEVERLAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON` to an operator-controlled
+3. Set `LAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON` to an operator-controlled
    JSON array. For every required test target provide exactly these properties:
 
 ```

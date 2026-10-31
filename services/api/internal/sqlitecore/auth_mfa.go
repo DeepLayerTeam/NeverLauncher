@@ -239,7 +239,7 @@ func (a *Auth) checkSecondFactorTx(ctx context.Context, q sqlitedurable.Executor
 }
 
 // DisableTOTP requires both a current password and a valid second factor.
-// Revocation is committed alongside removal of MFA, never deferred.
+// Revocation is committed alongside removal of MFA, deferred.
 func (a *Auth) DisableTOTP(ctx context.Context, userID, password, secondFactor string) error {
 	return a.repo.store.Write(ctx, func(q sqlitedurable.Executor) error {
 		if e := a.checkedPasswordTx(ctx, q, userID, password); e != nil {

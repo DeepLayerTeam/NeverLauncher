@@ -132,7 +132,7 @@ func (r *Repository) AuthEpoch(ctx context.Context, userID string) (epoch int64,
 	return
 }
 
-// SaveUser never applies a partially committed role binding: user record,
+// SaveUser applies a partially committed role binding: user record,
 // normalized per-project roles, generation bump and audit commit together.
 // Actor is mandatory because user-management changes are security events.
 func (r *Repository) SaveUser(ctx context.Context, u model.User, actor string) (model.User, error) {

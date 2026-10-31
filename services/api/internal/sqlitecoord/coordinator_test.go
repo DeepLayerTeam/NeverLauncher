@@ -16,7 +16,7 @@ import (
 
 func coordTestPath(t *testing.T) string {
 	t.Helper()
-	root := os.Getenv("NEVERLAUNCHER_SQLITE_TEST_ROOT")
+	root := os.Getenv("LAUNCHER_SQLITE_TEST_ROOT")
 	if root == "" {
 		root = t.TempDir()
 	} else {
@@ -38,7 +38,7 @@ func openTestCoordinator(t *testing.T, path string) *Coordinator {
 	if e != nil {
 		// The product's SQLite store explicitly denies overlayfs and tmpfs. A
 		// certified CI job sets the following flag and must never skip tests.
-		if os.Getenv("NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1" && (errors.Is(e, os.ErrPermission) || isUnsupportedFS(e)) {
+		if os.Getenv("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1" && (errors.Is(e, os.ErrPermission) || isUnsupportedFS(e)) {
 			t.Skipf("requires supported SQLite local FS: %v", e)
 		}
 		t.Fatal(e)

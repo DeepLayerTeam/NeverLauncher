@@ -52,7 +52,7 @@ ci = read(".github/workflows/ci.yml")
 
 require(
     bridge_config,
-    ["backend.urls", "NEVERLAUNCHER_BACKEND_URLS", "failoverCooldownMs"],
+    ["backend.urls", "LAUNCHER_BACKEND_URLS", "failoverCooldownMs"],
     "multi-endpoint config",
 )
 require(
@@ -143,9 +143,9 @@ require(
 require(
     config,
     [
-        "NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED",
-        "NEVERLAUNCHER_REPLICA_ID",
-        "NEVERLAUNCHER_REDIS_URL обязателен для ServerBridge HA fencing",
+        "LAUNCHER_SERVERBRIDGE_HA_REQUIRED",
+        "LAUNCHER_REPLICA_ID",
+        "LAUNCHER_REDIS_URL обязателен для ServerBridge HA fencing",
     ],
     "HA config",
 )

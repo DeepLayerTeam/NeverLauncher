@@ -34,7 +34,7 @@ func ValidateConnector(connector Connector) error {
 		}
 	}
 	// A plugin is not permitted to expose credential-bearing methods that are
-	// missing from metadata: the caller must never silently skip enforcement.
+	// missing from metadata: the caller must silently skip enforcement.
 	for _, req := range required {
 		if req.implemented && !HasCapability(meta, req.capability) {
 			return fmt.Errorf("auth connector %q implements %q without declaring it", meta.ID, req.capability)

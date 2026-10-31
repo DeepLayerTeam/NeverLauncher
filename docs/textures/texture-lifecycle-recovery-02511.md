@@ -11,7 +11,7 @@ or an independent database.
    the normal Launcher migration command **before** running the updated
    maintenance CLI. Keep `texture_blobs` and storage snapshots together in your
    disaster-recovery plan; a PNG-only snapshot does not restore assignments.
-2. Set `NEVERLAUNCHER_DATABASE_DSN` and `NEVERLAUNCHER_STORAGE_DRIVER=local|s3`
+2. Set `LAUNCHER_DATABASE_DSN` and `LAUNCHER_STORAGE_DRIVER=local|s3`
    with the same storage configuration as API. Use isolated operator credentials.
 3. Verify objects: `go run ./cmd/texture-maintenance-0253 --command=verify --report=texture-integrity.json`.
    The command streams and hashes complete blobs, validates their lengths and

@@ -409,7 +409,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	// any profile-supplied Java setting or installing game contents.
 	var gameTrustEnv []string
 	if p.configTrustEpoch() > 0 {
-		gameTrustEnv = []string{"NEVERLAUNCHER_GAME_TRUST_POLICY_FILE=" + filepath.Join(p.store.root, "trust", "active-policy.json")}
+		gameTrustEnv = []string{"LAUNCHER_GAME_TRUST_POLICY_FILE=" + filepath.Join(p.store.root, "trust", "active-policy.json")}
 	}
 	output, e := runChild(ctx, runtimeBin, gameTrustEnv, "verify", "--manifest", manifestPath, "--pinned-public-key", p.config.ProfilePublicKey)
 	if e != nil {
@@ -436,12 +436,12 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 	if e != nil {
 		return e
 	}
-	env := append(gameTrustEnv, "NEVERLAUNCHER_MANAGED_JRE_MANIFEST="+javaManifest, "NEVERLAUNCHER_MANAGED_JRE_MANIFEST_SHA256="+p.config.JavaManifest.SHA256)
+	env := append(gameTrustEnv, "LAUNCHER_MANAGED_JRE_MANIFEST="+javaManifest, "LAUNCHER_MANAGED_JRE_MANIFEST_SHA256="+p.config.JavaManifest.SHA256)
 	if opts.Offline {
-		env = append(env, "NEVERLAUNCHER_OFFLINE=1")
+		env = append(env, "LAUNCHER_OFFLINE=1")
 	}
 	if opts.OfflineDir != "" {
-		env = append(env, "NEVERLAUNCHER_MANAGED_JAVA_OFFLINE_DIR="+filepath.Join(opts.OfflineDir, "managed-jre"))
+		env = append(env, "LAUNCHER_MANAGED_JAVA_OFFLINE_DIR="+filepath.Join(opts.OfflineDir, "managed-jre"))
 	}
 	major := strconv.FormatUint(uint64(profile.Runtime.Java.Major), 10)
 	result, e := runChild(ctx, runtimeBin, env, "java", "ensure", "--major", major, "--distribution", profile.Runtime.Java.Distribution, "--manifest", javaManifest, "--manifest-sha256", p.config.JavaManifest.SHA256)
@@ -470,7 +470,7 @@ func (p *installer) prepareAndStart(ctx context.Context, record activeRecord, op
 		if e != nil {
 			return e
 		}
-		env = append(env, "NEVERLAUNCHER_CONFIG_DIR="+desktopConfigDir)
+		env = append(env, "LAUNCHER_CONFIG_DIR="+desktopConfigDir)
 		cmd := exec.Command(desktopBin)
 		cmd.Env = mergeEnv(env)
 		cmd.Dir = release

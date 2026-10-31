@@ -72,7 +72,7 @@ def check_args(
         raise OperationsBlocked(
             "fresh snapshot destination required; refusing overwrite"
         )
-    if os.environ.get("NEVERLAUNCHER_RC_DR_ISOLATED") != "YES":
+    if os.environ.get("LAUNCHER_RC_DR_ISOLATED") != "YES":
         raise OperationsBlocked("explicit staging-only acknowledgment required")
 
 

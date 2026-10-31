@@ -14,9 +14,9 @@ import (
 // устаревшие и только что зарегистрированные узлы без подписанного снимка маршрутизации. Такие
 // пары следует помечать как устаревшие, а не завершать запрос ошибкой SQL NULL → time.Time.
 func TestServerBridgeTopologyWithoutRoutingSnapshot0215(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN")
+	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
-		t.Skip("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN is not set")
+		t.Skip("LAUNCHER_SERVERBRIDGE_HA_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

@@ -341,10 +341,10 @@ def verify_update_payload_0410(
     # Verify both Ed25519 signatures using trust roots provided independently
     # by the release operator. Never take a public trust key from the ZIP.
     component_root = os.environ.get(
-        "NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY", ""
+        "LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY", ""
     ).strip()
     delegation_root = os.environ.get(
-        "NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY", ""
+        "LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY", ""
     ).strip()
     require(
         re.fullmatch("[0-9a-fA-F]{64}", component_root) is not None
@@ -573,10 +573,10 @@ def _no_dupes(pairs):
 
 
 def current_run() -> tuple[str, str]:
-    run_id = os.environ.get("NEVERLAUNCHER_RELEASE_RUN_ID") or os.environ.get(
+    run_id = os.environ.get("LAUNCHER_RELEASE_RUN_ID") or os.environ.get(
         "GITHUB_RUN_ID", ""
     )
-    attempt = os.environ.get("NEVERLAUNCHER_RELEASE_RUN_ATTEMPT") or os.environ.get(
+    attempt = os.environ.get("LAUNCHER_RELEASE_RUN_ATTEMPT") or os.environ.get(
         "GITHUB_RUN_ATTEMPT", ""
     )
     require(

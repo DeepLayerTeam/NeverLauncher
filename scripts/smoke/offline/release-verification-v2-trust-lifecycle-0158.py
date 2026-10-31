@@ -38,7 +38,7 @@ require(
         "revoked",
         "trust epoch rollback",
         "release rollback blocked",
-        "NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE",
+        "LAUNCHER_RELEASE_TRUST_STATE_FILE",
         "current trust policy",
         "root trust anchor",
     ],
@@ -68,9 +68,9 @@ build = read("scripts/release/build-release.sh")
 require(
     build,
     [
-        "NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE",
-        "NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE",
-        "NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE",
+        "LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE",
+        "LAUNCHER_RELEASE_TRUST_POLICY_FILE",
+        "LAUNCHER_RELEASE_TRUST_STATE_FILE",
         '--trust-policy "${TRUST_POLICY}"',
     ],
     "production release script",

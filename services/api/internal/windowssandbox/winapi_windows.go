@@ -222,7 +222,7 @@ func verifyAppContainerToken(process uintptr, wantSID uintptr) error {
 
 // Only three explicitly duplicated standard streams may cross the AppContainer
 // boundary. A generic inheritable Win32 HANDLE (database socket, broker pipe,
-// secret file, service token) must never be inherited by the extension.
+// secret file, service token) must be inherited by the extension.
 func inheritableStandardHandles() ([3]uintptr, error) {
 	var handles [3]uintptr
 	own, _, _ := getCurrentProcess.Call()
@@ -312,12 +312,12 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	for _, v := range c.Environment {
 		k, _, _ := strings.Cut(v, "=")
 		switch strings.ToUpper(k) {
-		case "NEVERLAUNCHER_EXTENSION_HOST_URL", "NEVERLAUNCHER_EXTENSION_HOST_PIPE", "TEMP", "TMP", "LOCALAPPDATA":
+		case "LAUNCHER_EXTENSION_HOST_URL", "LAUNCHER_EXTENSION_HOST_PIPE", "TEMP", "TMP", "LOCALAPPDATA":
 			continue
 		}
 		env = append(env, v)
 	}
-	env = append(env, "NEVERLAUNCHER_EXTENSION_HOST_URL=http://launcher.host.invalid", "NEVERLAUNCHER_EXTENSION_HOST_PIPE="+c.Pipe)
+	env = append(env, "LAUNCHER_EXTENSION_HOST_URL=http://launcher.host.invalid", "LAUNCHER_EXTENSION_HOST_PIPE="+c.Pipe)
 	env = append(env, "TEMP="+c.Scratch, "TMP="+c.Scratch, "LOCALAPPDATA="+c.Scratch)
 	sort.Slice(env, func(i, j int) bool { return strings.ToUpper(env[i]) < strings.ToUpper(env[j]) })
 	envBlock := []uint16{}

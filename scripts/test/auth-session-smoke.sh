@@ -2,9 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-VERSION="${NEVERLAUNCHER_EXPECTED_VERSION:-$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")}"
-API_BIN="${NEVERLAUNCHER_API_BIN:-${ROOT_DIR}/services/api/launcher-api}"
-API_ADDR="${NEVERLAUNCHER_AUTH_SMOKE_ADDR:-127.0.0.1:18131}"
+VERSION="${LAUNCHER_EXPECTED_VERSION:-$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")}"
+API_BIN="${LAUNCHER_API_BIN:-${ROOT_DIR}/services/api/launcher-api}"
+API_ADDR="${LAUNCHER_AUTH_SMOKE_ADDR:-127.0.0.1:18131}"
 API_URL="http://${API_ADDR}"
 LOG_FILE="${TMPDIR:-/tmp}/launcher-auth-session-smoke.log"
 
@@ -14,7 +14,7 @@ if [[ ! -x "${API_BIN}" ]]; then
   API_BIN="${ROOT_DIR}/services/api/launcher-api"
 fi
 
-NEVERLAUNCHER_HTTP_ADDR="${API_ADDR}" NEVERLAUNCHER_REPOSITORY_DRIVER=memory NEVERLAUNCHER_STORAGE_DRIVER=local "${API_BIN}" >"${LOG_FILE}" 2>&1 &
+LAUNCHER_HTTP_ADDR="${API_ADDR}" LAUNCHER_REPOSITORY_DRIVER=memory LAUNCHER_STORAGE_DRIVER=local "${API_BIN}" >"${LOG_FILE}" 2>&1 &
 PID=$!
 cleanup() { kill "${PID}" >/dev/null 2>&1 || true; }
 trap cleanup EXIT

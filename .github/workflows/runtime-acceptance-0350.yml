@@ -33,7 +33,7 @@ jobs:
           --health-cmd "pg_isready -U never_ga_test -d never_ga_test"
           --health-interval 5s --health-timeout 5s --health-retries 12
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://never_ga_test:never_ga_test_ci_only@127.0.0.1:5432/never_ga_test?sslmode=disable
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://never_ga_test:never_ga_test_ci_only@127.0.0.1:5432/never_ga_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
         with:

@@ -37,8 +37,8 @@ signing key or production database credential in the worker or CI.
    `chmod 0600 /secure/attestor-ed25519.pem`
 
    Export the **raw 32-byte public key** as base64url without padding into
-   `NEVERLAUNCHER_VALIDATION_ATTESTATION_PUBLIC_KEY`. Set
-   `NEVERLAUNCHER_VALIDATION_RUNNER_IMAGE_SHA256` to exactly 64 lowercase hex
+   `LAUNCHER_VALIDATION_ATTESTATION_PUBLIC_KEY`. Set
+   `LAUNCHER_VALIDATION_RUNNER_IMAGE_SHA256` to exactly 64 lowercase hex
    characters from the approved image's `@sha256:` reference. Configuration
    absent or mismatched is fail-closed.
 4. Store the scoped Backend `release:prepare` operator token in a 0600 file,

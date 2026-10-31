@@ -45,16 +45,16 @@ jobs:
           cat >> /tmp/launcher-dep09.env <<'EOF'
           POSTGRES_PASSWORD=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
           REDIS_PASSWORD=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-          NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON={"ci":"not-production"}
-          NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON={"ci":"not-production"}
-          NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-          NEVERLAUNCHER_AUTH_TOKEN_SECRET=dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
-          NEVERLAUNCHER_STORAGE_S3_ENDPOINT=https://s3.example.invalid
-          NEVERLAUNCHER_STORAGE_S3_BUCKET=ci-only
-          NEVERLAUNCHER_STORAGE_S3_REGION=us-east-1
-          NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY=ci-access
-          NEVERLAUNCHER_STORAGE_S3_SECRET_KEY=ci-secret
-          NEVERLAUNCHER_REPLICA_ID=api-ci
+          LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON={"ci":"not-production"}
+          LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON={"ci":"not-production"}
+          LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+          LAUNCHER_AUTH_TOKEN_SECRET=dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+          LAUNCHER_STORAGE_S3_ENDPOINT=https://s3.example.invalid
+          LAUNCHER_STORAGE_S3_BUCKET=ci-only
+          LAUNCHER_STORAGE_S3_REGION=us-east-1
+          LAUNCHER_STORAGE_S3_ACCESS_KEY=ci-access
+          LAUNCHER_STORAGE_S3_SECRET_KEY=ci-secret
+          LAUNCHER_REPLICA_ID=api-ci
           EOF
           # The compose CLI validates resolved service definitions, not application secrets.
           docker compose --project-name launcher --env-file /tmp/launcher-dep09.env \

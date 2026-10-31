@@ -1,6 +1,6 @@
 // Package configmigration handles the persisted JSON provider-list format.
 // Legacy (unversioned) provider arrays are upgraded in memory at activation;
-// the original file is never overwritten and secret references are untouched.
+// the original file is overwritten and secret references are untouched.
 package configmigration
 
 import (

@@ -27,4 +27,4 @@ go build -o nl ./cmd/launcher
 | `operations` | `nl operations readiness ...` | Эксплуатационные проверки |
 | `release` | `nl release doctor ...` | Release readiness |
 
-Backend-команды используют `--backend <url>`, а закрытые запросы могут требовать `--token` или `NEVERLAUNCHER_TOKEN`. Не записывайте токены в shell history, CI log и публичные отчёты. Полный help находится в `cli/cmd/launcher/main.go`.
+Backend-команды используют `--backend <url>`, а закрытые запросы могут требовать `--token` или `LAUNCHER_TOKEN`. Не записывайте токены в shell history, CI log и публичные отчёты. Полный help находится в `cli/cmd/launcher/main.go`.

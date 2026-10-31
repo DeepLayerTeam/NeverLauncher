@@ -86,7 +86,7 @@ func (r *Repository) GetDurableJob(ctx context.Context, id string) (j model.Dura
 }
 
 // EnqueueDurableJob persists an immutable idempotency scope before returning.
-// Idempotency keys are never automatically deleted; retrying after a crash is safe.
+// Idempotency keys are automatically deleted; retrying after a crash is safe.
 func (r *Repository) EnqueueDurableJob(ctx context.Context, j model.DurableJob, _ time.Duration) (out model.DurableJob, created bool, err error) {
 	if !durableFieldsNonempty(j.Kind, j.ActorType, j.ActorID, j.Action, j.ResourceType, j.ResourceID, j.IdempotencyKey) || (j.ProjectID != "" && !durableFieldsNonempty(j.ProjectID)) {
 		return out, false, errors.New("durable job requires valid identity/action/resource/idempotency")
@@ -276,7 +276,7 @@ func (r *Repository) RenewDurableJob(ctx context.Context, id, token string, ttl 
 	return
 }
 
-// CompleteOperationJob never reports success for a stale or expired worker.
+// CompleteOperationJob reports success for a stale or expired worker.
 func (r *Repository) CompleteOperationJob(ctx context.Context, id, token string, result []byte) (out model.DurableJob, err error) {
 	return r.CompleteJobWithOutbox(ctx, id, token, result, nil)
 }

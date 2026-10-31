@@ -13,7 +13,7 @@ Run all operations on a local, operator-controlled, private filesystem, with an 
    python3 scripts/install/minimal-install.py backup-verify --bundle /private/backups/minimal-2026-10-29
    ```
 
-2. Set `NEVERLAUNCHER_POSTGRES_DSN` in the operator's environment (do not put secrets in command arguments). Using the compiled `launcher-sqlite` binary:
+2. Set `LAUNCHER_POSTGRES_DSN` in the operator's environment (do not put secrets in command arguments). Using the compiled `launcher-sqlite` binary:
 
    ```sh
    launcher-sqlite minimal-to-postgres --bundle /private/backups/minimal-2026-10-29 --ack-no-backend-cutover

@@ -36,7 +36,7 @@ func joinFixture(t *testing.T) (*Repository, *Auth, string, ed25519.PrivateKey, 
 	if e != nil {
 		t.Fatal(e)
 	}
-	tokens, e := a.LoginLocal(ctx, "owner@never.test", password, "", "test-launcher")
+	tokens, e := a.LoginLocal(ctx, "owner@test", password, "", "test-launcher")
 	if e != nil {
 		t.Fatal(e)
 	}

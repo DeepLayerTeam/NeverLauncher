@@ -60,7 +60,7 @@ func (s Server) bridgeIntegrityRequired0135() bool {
 func (s Server) bridgeReleasePolicies0135() (map[string]bridgeReleasePolicy0135, error) {
 	raw := strings.TrimSpace(s.Config.BridgeReleaseAllowlistJSON)
 	if raw == "" {
-		return nil, errors.New("NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON is not configured")
+		return nil, errors.New("LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON is not configured")
 	}
 	policies := map[string]bridgeReleasePolicy0135{}
 	var probe map[string]json.RawMessage

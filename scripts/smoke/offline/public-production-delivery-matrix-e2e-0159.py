@@ -77,7 +77,7 @@ build = read("scripts/release/build-release.sh")
 require(
     build,
     [
-        "NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL",
+        "LAUNCHER_PUBLIC_RELEASE_BASE_URL",
         "PUBLIC_PRODUCTION_DELIVERY_MATRIX.json",
         "runtime-windows-x64.exe",
         "runtime-windows-arm64.exe",
@@ -93,8 +93,8 @@ require(
         "types: [published]",
         "PUBLIC_PRODUCTION_DELIVERY_MATRIX.json",
         "delivery public-e2e",
-        "NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE",
-        "NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE",
+        "LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE",
+        "LAUNCHER_RELEASE_TRUST_POLICY_FILE",
         "PUBLIC_DELIVERY_E2E_REPORT.json",
     ],
     "post-publish E2E workflow",

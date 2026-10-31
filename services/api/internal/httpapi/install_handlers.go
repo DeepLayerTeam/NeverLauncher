@@ -35,7 +35,7 @@ func (s Server) installWizard(w http.ResponseWriter, r *http.Request) {
 	if profile == "minimal-sqlite" {
 		data["mode"] = "single-node"
 		data["steps"] = []map[string]any{
-			{"id": "environment", "required": []string{"NEVERLAUNCHER_REPOSITORY_DRIVER=sqlite", "NEVERLAUNCHER_DATABASE_DSN", "NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH"}},
+			{"id": "environment", "required": []string{"LAUNCHER_REPOSITORY_DRIVER=sqlite", "LAUNCHER_DATABASE_DSN", "LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH"}},
 			{"id": "storage", "required": []string{"local"}},
 			{"id": "bootstrap-admin", "endpoint": "POST /api/v1/install/bootstrap-admin"},
 			{"id": "first-project", "endpoint": "POST /api/v1/install/first-project"},
@@ -153,5 +153,5 @@ func (s Server) installFirstProject(w http.ResponseWriter, r *http.Request) {
 }
 
 func installWizardAPI(toolVersion, profile string) map[string]any {
-	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": toolVersion, "mode": "production", "profile": profile, "status": "ready", "steps": []map[string]any{{"id": "environment", "required": []string{"NEVERLAUNCHER_DATABASE_DSN", "NEVERLAUNCHER_SQL_DRIVER=pgx"}}, {"id": "storage", "required": []string{"local-or-s3"}}, {"id": "bootstrap-admin", "endpoint": "POST /api/v1/install/bootstrap-admin"}, {"id": "first-project", "endpoint": "POST /api/v1/install/first-project"}, {"id": "readiness", "endpoint": "GET /api/v1/install/readiness"}, {"id": "verify", "command": "nl install verify --backend http://localhost:8080"}}}
+	return map[string]any{"schemaVersion": apiContractVersion, "toolVersion": toolVersion, "mode": "production", "profile": profile, "status": "ready", "steps": []map[string]any{{"id": "environment", "required": []string{"LAUNCHER_DATABASE_DSN", "LAUNCHER_SQL_DRIVER=pgx"}}, {"id": "storage", "required": []string{"local-or-s3"}}, {"id": "bootstrap-admin", "endpoint": "POST /api/v1/install/bootstrap-admin"}, {"id": "first-project", "endpoint": "POST /api/v1/install/first-project"}, {"id": "readiness", "endpoint": "GET /api/v1/install/readiness"}, {"id": "verify", "command": "nl install verify --backend http://localhost:8080"}}}
 }

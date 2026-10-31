@@ -11,12 +11,12 @@ fi
 [[ "$(uname -s)" == "Darwin" ]] || { echo "macOS production package must be built on macOS" >&2; exit 2; }
 for tool in cargo rustup lipo codesign ditto shasum python3; do command -v "$tool" >/dev/null || { echo "$tool is required" >&2; exit 1; }; done
 
-SIGN_IDENTITY="${NEVERLAUNCHER_MACOS_SIGNING_IDENTITY:-}"
-TEAM_ID="${NEVERLAUNCHER_MACOS_TEAM_ID:-}"
-NOTARY_PROFILE="${NEVERLAUNCHER_MACOS_NOTARY_PROFILE:-}"
+SIGN_IDENTITY="${LAUNCHER_MACOS_SIGNING_IDENTITY:-}"
+TEAM_ID="${LAUNCHER_MACOS_TEAM_ID:-}"
+NOTARY_PROFILE="${LAUNCHER_MACOS_NOTARY_PROFILE:-}"
 if [[ "${MODE}" == "production" ]]; then
   [[ -n "${SIGN_IDENTITY}" && -n "${TEAM_ID}" && -n "${NOTARY_PROFILE}" ]] || {
-    echo "production macOS release requires Developer ID Application identity, Team ID and notarytool keychain profile via NEVERLAUNCHER_MACOS_SIGNING_IDENTITY, NEVERLAUNCHER_MACOS_TEAM_ID and NEVERLAUNCHER_MACOS_NOTARY_PROFILE" >&2; exit 2;
+    echo "production macOS release requires Developer ID Application identity, Team ID and notarytool keychain profile via LAUNCHER_MACOS_SIGNING_IDENTITY, LAUNCHER_MACOS_TEAM_ID and LAUNCHER_MACOS_NOTARY_PROFILE" >&2; exit 2;
   }
   [[ "${SIGN_IDENTITY}" == Developer\ ID\ Application:* ]] || { echo "production signing identity must be a Developer ID Application certificate" >&2; exit 2; }
 else

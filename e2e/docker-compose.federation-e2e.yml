@@ -1,34 +1,34 @@
 x-api-env: &api-env
-  NEVERLAUNCHER_ENV: e2e-production
-  NEVERLAUNCHER_REPOSITORY_DRIVER: postgres
-  NEVERLAUNCHER_SQL_DRIVER: pgx
-  NEVERLAUNCHER_DATABASE_DSN: postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable
-  NEVERLAUNCHER_DATABASE_AUTO_MIGRATE: "false"
-  NEVERLAUNCHER_PUBLIC_URL: http://127.0.0.1:18081
-  NEVERLAUNCHER_STORAGE_DRIVER: local
-  NEVERLAUNCHER_STORAGE_LOCAL_PATH: /var/lib/launcher/storage/current
-  NEVERLAUNCHER_BACKUP_ROOT: /var/lib/launcher/backups
-  NEVERLAUNCHER_CORS_ALLOWED_ORIGINS: https://e2e.invalid
-  NEVERLAUNCHER_AUTH_TOKEN_SECRET: ${NEVERLAUNCHER_E2E_AUTH_SECRET}
-  NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '{"schemaVersion":"2.0","releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","requireAuthenticode":true}]},"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]},"macos":{"signingMode":"developer-id-notarized","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]}}}}}'
-  NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON: '{"0.13.5":{"velocitySha256":["cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],"paperSha256":["dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],"purpurSha256":["eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]}}'
-  NEVERLAUNCHER_BOOTSTRAP_TOKEN: ${NEVERLAUNCHER_E2E_BOOTSTRAP_TOKEN}
-  NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY: ${NEVERLAUNCHER_E2E_SIGNING_SEED}
-  NEVERLAUNCHER_REDIS_URL: redis://:${NEVERLAUNCHER_E2E_REDIS_PASSWORD}@redis:6379/0
-  NEVERLAUNCHER_RATE_LIMIT_ENABLED: "true"
-  NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED: "true"
-  NEVERLAUNCHER_PERSISTENT_SESSIONS: "true"
-  NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION: "true"
-  NEVERLAUNCHER_WEBAUTHN_RP_ID: 127.0.0.1
-  NEVERLAUNCHER_WEBAUTHN_RP_NAME: Launcher E2E
-  NEVERLAUNCHER_WEBAUTHN_ORIGINS: http://127.0.0.1:18081
+  LAUNCHER_ENV: e2e-production
+  LAUNCHER_REPOSITORY_DRIVER: postgres
+  LAUNCHER_SQL_DRIVER: pgx
+  LAUNCHER_DATABASE_DSN: postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable
+  LAUNCHER_DATABASE_AUTO_MIGRATE: "false"
+  LAUNCHER_PUBLIC_URL: http://127.0.0.1:18081
+  LAUNCHER_STORAGE_DRIVER: local
+  LAUNCHER_STORAGE_LOCAL_PATH: /var/lib/launcher/storage/current
+  LAUNCHER_BACKUP_ROOT: /var/lib/launcher/backups
+  LAUNCHER_CORS_ALLOWED_ORIGINS: https://e2e.invalid
+  LAUNCHER_AUTH_TOKEN_SECRET: ${LAUNCHER_E2E_AUTH_SECRET}
+  LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '{"schemaVersion":"2.0","releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","requireAuthenticode":true}]},"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]},"macos":{"signingMode":"developer-id-notarized","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]}}}}}'
+  LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON: '{"0.13.5":{"velocitySha256":["cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],"paperSha256":["dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],"purpurSha256":["eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"]}}'
+  LAUNCHER_BOOTSTRAP_TOKEN: ${LAUNCHER_E2E_BOOTSTRAP_TOKEN}
+  LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY: ${LAUNCHER_E2E_SIGNING_SEED}
+  LAUNCHER_REDIS_URL: redis://:${LAUNCHER_E2E_REDIS_PASSWORD}@redis:6379/0
+  LAUNCHER_RATE_LIMIT_ENABLED: "true"
+  LAUNCHER_RATE_LIMIT_FAIL_CLOSED: "true"
+  LAUNCHER_PERSISTENT_SESSIONS: "true"
+  LAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION: "true"
+  LAUNCHER_WEBAUTHN_RP_ID: 127.0.0.1
+  LAUNCHER_WEBAUTHN_RP_NAME: Launcher E2E
+  LAUNCHER_WEBAUTHN_ORIGINS: http://127.0.0.1:18081
 
 x-api-common: &api-common
   build:
     context: ..
     dockerfile: services/api/Dockerfile
     args:
-      NEVERLAUNCHER_VERSION: ${NEVERLAUNCHER_E2E_VERSION:-dev}
+      LAUNCHER_VERSION: ${LAUNCHER_E2E_VERSION:-dev}
   depends_on:
     volume-init:
       condition: service_completed_successfully
@@ -60,7 +60,7 @@ services:
   redis:
     image: redis:7-alpine
     environment:
-      REDIS_PASSWORD: ${NEVERLAUNCHER_E2E_REDIS_PASSWORD}
+      REDIS_PASSWORD: ${LAUNCHER_E2E_REDIS_PASSWORD}
     command: ["sh", "-ec", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
@@ -80,7 +80,7 @@ services:
     <<: *api-common
     environment:
       <<: *api-env
-      NEVERLAUNCHER_HTTP_ADDR: 0.0.0.0:8080
+      LAUNCHER_HTTP_ADDR: 0.0.0.0:8080
     ports:
       - "18081:8080"
 
@@ -88,7 +88,7 @@ services:
     <<: *api-common
     environment:
       <<: *api-env
-      NEVERLAUNCHER_HTTP_ADDR: 0.0.0.0:8080
+      LAUNCHER_HTTP_ADDR: 0.0.0.0:8080
     ports:
       - "18082:8080"
 
@@ -96,7 +96,7 @@ services:
     <<: *api-common
     environment:
       <<: *api-env
-      NEVERLAUNCHER_HTTP_ADDR: 0.0.0.0:8080
+      LAUNCHER_HTTP_ADDR: 0.0.0.0:8080
     ports:
       - "18083:8080"
 

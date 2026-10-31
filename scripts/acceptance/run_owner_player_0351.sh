@@ -12,11 +12,11 @@ trap cleanup EXIT
 
 # Only the CI/dev default test identity may be used. Do not point this runner at
 # a supplied Backend; it must start its own ephemeral memory-only instance.
-export NEVERLAUNCHER_TEST_ADMIN_EMAIL=admin@launcher.local
-export NEVERLAUNCHER_TEST_ADMIN_PASSWORD=admin
-export NEVERLAUNCHER_REPOSITORY_DRIVER=memory
-export NEVERLAUNCHER_STORAGE_DRIVER=local
-export NEVERLAUNCHER_STORAGE_LOCAL_PATH="$TMP/storage"
+export LAUNCHER_TEST_ADMIN_EMAIL=admin@launcher.local
+export LAUNCHER_TEST_ADMIN_PASSWORD=admin
+export LAUNCHER_REPOSITORY_DRIVER=memory
+export LAUNCHER_STORAGE_DRIVER=local
+export LAUNCHER_STORAGE_LOCAL_PATH="$TMP/storage"
 PORT="$(python3 - <<'PY'
 import socket
 with socket.socket() as s:
@@ -24,7 +24,7 @@ with socket.socket() as s:
     print(s.getsockname()[1])
 PY
 )"
-export NEVERLAUNCHER_HTTP_ADDR="127.0.0.1:$PORT"
+export LAUNCHER_HTTP_ADDR="127.0.0.1:$PORT"
 VERSION="$(cat "$ROOT/VERSION")"
 (
   cd "$ROOT/services/api"

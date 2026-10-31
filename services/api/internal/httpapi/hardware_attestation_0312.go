@@ -15,7 +15,7 @@ import (
 const hardwareChallengeTTL0312 = 2 * time.Minute
 
 func hardwareRootStore0312(now time.Time) (*attestverify.Store, error) {
-	return attestverify.Load(os.Getenv("NEVERLAUNCHER_TPM_AK_ROOTS_FILE"), now)
+	return attestverify.Load(os.Getenv("LAUNCHER_TPM_AK_ROOTS_FILE"), now)
 }
 
 func activeHardwareEvidence0312(s Server, device model.TrustedDevice, session authSessionRecord, now time.Time) (model.DeviceHardwareEvidence, bool) {

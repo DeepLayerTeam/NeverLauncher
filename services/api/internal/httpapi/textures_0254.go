@@ -147,7 +147,7 @@ func (s Server) textureImport0254(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusTooManyRequests, "texture URL import rate limit exceeded")
 		return
 	}
-	fetcher, err := texturefetch.New(os.Getenv("NEVERLAUNCHER_TEXTURE_FETCH_HOST_ALLOWLIST"))
+	fetcher, err := texturefetch.New(os.Getenv("LAUNCHER_TEXTURE_FETCH_HOST_ALLOWLIST"))
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "texture fetch host policy invalid")
 		return

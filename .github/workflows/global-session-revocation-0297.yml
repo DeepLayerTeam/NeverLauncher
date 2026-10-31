@@ -38,7 +38,7 @@ jobs:
       run:
         working-directory: services/api
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

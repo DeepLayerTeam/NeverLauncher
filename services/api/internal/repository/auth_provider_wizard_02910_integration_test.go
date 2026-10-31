@@ -10,7 +10,7 @@ import (
 
 // Uses the real pgx PostgreSQL driver under CI, including transaction fencing.
 func TestLiveManagedProviderCAS02910(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN")
 	if dsn == "" {
 		t.Skip("configure test PostgreSQL DSN")
 	}

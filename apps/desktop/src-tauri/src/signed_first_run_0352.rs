@@ -214,7 +214,7 @@ pub fn load(dir:&Path)->Result<Option<Provisioning0352>,String>{
     }
     // Production root is compiled into the Desktop binary. Never accept a
     // root key supplied by renderer, local config, query string or process env.
-    let root=option_env!("NEVERLAUNCHER_BOOTSTRAP_ROOT_KEY").unwrap_or("");
+    let root=option_env!("LAUNCHER_BOOTSTRAP_ROOT_KEY").unwrap_or("");
     if root.is_empty(){return Err("Desktop не содержит закреплённый bootstrap Ed25519 root; необходима branded production сборка".into())}
     let raw=safe_file(&file,1024*1024)?;
     let now=OffsetDateTime::from(SystemTime::now());

@@ -119,8 +119,8 @@ func TestGrowthFailsClosedOnMissingPostgres03212(t *testing.T) {
 	}
 }
 func TestGrowthLivePostgresRedis03212(t *testing.T) {
-	pg := os.Getenv("NEVERLAUNCHER_GROWTH_TEST_PG_DSN")
-	redis := os.Getenv("NEVERLAUNCHER_GROWTH_TEST_REDIS_URL")
+	pg := os.Getenv("LAUNCHER_GROWTH_TEST_PG_DSN")
+	redis := os.Getenv("LAUNCHER_GROWTH_TEST_REDIS_URL")
 	if pg == "" || redis == "" {
 		t.Skip("live PostgreSQL/Redis URLs required")
 	}
@@ -139,9 +139,9 @@ func TestGrowthLivePostgresRedis03212(t *testing.T) {
 // environment and rejects a skipped test as a release failure.
 func TestProductionRCLiveS3Growth(t *testing.T) {
 	keys := []string{
-		"NEVERLAUNCHER_RC_S3_ENDPOINT", "NEVERLAUNCHER_RC_S3_BUCKET",
-		"NEVERLAUNCHER_RC_S3_REGION", "NEVERLAUNCHER_RC_S3_ACCESS_KEY",
-		"NEVERLAUNCHER_RC_S3_SECRET_KEY",
+		"LAUNCHER_RC_S3_ENDPOINT", "LAUNCHER_RC_S3_BUCKET",
+		"LAUNCHER_RC_S3_REGION", "LAUNCHER_RC_S3_ACCESS_KEY",
+		"LAUNCHER_RC_S3_SECRET_KEY",
 	}
 	for _, k := range keys {
 		if os.Getenv(k) == "" {

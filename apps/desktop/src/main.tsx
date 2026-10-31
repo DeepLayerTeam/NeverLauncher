@@ -790,7 +790,7 @@ function decodeWebAuthnRequestOptions(
   } as PublicKeyCredentialRequestOptions;
 }
 
-const DESKTOP_VERSION = __NEVERLAUNCHER_VERSION__;
+const DESKTOP_VERSION = __LAUNCHER_VERSION__;
 const RELEASE_DOCTOR_MARKER = "Desktop First-Run Binding";
 
 const stageLabels: Record<Stage, string> = {
@@ -4840,13 +4840,27 @@ function App() {
           </header>
 
           {stage !== "idle" && (
-            <section className="startupStatus0427" aria-live="polite" aria-label={ui0357.locale === "ru" ? "Запуск клиента" : "Client startup"}>
+            <section
+              className="startupStatus0427"
+              aria-live="polite"
+              aria-label={
+                ui0357.locale === "ru" ? "Запуск клиента" : "Client startup"
+              }
+            >
               <span role={stage === "failed" ? "alert" : "status"}>
                 {startupStatus0427(stage, ui0357.locale).message}
               </span>
               {startupStatus0427(stage, ui0357.locale).failed && (
-                <button type="button" disabled={!normalActionsEnabled0357 || transferBusy} onClick={() => void runFullCheck().catch(error => log(String(error)))}>
-                  {ui0357.locale === "ru" ? "Повторить проверку" : "Retry checks"}
+                <button
+                  type="button"
+                  disabled={!normalActionsEnabled0357 || transferBusy}
+                  onClick={() =>
+                    void runFullCheck().catch((error) => log(String(error)))
+                  }
+                >
+                  {ui0357.locale === "ru"
+                    ? "Повторить проверку"
+                    : "Retry checks"}
                 </button>
               )}
             </section>

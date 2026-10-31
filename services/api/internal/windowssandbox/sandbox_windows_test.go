@@ -46,7 +46,7 @@ func TestChildIsolation03111(t *testing.T) {
 	if os.Getenv("NL_WIN_SANDBOX_CHILD") != "1" {
 		return
 	}
-	pipe := os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_PIPE")
+	pipe := os.Getenv("LAUNCHER_EXTENSION_HOST_PIPE")
 	if !strings.HasPrefix(pipe, `\\.\pipe\LOCAL\Launcher-Extension-`) {
 		t.Fatal("missing named broker pipe")
 	}

@@ -49,7 +49,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path != "/v1/manifest":
             self.answer(404, {})
             return
-        self.answer(200, json.loads((ROOT / "neverlauncher-extension.json").read_text()))
+        self.answer(200, json.loads((ROOT / "launcher-extension.json").read_text()))
 
     def do_POST(self):
         if not self.authorized():
@@ -113,15 +113,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
 def env(server, target):
     result = os.environ.copy()
     result.update(
-        NEVERLAUNCHER_EXTENSION_HOST_URL=f"http://127.0.0.1:{server.server_port}",
-        NEVERLAUNCHER_EXTENSION_HOST_TOKEN=TOKEN,
-        NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN=CALLBACK,
-        NEVERLAUNCHER_EXTENSION_ID="org.example.gravit-port",
-        NEVERLAUNCHER_EXTENSION_VERSION="0.1.0",
-        NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL="1.0",
-        NEVERLAUNCHER_EXTENSION_API_VERSION="1.0",
-        NEVERLAUNCHER_EXTENSION_INSTANCE_ID="compat-instance",
-        NEVERLAUNCHER_EXTENSION_TARGET=target,
+        LAUNCHER_EXTENSION_HOST_URL=f"http://127.0.0.1:{server.server_port}",
+        LAUNCHER_EXTENSION_HOST_TOKEN=TOKEN,
+        LAUNCHER_EXTENSION_CALLBACK_TOKEN=CALLBACK,
+        LAUNCHER_EXTENSION_ID="org.example.gravit-port",
+        LAUNCHER_EXTENSION_VERSION="0.1.0",
+        LAUNCHER_EXTENSION_HOST_PROTOCOL="1.0",
+        LAUNCHER_EXTENSION_API_VERSION="1.0",
+        LAUNCHER_EXTENSION_INSTANCE_ID="compat-instance",
+        LAUNCHER_EXTENSION_TARGET=target,
     )
     return result
 

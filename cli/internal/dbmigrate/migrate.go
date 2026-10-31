@@ -118,7 +118,7 @@ END $$;
 
 func runPSQL(ctx context.Context, psqlPath, dsn, script, action string) (string, error) {
 	if strings.TrimSpace(dsn) == "" {
-		return "", fmt.Errorf("PostgreSQL DSN обязателен: --dsn или NEVERLAUNCHER_DATABASE_DSN")
+		return "", fmt.Errorf("PostgreSQL DSN обязателен: --dsn или LAUNCHER_DATABASE_DSN")
 	}
 	if strings.TrimSpace(psqlPath) == "" {
 		psqlPath = "psql"

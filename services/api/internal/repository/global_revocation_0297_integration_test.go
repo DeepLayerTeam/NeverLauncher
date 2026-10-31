@@ -15,9 +15,9 @@ import (
 // Exercises both connections: revocation is committed by one replica and the
 // other must observe terminal Minecraft/bridge/work state without polling.
 func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable NEVERLAUNCHER_TEST_POSTGRES_DSN")
+		t.Skip("requires disposable LAUNCHER_TEST_POSTGRES_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()

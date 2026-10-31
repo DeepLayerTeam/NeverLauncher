@@ -9,7 +9,7 @@
 Example (using your real HTTPS image URL and a valid token):
 
 ```bash
-curl -sS -X POST "$NEVERLAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/import" \
+curl -sS -X POST "$LAUNCHER_PUBLIC_URL/api/v1/me/textures/skin/import" \
   -H "Authorization: Bearer $USER_ACCESS_TOKEN" -H 'Content-Type: application/json' \
   --data '{"url":"https://textures.example.org/skin.png","expectedRevision":0,"model":"classic","visibility":"public"}'
 ```
@@ -28,7 +28,7 @@ The backend validates the request and imports a PNG into **immutable SHA-256 loc
 
 ## Configuration and roll-out
 
-Optional variable: `NEVERLAUNCHER_TEXTURE_FETCH_HOST_ALLOWLIST=textures.example.org,cdn.example.org`. Hosts match exactly, no wildcards or subdomain matching. An empty value permits public HTTPS DNS hosts; the blocklist and numeric-IP check **always** apply. A malformed configured allowlist disables all imports. Docker Compose passes this variable into the API container.
+Optional variable: `LAUNCHER_TEXTURE_FETCH_HOST_ALLOWLIST=textures.example.org,cdn.example.org`. Hosts match exactly, no wildcards or subdomain matching. An empty value permits public HTTPS DNS hosts; the blocklist and numeric-IP check **always** apply. A malformed configured allowlist disables all imports. Docker Compose passes this variable into the API container.
 
 Apply migration `0070_texture_fetch_0254.sql` using the checksum-tracked migrator; it extends only the permitted assignment provenance and revision event enums (implemented as PostgreSQL CHECKs). Never modify previous migrations.
 

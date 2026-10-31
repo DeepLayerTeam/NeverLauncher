@@ -27,7 +27,7 @@ jobs:
         options: >-
           --health-cmd 'pg_isready -U never -d never' --health-interval 5s --health-timeout 5s --health-retries 25
     env:
-      NEVERLAUNCHER_DATABASE_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
+      LAUNCHER_DATABASE_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -49,7 +49,7 @@ jobs:
           /tmp/nl-prior db migrate apply
       - name: Seed two isolated issuers before upgrade
         run: |
-          psql "$NEVERLAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 <<'SQL'
+          psql "$LAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 <<'SQL'
           BEGIN;
           INSERT INTO users(id,email,display_name,role_id,password_hash)
           VALUES ('migration-a','migration-a@example.invalid','Migration_A','player',''),('migration-b','migration-b@example.invalid','Migration_B','player','');
@@ -68,10 +68,10 @@ jobs:
           /tmp/nl-upgrade db auth-upgrade apply --snapshot /tmp/nl-identity.json --backup-confirmed --maintenance-confirmed
           /tmp/nl-upgrade db auth-upgrade verify --snapshot /tmp/nl-identity.json
           # Even a privileged UPDATE must not remap an existing subject or GameProfile UUID.
-          if psql "$NEVERLAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE auth_identities SET issuer='https://malicious.invalid' WHERE id='migration-id-a'"; then exit 1; fi
-          if psql "$NEVERLAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_profiles SET uuid='7e58de9e-6dde-40ea-bfe6-16c85ae32973' WHERE user_id='migration-a'"; then exit 1; fi
+          if psql "$LAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE auth_identities SET issuer='https://malicious.invalid' WHERE id='migration-id-a'"; then exit 1; fi
+          if psql "$LAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_profiles SET uuid='7e58de9e-6dde-40ea-bfe6-16c85ae32973' WHERE user_id='migration-a'"; then exit 1; fi
           # Local data drift must be detected by the offline checkpoint.
-          psql "$NEVERLAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE users SET display_name='Changed' WHERE id='migration-a'"
+          psql "$LAUNCHER_DATABASE_DSN" -v ON_ERROR_STOP=1 -c "UPDATE users SET display_name='Changed' WHERE id='migration-a'"
           if /tmp/nl-upgrade db auth-upgrade verify --snapshot /tmp/nl-identity.json; then exit 1; fi
       - name: Backend catalogue matches CLI byte-for-byte
         run: |

@@ -30,7 +30,7 @@ Tokens, passwords, OAuth secrets, sensitive Java arguments, bearer headers, acco
 
 `cd services/api && go test ./internal/httpapi ./internal/repository ./internal/model`
 
-`NEVERLAUNCHER_TEST_POSTGRES_DSN=<disposable-db> go test ./internal/repository -run 'TestV12|TestV11'`
+`LAUNCHER_TEST_POSTGRES_DSN=<disposable-db> go test ./internal/repository -run 'TestV12|TestV11'`
 
 `cd apps/admin && npm ci && npm run build`
 

@@ -4,7 +4,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
 
 if ! command -v gradle >/dev/null 2>&1 || ! command -v jar >/dev/null 2>&1; then
-  if [[ "${NEVERLAUNCHER_PREFLIGHT_BRIDGE_STRICT:-0}" == "1" || "${NEVERLAUNCHER_PREFLIGHT_BRIDGE_STRICT:-0}" == "true" ]]; then
+  if [[ "${LAUNCHER_PREFLIGHT_BRIDGE_STRICT:-0}" == "1" || "${LAUNCHER_PREFLIGHT_BRIDGE_STRICT:-0}" == "true" ]]; then
     echo "[Launcher] strict preflight: Gradle/JDK обязательны для ServerBridge" >&2
     exit 1
   fi

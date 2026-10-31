@@ -25,7 +25,7 @@ On Linux with **Go 1.27.3 or newer** and Java 17/21, test the actual JVM Supervi
 
 ```sh
 cd services/api
-NEVERLAUNCHER_TEST_JAVA_HOST_JAR="$PWD/../../examples/extensions/java-host/build/package/backend/java-host.jar" \
+LAUNCHER_TEST_JAVA_HOST_JAR="$PWD/../../examples/extensions/java-host/build/package/backend/java-host.jar" \
     go test -race -count=1 -timeout 3m -run 'TestJava.*(0304|0422)' ./internal/extensionhost
 go test -race -count=1 -run '^TestJavaLateHelloCannotUndoOperatorStop0422$' ./internal/extensionhost
 ```

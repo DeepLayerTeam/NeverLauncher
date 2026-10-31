@@ -75,9 +75,9 @@ func javaHostFixture0304(t *testing.T) (*Supervisor, model.ExtensionInstall, Key
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux process-group supervisor test")
 	}
-	source := os.Getenv("NEVERLAUNCHER_TEST_JAVA_HOST_JAR")
+	source := os.Getenv("LAUNCHER_TEST_JAVA_HOST_JAR")
 	if source == "" {
-		t.Skip("set NEVERLAUNCHER_TEST_JAVA_HOST_JAR to the built Java host example")
+		t.Skip("set LAUNCHER_TEST_JAVA_HOST_JAR to the built Java host example")
 	}
 	if _, err := exec.LookPath("java"); err != nil {
 		t.Skip("Java 17+ runtime not installed")

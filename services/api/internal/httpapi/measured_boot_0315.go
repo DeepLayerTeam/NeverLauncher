@@ -14,7 +14,7 @@ import (
 const measuredBootTTL0315 = 2 * time.Minute
 
 func measuredBootPolicy0315(now time.Time) (attestverify.PCRPolicyFile0315, string, error) {
-	return attestverify.LoadPCRPolicy0315(os.Getenv("NEVERLAUNCHER_TPM_PCR_POLICY_FILE"), now)
+	return attestverify.LoadPCRPolicy0315(os.Getenv("LAUNCHER_TPM_PCR_POLICY_FILE"), now)
 }
 func (s Server) measuredBootPrerequisites0315(r *http.Request, deviceID string) (authClaims, authSessionRecord, model.TrustedDevice, model.DeviceHardwareEvidence, bool) {
 	claims, err := s.verifyAdminTokenFromRequest(r)

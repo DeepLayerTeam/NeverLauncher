@@ -26,7 +26,7 @@ const testUUID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
 func sampleReport(t *testing.T, source string) Report {
 	t.Helper()
-	r := Report{Format: "launcher.gravit-migration-report.v1", RunID: "abcdef0123456789", ProjectID: "project-1", SourceSHA256: source, InventorySHA256: testHash, RunRevision: 2, Items: []Item{}, Identities: []Identity{{Provider: "fileauth", SourceID: "1", Username: "player", UUID: testUUID, TargetUserID: "never-player", Status: "imported"}}, Evidence: []Evidence{}, Decisions: []Decision{}, Counts: map[string]int{"transferred": 0, "transformed": 0, "manual": 0, "blocked": 0}, Blockers: []string{}, Status: "review_required"}
+	r := Report{Format: "launcher.gravit-migration-report.v1", RunID: "abcdef0123456789", ProjectID: "project-1", SourceSHA256: source, InventorySHA256: testHash, RunRevision: 2, Items: []Item{}, Identities: []Identity{{Provider: "fileauth", SourceID: "1", Username: "player", UUID: testUUID, TargetUserID: "player", Status: "imported"}}, Evidence: []Evidence{}, Decisions: []Decision{}, Counts: map[string]int{"transferred": 0, "transformed": 0, "manual": 0, "blocked": 0}, Blockers: []string{}, Status: "review_required"}
 	for _, stage := range []string{"compatibility", "inventory", "identity", "authentication", "security", "content", "modules", "rehearsal", "cutover", "rollback"} {
 		r.Evidence = append(r.Evidence, Evidence{Stage: stage, State: "verified", SHA256: testHash})
 	}
@@ -76,7 +76,7 @@ func TestGAProbeHelper(t *testing.T) {
 	if os.Getenv("NEVER_GA_PROBE_HELPER") != "1" {
 		return
 	}
-	if os.Getenv("NEVERLAUNCHER_MIGRATION_GA_TOKEN") != "" || os.Getenv("MIGRATION_GA_SIGNING_KEY_B64") != "" {
+	if os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN") != "" || os.Getenv("MIGRATION_GA_SIGNING_KEY_B64") != "" {
 		os.Exit(9)
 	}
 	epath := os.Getenv("NEVER_GA_PROBE_EVIDENCE")
@@ -176,7 +176,7 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 	for _, name := range required {
 		p.Checks = append(p.Checks, Check{Name: name, Command: []string{os.Args[0], "-test.run=TestGAProbeHelper"}, TimeoutSeconds: 10})
 	}
-	t.Setenv("NEVERLAUNCHER_MIGRATION_GA_TOKEN", "high-privilege-secret")
+	t.Setenv("LAUNCHER_MIGRATION_GA_TOKEN", "high-privilege-secret")
 	t.Setenv("MIGRATION_GA_SIGNING_KEY_B64", "high-privilege-key")
 	for _, env := range []string{"NEVER_GA_PROBE_HELPER=1", "NEVER_GA_RUN=" + r.RunID, "NEVER_GA_REPORT=" + r.ReportSHA256, "NEVER_GA_SOURCE=" + r.SourceSHA256, "NEVER_GA_EVIDENCE_HASH=" + evidenceHash, "NEVER_GA_PROBE_EVIDENCE=" + evidenceFile} {
 		kv := strings.SplitN(env, "=", 2)

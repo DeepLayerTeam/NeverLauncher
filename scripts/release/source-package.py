@@ -35,6 +35,10 @@ TOP_DIRS = {
     "device-trust",
     "guard-ci",
     "serverbridge",
+    "sdk",
+    "examples",
+    "tools",
+    "docs",
 }
 EXCLUDED_PARTS = {
     ".git",

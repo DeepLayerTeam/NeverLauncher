@@ -34,7 +34,7 @@ var (
 	ErrCommitUnknown = errors.New("sqlite durable commit returned an error; outcome must be reconciled before replay")
 )
 
-// Options requires a plain absolute or relative on-disk pathname, never a URI,
+// Options requires a plain absolute or relative on-disk pathname, a URI,
 // in-memory DB, special file, or shared writable network/overlay volume.
 type Options struct {
 	Path        string
@@ -293,7 +293,7 @@ func (s *Store) verifyReaders(ctx context.Context, timeout string) error {
 }
 
 // Executor exposes connection-bound statements while the immediate transaction
-// is active. Callers must never run raw BEGIN/COMMIT/ROLLBACK/PRAGMA here.
+// is active. Callers must run raw BEGIN/COMMIT/ROLLBACK/PRAGMA here.
 type Executor interface {
 	ExecContext(context.Context, string, ...any) (sql.Result, error)
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
@@ -363,7 +363,7 @@ func (s *Store) Read(ctx context.Context, fn func(Executor) error) error {
 }
 
 // Checkpoint makes progress only when readers permit it; it cannot be treated
-// as backup and intentionally never truncates an active WAL.
+// as backup and intentionally truncates an active WAL.
 func (s *Store) Checkpoint(ctx context.Context) (status WALStatus, err error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

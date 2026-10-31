@@ -189,7 +189,7 @@ func (s Server) persistencePayload950(kind string) map[string]any {
 			"normalized PostgreSQL auth core is source of truth for sessions and MFA in 0.11.1",
 			"JSON persistence snapshots remain for non-auth legacy state and 0.10.x migration bootstrap",
 			"startup migration from latest PostgreSQL persistence snapshot into normalized auth tables",
-			"production guard: memory repository is rejected when NEVERLAUNCHER_ENV=production",
+			"production guard: memory repository is rejected when LAUNCHER_ENV=production",
 			"persistence status/readiness/security/server-bridge/smoke endpoints",
 			"backup/restore manifests include 0.10.0 persistent state tables",
 		},

@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+from pathlib import Path
+import re
+
+ROOT = Path(__file__).resolve().parents[3]
+
+
+def read(path: str) -> str:
+    return (ROOT / path).read_text(encoding="utf-8")
+
+
+def require(text: str, needles: list[str], label: str) -> None:
+    missing = [needle for needle in needles if needle not in text]
+    if missing:
+        raise SystemExit(f"{label} missing: {', '.join(missing)}")
+
+
+def version_tuple(value: str) -> tuple[int, int, int]:
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)", value)
+    if not match:
+        raise SystemExit(f"invalid VERSION: {value}")
+    return tuple(int(part) for part in match.groups())
+
+
+version = read("VERSION").strip()
+if version_tuple(version) < (0, 13, 4):
+    raise SystemExit(f"Guard Guard Attestation gate requires >=0.13.4, got {version}")
+
+attestation = read("runtime/runtime/src/attestation.rs")
+require(
+    attestation,
+    [
+        "guard/windows-guard-attestation/v1",
+        "Launcher Guard Attestation Core v1",
+        "challenge_sha256",
+        "recompute_attestation_sha256",
+        "process_policy",
+        "evidence_sha256",
+        "session_proof",
+    ],
+    "Guard challenge-bound attestation",
+)
+
+guard = read("runtime/runtime/src/guard_ipc.rs")
+require(
+    guard,
+    [
+        "GUARD_PROTOCOL_VERSION: u32 = 4",
+        "send_command_with_payload",
+        '"guard-attestation"',
+        "GuardAttestationRequest",
+        "GuardRemoteAttestation",
+        "attestation_session_proof",
+        "validate_remote_attestation",
+    ],
+    "Guard authenticated attestation IPC",
+)
+
+desktop = read("apps/desktop/src-tauri/src/main.rs")
+require(
+    desktop,
+    [
+        "guard_guard_attestation",
+        ".remote_attestation(",
+        "sign_guard_attestation",
+        "hardware_bound",
+    ],
+    "Desktop Guard Attestation command",
+)
+
+device_keys = read("apps/desktop/src-tauri/src/device_keys.rs")
+require(
+    device_keys,
+    [
+        "Launcher Guard Attestation Device Binding v1",
+        "purpose=guard-attest",
+        "sign_guard_attestation",
+        "attestation-sha256=",
+        "evidence-sha256=",
+    ],
+    "Hardware device-key Guard binding",
+)
+
+frontend = read("apps/desktop/src/main.tsx")
+require(
+    frontend,
+    [
+        "createGuardLaunchTicket",
+        "/guard-attest/begin",
+        "guard_guard_attestation",
+        "/guard-attest/complete",
+        "guardAttestationTicket",
+    ],
+    "Desktop end-to-end Guard verification flow",
+)
+
+guard_purpose_migration_api = read(
+    "services/api/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql"
+)
+guard_purpose_migration_cli = read(
+    "cli/internal/dbmigrate/sql/0031_guard_attestation_challenge_purposes_0161.sql"
+)
+if guard_purpose_migration_api != guard_purpose_migration_cli:
+    raise SystemExit("0.16.1 API/CLI Guard challenge-purpose migration differs")
+require(
+    guard_purpose_migration_api,
+    [
+        "device_challenges_purpose_check",
+        "guard-attest-v1",
+        "guard-launch-v1",
+        "key-rotate",
+        "key-recover",
+    ],
+    "PostgreSQL Guard challenge-purpose schema",
+)
+
+guard_migration_e2e = read("e2e/scripts/run-device-trust-migration-e2e.sh")
+require(
+    guard_migration_e2e,
+    [
+        "0031_guard_attestation_challenge_purposes_0161",
+        "dtmig-guard-attest",
+        "guard-attest-v1",
+        "dtmig-guard-launch",
+        "guard-launch-v1",
+        "guardPurposeMigrationSealed:true",
+    ],
+    "PostgreSQL Guard challenge-purpose migration E2E",
+)
+
+backend = read("services/api/internal/httpapi/guard_attestation_0134.go")
+require(
+    backend,
+    [
+        "guardAttestationChallengeTTL0134",
+        "canonicalGuardAttestationTime0134",
+        "Truncate(time.Microsecond)",
+        "guardLaunchTicketTTL0134",
+        "SaveDeviceChallenge",
+        "ConsumeDeviceChallenge",
+        "validateGuardAttestation0134",
+        "verifyDeviceSignature0123",
+        "Guard/Desktop release hash is not allowlisted",
+        "guard-launch-v1",
+        "consumeGuardLaunchTicket0134",
+        "isWindowsDevicePlatform0134",
+    ],
+    "Backend Guard verification and anti-replay",
+)
+
+minecraft = read("services/api/internal/httpapi/minecraft_auth_119.go")
+require(
+    minecraft,
+    [
+        "GuardAttestationTicket",
+        "guardAttestationRequiredForSession0134",
+        "consumeGuardLaunchTicket0134",
+    ],
+    "Minecraft session Guard-ticket enforcement",
+)
+
+config = read("services/api/internal/config/config.go")
+require(
+    config,
+    [
+        "GuardReleaseAllowlistJSON",
+        "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON",
+        "обязателен в production",
+    ],
+    "Production release allowlist configuration",
+)
+
+backend_test = read("services/api/internal/httpapi/guard_attestation_0134_test.go")
+require(
+    backend_test,
+    [
+        "TestGuardAttestationBackendVerificationAndOneTimeLaunchTicket0134",
+        "guardAttestationTicket",
+        "http.StatusCreated",
+        "http.StatusPreconditionFailed",
+        "TestGuardAttestationRejectsReleaseHashOutsideAllowlist0134",
+    ],
+    "Backend Guard Attestation E2E tests",
+)
+
+integration = read("runtime/runtime/tests/guard_windows.rs")
+require(
+    integration,
+    [
+        ".remote_attestation(",
+        "GUARD_REMOTE_ATTESTATION_SCHEMA",
+        "attestation.attestation_sha256.len()",
+    ],
+    "Windows Guard remote-attestation integration test",
+)
+
+release = read("scripts/release/build-windows-desktop.ps1")
+require(
+    release,
+    [
+        "GuardProtocolVersion = 4",
+        "windows-named-pipe+current-user-system-acl+hmac-sha256-v4",
+        "GUARD_RELEASE_ALLOWLIST.json",
+        "guardSha256",
+        "launcherSha256",
+    ],
+    "Windows release allowlist generation",
+)
+
+ci = read(".github/workflows/ci.yml")
+preflight = read("scripts/release/preflight.sh")
+if "guard-guard-attestation-0134.py" not in ci:
+    raise SystemExit("Guard 0.13.4 Guard Attestation gate is not wired into CI")
+if "guard-guard-attestation-0134.py" not in preflight:
+    raise SystemExit(
+        "Guard 0.13.4 Guard Attestation gate is not wired into release preflight"
+    )
+require(
+    ci,
+    [
+        "cargo test --manifest-path runtime/runtime/Cargo.toml --lib attestation::tests",
+        "cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_windows",
+    ],
+    "Windows Guard Attestation native CI",
+)
+
+# Документация безопасности Markdown необязательна; выполнение правил проверено выше.
+print(
+    f"[Launcher] Guard Guard Attestation + Backend verification 0.13.4 gate OK: {version}"
+)

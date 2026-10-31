@@ -470,7 +470,7 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string) (S
 	// No backend credentials or signing keys are exposed to test subprocesses.
 	env := []string{}
 	for _, s := range os.Environ() {
-		if strings.HasPrefix(s, "NEVERLAUNCHER_MIGRATION_GA_") || strings.HasPrefix(s, "NEVERLAUNCHER_ADMIN_TOKEN=") || strings.HasPrefix(s, "MIGRATION_GA_") {
+		if strings.HasPrefix(s, "LAUNCHER_MIGRATION_GA_") || strings.HasPrefix(s, "LAUNCHER_ADMIN_TOKEN=") || strings.HasPrefix(s, "MIGRATION_GA_") {
 			continue
 		}
 		env = append(env, s)
@@ -644,7 +644,7 @@ func certify(ctx context.Context, p Plan, token string, output string) error {
 		return err
 	}
 	if strings.TrimSpace(token) == "" {
-		return errors.New("missing NEVERLAUNCHER_MIGRATION_GA_TOKEN")
+		return errors.New("missing LAUNCHER_MIGRATION_GA_TOKEN")
 	}
 	source, e := shaFile(p.SourceArchive, 512<<20)
 	if e != nil {
@@ -777,7 +777,7 @@ func runMain(args []string) error {
 		if e = decodeStrict(data, &plan); e != nil {
 			return e
 		}
-		return certify(context.Background(), plan, os.Getenv("NEVERLAUNCHER_MIGRATION_GA_TOKEN"), *out)
+		return certify(context.Background(), plan, os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *out)
 	case "verify":
 		file := fs.String("certificate", "", "signed evidence bundle")
 		pub := fs.String("public-key", "", "trusted Ed25519 PUBLIC KEY PEM")

@@ -232,7 +232,7 @@ require(
         'wait_bridge_heartbeat "$service"',
         'capture_health_evidence "$service"',
         "velocity|bungeecord|waterfall)",
-        "NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5",
+        "LAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5",
         'wait_log "$service" "launcher.join.denied username=$PLAYER_USERNAME"',
         "launcher-bungeecord-bridge.jar",
         "launcher-waterfall-bridge.jar",
@@ -259,7 +259,7 @@ if '- "25570:25565"' in compose_e2e:
 
 allow_marker = 'wait_log "$service" "launcher.join.allowed username=$PLAYER_USERNAME"'
 deny_marker = 'wait_log "$service" "launcher.join.denied username=$PLAYER_USERNAME"'
-cooldown_marker = "NEVERLAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5"
+cooldown_marker = "LAUNCHER_E2E_PROXY_RECONNECT_COOLDOWN_SECONDS:-5"
 if not (
     runtime_e2e.index(allow_marker)
     < runtime_e2e.index(cooldown_marker)

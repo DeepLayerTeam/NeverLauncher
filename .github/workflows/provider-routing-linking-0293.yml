@@ -41,7 +41,7 @@ jobs:
           --health-timeout 3s
           --health-retries 15
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://routing_ci:routing_ci_only@127.0.0.1:5432/launcher_routing?sslmode=disable
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://routing_ci:routing_ci_only@127.0.0.1:5432/launcher_routing?sslmode=disable
     defaults:
       run:
         working-directory: services/api

@@ -4,7 +4,7 @@
 
 0.35.0 remains **blocked for GA** until this runbook has been executed on a disposable production-equivalent environment with a genuine staged Minecraft client and the applicable dedicated server. An observational CI run, an HTTP 200, a fake client log, or the bundled test fixture never certifies Minecraft.
 
-Provision: PostgreSQL 17 with migrations through `0107`; deployed API configured with `NEVERLAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON`, trusted attestor Ed25519 public key and exact OCI digest; a separate isolated Podman attestation host with protected signer; immutable staged content; Java runtimes and dedicated Windows/Linux/macOS GUI workers for all **claimed** OS/arch targets; real Minecraft accounts authorized for test use; applicable ServerBridge/plugins and servers; a previous signed release, managed JRE and replacement Java; encrypted backups and rollback runbook. Store credentials and signing keys only in protected environments, not GitHub-hosted test workers.
+Provision: PostgreSQL 17 with migrations through `0107`; deployed API configured with `LAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON`, trusted attestor Ed25519 public key and exact OCI digest; a separate isolated Podman attestation host with protected signer; immutable staged content; Java runtimes and dedicated Windows/Linux/macOS GUI workers for all **claimed** OS/arch targets; real Minecraft accounts authorized for test use; applicable ServerBridge/plugins and servers; a previous signed release, managed JRE and replacement Java; encrypted backups and rollback runbook. Store credentials and signing keys only in protected environments, not GitHub-hosted test workers.
 
 ## Execution steps
 

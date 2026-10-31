@@ -49,7 +49,7 @@ require(
         "acquireServerBridgeHostLock01910",
         "resolveServerBridgeHostJava01910",
         "javaMajorVersion",
-        "NEVERLAUNCHER_SERVERBRIDGE_JAVA",
+        "LAUNCHER_SERVERBRIDGE_JAVA",
         "JAVA_HOME",
         "exec.LookPath",
         "java-jar",

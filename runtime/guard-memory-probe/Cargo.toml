@@ -1,0 +1,19 @@
+[package]
+name = "guard-memory-probe"
+version = "0.43.0"
+description = "Windows-only Guard Memory Integrity adversarial integration fixture"
+authors = ["Дмитрий \"SkiF4er\" Ефимов"]
+license = "Apache-2.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "guard_memory_probe"
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[profile.release]
+panic = "abort"
+strip = "symbols"
+lto = "thin"
+codegen-units = 1

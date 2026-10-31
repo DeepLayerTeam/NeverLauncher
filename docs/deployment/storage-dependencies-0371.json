@@ -679,17 +679,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 7,
-          "evidence": "NEVERLAUNCHER_DATABASE_DSN=postgres://launcher:launcher@localhost:5432/launcher?sslmode=disable"
+          "evidence": "LAUNCHER_DATABASE_DSN=postgres://launcher:launcher@localhost:5432/launcher?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 8,
-          "evidence": "NEVERLAUNCHER_REPOSITORY_DRIVER=postgres"
+          "evidence": "LAUNCHER_REPOSITORY_DRIVER=postgres"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 9,
-          "evidence": "NEVERLAUNCHER_SQL_DRIVER=pgx"
+          "evidence": "LAUNCHER_SQL_DRIVER=pgx"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -699,7 +699,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 65,
-          "evidence": "# NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON=[{\"id\":\"website\",\"driver\":\"postgresql\",\"dsnEnv\":\"WEBSITE_AUTH_DATABASE_DSN\",\"table\":\"users\",\"columns\":{\"id\":\"id\",\"username\":\"username\",\"emai"
+          "evidence": "# LAUNCHER_AUTH_SQL_PROVIDERS_JSON=[{\"id\":\"website\",\"driver\":\"postgresql\",\"dsnEnv\":\"WEBSITE_AUTH_DATABASE_DSN\",\"table\":\"users\",\"columns\":{\"id\":\"id\",\"username\":\"username\",\"emai"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -709,17 +709,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 114,
-          "evidence": "# NEVERLAUNCHER_REPOSITORY_DRIVER=postgres"
+          "evidence": "# LAUNCHER_REPOSITORY_DRIVER=postgres"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 115,
-          "evidence": "# NEVERLAUNCHER_SQL_DRIVER=pgx"
+          "evidence": "# LAUNCHER_SQL_DRIVER=pgx"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 116,
-          "evidence": "# NEVERLAUNCHER_DATABASE_DSN=postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable"
+          "evidence": "# LAUNCHER_DATABASE_DSN=postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable"
         }
       ]
     },
@@ -754,12 +754,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 30,
-          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable"
+          "evidence": "LAUNCHER_DATABASE_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 52,
-          "evidence": "psql \"$NEVERLAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 \u003c\u003c'SQL'"
+          "evidence": "psql \"$LAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 \u003c\u003c'SQL'"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -789,17 +789,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 71,
-          "evidence": "if psql \"$NEVERLAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 -c \"UPDATE auth_identities SET issuer='https://malicious.invalid' WHERE id='migration-id-a'\"; then exit 1; fi"
+          "evidence": "if psql \"$LAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 -c \"UPDATE auth_identities SET issuer='https://malicious.invalid' WHERE id='migration-id-a'\"; then exit 1; fi"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 72,
-          "evidence": "if psql \"$NEVERLAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 -c \"UPDATE minecraft_profiles SET uuid='7e58de9e-6dde-40ea-bfe6-16c85ae32973' WHERE user_id='migration-a'\"; then exit 1; fi"
+          "evidence": "if psql \"$LAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 -c \"UPDATE minecraft_profiles SET uuid='7e58de9e-6dde-40ea-bfe6-16c85ae32973' WHERE user_id='migration-a'\"; then exit 1; fi"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 74,
-          "evidence": "psql \"$NEVERLAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 -c \"UPDATE users SET display_name='Changed' WHERE id='migration-a'\""
+          "evidence": "psql \"$LAUNCHER_DATABASE_DSN\" -v ON_ERROR_STOP=1 -c \"UPDATE users SET display_name='Changed' WHERE id='migration-a'\""
         }
       ]
     },
@@ -819,17 +819,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 56,
-          "evidence": "NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://auth:integration-only@127.0.0.1:5432/auth?sslmode=disable"
+          "evidence": "LAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://auth:integration-only@127.0.0.1:5432/auth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 57,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://auth:integration-only@127.0.0.1:5432/auth?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://auth:integration-only@127.0.0.1:5432/auth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 58,
-          "evidence": "NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@127.0.0.1:5432/auth?sslmode=disable"
+          "evidence": "LAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@127.0.0.1:5432/auth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -884,7 +884,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 45,
-          "evidence": "NEVERLAUNCHER_DATABASE_URL: postgres://never:integration-only@localhost:5432/never?sslmode=disable"
+          "evidence": "LAUNCHER_DATABASE_URL: postgres://never:integration-only@localhost:5432/never?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -899,7 +899,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 53,
-          "evidence": "NEVERLAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable"
+          "evidence": "LAUNCHER_PROVIDER_WIZARD_POSTGRES_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable"
         }
       ]
     },
@@ -954,7 +954,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 958,
-          "evidence": "NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64"
+          "evidence": "LAUNCHER_DEVICE_TRUST_TARGET_ID: postgres-protocol-linux-x64"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -974,7 +974,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 1283,
-          "evidence": "NEVERLAUNCHER_PARITY_POSTGRES_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable"
+          "evidence": "LAUNCHER_PARITY_POSTGRES_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -989,7 +989,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 1340,
-          "evidence": "NEVERLAUNCHER_PG_TEST_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable"
+          "evidence": "LAUNCHER_PG_TEST_DSN: postgres://launcher_parity:parity-ephemeral-only@127.0.0.1:5432/launcher_storage_parity?sslmode=disable"
         }
       ]
     },
@@ -1044,7 +1044,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 41,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable"
         }
       ]
     },
@@ -1069,7 +1069,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1089,7 +1089,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:disposable_test_only@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:disposable_test_only@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1114,7 +1114,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1134,7 +1134,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 34,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1159,7 +1159,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:disposable_only_0334@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:disposable_only_0334@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1184,7 +1184,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 40,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1214,7 +1214,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1239,7 +1239,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 34,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1259,7 +1259,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1279,7 +1279,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 33,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1309,7 +1309,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1334,7 +1334,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 38,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:disposable_only_0333@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:disposable_only_0333@127.0.0.1:5432/launcher_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1359,7 +1359,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1384,7 +1384,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 44,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:integration-only@localhost:5432/launcher_auth0295?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:integration-only@localhost:5432/launcher_auth0295?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1414,7 +1414,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable"
         }
       ]
     },
@@ -1479,17 +1479,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 59,
-          "evidence": "NEVERLAUNCHER_PG_TEST_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable"
+          "evidence": "LAUNCHER_PG_TEST_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 60,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 61,
-          "evidence": "NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable"
+          "evidence": "LAUNCHER_GROWTH_TEST_PG_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable"
         }
       ]
     },
@@ -1519,7 +1519,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 168,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:launcher_test_ci_only@127.0.0.1:5432/launcher_profile_ga?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:launcher_test_ci_only@127.0.0.1:5432/launcher_profile_ga?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1559,7 +1559,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable"
         }
       ]
     },
@@ -1579,7 +1579,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 44,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://routing_ci:routing_ci_only@127.0.0.1:5432/launcher_routing?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://routing_ci:routing_ci_only@127.0.0.1:5432/launcher_routing?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1614,7 +1614,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 82,
-          "evidence": "NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable"
+          "evidence": "LAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable"
         }
       ]
     },
@@ -1639,7 +1639,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 173,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:launcher_rc_ci_only@127.0.0.1:5432/launcher_rc?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:launcher_rc_ci_only@127.0.0.1:5432/launcher_rc?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1669,7 +1669,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://never_ga_test:never_ga_test_ci_only@127.0.0.1:5432/never_ga_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://never_ga_test:never_ga_test_ci_only@127.0.0.1:5432/never_ga_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1709,12 +1709,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 54,
-          "evidence": "NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable"
+          "evidence": "LAUNCHER_SECURITY_E2E_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 55,
-          "evidence": "NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable"
+          "evidence": "LAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1749,7 +1749,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 67,
-          "evidence": "NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable"
+          "evidence": "LAUNCHER_SQL_TEST_POSTGRES_DSN: postgres://auth:integration-only@localhost:5432/auth?sslmode=disable"
         }
       ]
     },
@@ -1779,12 +1779,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "NEVERLAUNCHER_PG_TEST_DSN: postgres://launcher_test:test-only-secret@127.0.0.1:5432/launcher_migration_test?sslmode=disable"
+          "evidence": "LAUNCHER_PG_TEST_DSN: postgres://launcher_test:test-only-secret@127.0.0.1:5432/launcher_migration_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 37,
-          "evidence": "NEVERLAUNCHER_POSTGRES_DSN: postgres://launcher_test:test-only-secret@127.0.0.1:5432/launcher_migration_test?sslmode=disable"
+          "evidence": "LAUNCHER_POSTGRES_DSN: postgres://launcher_test:test-only-secret@127.0.0.1:5432/launcher_migration_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1824,7 +1824,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 39,
-          "evidence": "NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://never_test:never_test@localhost:5432/never_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://never_test:never_test@localhost:5432/never_test?sslmode=disable"
         }
       ]
     },
@@ -1844,7 +1844,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 40,
-          "evidence": "NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://launcher_growth:growth-ci-only@127.0.0.1:5432/launcher_growth?sslmode=disable"
+          "evidence": "LAUNCHER_GROWTH_TEST_PG_DSN: postgres://launcher_growth:growth-ci-only@127.0.0.1:5432/launcher_growth?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1964,7 +1964,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 460,
-          "evidence": "dsn := flagValue(args, \"--dsn\", os.Getenv(\"NEVERLAUNCHER_DATABASE_DSN\"))"
+          "evidence": "dsn := flagValue(args, \"--dsn\", os.Getenv(\"LAUNCHER_DATABASE_DSN\"))"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1974,7 +1974,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 475,
-          "evidence": "dsn := flagValue(args, \"--dsn\", os.Getenv(\"NEVERLAUNCHER_DATABASE_DSN\"))"
+          "evidence": "dsn := flagValue(args, \"--dsn\", os.Getenv(\"LAUNCHER_DATABASE_DSN\"))"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -2004,7 +2004,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 29,
-          "evidence": "dsn := flags.String(\"dsn\", os.Getenv(\"NEVERLAUNCHER_DATABASE_DSN\"), \"PostgreSQL DSN (use NEVERLAUNCHER_DATABASE_DSN)\")"
+          "evidence": "dsn := flags.String(\"dsn\", os.Getenv(\"LAUNCHER_DATABASE_DSN\"), \"PostgreSQL DSN (use LAUNCHER_DATABASE_DSN)\")"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -2059,7 +2059,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 115,
-          "evidence": "t.Setenv(\"NEVERLAUNCHER_DATABASE_DSN\", \"postgres://secret\")"
+          "evidence": "t.Setenv(\"LAUNCHER_DATABASE_DSN\", \"postgres://secret\")"
         }
       ]
     },
@@ -2109,12 +2109,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 610,
-          "evidence": "{\"id\": \"database\", \"title\": \"PostgreSQL\", \"checks\": []string{\"NEVERLAUNCHER_DATABASE_DSN\", \"NEVERLAUNCHER_SQL_DRIVER=pgx\", \"migrations\"}},"
+          "evidence": "{\"id\": \"database\", \"title\": \"PostgreSQL\", \"checks\": []string{\"LAUNCHER_DATABASE_DSN\", \"LAUNCHER_SQL_DRIVER=pgx\", \"migrations\"}},"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 621,
-          "evidence": "return map[string]any{\"schemaVersion\": \"1.0.0\", \"toolVersion\": version, \"profile\": profile, \"required\": []string{\"NEVERLAUNCHER_HTTP_ADDR\", \"NEVERLAUNCHER_PUBLIC_URL\", \"NEVERLAUNCH"
+          "evidence": "return map[string]any{\"schemaVersion\": \"1.0.0\", \"toolVersion\": version, \"profile\": profile, \"required\": []string{\"LAUNCHER_HTTP_ADDR\", \"LAUNCHER_PUBLIC_URL\", \"NEVERLAUNCH"
         }
       ]
     },
@@ -2189,17 +2189,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 68,
-          "evidence": "NEVERLAUNCHER_REPOSITORY_DRIVER: postgres"
+          "evidence": "LAUNCHER_REPOSITORY_DRIVER: postgres"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 69,
-          "evidence": "NEVERLAUNCHER_SQL_DRIVER: pgx"
+          "evidence": "LAUNCHER_SQL_DRIVER: pgx"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 76,
-          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://${POSTGRES_USER:-launcher}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-launcher}?sslmode=disable"
+          "evidence": "LAUNCHER_DATABASE_DSN: postgres://${POSTGRES_USER:-launcher}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-launcher}?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -2214,12 +2214,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 13,
-          "evidence": "NEVERLAUNCHER_REPOSITORY_DRIVER=postgres"
+          "evidence": "LAUNCHER_REPOSITORY_DRIVER=postgres"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 14,
-          "evidence": "NEVERLAUNCHER_SQL_DRIVER=pgx"
+          "evidence": "LAUNCHER_SQL_DRIVER=pgx"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -2254,7 +2254,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 109,
-          "evidence": "return Checkpoint{}, errors.New(\"NEVERLAUNCHER_DATABASE_DSN is required\")"
+          "evidence": "return Checkpoint{}, errors.New(\"LAUNCHER_DATABASE_DSN is required\")"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -2314,7 +2314,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 121,
-          "evidence": "return \"\", fmt.Errorf(\"PostgreSQL DSN обязателен: --dsn или NEVERLAUNCHER_DATABASE_DSN\")"
+          "evidence": "return \"\", fmt.Errorf(\"PostgreSQL DSN обязателен: --dsn или LAUNCHER_DATABASE_DSN\")"
         }
       ]
     },
@@ -7124,17 +7124,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 69,
-          "evidence": "NEVERLAUNCHER_REPOSITORY_DRIVER: postgres"
+          "evidence": "LAUNCHER_REPOSITORY_DRIVER: postgres"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 70,
-          "evidence": "NEVERLAUNCHER_SQL_DRIVER: pgx"
+          "evidence": "LAUNCHER_SQL_DRIVER: pgx"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 77,
-          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://${POSTGRES_USER:-launcher}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-launcher}?sslmode=disable"
+          "evidence": "LAUNCHER_DATABASE_DSN: postgres://${POSTGRES_USER:-launcher}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-launcher}?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7159,12 +7159,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 17,
-          "evidence": "NEVERLAUNCHER_REPOSITORY_DRIVER=postgres"
+          "evidence": "LAUNCHER_REPOSITORY_DRIVER=postgres"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 18,
-          "evidence": "NEVERLAUNCHER_SQL_DRIVER=pgx"
+          "evidence": "LAUNCHER_SQL_DRIVER=pgx"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7184,12 +7184,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 4,
-          "evidence": "NEVERLAUNCHER_REPOSITORY_DRIVER=postgres"
+          "evidence": "LAUNCHER_REPOSITORY_DRIVER=postgres"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 5,
-          "evidence": "NEVERLAUNCHER_SQL_DRIVER=pgx"
+          "evidence": "LAUNCHER_SQL_DRIVER=pgx"
         }
       ]
     },
@@ -7199,17 +7199,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 3,
-          "evidence": "NEVERLAUNCHER_REPOSITORY_DRIVER: postgres"
+          "evidence": "LAUNCHER_REPOSITORY_DRIVER: postgres"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 4,
-          "evidence": "NEVERLAUNCHER_SQL_DRIVER: pgx"
+          "evidence": "LAUNCHER_SQL_DRIVER: pgx"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 5,
-          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable"
+          "evidence": "LAUNCHER_DATABASE_DSN: postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7259,17 +7259,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 53,
-          "evidence": "NEVERLAUNCHER_REPOSITORY_DRIVER: postgres"
+          "evidence": "LAUNCHER_REPOSITORY_DRIVER: postgres"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 54,
-          "evidence": "NEVERLAUNCHER_SQL_DRIVER: pgx"
+          "evidence": "LAUNCHER_SQL_DRIVER: pgx"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 55,
-          "evidence": "NEVERLAUNCHER_DATABASE_DSN: postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable"
+          "evidence": "LAUNCHER_DATABASE_DSN: postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -7484,7 +7484,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 12,
-          "evidence": "TARGET_ID=\"${NEVERLAUNCHER_DEVICE_TRUST_TARGET_ID:-postgres-protocol-linux-x64}\""
+          "evidence": "TARGET_ID=\"${LAUNCHER_DEVICE_TRUST_TARGET_ID:-postgres-protocol-linux-x64}\""
         },
         {
           "category": "postgresql-sql-dialect",
@@ -8669,7 +8669,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 97,
-          "evidence": "{\"NEVERLAUNCHER_EXTENSION_ROOT\", filepath.Join(filepath.Dir(storageDir), \"extensions\")}, {\"NEVERLAUNCHER_REPOSITORY_DRIVER\", \"postgres\"}, {\"NEVERLAUNCHER_SQL_DRIVER\", \"pgx\"}, {\"NEV"
+          "evidence": "{\"LAUNCHER_EXTENSION_ROOT\", filepath.Join(filepath.Dir(storageDir), \"extensions\")}, {\"LAUNCHER_REPOSITORY_DRIVER\", \"postgres\"}, {\"LAUNCHER_SQL_DRIVER\", \"pgx\"}, {\"NEV"
         }
       ]
     },
@@ -8864,7 +8864,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 17,
-          "evidence": "export NEVERLAUNCHER_REPOSITORY_DRIVER=memory"
+          "evidence": "export LAUNCHER_REPOSITORY_DRIVER=memory"
         }
       ]
     },
@@ -9034,17 +9034,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 81,
-          "evidence": "'NEVERLAUNCHER_REPOSITORY_DRIVER': 'sqlite',"
+          "evidence": "'LAUNCHER_REPOSITORY_DRIVER': 'sqlite',"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 82,
-          "evidence": "'NEVERLAUNCHER_DATABASE_DSN': str(root/'db'/'http.sqlite'),"
+          "evidence": "'LAUNCHER_DATABASE_DSN': str(root/'db'/'http.sqlite'),"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 137,
-          "evidence": "if values.get('NEVERLAUNCHER_REPOSITORY_DRIVER') != 'sqlite' or values.get('NEVERLAUNCHER_DEPLOYMENT_MODE') != 'single-node':"
+          "evidence": "if values.get('LAUNCHER_REPOSITORY_DRIVER') != 'sqlite' or values.get('LAUNCHER_DEPLOYMENT_MODE') != 'single-node':"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -9059,17 +9059,17 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 30,
-          "evidence": "'NEVERLAUNCHER_DATABASE_DSN': 'db/http.sqlite',"
+          "evidence": "'LAUNCHER_DATABASE_DSN': 'db/http.sqlite',"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 110,
-          "evidence": "values.get('NEVERLAUNCHER_REPOSITORY_DRIVER') == 'sqlite' and"
+          "evidence": "values.get('LAUNCHER_REPOSITORY_DRIVER') == 'sqlite' and"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 380,
-          "evidence": "require(values.get('NEVERLAUNCHER_REPOSITORY_DRIVER') == 'sqlite' and"
+          "evidence": "require(values.get('LAUNCHER_REPOSITORY_DRIVER') == 'sqlite' and"
         }
       ]
     },
@@ -9089,12 +9089,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 140,
-          "evidence": "needed.append('NEVERLAUNCHER_DATABASE_DSN')"
+          "evidence": "needed.append('LAUNCHER_DATABASE_DSN')"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 173,
-          "evidence": "if not docker and values.get('NEVERLAUNCHER_REPOSITORY_DRIVER') != 'postgres':"
+          "evidence": "if not docker and values.get('LAUNCHER_REPOSITORY_DRIVER') != 'postgres':"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -9149,12 +9149,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 42,
-          "evidence": "NEVERLAUNCHER_REPOSITORY_DRIVER='sqlite',"
+          "evidence": "LAUNCHER_REPOSITORY_DRIVER='sqlite',"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 133,
-          "evidence": "self.assertEqual(backup.read_install(dest)['NEVERLAUNCHER_DATABASE_DSN'], str(dest/'db/http.sqlite'))"
+          "evidence": "self.assertEqual(backup.read_install(dest)['LAUNCHER_DATABASE_DSN'], str(dest/'db/http.sqlite'))"
         }
       ]
     },
@@ -9164,7 +9164,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 29,
-          "evidence": "self.assertEqual(env['NEVERLAUNCHER_REPOSITORY_DRIVER'], 'sqlite')"
+          "evidence": "self.assertEqual(env['LAUNCHER_REPOSITORY_DRIVER'], 'sqlite')"
         }
       ]
     },
@@ -9174,12 +9174,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 24,
-          "evidence": "'NEVERLAUNCHER_DATABASE_DSN', 'NEVERLAUNCHER_IMAGE_TAG')}"
+          "evidence": "'LAUNCHER_DATABASE_DSN', 'LAUNCHER_IMAGE_TAG')}"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 35,
-          "evidence": "NEVERLAUNCHER_REPOSITORY_DRIVER='postgres',"
+          "evidence": "LAUNCHER_REPOSITORY_DRIVER='postgres',"
         }
       ]
     },
@@ -9264,7 +9264,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 28,
-          "evidence": "'NEVERLAUNCHER_SQLITE_TEST_ROOT', 'NEVERLAUNCHER_PG_TEST_DSN',"
+          "evidence": "'LAUNCHER_SQLITE_TEST_ROOT', 'LAUNCHER_PG_TEST_DSN',"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -9464,7 +9464,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 110,
-          "evidence": "print(\"GA certification requires NEVERLAUNCHER_TEST_POSTGRES_DSN (real PostgreSQL)\", file=sys.stderr)"
+          "evidence": "print(\"GA certification requires LAUNCHER_TEST_POSTGRES_DSN (real PostgreSQL)\", file=sys.stderr)"
         }
       ]
     },
@@ -9529,7 +9529,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 11,
-          "evidence": "echo \"[Launcher] backend build: offline launcher_nopgx mode. Для pgx/full: NEVERLAUNCHER_PREFLIGHT_PGX=1\" \u003e\u00262"
+          "evidence": "echo \"[Launcher] backend build: offline launcher_nopgx mode. Для pgx/full: LAUNCHER_PREFLIGHT_PGX=1\" \u003e\u00262"
         }
       ]
     },
@@ -9539,7 +9539,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 8,
-          "evidence": "echo \"[Launcher] backend tests: offline launcher_nopgx mode. Для pgx/full: NEVERLAUNCHER_PREFLIGHT_PGX=1\" \u003e\u00262"
+          "evidence": "echo \"[Launcher] backend tests: offline launcher_nopgx mode. Для pgx/full: LAUNCHER_PREFLIGHT_PGX=1\" \u003e\u00262"
         }
       ]
     },
@@ -10149,12 +10149,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 50,
-          "evidence": "pgConfig = regexp.MustCompile(`(?i)(NEVERLAUNCHER_(?:POSTGRES|PG_|DATABASE_DSN|REPOSITORY_DRIVER|SQL_DRIVER)|postgres(?:ql)?://|\\b(?:postgres|postgresql|pgx|jsonb|bigserial|timesta"
+          "evidence": "pgConfig = regexp.MustCompile(`(?i)(LAUNCHER_(?:POSTGRES|PG_|DATABASE_DSN|REPOSITORY_DRIVER|SQL_DRIVER)|postgres(?:ql)?://|\\b(?:postgres|postgresql|pgx|jsonb|bigserial|timesta"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 50,
-          "evidence": "pgConfig = regexp.MustCompile(`(?i)(NEVERLAUNCHER_(?:POSTGRES|PG_|DATABASE_DSN|REPOSITORY_DRIVER|SQL_DRIVER)|postgres(?:ql)?://|\\b(?:postgres|postgresql|pgx|jsonb|bigserial|timesta"
+          "evidence": "pgConfig = regexp.MustCompile(`(?i)(LAUNCHER_(?:POSTGRES|PG_|DATABASE_DSN|REPOSITORY_DRIVER|SQL_DRIVER)|postgres(?:ql)?://|\\b(?:postgres|postgresql|pgx|jsonb|bigserial|timesta"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10239,7 +10239,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 17,
-          "evidence": "NEVERLAUNCHER_HTTP_ADDR=\"${API_ADDR}\" NEVERLAUNCHER_REPOSITORY_DRIVER=memory NEVERLAUNCHER_STORAGE_DRIVER=local \"${API_BIN}\" \u003e\"${LOG_FILE}\" 2\u003e\u00261 \u0026"
+          "evidence": "LAUNCHER_HTTP_ADDR=\"${API_ADDR}\" LAUNCHER_REPOSITORY_DRIVER=memory LAUNCHER_STORAGE_DRIVER=local \"${API_BIN}\" \u003e\"${LOG_FILE}\" 2\u003e\u00261 \u0026"
         }
       ]
     },
@@ -10254,7 +10254,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 31,
-          "evidence": "NEVERLAUNCHER_HTTP_ADDR=\"${API_ADDR}\" NEVERLAUNCHER_REPOSITORY_DRIVER=memory NEVERLAUNCHER_STORAGE_DRIVER=local \"${API_BIN}\" \u003e/tmp/launcher-api-smoke-${VERSION}.log 2\u003e\u00261 \u0026"
+          "evidence": "LAUNCHER_HTTP_ADDR=\"${API_ADDR}\" LAUNCHER_REPOSITORY_DRIVER=memory LAUNCHER_STORAGE_DRIVER=local \"${API_BIN}\" \u003e/tmp/launcher-api-smoke-${VERSION}.log 2\u003e\u00261 \u0026"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -10294,12 +10294,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 78,
-          "evidence": "destDSN := strings.TrimSpace(os.Getenv(\"NEVERLAUNCHER_DATABASE_DSN\"))"
+          "evidence": "destDSN := strings.TrimSpace(os.Getenv(\"LAUNCHER_DATABASE_DSN\"))"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 80,
-          "evidence": "return errors.New(\"NEVERLAUNCHER_DATABASE_DSN required\")"
+          "evidence": "return errors.New(\"LAUNCHER_DATABASE_DSN required\")"
         },
         {
           "category": "postgres-repository-construction",
@@ -10344,12 +10344,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 60,
-          "evidence": "dsn := strings.TrimSpace(os.Getenv(\"NEVERLAUNCHER_DATABASE_DSN\"))"
+          "evidence": "dsn := strings.TrimSpace(os.Getenv(\"LAUNCHER_DATABASE_DSN\"))"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 65,
-          "evidence": "return errors.New(\"NEVERLAUNCHER_DATABASE_DSN is required\")"
+          "evidence": "return errors.New(\"LAUNCHER_DATABASE_DSN is required\")"
         },
         {
           "category": "postgres-repository-construction",
@@ -10384,12 +10384,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 241,
-          "evidence": "lifecycle, err := httpapi.NewBackendLifecycle0289(os.Getenv(\"NEVERLAUNCHER_BACKEND_SUPERVISED_RESTART\") == \"true\" \u0026\u0026 (strings.EqualFold(cfg.RepositoryDriver, \"postgres\") || strings"
+          "evidence": "lifecycle, err := httpapi.NewBackendLifecycle0289(os.Getenv(\"LAUNCHER_BACKEND_SUPERVISED_RESTART\") == \"true\" \u0026\u0026 (strings.EqualFold(cfg.RepositoryDriver, \"postgres\") || strings"
         },
         {
           "category": "storage-configuration-read",
           "line": 241,
-          "evidence": "lifecycle, err := httpapi.NewBackendLifecycle0289(os.Getenv(\"NEVERLAUNCHER_BACKEND_SUPERVISED_RESTART\") == \"true\" \u0026\u0026 (strings.EqualFold(cfg.RepositoryDriver, \"postgres\") || strings"
+          "evidence": "lifecycle, err := httpapi.NewBackendLifecycle0289(os.Getenv(\"LAUNCHER_BACKEND_SUPERVISED_RESTART\") == \"true\" \u0026\u0026 (strings.EqualFold(cfg.RepositoryDriver, \"postgres\") || strings"
         },
         {
           "category": "storage-configuration-read",
@@ -10429,12 +10429,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 464,
-          "evidence": "log.Fatalf(\"неизвестный NEVERLAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён\", cfg.RepositoryDriver)"
+          "evidence": "log.Fatalf(\"неизвестный LAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён\", cfg.RepositoryDriver)"
         },
         {
           "category": "storage-configuration-read",
           "line": 464,
-          "evidence": "log.Fatalf(\"неизвестный NEVERLAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён\", cfg.RepositoryDriver)"
+          "evidence": "log.Fatalf(\"неизвестный LAUNCHER_REPOSITORY_DRIVER=%q: fail-closed, memory fallback запрещён\", cfg.RepositoryDriver)"
         },
         {
           "category": "storage-configuration-read",
@@ -10469,7 +10469,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 17,
-          "evidence": "env := flags.String(\"dsn-env\", \"NEVERLAUNCHER_POSTGRES_DSN\", \"PostgreSQL DSN environment variable\")"
+          "evidence": "env := flags.String(\"dsn-env\", \"LAUNCHER_POSTGRES_DSN\", \"PostgreSQL DSN environment variable\")"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10499,7 +10499,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 18,
-          "evidence": "env := flags.String(\"dsn-env\", \"NEVERLAUNCHER_POSTGRES_DSN\", \"environment variable with PostgreSQL DSN\")"
+          "evidence": "env := flags.String(\"dsn-env\", \"LAUNCHER_POSTGRES_DSN\", \"environment variable with PostgreSQL DSN\")"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10529,7 +10529,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 18,
-          "evidence": "dsnEnv := flags.String(\"dsn-env\", \"NEVERLAUNCHER_POSTGRES_DSN\", \"name of environment variable containing PostgreSQL DSN\")"
+          "evidence": "dsnEnv := flags.String(\"dsn-env\", \"LAUNCHER_POSTGRES_DSN\", \"name of environment variable containing PostgreSQL DSN\")"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -10549,12 +10549,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 44,
-          "evidence": "dsn := strings.TrimSpace(os.Getenv(\"NEVERLAUNCHER_DATABASE_DSN\"))"
+          "evidence": "dsn := strings.TrimSpace(os.Getenv(\"LAUNCHER_DATABASE_DSN\"))"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 46,
-          "evidence": "return errors.New(\"NEVERLAUNCHER_DATABASE_DSN required\")"
+          "evidence": "return errors.New(\"LAUNCHER_DATABASE_DSN required\")"
         },
         {
           "category": "postgres-repository-construction",
@@ -10659,22 +10659,22 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 203,
-          "evidence": "if redisURL == \"\" \u0026\u0026 !strings.EqualFold(strings.TrimSpace(env(\"NEVERLAUNCHER_REPOSITORY_DRIVER\", \"postgres\")), \"sqlite\") {"
+          "evidence": "if redisURL == \"\" \u0026\u0026 !strings.EqualFold(strings.TrimSpace(env(\"LAUNCHER_REPOSITORY_DRIVER\", \"postgres\")), \"sqlite\") {"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 222,
-          "evidence": "DatabaseDSN: env(\"NEVERLAUNCHER_DATABASE_DSN\", env(\"NEVERLAUNCHER_DATABASE_URL\", \"postgres://launcher:launcher@localhost:5432/launcher?sslmode=disable\")),"
+          "evidence": "DatabaseDSN: env(\"LAUNCHER_DATABASE_DSN\", env(\"LAUNCHER_DATABASE_URL\", \"postgres://launcher:launcher@localhost:5432/launcher?sslmode=disable\")),"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 223,
-          "evidence": "RepositoryDriver: env(\"NEVERLAUNCHER_REPOSITORY_DRIVER\", \"postgres\"),"
+          "evidence": "RepositoryDriver: env(\"LAUNCHER_REPOSITORY_DRIVER\", \"postgres\"),"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 224,
-          "evidence": "SQLDriver: env(\"NEVERLAUNCHER_SQL_DRIVER\", \"pgx\"),"
+          "evidence": "SQLDriver: env(\"LAUNCHER_SQL_DRIVER\", \"pgx\"),"
         },
         {
           "category": "storage-configuration-read",
@@ -10729,7 +10729,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 367,
-          "evidence": "problems = append(problems, \"NEVERLAUNCHER_DATABASE_DSN is required\")"
+          "evidence": "problems = append(problems, \"LAUNCHER_DATABASE_DSN is required\")"
         },
         {
           "category": "storage-configuration-read",
@@ -16594,7 +16594,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 57,
-          "evidence": "t.Setenv(\"NEVERLAUNCHER_DATABASE_DSN\", \"must-not-leak\")"
+          "evidence": "t.Setenv(\"LAUNCHER_DATABASE_DSN\", \"must-not-leak\")"
         }
       ]
     },
@@ -16609,12 +16609,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 81,
-          "evidence": "t.Setenv(\"NEVERLAUNCHER_DATABASE_DSN\", \"postgres://must-not-leak\")"
+          "evidence": "t.Setenv(\"LAUNCHER_DATABASE_DSN\", \"postgres://must-not-leak\")"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 202,
-          "evidence": "t.Setenv(\"NEVERLAUNCHER_DATABASE_DSN\", \"secret\")"
+          "evidence": "t.Setenv(\"LAUNCHER_DATABASE_DSN\", \"secret\")"
         }
       ]
     },
@@ -16714,7 +16714,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 39,
-          "evidence": "return errors.New(\"auth core 0.11.1 требует NEVERLAUNCHER_DATABASE_DSN\")"
+          "evidence": "return errors.New(\"auth core 0.11.1 требует LAUNCHER_DATABASE_DSN\")"
         },
         {
           "category": "direct-sql-open",
@@ -17079,7 +17079,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 38,
-          "evidence": "{\"id\": \"environment\", \"required\": []string{\"NEVERLAUNCHER_REPOSITORY_DRIVER=sqlite\", \"NEVERLAUNCHER_DATABASE_DSN\", \"NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH\"}},"
+          "evidence": "{\"id\": \"environment\", \"required\": []string{\"LAUNCHER_REPOSITORY_DRIVER=sqlite\", \"LAUNCHER_DATABASE_DSN\", \"LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH\"}},"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -17549,7 +17549,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 1037,
-          "evidence": "return nil, \"\", errors.New(\"NEVERLAUNCHER_DATABASE_DSN должен быть postgres:// или postgresql:// URL для backup/restore\")"
+          "evidence": "return nil, \"\", errors.New(\"LAUNCHER_DATABASE_DSN должен быть postgres:// или postgresql:// URL для backup/restore\")"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -25884,7 +25884,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 20,
-          "evidence": "{\"postgresql\", \"postgresql\", \"NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN\"},"
+          "evidence": "{\"postgresql\", \"postgresql\", \"LAUNCHER_SQL_TEST_POSTGRES_DSN\"},"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -26174,12 +26174,12 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 61,
-          "evidence": "for name, data := range map[string][]byte{\"config/backend.env\": []byte(\"NEVERLAUNCHER_REPOSITORY_DRIVER=sqlite\\nNEVERLAUNCHER_DEPLOYMENT_MODE=single-node\\n\"), \"storage/client.bin\":"
+          "evidence": "for name, data := range map[string][]byte{\"config/backend.env\": []byte(\"LAUNCHER_REPOSITORY_DRIVER=sqlite\\nLAUNCHER_DEPLOYMENT_MODE=single-node\\n\"), \"storage/client.bin\":"
         },
         {
           "category": "postgresql-config-or-literal",
           "line": 89,
-          "evidence": "dsn := os.Getenv(\"NEVERLAUNCHER_PG_TEST_DSN\")"
+          "evidence": "dsn := os.Getenv(\"LAUNCHER_PG_TEST_DSN\")"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -26309,7 +26309,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 60,
-          "evidence": "dsn := os.Getenv(\"NEVERLAUNCHER_PG_TEST_DSN\")"
+          "evidence": "dsn := os.Getenv(\"LAUNCHER_PG_TEST_DSN\")"
         },
         {
           "category": "postgresql-config-or-literal",

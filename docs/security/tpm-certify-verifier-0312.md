@@ -10,7 +10,7 @@ A verified result is written to `device_hardware_evidence_0312` (PostgreSQL) or 
 
 ## Operator root provisioning and revocation
 
-Set `NEVERLAUNCHER_TPM_AK_ROOTS_FILE` to an absolute path to a **regular file** owned and provisioned by the backend administrator. The server does not auto-download or trust arbitrary device-supplied issuer chains, EK roots or certificates. Invalid/missing file = fail closed; never trust a claimed provider name. Restrict the file to administrative writers. Example (use a real provisioned AK CA PEM, not a generic public/WebPKI root):
+Set `LAUNCHER_TPM_AK_ROOTS_FILE` to an absolute path to a **regular file** owned and provisioned by the backend administrator. The server does not auto-download or trust arbitrary device-supplied issuer chains, EK roots or certificates. Invalid/missing file = fail closed; never trust a claimed provider name. Restrict the file to administrative writers. Example (use a real provisioned AK CA PEM, not a generic public/WebPKI root):
 
 ```json
 {

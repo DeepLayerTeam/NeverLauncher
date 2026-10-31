@@ -23,9 +23,9 @@ import (
 // listeners, repositories, session DB connections and Federation cores. No
 // in-memory state is shared between replicas. CI must set the DSN explicitly.
 func TestSecurityRealAuthPostgresTwoReplicas02912(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_SECURITY_E2E_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable NEVERLAUNCHER_SECURITY_E2E_POSTGRES_DSN")
+		t.Skip("requires disposable LAUNCHER_SECURITY_E2E_POSTGRES_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()

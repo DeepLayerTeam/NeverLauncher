@@ -34,7 +34,7 @@ if [[ -n "$(PATH="$work/bin" command -v java 2>/dev/null || :)" ]]; then
 fi
 run_ensure() {
   env -u JAVA_HOME -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS \
-    PATH="$work/bin" NEVERLAUNCHER_OFFLINE=1 "$runtime" java ensure \
+    PATH="$work/bin" LAUNCHER_OFFLINE=1 "$runtime" java ensure \
     --major "$major" --distribution temurin --runtime-root "$work/runtimes" \
     --manifest "$manifest" --manifest-sha256 "$digest" > "$work/result.json"
 }
@@ -51,7 +51,7 @@ printf 'partial' > "$(dirname "$install_dir")/.staging-dead-worker/partial"
 # No pinned manifest during recovery: force the unpinned but SHA-256-bound
 # local archive repair path. Offline mode forbids network fallback.
 env -u JAVA_HOME -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS \
-  PATH="$work/bin" NEVERLAUNCHER_OFFLINE=1 "$runtime" java ensure \
+  PATH="$work/bin" LAUNCHER_OFFLINE=1 "$runtime" java ensure \
   --major "$major" --distribution temurin --runtime-root "$work/runtimes" > "$work/result.json"
 "$python" - "$work/result.json" <<'PY'
 import json,sys

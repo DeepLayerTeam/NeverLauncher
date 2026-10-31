@@ -49,7 +49,7 @@ func TestLockInDifferentProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=^TestLockChildProcess$")
-	cmd.Env = append(os.Environ(), "NEVERLAUNCHER_DEPLOYMENT_LOCK_TEST_PATH="+plan.LockPath)
+	cmd.Env = append(os.Environ(), "LAUNCHER_DEPLOYMENT_LOCK_TEST_PATH="+plan.LockPath)
 	data, childErr := cmd.CombinedOutput()
 	if childErr != nil {
 		t.Fatalf("child failed %v: %s", childErr, data)
@@ -58,19 +58,19 @@ func TestLockInDifferentProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	cmd = exec.Command(os.Args[0], "-test.run=^TestLockChildProcess$")
-	cmd.Env = append(os.Environ(), "NEVERLAUNCHER_DEPLOYMENT_LOCK_TEST_PATH="+plan.LockPath, "NEVERLAUNCHER_DEPLOYMENT_LOCK_TEST_EXPECT_SUCCESS=1")
+	cmd.Env = append(os.Environ(), "LAUNCHER_DEPLOYMENT_LOCK_TEST_PATH="+plan.LockPath, "LAUNCHER_DEPLOYMENT_LOCK_TEST_EXPECT_SUCCESS=1")
 	data, childErr = cmd.CombinedOutput()
 	if childErr != nil {
 		t.Fatalf("child reacquisition failed %v: %s", childErr, data)
 	}
 }
 func TestLockChildProcess(t *testing.T) {
-	path := os.Getenv("NEVERLAUNCHER_DEPLOYMENT_LOCK_TEST_PATH")
+	path := os.Getenv("LAUNCHER_DEPLOYMENT_LOCK_TEST_PATH")
 	if path == "" {
 		return
 	}
 	lock, err := Acquire(Plan{SingleInstance: true, LockPath: path})
-	success := os.Getenv("NEVERLAUNCHER_DEPLOYMENT_LOCK_TEST_EXPECT_SUCCESS") == "1"
+	success := os.Getenv("LAUNCHER_DEPLOYMENT_LOCK_TEST_EXPECT_SUCCESS") == "1"
 	if (err == nil) != success {
 		t.Fatalf("got acquire err=%v, expected success=%v", err, success)
 	}

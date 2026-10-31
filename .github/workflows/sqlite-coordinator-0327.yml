@@ -35,13 +35,13 @@ jobs:
           test -z "$(gofmt -l internal/sqlitecoord internal/sqlitedurable internal/config/sqlite_single_node_0327_test.go internal/httpapi/rate_limit.go internal/httpapi/runtime_state.go cmd/launcher-api/main.go)"
       - name: Local filesystem and WAL integration (no skips permitted)
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-coordinator-327
-          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-coordinator-327
+          LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
-          mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          mkdir -p "$LAUNCHER_SQLITE_TEST_ROOT"
+          chmod 0700 "$LAUNCHER_SQLITE_TEST_ROOT"
+          stat -f -c '%T' "$LAUNCHER_SQLITE_TEST_ROOT"
           go test -race -count=1 -timeout=15m ./internal/sqlitecoord ./internal/sqlitedurable ./internal/config
           go vet ./internal/sqlitecoord ./internal/sqlitedurable ./internal/config ./internal/httpapi ./cmd/launcher-api
       - name: Build actual API with SQLite coordinator path

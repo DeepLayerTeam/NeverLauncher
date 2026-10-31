@@ -25,12 +25,12 @@ BRIDGE_ALLOWLIST_SET="false"
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
   set -a; source "${ENV_FILE}"; set +a
-  ADMIN_EMAIL="${NEVERLAUNCHER_BOOTSTRAP_ADMIN_EMAIL:-${ADMIN_EMAIL}}"
-  PUBLIC_URL="${NEVERLAUNCHER_PUBLIC_URL:-${PUBLIC_URL}}"
+  ADMIN_EMAIL="${LAUNCHER_BOOTSTRAP_ADMIN_EMAIL:-${ADMIN_EMAIL}}"
+  PUBLIC_URL="${LAUNCHER_PUBLIC_URL:-${PUBLIC_URL}}"
   [[ "${POSTGRES_PASSWORD:-}" != "" && "${POSTGRES_PASSWORD:-}" != change-me* ]] && POSTGRES_PASSWORD_SET="true"
-  [[ "${NEVERLAUNCHER_AUTH_TOKEN_SECRET:-}" != "" && "${NEVERLAUNCHER_AUTH_TOKEN_SECRET:-}" != change-me* ]] && TOKEN_SECRET_SET="true"
-  [[ "${NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON:-}" != "" ]] && GUARD_ALLOWLIST_SET="true"
-  [[ "${NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON:-}" != "" ]] && BRIDGE_ALLOWLIST_SET="true"
+  [[ "${LAUNCHER_AUTH_TOKEN_SECRET:-}" != "" && "${LAUNCHER_AUTH_TOKEN_SECRET:-}" != change-me* ]] && TOKEN_SECRET_SET="true"
+  [[ "${LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON:-}" != "" ]] && GUARD_ALLOWLIST_SET="true"
+  [[ "${LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON:-}" != "" ]] && BRIDGE_ALLOWLIST_SET="true"
 fi
 
 cat > "${REPORT}" <<JSON
@@ -59,9 +59,9 @@ cat > "${REPORT}" <<JSON
   "checks": [
     {"id": "env.file", "status": "$( [[ -f "${ENV_FILE}" ]] && echo ok || echo failed )", "message": "${ENV_FILE}"},
     {"id": "postgres.password", "status": "${POSTGRES_PASSWORD_SET}", "message": "replace default POSTGRES_PASSWORD before production"},
-    {"id": "token.secret", "status": "${TOKEN_SECRET_SET}", "message": "replace default NEVERLAUNCHER_AUTH_TOKEN_SECRET before production"},
-    {"id": "guard.release.allowlist", "status": "${GUARD_ALLOWLIST_SET}", "message": "set NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON from merged Guard schema 2.0 production policy"},
-    {"id": "serverbridge.release.allowlist", "status": "${BRIDGE_ALLOWLIST_SET}", "message": "set NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON from final ServerBridge release JAR hashes"},
+    {"id": "token.secret", "status": "${TOKEN_SECRET_SET}", "message": "replace default LAUNCHER_AUTH_TOKEN_SECRET before production"},
+    {"id": "guard.release.allowlist", "status": "${GUARD_ALLOWLIST_SET}", "message": "set LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON from merged Guard schema 2.0 production policy"},
+    {"id": "serverbridge.release.allowlist", "status": "${BRIDGE_ALLOWLIST_SET}", "message": "set LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON from final ServerBridge release JAR hashes"},
     {"id": "compose.file", "status": "$( [[ -f "${ROOT_DIR}/deploy/production/docker-compose.yml" ]] && echo ok || echo failed )", "message": "deploy/production/docker-compose.yml"},
     {"id": "nginx.file", "status": "$( [[ -f "${ROOT_DIR}/deploy/production/nginx.conf" ]] && echo ok || echo failed )", "message": "deploy/production/nginx.conf"}
   ],

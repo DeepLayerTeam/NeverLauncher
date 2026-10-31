@@ -185,7 +185,7 @@ func (s Server) backendRestart0289(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 503, "restart requires a durable PostgreSQL command journal")
 		return
 	}
-	if os.Getenv("NEVERLAUNCHER_BACKEND_SUPERVISED_RESTART") != "true" {
+	if os.Getenv("LAUNCHER_BACKEND_SUPERVISED_RESTART") != "true" {
 		writeError(w, 503, "external supervised restart is not enabled")
 		return
 	}

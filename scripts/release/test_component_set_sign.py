@@ -23,18 +23,18 @@ class ComponentSetSigningTest(unittest.TestCase):
             serialization.Encoding.Raw, serialization.PublicFormat.Raw
         )
         self.prev = (
-            os.environ.get("NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED"),
-            os.environ.get("NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY"),
+            os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_SEED"),
+            os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY"),
         )
-        os.environ["NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED"] = seed.hex()
-        os.environ["NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY"] = public.hex()
+        os.environ["LAUNCHER_COMPONENT_SET_ED25519_SEED"] = seed.hex()
+        os.environ["LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY"] = public.hex()
         self.public = private.public_key()
 
     def tearDown(self):
         for name, value in zip(
             (
-                "NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED",
-                "NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY",
+                "LAUNCHER_COMPONENT_SET_ED25519_SEED",
+                "LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY",
             ),
             self.prev,
         ):
@@ -77,7 +77,7 @@ class ComponentSetSigningTest(unittest.TestCase):
                 self.public.verify(bytes.fromhex(envelope["signature"]), data + b" ")
 
     def test_missing_key_fails_closed(self):
-        os.environ.pop("NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED")
+        os.environ.pop("LAUNCHER_COMPONENT_SET_ED25519_SEED")
         with self.assertRaises(RuntimeError):
             signed_set(self.fixture())
         unsigned, detached = signed_set(self.fixture(), development=True)
@@ -85,7 +85,7 @@ class ComponentSetSigningTest(unittest.TestCase):
         self.assertIn(b'"componentSet"', unsigned)
 
     def test_wrong_public_key_rejected(self):
-        os.environ["NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY"] = "00" * 32
+        os.environ["LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY"] = "00" * 32
         with self.assertRaises(RuntimeError):
             signed_set(self.fixture())
 
@@ -94,10 +94,8 @@ class ComponentSetSigningTest(unittest.TestCase):
         value["productVersion"] = "0.23.11"
         with self.assertRaises(ValueError):
             signed_set(value)
-        os.environ["NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION"] = "14"
-        self.addCleanup(
-            os.environ.pop, "NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION", None
-        )
+        os.environ["LAUNCHER_COMPONENT_SECURITY_GENERATION"] = "14"
+        self.addCleanup(os.environ.pop, "LAUNCHER_COMPONENT_SECURITY_GENERATION", None)
         raw, signature = signed_set(value)
         import json
 

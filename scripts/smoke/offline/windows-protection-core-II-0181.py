@@ -38,9 +38,9 @@ def main() -> int:
     require(
         protection,
         [
-            "NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION: u32 = 2",
-            "NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION: u32 = 1",
-            "NEVERGUARD_WINDOWS_PROTECTION_PROFILE_ENV",
+            "GUARD_WINDOWS_PROTECTION_CORE_VERSION: u32 = 2",
+            "GUARD_WINDOWS_CAPABILITY_MODEL_VERSION: u32 = 1",
+            "GUARD_WINDOWS_PROTECTION_PROFILE_ENV",
             "pub enum WindowsProtectionProfile",
             "Audit,",
             "Compat,",

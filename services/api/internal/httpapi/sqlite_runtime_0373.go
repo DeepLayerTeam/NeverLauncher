@@ -134,7 +134,7 @@ func ConfigureSQLiteRuntime0373(ctx context.Context, state *RuntimeState, backen
 		return errors.New("SQLite runtime requires SQLite HTTP repository")
 	}
 	if len(secret) < 32 {
-		return errors.New("SQLite runtime requires at least 32 bytes of stable NEVERLAUNCHER_AUTH_TOKEN_SECRET")
+		return errors.New("SQLite runtime requires at least 32 bytes of stable LAUNCHER_AUTH_TOKEN_SECRET")
 	}
 	// Load everything before binding mutation hooks. This rejects wrong keys,
 	// corrupt ciphertext and incompatible component formats at startup.

@@ -59,9 +59,9 @@ def main():
         help="already provisioned root PUBLIC key, never from downloaded metadata",
     )
     args = parser.parse_args()
-    seed = os.environ.get("NEVERLAUNCHER_TRUST_ROOT_ED25519_SEED", "")
+    seed = os.environ.get("LAUNCHER_TRUST_ROOT_ED25519_SEED", "")
     if not seed:
-        raise SystemExit("offline NEVERLAUNCHER_TRUST_ROOT_ED25519_SEED required")
+        raise SystemExit("offline LAUNCHER_TRUST_ROOT_ED25519_SEED required")
     sign_policy(args.payload, args.output, seed, args.root_key_hex)
 
 

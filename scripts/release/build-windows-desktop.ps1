@@ -24,15 +24,15 @@ $SensorManifest = Join-Path $Root "runtime\guard-sensor\Cargo.toml"
 $DesktopManifest = Join-Path $Root "apps\desktop\src-tauri\Cargo.toml"
 
 if ([string]::IsNullOrWhiteSpace($CodeSigningCertificateThumbprint)) {
-    $CodeSigningCertificateThumbprint = [Environment]::GetEnvironmentVariable("NEVERLAUNCHER_WINDOWS_SIGNING_CERT_THUMBPRINT")
+    $CodeSigningCertificateThumbprint = [Environment]::GetEnvironmentVariable("LAUNCHER_WINDOWS_SIGNING_CERT_THUMBPRINT")
 }
 if ([string]::IsNullOrWhiteSpace($CodeSigningCertificatePath)) {
-    $CodeSigningCertificatePath = [Environment]::GetEnvironmentVariable("NEVERLAUNCHER_WINDOWS_SIGNING_PFX_FILE")
+    $CodeSigningCertificatePath = [Environment]::GetEnvironmentVariable("LAUNCHER_WINDOWS_SIGNING_PFX_FILE")
 }
 if ([string]::IsNullOrWhiteSpace($CodeSigningCertificatePassword)) {
-    $CodeSigningCertificatePassword = [Environment]::GetEnvironmentVariable("NEVERLAUNCHER_WINDOWS_SIGNING_PFX_PASSWORD")
+    $CodeSigningCertificatePassword = [Environment]::GetEnvironmentVariable("LAUNCHER_WINDOWS_SIGNING_PFX_PASSWORD")
 }
-$TimestampFromEnv = [Environment]::GetEnvironmentVariable("NEVERLAUNCHER_WINDOWS_TIMESTAMP_URL")
+$TimestampFromEnv = [Environment]::GetEnvironmentVariable("LAUNCHER_WINDOWS_TIMESTAMP_URL")
 if (-not [string]::IsNullOrWhiteSpace($TimestampFromEnv)) {
     $TimestampServer = $TimestampFromEnv
 }
@@ -251,7 +251,7 @@ try {
         $OldGOOS = $env:GOOS; $OldGOARCH = $env:GOARCH; $OldCGO = $env:CGO_ENABLED
         try {
             $env:GOOS = "windows"; $env:GOARCH = $Target.GoArch; $env:CGO_ENABLED = "0"
-            Invoke-Checked { go build -trimpath -ldflags "-s -w -X main.version=$Version -X main.componentSetTrustedKey02310=$env:NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY -X main.componentSetRootKey02312=$env:NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY" -o $CliRootPath .\cmd\launcher } "CLI $Arch release build"
+            Invoke-Checked { go build -trimpath -ldflags "-s -w -X main.version=$Version -X main.componentSetTrustedKey02310=$env:LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY -X main.componentSetRootKey02312=$env:LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY" -o $CliRootPath .\cmd\launcher } "CLI $Arch release build"
         } finally {
             $env:GOOS = $OldGOOS; $env:GOARCH = $OldGOARCH; $env:CGO_ENABLED = $OldCGO
             Pop-Location

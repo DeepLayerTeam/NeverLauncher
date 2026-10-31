@@ -348,7 +348,7 @@ export function ClientFactoryBuilder02710({
     >
       <header className="registryHeading">
         <div>
-          <h4>Client Factory · {__NEVERLAUNCHER_VERSION__}</h4>
+          <h4>Client Factory · {__LAUNCHER_VERSION__}</h4>
           <p className="muted">
             Minecraft и загрузчик → сборка → проверка SHA-256 → diff → экспорт
             InstallPlan и файлов.

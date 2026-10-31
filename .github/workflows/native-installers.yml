@@ -84,7 +84,7 @@ jobs:
       - name: Pin root key from protected release environment
         shell: bash
         env:
-          PINNED_ROOT_KEY: ${{ vars.NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY }}
+          PINNED_ROOT_KEY: ${{ vars.LAUNCHER_RELEASE_ROOT_PUBLIC_KEY }}
         run: |
           test "${#PINNED_ROOT_KEY}" -eq 64
           printf '%s' "$PINNED_ROOT_KEY" > root-public-key.hex
@@ -100,7 +100,7 @@ jobs:
           $pass = ConvertTo-SecureString $env:PFX_PASSWORD -AsPlainText -Force
           $cert = Import-PfxCertificate -FilePath signing.pfx -CertStoreLocation Cert:\CurrentUser\My -Password $pass
           if (!$cert.Thumbprint) { throw 'No signing certificate imported' }
-          Add-Content $env:GITHUB_ENV "NEVERLAUNCHER_WINDOWS_CERT_THUMBPRINT=$($cert.Thumbprint)"
+          Add-Content $env:GITHUB_ENV "LAUNCHER_WINDOWS_CERT_THUMBPRINT=$($cert.Thumbprint)"
           Remove-Item signing.pfx
       - name: Import macOS Apple certificates
         if: runner.os == 'macOS'
@@ -119,19 +119,19 @@ jobs:
       - name: Build production-signed native artifact
         shell: bash
         env:
-          NEVERLAUNCHER_GPG_SIGNING_KEY: ${{ secrets.LINUX_GPG_KEY_ID }}
-          NEVERLAUNCHER_MACOS_CODESIGN_ID: ${{ vars.APPLE_DEVELOPER_ID_APPLICATION }}
-          NEVERLAUNCHER_MACOS_INSTALLER_ID: ${{ vars.APPLE_DEVELOPER_ID_INSTALLER }}
+          LAUNCHER_GPG_SIGNING_KEY: ${{ secrets.LINUX_GPG_KEY_ID }}
+          LAUNCHER_MACOS_CODESIGN_ID: ${{ vars.APPLE_DEVELOPER_ID_APPLICATION }}
+          LAUNCHER_MACOS_INSTALLER_ID: ${{ vars.APPLE_DEVELOPER_ID_INSTALLER }}
         run: |
           set -euo pipefail
           VERSION="$(cat VERSION)"
-          PRESTARTER="branded-input/neverprestarter"
+          PRESTARTER="branded-input/prestarter"
           if [ '${{ matrix.platform }}' = windows ]; then PRESTARTER="${PRESTARTER}.exe"; fi
           EXTRA=()
           if [ -d branded-input/offline-source ]; then EXTRA=(--offline-source branded-input/offline-source); fi
           python scripts/release/build-branded-installers.py \
             --platform '${{ matrix.platform }}' --arch '${{ matrix.arch }}' \
-            --project '${{ vars.NEVERLAUNCHER_BRANDED_PROJECT_ID }}' --version "$VERSION" \
+            --project '${{ vars.LAUNCHER_BRANDED_PROJECT_ID }}' --version "$VERSION" \
             --config branded-input/bootstrap.signed.json --prestarter "$PRESTARTER" \
             --root-key-file root-public-key.hex --output dist/native "${EXTRA[@]}"
       - name: Upload signed installers and signatures

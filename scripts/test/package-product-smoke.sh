@@ -2,8 +2,8 @@
 set -euo pipefail
 
 BASE_URL="${1:-http://127.0.0.1:18084}"
-EMAIL="${NEVERLAUNCHER_TEST_ADMIN_EMAIL:-admin@launcher.local}"
-PASSWORD="${NEVERLAUNCHER_TEST_ADMIN_PASSWORD:-admin}"
+EMAIL="${LAUNCHER_TEST_ADMIN_EMAIL:-admin@launcher.local}"
+PASSWORD="${LAUNCHER_TEST_ADMIN_PASSWORD:-admin}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 

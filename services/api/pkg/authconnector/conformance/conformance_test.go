@@ -61,7 +61,7 @@ func TestBehavioralConformanceExecutesEveryOperation(t *testing.T) {
 		t.Fatalf("failed: %+v", report)
 	}
 	if !c.revoked {
-		t.Fatal("revoke never executed")
+		t.Fatal("revoke executed")
 	}
 	required := map[string]bool{"registration": false, "health": false, "authenticate:password": false, "authenticate:wrong-password": false, "resolve:identity": false, "resolve:profile": false, "refresh": false, "revoke": false, "revoke:invalidation": false}
 	for _, v := range report.Checks {

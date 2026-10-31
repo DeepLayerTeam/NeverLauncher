@@ -2,8 +2,8 @@
 set -euo pipefail
 
 BACKEND="${1:-http://127.0.0.1:8080}"
-EMAIL="${NEVERLAUNCHER_TEST_ADMIN_EMAIL:-admin@launcher.local}"
-PASSWORD="${NEVERLAUNCHER_TEST_ADMIN_PASSWORD:-admin}"
+EMAIL="${LAUNCHER_TEST_ADMIN_EMAIL:-admin@launcher.local}"
+PASSWORD="${LAUNCHER_TEST_ADMIN_PASSWORD:-admin}"
 TS="$(date +%s)"
 PROJECT="crud-${TS}"
 PROFILE="vanilla"

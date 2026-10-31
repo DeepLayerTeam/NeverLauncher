@@ -29,10 +29,10 @@ throughput belongs only to that runner and is not a production SLO.
 Use an isolated ext4/XFS/Btrfs directory with mode `0700`, Go 1.27.3, an
 isolated PostgreSQL database, Redis and an S3-compatible test bucket.
 
-- `NEVERLAUNCHER_SQLITE_TEST_ROOT` and `NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS=1`
-- `NEVERLAUNCHER_PG_TEST_DSN`, `NEVERLAUNCHER_GROWTH_TEST_PG_DSN`
-- `NEVERLAUNCHER_GROWTH_TEST_REDIS_URL`
-- `NEVERLAUNCHER_RC_S3_ENDPOINT`, `_BUCKET`, `_REGION`, `_ACCESS_KEY`, `_SECRET_KEY`
+- `LAUNCHER_SQLITE_TEST_ROOT` and `LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS=1`
+- `LAUNCHER_PG_TEST_DSN`, `LAUNCHER_GROWTH_TEST_PG_DSN`
+- `LAUNCHER_GROWTH_TEST_REDIS_URL`
+- `LAUNCHER_RC_S3_ENDPOINT`, `_BUCKET`, `_REGION`, `_ACCESS_KEY`, `_SECRET_KEY`
 
 These are secrets/isolated fixtures supplied by the CI environment, not
 bundled with a release. Missing configuration blocks the gate. The gate

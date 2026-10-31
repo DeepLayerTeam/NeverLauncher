@@ -243,7 +243,7 @@ require(
         'wait_bridge_heartbeat "$service"',
         'capture_health_evidence "$service"',
         "spigot|paper|purpur|folia)",
-        "NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5",
+        "LAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5",
         'wait_log "$service" "launcher.join.denied username=$PLAYER_USERNAME"',
         "launcher-spigot-bridge.jar",
         "launcher-folia-bridge.jar",
@@ -262,13 +262,13 @@ require(
         "BytesocksClient.create API",
         "channelId API",
         "<artifactId>Java-WebSocket</artifactId>",
-        "NEVERLAUNCHER_SPARK_BUILD_MAVEN_REPO",
+        "LAUNCHER_SPARK_BUILD_MAVEN_REPO",
         'includeModule("me.lucko", "bytesocks-java-client")',
         "bytesocks-build.json",
         "bytesocksPinnedBuildDependency:true",
         "materialize_pinned_spark_paper_dependency()",
         ":spark-paper:shadowJar",
-        "NEVERLAUNCHER_FOLIA_BUILD_MAVEN_REPO",
+        "LAUNCHER_FOLIA_BUILD_MAVEN_REPO",
         'includeModule("me.lucko", "spark-paper")',
         "spark-paper-build.json",
         "foliaPinnedBuildDependency:true",
@@ -377,7 +377,7 @@ require(
 
 allow_marker = 'wait_log "$service" "launcher.join.allowed username=$PLAYER_USERNAME"'
 deny_marker = 'wait_log "$service" "launcher.join.denied username=$PLAYER_USERNAME"'
-cooldown_marker = "NEVERLAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5"
+cooldown_marker = "LAUNCHER_E2E_BUKKIT_RECONNECT_COOLDOWN_SECONDS:-5"
 if not (
     runtime_e2e.index(allow_marker)
     < runtime_e2e.index(cooldown_marker)

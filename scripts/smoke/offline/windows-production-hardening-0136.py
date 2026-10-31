@@ -32,7 +32,7 @@ policy = read("runtime/runtime/src/windows_policy.rs")
 require(
     policy,
     [
-        "NEVERGUARD_WINDOWS_HARDENING_VERSION: u32 = 1",
+        "GUARD_WINDOWS_HARDENING_VERSION: u32 = 1",
         "HeapSetInformation",
         "HeapEnableTerminationOnCorruption",
         "SetDllDirectoryW",
@@ -54,7 +54,7 @@ guard = read("runtime/runtime/src/guard_ipc.rs")
 require(
     guard,
     [
-        "NEVERGUARD_PROTOCOL_VERSION: u32 = 4",
+        "GUARD_PROTOCOL_VERSION: u32 = 4",
         "create_secure_pipe_server",
         "ConvertStringSecurityDescriptorToSecurityDescriptorW",
         "current_windows_user_sid_string",
@@ -82,7 +82,7 @@ require(
     desktop,
     [
         "ensure_windows_production_hardening()",
-        "NEVERGUARD_WINDOWS_HARDENING_VERSION",
+        "GUARD_WINDOWS_HARDENING_VERSION",
         "status.secure_pipe_acl",
         "status.lifetime_job_enforced",
         "status.package_manifest_verified",
@@ -130,7 +130,7 @@ integration = read("runtime/runtime/tests/guard_windows.rs")
 require(
     integration,
     [
-        "NEVERGUARD_WINDOWS_HARDENING_VERSION",
+        "GUARD_WINDOWS_HARDENING_VERSION",
         "status.hardening_enforced",
         "status.secure_pipe_acl",
         "status.lifetime_job_enforced",

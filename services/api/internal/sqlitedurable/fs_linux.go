@@ -61,7 +61,7 @@ func verifyLocalPath(path string) error {
 	}
 	if f, e := os.Lstat(path); e == nil {
 		if !f.Mode().IsRegular() || f.Mode()&os.ModeSymlink != 0 {
-			return errors.New("sqlite file must be regular and never a symlink")
+			return errors.New("sqlite file must be regular and a symlink")
 		}
 		if f.Mode().Perm()&0077 != 0 {
 			return fmt.Errorf("sqlite file permissions %04o unsafe", f.Mode().Perm())

@@ -19,7 +19,7 @@ python3 scripts/release/test_fetch_exact_certifications.py
 python3 scripts/smoke/offline/repository-policy.py
 ```
 
-`NEVERLAUNCHER_PREFLIGHT_STRICT=1 bash scripts/release/preflight.sh` — строгий режим проверок, зависящий от платформы и установленного toolchain. `scripts/release/fetch-exact-certifications.py` работает с сертификатами GitHub, не должен пересылать auth bearer на адреса артефактов. Не встраивайте токены в публичные URL.
+`LAUNCHER_PREFLIGHT_STRICT=1 bash scripts/release/preflight.sh` — строгий режим проверок, зависящий от платформы и установленного toolchain. `scripts/release/fetch-exact-certifications.py` работает с сертификатами GitHub, не должен пересылать auth bearer на адреса артефактов. Не встраивайте токены в публичные URL.
 
 ## Принцип честной сертификации
 
@@ -31,6 +31,6 @@ python3 scripts/smoke/offline/repository-policy.py
 
 `python3 scripts/release/certify-profiles-ga-0230.py` runs actual unit,
 HTTP and PostgreSQL E2E tests with the Go race detector and rejects missing or
-skipped cases. It requires `NEVERLAUNCHER_TEST_POSTGRES_DSN` and the exact
+skipped cases. It requires `LAUNCHER_TEST_POSTGRES_DSN` and the exact
 source SHA. Production release candidate requires its passed artifact, tied
 to the current commit. See [Profile/Workspace GA](../releases/profile-workspaces-0230.md).

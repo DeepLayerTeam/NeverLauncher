@@ -143,7 +143,7 @@ require(
 )
 require(
     java_config,
-    ["identity.file", "NEVERLAUNCHER_NODE_IDENTITY_FILE"],
+    ["identity.file", "LAUNCHER_NODE_IDENTITY_FILE"],
     "ServerBridge identity configuration",
 )
 if "X-Launcher-Server-Token" in java_client or "server.token" in java_config:

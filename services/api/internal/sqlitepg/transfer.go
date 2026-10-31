@@ -1,5 +1,5 @@
 // Package sqlitepg transfers an immutable, verified SQLite 326 snapshot into a
-// PostgreSQL quarantine schema. It never changes the live PostgreSQL tables or
+// PostgreSQL quarantine schema. Is changes the live PostgreSQL tables or
 // enables an unsafe backend cutover. It preserves every source table/row/column,
 // including audit, revoked tokens, join tickets, UUIDs, binary blobs and leases.
 package sqlitepg
@@ -396,7 +396,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 		return report, fmt.Errorf("store SQLite snapshot: %w", err)
 	}
 	// The import schema is deliberately append/UPDATE/DELETE protected. Live
-	// code must never start serving auth from this compatibility mirror.
+	// code must start serving auth from this compatibility mirror.
 	_, err = tx.Exec(ctx, `CREATE FUNCTION `+quoted(Schema)+`.reject_mutation() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Launcher verified import is immutable'; END $$`)
 	if err != nil {
 		return report, err

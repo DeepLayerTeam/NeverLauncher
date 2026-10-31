@@ -44,17 +44,17 @@ func TestCLIExtensionRunsThroughAuthenticatedHostProtocol0209(t *testing.T) {
 	}
 	script := `#!/usr/bin/env python3
 import json,os,sys,urllib.request
-base=os.environ["NEVERLAUNCHER_EXTENSION_HOST_URL"]; token=os.environ["NEVERLAUNCHER_EXTENSION_HOST_TOKEN"]
+base=os.environ["LAUNCHER_EXTENSION_HOST_URL"]; token=os.environ["LAUNCHER_EXTENSION_HOST_TOKEN"]
 def post(path,obj):
  data=json.dumps(obj).encode(); req=urllib.request.Request(base+path,data=data,headers={"Authorization":"Bearer "+token,"Content-Type":"application/json"},method="POST"); return urllib.request.urlopen(req,timeout=2).read()
-post("/v1/hello",{"protocolVersion":"1.0","extensionId":os.environ["NEVERLAUNCHER_EXTENSION_ID"],"instanceId":os.environ["NEVERLAUNCHER_EXTENSION_INSTANCE_ID"],"pid":os.getpid()})
-print(json.dumps({"command":sys.argv[1],"target":os.environ.get("NEVERLAUNCHER_EXTENSION_TARGET"),"dbSecretPresent":"NEVERLAUNCHER_DATABASE_DSN" in os.environ}))
+post("/v1/hello",{"protocolVersion":"1.0","extensionId":os.environ["LAUNCHER_EXTENSION_ID"],"instanceId":os.environ["LAUNCHER_EXTENSION_INSTANCE_ID"],"pid":os.getpid()})
+print(json.dumps({"command":sys.argv[1],"target":os.environ.get("LAUNCHER_EXTENSION_TARGET"),"dbSecretPresent":"LAUNCHER_DATABASE_DSN" in os.environ}))
 `
 	if err := os.WriteFile(filepath.Join(payload, "cli", "tool"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	install := model.ExtensionInstall{ExtensionID: manifest.ID, Scope: "global", CurrentVersion: "1.0.0", DesiredVersion: "1.0.0", CurrentState: model.ExtensionInstallStateEnabled, DesiredState: model.ExtensionInstallStateEnabled, Enabled: true, Generation: 1}
-	t.Setenv("NEVERLAUNCHER_DATABASE_DSN", "must-not-leak")
+	t.Setenv("LAUNCHER_DATABASE_DSN", "must-not-leak")
 	host := New(Config{ExtensionRoot: root, StartupTimeout: 3 * time.Second, MaxMemoryBytes: 128 << 20, MaxProcesses: 4}, repo, store)
 	if err := host.Start(context.Background()); err != nil {
 		t.Fatal(err)
@@ -99,8 +99,8 @@ func TestLifecycleStopTerminatesTransientCLI0209(t *testing.T) {
 	}
 	script := `#!/usr/bin/env python3
 import json,os,time,urllib.request
-base=os.environ["NEVERLAUNCHER_EXTENSION_HOST_URL"]; token=os.environ["NEVERLAUNCHER_EXTENSION_HOST_TOKEN"]
-data=json.dumps({"protocolVersion":"1.0","extensionId":os.environ["NEVERLAUNCHER_EXTENSION_ID"],"instanceId":os.environ["NEVERLAUNCHER_EXTENSION_INSTANCE_ID"],"pid":os.getpid()}).encode()
+base=os.environ["LAUNCHER_EXTENSION_HOST_URL"]; token=os.environ["LAUNCHER_EXTENSION_HOST_TOKEN"]
+data=json.dumps({"protocolVersion":"1.0","extensionId":os.environ["LAUNCHER_EXTENSION_ID"],"instanceId":os.environ["LAUNCHER_EXTENSION_INSTANCE_ID"],"pid":os.getpid()}).encode()
 req=urllib.request.Request(base+"/v1/hello",data=data,headers={"Authorization":"Bearer "+token,"Content-Type":"application/json"},method="POST")
 urllib.request.urlopen(req,timeout=2).read()
 time.sleep(30)

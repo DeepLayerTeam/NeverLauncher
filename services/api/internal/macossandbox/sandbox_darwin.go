@@ -104,7 +104,7 @@ func (h *Handle) Close() {
 	}
 }
 func teamID() (string, error) {
-	v := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_MACOS_SANDBOX_TEAM_ID"))
+	v := strings.TrimSpace(os.Getenv("LAUNCHER_MACOS_SANDBOX_TEAM_ID"))
 	if len(v) != 10 {
 		return "", errors.New("sandbox-macos-signed-team-id-required")
 	}
@@ -116,7 +116,7 @@ func teamID() (string, error) {
 	return v, nil
 }
 func helperPath() (string, error) {
-	p := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_MACOS_SANDBOX_HELPER"))
+	p := strings.TrimSpace(os.Getenv("LAUNCHER_MACOS_SANDBOX_HELPER"))
 	if !filepath.IsAbs(p) {
 		return "", errors.New("sandbox-macos-absolute-helper-path-required")
 	}

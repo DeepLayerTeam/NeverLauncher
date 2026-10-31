@@ -6,7 +6,7 @@ CONTAINER="launcher-durable-0213-${GITHUB_RUN_ID:-local}-$$"
 # Предпочитайте случайный свободный loopback-порт, чтобы не
 # конфликтовать с другими PostgreSQL в том же агенте. Для
 # разработчиков, которым нужен постоянный порт, остаётся явная настройка.
-PORT="${NEVERLAUNCHER_DURABLE_POSTGRES_PORT:-}"
+PORT="${LAUNCHER_DURABLE_POSTGRES_PORT:-}"
 PUBLISH_PORT="127.0.0.1::5432"
 if [[ -n "$PORT" ]]; then
   [[ "$PORT" =~ ^[0-9]+$ ]] && (( 10#$PORT >= 1 && 10#$PORT <= 65535 )) || { echo "[durable-0213] invalid port" >&2; exit 2; }
@@ -102,7 +102,7 @@ fi
 echo "[durable-0213] running multi-replica lease/restart/fencing tests"
 (
   cd "$ROOT/services/api"
-  NEVERLAUNCHER_DURABLE_DSN="$DSN" go test ./internal/repository \
+  LAUNCHER_DURABLE_DSN="$DSN" go test ./internal/repository \
     -run 'TestDurable(JobLeaseRecoversAcrossReplicaRestart|ScopeLeaseHasSingleDistributedOwner)0213' \
     -count=1 -v
 )

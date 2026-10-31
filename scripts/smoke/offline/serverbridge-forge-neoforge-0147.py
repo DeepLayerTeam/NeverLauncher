@@ -253,7 +253,7 @@ require(
         "--enter-configuration",
         "--drive-neoforge-configuration",
         "--allow-pre-configuration-disconnect",
-        "NEVERLAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS",
+        "LAUNCHER_E2E_MODLOADER_PROBE_HOLD_SECONDS",
         "${allow_probe_mode[@]}",
         "${deny_probe_mode[@]}",
     ],

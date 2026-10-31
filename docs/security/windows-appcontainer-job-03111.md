@@ -14,7 +14,7 @@ This release integrates the existing signed `sandbox.mode=isolated` policy into 
 
 ## Supported targets
 
-Native, signed `.exe` extension targets that communicate over the updated Go Backend or CLI SDK through `NEVERLAUNCHER_EXTENSION_HOST_PIPE`. Other extension clients must explicitly implement HTTP/1.1 over the SID-restricted named pipe, including bearer authentication. Unsandboxed fallback is forbidden.
+Native, signed `.exe` extension targets that communicate over the updated Go Backend or CLI SDK through `LAUNCHER_EXTENSION_HOST_PIPE`. Other extension clients must explicitly implement HTTP/1.1 over the SID-restricted named pipe, including bearer authentication. Unsandboxed fallback is forbidden.
 
 Java callbacks and any application requiring direct outbound network or a loopback listener are not supported in Windows isolated mode. Scoped network and secret requests remain accessible through Host Protocol. The *shared filesystem broker* from 0.31.10 currently remains unavailable on Windows: secure handle-relative NT filesystem operations are required before this grant can be enabled. Configuration with shared roots fails closed. The AppContainer scratch directory is writable; the package is read-only.
 

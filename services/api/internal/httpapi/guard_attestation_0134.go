@@ -395,7 +395,7 @@ func (p guardReleasePolicy0134) allowsArtifactPair0140(platform, guardSHA256, la
 func (s Server) guardReleasePolicies0134() (map[string]guardReleasePolicy0134, error) {
 	raw := strings.TrimSpace(s.Config.GuardReleaseAllowlistJSON)
 	if raw == "" {
-		return nil, errors.New("NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON is not configured")
+		return nil, errors.New("LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON is not configured")
 	}
 
 	var document guardReleasePolicyDocument0140

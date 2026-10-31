@@ -44,7 +44,7 @@ var validRouteDomain0293 = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(
 // trailing JSON objects. Empty configuration preserves the 0.29.2 local default.
 func LoadRoutingConfig(jsonValue, filePath string) (RoutingConfig, error) {
 	if strings.TrimSpace(jsonValue) != "" && strings.TrimSpace(filePath) != "" {
-		return RoutingConfig{}, errors.New("configure only one of NEVERLAUNCHER_AUTH_ROUTING_JSON or NEVERLAUNCHER_AUTH_ROUTING_FILE")
+		return RoutingConfig{}, errors.New("configure only one of LAUNCHER_AUTH_ROUTING_JSON or LAUNCHER_AUTH_ROUTING_FILE")
 	}
 	var raw []byte
 	if strings.TrimSpace(filePath) != "" {

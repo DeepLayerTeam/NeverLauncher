@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// Regression: restore of a partial backup must never claim success when the
+// Regression: restore of a partial backup must claim success when the
 // database inventory contains an additional live texture.
 func TestTextureGA0260RejectsIncompleteSnapshotBeforeMutation(t *testing.T) {
 	ctx := context.Background()

@@ -12,6 +12,6 @@ Extensions не должны получать произвольный дост�
 6. Обрабатывать crash/restart с ограничением частоты и без бесконечной регенерации неуспешной установки.
 7. Поддерживать disable/quarantine/emergency и возможность восстановления предыдущей версии.
 
-Переменные окружения для host и секретов находятся в `deploy/production/env.production.example` и `.env.example` (`NEVERLAUNCHER_EXTENSION_*`). Для брокера секретов требуется криптографически случайный ключ, хранимый вне Git.
+Переменные окружения для host и секретов находятся в `deploy/production/env.production.example` и `.env.example` (`LAUNCHER_EXTENSION_*`). Для брокера секретов требуется криптографически случайный ключ, хранимый вне Git.
 
 **Кроссплатформенная оговорка:** resource limits и process isolation на Linux, Windows и macOS имеют различную реализацию. Надёжность sandbox необходимо подтверждать тестами для каждой целевой ОС. См. [модель доверия](../security/trust-model.md) и `extensions/ga-targets-0210.json`.

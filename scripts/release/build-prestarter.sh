@@ -6,9 +6,9 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 OUT="${1:-$ROOT/dist/release-${VERSION}}"
 command -v go >/dev/null || { echo "Go 1.22+ is required" >&2; exit 2; }
-ROOT_KEY="${NEVERLAUNCHER_PRESTARTER_ROOT_PUBLIC_KEY:-}"
-if [[ -z "$ROOT_KEY" && -n "${NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE:-}" ]]; then
-  ROOT_KEY="$(tr -d '[:space:]' < "$NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE")"
+ROOT_KEY="${LAUNCHER_PRESTARTER_ROOT_PUBLIC_KEY:-}"
+if [[ -z "$ROOT_KEY" && -n "${LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE:-}" ]]; then
+  ROOT_KEY="$(tr -d '[:space:]' < "$LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE")"
 fi
 [[ "$ROOT_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo "A provisioned Ed25519 root public key (64 hexadecimal characters) is required" >&2; exit 2; }
 ROOT_KEY="${ROOT_KEY,,}"

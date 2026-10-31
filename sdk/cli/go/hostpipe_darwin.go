@@ -15,7 +15,7 @@ import (
 // The HTTP transport must reuse this connection; a closed connection fails
 // closed instead of opening a loopback TCP route.
 func hostPipeDialer() func(context.Context, string, string) (net.Conn, error) {
-	fd, err := strconv.Atoi(os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_FD"))
+	fd, err := strconv.Atoi(os.Getenv("LAUNCHER_EXTENSION_HOST_FD"))
 	if err != nil || fd != 4 {
 		return nil
 	}

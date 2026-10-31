@@ -9,7 +9,7 @@ entire client environment.
 
 ## Enabling Windows runtime authorization
 
-Before deploying API `0.31.7`, configure `NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON`
+Before deploying API `0.31.7`, configure `LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON`
 with Windows `runtimeProfiles` for each allowed Desktop release. On 0.31.7+
 backends missing profiles are a **configuration error**, not a downgrade to
 Guard v1, when a Windows release is present. This also applies to older

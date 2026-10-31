@@ -31,9 +31,9 @@ def signed_set(
     ) >= (0, 23, 11):
         generation = manifest.get("securityGeneration")
         if generation is None and os.environ.get(
-            "NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION", ""
+            "LAUNCHER_COMPONENT_SECURITY_GENERATION", ""
         ):
-            value = os.environ["NEVERLAUNCHER_COMPONENT_SECURITY_GENERATION"].strip()
+            value = os.environ["LAUNCHER_COMPONENT_SECURITY_GENERATION"].strip()
             if not value.isascii() or not value.isdigit():
                 raise ValueError("component security generation must be decimal")
             generation = int(value)
@@ -100,12 +100,12 @@ def signed_set(
     raw = (
         json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
     ).encode()
-    seed = os.environ.get("NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED", "").strip()
+    seed = os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_SEED", "").strip()
     if not seed:
         if development:
             return raw, None
         raise RuntimeError(
-            "production component update requires NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED"
+            "production component update requires LAUNCHER_COMPONENT_SET_ED25519_SEED"
         )
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -115,9 +115,7 @@ def signed_set(
         raise ValueError("Ed25519 seed must be exactly 32 bytes in hexadecimal")
     key = Ed25519PrivateKey.from_private_bytes(seed_bytes)
     expected_pub = (
-        os.environ.get("NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY", "")
-        .strip()
-        .lower()
+        os.environ.get("LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY", "").strip().lower()
     )
     actual_pub = (
         key.public_key()
@@ -153,14 +151,10 @@ def sign_delegated_set(manifest_bytes: bytes, now=None):
     from cryptography.hazmat.primitives import serialization
 
     now = now or datetime.datetime.now(datetime.timezone.utc)
-    root_hex = os.environ.get(
-        "NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY", ""
-    ).strip()
-    policy_file = os.environ.get(
-        "NEVERLAUNCHER_COMPONENT_TRUST_POLICY_FILE", ""
-    ).strip()
-    seed = os.environ.get("NEVERLAUNCHER_COMPONENT_DELEGATED_ED25519_SEED", "").strip()
-    key_id = os.environ.get("NEVERLAUNCHER_COMPONENT_DELEGATED_KEY_ID", "").strip()
+    root_hex = os.environ.get("LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY", "").strip()
+    policy_file = os.environ.get("LAUNCHER_COMPONENT_TRUST_POLICY_FILE", "").strip()
+    seed = os.environ.get("LAUNCHER_COMPONENT_DELEGATED_ED25519_SEED", "").strip()
+    key_id = os.environ.get("LAUNCHER_COMPONENT_DELEGATED_KEY_ID", "").strip()
     if not all((root_hex, policy_file, seed, key_id)):
         raise RuntimeError(
             "0.23.12 production signing requires offline trust root, signed policy, delegated seed and key ID"

@@ -26,7 +26,7 @@ func (a *Auth) revokeSessionTx(ctx context.Context, q sqlitedurable.Executor, id
 	if _, e := q.ExecContext(ctx, `UPDATE access_tokens SET revoked_at=? WHERE session_id=? AND revoked_at=0`, now, id); e != nil {
 		return e
 	}
-	if _, e := q.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=?,revoked_reason=? WHERE never_session_id=? AND status='active'`, now, reason, id); e != nil {
+	if _, e := q.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=?,revoked_reason=? WHERE session_id=? AND status='active'`, now, reason, id); e != nil {
 		return e
 	}
 	eid, e := newID("rev-")

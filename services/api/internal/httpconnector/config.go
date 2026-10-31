@@ -78,7 +78,7 @@ func LoadConfigs(jsonValue, filePath string) ([]Config, error) {
 	jsonValue = strings.TrimSpace(jsonValue)
 	filePath = strings.TrimSpace(filePath)
 	if jsonValue != "" && filePath != "" {
-		return nil, errors.New("configure only one of NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON or NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE")
+		return nil, errors.New("configure only one of LAUNCHER_AUTH_HTTP_PROVIDERS_JSON or LAUNCHER_AUTH_HTTP_PROVIDERS_FILE")
 	}
 	if jsonValue == "" && filePath == "" {
 		return nil, nil

@@ -26,8 +26,8 @@ require(
     [
         "loader-native:",
         "itzg/minecraft-server:java21",
-        "NEVERLAUNCHER_E2E_NATIVE_SERVER_TYPE",
-        "NEVERLAUNCHER_E2E_NATIVE_MINECRAFT_VERSION",
+        "LAUNCHER_E2E_NATIVE_SERVER_TYPE",
+        "LAUNCHER_E2E_NATIVE_MINECRAFT_VERSION",
         "FABRIC_LOADER_VERSION",
         "QUILT_LOADER_VERSION",
         "FORGE_VERSION",
@@ -65,8 +65,8 @@ integration = read("e2e/scripts/run-minecraft-e2e.sh")
 require(
     integration,
     [
-        "NEVERLAUNCHER_E2E_RESOLVED_LOADER_VERSION",
-        "NEVERLAUNCHER_E2E_LOADER_CLIENT_PROFILE_ID",
+        "LAUNCHER_E2E_RESOLVED_LOADER_VERSION",
+        "LAUNCHER_E2E_LOADER_CLIENT_PROFILE_ID",
         "run-loader-native-e2e.sh",
         "loader-native-server.json",
         "loaderNativeE2E",

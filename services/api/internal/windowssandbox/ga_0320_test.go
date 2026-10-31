@@ -8,7 +8,7 @@ import (
 )
 
 // The only inheritable handles supplied to a sandboxed process must be
-// explicit duplicates of the standard streams, never arbitrary process state.
+// explicit duplicates of the standard streams, arbitrary process state.
 func TestGAInheritedHandlesWhitelisted0320(t *testing.T) {
 	streams, err := inheritableStandardHandles()
 	if err != nil {

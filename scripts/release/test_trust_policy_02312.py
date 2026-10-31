@@ -75,12 +75,10 @@ class TrustPolicyTests02312(unittest.TestCase):
             )
             raw = b'{"securityGeneration":15,"productVersion":"0.23.12"}'
             env = {
-                "NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY": pub(root),
-                "NEVERLAUNCHER_COMPONENT_TRUST_POLICY_FILE": str(
-                    t / "signed-policy.json"
-                ),
-                "NEVERLAUNCHER_COMPONENT_DELEGATED_ED25519_SEED": seed(delegated),
-                "NEVERLAUNCHER_COMPONENT_DELEGATED_KEY_ID": "components-2026",
+                "LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY": pub(root),
+                "LAUNCHER_COMPONENT_TRUST_POLICY_FILE": str(t / "signed-policy.json"),
+                "LAUNCHER_COMPONENT_DELEGATED_ED25519_SEED": seed(delegated),
+                "LAUNCHER_COMPONENT_DELEGATED_KEY_ID": "components-2026",
             }
             with patch.dict(os.environ, env):
                 signed, policy_bytes = sign_delegated_set(raw)

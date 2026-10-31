@@ -146,8 +146,8 @@ func TestJarZipTraversalRejected(t *testing.T) {
 	}
 }
 func TestRunProcessSanitized(t *testing.T) {
-	jar := makeTestJar(t, false, `public class Fixture { public static void main(String[] a) { System.out.println(System.getenv("NEVERLAUNCHER_TOKEN")); System.out.println(System.getenv("NEVERLAUNCHER_DEVTOOLS_TEST_MODE")); System.out.println(a[0]); } }`)
-	t.Setenv("NEVERLAUNCHER_TOKEN", "production-secret")
+	jar := makeTestJar(t, false, `public class Fixture { public static void main(String[] a) { System.out.println(System.getenv("LAUNCHER_TOKEN")); System.out.println(System.getenv("LAUNCHER_DEVTOOLS_TEST_MODE")); System.out.println(a[0]); } }`)
+	t.Setenv("LAUNCHER_TOKEN", "production-secret")
 	r, e := RunComponent(context.Background(), ComponentOptions{Jar: jar, Java: "java", Isolation: "process", Timeout: 4 * time.Second, HeapMB: 64, Args: []string{"argument"}})
 	if e != nil {
 		t.Fatal(e)

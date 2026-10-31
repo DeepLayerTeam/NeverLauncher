@@ -36,7 +36,7 @@ func ConfigureAuthCore111(cfg config.Config, state *RuntimeState) error {
 		driver = "pgx"
 	}
 	if strings.TrimSpace(cfg.DatabaseDSN) == "" {
-		return errors.New("auth core 0.11.1 требует NEVERLAUNCHER_DATABASE_DSN")
+		return errors.New("auth core 0.11.1 требует LAUNCHER_DATABASE_DSN")
 	}
 	db, err := sql.Open(driver, cfg.DatabaseDSN)
 	if err != nil {

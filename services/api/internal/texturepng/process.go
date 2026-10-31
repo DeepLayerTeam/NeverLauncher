@@ -1,5 +1,5 @@
 // Package texturepng validates, fully decodes and deterministically rewrites
-// uploaded Minecraft skin/cape PNGs. It never trusts the filename, MIME type or
+// uploaded Minecraft skin/cape PNGs. It trusts the filename, MIME type or
 // PNG signature alone. Limits are checked before allocating decoded pixels.
 package texturepng
 

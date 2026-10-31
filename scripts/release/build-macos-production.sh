@@ -21,9 +21,9 @@ for tool in go cargo rustup npm codesign lipo ditto shasum python3; do
   command -v "$tool" >/dev/null || { echo "$tool is required" >&2; exit 1; }
 done
 
-SIGN_IDENTITY="${NEVERLAUNCHER_MACOS_SIGNING_IDENTITY:-}"
-TEAM_ID="${NEVERLAUNCHER_MACOS_TEAM_ID:-}"
-NOTARY_PROFILE="${NEVERLAUNCHER_MACOS_NOTARY_PROFILE:-}"
+SIGN_IDENTITY="${LAUNCHER_MACOS_SIGNING_IDENTITY:-}"
+TEAM_ID="${LAUNCHER_MACOS_TEAM_ID:-}"
+NOTARY_PROFILE="${LAUNCHER_MACOS_NOTARY_PROFILE:-}"
 SIGNING_MODE="developer-id-notarized"
 UPDATE_TRUST_MODE="developer-id-notarized"
 TIMESTAMP_ARG="--timestamp"
@@ -31,11 +31,11 @@ if [[ "${MODE}" == "production" ]]; then
   command -v xcrun >/dev/null || { echo "xcrun is required for production notarization" >&2; exit 1; }
   [[ -x /usr/sbin/spctl ]] || { echo "spctl is required for production Gatekeeper validation" >&2; exit 1; }
   [[ -n "${SIGN_IDENTITY}" && -n "${TEAM_ID}" && -n "${NOTARY_PROFILE}" ]] || {
-    echo "production macOS delivery requires NEVERLAUNCHER_MACOS_SIGNING_IDENTITY, NEVERLAUNCHER_MACOS_TEAM_ID and NEVERLAUNCHER_MACOS_NOTARY_PROFILE" >&2
+    echo "production macOS delivery requires LAUNCHER_MACOS_SIGNING_IDENTITY, LAUNCHER_MACOS_TEAM_ID and LAUNCHER_MACOS_NOTARY_PROFILE" >&2
     exit 2
   }
   [[ "${SIGN_IDENTITY}" == Developer\ ID\ Application:* ]] || { echo "signing identity must be Developer ID Application" >&2; exit 2; }
-  [[ "${TEAM_ID}" =~ ^[A-Z0-9]{10}$ ]] || { echo "NEVERLAUNCHER_MACOS_TEAM_ID must be a 10-character Apple Team ID" >&2; exit 2; }
+  [[ "${TEAM_ID}" =~ ^[A-Z0-9]{10}$ ]] || { echo "LAUNCHER_MACOS_TEAM_ID must be a 10-character Apple Team ID" >&2; exit 2; }
 else
   SIGN_IDENTITY="-"
   TEAM_ID="ADHOC-CI"
@@ -74,7 +74,7 @@ for arch in x64 arm64; do
   GO_CLI="${WORK_ROOT}/launcher-cli-${arch}"
   (
     cd "${ROOT_DIR}/cli"
-    GOOS=darwin GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.componentSetTrustedKey02310=${NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-} -X main.componentSetRootKey02312=${NEVERLAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY:-}" -o "${GO_CLI}" ./cmd/launcher
+    GOOS=darwin GOARCH="${GOARCH}" CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.componentSetTrustedKey02310=${LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY:-} -X main.componentSetRootKey02312=${LAUNCHER_COMPONENT_TRUST_ROOT_PUBLIC_KEY:-}" -o "${GO_CLI}" ./cmd/launcher
   )
 
   APP_ROOT="${WORK_ROOT}/${arch}/Launcher.app"

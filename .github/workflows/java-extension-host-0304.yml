@@ -68,7 +68,7 @@ jobs:
       - name: Real Go supervisor spawning Java (ready, RPC, CLI and hung callback kill)
         working-directory: services/api
         env:
-          NEVERLAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
+          LAUNCHER_TEST_JAVA_HOST_JAR: ${{ github.workspace }}/examples/extensions/java-host/build/package/backend/java-host.jar
         run: go test -race -count=1 -timeout 3m -run 'TestJava.*(0304|0422)'  ./internal/extensionhost
       - name: Java recovery admission and cancelled late hello regression
         working-directory: services/api
@@ -94,7 +94,7 @@ jobs:
         run: |
           set -eu
           sh examples/extensions/java-host/build.sh
-          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+          (cd cli && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
           openssl genpkey -algorithm ed25519 -out "$RUNNER_TEMP/private.pem"
           openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
           "$RUNNER_TEMP/nl" extension pack examples/extensions/java-host/build/package --output "$RUNNER_TEMP/java-host.nlext" --private-key "$RUNNER_TEMP/private.pem"

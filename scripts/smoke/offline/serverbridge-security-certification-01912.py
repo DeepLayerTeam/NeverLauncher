@@ -208,14 +208,14 @@ require(
     minecraft_e2e,
     [
         "CONTROL_PUBLIC_KEY=",
-        "NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY=$CONTROL_PUBLIC_KEY",
+        "LAUNCHER_E2E_CONTROL_PUBLIC_KEY=$CONTROL_PUBLIC_KEY",
         '"openssl", "pkey", "-inform", "DER", "-pubout", "-outform", "DER"',
     ],
     "Minecraft E2E control key derivation",
 )
 if (
     compose_e2e.count(
-        "NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:"
+        "LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:"
     )
     != 10
 ):

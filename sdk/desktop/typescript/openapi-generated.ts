@@ -74,7 +74,7 @@ export type ExtensionsAPIOperation = {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   path: string;
 };
-export const NEVEREXTENSIONS_API_OPERATIONS: Record<
+export const EXTENSIONS_API_OPERATIONS: Record<
   ExtensionsAPIOperationId,
   ExtensionsAPIOperation
 > = {

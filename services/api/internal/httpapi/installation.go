@@ -73,7 +73,7 @@ func InitializeInstallationSecurityP0(cfg config.Config, backend any) error {
 	if state.TokenHash == "" {
 		if token == "" {
 			if isProdP0(cfg.Environment) {
-				return errors.New("fresh production installation requires NEVERLAUNCHER_BOOTSTRAP_TOKEN")
+				return errors.New("fresh production installation requires LAUNCHER_BOOTSTRAP_TOKEN")
 			}
 			return nil
 		}
@@ -81,7 +81,7 @@ func InitializeInstallationSecurityP0(cfg config.Config, backend any) error {
 		return err
 	}
 	if token != "" && subtle.ConstantTimeCompare([]byte(state.TokenHash), []byte(bootstrapTokenHashP0(token))) != 1 {
-		return errors.New("NEVERLAUNCHER_BOOTSTRAP_TOKEN does not match initialized installation token")
+		return errors.New("LAUNCHER_BOOTSTRAP_TOKEN does not match initialized installation token")
 	}
 	return nil
 }

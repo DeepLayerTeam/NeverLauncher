@@ -17,8 +17,8 @@ missing PCR measurements or an unsigned policy.
 ## Deployment
 
 Provision a trusted AK issuer and root store as for 0.31.2–0.31.4. Set
-`NEVERLAUNCHER_TPM_AK_ROOTS_FILE` to the operator-controlled absolute path.
-Separately set `NEVERLAUNCHER_TPM_PCR_POLICY_FILE` to an absolute JSON policy
+`LAUNCHER_TPM_AK_ROOTS_FILE` to the operator-controlled absolute path.
+Separately set `LAUNCHER_TPM_PCR_POLICY_FILE` to an absolute JSON policy
 file, writable by the backend operator only (never writable by the launcher
 user, an extension or the untrusted service worker).
 

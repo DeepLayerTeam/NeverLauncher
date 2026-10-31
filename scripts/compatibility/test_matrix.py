@@ -1228,7 +1228,7 @@ class MatrixToolTests(unittest.TestCase):
         self,
     ) -> None:
         # Каждый сегмент должен сохранить целевой JDK (исполняемый файл
-        # закреплён NEVERLAUNCHER_E2E_JAVA), но для чистых заданий
+        # закреплён LAUNCHER_E2E_JAVA), но для чистых заданий
         # сертификации Vanilla Go/Rust не нужно заново скачивать Java 21.
         workflow = (ROOT / ".github" / "workflows" / "compatibility.yml").read_text(
             encoding="utf-8"
@@ -1251,7 +1251,7 @@ class MatrixToolTests(unittest.TestCase):
         self.assertEqual(
             workflow.count("- name: Install target Java ${{ matrix.javaMajor }}"), 2
         )
-        self.assertEqual(workflow.count("NEVERLAUNCHER_E2E_JAVA=%s"), 2)
+        self.assertEqual(workflow.count("LAUNCHER_E2E_JAVA=%s"), 2)
 
     def test_0178_aggregate_rejects_missing_loader_native_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

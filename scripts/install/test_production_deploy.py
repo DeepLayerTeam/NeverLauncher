@@ -20,43 +20,43 @@ def settings(mode="standard"):
     result = {
         name: "safe-value-" + name
         for name in (
-            "NEVERLAUNCHER_AUTH_TOKEN_SECRET",
-            "NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY",
-            "NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON",
-            "NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON",
-            "NEVERLAUNCHER_WEBAUTHN_RP_ID",
-            "NEVERLAUNCHER_WEBAUTHN_ORIGINS",
-            "NEVERLAUNCHER_CORS_ALLOWED_ORIGINS",
+            "LAUNCHER_AUTH_TOKEN_SECRET",
+            "LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY",
+            "LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON",
+            "LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON",
+            "LAUNCHER_WEBAUTHN_RP_ID",
+            "LAUNCHER_WEBAUTHN_ORIGINS",
+            "LAUNCHER_CORS_ALLOWED_ORIGINS",
             "POSTGRES_PASSWORD",
-            "NEVERLAUNCHER_DATABASE_DSN",
-            "NEVERLAUNCHER_IMAGE_TAG",
+            "LAUNCHER_DATABASE_DSN",
+            "LAUNCHER_IMAGE_TAG",
         )
     }
     result.update(
-        NEVERLAUNCHER_PUBLIC_URL="https://launcher.example.org",
-        NEVERLAUNCHER_WEBAUTHN_RP_ID="example.org",
-        NEVERLAUNCHER_WEBAUTHN_ORIGINS="https://launcher.example.org",
-        NEVERLAUNCHER_CORS_ALLOWED_ORIGINS="https://launcher.example.org",
-        NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON='{"releases":["release"]}',
-        NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON='{"releases":["bridge"]}',
-        NEVERLAUNCHER_AUTH_TOKEN_SECRET="a" * 64,
-        NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY="b" * 64,
+        LAUNCHER_PUBLIC_URL="https://launcher.example.org",
+        LAUNCHER_WEBAUTHN_RP_ID="example.org",
+        LAUNCHER_WEBAUTHN_ORIGINS="https://launcher.example.org",
+        LAUNCHER_CORS_ALLOWED_ORIGINS="https://launcher.example.org",
+        LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON='{"releases":["release"]}',
+        LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON='{"releases":["bridge"]}',
+        LAUNCHER_AUTH_TOKEN_SECRET="a" * 64,
+        LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY="b" * 64,
         POSTGRES_PASSWORD="c" * 40,
         REDIS_PASSWORD="d" * 40,
-        NEVERLAUNCHER_REPOSITORY_DRIVER="postgres",
-        NEVERLAUNCHER_IMAGE_TAG="0.32.13",
-        NEVERLAUNCHER_DEPLOYMENT_MODE=mode,
-        NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED="false",
+        LAUNCHER_REPOSITORY_DRIVER="postgres",
+        LAUNCHER_IMAGE_TAG="0.32.13",
+        LAUNCHER_DEPLOYMENT_MODE=mode,
+        LAUNCHER_SERVERBRIDGE_HA_REQUIRED="false",
     )
     if mode == "network-ha":
         for key in (
             "REDIS_PASSWORD",
-            "NEVERLAUNCHER_REPLICA_ID",
-            "NEVERLAUNCHER_STORAGE_S3_ENDPOINT",
-            "NEVERLAUNCHER_STORAGE_S3_BUCKET",
-            "NEVERLAUNCHER_STORAGE_S3_REGION",
-            "NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY",
-            "NEVERLAUNCHER_STORAGE_S3_SECRET_KEY",
+            "LAUNCHER_REPLICA_ID",
+            "LAUNCHER_STORAGE_S3_ENDPOINT",
+            "LAUNCHER_STORAGE_S3_BUCKET",
+            "LAUNCHER_STORAGE_S3_REGION",
+            "LAUNCHER_STORAGE_S3_ACCESS_KEY",
+            "LAUNCHER_STORAGE_S3_SECRET_KEY",
         ):
             result[key] = "d" * 40 if key == "REDIS_PASSWORD" else "safe-value-" + key
     return result
@@ -68,9 +68,9 @@ class DeploymentTests(unittest.TestCase):
         deploy.preflight(env, "standard", docker=True)
         for name, value in [
             ("POSTGRES_PASSWORD", "CHANGE_ME_PASSWORD"),
-            ("NEVERLAUNCHER_PUBLIC_URL", "http://localhost"),
-            ("NEVERLAUNCHER_DEPLOYMENT_MODE", "network-ha"),
-            ("NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED", "true"),
+            ("LAUNCHER_PUBLIC_URL", "http://localhost"),
+            ("LAUNCHER_DEPLOYMENT_MODE", "network-ha"),
+            ("LAUNCHER_SERVERBRIDGE_HA_REQUIRED", "true"),
         ]:
             edited = dict(env, **{name: value})
             with self.assertRaises(RuntimeError, msg=name):
@@ -127,7 +127,7 @@ class DeploymentTests(unittest.TestCase):
                     deploy.compose_run(args("uninstall", purge=True))
                 self.assertFalse(any("--volumes" in x for x in calls))
                 deploy.compose_run(
-                    args("uninstall", purge=True, confirm="PURGE-NEVERLAUNCHER-VOLUMES")
+                    args("uninstall", purge=True, confirm="PURGE-LAUNCHER-VOLUMES")
                 )
                 self.assertTrue(any("--volumes" in x for x in calls))
                 self.assertFalse((home / ".launcher-compose-state.json").exists())
@@ -152,7 +152,7 @@ class DeploymentTests(unittest.TestCase):
                 deploy, "execute", side_effect=lambda x, **y: calls.append(x)
             ):
                 deploy.compose_run(args())
-                config["NEVERLAUNCHER_IMAGE_TAG"] = "0.32.14"
+                config["LAUNCHER_IMAGE_TAG"] = "0.32.14"
                 env_path.write_text("".join(f"{k}={v}\n" for k, v in config.items()))
                 with self.assertRaises(RuntimeError):
                     deploy.compose_run(args())
@@ -203,7 +203,7 @@ class DeploymentTests(unittest.TestCase):
                     "uninstall",
                     "--purge-data",
                     "--confirm",
-                    "PURGE-NEVERLAUNCHER-NATIVE-DATA",
+                    "PURGE-LAUNCHER-NATIVE-DATA",
                 ]
             )
             remove.assert_called_once()
@@ -214,9 +214,9 @@ class DeploymentTests(unittest.TestCase):
         ha = deploy.HA.read_text()
         self.assertIn("profiles: [network-ha]", standard)
         self.assertIn("launcher_coordinator:", standard)
-        self.assertIn('NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED: "false"', standard)
-        self.assertIn('NEVERLAUNCHER_SERVERBRIDGE_HA_REQUIRED: "true"', ha)
-        self.assertIn("NEVERLAUNCHER_STORAGE_DRIVER: s3", ha)
+        self.assertIn('LAUNCHER_SERVERBRIDGE_HA_REQUIRED: "false"', standard)
+        self.assertIn('LAUNCHER_SERVERBRIDGE_HA_REQUIRED: "true"', ha)
+        self.assertIn("LAUNCHER_STORAGE_DRIVER: s3", ha)
 
     def test_native_signed_release_install_uninstall_and_rollback(self):
         from contextlib import nullcontext
@@ -231,10 +231,10 @@ class DeploymentTests(unittest.TestCase):
             (base / "var").mkdir()
             env = base / "backend.env"
             settings_native = settings()
-            settings_native["NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH"] = str(
+            settings_native["LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH"] = str(
                 state_root / "coordinator" / "state.db"
             )
-            settings_native["NEVERLAUNCHER_STORAGE_LOCAL_PATH"] = str(
+            settings_native["LAUNCHER_STORAGE_LOCAL_PATH"] = str(
                 state_root / "storage" / "current"
             )
             env.write_text("".join(f"{k}={v}\n" for k, v in settings_native.items()))

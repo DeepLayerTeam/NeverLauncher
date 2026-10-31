@@ -32,13 +32,13 @@ jobs:
       - name: Prepare supported real local filesystem
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/never-sqlite-core"
-          chmod 0700 "$RUNNER_TEMP/never-sqlite-core"
-          stat -f -c '%T' "$RUNNER_TEMP/never-sqlite-core"
+          mkdir -p "$RUNNER_TEMP/sqlite-core"
+          chmod 0700 "$RUNNER_TEMP/sqlite-core"
+          stat -f -c '%T' "$RUNNER_TEMP/sqlite-core"
       - name: Real SQLite WAL integration, CAS, trusted manifest and restart tests
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-core
-          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-core
+          LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Build operational CLI and exercise durable core initialization
         run: |

@@ -73,7 +73,7 @@ jobs:
             java_path="$(cygpath -m "$java_path")"
             [[ "${java_path,,}" == *.exe ]] || java_path="${java_path}.exe"
           fi
-          printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$java_path" >> "$GITHUB_ENV"
+          printf 'LAUNCHER_E2E_JAVA=%s\n' "$java_path" >> "$GITHUB_ENV"
       - name: Restore Java 21 for loader/Gradle build tooling
         # Сертификация Vanilla запускает только Go, Rust и уже закреплённую целевую
         # JVM; Gradle не используется. Повторная загрузка JDK приводит к сбоям
@@ -93,7 +93,7 @@ jobs:
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
       # Hosted Windows ARM64 occasionally crashes inside PowerShell's CLR
       # while extracting a valid JDK 21 ZIP. Retry the actual setup action;
-      # never continue the client certification without a working JDK.
+      # continue the client certification without a working JDK.
       - name: Retry Java 21 tooling after transient extraction failure
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21 && steps.java21_tooling.outcome == 'failure'
         uses: actions/setup-java@v5
@@ -143,19 +143,19 @@ jobs:
         run: |
           ./scripts/compatibility/install-windows-mesa.ps1 `
             -Architecture '${{ matrix.arch }}' `
-            -JavaExecutable "$env:NEVERLAUNCHER_E2E_JAVA"
+            -JavaExecutable "$env:LAUNCHER_E2E_JAVA"
       - name: Run actual-client compatibility target
         env:
-          NEVERLAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}
-          NEVERLAUNCHER_COMPAT_OS: ${{ matrix.os }}
-          NEVERLAUNCHER_COMPAT_ARCH: ${{ matrix.arch }}
-          NEVERLAUNCHER_COMPAT_SCOPE: ${{ matrix.scope }}
-          NEVERLAUNCHER_COMPAT_MATCHING_SERVER: ${{ matrix.matchingServer }}
-          NEVERLAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
-          NEVERLAUNCHER_E2E_LOADER: ${{ matrix.loader }}
-          NEVERLAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
-          NEVERLAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
-          NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
+          LAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}
+          LAUNCHER_COMPAT_OS: ${{ matrix.os }}
+          LAUNCHER_COMPAT_ARCH: ${{ matrix.arch }}
+          LAUNCHER_COMPAT_SCOPE: ${{ matrix.scope }}
+          LAUNCHER_COMPAT_MATCHING_SERVER: ${{ matrix.matchingServer }}
+          LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
+          LAUNCHER_E2E_LOADER: ${{ matrix.loader }}
+          LAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
+          LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
+          LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
           # CI runners have no physical audio device; force OpenAL Soft's
           # genuine null backend rather than failing to open the default one.
           # This only affects certification runners, not launcher releases.
@@ -275,7 +275,7 @@ jobs:
             java_path="$(cygpath -m "$java_path")"
             [[ "${java_path,,}" == *.exe ]] || java_path="${java_path}.exe"
           fi
-          printf 'NEVERLAUNCHER_E2E_JAVA=%s\n' "$java_path" >> "$GITHUB_ENV"
+          printf 'LAUNCHER_E2E_JAVA=%s\n' "$java_path" >> "$GITHUB_ENV"
       - name: Restore Java 21 for loader/Gradle build tooling
         # Сертификация Vanilla запускает только Go, Rust и уже закреплённую целевую
         # JVM; Gradle не используется. Повторная загрузка JDK приводит к сбоям
@@ -295,7 +295,7 @@ jobs:
           architecture: ${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}
       # Hosted Windows ARM64 occasionally crashes inside PowerShell's CLR
       # while extracting a valid JDK 21 ZIP. Retry the actual setup action;
-      # never continue the client certification without a working JDK.
+      # continue the client certification without a working JDK.
       - name: Retry Java 21 tooling after transient extraction failure
         if: matrix.loader != 'vanilla' && matrix.javaMajor != 21 && steps.java21_tooling.outcome == 'failure'
         uses: actions/setup-java@v5
@@ -345,19 +345,19 @@ jobs:
         run: |
           ./scripts/compatibility/install-windows-mesa.ps1 `
             -Architecture '${{ matrix.arch }}' `
-            -JavaExecutable "$env:NEVERLAUNCHER_E2E_JAVA"
+            -JavaExecutable "$env:LAUNCHER_E2E_JAVA"
       - name: Run actual-client compatibility target
         env:
-          NEVERLAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}
-          NEVERLAUNCHER_COMPAT_OS: ${{ matrix.os }}
-          NEVERLAUNCHER_COMPAT_ARCH: ${{ matrix.arch }}
-          NEVERLAUNCHER_COMPAT_SCOPE: ${{ matrix.scope }}
-          NEVERLAUNCHER_COMPAT_MATCHING_SERVER: ${{ matrix.matchingServer }}
-          NEVERLAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
-          NEVERLAUNCHER_E2E_LOADER: ${{ matrix.loader }}
-          NEVERLAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
-          NEVERLAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
-          NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
+          LAUNCHER_COMPAT_TARGET_ID: ${{ matrix.id }}
+          LAUNCHER_COMPAT_OS: ${{ matrix.os }}
+          LAUNCHER_COMPAT_ARCH: ${{ matrix.arch }}
+          LAUNCHER_COMPAT_SCOPE: ${{ matrix.scope }}
+          LAUNCHER_COMPAT_MATCHING_SERVER: ${{ matrix.matchingServer }}
+          LAUNCHER_E2E_MINECRAFT_VERSION: ${{ matrix.minecraft }}
+          LAUNCHER_E2E_LOADER: ${{ matrix.loader }}
+          LAUNCHER_E2E_LOADER_VERSION: ${{ matrix.loaderVersion }}
+          LAUNCHER_E2E_JAVA_MAJOR: ${{ matrix.javaMajor }}
+          LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: ${{ matrix.scope == 'client' && '30' || '90' }}
           # CI runners have no physical audio device; force OpenAL Soft's
           # genuine null backend rather than failing to open the default one.
           # This only affects certification runners, not launcher releases.

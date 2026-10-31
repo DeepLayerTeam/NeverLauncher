@@ -13,7 +13,7 @@ API = ROOT / "services" / "api"
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 OUT = pathlib.Path(
     os.environ.get(
-        "NEVERLAUNCHER_FEDERATION_E2E_REPORT",
+        "LAUNCHER_FEDERATION_E2E_REPORT",
         ROOT / "dist" / "reports" / "federation-e2e.json",
     )
 )

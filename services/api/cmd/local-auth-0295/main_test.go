@@ -10,7 +10,7 @@ import (
 )
 
 func TestLocalAuthCLI0295ExportRedactsUnknownServerFields(t *testing.T) {
-	t.Setenv("NEVERLAUNCHER_ADMIN_ACCESS_TOKEN", "test-token")
+	t.Setenv("LAUNCHER_ADMIN_ACCESS_TOKEN", "test-token")
 	remote := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/admin/users" || r.Header.Get("Authorization") != "Bearer test-token" {
 			t.Errorf("unauthorized endpoint %s", r.URL.Path)
@@ -34,7 +34,7 @@ func TestLocalAuthCLI0295ExportRedactsUnknownServerFields(t *testing.T) {
 	}
 }
 func TestLocalAuthCLI0295PasswordOnlyFromStdin(t *testing.T) {
-	t.Setenv("NEVERLAUNCHER_ADMIN_ACCESS_TOKEN", "test-token")
+	t.Setenv("LAUNCHER_ADMIN_ACCESS_TOKEN", "test-token")
 	secret := "Safe-Password-0295"
 	remote := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/admin/users/u-1/password" || r.Method != "POST" || r.Header.Get("Authorization") != "Bearer test-token" {
@@ -56,7 +56,7 @@ func TestLocalAuthCLI0295PasswordOnlyFromStdin(t *testing.T) {
 	}
 }
 func TestLocalAuthCLI0295SecurityRefusals(t *testing.T) {
-	t.Setenv("NEVERLAUNCHER_ADMIN_ACCESS_TOKEN", "test-token")
+	t.Setenv("LAUNCHER_ADMIN_ACCESS_TOKEN", "test-token")
 	var output bytes.Buffer
 	if err := run([]string{"list", "--api", "http://public.example.invalid"}, &output, strings.NewReader("")); err == nil {
 		t.Fatal("remote cleartext HTTP accepted")

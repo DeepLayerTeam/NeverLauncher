@@ -57,12 +57,12 @@ func Matches(policy Policy, server, project, profile, channel, release, catalog,
 // Configuration deliberately defaults to legacy behavior; operators must set
 // REQUIRE_PLAN_POLICY=1 before using the guarded join mode in production.
 func Required() bool {
-	return os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_REQUIRE_PLAN_POLICY") == "1" || os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE") != "" || os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY") != ""
+	return os.Getenv("LAUNCHER_SERVERBRIDGE_REQUIRE_PLAN_POLICY") == "1" || os.Getenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE") != "" || os.Getenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY") != ""
 }
 func Load(now time.Time) (Policy, error) {
 	var out Policy
-	path := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE"))
-	pin := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY"))
+	path := strings.TrimSpace(os.Getenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE"))
+	pin := strings.TrimSpace(os.Getenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY"))
 	if path == "" || pin == "" {
 		return out, errors.New("signed ServerBridge plan policy is not provisioned")
 	}

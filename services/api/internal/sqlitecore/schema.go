@@ -50,7 +50,7 @@ func Open(ctx context.Context, options sqlitedurable.Options) (*Repository, erro
 	return repo, nil
 }
 
-// OpenExisting never creates or migrates a core schema; for inspection and
+// OpenExisting creates or migrates a core schema; for inspection and
 // startup readiness checks. The caller must first ensure the DB file exists.
 func OpenExisting(ctx context.Context, options sqlitedurable.Options) (*Repository, error) {
 	store, err := sqlitedurable.Open(ctx, options)
@@ -234,7 +234,7 @@ func (r *Repository) Check(ctx context.Context) error {
 			`SELECT COUNT(*) FROM users u LEFT JOIN roles r ON r.id=u.role_id WHERE r.id IS NULL`,
 			`SELECT COUNT(*) FROM project_user_roles pur LEFT JOIN roles r ON r.id=pur.role_id WHERE r.id IS NULL`,
 			`SELECT COUNT(*) FROM refresh_tokens t JOIN refresh_families f ON f.id=t.family_id JOIN auth_sessions s ON s.id=f.session_id WHERE f.status='active' AND s.status<>'active' AND t.status='current'`,
-			`SELECT COUNT(*) FROM minecraft_sessions m JOIN auth_sessions s ON s.id=m.never_session_id WHERE m.status='active' AND s.status<>'active'`,
+			`SELECT COUNT(*) FROM minecraft_sessions m JOIN auth_sessions s ON s.id=m.session_id WHERE m.status='active' AND s.status<>'active'`,
 			`SELECT COUNT(*) FROM bridge_join_tickets t JOIN bridge_nodes n ON n.id=t.node_id WHERE t.status='active' AND (n.status<>'active' OR t.issued_identity_epoch<>n.identity_epoch OR t.issued_fingerprint<>n.fingerprint)`,
 			`SELECT COUNT(*) FROM bridge_join_tickets WHERE status='consumed' AND consumed_at=0`,
 			`SELECT COUNT(*) FROM bridge_nodes WHERE length(public_key)<>32`,

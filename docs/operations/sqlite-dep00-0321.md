@@ -2,7 +2,7 @@
 
 **Scope:** A physically durable SQLite transactional component and preflight command.
 This is **not** a Launcher SQLite application backend. Do not set
-`NEVERLAUNCHER_REPOSITORY_DRIVER=sqlite` in production until DEP01–DEP03 parity
+`LAUNCHER_REPOSITORY_DRIVER=sqlite` in production until DEP01–DEP03 parity
 has been implemented, tested, and reviewed. The HTTP API continues to require PostgreSQL.
 
 ## Pinned build inputs

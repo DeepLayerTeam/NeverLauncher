@@ -1,5 +1,5 @@
 // Package texturegravit migrates real Gravit TextureProvider records into
-// normalized Launcher texture storage. It never imports auth tokens,
+// normalized Launcher texture storage. It imports auth tokens,
 // private URLs, remote identities, or unverified PNG bytes.
 package texturegravit
 
@@ -27,7 +27,7 @@ import (
 )
 
 // SourceRow matches GravitLauncher/TextureProvider's PostgreSQL textures table.
-// ObjectKey is a trusted offline export extension; file_url is never fetched.
+// ObjectKey is a trusted offline export extension; file_url is fetched.
 type SourceRow struct {
 	ID          string          `json:"id"`
 	UserUUID    string          `json:"user_uuid"`
@@ -136,7 +136,7 @@ func LoadJSON(data []byte) ([]SourceRow, error) {
 
 // ReadPostgres reads the official upstream TextureProvider schema, with no
 // arbitrary SQL/identifiers supplied by the caller. Database credentials stay
-// in the operator process and never appear in reports.
+// in the operator process and appear in reports.
 func ReadPostgres(ctx context.Context, db *sql.DB) ([]SourceRow, error) {
 	rows, err := db.QueryContext(ctx, `SELECT id::text,user_uuid::text,texture_type,file_hash,file_url,COALESCE(metadata,'{}'::jsonb) FROM textures ORDER BY user_uuid,texture_type,id`)
 	if err != nil {
@@ -359,7 +359,7 @@ func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]b
 	return rec
 }
 
-// LocalSource never follows untrusted URLs. Files must resolve beneath the
+// LocalSource follows untrusted URLs. Files must resolve beneath the
 // configured operator-owned root; symlinks pointing outside are rejected.
 type LocalSource struct{ Root string }
 

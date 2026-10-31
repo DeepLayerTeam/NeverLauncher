@@ -59,26 +59,37 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     assert (STAGE / "backend/lib/java-lifecycle.jar").is_file(), "run build.sh first"
-    classpath = os.pathsep.join((str((STAGE / 'backend/lib/launcher-java-sdk-core.jar').resolve()),
-                                  str((STAGE / 'backend/lib/java-lifecycle.jar').resolve())))
+    classpath = os.pathsep.join(
+        (
+            str((STAGE / "backend/lib/launcher-java-sdk-core.jar").resolve()),
+            str((STAGE / "backend/lib/java-lifecycle.jar").resolve()),
+        )
+    )
     host = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=host.serve_forever, daemon=True)
     thread.start()
     env = dict(os.environ)
     env.update(
         {
-            "NEVERLAUNCHER_EXTENSION_HOST_URL": f"http://127.0.0.1:{host.server_port}",
-            "NEVERLAUNCHER_EXTENSION_HOST_TOKEN": "test-secret",
-            "NEVERLAUNCHER_EXTENSION_CALLBACK_TOKEN": "callback-test-secret",
-            "NEVERLAUNCHER_EXTENSION_ID": "org.example.java-lifecycle",
-            "NEVERLAUNCHER_EXTENSION_VERSION": "0.1.0",
-            "NEVERLAUNCHER_EXTENSION_HOST_PROTOCOL": "1.0",
-            "NEVERLAUNCHER_EXTENSION_API_VERSION": "1.0",
-            "NEVERLAUNCHER_EXTENSION_INSTANCE_ID": "test-instance",
+            "LAUNCHER_EXTENSION_HOST_URL": f"http://127.0.0.1:{host.server_port}",
+            "LAUNCHER_EXTENSION_HOST_TOKEN": "test-secret",
+            "LAUNCHER_EXTENSION_CALLBACK_TOKEN": "callback-test-secret",
+            "LAUNCHER_EXTENSION_ID": "org.example.java-lifecycle",
+            "LAUNCHER_EXTENSION_VERSION": "0.1.0",
+            "LAUNCHER_EXTENSION_HOST_PROTOCOL": "1.0",
+            "LAUNCHER_EXTENSION_API_VERSION": "1.0",
+            "LAUNCHER_EXTENSION_INSTANCE_ID": "test-instance",
         }
     )
     proc = subprocess.Popen(
-        ["java", "-cp", classpath, "ru.launcher.sdk.core.ExtensionRunner", "backend/manifest.json", "ru.example.launcher.LifecycleExample"],
+        [
+            "java",
+            "-cp",
+            classpath,
+            "ru.launcher.sdk.core.ExtensionRunner",
+            "backend/manifest.json",
+            "ru.example.launcher.LifecycleExample",
+        ],
         cwd=STAGE,
         env=env,
         stdout=subprocess.PIPE,
@@ -93,12 +104,12 @@ if __name__ == "__main__":
         assert proc.poll() is None and Handler.hello == 1 and Handler.heartbeats >= 1, (
             "Java extension failed to negotiate and heartbeat"
         )
-        if os.name == 'nt':
+        if os.name == "nt":
             # Windows TerminateProcess cannot execute a JVM shutdown hook.
             # Exercise the same lifecycle.stop() through a failed host heartbeat.
             Handler.allow_heartbeat = False
             out, err = proc.communicate(timeout=12)
-            assert proc.returncode != 0, 'lost host heartbeat should fail closed'
+            assert proc.returncode != 0, "lost host heartbeat should fail closed"
         else:
             proc.send_signal(signal.SIGTERM)
             out, err = proc.communicate(timeout=6)
@@ -108,11 +119,9 @@ if __name__ == "__main__":
         assert "Java extension started" in out and "Java extension stopped" in out, (
             f"lifecycle callbacks missing: {out}"
         )
-        if os.name != 'nt':
+        if os.name != "nt":
             assert not err.strip(), f"unexpected Java extension stderr: {err}"
-        print(
-            "PASS: real Java subprocess hello, PID, heartbeat, lifecycle stop"
-        )
+        print("PASS: real Java subprocess hello, PID, heartbeat, lifecycle stop")
     finally:
         if proc.poll() is None:
             proc.kill()

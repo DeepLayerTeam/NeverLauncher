@@ -49,10 +49,10 @@ jobs:
       - name: Build and Authenticode-sign both architectures
         shell: pwsh
         env:
-          NEVERLAUNCHER_WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
-          NEVERLAUNCHER_COMPONENT_SET_ED25519_SEED: ${{ secrets.COMPONENT_SET_ED25519_SEED }}
-          NEVERLAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ secrets.COMPONENT_SET_ED25519_PUBLIC_KEY }}
-          NEVERLAUNCHER_WINDOWS_TIMESTAMP_URL: http://timestamp.digicert.com
+          LAUNCHER_WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
+          LAUNCHER_COMPONENT_SET_ED25519_SEED: ${{ secrets.COMPONENT_SET_ED25519_SEED }}
+          LAUNCHER_COMPONENT_SET_ED25519_PUBLIC_KEY: ${{ secrets.COMPONENT_SET_ED25519_PUBLIC_KEY }}
+          LAUNCHER_WINDOWS_TIMESTAMP_URL: http://timestamp.digicert.com
         run: |
           ./scripts/release/build-windows-desktop.ps1 `
             -RequireCodeSigning `

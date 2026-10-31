@@ -59,11 +59,11 @@ func BootstrapOwnerFromEnv(base, email, name, passwordFile, envFile string) erro
 	var token string
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "NEVERLAUNCHER_BOOTSTRAP_TOKEN=") {
+		if strings.HasPrefix(line, "LAUNCHER_BOOTSTRAP_TOKEN=") {
 			if token != "" {
 				return errors.New("duplicate bootstrap token")
 			}
-			token = strings.TrimSpace(strings.TrimPrefix(line, "NEVERLAUNCHER_BOOTSTRAP_TOKEN="))
+			token = strings.TrimSpace(strings.TrimPrefix(line, "LAUNCHER_BOOTSTRAP_TOKEN="))
 		}
 	}
 	if err := scanner.Err(); err != nil {

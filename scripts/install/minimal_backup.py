@@ -28,13 +28,13 @@ from urllib.parse import quote
 FORMAT = "launcher-minimal-offline-backup-v1"
 DB_NAMES = ("db/http.sqlite", "db/coordinator.sqlite")
 RELOCATED = {
-    "NEVERLAUNCHER_DATABASE_DSN": "db/http.sqlite",
-    "NEVERLAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH": "db/coordinator.sqlite",
-    "NEVERLAUNCHER_STORAGE_LOCAL_PATH": "storage",
-    "NEVERLAUNCHER_BACKUP_ROOT": "backups",
-    "NEVERLAUNCHER_EXTENSION_ROOT": "extensions",
+    "LAUNCHER_DATABASE_DSN": "db/http.sqlite",
+    "LAUNCHER_SINGLE_NODE_COORDINATOR_SQLITE_PATH": "db/coordinator.sqlite",
+    "LAUNCHER_STORAGE_LOCAL_PATH": "storage",
+    "LAUNCHER_BACKUP_ROOT": "backups",
+    "LAUNCHER_EXTENSION_ROOT": "extensions",
 }
-OPTIONAL_RELOCATED = {"NEVERLAUNCHER_FACTORY_ROOT": "factory"}
+OPTIONAL_RELOCATED = {"LAUNCHER_FACTORY_ROOT": "factory"}
 EXCLUDED_FILES = (".launcher-api.owner.lock",)
 MAX_MANIFEST_BYTES = 32 * 1024 * 1024
 
@@ -115,14 +115,14 @@ def read_install(root):
         require("=" in line, "bad backend.env record")
         key, value = line.split("=", 1)
         require(
-            key.startswith("NEVERLAUNCHER_") and key not in values,
+            key.startswith("LAUNCHER_") and key not in values,
             "bad/duplicate backend.env key",
         )
         values[key] = value
     require(
-        values.get("NEVERLAUNCHER_DEPLOYMENT_MODE") == "single-node"
-        and values.get("NEVERLAUNCHER_REPOSITORY_DRIVER") == "sqlite"
-        and values.get("NEVERLAUNCHER_STORAGE_DRIVER") == "local",
+        values.get("LAUNCHER_DEPLOYMENT_MODE") == "single-node"
+        and values.get("LAUNCHER_REPOSITORY_DRIVER") == "sqlite"
+        and values.get("LAUNCHER_STORAGE_DRIVER") == "local",
         "not a minimal SQLite installation",
     )
     for key, suffix in RELOCATED.items():
@@ -136,7 +136,7 @@ def read_install(root):
                 values[key] == str(root / suffix),
                 f"nonstandard path {key}: cannot make complete backup",
             )
-    require(not values.get("NEVERLAUNCHER_REDIS_URL"), "minimal cannot have Redis")
+    require(not values.get("LAUNCHER_REDIS_URL"), "minimal cannot have Redis")
     return values
 
 
@@ -516,8 +516,8 @@ def restore(bundle, target_root):
                 )
                 values[key] = str(root / suffix)
         require(
-            values.get("NEVERLAUNCHER_REPOSITORY_DRIVER") == "sqlite"
-            and values.get("NEVERLAUNCHER_DEPLOYMENT_MODE") == "single-node",
+            values.get("LAUNCHER_REPOSITORY_DRIVER") == "sqlite"
+            and values.get("LAUNCHER_DEPLOYMENT_MODE") == "single-node",
             "not minimal configuration",
         )
         replacement = envfile.with_name(".backend.env.new")

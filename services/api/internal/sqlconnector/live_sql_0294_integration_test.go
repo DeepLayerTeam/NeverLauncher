@@ -17,9 +17,9 @@ import (
 // No test silently substitutes the fake database driver for a live E2E.
 func TestLiveSQLLegacyAuthentication0294(t *testing.T) {
 	targets := []struct{ name, driver, env string }{
-		{"postgresql", "postgresql", "NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN"},
-		{"mysql", "mysql", "NEVERLAUNCHER_SQL_TEST_MYSQL_DSN"},
-		{"mariadb", "mariadb", "NEVERLAUNCHER_SQL_TEST_MARIADB_DSN"},
+		{"postgresql", "postgresql", "LAUNCHER_SQL_TEST_POSTGRES_DSN"},
+		{"mysql", "mysql", "LAUNCHER_SQL_TEST_MYSQL_DSN"},
+		{"mariadb", "mariadb", "LAUNCHER_SQL_TEST_MARIADB_DSN"},
 	}
 	ran := 0
 	for _, target := range targets {
@@ -119,7 +119,7 @@ func TestLiveSQLLegacyAuthentication0294(t *testing.T) {
 	if ran == 0 {
 		t.Skip("no live PostgreSQL/MySQL/MariaDB DSNs configured; CI runs all three")
 	}
-	if os.Getenv("NEVERLAUNCHER_SQL_REQUIRE_ALL") == "1" && ran != 3 {
+	if os.Getenv("LAUNCHER_SQL_REQUIRE_ALL") == "1" && ran != 3 {
 		t.Fatalf("required 3 live DB engines, got %d", ran)
 	}
 }

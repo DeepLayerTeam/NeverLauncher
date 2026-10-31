@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Verify real Vanilla 26.3 certification uses the fail-closed native SDL retry helper."""
+
 from __future__ import annotations
 
 import subprocess
@@ -16,16 +17,24 @@ ROOT = Path(__file__).resolve().parents[2]
 class VanillaSDL3RetryWiringTests(unittest.TestCase):
     def test_vanilla_uses_shared_certification_runner(self):
         script = (ROOT / "e2e/scripts/run-vanilla-certification-case.sh").read_text()
-        self.assertIn('certification_run_client "$TARGET_OS" "$NEVERRUNTIME_BIN" "$RUNTIME_DIR/vanilla-certification.json"', script)
-        self.assertIn('source "$ROOT/e2e/scripts/lib/certification-platform.sh"', script)
+        self.assertIn(
+            'certification_run_client "$TARGET_OS" "$RUNTIME_BIN" "$RUNTIME_DIR/vanilla-certification.json"',
+            script,
+        )
+        self.assertIn(
+            'source "$ROOT/e2e/scripts/lib/certification-platform.sh"', script
+        )
 
     def test_retry_is_bound_to_real_native_sdl_abort(self):
         script = (ROOT / "e2e/scripts/lib/certification-platform.sh").read_text()
-        self.assertIn('"${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-}" == "26.3"', script)
-        self.assertIn('"${NEVERLAUNCHER_E2E_LOADER:-}" == "vanilla"', script)
-        self.assertIn('"${NEVERLAUNCHER_E2E_LOADER:-}" == "fabric"', script)
-        self.assertIn('"${NEVERLAUNCHER_E2E_LOADER:-}" == "forge"', script)
-        self.assertIn('python3 "$eligibility" --report "$output" --client-root "$client_root"', script)
+        self.assertIn('"${LAUNCHER_E2E_MINECRAFT_VERSION:-}" == "26.3"', script)
+        self.assertIn('"${LAUNCHER_E2E_LOADER:-}" == "vanilla"', script)
+        self.assertIn('"${LAUNCHER_E2E_LOADER:-}" == "fabric"', script)
+        self.assertIn('"${LAUNCHER_E2E_LOADER:-}" == "forge"', script)
+        self.assertIn(
+            'python3 "$eligibility" --report "$output" --client-root "$client_root"',
+            script,
+        )
         self.assertIn('"$runtime_bin" "$@" > "$output"', script)
 
     def test_both_attempts_uploaded(self):
@@ -39,7 +48,10 @@ class VanillaSDL3RetryWiringTests(unittest.TestCase):
             scratch = Path(tmp)
             scripts = scratch / "scripts/compatibility"
             scripts.mkdir(parents=True)
-            shutil.copy2(ROOT / "scripts/compatibility/retry-macos-sdl3.py", scripts / "retry-macos-sdl3.py")
+            shutil.copy2(
+                ROOT / "scripts/compatibility/retry-macos-sdl3.py",
+                scripts / "retry-macos-sdl3.py",
+            )
             runtime = scratch / "e2e/runtime"
             logs = runtime / "materialized-client/logs"
             logs.mkdir(parents=True)
@@ -65,28 +77,56 @@ raise SystemExit(0 if passed else 1)
             for second_succeeds in (True, False):
                 count.unlink(missing_ok=True)
                 report_path.unlink(missing_ok=True)
-                env = dict(os.environ, NEVERLAUNCHER_E2E_LOADER="vanilla", NEVERLAUNCHER_E2E_MINECRAFT_VERSION="26.3",
-                           FAKE_COUNT=str(count), FAKE_LOG=str(log_path), FAKE_PASS_SECOND="true" if second_succeeds else "false")
+                env = dict(
+                    os.environ,
+                    LAUNCHER_E2E_LOADER="vanilla",
+                    LAUNCHER_E2E_MINECRAFT_VERSION="26.3",
+                    FAKE_COUNT=str(count),
+                    FAKE_LOG=str(log_path),
+                    FAKE_PASS_SECOND="true" if second_succeeds else "false",
+                )
                 helper = ROOT / "e2e/scripts/lib/certification-platform.sh"
-                run = subprocess.run(["bash", "-c", 'source "$1"; certification_run_client macos "$2" "$3"', "bash", str(helper), str(fake), str(report_path)],
-                                     cwd=scratch, env=env, capture_output=True, text=True)
+                run = subprocess.run(
+                    [
+                        "bash",
+                        "-c",
+                        'source "$1"; certification_run_client macos "$2" "$3"',
+                        "bash",
+                        str(helper),
+                        str(fake),
+                        str(report_path),
+                    ],
+                    cwd=scratch,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                )
                 # Помощник определяет допустимость повтора относительно дерева
                 # исходников; при запуске из временного дерева подключайте его там же.
                 if "retry-macos-sdl3.py" in run.stderr and "No such file" in run.stderr:
                     self.fail(run.stderr)
                 self.assertEqual(count.read_text(), "2", (run.stderr, run.stdout))
-                self.assertEqual(run.returncode, 0 if second_succeeds else 1, run.stderr)
+                self.assertEqual(
+                    run.returncode, 0 if second_succeeds else 1, run.stderr
+                )
                 first = runtime / "vanilla-certification.first-attempt.json"
                 self.assertTrue(first.exists())
                 self.assertEqual(json.loads(first.read_text())["status"], "failed")
                 final = json.loads(report_path.read_text())
-                self.assertEqual(final["status"], "passed" if second_succeeds else "failed")
+                self.assertEqual(
+                    final["status"], "passed" if second_succeeds else "failed"
+                )
                 retry = json.loads((runtime / "certification-retry.json").read_text())
                 self.assertEqual(retry["lastSuccess"], second_succeeds)
 
     def test_bash_syntax(self):
-        for path in ("e2e/scripts/lib/certification-platform.sh", "e2e/scripts/run-vanilla-certification-case.sh"):
-            result = subprocess.run(["bash", "-n", str(ROOT / path)], capture_output=True, text=True)
+        for path in (
+            "e2e/scripts/lib/certification-platform.sh",
+            "e2e/scripts/run-vanilla-certification-case.sh",
+        ):
+            result = subprocess.run(
+                ["bash", "-n", str(ROOT / path)], capture_output=True, text=True
+            )
             self.assertEqual(result.returncode, 0, result.stderr)
 
 

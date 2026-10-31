@@ -119,7 +119,7 @@ func TestBackupTamperingAndOfflineLock(t *testing.T) {
 	if err = s.Close(); err != nil {
 		t.Fatal(err)
 	}
-	// Uncheckpointed sidecars must be handled explicitly, never silently removed.
+	// Uncheckpointed sidecars must be handled explicitly, silently removed.
 	sidecar := opt.Path + "-wal"
 	if err = os.WriteFile(sidecar, []byte("stale"), 0600); err != nil {
 		t.Fatal(err)

@@ -37,7 +37,7 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_test:test_only_not_production@127.0.0.1:5432/launcher_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -129,7 +129,7 @@ jobs:
     environment: migration-ga-certification
     timeout-minutes: 180
     env:
-      NEVERLAUNCHER_MIGRATION_GA_TOKEN: ${{ secrets.MIGRATION_GA_ADMIN_TOKEN }}
+      LAUNCHER_MIGRATION_GA_TOKEN: ${{ secrets.MIGRATION_GA_ADMIN_TOKEN }}
       MIGRATION_GA_PLAN_B64: ${{ secrets.MIGRATION_GA_PLAN_B64 }}
       MIGRATION_GA_SIGNING_KEY_B64: ${{ secrets.MIGRATION_GA_SIGNING_KEY_B64 }}
       MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64: ${{ secrets.MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64 }}
@@ -142,7 +142,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$NEVERLAUNCHER_MIGRATION_GA_TOKEN"
+          test -n "$LAUNCHER_MIGRATION_GA_TOKEN"
           test -n "$MIGRATION_GA_PLAN_B64"
           test -n "$MIGRATION_GA_SIGNING_KEY_B64"
           test -n "$MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64"

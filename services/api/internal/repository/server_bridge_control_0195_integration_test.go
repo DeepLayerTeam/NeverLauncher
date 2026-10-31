@@ -12,9 +12,9 @@ import (
 
 // Включено в CI PostgreSQL с тем же DSN, что и набор проверок HA ServerBridge.
 func TestServerBridgeControl0195Postgres(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN")
+	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
-		t.Skip("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN is not set")
+		t.Skip("LAUNCHER_SERVERBRIDGE_HA_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

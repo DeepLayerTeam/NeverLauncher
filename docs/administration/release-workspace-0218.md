@@ -15,7 +15,7 @@
 
 ## Проверка реального запуска
 
-`POST /api/v1/packages/{packageId}/smoke-test` в 0.21.7 — **совместимый псевдоним integrity-check**, который не запускает Minecraft. Release Workspace сознательно не выдаёт его за smoke-test. Фактический smoke/run должен быть выполнен доверенным CI/runtime-agent; импортируйте полученный **подписанный** `runtime-validation/v1` JSON (поля `keyId`, `evidence`, `signature`) через форму. Backend проверяет Ed25519-подпись, ключ из `NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON`, привязку к актуальному digest, OS/JRE/launcher факты и результат реального клиента. Для проектов с `requiredLevel=runtime` (и при необходимости `requireServerJoin=true`) сервер **не выпустит** пакет без соответствующего runtime PASS; устаревшее evidence отвергается. Встроенного браузерного/серверного эмулятора запуска Minecraft эта версия не обещает.
+`POST /api/v1/packages/{packageId}/smoke-test` в 0.21.7 — **совместимый псевдоним integrity-check**, который не запускает Minecraft. Release Workspace сознательно не выдаёт его за smoke-test. Фактический smoke/run должен быть выполнен доверенным CI/runtime-agent; импортируйте полученный **подписанный** `runtime-validation/v1` JSON (поля `keyId`, `evidence`, `signature`) через форму. Backend проверяет Ed25519-подпись, ключ из `LAUNCHER_RUNTIME_VALIDATION_KEYS_JSON`, привязку к актуальному digest, OS/JRE/launcher факты и результат реального клиента. Для проектов с `requiredLevel=runtime` (и при необходимости `requireServerJoin=true`) сервер **не выпустит** пакет без соответствующего runtime PASS; устаревшее evidence отвергается. Встроенного браузерного/серверного эмулятора запуска Minecraft эта версия не обещает.
 
 ## Сохранение и восстановление
 

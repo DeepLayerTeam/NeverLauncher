@@ -14,7 +14,7 @@ public final class PortedModule extends LauncherModule implements AutoCloseable 
     @Override public void init(LauncherInitContext initContext){
         if(!(initContext instanceof GravitInitContext ctx))throw new IllegalStateException("Launcher context required");
         context=ctx;
-        if("backend".equals(System.getenv("NEVERLAUNCHER_EXTENSION_TARGET")))registerEvent(this::onRelease,ReleasePublishedEvent.class);
+        if("backend".equals(System.getenv("LAUNCHER_EXTENSION_TARGET")))registerEvent(this::onRelease,ReleasePublishedEvent.class);
         modulesManager.getCommandHandler().registerCommand("status",new Command(){
             @Override public String getArgsDescription(){return "";}
             @Override public String getUsageDescription(){return "Reports the latest release event";}

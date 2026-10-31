@@ -75,9 +75,9 @@ func run() error {
 			return err
 		}
 	}
-	destDSN := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_DATABASE_DSN"))
+	destDSN := strings.TrimSpace(os.Getenv("LAUNCHER_DATABASE_DSN"))
 	if destDSN == "" {
-		return errors.New("NEVERLAUNCHER_DATABASE_DSN required")
+		return errors.New("LAUNCHER_DATABASE_DSN required")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
 	defer cancel()
@@ -126,7 +126,7 @@ func run() error {
 			return e
 		}
 	}
-	dst, e := makeStorage(getenv("NEVERLAUNCHER_STORAGE_DRIVER", "local"), getenv("NEVERLAUNCHER_STORAGE_LOCAL_PATH", "./data/storage"), os.Getenv("NEVERLAUNCHER_STORAGE_S3_ENDPOINT"), os.Getenv("NEVERLAUNCHER_STORAGE_S3_BUCKET"), os.Getenv("NEVERLAUNCHER_STORAGE_S3_REGION"), os.Getenv("NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY"), os.Getenv("NEVERLAUNCHER_STORAGE_S3_SECRET_KEY"), getenv("NEVERLAUNCHER_STORAGE_S3_PATH_STYLE", "true"))
+	dst, e := makeStorage(getenv("LAUNCHER_STORAGE_DRIVER", "local"), getenv("LAUNCHER_STORAGE_LOCAL_PATH", "./data/storage"), os.Getenv("LAUNCHER_STORAGE_S3_ENDPOINT"), os.Getenv("LAUNCHER_STORAGE_S3_BUCKET"), os.Getenv("LAUNCHER_STORAGE_S3_REGION"), os.Getenv("LAUNCHER_STORAGE_S3_ACCESS_KEY"), os.Getenv("LAUNCHER_STORAGE_S3_SECRET_KEY"), getenv("LAUNCHER_STORAGE_S3_PATH_STYLE", "true"))
 	if e != nil {
 		return e
 	}

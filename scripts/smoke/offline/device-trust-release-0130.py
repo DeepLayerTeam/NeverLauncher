@@ -83,7 +83,7 @@ build = read("scripts/release/build-release.sh")
 req(
     build,
     [
-        "NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE",
+        "LAUNCHER_DEVICE_TRUST_MATRIX_FILE",
         "--device-trust-matrix",
         "Publish-check Minecraft Compatibility + Device Trust Release",
     ],

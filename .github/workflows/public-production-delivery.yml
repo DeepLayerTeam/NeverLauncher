@@ -47,17 +47,17 @@ jobs:
       - name: Materialize external release trust inputs
         shell: bash
         env:
-          RELEASE_ROOT_PUBLIC_KEY_BASE64: ${{ secrets.NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_BASE64 }}
-          RELEASE_TRUST_POLICY_BASE64: ${{ secrets.NEVERLAUNCHER_RELEASE_TRUST_POLICY_BASE64 }}
+          RELEASE_ROOT_PUBLIC_KEY_BASE64: ${{ secrets.LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_BASE64 }}
+          RELEASE_TRUST_POLICY_BASE64: ${{ secrets.LAUNCHER_RELEASE_TRUST_POLICY_BASE64 }}
         run: |
           set -euo pipefail
-          test -n "${RELEASE_ROOT_PUBLIC_KEY_BASE64:-}" || { echo "missing NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_BASE64" >&2; exit 2; }
-          test -n "${RELEASE_TRUST_POLICY_BASE64:-}" || { echo "missing NEVERLAUNCHER_RELEASE_TRUST_POLICY_BASE64" >&2; exit 2; }
+          test -n "${RELEASE_ROOT_PUBLIC_KEY_BASE64:-}" || { echo "missing LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_BASE64" >&2; exit 2; }
+          test -n "${RELEASE_TRUST_POLICY_BASE64:-}" || { echo "missing LAUNCHER_RELEASE_TRUST_POLICY_BASE64" >&2; exit 2; }
           printf '%s' "$RELEASE_ROOT_PUBLIC_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/launcher-release-root-public.pem"
           printf '%s' "$RELEASE_TRUST_POLICY_BASE64" | base64 --decode > "$RUNNER_TEMP/launcher-current-trust-policy.json"
-          printf 'NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE=%s\n' "$RUNNER_TEMP/launcher-release-root-public.pem" >> "$GITHUB_ENV"
-          printf 'NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE=%s\n' "$RUNNER_TEMP/launcher-current-trust-policy.json" >> "$GITHUB_ENV"
-          printf 'NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE=%s\n' "$RUNNER_TEMP/launcher-public-e2e-trust-state.json" >> "$GITHUB_ENV"
+          printf 'LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE=%s\n' "$RUNNER_TEMP/launcher-release-root-public.pem" >> "$GITHUB_ENV"
+          printf 'LAUNCHER_RELEASE_TRUST_POLICY_FILE=%s\n' "$RUNNER_TEMP/launcher-current-trust-policy.json" >> "$GITHUB_ENV"
+          printf 'LAUNCHER_RELEASE_TRUST_STATE_FILE=%s\n' "$RUNNER_TEMP/launcher-public-e2e-trust-state.json" >> "$GITHUB_ENV"
 
       - name: Build public E2E verifier
         working-directory: cli
@@ -72,9 +72,9 @@ jobs:
           mkdir -p dist
           "$RUNNER_TEMP/nl" delivery public-e2e \
             --matrix-url "$PUBLIC_MATRIX_URL" \
-            --public-key "$NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE" \
-            --trust-policy "$NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE" \
-            --trust-state "$NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE" \
+            --public-key "$LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE" \
+            --trust-policy "$LAUNCHER_RELEASE_TRUST_POLICY_FILE" \
+            --trust-state "$LAUNCHER_RELEASE_TRUST_STATE_FILE" \
             --download-dir "$RUNNER_TEMP/public-release" \
             --report dist/PUBLIC_DELIVERY_E2E_REPORT.json
           python3 - <<'PY'

@@ -69,15 +69,15 @@ jobs:
         run: cargo build --manifest-path runtime/runtime/Cargo.toml --bin runtime
       - name: Real upstream materialization and JVM launch
         env:
-          NEVERLAUNCHER_CERT_LOADER: ${{ matrix.loader }}
-          NEVERLAUNCHER_CERT_MINECRAFT: ${{ matrix.minecraft }}
-          NEVERLAUNCHER_CERT_TARGET: linux/x86_64
-          NEVERLAUNCHER_CERT_RUNTIME_SECONDS: '45'
-          NEVERLAUNCHER_CERT_OUTPUT: e2e/client-factory-02712-result
+          LAUNCHER_CERT_LOADER: ${{ matrix.loader }}
+          LAUNCHER_CERT_MINECRAFT: ${{ matrix.minecraft }}
+          LAUNCHER_CERT_TARGET: linux/x86_64
+          LAUNCHER_CERT_RUNTIME_SECONDS: '45'
+          LAUNCHER_CERT_OUTPUT: e2e/client-factory-02712-result
         run: |
-          export NEVERLAUNCHER_CERT_JAVA="$JAVA_HOME/bin/java"
+          export LAUNCHER_CERT_JAVA="$JAVA_HOME/bin/java"
           bash e2e/scripts/run-client-factory-certification-02712.sh
-      - name: Upload evidence (never upload private signing key)
+      - name: Upload evidence (upload private signing key)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -111,13 +111,13 @@ jobs:
           sudo apt-get install -y --no-install-recommends xvfb xauth libgl1-mesa-dri libglx-mesa0 libegl1 libvulkan1 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libxrandr2 libxcursor1 libxinerama1 libasound2t64
       - name: Actual matching Mojang server start and client join (existing verified native E2E)
         env:
-          NEVERLAUNCHER_E2E_MINECRAFT_VERSION: '1.17.1'
-          NEVERLAUNCHER_E2E_JAVA_MAJOR: '17'
-          NEVERLAUNCHER_COMPAT_OS: linux
-          NEVERLAUNCHER_COMPAT_ARCH: x86_64
-          NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: '55'
+          LAUNCHER_E2E_MINECRAFT_VERSION: '1.17.1'
+          LAUNCHER_E2E_JAVA_MAJOR: '17'
+          LAUNCHER_COMPAT_OS: linux
+          LAUNCHER_COMPAT_ARCH: x86_64
+          LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: '55'
         run: |
-          export NEVERLAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"
+          export LAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"
           bash e2e/scripts/run-vanilla-matching-e2e.sh
           python3 - <<'PYJOIN'
           import json

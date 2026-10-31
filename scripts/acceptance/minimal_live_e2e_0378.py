@@ -323,10 +323,8 @@ def run_acceptance(
             for line in envfile.read_text().splitlines()
             if "=" in line
         )
-        token = envvalues["NEVERLAUNCHER_BOOTSTRAP_TOKEN"]
-        require(
-            not envvalues.get("NEVERLAUNCHER_REDIS_URL"), "Redis injected into minimal"
-        )
+        token = envvalues["LAUNCHER_BOOTSTRAP_TOKEN"]
+        require(not envvalues.get("LAUNCHER_REDIS_URL"), "Redis injected into minimal")
         step(
             report,
             "installer_diagnose",

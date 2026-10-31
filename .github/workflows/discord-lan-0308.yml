@@ -4,8 +4,8 @@ on:
     paths:
       - 'cli/internal/discordrpc/**'
       - 'cli/internal/lanmdns/**'
-      - 'cli/cmd/neverlauncher/lan_discord_0308*'
-      - 'cli/cmd/neverlauncher/main.go'
+      - 'cli/cmd/launcher/lan_discord_0308*'
+      - 'cli/cmd/launcher/main.go'
       - 'apps/desktop/src-tauri/src/discord_presence_0308.rs'
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src/main.tsx'
@@ -14,8 +14,8 @@ on:
     paths:
       - 'cli/internal/discordrpc/**'
       - 'cli/internal/lanmdns/**'
-      - 'cli/cmd/neverlauncher/lan_discord_0308*'
-      - 'cli/cmd/neverlauncher/main.go'
+      - 'cli/cmd/launcher/lan_discord_0308*'
+      - 'cli/cmd/launcher/main.go'
       - 'apps/desktop/src-tauri/src/discord_presence_0308.rs'
       - 'apps/desktop/src-tauri/src/main.rs'
       - 'apps/desktop/src/main.tsx'
@@ -42,8 +42,8 @@ jobs:
       - name: Test and build CLI
         working-directory: cli
         run: |
-          go test -run 'TestLAN0308|TestDiscord0308' ./cmd/neverlauncher
-          go build ./cmd/neverlauncher
+          go test -run 'TestLAN0308|TestDiscord0308' ./cmd/launcher
+          go build ./cmd/launcher
       - name: Verify release metadata
         run: python3 scripts/version/manage.py check
   desktop-ui:

@@ -54,17 +54,17 @@ jobs:
           --health-cmd 'redis-cli ping | grep -q PONG'
           --health-interval 5s --health-timeout 5s --health-retries 30
     env:
-      NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
-      NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-rc-sqlite
-      NEVERLAUNCHER_PG_TEST_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
-      NEVERLAUNCHER_GROWTH_TEST_PG_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
-      NEVERLAUNCHER_GROWTH_TEST_REDIS_URL: redis://127.0.0.1:6379/0
-      NEVERLAUNCHER_RC_S3_ENDPOINT: http://127.0.0.1:9000
-      NEVERLAUNCHER_RC_S3_BUCKET: launcher-rc
-      NEVERLAUNCHER_RC_S3_REGION: us-east-1
-      NEVERLAUNCHER_RC_S3_ACCESS_KEY: launcher-rc-user
-      NEVERLAUNCHER_RC_S3_SECRET_KEY: launcher-rc-temporary-secret
+      LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+      LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/launcher-rc-sqlite
+      LAUNCHER_PG_TEST_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
+      LAUNCHER_GROWTH_TEST_PG_DSN: postgres://launcher_rc:rc-temporary-password@127.0.0.1:5432/launcher_rc?sslmode=disable
+      LAUNCHER_GROWTH_TEST_REDIS_URL: redis://127.0.0.1:6379/0
+      LAUNCHER_RC_S3_ENDPOINT: http://127.0.0.1:9000
+      LAUNCHER_RC_S3_BUCKET: launcher-rc
+      LAUNCHER_RC_S3_REGION: us-east-1
+      LAUNCHER_RC_S3_ACCESS_KEY: launcher-rc-user
+      LAUNCHER_RC_S3_SECRET_KEY: launcher-rc-temporary-secret
     steps:
       - uses: actions/checkout@v4
         with:
@@ -86,8 +86,8 @@ jobs:
       - name: Require a verified local SQLite filesystem
         run: |
           set -euo pipefail
-          install -d -m 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          case "$(stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT")" in
+          install -d -m 0700 "$LAUNCHER_SQLITE_TEST_ROOT"
+          case "$(stat -f -c '%T' "$LAUNCHER_SQLITE_TEST_ROOT")" in
             ext2/ext3|ext4|xfs|btrfs) ;;
             *) echo 'RC BLOCKED: only a supported native ext4/xfs/btrfs volume is allowed' >&2; exit 2;;
           esac
@@ -96,15 +96,15 @@ jobs:
           set -euo pipefail
           docker run -d --name launcher-rc-minio \
             -p 127.0.0.1:9000:9000 \
-            -e MINIO_ROOT_USER="$NEVERLAUNCHER_RC_S3_ACCESS_KEY" \
-            -e MINIO_ROOT_PASSWORD="$NEVERLAUNCHER_RC_S3_SECRET_KEY" \
+            -e MINIO_ROOT_USER="$LAUNCHER_RC_S3_ACCESS_KEY" \
+            -e MINIO_ROOT_PASSWORD="$LAUNCHER_RC_S3_SECRET_KEY" \
             minio/minio:RELEASE.2025-02-07T23-21-09Z \
             server /data --address ':9000'
           python3 -m pip install 'boto3==1.35.99'
           python3 - <<'PY'
           import os, time, urllib.request
           import boto3
-          endpoint = os.environ['NEVERLAUNCHER_RC_S3_ENDPOINT']
+          endpoint = os.environ['LAUNCHER_RC_S3_ENDPOINT']
           for _ in range(60):
               try:
                   with urllib.request.urlopen(endpoint+'/minio/health/live', timeout=2) as response:
@@ -114,10 +114,10 @@ jobs:
           else:
               raise SystemExit('RC BLOCKED: MinIO did not become healthy')
           s3 = boto3.client('s3', endpoint_url=endpoint,
-                           aws_access_key_id=os.environ['NEVERLAUNCHER_RC_S3_ACCESS_KEY'],
-                           aws_secret_access_key=os.environ['NEVERLAUNCHER_RC_S3_SECRET_KEY'],
-                           region_name=os.environ['NEVERLAUNCHER_RC_S3_REGION'])
-          s3.create_bucket(Bucket=os.environ['NEVERLAUNCHER_RC_S3_BUCKET'])
+                           aws_access_key_id=os.environ['LAUNCHER_RC_S3_ACCESS_KEY'],
+                           aws_secret_access_key=os.environ['LAUNCHER_RC_S3_SECRET_KEY'],
+                           region_name=os.environ['LAUNCHER_RC_S3_REGION'])
+          s3.create_bucket(Bucket=os.environ['LAUNCHER_RC_S3_BUCKET'])
           PY
       - name: Execute strictly verified live release candidate tests
         run: |

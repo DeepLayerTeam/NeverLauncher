@@ -9,7 +9,7 @@ TLS → Host Supervisor / OS-JVM path; it never runs shell commands in the brows
 
 - Apply the existing PostgreSQL migration `0111_server_bridge_host_operations_0413.sql`
   before deploying the Backend. A PostgreSQL-backed ServerBridge is mandatory.
-- Configure `NEVERLAUNCHER_SERVER_BRIDGE_HOST_TARGETS_FILE` with explicitly provisioned
+- Configure `LAUNCHER_SERVER_BRIDGE_HOST_TARGETS_FILE` with explicitly provisioned
   node IDs, pinned TLS root CA and private credentials readable only by Backend.
   There is no caller-selected host URL and no fallback to an untrusted endpoint.
 - Provision and start a RemoteControl agent and Host Supervisor for each managed node.

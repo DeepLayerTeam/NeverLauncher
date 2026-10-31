@@ -5,9 +5,9 @@
 Set **all three** environment variables on every API instance:
 
 ```sh
-NEVERLAUNCHER_SERVERBRIDGE_REQUIRE_PLAN_POLICY=1
-NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE=/etc/launcher/bridge-plans.signed.json
-NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY=<64-char-hex-offline-policy-public-key>
+LAUNCHER_SERVERBRIDGE_REQUIRE_PLAN_POLICY=1
+LAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE=/etc/launcher/bridge-plans.signed.json
+LAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY=<64-char-hex-offline-policy-public-key>
 ```
 
 Configuring either the policy path or its public key also enables enforcement. A missing file, invalid signature, expired policy, or missing trusted device **denies** protected joins. Without any setting, the previous legacy join flow remains available for explicit staged migration; **legacy mode does not provide component-plan enforcement**. All Backend replicas must use identical policy configuration. Do not put the signing private key on the server.

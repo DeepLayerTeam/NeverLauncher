@@ -10,25 +10,25 @@ fi
 VERSION="${CANONICAL_VERSION}"
 OUT_DIR="${2:-${ROOT_DIR}/dist/release-${VERSION}}"
 WORK_DIR="${ROOT_DIR}/dist/.release-${VERSION}"
-PRIVATE_KEY="${NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE:-}"
-PUBLIC_KEY="${NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE:-${NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE:-}}"
-TRUST_POLICY="${NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE:-}"
-TRUST_STATE="${NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE:-${WORK_DIR}/release-trust-state.json}"
-COMPATIBILITY_MATRIX="${NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE:-}"
-COMPATIBILITY_TARGETS="${NEVERLAUNCHER_COMPATIBILITY_TARGETS_FILE:-${ROOT_DIR}/compatibility/targets.json}"
-DEVICE_TRUST_MATRIX="${NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE:-}"
-DEVICE_TRUST_TARGETS="${NEVERLAUNCHER_DEVICE_TRUST_TARGETS_FILE:-${ROOT_DIR}/device-trust/targets.json}"
-GUARD_CI_MATRIX="${NEVERLAUNCHER_GUARD_CI_MATRIX_FILE:-}"
-GUARD_CI_TARGETS="${NEVERLAUNCHER_GUARD_CI_TARGETS_FILE:-${ROOT_DIR}/guard-ci/targets.json}"
-GUARD_PLATFORM_ARTIFACTS_DIR="${NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR:-}"
-WINDOWS_SIGNED_ARTIFACTS_DIR="${NEVERLAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR:-}"
-LINUX_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR:-}"
-MACOS_PRODUCTION_ARTIFACTS_DIR="${NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR:-}"
-MANAGED_JRE_ARTIFACTS_DIR="${NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR:-}"
-WINDOWS_ADVERSARIAL_CERTIFICATE="${NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE:-}"
-SOURCE_COMMIT="${NEVERLAUNCHER_SOURCE_COMMIT:-}"
-PUBLIC_RELEASE_BASE_URL="${NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL:-https://github.com/DeepLayerTeam/Launcher/releases/download/v${VERSION}}"
-export NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL="${PUBLIC_RELEASE_BASE_URL}"
+PRIVATE_KEY="${LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE:-}"
+PUBLIC_KEY="${LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE:-${LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE:-}}"
+TRUST_POLICY="${LAUNCHER_RELEASE_TRUST_POLICY_FILE:-}"
+TRUST_STATE="${LAUNCHER_RELEASE_TRUST_STATE_FILE:-${WORK_DIR}/release-trust-state.json}"
+COMPATIBILITY_MATRIX="${LAUNCHER_COMPATIBILITY_MATRIX_FILE:-}"
+COMPATIBILITY_TARGETS="${LAUNCHER_COMPATIBILITY_TARGETS_FILE:-${ROOT_DIR}/compatibility/targets.json}"
+DEVICE_TRUST_MATRIX="${LAUNCHER_DEVICE_TRUST_MATRIX_FILE:-}"
+DEVICE_TRUST_TARGETS="${LAUNCHER_DEVICE_TRUST_TARGETS_FILE:-${ROOT_DIR}/device-trust/targets.json}"
+GUARD_CI_MATRIX="${LAUNCHER_GUARD_CI_MATRIX_FILE:-}"
+GUARD_CI_TARGETS="${LAUNCHER_GUARD_CI_TARGETS_FILE:-${ROOT_DIR}/guard-ci/targets.json}"
+GUARD_PLATFORM_ARTIFACTS_DIR="${LAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR:-}"
+WINDOWS_SIGNED_ARTIFACTS_DIR="${LAUNCHER_WINDOWS_SIGNED_ARTIFACTS_DIR:-}"
+LINUX_PRODUCTION_ARTIFACTS_DIR="${LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR:-}"
+MACOS_PRODUCTION_ARTIFACTS_DIR="${LAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR:-}"
+MANAGED_JRE_ARTIFACTS_DIR="${LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR:-}"
+WINDOWS_ADVERSARIAL_CERTIFICATE="${LAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE:-}"
+SOURCE_COMMIT="${LAUNCHER_SOURCE_COMMIT:-}"
+PUBLIC_RELEASE_BASE_URL="${LAUNCHER_PUBLIC_RELEASE_BASE_URL:-https://github.com/DeepLayerTeam/Launcher/releases/download/v${VERSION}}"
+export LAUNCHER_PUBLIC_RELEASE_BASE_URL="${PUBLIC_RELEASE_BASE_URL}"
 
 # 0.25.0 is GA only if a different, authorized CI attestation key has
 # cryptographically certified all six real platform installers and the actual
@@ -38,10 +38,10 @@ if [[ "${VERSION}" == "0.25.0" ]]; then
   for tool in python3 git; do
     command -v "${tool}" >/dev/null 2>&1 || { echo "GA requires ${tool}" >&2; exit 2; }
   done
-  GA_DIR="${NEVERLAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR:-}"
-  GA_PUB="${NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY:-}"
+  GA_DIR="${LAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR:-}"
+  GA_PUB="${LAUNCHER_COMPONENT_GA_PUBLIC_KEY:-}"
   if [[ -z "${GA_DIR}" || -z "${GA_PUB}" || ! -d "${GA_DIR}" ]]; then
-    echo "0.25.0 GA requires signed evidence in NEVERLAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR and a pinned NEVERLAUNCHER_COMPONENT_GA_PUBLIC_KEY" >&2
+    echo "0.25.0 GA requires signed evidence in LAUNCHER_COMPONENT_GA_ATTESTATIONS_DIR and a pinned LAUNCHER_COMPONENT_GA_PUBLIC_KEY" >&2
     exit 2
   fi
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
@@ -67,8 +67,8 @@ fi
 # cannot satisfy this gate. Keep operator keys outside the source tree.
 OFFICIAL_GA_RECEIPT=""
 if [[ "${VERSION}" == "0.27.0" ]]; then
-  OFFICIAL_GA_DIR="${NEVERLAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR:-}"
-  OFFICIAL_GA_PUB="${NEVERLAUNCHER_OFFICIAL_GA_PUBLIC_KEY:-}"
+  OFFICIAL_GA_DIR="${LAUNCHER_OFFICIAL_GA_ATTESTATIONS_DIR:-}"
+  OFFICIAL_GA_PUB="${LAUNCHER_OFFICIAL_GA_PUBLIC_KEY:-}"
   [[ -d "${OFFICIAL_GA_DIR}" && -n "${OFFICIAL_GA_PUB}" ]] || {
     echo "0.27.0 GA BLOCKED: six signed live official Minecraft attestations and a pinned operator public key are required" >&2
     exit 2
@@ -92,7 +92,7 @@ fi
 # 0.31.0 Java SDK & Module Parity GA: no unsigned/incomplete evidence may
 # authorize production signing. Validate before deleting any release outputs.
 if [[ "${VERSION}" == "0.31.0" ]]; then
-  for name in NEVERLAUNCHER_JAVA_GA_EVIDENCE_DIR NEVERLAUNCHER_JAVA_GA_APPROVAL_PUBLIC_KEY_FILE NEVERLAUNCHER_JAVA_GA_APPROVAL_SIGNATURE_FILE; do
+  for name in LAUNCHER_JAVA_GA_EVIDENCE_DIR LAUNCHER_JAVA_GA_APPROVAL_PUBLIC_KEY_FILE LAUNCHER_JAVA_GA_APPROVAL_SIGNATURE_FILE; do
     [[ -n "${!name:-}" ]] || { echo "0.31.0 GA BLOCKED: missing ${name}" >&2; exit 2; }
   done
   command -v git >/dev/null 2>&1 || { echo "0.31.0 GA requires git" >&2; exit 2; }
@@ -105,10 +105,10 @@ if [[ "${VERSION}" == "0.31.0" ]]; then
   }
   SOURCE_COMMIT="${HEAD_COMMIT}"
   python3 "${ROOT_DIR}/scripts/ga/verify_java_ga_0310.py" \
-    --evidence "${NEVERLAUNCHER_JAVA_GA_EVIDENCE_DIR}" \
+    --evidence "${LAUNCHER_JAVA_GA_EVIDENCE_DIR}" \
     --revision "${HEAD_COMMIT}" \
-    --public-key "${NEVERLAUNCHER_JAVA_GA_APPROVAL_PUBLIC_KEY_FILE}" \
-    --signature "${NEVERLAUNCHER_JAVA_GA_APPROVAL_SIGNATURE_FILE}" >/dev/null || exit 2
+    --public-key "${LAUNCHER_JAVA_GA_APPROVAL_PUBLIC_KEY_FILE}" \
+    --signature "${LAUNCHER_JAVA_GA_APPROVAL_SIGNATURE_FILE}" >/dev/null || exit 2
 fi
 
 # Trusted release policy is compiled into scripts/release/release_policy.py, not
@@ -118,11 +118,11 @@ GA_TARGET_MODE="$(python3 "${ROOT_DIR}/scripts/release/release_policy.py" ga-mod
 GA_TARGET_EVIDENCE_DIR=""
 GA_TARGET_TRUSTED_KEY=""
 if [[ "${GA_TARGET_MODE}" == "legacy-ga036" ]]; then
-  GA_TARGET_EVIDENCE_DIR="${NEVERLAUNCHER_GA036_EVIDENCE_DIR:-}"
-  GA_TARGET_TRUSTED_KEY="${NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE:-}"
+  GA_TARGET_EVIDENCE_DIR="${LAUNCHER_GA036_EVIDENCE_DIR:-}"
+  GA_TARGET_TRUSTED_KEY="${LAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE:-}"
 elif [[ "${GA_TARGET_MODE}" == "signed-ga-v2" ]]; then
-  GA_TARGET_EVIDENCE_DIR="${NEVERLAUNCHER_GA_EVIDENCE_DIR:-}"
-  GA_TARGET_TRUSTED_KEY="${NEVERLAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE:-}"
+  GA_TARGET_EVIDENCE_DIR="${LAUNCHER_GA_EVIDENCE_DIR:-}"
+  GA_TARGET_TRUSTED_KEY="${LAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE:-}"
 fi
 if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
   [[ -n "${GA_TARGET_EVIDENCE_DIR}" && -n "${GA_TARGET_TRUSTED_KEY}" ]] || {
@@ -151,8 +151,8 @@ fi
 SINGLE_NODE_GA_DIR=""
 SINGLE_NODE_GA_VERIFIED_DIR=""
 if [[ "${VERSION}" == "0.33.0" ]]; then
-  SINGLE_NODE_GA_DIR="${NEVERLAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR:-}"
-  SINGLE_NODE_GA_PUBLIC_KEY="${NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE:-}"
+  SINGLE_NODE_GA_DIR="${LAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR:-}"
+  SINGLE_NODE_GA_PUBLIC_KEY="${LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE:-}"
   [[ -d "${SINGLE_NODE_GA_DIR}" && -f "${SINGLE_NODE_GA_PUBLIC_KEY}" ]] || {
     echo "0.33.0 GA BLOCKED: signed live SQLite-only evidence and an independently pinned public key are mandatory" >&2; exit 2;
   }
@@ -238,7 +238,7 @@ require_file() {
 
 for tool in go python3 npm cargo gradle; do require "${tool}"; done
 if [[ -z "${PRIVATE_KEY}" || -z "${PUBLIC_KEY}" || -z "${TRUST_POLICY}" ]]; then
-  echo "Ошибка: задайте NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE, NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE и NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE" >&2
+  echo "Ошибка: задайте LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE, LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE и LAUNCHER_RELEASE_TRUST_POLICY_FILE" >&2
   exit 1
 fi
 require_file "${PRIVATE_KEY}"
@@ -374,7 +374,7 @@ if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
   HEAD_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
   if [[ -z "${SOURCE_COMMIT}" ]]; then SOURCE_COMMIT="${HEAD_COMMIT}"; fi
   [[ "${SOURCE_COMMIT,,}" == "${HEAD_COMMIT,,}" ]] || {
-    echo "Ошибка: NEVERLAUNCHER_SOURCE_COMMIT=${SOURCE_COMMIT} не совпадает с git HEAD=${HEAD_COMMIT}" >&2
+    echo "Ошибка: LAUNCHER_SOURCE_COMMIT=${SOURCE_COMMIT} не совпадает с git HEAD=${HEAD_COMMIT}" >&2
     exit 1
   }
   [[ "${SOURCE_COMMIT}" =~ ^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$ ]] || {
@@ -392,7 +392,7 @@ if [[ "${PRODUCTION_RC_REQUIRED}" == "1" ]]; then
 fi
 if [[ "${WINDOWS_PROTECTION_RC_REQUIRED}" == "1" ]]; then
   [[ -n "${WINDOWS_ADVERSARIAL_CERTIFICATE}" ]] || {
-    echo "Ошибка: ${VERSION} Windows Protection RC требует NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE" >&2
+    echo "Ошибка: ${VERSION} Windows Protection RC требует LAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE" >&2
     exit 1
   }
   require_file "${WINDOWS_ADVERSARIAL_CERTIFICATE}"
@@ -414,25 +414,25 @@ fi
 
 if [[ "${LINUX_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   [[ -n "${LINUX_PRODUCTION_ARTIFACTS_DIR}" && -d "${LINUX_PRODUCTION_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} production release требует NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR с native x64+ARM64 outputs" >&2
+    echo "Ошибка: ${VERSION} production release требует LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR с native x64+ARM64 outputs" >&2
     exit 1
   }
 fi
 if [[ "${MACOS_DUAL_ARCH_REQUIRED}" == "1" ]]; then
   [[ -n "${MACOS_PRODUCTION_ARTIFACTS_DIR}" && -d "${MACOS_PRODUCTION_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} release bundle требует NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR с macOS x64+ARM64 delivery outputs" >&2
+    echo "Ошибка: ${VERSION} release bundle требует LAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR с macOS x64+ARM64 delivery outputs" >&2
     exit 1
   }
 fi
 if [[ "${MANAGED_JRE_REQUIRED}" == "1" ]]; then
   [[ -n "${MANAGED_JRE_ARTIFACTS_DIR}" && -d "${MANAGED_JRE_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} release bundle требует NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR с Managed JRE Distribution" >&2
+    echo "Ошибка: ${VERSION} release bundle требует LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR с Managed JRE Distribution" >&2
     exit 1
   }
 fi
 if [[ "${GUARD_CERT_REQUIRED}" == "1" ]]; then
   [[ -n "${GUARD_CI_MATRIX}" && -n "${GUARD_CI_TARGETS}" && -n "${GUARD_PLATFORM_ARTIFACTS_DIR}" ]] || {
-    echo "Ошибка: ${VERSION} production release требует NEVERLAUNCHER_GUARD_CI_MATRIX_FILE, NEVERLAUNCHER_GUARD_CI_TARGETS_FILE и NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR" >&2
+    echo "Ошибка: ${VERSION} production release требует LAUNCHER_GUARD_CI_MATRIX_FILE, LAUNCHER_GUARD_CI_TARGETS_FILE и LAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR" >&2
     exit 1
   }
   require_file "${GUARD_CI_MATRIX}"
@@ -453,7 +453,7 @@ if [[ -n "${COMPATIBILITY_MATRIX}" || -n "${DEVICE_TRUST_MATRIX}" || -n "${GUARD
     SOURCE_COMMIT="$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || true)"
   fi
   if [[ -z "${SOURCE_COMMIT}" ]]; then
-    echo "Ошибка: certified release требует NEVERLAUNCHER_SOURCE_COMMIT или git HEAD" >&2
+    echo "Ошибка: certified release требует LAUNCHER_SOURCE_COMMIT или git HEAD" >&2
     exit 1
   fi
 fi
@@ -479,7 +479,7 @@ if [[ "${LINUX_DUAL_ARCH_REQUIRED}" != "1" ]]; then
   log "Сборка legacy Backend API linux/amd64 (production pgx, fail-closed)"
   (
     cd "${ROOT_DIR}/services/api"
-    GOOS=linux GOARCH=amd64 CGO_ENABLED="${NEVERLAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${SOURCE_COMMIT:-unknown}" -o "${OUT_DIR}/launcher-api-linux-amd64" ./cmd/launcher-api
+    GOOS=linux GOARCH=amd64 CGO_ENABLED="${LAUNCHER_API_CGO_ENABLED:-0}" go build -trimpath -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${SOURCE_COMMIT:-unknown}" -o "${OUT_DIR}/launcher-api-linux-amd64" ./cmd/launcher-api
   )
   chmod +x "${OUT_DIR}/launcher-api-linux-amd64"
 fi
@@ -735,9 +735,49 @@ if [[ "$(printf '%s\n' '0.42.0' "${VERSION}" | sort -V | head -n1)" == "0.42.0" 
   log "${VERSION}: verify exact final ServerBridge payload and full live network cycle"
   python3 "${ROOT_DIR}/scripts/ga/accept_network_release_0420.py" \
     --root "${ROOT_DIR}" --release "${OUT_DIR}" \
-    --runtime "${NEVERLAUNCHER_NETWORK_LIVE_EVIDENCE_DIR:-${ROOT_DIR}/e2e/runtime}" \
+    --runtime "${LAUNCHER_NETWORK_LIVE_EVIDENCE_DIR:-${ROOT_DIR}/e2e/runtime}" \
     --source-commit "${SOURCE_COMMIT}" \
     --out "${OUT_DIR}/SERVER_NETWORK_ACCEPTANCE_0420.json"
+fi
+
+# 0.43.0+: build *executable* Java extension packages from SDK sources and
+# certify their exact signed bytes against all six same-run JVM acceptance
+# reports. Never issue a signed release solely on declared module parity.
+if [[ "$(printf '%s\n' '0.43.0' "${VERSION}" | sort -V | head -n1)" == '0.43.0' ]]; then
+  log "${VERSION}: build, sign and verify runnable Java Host and Gravit source-port .nlext"
+  EXT_EVIDENCE="${LAUNCHER_EXTENSION_ACCEPTANCE_EVIDENCE_DIR:-}"
+  EXT_KEY="${LAUNCHER_EXTENSION_PUBLISHER_PRIVATE_KEY_FILE:-}"
+  EXT_PUBLIC="${LAUNCHER_EXTENSION_PUBLISHER_PUBLIC_KEY_FILE:-}"
+  EXT_RUN="${LAUNCHER_EXTENSION_ACCEPTANCE_RUN_ID:-}"
+  EXT_ATTEMPT="${LAUNCHER_EXTENSION_ACCEPTANCE_RUN_ATTEMPT:-}"
+  [[ -d "${EXT_EVIDENCE}" && -f "${EXT_KEY}" && -f "${EXT_PUBLIC}" && -n "${EXT_RUN}" && -n "${EXT_ATTEMPT}" ]] || {
+    echo "${VERSION} EXTENSION GA BLOCKED: requires six real platform reports, CI run/attempt and dedicated publisher signing identity" >&2
+    exit 2
+  }
+  sh "${ROOT_DIR}/examples/extensions/java-host/build.sh"
+  sh "${ROOT_DIR}/examples/extensions/gravit-compat/build.sh"
+  for extension in java-host gravit-port; do
+    if [[ "${extension}" == java-host ]]; then
+      STAGE="${ROOT_DIR}/examples/extensions/java-host/build/package"
+      FILE="launcher-example-java-host.nlext"
+    else
+      STAGE="${ROOT_DIR}/examples/extensions/gravit-compat/build/package"
+      FILE="launcher-example-gravit-port.nlext"
+    fi
+    "${RELEASE_CLI}" extension pack "${STAGE}" --output "${OUT_DIR}/${FILE}" --private-key "${EXT_KEY}"
+    "${RELEASE_CLI}" extension verify "${OUT_DIR}/${FILE}" --public-key "${EXT_PUBLIC}"
+  done
+  cp -- "${EXT_PUBLIC}" "${OUT_DIR}/EXTENSION_PUBLISHER_PUBLIC_KEY_0430.pem"
+  python3 "${ROOT_DIR}/scripts/ga/extension_release_0430.py" \
+    --evidence "${EXT_EVIDENCE}" --bundle "${OUT_DIR}" --cli "${RELEASE_CLI}" \
+    --publisher-key "${EXT_PUBLIC}" --version "${VERSION}" \
+    --commit "${SOURCE_COMMIT}" --run-id "${EXT_RUN}" --run-attempt "${EXT_ATTEMPT}" \
+    --matrix "${ROOT_DIR}/compatibility/gravit/module-parity-04211.json" \
+    --output "${OUT_DIR}/EXTENSION_RELEASE_CERTIFICATION_0430.json"
+  # BOM/SHA256SUMS enumerate the flat release root. Bundle all seven raw
+  # reports in one top-level ZIP so their exact bytes enter the signed BOM.
+  python3 "${ROOT_DIR}/scripts/release/zip-dir.py" "${EXT_EVIDENCE}" \
+    "${OUT_DIR}/EXTENSION_ACCEPTANCE_EVIDENCE_0430.zip"
 fi
 
 log "Source archive только из git-tracked/allowlisted файлов"

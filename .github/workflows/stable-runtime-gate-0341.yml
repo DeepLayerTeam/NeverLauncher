@@ -36,7 +36,7 @@ jobs:
           --health-cmd "pg_isready -U never_test -d never_test"
           --health-interval 10s --health-timeout 5s --health-retries 8
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://never_test:never_test@localhost:5432/never_test?sslmode=disable
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://never_test:never_test@localhost:5432/never_test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v6

@@ -31,7 +31,7 @@ Production Microsoft identity provider for Launcher Federation Core. It delegate
 ]
 ```
 
-Use `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON` or `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE`. Secrets stay outside provider JSON through `clientSecretEnv` or `clientSecretFile`.
+Use `LAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON` or `LAUNCHER_AUTH_MICROSOFT_PROVIDERS_FILE`. Secrets stay outside provider JSON through `clientSecretEnv` or `clientSecretFile`.
 
 Supported clouds: `global`, `usgov`, `china`. `custom` exists for controlled testing/private-compatible authorities and requires `allowCustomAuthority=true` plus normal OIDC TLS/SSRF restrictions.
 

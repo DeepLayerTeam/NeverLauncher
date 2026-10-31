@@ -8,9 +8,9 @@ verification results.
 
 ## Operator sequence
 
-1. Configure an absolute, trusted executable path in `NEVERLAUNCHER_FACTORY_CLI` and
-   a private absolute directory in `NEVERLAUNCHER_FACTORY_ROOT`. For Forge-like
-   installation, configure `NEVERLAUNCHER_FACTORY_JAVA` where necessary.
+1. Configure an absolute, trusted executable path in `LAUNCHER_FACTORY_CLI` and
+   a private absolute directory in `LAUNCHER_FACTORY_ROOT`. For Forge-like
+   installation, configure `LAUNCHER_FACTORY_JAVA` where necessary.
 2. In Admin create a client profile with an **exact** Minecraft version and an
    exact loader version (for modded clients); create a new, empty Build Workspace
    with matching Java major and default launch settings.

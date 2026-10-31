@@ -47,7 +47,7 @@ func Detect(cfg config.Config) (Plan, error) {
 	switch requested {
 	case "auto", string(SingleNode), string(Standard), string(NetworkHA):
 	default:
-		return p, fmt.Errorf("unsupported NEVERLAUNCHER_DEPLOYMENT_MODE=%q (auto|single-node|standard|network-ha)", requested)
+		return p, fmt.Errorf("unsupported LAUNCHER_DEPLOYMENT_MODE=%q (auto|single-node|standard|network-ha)", requested)
 	}
 	if p.Storage == "" {
 		p.Storage = "local"
@@ -69,7 +69,7 @@ func Detect(cfg config.Config) (Plan, error) {
 	switch {
 	case requested != "auto":
 		p.Mode = Mode(requested)
-		p.Reasons = append(p.Reasons, "selected explicitly by NEVERLAUNCHER_DEPLOYMENT_MODE")
+		p.Reasons = append(p.Reasons, "selected explicitly by LAUNCHER_DEPLOYMENT_MODE")
 	case sqliteRepo:
 		p.Mode = SingleNode
 		p.Reasons = append(p.Reasons, "SQLite repository configured")
@@ -190,7 +190,7 @@ func Detect(cfg config.Config) (Plan, error) {
 				p.LockPath = lock
 				p.Reasons = append(p.Reasons, "using explicit instance lock path")
 			default:
-				problems = append(problems, "standard with S3 requires NEVERLAUNCHER_DEPLOYMENT_LOCK_PATH on a shared, persistent local instance volume")
+				problems = append(problems, "standard with S3 requires LAUNCHER_DEPLOYMENT_LOCK_PATH on a shared, persistent local instance volume")
 			}
 			if p.LockPath != "" && !filepath.IsAbs(p.LockPath) {
 				if config.IsProductionEnvironment(cfg.Environment) {

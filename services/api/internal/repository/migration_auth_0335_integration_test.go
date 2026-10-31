@@ -20,7 +20,7 @@ import (
 // Requires a disposable PostgreSQL. Exercises actual inserts, transaction
 // rollback, receipt replay, UUID ownership, and CAS-upgraded password replay.
 func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
 		t.Skip("requires disposable PostgreSQL")
 	}

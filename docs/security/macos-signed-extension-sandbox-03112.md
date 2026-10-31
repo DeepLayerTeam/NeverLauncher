@@ -11,13 +11,13 @@ unsupported layouts are denied; no transition to `trusted` occurs.
 1. Build helper **on a Mac** with a trusted Developer ID Application certificate:
 
    ```sh
-   export NEVERLAUNCHER_MACOS_SANDBOX_TEAM_ID='YOURTEAMID'
-   export NEVERLAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY='Developer ID Application: Example (YOURTEAMID)'
+   export LAUNCHER_MACOS_SANDBOX_TEAM_ID='YOURTEAMID'
+   export LAUNCHER_MACOS_SANDBOX_SIGN_IDENTITY='Developer ID Application: Example (YOURTEAMID)'
    ./scripts/security/build-macos-sandbox-helper-03112.sh /opt/launcher/libexec/NeverExtensionSandbox
    ```
 
-2. Configure the API service with `NEVERLAUNCHER_MACOS_SANDBOX_HELPER` and
-   `NEVERLAUNCHER_MACOS_SANDBOX_TEAM_ID`. The helper must remain in a trusted,
+2. Configure the API service with `LAUNCHER_MACOS_SANDBOX_HELPER` and
+   `LAUNCHER_MACOS_SANDBOX_TEAM_ID`. The helper must remain in a trusted,
    non-group-writable directory. Never ship an unsigned fallback.
 3. The server validates the helper's Developer ID chain, Team ID, strict code
    signature and minimal entitlement set. Missing/overprivileged/unsigned helpers

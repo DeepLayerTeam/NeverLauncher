@@ -35,14 +35,14 @@ func writePythonFixture0205(t *testing.T, root string, crash bool) string {
 	}
 	script := `#!/usr/bin/env python3
 import json, os, sys, threading, time, urllib.request
-url=os.environ["NEVERLAUNCHER_EXTENSION_HOST_URL"]
-token=os.environ["NEVERLAUNCHER_EXTENSION_HOST_TOKEN"]
+url=os.environ["LAUNCHER_EXTENSION_HOST_URL"]
+token=os.environ["LAUNCHER_EXTENSION_HOST_TOKEN"]
 headers={"Authorization":"Bearer "+token,"Content-Type":"application/json"}
 def post(path,obj):
     req=urllib.request.Request(url+path,data=json.dumps(obj).encode(),headers=headers,method="POST")
     with urllib.request.urlopen(req,timeout=2) as r: return r.read()
-post("/v1/hello",{"protocolVersion":"1.0","extensionApiVersion":os.environ["NEVERLAUNCHER_EXTENSION_API_VERSION"],"extensionId":os.environ["NEVERLAUNCHER_EXTENSION_ID"],"instanceId":os.environ["NEVERLAUNCHER_EXTENSION_INSTANCE_ID"],"pid":os.getpid()})
-post("/v1/log",{"level":"info","message":"fixture-online secret="+str("NEVERLAUNCHER_DATABASE_DSN" in os.environ).lower()})
+post("/v1/hello",{"protocolVersion":"1.0","extensionApiVersion":os.environ["LAUNCHER_EXTENSION_API_VERSION"],"extensionId":os.environ["LAUNCHER_EXTENSION_ID"],"instanceId":os.environ["LAUNCHER_EXTENSION_INSTANCE_ID"],"pid":os.getpid()})
+post("/v1/log",{"level":"info","message":"fixture-online secret="+str("LAUNCHER_DATABASE_DSN" in os.environ).lower()})
 post("/v1/capabilities/project.get",{"projectId":"demo-project"})
 print("stdout-ready", flush=True)
 ` + crashLine + `
@@ -78,7 +78,7 @@ func TestExtensionHostRealProcessProtocolAndSanitizedEnvironment0205(t *testing.
 	repo := repository.NewMemoryRepository("http://example.test")
 	store := storage.NewLocalStorage(filepath.Join(t.TempDir(), "storage"))
 	install := hostFixtureInstall0205(t, repo, root, "example.host", false)
-	t.Setenv("NEVERLAUNCHER_DATABASE_DSN", "postgres://must-not-leak")
+	t.Setenv("LAUNCHER_DATABASE_DSN", "postgres://must-not-leak")
 	host := New(Config{ExtensionRoot: root, StartupTimeout: 4 * time.Second, HeartbeatTimeout: 2 * time.Second, StopTimeout: 2 * time.Second, MaxMemoryBytes: 128 << 20, MaxProcesses: 4, RestartBackoff: 50 * time.Millisecond}, repo, store)
 	if err := host.Start(context.Background()); err != nil {
 		t.Fatal(err)
@@ -199,14 +199,14 @@ func TestSafeEntrypointRejectsSymlink0205(t *testing.T) {
 }
 
 func TestSanitizedEnvironmentNeverForwardsSecrets0205(t *testing.T) {
-	t.Setenv("NEVERLAUNCHER_DATABASE_DSN", "secret")
-	t.Setenv("NEVERLAUNCHER_AUTH_TOKEN_SECRET", "secret2")
-	env := sanitizedEnvironment(map[string]string{"NEVERLAUNCHER_EXTENSION_HOST_TOKEN": "token"})
+	t.Setenv("LAUNCHER_DATABASE_DSN", "secret")
+	t.Setenv("LAUNCHER_AUTH_TOKEN_SECRET", "secret2")
+	env := sanitizedEnvironment(map[string]string{"LAUNCHER_EXTENSION_HOST_TOKEN": "token"})
 	joined := strings.Join(env, "\n")
 	if strings.Contains(joined, "DATABASE_DSN") || strings.Contains(joined, "AUTH_TOKEN_SECRET") {
 		t.Fatal("backend secrets leaked to extension environment")
 	}
-	if !strings.Contains(joined, "NEVERLAUNCHER_EXTENSION_HOST_TOKEN=token") {
+	if !strings.Contains(joined, "LAUNCHER_EXTENSION_HOST_TOKEN=token") {
 		t.Fatal("host token missing")
 	}
 }

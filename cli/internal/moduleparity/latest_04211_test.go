@@ -54,7 +54,7 @@ func TestLatest04211EvidenceAndStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.FullyCertified || got.ProductVersion != "0.42.11" || len(got.Results) != 19 {
+	if got.FullyCertified || got.ProductVersion != "0.43.0" || len(got.Results) != 19 {
 		t.Fatalf("wrong results: %+v", got)
 	}
 	for i, r := range got.Results {
@@ -66,6 +66,31 @@ func TestLatest04211EvidenceAndStatus(t *testing.T) {
 		}
 		if i != 16 && r.Status != "partial" {
 			t.Fatalf("M%02d status was promoted without execution", i+1)
+		}
+	}
+}
+
+func TestLatest04211CarriesForwardWithoutClaimingVerified(t *testing.T) {
+	for _, version := range []string{"0.42.11", "0.42.12", "0.43.0", "0.45.0", "1.0.0"} {
+		root := latestFixture04211(t)
+		if err := os.WriteFile(filepath.Join(root, "VERSION"), []byte(version+"\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		report, err := InspectLatest04211(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if report.ProductVersion != version || report.FullyCertified || len(report.Results) != 19 {
+			t.Fatalf("invalid current audit %s: %+v", version, report)
+		}
+	}
+	for _, version := range []string{"0.42.10", "0.42.9", "foo", "0.43.0-rc"} {
+		root := latestFixture04211(t)
+		if err := os.WriteFile(filepath.Join(root, "VERSION"), []byte(version+"\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := InspectLatest04211(root); err == nil {
+			t.Fatalf("unsupported version %s passed", version)
 		}
 	}
 }

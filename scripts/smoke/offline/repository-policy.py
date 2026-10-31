@@ -40,8 +40,8 @@ if version_check.returncode != 0:
 dynamic_version_expectations = {
     "cli/cmd/launcher/main.go": 'var version = "dev"',
     "services/api/cmd/launcher-api/main.go": 'var version = "dev"',
-    "apps/admin/src/admin/AdminApp.tsx": "const TOOL_VERSION = __NEVERLAUNCHER_VERSION__;",
-    "apps/desktop/src/main.tsx": "const DESKTOP_VERSION = __NEVERLAUNCHER_VERSION__;",
+    "apps/admin/src/admin/AdminApp.tsx": "const TOOL_VERSION = __LAUNCHER_VERSION__;",
+    "apps/desktop/src/main.tsx": "const DESKTOP_VERSION = __LAUNCHER_VERSION__;",
     "apps/admin/vite.config.ts": "../../VERSION",
     "apps/desktop/vite.config.ts": "../../VERSION",
     "plugins/bridge-common/src/main/java/ru/launcher/bridge/common/BridgeDefaults.java": "BridgeVersion.VERSION",
@@ -174,7 +174,7 @@ if "<AdminApp" not in read("apps/admin/src/main.tsx"):
 ui_files = ["apps/admin/src/admin/AdminApp.tsx", "apps/desktop/src/main.tsx"]
 for rel in ui_files:
     text = read(rel)
-    if "__NEVERLAUNCHER_VERSION__" not in text:
+    if "__LAUNCHER_VERSION__" not in text:
         fail(f"{rel}: UI должен получать версию из Vite define, связанного с VERSION")
     for match in re.finditer(r"(?<![0-9])\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?", text):
         line = text.count("\n", 0, match.start()) + 1
@@ -236,8 +236,8 @@ if "needs.compatibility-e2e.result != 'cancelled'" not in compatibility_workflow
 for forbidden in [
     "AdminPassword",
     "AdminEmail",
-    "NEVERLAUNCHER_ADMIN_PASSWORD",
-    "NEVERLAUNCHER_ADMIN_EMAIL",
+    "LAUNCHER_ADMIN_PASSWORD",
+    "LAUNCHER_ADMIN_EMAIL",
 ]:
     if forbidden in config_go or forbidden in admin_handlers or forbidden in compose:
         fail(
@@ -249,7 +249,7 @@ for rel in [
     "scripts/test/package-product-smoke.sh",
 ]:
     text = read(rel)
-    if "NEVERLAUNCHER_ADMIN_PASSWORD" in text or "NEVERLAUNCHER_ADMIN_EMAIL" in text:
+    if "LAUNCHER_ADMIN_PASSWORD" in text or "LAUNCHER_ADMIN_EMAIL" in text:
         fail(f"{rel}: устаревшие runtime admin credentials запрещены")
 admin_ui = read("apps/admin/src/main.tsx")
 if "useState('admin@launcher.local')" in admin_ui or "useState('admin')" in admin_ui:
@@ -267,7 +267,7 @@ if 'Access-Control-Allow-Origin", "*"' in server_go:
 for required in ["BackupRoot", "CORSAllowedOrigins", "ValidateProduction"]:
     if required not in config_go:
         fail(f"config: отсутствует production hardening {required}")
-for required in ["NEVERLAUNCHER_BACKUP_ROOT", "NEVERLAUNCHER_CORS_ALLOWED_ORIGINS"]:
+for required in ["LAUNCHER_BACKUP_ROOT", "LAUNCHER_CORS_ALLOWED_ORIGINS"]:
     if required not in compose:
         fail(f"production compose: отсутствует {required}")
 if 'POST /api/v1/operations/backups/{backupId}/restore"' not in routes_operations:
@@ -296,7 +296,7 @@ if (
     or "scripts/test/federation-e2e.py" not in preflight
 ):
     fail("preflight не запускает federation E2E release gate")
-if "NEVERLAUNCHER_PREFLIGHT_FEDERATION_POSTGRES" not in preflight:
+if "LAUNCHER_PREFLIGHT_FEDERATION_POSTGRES" not in preflight:
     fail("strict preflight не умеет запускать PostgreSQL multi-instance federation E2E")
 federation_routes = read("services/api/internal/httpapi/routes_auth.go")
 federation_registry = read("services/api/internal/httpapi/sql_connector_113.go")
@@ -655,19 +655,19 @@ if (
 if "Minecraft/ServerBridge trust enforcement gate OK" not in gameplay_trust_gate:
     fail("0.12.7 Minecraft/ServerBridge trust gate is incomplete")
 
-for required in ["NEVERLAUNCHER_PREFLIGHT_STRICT", "NEVERLAUNCHER_PREFLIGHT_PGX"]:
+for required in ["LAUNCHER_PREFLIGHT_STRICT", "LAUNCHER_PREFLIGHT_PGX"]:
     if required not in preflight:
         fail(f"preflight не содержит strict gate {required}")
 if "release doctor" not in ci.lower():
     fail("CI не запускает release doctor")
-if "NEVERLAUNCHER_CORS_ALLOWED_ORIGINS" not in ci:
+if "LAUNCHER_CORS_ALLOWED_ORIGINS" not in ci:
     fail("CI Compose validation не задаёт обязательный CORS origin")
 
 e2e_compose = read("e2e/docker-compose.minecraft-e2e.yml")
 for required in [
-    "NEVERLAUNCHER_ENV: e2e-production",
-    "NEVERLAUNCHER_BACKUP_ROOT",
-    "NEVERLAUNCHER_CORS_ALLOWED_ORIGINS",
+    "LAUNCHER_ENV: e2e-production",
+    "LAUNCHER_BACKUP_ROOT",
+    "LAUNCHER_CORS_ALLOWED_ORIGINS",
     "e2e-backups:/var/lib/launcher/backups",
 ]:
     if required not in e2e_compose:
@@ -677,8 +677,8 @@ for required in [
     "api-a:",
     "api-b:",
     "api-c:",
-    "NEVERLAUNCHER_PERSISTENT_SESSIONS",
-    'NEVERLAUNCHER_DATABASE_AUTO_MIGRATE: "false"',
+    "LAUNCHER_PERSISTENT_SESSIONS",
+    'LAUNCHER_DATABASE_AUTO_MIGRATE: "false"',
 ]:
     if required not in federation_e2e_compose:
         fail(f"federation PostgreSQL E2E incomplete: {required}")
@@ -725,7 +725,7 @@ for required in [
     "api-volume-init:",
     "chown -R 10001:10001 /storage /backups",
     "condition: service_completed_successfully",
-    "NEVERLAUNCHER_STORAGE_LOCAL_PATH: /var/lib/launcher/storage/current",
+    "LAUNCHER_STORAGE_LOCAL_PATH: /var/lib/launcher/storage/current",
 ]:
     if required not in compose:
         fail(
@@ -776,8 +776,8 @@ for required in [
     if required not in build_release:
         fail(f"build-release не собирает/проверяет обязательный artifact: {required}")
 if (
-    "NEVERLAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE" not in build_release
-    or "NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE" not in build_release
+    "LAUNCHER_RELEASE_SIGNING_PRIVATE_KEY_FILE" not in build_release
+    or "LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE" not in build_release
 ):
     fail("build-release должен требовать внешний Ed25519 private/public key")
 if (
@@ -798,7 +798,7 @@ if (
     in ci.split("production-e2e:", 1)[1].split("needs:", 1)[1].split("\n", 1)[0]
 ):
     fail("main functional E2E должен выполняться независимо от production signing")
-if "NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE" not in release_bundle_gate:
+if "LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE" not in release_bundle_gate:
     fail("release-bundle smoke gate не требует trusted Ed25519 public key")
 
 for legacy_helper in [
@@ -1047,7 +1047,7 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(f"actual Minecraft E2E отсутствует обязательный primitive: {required}")
-for forbidden in ["LaunchFixture", "NEVERLAUNCHER_E2E_FIXTURE_OK", "launch-fixture"]:
+for forbidden in ["LaunchFixture", "LAUNCHER_E2E_FIXTURE_OK", "launch-fixture"]:
     if forbidden in e2e_script:
         fail(
             f"production Minecraft E2E снова использует synthetic fixture: {forbidden}"
@@ -1176,7 +1176,7 @@ if (
     fail("Runtime clean sync must use verified resumable download scheduler")
 
 for required in [
-    'JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"',
+    'JAVA_BIN="${LAUNCHER_E2E_JAVA:-}"',
     "${JAVA_HOME}/bin/java",
     '--java "$JAVA_BIN"',
 ]:
@@ -1276,7 +1276,7 @@ for required in [
     if required not in compat_workflow:
         fail(f"public compatibility workflow incomplete: {required}")
 for required in [
-    "NEVERLAUNCHER_E2E_MODE=compatibility",
+    "LAUNCHER_E2E_MODE=compatibility",
     "GITHUB_SHA",
     "GITHUB_RUN_ID",
     "actualClient",
@@ -1298,10 +1298,7 @@ for required in [
 ]:
     if required not in e2e_script:
         fail(f"generic real-client E2E hardening missing: {required}")
-if (
-    "NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}"
-    not in e2e_compose
-):
+if "LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}" not in e2e_compose:
     fail(
         "E2E server profile must be bound to compatibility target instead of hard-coded Vanilla"
     )
@@ -1494,8 +1491,8 @@ for required in [
     if required not in release_commands:
         fail(f"release CLI is not compatibility-certified: {required}")
 for required in [
-    "NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE",
-    "NEVERLAUNCHER_SOURCE_COMMIT",
+    "LAUNCHER_COMPATIBILITY_MATRIX_FILE",
+    "LAUNCHER_SOURCE_COMMIT",
     "release publish-check",
     "Certification evidence не передан",
 ]:
@@ -1547,8 +1544,8 @@ for required in [
     "actions: read",
     "fetch-exact-certifications.py",
     '--commit "$GITHUB_SHA"',
-    "NEVERLAUNCHER_COMPATIBILITY_MATRIX_FILE",
-    "NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE",
+    "LAUNCHER_COMPATIBILITY_MATRIX_FILE",
+    "LAUNCHER_DEVICE_TRUST_MATRIX_FILE",
     "external-certifications/compatibility/matrix.json",
     "external-certifications/device-trust/matrix.json",
 ]:
@@ -2069,9 +2066,9 @@ for required in [
     if required not in guard_release_0139:
         fail(f"0.13.9 release certification enforcement incomplete: {required}")
 for required in [
-    "NEVERLAUNCHER_GUARD_CI_MATRIX_FILE",
-    "NEVERLAUNCHER_GUARD_CI_TARGETS_FILE",
-    "NEVERLAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR",
+    "LAUNCHER_GUARD_CI_MATRIX_FILE",
+    "LAUNCHER_GUARD_CI_TARGETS_FILE",
+    "LAUNCHER_GUARD_PLATFORM_ARTIFACTS_DIR",
     "scripts/guard_ci/stage_release.py",
 ]:
     if required not in build_release_0139:
@@ -2351,7 +2348,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in linux_packager_0153:
             fail(f"0.15.3 deterministic Linux packager incomplete: {required}")
     for required in [
-        "NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR",
+        "LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR",
         "LINUX_DUAL_ARCH_REQUIRED",
         "launcher-linux-${arch}-${VERSION}.tar.gz",
     ]:
@@ -2364,10 +2361,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in ci:
             fail(f"0.15.3 Linux native CI matrix incomplete: {required}")
-    if (
-        "NEVERLAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR"
-        not in production_release_workflow
-    ):
+    if "LAUNCHER_LINUX_PRODUCTION_ARTIFACTS_DIR" not in production_release_workflow:
         fail("0.15.3 Linux production release staging is not wired")
     for required in [
         "LINUX_PRODUCTION_EVIDENCE.json",
@@ -2437,7 +2431,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in macos_packager_0154:
             fail(f"0.15.4 macOS packager/evidence generator incomplete: {required}")
     for required in [
-        "NEVERLAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR",
+        "LAUNCHER_MACOS_PRODUCTION_ARTIFACTS_DIR",
         "MACOS_DUAL_ARCH_REQUIRED",
         "MACOS_NOTARIZATION_EVIDENCE.json",
     ]:
@@ -2512,8 +2506,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.15.5 Managed JRE builder incomplete: {required}")
     for required in [
         "ensure_managed_java_from_distribution",
-        "NEVERLAUNCHER_MANAGED_JRE_MANIFEST",
-        "NEVERLAUNCHER_MANAGED_JRE_MANIFEST_SHA256",
+        "LAUNCHER_MANAGED_JRE_MANIFEST",
+        "LAUNCHER_MANAGED_JRE_MANIFEST_SHA256",
         "exact vendor archive SHA-256",
         "ensure_managed_archive",
         "Managed JRE javaEntry mismatch",
@@ -2521,7 +2515,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in jre_runtime_0155:
             fail(f"0.15.5 Runtime Managed JRE consumer incomplete: {required}")
     for required in [
-        "NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR",
+        "LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR",
         "MANAGED_JRE_REQUIRED",
         "MANAGED_JRE_MANIFEST.json",
         "launcher-jre-temurin21-",
@@ -2546,7 +2540,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "Download Managed JRE six-target production assets",
         "path: managed-jre-artifacts",
-        "NEVERLAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts",
+        "LAUNCHER_MANAGED_JRE_ARTIFACTS_DIR: ${{ github.workspace }}/managed-jre-artifacts",
     ]:
         if required not in production_release_workflow:
             fail(
@@ -2973,7 +2967,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in matching_case_01610:
             fail(f"0.16.10 real client/matching server E2E incomplete: {required}")
     for required in [
-        "NEVERLAUNCHER_COMPAT_MATCHING_SERVER",
+        "LAUNCHER_COMPAT_MATCHING_SERVER",
         "run-vanilla-matching-e2e.sh",
         "matchingServer",
     ]:
@@ -3202,7 +3196,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "revoked",
         "trust epoch rollback",
         "release rollback blocked",
-        "NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE",
+        "LAUNCHER_RELEASE_TRUST_STATE_FILE",
     ]:
         if required not in rv2_0158:
             fail(f"0.15.8 Release Verification v2 incomplete: {required}")
@@ -3216,9 +3210,9 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in release_0158:
             fail(f"0.15.8 release integration incomplete: {required}")
     for required in [
-        "NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE",
-        "NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE",
-        "NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE",
+        "LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE",
+        "LAUNCHER_RELEASE_TRUST_POLICY_FILE",
+        "LAUNCHER_RELEASE_TRUST_STATE_FILE",
     ]:
         if required not in build_release_0158:
             fail(f"0.15.8 production release trust input missing: {required}")
@@ -3281,7 +3275,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in release_0159:
             fail(f"0.15.9 release integration incomplete: {required}")
     for required in [
-        "NEVERLAUNCHER_PUBLIC_RELEASE_BASE_URL",
+        "LAUNCHER_PUBLIC_RELEASE_BASE_URL",
         "runtime-windows-x64.exe",
         "runtime-windows-arm64.exe",
     ]:
@@ -3291,8 +3285,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "types: [published]",
         "delivery public-e2e",
         "PUBLIC_DELIVERY_E2E_REPORT.json",
-        "NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE",
-        "NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE",
+        "LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE",
+        "LAUNCHER_RELEASE_TRUST_POLICY_FILE",
     ]:
         if required not in workflow_0159:
             fail(f"0.15.9 post-publish workflow incomplete: {required}")
@@ -3330,7 +3324,7 @@ if (ROOT / "VERSION").read_text(encoding="utf-8").strip() >= "0.13.0":
         fail("0.13.0 runtime Device Trust release contract is incomplete")
     if "deviceTrustRelease0130" not in dt_targets_0130:
         fail("0.13.0 public Device Trust targets do not require release acceptance")
-    if "NEVERLAUNCHER_DEVICE_TRUST_MATRIX_FILE" not in build_release_0130:
+    if "LAUNCHER_DEVICE_TRUST_MATRIX_FILE" not in build_release_0130:
         fail("0.13.0 build-release cannot embed Device Trust matrix")
     if (
         "device-trust-release-0130.py" not in preflight
@@ -4481,7 +4475,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.17.8 loader-native runtime incomplete: {required}")
     for required in [
         "run-loader-native-e2e.sh",
-        "NEVERLAUNCHER_E2E_RESOLVED_LOADER_VERSION",
+        "LAUNCHER_E2E_RESOLVED_LOADER_VERSION",
         "loaderNativeClientJoin",
     ]:
         if required not in native_integration_0178:
@@ -4946,8 +4940,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "WindowsProtectionProfile",
         "WindowsProtectionCapabilities",
-        "NEVERGUARD_WINDOWS_PROTECTION_CORE_VERSION: u32 = 2",
-        "NEVERGUARD_WINDOWS_CAPABILITY_MODEL_VERSION: u32 = 1",
+        "GUARD_WINDOWS_PROTECTION_CORE_VERSION: u32 = 2",
+        "GUARD_WINDOWS_CAPABILITY_MODEL_VERSION: u32 = 1",
     ]:
         if required not in windows_core_0181:
             fail(f"0.18.1 Windows Protection Core II model incomplete: {required}")
@@ -5050,7 +5044,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
                 f"0.18.2 Guard Sensor supervised launch integration incomplete: {required}"
             )
     for required in [
-        "NEVERGUARD_SENSOR_FILE_NAME",
+        "GUARD_SENSOR_FILE_NAME",
         "verify_package_artifact(&manifest, &sensor_path)",
         "verify_windows_authenticode_trust(&sensor_path)",
     ]:
@@ -5140,7 +5134,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in module_parent_0183:
             fail(f"0.18.3 Module Guard parent enforcement incomplete: {required}")
     for required in [
-        "NEVERGUARD_SENSOR_PROTOCOL_VERSION",
+        "GUARD_SENSOR_PROTOCOL_VERSION",
         "SENSOR_MAGIC",
         "policy_for_command",
         "arm_module_guard",
@@ -5242,10 +5236,10 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     ]:
         if required not in hook_parent_0184:
             fail(f"0.18.4 Hook Engine parent enforcement incomplete: {required}")
-    for required in ["WindowsHookEngineReport", "NEVERGUARD_HOOK_ENGINE_VERSION"]:
+    for required in ["WindowsHookEngineReport", "GUARD_HOOK_ENGINE_VERSION"]:
         if required not in hook_report_0184:
             fail(f"0.18.4 Hook Engine report missing: {required}")
-    for required in ["NEVERGUARD_SENSOR_PROTOCOL_VERSION: u32 = 3", "NGSENS04"]:
+    for required in ["GUARD_SENSOR_PROTOCOL_VERSION: u32 = 3", "NGSENS04"]:
         if required not in hook_bootstrap_0184:
             fail(f"0.18.4 protocol-v3 bootstrap incomplete: {required}")
     for required in [
@@ -5333,7 +5327,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.18.5 Memory Integrity parent enforcement incomplete: {required}")
     for required in [
         "WindowsMemoryIntegrityReport",
-        "NEVERGUARD_MEMORY_INTEGRITY_VERSION",
+        "GUARD_MEMORY_INTEGRITY_VERSION",
     ]:
         if required not in memory_report_0185:
             fail(f"0.18.5 Memory Integrity report missing: {required}")
@@ -5363,7 +5357,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.5 Memory Integrity gate is not wired into preflight/CI")
     if (
         "runtime/guard-memory-probe/Cargo.toml" not in ci
-        or "NEVERGUARD_MEMORY_PROBE_DLL" not in ci
+        or "GUARD_MEMORY_PROBE_DLL" not in ci
     ):
         fail("0.18.5 Memory Integrity lacks adversarial Windows probe CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
@@ -5445,7 +5439,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             )
     for required in [
         "WindowsThreadProcessIntegrityReport",
-        "NEVERGUARD_THREAD_PROCESS_INTEGRITY_VERSION",
+        "GUARD_THREAD_PROCESS_INTEGRITY_VERSION",
         "descendant_process_peak",
         "process_transition_count",
         "thread_set_sha256",
@@ -5480,7 +5474,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.6 Thread & Process Integrity gate is not wired into preflight/CI")
     if (
         "runtime/guard-thread-probe/Cargo.toml" not in ci
-        or "NEVERGUARD_THREAD_PROBE_DLL" not in ci
+        or "GUARD_THREAD_PROBE_DLL" not in ci
     ):
         fail("0.18.6 Thread Integrity lacks adversarial Windows probe CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
@@ -5560,7 +5554,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
             fail(f"0.18.7 Debug Guard parent enforcement incomplete: {required}")
     for required in [
         "WindowsDebugInstrumentationReport",
-        "NEVERGUARD_DEBUG_INSTRUMENTATION_VERSION",
+        "GUARD_DEBUG_INSTRUMENTATION_VERSION",
         "attach_mechanism_disabled",
         "state_sha256",
     ]:
@@ -5570,7 +5564,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard_debug_instrumentation_guard_rejects_startup_agents_and_enforces_attach_disable",
         "guard_debug_instrumentation_guard_fail_closed_on_live_debugger_attach",
         "live debugger attach must be fail-closed",
-        "NEVERGUARD_DEBUG_PROBE_EXE",
+        "GUARD_DEBUG_PROBE_EXE",
     ]:
         if required not in debug_test_0187:
             fail(
@@ -5593,7 +5587,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         fail("0.18.7 Debug Guard gate is not wired into preflight/CI")
     if (
         "runtime/guard-debug-probe/Cargo.toml" not in ci
-        or "NEVERGUARD_DEBUG_PROBE_EXE" not in ci
+        or "GUARD_DEBUG_PROBE_EXE" not in ci
     ):
         fail("0.18.7 Debug Guard lacks adversarial debugger probe CI")
     if "--test guard_sensor_windows" not in ci or "-D warnings" not in ci:
@@ -5649,14 +5643,14 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "jvm_aware: crate::WindowsJvmAwareProtectionReport",
         "expected JVM_AWARE_READY as fifth event",
         "jvm_aware_report_from_event",
-        "NEVERGUARD_CERTIFIED_JAVA_MAJORS",
+        "GUARD_CERTIFIED_JAVA_MAJORS",
         "non-JVM executable-memory transition",
     ]:
         if required not in jvm_parent_0188:
             fail(f"0.18.8 JVM-Aware parent enforcement incomplete: {required}")
     for required in [
         "WindowsJvmAwareProtectionReport",
-        "NEVERGUARD_JVM_AWARE_PROTECTION_VERSION",
+        "GUARD_JVM_AWARE_PROTECTION_VERSION",
         "baseline_private_executable_region_count",
         "jit_transition_count",
         "foreign_executable_transition_count",
@@ -5669,8 +5663,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         "guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
         "-Xbatch",
         "-XX:CompileThreshold=100",
-        "NEVERGUARD_EXPECTED_JAVA_MAJOR",
-        "NEVERGUARD_JVM_PROBE_DLL",
+        "GUARD_EXPECTED_JAVA_MAJOR",
+        "GUARD_JVM_PROBE_DLL",
     ]:
         if required not in jvm_test_0188:
             fail(f"0.18.8 JVM-Aware Windows integration regression missing: {required}")
@@ -5692,8 +5686,8 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
         if required not in ci:
             fail(f"0.18.8 JVM-Aware Java matrix CI incomplete: {required}")
     for required in [
-        "NEVERGUARD_JVM_PROBE_DLL",
-        "NEVERGUARD_EXPECTED_JAVA_MAJOR",
+        "GUARD_JVM_PROBE_DLL",
+        "GUARD_EXPECTED_JAVA_MAJOR",
         "guard_jvm_aware_protection_accepts_certified_hotspot_jit",
         "guard_jvm_aware_protection_fail_closed_on_foreign_executable_private_allocation",
     ]:
@@ -5756,7 +5750,7 @@ if tuple(int(p) for p in VERSION.split("-")[0].split("+")[0].split(".")[:3]) >= 
     for required in [
         "guard_continuous_guard_cross_checks_sensor_and_guard_heartbeat",
         "every Sensor heartbeat must receive exactly one Guard ACK",
-        "NEVERGUARD_CONTINUOUS_GUARD_VERSION",
+        "GUARD_CONTINUOUS_GUARD_VERSION",
     ]:
         if required not in continuous_test_0189:
             fail(
@@ -5885,7 +5879,7 @@ for required in [
     if required not in release_commands_01812:
         fail(f"0.18.12 release CLI Windows Protection RC wiring missing: {required}")
 for required in [
-    "NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE",
+    "LAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE",
     "WINDOWS_PROTECTION_RC_REQUIRED",
     "WINDOWS_ADVERSARIAL_CERTIFICATE.json",
     'release windows-protection-verify "${OUT_DIR}"',
@@ -5909,7 +5903,7 @@ if (
     fail("0.18.12 Production Delivery Release does not anchor Windows Protection RC")
 for required in [
     "guard-windows-adversarial-certificate-${{ github.sha }}",
-    "NEVERLAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE",
+    "LAUNCHER_WINDOWS_ADVERSARIAL_CERTIFICATE_FILE",
     "WINDOWS_PROTECTION_RELEASE_CERTIFICATE.json",
     ".windowsProtectionReleaseCertified == true",
 ]:

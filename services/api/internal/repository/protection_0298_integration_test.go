@@ -14,9 +14,9 @@ import (
 // Uses two distinct connections to prove live cross-replica visibility and the
 // PostgreSQL 0.29.7 session cascade on a real protection ban.
 func TestProtectionBanPostgres0298(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("requires disposable NEVERLAUNCHER_TEST_POSTGRES_DSN")
+		t.Skip("requires disposable LAUNCHER_TEST_POSTGRES_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

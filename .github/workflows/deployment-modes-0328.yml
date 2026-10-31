@@ -42,6 +42,6 @@ jobs:
         run: |
           set -euo pipefail
           go build -trimpath -o "$RUNNER_TEMP/launcher-api-328" ./cmd/launcher-api
-          NEVERLAUNCHER_ENV=production NEVERLAUNCHER_DEPLOYMENT_MODE=single-node "$RUNNER_TEMP/launcher-api-328" diagnose deployment > "$RUNNER_TEMP/diagnose-single.json" && exit 1 || test $? -eq 2
+          LAUNCHER_ENV=production LAUNCHER_DEPLOYMENT_MODE=single-node "$RUNNER_TEMP/launcher-api-328" diagnose deployment > "$RUNNER_TEMP/diagnose-single.json" && exit 1 || test $? -eq 2
           grep -q '"configurationValid":false' "$RUNNER_TEMP/diagnose-single.json"
           grep -q 'SQLite-only HTTP repository is not implemented' "$RUNNER_TEMP/diagnose-single.json"

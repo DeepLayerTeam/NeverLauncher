@@ -85,7 +85,7 @@ func (r *Repository) CreateDraft(ctx context.Context, projectID, profileID, chan
 			return e
 		}
 		// Match existing behavior: draft creation creates an unprotected channel
-		// only when not already present, never changing protected setting.
+		// only when not already present, changing protected setting.
 		if _, e = q.ExecContext(ctx, `INSERT INTO channels(project_id,id,name,description,protected) VALUES(?,?,?,'',0) ON CONFLICT(project_id,id) DO NOTHING`, projectID, channel, channel); e != nil {
 			return conflict(e)
 		}

@@ -3,13 +3,13 @@
 # This is NOT a fixture-only check; missing Java, graphics, Minecraft or network fails closed.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-LOADER="${NEVERLAUNCHER_CERT_LOADER:?set NEVERLAUNCHER_CERT_LOADER}"
-MC="${NEVERLAUNCHER_CERT_MINECRAFT:?set NEVERLAUNCHER_CERT_MINECRAFT}"
-JAVA="${NEVERLAUNCHER_CERT_JAVA:?set NEVERLAUNCHER_CERT_JAVA}"
-TARGET="${NEVERLAUNCHER_CERT_TARGET:-linux/x86_64}"
-LOADER_VERSION="${NEVERLAUNCHER_CERT_LOADER_VERSION:-latest-stable}"
-DEST="${NEVERLAUNCHER_CERT_OUTPUT:-$ROOT/e2e/client-factory-02712-result}"
-DURATION="${NEVERLAUNCHER_CERT_RUNTIME_SECONDS:-45}"
+LOADER="${LAUNCHER_CERT_LOADER:?set LAUNCHER_CERT_LOADER}"
+MC="${LAUNCHER_CERT_MINECRAFT:?set LAUNCHER_CERT_MINECRAFT}"
+JAVA="${LAUNCHER_CERT_JAVA:?set LAUNCHER_CERT_JAVA}"
+TARGET="${LAUNCHER_CERT_TARGET:-linux/x86_64}"
+LOADER_VERSION="${LAUNCHER_CERT_LOADER_VERSION:-latest-stable}"
+DEST="${LAUNCHER_CERT_OUTPUT:-$ROOT/e2e/client-factory-02712-result}"
+DURATION="${LAUNCHER_CERT_RUNTIME_SECONDS:-45}"
 case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "Unsupported loader" >&2; exit 2;; esac
 [[ "$MC" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,95}$ ]] || { echo "Invalid version" >&2; exit 2; }
 [[ "$DURATION" =~ ^[0-9]+$ ]] || { echo "Invalid duration" >&2; exit 2; }
@@ -18,7 +18,7 @@ case "$LOADER" in vanilla|fabric|quilt|forge|neoforge) ;; *) echo "Unsupported l
 mkdir -p "$DEST"
 DEST="$(cd "$DEST" && pwd -P)"
 BIN="$DEST/launcher"
-RT="${NEVERLAUNCHER_CERT_RUNTIME_BIN:-$ROOT/runtime/runtime/target/debug/runtime}"
+RT="${LAUNCHER_CERT_RUNTIME_BIN:-$ROOT/runtime/runtime/target/debug/runtime}"
 (
  cd "$ROOT/cli"
  go build -o "$BIN" ./cmd/launcher
@@ -39,15 +39,15 @@ PY
 )"
 CLIENT="$DEST/client"
 PROCESSOR_ARGS=()
-if [[ "${NEVERLAUNCHER_CERT_PROCESSOR_SANDBOX:-process}" == required ]]; then PROCESSOR_ARGS=(--processor-sandbox required); fi
+if [[ "${LAUNCHER_CERT_PROCESSOR_SANDBOX:-process}" == required ]]; then PROCESSOR_ARGS=(--processor-sandbox required); fi
 "$BIN" runtime client-factory build \
  --client-dir "$CLIENT" --loader "$LOADER" --minecraft "$MC" \
  --loader-version "$LOADER_VERSION" --target "$TARGET" --java "$JAVA" \
  --processor-timeout 10m "${PROCESSOR_ARGS[@]}" --output "$DEST/install-plan-result.json"
 "$BIN" runtime client-factory verify --client-dir "$CLIENT" --output "$DEST/install-verified.json"
-KEY="${NEVERLAUNCHER_CERT_SIGNING_KEY:-$DEST/ci-only-private.key}"; PUB="${NEVERLAUNCHER_CERT_PUBLIC_KEY:-$DEST/certification.pub}"
+KEY="${LAUNCHER_CERT_SIGNING_KEY:-$DEST/ci-only-private.key}"; PUB="${LAUNCHER_CERT_PUBLIC_KEY:-$DEST/certification.pub}"
 if [[ ! -f "$KEY" ]]; then
- [[ -z "${NEVERLAUNCHER_CERT_SIGNING_KEY:-}" ]] || { echo "Protected signing key is missing" >&2; exit 2; }
+ [[ -z "${LAUNCHER_CERT_SIGNING_KEY:-}" ]] || { echo "Protected signing key is missing" >&2; exit 2; }
  "$BIN" runtime client-factory certify-keygen --private-key "$KEY" --public-key "$PUB"
 fi
 CERT="$DEST/runtime-certificate.json"
@@ -63,5 +63,5 @@ else
 fi
 "$BIN" runtime client-factory certify-verify --client-dir "$CLIENT" --certificate "$CERT" --public-key "$PUB" --output "$DEST/certificate-verification.json"
 # Never publish this ephemeral CI private key as a build artifact.
-if [[ -z "${NEVERLAUNCHER_CERT_SIGNING_KEY:-}" && "${NEVERLAUNCHER_CERT_KEEP_TEST_KEY:-0}" != 1 ]]; then rm -f "$KEY"; fi
+if [[ -z "${LAUNCHER_CERT_SIGNING_KEY:-}" && "${LAUNCHER_CERT_KEEP_TEST_KEY:-0}" != 1 ]]; then rm -f "$KEY"; fi
 printf '[client-factory-certification] certified loader=%s mc=%s target=%s output=%s\n' "$LOADER" "$MC" "$TARGET" "$CERT"

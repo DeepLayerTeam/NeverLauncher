@@ -57,12 +57,12 @@ func run(args []string, output io.Writer, input io.Reader) error {
 		if err != nil {
 			return err
 		}
-		dsn := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_DATABASE_DSN"))
+		dsn := strings.TrimSpace(os.Getenv("LAUNCHER_DATABASE_DSN"))
 		if dsn == "" {
-			dsn = strings.TrimSpace(os.Getenv("NEVERLAUNCHER_DATABASE_URL"))
+			dsn = strings.TrimSpace(os.Getenv("LAUNCHER_DATABASE_URL"))
 		}
 		if dsn == "" {
-			return errors.New("NEVERLAUNCHER_DATABASE_DSN is required")
+			return errors.New("LAUNCHER_DATABASE_DSN is required")
 		}
 		repo := repository.NewSQLRepository("pgx", dsn, "")
 		migrator, ok := repo.(interface {
@@ -104,8 +104,8 @@ func run(args []string, output io.Writer, input io.Reader) error {
 func runOnline(args []string, output io.Writer, input io.Reader) error {
 	command := args[0]
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
-	endpoint := flags.String("api", os.Getenv("NEVERLAUNCHER_API_URL"), "HTTPS Backend URL")
-	tokenEnv := flags.String("token-env", "NEVERLAUNCHER_ADMIN_ACCESS_TOKEN", "environment variable containing admin Bearer token")
+	endpoint := flags.String("api", os.Getenv("LAUNCHER_API_URL"), "HTTPS Backend URL")
+	tokenEnv := flags.String("token-env", "LAUNCHER_ADMIN_ACCESS_TOKEN", "environment variable containing admin Bearer token")
 	email := flags.String("email", "", "new account email")
 	displayName := flags.String("name", "", "display name")
 	role := flags.String("role", "player", "new account role")

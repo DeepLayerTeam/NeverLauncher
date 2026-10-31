@@ -23,7 +23,7 @@ to the imported schema.** `readyForBackendCutover` is always `false`.
 
 2. Provision a dedicated PostgreSQL database with a role allowed to create
    schemas. For remote connections require TLS certificate verification.
-   Store the connection string securely in `NEVERLAUNCHER_POSTGRES_DSN` (never
+   Store the connection string securely in `LAUNCHER_POSTGRES_DSN` (never
    in CLI arguments, source control or logs).
 
 3. Run (requires sufficient PostgreSQL space, local filesystem for SQLite

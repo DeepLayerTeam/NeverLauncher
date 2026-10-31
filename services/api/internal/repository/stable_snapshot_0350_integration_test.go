@@ -15,7 +15,7 @@ import (
 // This test executes actual PostgreSQL triggers and assertions; it does not
 // substitute mocks for the protected release tables.
 func TestGAStableSnapshotImmutablePostgres0350(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
 		t.Skip("requires disposable PostgreSQL")
 	}

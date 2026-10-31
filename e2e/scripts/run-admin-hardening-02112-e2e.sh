@@ -6,7 +6,7 @@ CONTAINER="launcher-admin-hardening-02112-${GITHUB_RUN_ID:-local}-$$"
 # Предпочитайте случайный свободный loopback-порт, чтобы не
 # конфликтовать с другими PostgreSQL в том же агенте. Для
 # разработчиков, которым нужен постоянный порт, остаётся явная настройка.
-PORT="${NEVERLAUNCHER_ADMIN_HARDENING_PG_PORT:-}"
+PORT="${LAUNCHER_ADMIN_HARDENING_PG_PORT:-}"
 PUBLISH_PORT="127.0.0.1::5432"
 if [[ -n "$PORT" ]]; then
   [[ "$PORT" =~ ^[0-9]+$ ]] && (( 10#$PORT >= 1 && 10#$PORT <= 65535 )) || { echo "[admin-hardening-02112] invalid port" >&2; exit 2; }
@@ -102,7 +102,7 @@ fi
 echo "[admin-hardening-02112] running real PostgreSQL + ServerBridge v3 + CAS integration tests"
 (
   cd "$ROOT/services/api"
-  NEVERLAUNCHER_DURABLE_DSN="$DSN" NEVERLAUNCHER_SERVERBRIDGE_HA_DSN="$DSN" \
+  LAUNCHER_DURABLE_DSN="$DSN" LAUNCHER_SERVERBRIDGE_HA_DSN="$DSN" \
     go test -count=1 -timeout=180s ./internal/repository \
       -run 'Test(Hardening02112PostgresConcurrentRevisionCAS|ServerBridgeControl0195Postgres|ServerBridgeHAControlPlane01911MultiReplica|ServerBridgeEventStream0194Postgres|Durable(JobLeaseRecoversAcrossReplicaRestart|ScopeLeaseHasSingleDistributedOwner)0213)' -v
   go test -count=1 -timeout=120s ./internal/httpapi \

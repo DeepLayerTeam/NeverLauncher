@@ -156,7 +156,7 @@ func TestInitSecretsAndNoOverwrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Contains(b, []byte("NEVERLAUNCHER_BOOTSTRAP_TOKEN=")) || !bytes.Contains(b, []byte("NEVERLAUNCHER_ENV=production")) {
+	if !bytes.Contains(b, []byte("LAUNCHER_BOOTSTRAP_TOKEN=")) || !bytes.Contains(b, []byte("LAUNCHER_ENV=production")) {
 		t.Fatal("configuration fields missing")
 	}
 	if err := Init(dest, "https://launcher.example", "postgres://localhost/db", filepath.Join(dir, "storage")); err == nil {
@@ -234,8 +234,8 @@ func TestBootstrapFromGeneratedEnv(t *testing.T) {
 	}
 	var token string
 	for _, line := range strings.Split(string(contents), "\n") {
-		if strings.HasPrefix(line, "NEVERLAUNCHER_BOOTSTRAP_TOKEN=") {
-			token = strings.TrimPrefix(line, "NEVERLAUNCHER_BOOTSTRAP_TOKEN=")
+		if strings.HasPrefix(line, "LAUNCHER_BOOTSTRAP_TOKEN=") {
+			token = strings.TrimPrefix(line, "LAUNCHER_BOOTSTRAP_TOKEN=")
 		}
 	}
 	if len(token) != 64 {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -106,6 +107,23 @@ func inspectEvidenceMatrix03012(root, filename, expectedVersion, expectedBaselin
 	return report, nil
 }
 
+// latestAuditVersionAllowed keeps the immutable 0.42.11 source-port baseline
+// auditable in newer releases. It does not imply that partial modules became
+// fully compatible merely because the product version was incremented.
+func latestAuditVersionAllowed(version string) bool {
+	parts := strings.Split(strings.TrimSpace(version), ".")
+	if len(parts) != 3 {
+		return false
+	}
+	major, e0 := strconv.Atoi(parts[0])
+	minor, e1 := strconv.Atoi(parts[1])
+	patch, e2 := strconv.Atoi(parts[2])
+	if e0 != nil || e1 != nil || e2 != nil || major < 0 || minor < 0 || patch < 0 {
+		return false
+	}
+	return major > 0 || (major == 0 && (minor > 42 || minor == 42 && patch >= 11))
+}
+
 // LatestMatrixPath04211 inventories the same 19 modules using CURRENT source paths.
 // Local source/tests are evidence of implementations, not upstream parity certification.
 const LatestMatrixPath04211 = "compatibility/gravit/module-parity-04211.json"
@@ -132,10 +150,10 @@ func InspectLatest04211(root string) (Report, error) {
 	if err != nil {
 		return Report{}, err
 	}
-	if (strings.TrimSpace(string(version)) != "0.42.11" && strings.TrimSpace(string(version)) != "0.42.12") || current.SchemaVersion != "1.0" || current.ProductVersion != "0.42.11" || current.AuditBaseline != "0.31.0" || current.Upstream != baseline.Upstream || len(current.Modules) != 19 || len(baseline.Modules) != 19 {
+	if !latestAuditVersionAllowed(string(version)) || current.SchemaVersion != "1.0" || current.ProductVersion != "0.42.11" || current.AuditBaseline != "0.31.0" || current.Upstream != baseline.Upstream || len(current.Modules) != 19 || len(baseline.Modules) != 19 {
 		return Report{}, fmt.Errorf("pinned 0.42.11 Gravit module inventory/version mismatch")
 	}
-	report := Report{SchemaVersion: "1.0", ProductVersion: current.ProductVersion, UpstreamCommit: current.Upstream.Commit, AuditStatus: "evidence-present-not-certified", FullyCertified: false, Results: make([]Result, 0, 19)}
+	report := Report{SchemaVersion: "1.0", ProductVersion: strings.TrimSpace(string(version)), UpstreamCommit: current.Upstream.Commit, AuditStatus: "evidence-present-not-certified", FullyCertified: false, Results: make([]Result, 0, 19)}
 	for i, mod := range current.Modules {
 		expected := fmt.Sprintf("M%02d", i+1)
 		if mod.ID != expected || mod.ID != baseline.Modules[i].ID || mod.UpstreamModule != baseline.Modules[i].UpstreamModule || strings.TrimSpace(mod.Equivalent) == "" || strings.TrimSpace(mod.Limitations) == "" || (mod.Status != "partial" && mod.Status != "blocked") || (baseline.Modules[i].Status == "blocked" && mod.Status != "blocked") {

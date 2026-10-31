@@ -106,7 +106,7 @@ COMMIT;
 // psql. stdout is parsed incrementally; no secrets are written to report files.
 func ScanPSQL(ctx context.Context, executable, dsn string, allow []string) (Checkpoint, error) {
 	if strings.TrimSpace(dsn) == "" {
-		return Checkpoint{}, errors.New("NEVERLAUNCHER_DATABASE_DSN is required")
+		return Checkpoint{}, errors.New("LAUNCHER_DATABASE_DSN is required")
 	}
 	if executable == "" {
 		executable = "psql"

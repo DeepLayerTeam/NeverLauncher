@@ -96,7 +96,7 @@ type ExtensionHostListData = {
   items?: ExtensionHostView[];
 };
 
-const TOOL_VERSION = __NEVERLAUNCHER_VERSION__;
+const TOOL_VERSION = __LAUNCHER_VERSION__;
 const cancelledOperation = Symbol("cancelled-operation");
 export function RegistryWorkspace({
   backendUrl,

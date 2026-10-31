@@ -31,22 +31,22 @@ jobs:
           test -z "$(gofmt -l internal/sqlitecore cmd/launcher-sqlite)"
       - name: Require native supported filesystem and test real SQLite driver
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-join
-          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-join
+          LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
-          mkdir -p "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
-          stat -f -c '%T' "$NEVERLAUNCHER_SQLITE_TEST_ROOT"
+          mkdir -p "$LAUNCHER_SQLITE_TEST_ROOT"
+          chmod 0700 "$LAUNCHER_SQLITE_TEST_ROOT"
+          stat -f -c '%T' "$LAUNCHER_SQLITE_TEST_ROOT"
           go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
           go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Build real operational CLI and initialize latest SQLite schema 326
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-join
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-join
         run: |
           set -euo pipefail
           go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
-          db="$NEVERLAUNCHER_SQLITE_TEST_ROOT/production.db"
+          db="$LAUNCHER_SQLITE_TEST_ROOT/production.db"
           "$RUNNER_TEMP/launcher-sqlite" core-init --db "$db" > "$RUNNER_TEMP/created.json"
           "$RUNNER_TEMP/launcher-sqlite" core-status --db "$db" > "$RUNNER_TEMP/status.json"
           python3 - <<'PY'
@@ -57,10 +57,10 @@ jobs:
           assert j['counts']['bridge_join_tickets']==0,j
           assert j['counts']['bridge_nonces']==0,j
           PY
-          mkdir "$NEVERLAUNCHER_SQLITE_TEST_ROOT/keys"
-          chmod 0700 "$NEVERLAUNCHER_SQLITE_TEST_ROOT/keys"
-          "$RUNNER_TEMP/launcher-sqlite" join-keygen --key-file "$NEVERLAUNCHER_SQLITE_TEST_ROOT/keys/node.key" > "$RUNNER_TEMP/public.json"
-          test "$(stat -c '%a' "$NEVERLAUNCHER_SQLITE_TEST_ROOT/keys/node.key")" = 600
+          mkdir "$LAUNCHER_SQLITE_TEST_ROOT/keys"
+          chmod 0700 "$LAUNCHER_SQLITE_TEST_ROOT/keys"
+          "$RUNNER_TEMP/launcher-sqlite" join-keygen --key-file "$LAUNCHER_SQLITE_TEST_ROOT/keys/node.key" > "$RUNNER_TEMP/public.json"
+          test "$(stat -c '%a' "$LAUNCHER_SQLITE_TEST_ROOT/keys/node.key")" = 600
           python3 - <<'PY'
           import json,os
           with open(os.environ['RUNNER_TEMP']+'/public.json') as f: j=json.load(f)

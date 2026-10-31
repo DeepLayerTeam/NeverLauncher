@@ -158,7 +158,7 @@ func Generate(directory string, hosts []string, days int) (result Result, err er
 	if e != nil {
 		return result, e
 	}
-	caTmpl := &x509.Certificate{SerialNumber: serialCA, Subject: pkix.Name{CommonName: "NeverLauncher RemoteControl local CA"}, NotBefore: now.Add(-5 * time.Minute), NotAfter: expiry.Add(24 * time.Hour), KeyUsage: x509.KeyUsageCertSign | x509.KeyUsageCRLSign, BasicConstraintsValid: true, IsCA: true, MaxPathLenZero: true}
+	caTmpl := &x509.Certificate{SerialNumber: serialCA, Subject: pkix.Name{CommonName: "Launcher RemoteControl local CA"}, NotBefore: now.Add(-5 * time.Minute), NotAfter: expiry.Add(24 * time.Hour), KeyUsage: x509.KeyUsageCertSign | x509.KeyUsageCRLSign, BasicConstraintsValid: true, IsCA: true, MaxPathLenZero: true}
 	caDER, e := x509.CreateCertificate(rand.Reader, caTmpl, caTmpl, caPub, caPriv)
 	if e != nil {
 		return result, e
@@ -179,11 +179,11 @@ func Generate(directory string, hosts []string, days int) (result Result, err er
 		}
 		return x509.CreateCertificate(rand.Reader, t, ca, pub, caPriv)
 	}
-	serverDER, e := makeLeaf("NeverLauncher RemoteControl server", serverPub, x509.ExtKeyUsageServerAuth, true)
+	serverDER, e := makeLeaf("Launcher RemoteControl server", serverPub, x509.ExtKeyUsageServerAuth, true)
 	if e != nil {
 		return result, e
 	}
-	clientDER, e := makeLeaf("NeverLauncher RemoteControl operator", clientPub, x509.ExtKeyUsageClientAuth, false)
+	clientDER, e := makeLeaf("Launcher RemoteControl operator", clientPub, x509.ExtKeyUsageClientAuth, false)
 	if e != nil {
 		return result, e
 	}

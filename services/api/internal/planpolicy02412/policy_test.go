@@ -36,9 +36,9 @@ func TestSignedPolicyAndAdversarialMutations02412(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	t.Setenv("NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE", path)
-	t.Setenv("NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY", hex.EncodeToString(pub))
-	t.Setenv("NEVERLAUNCHER_SERVERBRIDGE_REQUIRE_PLAN_POLICY", "1")
+	t.Setenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_FILE", path)
+	t.Setenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY", hex.EncodeToString(pub))
+	t.Setenv("LAUNCHER_SERVERBRIDGE_REQUIRE_PLAN_POLICY", "1")
 	write(env)
 	got, err := Load(now)
 	if err != nil {
@@ -72,7 +72,7 @@ func TestSignedPolicyAndAdversarialMutations02412(t *testing.T) {
 		t.Fatal("wrong signature accepted")
 	}
 	write(Envelope{SchemaVersion: "1.0", Payload: base64.StdEncoding.EncodeToString(bytes), Signature: hex.EncodeToString(signature)})
-	t.Setenv("NEVERLAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY", strings.Repeat("f", 64))
+	t.Setenv("LAUNCHER_SERVERBRIDGE_PLAN_POLICY_PUBLIC_KEY", strings.Repeat("f", 64))
 	if _, err = Load(now); err == nil {
 		t.Fatal("wrong pinned key accepted")
 	}

@@ -38,7 +38,7 @@ docker compose --env-file .env ps
 python3 scripts/version/manage.py check
 python3 scripts/contracts/validate-openapi.py
 # Полная сертификация (требуются toolchains и в некоторых режимах credentials/evidence):
-NEVERLAUNCHER_PREFLIGHT_STRICT=1 bash scripts/release/preflight.sh
+LAUNCHER_PREFLIGHT_STRICT=1 bash scripts/release/preflight.sh
 ```
 
 `/ready` и `/health` проверяйте на запущенном API, если эти маршруты доступны для вашей конфигурации. Для публичного релиза требуется evidence **точного commit SHA** — см. [сертификацию](../security/release-certification.md).

@@ -16,12 +16,12 @@ import (
 
 func openDurablePostgres0213(t *testing.T) (*SQLRepository, *SQLRepository, context.Context) {
 	t.Helper()
-	dsn := os.Getenv("NEVERLAUNCHER_DURABLE_DSN")
+	dsn := os.Getenv("LAUNCHER_DURABLE_DSN")
 	if dsn == "" {
-		dsn = os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+		dsn = os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	}
 	if dsn == "" {
-		dsn = os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN")
+		dsn = os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	}
 	if dsn == "" {
 		t.Skip("PostgreSQL durable-boundaries test DSN is not set")

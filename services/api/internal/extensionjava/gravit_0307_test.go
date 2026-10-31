@@ -65,7 +65,7 @@ func TestGravitOptInValidation0307(t *testing.T) {
 	}
 }
 func TestRealGravitPortJar0307(t *testing.T) {
-	file := os.Getenv("NEVERLAUNCHER_TEST_GRAVIT_PORT_JAR")
+	file := os.Getenv("LAUNCHER_TEST_GRAVIT_PORT_JAR")
 	if file == "" {
 		t.Skip("real JAR not provided")
 	}

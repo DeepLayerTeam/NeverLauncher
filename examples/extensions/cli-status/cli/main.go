@@ -1,6 +1,6 @@
 package main
 
-// SDK аутентифицируется через NEVERLAUNCHER_EXTENSION_HOST_URL и NEVERLAUNCHER_EXTENSION_HOST_TOKEN.
+// SDK аутентифицируется через LAUNCHER_EXTENSION_HOST_URL и LAUNCHER_EXTENSION_HOST_TOKEN.
 // Перед объявленной командой статуса он выполняет POST /v1/hello.
 
 import (

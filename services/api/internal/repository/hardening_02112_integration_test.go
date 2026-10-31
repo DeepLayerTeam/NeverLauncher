@@ -12,9 +12,9 @@ import (
 // Two independently opened pgx connections emulate separate API replicas/tabs.
 // This is a real PostgreSQL test; it must not silently downgrade to memory.
 func TestHardening02112PostgresConcurrentRevisionCAS(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN")
+	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
-		t.Skip("requires NEVERLAUNCHER_SERVERBRIDGE_HA_DSN")
+		t.Skip("requires LAUNCHER_SERVERBRIDGE_HA_DSN")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()

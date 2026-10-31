@@ -123,7 +123,7 @@ def validate_validation_pipeline() -> None:
     ]:
         if needle not in repo:
             fail(f"durable validation repository missing {needle}")
-    if "NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON" not in config:
+    if "LAUNCHER_RUNTIME_VALIDATION_KEYS_JSON" not in config:
         fail("runtime signer trust-set configuration missing")
     for needle in [
         "runtime-sign",

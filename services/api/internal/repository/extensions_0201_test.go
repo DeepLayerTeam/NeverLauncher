@@ -105,9 +105,9 @@ func TestExtensionMemoryRepositoryInstallStateReferencesExistingVersion0201(t *t
 }
 
 func TestExtensionsCore0201Postgres(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN")
+	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
-		dsn = os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+		dsn = os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	}
 	if dsn == "" {
 		t.Skip("PostgreSQL test DSN is not set")

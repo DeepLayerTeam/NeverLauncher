@@ -2,9 +2,9 @@
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 BUNDLE_DIR="${1:?Укажите каталог release bundle}"
-PUBLIC_KEY="${NEVERLAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE:-${NEVERLAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE:-${2:-}}}"
-TRUST_STATE="${NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE:-${3:-}}"
-TRUST_POLICY="${NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE:-${4:-}}"
+PUBLIC_KEY="${LAUNCHER_RELEASE_ROOT_PUBLIC_KEY_FILE:-${LAUNCHER_RELEASE_SIGNING_PUBLIC_KEY_FILE:-${2:-}}}"
+TRUST_STATE="${LAUNCHER_RELEASE_TRUST_STATE_FILE:-${3:-}}"
+TRUST_POLICY="${LAUNCHER_RELEASE_TRUST_POLICY_FILE:-${4:-}}"
 VERSION="$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")"
 
 test -d "${BUNDLE_DIR}"
@@ -56,11 +56,11 @@ if [[ -z "${PUBLIC_KEY}" || ! -f "${PUBLIC_KEY}" ]]; then
   exit 1
 fi
 if [[ -z "${TRUST_STATE}" ]]; then
-  echo "[Launcher] release-bundle gate требует persistent trust state через NEVERLAUNCHER_RELEASE_TRUST_STATE_FILE или третий аргумент" >&2
+  echo "[Launcher] release-bundle gate требует persistent trust state через LAUNCHER_RELEASE_TRUST_STATE_FILE или третий аргумент" >&2
   exit 1
 fi
 if [[ -z "${TRUST_POLICY}" || ! -f "${TRUST_POLICY}" ]]; then
-  echo "[Launcher] release-bundle gate требует внешний current trust policy через NEVERLAUNCHER_RELEASE_TRUST_POLICY_FILE или четвёртый аргумент" >&2
+  echo "[Launcher] release-bundle gate требует внешний current trust policy через LAUNCHER_RELEASE_TRUST_POLICY_FILE или четвёртый аргумент" >&2
   exit 1
 fi
 if [ -x "${ROOT_DIR}/dist/preflight/nl" ]; then

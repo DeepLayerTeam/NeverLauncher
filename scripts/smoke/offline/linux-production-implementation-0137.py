@@ -73,7 +73,7 @@ require(
     desktop,
     [
         'target_os = "linux"',
-        "NEVERGUARD_LINUX_PROCESS_POLICY_VERSION",
+        "GUARD_LINUX_PROCESS_POLICY_VERSION",
         "ensure_linux_production_hardening",
         "Guard Linux production hardening verification failed",
     ],

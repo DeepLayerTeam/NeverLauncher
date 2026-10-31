@@ -8,5 +8,5 @@ rm -rf "$folder/build/package"
 python3 tools/gravit-port/port.py \
   --source "$folder/src" \
   --module-class ru.example.gravit.PortedModule \
-  --manifest "$folder/neverlauncher-extension.json" \
+  --manifest "$folder/launcher-extension.json" \
   --output "$folder/build/package"

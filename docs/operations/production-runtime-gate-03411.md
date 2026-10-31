@@ -2,7 +2,7 @@
 
 ## Publication prerequisites
 
-The release must be staged with a valid release signature, current integrity PASS, a configured **complete** `NEVERLAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON` matrix, and one live trusted v4 attestation for each required target. Each attestation must cover all nine required V02/V03/V07/V08/V09 stages. The trusted Ed25519 validation key and pinned OCI runner image must be configured. CI reports, legacy v1 validations, or an admin flag are not accepted as runtime certification.
+The release must be staged with a valid release signature, current integrity PASS, a configured **complete** `LAUNCHER_VALIDATION_REQUIRED_TARGETS_JSON` matrix, and one live trusted v4 attestation for each required target. Each attestation must cover all nine required V02/V03/V07/V08/V09 stages. The trusted Ed25519 validation key and pinned OCI runner image must be configured. CI reports, legacy v1 validations, or an admin flag are not accepted as runtime certification.
 
 The Admin Release Workspace displays the effective `trusted-runtime` policy, required/verified counts, target-by-target blockers, and whether the current package is eligible. The existing `/api/v1/packages/{packageId}/validations` response contains this information. An unavailable database, revoked key, changed package, missing target, failed/inconclusive stage, or expired evidence blocks stable.
 

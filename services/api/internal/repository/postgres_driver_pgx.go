@@ -10,5 +10,5 @@ import _ "github.com/jackc/pgx/v5/stdlib"
 //
 // Настройка по умолчанию:
 //
-//   NEVERLAUNCHER_SQL_DRIVER=pgx
-//   NEVERLAUNCHER_REPOSITORY_DRIVER=postgres
+//   LAUNCHER_SQL_DRIVER=pgx
+//   LAUNCHER_REPOSITORY_DRIVER=postgres

@@ -174,7 +174,7 @@ def run_cases(
                 # subprocess test. Without it Go's t.Skip would fake a pass.
                 env = os.environ.copy()
                 if name == "java-supervisor-go":
-                    env["NEVERLAUNCHER_TEST_JAVA_HOST_JAR"] = str(
+                    env["LAUNCHER_TEST_JAVA_HOST_JAR"] = str(
                         (
                             ROOT
                             / "examples/extensions/java-host/build/package/backend/java-host.jar"

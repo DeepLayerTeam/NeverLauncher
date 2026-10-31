@@ -28,7 +28,7 @@ func (c *hostPipeConn) SetDeadline(t time.Time) error      { return c.File.SetDe
 func (c *hostPipeConn) SetReadDeadline(t time.Time) error  { return c.File.SetReadDeadline(t) }
 func (c *hostPipeConn) SetWriteDeadline(t time.Time) error { return c.File.SetWriteDeadline(t) }
 func hostPipeDialer() func(context.Context, string, string) (net.Conn, error) {
-	pipe := os.Getenv("NEVERLAUNCHER_EXTENSION_HOST_PIPE")
+	pipe := os.Getenv("LAUNCHER_EXTENSION_HOST_PIPE")
 	if !strings.HasPrefix(pipe, `\\.\pipe\LOCAL\Launcher-Extension-`) {
 		return nil
 	}

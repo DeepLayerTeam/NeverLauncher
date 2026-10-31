@@ -45,7 +45,7 @@ jobs:
       run:
         working-directory: services/api
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:integration-only@localhost:5432/launcher_auth0295?sslmode=disable
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:integration-only@localhost:5432/launcher_auth0295?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -61,6 +61,6 @@ jobs:
       - name: PostgreSQL atomic import, UUID, collision and CAS integration
         run: go test -count=1 -timeout=8m ./internal/repository -run '^TestFileAuthImportPostgres0295$' -v
       - name: Compile CLI and Backend
-        run: go build ./cmd/local-auth-0295 ./cmd/neverlauncher-api
+        run: go build ./cmd/local-auth-0295 ./cmd/launcher-api
       - name: Core regression tests
         run: go test -count=1 -timeout=8m ./internal/federation ./internal/repository ./internal/httpapi

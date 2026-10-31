@@ -108,10 +108,11 @@ def main():
     report = {'version': (ROOT / 'VERSION').read_text().strip(),
               'target': args.target, 'status': 'failed',
               'sourceCommit': os.getenv('GITHUB_SHA') or None,
-              'runId': os.getenv('GITHUB_RUN_ID') or None, 'checks': {}}
+              'runId': os.getenv('GITHUB_RUN_ID') or None,
+              'runAttempt': os.getenv('GITHUB_RUN_ATTEMPT') or None, 'checks': {}}
     try:
-        if report['version'] != '0.42.12':
-            raise RuntimeError(f"unexpected source version: {report['version']}")
+        if not re.fullmatch(r'\d+\.\d+\.\d+', report['version']) or tuple(map(int, report['version'].split('.'))) < (0, 42, 12):
+            raise RuntimeError(f"unsupported source version: {report['version']}")
         if actual_platform() != args.target:
             raise RuntimeError(f"host architecture/OS mismatch: {actual_platform()} != {args.target}")
         report['javaRuntime'] = check_java_arch(args.target)
@@ -120,6 +121,23 @@ def main():
         if not cli.is_file():
             raise RuntimeError('CLI is not a regular file')
         report['cliSha256'] = sha(cli)
+        # Inspect the 19 real module source/test references with the built CLI,
+        # preserving their partial/blocked status rather than inventing parity.
+        with tempfile.TemporaryDirectory(prefix='nl-gravit-audit-') as audit_dir:
+            audit_file = Path(audit_dir) / 'audit.json'
+            run([cli, 'module-parity', 'audit', '--root', ROOT,
+                 '--baseline', '0.42.11', '--report', audit_file])
+            audit = json.loads(audit_file.read_text())
+            rows = audit.get('results', [])
+            if (audit.get('productVersion') != report['version'] or
+                    audit.get('fullyCertified') is not False or len(rows) != 19 or
+                    audit.get('auditStatus') != 'evidence-present-not-certified' or
+                    any(row.get('status') not in ('partial', 'blocked') or
+                        row.get('sourceValidated') is not True for row in rows)):
+                raise RuntimeError('Gravit CLI audit failed to validate 19 explicit module outcomes')
+            report['gravitMatrixAudit'] = {
+                'status': 'source-verified-not-equivalent', 'modules': 19,
+                'sha256': sha(ROOT / 'compatibility/gravit/module-parity-04211.json')}
         for key, script, jar in CASES:
             executable = ROOT / jar
             if not executable.is_file():

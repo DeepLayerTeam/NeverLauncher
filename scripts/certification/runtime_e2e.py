@@ -62,7 +62,7 @@ def manifest(
 def sign(signer: Path, source: Path, target: Path, doc: dict) -> str:
     source.write_text(json.dumps(doc), encoding="utf8")
     env = os.environ.copy()
-    env["NEVERLAUNCHER_CERT_TEST_SEED"] = (
+    env["LAUNCHER_CERT_TEST_SEED"] = (
         "42" * 32
     )  # certification-only deterministic fixture
     result = subprocess.run(

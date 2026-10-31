@@ -18,7 +18,7 @@ services:
   redis:
     image: redis:7-alpine
     environment:
-      REDIS_PASSWORD: ${NEVERLAUNCHER_E2E_REDIS_PASSWORD}
+      REDIS_PASSWORD: ${LAUNCHER_E2E_REDIS_PASSWORD}
     command: ["sh", "-ec", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
@@ -46,30 +46,30 @@ services:
       context: ..
       dockerfile: services/api/Dockerfile
       args:
-        NEVERLAUNCHER_VERSION: ${NEVERLAUNCHER_E2E_VERSION:-dev}
+        LAUNCHER_VERSION: ${LAUNCHER_E2E_VERSION:-dev}
     environment:
-      NEVERLAUNCHER_ENV: e2e-production
-      NEVERLAUNCHER_HTTP_ADDR: 0.0.0.0:8080
-      NEVERLAUNCHER_REPOSITORY_DRIVER: postgres
-      NEVERLAUNCHER_SQL_DRIVER: pgx
-      NEVERLAUNCHER_DATABASE_DSN: postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable
-      NEVERLAUNCHER_DATABASE_AUTO_MIGRATE: "false"
-      NEVERLAUNCHER_PUBLIC_URL: http://127.0.0.1:18080
-      NEVERLAUNCHER_STORAGE_DRIVER: local
-      NEVERLAUNCHER_STORAGE_LOCAL_PATH: /var/lib/launcher/storage/current
-      NEVERLAUNCHER_BACKUP_ROOT: /var/lib/launcher/backups
-      NEVERLAUNCHER_CORS_ALLOWED_ORIGINS: https://e2e.invalid
-      NEVERLAUNCHER_AUTH_TOKEN_SECRET: ${NEVERLAUNCHER_E2E_AUTH_SECRET}
-      NEVERLAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '{"schemaVersion":"2.0","releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","requireAuthenticode":true}]},"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]},"macos":{"signingMode":"developer-id-notarized","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]}}}}}'
-      NEVERLAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON: ${NEVERLAUNCHER_E2E_BRIDGE_RELEASE_ALLOWLIST_JSON}
-      NEVERLAUNCHER_BOOTSTRAP_TOKEN: ${NEVERLAUNCHER_E2E_BOOTSTRAP_TOKEN}
-      NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY: ${NEVERLAUNCHER_E2E_SIGNING_SEED}
-      NEVERLAUNCHER_REDIS_URL: redis://:${NEVERLAUNCHER_E2E_REDIS_PASSWORD}@redis:6379/0
-      NEVERLAUNCHER_RATE_LIMIT_ENABLED: "true"
-      NEVERLAUNCHER_RATE_LIMIT_FAIL_CLOSED: "true"
-      NEVERLAUNCHER_TRUSTED_PROXY_CIDRS: 172.16.0.0/12
-      NEVERLAUNCHER_PERSISTENT_SESSIONS: "true"
-      NEVERLAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION: "true"
+      LAUNCHER_ENV: e2e-production
+      LAUNCHER_HTTP_ADDR: 0.0.0.0:8080
+      LAUNCHER_REPOSITORY_DRIVER: postgres
+      LAUNCHER_SQL_DRIVER: pgx
+      LAUNCHER_DATABASE_DSN: postgres://launcher:launcher@postgres:5432/launcher?sslmode=disable
+      LAUNCHER_DATABASE_AUTO_MIGRATE: "false"
+      LAUNCHER_PUBLIC_URL: http://127.0.0.1:18080
+      LAUNCHER_STORAGE_DRIVER: local
+      LAUNCHER_STORAGE_LOCAL_PATH: /var/lib/launcher/storage/current
+      LAUNCHER_BACKUP_ROOT: /var/lib/launcher/backups
+      LAUNCHER_CORS_ALLOWED_ORIGINS: https://e2e.invalid
+      LAUNCHER_AUTH_TOKEN_SECRET: ${LAUNCHER_E2E_AUTH_SECRET}
+      LAUNCHER_GUARD_RELEASE_ALLOWLIST_JSON: '{"schemaVersion":"2.0","releases":{"0.14.0":{"protocolVersion":4,"platforms":{"windows":{"signingMode":"authenticode","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","requireAuthenticode":true}]},"linux":{"signingMode":"integrity-only","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]},"macos":{"signingMode":"developer-id-notarized","artifacts":[{"guardSha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","launcherSha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]}}}}}'
+      LAUNCHER_BRIDGE_RELEASE_ALLOWLIST_JSON: ${LAUNCHER_E2E_BRIDGE_RELEASE_ALLOWLIST_JSON}
+      LAUNCHER_BOOTSTRAP_TOKEN: ${LAUNCHER_E2E_BOOTSTRAP_TOKEN}
+      LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY: ${LAUNCHER_E2E_SIGNING_SEED}
+      LAUNCHER_REDIS_URL: redis://:${LAUNCHER_E2E_REDIS_PASSWORD}@redis:6379/0
+      LAUNCHER_RATE_LIMIT_ENABLED: "true"
+      LAUNCHER_RATE_LIMIT_FAIL_CLOSED: "true"
+      LAUNCHER_TRUSTED_PROXY_CIDRS: 172.16.0.0/12
+      LAUNCHER_PERSISTENT_SESSIONS: "true"
+      LAUNCHER_REQUIRE_PERSISTENT_STORE_IN_PRODUCTION: "true"
     ports:
       - "18080:8080"
     depends_on:
@@ -89,19 +89,19 @@ services:
       TYPE: VELOCITY
       VELOCITY_VERSION: "3.4.0"
       MEMORY: 384m
-      PUID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
-      PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
-      NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
-      NEVERLAUNCHER_SERVER_ID: velocity-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
-      NEVERLAUNCHER_PROJECT_ID: e2e-project
-      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
-      NEVERLAUNCHER_CHANNEL: stable
-      NEVERLAUNCHER_FAIL_MODE: closed
-      NEVERLAUNCHER_REQUIRE_SESSION: "true"
-      NEVERLAUNCHER_TIMEOUT_MS: "5000"
-      NEVERLAUNCHER_RETRIES: "2"
+      PUID: ${LAUNCHER_E2E_HOST_UID:-1000}
+      PGID: ${LAUNCHER_E2E_HOST_GID:-1000}
+      LAUNCHER_BACKEND_URL: http://launcher-api:8080
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_SERVER_ID: velocity-e2e-p3
+      LAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
+      LAUNCHER_PROJECT_ID: e2e-project
+      LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}
+      LAUNCHER_CHANNEL: stable
+      LAUNCHER_FAIL_MODE: closed
+      LAUNCHER_REQUIRE_SESSION: "true"
+      LAUNCHER_TIMEOUT_MS: "5000"
+      LAUNCHER_RETRIES: "2"
     depends_on:
       - launcher-api
     healthcheck:
@@ -122,19 +122,19 @@ services:
     environment:
       TYPE: BUNGEECORD
       MEMORY: 384m
-      PUID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
-      PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
-      NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
-      NEVERLAUNCHER_SERVER_ID: bungeecord-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
-      NEVERLAUNCHER_PROJECT_ID: e2e-project
-      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
-      NEVERLAUNCHER_CHANNEL: stable
-      NEVERLAUNCHER_FAIL_MODE: closed
-      NEVERLAUNCHER_REQUIRE_SESSION: "true"
-      NEVERLAUNCHER_TIMEOUT_MS: "5000"
-      NEVERLAUNCHER_RETRIES: "2"
+      PUID: ${LAUNCHER_E2E_HOST_UID:-1000}
+      PGID: ${LAUNCHER_E2E_HOST_GID:-1000}
+      LAUNCHER_BACKEND_URL: http://launcher-api:8080
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_SERVER_ID: bungeecord-e2e-p3
+      LAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
+      LAUNCHER_PROJECT_ID: e2e-project
+      LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}
+      LAUNCHER_CHANNEL: stable
+      LAUNCHER_FAIL_MODE: closed
+      LAUNCHER_REQUIRE_SESSION: "true"
+      LAUNCHER_TIMEOUT_MS: "5000"
+      LAUNCHER_RETRIES: "2"
     depends_on:
       - launcher-api
     healthcheck:
@@ -155,19 +155,19 @@ services:
     environment:
       TYPE: WATERFALL
       MEMORY: 384m
-      PUID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
-      PGID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
-      NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
-      NEVERLAUNCHER_SERVER_ID: waterfall-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
-      NEVERLAUNCHER_PROJECT_ID: e2e-project
-      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
-      NEVERLAUNCHER_CHANNEL: stable
-      NEVERLAUNCHER_FAIL_MODE: closed
-      NEVERLAUNCHER_REQUIRE_SESSION: "true"
-      NEVERLAUNCHER_TIMEOUT_MS: "5000"
-      NEVERLAUNCHER_RETRIES: "2"
+      PUID: ${LAUNCHER_E2E_HOST_UID:-1000}
+      PGID: ${LAUNCHER_E2E_HOST_GID:-1000}
+      LAUNCHER_BACKEND_URL: http://launcher-api:8080
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_SERVER_ID: waterfall-e2e-p3
+      LAUNCHER_NODE_IDENTITY_FILE: /server/.launcher-identity/node-identity.properties
+      LAUNCHER_PROJECT_ID: e2e-project
+      LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}
+      LAUNCHER_CHANNEL: stable
+      LAUNCHER_FAIL_MODE: closed
+      LAUNCHER_REQUIRE_SESSION: "true"
+      LAUNCHER_TIMEOUT_MS: "5000"
+      LAUNCHER_RETRIES: "2"
     depends_on:
       - launcher-api
     healthcheck:
@@ -193,19 +193,19 @@ services:
       MEMORY: 768M
       ENABLE_RCON: "false"
       SPAWN_PROTECTION: "0"
-      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
-      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
-      NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
-      NEVERLAUNCHER_SERVER_ID: spigot-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
-      NEVERLAUNCHER_PROJECT_ID: e2e-project
-      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
-      NEVERLAUNCHER_CHANNEL: stable
-      NEVERLAUNCHER_FAIL_MODE: closed
-      NEVERLAUNCHER_REQUIRE_SESSION: "true"
-      NEVERLAUNCHER_TIMEOUT_MS: "5000"
-      NEVERLAUNCHER_RETRIES: "2"
+      UID: ${LAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${LAUNCHER_E2E_HOST_GID:-1000}
+      LAUNCHER_BACKEND_URL: http://launcher-api:8080
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_SERVER_ID: spigot-e2e-p3
+      LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
+      LAUNCHER_PROJECT_ID: e2e-project
+      LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}
+      LAUNCHER_CHANNEL: stable
+      LAUNCHER_FAIL_MODE: closed
+      LAUNCHER_REQUIRE_SESSION: "true"
+      LAUNCHER_TIMEOUT_MS: "5000"
+      LAUNCHER_RETRIES: "2"
     depends_on:
       - launcher-api
     healthcheck:
@@ -232,21 +232,21 @@ services:
       ENABLE_RCON: "true"
       # Internal E2E console only; no host RCON port exposure. The world GA
       # test must request `save-all flush` and `stop`, never trust SIGTERM alone.
-      RCON_PASSWORD: ${NEVERLAUNCHER_E2E_RCON_PASSWORD:?E2E private RCON password required}
+      RCON_PASSWORD: ${LAUNCHER_E2E_RCON_PASSWORD:?E2E private RCON password required}
       SPAWN_PROTECTION: "0"
-      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
-      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
-      NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
-      NEVERLAUNCHER_SERVER_ID: paper-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
-      NEVERLAUNCHER_PROJECT_ID: e2e-project
-      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
-      NEVERLAUNCHER_CHANNEL: stable
-      NEVERLAUNCHER_FAIL_MODE: closed
-      NEVERLAUNCHER_REQUIRE_SESSION: "true"
-      NEVERLAUNCHER_TIMEOUT_MS: "5000"
-      NEVERLAUNCHER_RETRIES: "2"
+      UID: ${LAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${LAUNCHER_E2E_HOST_GID:-1000}
+      LAUNCHER_BACKEND_URL: http://launcher-api:8080
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_SERVER_ID: paper-e2e-p3
+      LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
+      LAUNCHER_PROJECT_ID: e2e-project
+      LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}
+      LAUNCHER_CHANNEL: stable
+      LAUNCHER_FAIL_MODE: closed
+      LAUNCHER_REQUIRE_SESSION: "true"
+      LAUNCHER_TIMEOUT_MS: "5000"
+      LAUNCHER_RETRIES: "2"
     depends_on:
       - launcher-api
     healthcheck:
@@ -272,19 +272,19 @@ services:
       MEMORY: 768M
       ENABLE_RCON: "false"
       SPAWN_PROTECTION: "0"
-      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
-      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
-      NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
-      NEVERLAUNCHER_SERVER_ID: purpur-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
-      NEVERLAUNCHER_PROJECT_ID: e2e-project
-      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
-      NEVERLAUNCHER_CHANNEL: stable
-      NEVERLAUNCHER_FAIL_MODE: closed
-      NEVERLAUNCHER_REQUIRE_SESSION: "true"
-      NEVERLAUNCHER_TIMEOUT_MS: "5000"
-      NEVERLAUNCHER_RETRIES: "2"
+      UID: ${LAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${LAUNCHER_E2E_HOST_GID:-1000}
+      LAUNCHER_BACKEND_URL: http://launcher-api:8080
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_SERVER_ID: purpur-e2e-p3
+      LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
+      LAUNCHER_PROJECT_ID: e2e-project
+      LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}
+      LAUNCHER_CHANNEL: stable
+      LAUNCHER_FAIL_MODE: closed
+      LAUNCHER_REQUIRE_SESSION: "true"
+      LAUNCHER_TIMEOUT_MS: "5000"
+      LAUNCHER_RETRIES: "2"
     depends_on:
       - launcher-api
     healthcheck:
@@ -311,19 +311,19 @@ services:
       MEMORY: 768M
       ENABLE_RCON: "false"
       SPAWN_PROTECTION: "0"
-      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
-      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
-      NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
-      NEVERLAUNCHER_SERVER_ID: folia-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
-      NEVERLAUNCHER_PROJECT_ID: e2e-project
-      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
-      NEVERLAUNCHER_CHANNEL: stable
-      NEVERLAUNCHER_FAIL_MODE: closed
-      NEVERLAUNCHER_REQUIRE_SESSION: "true"
-      NEVERLAUNCHER_TIMEOUT_MS: "5000"
-      NEVERLAUNCHER_RETRIES: "2"
+      UID: ${LAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${LAUNCHER_E2E_HOST_GID:-1000}
+      LAUNCHER_BACKEND_URL: http://launcher-api:8080
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_SERVER_ID: folia-e2e-p3
+      LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
+      LAUNCHER_PROJECT_ID: e2e-project
+      LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}
+      LAUNCHER_CHANNEL: stable
+      LAUNCHER_FAIL_MODE: closed
+      LAUNCHER_REQUIRE_SESSION: "true"
+      LAUNCHER_TIMEOUT_MS: "5000"
+      LAUNCHER_RETRIES: "2"
     depends_on:
       - launcher-api
     healthcheck:
@@ -353,19 +353,19 @@ services:
       MEMORY: 768M
       ENABLE_RCON: "false"
       SPAWN_PROTECTION: "0"
-      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
-      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
-      NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
-      NEVERLAUNCHER_SERVER_ID: fabric-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
-      NEVERLAUNCHER_PROJECT_ID: e2e-project
-      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
-      NEVERLAUNCHER_CHANNEL: stable
-      NEVERLAUNCHER_FAIL_MODE: closed
-      NEVERLAUNCHER_REQUIRE_SESSION: "true"
-      NEVERLAUNCHER_TIMEOUT_MS: "5000"
-      NEVERLAUNCHER_RETRIES: "2"
+      UID: ${LAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${LAUNCHER_E2E_HOST_GID:-1000}
+      LAUNCHER_BACKEND_URL: http://launcher-api:8080
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_SERVER_ID: fabric-e2e-p3
+      LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
+      LAUNCHER_PROJECT_ID: e2e-project
+      LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}
+      LAUNCHER_CHANNEL: stable
+      LAUNCHER_FAIL_MODE: closed
+      LAUNCHER_REQUIRE_SESSION: "true"
+      LAUNCHER_TIMEOUT_MS: "5000"
+      LAUNCHER_RETRIES: "2"
     depends_on:
       - launcher-api
     healthcheck:
@@ -392,19 +392,19 @@ services:
       MEMORY: 768M
       ENABLE_RCON: "false"
       SPAWN_PROTECTION: "0"
-      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
-      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
-      NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
-      NEVERLAUNCHER_SERVER_ID: forge-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
-      NEVERLAUNCHER_PROJECT_ID: e2e-project
-      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
-      NEVERLAUNCHER_CHANNEL: stable
-      NEVERLAUNCHER_FAIL_MODE: closed
-      NEVERLAUNCHER_REQUIRE_SESSION: "true"
-      NEVERLAUNCHER_TIMEOUT_MS: "5000"
-      NEVERLAUNCHER_RETRIES: "2"
+      UID: ${LAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${LAUNCHER_E2E_HOST_GID:-1000}
+      LAUNCHER_BACKEND_URL: http://launcher-api:8080
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_SERVER_ID: forge-e2e-p3
+      LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
+      LAUNCHER_PROJECT_ID: e2e-project
+      LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}
+      LAUNCHER_CHANNEL: stable
+      LAUNCHER_FAIL_MODE: closed
+      LAUNCHER_REQUIRE_SESSION: "true"
+      LAUNCHER_TIMEOUT_MS: "5000"
+      LAUNCHER_RETRIES: "2"
     depends_on:
       - launcher-api
     healthcheck:
@@ -431,19 +431,19 @@ services:
       MEMORY: 768M
       ENABLE_RCON: "false"
       SPAWN_PROTECTION: "0"
-      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
-      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
-      NEVERLAUNCHER_BACKEND_URL: http://launcher-api:8080
-      NEVERLAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${NEVERLAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
-      NEVERLAUNCHER_SERVER_ID: neoforge-e2e-p3
-      NEVERLAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
-      NEVERLAUNCHER_PROJECT_ID: e2e-project
-      NEVERLAUNCHER_PROFILE_ID: ${NEVERLAUNCHER_E2E_PROFILE_ID:-vanilla}
-      NEVERLAUNCHER_CHANNEL: stable
-      NEVERLAUNCHER_FAIL_MODE: closed
-      NEVERLAUNCHER_REQUIRE_SESSION: "true"
-      NEVERLAUNCHER_TIMEOUT_MS: "5000"
-      NEVERLAUNCHER_RETRIES: "2"
+      UID: ${LAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${LAUNCHER_E2E_HOST_GID:-1000}
+      LAUNCHER_BACKEND_URL: http://launcher-api:8080
+      LAUNCHER_CONTROL_BACKEND_PUBLIC_KEY: ${LAUNCHER_E2E_CONTROL_PUBLIC_KEY:?E2E control signing key is required}
+      LAUNCHER_SERVER_ID: neoforge-e2e-p3
+      LAUNCHER_NODE_IDENTITY_FILE: /data/.launcher-identity/node-identity.properties
+      LAUNCHER_PROJECT_ID: e2e-project
+      LAUNCHER_PROFILE_ID: ${LAUNCHER_E2E_PROFILE_ID:-vanilla}
+      LAUNCHER_CHANNEL: stable
+      LAUNCHER_FAIL_MODE: closed
+      LAUNCHER_REQUIRE_SESSION: "true"
+      LAUNCHER_TIMEOUT_MS: "5000"
+      LAUNCHER_RETRIES: "2"
     depends_on:
       - launcher-api
     healthcheck:
@@ -463,20 +463,20 @@ services:
     image: itzg/minecraft-server:java21
     environment:
       EULA: "TRUE"
-      TYPE: ${NEVERLAUNCHER_E2E_NATIVE_SERVER_TYPE:-VANILLA}
-      VERSION: ${NEVERLAUNCHER_E2E_NATIVE_MINECRAFT_VERSION:-1.21.1}
-      FABRIC_LOADER_VERSION: ${NEVERLAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
-      QUILT_LOADER_VERSION: ${NEVERLAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
-      FORGE_VERSION: ${NEVERLAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
-      NEOFORGE_VERSION: ${NEVERLAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
+      TYPE: ${LAUNCHER_E2E_NATIVE_SERVER_TYPE:-VANILLA}
+      VERSION: ${LAUNCHER_E2E_NATIVE_MINECRAFT_VERSION:-1.21.1}
+      FABRIC_LOADER_VERSION: ${LAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
+      QUILT_LOADER_VERSION: ${LAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
+      FORGE_VERSION: ${LAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
+      NEOFORGE_VERSION: ${LAUNCHER_E2E_NATIVE_LOADER_VERSION:-}
       ONLINE_MODE: "FALSE"
       MEMORY: 768M
       ENABLE_RCON: "false"
       SPAWN_PROTECTION: "0"
       ENABLE_AUTOPAUSE: "false"
       ENABLE_AUTOSTOP: "false"
-      UID: ${NEVERLAUNCHER_E2E_HOST_UID:-1000}
-      GID: ${NEVERLAUNCHER_E2E_HOST_GID:-1000}
+      UID: ${LAUNCHER_E2E_HOST_UID:-1000}
+      GID: ${LAUNCHER_E2E_HOST_GID:-1000}
       MOTD: "Launcher loader-native E2E"
     healthcheck:
       test: ["CMD", "mc-health"]

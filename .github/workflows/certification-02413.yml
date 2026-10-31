@@ -91,20 +91,20 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/compatibility/install-windows-mesa.ps1 -Architecture '${{ matrix.arch == 'x86_64' && 'x64' || 'aarch64' }}' -JavaExecutable "$env:JAVA_HOME/bin/java.exe"
-      - name: Real Mojang Minecraft client launch (never a mock success)
+      - name: Real Mojang Minecraft client launch (a mock success)
         if: github.event_name == 'workflow_dispatch' && inputs.actual_minecraft
         shell: bash
         env:
-          NEVERLAUNCHER_E2E_MINECRAFT_VERSION: '1.21.1'
-          NEVERLAUNCHER_E2E_JAVA_MAJOR: '21'
-          NEVERLAUNCHER_COMPAT_OS: ${{ matrix.os }}
-          NEVERLAUNCHER_COMPAT_ARCH: ${{ matrix.arch }}
-          NEVERLAUNCHER_COMPAT_TARGET_ID: certification-02413-vanilla
-          NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: '45'
+          LAUNCHER_E2E_MINECRAFT_VERSION: '1.21.1'
+          LAUNCHER_E2E_JAVA_MAJOR: '21'
+          LAUNCHER_COMPAT_OS: ${{ matrix.os }}
+          LAUNCHER_COMPAT_ARCH: ${{ matrix.arch }}
+          LAUNCHER_COMPAT_TARGET_ID: certification-02413-vanilla
+          LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS: '45'
         run: |
           set -euo pipefail
-          if [[ '${{ matrix.os }}' == windows ]]; then export NEVERLAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java.exe";
-          else export NEVERLAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"; fi
+          if [[ '${{ matrix.os }}' == windows ]]; then export LAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java.exe";
+          else export LAUNCHER_E2E_JAVA="$JAVA_HOME/bin/java"; fi
           bash e2e/scripts/run-vanilla-certification-case.sh
           python3 - <<'PY'
           import json
@@ -113,7 +113,7 @@ jobs:
           report=json.loads(p.read_text())
           assert report['status']=='passed' and report['checks']['actualClient'] is True, 'Minecraft did not actually launch'
           PY
-      - name: Build provenance-bound report (never marks missing Guard/Bridge as passed)
+      - name: Build provenance-bound report (marks missing Guard/Bridge as passed)
         if: success()
         shell: bash
         run: |

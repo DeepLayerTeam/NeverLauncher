@@ -2,14 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-VERSION="${NEVERLAUNCHER_EXPECTED_VERSION:-$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")}"
+VERSION="${LAUNCHER_EXPECTED_VERSION:-$(tr -d '[:space:]' < "${ROOT_DIR}/VERSION")}"
 API_BIN="${TMPDIR:-/tmp}/launcher-api-smoke-${VERSION}"
-API_ADDR="${NEVERLAUNCHER_SMOKE_ADDR:-127.0.0.1:18130}"
+API_ADDR="${LAUNCHER_SMOKE_ADDR:-127.0.0.1:18130}"
 API_URL="http://${API_ADDR}"
 
 printf '[Launcher] Release smoke %s: offline release gate\n' "${VERSION}"
-NEVERLAUNCHER_PREFLIGHT_FRONTEND="${NEVERLAUNCHER_PREFLIGHT_FRONTEND:-auto}" \
-NEVERLAUNCHER_PREFLIGHT_MODE=offline \
+LAUNCHER_PREFLIGHT_FRONTEND="${LAUNCHER_PREFLIGHT_FRONTEND:-auto}" \
+LAUNCHER_PREFLIGHT_MODE=offline \
 bash "${ROOT_DIR}/scripts/release/preflight.sh"
 
 printf '[Launcher] Release smoke %s: production deployment config\n' "${VERSION}"
@@ -28,7 +28,7 @@ else
 fi
 chmod +x "${API_BIN}" 2>/dev/null || true
 
-NEVERLAUNCHER_HTTP_ADDR="${API_ADDR}" NEVERLAUNCHER_REPOSITORY_DRIVER=memory NEVERLAUNCHER_STORAGE_DRIVER=local "${API_BIN}" >/tmp/launcher-api-smoke-${VERSION}.log 2>&1 &
+LAUNCHER_HTTP_ADDR="${API_ADDR}" LAUNCHER_REPOSITORY_DRIVER=memory LAUNCHER_STORAGE_DRIVER=local "${API_BIN}" >/tmp/launcher-api-smoke-${VERSION}.log 2>&1 &
 PID=$!
 cleanup() { kill "${PID}" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
@@ -40,7 +40,7 @@ for _ in $(seq 1 50); do
   sleep 0.2
 done
 
-SMOKE_TIMEOUT="${NEVERLAUNCHER_SMOKE_TIMEOUT:-45}"
+SMOKE_TIMEOUT="${LAUNCHER_SMOKE_TIMEOUT:-45}"
 run_api_smoke() {
   local name="$1"; shift
   echo "[Launcher][api-smoke:${name}] $*"

@@ -127,7 +127,7 @@ func TestJavaRuntimeProbe0305(t *testing.T) {
 
 // Runs against the real SDK-built host JAR in CI (no fake class bytes).
 func TestRealJavaHostArtifact0305(t *testing.T) {
-	source := os.Getenv("NEVERLAUNCHER_TEST_JAVA_HOST_JAR")
+	source := os.Getenv("LAUNCHER_TEST_JAVA_HOST_JAR")
 	if source == "" {
 		t.Skip("JAR fixture not provided")
 	}

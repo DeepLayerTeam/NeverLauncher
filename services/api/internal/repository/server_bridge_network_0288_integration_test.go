@@ -14,9 +14,9 @@ import (
 // This executes real PostgreSQL route selection and the optimistic admission
 // mutation; a source-only test cannot prove SQL behavior. CI must supply a DSN.
 func TestNetworkAdmissionPostgreSQL0288(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN")
+	dsn := os.Getenv("LAUNCHER_SERVERBRIDGE_HA_DSN")
 	if dsn == "" {
-		t.Skip("NEVERLAUNCHER_SERVERBRIDGE_HA_DSN is not set")
+		t.Skip("LAUNCHER_SERVERBRIDGE_HA_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
 	defer cancel()

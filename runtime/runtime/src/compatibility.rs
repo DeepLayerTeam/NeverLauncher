@@ -1,0 +1,1997 @@
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::{HashMap, HashSet},
+    path::{Component, Path, PathBuf},
+    process::Command,
+};
+use tokio::fs;
+
+const MAX_INHERITANCE_DEPTH: usize = 16;
+
+const LWJGL_EXTRACT_PROPERTY: &str = "-Dorg.lwjgl.system.SharedLibraryExtractPath=";
+
+pub(crate) fn pin_windows_lwjgl_extract_path(args: &mut Vec<String>, game_root: &Path, os: &str, arch: &str) {
+    if os != "windows" {
+        return;
+    }
+    // The Sensor accepts this single, platform-specific extraction directory.
+    // Strip publisher/mod-provided overrides so the JVM and Sensor cannot
+    // disagree on where LWJGL's classpath natives are expected to be loaded.
+    args.retain(|arg| !arg.starts_with(LWJGL_EXTRACT_PROPERTY));
+    let extract = game_root.join(".launcher").join("lwjgl-extract")
+        .join("windows").join(arch);
+    args.push(format!("{LWJGL_EXTRACT_PROPERTY}{}", extract.display()));
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CompatibilityEnvironment {
+    pub os: String,
+    pub arch: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub os_version: String,
+    #[serde(default)]
+    pub features: HashMap<String, bool>,
+}
+
+impl CompatibilityEnvironment {
+    pub fn current(features: HashMap<String, bool>) -> Self {
+        Self {
+            os: normalized_current_os().to_string(),
+            arch: normalized_current_arch().to_string(),
+            os_version: detect_os_version(),
+            features,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CompatibilityContext {
+    pub username: String,
+    pub uuid: String,
+    pub access_token: String,
+    pub user_type: String,
+    pub launcher_name: String,
+    pub launcher_version: String,
+    pub game_directory: String,
+    pub assets_directory: String,
+    pub natives_directory: String,
+    #[serde(default)]
+    pub features: HashMap<String, bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CompatibilityResolution {
+    pub requested_version: String,
+    pub resolved_version: String,
+    pub minecraft_type: String,
+    pub main_class: String,
+    pub java_major_version: Option<u32>,
+    pub client_jar: String,
+    pub classpath: Vec<String>,
+    pub libraries: Vec<ResolvedLibrary>,
+    pub natives: Vec<ResolvedNative>,
+    pub jvm_args: Vec<String>,
+    pub game_args: Vec<String>,
+    pub assets_index: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logging_file: Option<String>,
+    pub metadata_paths: Vec<String>,
+    pub inheritance_chain: Vec<String>,
+    pub environment: CompatibilityEnvironment,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedLibrary {
+    pub name: String,
+    pub path: String,
+    pub url: String,
+    pub sha1: String,
+    pub size: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedNative {
+    pub name: String,
+    pub classifier: String,
+    pub path: String,
+    pub url: String,
+    pub sha1: String,
+    pub size: u64,
+    pub excludes: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+struct VersionMetadata {
+    #[serde(default)]
+    id: String,
+    #[serde(default)]
+    inherits_from: String,
+    #[serde(default)]
+    r#type: String,
+    #[serde(default)]
+    main_class: String,
+    #[serde(default)]
+    assets: String,
+    #[serde(default)]
+    asset_index: Option<Download>,
+    #[serde(default)]
+    downloads: HashMap<String, Download>,
+    #[serde(default)]
+    libraries: Vec<Library>,
+    #[serde(default)]
+    arguments: Arguments,
+    #[serde(default)]
+    minecraft_arguments: String,
+    #[serde(default)]
+    java_version: Option<JavaVersion>,
+    #[serde(default)]
+    logging: LoggingConfig,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+struct JavaVersion {
+    #[serde(default)]
+    major_version: u32,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct LoggingConfig {
+    #[serde(default)]
+    client: Option<LoggingClient>,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct LoggingClient {
+    #[serde(default)]
+    argument: String,
+    #[serde(default)]
+    file: Download,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct Arguments {
+    #[serde(default)]
+    game: Vec<Argument>,
+    #[serde(default)]
+    jvm: Vec<Argument>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(untagged)]
+enum Argument {
+    Plain(String),
+    Conditional(ConditionalArgument),
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct ConditionalArgument {
+    #[serde(default)]
+    rules: Vec<Rule>,
+    value: ArgumentValue,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(untagged)]
+enum ArgumentValue {
+    One(String),
+    Many(Vec<String>),
+}
+
+impl Default for ArgumentValue {
+    fn default() -> Self {
+        Self::Many(Vec::new())
+    }
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct Library {
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    url: String,
+    #[serde(default)]
+    downloads: LibraryDownloads,
+    #[serde(default)]
+    natives: HashMap<String, String>,
+    #[serde(default)]
+    rules: Vec<Rule>,
+    #[serde(default)]
+    extract: ExtractRules,
+    // Forge <=1.12.2 использует в versionInfo поля clientreq/serverreq в нижнем
+    // регистре. Библиотеки только для сервера не должны попадать в classpath клиента.
+    #[serde(default, alias = "clientreq")]
+    client_req: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct ExtractRules {
+    #[serde(default)]
+    exclude: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct LibraryDownloads {
+    #[serde(default)]
+    artifact: Option<Download>,
+    #[serde(default)]
+    classifiers: HashMap<String, Download>,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct Download {
+    #[serde(default)]
+    path: String,
+    #[serde(default)]
+    sha1: String,
+    #[serde(default)]
+    size: u64,
+    #[serde(default)]
+    url: String,
+    #[serde(default)]
+    id: String,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct Rule {
+    #[serde(default)]
+    action: String,
+    #[serde(default)]
+    os: Option<RuleOs>,
+    #[serde(default)]
+    features: HashMap<String, bool>,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+struct RuleOs {
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    version: String,
+    #[serde(default)]
+    arch: String,
+}
+
+#[derive(Debug, Clone, Default)]
+struct MergedVersion {
+    id: String,
+    r#type: String,
+    main_class: String,
+    assets: String,
+    asset_index: Option<Download>,
+    client_version_id: String,
+    libraries: Vec<Library>,
+    arguments: Arguments,
+    legacy_game_arguments: Vec<String>,
+    java_version: Option<JavaVersion>,
+    logging_client: Option<LoggingClient>,
+}
+
+pub async fn resolve_compatibility(
+    root: &Path,
+    requested_version: &str,
+    metadata_path: Option<&str>,
+    context: &CompatibilityContext,
+) -> Result<CompatibilityResolution, String> {
+    let requested = safe_component(requested_version)?;
+    let first_path = match metadata_path.filter(|value| !value.trim().is_empty()) {
+        Some(path) => normalize_relative_path(path)?,
+        None => format!("versions/{requested}/{requested}.json"),
+    };
+
+    let mut layers = Vec::<(String, String, VersionMetadata)>::new();
+    let mut seen = HashSet::new();
+    let mut current_id = requested.clone();
+    let mut current_path = first_path;
+
+    for _ in 0..MAX_INHERITANCE_DEPTH {
+        let relative_path = normalize_relative_path(&current_path)?;
+        let full_path = safe_join(root, &relative_path)?;
+        let bytes = fs::read(&full_path)
+            .await
+            .map_err(|err| format!("не удалось прочитать Minecraft metadata {}: {err}", full_path.display()))?;
+        let mut metadata: VersionMetadata = serde_json::from_slice(&bytes)
+            .map_err(|err| format!("Minecraft metadata {} повреждён: {err}", relative_path))?;
+        if metadata.id.trim().is_empty() {
+            metadata.id = current_id.clone();
+        }
+        let metadata_id = safe_component(&metadata.id)?;
+        if !seen.insert(metadata_id.clone()) {
+            return Err(format!("обнаружен цикл inheritsFrom: {metadata_id}"));
+        }
+        let parent = metadata.inherits_from.trim().to_string();
+        layers.push((metadata_id.clone(), relative_path, metadata));
+        if parent.is_empty() {
+            break;
+        }
+        current_id = safe_component(&parent)?;
+        current_path = format!("versions/{current_id}/{current_id}.json");
+    }
+
+    if !layers.last().map(|(_, _, v)| v.inherits_from.trim().is_empty()).unwrap_or(false) {
+        return Err(format!("цепочка inheritsFrom превышает {MAX_INHERITANCE_DEPTH} уровней"));
+    }
+
+    layers.reverse();
+    let environment = CompatibilityEnvironment::current(context.features.clone());
+    let merged = merge_layers(&layers, &environment)?;
+    if merged.main_class.trim().is_empty() {
+        return Err("resolved Minecraft metadata не содержит mainClass".to_string());
+    }
+
+    let (libraries, natives, mut classpath) = resolve_libraries(&merged.libraries, &environment)?;
+    if merged.client_version_id.trim().is_empty() {
+        return Err("resolved Minecraft metadata не содержит downloads.client".to_string());
+    }
+    let client_version_id = safe_component(&merged.client_version_id)?;
+    let client_jar = format!("versions/{client_version_id}/{client_version_id}.jar");
+    classpath.push(client_jar.clone());
+    dedupe_preserving_order(&mut classpath);
+
+    let assets_index = merged
+        .asset_index
+        .as_ref()
+        .map(|index| if index.id.trim().is_empty() { merged.assets.clone() } else { index.id.clone() })
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| merged.assets.clone());
+
+    let classpath_absolute = classpath
+        .iter()
+        .map(|path| safe_join(root, path).map(|value| value.to_string_lossy().to_string()))
+        .collect::<Result<Vec<_>, _>>()?;
+    let classpath_value = classpath_absolute.join(if cfg!(windows) { ";" } else { ":" });
+    let library_directory = safe_join(root, "libraries")?.to_string_lossy().to_string();
+    let game_assets_directory = legacy_game_assets_directory(&context.assets_directory, &merged.assets, &assets_index)?;
+    let auth_session = legacy_auth_session(&context.access_token, &context.uuid);
+
+    let mut variables = HashMap::from([
+        ("auth_player_name".to_string(), context.username.clone()),
+        ("version_name".to_string(), merged.id.clone()),
+        ("game_directory".to_string(), context.game_directory.clone()),
+        ("assets_root".to_string(), context.assets_directory.clone()),
+        ("game_assets".to_string(), game_assets_directory),
+        ("assets_index_name".to_string(), assets_index.clone()),
+        ("auth_uuid".to_string(), context.uuid.clone()),
+        ("uuid".to_string(), context.uuid.clone()),
+        ("auth_access_token".to_string(), context.access_token.clone()),
+        ("accessToken".to_string(), context.access_token.clone()),
+        ("auth_session".to_string(), auth_session),
+        // В старых метаданных лаунчера, особенно 1.7.x–1.12.x, этот заполнитель
+        // передаётся даже офлайн-профилю. Официальный лаунчер использует
+        // JSON-объект; правильное значение для офлайна — пустой объект.
+        ("user_properties".to_string(), "{}".to_string()),
+        ("profile_properties".to_string(), "{}".to_string()),
+        ("user_type".to_string(), context.user_type.clone()),
+        ("version_type".to_string(), if merged.r#type.is_empty() { "release".to_string() } else { merged.r#type.clone() }),
+        ("natives_directory".to_string(), context.natives_directory.clone()),
+        ("launcher_name".to_string(), context.launcher_name.clone()),
+        ("launcher_version".to_string(), context.launcher_version.clone()),
+        ("classpath".to_string(), classpath_value),
+        ("classpath_separator".to_string(), if cfg!(windows) { ";".to_string() } else { ":".to_string() }),
+        ("library_directory".to_string(), library_directory),
+        ("auth_xuid".to_string(), String::new()),
+        ("clientid".to_string(), String::new()),
+    ]);
+    if let Ok(width) = std::env::var("LAUNCHER_RESOLUTION_WIDTH") {
+        variables.insert("resolution_width".to_string(), width);
+    }
+    if let Ok(height) = std::env::var("LAUNCHER_RESOLUTION_HEIGHT") {
+        variables.insert("resolution_height".to_string(), height);
+    }
+
+    let raw_game_args = if merged.arguments.game.is_empty() && !merged.legacy_game_arguments.is_empty() {
+        merged.legacy_game_arguments.clone()
+    } else {
+        resolve_arguments(&merged.arguments.game, &environment)?
+    };
+    if raw_game_args.is_empty() {
+        return Err(format!(
+            "Minecraft {} metadata does not contain executable arguments.game or minecraftArguments",
+            merged.id
+        ));
+    }
+    let is_neoforge = raw_game_args.iter().any(|value| value == "--fml.neoForgeVersion");
+    // Forge 1.20.2+ использует net.minecraftforge.bootstrap.BootstrapLauncher
+    // вместо cpw.mods.bootstraplauncher.BootstrapLauncher. Оба создают преобразованный
+    // именованный модуль Minecraft и должны игнорировать JAR клиента Mojang в
+    // bootstrap module path, чтобы избежать дублирования net.minecraft.*.
+    let is_modern_forge = raw_game_args.iter().any(|value| value == "--fml.forgeVersion")
+        && matches!(
+            merged.main_class.as_str(),
+            "cpw.mods.bootstraplauncher.BootstrapLauncher"
+                | "net.minecraftforge.bootstrap.BootstrapLauncher"
+        );
+    let mut raw_jvm_args = resolve_arguments(&merged.arguments.jvm, &environment)?;
+    if raw_jvm_args.is_empty() {
+        // До появления метаданных arguments.jvm старые выпуски Minecraft
+        // полагались на лаунчер для путей нативных библиотек, идентичности
+        // лаунчера и classpath. Сохраняйте это поведение, чтобы старый Vanilla
+        // запускался общим Compatibility Engine без особого устаревшего пути.
+        raw_jvm_args = vec![
+            "-Djava.library.path=${natives_directory}".to_string(),
+            "-Dminecraft.launcher.brand=${launcher_name}".to_string(),
+            "-Dminecraft.launcher.version=${launcher_version}".to_string(),
+            "-cp".to_string(),
+            "${classpath}".to_string(),
+        ];
+    }
+    let game_args = substitute_all(raw_game_args, &variables)?;
+    let mut jvm_args = substitute_all(raw_jvm_args, &variables)?;
+    strip_classpath_pair(&mut jvm_args)?;
+    // Современные выпуски Mojang, включая 26.x, могут не содержать
+    // старый параметр -Djava.library.path, хотя нативные LWJGL
+    // распакованы в проверенный каталог платформы. Без параметра
+    // игра падает до загрузки SDL/LWJGL на Linux ARM64 либо ищет
+    // библиотеки хоста вместо поставляемых на других системах.
+    // Сохраняйте значение из метаданных издателя, если оно есть.
+    if !jvm_args.iter().any(|arg| arg.starts_with("-Djava.library.path=")) {
+        jvm_args.push(format!("-Djava.library.path={}", context.natives_directory));
+    }
+    if !jvm_args.iter().any(|arg| arg.starts_with("-Dorg.lwjgl.librarypath=")) {
+        jvm_args.push(format!("-Dorg.lwjgl.librarypath={}", context.natives_directory));
+    }
+    // LWJGL 3 prefers native resources on the classpath and can extract
+    // lwjgl.dll even when java.library.path points at a verified flat copy.
+    // Keep extraction inside the pinned client root, never in a user-global
+    // temp directory. Guard rechecks extracted bytes against the signed
+    // package's native copy before trusting any executable-memory calls.
+    pin_windows_lwjgl_extract_path(
+        &mut jvm_args,
+        Path::new(&context.game_directory),
+        &environment.os,
+        &environment.arch,
+    );
+    // Minecraft 26.x Vanilla и Fabric сами инициализируют SDL 3;
+    // принудительный -XstartOnFirstThread прерывает их в macOS. Однако
+    // ForgeBootstrap создаёт раннее окно GLFW/AppKit до передачи
+    // управления SDL 3 и требует основной первоначальный поток.
+    // Определяйте фактическую точку входа, а не только версию Minecraft.
+    let minecraft_26x = layers.iter().any(|(id, _, _)| id.starts_with("26."));
+    let uses_sdl3_client = macos_uses_sdl3_game_entry(minecraft_26x, &merged.main_class);
+    ensure_macos_first_thread(&mut jvm_args, &environment.os, uses_sdl3_client);
+    if is_neoforge || is_modern_forge {
+        // Forge/NeoForge ModLauncher создаёт преобразованный модуль
+        // Minecraft. Оставляйте базовый клиент Mojang в старом classpath,
+        // но запретите BootstrapLauncher превращать его в дополнительный
+        // именованный модуль. Иначе разрешение модулей Java падает из-за
+        // повторяющихся пакетов minecraft и базового неизменённого JAR.
+        ensure_neoforge_bootstrap_ignores_base_client(&mut jvm_args, &client_jar)?;
+    }
+
+    let logging_file = if let Some(logging) = merged.logging_client.as_ref() {
+        if logging.file.id.trim().is_empty() || logging.argument.trim().is_empty() {
+            return Err("logging.client должен содержать file.id и argument".to_string());
+        }
+        let relative = normalize_relative_path(&format!("assets/log_configs/{}", logging.file.id))?;
+        let absolute = safe_join(root, &relative)?.to_string_lossy().to_string();
+        let argument = logging.argument.replace("${path}", &absolute);
+        if argument.contains("${path}") {
+            return Err("logging.client.argument содержит неразрешённый ${path}".to_string());
+        }
+        jvm_args.push(argument);
+        Some(relative)
+    } else {
+        None
+    };
+
+    let metadata_paths = layers.iter().map(|(_, path, _)| path.clone()).collect::<Vec<_>>();
+    let inheritance_chain = layers.iter().map(|(id, _, _)| id.clone()).collect::<Vec<_>>();
+    let java_major_version = resolved_java_major_version(&merged)?;
+
+    Ok(CompatibilityResolution {
+        requested_version: requested,
+        resolved_version: merged.id,
+        minecraft_type: if merged.r#type.is_empty() { "release".to_string() } else { merged.r#type },
+        main_class: merged.main_class,
+        java_major_version,
+        client_jar,
+        classpath,
+        libraries,
+        natives,
+        jvm_args,
+        game_args,
+        assets_index,
+        logging_file,
+        metadata_paths,
+        inheritance_chain,
+        environment,
+    })
+}
+
+fn merge_layers(
+    layers: &[(String, String, VersionMetadata)],
+    environment: &CompatibilityEnvironment,
+) -> Result<MergedVersion, String> {
+    let mut merged = MergedVersion::default();
+    let mut library_positions = HashMap::<String, usize>::new();
+
+    for (layer_id, _, layer) in layers {
+        merged.id = layer.id.clone();
+        if !layer.r#type.trim().is_empty() {
+            merged.r#type = layer.r#type.clone();
+        }
+        if !layer.main_class.trim().is_empty() {
+            merged.main_class = layer.main_class.clone();
+        }
+        if !layer.assets.trim().is_empty() {
+            merged.assets = layer.assets.clone();
+        }
+        if layer.asset_index.is_some() {
+            merged.asset_index = layer.asset_index.clone();
+        }
+        if layer.downloads.contains_key("client") {
+            merged.client_version_id = layer_id.clone();
+        }
+        for library in &layer.libraries {
+            if library.name.trim().is_empty() {
+                return Err(format!("Minecraft metadata {} содержит library без name", layer.id));
+            }
+            // Фильтруйте до объединения координат Maven. Mojang
+            // 1.6.x–1.12.x может перечислять две версии org.lwjgl.lwjgl:lwjgl
+            // с взаимоисключающими правилами ОС (старый LWJGL для
+            // Linux/Windows и ночная версия старой macOS). Безусловная
+            // замена первой координаты второй удалит LWJGL из classpath
+            // Linux, хотя материализатор скачал его.
+            if library.client_req == Some(false)
+                || !rules_allow(&library.rules, environment)?
+                || !library_artifact_matches_environment(&library.name, environment)
+            {
+                continue;
+            }
+            let key = library_identity(&library.name);
+            if let Some(index) = library_positions.get(&key).copied() {
+                merged.libraries[index] = library.clone();
+            } else {
+                library_positions.insert(key, merged.libraries.len());
+                merged.libraries.push(library.clone());
+            }
+        }
+        merged.arguments.game.extend(layer.arguments.game.clone());
+        merged.arguments.jvm.extend(layer.arguments.jvm.clone());
+        if !layer.minecraft_arguments.trim().is_empty() {
+            let child = split_legacy_arguments(&layer.minecraft_arguments)?;
+            merged.legacy_game_arguments = merge_legacy_argument_tokens(
+                &merged.legacy_game_arguments, &child,
+            );
+        }
+        if layer.java_version.is_some() {
+            merged.java_version = layer.java_version.clone();
+        }
+        if layer.logging.client.is_some() {
+            merged.logging_client = layer.logging.client.clone();
+        }
+    }
+    // LaunchWrapper is loaded ahead of the inherited Minecraft libraries.
+    // Its classpath must prefer child Forge JARs (including overridden Maven
+    // coordinates) before the base game dependencies. This matches the
+    // verified Client Factory legacy-launch recipe, rather than retaining a
+    // parent-first order that could load an older class of the same name.
+    if merged.main_class == "net.minecraft.launchwrapper.Launch" && layers.len() > 1 {
+        let mut seen = HashSet::new();
+        let mut preferred = Vec::new();
+        for (_, _, layer) in layers.iter().rev() {
+            for library in &layer.libraries {
+                if library.client_req == Some(false)
+                    || !rules_allow(&library.rules, environment)?
+                    || !library_artifact_matches_environment(&library.name, environment)
+                {
+                    continue;
+                }
+                if seen.insert(library_identity(&library.name)) {
+                    preferred.push(library.clone());
+                }
+            }
+        }
+        merged.libraries = preferred;
+    }
+    if merged.id.trim().is_empty() {
+        return Err("resolved Minecraft metadata не содержит id".to_string());
+    }
+    Ok(merged)
+}
+
+type ResolvedLibraries = (Vec<ResolvedLibrary>, Vec<ResolvedNative>, Vec<String>);
+
+// Preserve inherited Mojang options even when a legacy Forge profile also
+// declares identity placeholders. The child overrides only the flags it
+// explicitly specifies, and values containing spaces remain single argv items.
+fn merge_legacy_argument_tokens(parent: &[String], child: &[String]) -> Vec<String> {
+    if parent.is_empty() {
+        return child.to_vec();
+    }
+    if child.is_empty() {
+        return parent.to_vec();
+    }
+    let overridden: HashSet<&str> = child
+        .iter()
+        .filter(|arg| arg.starts_with("--") && arg.len() > 2)
+        .map(|arg| arg.split('=').next().unwrap_or(arg))
+        .collect();
+    let mut result = Vec::with_capacity(parent.len() + child.len());
+    let mut i = 0;
+    while i < parent.len() {
+        let option = &parent[i];
+        if option.starts_with("--") && option.len() > 2 {
+            let start = i;
+            i += 1;
+            while i < parent.len() && !parent[i].starts_with("--") {
+                i += 1;
+            }
+            if !overridden.contains(option.split('=').next().unwrap_or(option)) {
+                result.extend_from_slice(&parent[start..i]);
+            }
+        } else {
+            result.push(option.clone());
+            i += 1;
+        }
+    }
+    result.extend_from_slice(child);
+    result
+}
+
+fn resolve_libraries(
+    libraries: &[Library],
+    environment: &CompatibilityEnvironment,
+) -> Result<ResolvedLibraries, String> {
+    let mut resolved = Vec::new();
+    let mut natives = Vec::new();
+    let mut classpath = Vec::new();
+
+    for library in libraries {
+        if library.client_req == Some(false) {
+            continue;
+        }
+        if !rules_allow(&library.rules, environment)? || !library_artifact_matches_environment(&library.name, environment) {
+            continue;
+        }
+        // Часть старых записей Mojang — нативные контейнеры только
+        // с классификаторами, например lwjgl-platform и jinput-platform.
+        // Не превращайте их в обычные артефакты classpath.
+        if let Some(artifact) = library.downloads.artifact.clone() {
+            let path = if artifact.path.trim().is_empty() {
+                maven_path(&library.name)?
+            } else {
+                normalize_relative_path(&format!("libraries/{}", artifact.path.trim_start_matches('/')))?
+            };
+            let url = if !artifact.url.trim().is_empty() {
+                artifact.url.clone()
+            } else if !library.url.trim().is_empty() {
+                format!("{}/{}", library.url.trim_end_matches('/'), path.trim_start_matches("libraries/"))
+            } else {
+                String::new()
+            };
+            resolved.push(ResolvedLibrary {
+                name: library.name.clone(),
+                path: path.clone(),
+                url,
+                sha1: artifact.sha1.clone(),
+                size: artifact.size,
+            });
+            classpath.push(path);
+        } else if library.downloads.classifiers.is_empty() {
+            // Сохраняйте совместимость со старыми локальными метаданными, появившимися
+            // до объекта downloads. В строгом режиме материализатор по-прежнему отказывает
+            // при ошибке; резервный путь только для уже существующих деревьев.
+            let path = maven_path(&library.name)?;
+            let url = if !library.url.trim().is_empty() {
+                format!("{}/{}", library.url.trim_end_matches('/'), path.trim_start_matches("libraries/"))
+            } else {
+                String::new()
+            };
+            resolved.push(ResolvedLibrary {
+                name: library.name.clone(),
+                path: path.clone(),
+                url,
+                sha1: String::new(),
+                size: 0,
+            });
+            classpath.push(path);
+        }
+
+        if let Some(classifier_template) = native_classifier(library, environment) {
+            let classifier = classifier_template.replace("${arch}", native_arch_token(&environment.arch));
+            // Legacy Minecraft/Forge metadata predates downloads.classifiers.
+            // Метаданные Minecraft/Forge 1.7.x появились до downloads.classifiers.
+            // Материализатор Vanilla уже размещает нативные JAR с
+            // классификаторами в Maven-дереве, поэтому определяйте их пути
+            // по старым Maven-координатам, не отклоняя корректный
+            // LaunchWrapper-профиль. Неполная современная карта classifiers
+            // означает повреждение и требует строгого отказа.
+            let native = match library.downloads.classifiers.get(&classifier) {
+                Some(native) => Some(native),
+                None if library.downloads.classifiers.is_empty() => None,
+                None => return Err(format!("{}: отсутствует classifier {}", library.name, classifier)),
+            };
+            let native_path = if let Some(native) = native {
+                if native.path.trim().is_empty() {
+                    maven_path_with_classifier(&library.name, &classifier)?
+                } else {
+                    normalize_relative_path(&format!("libraries/{}", native.path.trim_start_matches('/')))?
+                }
+            } else {
+                maven_path_with_classifier(&library.name, &classifier)?
+            };
+            let native_url = if let Some(native) = native {
+                if !native.url.trim().is_empty() {
+                    native.url.clone()
+                } else if !library.url.trim().is_empty() {
+                    format!(
+                        "{}/{}",
+                        library.url.trim_end_matches('/'),
+                        native_path.trim_start_matches("libraries/")
+                    )
+                } else {
+                    String::new()
+                }
+            } else if !library.url.trim().is_empty() {
+                format!(
+                    "{}/{}",
+                    library.url.trim_end_matches('/'),
+                    native_path.trim_start_matches("libraries/")
+                )
+            } else {
+                String::new()
+            };
+            natives.push(ResolvedNative {
+                name: library.name.clone(),
+                classifier,
+                path: native_path,
+                url: native_url,
+                sha1: native.map(|value| value.sha1.clone()).unwrap_or_default(),
+                size: native.map(|value| value.size).unwrap_or_default(),
+                excludes: library.extract.exclude.clone(),
+            });
+        }
+    }
+    Ok((resolved, natives, classpath))
+}
+
+fn resolved_java_major_version(merged: &MergedVersion) -> Result<Option<u32>, String> {
+    let metadata_major = merged
+        .java_version
+        .as_ref()
+        .map(|value| value.major_version)
+        .filter(|value| *value > 0);
+
+    if is_legacy_vanilla_java8_release(&merged.id) {
+        return match metadata_major {
+            Some(8) | None => Ok(Some(8)),
+            Some(actual) => Err(format!(
+                "Minecraft {} Mojang metadata Java mismatch: Legacy Vanilla requires Java 8, got {}",
+                merged.id, actual
+            )),
+        };
+    }
+
+    if let Some(expected) = expected_java_major_for_vanilla_0170v2(&merged.id) {
+        return match metadata_major {
+            Some(actual) if actual == expected => Ok(Some(actual)),
+            Some(actual) => Err(format!(
+                "Minecraft {} Mojang metadata Java mismatch: 0.17.0v2 expected {}, got {}",
+                merged.id, expected, actual
+            )),
+            None => Err(format!(
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.17.0v2 requires exact Java {}",
+                merged.id, expected
+            )),
+        };
+    }
+
+    if let Some(expected) = expected_java_major_for_vanilla_0170v3(&merged.id) {
+        return match metadata_major {
+            Some(actual) if actual == expected => Ok(Some(actual)),
+            Some(actual) => Err(format!(
+                "Minecraft {} Mojang metadata Java mismatch: 0.17.0v3 expected {}, got {}",
+                merged.id, expected, actual
+            )),
+            None => Err(format!(
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.17.0v3 requires exact Java {}",
+                merged.id, expected
+            )),
+        };
+    }
+
+    if let Some(expected) = expected_java_major_for_vanilla_0166(&merged.id) {
+        return match metadata_major {
+            Some(actual) if actual == expected => Ok(Some(actual)),
+            Some(actual) => Err(format!(
+                "Minecraft {} Mojang metadata Java mismatch: expected {}, got {}",
+                merged.id, expected, actual
+            )),
+            None => Err(format!(
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.16.6 requires exact Java {}",
+                merged.id, expected
+            )),
+        };
+    }
+
+    if let Some(expected) = expected_java_major_for_vanilla_0167(&merged.id) {
+        return match metadata_major {
+            Some(actual) if actual == expected => Ok(Some(actual)),
+            Some(actual) => Err(format!(
+                "Minecraft {} Mojang metadata Java mismatch: expected {}, got {}",
+                merged.id, expected, actual
+            )),
+            None => Err(format!(
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.16.7 requires exact Java {}",
+                merged.id, expected
+            )),
+        };
+    }
+
+    if let Some(expected) = expected_java_major_for_vanilla_0168(&merged.id) {
+        return match metadata_major {
+            Some(actual) if actual == expected => Ok(Some(actual)),
+            Some(actual) => Err(format!(
+                "Minecraft {} Mojang metadata Java mismatch: expected {}, got {}",
+                merged.id, expected, actual
+            )),
+            None => Err(format!(
+                "Minecraft {} Mojang metadata does not contain javaVersion.majorVersion; 0.16.8 requires exact Java {}",
+                merged.id, expected
+            )),
+        };
+    }
+
+    Ok(metadata_major)
+}
+
+fn expected_java_major_for_vanilla_0170v2(version: &str) -> Option<u32> {
+    match version.trim() {
+        "1.17" => Some(16),
+        "1.18" | "1.18.1" | "1.19" | "1.19.1" | "1.19.2" | "1.19.3" | "1.20" | "1.20.3" => Some(17),
+        _ => None,
+    }
+}
+
+fn expected_java_major_for_vanilla_0170v3(version: &str) -> Option<u32> {
+    match version.trim() {
+        "1.21.11" => Some(21),
+        "26.2" => Some(25),
+        _ => None,
+    }
+}
+
+fn expected_java_major_for_vanilla_0166(version: &str) -> Option<u32> {
+    let (major, minor, patch) = parse_minecraft_release_version(version)?;
+    if major != 1 {
+        return None;
+    }
+    if minor == 17 && patch == 1 {
+        return Some(16);
+    }
+    if !(18..=20).contains(&minor) {
+        return None;
+    }
+    if minor == 20 && patch > 4 {
+        return None;
+    }
+    Some(17)
+}
+
+fn expected_java_major_for_vanilla_0167(version: &str) -> Option<u32> {
+    let (major, minor, patch) = parse_minecraft_release_version(version)?;
+    if major != 1 {
+        return None;
+    }
+    if minor == 20 {
+        return matches!(patch, 5 | 6).then_some(21);
+    }
+    if minor == 21 && patch <= 10 {
+        return Some(21);
+    }
+    None
+}
+
+fn expected_java_major_for_vanilla_0168(version: &str) -> Option<u32> {
+    let (major, minor, patch) = parse_minecraft_release_version(version)?;
+    if major == 26 && (minor == 1 || (minor == 3 && patch == 0)) {
+        return Some(25);
+    }
+    None
+}
+
+fn parse_minecraft_release_version(version: &str) -> Option<(u32, u32, u32)> {
+    let parts = version.trim().split('.').collect::<Vec<_>>();
+    if !(2..=3).contains(&parts.len()) {
+        return None;
+    }
+    let major = parts[0].parse::<u32>().ok()?;
+    let minor = parts[1].parse::<u32>().ok()?;
+    let patch = if parts.len() == 3 {
+        parts[2].parse::<u32>().ok()?
+    } else {
+        0
+    };
+    Some((major, minor, patch))
+}
+
+fn is_legacy_vanilla_java8_release(version: &str) -> bool {
+    matches!(
+        parse_minecraft_release_version(version),
+        Some((1, minor, patch)) if (minor, patch) <= (16, 5)
+    )
+}
+
+fn legacy_auth_session(access_token: &str, uuid: &str) -> String {
+    let token = access_token.trim();
+    if token.is_empty() {
+        return "-".to_string();
+    }
+    if token.starts_with("token:") {
+        return token.to_string();
+    }
+    format!("token:{token}:{}", uuid.trim())
+}
+
+fn legacy_game_assets_directory(assets_directory: &str, assets_name: &str, assets_index: &str) -> Result<String, String> {
+    let legacy_id = [assets_name, assets_index]
+        .into_iter()
+        .map(str::trim)
+        .find(|value| matches!(value.to_ascii_lowercase().as_str(), "pre-1.6" | "legacy"));
+    let Some(id) = legacy_id else {
+        return Ok(assets_directory.to_string());
+    };
+    let id = safe_component(id)?;
+    Ok(Path::new(assets_directory)
+        .join("virtual")
+        .join(id)
+        .to_string_lossy()
+        .to_string())
+}
+
+fn native_classifier<'a>(library: &'a Library, environment: &CompatibilityEnvironment) -> Option<&'a String> {
+    library.natives.get(environment.os.as_str())
+}
+
+fn resolve_arguments(arguments: &[Argument], environment: &CompatibilityEnvironment) -> Result<Vec<String>, String> {
+    let mut out = Vec::new();
+    for argument in arguments {
+        match argument {
+            Argument::Plain(value) => out.push(value.clone()),
+            Argument::Conditional(value) => {
+                if !rules_allow(&value.rules, environment)? {
+                    continue;
+                }
+                match &value.value {
+                    ArgumentValue::One(item) => out.push(item.clone()),
+                    ArgumentValue::Many(items) => out.extend(items.clone()),
+                }
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn rules_allow(rules: &[Rule], environment: &CompatibilityEnvironment) -> Result<bool, String> {
+    if rules.is_empty() {
+        return Ok(true);
+    }
+    let mut allowed = false;
+    for rule in rules {
+        if rule_matches(rule, environment)? {
+            match rule.action.as_str() {
+                "allow" => allowed = true,
+                "disallow" => allowed = false,
+                other => return Err(format!("неподдерживаемое Mojang rule action: {other}")),
+            }
+        }
+    }
+    Ok(allowed)
+}
+
+fn rule_matches(rule: &Rule, environment: &CompatibilityEnvironment) -> Result<bool, String> {
+    if let Some(os) = &rule.os {
+        if !os.name.trim().is_empty() && !os_name_matches_environment(&os.name, environment) {
+            return Ok(false);
+        }
+        if !os.arch.trim().is_empty() && !pattern_matches(&os.arch, &environment.arch)? {
+            return Ok(false);
+        }
+        if !os.version.trim().is_empty()
+            && (environment.os_version.trim().is_empty()
+                || !pattern_matches(&os.version, &environment.os_version)?)
+        {
+            return Ok(false);
+        }
+    }
+    for (name, expected) in &rule.features {
+        if environment.features.get(name).copied().unwrap_or(false) != *expected {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+fn pattern_matches(pattern: &str, value: &str) -> Result<bool, String> {
+    let anchored = format!("^(?:{pattern})$");
+    Regex::new(&anchored)
+        .map_err(|err| format!("некорректный regex в Mojang rule {pattern:?}: {err}"))
+        .map(|regex| regex.is_match(value))
+}
+
+fn substitute_all(values: Vec<String>, variables: &HashMap<String, String>) -> Result<Vec<String>, String> {
+    values.into_iter().map(|value| substitute(&value, variables)).collect()
+}
+
+fn substitute(value: &str, variables: &HashMap<String, String>) -> Result<String, String> {
+    let mut out = String::with_capacity(value.len());
+    let bytes = value.as_bytes();
+    let mut index = 0usize;
+    while index < bytes.len() {
+        if index + 2 <= bytes.len() && &bytes[index..index + 2] == b"${" {
+            let tail = &value[index + 2..];
+            let Some(end_rel) = tail.find('}') else {
+                return Err(format!("незакрытый placeholder в аргументе: {value}"));
+            };
+            let key = &tail[..end_rel];
+            let replacement = variables
+                .get(key)
+                .ok_or_else(|| format!("неизвестный Minecraft placeholder ${{{key}}}"))?;
+            out.push_str(replacement);
+            index += 2 + end_rel + 1;
+            continue;
+        }
+        let ch = value[index..]
+            .chars()
+            .next()
+            .ok_or_else(|| "ошибка UTF-8 при подстановке аргумента".to_string())?;
+        out.push(ch);
+        index += ch.len_utf8();
+    }
+    Ok(out)
+}
+
+fn macos_uses_sdl3_game_entry(minecraft_26x: bool, main_class: &str) -> bool {
+    // ForgeBootstrap владеет ранним окном GLFW даже в версиях Minecraft с SDL 3.
+    minecraft_26x && !main_class.starts_with("net.minecraftforge.bootstrap.")
+}
+
+fn ensure_macos_first_thread(jvm_args: &mut Vec<String>, os: &str, uses_sdl3_client: bool) {
+    if os == "osx" && !uses_sdl3_client && !jvm_args.iter().any(|arg| arg == "-XstartOnFirstThread") {
+        jvm_args.push("-XstartOnFirstThread".to_string());
+    }
+}
+
+fn ensure_neoforge_bootstrap_ignores_base_client(jvm_args: &mut Vec<String>, client_jar: &str) -> Result<(), String> {
+    let file_name = client_jar
+        .rsplit('/')
+        .next()
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| "ModLauncher base client JAR path не содержит filename".to_string())?;
+
+    for arg in jvm_args.iter_mut() {
+        let Some(list) = arg.strip_prefix("-DignoreList=") else {
+            continue;
+        };
+        let already_ignored = list
+            .split(',')
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .any(|prefix| file_name.starts_with(prefix));
+        if !already_ignored {
+            if !list.is_empty() {
+                arg.push(',');
+            }
+            arg.push_str(file_name);
+        }
+        return Ok(());
+    }
+
+    jvm_args.push(format!("-DignoreList={file_name}"));
+    Ok(())
+}
+
+fn strip_classpath_pair(args: &mut Vec<String>) -> Result<(), String> {
+    let mut index = 0usize;
+    while index < args.len() {
+        if args[index] == "-cp" || args[index] == "-classpath" {
+            if index + 1 >= args.len() {
+                return Err("JVM arguments содержат classpath flag без значения".to_string());
+            }
+            args.drain(index..=index + 1);
+            continue;
+        }
+        index += 1;
+    }
+    Ok(())
+}
+
+fn split_legacy_arguments(input: &str) -> Result<Vec<String>, String> {
+    let mut out = Vec::new();
+    let mut current = String::new();
+    let mut chars = input.chars().peekable();
+    let mut quote: Option<char> = None;
+    while let Some(ch) = chars.next() {
+        match quote {
+            Some(marker) if ch == marker => quote = None,
+            Some(_) if ch == '\\' => {
+                if let Some(next) = chars.next() {
+                    current.push(next);
+                }
+            }
+            Some(_) => current.push(ch),
+            None if ch == '\'' || ch == '"' => quote = Some(ch),
+            None if ch.is_whitespace() => {
+                if !current.is_empty() {
+                    out.push(std::mem::take(&mut current));
+                }
+            }
+            None => current.push(ch),
+        }
+    }
+    if quote.is_some() {
+        return Err("minecraftArguments содержит незакрытую кавычку".to_string());
+    }
+    if !current.is_empty() {
+        out.push(current);
+    }
+    Ok(out)
+}
+
+fn maven_path(name: &str) -> Result<String, String> {
+    maven_path_internal(name, None)
+}
+
+fn maven_path_with_classifier(name: &str, classifier: &str) -> Result<String, String> {
+    maven_path_internal(name, Some(classifier))
+}
+
+fn maven_path_internal(name: &str, override_classifier: Option<&str>) -> Result<String, String> {
+    let mut coordinate_and_ext = name.splitn(2, '@');
+    let coordinate = coordinate_and_ext.next().unwrap_or_default();
+    let extension = coordinate_and_ext.next().unwrap_or("jar");
+    let parts = coordinate.split(':').collect::<Vec<_>>();
+    if parts.len() < 3 || parts[0].is_empty() || parts[1].is_empty() || parts[2].is_empty() {
+        return Err(format!("некорректная Maven coordinate: {name}"));
+    }
+    let classifier = override_classifier.or_else(|| parts.get(3).copied());
+    let group = parts[0].replace('.', "/");
+    let artifact = parts[1];
+    let version = parts[2];
+    let suffix = classifier.filter(|value| !value.is_empty()).map(|value| format!("-{value}")).unwrap_or_default();
+    normalize_relative_path(&format!("libraries/{group}/{artifact}/{version}/{artifact}-{version}{suffix}.{extension}"))
+}
+
+fn library_identity(name: &str) -> String {
+    let coordinate = name.split('@').next().unwrap_or(name);
+    let parts = coordinate.split(':').collect::<Vec<_>>();
+    if parts.len() >= 2 {
+        format!("{}:{}:{}", parts[0], parts[1], parts.get(3).copied().unwrap_or_default())
+    } else {
+        coordinate.to_string()
+    }
+}
+
+fn dedupe_preserving_order(items: &mut Vec<String>) {
+    let mut seen = HashSet::new();
+    items.retain(|item| seen.insert(item.clone()));
+}
+
+pub fn normalize_relative_path(path: &str) -> Result<String, String> {
+    let path = path.replace('\\', "/");
+    let candidate = Path::new(&path);
+    if candidate.is_absolute() || path.is_empty() {
+        return Err(format!("небезопасный compatibility path: {path}"));
+    }
+    let mut normalized = Vec::new();
+    for component in candidate.components() {
+        match component {
+            Component::Normal(value) => normalized.push(value.to_string_lossy().to_string()),
+            _ => return Err(format!("небезопасный compatibility path: {path}")),
+        }
+    }
+    Ok(normalized.join("/"))
+}
+
+fn safe_join(root: &Path, relative: &str) -> Result<PathBuf, String> {
+    let normalized = normalize_relative_path(relative)?;
+    let root_meta = std::fs::symlink_metadata(root)
+        .map_err(|err| format!("compatibility root {} недоступен: {err}", root.display()))?;
+    if root_meta.file_type().is_symlink() || !root_meta.is_dir() {
+        return Err(format!("compatibility root не должен быть symlink/файлом: {}", root.display()));
+    }
+    let mut current = root.to_path_buf();
+    for component in Path::new(&normalized).components() {
+        let Component::Normal(value) = component else {
+            return Err(format!("небезопасный compatibility path: {relative}"));
+        };
+        current.push(value);
+        match std::fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(format!("compatibility path содержит symlink: {}", current.display()));
+            }
+            Ok(_) => {}
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => break,
+            Err(err) => return Err(format!("compatibility path metadata {}: {err}", current.display())),
+        }
+    }
+    Ok(root.join(normalized))
+}
+
+fn safe_component(value: &str) -> Result<String, String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty()
+        || trimmed == "."
+        || trimmed == ".."
+        || trimmed.contains('/')
+        || trimmed.contains('\\')
+        || trimmed.chars().any(|ch| ch.is_control() || matches!(ch, ':' | '*' | '?' | '"' | '<' | '>' | '|'))
+    {
+        return Err(format!("небезопасный Minecraft version id: {value}"));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn normalized_current_os() -> &'static str {
+    match std::env::consts::OS {
+        "macos" => "osx",
+        "windows" => "windows",
+        "linux" => "linux",
+        other => other,
+    }
+}
+
+fn normalize_os_name(value: &str) -> String {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "mac" | "macos" | "darwin" | "osx" => "osx".to_string(),
+        "win" | "windows" => "windows".to_string(),
+        "linux" => "linux".to_string(),
+        other => other.to_string(),
+    }
+}
+
+fn os_name_matches_environment(value: &str, environment: &CompatibilityEnvironment) -> bool {
+    let normalized = value.trim().to_ascii_lowercase();
+    for (suffix, arch) in [
+        ("-arm64", "aarch64"),
+        ("-aarch64", "aarch64"),
+        ("-x64", "x86_64"),
+        ("-x86_64", "x86_64"),
+    ] {
+        if let Some(base) = normalized.strip_suffix(suffix) {
+            return normalize_os_name(base) == environment.os && environment.arch == arch;
+        }
+    }
+    normalize_os_name(&normalized) == environment.os
+}
+
+fn library_artifact_matches_environment(name: &str, environment: &CompatibilityEnvironment) -> bool {
+    let parts: Vec<&str> = name.trim().split(':').collect();
+    if parts.len() < 4 {
+        return true;
+    }
+    let classifier = parts[3].to_ascii_lowercase();
+    if !classifier.starts_with("natives-") {
+        return true;
+    }
+    let os_token = if environment.os == "osx" { "macos" } else { environment.os.as_str() };
+    let prefix = format!("natives-{os_token}");
+    let Some(suffix) = classifier.strip_prefix(&prefix) else {
+        return true;
+    };
+    match suffix {
+        "" => environment.arch == "x86_64",
+        "-arm64" | "-aarch64" => environment.arch == "aarch64",
+        "-x86" | "-i386" | "-i686" => environment.arch == "x86",
+        "-arm32" => environment.arch == "arm",
+        _ => true,
+    }
+}
+
+fn normalized_current_arch() -> &'static str {
+    std::env::consts::ARCH
+}
+
+fn native_arch_token(arch: &str) -> &'static str {
+    match arch {
+        "x86" | "arm" => "32",
+        _ => "64",
+    }
+}
+
+fn detect_os_version() -> String {
+    if let Ok(value) = std::env::var("LAUNCHER_OS_VERSION") {
+        if !value.trim().is_empty() {
+            return value.trim().to_string();
+        }
+    }
+    let output = match std::env::consts::OS {
+        "windows" => Command::new("cmd").args(["/C", "ver"]).output(),
+        "macos" => Command::new("sw_vers").arg("-productVersion").output(),
+        _ => Command::new("uname").arg("-r").output(),
+    };
+    let raw = output
+        .ok()
+        .filter(|value| value.status.success())
+        .map(|value| String::from_utf8_lossy(&value.stdout).trim().to_string())
+        .unwrap_or_default();
+
+    if std::env::consts::OS == "windows" {
+        // `cmd /C ver` возвращает локализованный префикс перед числовой версией ядра. Правила
+        // Mojang сравнивают Java `os.version`, поэтому отдавайте только сам номер версии.
+        if let Ok(version_re) = Regex::new(r"(?P<version>\d+(?:\.\d+){1,3})") {
+            if let Some(captures) = version_re.captures(&raw) {
+                if let Some(version) = captures.name("version") {
+                    return version.as_str().to_string();
+                }
+            }
+        }
+    }
+    raw
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs as stdfs;
+
+    fn temp_root(name: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!("runtime-compat-{name}-{}", std::process::id()));
+        let _ = stdfs::remove_dir_all(&root);
+        stdfs::create_dir_all(&root).expect("mkdir");
+        root
+    }
+
+    #[test]
+    fn macos_26x_forge_bootstrap_still_requires_first_thread() {
+        assert!(macos_uses_sdl3_game_entry(true, "net.minecraft.client.main.Main"));
+        assert!(macos_uses_sdl3_game_entry(true, "net.fabricmc.loader.impl.launch.knot.KnotClient"));
+        assert!(!macos_uses_sdl3_game_entry(true, "net.minecraftforge.bootstrap.ForgeBootstrap"));
+        assert!(!macos_uses_sdl3_game_entry(false, "net.minecraft.client.main.Main"));
+
+        let mut forge = vec!["-Xmx1024m".to_string()];
+        ensure_macos_first_thread(
+            &mut forge,
+            "osx",
+            macos_uses_sdl3_game_entry(true, "net.minecraftforge.bootstrap.ForgeBootstrap"),
+        );
+        assert_eq!(forge, ["-Xmx1024m", "-XstartOnFirstThread"]);
+    }
+
+    #[test]
+    fn macos_legacy_glfw_requires_first_thread_but_modern_sdl3_does_not() {
+        let mut legacy = vec!["-Xmx1024m".to_string()];
+        ensure_macos_first_thread(&mut legacy, "linux", false);
+        assert_eq!(legacy, ["-Xmx1024m"]);
+        ensure_macos_first_thread(&mut legacy, "osx", false);
+        ensure_macos_first_thread(&mut legacy, "osx", false);
+        assert_eq!(legacy, ["-Xmx1024m", "-XstartOnFirstThread"]);
+
+        let mut sdl3 = vec!["-Xmx1024m".to_string()];
+        ensure_macos_first_thread(&mut sdl3, "osx", true);
+        assert_eq!(sdl3, ["-Xmx1024m"]);
+        // Сохраняйте параметр издателя вместо незаметного переопределения.
+        let mut upstream = vec!["-XstartOnFirstThread".to_string()];
+        ensure_macos_first_thread(&mut upstream, "osx", true);
+        assert_eq!(upstream, ["-XstartOnFirstThread"]);
+    }
+
+    #[tokio::test]
+    async fn resolves_inheritance_rules_classpath_and_placeholders() {
+        let root = temp_root("inheritance");
+        stdfs::create_dir_all(root.join("versions/1.21.1")).unwrap();
+        stdfs::create_dir_all(root.join("versions/custom")).unwrap();
+        stdfs::write(
+            root.join("versions/1.21.1/1.21.1.json"),
+            r#"{
+              "id":"1.21.1","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"17",
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
+              "libraries":[
+                {"name":"com.example:base:1.0","downloads":{"artifact":{"path":"com/example/base/1.0/base-1.0.jar","sha1":"aa","size":1,"url":"https://example/base.jar"}}},
+                {"name":"com.example:windows-only:1.0","rules":[{"action":"allow","os":{"name":"windows"}}],"downloads":{"artifact":{"path":"com/example/windows-only/1.0/windows-only-1.0.jar"}}}
+              ],
+              "arguments":{"jvm":["-Djava.library.path=${natives_directory}","-cp","${classpath}"],"game":["--username","${auth_player_name}","--assetsDir","${assets_root}"]},
+              "javaVersion":{"majorVersion":21}
+            }"#,
+        ).unwrap();
+        stdfs::write(
+            root.join("versions/custom/custom.json"),
+            r#"{
+              "id":"custom","inheritsFrom":"1.21.1","mainClass":"com.example.CustomMain",
+              "libraries":[{"name":"com.example:loader:2.0","downloads":{"artifact":{"path":"com/example/loader/2.0/loader-2.0.jar"}}}],
+              "arguments":{"game":["--version","${version_name}"]}
+            }"#,
+        ).unwrap();
+
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/custom").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "custom", None, &ctx).await.expect("resolve");
+        assert_eq!(result.main_class, "com.example.CustomMain");
+        assert_eq!(result.java_major_version, Some(21));
+        assert_eq!(result.client_jar, "versions/1.21.1/1.21.1.jar");
+        assert!(result.classpath.iter().any(|value| value.ends_with("base-1.0.jar")));
+        assert!(result.classpath.iter().any(|value| value.ends_with("loader-2.0.jar")));
+        assert_eq!(result.classpath.last().unwrap(), "versions/1.21.1/1.21.1.jar");
+        assert!(!result.jvm_args.iter().any(|value| value == "-cp"));
+        assert!(result.game_args.windows(2).any(|pair| pair[0] == "--username" && pair[1] == "Player"));
+        assert_eq!(result.inheritance_chain, vec!["1.21.1", "custom"]);
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn modern_minecraft_without_native_jvm_property_uses_verified_platform_natives() {
+        // Minecraft 26.x использует собственную загрузку LWJGL и больше не
+        // гарантирует прежний аргумент -Djava.library.path в метаданных версии.
+        let root = temp_root("modern-native-jvm-args");
+        stdfs::create_dir_all(root.join("versions/26.3")).unwrap();
+        stdfs::write(
+            root.join("versions/26.3/26.3.json"),
+            r#"{
+              "id":"26.3","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"34",
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
+              "libraries":[],
+              "arguments":{"jvm":["-Dminecraft.launcher.brand=${launcher_name}","-cp","${classpath}"],
+                           "game":["--username","${auth_player_name}"]},
+              "javaVersion":{"majorVersion":25}
+            }"#,
+        ).unwrap();
+        let native_path = root.join("natives/linux/aarch64");
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(),
+            access_token: "offline".into(), user_type: "legacy".into(), launcher_name: "Launcher".into(),
+            launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(),
+            natives_directory: native_path.to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "26.3", None, &ctx).await.expect("resolve modern runtime");
+        let java_path = format!("-Djava.library.path={}", native_path.display());
+        let lwjgl_path = format!("-Dorg.lwjgl.librarypath={}", native_path.display());
+        assert_eq!(result.jvm_args.iter().filter(|arg| arg.as_str() == java_path.as_str()).count(), 1);
+        assert_eq!(result.jvm_args.iter().filter(|arg| arg.as_str() == lwjgl_path.as_str()).count(), 1);
+        assert_eq!(result.jvm_args.iter().filter(|arg| arg.starts_with("-Djava.library.path=")).count(), 1);
+        assert!(!result.jvm_args.iter().any(|arg| arg == "-cp"));
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn neoforge_bootstrap_ignores_base_client_jar_module() {
+        let root = temp_root("neoforge-module-isolation");
+        stdfs::create_dir_all(root.join("versions/1.21.1")).unwrap();
+        stdfs::create_dir_all(root.join("versions/neoforge-21.1.252")).unwrap();
+        stdfs::write(
+            root.join("versions/1.21.1/1.21.1.json"),
+            r#"{
+              "id":"1.21.1","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"17",
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
+              "arguments":{"jvm":["-Djava.library.path=${natives_directory}","-cp","${classpath}"],"game":["--username","${auth_player_name}"]},
+              "javaVersion":{"majorVersion":21}
+            }"#,
+        ).unwrap();
+        stdfs::write(
+            root.join("versions/neoforge-21.1.252/neoforge-21.1.252.json"),
+            r#"{
+              "id":"neoforge-21.1.252","inheritsFrom":"1.21.1","mainClass":"cpw.mods.bootstraplauncher.BootstrapLauncher",
+              "arguments":{
+                "jvm":["-DignoreList=client-extra,neoforge-21.1.252.jar"],
+                "game":["--fml.neoForgeVersion","21.1.252","--launchTarget","forgeclient"]
+              }
+            }"#,
+        ).unwrap();
+
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/neoforge").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "neoforge-21.1.252", None, &ctx).await.expect("resolve NeoForge");
+        assert!(result.classpath.iter().any(|value| value == "versions/1.21.1/1.21.1.jar"));
+        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("NeoForge ignoreList");
+        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.21.1.jar".starts_with(value.trim()) && !value.trim().is_empty()), "base client must remain legacy classpath, not a BootstrapLauncher module: {ignore}");
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn modern_forge_bootstrap_ignores_base_minecraft_module() {
+        let root = temp_root("forge-module-isolation");
+        stdfs::create_dir_all(root.join("versions/1.19.4")).unwrap();
+        stdfs::create_dir_all(root.join("versions/1.19.4-forge-45.4.5")).unwrap();
+        stdfs::write(
+            root.join("versions/1.19.4/1.19.4.json"),
+            r#"{
+              "id":"1.19.4","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"3",
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
+              "arguments":{"jvm":["-Djava.library.path=${natives_directory}","-cp","${classpath}"],"game":["--username","${auth_player_name}"]},
+              "javaVersion":{"majorVersion":17}
+            }"#,
+        ).unwrap();
+        stdfs::write(
+            root.join("versions/1.19.4-forge-45.4.5/1.19.4-forge-45.4.5.json"),
+            r#"{
+              "id":"1.19.4-forge-45.4.5","inheritsFrom":"1.19.4","mainClass":"cpw.mods.bootstraplauncher.BootstrapLauncher",
+              "arguments":{"game":["--fml.forgeVersion","45.4.5","--launchTarget","forgeclient"]}
+            }"#,
+        ).unwrap();
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/forge").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "1.19.4-forge-45.4.5", None, &ctx).await.expect("resolve Forge");
+        assert!(result.classpath.iter().any(|value| value == "versions/1.19.4/1.19.4.jar"));
+        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("Forge ignoreList");
+        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|value| "1.19.4.jar".starts_with(value.trim()) && !value.trim().is_empty()), "base vanilla client must not become an additional Forge module: {ignore}");
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn forge_1202_bootstrap_ignores_base_minecraft_module() {
+        let root = temp_root("forge-1202-module-isolation");
+        stdfs::create_dir_all(root.join("versions/1.20.2")).unwrap();
+        stdfs::create_dir_all(root.join("versions/1.20.2-forge-48.1.0")).unwrap();
+        stdfs::write(
+            root.join("versions/1.20.2/1.20.2.json"),
+            r#"{
+              "id":"1.20.2","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"5",
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
+              "arguments":{"jvm":["-Djava.library.path=${natives_directory}","-cp","${classpath}"],"game":["--username","${auth_player_name}"]},
+              "javaVersion":{"majorVersion":17}
+            }"#,
+        ).unwrap();
+        stdfs::write(
+            root.join("versions/1.20.2-forge-48.1.0/1.20.2-forge-48.1.0.json"),
+            r#"{
+              "id":"1.20.2-forge-48.1.0","inheritsFrom":"1.20.2","mainClass":"net.minecraftforge.bootstrap.BootstrapLauncher",
+              "arguments":{"game":["--fml.forgeVersion","48.1.0","--launchTarget","forgeclient"]}
+            }"#,
+        ).unwrap();
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/forge").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "1.20.2-forge-48.1.0", None, &ctx).await.expect("resolve Forge 1.20.2");
+        assert_eq!(result.main_class, "net.minecraftforge.bootstrap.BootstrapLauncher");
+        let ignore = result.jvm_args.iter().find(|value| value.starts_with("-DignoreList=")).expect("Forge 1.20.2 ignoreList");
+        assert!(ignore.split('=').nth(1).unwrap().split(',').any(|prefix| "1.20.2.jar".starts_with(prefix.trim()) && !prefix.trim().is_empty()), "base Minecraft JAR must not be added as a duplicate module: {ignore}");
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn os_specific_lwjgl_variants_preserve_the_active_mojang_library() {
+        // Mojang 1.6.4 содержит и lwjgl:2.9.0 для Linux/Windows, и более позднюю
+        // ночную сборку 2.9.1 только для macOS. Неактивная запись не должна
+        // перекрывать активную лишь потому, что группа и артефакт Maven совпадают.
+        let metadata: VersionMetadata = serde_json::from_str(r#"{
+            "id":"1.6.4",
+            "libraries":[
+                {"name":"org.lwjgl.lwjgl:lwjgl:2.9.0",
+                 "rules":[{"action":"allow"}, {"action":"disallow", "os":{"name":"osx","version":"^10\\.5\\.\\d$"}}],
+                 "downloads":{"artifact":{"path":"org/lwjgl/lwjgl/lwjgl/2.9.0/lwjgl-2.9.0.jar"}}},
+                {"name":"org.lwjgl.lwjgl:lwjgl:2.9.1-nightly",
+                 "rules":[{"action":"allow", "os":{"name":"osx","version":"^10\\.5\\.\\d$"}}],
+                 "downloads":{"artifact":{"path":"org/lwjgl/lwjgl/lwjgl/2.9.1-nightly/lwjgl-2.9.1-nightly.jar"}}}
+            ]
+        }"#).unwrap();
+        let layers = vec![("1.6.4".to_string(), "versions/1.6.4/1.6.4.json".to_string(), metadata)];
+        let linux = CompatibilityEnvironment {
+            os: "linux".into(), arch: "x86_64".into(), os_version: "6.17".into(), features: HashMap::new(),
+        };
+        let mac = CompatibilityEnvironment {
+            os: "osx".into(), arch: "x86_64".into(), os_version: "10.5.8".into(), features: HashMap::new(),
+        };
+        let l = merge_layers(&layers, &linux).unwrap();
+        let m = merge_layers(&layers, &mac).unwrap();
+        assert_eq!(l.libraries.len(), 1);
+        assert_eq!(m.libraries.len(), 1);
+        assert_eq!(l.libraries[0].name, "org.lwjgl.lwjgl:lwjgl:2.9.0");
+        assert_eq!(m.libraries[0].name, "org.lwjgl.lwjgl:lwjgl:2.9.1-nightly");
+        let (_, _, cp) = resolve_libraries(&l.libraries, &linux).unwrap();
+        assert_eq!(cp.len(), 1);
+        assert_eq!(cp[0], "libraries/org/lwjgl/lwjgl/lwjgl/2.9.0/lwjgl-2.9.0.jar");
+    }
+
+    #[tokio::test]
+    async fn legacy_metadata_injects_launcher_jvm_arguments() {
+        let root = temp_root("legacy-jvm");
+        stdfs::create_dir_all(root.join("versions/1.7.10")).unwrap();
+        stdfs::write(
+            root.join("versions/1.7.10/1.7.10.json"),
+            r#"{
+              "id":"1.7.10","type":"release","mainClass":"net.minecraft.client.main.Main","assets":"1.7.10",
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example/client.jar"}},
+              "libraries":[
+                {"name":"org.lwjgl.lwjgl:lwjgl:2.9.1","downloads":{"artifact":{"path":"org/lwjgl/lwjgl/lwjgl/2.9.1/lwjgl-2.9.1.jar","sha1":"aa","size":1,"url":"https://example/lwjgl.jar"}}},
+                {"name":"org.lwjgl.lwjgl:lwjgl-platform:2.9.1","downloads":{"classifiers":{"natives-linux":{"path":"org/lwjgl/lwjgl/lwjgl-platform/2.9.1/lwjgl-platform-2.9.1-natives-linux.jar","sha1":"bb","size":1,"url":"https://example/native-linux.jar"},"natives-windows":{"path":"org/lwjgl/lwjgl/lwjgl-platform/2.9.1/lwjgl-platform-2.9.1-natives-windows.jar","sha1":"cc","size":1,"url":"https://example/native-windows.jar"},"natives-osx":{"path":"org/lwjgl/lwjgl/lwjgl-platform/2.9.1/lwjgl-platform-2.9.1-natives-osx.jar","sha1":"dd","size":1,"url":"https://example/native-osx.jar"}}},"natives":{"linux":"natives-linux","windows":"natives-windows","osx":"natives-osx"},"extract":{"exclude":["META-INF/"]}}
+              ],
+              "minecraftArguments":"--username ${auth_player_name} --version ${version_name} --gameDir ${game_directory} --assetsDir ${assets_root} --assetIndex ${assets_index_name} --uuid ${auth_uuid} --accessToken ${auth_access_token} --userProperties ${user_properties} --userType ${user_type}"
+            }"#,
+        ).unwrap();
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline".into(), user_type: "legacy".into(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/linux").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "1.7.10", None, &ctx).await.expect("resolve legacy");
+        assert!(result.jvm_args.iter().any(|value| value.starts_with("-Djava.library.path=")));
+        assert!(result.jvm_args.iter().any(|value| value.starts_with("-Dorg.lwjgl.librarypath=")));
+        assert!(result.jvm_args.iter().any(|value| value == "-Dminecraft.launcher.brand=Launcher"));
+        assert!(!result.jvm_args.iter().any(|value| value == "-cp"));
+        assert_eq!(result.java_major_version, Some(8));
+        assert!(result.game_args.windows(2).any(|pair| pair[0] == "--username" && pair[1] == "Player"));
+        assert!(result.game_args.windows(2).any(|pair| pair[0] == "--userProperties" && pair[1] == "{}"));
+        assert!(result.classpath.iter().any(|value| value.ends_with("lwjgl-2.9.1.jar")));
+        assert!(!result.classpath.iter().any(|value| value.ends_with("lwjgl-platform-2.9.1.jar")));
+        assert_eq!(result.natives.len(), 1);
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn pre16_metadata_resolves_legacy_session_assets_and_java8() {
+        let root = temp_root("pre16-legacy-runtime");
+        stdfs::create_dir_all(root.join("versions/1.5.2")).unwrap();
+        stdfs::create_dir_all(root.join("assets/virtual/pre-1.6")).unwrap();
+        stdfs::write(
+            root.join("versions/1.5.2/1.5.2.json"),
+            r#"{
+              "id":"1.5.2","type":"release","mainClass":"net.minecraft.launchwrapper.Launch","assets":"pre-1.6",
+              "assetIndex":{"id":"pre-1.6","sha1":"asset","size":1,"url":"https://example.invalid/pre-1.6.json"},
+              "downloads":{"client":{"sha1":"abc","size":10,"url":"https://example.invalid/client.jar"}},
+              "libraries":[{"name":"net.minecraft:launchwrapper:1.5","downloads":{"artifact":{"path":"net/minecraft/launchwrapper/1.5/launchwrapper-1.5.jar","sha1":"aa","size":1,"url":"https://example.invalid/launchwrapper.jar"}}}],
+              "minecraftArguments":"${auth_player_name} ${auth_session} --gameDir ${game_directory} --assetsDir ${game_assets}"
+            }"#,
+        ).unwrap();
+        let ctx = CompatibilityContext {
+            username: "LegacyPlayer".into(), uuid: "00000000-0000-0000-0000-000000000000".into(), access_token: "offline-session".into(), user_type: "legacy".into(),
+            launcher_name: "Launcher".into(), launcher_version: env!("CARGO_PKG_VERSION").into(), game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(), natives_directory: root.join("natives/linux").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let result = resolve_compatibility(&root, "1.5.2", None, &ctx).await.expect("resolve pre-1.6");
+        assert_eq!(result.java_major_version, Some(8));
+        assert_eq!(result.main_class, "net.minecraft.launchwrapper.Launch");
+        assert!(result.game_args.windows(2).any(|pair| pair[0] == "LegacyPlayer" && pair[1] == "token:offline-session:00000000-0000-0000-0000-000000000000"));
+        let expected_assets = root.join("assets/virtual/pre-1.6").to_string_lossy().to_string();
+        assert!(result.game_args.windows(2).any(|pair| pair[0] == "--assetsDir" && pair[1] == expected_assets));
+        assert!(result.jvm_args.iter().any(|value| value.starts_with("-Djava.library.path=")));
+        assert!(result.jvm_args.iter().any(|value| value.starts_with("-Dorg.lwjgl.librarypath=")));
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn forge_legacy_argument_inheritance_preserves_argv_boundaries() {
+        let parent = split_legacy_arguments(
+            "--username ${auth_player_name} --gameDir \"${game_directory}\" --version ${version_name} --accessToken ${auth_access_token}",
+        ).unwrap();
+        let child = split_legacy_arguments(
+            "--username ForgePlayer --tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker",
+        ).unwrap();
+        let merged = merge_legacy_argument_tokens(&parent, &child);
+        assert_eq!(merged.iter().filter(|v| v.as_str() == "--username").count(), 1);
+        assert!(merged.windows(2).any(|w| w[0] == "--username" && w[1] == "ForgePlayer"));
+        assert!(merged.windows(2).any(|w| w[0] == "--gameDir" && w[1] == "${game_directory}"));
+        assert!(merged.windows(2).any(|w| w[0] == "--accessToken" && w[1] == "${auth_access_token}"));
+        assert!(merged.windows(2).any(|w| w[0] == "--tweakClass" && w[1] == "net.minecraftforge.fml.common.launcher.FMLTweaker"));
+        let already_complete = merge_legacy_argument_tokens(&parent, &parent);
+        assert_eq!(already_complete, parent);
+    }
+
+    #[tokio::test]
+    async fn legacy_forge_child_overrides_parent_libs_and_retains_base_launch_options() {
+        let root = temp_root("legacy-forge-argv-inheritance");
+        stdfs::create_dir_all(root.join("versions/1.12.2")).unwrap();
+        stdfs::create_dir_all(root.join("versions/1.12.2-forge")).unwrap();
+        stdfs::write(root.join("versions/1.12.2/1.12.2.json"), r#"{
+          "id":"1.12.2", "mainClass":"net.minecraft.client.main.Main", "type":"release",
+          "downloads":{"client":{"url":"https://example.test/client.jar","sha1":"abc","size":2}},
+          "minecraftArguments":"--username ${auth_player_name} --gameDir ${game_directory} --accessToken ${auth_access_token} --version ${version_name}",
+          "libraries":[{"name":"example:core:1.0","downloads":{"artifact":{"path":"example/core/1.0/core-1.0.jar"}}}]
+        }"#).unwrap();
+        stdfs::write(root.join("versions/1.12.2-forge/1.12.2-forge.json"), r#"{
+          "id":"1.12.2-forge", "inheritsFrom":"1.12.2", "mainClass":"net.minecraft.launchwrapper.Launch",
+          "minecraftArguments":"--username ForgeUser --tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker",
+          "libraries":[{"name":"example:core:2.0","downloads":{"artifact":{"path":"example/core/2.0/core-2.0.jar"}}},
+                       {"name":"net.minecraftforge:forge:1.0","downloads":{"artifact":{"path":"net/minecraftforge/forge/1.0/forge-1.0.jar"}}}]
+        }"#).unwrap();
+        let ctx = CompatibilityContext {
+            username: "Player".into(), uuid: "uuid".into(), access_token: "offline".into(), user_type: "legacy".into(),
+            launcher_name: "Launcher".into(), launcher_version: "0.41.6".into(),
+            game_directory: root.to_string_lossy().to_string(),
+            assets_directory: root.join("assets").to_string_lossy().to_string(),
+            natives_directory: root.join("natives").to_string_lossy().to_string(), features: HashMap::new(),
+        };
+        let resolved = resolve_compatibility(&root, "1.12.2-forge", None, &ctx).await.unwrap();
+        assert_eq!(resolved.main_class, "net.minecraft.launchwrapper.Launch");
+        assert!(resolved.game_args.windows(2).any(|w| w[0] == "--gameDir" && w[1] == ctx.game_directory));
+        assert!(resolved.game_args.windows(2).any(|w| w[0] == "--username" && w[1] == "ForgeUser"));
+        assert_eq!(resolved.game_args.iter().filter(|a| a.as_str() == "--username").count(), 1);
+        assert!(resolved.classpath[0].ends_with("core-2.0.jar"));
+        assert!(!resolved.classpath.iter().any(|p| p.ends_with("core-1.0.jar")));
+        let _ = stdfs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn legacy_auth_session_uses_session_id_format_and_is_idempotent() {
+        assert_eq!(legacy_auth_session("access", "profile"), "token:access:profile");
+        assert_eq!(legacy_auth_session("token:access:profile", "ignored"), "token:access:profile");
+        assert_eq!(legacy_auth_session("", "profile"), "-");
+    }
+
+    #[test]
+    fn java8_fallback_covers_first_release_through_1165() {
+        for version in ["1.0", "1.1", "1.2.5", "1.3.2", "1.4.7", "1.5.2", "1.6.4", "1.7.10", "1.16.5"] {
+            assert!(is_legacy_vanilla_java8_release(version), "{version}");
+        }
+        assert!(!is_legacy_vanilla_java8_release("1.17"));
+    }
+
+    #[test]
+    fn legacy_java8_policy_rejects_tampered_java_metadata() {
+        let mut merged = MergedVersion {
+            id: "1.16.4".to_string(),
+            ..MergedVersion::default()
+        };
+        assert_eq!(resolved_java_major_version(&merged).unwrap(), Some(8));
+        merged.java_version = Some(JavaVersion { major_version: 8 });
+        assert_eq!(resolved_java_major_version(&merged).unwrap(), Some(8));
+        merged.java_version = Some(JavaVersion { major_version: 17 });
+        assert!(resolved_java_major_version(&merged).is_err());
+    }
+
+    #[test]
+    fn exact_java_policy_covers_0170v2_transition_grid() {
+        assert_eq!(expected_java_major_for_vanilla_0170v2("1.17"), Some(16));
+        for version in ["1.18", "1.18.1", "1.19", "1.19.1", "1.19.2", "1.19.3", "1.20", "1.20.3"] {
+            assert_eq!(expected_java_major_for_vanilla_0170v2(version), Some(17), "{version}");
+        }
+        for version in ["1.17.1", "1.18.2", "1.19.4", "1.20.1", "1.20.2", "1.20.4", "1.20.5"] {
+            assert_eq!(expected_java_major_for_vanilla_0170v2(version), None, "{version}");
+        }
+    }
+
+    #[test]
+    fn exact_java_policy_0170v2_rejects_missing_or_wrong_metadata() {
+        let mut merged = MergedVersion { id: "1.17".into(), ..MergedVersion::default() };
+        assert!(resolved_java_major_version(&merged).is_err());
+        merged.java_version = Some(JavaVersion { major_version: 17 });
+        assert!(resolved_java_major_version(&merged).is_err());
+        merged.java_version = Some(JavaVersion { major_version: 16 });
+        assert_eq!(resolved_java_major_version(&merged).unwrap(), Some(16));
+        merged.id = "1.20.3".into();
+        merged.java_version = Some(JavaVersion { major_version: 16 });
+        assert!(resolved_java_major_version(&merged).is_err());
+        merged.java_version = Some(JavaVersion { major_version: 17 });
+        assert_eq!(resolved_java_major_version(&merged).unwrap(), Some(17));
+    }
+
+    #[test]
+    fn exact_java_policy_covers_0170v3_java21_and_java25_grid() {
+        assert_eq!(expected_java_major_for_vanilla_0170v3("1.21.11"), Some(21));
+        assert_eq!(expected_java_major_for_vanilla_0170v3("26.2"), Some(25));
+        for version in ["1.21.10", "26.1.2", "26.3"] {
+            assert_eq!(expected_java_major_for_vanilla_0170v3(version), None, "{version}");
+        }
+    }
+
+    #[test]
+    fn exact_java_policy_0170v3_rejects_missing_or_wrong_metadata() {
+        let mut merged = MergedVersion { id: "1.21.11".into(), ..MergedVersion::default() };
+        assert!(resolved_java_major_version(&merged).is_err());
+        merged.java_version = Some(JavaVersion { major_version: 17 });
+        assert!(resolved_java_major_version(&merged).is_err());
+        merged.java_version = Some(JavaVersion { major_version: 21 });
+        assert_eq!(resolved_java_major_version(&merged).unwrap(), Some(21));
+
+        merged.id = "26.2".into();
+        merged.java_version = None;
+        assert!(resolved_java_major_version(&merged).is_err());
+        merged.java_version = Some(JavaVersion { major_version: 21 });
+        assert!(resolved_java_major_version(&merged).is_err());
+        merged.java_version = Some(JavaVersion { major_version: 25 });
+        assert_eq!(resolved_java_major_version(&merged).unwrap(), Some(25));
+    }
+
+    #[test]
+    fn exact_java_policy_covers_1171_through_1204() {
+        assert_eq!(expected_java_major_for_vanilla_0166("1.17.1"), Some(16));
+        for version in [
+            "1.18", "1.18.2", "1.19.4", "1.20", "1.20.1", "1.20.2", "1.20.4",
+        ] {
+            assert_eq!(
+                expected_java_major_for_vanilla_0166(version),
+                Some(17),
+                "{version}"
+            );
+        }
+        assert_eq!(expected_java_major_for_vanilla_0166("1.16.5"), None);
+        assert_eq!(expected_java_major_for_vanilla_0166("1.17"), None);
+        assert_eq!(expected_java_major_for_vanilla_0166("1.20.5"), None);
+        assert_eq!(expected_java_major_for_vanilla_0166("1.20.6"), None);
+    }
+
+    #[test]
+    fn exact_java21_policy_covers_1205_through_12110() {
+        for version in [
+            "1.20.5", "1.20.6", "1.21", "1.21.1", "1.21.2", "1.21.3", "1.21.4",
+            "1.21.5", "1.21.6", "1.21.7", "1.21.8", "1.21.9", "1.21.10",
+        ] {
+            assert_eq!(expected_java_major_for_vanilla_0167(version), Some(21), "{version}");
+        }
+        for version in ["1.20.4", "1.21.11", "1.22"] {
+            assert_eq!(expected_java_major_for_vanilla_0167(version), None, "{version}");
+        }
+    }
+
+    #[test]
+    fn exact_java25_policy_covers_261x_and_263() {
+        for version in ["26.1", "26.1.1", "26.1.2", "26.3"] {
+            assert_eq!(expected_java_major_for_vanilla_0168(version), Some(25), "{version}");
+        }
+        for version in ["1.21.10", "26.2", "26.3.1", "26.4"] {
+            assert_eq!(expected_java_major_for_vanilla_0168(version), None, "{version}");
+        }
+    }
+
+    #[test]
+    fn exact_java_policy_rejects_missing_or_wrong_modern_metadata() {
+        let mut modern = MergedVersion {
+            id: "1.17.1".into(),
+            ..MergedVersion::default()
+        };
+        assert!(resolved_java_major_version(&modern).is_err());
+        modern.java_version = Some(JavaVersion { major_version: 17 });
+        assert!(resolved_java_major_version(&modern).is_err());
+        modern.java_version = Some(JavaVersion { major_version: 16 });
+        assert_eq!(resolved_java_major_version(&modern).unwrap(), Some(16));
+
+        modern.id = "1.20.4".into();
+        modern.java_version = Some(JavaVersion { major_version: 17 });
+        assert_eq!(resolved_java_major_version(&modern).unwrap(), Some(17));
+
+        modern.id = "1.21.10".into();
+        modern.java_version = None;
+        assert!(resolved_java_major_version(&modern).is_err());
+        modern.java_version = Some(JavaVersion { major_version: 17 });
+        assert!(resolved_java_major_version(&modern).is_err());
+        modern.java_version = Some(JavaVersion { major_version: 21 });
+        assert_eq!(resolved_java_major_version(&modern).unwrap(), Some(21));
+
+        modern.id = "26.3".into();
+        modern.java_version = None;
+        assert!(resolved_java_major_version(&modern).is_err());
+        modern.java_version = Some(JavaVersion { major_version: 21 });
+        assert!(resolved_java_major_version(&modern).is_err());
+        modern.java_version = Some(JavaVersion { major_version: 25 });
+        assert_eq!(resolved_java_major_version(&modern).unwrap(), Some(25));
+    }
+
+    #[test]
+    fn rules_are_last_matching_rule_wins_and_feature_aware() {
+        let env = CompatibilityEnvironment { os: "windows".into(), arch: "x86_64".into(), os_version: "10.0".into(), features: HashMap::from([("is_demo_user".into(), false)]) };
+        let rules: Vec<Rule> = serde_json::from_str(r#"[
+          {"action":"allow"},
+          {"action":"disallow","os":{"name":"linux"}},
+          {"action":"allow","features":{"is_demo_user":false}}
+        ]"#).unwrap();
+        assert!(rules_allow(&rules, &env).unwrap());
+    }
+
+    #[test]
+    fn legacy_forge_native_classifier_without_downloads_is_resolved_from_maven_coordinate() {
+        let env = CompatibilityEnvironment {
+            os: "linux".into(),
+            arch: "x86_64".into(),
+            os_version: String::new(),
+            features: HashMap::new(),
+        };
+        let library: Library = serde_json::from_str(r#"{
+          "name":"org.lwjgl.lwjgl:lwjgl-platform:2.9.1-nightly-20130708-debug3",
+          "url":"https://libraries.minecraft.net/",
+          "natives":{"linux":"natives-linux","windows":"natives-windows","osx":"natives-osx"},
+          "extract":{"exclude":["META-INF/"]}
+        }"#).unwrap();
+        let (_, natives, _) = resolve_libraries(&[library], &env).unwrap();
+        assert_eq!(natives.len(), 1);
+        assert_eq!(natives[0].classifier, "natives-linux");
+        assert_eq!(natives[0].path, "libraries/org/lwjgl/lwjgl/lwjgl-platform/2.9.1-nightly-20130708-debug3/lwjgl-platform-2.9.1-nightly-20130708-debug3-natives-linux.jar");
+        assert!(natives[0].sha1.is_empty());
+    }
+
+    #[test]
+    fn cross_platform_native_classifier_is_architecture_bound() {
+        let windows_arm = CompatibilityEnvironment {
+            os: "windows".into(),
+            arch: "aarch64".into(),
+            os_version: "11".into(),
+            features: HashMap::new(),
+        };
+        let windows_x64 = CompatibilityEnvironment {
+            os: "windows".into(),
+            arch: "x86_64".into(),
+            os_version: "11".into(),
+            features: HashMap::new(),
+        };
+        assert!(library_artifact_matches_environment(
+            "org.lwjgl:lwjgl-glfw:3.4.1:natives-windows-arm64",
+            &windows_arm
+        ));
+        assert!(!library_artifact_matches_environment(
+            "org.lwjgl:lwjgl-glfw:3.4.1:natives-windows-arm64",
+            &windows_x64
+        ));
+        assert!(library_artifact_matches_environment(
+            "org.lwjgl:lwjgl-glfw:3.4.1:natives-windows",
+            &windows_x64
+        ));
+        assert!(!library_artifact_matches_environment(
+            "org.lwjgl:lwjgl-glfw:3.4.1:natives-windows",
+            &windows_arm
+        ));
+        assert!(library_artifact_matches_environment(
+            "com.example:ordinary:1.0.0",
+            &windows_arm
+        ));
+    }
+
+    #[test]
+    fn composite_mojang_os_names_match_only_the_requested_architecture() {
+        let arm = CompatibilityEnvironment {
+            os: "windows".into(),
+            arch: "aarch64".into(),
+            os_version: "11".into(),
+            features: HashMap::new(),
+        };
+        let x64 = CompatibilityEnvironment {
+            os: "windows".into(),
+            arch: "x86_64".into(),
+            os_version: "11".into(),
+            features: HashMap::new(),
+        };
+        assert!(os_name_matches_environment("windows-arm64", &arm));
+        assert!(!os_name_matches_environment("windows-arm64", &x64));
+        assert!(os_name_matches_environment("windows-x64", &x64));
+        assert!(!os_name_matches_environment("windows-x64", &arm));
+    }
+
+    #[test]
+    fn rejects_traversal_and_bad_maven_coordinates() {
+        assert!(normalize_relative_path("../evil.jar").is_err());
+        assert!(normalize_relative_path("/absolute").is_err());
+        assert!(maven_path("broken").is_err());
+        assert_eq!(maven_path("org.example:demo:1.2.3").unwrap(), "libraries/org/example/demo/1.2.3/demo-1.2.3.jar");
+    }
+
+    #[test]
+    fn legacy_argument_split_preserves_quoted_values() {
+        let args = split_legacy_arguments(r#"--username Player --title "Hello world" --token 'abc def'"#).unwrap();
+        assert_eq!(args, vec!["--username", "Player", "--title", "Hello world", "--token", "abc def"]);
+    }
+}
+
+#[cfg(test)]
+mod windows_lwjgl_extract_tests {
+    use super::{pin_windows_lwjgl_extract_path, LWJGL_EXTRACT_PROPERTY};
+    use std::path::Path;
+
+    #[test]
+    fn windows_paths_are_arch_scoped_and_replace_untrusted_overrides() {
+        let mut args = vec![
+            "-Xmx1024m".to_string(),
+            format!("{LWJGL_EXTRACT_PROPERTY}C:\\Users\\Public"),
+        ];
+        pin_windows_lwjgl_extract_path(&mut args, Path::new("C:/client"), "windows", "aarch64");
+        assert_eq!(args.len(), 2);
+        assert_eq!(args[0], "-Xmx1024m");
+        assert!(args[1].starts_with(LWJGL_EXTRACT_PROPERTY));
+        assert!(args[1].contains(".launcher"));
+        assert!(args[1].contains("lwjgl-extract"));
+        assert!(args[1].contains("aarch64"));
+        assert!(!args[1].contains("Public"));
+    }
+
+    #[test]
+    fn non_windows_platform_does_not_modify_args() {
+        let mut args = vec!["-Xmx2048m".to_string()];
+        pin_windows_lwjgl_extract_path(&mut args, Path::new("/client"), "linux", "x86_64");
+        assert_eq!(args, vec!["-Xmx2048m"]);
+    }
+}

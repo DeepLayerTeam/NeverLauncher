@@ -39,10 +39,10 @@ class MinimalBackupTests(unittest.TestCase):
         for key, path in backup.RELOCATED.items():
             data[key] = str(self.root / path)
         data.update(
-            NEVERLAUNCHER_DEPLOYMENT_MODE="single-node",
-            NEVERLAUNCHER_REPOSITORY_DRIVER="sqlite",
-            NEVERLAUNCHER_STORAGE_DRIVER="local",
-            NEVERLAUNCHER_AUTH_TOKEN_SECRET="server-secret-unchanged",
+            LAUNCHER_DEPLOYMENT_MODE="single-node",
+            LAUNCHER_REPOSITORY_DRIVER="sqlite",
+            LAUNCHER_STORAGE_DRIVER="local",
+            LAUNCHER_AUTH_TOKEN_SECRET="server-secret-unchanged",
         )
         config = self.root / "config/backend.env"
         config.write_text("".join(f"{k}={v}\n" for k, v in sorted(data.items())))
@@ -65,7 +65,7 @@ class MinimalBackupTests(unittest.TestCase):
         dest = self.base / "restored"
         backup.restore(bundle, dest)
         self.assertEqual(
-            backup.read_install(dest)["NEVERLAUNCHER_STORAGE_LOCAL_PATH"],
+            backup.read_install(dest)["LAUNCHER_STORAGE_LOCAL_PATH"],
             str(dest / "storage"),
         )
         self.assertIn(
@@ -169,7 +169,7 @@ class MinimalBackupTests(unittest.TestCase):
             check=True,
         )
         self.assertEqual(
-            backup.read_install(dest)["NEVERLAUNCHER_DATABASE_DSN"],
+            backup.read_install(dest)["LAUNCHER_DATABASE_DSN"],
             str(dest / "db/http.sqlite"),
         )
 

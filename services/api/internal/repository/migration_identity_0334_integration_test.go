@@ -17,7 +17,7 @@ import (
 // PostgreSQL integration covers actual row locks, stable snapshot replay,
 // target identity collision detection and re-verification across transactions.
 func TestMigrationIdentityTransactional0334(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
 		t.Skip("requires disposable PostgreSQL 17")
 	}

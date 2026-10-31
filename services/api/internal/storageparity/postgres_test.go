@@ -41,12 +41,12 @@ func (p *postgresAdapter) Close() error              { return p.repo.Close() }
 // A disposable PostgreSQL DSN is mandatory for the dedicated CI job. Neither
 // SQLite nor an in-memory fallback can satisfy this test.
 func TestPostgresRealStorageParity0371(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_PARITY_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_PARITY_POSTGRES_DSN")
 	if dsn == "" {
-		if os.Getenv("NEVERLAUNCHER_STORAGE_PARITY_REQUIRED") == "1" {
-			t.Fatal("NEVERLAUNCHER_PARITY_POSTGRES_DSN required for production parity gate")
+		if os.Getenv("LAUNCHER_STORAGE_PARITY_REQUIRED") == "1" {
+			t.Fatal("LAUNCHER_PARITY_POSTGRES_DSN required for production parity gate")
 		}
-		t.Skip("requires disposable NEVERLAUNCHER_PARITY_POSTGRES_DSN")
+		t.Skip("requires disposable LAUNCHER_PARITY_POSTGRES_DSN")
 	}
 	makeRepo := func() *repository.SQLRepository {
 		r, ok := repository.NewSQLRepository("pgx", dsn, "http://127.0.0.1").(*repository.SQLRepository)

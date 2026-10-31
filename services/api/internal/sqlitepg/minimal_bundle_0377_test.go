@@ -58,7 +58,7 @@ func fixtureMinimalBundle0377(t *testing.T, base string) string {
 		}
 	}
 	// Store a real-world-shaped env and arbitrary binary file, not only SQLite.
-	for name, data := range map[string][]byte{"config/backend.env": []byte("NEVERLAUNCHER_REPOSITORY_DRIVER=sqlite\nNEVERLAUNCHER_DEPLOYMENT_MODE=single-node\n"), "storage/client.bin": {0, 1, 2, 3, 255, 0, 11}} {
+	for name, data := range map[string][]byte{"config/backend.env": []byte("LAUNCHER_REPOSITORY_DRIVER=sqlite\nLAUNCHER_DEPLOYMENT_MODE=single-node\n"), "storage/client.bin": {0, 1, 2, 3, 255, 0, 11}} {
 		if err := os.WriteFile(filepath.Join(payload, name), data, 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -86,7 +86,7 @@ func fixtureMinimalBundle0377(t *testing.T, base string) string {
 }
 
 func TestMinimalBundlePostgreSQLRoundTrip0377(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_PG_TEST_DSN")
+	dsn := os.Getenv("LAUNCHER_PG_TEST_DSN")
 	if dsn == "" {
 		t.Skip("isolated PostgreSQL service required")
 	}

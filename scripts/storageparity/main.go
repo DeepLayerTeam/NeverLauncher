@@ -47,7 +47,7 @@ type Report struct {
 
 var (
 	pgDialect = regexp.MustCompile(`(?i)(\$[1-9][0-9]*|::(?:jsonb?|uuid|text|timestamptz|interval)|\b(?:FOR\s+UPDATE|SKIP\s+LOCKED|BIGSERIAL|TIMESTAMPTZ|pg_advisory_[a-z_]+|jsonb_[a-z_]+|pg_catalog|CREATE\s+EXTENSION|ON\s+CONFLICT\s+ON\s+CONSTRAINT)\b)`)
-	pgConfig  = regexp.MustCompile(`(?i)(NEVERLAUNCHER_(?:POSTGRES|PG_|DATABASE_DSN|REPOSITORY_DRIVER|SQL_DRIVER)|postgres(?:ql)?://|\b(?:postgres|postgresql|pgx|jsonb|bigserial|timestamptz)\b)`)
+	pgConfig  = regexp.MustCompile(`(?i)(LAUNCHER_(?:POSTGRES|PG_|DATABASE_DSN|REPOSITORY_DRIVER|SQL_DRIVER)|postgres(?:ql)?://|\b(?:postgres|postgresql|pgx|jsonb|bigserial|timestamptz)\b)`)
 )
 
 func uniqueSorted(m map[string]bool) []string {

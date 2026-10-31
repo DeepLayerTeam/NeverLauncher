@@ -14,7 +14,7 @@ import (
 )
 
 func TestMigrationReportPostgres03313(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
 		t.Skip("requires isolated PostgreSQL")
 	}

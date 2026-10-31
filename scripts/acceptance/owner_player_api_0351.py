@@ -257,8 +257,8 @@ def main():
             and not url.path.rstrip("/"),
             "only a local HTTP test Backend is allowed",
         )
-        email = os.environ.get("NEVERLAUNCHER_TEST_ADMIN_EMAIL", "")
-        password = os.environ.get("NEVERLAUNCHER_TEST_ADMIN_PASSWORD", "")
+        email = os.environ.get("LAUNCHER_TEST_ADMIN_EMAIL", "")
+        password = os.environ.get("LAUNCHER_TEST_ADMIN_PASSWORD", "")
         require(
             bool(email) and bool(password),
             "test credentials must be supplied via environment",

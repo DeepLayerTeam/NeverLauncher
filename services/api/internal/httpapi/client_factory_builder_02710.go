@@ -87,10 +87,10 @@ type factoryPlanView02710 struct {
 }
 
 func factoryConfig02710() (string, string, error) {
-	binary := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_FACTORY_CLI"))
-	root := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_FACTORY_ROOT"))
+	binary := strings.TrimSpace(os.Getenv("LAUNCHER_FACTORY_CLI"))
+	root := strings.TrimSpace(os.Getenv("LAUNCHER_FACTORY_ROOT"))
 	if !filepath.IsAbs(binary) || !filepath.IsAbs(root) {
-		return "", "", errors.New("configure absolute NEVERLAUNCHER_FACTORY_CLI and NEVERLAUNCHER_FACTORY_ROOT")
+		return "", "", errors.New("configure absolute LAUNCHER_FACTORY_CLI and LAUNCHER_FACTORY_ROOT")
 	}
 	stat, err := os.Stat(binary)
 	if err != nil || stat.IsDir() || stat.Mode()&0111 == 0 {
@@ -262,18 +262,18 @@ func factoryRun02710(binary, root string, job factoryBuilderJob02710) {
 	if job.Request.Loader != "vanilla" {
 		args = append(args, "--loader-version", job.Request.LoaderVersion)
 	}
-	if sandbox := os.Getenv("NEVERLAUNCHER_FACTORY_SANDBOX"); sandbox == "required" {
+	if sandbox := os.Getenv("LAUNCHER_FACTORY_SANDBOX"); sandbox == "required" {
 		args = append(args, "--processor-sandbox", "required")
 	}
-	if java := os.Getenv("NEVERLAUNCHER_FACTORY_JAVA"); filepath.IsAbs(java) {
+	if java := os.Getenv("LAUNCHER_FACTORY_JAVA"); filepath.IsAbs(java) {
 		args = append(args, "--java", java)
 	}
 	if job.Request.Source == "modpack" {
 		args = []string{"runtime", "client-factory", "import-modpack", "--file", filepath.Join(dir, "source.zip"), "--client-dir", filepath.Join(dir, "client"), "--target", job.Request.Target, "--workers", "6", "--processor-timeout", "15m", "--distribution", "local", "--output", filepath.Join(dir, "import-result.json"), "--report", filepath.Join(dir, "import-report.json")}
-		if sandbox := os.Getenv("NEVERLAUNCHER_FACTORY_SANDBOX"); sandbox == "required" {
+		if sandbox := os.Getenv("LAUNCHER_FACTORY_SANDBOX"); sandbox == "required" {
 			args = append(args, "--processor-sandbox", "required")
 		}
-		if java := os.Getenv("NEVERLAUNCHER_FACTORY_JAVA"); filepath.IsAbs(java) {
+		if java := os.Getenv("LAUNCHER_FACTORY_JAVA"); filepath.IsAbs(java) {
 			args = append(args, "--java", java)
 		}
 	}

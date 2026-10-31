@@ -27,7 +27,7 @@ import (
 	"unsafe"
 )
 
-const marker = "NEVERLAUNCHER_INTERNAL_LINUX_SANDBOX_0319"
+const marker = "LAUNCHER_INTERNAL_LINUX_SANDBOX_0319"
 
 type Policy struct {
 	FilesystemRead  []string

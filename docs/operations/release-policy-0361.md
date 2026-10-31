@@ -78,14 +78,14 @@ it does **not** generate reports or claim to have executed Minecraft.
    `SHA256SUMS`, and `release verify`/`publish-check` continue to enforce the
    other mandatory compatibility, device trust, guard and delivery gates.
 
-For offline production use, set `NEVERLAUNCHER_GA_EVIDENCE_DIR` to the
+For offline production use, set `LAUNCHER_GA_EVIDENCE_DIR` to the
 operator-signed evidence directory and
-`NEVERLAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE` to the independently managed raw
+`LAUNCHER_GA_TRUSTED_PUBLIC_KEY_FILE` to the independently managed raw
 public-key hex file. Keep both outside the release output. The source commit
 must be a clean Git `HEAD` and match the signed approval exactly.
 
-The historical 0.36.0 inputs remain `NEVERLAUNCHER_GA036_EVIDENCE_DIR` and
-`NEVERLAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE`; the historical workflow dispatch
+The historical 0.36.0 inputs remain `LAUNCHER_GA036_EVIDENCE_DIR` and
+`LAUNCHER_GA036_TRUSTED_PUBLIC_KEY_FILE`; the historical workflow dispatch
 uses `ga036_operator_approval_run_id`.
 
 **No operator evidence or no actual execution means BLOCKED, not PASS.**

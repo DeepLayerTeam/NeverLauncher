@@ -174,7 +174,7 @@ func writeManifest(path string, m BackupManifest) error {
 	if err != nil {
 		return err
 	}
-	// Never expose a truncated manifest, and never overwrite a previous one.
+	// Expose a truncated manifest, and overwrite a previous one.
 	return os.Link(stage, path)
 }
 func requireNewBackupPath(source, dest string) (string, string, error) {
@@ -212,8 +212,8 @@ func requireNewBackupPath(source, dest string) (string, string, error) {
 }
 
 // OnlineBackup works while the Launcher API owns the source database.
-// It never acquires the source owner lock, never checkpoints/truncates the WAL,
-// and never replaces a previous backup. The .json sidecar is a checksum and
+// It acquires the source owner lock, checkpoints/truncates the WAL,
+// and replaces a previous backup. The .json sidecar is a checksum and
 // metadata (not an authentication signature). Backups contain sensitive data.
 func OnlineBackup(ctx context.Context, source, destination string) (m BackupManifest, err error) {
 	src, dst, err := requireNewBackupPath(source, destination)

@@ -5,14 +5,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNTIME_DIR="$ROOT/e2e/runtime"
 CLIENT_DIR="$RUNTIME_DIR/materialized-client"
 SERVER_DIR="$RUNTIME_DIR/matching-server"
-MINECRAFT_VERSION="${NEVERLAUNCHER_E2E_MINECRAFT_VERSION:-}"
-JAVA_BIN="${NEVERLAUNCHER_E2E_JAVA:-}"
-JAVA_MAJOR="${NEVERLAUNCHER_E2E_JAVA_MAJOR:-}"
-TARGET_ID="${NEVERLAUNCHER_COMPAT_TARGET_ID:-vanilla-matching-server}"
-TARGET_OS="${NEVERLAUNCHER_COMPAT_OS:-linux}"
-TARGET_ARCH="${NEVERLAUNCHER_COMPAT_ARCH:-x86_64}"
+MINECRAFT_VERSION="${LAUNCHER_E2E_MINECRAFT_VERSION:-}"
+JAVA_BIN="${LAUNCHER_E2E_JAVA:-}"
+JAVA_MAJOR="${LAUNCHER_E2E_JAVA_MAJOR:-}"
+TARGET_ID="${LAUNCHER_COMPAT_TARGET_ID:-vanilla-matching-server}"
+TARGET_OS="${LAUNCHER_COMPAT_OS:-linux}"
+TARGET_ARCH="${LAUNCHER_COMPAT_ARCH:-x86_64}"
 PRODUCT_VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
-CLIENT_RUNTIME_SECONDS="${NEVERLAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-55}"
+CLIENT_RUNTIME_SECONDS="${LAUNCHER_E2E_CLIENT_RUNTIME_SECONDS:-55}"
 PLAYER_USERNAME="NL_Cert_Client"
 
 [[ "$MINECRAFT_VERSION" =~ ^[0-9A-Za-z][0-9A-Za-z._+-]{0,63}$ ]] || { echo "[matching-e2e] invalid Minecraft version" >&2; exit 2; }
@@ -26,7 +26,7 @@ done
 rm -rf "$RUNTIME_DIR"
 mkdir -p "$CLIENT_DIR" "$SERVER_DIR"
 NL_BIN="$RUNTIME_DIR/nl"
-NEVERRUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime"
+RUNTIME_BIN="$ROOT/runtime/runtime/target/debug/runtime"
 SERVER_PID=""
 PROXY_PID=""
 cleanup() {
@@ -50,7 +50,7 @@ printf '[matching-e2e] build CLI and Runtime\n'
   go build -o "$NL_BIN" ./cmd/launcher
 )
 cargo build --quiet --manifest-path "$ROOT/runtime/runtime/Cargo.toml" --bin runtime
-[[ -x "$NEVERRUNTIME_BIN" ]] || { echo "[matching-e2e] Runtime binary is missing" >&2; exit 1; }
+[[ -x "$RUNTIME_BIN" ]] || { echo "[matching-e2e] Runtime binary is missing" >&2; exit 1; }
 
 printf '[matching-e2e] materialize actual Mojang client %s\n' "$MINECRAFT_VERSION"
 "$NL_BIN" runtime vanilla-package \
@@ -275,10 +275,10 @@ printf '[matching-e2e] launch actual Mojang client %s and connect to exact match
 # мира, реальный вход и строгие проверки остаются включёнными.
 export ALSOFT_DRIVERS=null
 export LIBGL_ALWAYS_SOFTWARE=1
-export NEVERLAUNCHER_RESOLUTION_WIDTH=854
-export NEVERLAUNCHER_RESOLUTION_HEIGHT=480
+export LAUNCHER_RESOLUTION_WIDTH=854
+export LAUNCHER_RESOLUTION_HEIGHT=480
 xvfb-run -a -s '-screen 0 1280x720x24 +extension GLX +render -noreset' \
-  "$NEVERRUNTIME_BIN" certify-vanilla \
+  "$RUNTIME_BIN" certify-vanilla \
     --root "$CLIENT_DIR" \
     --version "$MINECRAFT_VERSION" \
     --java "$JAVA_BIN" \

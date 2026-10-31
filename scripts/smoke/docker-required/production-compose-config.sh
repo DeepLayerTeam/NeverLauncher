@@ -11,7 +11,7 @@ test -s "${ENV_FILE}"
 grep -q "launcher-api" "${COMPOSE_FILE}"
 grep -q "postgres:16" "${COMPOSE_FILE}"
 grep -q "redis:7" "${COMPOSE_FILE}"
-grep -q "NEVERLAUNCHER_AUTH_TOKEN_SECRET" "${COMPOSE_FILE}"
+grep -q "LAUNCHER_AUTH_TOKEN_SECRET" "${COMPOSE_FILE}"
 grep -q "proxy_pass http://api:8080" "${NGINX_FILE}"
 
 if command -v docker >/dev/null 2>&1; then

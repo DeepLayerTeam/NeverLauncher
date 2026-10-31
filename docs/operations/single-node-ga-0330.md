@@ -111,8 +111,8 @@ From a clean, committed checkout, set the existing release signing/trust
 variables and additionally:
 
 ```sh
-export NEVERLAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR=/secure/evidence
-export NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE=/secure/trust/independent-ga.pub
+export LAUNCHER_SINGLE_NODE_GA_EVIDENCE_DIR=/secure/evidence
+export LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE=/secure/trust/independent-ga.pub
 bash scripts/release/build-release.sh
 ```
 
@@ -126,7 +126,7 @@ missing/altered reports. Consumers must supply an independently pinned GA
 public key in addition to the normal release root/trust policy:
 
 ```sh
-export NEVERLAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE=/secure/trust/independent-ga.pub
+export LAUNCHER_SINGLE_NODE_GA_PUBLIC_KEY_FILE=/secure/trust/independent-ga.pub
 launcher release verify /secure/release-0.33.0 \
   --public-key /secure/trust/release-root.pub \
   --trust-policy /secure/trust/release-trust.json

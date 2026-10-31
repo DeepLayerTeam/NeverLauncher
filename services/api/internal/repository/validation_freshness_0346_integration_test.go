@@ -13,7 +13,7 @@ import (
 )
 
 func TestV05PostgresDurableChallengeAndKeyRevocation0346(t *testing.T) {
-	dsn := os.Getenv("NEVERLAUNCHER_TEST_POSTGRES_DSN")
+	dsn := os.Getenv("LAUNCHER_TEST_POSTGRES_DSN")
 	if dsn == "" {
 		t.Skip("requires disposable PostgreSQL")
 	}

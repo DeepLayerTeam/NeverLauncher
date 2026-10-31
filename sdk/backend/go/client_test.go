@@ -15,7 +15,7 @@ func TestCallbackServerRequiresToken(t *testing.T){
   resp,err:=http.DefaultClient.Do(req);if err!=nil{t.Fatal(err)};defer resp.Body.Close();if resp.StatusCode!=http.StatusUnauthorized{t.Fatalf("status=%d",resp.StatusCode)}
 }
 func TestEnvironmentRejectsIncompleteHost(t *testing.T){
-  t.Setenv("NEVERLAUNCHER_EXTENSION_HOST_URL","");t.Setenv("NEVERLAUNCHER_EXTENSION_HOST_TOKEN","");t.Setenv("NEVERLAUNCHER_EXTENSION_ID","");t.Setenv("NEVERLAUNCHER_EXTENSION_INSTANCE_ID","")
+  t.Setenv("LAUNCHER_EXTENSION_HOST_URL","");t.Setenv("LAUNCHER_EXTENSION_HOST_TOKEN","");t.Setenv("LAUNCHER_EXTENSION_ID","");t.Setenv("LAUNCHER_EXTENSION_INSTANCE_ID","")
   if _,err:=Environment();err==nil{t.Fatal("expected incomplete host environment error")}
 }
 func TestNewUsesBoundedHTTPClient(t *testing.T){c:=New(HostEnvironment{});if c.http.Timeout!=10*time.Second{t.Fatalf("timeout=%s",c.http.Timeout)}}

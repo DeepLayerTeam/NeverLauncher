@@ -41,18 +41,18 @@ func run() error {
 	if (*command == "backup" || *command == "restore") && *backup == "" {
 		return errors.New("--backup directory required")
 	}
-	dsn := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_DATABASE_DSN"))
+	dsn := strings.TrimSpace(os.Getenv("LAUNCHER_DATABASE_DSN"))
 	if dsn == "" {
-		return errors.New("NEVERLAUNCHER_DATABASE_DSN required")
+		return errors.New("LAUNCHER_DATABASE_DSN required")
 	}
-	driver := env("NEVERLAUNCHER_STORAGE_DRIVER", "local")
+	driver := env("LAUNCHER_STORAGE_DRIVER", "local")
 	var store storage.Storage
 	switch driver {
 	case "local":
-		store = storage.NewLocalStorage(env("NEVERLAUNCHER_STORAGE_LOCAL_PATH", "./data/storage"))
+		store = storage.NewLocalStorage(env("LAUNCHER_STORAGE_LOCAL_PATH", "./data/storage"))
 	case "s3":
-		pathStyle, _ := strconv.ParseBool(env("NEVERLAUNCHER_STORAGE_S3_PATH_STYLE", "true"))
-		s, err := storage.NewS3Storage(storage.S3Config{Endpoint: os.Getenv("NEVERLAUNCHER_STORAGE_S3_ENDPOINT"), Bucket: os.Getenv("NEVERLAUNCHER_STORAGE_S3_BUCKET"), Region: os.Getenv("NEVERLAUNCHER_STORAGE_S3_REGION"), AccessKey: os.Getenv("NEVERLAUNCHER_STORAGE_S3_ACCESS_KEY"), SecretKey: os.Getenv("NEVERLAUNCHER_STORAGE_S3_SECRET_KEY"), PathStyle: pathStyle})
+		pathStyle, _ := strconv.ParseBool(env("LAUNCHER_STORAGE_S3_PATH_STYLE", "true"))
+		s, err := storage.NewS3Storage(storage.S3Config{Endpoint: os.Getenv("LAUNCHER_STORAGE_S3_ENDPOINT"), Bucket: os.Getenv("LAUNCHER_STORAGE_S3_BUCKET"), Region: os.Getenv("LAUNCHER_STORAGE_S3_REGION"), AccessKey: os.Getenv("LAUNCHER_STORAGE_S3_ACCESS_KEY"), SecretKey: os.Getenv("LAUNCHER_STORAGE_S3_SECRET_KEY"), PathStyle: pathStyle})
 		if err != nil {
 			return err
 		}

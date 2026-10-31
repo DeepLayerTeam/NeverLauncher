@@ -258,7 +258,7 @@ func verifyMinimalBundle0377(ctx context.Context, bundle string) (MinimalBundleM
 
 // ImportMinimalBundle0377 stores a complete offline minimal snapshot in
 // PostgreSQL; includes both SQLite databases, keys, config and project files.
-// It never mutates the live PostgreSQL Repository schema.
+// It mutates the live PostgreSQL Repository schema.
 func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report MinimalBundleReport0377, err error) {
 	if dsn == "" {
 		return report, errors.New("PostgreSQL DSN required")
@@ -362,7 +362,7 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 			}
 		}
 	}
-	// Reverify exact source bytes immediately before commit; never use an
+	// Reverify exact source bytes immediately before commit; use an
 	// unfrozen active directory here. The source must be an offline backup.
 	_, again, err := verifyMinimalBundle0377(ctx, bundle)
 	if err != nil {
@@ -379,7 +379,7 @@ func ImportMinimalBundle0377(ctx context.Context, bundle, dsn string) (report Mi
 }
 
 // ExportMinimalBundle0377 reconstructs a new offline minimal backup bundle.
-// Feed this to minimal_backup.py verify/restore; never serve the imported PG
+// Feed this to minimal_backup.py verify/restore; serve the imported PG
 // schema as a PostgreSQL backend.
 func ExportMinimalBundle0377(ctx context.Context, dsn, target string) (report MinimalBundleReport0377, err error) {
 	if dsn == "" || target == "" {

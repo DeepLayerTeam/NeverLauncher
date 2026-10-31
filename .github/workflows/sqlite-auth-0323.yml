@@ -33,13 +33,13 @@ jobs:
       - name: Certify native local filesystem
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/never-sqlite-auth"
-          chmod 0700 "$RUNNER_TEMP/never-sqlite-auth"
-          stat -f -c '%T' "$RUNNER_TEMP/never-sqlite-auth"
+          mkdir -p "$RUNNER_TEMP/sqlite-auth"
+          chmod 0700 "$RUNNER_TEMP/sqlite-auth"
+          stat -f -c '%T' "$RUNNER_TEMP/sqlite-auth"
       - name: Run real-driver auth/MFA/replay/revocation/restart/migration tests
         env:
-          NEVERLAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-auth
-          NEVERLAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-auth
+          LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
           go test -race -count=1 -v ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
-          db="$RUNNER_TEMP/never-sqlite-auth/live.sqlite"
+          db="$RUNNER_TEMP/sqlite-auth/live.sqlite"
           "$RUNNER_TEMP/launcher-sqlite" core-init --db "$db" > "$RUNNER_TEMP/auth-init.json"
           "$RUNNER_TEMP/launcher-sqlite" core-status --db "$db" > "$RUNNER_TEMP/auth-status.json"
           python3 - <<'PY'
@@ -58,11 +58,11 @@ jobs:
           assert result['counts']['roles']==8
           assert result['counts']['auth_sessions']==0
           PY
-          printf '{"password":"correct long secret"}\n' > "$RUNNER_TEMP/never-sqlite-auth/password.json"
-          chmod 0600 "$RUNNER_TEMP/never-sqlite-auth/password.json"
-          "$RUNNER_TEMP/launcher-sqlite" auth-hash-password --input "$RUNNER_TEMP/never-sqlite-auth/password.json" > "$RUNNER_TEMP/never-sqlite-auth/hash.json"
+          printf '{"password":"correct long secret"}\n' > "$RUNNER_TEMP/sqlite-auth/password.json"
+          chmod 0600 "$RUNNER_TEMP/sqlite-auth/password.json"
+          "$RUNNER_TEMP/launcher-sqlite" auth-hash-password --input "$RUNNER_TEMP/sqlite-auth/password.json" > "$RUNNER_TEMP/sqlite-auth/hash.json"
           python3 - <<'PY'
           import json,os
-          with open(os.environ['RUNNER_TEMP']+'/never-sqlite-auth/hash.json') as f: result=json.load(f)
+          with open(os.environ['RUNNER_TEMP']+'/sqlite-auth/hash.json') as f: result=json.load(f)
           assert result['passwordHash'].startswith('$argon2id$')
           PY

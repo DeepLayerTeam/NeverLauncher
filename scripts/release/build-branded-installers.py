@@ -262,7 +262,7 @@ def package_windows(args, stage, key, out, version):
         )
     check_binary_arch(result, args.platform, args.arch)
     if not args.unsigned_test:
-        thumb = os.environ.get("NEVERLAUNCHER_WINDOWS_CERT_THUMBPRINT", "")
+        thumb = os.environ.get("LAUNCHER_WINDOWS_CERT_THUMBPRINT", "")
         if not thumb or not shutil.which("signtool"):
             raise RuntimeError(
                 "Authenticode certificate and signtool required for production"
@@ -332,7 +332,7 @@ def package_linux(args, stage, key, out, version):
         checked("dpkg-deb", "--build", "--root-owner-group", pkg, result)
         checked("dpkg-deb", "--info", result)
     if not args.unsigned_test:
-        gpg = os.environ.get("NEVERLAUNCHER_GPG_SIGNING_KEY", "")
+        gpg = os.environ.get("LAUNCHER_GPG_SIGNING_KEY", "")
         if not gpg or not shutil.which("gpg"):
             raise RuntimeError("Linux release needs a GPG signing key")
         checked(
@@ -390,8 +390,8 @@ def package_macos(args, stage, key, out, version):
         }
         (app / "Contents" / "Info.plist").write_bytes(plistlib.dumps(info))
         result = out / f"launcher-{version}-{args.project}-macos-{ARCH[args.arch]}.pkg"
-        signid = os.environ.get("NEVERLAUNCHER_MACOS_CODESIGN_ID", "")
-        pkgid = os.environ.get("NEVERLAUNCHER_MACOS_INSTALLER_ID", "")
+        signid = os.environ.get("LAUNCHER_MACOS_CODESIGN_ID", "")
+        pkgid = os.environ.get("LAUNCHER_MACOS_INSTALLER_ID", "")
         if not args.unsigned_test and (not signid or not pkgid):
             raise RuntimeError(
                 "Developer ID Application and Installer identities required"

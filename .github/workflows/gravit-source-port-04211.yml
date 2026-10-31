@@ -8,7 +8,7 @@ on:
       - 'examples/extensions/gravit-compat/**'
       - 'compatibility/gravit/module-parity-04211.json'
       - 'cli/internal/moduleparity/**'
-      - 'cli/cmd/neverlauncher/module_parity_0301.go'
+      - 'cli/cmd/launcher/module_parity_0301.go'
       - '.github/workflows/gravit-source-port-04211.yml'
   pull_request:
   workflow_dispatch:
@@ -44,7 +44,7 @@ jobs:
       - name: Build real CLI, inspect 19 modules, execute selected module tests
         run: |
           set -eu
-          (cd cli && go test -count=1 -run '^TestLatest04211' ./internal/moduleparity && go build -o "$RUNNER_TEMP/nl" ./cmd/neverlauncher)
+          (cd cli && go test -count=1 -run '^TestLatest04211' ./internal/moduleparity && go build -o "$RUNNER_TEMP/nl" ./cmd/launcher)
           "$RUNNER_TEMP/nl" module-parity audit --root "$GITHUB_WORKSPACE" --baseline 0.42.11 --report "$RUNNER_TEMP/gravit-matrix.json"
           "$RUNNER_TEMP/nl" module-parity audit --root "$GITHUB_WORKSPACE" --baseline 0.42.11 --module M02 --run-tests --require-tests --report "$RUNNER_TEMP/gravit-discord.json"
       - name: Sign real source-ported .nlext and reject tampering
@@ -55,7 +55,7 @@ jobs:
           python3 tools/gravit-port/port.py \
             --source examples/extensions/gravit-compat/src \
             --module-class ru.example.gravit.PortedModule \
-            --manifest examples/extensions/gravit-compat/neverlauncher-extension.json \
+            --manifest examples/extensions/gravit-compat/launcher-extension.json \
             --output "$RUNNER_TEMP/gravit-port-stage" \
             --nl "$RUNNER_TEMP/nl" \
             --private-key "$RUNNER_TEMP/author.pem" \

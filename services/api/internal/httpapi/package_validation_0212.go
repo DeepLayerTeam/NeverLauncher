@@ -204,7 +204,7 @@ func (s Server) runtimeValidationKeys0212() (map[string]ed25519.PublicKey, error
 	}
 	var cfg map[string]string
 	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
-		return nil, errors.New("NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON must be a JSON object")
+		return nil, errors.New("LAUNCHER_RUNTIME_VALIDATION_KEYS_JSON must be a JSON object")
 	}
 	out := make(map[string]ed25519.PublicKey, len(cfg))
 	for id, val := range cfg {
@@ -374,7 +374,7 @@ func (s Server) projectValidationPolicyPut0212(w http.ResponseWriter, r *http.Re
 	}
 	if strings.EqualFold(strings.TrimSpace(req.RequiredLevel), "runtime") {
 		if _, err := s.runtimeValidationKeys0212(); err != nil {
-			writeError(w, http.StatusConflict, "runtime policy нельзя включить без корректного NEVERLAUNCHER_RUNTIME_VALIDATION_KEYS_JSON: "+err.Error())
+			writeError(w, http.StatusConflict, "runtime policy нельзя включить без корректного LAUNCHER_RUNTIME_VALIDATION_KEYS_JSON: "+err.Error())
 			return
 		}
 	}

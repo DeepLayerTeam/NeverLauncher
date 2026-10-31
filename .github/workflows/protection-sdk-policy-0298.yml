@@ -33,7 +33,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U launcher -d launcher" --health-interval 5s --health-timeout 5s --health-retries 20
     env:
-      NEVERLAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:test-only@localhost:5432/launcher?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

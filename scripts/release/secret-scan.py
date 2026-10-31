@@ -17,13 +17,35 @@ CONTENT_PATTERNS = [
     re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     re.compile(rb"AKIA[0-9A-Z]{16}"),
 ]
-ENV_SECRET = re.compile(rb"(?mi)^(?:NEVERLAUNCHER_[A-Z0-9_]*(?:SECRET|PASSWORD|PRIVATE_KEY)|POSTGRES_PASSWORD|REDIS_PASSWORD)\s*=\s*([^\r\n#]+)")
-PLACEHOLDERS = {b"", b"change-me", b"replace-me", b"example", b"example-only", b"<required>", b"<secret>"}
-PLACEHOLDER_PREFIXES = (b"change-me", b"change_me", b"replace-me", b"replace_me", b"${", b"$", b"<")
+ENV_SECRET = re.compile(
+    rb"(?mi)^(?:LAUNCHER_[A-Z0-9_]*(?:SECRET|PASSWORD|PRIVATE_KEY)|POSTGRES_PASSWORD|REDIS_PASSWORD)\s*=\s*([^\r\n#]+)"
+)
+PLACEHOLDERS = {
+    b"",
+    b"change-me",
+    b"replace-me",
+    b"example",
+    b"example-only",
+    b"<required>",
+    b"<secret>",
+}
+PLACEHOLDER_PREFIXES = (
+    b"change-me",
+    b"change_me",
+    b"replace-me",
+    b"replace_me",
+    b"${",
+    b"$",
+    b"<",
+)
 
 
 def suspicious_path(name: str) -> bool:
-    if name.endswith(".example") or name.endswith(".example.pem") or name.endswith(".env.example"):
+    if (
+        name.endswith(".example")
+        or name.endswith(".example.pem")
+        or name.endswith(".env.example")
+    ):
         return False
     return any(p.search(name) for p in PATH_PATTERNS)
 
@@ -35,8 +57,15 @@ def scan_content(name: str, data: bytes) -> list[str]:
             issues.append(f"{name}: обнаружен private key/access-key pattern")
     for match in ENV_SECRET.finditer(data):
         value = match.group(1).strip().strip(b"\"'").lower()
-        if value not in PLACEHOLDERS and not value.startswith(PLACEHOLDER_PREFIXES) and b"example" not in value and b"replace" not in value:
-            issues.append(f"{name}: обнаружено непустое secret/password/private-key значение")
+        if (
+            value not in PLACEHOLDERS
+            and not value.startswith(PLACEHOLDER_PREFIXES)
+            and b"example" not in value
+            and b"replace" not in value
+        ):
+            issues.append(
+                f"{name}: обнаружено непустое secret/password/private-key значение"
+            )
     return issues
 
 
@@ -54,8 +83,6 @@ def scan_zip(path: Path) -> list[str]:
     return issues
 
 
-
-
 def scan_tar(path: Path) -> list[str]:
     issues: list[str] = []
     with tarfile.open(path, mode="r:*") as tf:
@@ -64,7 +91,9 @@ def scan_tar(path: Path) -> list[str]:
                 continue
             name = member.name
             if member.issym() or member.islnk() or not member.isfile():
-                issues.append(f"{name}: links/special files запрещены в release archive")
+                issues.append(
+                    f"{name}: links/special files запрещены в release archive"
+                )
                 continue
             if suspicious_path(name):
                 issues.append(f"{name}: secret-like path запрещён в release archive")
@@ -73,6 +102,7 @@ def scan_tar(path: Path) -> list[str]:
                 if extracted is not None:
                     issues.extend(scan_content(name, extracted.read()))
     return issues
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()

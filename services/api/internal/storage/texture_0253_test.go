@@ -137,7 +137,7 @@ func TestTextureS3ImmutableConditionalAndDelete0253(t *testing.T) {
 	if puts != 2 {
 		t.Fatalf("expected PUT + conditional retry, got %d", puts)
 	}
-	// Object was tampered with between uploads; never accept a collision by key only.
+	// Object was tampered with between uploads; accept a collision by key only.
 	mu.Lock()
 	for k := range stored {
 		stored[k] = []byte("tampered")

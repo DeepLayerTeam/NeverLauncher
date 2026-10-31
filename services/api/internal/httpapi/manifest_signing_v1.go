@@ -18,7 +18,7 @@ func (s Server) manifestSigningPrivateKey() (ed25519.PrivateKey, error) {
 	seedHex := strings.TrimSpace(s.Config.ManifestSigningPrivateKey)
 	if seedHex == "" {
 		if strings.EqualFold(s.Config.Environment, "production") || strings.EqualFold(s.Config.Environment, "prod") {
-			return nil, errors.New("NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY обязателен для production publish")
+			return nil, errors.New("LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY обязателен для production publish")
 		}
 		dev := sha256.Sum256([]byte("Launcher development signing key - never use in production"))
 		seedHex = hex.EncodeToString(dev[:])
@@ -69,7 +69,7 @@ func (s Server) verifyManifestSignature(manifest model.Manifest) error {
 	if err != nil || len(declaredPublicKey) != ed25519.PublicKeySize {
 		return errors.New("invalid manifest public key")
 	}
-	configured := strings.TrimSpace(os.Getenv("NEVERLAUNCHER_GAME_TRUST_POLICY_FILE")) != "" || strings.TrimSpace(os.Getenv("NEVERLAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY")) != ""
+	configured := strings.TrimSpace(os.Getenv("LAUNCHER_GAME_TRUST_POLICY_FILE")) != "" || strings.TrimSpace(os.Getenv("LAUNCHER_GAME_TRUST_ROOT_PUBLIC_KEY")) != ""
 	production := strings.EqualFold(s.Config.Environment, "production") || strings.EqualFold(s.Config.Environment, "prod")
 	if !configured && !production {
 		privateKey, e := s.manifestSigningPrivateKey()
@@ -102,7 +102,7 @@ func (s Server) verifyManifestSignature(manifest model.Manifest) error {
 func ValidateManifestSigningConfig(seedHex string) error {
 	seed, err := hex.DecodeString(strings.TrimSpace(seedHex))
 	if err != nil || len(seed) != ed25519.SeedSize {
-		return errors.New("NEVERLAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY должен содержать 64 hex-символа (32-byte Ed25519 seed)")
+		return errors.New("LAUNCHER_MANIFEST_SIGNING_PRIVATE_KEY должен содержать 64 hex-символа (32-byte Ed25519 seed)")
 	}
 	return nil
 }
