@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.43.1 — Fail-closed security capability certification and publication
+
+- GA release authorization now requires independent per-target Ed25519-approved evidence for six separate security capabilities: Device Trust, HWID policy, NeverGuard, key revocation, account recovery, and native extension sandbox. Each required capability has a positive and a negative observed scenario, run/attempt correlation and log hashes bound to the final client binary and package. A generic `security: passed` no longer authorizes shipping an unverified protection claim.
+- The live security verifier executes both at signed operator preflight and exact-byte GA verification. Missing, blocked, skipped, simulated, stale, foreign-architecture, cross-run or modified observations prevent certification. Mandatory targets and scenario names are embedded in the trusted verifier, not read from a mutable release matrix.
+- The real packaging workflow includes `SECURITY_CAPABILITY_EVIDENCE_0431.zip` before release signing. GitHub publication validates its complete raw observations again against independently signed approval and the current CI run/attempt; incomplete or tampered archives cannot authorize publication.
+- Version metadata synchronized to 0.43.1. Local Python negative, producer/publisher, existing GA, release-publication and matrix regression tests passed. **No native six-platform security suite, production package signing, Minecraft game join or physical hardware attestation was performed locally; GA remains blocked without independent live evidence.** The verifier does not pretend to implement missing platform security features.
+
 ## 0.43.0 — Executable extension integration and exact release binding
 
 - Removed the version-specific `0.42.12` acceptance blocker. Six real Java Host/Runtime/Lifecycle/Gravit source-port JVM runs now produce source-commit, product-version and GitHub run/attempt bound evidence; each also executes the 19-module auditor. Failed/missing, wrong-platform, wrong-run, stale or incomplete results block certification rather than becoming a synthetic PASS.

@@ -833,6 +833,14 @@ if [[ "${GA_TARGET_MODE}" != "historical" ]]; then
     --output "${OUT_DIR}/${GA_RECEIPT}"
   cp -- "${GA_TARGET_EVIDENCE_DIR}/approval.json" "${OUT_DIR}/${GA_APPROVAL}"
   cp -- "${GA_TARGET_EVIDENCE_DIR}/approval.sig" "${OUT_DIR}/${GA_SIGNATURE}"
+  # 0.43.1+: ship the independently signed per-capability raw observations,
+  # not only an aggregate 'security: PASS'. Publication rechecks this archive.
+  if [[ "$(printf '%s\n' '0.43.1' "${VERSION}" | sort -V | head -n1)" == '0.43.1' ]]; then
+    python3 "${ROOT_DIR}/scripts/ga/package_security_0431.py" \
+      --evidence "${GA_TARGET_EVIDENCE_DIR}" --trusted-key "${GA_TARGET_TRUSTED_KEY}" \
+      --version "${VERSION}" --commit "${SOURCE_COMMIT}" \
+      --output "${OUT_DIR}/SECURITY_CAPABILITY_EVIDENCE_0431.zip"
+  fi
 fi
 
 # 0.36.5+: inspect six actual signed/native packages and their inner payload

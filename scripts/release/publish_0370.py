@@ -19,12 +19,15 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from zipfile import ZipFile, BadZipFile
 
 from release_policy import policy, parsed
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ga"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ci"))
 from verified_targets import TARGETS, checks_for, approval_data, paths, Blocked
+from security_capabilities_0431 import checks as security_checks, verify_all as verify_security
+from package_security_0431 import evidence_files as security_evidence_files
 from required_jobs_0363 import declared_jobs
 
 PRODUCTION_WORKFLOW = (
@@ -150,6 +153,44 @@ def verify_ci(report: dict, version: str, commit: str, run_id: int, attempt: int
     )
 
 
+def verify_security_archive(
+    bundle: Path, approval: dict, run_id: int, attempt: int, *, now=None
+) -> None:
+    """Recheck SHA256SUMS-protected raw observations before publication."""
+    archive_path = bundle / "SECURITY_CAPABILITY_EVIDENCE_0431.zip"
+    require(
+        archive_path.is_file() and not archive_path.is_symlink()
+        and 0 < archive_path.stat().st_size <= 256 * 1024 * 1024,
+        "missing/unsafe signed security evidence archive",
+    )
+    with tempfile.TemporaryDirectory(prefix="nl-security-publish-") as folder:
+        extracted = Path(folder)
+        with ZipFile(archive_path, "r") as archive:
+            expected_names = set(security_evidence_files())
+            members = archive.infolist()
+            require(
+                len(members) == len(expected_names)
+                and {item.filename for item in members} == expected_names
+                and all(
+                    not item.is_dir() and ((item.external_attr >> 16) & 0o170000) != 0o120000
+                    and 0 < item.file_size <= 32 * 1024 * 1024
+                    for item in members
+                ),
+                "security archive contains missing, extra, symlink or oversized evidence",
+            )
+            for member in members:
+                # Filenames come exclusively from the fixed verifier list;
+                # there are no arbitrary file paths or archive.extract().
+                path = extracted / member.filename
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with archive.open(member, "r") as stream:
+                    data = stream.read(32 * 1024 * 1024 + 1)
+                require(len(data) == member.file_size, "truncated security evidence")
+                path.write_bytes(data)
+        verify_security(
+            extracted, approval, run_id=str(run_id), run_attempt=attempt, now=now
+        )
+
 def verify_ga(
     bundle: Path, public_key: Path, version: str, commit: str, run_id: int, attempt: int
 ) -> str:
@@ -221,6 +262,8 @@ def verify_ga(
             and isinstance(signed_row.get("checks"), dict)
             and set(signed_row["checks"]) == set(checks_for(version))
             and certified_row.get("checksPassed") == len(checks_for(version))
+            and (not security_checks(version)
+                 or certified_row.get("securityCapabilitiesVerified") == list(security_checks(version)))
             and rehearsed_row.get("binary") == binary
             and rehearsed_row.get("package") == package,
             target + ": incomplete independent GA checks",
@@ -234,6 +277,8 @@ def verify_ga(
                 == rehearsed_row.get(field),
                 target + ": published file not independently authorized: " + file,
             )
+    if security_checks(version):
+        verify_security_archive(bundle, approval, run_id, attempt)
     return receipt["approvalSha256"]
 
 
@@ -517,6 +562,7 @@ def main() -> int:
         OSError,
         subprocess.TimeoutExpired,
         json.JSONDecodeError,
+        BadZipFile,
     ) as exc:
         print("RELEASE PUBLICATION BLOCKED: " + str(exc), file=sys.stderr)
         return 2

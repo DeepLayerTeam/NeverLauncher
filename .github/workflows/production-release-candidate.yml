@@ -851,8 +851,12 @@ jobs:
             echo 'missing mandatory signed GA policy' >&2; exit 2
           fi
           REQUIRED_CHECKS="$(python3 -c 'import sys;sys.path.insert(0,"scripts/ga");from verified_targets import checks_for;print(len(checks_for(sys.argv[1])))' "$VERSION")"
-          jq -e --arg sha "$GITHUB_SHA" --arg version "$VERSION" --arg schema "$SCHEMA" --argjson requiredChecks "$REQUIRED_CHECKS" \
-            '.schemaVersion == $schema and .status == "approved-for-release-signing" and .commit == $sha and .version == $version and (.targets | length) == 6 and all(.targets[]; .checksPassed == $requiredChecks)' "$DIR/$RECEIPT"
+          SECURITY_CHECKS="$(python3 -c 'import sys;sys.path.insert(0,"scripts/ga");from security_capabilities_0431 import checks;print(len(checks(sys.argv[1])))' "$VERSION")"
+          jq -e --arg sha "$GITHUB_SHA" --arg version "$VERSION" --arg schema "$SCHEMA" --argjson requiredChecks "$REQUIRED_CHECKS" --argjson securityChecks "$SECURITY_CHECKS" \
+            '.schemaVersion == $schema and .status == "approved-for-release-signing" and .commit == $sha and .version == $version and (.targets | length) == 6 and all(.targets[]; .checksPassed == $requiredChecks and (if $securityChecks > 0 then (.securityCapabilitiesVerified | length) == $securityChecks else true end))' "$DIR/$RECEIPT"
+          if [[ "$SECURITY_CHECKS" != 0 ]]; then
+            test -s "$DIR/SECURITY_CAPABILITY_EVIDENCE_0431.zip"
+          fi
           test -s "$DIR/$APPROVAL"
           test -s "$DIR/$SIG"
       - name: Assert required production artifacts

@@ -22,6 +22,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "release"))
 from release_policy import policy
+from security_capabilities_0431 import checks as security_checks, verify_all as verify_security
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -88,7 +89,8 @@ def checks_for(version: str) -> tuple[str, ...]:
     from release_policy import parsed
 
     number, _ = parsed(version)
-    return CHECKS + PLAYER_CHECKS_0400 if number >= (0, 40, 0) else CHECKS
+    baseline = CHECKS + PLAYER_CHECKS_0400 if number >= (0, 40, 0) else CHECKS
+    return baseline + security_checks(version)
 
 
 def verify_player_trace(
@@ -330,6 +332,9 @@ def verify(
 ):
     cfg = policy(version)
     data, raw, key_raw = approval_data(evidence, public_key, version, commit, now=now)
+    # Full GA requires all signed live security evidence on the current run,
+    # not merely a signature over declarations or previously approved targets.
+    verify_security(evidence, data, now=now)
     targets = data["targets"]
     require(
         isinstance(targets, list)
@@ -417,10 +422,14 @@ def verify(
             require(
                 sha(trace_path) == meta["sha256"], target + ": changed trace " + check
             )
-            if check in PLAYER_CHECKS_0400 and check in checks_for(version):
+            if check in security_checks(version):
+                # Already checked in signed-approval preflight, including raw
+                # execution events and run-scoped final package identity.
+                pass
+            elif check in PLAYER_CHECKS_0400 and check in checks_for(version):
                 verify_player_trace(trace, check, item, target, evidence)
                 cycle_ids.add(trace["playerCycleId"])
-            else:
+            elif check not in security_checks(version):
                 require(
                     set(trace)
                     == {
@@ -437,6 +446,8 @@ def verify(
                     },
                     target + ": invalid trace fields " + check,
                 )
+            if check in security_checks(version):
+                continue
             require(
                 trace["schemaVersion"] == cfg.execution_schema
                 and trace["version"] == version
@@ -464,6 +475,8 @@ def verify(
                 "package": package_name,
                 "packageSha256": item["packageSha256"],
                 "checksPassed": len(checks_for(version)),
+                **({"securityCapabilitiesVerified": list(security_checks(version))}
+                   if security_checks(version) else {}),
             }
         )
     return {
@@ -497,7 +510,8 @@ def main():
         args.output.unlink(missing_ok=True)
     try:
         if args.preflight:
-            approval_data(args.evidence, args.trusted_key, args.version, args.commit)
+            approval, _, _ = approval_data(args.evidence, args.trusted_key, args.version, args.commit)
+            verify_security(args.evidence, approval)
             print(
                 f"{args.version}: signed operator identity preflight accepted; exact bytes NOT YET checked"
             )
