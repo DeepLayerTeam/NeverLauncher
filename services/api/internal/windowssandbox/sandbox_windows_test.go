@@ -130,3 +130,112 @@ func TestRealWindowsAppContainerAndJob03111(t *testing.T) {
 		t.Fatalf("child did not complete: %s", output.String())
 	}
 }
+
+// Shared directories currently have no handle-relative Windows filesystem
+// broker. Accepting them in policy would misrepresent an unenforced grant.
+func TestWindowsSandboxRefusesUnimplementedFilesystemGrants04310(t *testing.T) {
+	root := t.TempDir()
+	entry := filepath.Join(root, "worker.exe")
+	if err := os.WriteFile(entry, []byte("fixture"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, grant := range []struct {
+		name   string
+		modify func(*Options)
+	}{
+		{"read-shared", func(o *Options) { o.Policy.FilesystemRead = []string{"package", "shared:private"} }},
+		{"write-shared", func(o *Options) { o.Policy.FilesystemWrite = []string{"scratch", "shared:private"} }},
+		{"arbitrary-read", func(o *Options) { o.Policy.FilesystemRead = []string{"C:\\Users"} }},
+		{"arbitrary-write", func(o *Options) { o.Policy.FilesystemWrite = []string{"C:\\Temp"} }},
+	} {
+		t.Run(grant.name, func(t *testing.T) {
+			o := testOptions03111(root, entry)
+			grant.modify(&o)
+			if err := validate(o); err == nil {
+				t.Fatal("unimplemented shared grant was accepted")
+			}
+		})
+	}
+}
+
+func TestWindowsSandboxRejectsReparsePackage04310(t *testing.T) {
+	root := t.TempDir()
+	entry := filepath.Join(root, "worker.exe")
+	if err := os.WriteFile(entry, []byte("fixture"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := validate(testOptions03111(root, entry)); err != nil {
+		t.Fatal(err)
+	}
+	outside := t.TempDir()
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(outside, link); err != nil {
+		// Creating junctions does not need SeCreateSymbolicLinkPrivilege on
+		// ordinary supported Windows hosts; this test must not quietly SKIP.
+		output, junctionErr := exec.Command("cmd.exe", "/c", "mklink", "/J", link, outside).CombinedOutput()
+		if junctionErr != nil {
+			t.Fatalf("cannot exercise reparse-point rejection (symlink: %v, junction: %v): %s", err, junctionErr, output)
+		}
+	}
+	if err := validate(testOptions03111(root, entry)); err == nil {
+		t.Fatal("recursive ACL grant would traverse a reparse point")
+	}
+}
+
+func TestChildKeepRunningForJobTermination04310(t *testing.T) {
+	if os.Getenv("NL_WIN_SANDBOX_LONG_RUNNING_CHILD") != "1" {
+		return
+	}
+	time.Sleep(30 * time.Second)
+}
+
+// The supervisor must prove that terminating its helper actually kills the
+// already-resumed isolated child (not merely that the helper exited).
+func TestLiveWindowsJobKillOnClose04310(t *testing.T) {
+	if os.Getenv("NL_RUN_LIVE_WIN_SANDBOX") != "1" {
+		t.Skip("requires a native Windows AppContainer runner")
+	}
+	binary, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	entry := filepath.Join(root, "fixture.exe")
+	data, err := os.ReadFile(binary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(entry, data, 0700); err != nil {
+		t.Fatal(err)
+	}
+	o := testOptions03111(root, entry)
+	o.Args = []string{"-test.run=^TestChildKeepRunningForJobTermination04310$"}
+	o.Environment = []string{"NL_WIN_SANDBOX_LONG_RUNNING_CHILD=1", "SystemRoot=" + os.Getenv("SystemRoot"), "PATH=" + os.Getenv("PATH")}
+	h, err := Prepare(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	if err := h.Cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.Started(); err != nil {
+		t.Fatal(err)
+	}
+	childPID := h.PID()
+	if childPID <= 0 {
+		t.Fatal("isolated child PID is missing")
+	}
+	const synchronize = 0x00100000
+	child, _, callErr := kernel32.NewProc("OpenProcess").Call(synchronize, 0, uintptr(childPID))
+	if child == 0 {
+		t.Fatalf("OpenProcess(%d): %v", childPID, callErr)
+	}
+	defer closeHandle(child)
+	h.Close() // kill helper; its last Job handle close must kill all descendants
+	_ = h.Cmd.Wait()
+	status, _, callErr := waitObject.Call(child, 5000)
+	if status != 0 {
+		t.Fatalf("sandbox child survived Job handle closure: status=%d error=%v", status, callErr)
+	}
+}

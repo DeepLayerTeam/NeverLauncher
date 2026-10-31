@@ -49,7 +49,6 @@ jobs:
       - run: python3 -m pip install 'cryptography>=43,<47'
       - name: Source and metadata consistency
         run: |
-          test "$(cat VERSION)" = 0.32.0
           test -z "$(git status --porcelain)"
           python3 scripts/version/manage.py check
       - name: Cryptographic GA verifier negative tests

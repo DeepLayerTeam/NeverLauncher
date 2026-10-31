@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"syscall"
@@ -28,6 +29,9 @@ var (
 	createJob           = kernel32.NewProc("CreateJobObjectW")
 	setJob              = kernel32.NewProc("SetInformationJobObject")
 	assignJob           = kernel32.NewProc("AssignProcessToJobObject")
+	isProcessInJob      = kernel32.NewProc("IsProcessInJob")
+	queryJob            = kernel32.NewProc("QueryInformationJobObject")
+	getFileAttributes   = kernel32.NewProc("GetFileAttributesW")
 	resumeThread        = kernel32.NewProc("ResumeThread")
 	waitObject          = kernel32.NewProc("WaitForSingleObject")
 	getExitCode         = kernel32.NewProc("GetExitCodeProcess")
@@ -120,6 +124,23 @@ func closeHandle(h uintptr) {
 		syscall.CloseHandle(syscall.Handle(h))
 	}
 }
+
+// Windows junctions and mount points can be reparse points even when an
+// ordinary file-mode check does not identify a symbolic link.
+func rejectReparsePoint(path string) error {
+	if !filepath.IsAbs(path) {
+		return errors.New("sandbox-reparse-check-needs-absolute-path")
+	}
+	attributes, _, err := getFileAttributes.Call(uintptr(unsafe.Pointer(utf16(path))))
+	if attributes == ^uintptr(0) || uint32(attributes) == 0xFFFFFFFF {
+		return fmt.Errorf("sandbox-GetFileAttributes(%s): %w", path, err)
+	}
+	if attributes&0x400 != 0 { // FILE_ATTRIBUTE_REPARSE_POINT
+		return fmt.Errorf("sandbox-package-reparse-point-rejected: %s", path)
+	}
+	return nil
+}
+
 func ensureWindows() error {
 	if os.Getenv("OS") != "Windows_NT" {
 		return errors.New("windows-process-environment-unavailable")
@@ -186,6 +207,48 @@ type extendedLimits struct {
 	processMemoryLimit, jobMemoryLimit, peakProcessMemoryUsed, peakJobMemoryUsed uintptr
 }
 type cpuRate struct{ control, rate uint32 }
+
+// Read back the *effective* kernel Job constraints after assignment. A
+// successful SetInformationJobObject call is not proof that all required
+// limits have remained in place or that the process is contained in that Job.
+func verifyJobContainment(job, process uintptr, p Policy) error {
+	var member int32
+	ok, _, e := isProcessInJob.Call(process, job, uintptr(unsafe.Pointer(&member)))
+	if err := winerr("IsProcessInJob", ok, e); err != nil {
+		return err
+	}
+	if member == 0 {
+		return errors.New("sandbox-child-outside-required-job")
+	}
+	var limits extendedLimits
+	var returned uint32
+	ok, _, e = queryJob.Call(job, jobExtendedLimitInformation, uintptr(unsafe.Pointer(&limits)), unsafe.Sizeof(limits), uintptr(unsafe.Pointer(&returned)))
+	if err := winerr("QueryInformationJobObject(ExtendedLimit)", ok, e); err != nil {
+		return err
+	}
+	if uintptr(returned) < unsafe.Sizeof(limits) {
+		return errors.New("sandbox-job-limit-report-truncated")
+	}
+	const required = jobKillOnClose | jobProcessMemory | jobActiveProcesses | 0x200 // JOB_MEMORY
+	const breakaway = 0x800 | 0x1000                                                // BREAKAWAY_OK, SILENT_BREAKAWAY_OK
+	if limits.basic.limitFlags&required != required || limits.basic.limitFlags&breakaway != 0 {
+		return errors.New("sandbox-job-required-limit-missing-or-breakaway-enabled")
+	}
+	if limits.basic.activeProcessLimit != uint32(p.MaxProcesses) ||
+		limits.processMemoryLimit != uintptr(p.MaxMemoryBytes) || limits.jobMemoryLimit != uintptr(p.MaxMemoryBytes) {
+		return errors.New("sandbox-job-resource-limits-mismatch")
+	}
+	var cpu cpuRate
+	returned = 0
+	ok, _, e = queryJob.Call(job, jobCPURateControlInformation, uintptr(unsafe.Pointer(&cpu)), unsafe.Sizeof(cpu), uintptr(unsafe.Pointer(&returned)))
+	if err := winerr("QueryInformationJobObject(CpuRate)", ok, e); err != nil {
+		return err
+	}
+	if uintptr(returned) < unsafe.Sizeof(cpu) || cpu.control&(jobCPURateEnable|jobCPURateHardCap) != (jobCPURateEnable|jobCPURateHardCap) || cpu.rate != uint32(p.MaxCPUPercent*100) {
+		return errors.New("sandbox-job-cpu-hard-cap-not-enforced")
+	}
+	return nil
+}
 
 // AppContainer process creation is verified against the actual primary token,
 // not just a successful UpdateProcThreadAttribute call.
@@ -348,6 +411,12 @@ func createIsolatedProcess(c childConfig, sid uintptr) (uintptr, uintptr, uintpt
 	r, _, e = assignJob.Call(job, pi.process)
 	if err := winerr("AssignProcessToJobObject before resume", r, e); err != nil {
 		terminateProcess.Call(pi.process, 1)
+		closeHandle(pi.thread)
+		closeHandle(pi.process)
+		return fail(err)
+	}
+	if err := verifyJobContainment(job, pi.process, c.Policy); err != nil {
+		terminateJob.Call(job, 1)
 		closeHandle(pi.thread)
 		closeHandle(pi.process)
 		return fail(err)

@@ -33,3 +33,13 @@ go test -tags launcher_nopgx -count=1 -v ./internal/windowssandbox
 ```
 
 The test creates a **real** AppContainer process, asserts it cannot read private backend files or change package contents, probes denied direct outbound access and attempts to exceed its Job active-process limit. Test failures must block deployment; availability checks and compilation alone do not certify the kernel isolation.
+
+## 0.43.10 native Windows acceptance and enforced policy readback
+
+The sandbox helper reads the **live kernel Job configuration** (membership, process count, both memory caps, CPU hard cap and breakaway flags) after attaching the suspended AppContainer child and **before** resuming its main thread. If any value is missing or differs from the signed policy, it terminates the Job and refuses launch. The helper also verifies the actual AppContainer SID on the child token. This protects against assuming that successful Win32 setup calls imply effective restrictions.
+
+Recursive package ACL grants cannot cross reparse points or directory junctions. `icacls` must report success for the entire package and runs from the OS system directory, never from a PATH-selected binary. The Windows shared-root filesystem broker is still unavailable: `shared:*` grants fail closed. Host-protocol broker requests for approved network/secrets remain separate from direct network access, which AppContainer is not granted. Both IPC pipe modes deny remote clients; the single-instance ready pipe also rejects pre-existing instances of its randomized name.
+
+**Required live jobs:** `.github/workflows/windows-extension-sandbox-03111.yml` runs the sandbox boundary tests on native `windows/amd64` and a self-hosted native `windows/arm64` runner with label `launcher-appcontainer`. A missing runner or failed system policy must leave native acceptance unverified; a Windows x64 build or ARM64 cross-compile cannot replace the ARM64 Job kernel test. The tests include killing a running isolated process by closing the owning helper's Job handle and proving that it actually terminates.
+
+These tests validate the native extension sandbox subsystem. Independent end-to-end gaming, anti-cheat, signed package hashes and the six-target release evidence gate still apply separately.

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.43.10 — Windows x64/ARM64 sandbox containment and native runtime proof
+
+- For isolated native Windows extensions, verify the actual AppContainer process token and SID **and** read back live Job Object membership, required `KILL_ON_JOB_CLOSE`, process count, memory limits, hard CPU quota and absence of breakaway permissions **while the target is suspended**. Missing or changed enforcement terminates the new Job and prevents resume; successful Win32 API calls are not treated as sufficient proof.
+- Reject reparse points, symbolic links and junctions throughout the executable package and its parent directories before recursively granting the per-instance AppContainer SID read/execute rights. Granting with `icacls /T` now fails on any error (`/C` removed); the system `icacls.exe` path is resolved from SystemRoot, not from an untrusted PATH. Previously accepted `shared:*` filesystem grants fail closed until the required handle-relative Windows broker exists.
+- Harden Windows IPC pipes with `PIPE_REJECT_REMOTE_CLIENTS`; enforce `FILE_FLAG_FIRST_PIPE_INSTANCE` on the one-shot launch handshake to prevent name preemption. Keep the extension broker pipe multi-instance for HTTP requests.
+- Expand executable native Windows sandbox acceptance to **both x64 and ARM64**: actual AppContainer child, denied backend-file read, denied package modification, no outbound TCP, Job process-count enforcement and new kill-on-close descendant termination. The ARM64 job requires a dedicated native host and fails unavailable, rather than silently substituting x64 or emulation. A real reparse-point test exercises junction rejection without relying on developer-mode symlinks.
+- Refresh product version metadata to 0.43.10 and remove one obsolete 0.32.0 equality check that caused the ongoing security CI to fail unrelated to the current release. Existing independent security GA proofs and final-package release gates are not weakened.
+
+**Verification boundary:** Windows x64 and ARM64 Go test executables cross-compiled with a locally available Go compiler. This is **not** execution of AppContainer/Job Objects on either native architecture; live Windows acceptance, full Go 1.27.3 backend integration, signed artifacts and production certification remain unverified until their required jobs pass. Native Windows sandbox protects extensions and does not by itself attest the NeverGuard/Minecraft game process.
+
 ## 0.43.9 — Linux ARM64 native extension sandbox
 
 - Run native extensions on **Linux AArch64** through the existing real sandbox implementation: unprivileged user/PID/mount/network/IPC/UTS namespaces, private pivot-root filesystem, read-only package/runtime mounts, restricted scratch, no host network path other than the capability-broker socketpair, capability drop, `no_new_privs`, and kernel seccomp-BPF.

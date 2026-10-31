@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -44,15 +45,15 @@ type childConfig struct {
 	Pipe, Ready, Scratch, Profile string
 }
 type Handle struct {
-	Cmd                *exec.Cmd
-	pipe               *pipeListener
-	server             *http.Server
-	ready              uintptr
-	profile, root, sid string
-	scratch            string
-	pid                int
-	mu                 sync.Mutex
-	closed             bool
+	Cmd                       *exec.Cmd
+	pipe                      *pipeListener
+	server                    *http.Server
+	ready                     uintptr
+	profile, root, entry, sid string
+	scratch                   string
+	pid                       int
+	mu                        sync.Mutex
+	closed                    bool
 }
 
 func randomName() string {
@@ -96,32 +97,74 @@ func validate(o Options) error {
 		return errors.New("sandbox-host-must-use-localhost")
 	} // only parent ever calls this address
 	for _, x := range p.FilesystemRead {
-		if x != "package" && !validShared(x) {
+		if x != "package" {
 			return errors.New("sandbox-invalid-filesystem-read")
 		}
 	}
 	for _, x := range p.FilesystemWrite {
-		if x != "scratch" && !validShared(x) {
+		if x != "scratch" {
 			return errors.New("sandbox-invalid-filesystem-write")
 		}
 	}
-	if _, e = os.Stat(o.Entrypoint); e != nil {
+	if e = validatePackageTree(o.PayloadRoot, o.Entrypoint); e != nil {
 		return e
 	}
 	return nil
 }
-func validShared(s string) bool {
-	if !strings.HasPrefix(s, "shared:") || len(s) > 96 || len(s) <= 7 {
-		return false
-	}
-	for _, r := range s[7:] {
-		if r != '-' && r != '_' && r != '.' && (r < '0' || r > '9') && (r < 'a' || r > 'z') {
-			return false
+
+// icacls /T is recursive and follows Windows reparse points on some filesystem
+// configurations. Never grant a sandbox SID permissions through a junction,
+// symlink, mount point or another reparse tag, including a parent of the package.
+func validatePackageTree(root, entry string) error {
+	for dir := filepath.Clean(root); ; dir = filepath.Dir(dir) {
+		if err := rejectReparsePoint(dir); err != nil {
+			return err
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
 		}
 	}
-	return true
+	info, err := os.Stat(root)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return errors.New("sandbox-package-not-directory")
+	}
+	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		return rejectReparsePoint(path)
+	}); err != nil {
+		return err
+	}
+	info, err = os.Stat(entry)
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() {
+		return errors.New("sandbox-entrypoint-not-regular-file")
+	}
+	return nil
 }
-func createPipe(path, sid string) (uintptr, error) {
+
+// Use the OS supplied system tools, never a PATH-selected executable that a
+// less privileged account could plant before the trusted system directory.
+func systemICACLS() (string, error) {
+	root := os.Getenv("SystemRoot")
+	if !filepath.IsAbs(root) {
+		return "", errors.New("sandbox-SystemRoot-unavailable")
+	}
+	tool := filepath.Join(root, "System32", "icacls.exe")
+	if err := rejectReparsePoint(tool); err != nil {
+		return "", err
+	}
+	return tool, nil
+}
+
+func createPipe(path, sid string, firstInstance bool) (uintptr, error) {
 	// Explicit per-instance SID: no AppContainer wildcard, anonymous users or network clients.
 	sddl := "D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;" + sid + ")S:(ML;;NW;;;LW)"
 	sd, e := securityDescriptor(sddl)
@@ -136,8 +179,12 @@ func createPipe(path, sid string) (uintptr, error) {
 	}{uint32(unsafe.Sizeof(uint32(0)) + 2*unsafe.Sizeof(uintptr(0))), sd, 0}
 	// SECURITY_ATTRIBUTES offset after Length on 64bit is 8, so use a native-layout struct.
 	sa.Length = uint32(unsafe.Sizeof(sa))
-	h, _, err := createNamedPipe.Call(uintptr(unsafe.Pointer(utf16(path))), 0x00000003, // PIPE_ACCESS_DUPLEX (no FILE_FLAG_OVERLAPPED)
-		0x00000000, 255, 64<<10, 64<<10, 0, uintptr(unsafe.Pointer(&sa)))
+	openMode := uintptr(0x00000003) // PIPE_ACCESS_DUPLEX, synchronous
+	if firstInstance {
+		openMode |= 0x00080000
+	} // FILE_FLAG_FIRST_PIPE_INSTANCE
+	h, _, err := createNamedPipe.Call(uintptr(unsafe.Pointer(utf16(path))), openMode,
+		0x00000008, 255, 64<<10, 64<<10, 0, uintptr(unsafe.Pointer(&sa))) // PIPE_REJECT_REMOTE_CLIENTS
 	if h == ^uintptr(0) {
 		return 0, fmt.Errorf("CreateNamedPipe: %w", err)
 	}
@@ -181,7 +228,7 @@ type pipeListener struct {
 }
 
 func (l *pipeListener) Accept() (net.Conn, error) {
-	h, e := createPipe(l.path, l.sid)
+	h, e := createPipe(l.path, l.sid, false)
 	if e != nil {
 		return nil, e
 	}
@@ -249,7 +296,13 @@ func (h *Handle) Close() {
 		closeHandle(h.ready)
 	}
 	if h.root != "" && h.sid != "" {
-		_ = exec.Command("icacls.exe", h.root, "/remove:g", "*"+h.sid, "/T", "/C").Run()
+		if tool, err := systemICACLS(); err == nil {
+			// A package may have changed while the extension was running.
+			// Never recursively walk a newly inserted junction during cleanup.
+			if validatePackageTree(h.root, h.entry) == nil {
+				_ = exec.Command(tool, h.root, "/remove:g", "*"+h.sid, "/T").Run()
+			}
+		}
 	}
 	if h.profile != "" {
 		destroyProfile(h.profile)
@@ -331,7 +384,7 @@ func Prepare(o Options) (*Handle, error) {
 		return nil, e
 	}
 	defer freeSID(sidPtr)
-	h := &Handle{profile: profile, root: o.PayloadRoot, sid: sid}
+	h := &Handle{profile: profile, root: o.PayloadRoot, entry: o.Entrypoint, sid: sid}
 	fail := func(err error) (*Handle, error) { h.Close(); return nil, err }
 	scratch, e := profilePath(sidPtr)
 	if e != nil {
@@ -343,12 +396,21 @@ func Prepare(o Options) (*Handle, error) {
 	}
 	// Read/execute is granted ONLY to the signed immutable package; shared host
 	// directories are ACL-granted. Shared files are accessed by the broker.
-	if output, e := exec.Command("icacls.exe", o.PayloadRoot, "/grant", "*"+sid+":(OI)(CI)(RX)", "/T", "/C").CombinedOutput(); e != nil {
+	tool, e := systemICACLS()
+	if e != nil {
+		return fail(e)
+	}
+	// Recheck immediately before recursively granting rights. No /C: any
+	// subtree failure is fatal, not a silently partially shared package.
+	if e = validatePackageTree(o.PayloadRoot, o.Entrypoint); e != nil {
+		return fail(e)
+	}
+	if output, e := exec.Command(tool, o.PayloadRoot, "/grant", "*"+sid+":(OI)(CI)(RX)", "/T").CombinedOutput(); e != nil {
 		return fail(fmt.Errorf("package AppContainer ACL: %w: %s", e, string(output)))
 	}
 	pipeName := `\\.\pipe\LOCAL\Launcher-Extension-` + id
 	readyName := `\\.\pipe\LOCAL\Launcher-Ready-` + id
-	ready, e := createPipe(readyName, "AU")
+	ready, e := createPipe(readyName, "AU", true)
 	if e != nil {
 		return fail(e)
 	}

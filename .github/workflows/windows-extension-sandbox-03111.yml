@@ -1,4 +1,5 @@
-name: Windows Extension Sandbox 0.31.11
+name: NeverLauncher 0.43.10 Windows AppContainer and Job Objects native acceptance
+
 on:
   push:
     paths:
@@ -9,35 +10,68 @@ on:
       - 'sdk/cli/go/**'
       - '.github/workflows/windows-extension-sandbox-03111.yml'
   pull_request:
+    paths:
+      - 'services/api/internal/windowssandbox/**'
+      - 'services/api/internal/extensionhost/**'
+      - 'services/api/internal/extensionbroker/**'
+      - '.github/workflows/windows-extension-sandbox-03111.yml'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
-  windows-isolation:
-    runs-on: windows-2022
-    permissions:
-      contents: read
+  windows-native-isolation:
+    # ARM64 is intentionally a real native host, never an x64 cross-build or
+    # emulator. An unavailable runner blocks this job; there is no fallback.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: windows-2025
+          - arch: arm64
+            runner: [self-hosted, windows, ARM64, launcher-appcontainer]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 50
     defaults:
       run:
         shell: pwsh
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - name: Windows SDK compilation
+      - name: Require native Windows architecture (no emulation)
         run: |
-          cd sdk/backend/go
-          go test ./...
-          cd ../../cli/go
-          go test ./...
-      - name: Windows API and AppContainer live verification
+          $goArch = (go env GOARCH).Trim()
+          if ($goArch -ne '${{ matrix.arch }}') { throw "Expected native ${{ matrix.arch }} Go, got $goArch" }
+          $osArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+          $expected = if ('${{ matrix.arch }}' -eq 'arm64') { 'Arm64' } else { 'X64' }
+          if ($osArchitecture -ne $expected) { throw "Expected $expected host, got $osArchitecture" }
+      - name: Build Windows extension SDKs
+        run: |
+          Push-Location sdk/backend/go
+          try { go test -count=1 ./...; if ($LASTEXITCODE -ne 0) { throw 'Backend SDK tests failed' } } finally { Pop-Location }
+          Push-Location sdk/cli/go
+          try { go test -count=1 ./...; if ($LASTEXITCODE -ne 0) { throw 'CLI SDK tests failed' } } finally { Pop-Location }
+      - name: Run real Windows AppContainer, Job and filesystem boundary tests
+        working-directory: services/api
         env:
           NL_RUN_LIVE_WIN_SANDBOX: '1'
         run: |
-          cd services/api
-          go test -tags launcher_nopgx -count=1 -v ./internal/windowssandbox
-          go test -tags launcher_nopgx -run 'TestSignedPolicy|TestExtensionHost' ./internal/extensionpolicy ./internal/extensionhost
-      - name: Windows backend build
+          go test -tags launcher_nopgx -count=1 -timeout 10m -v ./internal/windowssandbox
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows sandbox boundary tests failed' }
+          go test -tags launcher_nopgx -count=1 ./internal/extensionpolicy ./internal/extensionhost
+          if ($LASTEXITCODE -ne 0) { throw 'Windows extension policy/host tests failed' }
+      - name: Build real Windows Backend
+        working-directory: services/api
         run: |
-          cd services/api
-          go build -o "$env:RUNNER_TEMP/launcher-api.exe" ./cmd/launcher-api
+          go build -o "$env:RUNNER_TEMP/launcher-api-${{ matrix.arch }}.exe" ./cmd/launcher-api
+          if ($LASTEXITCODE -ne 0) { throw 'Windows Backend build failed' }
+      - name: Native tests are not release certification
+        run: |
+          Write-Output 'This job verifies Windows sandbox enforcement, not final signed installers or the six-platform release gate.'
