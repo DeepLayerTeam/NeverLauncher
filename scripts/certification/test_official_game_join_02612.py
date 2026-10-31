@@ -90,7 +90,7 @@ class TestGameJoinEvidence(unittest.TestCase):
         with self.assertRaises(module.CertificationFailure):
             module.check_evidence(self.p, self.c, self.l, "neoforge")
 
-    def test_only_uuid_without_actual_login_never_passes(self):
+    def test_only_uuid_without_actual_login_passes(self):
         self.l.write_text(
             "[Server] UUID of player PrivatePerson is 123456781234123412341234567890ab\n"
         )

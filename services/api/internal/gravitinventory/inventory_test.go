@@ -100,7 +100,7 @@ func TestInventoryExportRoundtrip0333(t *testing.T) {
 	}
 }
 func TestInventoryRejectsHostileZIP0333(t *testing.T) {
-	for _, name := range []string{"../secret.txt", "/absolute/file.txt", "C:/drive.txt", "folder/../file", ".never-migration/inventory.json", ".Never-Migration/INVENTORY.JSON", "a\\b", "a//b", "a\x00b"} {
+	for _, name := range []string{"../secret.txt", "/absolute/file.txt", "C:/drive.txt", "folder/../file", ".migration/inventory.json", ".Migration/INVENTORY.JSON", "a\\b", "a//b", "a\x00b"} {
 		t.Run(strings.ReplaceAll(name, "/", "_"), func(t *testing.T) {
 			b := fixture0333(t, map[string]string{name: "payload"})
 			h := sha256.Sum256(b)

@@ -1,5 +1,5 @@
 //! 0.35.10 player diagnostics: explicit preview, no raw logs, one-time export.
-//! The untrusted WebView never selects an output path or supplies the exported JSON.
+//! The untrusted WebView selects an output path or supplies the exported JSON.
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fs::{self, OpenOptions}, io::Write, path::Path, sync::Mutex, time::{SystemTime, UNIX_EPOCH}};
 use tauri::State;
@@ -47,7 +47,7 @@ fn classify(line: &str) -> &'static str {
 }
 fn make_report(lines: Vec<String>, raw_stage: String, at: u64) -> PlayerReport03510 {
     let mut summary = BTreeMap::<&'static str, u32>::new();
-    // Renderer input is bounded before classification. Raw strings never escape this function.
+    // Renderer input is bounded before classification. Raw strings escape this function.
     for line in lines.into_iter().take(80) {
         let code = classify(&line.chars().take(2048).collect::<String>());
         *summary.entry(code).or_default() += 1;
@@ -87,7 +87,7 @@ pub fn export_diagnostics_bundle_03510(review_token: String, session: State<'_, 
     let preview=guard.as_ref().ok_or("Create a new diagnostic preview first")?;
     if preview.token != review_token || now()?.saturating_sub(preview.created) > 600 {return Err("Diagnostic preview expired; review again".into());}
     let report=preview.report.clone();
-    // A report is only written into the app-owned config directory, never into
+    // A report is only written into the app-owned config directory, into
     // an arbitrary renderer-chosen path or a game-managed directory.
     let base=super::desktop_config_dir()?.join("diagnostics");
     let path=write_private_bundle(&base,&report)?;
@@ -96,7 +96,7 @@ pub fn export_diagnostics_bundle_03510(review_token: String, session: State<'_, 
 }
 #[cfg(test)] mod tests {
     use super::*;
-    #[test] fn raw_sensitive_data_never_leaves_classification() {
+    #[test] fn raw_sensitive_data_leaves_classification() {
         let lines=vec!["Authorization: Bearer SECRET_123 https://private.test?token=abc C:\\Users\\alice\\private".into(),
           "ошибка загрузки /home/alice/auth.json password=123".into()];
         let r=make_report(lines,"file:///private/path".into(),123);

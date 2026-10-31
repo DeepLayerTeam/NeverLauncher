@@ -139,7 +139,7 @@
           {
             "type": "ClientArgs",
             "args": [
-              "--never-optional-feature=1"
+              "--optional-feature=1"
             ]
           }
         ],

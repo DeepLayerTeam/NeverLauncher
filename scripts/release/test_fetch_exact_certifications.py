@@ -17,7 +17,7 @@ spec.loader.exec_module(mod)
 
 
 class ExactCertificationTests(unittest.TestCase):
-    def test_select_exact_run_never_falls_back_to_other_commit(self) -> None:
+    def test_select_exact_run_falls_back_to_other_commit(self) -> None:
         runs = [
             {"id": 1, "head_sha": "b" * 40, "created_at": "2026-09-27T00:00:00Z"},
             {"id": 2, "head_sha": "a" * 40, "created_at": "2026-09-27T00:01:00Z"},

@@ -147,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn session_credentials_never_change_static_identity() {
+    fn session_credentials_change_static_identity() {
         let (manifest, mut plan) = inputs();
         let first = MinecraftLaunchCredentials { username: "Alice".into(), uuid: "uuid-one".into(), access_token: "private-token-one".into(), user_type: "mojang".into(), auth_server_base_url: "".into() };
         plan.game_args.extend(["--username".into(), first.username.clone(), "--uuid".into(), first.uuid.clone(), "--accessToken".into(), first.access_token.clone()]);

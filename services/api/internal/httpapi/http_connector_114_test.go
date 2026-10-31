@@ -53,7 +53,7 @@ func TestFederationCore114RegistersAndAuthenticatesHTTPProvider(t *testing.T) {
 			"protocolVersion": "launcher-http-auth/1", "issuer": "cms-fixture", "subject": "cms-user-42",
 			"email": "player@example.test", "username": "player", "displayName": "HTTP Player",
 			"groups": []string{"vip"}, "roles": []string{"member"}, "authMethods": []string{"password"},
-			"providerToken": "must-never-become-never-token",
+			"providerToken": "must-become-token",
 		})
 	}))
 	defer server.Close()

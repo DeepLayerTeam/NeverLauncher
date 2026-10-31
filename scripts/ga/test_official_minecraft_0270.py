@@ -268,7 +268,7 @@ class OfficialGATest(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "already exists"):
             signer.sign_attestation(folder, self.pub, seed, SHA)
 
-    def test_release_never_has_local_approval_key(self):
+    def test_release_has_local_approval_key(self):
         # CI cannot fabricate external approval because the signing key is not in the repo.
         self.assertFalse((Path(__file__).parent / "official-ga-seed.key").exists())
 

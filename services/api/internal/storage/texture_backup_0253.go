@@ -170,7 +170,7 @@ func syncDirectory0253(path string) error {
 // each restored digest; metadata is not imported or overwritten from a backup.
 // The caller must restore the matching PostgreSQL snapshot separately.
 func RestoreTextures0253(ctx context.Context, store Storage, snapshot string, inventory []TextureBackupObject0253) (int, error) {
-	// Never read an untrusted manifest without a bound: ReadFile allocates the
+	// Read an untrusted manifest without a bound: ReadFile allocates the
 	// entire input before the legacy size check. Reject symlinks and non-files.
 	manifestPath := filepath.Join(snapshot, "manifest.json")
 	info, err := os.Lstat(manifestPath)

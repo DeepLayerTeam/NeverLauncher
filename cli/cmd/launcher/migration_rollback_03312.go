@@ -39,8 +39,8 @@ func handleMigrationRollback03312(args []string) error {
 	if cmd == "rollback-status" {
 		return cutoverRequest03311("GET", path+"/"+url.PathEscape(flagValue(args, "--profile-id", ""))+"/"+url.PathEscape(flagValue(args, "--channel", "")), token, run, nil, false, flagValue(args, "--output", ""))
 	}
-	if flagValue(args, "--confirm", "") != run || flagValue(args, "--never-writer-fenced", "") != "true" {
-		return errors.New("rollback requires exact --confirm run and --never-writer-fenced true")
+	if flagValue(args, "--confirm", "") != run || flagValue(args, "--writer-fenced", "") != "true" {
+		return errors.New("rollback requires exact --confirm run and --writer-fenced true")
 	}
 	revision, e := strconv.ParseInt(flagValue(args, "--expected-revision", ""), 10, 64)
 	if e != nil || revision < 1 {
@@ -123,7 +123,7 @@ func handleMigrationRollback03312(args []string) error {
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Migration-Rollback-Confirm", run)
-	req.Header.Set("X-Never-Writer-Fenced", "true")
+	req.Header.Set("X-Writer-Fenced", "true")
 	if cmd == "rollback-commit" {
 		req.Header.Set("X-Migration-Source-Fenced", "true")
 	}

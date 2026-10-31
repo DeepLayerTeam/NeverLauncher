@@ -15,7 +15,7 @@ SCRIPT = Path(__file__).with_name("vanilla-1171-resource-ready-proxy.py")
 
 
 class ResourceReadyProxyTests(unittest.TestCase):
-    def test_never_forwards_before_atlas_ready(self):
+    def test_forwards_before_atlas_ready(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             logs = root / "logs"

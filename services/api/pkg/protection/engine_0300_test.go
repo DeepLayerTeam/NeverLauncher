@@ -11,7 +11,7 @@ type panicHandler0300 struct{ n string }
 
 func (h panicHandler0300) Name() string { return h.n }
 func (h panicHandler0300) Evaluate(context.Context, Request) (Decision, error) {
-	panic("SECRET SHOULD NEVER APPEAR IN DECISION")
+	panic("SECRET SHOULD APPEAR IN DECISION")
 }
 
 type cancelHandler0300 struct{ cancel context.CancelFunc }

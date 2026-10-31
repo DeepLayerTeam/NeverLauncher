@@ -529,7 +529,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn changed_etag_and_http_200_never_append_old_content() {
+    async fn changed_etag_and_http_200_append_old_content() {
         let old = b"OOOOOOOOOOabcdefghij";
         let new = b"NNNNNNNNNNabcdefghij";
         let replies = vec![
@@ -618,7 +618,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn weak_or_missing_validator_never_triggers_range_reuse() {
+    async fn weak_or_missing_validator_triggers_range_reuse() {
         let data = b"0123456789ABCDEFGHIJ";
         let (url, history, server) = mock_http(vec![
             response("200 OK", Some("W/\"weak\""), &data[..7], 20),

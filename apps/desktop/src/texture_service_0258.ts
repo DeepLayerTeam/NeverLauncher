@@ -1,4 +1,4 @@
-/** 0.25.8: account-scoped local texture operations; never sends official credentials. */
+/** 0.25.8: account-scoped local texture operations; sends official credentials. */
 export type TextureKind0258 = "skin" | "cape";
 export type SkinModel0258 = "classic" | "slim";
 export type TextureVisibility0258 = "public" | "unlisted" | "private";

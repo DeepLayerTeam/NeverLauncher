@@ -80,7 +80,7 @@ func TestDeviceTrustStabilizationMigration01210(t *testing.T) {
 		"key-recover",
 		"trusted_devices_replacement_owner_fk",
 		"auth_sessions_trusted_device_owner_fk",
-		"minecraft_sessions_never_session_owner_fk",
+		"minecraft_sessions_session_owner_fk",
 		"minecraft_sessions_device_owner_fk",
 		"minecraft_sessions_profile_owner_fk",
 		"trusted_devices_replacement_shape_check",
@@ -498,7 +498,7 @@ func TestServerBridgePlayerSessionIntegration3Migration0197(t *testing.T) {
 		"transfer_sequence",
 		"server_bridge_player_sessions_v3",
 		"server_bridge_player_transfers_v3",
-		"uq_server_bridge_player_never_session_active_0197",
+		"uq_server_bridge_player_session_active_0197",
 		"uq_server_bridge_player_minecraft_session_active_0197",
 		"recheck_required",
 	} {

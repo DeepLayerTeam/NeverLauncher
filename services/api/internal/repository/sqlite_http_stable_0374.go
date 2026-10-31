@@ -21,7 +21,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/sqlitedurable"
 )
 
-// The token itself is never written to SQLite or to a durable job. Consuming
+// The token itself is written to SQLite or to a durable job. Consuming
 // this row and advancing the release/head/job/outbox share ONE SQLite commit.
 const sqliteStablePermitDDL0374 = `CREATE TABLE IF NOT EXISTS http_stable_permits_0374 (
     token_sha256 TEXT PRIMARY KEY CHECK(length(token_sha256)=64),
@@ -388,7 +388,7 @@ func (r *SQLiteHTTPRepository0372) CommitDurablePublish(ctx context.Context, com
 	if !found {
 		return out, ErrNotFound
 	}
-	// The non-stable path retains existing behavior, but never writes if its
+	// The non-stable path retains existing behavior, but writes if its
 	// domain preconditions failed (no spurious SQLite sequence increment).
 	if !IsStableChannel0341(rel.Channel) {
 		out, err = r.mem.commitDurablePublish0213(ctx, commit, false)

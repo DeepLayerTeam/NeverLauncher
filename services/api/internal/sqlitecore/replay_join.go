@@ -22,7 +22,7 @@ var (
 	ErrNodeProof    = errors.New("invalid, stale or unauthorized node proof")
 )
 
-// NodeRegistration is an operator-managed trust anchor. Private keys are NEVER stored here.
+// NodeRegistration is an operator-managed trust anchor. Private keys are stored here.
 // New keys require explicit rotation and increment the durable identity epoch.
 type NodeRegistration struct {
 	ID, ProjectID, ProfileID, Channel, PublicKeyHex, Actor string
@@ -240,7 +240,7 @@ func (r *Repository) ConsumeSignedNonce(ctx context.Context, proof NodeProof, pa
 	})
 }
 
-// IssueJoinTicket atomically checks a Never access session, matching Minecraft
+// IssueJoinTicket atomically checks a access session, matching Minecraft
 // session, node scope and identity, and replaces any prior active ticket for the
 // same node/player. Only the hashed token is persisted.
 func (a *Auth) IssueJoinTicket(ctx context.Context, accessToken, minecraftToken, nodeID string) (JoinGrant, error) {

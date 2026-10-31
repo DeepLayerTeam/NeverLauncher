@@ -317,7 +317,7 @@ class MaterializedWindowsLWJGLTests(unittest.TestCase):
         self.assertIn("digest.update(&buffer[..chunk])", memory)
         self.assertIn("Guard Memory Integrity code-page drift", memory)
 
-    def test_java21_tooling_retries_setup_but_never_skips_failure(self):
+    def test_java21_tooling_retries_setup_but_skips_failure(self):
         workflow = (ROOT / ".github/workflows/compatibility.yml").read_text(
             encoding="utf-8"
         )

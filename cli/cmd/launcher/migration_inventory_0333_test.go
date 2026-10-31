@@ -20,7 +20,7 @@ func TestGravitSourceExportCLI0333(t *testing.T) {
 	manifest := `{"format":"launcher.gravit-source-inventory.v1","sourceSha256":"aabb","sourceBytes":2,"sourceEntries":1,"totalBytes":6,"sensitiveEntries":0,"categories":{"asset":1},"authProviders":{},"textureProviders":{},"optionalActions":{},"serverReferences":0,"files":[{"path":"assets/x","kind":"asset","size":6,"sha256":"` + sha0333([]byte("source")) + `"}],"manifestSha256":""}`
 	h := sha256.Sum256([]byte(manifest))
 	expected := hex.EncodeToString(h[:])
-	f, e := zipWriter.Create(".never-migration/inventory.json")
+	f, e := zipWriter.Create(".migration/inventory.json")
 	if e != nil {
 		t.Fatal(e)
 	}

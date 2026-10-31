@@ -23,7 +23,7 @@ func setupAuth(t *testing.T) (*Repository, *Auth, string, string) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	_, e = repo.SaveUser(context.Background(), model.User{ID: "owner", Email: "owner@never.test", RoleID: "owner", Status: "active", PasswordHash: hashed}, "bootstrap")
+	_, e = repo.SaveUser(context.Background(), model.User{ID: "owner", Email: "owner@test", RoleID: "owner", Status: "active", PasswordHash: hashed}, "bootstrap")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -40,7 +40,7 @@ func setupAuth(t *testing.T) (*Repository, *Auth, string, string) {
 func TestAuthRotateReplayAndRestart(t *testing.T) {
 	r, a, path, pw := setupAuth(t)
 	ctx := context.Background()
-	t1, e := a.LoginLocal(ctx, "OWNER@never.test", pw, "", "launcher")
+	t1, e := a.LoginLocal(ctx, "OWNER@test", pw, "", "launcher")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -90,7 +90,7 @@ func TestAuthRotateReplayAndRestart(t *testing.T) {
 func TestSQLiteMFAEnrollmentRecoveryAndRevocation(t *testing.T) {
 	_, a, _, pw := setupAuth(t)
 	ctx := context.Background()
-	before, e := a.LoginLocal(ctx, "owner@never.test", pw, "", "device")
+	before, e := a.LoginLocal(ctx, "owner@test", pw, "", "device")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -112,14 +112,14 @@ func TestSQLiteMFAEnrollmentRecoveryAndRevocation(t *testing.T) {
 	if _, e = a.ValidateAccess(ctx, before.AccessToken); !errors.Is(e, ErrAuthentication) {
 		t.Fatal("pre-MFA session valid")
 	}
-	if _, e = a.LoginLocal(ctx, "owner@never.test", pw, "", "device"); !errors.Is(e, ErrMFARequired) {
+	if _, e = a.LoginLocal(ctx, "owner@test", pw, "", "device"); !errors.Is(e, ErrMFARequired) {
 		t.Fatalf("MFA bypass: %v", e)
 	}
-	token, e := a.LoginLocal(ctx, "owner@never.test", pw, codes[0], "device")
+	token, e := a.LoginLocal(ctx, "owner@test", pw, codes[0], "device")
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = a.LoginLocal(ctx, "owner@never.test", pw, codes[0], "device"); !errors.Is(e, ErrMFARequired) {
+	if _, e = a.LoginLocal(ctx, "owner@test", pw, codes[0], "device"); !errors.Is(e, ErrMFARequired) {
 		t.Fatalf("reused recovery accepted: %v", e)
 	}
 	n, e := a.RecoveryRemaining(ctx, "owner")
@@ -132,7 +132,7 @@ func TestSQLiteMFAEnrollmentRecoveryAndRevocation(t *testing.T) {
 	if _, e = a.ValidateAccess(ctx, token.AccessToken); !errors.Is(e, ErrAuthentication) {
 		t.Fatal("session survived MFA removal")
 	}
-	if _, e = a.LoginLocal(ctx, "owner@never.test", pw, "", "device"); e != nil {
+	if _, e = a.LoginLocal(ctx, "owner@test", pw, "", "device"); e != nil {
 		t.Fatalf("password login after disable: %v", e)
 	}
 }
@@ -147,7 +147,7 @@ func TestMinecraftIdentityImmutableAndAuthEpoch(t *testing.T) {
 	if out.UUID != p.UUID {
 		t.Fatal("uuid changed")
 	}
-	login, e := a.LoginLocal(ctx, "owner@never.test", pw, "", "launcher")
+	login, e := a.LoginLocal(ctx, "owner@test", pw, "", "launcher")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -192,7 +192,7 @@ func TestMinecraftIdentityImmutableAndAuthEpoch(t *testing.T) {
 func TestRefreshConcurrentReplayIsFailClosed(t *testing.T) {
 	_, a, _, pw := setupAuth(t)
 	ctx := context.Background()
-	init, e := a.LoginLocal(ctx, "owner@never.test", pw, "", "test")
+	init, e := a.LoginLocal(ctx, "owner@test", pw, "", "test")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -296,7 +296,7 @@ func TestSQLiteWrongMFAKeyAndRecoveryPersistence(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	// Secret must never be persisted in cleartext.
+	// Secret must be persisted in cleartext.
 	e = r.store.Read(ctx, func(q sqlitedurable.Executor) error {
 		var ciphertext []byte
 		if er := q.QueryRowContext(ctx, `SELECT secret_ciphertext FROM mfa_totp WHERE user_id='owner'`).Scan(&ciphertext); er != nil {
@@ -326,17 +326,17 @@ func TestSQLiteWrongMFAKeyAndRecoveryPersistence(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = alt.LoginLocal(ctx, "owner@never.test", password, "123456", "desktop"); !errors.Is(e, ErrMFARequired) && !errors.Is(e, ErrAuthentication) {
+	if _, e = alt.LoginLocal(ctx, "owner@test", password, "123456", "desktop"); !errors.Is(e, ErrMFARequired) && !errors.Is(e, ErrAuthentication) {
 		t.Fatalf("wrong key accepted: %v", e)
 	}
 	a, e = r.Auth(a.key[:])
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = a.LoginLocal(ctx, "owner@never.test", password, recovery[0], "desktop"); e != nil {
+	if _, e = a.LoginLocal(ctx, "owner@test", password, recovery[0], "desktop"); e != nil {
 		t.Fatal(e)
 	}
-	if _, e = a.LoginLocal(ctx, "owner@never.test", password, recovery[0], "desktop"); !errors.Is(e, ErrMFARequired) {
+	if _, e = a.LoginLocal(ctx, "owner@test", password, recovery[0], "desktop"); !errors.Is(e, ErrMFARequired) {
 		t.Fatal("recovery replay after restart")
 	}
 }
@@ -347,7 +347,7 @@ func TestMinecraftCascadeRevokeUserAndStaleSession(t *testing.T) {
 	if _, e := a.SaveMinecraftIdentity(ctx, identity, "owner"); e != nil {
 		t.Fatal(e)
 	}
-	login, e := a.LoginLocal(ctx, "owner@never.test", pw, "", "desktop")
+	login, e := a.LoginLocal(ctx, "owner@test", pw, "", "desktop")
 	if e != nil {
 		t.Fatal(e)
 	}

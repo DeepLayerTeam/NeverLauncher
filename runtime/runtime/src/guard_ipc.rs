@@ -95,7 +95,7 @@ struct WindowsPackageManifest {
     platform: String,
     #[serde(default)]
     architecture: String,
-    never_guard_protocol_version: u32,
+    guard_protocol_version: u32,
     #[serde(default)]
     authenticode_required: bool,
     artifacts: Vec<WindowsPackageArtifact>,
@@ -641,7 +641,7 @@ fn verify_windows_package_manifest(guard_executable: &Path) -> Result<(), String
         && manifest.platform == format!("windows-{canonical_arch}")
         && manifest.architecture == canonical_arch;
     if manifest.product_version != env!("CARGO_PKG_VERSION")
-        || manifest.never_guard_protocol_version != GUARD_PROTOCOL_VERSION
+        || manifest.guard_protocol_version != GUARD_PROTOCOL_VERSION
         || (!legacy_identity && !canonical_identity)
     {
         return Err("Windows package manifest version/platform/protocol mismatch".to_string());

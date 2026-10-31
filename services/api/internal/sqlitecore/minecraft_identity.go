@@ -16,7 +16,7 @@ var mcName = regexp.MustCompile(`^[A-Za-z0-9_]{3,16}$`)
 var mcUUID = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
 
 // SaveMinecraftIdentity binds an existing canonical user to one immutable UUID.
-// It never derives a new UUID from mutable email, display name or launcher name.
+// It derives a new UUID from mutable email, display name or launcher name.
 func (a *Auth) SaveMinecraftIdentity(ctx context.Context, p model.MinecraftProfile, actor string) (model.MinecraftProfile, error) {
 	p.Name = strings.TrimSpace(p.Name)
 	p.UUID = strings.ToLower(strings.TrimSpace(p.UUID))
@@ -85,14 +85,14 @@ func (a *Auth) MinecraftIdentity(ctx context.Context, userID string) (p model.Mi
 	return
 }
 
-// IssueMinecraftSession requires the current Never access token, joins the
+// IssueMinecraftSession requires the current access token, joins the
 // canonical profile and writes only the hash of the new bearer. Password or
 // disabled user changes instantly invalidate the token via auth_epoch.
-func (a *Auth) IssueMinecraftSession(ctx context.Context, neverAccess string, ttl time.Duration) (string, string, error) {
+func (a *Auth) IssueMinecraftSession(ctx context.Context, Access string, ttl time.Duration) (string, string, error) {
 	if ttl <= 0 || ttl > 24*time.Hour {
 		return "", "", errors.New("Minecraft token TTL must be <=24h")
 	}
-	principal, e := a.ValidateAccess(ctx, neverAccess)
+	principal, e := a.ValidateAccess(ctx, Access)
 	if e != nil {
 		return "", "", e
 	}
@@ -120,13 +120,13 @@ func (a *Auth) IssueMinecraftSession(ctx context.Context, neverAccess string, tt
 			return ErrAuthentication
 		}
 		var accessExpiry, accessRevoked int64
-		if er = q.QueryRowContext(ctx, `SELECT expires_at,revoked_at FROM access_tokens WHERE token_hash=? AND session_id=?`, hashBearer(neverAccess), principal.SessionID).Scan(&accessExpiry, &accessRevoked); er != nil {
+		if er = q.QueryRowContext(ctx, `SELECT expires_at,revoked_at FROM access_tokens WHERE token_hash=? AND session_id=?`, hashBearer(Access), principal.SessionID).Scan(&accessExpiry, &accessRevoked); er != nil {
 			return ErrAuthentication
 		}
 		if accessRevoked != 0 || accessExpiry <= now {
 			return ErrAuthentication
 		}
-		if _, er = q.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,access_hash,status,created_at,expires_at) VALUES(?,?,?,?,?,'active',?,?)`, sid, principal.UserID, principal.SessionID, uuid, hash, now, now+int64(ttl)); er != nil {
+		if _, er = q.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_hash,status,created_at,expires_at) VALUES(?,?,?,?,?,'active',?,?)`, sid, principal.UserID, principal.SessionID, uuid, hash, now, now+int64(ttl)); er != nil {
 			return er
 		}
 		return recordAudit(ctx, q, audit(principal.UserID, "minecraft:session-created", sid))
@@ -145,7 +145,7 @@ func (a *Auth) ValidateMinecraftSession(ctx context.Context, raw string) (model.
 		var mcStatus, sessionStatus, userStatus string
 		var expire, sExpire, epoch, currentEpoch int64
 		er := q.QueryRowContext(ctx, `SELECT p.user_id,p.uuid,p.name,p.issuer,p.realm,p.subject,p.identity_version,m.status,s.status,u.status,m.expires_at,s.expires_at,s.auth_epoch,u.auth_epoch
- FROM minecraft_sessions m JOIN minecraft_profiles p ON p.uuid=m.profile_uuid JOIN auth_sessions s ON s.id=m.never_session_id JOIN users u ON u.id=m.user_id
+ FROM minecraft_sessions m JOIN minecraft_profiles p ON p.uuid=m.profile_uuid JOIN auth_sessions s ON s.id=m.session_id JOIN users u ON u.id=m.user_id
  WHERE m.access_hash=? AND m.user_id=p.user_id AND s.user_id=m.user_id`, hashBearer(raw)).Scan(&p.UserID, &p.UUID, &p.Name, &p.Issuer, &p.Realm, &p.Subject, &p.IdentityVersion, &mcStatus, &sessionStatus, &userStatus, &expire, &sExpire, &epoch, &currentEpoch)
 		if errors.Is(er, sql.ErrNoRows) {
 			return ErrAuthentication
@@ -166,7 +166,7 @@ func (a *Auth) ValidateMinecraftSession(ctx context.Context, raw string) (model.
 }
 
 // RevokeMinecraftSession invalidates one Minecraft bearer without revoking the
-// parent Never session. Session ownership is checked in the same transaction.
+// parent session. Session ownership is checked in the same transaction.
 func (a *Auth) RevokeMinecraftSession(ctx context.Context, userID, id, reason string) error {
 	if userID == "" || id == "" || strings.TrimSpace(reason) == "" {
 		return errors.New("owner/session/reason required")

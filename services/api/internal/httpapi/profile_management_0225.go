@@ -130,7 +130,7 @@ func (s Server) profileExport0225(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, err.Error())
 		return
 	}
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="never-profile-r%d.json"`, snap.Revision))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="profile-r%d.json"`, snap.Revision))
 	writeJSON(w, http.StatusOK, bundle)
 }
 

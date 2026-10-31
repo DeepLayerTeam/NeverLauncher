@@ -1753,7 +1753,7 @@ for required in [
     "auth_sessions_device_binding_shape_check",
     "auth_sessions_trusted_device_owner_fk",
     "trusted_devices_replacement_owner_fk",
-    "minecraft_sessions_never_session_owner_fk",
+    "minecraft_sessions_session_owner_fk",
     "minecraft_sessions_device_owner_fk",
     "minecraft_sessions_profile_owner_fk",
     "UPDATE minecraft_sessions SET trusted_device_id=NULL",

@@ -20,7 +20,7 @@ func archive334(t *testing.T, files map[string]string) ([]byte,inv.Inventory) {
 }
 func TestExtractFileAuth334(t *testing.T) {
  src,snapshot:=archive334(t,map[string]string{
-  "modules-config/FileAuthSystem/Database.json":`{"11111111-2222-4333-8444-555555555555":{"username":"Alice_01","uuid":"11111111-2222-4333-8444-555555555555","password":"should-never-appear","permissions":{"roles":["ADMIN"]}}}`,
+  "modules-config/FileAuthSystem/Database.json":`{"11111111-2222-4333-8444-555555555555":{"username":"Alice_01","uuid":"11111111-2222-4333-8444-555555555555","password":"should-appear","permissions":{"roles":["ADMIN"]}}}`,
   "modules-config/FileAuthSystem/Sessions.json":`{"accessToken":"SECRET"}`,
  })
  result,e:=Extract(context.Background(),bytes.NewReader(src),int64(len(src)),snapshot);if e!=nil{t.Fatal(e)}

@@ -64,14 +64,14 @@ class Gate02413Tests(unittest.TestCase):
                 "incomplete",
             )
 
-    def test_missing_minecraft_never_certifies(self):
+    def test_missing_minecraft_certifies(self):
         with tempfile.TemporaryDirectory() as tmp:
             docs = [sample(t) for t in sorted(REQUIRED_TARGETS)]
             docs[0]["minecraft"]["actualClient"] = False
             result = aggregate(self.files(tmp, docs), expected_commit=SHA)
             self.assertIn("Minecraft", " ".join(result["unmetGates"]))
 
-    def test_skipped_fault_injection_never_certifies(self):
+    def test_skipped_fault_injection_certifies(self):
         with tempfile.TemporaryDirectory() as tmp:
             docs = [sample(t) for t in sorted(REQUIRED_TARGETS)]
             docs[0]["checks"]["faultInjection"] = "skipped"

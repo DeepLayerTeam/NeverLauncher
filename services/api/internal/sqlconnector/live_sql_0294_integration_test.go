@@ -31,7 +31,7 @@ func TestLiveSQLLegacyAuthentication0294(t *testing.T) {
 		t.Run(target.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
-			tls := false // isolated loopback CI instances, never use this in production
+			tls := false // isolated loopback CI instances, use this in production
 			cfg := Config{
 				ID: "legacy-test", Driver: target.driver, DSN: dsn, Table: "nl_auth_0294_users",
 				Columns:  Columns{ID: "account_id", Username: "login_name", Email: "email_addr", Password: "pass_hash", Status: "account_state", MinecraftUUID: "game_uuid"},

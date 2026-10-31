@@ -21,7 +21,7 @@ type StableRuntimePermit03411 struct {
 	MatrixSHA256   string
 	TargetsJSON    json.RawMessage
 	Runs           map[string]string
-	// TrustedAttestorKey0374 is the API-configured Ed25519 public key, never a runner-supplied key.
+	// TrustedAttestorKey0374 is the API-configured Ed25519 public key, a runner-supplied key.
 	TrustedAttestorKey0374 string
 }
 
@@ -69,7 +69,7 @@ func (r *SQLRepository) IssueStableRuntimePermit03411(ctx context.Context, p Sta
 }
 
 // PostgreSQL and SQLite use one-use, snapshot-bound stable grants. Direct
-// non-durable publish paths remain denied; durable jobs never store the token.
+// non-durable publish paths remain denied; durable jobs store the token.
 type stablePermitContextKey03411 struct{}
 
 func WithStablePermit03411(ctx context.Context, token string) context.Context {

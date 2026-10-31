@@ -101,7 +101,7 @@ func safeOptionalArgument0245(t, arg string) bool {
 		return true
 	}
 	if t == "ClientArgs" {
-		for _, prefix := range []string{"--never-optional-", "--fabric-", "--forge-", "--neoforge-", "--mixin-"} {
+		for _, prefix := range []string{"--optional-", "--fabric-", "--forge-", "--neoforge-", "--mixin-"} {
 			if strings.HasPrefix(arg, prefix) {
 				rest := strings.TrimPrefix(arg, prefix)
 				if len(rest) == 0 {

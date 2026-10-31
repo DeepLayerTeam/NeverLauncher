@@ -125,7 +125,7 @@ func TestMigrationSecurityTrustResetPostgres0336(t *testing.T) {
 	if _, err = repo.ResetMigrationTrust0336(ctx, run.ID, "different-kid", manifestHash, false); !errors.Is(err, mw.ErrConflict) {
 		t.Fatalf("changed signer accepted %v", err)
 	}
-	// A new, independent key enrolled after reset is Never-owned and must not
+	// A new, independent key enrolled after reset is owned and must not
 	// be revoked by a repeated request after an uncertain response.
 	newDevice := "new-device-" + suffix
 	_, err = repo.db.ExecContext(ctx, `INSERT INTO trusted_devices(id,user_id,name,status,trust_state,assurance,key_algorithm,public_key,key_fingerprint) VALUES($1,$2,'fresh enrollment','active','verified','proof-of-possession','ed25519','new-public-key',$3)`, newDevice, userID, fmt.Sprintf("%064x", time.Now().UnixNano()+1))

@@ -164,7 +164,7 @@ WHERE coord_channels.expires_at<=? OR coord_channels.resume_after<=excluded.resu
 	})
 }
 
-// AcquireCommandLease never reuses an old token, including after expiry or
+// AcquireCommandLease reuses an old token, including after expiry or
 // release. Fencing high-water marks and the token tombstone table persist.
 func (c *Coordinator) AcquireCommandLease(ctx context.Context, serverID, commandID, owner, token string, ttl time.Duration) (bool, error) {
 	if e := validatePart(serverID, commandID, owner, token); e != nil {

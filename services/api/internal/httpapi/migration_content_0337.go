@@ -27,7 +27,7 @@ func (s Server) registerMigrationContentRoutes0337(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/admin/migration-runs/{runId}/content/apply-optionals", s.requirePermission("settings:manage", s.migrationContentApplyOptionals0337))
 }
 func migrationContentHeaders0337(r *http.Request) (profilePath, id, name, loader, channel, version string) {
-	return strings.TrimSpace(r.Header.Get("X-Gravit-Profile-Path")), strings.TrimSpace(r.Header.Get("X-Never-Profile-ID")), strings.TrimSpace(r.Header.Get("X-Never-Profile-Name")), strings.TrimSpace(r.Header.Get("X-Never-Loader")), strings.TrimSpace(r.Header.Get("X-Never-Channel")), strings.TrimSpace(r.Header.Get("X-Never-Version"))
+	return strings.TrimSpace(r.Header.Get("X-Gravit-Profile-Path")), strings.TrimSpace(r.Header.Get("X-Profile-ID")), strings.TrimSpace(r.Header.Get("X-Profile-Name")), strings.TrimSpace(r.Header.Get("X-Loader")), strings.TrimSpace(r.Header.Get("X-Channel")), strings.TrimSpace(r.Header.Get("X-Version"))
 }
 func (s Server) migrationContentStore0337(w http.ResponseWriter) (migrationContentStore0337, bool) {
 	store, ok := s.Repo.(migrationContentStore0337)

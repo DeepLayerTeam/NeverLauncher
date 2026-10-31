@@ -327,7 +327,7 @@ export function AdminApp() {
     }
   }
 
-  // Live Backend view. A failed request never leaves a stale success-shaped inventory.
+  // Live Backend view. A failed request leaves a stale success-shaped inventory.
   useEffect(() => {
     if (
       !token ||

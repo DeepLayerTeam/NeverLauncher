@@ -93,7 +93,7 @@ mod tests {
     use super::*;
     #[test]
     fn older_signed_generation_fails_even_with_same_jar() {
-        let root=std::env::temp_dir().join(format!("never-generation-{}",rand::random::<u64>()));
+        let root=std::env::temp_dir().join(format!("generation-{}",rand::random::<u64>()));
         fs::create_dir_all(&root).unwrap();
         let mut m:Manifest=serde_json::from_value(serde_json::json!({"schemaVersion":"1.0","projectId":"p","profileId":"q","channel":"stable","version":"v1","createdAt":"now","minecraft":{"version":"1.20","loader":"vanilla"},"runtime":{"java":{"majorVersion":17,"distribution":"temurin"}},"files":[]})).unwrap();
         m.game_release_generation=5;

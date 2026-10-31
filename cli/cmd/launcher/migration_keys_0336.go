@@ -17,7 +17,7 @@ import (
 // logs, CLI arguments or API responses. Nothing is deployed automatically.
 func generateNeverMigrationKeys0336(path string) (err error) {
 	if path == "" {
-		return errors.New("generate-never-keys requires --output /secure/private/never-key-material.json")
+		return errors.New("generate-keys requires --output /secure/private/key-material.json")
 	}
 	var token [32]byte
 	var seed [32]byte
@@ -31,7 +31,7 @@ func generateNeverMigrationKeys0336(path string) (err error) {
 	if _, err = rand.Read(suffix[:]); err != nil {
 		return err
 	}
-	kid := "never-migration-" + hex.EncodeToString(suffix[:])
+	kid := "migration-" + hex.EncodeToString(suffix[:])
 	pub := ed25519.NewKeyFromSeed(seed[:]).Public().(ed25519.PublicKey)
 	fp := sha256.Sum256(pub)
 	payload := struct {

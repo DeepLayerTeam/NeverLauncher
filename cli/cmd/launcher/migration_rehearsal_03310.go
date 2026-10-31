@@ -128,7 +128,7 @@ func rehearsalProbeExec03310(ctx context.Context, root, run, stage, name string)
 	cmd := exec.CommandContext(ctx, program)
 	cmd.Dir = root
 	// Inherit no tokens, no cloud credentials, no production DB connection.
-	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + root, "NEVER_MIGRATION_RUN_ID=" + run, "NEVER_MIGRATION_STAGE_ID=" + stage, "NEVER_MIGRATION_CHECK=" + name}
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + root, "MIGRATION_RUN_ID=" + run, "MIGRATION_STAGE_ID=" + stage, "MIGRATION_CHECK=" + name}
 	var stdout, stderr limitedProbeBuffer03310
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -190,7 +190,7 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 	if real == "/" || real == filepath.Dir(real) {
 		return report, errors.New("unsafe staging root")
 	}
-	marker, e := rehearsalRead03310(real, ".never-migration-stage.json", 8192)
+	marker, e := rehearsalRead03310(real, ".migration-stage.json", 8192)
 	if e != nil {
 		return report, e
 	}

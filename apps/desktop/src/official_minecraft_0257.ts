@@ -1,6 +1,6 @@
 /** 0.26.2 official Minecraft facade. Only native Tauri is allowed to hold official
  * session tickets/Microsoft refresh/Minecraft access tokens. Renderer receives
- * profile metadata, Device Code display values and status, never credentials.
+ * profile metadata, Device Code display values and status, credentials.
  */
 export type OfficialProfile0257 = {
   id: string;
@@ -31,27 +31,24 @@ export class OfficialMinecraftClient0257 {
   private generation = 0;
   constructor(
     private backendUrl: string,
-    private neverToken: string,
-    private neverSessionId: string,
+    private Token: string,
+    private SessionId: string,
     private readonly native: NativeOfficialInvoke0262,
   ) {}
-  rebind(backendUrl: string, neverToken: string, neverSessionId: string) {
-    if (
-      this.backendUrl !== backendUrl ||
-      this.neverSessionId !== neverSessionId
-    )
+  rebind(backendUrl: string, Token: string, rSessionId: string) {
+    if (this.backendUrl !== backendUrl || this.SessionId !== SessionId)
       this.clear();
     this.backendUrl = backendUrl;
-    this.neverToken = neverToken;
-    this.neverSessionId = neverSessionId;
+    this.Token = Token;
+    this.SessionId = SessionId;
   }
   private get context(): Record<string, string> {
-    if (!this.neverToken || !this.neverSessionId)
+    if (!this.Token || !this.SessionId)
       throw new Error("Сначала выполните вход в Launcher.");
     return {
       backendUrl: this.backendUrl,
-      neverToken: this.neverToken,
-      neverSessionId: this.neverSessionId,
+      Token: this.Token,
+      SessionId: this.SessionId,
     };
   }
   private async call<T>(
@@ -86,10 +83,10 @@ export class OfficialMinecraftClient0257 {
     this.active = hadLinkedAccount; // cancelling an add-account flow does not sign out an existing account
     await this.native("official_identity_cancel_0262", {
       backendUrl: this.backendUrl,
-      neverSessionId: this.neverSessionId,
+      SessionId: this.SessionId,
     });
   }
-  /** System-browser OAuth PKCE: authorization code and verifier never enter React. */
+  /** System-browser OAuth PKCE: authorization code and verifier enter React. */
   async browserLogin(): Promise<OfficialProfile0257> {
     const beforeCancel = this.generation;
     await this.cancel();
@@ -171,7 +168,7 @@ export class OfficialMinecraftClient0257 {
     if (!profile) throw new Error("Подключите официальный Minecraft-аккаунт.");
     return profile;
   }
-  /** Metadata-only directory: credentials never leave the Rust OS vault. */
+  /** Metadata-only directory: credentials leave the Rust OS vault. */
   async accounts(): Promise<OfficialAccount0267[]> {
     return this.call("official_identity_accounts_0267");
   }
@@ -198,7 +195,7 @@ export class OfficialMinecraftClient0257 {
     this.active = true;
     return profile;
   }
-  /** Logout deletes one selected UUID's native credential, never all linked accounts. */
+  /** Logout deletes one selected UUID's native credential, all linked accounts. */
   async logout(accountId: string): Promise<OfficialProfile0257 | null> {
     ++this.generation;
     this.active = false;
@@ -210,8 +207,8 @@ export class OfficialMinecraftClient0257 {
     await this.call("official_identity_disconnect_0262");
   }
   /** An official change is complete only with a matching, verified native
-   * account and the state returned by Minecraft Services. The renderer never
-   * constructs a provider request, never persists a bearer, and cannot choose
+   * account and the state returned by Minecraft Services. The renderer
+   * constructs a provider request, persists a bearer, and cannot choose
    * a different account while the native mutation holds its vault lock. */
   private async texture(
     operation: "uploadSkin" | "resetSkin" | "selectCape" | "resetCape",
@@ -327,8 +324,8 @@ export class OfficialMinecraftClient0257 {
   async resetCape(): Promise<OfficialProfile0257> {
     return this.texture("resetCape");
   }
-  /** Durable Never-to-Minecraft links are verified independently by the Backend. */
-  async neverLinks(): Promise<NeverOfficialLink0268[]> {
+  /** Durable to-Minecraft links are verified independently by the Backend. */
+  async Links(): Promise<NeverOfficialLink0268[]> {
     return this.call<NeverOfficialLink0268[]>("official_identity_links_0268");
   }
   async linkToNever(
@@ -348,7 +345,7 @@ export class OfficialMinecraftClient0257 {
       confirmed: true,
     });
   }
-  /** Intentional break: never return game access tokens through renderer. */
+  /** Intentional break: return game access tokens through renderer. */
   async credentials(): Promise<never> {
     throw new Error(
       "Official Minecraft launch credentials доступны только Runtime через native manager.",

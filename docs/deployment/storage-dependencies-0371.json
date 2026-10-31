@@ -1419,7 +1419,7 @@
       ]
     },
     {
-      "path": ".github/workflows/never-official-linking-0268.yml",
+      "path": ".github/workflows/official-linking-0268.yml",
       "findings": [
         {
           "category": "postgresql-config-or-literal",
@@ -1434,7 +1434,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 41,
-          "evidence": "NEVER_TEST_POSTGRES_DSN: postgresql://ci:ci@localhost:5432/launcher_link_ci?sslmode=disable"
+          "evidence": "TEST_POSTGRES_DSN: postgresql://ci:ci@localhost:5432/launcher_link_ci?sslmode=disable"
         }
       ]
     },
@@ -1669,7 +1669,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 36,
-          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://never_ga_test:never_ga_test_ci_only@127.0.0.1:5432/never_ga_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://ga_test:ga_test_ci_only@127.0.0.1:5432/ga_test?sslmode=disable"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -1824,7 +1824,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 39,
-          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://never_test:never_test@localhost:5432/never_test?sslmode=disable"
+          "evidence": "LAUNCHER_TEST_POSTGRES_DSN: postgres://test:test@localhost:5432/test?sslmode=disable"
         }
       ]
     },
@@ -6509,7 +6509,7 @@
       ]
     },
     {
-      "path": "cli/internal/dbmigrate/sql/0075_official_never_identity_0268.sql",
+      "path": "cli/internal/dbmigrate/sql/0075_official_identity_0268.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -15154,7 +15154,7 @@
       ]
     },
     {
-      "path": "services/api/internal/dbmigrate/sql/0075_official_never_identity_0268.sql",
+      "path": "services/api/internal/dbmigrate/sql/0075_official_identity_0268.sql",
       "findings": [
         {
           "category": "postgresql-migration-file",
@@ -19684,7 +19684,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 73,
-          "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 ho"
+          "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 ho"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -19714,7 +19714,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 90,
-          "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,never_session_id,binding_epoch,proj"
+          "evidence": "if _, err := a.db.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,session_id,binding_epoch,proj"
         },
         {
           "category": "postgresql-config-or-literal",
@@ -19759,7 +19759,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 112,
-          "evidence": "{`SELECT status FROM server_bridge_player_sessions_v3 WHERE never_session_id=$1`, \"invalidated\"},"
+          "evidence": "{`SELECT status FROM server_bridge_player_sessions_v3 WHERE session_id=$1`, \"invalidated\"},"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -19774,7 +19774,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 136,
-          "evidence": "if _, err := b.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 ho"
+          "evidence": "if _, err := b.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 ho"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -22294,17 +22294,17 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 31,
-          "evidence": "rows, err := r.db.QueryContext(ctx, `SELECT minecraft_uuid,minecraft_name,verified_at FROM official_never_identity_links_0268 WHERE never_user_id=$1 ORDER BY created_at,minecraft_u"
+          "evidence": "rows, err := r.db.QueryContext(ctx, `SELECT minecraft_uuid,minecraft_name,verified_at FROM official_identity_links_0268 WHERE user_id=$1 ORDER BY created_at,minecraft_u"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 54,
-          "evidence": "err := r.db.QueryRowContext(ctx, `INSERT INTO official_never_identity_links_0268(minecraft_uuid,never_user_id,minecraft_name)"
+          "evidence": "err := r.db.QueryRowContext(ctx, `INSERT INTO official_identity_links_0268(minecraft_uuid,user_id,minecraft_name)"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 70,
-          "evidence": "result, err := r.db.ExecContext(ctx, `DELETE FROM official_never_identity_links_0268 WHERE never_user_id=$1 AND minecraft_uuid=$2`, owner, uuid)"
+          "evidence": "result, err := r.db.ExecContext(ctx, `DELETE FROM official_identity_links_0268 WHERE user_id=$1 AND minecraft_uuid=$2`, owner, uuid)"
         }
       ]
     },
@@ -22314,7 +22314,7 @@
         {
           "category": "postgresql-config-or-literal",
           "line": 17,
-          "evidence": "t.Skip(\"set NEVER_TEST_POSTGRES_DSN for isolated PostgreSQL integration tests\")"
+          "evidence": "t.Skip(\"set TEST_POSTGRES_DSN for isolated PostgreSQL integration tests\")"
         },
         {
           "category": "direct-sql-open",
@@ -22934,17 +22934,17 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 1773,
-          "evidence": "_, err := r.db.Exec(`INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard"
+          "evidence": "_, err := r.db.Exec(`INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 1785,
-          "evidence": "err := r.db.QueryRow(`SELECT id,user_id,never_session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,gua"
+          "evidence": "err := r.db.QueryRow(`SELECT id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,gua"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 1807,
-          "evidence": "err := r.db.QueryRow(`SELECT id,user_id,never_session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,gua"
+          "evidence": "err := r.db.QueryRow(`SELECT id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,integrity_verified,guard_attestation_sha256,gua"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -22959,7 +22959,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 1857,
-          "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE never_session_id=$1 AND status='active'`, strings.TrimSpace(neverSess"
+          "evidence": "res, err := r.db.Exec(`UPDATE minecraft_sessions SET status='revoked',revoked_at=now(),revoked_reason=$2 WHERE session_id=$1 AND status='active'`, strings.TrimSpace(neverSess"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -23389,12 +23389,12 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 134,
-          "evidence": "rows, err := tx.QueryContext(ctx, `SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE status='active' AND correlation_id\u003c\u003e$1 AND ((never_session_id=$2 AND player_uui"
+          "evidence": "rows, err := tx.QueryContext(ctx, `SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE status='active' AND correlation_id\u003c\u003e$1 AND ((session_id=$2 AND player_uui"
         },
         {
           "category": "postgresql-sql-dialect",
           "line": 166,
-          "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,never_session_id,minecraft_session_id,tru"
+          "evidence": "_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,session_id,minecraft_session_id,tru"
         },
         {
           "category": "postgresql-sql-dialect",
@@ -23469,7 +23469,7 @@
         {
           "category": "postgresql-sql-dialect",
           "line": 263,
-          "evidence": "rows, err := tx.QueryContext(ctx, `SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE never_session_id=$1 AND status='active' AND ($2='' OR proxy_node_id=$2 OR backe"
+          "evidence": "rows, err := tx.QueryContext(ctx, `SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE session_id=$1 AND status='active' AND ($2='' OR proxy_node_id=$2 OR backe"
         },
         {
           "category": "database-sql-handle",

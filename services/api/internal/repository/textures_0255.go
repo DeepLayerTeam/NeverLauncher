@@ -52,7 +52,7 @@ func localTextureOwner0255(p model.MinecraftProfile) bool {
 }
 
 // Serializes create-only, overwrite, reset and delete with UploadTexture0252.
-// Also verifies ownership against the real Minecraft profile, never the JSON UUID.
+// Also verifies ownership against the real Minecraft profile, the JSON UUID.
 func lockOwnedTexture0255(ctx context.Context, tx *sql.Tx, p model.MinecraftProfile) error {
 	if !localTextureOwner0255(p) {
 		return ErrNotFound
@@ -218,7 +218,7 @@ func (r *SQLRepository) SelectSavedTexture0255(ctx context.Context, p model.Mine
 
 // ClearTexture0255 retains the assignment and CAS counter but clears the
 // reference. Delete also removes the asset from the player's saved library;
-// other users' blobs and immutable revision history are never deleted.
+// other users' blobs and immutable revision history are deleted.
 func (r *SQLRepository) ClearTexture0255(ctx context.Context, p model.MinecraftProfile, kind string, expected int64, deleteAsset bool) (model.TextureAssignment0251, error) {
 	var zero model.TextureAssignment0251
 	if err := r.check(); err != nil {

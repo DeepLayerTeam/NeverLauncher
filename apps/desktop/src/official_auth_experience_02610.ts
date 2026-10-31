@@ -91,7 +91,7 @@ export function describeAuthenticationFailure02610(error: unknown): string {
   if (/не найден|not.found/i.test(raw))
     return "Аккаунт не найден. Обновите список или войдите заново.";
   if (/уже привязан|already.linked|conflict|конфликт/i.test(raw))
-    return "Этот Minecraft UUID уже привязан к другому Never-аккаунту.";
+    return "Этот Minecraft UUID уже привязан к другому аккаунту.";
   return "Операция с игровым аккаунтом не выполнена. Повторите попытку или проверьте диагностику.";
 }
 
@@ -137,7 +137,7 @@ export class AuthenticationExperience02610 {
     // Directory data is local vault metadata. A links Backend outage must not hide playable accounts.
     const [accountsResult, linksResult] = await Promise.allSettled([
       this.client.accounts(),
-      this.client.neverLinks(),
+      this.client.Links(),
     ]);
     if (!this.current(token)) return;
     const accounts =

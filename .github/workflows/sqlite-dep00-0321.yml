@@ -28,17 +28,17 @@ jobs:
           go mod download
           go mod tidy
           go mod verify
-          mkdir -p "$RUNNER_TEMP/never-sqlite-dep00"
-          chmod 0700 "$RUNNER_TEMP/never-sqlite-dep00"
-          stat -f -c '%T' "$RUNNER_TEMP/never-sqlite-dep00"
+          mkdir -p "$RUNNER_TEMP/sqlite-dep00"
+          chmod 0700 "$RUNNER_TEMP/sqlite-dep00"
+          stat -f -c '%T' "$RUNNER_TEMP/sqlite-dep00"
       - name: Real WAL crash, process fencing and transaction tests
         env:
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: "1"
-          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-dep00
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-dep00
         run: go test -race -count=1 -v ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Build actual CLI
         run: go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
       - name: Real CLI probe and verification
         run: |
-          "$RUNNER_TEMP/launcher-sqlite" probe --db "$RUNNER_TEMP/never-sqlite-dep00/preflight.sqlite"
-          "$RUNNER_TEMP/launcher-sqlite" verify --db "$RUNNER_TEMP/never-sqlite-dep00/preflight.sqlite"
+          "$RUNNER_TEMP/launcher-sqlite" probe --db "$RUNNER_TEMP/sqlite-dep00/preflight.sqlite"
+          "$RUNNER_TEMP/launcher-sqlite" verify --db "$RUNNER_TEMP/sqlite-dep00/preflight.sqlite"

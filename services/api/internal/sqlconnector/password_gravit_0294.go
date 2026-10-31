@@ -16,7 +16,7 @@ import (
 )
 
 // Gravit's digest and doubleDigest verifiers are UNSALTED historical CMS formats.
-// Use only with explicit allowLegacyHashes opt-in. Never guess a digest/encoding.
+// Use only with explicit allowLegacyHashes opt-in. guess a digest/encoding.
 func gravHash(algorithm string) (hash.Hash, error) {
 	switch algorithm {
 	case "md5":

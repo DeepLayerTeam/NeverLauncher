@@ -17,7 +17,7 @@ import (
 
 // SQLiteHTTPRepository0372 persists the complete HTTP repository domain state
 // in a single-process, FULL-sync WAL SQLite database. The in-process domain
-// model is a cache, never a durable source: a mutation returns only after the
+// model is a cache, a durable source: a mutation returns only after the
 // new state and its integrity digest commit atomically. This design is intended
 // for a small, single-node installation, not network HA or large data sets.
 //
@@ -44,7 +44,7 @@ const sqliteHTTPDDL0372 = `CREATE TABLE IF NOT EXISTS http_repository_state_0372
 )`
 
 // OpenSQLiteHTTPRepository0372 owns the database and rejects another process
-// attempting to acquire the same SQLite file. It never falls back to memory.
+// attempting to acquire the same SQLite file. It falls back to memory.
 func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (_ *SQLiteHTTPRepository0372, err error) {
 	store, err := sqlitedurable.Open(ctx, sqlitedurable.Options{Path: path})
 	if err != nil {
@@ -56,7 +56,7 @@ func OpenSQLiteHTTPRepository0372(ctx context.Context, path, publicURL string) (
 		}
 	}()
 	r := &SQLiteHTTPRepository0372{store: store, mem: NewMemoryRepository(publicURL)}
-	// Never seed the HTTP production repository with the development demo,
+	// Seed the HTTP production repository with the development demo,
 	// default admin credentials, or a pre-published synthetic release.
 	r.mem.projects = nil
 	r.mem.profiles = nil

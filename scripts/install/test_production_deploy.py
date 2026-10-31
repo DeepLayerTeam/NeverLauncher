@@ -168,7 +168,7 @@ class DeploymentTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     deploy.compose_run(args(mode="network-ha", backup=True))
 
-    def test_symlinks_and_mounts_never_deleted(self):
+    def test_symlinks_and_mounts_deleted(self):
         with tempfile.TemporaryDirectory() as base:
             root = Path(base) / "owned"
             root.mkdir()

@@ -165,7 +165,7 @@ func TestExclusiveOwner(t *testing.T) {
 	}
 	// Child tries exactly the same store, not only raw file locks.
 	child := exec.Command(os.Args[0], "-test.run=^TestOwnerChild$")
-	child.Env = append(os.Environ(), "NEVER_SQLITE_CHILD_PATH="+opt.Path, "NEVER_SQLITE_CHILD_MODE=expect-deny")
+	child.Env = append(os.Environ(), "SQLITE_CHILD_PATH="+opt.Path, "SQLITE_CHILD_MODE=expect-deny")
 	if out, e := child.CombinedOutput(); e != nil {
 		t.Fatalf("second owner accepted or helper failed: %v\n%s", e, out)
 	}
@@ -173,19 +173,19 @@ func TestExclusiveOwner(t *testing.T) {
 		t.Fatal(err)
 	}
 	child = exec.Command(os.Args[0], "-test.run=^TestOwnerChild$")
-	child.Env = append(os.Environ(), "NEVER_SQLITE_CHILD_PATH="+opt.Path, "NEVER_SQLITE_CHILD_MODE=expect-allow")
+	child.Env = append(os.Environ(), "SQLITE_CHILD_PATH="+opt.Path, "SQLITE_CHILD_MODE=expect-allow")
 	if out, e := child.CombinedOutput(); e != nil {
 		t.Fatalf("owner lock not released: %v\n%s", e, out)
 	}
 }
 
 func TestOwnerChild(t *testing.T) {
-	path := os.Getenv("NEVER_SQLITE_CHILD_PATH")
+	path := os.Getenv("SQLITE_CHILD_PATH")
 	if path == "" {
 		return
 	}
 	s, err := Open(context.Background(), Options{Path: path})
-	switch os.Getenv("NEVER_SQLITE_CHILD_MODE") {
+	switch os.Getenv("SQLITE_CHILD_MODE") {
 	case "expect-deny":
 		if err == nil {
 			_ = s.Close()
@@ -243,7 +243,7 @@ func TestAbruptExitRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 	child := exec.Command(os.Args[0], "-test.run=^TestOwnerChild$")
-	child.Env = append(os.Environ(), "NEVER_SQLITE_CHILD_PATH="+opt.Path, "NEVER_SQLITE_CHILD_MODE=crash")
+	child.Env = append(os.Environ(), "SQLITE_CHILD_PATH="+opt.Path, "SQLITE_CHILD_MODE=crash")
 	if err = child.Run(); err == nil {
 		t.Fatal("child must die before COMMIT")
 	}

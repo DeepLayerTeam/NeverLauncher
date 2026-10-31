@@ -38,7 +38,7 @@ func TestSQLiteHTTPPersistenceAndCAS0372(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "http-repository.db")
 	open := func() *SQLiteHTTPRepository0372 {
-		r, err := OpenSQLiteHTTPRepository0372(ctx, path, "https://never.example")
+		r, err := OpenSQLiteHTTPRepository0372(ctx, path, "https://example")
 		if err != nil {
 			t.Fatalf("open real SQLite WAL repository: %v", err)
 		}
@@ -158,7 +158,7 @@ func TestSQLiteHTTPMutationsCannotReportSuccessWithoutCommit0372(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// A disk/connection failure after domain mutation must never be reported
+	// A disk/connection failure after domain mutation must be reported
 	// as a durable write or served from the unsynced in-process cache.
 	if err := r.store.Close(); err != nil {
 		t.Fatal(err)

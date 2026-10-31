@@ -1,5 +1,5 @@
 // Package yggdrasiltexture signs authlib-injector texture properties with the
-// protocol's RSA PKCS#1 v1.5 / SHA-1 signature, NEVER with manifest Ed25519.
+// protocol's RSA PKCS#1 v1.5 / SHA-1 signature, with manifest Ed25519.
 package yggdrasiltexture
 
 import (

@@ -142,7 +142,7 @@ func TestMinecraftIntegritySnapshot0135IsReevaluatedAgainstCurrentReleasePolicy(
 	s := Server{Version: "0.13.5", Config: cfg, Repo: repo}
 	now := time.Now().UTC()
 	session := model.MinecraftSession{
-		ID: "mc-0135", UserID: "user-0135", NeverSessionID: "never-session-0135", ProfileUUID: "00000000-0000-0000-0000-000000000135",
+		ID: "mc-0135", UserID: "user-0135", NeverSessionID: "session-0135", ProfileUUID: "00000000-0000-0000-0000-000000000135",
 		TrustedDeviceID: "win-device-0135", BindingEpoch: 7, AccessTokenHash: strings.Repeat("2", 64), Status: "active",
 		IntegrityVerified: true, GuardAttestationSHA256: strings.Repeat("3", 64), GuardEvidenceSHA256: strings.Repeat("4", 64),
 		GuardSHA256: guardHash0135, LauncherSHA256: launcherHash0135, LauncherVersion: "0.13.5", IntegrityVerifiedAt: now.Add(-time.Second),
@@ -215,7 +215,7 @@ func TestMinecraftIntegrityV2RejectsCrossProductArtifactPair0140(t *testing.T) {
 	s := Server{Version: "0.14.0", Config: cfg, Repo: repo}
 	now := time.Now().UTC()
 	session := model.MinecraftSession{
-		ID: "mc-0140", UserID: "user-0140", NeverSessionID: "never-session-0140", ProfileUUID: "00000000-0000-0000-0000-000000000140",
+		ID: "mc-0140", UserID: "user-0140", NeverSessionID: "session-0140", ProfileUUID: "00000000-0000-0000-0000-000000000140",
 		TrustedDeviceID: "win-device-0140", BindingEpoch: 1, AccessTokenHash: strings.Repeat("2", 64), Status: "active",
 		IntegrityVerified: true, GuardAttestationSHA256: strings.Repeat("3", 64), GuardEvidenceSHA256: strings.Repeat("4", 64),
 		GuardSHA256: guardA, LauncherSHA256: launcherA, LauncherVersion: "0.14.0", IntegrityVerifiedAt: now.Add(-time.Second),

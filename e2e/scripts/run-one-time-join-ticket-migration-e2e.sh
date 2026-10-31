@@ -79,7 +79,7 @@ INSERT INTO refresh_token_families(id,session_id,user_id,status)
 VALUES ('ticket-family','ticket-session','ticket-user','active');
 INSERT INTO minecraft_profiles(user_id,uuid,name)
 VALUES ('ticket-user','00000000-0000-0000-0000-000000000143','TicketPlayer');
-INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,access_token_hash,status,expires_at)
+INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,status,expires_at)
 VALUES ('minecraft-ticket-session','ticket-user','ticket-session','00000000-0000-0000-0000-000000000143',repeat('d',64),'active',now()+interval '1 hour');
 INSERT INTO server_bridge_nodes_v2(
   id,name,kind,project_id,profile_id,fingerprint,token_hash,token_prefix,status,protocol_version,

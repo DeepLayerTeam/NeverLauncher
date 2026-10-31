@@ -23,7 +23,7 @@ All responses include `Cache-Control: no-store`. POST accepts at most 12 KiB and
 
 ## Persistence and deployment
 
-The checked migration `0075_official_never_identity_0268.sql` creates `official_never_identity_links_0268`, with a foreign key to Never `users`, unique Minecraft UUID ownership and owner lookup index. It is part of normal checksum-verified database migration application. **Apply migrations before enabling upgraded Desktop clients.** In-memory-only Backend mode deliberately responds HTTP 503 instead of inventing a non-durable identity link. Database errors fail closed.
+The checked migration `0075_official_identity_0268.sql` creates `official_identity_links_0268`, with a foreign key to Never `users`, unique Minecraft UUID ownership and owner lookup index. It is part of normal checksum-verified database migration application. **Apply migrations before enabling upgraded Desktop clients.** In-memory-only Backend mode deliberately responds HTTP 503 instead of inventing a non-durable identity link. Database errors fail closed.
 
 A user can link multiple separate Minecraft Java accounts. A Minecraft UUID cannot be silently claimed by a different Never user; owner must explicitly unlink. Local logout and Minecraft account removal do not delete the server link. Never account deletion cascades its links through the database foreign key.
 

@@ -245,7 +245,7 @@ impl NativeProvider {
     /// A write acknowledgement is not the final Minecraft state. Read the
     /// authenticated profile again and confirm that the requested texture is
     /// active before returning it to Desktop (and before updating the vault).
-    /// Provider propagation can lag briefly; retries are bounded and never
+    /// Provider propagation can lag briefly; retries are bounded and
     /// repeat the write itself.
     async fn confirmed_texture_0395(&self, token: &str, operation: &str,
         cape_id: Option<&str>, skin_variant: Option<&str>, uuid: &str,
@@ -269,7 +269,7 @@ impl NativeProvider {
     }
     pub async fn texture(&self, token: &str, operation: &str, cape_id: Option<&str>, skin: Option<(Vec<u8>,String)>) -> Result<OfficialProfile,ProviderError> {
         if !valid_token(token) { return Err(ProviderError::InvalidResponse); }
-        // All writes use one account's token; never accept a cape merely because
+        // All writes use one account's token; accept a cape merely because
         // it was displayed earlier by the renderer.
         let before = self.profile(token).await?;
         let variant = skin.as_ref().map(|(_,model)| model.as_str().to_owned());
@@ -374,7 +374,7 @@ mod tests {
         assert_ne!(first.verified_hash().unwrap(),second.verified_hash().unwrap());
         assert!(serde_json::from_str::<XboxGrant>(r#"{"Token":"t","DisplayClaims":{"xui":[]}}"#).unwrap().verified_hash().is_err());
     }
-    #[test] fn provider_errors_are_specific_and_never_contain_secrets() {
+    #[test] fn provider_errors_are_specific_and_contain_secrets() {
         let hint=ErrorBody{error:String::new(),message:"Invalid app registration: very-secret".into(),xerr:serde_json::json!(0)};
         assert_eq!(classify(403,&hint,None),ProviderError::AppNotAuthorized);
         assert_eq!(classify(429,&ErrorBody::default(),Some(31)),ProviderError::Throttled(Some(31)));

@@ -17,7 +17,7 @@ func migrationIdentityTargets0334(ctx context.Context, tx *sql.Tx) ([]gi.Target,
 	// Inspect both Never's local/remote Minecraft identity and verified official
 	// identities; contradictory claims are deliberately not silently de-duped.
 	rows, e := tx.QueryContext(ctx, `SELECT uuid,name,user_id,'minecraft_profiles' FROM minecraft_profiles UNION ALL
- SELECT minecraft_uuid,minecraft_name,never_user_id,'official_link' FROM official_never_identity_links_0268`)
+ SELECT minecraft_uuid,minecraft_name,user_id,'official_link' FROM official_identity_links_0268`)
 	if e != nil {
 		return nil, e
 	}

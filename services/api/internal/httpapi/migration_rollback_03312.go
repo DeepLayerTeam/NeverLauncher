@@ -81,7 +81,7 @@ func (s Server) migrationRollbackPlan03312(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
-	if r.Header.Get("X-Migration-Rollback-Confirm") != id || r.Header.Get("X-Never-Writer-Fenced") != "true" {
+	if r.Header.Get("X-Migration-Rollback-Confirm") != id || r.Header.Get("X-Writer-Fenced") != "true" {
 		writeError(w, 400, "exact run ID and separately fenced Never writer confirmation required")
 		return
 	}
@@ -103,7 +103,7 @@ func (s Server) migrationRollbackCommit03312(w http.ResponseWriter, r *http.Requ
 	if !ok {
 		return
 	}
-	if r.Header.Get("X-Migration-Rollback-Confirm") != id || r.Header.Get("X-Never-Writer-Fenced") != "true" || r.Header.Get("X-Migration-Source-Fenced") != "true" {
+	if r.Header.Get("X-Migration-Rollback-Confirm") != id || r.Header.Get("X-Writer-Fenced") != "true" || r.Header.Get("X-Migration-Source-Fenced") != "true" {
 		writeError(w, 400, "exact run ID and BOTH externally fenced writers required")
 		return
 	}

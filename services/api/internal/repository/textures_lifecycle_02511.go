@@ -210,7 +210,7 @@ func (r *SQLRepository) ReleaseTextureGC02511(ctx context.Context, b TextureGCLe
 	return err
 }
 
-// Reduce storage of stale crash pins; expired pins never block GC even before cleanup.
+// Reduce storage of stale crash pins; expired pins block GC even before cleanup.
 func (r *SQLRepository) PruneTextureSnapshotPins02511(ctx context.Context) (int64, error) {
 	if err := r.check(); err != nil {
 		return 0, err

@@ -1062,7 +1062,7 @@ code {
     flex: 1 1 42%;
   }
 }
-/* 0.35.5 trusted branding editor: preview data never renders as HTML. */
+/* 0.35.5 trusted branding editor: preview data renders as HTML. */
 .brandingStudio0355 input,
 .brandingStudio0355 select {
   max-width: 100%;

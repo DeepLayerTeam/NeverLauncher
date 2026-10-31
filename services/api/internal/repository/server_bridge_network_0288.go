@@ -13,7 +13,7 @@ import (
 
 // ListServerBridgeNetworkStates reads observed, runtime-bound routing and operator
 // admission policy from the same PostgreSQL source used by handoff execution.
-// It intentionally never infers a healthy route from heartbeat alone.
+// It intentionally infers a healthy route from heartbeat alone.
 func (r *SQLRepository) ListServerBridgeNetworkStates(ctx context.Context, projectID string, now time.Time) ([]model.ServerBridgeNetworkState, error) {
 	if err := r.check(); err != nil {
 		return nil, err

@@ -44,7 +44,7 @@ class MacOSSDL3RetryTest(unittest.TestCase):
     def test_specific_native_abort_can_retry(self) -> None:
         self.assertTrue(MOD.is_retryable(self.report, self.root))
 
-    def test_never_retry_passed_or_normal_crash(self) -> None:
+    def test_retry_passed_or_normal_crash(self) -> None:
         for k, v in (
             ("status", "passed"),
             ("success", True),

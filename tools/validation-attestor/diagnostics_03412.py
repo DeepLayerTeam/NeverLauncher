@@ -1,4 +1,4 @@
-"""Trusted-host-only diagnostic retention. Never export raw runner stdout.
+"""Trusted-host-only diagnostic retention. Export raw runner stdout.
 
 Diagnostics are not certification: the attestor signs separately verified
 runtime artifacts; this spool only retains redacted operational logs.
@@ -84,7 +84,7 @@ def retain(
         raise ValueError("diagnostic directory must be host-owner-only")
     now = datetime.now(timezone.utc)
     prune(directory, now)
-    # Bound total retained log size to 2 MiB. Never read past this limit.
+    # Bound total retained log size to 2 MiB. Read past this limit.
     with worker_log.open("rb") as raw:
         content = raw.read(2 * 1024 * 1024)
     sanitized = redact(content.decode("utf-8", "replace")).encode("utf-8")

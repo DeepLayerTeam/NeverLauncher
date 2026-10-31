@@ -156,7 +156,7 @@ func (s Server) migrationBaseline0331(ctx context.Context, run mw.Run) (json.Raw
 		if err != nil {
 			return nil, err
 		}
-		value := map[string]any{"projectId": project.ID, "name": project.Name, "verifiedAt": time.Now().UTC(), "kind": "never-target-present"}
+		value := map[string]any{"projectId": project.ID, "name": project.Name, "verifiedAt": time.Now().UTC(), "kind": "target-present"}
 		return json.Marshal(value)
 	case "target_inventory":
 		if _, err := s.Repo.GetProject(run.ProjectID); err != nil {
@@ -175,7 +175,7 @@ func (s Server) migrationBaseline0331(ctx context.Context, run mw.Run) (json.Raw
 			return nil, err
 		}
 		// Do not include secrets, authentication credentials or user account information.
-		inventory := map[string]any{"projectId": run.ProjectID, "profiles": len(profiles), "channels": len(channels), "releases": len(versions), "kind": "never-target-inventory", "sourceCompatibility": "not-assessed"}
+		inventory := map[string]any{"projectId": run.ProjectID, "profiles": len(profiles), "channels": len(channels), "releases": len(versions), "kind": "target-inventory", "sourceCompatibility": "not-assessed"}
 		raw, err := json.Marshal(inventory)
 		if err != nil {
 			return nil, err

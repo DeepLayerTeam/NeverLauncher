@@ -19,7 +19,7 @@ import (
 const MaxDatabaseBytes = 16 << 20
 const MaxAccounts = 20000
 const EmailDomain = "fileauth.invalid"
-const credentialPrefix = "$never-gravit$v1$"
+const credentialPrefix = "$gravit$v1$"
 
 var usernamePattern = regexp.MustCompile(`^[A-Za-z0-9_]{3,16}$`)
 var uuidPattern = regexp.MustCompile(`^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$`)

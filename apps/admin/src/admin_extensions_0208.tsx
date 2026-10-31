@@ -1,9 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { auditHref, recoveryAdvice } from "./admin/lifecycle";
 import {
-  ExtensionManagement0425, checkScope0425, verifyLifecycle0425,
-  type ExtensionScope0425, type ExtensionRegistryVersion0425,
-  type ExtensionQuarantine0425, type ExtensionEmergency0425,
+  ExtensionManagement0425,
+  checkScope0425,
+  verifyLifecycle0425,
+  type ExtensionScope0425,
+  type ExtensionRegistryVersion0425,
+  type ExtensionQuarantine0425,
+  type ExtensionEmergency0425,
   type ExtensionOperation0425,
 } from "./admin/extension_management_0425";
 
@@ -114,7 +118,9 @@ async function api<T>(
   const payload = (await response.json().catch(() => ({}))) as Envelope<T> | T;
   if (!response.ok)
     throw new Error(
-      (typeof (payload as Envelope<T>).error === "string" ? (payload as any).error : (payload as Envelope<T>).error?.message) ??
+      (typeof (payload as Envelope<T>).error === "string"
+        ? (payload as any).error
+        : (payload as Envelope<T>).error?.message) ??
         `${response.status} ${response.statusText}`,
     );
   return ((payload as Envelope<T>).data ?? payload) as T;
@@ -186,7 +192,11 @@ function AdminExtensionFrame({
 
   useEffect(() => {
     const onMessage = async (event: MessageEvent) => {
-      if (!frame.current || event.source !== frame.current.contentWindow || event.origin !== "null")
+      if (
+        !frame.current ||
+        event.source !== frame.current.contentWindow ||
+        event.origin !== "null"
+      )
         return;
       const message = event.data as any;
       if (
@@ -197,10 +207,18 @@ function AdminExtensionFrame({
         typeof message.method !== "string"
       )
         return;
-      if (message.id.length > 160 || message.method.length > 64 ||
-          pending.current.has(message.id)) return;
+      if (
+        message.id.length > 160 ||
+        message.method.length > 64 ||
+        pending.current.has(message.id)
+      )
+        return;
       let size: number;
-      try { size = JSON.stringify(message.params ?? {}).length; } catch { return; }
+      try {
+        size = JSON.stringify(message.params ?? {}).length;
+      } catch {
+        return;
+      }
       if (size > 64 * 1024) return;
       const currentInflight = inflight.current ?? 0;
       if (currentInflight >= 32) {
@@ -234,7 +252,11 @@ function AdminExtensionFrame({
             }),
           },
         );
-        if (source !== frame.current?.contentWindow || generation !== frameGeneration.current) return;
+        if (
+          source !== frame.current?.contentWindow ||
+          generation !== frameGeneration.current
+        )
+          return;
         source?.postMessage(
           {
             protocol: ADMIN_PROTOCOL,
@@ -246,7 +268,11 @@ function AdminExtensionFrame({
           "*",
         );
       } catch (err) {
-        if (source !== frame.current?.contentWindow || generation !== frameGeneration.current) return;
+        if (
+          source !== frame.current?.contentWindow ||
+          generation !== frameGeneration.current
+        )
+          return;
         source?.postMessage(
           {
             protocol: ADMIN_PROTOCOL,
@@ -262,7 +288,10 @@ function AdminExtensionFrame({
       }
     };
     window.addEventListener("message", onMessage);
-    return () => { window.removeEventListener("message", onMessage); pending.current.clear(); };
+    return () => {
+      window.removeEventListener("message", onMessage);
+      pending.current.clear();
+    };
   }, [backendUrl, token, extension.extensionId, scope]);
 
   const sendContext = () => {
@@ -336,11 +365,20 @@ export function AdminExtensions({
   const [registry, setRegistry] = useState<ExtensionRegistryVersion0425[]>([]);
   const [quarantine, setQuarantine] = useState<ExtensionQuarantine0425[]>([]);
   const [emergency, setEmergency] = useState<ExtensionEmergency0425[]>([]);
-  const [targetScope, setTargetScope] = useState<"global" | "project">("global");
+  const [targetScope, setTargetScope] = useState<"global" | "project">(
+    "global",
+  );
   const [targetScopeId, setTargetScopeId] = useState("");
-  const [updateVersions, setUpdateVersions] = useState<Record<string, string>>({});
-  const [updateChannel, setUpdateChannel] = useState<Record<string, string>>({});
-  const management = useMemo(() => new ExtensionManagement0425(backendUrl, token), [backendUrl, token]);
+  const [updateVersions, setUpdateVersions] = useState<Record<string, string>>(
+    {},
+  );
+  const [updateChannel, setUpdateChannel] = useState<Record<string, string>>(
+    {},
+  );
+  const management = useMemo(
+    () => new ExtensionManagement0425(backendUrl, token),
+    [backendUrl, token],
+  );
   const [operationResult, setOperationResult] = useState<{
     target: string;
     action: string;
@@ -350,7 +388,11 @@ export function AdminExtensions({
   const refresh = async () => {
     const generation = ++refreshGeneration.current;
     if (!token) {
-      setCatalog([]); setManager({}); setQuarantine([]); setEmergency([]); setRegistry([]);
+      setCatalog([]);
+      setManager({});
+      setQuarantine([]);
+      setEmergency([]);
+      setRegistry([]);
       return;
     }
     setLoading(true);
@@ -370,10 +412,16 @@ export function AdminExtensions({
       setCatalog(data.items ?? []);
       if (mode === "workspace") {
         const [m, q, e] = await Promise.all([
-          api<ManagerData>(backendUrl, "/api/v1/admin/extensions/manager", token),
-          management.quarantine(), management.emergency(),
+          api<ManagerData>(
+            backendUrl,
+            "/api/v1/admin/extensions/manager",
+            token,
+          ),
+          management.quarantine(),
+          management.emergency(),
         ]);
-        if (!Array.isArray(m.items)) throw new Error("Invalid extension manager inventory");
+        if (!Array.isArray(m.items))
+          throw new Error("Invalid extension manager inventory");
         if (generation !== refreshGeneration.current) return;
         setManager(m);
         setQuarantine(q);
@@ -383,7 +431,11 @@ export function AdminExtensions({
       if (generation !== refreshGeneration.current) return;
       const message = err instanceof Error ? err.message : String(err);
       setLocalError(message);
-      if (mode === "workspace") { setManager({}); setQuarantine([]); setEmergency([]); }
+      if (mode === "workspace") {
+        setManager({});
+        setQuarantine([]);
+        setEmergency([]);
+      }
       onError?.(message);
     } finally {
       if (generation === refreshGeneration.current) setLoading(false);
@@ -392,7 +444,9 @@ export function AdminExtensions({
 
   useEffect(() => {
     void refresh();
-    return () => { ++refreshGeneration.current; };
+    return () => {
+      ++refreshGeneration.current;
+    };
   }, [backendUrl, token, mode]);
 
   const nav = useMemo(
@@ -440,7 +494,12 @@ export function AdminExtensions({
       scope: install.scope === "project" ? "project" : "global",
       scopeId: String(install.scopeId ?? ""),
     };
-    if (!window.confirm(`Подтвердить ${action}: ${id}\nScope: ${scope.scope}/${scope.scopeId || "global"}`)) return;
+    if (
+      !window.confirm(
+        `Подтвердить ${action}: ${id}\nScope: ${scope.scope}/${scope.scopeId || "global"}`,
+      )
+    )
+      return;
     setOperationBusy(true);
     setLocalError("");
     setOperationResult(null);
@@ -453,51 +512,105 @@ export function AdminExtensions({
         verifyLifecycle0425(action, id, scope, before, after, result);
         output = result;
       } else {
-        const params = new URLSearchParams({ scope: scope.scope, scopeId: scope.scopeId });
-        output = await api(backendUrl, `/api/v1/admin/extension-hosts/${encodeURIComponent(id)}/${action}?${params}`, token, {method: "POST"});
-        const current = await api<{host: RuntimeStatus}>(backendUrl, `/api/v1/admin/extension-hosts/${encodeURIComponent(id)}?${params}`, token);
-        if (!current.host || (action === "stop" && current.host.state !== "stopped") ||
-          (action !== "stop" && (current.host.state === "stopped" || current.host.state === "failed")))
-          throw new Error("Host не подтвердил новое состояние; проверьте журнал, прежде чем повторять команду");
+        const params = new URLSearchParams({
+          scope: scope.scope,
+          scopeId: scope.scopeId,
+        });
+        output = await api(
+          backendUrl,
+          `/api/v1/admin/extension-hosts/${encodeURIComponent(id)}/${action}?${params}`,
+          token,
+          { method: "POST" },
+        );
+        const current = await api<{ host: RuntimeStatus }>(
+          backendUrl,
+          `/api/v1/admin/extension-hosts/${encodeURIComponent(id)}?${params}`,
+          token,
+        );
+        if (
+          !current.host ||
+          (action === "stop" && current.host.state !== "stopped") ||
+          (action !== "stop" &&
+            (current.host.state === "stopped" ||
+              current.host.state === "failed"))
+        )
+          throw new Error(
+            "Host не подтвердил новое состояние; проверьте журнал, прежде чем повторять команду",
+          );
       }
-      const inventory = await api<ManagerData>(backendUrl, "/api/v1/admin/extensions/manager", token);
-      if (!Array.isArray(inventory.items)) throw new Error("Не удалось обновить состояние Manager");
+      const inventory = await api<ManagerData>(
+        backendUrl,
+        "/api/v1/admin/extensions/manager",
+        token,
+      );
+      if (!Array.isArray(inventory.items))
+        throw new Error("Не удалось обновить состояние Manager");
       setManager(inventory);
-      setOperationResult({target:id,action,output});
+      setOperationResult({ target: id, action, output });
     } catch (e) {
       const reason = e instanceof Error ? e.message : String(e);
       setLocalError(`${reason}. ${recoveryAdvice(reason)}`);
-    } finally { setOperationBusy(false); }
+    } finally {
+      setOperationBusy(false);
+    }
   }
 
-  const selectedScope = (): ExtensionScope0425 => checkScope0425({
-    scope: targetScope, scopeId: targetScope === "global" ? "" : targetScopeId.trim(),
-  });
+  const selectedScope = (): ExtensionScope0425 =>
+    checkScope0425({
+      scope: targetScope,
+      scopeId: targetScope === "global" ? "" : targetScopeId.trim(),
+    });
 
   async function searchRegistry() {
     if (operationBusy) return;
     setOperationBusy(true);
     setLocalError("");
-    try { setRegistry(await management.registry(registryQuery)); }
-    catch (e) { setRegistry([]); setLocalError(String(e)); }
-    finally { setOperationBusy(false); }
+    try {
+      setRegistry(await management.registry(registryQuery));
+    } catch (e) {
+      setRegistry([]);
+      setLocalError(String(e));
+    } finally {
+      setOperationBusy(false);
+    }
   }
 
   async function executeManagement(
-    action: ExtensionOperation0425 | "emergency-disable" | "emergency-clear" | "quarantine-release",
-    id: string, scope: ExtensionScope0425, version = "", channel = "",
+    action:
+      | ExtensionOperation0425
+      | "emergency-disable"
+      | "emergency-clear"
+      | "quarantine-release",
+    id: string,
+    scope: ExtensionScope0425,
+    version = "",
+    channel = "",
   ) {
     if (operationBusy) return;
     let reason = "";
-    try { checkScope0425(scope); }
-    catch (e) { setLocalError(String(e)); return; }
+    try {
+      checkScope0425(scope);
+    } catch (e) {
+      setLocalError(String(e));
+      return;
+    }
     if (action === "emergency-disable") {
-      const input = window.prompt(`Причина аварийной блокировки ${id} (не менее 5 символов):`);
+      const input = window.prompt(
+        `Причина аварийной блокировки ${id} (не менее 5 символов):`,
+      );
       if (input === null) return;
       reason = input.trim();
-      if (reason.length < 5) { setLocalError("Укажите причину не короче 5 символов"); return; }
+      if (reason.length < 5) {
+        setLocalError("Укажите причину не короче 5 символов");
+        return;
+      }
     }
-    if (!window.confirm(`Подтвердить ${action}: ${id}${version ? `@${version}` : ""}\nScope: ${scope.scope}/${scope.scopeId || "global"}\n${action === "uninstall" ? "Удаление пакета может быть необратимым." : "Операция будет проверена через Backend."}`)) return;
+    if (
+      !window.confirm(
+        `Подтвердить ${action}: ${id}${version ? `@${version}` : ""}\nScope: ${scope.scope}/${scope.scopeId || "global"}\n${action === "uninstall" ? "Удаление пакета может быть необратимым." : "Операция будет проверена через Backend."}`,
+      )
+    )
+      return;
     setOperationBusy(true);
     setLocalError("");
     setOperationResult(null);
@@ -511,32 +624,61 @@ export function AdminExtensions({
       } else if (action === "quarantine-release") {
         output = await management.releaseQuarantine(id);
       } else {
-        const result = await management.lifecycle(action, id, scope, version, channel);
+        const result = await management.lifecycle(
+          action,
+          id,
+          scope,
+          version,
+          channel,
+        );
         output = result;
         const after = await management.installs();
         verifyLifecycle0425(action, id, scope, before, after, result);
       }
-      // The inventory and safety lists must be refreshed, never infer success
+      // The inventory and safety lists must be refreshed, infer success
       // from a 200/201 response or optimistically alter the UI.
       const [nextManager, nextQuarantine, nextEmergency] = await Promise.all([
         api<ManagerData>(backendUrl, "/api/v1/admin/extensions/manager", token),
-        management.quarantine(), management.emergency(),
+        management.quarantine(),
+        management.emergency(),
       ]);
-      if (!Array.isArray(nextManager.items)) throw new Error("Manager inventory unavailable after action");
+      if (!Array.isArray(nextManager.items))
+        throw new Error("Manager inventory unavailable after action");
       setManager(nextManager);
       setQuarantine(nextQuarantine);
       setEmergency(nextEmergency);
-      if (action === "emergency-disable" && !nextEmergency.some(x => x.extensionId === id && x.scope === scope.scope && (x.scopeId ?? "") === scope.scopeId))
+      if (
+        action === "emergency-disable" &&
+        !nextEmergency.some(
+          (x) =>
+            x.extensionId === id &&
+            x.scope === scope.scope &&
+            (x.scopeId ?? "") === scope.scopeId,
+        )
+      )
         throw new Error("Аварийная блокировка не подтверждена на Backend");
-      if (action === "emergency-clear" && nextEmergency.some(x => x.extensionId === id && x.scope === scope.scope && (x.scopeId ?? "") === scope.scopeId))
+      if (
+        action === "emergency-clear" &&
+        nextEmergency.some(
+          (x) =>
+            x.extensionId === id &&
+            x.scope === scope.scope &&
+            (x.scopeId ?? "") === scope.scopeId,
+        )
+      )
         throw new Error("Снятие блокировки не подтверждено на Backend");
-      if (action === "quarantine-release" && nextQuarantine.some(x => x.id === id && x.active))
+      if (
+        action === "quarantine-release" &&
+        nextQuarantine.some((x) => x.id === id && x.active)
+      )
         throw new Error("Карантин всё ещё активен");
       setOperationResult({ target: id, action, output });
     } catch (e) {
       const reason = e instanceof Error ? e.message : String(e);
       setLocalError(`${reason}. ${recoveryAdvice(reason)}`);
-    } finally { setOperationBusy(false); }
+    } finally {
+      setOperationBusy(false);
+    }
   }
 
   if (mode === "dashboard")
@@ -655,39 +797,123 @@ export function AdminExtensions({
         </div>
       </div>
       <h2>Реестр и установка расширений</h2>
-      <p className="muted">Устанавливаются только опубликованные подписанные версии из Backend Registry. Для операций обновления, отката и удаления Backend требует свежую MFA-сессию.</p>
+      <p className="muted">
+        Устанавливаются только опубликованные подписанные версии из Backend
+        Registry. Для операций обновления, отката и удаления Backend требует
+        свежую MFA-сессию.
+      </p>
       <div className="buttonRow">
-        <input aria-label="Поиск расширений" value={registryQuery} onChange={e => setRegistryQuery(e.target.value)} placeholder="ID или название" />
-        <button disabled={operationBusy || loading} onClick={() => void searchRegistry()}>Найти в реестре</button>
-        <select aria-label="Область установки" value={targetScope} onChange={e => setTargetScope(e.target.value as "global" | "project")}>
-          <option value="global">Global</option><option value="project">Project</option>
+        <input
+          aria-label="Поиск расширений"
+          value={registryQuery}
+          onChange={(e) => setRegistryQuery(e.target.value)}
+          placeholder="ID или название"
+        />
+        <button
+          disabled={operationBusy || loading}
+          onClick={() => void searchRegistry()}
+        >
+          Найти в реестре
+        </button>
+        <select
+          aria-label="Область установки"
+          value={targetScope}
+          onChange={(e) =>
+            setTargetScope(e.target.value as "global" | "project")
+          }
+        >
+          <option value="global">Global</option>
+          <option value="project">Project</option>
         </select>
-        {targetScope === "project" && <input aria-label="ID проекта" value={targetScopeId} onChange={e => setTargetScopeId(e.target.value)} placeholder="project ID" />}
+        {targetScope === "project" && (
+          <input
+            aria-label="ID проекта"
+            value={targetScopeId}
+            onChange={(e) => setTargetScopeId(e.target.value)}
+            placeholder="project ID"
+          />
+        )}
       </div>
       <div className="extensionManagerGrid">
-        {registry.map(entry => <article className="subcard" key={`${entry.extensionId}:${entry.version}`}>
-          <strong>{entry.extensionId} · {entry.version}</strong>
-          <p className="muted">Издатель: {entry.publisherId} · Каналы: {(entry.channels ?? []).join(", ") || "—"}</p>
-          <button disabled={operationBusy || loading} onClick={() => {
-            try { void executeManagement("install", entry.extensionId, selectedScope(), entry.version); }
-            catch (e) { setLocalError(String(e)); }
-          }}>Установить версию</button>
-        </article>)}
+        {registry.map((entry) => (
+          <article
+            className="subcard"
+            key={`${entry.extensionId}:${entry.version}`}
+          >
+            <strong>
+              {entry.extensionId} · {entry.version}
+            </strong>
+            <p className="muted">
+              Издатель: {entry.publisherId} · Каналы:{" "}
+              {(entry.channels ?? []).join(", ") || "—"}
+            </p>
+            <button
+              disabled={operationBusy || loading}
+              onClick={() => {
+                try {
+                  void executeManagement(
+                    "install",
+                    entry.extensionId,
+                    selectedScope(),
+                    entry.version,
+                  );
+                } catch (e) {
+                  setLocalError(String(e));
+                }
+              }}
+            >
+              Установить версию
+            </button>
+          </article>
+        ))}
       </div>
       <h2>Карантин и аварийные блокировки</h2>
       <div className="extensionManagerGrid">
-        {quarantine.map(entry => <article className="subcard" key={entry.id}>
-          <strong>Карантин: {entry.extensionId || entry.packageIdentity}</strong>
-          <p className="error">{entry.reason}</p>
-          <p className="muted">{entry.version || "—"} · {entry.id}</p>
-          <button disabled={operationBusy} onClick={() => void executeManagement("quarantine-release", entry.id, {scope:"global",scopeId:""})}>Освободить из карантина (MFA)</button>
-        </article>)}
-        {emergency.map(entry => <article className="subcard" key={`${entry.scope}:${entry.scopeId ?? ""}:${entry.extensionId}`}>
-          <strong>Запрещено: {entry.extensionId}</strong>
-          <p className="error">{entry.reason}</p>
-          <p className="muted">{entry.scope}/{entry.scopeId || "global"}</p>
-          <button disabled={operationBusy} onClick={() => void executeManagement("emergency-clear", entry.extensionId, {scope: entry.scope === "project" ? "project" : "global", scopeId: entry.scopeId ?? ""})}>Снять блокировку</button>
-        </article>)}
+        {quarantine.map((entry) => (
+          <article className="subcard" key={entry.id}>
+            <strong>
+              Карантин: {entry.extensionId || entry.packageIdentity}
+            </strong>
+            <p className="error">{entry.reason}</p>
+            <p className="muted">
+              {entry.version || "—"} · {entry.id}
+            </p>
+            <button
+              disabled={operationBusy}
+              onClick={() =>
+                void executeManagement("quarantine-release", entry.id, {
+                  scope: "global",
+                  scopeId: "",
+                })
+              }
+            >
+              Освободить из карантина (MFA)
+            </button>
+          </article>
+        ))}
+        {emergency.map((entry) => (
+          <article
+            className="subcard"
+            key={`${entry.scope}:${entry.scopeId ?? ""}:${entry.extensionId}`}
+          >
+            <strong>Запрещено: {entry.extensionId}</strong>
+            <p className="error">{entry.reason}</p>
+            <p className="muted">
+              {entry.scope}/{entry.scopeId || "global"}
+            </p>
+            <button
+              disabled={operationBusy}
+              onClick={() =>
+                void executeManagement("emergency-clear", entry.extensionId, {
+                  scope: entry.scope === "project" ? "project" : "global",
+                  scopeId: entry.scopeId ?? "",
+                })
+              }
+            >
+              Снять блокировку
+            </button>
+          </article>
+        ))}
       </div>
       <h2>Extension Manager</h2>
       <div className="extensionManagerGrid">
@@ -830,14 +1056,106 @@ export function AdminExtensions({
                 >
                   Disable
                 </button>
-                <button disabled={operationBusy} onClick={() => void executeManagement("update", String(install.extensionId), {scope: install.scope === "project" ? "project" : "global", scopeId: String(install.scopeId ?? "")}, updateVersions[String(install.extensionId)] ?? "", updateVersions[String(install.extensionId)] ? "" : (updateChannel[String(install.extensionId)] ?? "stable"))}>Update</button>
-                <button disabled={operationBusy || !install.previousVersion} onClick={() => void executeManagement("rollback", String(install.extensionId), {scope: install.scope === "project" ? "project" : "global", scopeId: String(install.scopeId ?? "")})}>Rollback</button>
-                <button disabled={operationBusy} onClick={() => void executeManagement("uninstall", String(install.extensionId), {scope: install.scope === "project" ? "project" : "global", scopeId: String(install.scopeId ?? "")})}>Uninstall (MFA)</button>
-                <button disabled={operationBusy} onClick={() => void executeManagement("emergency-disable", String(install.extensionId), {scope: install.scope === "project" ? "project" : "global", scopeId: String(install.scopeId ?? "")})}>Emergency disable</button>
+                <button
+                  disabled={operationBusy}
+                  onClick={() =>
+                    void executeManagement(
+                      "update",
+                      String(install.extensionId),
+                      {
+                        scope:
+                          install.scope === "project" ? "project" : "global",
+                        scopeId: String(install.scopeId ?? ""),
+                      },
+                      updateVersions[String(install.extensionId)] ?? "",
+                      updateVersions[String(install.extensionId)]
+                        ? ""
+                        : (updateChannel[String(install.extensionId)] ??
+                            "stable"),
+                    )
+                  }
+                >
+                  Update
+                </button>
+                <button
+                  disabled={operationBusy || !install.previousVersion}
+                  onClick={() =>
+                    void executeManagement(
+                      "rollback",
+                      String(install.extensionId),
+                      {
+                        scope:
+                          install.scope === "project" ? "project" : "global",
+                        scopeId: String(install.scopeId ?? ""),
+                      },
+                    )
+                  }
+                >
+                  Rollback
+                </button>
+                <button
+                  disabled={operationBusy}
+                  onClick={() =>
+                    void executeManagement(
+                      "uninstall",
+                      String(install.extensionId),
+                      {
+                        scope:
+                          install.scope === "project" ? "project" : "global",
+                        scopeId: String(install.scopeId ?? ""),
+                      },
+                    )
+                  }
+                >
+                  Uninstall (MFA)
+                </button>
+                <button
+                  disabled={operationBusy}
+                  onClick={() =>
+                    void executeManagement(
+                      "emergency-disable",
+                      String(install.extensionId),
+                      {
+                        scope:
+                          install.scope === "project" ? "project" : "global",
+                        scopeId: String(install.scopeId ?? ""),
+                      },
+                    )
+                  }
+                >
+                  Emergency disable
+                </button>
               </div>
               <div className="buttonRow">
-                <label>Версия обновления <input aria-label={`Версия обновления ${install.extensionId}`} placeholder="1.2.3 (или оставьте пустым)" value={updateVersions[String(install.extensionId)] ?? ""} onChange={e => setUpdateVersions(prev => ({...prev, [String(install.extensionId)]: e.target.value}))} /></label>
-                <label>Канал <input aria-label={`Канал обновления ${install.extensionId}`} value={updateChannel[String(install.extensionId)] ?? "stable"} onChange={e => setUpdateChannel(prev => ({...prev, [String(install.extensionId)]: e.target.value}))} /></label>
+                <label>
+                  Версия обновления{" "}
+                  <input
+                    aria-label={`Версия обновления ${install.extensionId}`}
+                    placeholder="1.2.3 (или оставьте пустым)"
+                    value={updateVersions[String(install.extensionId)] ?? ""}
+                    onChange={(e) =>
+                      setUpdateVersions((prev) => ({
+                        ...prev,
+                        [String(install.extensionId)]: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Канал{" "}
+                  <input
+                    aria-label={`Канал обновления ${install.extensionId}`}
+                    value={
+                      updateChannel[String(install.extensionId)] ?? "stable"
+                    }
+                    onChange={(e) =>
+                      setUpdateChannel((prev) => ({
+                        ...prev,
+                        [String(install.extensionId)]: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
               </div>
               <details>
                 <summary>Последние логи ({logs.length})</summary>

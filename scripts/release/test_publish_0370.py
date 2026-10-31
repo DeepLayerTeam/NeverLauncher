@@ -253,7 +253,7 @@ class PublicationAcceptance(unittest.TestCase):
                 p.publish("DeepLayerTeam/Launcher", verified, self.bundle)
         self.assertFalse(any(x[:3] == ["gh", "release", "edit"] for x in commands))
 
-    def test_preexisting_release_never_overwritten(self):
+    def test_preexisting_release_overwritten(self):
         verified = self.check()
         from subprocess import CompletedProcess
 

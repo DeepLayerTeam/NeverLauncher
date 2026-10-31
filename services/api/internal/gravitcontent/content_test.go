@@ -107,7 +107,7 @@ func TestContentOptionalUnknownAction0337(t *testing.T) {
 	}
 }
 func TestContentSafeTargets0337(t *testing.T) {
-	for _, p := range []string{"../world", "C:/foo", "/root", "mods\\foo", "a/../b", ".never-migration/evil"} {
+	for _, p := range []string{"../world", "C:/foo", "/root", "mods\\foo", "a/../b", ".migration/evil"} {
 		if safeTarget(p) {
 			t.Fatalf("unsafe path accepted %q", p)
 		}

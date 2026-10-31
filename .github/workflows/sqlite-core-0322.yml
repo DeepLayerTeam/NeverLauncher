@@ -44,12 +44,12 @@ jobs:
         run: |
           set -euo pipefail
           go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite
-          db="$RUNNER_TEMP/never-sqlite-core/live-core.sqlite"
+          db="$RUNNER_TEMP/sqlite-core/live-core.sqlite"
           "$RUNNER_TEMP/launcher-sqlite" core-init --db "$db" > "$RUNNER_TEMP/sqlite-core-init.json"
           "$RUNNER_TEMP/launcher-sqlite" core-status --db "$db" > "$RUNNER_TEMP/sqlite-core-status.json"
-          printf '%s\n' '{"id":"ci-project","name":"CI Project"}' > "$RUNNER_TEMP/never-sqlite-core/project.json"
-          chmod 0600 "$RUNNER_TEMP/never-sqlite-core/project.json"
-          "$RUNNER_TEMP/launcher-sqlite" core-put --db "$db" --kind project --actor ci --input "$RUNNER_TEMP/never-sqlite-core/project.json" > "$RUNNER_TEMP/sqlite-core-written.json"
+          printf '%s\n' '{"id":"ci-project","name":"CI Project"}' > "$RUNNER_TEMP/sqlite-core/project.json"
+          chmod 0600 "$RUNNER_TEMP/sqlite-core/project.json"
+          "$RUNNER_TEMP/launcher-sqlite" core-put --db "$db" --kind project --actor ci --input "$RUNNER_TEMP/sqlite-core/project.json" > "$RUNNER_TEMP/sqlite-core-written.json"
           "$RUNNER_TEMP/launcher-sqlite" core-get --db "$db" --kind project --project ci-project > "$RUNNER_TEMP/sqlite-core-read.json"
           python3 - <<'PY'
           import json,os
@@ -63,7 +63,7 @@ jobs:
               project=json.load(f)
           assert project['id']=='ci-project' and project['name']=='CI Project'
           PY
-          if "$RUNNER_TEMP/launcher-sqlite" core-status --db "$RUNNER_TEMP/never-sqlite-core/nonexistent.sqlite"; then
+          if "$RUNNER_TEMP/launcher-sqlite" core-status --db "$RUNNER_TEMP/sqlite-core/nonexistent.sqlite"; then
             echo 'core-status incorrectly initialized a nonexistent database' >&2
             exit 1
           fi

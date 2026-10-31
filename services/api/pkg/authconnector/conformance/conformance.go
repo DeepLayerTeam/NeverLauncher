@@ -42,7 +42,7 @@ type Fixture struct {
 	RefreshToken string
 	RevokeToken  string
 	AllowRevoke  bool
-	// The provider may support linking, but the Never federation owns the
+	// The provider may support linking, but the federation owns the
 	// canonical account link and requires fresh proof (tested separately).
 	VerifyRevokedToken bool
 }
@@ -82,7 +82,7 @@ func Run(ctx context.Context, connector authconnector.Connector) Report {
 
 // RunBehavioral exercises the actual provider methods, tests invariants after
 // every response, and reports no token/credential/identity values. It does not
-// create or link a Never account; linking proof is tested at federation level.
+// create or link a account; linking proof is tested at federation level.
 func RunBehavioral(ctx context.Context, connector authconnector.Connector, fixture Fixture) Report {
 	r := Run(ctx, connector)
 	r.Mode = "behavioral"

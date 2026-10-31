@@ -35,7 +35,7 @@ jobs:
         run: go test -count=1 ./...
       - name: Native bootstrap binary
         working-directory: prestarter
-        run: go build -o neverprestarter-test${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/neverprestarter
+        run: go build -o prestarter-test${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/prestarter
   cross-compile:
     runs-on: ubuntu-latest
     steps:

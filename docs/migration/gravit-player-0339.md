@@ -18,7 +18,7 @@
 - No bulk copying, autoexecution, symlink traversal, arbitrary extension imports, password transfer, credential storage, trusted key migration, or deletion of the old directory.
 - Source layouts are bounded to the explicitly chosen directory, `.minecraft/`, `updates/<profile>`, `clients/<profile>`, and `<profile>`; unknown custom layouts may need manual selection of a different root.
 - At most 30,000 signed selected files and 100 GiB of signed bytes are inspected per preview. An individual file is capped at 16 GiB. Only three whitelisted settings fields are considered.
-- Content adoption is **cache-only**, not a live release install. It does not mark old bytes as Never-owned or publish an unsigned release. Runtime's signed release installation remains necessary.
+- Content adoption is **cache-only**, not a live release install. It does not mark old bytes as owned or publish an unsigned release. Runtime's signed release installation remains necessary.
 - Different Gravit layouts or patched jars can produce fewer matches, not an unsafe fallback. Unknown files are downloaded from Never's signed source instead of adopted.
 - Existing CacheStore locks serialize with concurrent downloads and other processes. A failed scan leaves the game's installation untouched; a failed publication may leave previously verified cache objects, which are safe to reuse.
 - `cargo test --lib player_migration_0339` and desktop build/check are required gates. Production acceptance additionally requires real Windows/macOS/Linux builds, signed installer validation, and end-to-end installation into a clean profile.

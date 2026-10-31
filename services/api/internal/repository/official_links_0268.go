@@ -28,7 +28,7 @@ func (r *SQLRepository) ListOfficialLinks0268(ctx context.Context, owner string)
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	rows, err := r.db.QueryContext(ctx, `SELECT minecraft_uuid,minecraft_name,verified_at FROM official_never_identity_links_0268 WHERE never_user_id=$1 ORDER BY created_at,minecraft_uuid`, owner)
+	rows, err := r.db.QueryContext(ctx, `SELECT minecraft_uuid,minecraft_name,verified_at FROM official_identity_links_0268 WHERE user_id=$1 ORDER BY created_at,minecraft_uuid`, owner)
 	if err != nil {
 		return nil, err
 	}
@@ -51,10 +51,10 @@ func (r *SQLRepository) UpsertOfficialLink0268(ctx context.Context, owner, uuid,
 	// Conditional upsert is atomic across all Backend instances. An owner cannot
 	// take over another owner's Minecraft identity through a racing POST.
 	var result OfficialNeverLink0268
-	err := r.db.QueryRowContext(ctx, `INSERT INTO official_never_identity_links_0268(minecraft_uuid,never_user_id,minecraft_name)
+	err := r.db.QueryRowContext(ctx, `INSERT INTO official_identity_links_0268(minecraft_uuid,user_id,minecraft_name)
  VALUES($1,$2,$3) ON CONFLICT(minecraft_uuid) DO UPDATE SET
  minecraft_name=EXCLUDED.minecraft_name, verified_at=now(),updated_at=now()
- WHERE official_never_identity_links_0268.never_user_id=EXCLUDED.never_user_id
+ WHERE official_identity_links_0268.user_id=EXCLUDED.user_id
  RETURNING minecraft_uuid,minecraft_name,verified_at`, uuid, owner, name).
 		Scan(&result.MinecraftUUID, &result.MinecraftName, &result.VerifiedAt)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -67,7 +67,7 @@ func (r *SQLRepository) RemoveOfficialLink0268(ctx context.Context, owner, uuid 
 	if err := r.check(); err != nil {
 		return err
 	}
-	result, err := r.db.ExecContext(ctx, `DELETE FROM official_never_identity_links_0268 WHERE never_user_id=$1 AND minecraft_uuid=$2`, owner, uuid)
+	result, err := r.db.ExecContext(ctx, `DELETE FROM official_identity_links_0268 WHERE user_id=$1 AND minecraft_uuid=$2`, owner, uuid)
 	if err != nil {
 		return err
 	}

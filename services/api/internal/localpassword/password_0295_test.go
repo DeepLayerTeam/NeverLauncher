@@ -25,7 +25,7 @@ func TestLocalPasswordUpgrade0295(t *testing.T) {
 	if !strings.HasPrefix(argon, "$argon2id$") || !Verify("known-password", argon) || Verify("unknown", argon) || NeedsRehash(argon) {
 		t.Fatal("Argon2id hash or verify broken")
 	}
-	if Verify("known-password", legacy+"garbage") || Verify("known-password", "$never-gravit$v2$sha256-hex$") {
+	if Verify("known-password", legacy+"garbage") || Verify("known-password", "$gravit$v2$sha256-hex$") {
 		t.Fatal("unknown format accepted")
 	}
 }

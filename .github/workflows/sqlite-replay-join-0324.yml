@@ -31,7 +31,7 @@ jobs:
           test -z "$(gofmt -l internal/sqlitecore cmd/launcher-sqlite)"
       - name: Require native supported filesystem and test real SQLite driver
         env:
-          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-join
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-join
           LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS: '1'
         run: |
           set -euo pipefail
@@ -42,7 +42,7 @@ jobs:
           go vet ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-sqlite
       - name: Build real operational CLI and initialize latest SQLite schema 326
         env:
-          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/never-sqlite-join
+          LAUNCHER_SQLITE_TEST_ROOT: ${{ runner.temp }}/sqlite-join
         run: |
           set -euo pipefail
           go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite" ./cmd/launcher-sqlite

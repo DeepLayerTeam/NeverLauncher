@@ -13,7 +13,7 @@ UPDATE minecraft_sessions m
 SET trusted_device_id = COALESCE(a.trusted_device_id, ''),
     binding_epoch = GREATEST(COALESCE(a.binding_epoch, 1), 1)
 FROM auth_sessions a
-WHERE a.id = m.never_session_id
+WHERE a.id = m.session_id
   AND (m.trusted_device_id = '' OR m.binding_epoch = 1);
 
 DO $$
@@ -30,4 +30,4 @@ BEGIN
 END $$;
 
 CREATE INDEX IF NOT EXISTS idx_minecraft_sessions_trust_binding
-    ON minecraft_sessions(never_session_id, trusted_device_id, binding_epoch, status);
+    ON minecraft_sessions(session_id, trusted_device_id, binding_epoch, status);

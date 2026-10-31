@@ -104,7 +104,7 @@ INSERT INTO refresh_token_families(id,session_id,user_id,status) VALUES
 INSERT INTO minecraft_profiles(user_id,uuid,name) VALUES
  ('dtmig-user','00000000-0000-0000-0000-000000000101','DTMigUser');
 INSERT INTO minecraft_sessions(
- id,user_id,never_session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,status,created_at,last_seen_at,expires_at
+ id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,status,created_at,last_seen_at,expires_at
 ) VALUES
  ('dtmig-mc-unbound','dtmig-user','dtmig-session','00000000-0000-0000-0000-000000000101','',1,'legacy-client',repeat('a',64),'active',now(),now(),now()+interval '1 hour');
 INSERT INTO device_challenges(id,user_id,device_id,purpose,challenge_hash,metadata,created_at,expires_at)
@@ -163,7 +163,7 @@ if psql "$DB_DSN" -v ON_ERROR_STOP=1 -c "UPDATE minecraft_sessions SET trusted_d
   exit 1
 fi
 
-constraint_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM pg_constraint WHERE conname IN ('auth_sessions_trusted_device_owner_fk','trusted_devices_replacement_owner_fk','minecraft_sessions_never_session_owner_fk','minecraft_sessions_device_owner_fk','minecraft_sessions_profile_owner_fk','trusted_devices_replacement_shape_check','auth_sessions_device_binding_shape_check')")"
+constraint_count="$(psql "$DB_DSN" -Atqc "SELECT count(*) FROM pg_constraint WHERE conname IN ('auth_sessions_trusted_device_owner_fk','trusted_devices_replacement_owner_fk','minecraft_sessions_session_owner_fk','minecraft_sessions_device_owner_fk','minecraft_sessions_profile_owner_fk','trusted_devices_replacement_shape_check','auth_sessions_device_binding_shape_check')")"
 [[ "$constraint_count" == "7" ]]
 
 jq -n \

@@ -669,7 +669,7 @@ func certify(ctx context.Context, p Plan, token string, output string) error {
 	if r.RunID != p.RunID || r.ProjectID != p.ProjectID || r.SourceSHA256 != source {
 		return errors.New("source ZIP, project or run does not match database report")
 	}
-	// Bind the tested Never release to an actually active cutover, not merely
+	// Bind the tested release to an actually active cutover, not merely
 	// a release ID or digest invented by the operator's test scripts.
 	foundTarget := false
 	for _, ev := range r.Evidence {
@@ -678,7 +678,7 @@ func certify(ctx context.Context, p Plan, token string, output string) error {
 		}
 	}
 	if !foundTarget {
-		return errors.New("target digest is not an active verified Never release")
+		return errors.New("target digest is not an active verified release")
 	}
 
 	var review Review

@@ -50,7 +50,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 	var manifest sourceManifest0333
 	hasManifest := false
 	for _, entry := range z.File {
-		if entry.Name != ".never-migration/inventory.json" {
+		if entry.Name != ".migration/inventory.json" {
 			continue
 		}
 		if entry.UncompressedSize64 > 16<<20 {
@@ -94,7 +94,7 @@ func verifyGravitExport0333(name, manifestHash string) error {
 			return errors.New("duplicate export member")
 		}
 		seen[entry.Name] = true
-		if entry.Name == ".never-migration/inventory.json" {
+		if entry.Name == ".migration/inventory.json" {
 			continue
 		}
 		meta, ok := expected[entry.Name]
@@ -192,7 +192,7 @@ func postGravitInventory0333(endpoint, token, sourcePath, out string, export boo
 		return errors.New("missing manifest checksum")
 	}
 	dir := filepath.Dir(out)
-	tmp, e := os.CreateTemp(dir, ".never-gravit-export-*.tmp")
+	tmp, e := os.CreateTemp(dir, ".gravit-export-*.tmp")
 	if e != nil {
 		return e
 	}

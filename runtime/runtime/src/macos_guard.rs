@@ -49,7 +49,7 @@ struct MacOSPackageManifest {
     #[serde(default)]
     architecture: String,
     #[serde(default)]
-    never_guard_protocol_version: u32,
+    guard_protocol_version: u32,
     #[serde(default)]
     authenticated_ipc: String,
     #[serde(default)]
@@ -224,7 +224,7 @@ fn verify_macos_package_manifest(guard:&Path)->Result<(),String>{
     validate_secure_file(&manifest_path,false)?;
     let manifest:MacOSPackageManifest=serde_json::from_slice(&std::fs::read(&manifest_path).map_err(|e|e.to_string())?).map_err(|e|format!("macOS package manifest JSON invalid: {e}"))?;
     let canonical_arch=if cfg!(target_arch="aarch64"){"arm64"}else{"x64"};
-    let legacy=manifest.schema_version=="1.0"&&manifest.platform=="macos-universal"&&manifest.never_guard_protocol_version==GUARD_PROTOCOL_VERSION&&manifest.authenticated_ipc=="unix-domain-socket+0600+peer-credentials+hmac-sha256-v4"&&manifest.macos_production_hardening_version==GUARD_MACOS_HARDENING_VERSION&&manifest.developer_id_required&&manifest.notarization_required;
+    let legacy=manifest.schema_version=="1.0"&&manifest.platform=="macos-universal"&&manifest.guard_protocol_version==GUARD_PROTOCOL_VERSION&&manifest.authenticated_ipc=="unix-domain-socket+0600+peer-credentials+hmac-sha256-v4"&&manifest.macos_production_hardening_version==GUARD_MACOS_HARDENING_VERSION&&manifest.developer_id_required&&manifest.notarization_required;
     let canonical=manifest.schema_version=="1.0"&&manifest.platform=="macos"&&manifest.architecture==canonical_arch&&!manifest.artifacts.is_empty();
     if manifest.product_version!=env!("CARGO_PKG_VERSION")||manifest.bundle_identifier!="ru.skif4er.launcher"||(!legacy&&!canonical){return Err("macOS package manifest identity/hardening mismatch".into())}
     if canonical {

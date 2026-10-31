@@ -291,7 +291,7 @@ mod tests {
     #[tokio::test]
     async fn adopted_bytes_are_consumable_by_regular_content_cache() {
         let (root, m, key) = fixture();
-        let cache_path = root.join("test-never-cache");
+        let cache_path = root.join("test-cache");
         let store = CacheStore::at(cache_path);
         let first = scan(&m, &key, &root, None).unwrap();
         let result = adopt_scanned(first, &store).await.unwrap();
@@ -308,11 +308,11 @@ mod tests {
         fs::remove_dir_all(root).unwrap();
     }
     #[tokio::test]
-    async fn source_mutation_after_preview_never_publishes() {
+    async fn source_mutation_after_preview_publishes() {
         let (root, m, key) = fixture();
         let scan = scan(&m, &key, &root, None).unwrap();
         fs::write(root.join("updates/default/mods/test.jar"), b"EVIL").unwrap();
-        let store = CacheStore::at(root.join("test-never-cache"));
+        let store = CacheStore::at(root.join("test-cache"));
         assert!(adopt_scanned(scan, &store).await.is_err());
         fs::remove_dir_all(root).unwrap();
     }

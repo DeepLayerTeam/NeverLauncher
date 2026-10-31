@@ -39,7 +39,7 @@ func (r *SQLRepository) queuePlayerKickTx0197(ctx context.Context, tx *sql.Tx, c
 	if nodeID == "" || runtimeEpoch < 1 || len(runtimeID) != 64 || strings.TrimSpace(username) == "" {
 		return nil
 	}
-	// The execution target is the *revoked session*, never a username that
+	// The execution target is the *revoked session*, Username that
 	// could have been reused by a newly authenticated connection.
 	payload := map[string]string{"username": strings.TrimSpace(username), "reason": strings.TrimSpace(reason), "sessionCorrelationId": strings.ToLower(strings.TrimSpace(correlationID))}
 	payloadJSON, err := json.Marshal(payload)
@@ -133,7 +133,7 @@ func (r *SQLRepository) activatePlayerSessionTx0197(ctx context.Context, tx *sql
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(1970, hashtext($1))`, lockKey); err != nil {
 		return err
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE status='active' AND correlation_id<>$1 AND ((never_session_id=$2 AND player_uuid=$3) OR ($4<>'' AND minecraft_session_id=$4)) FOR UPDATE`, correlationID, join.SessionID, join.UUID, join.MinecraftSessionID)
+	rows, err := tx.QueryContext(ctx, `SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE status='active' AND correlation_id<>$1 AND ((session_id=$2 AND player_uuid=$3) OR ($4<>'' AND minecraft_session_id=$4)) FOR UPDATE`, correlationID, join.SessionID, join.UUID, join.MinecraftSessionID)
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (r *SQLRepository) activatePlayerSessionTx0197(ctx context.Context, tx *sql
 	if verifiedAt.IsZero() {
 		verifiedAt = now.UTC()
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,never_session_id,minecraft_session_id,trusted_device_id,binding_epoch,project_id,profile_id,channel,status,proxy_node_id,proxy_runtime_id,proxy_runtime_epoch,backend_node_id,backend_runtime_id,backend_runtime_epoch,transfer_sequence,recheck_required,trust_reason,integrity_reason,last_verified_at,created_at,updated_at)
+	_, err = tx.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,session_id,minecraft_session_id,trusted_device_id,binding_epoch,project_id,profile_id,channel,status,proxy_node_id,proxy_runtime_id,proxy_runtime_epoch,backend_node_id,backend_runtime_id,backend_runtime_epoch,transfer_sequence,recheck_required,trust_reason,integrity_reason,last_verified_at,created_at,updated_at)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'active',NULLIF($13,''),$14,$15,NULLIF($16,''),$17,$18,0,FALSE,$19,$20,$21,$22,$22)
 		ON CONFLICT(correlation_id) DO UPDATE SET status='active',proxy_node_id=CASE WHEN EXCLUDED.proxy_node_id IS NOT NULL THEN EXCLUDED.proxy_node_id ELSE server_bridge_player_sessions_v3.proxy_node_id END,proxy_runtime_id=CASE WHEN EXCLUDED.proxy_node_id IS NOT NULL THEN EXCLUDED.proxy_runtime_id ELSE server_bridge_player_sessions_v3.proxy_runtime_id END,proxy_runtime_epoch=CASE WHEN EXCLUDED.proxy_node_id IS NOT NULL THEN EXCLUDED.proxy_runtime_epoch ELSE server_bridge_player_sessions_v3.proxy_runtime_epoch END,backend_node_id=CASE WHEN EXCLUDED.backend_node_id IS NOT NULL THEN EXCLUDED.backend_node_id ELSE server_bridge_player_sessions_v3.backend_node_id END,backend_runtime_id=CASE WHEN EXCLUDED.backend_node_id IS NOT NULL THEN EXCLUDED.backend_runtime_id ELSE server_bridge_player_sessions_v3.backend_runtime_id END,backend_runtime_epoch=CASE WHEN EXCLUDED.backend_node_id IS NOT NULL THEN EXCLUDED.backend_runtime_epoch ELSE server_bridge_player_sessions_v3.backend_runtime_epoch END,recheck_required=FALSE,trust_reason=EXCLUDED.trust_reason,integrity_reason=EXCLUDED.integrity_reason,last_verified_at=EXCLUDED.last_verified_at,updated_at=EXCLUDED.updated_at`,
 		correlationID, join.UUID, join.Username, join.UsernameNormalized, join.UserID, join.SessionID, join.MinecraftSessionID, join.TrustedDeviceID, join.BindingEpoch, join.ProjectID, join.ProfileID, join.Channel,
@@ -262,7 +262,7 @@ func (r *SQLRepository) consumePlayerTransferTx0197(ctx context.Context, tx *sql
 }
 
 func (r *SQLRepository) invalidatePlayerSessionsBySessionTx0197(ctx context.Context, tx *sql.Tx, sessionID, serverID, reason string, now time.Time) (int, error) {
-	rows, err := tx.QueryContext(ctx, `SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE never_session_id=$1 AND status='active' AND ($2='' OR proxy_node_id=$2 OR backend_node_id=$2) FOR UPDATE`, sessionID, serverID)
+	rows, err := tx.QueryContext(ctx, `SELECT correlation_id FROM server_bridge_player_sessions_v3 WHERE session_id=$1 AND status='active' AND ($2='' OR proxy_node_id=$2 OR backend_node_id=$2) FOR UPDATE`, sessionID, serverID)
 	if err != nil {
 		return 0, err
 	}

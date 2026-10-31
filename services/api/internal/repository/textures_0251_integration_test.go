@@ -17,7 +17,7 @@ import (
 )
 
 // Run with TEST_PG_DSN_0251 pointing to an isolated PostgreSQL 17+ test DB.
-// This test creates and drops its OWN schema; it never executes against public.
+// This test creates and drops its OWN schema; it executes against public.
 func TestTextureIdentityAndRevisionPostgres0251(t *testing.T) {
 	dsn := os.Getenv("TEST_PG_DSN_0251")
 	if dsn == "" {

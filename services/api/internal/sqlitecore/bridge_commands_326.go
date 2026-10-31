@@ -86,7 +86,7 @@ func (r *Repository) HeartbeatBridgeRuntime(ctx context.Context, b BridgeRuntime
 	})
 }
 
-// Bridge commands are limited to typed plugin operations; NEVER execute shell or arbitrary argv.
+// Bridge commands are limited to typed plugin operations; execute shell or arbitrary argv.
 var bridgeCommandTypes = map[string]bool{"broadcast": true, "save": true, "kick": true, "whitelist": true, "shutdown": true, "maintenance": true}
 
 const bridgeCommandCols = `id,node_id,runtime_id,runtime_epoch,command_type,payload,payload_digest,request_digest,actor,idempotency_key,status,attempt,delivery_seq,lease_owner,lease_token,lease_until,created_at,updated_at,expires_at,completed_at,result,failure`
@@ -218,7 +218,7 @@ func (r *Repository) CreateBridgeCommand(ctx context.Context, c model.ServerBrid
 	return
 }
 
-// LeaseBridgeCommand is single-delivery. A lost ACK is indeterminate, NEVER automatically redelivered.
+// LeaseBridgeCommand is single-delivery. A lost ACK is indeterminate, automatically redelivered.
 func (r *Repository) LeaseBridgeCommand(ctx context.Context, proof NodeProof, runtime string, epoch int64, worker string, after int64, ttl time.Duration) (out model.ServerBridgeControlCommand, err error) {
 	node := proof.NodeID
 	if !durableFieldsNonempty(node, worker) || !isHex256(runtime) || epoch < 1 || len(worker) < 8 || after < 0 || ttl < time.Second || ttl > time.Minute {

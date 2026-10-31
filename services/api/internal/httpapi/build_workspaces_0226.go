@@ -617,7 +617,7 @@ func buildDigest0226(ws repository.BuildWorkspace) (string, error) {
 		Version         string                   `json:"version"`
 		Settings        repository.BuildSettings `json:"settings"`
 		Files           []repository.BuildFile   `json:"files"`
-	}{"never-build-workspace-v1", ws.ProjectID, ws.ProfileID, ws.ProfileDigest, ws.ProfileRevision, ws.Channel, ws.Version, ws.Settings, selectedFiles0226(ws)}
+	}{"build-workspace-v1", ws.ProjectID, ws.ProfileID, ws.ProfileDigest, ws.ProfileRevision, ws.Channel, ws.Version, ws.Settings, selectedFiles0226(ws)}
 	b, err := json.Marshal(basis)
 	if err != nil {
 		return "", err

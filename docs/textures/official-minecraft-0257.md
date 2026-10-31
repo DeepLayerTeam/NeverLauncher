@@ -32,7 +32,7 @@ all responses are capped to 1 MiB with finite timeouts.
 
 ### Authenticated API usage
 
-All endpoints require the **Never** `Authorization: Bearer <never-access-token>`;
+All endpoints require the **Never** `Authorization: Bearer <access-token>`;
 a local Yggdrasil Minecraft bearer **must not** be used here.
 
 | Operation | Method / path | Additional authorization |

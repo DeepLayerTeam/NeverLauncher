@@ -94,7 +94,7 @@ SELECT row_to_json(v)::text FROM (
    WHEN password_hash IS NULL OR password_hash='' THEN 'none'
    WHEN password_hash ~ '^\$argon2id\$v=19\$m=[0-9]+,t=[0-9]+,p=[0-9]+\$[A-Za-z0-9+/]+\$[A-Za-z0-9+/]+$' THEN 'argon2id'
    WHEN password_hash ~ '^sha256:[0-9a-f]{64}$' THEN 'sha256-legacy'
-   WHEN password_hash ~ '^\$never-gravit\$v1\$(sha256-hex|sha256-base64url|md5-hex|sha1-hex|sha512-hex|double-sha256-hex|double-sha256-binary-hex|phpass|bcrypt|argon2id)\$[A-Za-z0-9_-]+$' THEN 'fileauth-legacy'
+   WHEN password_hash ~ '^\$gravit\$v1\$(sha256-hex|sha256-base64url|md5-hex|sha1-hex|sha512-hex|double-sha256-hex|double-sha256-binary-hex|phpass|bcrypt|argon2id)\$[A-Za-z0-9_-]+$' THEN 'fileauth-legacy'
    ELSE 'unsupported'
   END AS format FROM users
  ) formats GROUP BY format

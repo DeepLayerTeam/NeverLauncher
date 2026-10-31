@@ -110,7 +110,7 @@ func TestMacOSStrictRefusalDoesNotDependOnBackendOS0311(t *testing.T) {
 	}
 }
 
-func TestFakeTPMNodeNeverDetected0311(t *testing.T) {
+func TestFakeTPMNodeDetected0311(t *testing.T) {
 	dir := t.TempDir()
 	fake := filepath.Join(dir, "tpmrm0")
 	if err := os.WriteFile(fake, []byte("not a tpm"), 0600); err != nil {

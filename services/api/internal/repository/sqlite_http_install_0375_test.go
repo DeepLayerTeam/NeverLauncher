@@ -13,7 +13,7 @@ import (
 func TestMinimalInstallationSQLite0375(t *testing.T) {
 	ctx := context.Background()
 	file := filepath.Join(t.TempDir(), "http.sqlite")
-	r, err := OpenSQLiteHTTPRepository0372(ctx, file, "https://never.example")
+	r, err := OpenSQLiteHTTPRepository0372(ctx, file, "https://example")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestMinimalInstallationSQLite0375(t *testing.T) {
 	if err = r.Close(); err != nil {
 		t.Fatal(err)
 	}
-	r, err = OpenSQLiteHTTPRepository0372(ctx, file, "https://never.example")
+	r, err = OpenSQLiteHTTPRepository0372(ctx, file, "https://example")
 	if err != nil {
 		t.Fatal(err)
 	}

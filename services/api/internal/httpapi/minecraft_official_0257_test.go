@@ -12,7 +12,7 @@ import (
 
 func TestOfficialTicketsBoundAndTamperProof0257(t *testing.T) {
 	secret := "a-long-independent-server-secret-at-least-32-bytes"
-	st := officialState0257{Kind: "linked", User: "user-A", Session: "never-session-A", Expires: time.Now().Add(time.Hour).Unix(), UUID: "123456781234123412341234567890ab", MinecraftToken: "official-secret-not-local"}
+	st := officialState0257{Kind: "linked", User: "user-A", Session: "session-A", Expires: time.Now().Add(time.Hour).Unix(), UUID: "123456781234123412341234567890ab", MinecraftToken: "official-secret-not-local"}
 	ticket, err := officialSeal0257(secret, st)
 	if err != nil {
 		t.Fatal(err)

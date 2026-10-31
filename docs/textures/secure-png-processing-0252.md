@@ -38,7 +38,7 @@ creating a competing set of identities or overwriting legacy URLs.
 Get the current CAS revision from `GET /api/v1/me/textures`, then:
 
 ```bash
-curl -fS -X POST "$NEVER_API/api/v1/me/textures/skin/upload" \
+curl -fS -X POST "$API/api/v1/me/textures/skin/upload" \
   -H "Authorization: Bearer $PLAYER_TOKEN" \
   -F 'expectedRevision=0' -F 'model=slim' -F 'visibility=public' \
   -F 'file=@skin.png;type=image/png'

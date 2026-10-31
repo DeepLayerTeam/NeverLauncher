@@ -109,7 +109,7 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	m := model.Manifest{SchemaVersion: "1.0", ProjectID: project, ProfileID: profile, Channel: channel, Version: "never-v2", Files: []model.ManifestFile{}}
+	m := model.Manifest{SchemaVersion: "1.0", ProjectID: project, ProfileID: profile, Channel: channel, Version: "v2", Files: []model.ManifestFile{}}
 	bare, _ := json.Marshal(m)
 	m.Signature = &model.SignatureInfo{Algorithm: "Ed25519", PublicKey: hex.EncodeToString(pub), Signature: hex.EncodeToString(ed25519.Sign(priv, bare))}
 	raw, _ := json.Marshal(m)

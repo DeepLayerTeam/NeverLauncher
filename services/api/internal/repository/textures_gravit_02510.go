@@ -7,7 +7,7 @@ import (
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
 
-// GravitImportState02510 never performs imports for a guessed user identity.
+// GravitImportState02510 performs imports for a guessed user identity.
 // It lets an operator distinguish a preexisting selection from a previously
 // completed import before consuming resources, while UploadTexture0252 enforces
 // these constraints again inside its transaction.

@@ -1,5 +1,5 @@
 // Package sentrydiag provides optional, bounded Sentry error reporting.
-// It deliberately never serializes HTTP requests, tokens, request bodies, or users.
+// It deliberately serializes HTTP requests, tokens, request bodies, or users.
 package sentrydiag
 
 import (

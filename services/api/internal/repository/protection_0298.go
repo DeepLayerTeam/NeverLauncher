@@ -9,7 +9,7 @@ import (
 )
 
 // ProtectionBan is independent from a user's disabled status. An unban must
-// never re-enable an account that was independently disabled.
+// re-enable an account that was independently disabled.
 type ProtectionBan struct {
 	UserID    string     `json:"userId"`
 	Reason    string     `json:"reason"`

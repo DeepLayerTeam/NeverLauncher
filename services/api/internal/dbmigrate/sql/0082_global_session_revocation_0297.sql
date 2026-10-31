@@ -4,7 +4,7 @@
 CREATE OR REPLACE FUNCTION nl_revoke_session_dependents_0297()
 RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
-    why text := left(coalesce(nullif(NEW.revoked_reason, ''), 'never-session-revoked'), 512);
+    why text := left(coalesce(nullif(NEW.revoked_reason, ''), 'session-revoked'), 512);
     stamp timestamptz := coalesce(NEW.revoked_at, now());
 BEGIN
     IF OLD.status <> 'active' OR NEW.status <> 'revoked' THEN
@@ -16,20 +16,20 @@ BEGIN
     UPDATE refresh_tokens SET status='revoked',revoked_at=coalesce(revoked_at,stamp)
         WHERE family_id=NEW.refresh_family_id AND status<>'revoked';
     UPDATE minecraft_sessions SET status='revoked',revoked_at=coalesce(revoked_at,stamp),revoked_reason=why
-        WHERE never_session_id=NEW.id AND status='active';
+        WHERE session_id=NEW.id AND status='active';
     DELETE FROM minecraft_joins WHERE minecraft_session_id IN
-        (SELECT id FROM minecraft_sessions WHERE never_session_id=NEW.id);
+        (SELECT id FROM minecraft_sessions WHERE session_id=NEW.id);
     UPDATE server_bridge_join_tickets_v2 SET status='invalidated',invalidated_at=stamp
         WHERE session_id=NEW.id AND status='active';
     UPDATE server_bridge_handoffs_v2 SET status='invalidated',invalidated_at=stamp
         WHERE session_id=NEW.id AND status='active';
     UPDATE server_bridge_player_sessions_v3 SET status='invalidated',recheck_required=FALSE,
         invalidated_at=stamp,invalidated_reason=why,updated_at=stamp
-        WHERE never_session_id=NEW.id AND status='active';
+        WHERE session_id=NEW.id AND status='active';
     UPDATE server_bridge_player_transfers_v3 SET status='invalidated'
         WHERE correlation_id IN
             (SELECT correlation_id FROM server_bridge_player_sessions_v3
-             WHERE never_session_id=NEW.id AND status='invalidated')
+             WHERE session_id=NEW.id AND status='invalidated')
           AND status='issued';
 
     INSERT INTO auth_events(user_id,session_id,family_id,event_type,details)
@@ -57,7 +57,7 @@ CREATE TRIGGER nl_session_revocation_0297 AFTER UPDATE OF status ON auth_session
     EXECUTE FUNCTION nl_revoke_session_dependents_0297();
 
 -- Terminal sessions cannot be resurrected by buggy code or stale workers.
-CREATE OR REPLACE FUNCTION nl_never_session_terminal_0297()
+CREATE OR REPLACE FUNCTION nl_session_terminal_0297()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF OLD.status='revoked' AND NEW.status <> 'revoked' THEN
@@ -66,9 +66,9 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-DROP TRIGGER IF EXISTS nl_never_session_terminal_0297 ON auth_sessions;
-CREATE TRIGGER nl_never_session_terminal_0297 BEFORE UPDATE OF status ON auth_sessions
-    FOR EACH ROW EXECUTE FUNCTION nl_never_session_terminal_0297();
+DROP TRIGGER IF EXISTS nl_session_terminal_0297 ON auth_sessions;
+CREATE TRIGGER nl_session_terminal_0297 BEFORE UPDATE OF status ON auth_sessions
+    FOR EACH ROW EXECUTE FUNCTION nl_session_terminal_0297();
 
 -- Security-sensitive user changes revoke even tokens cached in other API replicas.
 -- Comparison avoids logging out users for harmless profile/last-login updates.
@@ -253,10 +253,10 @@ BEGIN
     IF NEW.status <> 'active' THEN RETURN NEW; END IF;
     IF TG_TABLE_NAME='minecraft_sessions' THEN
         subject_user := NEW.user_id;
-        parent_session := NEW.never_session_id;
+        parent_session := NEW.session_id;
     ELSIF TG_TABLE_NAME='server_bridge_player_sessions_v3' THEN
         subject_user := NEW.user_id;
-        parent_session := NEW.never_session_id;
+        parent_session := NEW.session_id;
     ELSE
         subject_user := NEW.user_id;
         parent_session := NEW.session_id;
@@ -351,7 +351,7 @@ CREATE OR REPLACE FUNCTION nl_minecraft_join_gate_0297()
 RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE sid text;
 BEGIN
-    SELECT never_session_id INTO sid FROM minecraft_sessions
+    SELECT session_id INTO sid FROM minecraft_sessions
         WHERE id=NEW.minecraft_session_id AND user_id=NEW.user_id AND status='active';
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Minecraft session revoked' USING ERRCODE='23514';
@@ -393,7 +393,7 @@ CREATE TRIGGER nl_bridge_transfer_gate_0297 BEFORE INSERT OR UPDATE OF status ON
 
 CREATE INDEX IF NOT EXISTS idx_bridge_handoff_session_revocation_0297
     ON server_bridge_handoffs_v2(session_id) WHERE status='active';
-CREATE INDEX IF NOT EXISTS idx_bridge_player_never_revocation_0297
-    ON server_bridge_player_sessions_v3(never_session_id) WHERE status='active';
+CREATE INDEX IF NOT EXISTS idx_bridge_player_revocation_0297
+    ON server_bridge_player_sessions_v3(session_id) WHERE status='active';
 CREATE INDEX IF NOT EXISTS idx_durable_jobs_user_revocation_0297
     ON durable_jobs(actor_id) WHERE actor_type='user' AND status IN ('pending','running');

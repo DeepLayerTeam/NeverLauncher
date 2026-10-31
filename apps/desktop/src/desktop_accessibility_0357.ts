@@ -1,4 +1,4 @@
-/** Persistent player-only UI preferences. These never change signed provisioning or API trust. */
+/** Persistent player-only UI preferences. These change signed provisioning or API trust. */
 export type Locale0357 = "ru" | "en";
 export type UISettings0357 = {
   locale: Locale0357;
@@ -107,7 +107,7 @@ export function shortcut0357(
     return { type: "section", index: Number(event.key) - 1 };
   return null;
 }
-/** Trust-gated access: UI shortcuts must never bypass signed first-run or native verification. */
+/** Trust-gated access: UI shortcuts must bypass signed first-run or native verification. */
 export function canNavigate0357(
   screen: Screen0357,
   nativeLoaded: boolean,

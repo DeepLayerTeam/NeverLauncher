@@ -12,9 +12,9 @@ import (
 
 // Requires a disposable migrated PostgreSQL database. Never run against prod.
 func TestOfficialNeverLinkAtomicOwnership0268(t *testing.T) {
-	dsn := os.Getenv("NEVER_TEST_POSTGRES_DSN")
+	dsn := os.Getenv("TEST_POSTGRES_DSN")
 	if dsn == "" {
-		t.Skip("set NEVER_TEST_POSTGRES_DSN for isolated PostgreSQL integration tests")
+		t.Skip("set TEST_POSTGRES_DSN for isolated PostgreSQL integration tests")
 	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {

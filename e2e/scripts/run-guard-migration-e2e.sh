@@ -94,7 +94,7 @@ INSERT INTO refresh_token_families(id,session_id,user_id,status) VALUES
 INSERT INTO minecraft_profiles(user_id,uuid,name) VALUES
  ('gmig-user','00000000-0000-0000-0000-000000001310','GMigUser');
 INSERT INTO minecraft_sessions(
- id,user_id,never_session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,
+ id,user_id,session_id,profile_uuid,trusted_device_id,binding_epoch,client_token,access_token_hash,
  integrity_verified,guard_attestation_sha256,guard_evidence_sha256,guard_sha256,launcher_sha256,launcher_version,integrity_verified_at,
  status,created_at,last_seen_at,expires_at
 ) VALUES

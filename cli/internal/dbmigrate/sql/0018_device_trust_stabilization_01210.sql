@@ -97,7 +97,7 @@ BEGIN
 
     SELECT count(*) INTO broken
     FROM minecraft_sessions m
-    JOIN auth_sessions s ON s.id=m.never_session_id
+    JOIN auth_sessions s ON s.id=m.session_id
     WHERE s.user_id<>m.user_id;
     IF broken<>0 THEN
         RAISE EXCEPTION '0.12.10 migration refused: % Minecraft session(s) disagree with parent Never session ownership', broken;
@@ -173,9 +173,9 @@ DO $$ BEGIN
             FOREIGN KEY(replaced_by_device_id,user_id) REFERENCES trusted_devices(id,user_id)
             DEFERRABLE INITIALLY DEFERRED;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='minecraft_sessions_never_session_owner_fk' AND conrelid='minecraft_sessions'::regclass) THEN
-        ALTER TABLE minecraft_sessions ADD CONSTRAINT minecraft_sessions_never_session_owner_fk
-            FOREIGN KEY(never_session_id,user_id) REFERENCES auth_sessions(id,user_id)
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='minecraft_sessions_session_owner_fk' AND conrelid='minecraft_sessions'::regclass) THEN
+        ALTER TABLE minecraft_sessions ADD CONSTRAINT minecraft_sessions_session_owner_fk
+            FOREIGN KEY(session_id,user_id) REFERENCES auth_sessions(id,user_id)
             DEFERRABLE INITIALLY DEFERRED;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='minecraft_sessions_device_owner_fk' AND conrelid='minecraft_sessions'::regclass) THEN

@@ -48,13 +48,13 @@ var authDDL = []string{
  WHEN NEW.uuid<>OLD.uuid OR NEW.user_id<>OLD.user_id BEGIN SELECT RAISE(ABORT,'minecraft identity immutable'); END`,
 	`CREATE TABLE minecraft_sessions (
  id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
- never_session_id TEXT NOT NULL REFERENCES auth_sessions(id) ON DELETE RESTRICT,
+ session_id TEXT NOT NULL REFERENCES auth_sessions(id) ON DELETE RESTRICT,
  profile_uuid TEXT NOT NULL REFERENCES minecraft_profiles(uuid) ON DELETE RESTRICT,
  access_hash TEXT NOT NULL UNIQUE CHECK(length(access_hash)=64),
  status TEXT NOT NULL CHECK(status IN ('active','revoked')),
  created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL,
  revoked_at INTEGER NOT NULL DEFAULT 0, revoked_reason TEXT NOT NULL DEFAULT '')`,
-	`CREATE INDEX minecraft_sessions_never ON minecraft_sessions(never_session_id,status)`,
+	`CREATE INDEX minecraft_sessions ON minecraft_sessions(session_id,status)`,
 	`CREATE TABLE auth_revocation_events (
  id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
  session_id TEXT NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL)`,

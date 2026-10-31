@@ -12,7 +12,7 @@ import (
 )
 
 func TestCutoverInputs03311(t *testing.T) {
-	valid := Stage{ProfileID: "forge-1", Channel: "stable", ReleaseID: "never-release", ExpectedHeadRevision: 0, StageID: strings.Repeat("s", 20)}
+	valid := Stage{ProfileID: "forge-1", Channel: "stable", ReleaseID: "release", ExpectedHeadRevision: 0, StageID: strings.Repeat("s", 20)}
 	if e := ValidateStage(valid); e != nil {
 		t.Fatal(e)
 	}

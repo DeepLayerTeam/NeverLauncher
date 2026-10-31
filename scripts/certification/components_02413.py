@@ -149,7 +149,7 @@ def assert_bytes(root: Path, doc: dict, expected: set[str]) -> None:
 def certified_case(runtime: Path, signer: Path, *, version: str = "0.24.13") -> dict:
     started = time.monotonic_ns()
     os_name, arch = current_target()
-    with tempfile.TemporaryDirectory(prefix="never-components-02413-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="components-02413-") as tmp:
         home = Path(tmp)
         installation = home / "installed"
         cache = home / "cache"

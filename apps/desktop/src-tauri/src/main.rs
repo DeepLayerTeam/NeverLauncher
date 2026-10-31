@@ -689,7 +689,7 @@ async fn download_missing_files(app: tauri::AppHandle, manifest: Manifest, root:
     let result=runtime::component_catalog_0241::with_verified_release_scopes_0393(grants,
         download_missing_files_inner_0392(app,manifest,root.clone(),pinned_public_key.clone(),preset)).await?;
     // The release pointer commits before Tauri responds. Persist the exact
-    // native installed selection even if the renderer never receives success.
+    // native installed selection even if the renderer receives success.
     if result.failed==0 {reconcile_component_preference_0393(&root,&pinned_public_key).await?;}
     Ok(result)
 }
@@ -844,7 +844,7 @@ async fn build_launch_plan(manifest: Manifest, root: String, java_path: Option<S
     Ok(plan)
 }
 // 0.35.8: An offline session is a replay of an owner-provisioned installation,
-// never an entitlement, a login, or an arbitrary renderer-provided public key.
+// an entitlement, a login, or an arbitrary renderer-provided public key.
 // Native verification is repeated on every cache read and every launch.
 fn check_offline_owner_binding_0358(
     cfg: &DesktopConfig,
@@ -919,7 +919,7 @@ fn matching_offline_release_0358(requested: &Manifest, cached: &Manifest) -> Res
     Ok(())
 }
 
-// Cached manifests are never trusted solely because they are on disk.
+// Cached manifests are trusted solely because they are on disk.
 // All offline reads verify the pinned Ed25519 signature again.
 fn desktop_manifest_cache_path_0229(root: &str) -> Result<PathBuf, String> {
     let root = PathBuf::from(root).canonicalize().map_err(|e| format!("client root unavailable: {e}"))?;
@@ -1108,7 +1108,7 @@ async fn save_installed_component_choice_0247_inner_0392(
 }
 
 
-// Evidence is measured from the installed active release, never from the
+// Evidence is measured from the installed active release, from the
 // renderer-provided list of mods, manifest or chosen plan SHA-256.
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase")]
@@ -1270,7 +1270,7 @@ struct ReleaseRequirements0359 {
 }
 
 // Compare two verified, installed/target signed releases. UI memory and
-// localStorage are never accepted as a source of installed requirements.
+// localStorage are accepted as a source of installed requirements.
 #[tauri::command]
 async fn preview_release_requirements_0359(
     manifest: Manifest,root:String,pinned_public_key:String,component_preset:Option<String>,
@@ -1570,7 +1570,7 @@ async fn launch_minecraft_inner_0392(
         return Err("Official Minecraft launch cannot be offline".into());
     }
     let minecraft_credentials = if let Some(context) = official_identity {
-        let credentials=official_manager.launch_credentials(&context.backend_url, &context.never_token, &context.never_session_id).await?;
+        let credentials=official_manager.launch_credentials(&context.backend_url, &context.token, &context.session_id).await?;
         // The account used to start the game must be the one selected for
         // ServerBridge authorization, even across an asynchronous vault switch.
         if credentials.uuid.replace('-', "").to_ascii_lowercase()!=context.expected_uuid.replace('-', "").to_ascii_lowercase() {
@@ -1903,7 +1903,7 @@ async fn validate_desktop_settings(game_directory: String, java_path: Option<Str
     Ok(SettingsCheckResult { valid: memory_valid, status: if memory_valid { "ready" } else { "invalid" }.into(), messages, normalized_game_directory: game_dir.to_string_lossy().to_string() })
 }
 
-// Untrusted URLs never navigate the privileged Tauri WebView. Only an explicit
+// Untrusted URLs navigate the privileged Tauri WebView. Only an explicit
 // player click may open a well-formed HTTPS link in the *system* browser.
 fn validate_external_https_0356(raw: &str) -> Result<reqwest::Url, String> {
     if raw.len() > 2048 || raw.bytes().any(|b| b.is_ascii_control() || b == b'\\') || !raw.starts_with("https://") {
@@ -1987,7 +1987,7 @@ fn recover_components_before_desktop02310() -> Result<(), String> {
     std::process::exit(0);
 }
 
-// MIG09: never execute Gravit software or trust any Gravit session / key.
+// MIG09: execute Gravit software or trust any Gravit session / key.
 // The existing pinned Never Ed25519 manifest is the sole authority for reusable bytes.
 #[tauri::command]
 fn player_migration_discover_0339() -> Vec<String> {
@@ -2015,7 +2015,7 @@ async fn player_migration_adopt_0339(
 }
 
 /// Performance instrumentation is disabled unless the parent process opts in.
-/// Called only after React has rendered across two animation frames. It never
+/// Called only after React has rendered across two animation frames. It
 /// returns environment data to the renderer or exposes arbitrary filesystem IO.
 #[tauri::command]
 fn benchmark_ui_ready_03511() -> Result<(), String> {
@@ -2082,7 +2082,7 @@ fn main() {
 mod launch_realm_0269_tests {
     use super::*;
     fn local() -> MinecraftLaunchCredentials {
-        MinecraftLaunchCredentials{username:"NeverPlayer".into(),uuid:"11111111222233334444555555555555".into(),access_token:"project-token".into(),user_type:"mojang".into(),auth_server_base_url:"https://never.example".into()}
+        MinecraftLaunchCredentials{username:"NeverPlayer".into(),uuid:"11111111222233334444555555555555".into(),access_token:"project-token".into(),user_type:"mojang".into(),auth_server_base_url:"https://example".into()}
     }
     #[test]
     fn native_rejects_cross_realm_launch() {

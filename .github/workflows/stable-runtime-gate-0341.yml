@@ -28,15 +28,15 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_USER: never_test
-          POSTGRES_PASSWORD: never_test
-          POSTGRES_DB: never_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U never_test -d never_test"
+          --health-cmd "pg_isready -U test -d test"
           --health-interval 10s --health-timeout 5s --health-retries 8
     env:
-      LAUNCHER_TEST_POSTGRES_DSN: postgres://never_test:never_test@localhost:5432/never_test?sslmode=disable
+      LAUNCHER_TEST_POSTGRES_DSN: postgres://test:test@localhost:5432/test?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v6

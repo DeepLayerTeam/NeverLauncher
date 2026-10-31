@@ -46,7 +46,7 @@ func postMigrationContent0337(endpoint, token, source, run, profilePath, profile
 	r.ContentLength = st.Size()
 	r.Header.Set("Content-Type", "application/zip")
 	r.Header.Set("Authorization", "Bearer "+strings.TrimSpace(token))
-	for k, v := range map[string]string{"X-Gravit-Profile-Path": profilePath, "X-Never-Profile-ID": profileID, "X-Never-Profile-Name": name, "X-Never-Loader": loader, "X-Never-Channel": channel, "X-Never-Version": version} {
+	for k, v := range map[string]string{"X-Gravit-Profile-Path": profilePath, "X-Profile-ID": profileID, "X-Profile-Name": name, "X-Loader": loader, "X-Channel": channel, "X-Version": version} {
 		r.Header.Set(k, v)
 	}
 	if commit {

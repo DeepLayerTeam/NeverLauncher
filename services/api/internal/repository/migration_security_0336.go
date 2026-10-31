@@ -42,7 +42,7 @@ type migrationSecurityTarget0336 struct{ UserID, Name, UUID string }
 
 // Deterministically derives affected targets from the *committed* MIG05 receipt,
 // never from a client-supplied username or request body. Existing Never users are
-// expressly excluded; their sessions/keys are Never-owned and are not Gravit trust.
+// expressly excluded; their sessions/keys are owned and are not Gravit trust.
 func migrationSecurityTargets0336(rows []gc.Row) ([]migrationSecurityTarget0336, error) {
 	out := make([]migrationSecurityTarget0336, 0, len(rows))
 	seen := make(map[string]bool)

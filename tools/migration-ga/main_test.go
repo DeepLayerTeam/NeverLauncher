@@ -73,20 +73,20 @@ func TestCheckPlanRequiresFullMatrix(t *testing.T) {
 	}
 }
 func TestGAProbeHelper(t *testing.T) {
-	if os.Getenv("NEVER_GA_PROBE_HELPER") != "1" {
+	if os.Getenv("GA_PROBE_HELPER") != "1" {
 		return
 	}
 	if os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN") != "" || os.Getenv("MIGRATION_GA_SIGNING_KEY_B64") != "" {
 		os.Exit(9)
 	}
-	epath := os.Getenv("NEVER_GA_PROBE_EVIDENCE")
+	epath := os.Getenv("GA_PROBE_EVIDENCE")
 	// The helper updates the receipt during this process invocation.
 	_ = os.Chtimes(epath, time.Now(), time.Now())
 	name := ""
 	if len(os.Args) >= 2 {
 		name = os.Args[len(os.Args)-1]
 	}
-	p := Probe{RunID: os.Getenv("NEVER_GA_RUN"), Name: name, Passed: true, ReportSHA256: os.Getenv("NEVER_GA_REPORT"), SourceSHA256: os.Getenv("NEVER_GA_SOURCE"), SourceVersion: "5.7.4", TargetReleaseSHA256: testHash, EvidenceFile: epath, EvidenceSHA256: os.Getenv("NEVER_GA_EVIDENCE_HASH")}
+	p := Probe{RunID: os.Getenv("GA_RUN"), Name: name, Passed: true, ReportSHA256: os.Getenv("GA_REPORT"), SourceSHA256: os.Getenv("GA_SOURCE"), SourceVersion: "5.7.4", TargetReleaseSHA256: testHash, EvidenceFile: epath, EvidenceSHA256: os.Getenv("GA_EVIDENCE_HASH")}
 	if p.Name == "uuid-world-plugin-data" {
 		p.SourceUUIDs = []string{testUUID}
 		p.TargetUUIDs = []string{testUUID}
@@ -178,7 +178,7 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 	}
 	t.Setenv("LAUNCHER_MIGRATION_GA_TOKEN", "high-privilege-secret")
 	t.Setenv("MIGRATION_GA_SIGNING_KEY_B64", "high-privilege-key")
-	for _, env := range []string{"NEVER_GA_PROBE_HELPER=1", "NEVER_GA_RUN=" + r.RunID, "NEVER_GA_REPORT=" + r.ReportSHA256, "NEVER_GA_SOURCE=" + r.SourceSHA256, "NEVER_GA_EVIDENCE_HASH=" + evidenceHash, "NEVER_GA_PROBE_EVIDENCE=" + evidenceFile} {
+	for _, env := range []string{"GA_PROBE_HELPER=1", "GA_RUN=" + r.RunID, "GA_REPORT=" + r.ReportSHA256, "GA_SOURCE=" + r.SourceSHA256, "GA_EVIDENCE_HASH=" + evidenceHash, "GA_PROBE_EVIDENCE=" + evidenceFile} {
 		kv := strings.SplitN(env, "=", 2)
 		t.Setenv(kv[0], kv[1])
 	}

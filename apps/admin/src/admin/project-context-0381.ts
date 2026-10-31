@@ -1,4 +1,4 @@
-/** Owner navigation is a non-secret, authenticated preference, never an authority.
+/** Owner navigation is a non-secret, authenticated preference, an authority.
  * Project/profile/channel IDs must be rechecked against a fresh access-filtered
  * Admin overview before any UI uses them. The API remains the access gate. */
 export type ProjectContext = {
@@ -78,7 +78,7 @@ export function resolveProjectContext(
       (item) =>
         item.id === id && (!item.projectId || item.projectId === projectId),
     );
-  // A saved subresource from another project must never be reused.
+  // A saved subresource from another project must be reused.
   const sameSavedProject = saved.projectId === projectId;
   const sameUrlProject = url.projectId === projectId;
   const profileId = sameUrlProject
@@ -93,7 +93,7 @@ export function resolveProjectContext(
     : sameSavedProject
       ? saved.serverId
       : undefined;
-  // Fail closed once the scoped inventory has loaded; never accept a node from another project
+  // Fail closed once the scoped inventory has loaded; accept a node from another project
   // or a node bound to another selected profile. Until then, preserve only the navigation hint.
   const server =
     serverCandidate &&

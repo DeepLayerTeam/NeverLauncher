@@ -805,7 +805,7 @@ func (r *SQLRepository) InvalidateServerBridgeSession(ctx context.Context, sessi
 		return int(n), err
 	}
 	hn, _ := hRes.RowsAffected()
-	pn, err := r.invalidatePlayerSessionsBySessionTx0197(ctx, tx, sessionID, serverID, "never-session-invalidated", now)
+	pn, err := r.invalidatePlayerSessionsBySessionTx0197(ctx, tx, sessionID, serverID, "session-invalidated", now)
 	if err != nil {
 		return int(n + hn), err
 	}
@@ -1308,12 +1308,12 @@ func (r *SQLRepository) MaintainServerBridge(ctx context.Context, now time.Time)
 		result.HandoffsExpired, _ = res.RowsAffected()
 	}
 	// Игровой сеанс может пережить краткоживущие строки токенов подключения и передачи,
-	// но не должен переживать сеанс Never либо конкретные процессы прокси и серверной
+	// но не должен переживать сеанс либо конкретные процессы прокси и серверной
 	// части, к которым привязан. Аннулируйте его в той же транзакции обслуживания, чтобы
 	// долговечный Control API разослал player.kick всем действующим участникам.
 	staleRows, queryErr := tx.QueryContext(ctx, `SELECT p.correlation_id FROM server_bridge_player_sessions_v3 p
 		WHERE p.status='active' AND (
-			NOT EXISTS (SELECT 1 FROM auth_sessions a WHERE a.id=p.never_session_id AND a.user_id=p.user_id AND a.status='active' AND a.expires_at>$1 AND a.binding_epoch=p.binding_epoch)
+			NOT EXISTS (SELECT 1 FROM auth_sessions a WHERE a.id=p.session_id AND a.user_id=p.user_id AND a.status='active' AND a.expires_at>$1 AND a.binding_epoch=p.binding_epoch)
 			OR (p.proxy_node_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=p.proxy_node_id AND n.status='active' AND n.runtime_id=p.proxy_runtime_id AND n.runtime_epoch=p.proxy_runtime_epoch))
 			OR (p.backend_node_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM server_bridge_nodes_v2 n WHERE n.id=p.backend_node_id AND n.status='active' AND n.runtime_id=p.backend_runtime_id AND n.runtime_epoch=p.backend_runtime_epoch))
 		)
@@ -1515,7 +1515,7 @@ func (r *SQLRepository) CreateServerBridgeControlCommand(ctx context.Context, c 
 
 // reconcileControlLeases0285 is executed under the same PostgreSQL transaction
 // as dispatch. A delivered command that lost its lease or its original runtime
-// cannot safely be redelivered, even when its application never ACKed.
+// cannot safely be redelivered, even when its application ACKed.
 // The identity/token/sequence stay on the row for forensic reconciliation.
 func (r *SQLRepository) reconcileControlLeases0285(ctx context.Context, tx *sql.Tx, serverID string, now time.Time) error {
 	_, err := tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3
@@ -1574,7 +1574,7 @@ func (r *SQLRepository) LeaseServerBridgeControlCommand(ctx context.Context, ser
 		return model.ServerBridgeControlCommand{}, fmt.Errorf("%w: control runtime is not active", ErrConflict)
 	}
 	// A leased command MAY have performed the side effect even if the ACK was
-	// lost. Never convert an expired delivery into another dispatch. The
+	// lost. Convert an expired delivery into another dispatch. The
 	// PostgreSQL row is authoritative across all Backend replicas; Redis is
 	// only an additional ephemeral ownership check.
 	if err = r.reconcileControlLeases0285(ctx, tx, serverID, now); err != nil {
@@ -1646,7 +1646,7 @@ func (r *SQLRepository) CompleteServerBridgeControlCommand(ctx context.Context, 
 	}
 	// The agent has durably finished, but its ACK may arrive after expiry of
 	// the original lease or after read-time reconciliation. Preserve the
-	// original lease identity (checked above); NEVER grant a new execution.
+	// original lease identity (checked above); grant a new execution.
 	if recoverableServerBridgeLease0412(current) {
 		if _, err = tx.ExecContext(ctx, `UPDATE server_bridge_control_commands_v3 SET status=$2,result=$3::jsonb,error=$4,completed_at=$5,updated_at=$5,lease_until=NULL WHERE id=$1`, commandID, status, string(resultJSON), failure, now.UTC()); err != nil {
 			return model.ServerBridgeControlCommand{}, err
@@ -1710,7 +1710,7 @@ func (r *SQLRepository) GetServerBridgeControlCommand(ctx context.Context, serve
 	if err := r.check(); err != nil {
 		return model.ServerBridgeControlCommand{}, err
 	}
-	// Reconcile at read time as well: a server may never poll again after a
+	// Reconcile at read time as well: a server may poll again after a
 	// crash, and operators still need the actual indeterminate outcome.
 	if err := r.reconcileControlRead0285(ctx, serverID, commandID); err != nil {
 		return model.ServerBridgeControlCommand{}, err
@@ -1734,7 +1734,7 @@ func (r *SQLRepository) ListServerBridgeRecentControlCommands(ctx context.Contex
 	if limit > 200 {
 		limit = 200
 	}
-	// Make uncertainty visible even after the game never reconnects.
+	// Make uncertainty visible even after the game reconnects.
 	if err := r.reconcileControlRead0285(ctx, "", ""); err != nil {
 		return nil, err
 	}

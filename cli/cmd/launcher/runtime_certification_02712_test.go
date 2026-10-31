@@ -123,7 +123,7 @@ func TestRuntimeCertification02712HostAndPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	wrong := currentVanillaTarget()
-	wrong.OS = "never-os"
+	wrong.OS = "os"
 	if err := certHostTarget02712(wrong); err == nil {
 		t.Fatal("cross-target runtime certification accepted")
 	}

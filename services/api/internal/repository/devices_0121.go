@@ -563,7 +563,7 @@ func revokeTrustedDeviceSQLTx0125(ctx context.Context, tx *sql.Tx, userID, devic
 				return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke refresh tokens for family %s: %w", a.family, err)
 			}
 		}
-		if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE never_session_id=$1 AND status='active'`, a.session, now, reason); err != nil {
+		if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE session_id=$1 AND status='active'`, a.session, now, reason); err != nil {
 			return model.DeviceRevocationResult{}, fmt.Errorf("revoke trusted device: revoke minecraft sessions for %s: %w", a.session, err)
 		} else if n, err := res.RowsAffected(); err == nil {
 			result.RevokedMinecraftSessions += int(n)
@@ -822,7 +822,7 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 				return result, fmt.Errorf("replace trusted device: revoke sibling refresh tokens: %w", err)
 			}
 		}
-		if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE never_session_id=$1 AND status='active'`, a.session, now, reason); err != nil {
+		if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE session_id=$1 AND status='active'`, a.session, now, reason); err != nil {
 			return result, fmt.Errorf("replace trusted device: revoke sibling minecraft sessions: %w", err)
 		} else if n, e := res.RowsAffected(); e == nil {
 			result.RevokedMinecraftSessions += int(n)
@@ -831,7 +831,7 @@ ON CONFLICT DO NOTHING RETURNING `+trustedDeviceColumns0121, replacement.ID, rep
 	}
 	// Действующие игровые учётные данные были выданы для старой эпохи привязки и явно отзываются,
 	// вместо того чтобы оставлять устаревшие строки, отклоняемые только при текущих проверках.
-	if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE never_session_id=$1 AND status='active'`, currentSessionID, now, reason); err != nil {
+	if res, err := tx.ExecContext(ctx, `UPDATE minecraft_sessions SET status='revoked',revoked_at=COALESCE(revoked_at,$2),revoked_reason=CASE WHEN revoked_reason='' THEN $3 ELSE revoked_reason END WHERE session_id=$1 AND status='active'`, currentSessionID, now, reason); err != nil {
 		return result, fmt.Errorf("replace trusted device: revoke current minecraft sessions: %w", err)
 	} else if n, e := res.RowsAffected(); e == nil {
 		result.RevokedMinecraftSessions += int(n)

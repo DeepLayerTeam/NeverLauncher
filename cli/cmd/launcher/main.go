@@ -59,7 +59,7 @@ Backend / production:
   backup status|create|inspect|restore-dry-run|restore|audit-export|diagnostics-bundle
   db migrations|migration-doctor|migrate|auth-upgrade|status|validate|repository
   storage ...
-  migrate gravit create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|security|preview-security|activate-security|generate-never-keys --backend URL --token TOKEN
+  migrate gravit create|list|status|events|execute|pause|resume|assess|compatibility|inventory|export|security|preview-security|activate-security|generate-keys --backend URL --token TOKEN
                                    PostgreSQL workflow and live Gravit ZIP compatibility inspection (not source import)
   migrate ...
   production deployment|first-run|e2e

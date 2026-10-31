@@ -49,7 +49,7 @@ checks = [
         [
             "server_bridge_player_sessions_v3",
             "server_bridge_player_transfers_v3",
-            "uq_server_bridge_player_never_session_active_0197",
+            "uq_server_bridge_player_session_active_0197",
             "uq_server_bridge_player_minecraft_session_active_0197",
             "recheck_required",
         ],

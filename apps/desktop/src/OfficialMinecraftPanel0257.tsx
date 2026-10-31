@@ -474,7 +474,7 @@ export function OfficialMinecraftPanel0257({
           </div>
         </>
       )}
-      {/* Parent launch mode is driven solely by the verified profile callback, never by stored metadata. */}
+      {/* Parent launch mode is driven solely by the verified profile callback, by stored metadata. */}
       {linkedProfile && !ready && (
         <p className="officialAuthError02610">
           Данные о ранее активном аккаунте перепроверяются. Официальный запуск

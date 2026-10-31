@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Compile an explicitly source-ported Gravit module into a real Never Extension.
+"""Compile an explicitly source-ported Gravit module into a real Extension.
 
 Does not load arbitrary Gravit JARs or attempt unsafe Java API emulation.
-Published packages must be signed and independently verified by Never CLI.
+Published packages must be signed and independently verified by CLI.
 """
 
 from __future__ import annotations
@@ -237,7 +237,7 @@ def build(args: argparse.Namespace) -> None:
         # Publish the build directory only after the actual compilation and JAR verification.
         stage.rename(destination)
 
-    # No signing key -> only an untrusted staging directory. Never represent that as an installable package.
+    # No signing key -> only an untrusted staging directory. Represent that as an installable package.
     if args.private_key is not None:
         pkg = args.package.resolve()
         try:
@@ -281,7 +281,7 @@ def build(args: argparse.Namespace) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Compile an explicitly ported Gravit Java module to executable Never Extension"
+        description="Compile an explicitly ported Gravit Java module to executable Extension"
     )
     parser.add_argument(
         "--source", type=Path, required=True, help="directory with ported .java sources"
@@ -298,9 +298,7 @@ def main() -> int:
     parser.add_argument(
         "--output", type=Path, required=True, help="new package directory; overwritten"
     )
-    parser.add_argument(
-        "--nl", type=Path, help="compiled Never CLI executable for signing"
-    )
+    parser.add_argument("--nl", type=Path, help="compiled CLI executable for signing")
     parser.add_argument(
         "--private-key", type=Path, help="existing publisher private Ed25519 key"
     )

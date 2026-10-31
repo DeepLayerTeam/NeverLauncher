@@ -289,7 +289,7 @@ func Import(ctx context.Context, backupPath, postgresDSN string) (Report, error)
 		return report, fmt.Errorf("required SQLite schema %d, got %d", sqlitecore.SchemaVersion, manifest.SchemaVersion)
 	}
 	// Verify application-level invariants against an isolated restored copy.
-	// Never open the checksum-protected backup in writable/WAL mode.
+	// Open the checksum-protected backup in writable/WAL mode.
 	if err = verifyRestoredCore(ctx, backupPath); err != nil {
 		return report, fmt.Errorf("SQLite application consistency: %w", err)
 	}

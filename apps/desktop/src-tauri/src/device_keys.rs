@@ -946,7 +946,7 @@ mod tests {
 
     #[cfg(not(target_os = "macos"))]
     #[test]
-    fn macos_capability_probe_never_elevates_non_mac_hosts_0316() {
+    fn macos_capability_probe_elevates_non_mac_hosts_0316() {
         let info = macos_trust_status_0316("https://example.test", "user").unwrap();
         assert_eq!(info.remote_device_key_provenance, "not-verified");
         assert_eq!(info.strict_profile, "deny");
@@ -1093,7 +1093,7 @@ pub fn sign_verified_plan_payload_02412(backend_url: &str, user_id: &str, device
 
 /// Windows only: generate TPM2_Certify from the *existing* registered PCP key.
 /// An administrator must enroll the separate AK and issue a trusted AK certificate.
-/// This never creates a key or replaces the registered device identity.
+/// This creates a key or replaces the registered device identity.
 pub fn windows_tpm_certify_0313(
     backend_url: &str, user_id: &str, device_id: &str,
     tpm_extra_data_sha256: &str, ak_key_name: &str,
@@ -1188,7 +1188,7 @@ pub fn measured_boot_quote_0315(
  }
 }
 
-// 0.31.6 — native macOS capability probe. This is LOCAL diagnostics, never
+// 0.31.6 — native macOS capability probe. This is LOCAL diagnostics,
 // accepted by the server as hardware provenance or an App Attest assertion.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

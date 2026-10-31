@@ -46,7 +46,7 @@ fn safe_argument(t:&str,arg:&str)->bool {
         return key.bytes().chain(value.bytes()).all(|b|b.is_ascii_alphanumeric()||matches!(b,b'.'|b'_'|b'-'));
     }
     if t=="ClientArgs" {
-        for prefix in ["--never-optional-","--fabric-","--forge-","--neoforge-","--mixin-"] {
+        for prefix in ["--optional-","--fabric-","--forge-","--neoforge-","--mixin-"] {
             if let Some(rest)=arg.strip_prefix(prefix) {
                 return !rest.is_empty()&&rest.bytes().all(|b|b.is_ascii_lowercase()||b.is_ascii_digit()||matches!(b,b'-'|b'_'|b'='|b'.'));
             }
@@ -155,7 +155,7 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
         for arg in ["--accessToken=forged","--gameDir=/tmp","--username=forged","--version=other","-cp","--server=evil"]{assert!(!safe_argument("ClientArgs",arg),"{arg}")}
         assert!(safe_argument("JvmArgs","-Dfabric.log.level=debug"));
         assert!(safe_argument("JvmArgs","-XX:MaxGCPauseMillis=100"));
-        assert!(safe_argument("ClientArgs","--never-optional-debug=1"));
+        assert!(safe_argument("ClientArgs","--optional-debug=1"));
     }
     #[test] fn signed_go_actions_fixture_and_signature(){
         let m:Manifest=serde_json::from_str(include_str!("../tests/fixtures/catalog_actions_0245_go_signed.json")).unwrap();
@@ -180,7 +180,7 @@ fn apply_selected_actions(cat:&ComponentCatalog,active:&HashSet<String>,root:&Pa
         apply_selected_actions(cat,&active,Path::new("/client"),&mut plan).unwrap();
         assert!(plan.classpath_entries.iter().any(|s|s.ends_with("/mods/sodium.jar")));
         assert!(plan.jvm_args.iter().any(|s|s=="-Dfabric.log.level=debug"));
-        assert!(plan.game_args.iter().any(|s|s=="--never-optional-feature=1"));
+        assert!(plan.game_args.iter().any(|s|s=="--optional-feature=1"));
         let mut baseline=plan.clone();baseline.classpath_entries.clear();baseline.jvm_args.clear();baseline.game_args.clear();
         apply_selected_actions(cat,&HashSet::new(),Path::new("/client"),&mut baseline).unwrap();
         assert!(baseline.classpath_entries.is_empty()&&baseline.jvm_args.is_empty()&&baseline.game_args.is_empty());

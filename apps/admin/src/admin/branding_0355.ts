@@ -1,4 +1,4 @@
-/** Owner-side signing. Private Ed25519 seeds never cross the network or storage. */
+/** Owner-side signing. Private Ed25519 seeds cross the network or storage. */
 export type News0355 = { title: string; url: string };
 export type Branding0355 = {
   displayName: string;

@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// PutTextureImmutable0253 ensures that an existing digest-keyed blob is NEVER
+// PutTextureImmutable0253 ensures that an existing digest-keyed blob
 // overwritten on S3. A conflict is accepted only after verifying the remote
 // bytes, including their digest. The local implementation uses atomic hardlink.
 func PutTextureImmutable0253(ctx context.Context, store Storage, digest string, png []byte) (string, int64, error) {

@@ -547,13 +547,11 @@ for (const action of ["preview", "status", "import", "optionals"]) {
         headers["Content-Type"] = "application/zip";
         for (const [name, value] of Object.entries({
           "X-Gravit-Profile-Path": pp,
-          "X-Never-Profile-ID": byId(
-            "migration-content-profile-id",
-          ).value.trim(),
-          "X-Never-Profile-Name": byId("migration-content-name").value.trim(),
-          "X-Never-Loader": byId("migration-content-loader").value,
-          "X-Never-Channel": byId("migration-content-channel").value.trim(),
-          "X-Never-Version": byId("migration-content-version").value.trim(),
+          "X-Profile-ID": byId("migration-content-profile-id").value.trim(),
+          "X-Profile-Name": byId("migration-content-name").value.trim(),
+          "X-Loader": byId("migration-content-loader").value,
+          "X-Channel": byId("migration-content-channel").value.trim(),
+          "X-Version": byId("migration-content-version").value.trim(),
         }))
           headers[name] = value;
         if (action === "import") headers["X-Migration-Content-Confirm"] = id;
@@ -799,8 +797,7 @@ for (const operation of ["plan", "commit", "status"]) {
         !profile ||
         !channel ||
         (operation !== "status" &&
-          (run !== confirmed ||
-            !byId("migration-rollback-never-fenced").checked))
+          (run !== confirmed || !byId("migration-rollback-fenced").checked))
       ) {
         message(
           "Укажите run/profile/channel, подтвердите run и остановку Never writers",
@@ -871,7 +868,7 @@ for (const operation of ["plan", "commit", "status"]) {
         if (operation !== "status") {
           headers["Content-Type"] = "application/json";
           headers["X-Migration-Rollback-Confirm"] = run;
-          headers["X-Never-Writer-Fenced"] = "true";
+          headers["X-Writer-Fenced"] = "true";
           if (operation === "commit")
             headers["X-Migration-Source-Fenced"] = "true";
         }

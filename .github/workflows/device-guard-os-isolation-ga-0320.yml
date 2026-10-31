@@ -111,7 +111,7 @@ jobs:
           go-version-file: services/api/go.mod
       - name: macOS helper syntax and sandbox policy tests (not live isolation certification)
         run: |
-          swiftc -parse macos/sandbox-helper/NeverExtensionSandbox.swift
+          swiftc -parse macos/sandbox-helper/ExtensionSandbox.swift
           cd services/api
           go test -count=1 ./internal/macossandbox ./internal/extensionpolicy
           go build ./internal/macossandbox ./internal/extensionhost

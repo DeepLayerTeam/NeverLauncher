@@ -31,7 +31,7 @@ func TestFileAuthCredentialExtraction335(t *testing.T){
  if e!=nil{t.Fatal(e)}
  if len(entries)!=1||entries[0].PasswordHash==""||entries[0].Algorithm!="sha256-hex"{t.Fatalf("unexpected entries: %+v",entries)}
  raw,e:=json.Marshal(entries);if e!=nil{t.Fatal(e)}
- if bytes.Contains(raw,[]byte(original))||bytes.Contains(raw,[]byte("$never-gravit"))||bytes.Contains(raw,[]byte("DO_NOT_COPY")){t.Fatal("hash leaked in report")}
+ if bytes.Contains(raw,[]byte(original))||bytes.Contains(raw,[]byte("$gravit"))||bytes.Contains(raw,[]byte("DO_NOT_COPY")){t.Fatal("hash leaked in report")}
  if _,e=Extract(context.Background(),bytes.NewReader(src),int64(len(src)),snapshot,"");e==nil{t.Fatal("accepted unconfigured algorithm")}
  changed:=snapshot;changed.SourceSHA256=strings.Repeat("0",64)
  if _,e=Extract(context.Background(),bytes.NewReader(src),int64(len(src)),changed,"sha256-hex");e==nil{t.Fatal("accepted changed source")}

@@ -95,7 +95,7 @@ func TestTextureAdminEndToEndPostgres0259(t *testing.T) {
 		t.Fatalf("stale CAS allowed: %v", err)
 	}
 	// Admin fallback is returned for both a policy-blocked uploader and a player
-	// who never uploaded their own skin.
+	// who uploaded their own skin.
 	for _, uuid := range []string{"11111111-2222-4333-8444-555555555555", "99999999-aaaa-4bbb-8ccc-dddddddddddd"} {
 		texture, found, e := repo.ReadTextureProfile0251(ctx, uuid)
 		expectedModel := "slim"

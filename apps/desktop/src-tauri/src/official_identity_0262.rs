@@ -1,5 +1,5 @@
 //! 0.26.2: Native boundary for the existing official Minecraft backend flow.
-//! The renderer never receives Microsoft/Minecraft credentials or the opaque
+//! The renderer receives Microsoft/Minecraft credentials or the opaque
 //! encrypted backend ticket (which itself contains refresh/game tokens).
 use std::{collections::HashMap, net::IpAddr, sync::Mutex, time::{Duration, Instant}};
 use serde::{Deserialize, Serialize};
@@ -59,7 +59,7 @@ struct NativeAccount0265 {
     minecraft_expires_at: u64,
     // Recovery checkpoint: MS refresh rotation may succeed before Xbox/XSTS
     // or Minecraft becomes available. Keep the redeemed access token ONLY in
-    // the OS vault so a restart never redeems a rotated refresh token again.
+    // the OS vault so a restart redeems a rotated refresh token again.
     #[serde(default)] pending_microsoft_access: String,
     #[serde(default)] pending_microsoft_expires_at: u64,
 }
@@ -95,9 +95,9 @@ struct PendingFlow {
 }
 impl Drop for PendingFlow { fn drop(&mut self) { self.ticket.zeroize(); } }
 
-fn retryable_never_backend_0396(error: &str) -> bool {
+fn retryable_backend_0396(error: &str) -> bool {
     // Keep an already redeemed one-time Microsoft grant on recoverable transport
-    // failures. Auth revocation or identity mismatch must never be retried.
+    // failures. Auth revocation or identity mismatch must be retried.
     matches!(error,
         "Сервис официальной авторизации недоступен" |
         "Сервис Microsoft/Minecraft временно недоступен" |
@@ -156,8 +156,8 @@ fn scope(backend: &str, session_id: &str) -> Result<(Url, String), String> {
 // Never session ID must come from the backend's authenticated claims, not
 // from a renderer field that can select an arbitrary credential namespace.
 fn verify_session_binding_0396(config: &Value, expected_session: &str) -> Result<(), String> {
-    let actual = config.get("neverSessionId").and_then(Value::as_str).unwrap_or("");
-    let user = config.get("neverUserId").and_then(Value::as_str).unwrap_or("");
+    let actual = config.get("SessionId").and_then(Value::as_str).unwrap_or("");
+    let user = config.get("UserId").and_then(Value::as_str).unwrap_or("");
     if actual.is_empty() || actual != expected_session || user.is_empty() || user.len() > 256 {
         return Err("Never session identity mismatch: доступ к OS vault запрещён".into());
     }
@@ -360,7 +360,7 @@ fn migrate_legacy(id: &str) -> Result<(), String> {
     let mut dir = load_directory(id)?;
     let slot = account_slot(id, &uuid)?;
     // Never overwrite a newer native account (schema 2) with an old backend
-    // ticket left behind by an interrupted 0.26.7 migration. And never delete
+    // ticket left behind by an interrupted 0.26.7 migration. And delete
     // the only recoverable legacy ticket if the indexed slot is incomplete.
     let existing = read(&slot)?;
     if let Some(ref current) = existing {
@@ -721,10 +721,10 @@ impl IdentityManager {
         Ok(profile)
     }
     // Native-only official ServerBridge ticket creation. Renderer supplies scope
-    // and Guard evidence, never the official Minecraft token. Revalidate the
+    // and Guard evidence, the official Minecraft token. Revalidate the
     // selected account while holding the same OS-vault selection lock.
     pub async fn prepare_server_join_0397(&self, req: OfficialServerJoinRequest0397) -> Result<OfficialServerJoinResult0397,String> {
-        let (base,id)=self.verified_scope(&req.backend_url,&req.never_token,&req.never_session_id).await?;
+        let (base,id)=self.verified_scope(&req.backend_url,&req.token,&req.session_id).await?;
         let expected=normalized_uuid(&req.expected_uuid)?;
         if req.server_id.is_empty() || req.project_id.is_empty() || req.profile_id.is_empty() || req.channel.is_empty() {
             return Err("ServerBridge join requires a real project, profile, channel and server".into());
@@ -735,7 +735,7 @@ impl IdentityManager {
         if normalized_uuid(&record.profile.id)?!=expected || record.native.is_none() {
             return Err("Selected native Minecraft account changed; reconnect and retry".into());
         }
-        self.native_validate(&base,&slot,&req.never_token,&mut record,false).await?;
+        self.native_validate(&base,&slot,&req.token,&mut record,false).await?;
         if normalized_uuid(&record.profile.id)?!=expected {
             return Err("Minecraft UUID changed before server authorization".into());
         }
@@ -750,7 +750,7 @@ impl IdentityManager {
             "continuousGuardTicket":req.continuous_guard_ticket,
             "planEvidence":req.plan_evidence,
         });
-        let response=self.client.post(url).bearer_auth(&req.never_token).json(&body).send().await
+        let response=self.client.post(url).bearer_auth(&req.token).json(&body).send().await
             .map_err(|_|"ServerBridge join request unavailable")?;
         let status=response.status();
         if !status.is_success() {return Err(format!("ServerBridge rejected official Minecraft identity (HTTP {})",status.as_u16()));}
@@ -818,7 +818,7 @@ impl IdentityManager {
             let client_id = native.client_id.clone();
             // An OS-vault checkpoint survives shutdown after a one-time Microsoft
             // refresh grant was rotated. Retry Xbox with this access token;
-            // never fall back to the already consumed refresh token.
+            // fall back to the already consumed refresh token.
             if !record.native.as_ref().is_some_and(|n|
                 !n.pending_microsoft_access.is_empty() && n.pending_microsoft_expires_at > now().saturating_add(30)) {
                 {
@@ -857,7 +857,7 @@ impl IdentityManager {
             save(id,record)?;
         }
         // Revalidate entitlements and authenticated Java profile on every
-        // native status/launch/texture action; never trust cached membership.
+        // native status/launch/texture action; trust cached membership.
         let profile = self.provider.verify_java(&record.native.as_ref().unwrap().minecraft_token,
             Some(&record.profile.id)).await.map_err(|e|e.message().to_string())?;
         record.profile = profile;
@@ -958,7 +958,7 @@ impl IdentityManager {
             drop(flows);
             let current = match self.request(&base,access,"/browser/config",Method::GET,None,None,None).await {
                 Ok(response) => response,
-                Err(error) if retryable_never_backend_0396(&error) => {
+                Err(error) if retryable_backend_0396(&error) => {
                     let mut flows = self.native_pending.lock().map_err(|_|"Native identity заблокирован")?;
                     let flow = flows.get_mut(&id).filter(|f| f.nonce == nonce)
                         .ok_or("Microsoft-авторизация отменена")?;
@@ -1048,7 +1048,7 @@ impl IdentityManager {
             .get(id).is_some_and(|flow| flow.state == state))
     }
     // await the callback and complete provider exchange wholly within Rust.
-    // Renderer sees only the finished profile and never code/state/verifier.
+    // Renderer sees only the finished profile and code/state/verifier.
     pub async fn login_browser(&self, backend: &str, access: &str, session: &str) -> Result<OfficialProfile,String> {
         let (base,id) = self.verified_scope(backend,access,session).await?;
         let state = official_browser_0263::random_secret(32);
@@ -1058,7 +1058,7 @@ impl IdentityManager {
         let (sender,receiver) = watch::channel(false);
         self.browser.lock().map_err(|_| "Native Identity Manager заблокирован")?.insert(id.clone(), BrowserFlow0263 {state: state.to_string(), cancel: sender});
         // Cleanup always removes only this specific flow. A newer login must
-        // never be removed by completion/cancellation of an older one.
+        // be removed by completion/cancellation of an older one.
         let response = async {
             let client_info = self.request(&base,access,"/browser/config",Method::GET,None,None,None).await?;
             verify_session_binding_0396(&client_info.data, session)?;
@@ -1162,13 +1162,13 @@ impl IdentityManager {
     // Link is a server-side, durable Never relationship, not merely a local
     // vault association. Hold the selection lock across provider verification
     // and Backend transaction to prevent linking a just-switched account.
-    pub async fn never_links_0268(&self, backend:&str, access:&str, session:&str) -> Result<Vec<NeverOfficialLink0268>,String> {
+    pub async fn links_0268(&self, backend:&str, access:&str, session:&str) -> Result<Vec<NeverOfficialLink0268>,String> {
         let (base,_)=self.verified_scope(backend,access,session).await?;
         let response=self.request(&base,access,"/link",Method::GET,None,None,None).await?;
         serde_json::from_value(response.data.get("links").cloned().ok_or("Некорректный список Never links")?)
             .map_err(|_|"Некорректные записи Never identity".into())
     }
-    pub async fn never_link_0268(&self, backend:&str, access:&str, session:&str, expected_uuid:&str, confirmed:bool) -> Result<NeverOfficialLink0268,String> {
+    pub async fn link_0268(&self, backend:&str, access:&str, session:&str, expected_uuid:&str, confirmed:bool) -> Result<NeverOfficialLink0268,String> {
         if !confirmed {return Err("Необходимо явное подтверждение привязки Never и Minecraft".into());}
         let (base,id)=self.verified_scope(backend,access,session).await?;
         let requested=normalized_uuid(expected_uuid)?;
@@ -1188,7 +1188,7 @@ impl IdentityManager {
         if normalized_uuid(&link.minecraft_uuid)?!=requested{return Err("Backend изменил Minecraft identity".into());}
         Ok(link)
     }
-    pub async fn never_unlink_0268(&self, backend:&str, access:&str, session:&str, uuid:&str, confirmed:bool) -> Result<(),String> {
+    pub async fn unlink_0268(&self, backend:&str, access:&str, session:&str, uuid:&str, confirmed:bool) -> Result<(),String> {
         if !confirmed {return Err("Необходимо явное подтверждение отвязывания".into());}
         let (base,_)=self.verified_scope(backend,access,session).await?;
         let uuid=normalized_uuid(uuid)?;
@@ -1222,11 +1222,11 @@ pub struct NeverOfficialLink0268 {
 
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase")]
-pub struct Context { backend_url: String, never_token: String, never_session_id: String }
+pub struct Context { backend_url: String, token: String, session_id: String }
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase")]
 pub struct OfficialServerJoinRequest0397 {
-    backend_url:String, never_token:String, never_session_id:String,
+    backend_url:String, token:String, session_id:String,
     expected_uuid:String, server_id:String, project_id:String,profile_id:String,
     channel:String, guard_attestation_ticket:String,
     continuous_guard_ticket:Option<String>, plan_evidence:Option<Value>,
@@ -1243,82 +1243,82 @@ pub async fn official_identity_prepare_join_0397(manager:tauri::State<'_,Identit
 
 #[derive(Deserialize)]
 #[serde(rename_all="camelCase")]
-pub struct LaunchContext { pub backend_url: String, pub never_token: String, pub never_session_id: String, pub expected_uuid: String }
+pub struct LaunchContext { pub backend_url: String, pub token: String, pub session_id: String, pub expected_uuid: String }
 
 #[tauri::command]
 pub async fn official_identity_begin_0262(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<DeviceChallenge, String> {
-    manager.native_begin(&context.backend_url, &context.never_token, &context.never_session_id).await
+    manager.native_begin(&context.backend_url, &context.token, &context.session_id).await
 }
 #[tauri::command]
 pub async fn official_identity_poll_0262(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<PollResult, String> {
-    manager.native_poll(&context.backend_url, &context.never_token, &context.never_session_id).await
+    manager.native_poll(&context.backend_url, &context.token, &context.session_id).await
 }
 #[tauri::command]
 pub async fn official_identity_wait_device_0264(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<OfficialProfile, String> {
-    manager.native_wait_device(&context.backend_url, &context.never_token, &context.never_session_id).await
+    manager.native_wait_device(&context.backend_url, &context.token, &context.session_id).await
 }
 #[tauri::command]
 pub async fn official_identity_status_0262(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<Option<OfficialProfile>, String> {
-    manager.status(&context.backend_url, &context.never_token, &context.never_session_id).await
+    manager.status(&context.backend_url, &context.token, &context.session_id).await
 }
 #[tauri::command]
 pub async fn official_identity_texture_0262(manager: tauri::State<'_, IdentityManager>, context: Context, operation: String, cape_id: Option<String>, skin_bytes: Option<Vec<u8>>, variant: Option<String>) -> Result<OfficialProfile, String> {
     let skin = skin_bytes.map(|v| (v, variant.unwrap_or_default()));
-    manager.modify(&context.backend_url, &context.never_token, &context.never_session_id, &operation, cape_id.as_deref(), skin).await
+    manager.modify(&context.backend_url, &context.token, &context.session_id, &operation, cape_id.as_deref(), skin).await
 }
 #[tauri::command]
-pub fn official_identity_cancel_0262(manager: tauri::State<'_, IdentityManager>, backend_url: String, never_session_id: String) -> Result<(), String> {
-    manager.cancel(&backend_url, &never_session_id)
+pub fn official_identity_cancel_0262(manager: tauri::State<'_, IdentityManager>, backend_url: String, session_id: String) -> Result<(), String> {
+    manager.cancel(&backend_url, &session_id)
 }
 #[tauri::command]
 pub async fn official_identity_disconnect_0262(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<(), String> {
-    manager.disconnect(&context.backend_url, &context.never_token, &context.never_session_id).await
+    manager.disconnect(&context.backend_url, &context.token, &context.session_id).await
 }
 
 #[tauri::command]
 pub async fn official_identity_accounts_0267(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<Vec<OfficialAccount0267>,String> {
-    manager.list_accounts(&context.backend_url,&context.never_token,&context.never_session_id).await
+    manager.list_accounts(&context.backend_url,&context.token,&context.session_id).await
 }
 #[tauri::command]
 pub async fn official_identity_select_0267(manager: tauri::State<'_, IdentityManager>, context: Context, account_id: String) -> Result<OfficialProfile,String> {
-    manager.select_account(&context.backend_url,&context.never_token,&context.never_session_id,&account_id).await
+    manager.select_account(&context.backend_url,&context.token,&context.session_id,&account_id).await
 }
 #[tauri::command]
 pub async fn official_identity_refresh_0267(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<OfficialProfile,String> {
-    manager.refresh_active(&context.backend_url,&context.never_token,&context.never_session_id).await
+    manager.refresh_active(&context.backend_url,&context.token,&context.session_id).await
 }
 #[tauri::command]
 pub async fn official_identity_logout_0267(manager: tauri::State<'_, IdentityManager>, context: Context, account_id: String) -> Result<(),String> {
-    manager.disconnect_account(&context.backend_url,&context.never_token,&context.never_session_id,&account_id).await
+    manager.disconnect_account(&context.backend_url,&context.token,&context.session_id,&account_id).await
 }
 
 #[tauri::command]
 pub async fn official_identity_links_0268(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<Vec<NeverOfficialLink0268>,String> {
-    manager.never_links_0268(&context.backend_url,&context.never_token,&context.never_session_id).await
+    manager.links_0268(&context.backend_url,&context.token,&context.session_id).await
 }
 #[tauri::command]
 pub async fn official_identity_link_0268(manager: tauri::State<'_, IdentityManager>, context: Context, account_id: String, confirmed: bool) -> Result<NeverOfficialLink0268,String> {
-    manager.never_link_0268(&context.backend_url,&context.never_token,&context.never_session_id,&account_id,confirmed).await
+    manager.link_0268(&context.backend_url,&context.token,&context.session_id,&account_id,confirmed).await
 }
 #[tauri::command]
 pub async fn official_identity_unlink_0268(manager: tauri::State<'_, IdentityManager>, context: Context, account_id: String, confirmed: bool) -> Result<(),String> {
-    manager.never_unlink_0268(&context.backend_url,&context.never_token,&context.never_session_id,&account_id,confirmed).await
+    manager.unlink_0268(&context.backend_url,&context.token,&context.session_id,&account_id,confirmed).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[tokio::test]
-    async fn official_never_linking_requires_explicit_confirmation() {
+    async fn official_linking_requires_explicit_confirmation() {
         let manager=IdentityManager::new().expect("http manager");
         let uuid="123456789abcdef0123456789abcdef0";
-        let result=manager.never_link_0268("https://example.com","never-access-token","never-session",uuid,false).await;
+        let result=manager.link_0268("https://example.com","access-token","session",uuid,false).await;
         assert!(result.unwrap_err().contains("подтверждение"));
-        let result=manager.never_unlink_0268("https://example.com","never-access-token","never-session",uuid,false).await;
+        let result=manager.unlink_0268("https://example.com","access-token","session",uuid,false).await;
         assert!(result.unwrap_err().contains("подтверждение"));
     }
     #[test]
-    fn never_link_response_only_contains_nonsecret_identity_fields() {
+    fn link_response_only_contains_nonsecret_identity_fields() {
         let link=NeverOfficialLink0268{minecraft_uuid:"a".repeat(32),minecraft_name:"ValidUser".into(),verified_at:"2026-10-23T12:00:00Z".into()};
         let serialized=serde_json::to_string(&link).unwrap();
         assert!(serialized.contains("minecraftUuid"));
@@ -1361,7 +1361,7 @@ mod tests {
     async fn cancelling_native_device_flow_notifies_waiter() {
         let manager = IdentityManager::new().unwrap();
         let backend = "https://official.example";
-        let session = "never-sid";
+        let session = "sid";
         let (_, id) = scope(backend, session).unwrap();
         let (cancel, mut receiver) = watch::channel(false);
         manager.pending.lock().unwrap().insert(id.clone(), PendingFlow {
@@ -1384,7 +1384,7 @@ mod tests {
     async fn expired_device_flow_does_not_hit_provider() {
         let manager = IdentityManager::new().unwrap();
         let backend = "https://official.example";
-        let session = "never-sid";
+        let session = "sid";
         let (_, id) = scope(backend, session).unwrap();
         let (cancel, _) = watch::channel(false);
         manager.pending.lock().unwrap().insert(id.clone(), PendingFlow {
@@ -1392,7 +1392,7 @@ mod tests {
             expires: Instant::now() - Duration::from_secs(1), nonce: 2, in_flight: false,
             failures: 0, interval: 5, cancel,
         });
-        assert!(manager.wait_device(backend, "never-access-token", session).await.unwrap_err().contains("истёк"));
+        assert!(manager.wait_device(backend, "access-token", session).await.unwrap_err().contains("истёк"));
         assert!(manager.pending.lock().unwrap().get(&id).is_none());
     }
     #[test] fn device_retry_preserves_provider_interval_and_backoff() {
@@ -1403,7 +1403,7 @@ mod tests {
         assert_eq!(retry_delay(350, 1, Some(600)), 700);
     }
     #[tokio::test]
-    async fn never_session_check_rejects_wrong_bearer_scope_before_opening_vault() {
+    async fn session_check_rejects_wrong_bearer_scope_before_opening_vault() {
         use tokio::{io::{AsyncReadExt,AsyncWriteExt},net::TcpListener};
         let listener=TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr=listener.local_addr().unwrap();
@@ -1421,20 +1421,20 @@ mod tests {
                 }
                 let request=String::from_utf8_lossy(&request);
                 assert!(request.contains("/api/v1/minecraft/official/browser/config"));
-                assert!(request.to_ascii_lowercase().contains("authorization: bearer never-access-token-0396"));
+                assert!(request.to_ascii_lowercase().contains("authorization: bearer access-token-0396"));
                 let body=r#"{"data":{"neverSessionId":"sid-real","neverUserId":"user-real","enabled":true}}"#;
                 let reply=format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len());
                 stream.write_all(reply.as_bytes()).await.unwrap();
             }
         });
         let manager=IdentityManager::new().unwrap();
-        assert!(manager.verified_scope(&backend,"never-access-token-0396","sid-real").await.is_ok());
-        assert!(manager.verified_scope(&backend,"never-access-token-0396","sid-forged").await
+        assert!(manager.verified_scope(&backend,"access-token-0396","sid-real").await.is_ok());
+        assert!(manager.verified_scope(&backend,"access-token-0396","sid-forged").await
             .unwrap_err().contains("identity mismatch"));
         server.await.unwrap();
     }
     #[test]
-    fn never_session_identity_is_required_before_vault_access() {
+    fn session_identity_is_required_before_vault_access() {
         let sid = "session-0396";
         assert!(verify_session_binding_0396(&serde_json::json!({
             "neverSessionId": sid, "neverUserId": "user-123", "enabled":true
@@ -1447,8 +1447,8 @@ mod tests {
         ] {
             assert!(verify_session_binding_0396(&invalid,sid).is_err());
         }
-        assert!(retryable_never_backend_0396("Сервис официальной авторизации недоступен"));
-        assert!(!retryable_never_backend_0396("Сессия Never/Minecraft недействительна; войдите повторно"));
+        assert!(retryable_backend_0396("Сервис официальной авторизации недоступен"));
+        assert!(!retryable_backend_0396("Сессия Never/Minecraft недействительна; войдите повторно"));
     }
     #[test]
     fn pending_microsoft_refresh_can_be_restored_without_redeeming_refresh() {
@@ -1504,5 +1504,5 @@ mod tests {
 
 #[tauri::command]
 pub async fn official_identity_browser_login_0263(manager: tauri::State<'_, IdentityManager>, context: Context) -> Result<OfficialProfile,String> {
-    manager.login_browser(&context.backend_url, &context.never_token, &context.never_session_id).await
+    manager.login_browser(&context.backend_url, &context.token, &context.session_id).await
 }

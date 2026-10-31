@@ -102,7 +102,7 @@ class DR03512Tests(unittest.TestCase):
                 )
             exists.assert_not_called()
 
-    def test_existing_target_volume_never_overwritten(self):
+    def test_existing_target_volume_overwritten(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             files = {"database.dump": b"database"}
@@ -151,7 +151,7 @@ class DR03512Tests(unittest.TestCase):
         with patch.object(dr, "urlopen", return_value=Response()):
             self.assertFalse(dr.ready("http://localhost:18080/ready"))
 
-    def test_production_backup_requires_two_approvals_and_never_chaos(self):
+    def test_production_backup_requires_two_approvals_and_chaos(self):
         for production, approved in [(False, False), (True, False), (False, True)]:
             with self.assertRaises(dr.DrillError):
                 dr.authorize_project(

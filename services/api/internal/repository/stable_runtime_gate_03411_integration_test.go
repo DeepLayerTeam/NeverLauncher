@@ -53,7 +53,7 @@ func TestV11StableSQLRejectsForgedPermitAndManualWrites03411(t *testing.T) {
 			}
 			defer tx.Rollback()
 			if withToken {
-				if _, e = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); e != nil {
+				if _, e = tx.ExecContext(ctx, `SELECT set_config('stable_gate_token',$1,true)`, token); e != nil {
 					t.Fatal(e)
 				}
 			}
@@ -67,7 +67,7 @@ func TestV11StableSQLRejectsForgedPermitAndManualWrites03411(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback()
-	if _, err = tx.ExecContext(ctx, `SELECT set_config('never.stable_gate_token',$1,true)`, token); err != nil {
+	if _, err = tx.ExecContext(ctx, `SELECT set_config('stable_gate_token',$1,true)`, token); err != nil {
 		t.Fatal(err)
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO channel_heads(project_id,profile_id,channel,revision,release_id,version,manifest_digest) VALUES($1,'vanilla','stable',1,$2,'0.34.11',$3)`, project, id, strings.Repeat("a", 64))

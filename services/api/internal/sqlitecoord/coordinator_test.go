@@ -37,7 +37,7 @@ func openTestCoordinator(t *testing.T, path string) *Coordinator {
 	c, e := Open(context.Background(), path)
 	if e != nil {
 		// The product's SQLite store explicitly denies overlayfs and tmpfs. A
-		// certified CI job sets the following flag and must never skip tests.
+		// certified CI job sets the following flag and must skip tests.
 		if os.Getenv("LAUNCHER_SQLITE_REQUIRE_SUPPORTED_FS") != "1" && (errors.Is(e, os.ErrPermission) || isUnsupportedFS(e)) {
 			t.Skipf("requires supported SQLite local FS: %v", e)
 		}

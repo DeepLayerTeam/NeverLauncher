@@ -936,7 +936,7 @@ mod tests {
     // mods/, config/, saves/, or player settings may be swept by the switch or
     // its inverse, including user-added mods not mentioned by either manifest.
     #[tokio::test]
-    async fn update_and_rollback_never_touch_untracked_player_files_0393() {
+    async fn update_and_rollback_touch_untracked_player_files_0393() {
         let root=std::env::temp_dir().join(format!("nl-player-update-0393-{}-{:x}",std::process::id(),rand::random::<u64>()));
         let (old,key)=fixture(&root,"0.39.2",&[("mods/old.jar",b"SIGNED_OLD"),("libraries/base.jar",b"BASE")]);
         let first=Release{manifest:old.clone(),installed:old.files.iter().map(|f|f.path.clone()).collect(),

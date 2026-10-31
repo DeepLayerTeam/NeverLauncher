@@ -70,7 +70,7 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := a.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 hour')`, mc, user, first, uuid, strings.Repeat("b", 64)); err != nil {
+	if _, err := a.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 hour')`, mc, user, first, uuid, strings.Repeat("b", 64)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := a.db.ExecContext(ctx, `INSERT INTO minecraft_joins(username,username_normalized,profile_uuid,user_id,minecraft_session_id,server_id,expires_at) VALUES('Revoke0297','revoke0297',$1,$2,$3,'test-bridge',now()+interval '1 minute')`, uuid, user, mc); err != nil {
@@ -87,7 +87,7 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer a.db.ExecContext(context.Background(), `DELETE FROM server_bridge_nodes_v2 WHERE id=$1`, node)
-	if _, err := a.db.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,never_session_id,binding_epoch,project_id,profile_id,channel,proxy_node_id,proxy_runtime_id,proxy_runtime_epoch) VALUES($1,$2,'Revoke0297','revoke0297',$3,$4,1,$5,'test-profile','stable',$6,$7,1)`, player, uuid, user, first, project, node, runtimeID); err != nil {
+	if _, err := a.db.ExecContext(ctx, `INSERT INTO server_bridge_player_sessions_v3(correlation_id,player_uuid,username,username_normalized,user_id,session_id,binding_epoch,project_id,profile_id,channel,proxy_node_id,proxy_runtime_id,proxy_runtime_epoch) VALUES($1,$2,'Revoke0297','revoke0297',$3,$4,1,$5,'test-profile','stable',$6,$7,1)`, player, uuid, user, first, project, node, runtimeID); err != nil {
 		t.Fatal(err)
 	}
 	job := "job-" + suffix
@@ -109,7 +109,7 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 	}{
 		{`SELECT status FROM refresh_token_families WHERE id=$1`, "revoked"},
 		{`SELECT status FROM minecraft_sessions WHERE id=$1`, "revoked"},
-		{`SELECT status FROM server_bridge_player_sessions_v3 WHERE never_session_id=$1`, "invalidated"},
+		{`SELECT status FROM server_bridge_player_sessions_v3 WHERE session_id=$1`, "invalidated"},
 	} {
 		key := first
 		if strings.Contains(check.sql, "refresh_token_families") {
@@ -133,7 +133,7 @@ func TestGlobalSessionRevocationPostgres0297(t *testing.T) {
 	}
 	// Even the second API connection must be unable to issue a Minecraft token
 	// against a revoked parent, independent of replica-local caches.
-	if _, err := b.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,never_session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 hour')`, "late-"+suffix, user, first, uuid, strings.Repeat("d", 64)); err == nil {
+	if _, err := b.db.ExecContext(ctx, `INSERT INTO minecraft_sessions(id,user_id,session_id,profile_uuid,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 hour')`, "late-"+suffix, user, first, uuid, strings.Repeat("d", 64)); err == nil {
 		t.Fatal("concurrent-revocation gate allowed new Minecraft authorization")
 	}
 	var status string

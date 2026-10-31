@@ -15,7 +15,7 @@ import (
 )
 
 // TextureRepository0251 is an operational CAS store. It is intentionally separate
-// from the pre-0.25.1 ServerBridge URL repository: writes never overwrite legacy data.
+// from the pre-0.25.1 ServerBridge URL repository: writes overwrite legacy data.
 type TextureRepository0251 interface {
 	ReadTextureProfile0251(context.Context, string) (model.ServerBridgeTexture, bool, error)
 	ListTextureAssignments0251(context.Context, model.MinecraftProfile) ([]model.TextureAssignment0251, error)
@@ -58,7 +58,7 @@ func (r *SQLRepository) ReadTextureProfile0251(ctx context.Context, rawUUID stri
 	}
 	var t model.ServerBridgeTexture
 	var userID string
-	// Never use an arbitrary foreign UUID as a texture owner. Legacy aliases
+	// Use an arbitrary foreign UUID as a texture owner. Legacy aliases
 	// only resolve mappings whose proof was established by the SQL migration.
 	err = r.db.QueryRowContext(ctx, `SELECT i.profile_uuid,i.profile_name,i.user_id FROM texture_identities i
       WHERE i.realm='local-project' AND i.profile_uuid=$1
@@ -203,7 +203,7 @@ func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile 
 	}
 	defer tx.Rollback()
 	// Prove UUID and user ownership in PostgreSQL; caller-supplied profile UUID
-	// alone never authorizes mutation. New Minecraft profiles sync lazily.
+	// alone authorizes mutation. New Minecraft profiles sync lazily.
 	res, err := tx.ExecContext(ctx, `INSERT INTO texture_identities(realm,profile_uuid,user_id,profile_name,origin,local_profile_uuid)
       SELECT 'local-project',uuid,user_id,name,'local-profile',uuid FROM minecraft_profiles WHERE uuid=$1 AND user_id=$2
       ON CONFLICT(realm,profile_uuid) DO UPDATE SET profile_name=EXCLUDED.profile_name
@@ -252,7 +252,7 @@ func (r *SQLRepository) UpdateTextureSelection0251(ctx context.Context, profile 
 	oldModel, oldVisibility, oldActive := a.Model, a.Visibility, a.Active
 	if !active {
 		visibility = "private"
-	} // reset never unintentionally republishes old URL
+	} // reset unintentionally republishes old URL
 	a.Model = skinModel
 	a.Visibility = visibility
 	a.Active = active
@@ -349,7 +349,7 @@ func (r *SQLRepository) EnsureTextureIdentity0251(ctx context.Context, profile m
 		if err != nil {
 			return err
 		}
-		// A colliding alias must never be allowed to reassign another user's texture.
+		// A colliding alias must be allowed to reassign another user's texture.
 		var owner, uuid string
 		if err = tx.QueryRowContext(ctx, `SELECT user_id,profile_uuid FROM texture_legacy_aliases WHERE legacy_uuid=$1`, candidate.key).Scan(&owner, &uuid); err != nil {
 			return err

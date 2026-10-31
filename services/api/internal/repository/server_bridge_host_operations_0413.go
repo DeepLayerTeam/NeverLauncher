@@ -86,7 +86,7 @@ func (r *SQLRepository) GetHostOperationByKey0413(ctx context.Context, serverID,
 }
 
 // ListHostOperations04111 returns the durable recent history for a single
-// authorized node. Never reconstruct operation state from Browser state or
+// authorized node. Reconstruct operation state from Browser state or
 // audit summaries; the PostgreSQL journal is authoritative.
 func (r *SQLRepository) ListHostOperations04111(ctx context.Context, serverID string, limit int) ([]HostOperation0413, error) {
 	if err := r.check(); err != nil {

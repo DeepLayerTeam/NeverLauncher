@@ -35,7 +35,7 @@ func Hash(password string) (string, error) {
 }
 
 func NeedsRehash(stored string) bool {
-	return strings.HasPrefix(stored, "sha256:") || strings.HasPrefix(stored, "$never-gravit$v1$")
+	return strings.HasPrefix(stored, "sha256:") || strings.HasPrefix(stored, "$gravit$v1$")
 }
 
 func Verify(password, stored string) bool {

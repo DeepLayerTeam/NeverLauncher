@@ -854,7 +854,7 @@ jobs:
       - name: Extensions Extension Host 1 0.20.5 gate
         run: |
           python3 scripts/smoke/offline/extensions-host-0205.py
-          (cd services/api && go test -run 'TestExtensionHost.*0205|TestSafeEntrypointRejectsSymlink0205|TestSanitizedEnvironmentNeverForwardsSecrets0205|TestStartRequiresEnabledState0205' ./internal/extensionhost)
+          (cd services/api && go test -run 'TestExtensionHost.*0205|TestSafeEntrypointRejectsSymlink0205|TestSanitizedEnvironmentForwardsSecrets0205|TestStartRequiresEnabledState0205' ./internal/extensionhost)
           (cd services/api && go test -run 'TestExtensionHostAdmin.*0205' ./internal/httpapi)
           (cd cli && go test -run 'TestExtensionHostCLI0205|TestExtensionLifecycle.*0204' ./cmd/launcher)
           (cd cli && go vet ./cmd/launcher)

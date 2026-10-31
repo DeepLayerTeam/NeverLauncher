@@ -49,7 +49,7 @@ struct LinuxPackageManifest {
     #[serde(default)]
     architecture: String,
     #[serde(default)]
-    never_guard_protocol_version: u32,
+    guard_protocol_version: u32,
     #[serde(default)]
     authenticated_ipc: String,
     #[serde(default)]
@@ -158,7 +158,7 @@ fn verify_linux_package_manifest(guard:&Path)->Result<(),String>{
     let dd=desktop.parent().ok_or("desktop parent missing")?.canonicalize().map_err(|e|e.to_string())?; let gd=guard.parent().ok_or("guard parent missing")?.canonicalize().map_err(|e|e.to_string())?; if dd!=gd{return Err("Desktop and Guard must be in same package directory".into())}
     let mp=dd.join(PACKAGE_MANIFEST); validate_secure_file(&mp,false)?; let raw=std::fs::read(&mp).map_err(|e|e.to_string())?; let m:LinuxPackageManifest=serde_json::from_slice(&raw).map_err(|e|format!("Linux package manifest JSON invalid: {e}"))?;
     let canonical_arch=if cfg!(target_arch="aarch64"){"arm64"}else{"x64"};
-    let legacy=m.schema_version=="1.0"&&m.platform=="linux-amd64"&&m.never_guard_protocol_version==GUARD_PROTOCOL_VERSION&&m.authenticated_ipc=="unix-domain-socket+0600+so-peercred+hmac-sha256-v4"&&m.linux_production_hardening_version==GUARD_LINUX_HARDENING_VERSION;
+    let legacy=m.schema_version=="1.0"&&m.platform=="linux-amd64"&&m.guard_protocol_version==GUARD_PROTOCOL_VERSION&&m.authenticated_ipc=="unix-domain-socket+0600+so-peercred+hmac-sha256-v4"&&m.linux_production_hardening_version==GUARD_LINUX_HARDENING_VERSION;
     let canonical=m.schema_version=="1.0"&&m.platform=="linux"&&m.architecture==canonical_arch;
     if m.product_version!=env!("CARGO_PKG_VERSION")||(!legacy&&!canonical){return Err("Linux package manifest identity/hardening mismatch".into())}
     for path in [&desktop,guard]{

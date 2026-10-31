@@ -406,7 +406,7 @@ psql "$DB_DSN" -Atqc "SELECT json_build_object(
   'migration','0018_device_trust_stabilization_01210',
   'sealed',(SELECT checksum<>'' FROM schema_migrations WHERE version='0018_device_trust_stabilization_01210'),
   'replacementChallengePurposes',(SELECT position('key-rotate' in pg_get_constraintdef(oid))>0 AND position('key-recover' in pg_get_constraintdef(oid))>0 FROM pg_constraint WHERE conname='device_challenges_purpose_check'),
-  'ownershipConstraints',(SELECT count(*) FROM pg_constraint WHERE conname IN ('auth_sessions_trusted_device_owner_fk','trusted_devices_replacement_owner_fk','minecraft_sessions_never_session_owner_fk','minecraft_sessions_device_owner_fk','minecraft_sessions_profile_owner_fk')),
+  'ownershipConstraints',(SELECT count(*) FROM pg_constraint WHERE conname IN ('auth_sessions_trusted_device_owner_fk','trusted_devices_replacement_owner_fk','minecraft_sessions_session_owner_fk','minecraft_sessions_device_owner_fk','minecraft_sessions_profile_owner_fk')),
   'bindingShapeConstraint',(SELECT count(*)=1 FROM pg_constraint WHERE conname='auth_sessions_device_binding_shape_check'),
   'replacementShapeConstraint',(SELECT count(*)=1 FROM pg_constraint WHERE conname='trusted_devices_replacement_shape_check')
 )::text" | jq -c . > "$RESULT_DIR/migration-stabilization.json"

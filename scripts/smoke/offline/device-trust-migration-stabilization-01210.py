@@ -50,7 +50,7 @@ require(
         "trusted_devices_id_user_key",
         "auth_sessions_trusted_device_owner_fk",
         "trusted_devices_replacement_owner_fk",
-        "minecraft_sessions_never_session_owner_fk",
+        "minecraft_sessions_session_owner_fk",
         "minecraft_sessions_device_owner_fk",
         "minecraft_sessions_profile_owner_fk",
         "legacy-device-revoked",

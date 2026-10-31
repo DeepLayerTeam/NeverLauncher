@@ -16,7 +16,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_minecraft_profiles_name_ci ON minecraft_pr
 CREATE TABLE IF NOT EXISTS minecraft_sessions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    never_session_id TEXT NOT NULL REFERENCES auth_sessions(id) ON DELETE CASCADE,
+    session_id TEXT NOT NULL REFERENCES auth_sessions(id) ON DELETE CASCADE,
     profile_uuid TEXT NOT NULL REFERENCES minecraft_profiles(uuid) ON DELETE CASCADE,
     client_token TEXT NOT NULL DEFAULT '',
     access_token_hash TEXT NOT NULL UNIQUE,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS minecraft_sessions (
     CONSTRAINT minecraft_sessions_status_check CHECK (status IN ('active','revoked'))
 );
 CREATE INDEX IF NOT EXISTS idx_minecraft_sessions_user_status ON minecraft_sessions(user_id,status,last_seen_at DESC);
-CREATE INDEX IF NOT EXISTS idx_minecraft_sessions_never_session ON minecraft_sessions(never_session_id,status);
+CREATE INDEX IF NOT EXISTS idx_minecraft_sessions_session ON minecraft_sessions(session_id,status);
 CREATE INDEX IF NOT EXISTS idx_minecraft_sessions_expires ON minecraft_sessions(expires_at);
 
 CREATE TABLE IF NOT EXISTS minecraft_joins (

@@ -445,7 +445,7 @@ func scanJar(file string, output string) (JarReport, *TransformReport, error) {
 		if !os.IsNotExist(e) {
 			return report, nil, e
 		}
-		tmp, e = os.CreateTemp(filepath.Dir(absOut), ".never-devtools-*.jar")
+		tmp, e = os.CreateTemp(filepath.Dir(absOut), ".devtools-*.jar")
 		if e != nil {
 			return report, nil, e
 		}

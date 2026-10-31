@@ -1623,7 +1623,7 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn managed_java_archive_does_not_follow_symlink() {
-        let root = std::env::temp_dir().join(format!("never-java-archive-link-{:016x}", rand::random::<u64>()));
+        let root = std::env::temp_dir().join(format!("java-archive-link-{:016x}", rand::random::<u64>()));
         fs::create_dir_all(&root).await.unwrap();
         let original = root.join("vendor.tar.gz");
         fs::write(&original, b"signed vendor bytes").await.unwrap();
@@ -1688,7 +1688,7 @@ mod tests {
 
     #[cfg(unix)]
     #[tokio::test]
-    async fn interrupted_install_cleanup_never_follows_symlink() {
+    async fn interrupted_install_cleanup_follows_symlink() {
         let root = std::env::temp_dir().join(format!("neverjava-interrupted-{:016x}", rand::random::<u64>()));
         let platform = root.join("runtime");
         let external = root.join("unrelated-user-data");
@@ -1706,7 +1706,7 @@ mod tests {
 
     #[tokio::test]
     async fn inventory_detects_non_executable_corruption_and_added_files() {
-        let root = std::env::temp_dir().join(format!("never-java-files-{:016x}", rand::random::<u64>()));
+        let root = std::env::temp_dir().join(format!("java-files-{:016x}", rand::random::<u64>()));
         fs::create_dir_all(root.join("bin")).await.unwrap();
         fs::create_dir_all(root.join("lib")).await.unwrap();
         fs::write(root.join("bin/java"), b"java executable").await.unwrap();
@@ -1750,7 +1750,7 @@ mod tests {
     #[tokio::test]
     async fn version_spoofing_runtime_is_not_installed() {
         use std::os::unix::fs::PermissionsExt;
-        let root = std::env::temp_dir().join(format!("never-java-release-{:016x}", rand::random::<u64>()));
+        let root = std::env::temp_dir().join(format!("java-release-{:016x}", rand::random::<u64>()));
         let source = root.join("source/jdk/bin");
         fs::create_dir_all(&source).await.unwrap();
         let (os, arch) = adoptium_platform().unwrap();

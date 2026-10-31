@@ -39,7 +39,7 @@ def request(base, endpoint, payload=None, control=None):
 
 
 def main(cli):
-    with tempfile.TemporaryDirectory(prefix="never-devtools-cli-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="devtools-cli-") as tmp:
         root = Path(tmp)
         src = root / "Fixture.java"
         src.write_text(

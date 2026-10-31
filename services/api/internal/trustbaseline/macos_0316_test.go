@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func TestMacOSSecureEnclaveLabelsNeverGrantRemoteProvenance0316(t *testing.T) {
+func TestMacOSSecureEnclaveLabelsGrantRemoteProvenance0316(t *testing.T) {
 	now := time.Now().UTC()
 	for _, platform := range []string{"darwin", "macos", "Mac OS X", "MacIntel", "MacPPC", "Macintosh"} {
 		device := testDevice0311(now)

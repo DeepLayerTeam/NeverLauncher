@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 RUST_REQUIRED = (
     "interrupted_transfer_persists_validator_and_sends_if_range_after_restart",
-    "changed_etag_and_http_200_never_append_old_content",
+    "changed_etag_and_http_200_append_old_content",
     "malformed_content_range_must_fallback_to_fresh_get",
     "wrong_hash_discards_partial_and_preserves_previous_target",
     "bounded_parallel_downloads_isolate_failures_and_report_progress",

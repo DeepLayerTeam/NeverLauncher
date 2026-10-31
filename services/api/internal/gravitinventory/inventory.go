@@ -26,7 +26,7 @@ const (
 	MaxExpandedBytes int64 = 2 << 30
 	MaxFiles               = 30000
 	MaxConfigBytes   int64 = 2 << 20
-	ManifestPath           = ".never-migration/inventory.json"
+	ManifestPath           = ".migration/inventory.json"
 )
 
 type File struct {
@@ -109,7 +109,7 @@ func sensitive(n, kind string) bool {
 	return kind == "key" || kind == "launchserver" || kind == "server_wrapper" || kind == "authentication" || base == ".env" || strings.HasSuffix(l, ".env") || strings.Contains(l, "password") || strings.Contains(l, "secret") || strings.Contains(l, "private")
 }
 func validName(n string, isDir bool) error {
-	if n == "" || strings.HasPrefix(n, "/") || strings.ContainsAny(n, "\\:\x00\r\n\t") || strings.HasPrefix(strings.ToLower(n), ".never-migration/") || strings.EqualFold(n, ".never-migration") {
+	if n == "" || strings.HasPrefix(n, "/") || strings.ContainsAny(n, "\\:\x00\r\n\t") || strings.HasPrefix(strings.ToLower(n), ".migration/") || strings.EqualFold(n, ".migration") {
 		return fmt.Errorf("unsafe/reserved ZIP path %q", n)
 	}
 	p := strings.TrimSuffix(n, "/")
@@ -440,7 +440,7 @@ func Export(ctx context.Context, out io.Writer, src io.ReaderAt, size int64, v I
 // Spool makes a bounded, private temporary copy of an HTTP request with an
 // independently verified source digest. Caller must Close and Remove the file.
 func Spool(ctx context.Context, source io.Reader) (*os.File, int64, string, error) {
-	f, e := os.CreateTemp("", "never-gravit-source-*.zip")
+	f, e := os.CreateTemp("", "gravit-source-*.zip")
 	if e != nil {
 		return nil, 0, "", e
 	}

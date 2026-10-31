@@ -28,7 +28,7 @@ func TestMigrationContent0337(t *testing.T) {
 	_ = f.Close()
 	var gotConfirm string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Gravit-Profile-Path") != "profiles/demo.json" || r.Header.Get("X-Never-Profile-ID") != "demo" {
+		if r.Header.Get("X-Gravit-Profile-Path") != "profiles/demo.json" || r.Header.Get("X-Profile-ID") != "demo" {
 			t.Error("missing profile mapping headers")
 		}
 		gotConfirm = r.Header.Get("X-Migration-Content-Confirm")

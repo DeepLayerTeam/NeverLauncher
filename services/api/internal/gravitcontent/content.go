@@ -45,7 +45,7 @@ type Plan struct {
 }
 
 func safeTarget(p string) bool {
-	return p != "" && len(p) < 1024 && !strings.HasPrefix(p, "/") && !strings.ContainsAny(p, "\\:\x00\r\n\t") && path.Clean(p) == p && p != ".." && !strings.HasPrefix(p, "../") && !strings.HasPrefix(strings.ToLower(p), ".never-")
+	return p != "" && len(p) < 1024 && !strings.HasPrefix(p, "/") && !strings.ContainsAny(p, "\\:\x00\r\n\t") && path.Clean(p) == p && p != ".." && !strings.HasPrefix(p, "../") && !strings.HasPrefix(strings.ToLower(p), ".")
 }
 func sourceFile(z *zip.Reader, name string, limit int64) ([]byte, error) {
 	for _, f := range z.File {

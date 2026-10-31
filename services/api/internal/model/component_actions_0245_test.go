@@ -12,7 +12,7 @@ func signedActionsFixture0245() Manifest {
 		{Type: "File", Path: m.ComponentCatalog.Components[1].Files[0]},
 		{Type: "ClassPath", Path: m.ComponentCatalog.Components[1].Files[0]},
 		{Type: "JvmArgs", Args: []string{"-Dfabric.log.level=debug", "-XX:MaxGCPauseMillis=200"}},
-		{Type: "ClientArgs", Args: []string{"--never-optional-debug=1"}},
+		{Type: "ClientArgs", Args: []string{"--optional-debug=1"}},
 	}
 	v5 := NewComponentCatalog0245(*m.ComponentCatalog, 7)
 	m.ComponentCatalog = &v5

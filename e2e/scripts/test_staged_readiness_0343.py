@@ -92,7 +92,7 @@ class ReadinessTests(unittest.TestCase):
         (self.root / "hs_err_pid123.log").write_text("fatal")
         self.assertEqual(obs.conclude(self.launch)[0], "failed")
 
-    def test_timeout_and_marker_never_pass_without_window(self):
+    def test_timeout_and_marker_pass_without_window(self):
         obs = self.observer()
         (self.root / "logs" / "latest.log").write_text(
             "Loading Minecraft with Fabric Loader 0.16\nLWJGL version 3.3\n"

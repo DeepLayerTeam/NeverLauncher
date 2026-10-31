@@ -58,7 +58,7 @@ func (r *SQLRepository) ClaimTextureGarbage0253(ctx context.Context, driver stri
 }
 
 // FinishTextureGarbage0253 removes the DB record and associated quota entries.
-// It will never delete an object that became referenced after its GC lease.
+// It will delete an object that became referenced after its GC lease.
 func (r *SQLRepository) FinishTextureGarbage0253(ctx context.Context, digest string) error {
 	if err := r.check(); err != nil {
 		return err

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// OfficialProviderSettings02611 contains public-app configuration only. Never store
+// OfficialProviderSettings02611 contains public-app configuration only. Store
 // Microsoft client secrets, tokens, redirect URLs, or arbitrary issuer endpoints here.
 type OfficialProviderSettings02611 struct {
 	ClientID       string `json:"clientId"`

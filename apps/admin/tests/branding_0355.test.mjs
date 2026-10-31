@@ -96,7 +96,7 @@ test("root signed v1 -> branding edit -> new signed payload verifies; tampering 
   assert.deepEqual(result.payload.branding, brand);
   assert.equal(result.payload.projectId, "example");
   if (hasGo) {
-    const dir = mkdtempSync(join(tmpdir(), "never-brand-"));
+    const dir = mkdtempSync(join(tmpdir(), "brand-"));
     try {
       writeFileSync(join(dir, "bootstrap.signed.json"), output);
       writeFileSync(join(dir, "root.hex"), root.public);
@@ -191,7 +191,7 @@ test("delegated signed v2 -> root policy -> modified signed bootstrap remains v2
     "Example Launcher",
   );
   if (hasGo) {
-    const dir = mkdtempSync(join(tmpdir(), "never-brand-delegated-"));
+    const dir = mkdtempSync(join(tmpdir(), "brand-delegated-"));
     try {
       writeFileSync(join(dir, "bootstrap.signed.json"), modified);
       writeFileSync(join(dir, "root.hex"), root.public);

@@ -92,7 +92,7 @@ func RunComponent(parent context.Context, opt ComponentOptions) (ComponentResult
 	if e != nil {
 		return res, e
 	}
-	work, e := os.MkdirTemp("", "never-devtools-component-")
+	work, e := os.MkdirTemp("", "devtools-component-")
 	if e != nil {
 		return res, e
 	}

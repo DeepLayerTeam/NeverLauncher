@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS server_bridge_player_sessions_v3 (
     username TEXT NOT NULL,
     username_normalized TEXT NOT NULL,
     user_id TEXT NOT NULL,
-    never_session_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
     minecraft_session_id TEXT NOT NULL DEFAULT '',
     trusted_device_id TEXT NOT NULL DEFAULT '',
     binding_epoch BIGINT NOT NULL CHECK (binding_epoch > 0),
@@ -56,8 +56,8 @@ CREATE TABLE IF NOT EXISTS server_bridge_player_sessions_v3 (
 );
 
 -- Одни учётные данные Never/Minecraft могут иметь только одну активную привязку игрового сеанса.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_server_bridge_player_never_session_active_0197
-    ON server_bridge_player_sessions_v3(never_session_id, player_uuid)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_server_bridge_player_session_active_0197
+    ON server_bridge_player_sessions_v3(session_id, player_uuid)
     WHERE status='active';
 CREATE UNIQUE INDEX IF NOT EXISTS uq_server_bridge_player_minecraft_session_active_0197
     ON server_bridge_player_sessions_v3(minecraft_session_id)

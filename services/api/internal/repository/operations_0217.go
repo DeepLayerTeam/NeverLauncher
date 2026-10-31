@@ -97,7 +97,7 @@ func (r *SQLRepository) RetryOperationJob(ctx context.Context, id string) (model
 	if j.Status != model.DurableJobStatusFailed && j.Status != model.DurableJobStatusDead && j.Status != model.DurableJobStatusRevoked {
 		return model.DurableJob{}, ErrImmutable
 	}
-	// Attempt IDs stay monotonic across retries: never overwrite prior audit records.
+	// Attempt IDs stay monotonic across retries: overwrite prior audit records.
 	_, err = tx.ExecContext(ctx, `UPDATE durable_jobs SET status='pending',max_attempts=GREATEST(max_attempts,attempt_count+8),last_error='',result='{}'::jsonb,available_at=now(),completed_at=NULL,updated_at=now() WHERE id=$1`, id)
 	if err != nil {
 		return model.DurableJob{}, err

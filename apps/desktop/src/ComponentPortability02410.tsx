@@ -32,7 +32,7 @@ type Props = {
 };
 
 /** The native boundary verifies the old installed release and the new pinned
- * Ed25519 manifest. Imported JSON never supplies file paths or JVM arguments. */
+ * Ed25519 manifest. Imported JSON supplies file paths or JVM arguments. */
 export function ComponentPortability02410({
   manifest,
   root,

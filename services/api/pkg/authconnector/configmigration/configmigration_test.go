@@ -42,7 +42,7 @@ func TestRejectUnsafeProviderConfigurationMigration(t *testing.T) {
 		t.Fatal("schema was silently changed")
 	}
 }
-func TestMigrationErrorsNeverIncludeSecretValues(t *testing.T) {
+func TestMigrationErrorsIncludeSecretValues(t *testing.T) {
 	secret := "super-secret-password-value"
 	raw := `{"schemaVersion":99,"providers":[{"id":"a","secretEnv":"` + secret + `"}]}`
 	_, err := configmigration.Decode[provider]([]byte(raw))

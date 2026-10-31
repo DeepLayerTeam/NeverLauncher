@@ -38,7 +38,7 @@ jobs:
           --health-cmd "pg_isready -U ci -d launcher_link_ci"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      NEVER_TEST_POSTGRES_DSN: postgresql://ci:ci@localhost:5432/launcher_link_ci?sslmode=disable
+      TEST_POSTGRES_DSN: postgresql://ci:ci@localhost:5432/launcher_link_ci?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
