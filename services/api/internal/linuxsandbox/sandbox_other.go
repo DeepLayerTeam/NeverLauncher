@@ -1,4 +1,4 @@
-//go:build !linux || !amd64
+//go:build !linux || (!amd64 && !arm64)
 
 package linuxsandbox
 
@@ -25,5 +25,5 @@ type Handle struct{ Cmd *exec.Cmd }
 func (*Handle) Close()                 {}
 func (*Handle) Abort()                 {}
 func (*Handle) Started() error         { return errors.New("sandbox-not-supported") }
-func Available() error                 { return errors.New("sandbox-requires-linux-amd64") }
+func Available() error                 { return errors.New("sandbox-requires-linux-amd64-or-arm64") }
 func Prepare(Options) (*Handle, error) { return nil, Available() }

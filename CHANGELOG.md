@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.43.9 — Linux ARM64 native extension sandbox
+
+- Run native extensions on **Linux AArch64** through the existing real sandbox implementation: unprivileged user/PID/mount/network/IPC/UTS namespaces, private pivot-root filesystem, read-only package/runtime mounts, restricted scratch, no host network path other than the capability-broker socketpair, capability drop, `no_new_privs`, and kernel seccomp-BPF.
+- Extract the shared Linux implementation from architecture-specific filenames while preserving the existing amd64 behavior. Select syscall ABI at **compile time**: `AUDIT_ARCH_AARCH64`, ARM64 `memfd_create` (279), ARM64 syscall deny numbers, and ARM64 clone namespace-flag verification. The x86-64 alternate x32 ABI check remains enforced only on amd64. `clone3` fails with ENOSYS so consumers may use namespace-filtered `clone(2)`.
+- Keep cgroup v2 containment mandatory on both architectures: memory/swap, pids, CPU quota, `UseCgroupFD` during process creation and `cgroup.kill` at close/timeout. No fallback to unconstrained process groups and no enabling on kernels missing rootless user namespaces, recursive read-only mounts, supported syscall filtering or delegated cgroup v2.
+- Add architecture-specific policy tests and a real ARM64 guest executable test that verifies kernel-enforced `NoNewPrivs`, seccomp, no effective capabilities, mount/namespace isolation and denied ARM64 syscalls. Native ARM64 CI must run it **and** the pre-existing descendant `cgroup.kill` test on a dedicated unprivileged runner; cross compilation is a separate non-certifying check.
+- Update `VERSION` and canonical version metadata. Existing independent six-target security proof and release gates continue to refuse unverified native sandbox capabilities.
+
+**Verification boundary:** Linux amd64 sandbox unit tests passed under Go 1.23.2 with the race detector; the sandbox test binary cross-compiled for Linux ARM64. The true native AArch64 sandbox, real delegated cgroups, extension host integration with the full Go 1.27.3 project, and final signed release artifacts were **not** executed or verified locally. These must pass on actual targets before describing the feature as production-certified.
+
 ## 0.43.8 — NeverGuard live game-lifetime enforcement
 
 - Keep the **exact same authenticated NeverGuard process identity and signed executable image** during the lifetime of each launched Minecraft JVM. Native Desktop performs a bounded authenticated Guard status, ping, process-policy and integrity-evidence check at startup and at two-second intervals while the game is running. Guard replacement/restart, IPC loss, stale proofs, unexpected image changes, loss of hardening or a timed-out probe fail closed, not by transparently starting a new trusted Guard for the old game.
