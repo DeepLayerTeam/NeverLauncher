@@ -37,6 +37,12 @@ type Status struct {
 		ProcessAlive    bool   `json:"processAlive"`
 		SupervisorAlive bool   `json:"supervisorAlive"`
 		SessionID       string `json:"sessionId"`
+		Telemetry       *struct {
+			ProcessID                int    `json:"processId"`
+			ProcessResidentBytes     uint64 `json:"processResidentBytes,omitempty"`
+			HostTotalMemoryBytes     uint64 `json:"hostTotalMemoryBytes,omitempty"`
+			HostAvailableMemoryBytes uint64 `json:"hostAvailableMemoryBytes,omitempty"`
+		} `json:"telemetry,omitempty"`
 	} `json:"status"`
 }
 type Receipt struct {

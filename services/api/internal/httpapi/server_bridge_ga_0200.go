@@ -96,6 +96,7 @@ type serverBridgeOverviewNode0200 struct {
 	Fresh                     bool                         `json:"fresh"`
 	RuntimeID                 string                       `json:"runtimeId,omitempty"`
 	RuntimeEpoch              int64                        `json:"runtimeEpoch,omitempty"`
+	RuntimeProcessID          int64                        `json:"runtimeProcessId,omitempty"`
 	RuntimeTransition         string                       `json:"runtimeTransition,omitempty"`
 	Hostname                  string                       `json:"hostname,omitempty"`
 	MinecraftVersion          string                       `json:"minecraftVersion,omitempty"`
@@ -106,6 +107,7 @@ type serverBridgeOverviewNode0200 struct {
 	RuntimeCapabilities       []string                     `json:"runtimeCapabilities,omitempty"`
 	RuntimeLastSeenAt         time.Time                    `json:"runtimeLastSeenAt,omitempty"`
 	Telemetry                 *model.ServerBridgeTelemetry `json:"telemetry,omitempty"`
+	TelemetryState            string                       `json:"telemetryState"`
 }
 
 func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +116,7 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	now := time.Now().UTC()
-	freshAfter := now.Add(-2 * time.Minute)
+	freshAfter := now.Add(-90 * time.Second)
 	projectFilter := strings.TrimSpace(r.PathValue("projectId"))
 	servers := s.State.ServerBridge.listServers()
 	nodes := make([]serverBridgeOverviewNode0200, 0, len(servers))
@@ -137,7 +139,10 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 		default:
 			protocolCounts["unsupported"]++
 		}
-		fresh := !server.LastHeartbeatAt.IsZero() && server.LastHeartbeatAt.After(freshAfter)
+		fresh := server.Status == "active" && server.RuntimeEpoch > 0 && server.RuntimeID != "" &&
+			!server.LastHeartbeatAt.IsZero() && !server.LastHeartbeatAt.After(now.Add(30*time.Second)) &&
+			server.LastHeartbeatAt.After(freshAfter)
+		telemetry, telemetryState := bridgeCurrentTelemetry0419(server, now)
 		if fresh {
 			freshCount++
 		}
@@ -154,11 +159,11 @@ func (s Server) serverBridgeOverview0200(w http.ResponseWriter, r *http.Request)
 			Status: server.Status, ProtocolVersion: server.ProtocolVersion, ProtocolMode: mode,
 			ProtocolMigrationRequired: migrationRequired, UpgradeRecommended: upgradeRecommended, PluginVersion: server.PluginVersion,
 			IntegrityStatus: server.IntegrityStatus, LastHeartbeatAt: server.LastHeartbeatAt, Fresh: fresh,
-			RuntimeID: server.RuntimeID, RuntimeEpoch: server.RuntimeEpoch, RuntimeTransition: server.RuntimeTransition,
+			RuntimeID: server.RuntimeID, RuntimeEpoch: server.RuntimeEpoch, RuntimeProcessID: server.RuntimeProcessID, RuntimeTransition: server.RuntimeTransition,
 			Hostname: server.Hostname, MinecraftVersion: server.MinecraftVersion, JavaVersion: server.JavaVersion,
 			LoaderName: server.LoaderName, LoaderVersion: server.LoaderVersion, ServerBrand: server.ServerBrand,
 			RuntimeCapabilities: append([]string(nil), server.RuntimeCapabilities...), RuntimeLastSeenAt: server.RuntimeLastSeenAt,
-			Telemetry: server.Telemetry,
+			Telemetry: telemetry, TelemetryState: telemetryState,
 		})
 	}
 

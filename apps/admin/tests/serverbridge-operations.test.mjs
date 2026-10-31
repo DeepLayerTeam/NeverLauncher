@@ -42,6 +42,18 @@ test('telemetry is withheld for unknown, stale and wrong runtime samples', () =>
   assert.equal(canControlNode({...node,lastHeartbeatAt:new Date(now-200_000).toISOString()},now),false);
 });
 
+test('0.41.9 never displays a missing physical process or stale host/players as healthy', () => {
+  const process = 4711;
+  const good = {...node, runtimeProcessId: process, telemetryState: 'fresh', telemetry: {...node.telemetry,
+    processId:process, processCpuLoad:.17, hostTotalMemoryBytes:8589934592,hostFreeMemoryBytes:4294967296}};
+  assert.equal(telemetryState(good,now).state,'fresh');
+  assert.equal(telemetryState({...good,telemetryState:'stale',telemetry:undefined},now).state,'stale');
+  assert.equal(telemetryState({...good,telemetry:{...good.telemetry,processId:99}},now).state,'stale');
+  assert.equal(telemetryState({...good,lastHeartbeatAt:new Date(now-93_000).toISOString()},now).state,'stale');
+  assert.equal(telemetryState({...good,telemetry:{...good.telemetry,sampledAtUnixMillis:now+60_000}},now).state,'unknown');
+  assert.equal(telemetryState({...good,status:'disabled'},now).state,'stale');
+});
+
 test('form builds only allowlisted payload without shell or unknown fields', () => {
   const form={username:'Notch',reason:'Reason',message:'Hello',enabled:true,command:'say Hello'};
   assert.deepEqual(buildControlPayload('player.kick',form),{username:'Notch',reason:'Reason'});

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.41.9 — Live JVM/host telemetry and fail-closed freshness
+
+- **Real runtime sampling:** signed ServerBridge heartbeat now carries the actual Java PID, process CPU time/load and OS-reported free/total host memory, when supported. Unsupported host fields are omitted (never replaced with fabricated zero values). Game-specific stale/future samples cannot report healthy ticks.
+- **Cross-boundary validation:** Backend validates process ID against signed runtime identity, CPU limits and physically possible host memory values; accepted data is persisted alongside existing metrics in PostgreSQL.
+- **Live view fails closed:** Backend masks stored samples whenever heartbeat, sample timestamp, runtime epoch, PID or active node state no longer match. Historical data stays in PostgreSQL, live overview reports `fresh`, `stale` or `unknown` and does not return stale numbers.
+- **Admin:** shows JVM PID/process CPU load and real host free/total memory only for fresh samples; older overview no longer displays raw historical telemetry as live.
+- **Tests:** Java 21 process-sampling and freshness tests, Backend process/freshness regression cases, Admin regressions. Upstream Minecraft JAR, PostgreSQL E2E and full Go 1.27.3 certification must still be run in a matching CI environment.
+
 ## 0.41.8 — End-to-end session-bound revocation and authorization fencing
 
 - **Real revocation disconnect path:** PostgreSQL now places the revoked `sessionCorrelationId` into the durable, signed `player.kick` operation. Velocity, BungeeCord/Waterfall, Bukkit/Paper/Purpur/Spigot/Folia, Fabric/Quilt/Forge/NeoForge, and Sponge compare the queued correlation against their locally authenticated current session before disconnecting. A delayed operation for a previous login cannot kick the new session merely because the player name was reused. Folia checks again inside the scheduled entity action. Vanilla RCON sidecar refuses session-targeted kick since it cannot prove the active player's session.

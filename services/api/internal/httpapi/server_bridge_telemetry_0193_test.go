@@ -11,13 +11,15 @@ import (
 func testTelemetry0193(now time.Time, runtimeID string) *bridgeServerTelemetryV3Contract0193 {
 	tps := 20.0
 	mspt := 12.5
+	players := 4
+	maxPlayers := 100
 	worlds := 3
 	dimensions := 3
 	chunks := int64(420)
 	entities := int64(1337)
 	return &bridgeServerTelemetryV3Contract0193{
 		Sequence: 7, SampledAtUnixMillis: now.UnixMilli(), WindowMillis: 10_000, RuntimeID: runtimeID,
-		TPS: &tps, MSPT: &mspt, TickHealth: "healthy", PlayersOnline: 4, PlayersMax: 100,
+		TPS: &tps, MSPT: &mspt, TickHealth: "healthy", PlayersOnline: &players, PlayersMax: &maxPlayers,
 		HeapUsedBytes: 128 << 20, HeapCommittedBytes: 256 << 20, HeapMaxBytes: 1024 << 20,
 		NonHeapUsedBytes: 32 << 20, NonHeapCommittedBytes: 64 << 20,
 		GCCollections: 12, GCCollectionTimeMillis: 80, GCCollectionsDelta: 1, GCCollectionTimeDeltaMillis: 4,

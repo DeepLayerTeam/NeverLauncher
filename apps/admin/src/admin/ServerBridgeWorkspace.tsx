@@ -239,7 +239,7 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, userId, se
       return <button key={n.id} type="button" aria-pressed={n.id===selectedServer} className={`bridgeNodeButton ${n.id===selectedServer?'selected':''}`} onClick={()=>{setSelectedServer(n.id);setSelectedCommand(null);onSelectServer?.(n.id);}}>
         <strong>{n.name || n.id}</strong><span>Профиль: {n.profileId || 'не привязан'}</span><span className={`badge ${fresh?'ok':'warn'}`}>{fresh?'heartbeat fresh':'heartbeat stale/unknown'}</span>
         <span>{n.serverBrand || n.loaderName || n.kind || 'Minecraft'} · {n.minecraftVersion || 'версия неизвестна'}</span>
-        <span>Players: {state.state==='fresh'?`${formatMetric(n.telemetry?.playersOnline)} / ${formatMetric(n.telemetry?.playersMax)}`:'неизвестно (telemetry stale)'}</span>
+        <span>Players: {state.state==='fresh' && n.telemetry?.playersOnline != null && n.telemetry?.playersMax != null ? `${formatMetric(n.telemetry.playersOnline)} / ${formatMetric(n.telemetry.playersMax)}`:'неизвестно (telemetry stale)'}</span>
         <small>Protocol {n.protocolVersion || 'unknown'} · {state.state==='fresh'?'Telemetry fresh':state.reason}</small>
       </button>;
     })}</div>
@@ -267,10 +267,12 @@ export function ServerBridgeWorkspace({ backendUrl, token, projectId, userId, se
       </article>
       <article className="bridgeSection"><h3>Телеметрия и игроки</h3>
         <span className={`badge ${tele?.state==='fresh' && snapshotFresh?'ok':'warn'}`}>{tele?.state === 'fresh' && snapshotFresh ? `Fresh · ${tele.ageSeconds} сек` : tele?.reason || 'нет данных'}</span>
-        <dl className="bridgeFacts"><dt>Online / max</dt><dd>{tele?.state==='fresh' && snapshotFresh ? `${formatMetric(t?.playersOnline)} / ${formatMetric(t?.playersMax)}` : 'неизвестно'}</dd>
+        <dl className="bridgeFacts"><dt>Online / max</dt><dd>{tele?.state==='fresh' && snapshotFresh && t?.playersOnline != null && t?.playersMax != null ? `${formatMetric(t.playersOnline)} / ${formatMetric(t.playersMax)}` : 'неизвестно'}</dd>
           <dt>TPS / MSPT</dt><dd>{tele?.state==='fresh' && snapshotFresh ? `${formatMetric(t?.tps)} / ${formatMetric(t?.mspt)}` : 'неизвестно'}</dd>
           <dt>Tick health</dt><dd>{tele?.state==='fresh' && snapshotFresh ? t?.tickHealth || 'неизвестно' : 'неизвестно'}</dd>
           <dt>Heap</dt><dd>{tele?.state==='fresh' && snapshotFresh ? `${bytes(t?.heapUsedBytes)} / ${bytes(t?.heapMaxBytes)}` : 'неизвестно'}</dd>
+          <dt>JVM process PID / CPU</dt><dd>{tele?.state==='fresh' && snapshotFresh ? `${formatMetric(t?.processId)} / ${typeof t?.processCpuLoad==='number' ? (t.processCpuLoad*100).toFixed(1)+'%' : 'неизвестно'}` : 'неизвестно'}</dd>
+          <dt>Host memory free / total</dt><dd>{tele?.state==='fresh' && snapshotFresh ? `${bytes(t?.hostFreeMemoryBytes)} / ${bytes(t?.hostTotalMemoryBytes)}` : 'неизвестно'}</dd>
           <dt>Worlds / chunks</dt><dd>{tele?.state==='fresh' && snapshotFresh ? `${formatMetric(t?.loadedWorlds)} / ${formatMetric(t?.loadedChunks)}` : 'неизвестно'}</dd>
           <dt>Снимок</dt><dd>{t?.sampledAtUnixMillis ? new Date(t.sampledAtUnixMillis).toLocaleString() : 'неизвестно'}</dd></dl>
         <p className="muted">Protocol v3 сообщает число игроков, а не список ников. Для kick/ban имя вводится вручную.</p>

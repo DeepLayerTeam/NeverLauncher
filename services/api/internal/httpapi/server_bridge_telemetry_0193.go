@@ -24,8 +24,8 @@ type bridgeServerTelemetryV3Contract0193 struct {
 	TPS                         *float64 `json:"tps,omitempty"`
 	MSPT                        *float64 `json:"mspt,omitempty"`
 	TickHealth                  string   `json:"tickHealth"`
-	PlayersOnline               int      `json:"playersOnline"`
-	PlayersMax                  int      `json:"playersMax"`
+	PlayersOnline               *int     `json:"playersOnline,omitempty"`
+	PlayersMax                  *int     `json:"playersMax,omitempty"`
 	HeapUsedBytes               int64    `json:"heapUsedBytes"`
 	HeapCommittedBytes          int64    `json:"heapCommittedBytes"`
 	HeapMaxBytes                int64    `json:"heapMaxBytes"`
@@ -44,6 +44,11 @@ type bridgeServerTelemetryV3Contract0193 struct {
 	EntityCount                 *int64   `json:"entityCount,omitempty"`
 	SamplingBudgetExceeded      bool     `json:"samplingBudgetExceeded"`
 	Metrics                     []string `json:"metrics"`
+	ProcessID                   *int64   `json:"processId,omitempty"`
+	ProcessCPUTimeNanos         *int64   `json:"processCpuTimeNanos,omitempty"`
+	ProcessCPULoad              *float64 `json:"processCpuLoad,omitempty"`
+	HostTotalMemoryBytes        *int64   `json:"hostTotalMemoryBytes,omitempty"`
+	HostFreeMemoryBytes         *int64   `json:"hostFreeMemoryBytes,omitempty"`
 }
 
 func bridgeTelemetryFeatureMode0193(features []string) (bool, string) {
@@ -92,8 +97,23 @@ func validateBridgeTelemetry0193(raw *bridgeServerTelemetryV3Contract0193, runti
 	default:
 		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_tick_health_invalid")
 	}
-	if raw.PlayersOnline < 0 || raw.PlayersOnline > 1_000_000 || raw.PlayersMax < 0 || raw.PlayersMax > 1_000_000 || (raw.PlayersMax > 0 && raw.PlayersOnline > raw.PlayersMax) {
+	if (raw.PlayersOnline == nil) != (raw.PlayersMax == nil) ||
+		(raw.PlayersOnline != nil && (*raw.PlayersOnline < 0 || *raw.PlayersOnline > 1_000_000 || *raw.PlayersMax < 0 || *raw.PlayersMax > 1_000_000 || (*raw.PlayersMax > 0 && *raw.PlayersOnline > *raw.PlayersMax))) {
 		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_players_invalid")
+	}
+	// A stale platform sample may leave JVM statistics available, but it cannot
+	// assert healthy ticks or fabricate zero connected players.
+	if raw.TPS == nil && raw.MSPT == nil && health != "unavailable" {
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_health_without_ticks")
+	}
+	if (raw.MSPT != nil && *raw.MSPT >= 50) || (raw.TPS != nil && *raw.TPS < 15) {
+		if health != "overloaded" {
+			return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_health_mismatch")
+		}
+	} else if (raw.MSPT != nil && *raw.MSPT >= 40) || (raw.TPS != nil && *raw.TPS < 19) {
+		if health != "degraded" && health != "overloaded" {
+			return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_health_mismatch")
+		}
 	}
 	if !nonNegativeBounded0193(raw.HeapUsedBytes, 1<<62) ||
 		!nonNegativeBounded0193(raw.HeapCommittedBytes, 1<<62) ||
@@ -113,6 +133,27 @@ func validateBridgeTelemetry0193(raw *bridgeServerTelemetryV3Contract0193, runti
 		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_game_counter_invalid")
 	}
 
+	// Bind a signed telemetry sample to the very same OS process described by
+	// the signed runtime identity. Do not trust uncorrelated host/process counters.
+	if raw.ProcessID != nil && (*raw.ProcessID <= 0 || *raw.ProcessID != runtime.ProcessID) {
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_process_mismatch")
+	}
+	if raw.ProcessID == nil && (raw.ProcessCPUTimeNanos != nil || raw.ProcessCPULoad != nil) {
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_process_identity_required")
+	}
+	if raw.ProcessCPUTimeNanos != nil && !nonNegativeBounded0193(*raw.ProcessCPUTimeNanos, 1<<62) {
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_cpu_time_invalid")
+	}
+	if raw.ProcessCPULoad != nil && !finiteBetween0193(*raw.ProcessCPULoad, 0, 1) {
+		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_cpu_load_invalid")
+	}
+	if raw.HostTotalMemoryBytes != nil || raw.HostFreeMemoryBytes != nil {
+		if raw.ProcessID == nil || raw.HostTotalMemoryBytes == nil || raw.HostFreeMemoryBytes == nil ||
+			*raw.HostTotalMemoryBytes <= 0 || !nonNegativeBounded0193(*raw.HostTotalMemoryBytes, 1<<62) ||
+			*raw.HostFreeMemoryBytes < 0 || *raw.HostFreeMemoryBytes > *raw.HostTotalMemoryBytes {
+			return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_host_memory_invalid")
+		}
+	}
 	metrics := normalizeTelemetryMetrics0193(raw.Metrics)
 	if len(metrics) == 0 || len(metrics) > 64 {
 		return model.ServerBridgeTelemetry{}, fmt.Errorf("serverbridge_telemetry_metrics_invalid")
@@ -128,6 +169,9 @@ func validateBridgeTelemetry0193(raw *bridgeServerTelemetryV3Contract0193, runti
 		ThreadCount: raw.ThreadCount, DaemonThreadCount: raw.DaemonThreadCount, PeakThreadCount: raw.PeakThreadCount,
 		LoadedWorlds: raw.LoadedWorlds, LoadedDimensions: raw.LoadedDimensions, LoadedChunks: raw.LoadedChunks, EntityCount: raw.EntityCount,
 		SamplingBudgetExceeded: raw.SamplingBudgetExceeded, Metrics: metrics,
+		ProcessID: raw.ProcessID, ProcessCPUTimeNanos: raw.ProcessCPUTimeNanos,
+		ProcessCPULoad: raw.ProcessCPULoad, HostTotalMemoryBytes: raw.HostTotalMemoryBytes,
+		HostFreeMemoryBytes: raw.HostFreeMemoryBytes,
 	}, nil
 }
 

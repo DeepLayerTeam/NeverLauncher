@@ -471,6 +471,12 @@ func remoteHostStatus0284(root string) json.RawMessage {
 		result["observedStatus"] = status
 		result["supervisorAlive"] = supervisor
 		result["processAlive"] = process
+		if process {
+			// Only live OS observations, bound to the managed process identity.
+			if metrics := hostProcessTelemetry0419(state.ProcessPID, state.ProcessIdentity); metrics != nil {
+				result["telemetry"] = metrics
+			}
+		}
 		result["sessionId"] = state.SessionID
 		result["restartCount"] = state.RestartCount
 		result["crashCount"] = state.CrashCount

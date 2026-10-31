@@ -17,7 +17,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * безопасного для их API потока; HTTP-поток никогда не перечисляет миры или сущности.
  */
 public final class BridgeTelemetrySampler {
-    private static final long PLATFORM_SAMPLE_MAX_AGE_MS = 120_000L;
+    private static final long PLATFORM_SAMPLE_MAX_AGE_MS = 90_000L;
+    // A clock-skewed or future-dated platform sample must never make the game healthy.
+    private static final long PLATFORM_FUTURE_SKEW_MS = 5_000L;
 
     private final MemoryMXBean memory = ManagementFactory.getMemoryMXBean();
     private final ThreadMXBean threads = ManagementFactory.getThreadMXBean();
@@ -35,7 +37,8 @@ public final class BridgeTelemetrySampler {
     public BridgePlatformTelemetry latestPlatformSample() {
         BridgePlatformTelemetry sample = platform.get();
         if (sample == null) return null;
-        if (System.currentTimeMillis() - sample.sampledAtUnixMillis() > PLATFORM_SAMPLE_MAX_AGE_MS) return null;
+        long age = System.currentTimeMillis() - sample.sampledAtUnixMillis();
+        if (age > PLATFORM_SAMPLE_MAX_AGE_MS || age < -PLATFORM_FUTURE_SKEW_MS) return null;
         return sample;
     }
 
@@ -45,7 +48,8 @@ public final class BridgeTelemetrySampler {
         long window = previousAt <= 0L ? 0L : Math.max(0L, Math.min(600_000L, now - previousAt));
 
         BridgePlatformTelemetry game = platform.get();
-        if (game != null && now - game.sampledAtUnixMillis() > PLATFORM_SAMPLE_MAX_AGE_MS) game = null;
+        if (game != null && (now - game.sampledAtUnixMillis() > PLATFORM_SAMPLE_MAX_AGE_MS ||
+            now - game.sampledAtUnixMillis() < -PLATFORM_FUTURE_SKEW_MS)) game = null;
 
         MemoryUsage heap = memory.getHeapMemoryUsage();
         MemoryUsage nonHeap = memory.getNonHeapMemoryUsage();
@@ -71,6 +75,26 @@ public final class BridgeTelemetrySampler {
         metrics.add("jvm.gc");
         metrics.add("jvm.threads");
         if (game != null) metrics.addAll(game.metrics());
+        Long pid = ProcessHandle.current().pid();
+        Long processCpuNanos = null;
+        Double processCpuLoad = null;
+        Long hostTotalMemory = null;
+        Long hostFreeMemory = null;
+        java.lang.management.OperatingSystemMXBean os = ManagementFactory.getOperatingSystemMXBean();
+        if (os instanceof com.sun.management.OperatingSystemMXBean extended) {
+            long cpu = extended.getProcessCpuTime();
+            if (cpu >= 0) { processCpuNanos = cpu; metrics.add("jvm.process_cpu_time"); }
+            double load = extended.getProcessCpuLoad();
+            if (Double.isFinite(load) && load >= 0 && load <= 1) {
+                processCpuLoad = load; metrics.add("jvm.process_cpu_load");
+            }
+            long total = extended.getTotalMemorySize();
+            long free = extended.getFreeMemorySize();
+            if (total > 0 && free >= 0 && free <= total) {
+                hostTotalMemory = total; hostFreeMemory = free; metrics.add("host.memory");
+            }
+        }
+        metrics.add("jvm.process_id");
 
         return new BridgeTelemetrySnapshot(
             Math.max(1L, sequence.incrementAndGet()),
@@ -80,8 +104,8 @@ public final class BridgeTelemetrySampler {
             tps,
             mspt,
             health,
-            game == null ? 0 : game.playersOnline(),
-            game == null ? 0 : game.playersMax(),
+            game == null ? null : game.playersOnline(),
+            game == null ? null : game.playersMax(),
             nonNegative(heap.getUsed()),
             nonNegative(heap.getCommitted()),
             nonNegative(heap.getMax()),
@@ -99,7 +123,8 @@ public final class BridgeTelemetrySampler {
             game == null ? null : game.loadedChunks(),
             game == null ? null : game.entityCount(),
             game != null && game.samplingBudgetExceeded(),
-            List.copyOf(metrics)
+            List.copyOf(metrics),
+            pid, processCpuNanos, processCpuLoad, hostTotalMemory, hostFreeMemory
         );
     }
 

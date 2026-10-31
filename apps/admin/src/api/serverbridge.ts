@@ -6,6 +6,8 @@ export type ServerBridgeTelemetry = {
   playersOnline?: number; playersMax?: number; tps?: number | null; mspt?: number | null;
   tickHealth?: string; heapUsedBytes?: number; heapMaxBytes?: number;
   loadedWorlds?: number; loadedChunks?: number; threadCount?: number; metrics?: string[];
+  processId?: number; processCpuTimeNanos?: number; processCpuLoad?: number;
+  hostTotalMemoryBytes?: number; hostFreeMemoryBytes?: number;
 };
 export type ServerBridgeNode = {
   id: string; name?: string; projectId: string; profileId?: string; kind?: string;
@@ -14,7 +16,8 @@ export type ServerBridgeNode = {
   protocolMigrationRequired?: boolean; upgradeRecommended?: boolean; pluginVersion?: string;
   integrityStatus?: string; serverBrand?: string; minecraftVersion?: string;
   javaVersion?: string; loaderName?: string; loaderVersion?: string; telemetry?: ServerBridgeTelemetry;
-  runtimeCapabilities?: string[]; runtimeLastSeenAt?: string;
+  telemetryState?: 'fresh' | 'stale' | 'unknown';
+  runtimeCapabilities?: string[]; runtimeLastSeenAt?: string; runtimeProcessId?: number;
 };
 export type BridgeCommandType =
   'player.kick' | 'message.broadcast' | 'whitelist.add' | 'whitelist.remove' |
@@ -172,11 +175,15 @@ export function commandLifecycle(raw: string): { lifecycle: BridgeLifecycle; lab
 
 export function telemetryState(node: ServerBridgeNode, now = Date.now()): { state: 'fresh' | 'stale' | 'unknown'; reason: string; ageSeconds: number | null } {
   const t = node.telemetry;
-  if (!t || !Number.isFinite(t.sampledAtUnixMillis) || !t.sampledAtUnixMillis) return { state: 'unknown', reason: 'Telemetry ещё не получена', ageSeconds: null };
+  if (!t || !Number.isFinite(t.sampledAtUnixMillis) || !t.sampledAtUnixMillis) return { state: node.telemetryState === 'stale' ? 'stale' : 'unknown', reason: node.telemetryState === 'stale' ? 'Последний снимок устарел (Backend)' : 'Telemetry ещё не получена', ageSeconds: null };
   const age = now - t.sampledAtUnixMillis;
   if (age < -30_000) return { state: 'unknown', reason: 'Время узла отличается от Backend/браузера', ageSeconds: null };
   const seconds = Math.max(0, Math.floor(age / 1000));
-  if (!node.fresh || age > 120_000 || t.runtimeId !== node.runtimeId || t.runtimeEpoch !== node.runtimeEpoch) {
+  const heartbeat = Date.parse(node.lastHeartbeatAt ?? '');
+  if (node.telemetryState === 'stale' || node.telemetryState === 'unknown' || node.status !== 'active' ||
+      !Number.isFinite(heartbeat) || heartbeat > now + 30_000 || now - heartbeat >= 90_000 ||
+      age >= 90_000 || !node.fresh || t.runtimeId !== node.runtimeId || t.runtimeEpoch !== node.runtimeEpoch ||
+      (t.processId !== undefined && t.processId !== node.runtimeProcessId)) {
     return { state: 'stale', reason: 'Снимок устарел или относится к другому runtime', ageSeconds: seconds };
   }
   return { state: 'fresh', reason: 'Показатели актуальны', ageSeconds: seconds };

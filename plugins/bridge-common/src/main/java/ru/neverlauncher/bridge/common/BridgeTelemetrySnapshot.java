@@ -12,8 +12,8 @@ public record BridgeTelemetrySnapshot(
     Double tps,
     Double mspt,
     String tickHealth,
-    int playersOnline,
-    int playersMax,
+    Integer playersOnline,
+    Integer playersMax,
     long heapUsedBytes,
     long heapCommittedBytes,
     long heapMaxBytes,
@@ -31,7 +31,12 @@ public record BridgeTelemetrySnapshot(
     Long loadedChunks,
     Long entityCount,
     boolean samplingBudgetExceeded,
-    List<String> metrics
+    List<String> metrics,
+    Long processId,
+    Long processCpuTimeNanos,
+    Double processCpuLoad,
+    Long hostTotalMemoryBytes,
+    Long hostFreeMemoryBytes
 ) {
     public String toJson() {
         StringBuilder out = new StringBuilder(512);
@@ -41,8 +46,6 @@ public record BridgeTelemetrySnapshot(
             .append(",\"windowMillis\":").append(windowMillis)
             .append(",\"runtimeId\":").append(quote(runtimeId))
             .append(",\"tickHealth\":").append(quote(tickHealth))
-            .append(",\"playersOnline\":").append(playersOnline)
-            .append(",\"playersMax\":").append(playersMax)
             .append(",\"heapUsedBytes\":").append(heapUsedBytes)
             .append(",\"heapCommittedBytes\":").append(heapCommittedBytes)
             .append(",\"heapMaxBytes\":").append(heapMaxBytes)
@@ -56,6 +59,13 @@ public record BridgeTelemetrySnapshot(
             .append(",\"daemonThreadCount\":").append(daemonThreadCount)
             .append(",\"peakThreadCount\":").append(peakThreadCount)
             .append(",\"samplingBudgetExceeded\":").append(samplingBudgetExceeded);
+        appendInt(out, "playersOnline", playersOnline);
+        appendInt(out, "playersMax", playersMax);
+        appendLong(out, "processId", processId);
+        appendLong(out, "processCpuTimeNanos", processCpuTimeNanos);
+        appendDouble(out, "processCpuLoad", processCpuLoad);
+        appendLong(out, "hostTotalMemoryBytes", hostTotalMemoryBytes);
+        appendLong(out, "hostFreeMemoryBytes", hostFreeMemoryBytes);
         appendDouble(out, "tps", tps);
         appendDouble(out, "mspt", mspt);
         appendInt(out, "loadedWorlds", loadedWorlds);

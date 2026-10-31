@@ -536,8 +536,8 @@ type ServerBridgeTelemetry struct {
 	TPS                         *float64 `json:"tps,omitempty"`
 	MSPT                        *float64 `json:"mspt,omitempty"`
 	TickHealth                  string   `json:"tickHealth"`
-	PlayersOnline               int      `json:"playersOnline"`
-	PlayersMax                  int      `json:"playersMax"`
+	PlayersOnline               *int     `json:"playersOnline,omitempty"`
+	PlayersMax                  *int     `json:"playersMax,omitempty"`
 	HeapUsedBytes               int64    `json:"heapUsedBytes"`
 	HeapCommittedBytes          int64    `json:"heapCommittedBytes"`
 	HeapMaxBytes                int64    `json:"heapMaxBytes"`
@@ -556,6 +556,11 @@ type ServerBridgeTelemetry struct {
 	EntityCount                 *int64   `json:"entityCount,omitempty"`
 	SamplingBudgetExceeded      bool     `json:"samplingBudgetExceeded"`
 	Metrics                     []string `json:"metrics"`
+	ProcessID                   *int64   `json:"processId,omitempty"`
+	ProcessCPUTimeNanos         *int64   `json:"processCpuTimeNanos,omitempty"`
+	ProcessCPULoad              *float64 `json:"processCpuLoad,omitempty"`
+	HostTotalMemoryBytes        *int64   `json:"hostTotalMemoryBytes,omitempty"`
+	HostFreeMemoryBytes         *int64   `json:"hostFreeMemoryBytes,omitempty"`
 }
 
 // ServerBridgeEvent — упорядоченное событие с индивидуальной подписью, привязанное к подтверждённой эпохе выполнения.
