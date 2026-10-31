@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.42.0 — Final executable network release acceptance (production blocked until real 14-target E2E)
+
+- Fixed the actual `build-release.sh` ServerBridge cohort: all fourteen built platform JARs (including Quilt, Sponge, Vanilla) now enter the final distribution; no missing adapter silently ships.
+- Bound live JVM/network evidence to the SHA-256 of the specific Gradle-built Bridge JAR and exact source commit, then independently compared it with the exact shipped binary. A modified/missing/symlinked JAR or duplicate payload blocks acceptance.
+- Added executable final-package acceptance that invokes existing independent real Minecraft auth, one-time ticket, real game update/rollback, and Paper world restore verifiers, plus the full live 14-target matrix.
+- Added actual `go test -json -race` fault/JVM/WorldBackup runner and a fail-closed parser that checks all required real Go tests, their package-level success, no skipped/failed cases, and the exact SHA-256 of the raw test log.
+- Enforced an explicit gate before production signing; failed/unverified runs cannot create a positive release receipt. Ten core Minecraft/Proxy runners exist; four other target live runners remain absent, so this release **is not production-certified**.
+- Offline verifier and Go/JVM regression results are tracked separately from live Minecraft/JVM/Proxy evidence; consult `docs/servers/server-network-release-0420.md`.
+
+
 ## 0.41.13 — Live ServerBridge compatibility evidence and fail-closed matrix
 
 - Instrumented the **executing** full Minecraft E2E runner: after real authenticated login and revocation, Docker must report a healthy running JVM with a pinned image ID and a live Java process. Preserve native logs, client/network probes and their SHA-256 digests per runtime; refuse mismatched node IDs or missing game events.

@@ -28,7 +28,15 @@ def digest(path: Path) -> str:
 
 
 def record(service: str, node: str, port: int, player: str, runtime: Path, cid: str,
-           version: str, require_real_join: bool = False) -> dict:
+           version: str, require_real_join: bool = False, artifact: Path | None = None,
+           source_commit: str = "") -> dict:
+    if artifact is None or not artifact.is_file() or artifact.is_symlink() or artifact.stat().st_size == 0:
+        raise ValueError(f'{service}: the exact built plugin JAR is required')
+    # A runtime test must bind to the actual plugin bytes, not a file name or
+    # a declaration in the generated build manifest.
+    jar_digest = digest(artifact)
+    if version == '0.42.0' and not re.fullmatch(r'[a-f0-9]{40}|[a-f0-9]{64}', source_commit):
+        raise ValueError('0.42.0 requires an exact source commit for live certification')
     # Independent observation: do not infer process presence from HTTP heartbeat.
     inspect = json.loads(run('docker', 'inspect', '--type', 'container', cid))
     if len(inspect) != 1:
@@ -87,7 +95,8 @@ def record(service: str, node: str, port: int, player: str, runtime: Path, cid: 
             raise ValueError(f'{service}: no actual player join in game log')
     return {
         'schemaVersion': '1.0', 'productVersion': version, 'service': service,
-        'nodeId': node, 'minecraftPort': port,
+        'nodeId': node, 'minecraftPort': port, 'bridgeJarSha256': jar_digest,
+        'sourceCommit': source_commit,
         'observedAt': dt.datetime.now(dt.timezone.utc).isoformat(),
         'runtime': {'containerId': entry['Id'], 'imageId': image,
                     'hostJavaPid': java_pids[0], 'javaMajor': int(re.search(r'\bversion "(\d+)', first_line).group(1)),
@@ -108,10 +117,12 @@ def main() -> int:
     parser.add_argument('--version', required=True)
     parser.add_argument('--runtime', required=True, type=Path)
     parser.add_argument('--require-real-join', action='store_true')
+    parser.add_argument('--artifact', type=Path, required=True)
+    parser.add_argument('--source-commit', default='')
     args = parser.parse_args()
     try:
         proof = record(args.service, args.node, args.port, args.player, args.runtime,
-                       args.container, args.version, args.require_real_join)
+                       args.container, args.version, args.require_real_join, args.artifact, args.source_commit)
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired,
             ValueError, KeyError, IndexError, json.JSONDecodeError) as exc:
         parser.exit(1, f'[live] cannot certify {args.service}: {exc}\n')

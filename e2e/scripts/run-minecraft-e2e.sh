@@ -243,7 +243,9 @@ record_live_serverbridge_04113() {
   [[ "$service" == "paper" ]] && extra+=(--require-real-join)
   python3 "$ROOT/e2e/scripts/record-serverbridge-runtime-04113.py" \
     --service "$service" --node "$node" --port "$port" --container "$cid" \
-    --player "$PLAYER_USERNAME" --version "$VERSION" --runtime "$RUNTIME_DIR" "${extra[@]}"
+    --player "$PLAYER_USERNAME" --version "$VERSION" --runtime "$RUNTIME_DIR" \
+    --artifact "$ROOT/artifacts/plugins/neverlauncher-${service}-bridge-${VERSION}.jar" \
+    --source-commit "${GITHUB_SHA:-}" "${extra[@]}"
 }
 wait_log() {
   local service="$1" pattern="$2"

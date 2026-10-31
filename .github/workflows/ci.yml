@@ -648,6 +648,11 @@ jobs:
           gradle-version: '9.7.1'
       - name: Build real Velocity + Bukkit family bridges
         run: bash scripts/build/bridge-plugins.sh
+      - name: Verify 0.42.0 exact-runtime proof semantics and release package negative regressions
+        run: |
+          python3 -m unittest discover -s serverbridge/tests -p '*04113.py' -v
+          python3 -m unittest discover -s e2e/scripts -p 'test_record_serverbridge_runtime_04113.py' -v
+          python3 -m unittest discover -s scripts/ga -p 'test_accept_network_release_0420.py' -v
 
   containers:
     name: Production containers
@@ -976,6 +981,23 @@ jobs:
           python3 -m unittest discover -s scripts/ga -p 'test_verify_player_cycle_0398.py' -v
       - name: Materialize -> publish -> sync -> launch actual Minecraft -> join -> revoke -> deny
         run: bash e2e/scripts/run-minecraft-e2e.sh
+      - name: 0.42.0 exact Go race/fault evidence and mandatory 14-target live Minecraft gate
+        if: ${{ always() && success() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$(cat VERSION)" != "0.42.0" ]]; then exit 0; fi
+          (
+            cd cli
+            GOTOOLCHAIN=local go test -json -race -count=1 -timeout 240s ./cmd/neverlauncher \
+              -run '^(TestRemoteFault.*04112|TestHostLifecycle0414(RealJVMStartStopRestartAndSIGTERM|RealJVMAutoRecoveryAfterCrash|RealJVMCrashLoopIsBounded|ActualCLIAndRemoteEffects|StopWhileJavaCrashIsInBackoff)|TestWorldBackup(CreateVerifyRestore02810|GateBlocksStartAndSecondBackup04110|GateFailsClosedAndRecoversOffline04110))$'
+          ) > e2e/runtime/network-faults-0420.go-test.jsonl
+          python3 scripts/ga/record_network_faults_0420.py \
+            --log e2e/runtime/network-faults-0420.go-test.jsonl \
+            --source-commit "$GITHUB_SHA" --version 0.42.0 \
+            --out e2e/runtime/network-faults-0420.json
+          python3 serverbridge/live_matrix_04113.py --root . --scope all \
+            --runtime e2e/runtime --out e2e/runtime/live-matrix-all-0420.json
       - name: Require real Paper world backup/restore evidence for 0.29.0
         run: |
           python3 scripts/ga/verify_server_control_0290.py \
@@ -1028,6 +1050,12 @@ jobs:
             e2e/runtime/spark-paper-build.json
             e2e/runtime/bytesocks-build.json
             e2e/runtime/bridge-diagnostics.json
+            e2e/runtime/live-*-04113.json
+            e2e/runtime/live-*-04113.log
+            e2e/runtime/live-matrix-*.json
+            e2e/runtime/probe-*.txt
+            e2e/runtime/network-faults-0420.json
+            e2e/runtime/network-faults-0420.go-test.jsonl
             e2e/runtime-durable-0213/*.log
             e2e/runtime/validate-*.json
             e2e/runtime/join-*.json

@@ -24,6 +24,8 @@ class RecorderTests(unittest.TestCase):
         for suffix in ('allow', 'deny'):
             (self.runtime / f'probe-velocity-e2e-p3-{suffix}.txt').write_text(
                 'probe host=127.0.0.1 port=25570 username=E2EPlayer responseBytes=0 terminal=reset')
+        self.artifact = self.runtime / 'bridge.jar'
+        self.artifact.write_bytes(b'actual-test-jar')
         self.recorded = []
 
     def docker(self, argv, **kwargs):
@@ -46,9 +48,10 @@ class RecorderTests(unittest.TestCase):
     def test_live_docker_invoked_and_evidence_hashed(self):
         with mock.patch.object(rec.subprocess, 'run', side_effect=self.docker):
             proof = rec.record('velocity', 'velocity-e2e-p3', 25570, 'E2EPlayer',
-                               self.runtime, 'a'*64, '0.41.13')
+                               self.runtime, 'a'*64, '0.41.13', artifact=self.artifact)
         self.assertEqual(proof['runtime']['hostJavaPid'], 555)
         self.assertEqual(proof['runtime']['javaMajor'], 21)
+        self.assertEqual(proof['bridgeJarSha256'], rec.digest(self.artifact))
         self.assertEqual(len(self.recorded), 4)
         self.assertEqual(proof['observations']['denyAfterRevocation'], True)
 
@@ -61,7 +64,7 @@ class RecorderTests(unittest.TestCase):
         with mock.patch.object(rec.subprocess, 'run', side_effect=no_java):
             with self.assertRaisesRegex(ValueError, 'one live Java process'):
                 rec.record('velocity', 'velocity-e2e-p3', 25570, 'E2EPlayer',
-                           self.runtime, 'a'*64, '0.41.13')
+                           self.runtime, 'a'*64, '0.41.13', artifact=self.artifact)
 
     def test_unhealthy_container_rejected(self):
         def unhealthy(argv, **kwargs):
@@ -74,7 +77,7 @@ class RecorderTests(unittest.TestCase):
         with mock.patch.object(rec.subprocess, 'run', side_effect=unhealthy):
             with self.assertRaisesRegex(ValueError, 'not healthy'):
                 rec.record('velocity', 'velocity-e2e-p3', 25570, 'E2EPlayer',
-                           self.runtime, 'a'*64, '0.41.13')
+                           self.runtime, 'a'*64, '0.41.13', artifact=self.artifact)
 
     def test_missing_revocation_evidence_rejected(self):
         def missing_deny(argv, **kwargs):
@@ -85,7 +88,7 @@ class RecorderTests(unittest.TestCase):
         with mock.patch.object(rec.subprocess, 'run', side_effect=missing_deny):
             with self.assertRaisesRegex(ValueError, 'missing ordered allow/revocation deny'):
                 rec.record('velocity', 'velocity-e2e-p3', 25570, 'E2EPlayer',
-                           self.runtime, 'a'*64, '0.41.13')
+                           self.runtime, 'a'*64, '0.41.13', artifact=self.artifact)
 
 
 if __name__ == '__main__':

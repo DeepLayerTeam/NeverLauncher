@@ -30,7 +30,10 @@ class MatrixTests(unittest.TestCase):
         (self.runtime / 'result.json').write_text(json.dumps({
             'version': VERSION, 'status': 'passed', 'mode': 'full',
         }))
+        (self.root / 'artifacts/plugins').mkdir(parents=True)
         for service, (node, port) in mod.CORE.items():
+            jar = self.root / 'artifacts/plugins' / f'neverlauncher-{service}-bridge-{VERSION}.jar'
+            jar.write_bytes(f'real-test-artifact-{service}'.encode())
             log_file = self.runtime / f'live-{service}-04113.log'
             content = (f'NeverLauncher {service} Bridge v3 heartbeat=true\n'
                        'E2EPlayer joined the game\n'
@@ -40,6 +43,7 @@ class MatrixTests(unittest.TestCase):
             proof = {
                 'schemaVersion': '1.0', 'productVersion': VERSION, 'service': service,
                 'nodeId': node, 'minecraftPort': port,
+                'bridgeJarSha256': hashlib.sha256(jar.read_bytes()).hexdigest(),
                 'runtime': {'containerId': 'a' * 64, 'imageId': 'sha256:' + 'b'*64,
                             'hostJavaPid': 22, 'javaMajor': 21, 'startedAt': '2026-10-31T01:00:00Z',
                             'health': 'healthy'},
@@ -89,6 +93,20 @@ class MatrixTests(unittest.TestCase):
     def test_probe_tampering_fails(self):
         (self.runtime / 'probe-velocity-e2e-p3-allow.txt').write_text('fake')
         self.assertEqual(mod.certify(self.root, self.runtime, 'core')['cases']['velocity']['status'],
+                         'not-certified')
+
+    def test_tampered_actual_built_jar_fails(self):
+        jar = self.root / 'artifacts/plugins' / f'neverlauncher-velocity-bridge-{VERSION}.jar'
+        jar.write_bytes(b'different-live-binary')
+        self.assertEqual(mod.certify(self.root, self.runtime, 'core')['cases']['velocity']['status'],
+                         'not-certified')
+
+    def test_missing_bridge_digest_fails(self):
+        path = self.runtime / 'live-paper-04113.json'
+        proof = json.loads(path.read_text())
+        proof.pop('bridgeJarSha256')
+        path.write_text(json.dumps(proof))
+        self.assertEqual(mod.certify(self.root, self.runtime, 'core')['cases']['paper']['status'],
                          'not-certified')
 
     def test_no_java_or_wrong_image_does_not_count(self):

@@ -716,7 +716,7 @@ fi
 
 log "Сборка ServerBridge JAR"
 bash "${ROOT_DIR}/scripts/build/bridge-plugins.sh"
-for bridge in velocity bungeecord waterfall bukkit spigot paper purpur folia fabric forge neoforge; do
+for bridge in velocity bungeecord waterfall bukkit spigot paper purpur folia fabric quilt forge neoforge sponge vanilla; do
   src="${ROOT_DIR}/artifacts/plugins/neverlauncher-${bridge}-bridge-${VERSION}.jar"
   require_file "${src}"
   cp "${src}" "${OUT_DIR}/neverlauncher-${bridge}-bridge-${VERSION}.jar"
@@ -727,6 +727,18 @@ require_file "${ROOT_DIR}/artifacts/plugins/SERVERBRIDGE3_CERTIFICATION.json"
 cp "${ROOT_DIR}/artifacts/plugins/BRIDGE_RELEASE_ALLOWLIST.json" "${OUT_DIR}/BRIDGE_RELEASE_ALLOWLIST.json"
 cp "${ROOT_DIR}/artifacts/plugins/PLUGIN_MANIFEST.json" "${OUT_DIR}/BRIDGE_PLUGIN_MANIFEST.json"
 cp "${ROOT_DIR}/artifacts/plugins/SERVERBRIDGE3_CERTIFICATION.json" "${OUT_DIR}/SERVERBRIDGE3_CERTIFICATION.json"
+
+# GA network acceptance consumes the exact JARs copied into OUT_DIR, not build
+# intermediates. It refuses to declare 0.42.0 production-ready until all
+# fourteen live Minecraft/Proxy targets and real restore evidence exist.
+if [[ "${VERSION}" == "0.42.0" ]]; then
+  log "0.42.0: verify exact final ServerBridge payload and full live network cycle"
+  python3 "${ROOT_DIR}/scripts/ga/accept_network_release_0420.py" \
+    --root "${ROOT_DIR}" --release "${OUT_DIR}" \
+    --runtime "${NEVERLAUNCHER_NETWORK_LIVE_EVIDENCE_DIR:-${ROOT_DIR}/e2e/runtime}" \
+    --source-commit "${SOURCE_COMMIT}" \
+    --out "${OUT_DIR}/SERVER_NETWORK_ACCEPTANCE_0420.json"
+fi
 
 log "Source archive только из git-tracked/allowlisted файлов"
 python3 "${ROOT_DIR}/scripts/release/source-package.py" "${ROOT_DIR}" "${OUT_DIR}/neverlauncher-source-${VERSION}.zip" --list-file "${WORK_DIR}/source-files.txt"

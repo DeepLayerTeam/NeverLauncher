@@ -47,7 +47,7 @@ def checksum(path: Path, expected: str) -> None:
         raise ValueError(f'{path.name}: missing or altered evidence')
 
 
-def verify_runtime(service: str, target: dict, runtime: Path, version: str, player: str) -> dict:
+def verify_runtime(service: str, target: dict, runtime: Path, version: str, player: str, root: Path | None = None) -> dict:
     if service not in CORE:
         raise ValueError('no native server-side live runner (client/compile tests do not qualify)')
     node_id, port = CORE[service]
@@ -56,6 +56,14 @@ def verify_runtime(service: str, target: dict, runtime: Path, version: str, play
         raise ValueError('product version mismatch')
     if (proof.get('service'), proof.get('nodeId'), proof.get('minecraftPort')) != (service, node_id, port):
         raise ValueError('wrong server/node/port identity')
+    jar = ROOT if root is None else root  # use requested source checkout
+    jar = jar / 'artifacts/plugins' / f'neverlauncher-{service}-bridge-{version}.jar'
+    observed_digest = proof.get('bridgeJarSha256')
+    if not isinstance(observed_digest, str) or not HEX64.fullmatch(observed_digest):
+        raise ValueError('missing exact deployed ServerBridge JAR digest')
+    if jar.is_symlink() or not jar.is_file() or jar.stat().st_size == 0:
+        raise ValueError('missing exact built ServerBridge JAR')
+    checksum(jar, observed_digest)
     meta = proof.get('runtime') or {}
     if (not isinstance(meta.get('containerId'), str)
         or not re.fullmatch(r'[0-9a-f]{64}', meta['containerId'])
@@ -105,6 +113,7 @@ def verify_runtime(service: str, target: dict, runtime: Path, version: str, play
     return {'status': 'passed', 'kind': 'real-jvm-and-game-protocol',
             'serverVersion': target.get('minecraft'), 'containerId': meta['containerId'],
             'imageId': meta['imageId'], 'javaMajor': meta['javaMajor'],
+            'bridgeJarSha256': observed_digest,
             'evidenceFile': f'live-{service}-04113.json'}
 
 
@@ -135,7 +144,7 @@ def certify(root: Path, runtime: Path, scope: str = 'all', player: str = 'E2EPla
             outcome['cases'][name] = {'status': 'not-certified', 'reason': 'full E2E not passed'}
             continue
         try:
-            outcome['cases'][name] = verify_runtime(name, target, runtime, version, player)
+            outcome['cases'][name] = verify_runtime(name, target, runtime, version, player, root)
         except (ValueError, KeyError, OSError, TypeError) as exc:
             outcome['cases'][name] = {'status': 'not-certified', 'reason': str(exc)}
     needed = list(CORE) if scope == 'core' else ids
