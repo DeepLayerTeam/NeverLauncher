@@ -6,7 +6,9 @@ import (
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/config"
 	"gitflic.ru/skif4er/launcher/services/api/internal/federation"
+	"gitflic.ru/skif4er/launcher/services/api/internal/fileauthlive"
 	"gitflic.ru/skif4er/launcher/services/api/internal/httpconnector"
+	"gitflic.ru/skif4er/launcher/services/api/internal/localpassword"
 	"gitflic.ru/skif4er/launcher/services/api/internal/microsoftconnector"
 	"gitflic.ru/skif4er/launcher/services/api/internal/oidcconnector"
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
@@ -49,6 +51,26 @@ func NewFederationCore(ctx context.Context, repo repository.Repository, cfg conf
 			_ = connector.Close()
 			_ = core.Close()
 			return nil, fmt.Errorf("SQL connector registration: %w", err)
+		}
+	}
+
+	// Live Gravit FileAuthSystem sources are opt-in and read-only. A corrupt,
+	// unreadable or ambiguous database must fail registration and later login;
+	// Never never falls back to its own local accounts.
+	fileConfigs, err := fileauthlive.LoadLiveConfigs(cfg.AuthFileProvidersJSON, cfg.AuthFileProvidersFile)
+	if err != nil {
+		_ = core.Close()
+		return nil, err
+	}
+	for _, providerConfig := range fileConfigs {
+		connector, err := fileauthlive.NewLiveConnector(ctx, providerConfig, localpassword.Verify)
+		if err != nil {
+			_ = core.Close()
+			return nil, err
+		}
+		if err := registerFederatedConnector(ctx, core, connector, connector.ProvisioningMode(), connector.DefaultRole()); err != nil {
+			_ = core.Close()
+			return nil, fmt.Errorf("FileAuth connector registration: %w", err)
 		}
 	}
 

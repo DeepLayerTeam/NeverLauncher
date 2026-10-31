@@ -6,6 +6,7 @@ Backend включает внутреннюю auth-систему, поддер�
 | --- | --- | --- |
 | Встроенные аккаунты | `NEVERLAUNCHER_AUTH_TOKEN_*` | Выдача и отзыв токенов, политика сессий |
 | SQL | `NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON` или `_FILE` | Изолированные DSN и проверка password hashing |
+| Live FileAuthSystem (read-only) | `NEVERLAUNCHER_AUTH_FILE_PROVIDERS_JSON` или `_FILE` | Файл Gravit `Database.json`, динамическое обновление и точный формат паролей |
 | HTTP | `NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON` или `_FILE` | HTTPS, host allowlist и подписанные ответы |
 | OIDC | `NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_JSON` или `_FILE` | Authorization Code + PKCE, issuer/JWKS validation |
 | Microsoft identity | `NEVERLAUNCHER_AUTH_MICROSOFT_PROVIDERS_JSON` или `_FILE` | Федерация учётной записи; **не тождественна** владению Minecraft Java Edition |
@@ -79,3 +80,18 @@ Use `password: {"algorithm":"phpass","allowLegacyHashes":true}` for WordPress `$
 On startup the SQL connector opens a **read-only transaction** and executes a zero-row `SELECT` of the configured columns. The database driver must confirm that the table and each configured column exists, and the password/Minecraft UUID mappings must not be a binary database type. Missing columns, insufficient permissions, or schema mismatch fail the provider's startup rather than waiting for a login attempt. The diagnostic mapping preview contains only logical field names, mapped column names, and SQL column types — never example rows or password hashes. SQL identifiers are validated and quoted per dialect; login values remain bound SQL parameters. A prepared query and the runtime connection-health check follow successful schema validation.
 
 Run live tests with `NEVERLAUNCHER_SQL_TEST_POSTGRES_DSN`, `NEVERLAUNCHER_SQL_TEST_MYSQL_DSN`, and `NEVERLAUNCHER_SQL_TEST_MARIADB_DSN` pointing to isolated disposable test databases. The `sql-mapping-legacy-hash-0294.yml` workflow provisions all three engines and must pass wrong-password, correct-password, mapping-failure, and unknown-hash fail-closed cases before a production rollout. Gravit reference: https://gravitlauncher.com/auth/ (PasswordVerifier); AdditionalHash: https://github.com/GravitLauncher/LauncherModules.
+
+
+## Live Gravit FileAuthSystem — 0.42.6
+
+Never can authenticate directly against a **read-only** Gravit `FileAuthSystem/Database.json`; the previous one-time import remains available. The connector is opt-in, separate from the `local` provider, and does not consume `Sessions.json`. The Gravit UUID is the immutable external identity subject and `minecraftUuid` claim. Never issues its own sessions, and does **not** import Gravit administrator roles, access tokens, permissions, skins, or source sessions.
+
+```sh
+NEVERLAUNCHER_AUTH_FILE_PROVIDERS_JSON='[{"id":"gravit-files","displayName":"Gravit FileAuth","databasePath":"/run/neverlauncher/gravit/FileAuthSystem/Database.json","passwordFormat":"phpass","provisioning":{"mode":"jit","defaultRole":"player"}}]'
+```
+
+Use only one of `NEVERLAUNCHER_AUTH_FILE_PROVIDERS_JSON` and `NEVERLAUNCHER_AUTH_FILE_PROVIDERS_FILE` (the latter contains the same JSON array). `databasePath` must be absolute, end with `Database.json`, and point to a regular file that is **not world-readable**. For Docker, bind-mount the actual file or its containing directory read-only; environment values alone do not mount host paths. `passwordFormat` is mandatory and cannot be `auto` (supported explicit formats are defined in `internal/fileauth`). `provisioning.mode: "explicit-only"` is the default, requiring prior authenticated account linking; `jit` creates a Never account with *only* its configured default Never role, usually `player`. For production, set an explicit provider routing rule or require an explicit `providerId`.
+
+The connector verifies the source on startup, hashes and checks its bytes before each login/lookup, reuses an immutable parsed snapshot only if the exact content is unchanged, and **fails closed** for missing, corrupted, replaced-during-read, symlinked, oversized or unreadable files. Use atomic replacement (write a private temporary file, fsync, then rename) for source updates; editing `Database.json` in place may produce transient authentication errors. A FileAuth password changed in the source takes effect on the next authentication. An already issued Never session is independent and remains subject to Never's session lifetime/revocation policy; changing the source password alone is **not** an immediate Never-session revocation.
+
+Legacy Gravit `digest` and `doubleDigest` are intentionally password verifiers, **not** secure new password storage methods. Never's imported local accounts rehash valid legacy credentials to Argon2id with atomic CAS on the first successful login. A live read-only FileAuth provider **cannot** rewrite the upstream hash: migrate users to Never-owned accounts to perform such upgrades. PHPass and supported legacy digest combinations are explicit; unknown third-party CMS salts, arbitrary Gravit JAR logic and custom password formats are not supported. The live provider does not write authentication state to the Gravit source, and is not a binary-compatible Gravit Java module.

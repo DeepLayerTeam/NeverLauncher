@@ -11,32 +11,44 @@ import (
 	"strings"
 )
 
+// VerifyDigest is the portable Gravit digest/doubleDigest verifier for explicit
+// algorithms. Gravit toHexMode hashes the lowercase hex *text* of pass one;
+// binary mode hashes the original digest bytes.
 func VerifyDigest(password, format, stored string) bool {
+	algorithm := format
+	doubled := strings.HasPrefix(algorithm, "double-")
+	algorithm = strings.TrimPrefix(algorithm, "double-")
+	binarySecond := strings.HasSuffix(algorithm, "-binary-hex")
+	algorithm = strings.TrimSuffix(algorithm, "-binary-hex")
+	algorithm = strings.TrimSuffix(algorithm, "-hex")
 	var h hash.Hash
-	switch format {
-	case "md5-hex":
+	switch algorithm {
+	case "md5":
 		h = md5.New()
-	case "sha1-hex":
+	case "sha1":
 		h = sha1.New()
-	case "sha256-hex", "double-sha256-hex", "double-sha256-binary-hex":
+	case "sha256":
 		h = sha256.New()
-	case "sha512-hex":
+	case "sha512":
 		h = sha512.New()
 	default:
 		return false
 	}
+	if !SupportedFormat(format) || len(stored) != h.Size()*2 {
+		return false
+	}
 	h.Write([]byte(password))
 	first := h.Sum(nil)
-	if strings.HasPrefix(format, "double-") {
+	if doubled {
 		h.Reset()
-		if format == "double-sha256-hex" {
-			h.Write([]byte(hex.EncodeToString(first)))
-		} else {
+		if binarySecond {
 			h.Write(first)
+		} else {
+			h.Write([]byte(hex.EncodeToString(first)))
 		}
 		first = h.Sum(nil)
 	}
-	return hmac.Equal([]byte(hex.EncodeToString(first)), []byte(stored))
+	return hmac.Equal([]byte(hex.EncodeToString(first)), []byte(strings.ToLower(stored)))
 }
 
 const alphabet = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"

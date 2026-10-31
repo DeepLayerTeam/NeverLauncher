@@ -3,6 +3,8 @@ on:
   push:
     paths:
       - 'services/api/internal/fileauth/**'
+      - 'services/api/internal/fileauthlive/**'
+      - 'services/api/internal/httpapi/fileauth_live_0426_test.go'
       - 'services/api/internal/localpassword/**'
       - 'services/api/internal/httpapi/federation_112.go'
       - 'services/api/internal/httpapi/auth.go'
@@ -13,6 +15,8 @@ on:
   pull_request:
     paths:
       - 'services/api/internal/fileauth/**'
+      - 'services/api/internal/fileauthlive/**'
+      - 'services/api/internal/httpapi/fileauth_live_0426_test.go'
       - 'services/api/internal/localpassword/**'
       - 'services/api/internal/httpapi/federation_112.go'
       - 'services/api/internal/httpapi/auth.go'
@@ -49,12 +53,14 @@ jobs:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
       - name: Verify Go formatting
-        run: test -z "$(gofmt -l internal/fileauth internal/localpassword internal/repository/local_auth_0295* internal/httpapi/local_auth_0295_test.go internal/httpapi/federation_112.go internal/httpapi/auth.go cmd/local-auth-0295)"
+        run: test -z "$(gofmt -l internal/fileauth internal/fileauthlive internal/localpassword internal/repository/local_auth_0295* internal/httpapi/local_auth_0295_test.go internal/httpapi/federation_112.go internal/httpapi/auth.go cmd/local-auth-0295)"
       - name: Real FileAuth parser / hash vectors and legacy password login
-        run: go test -race -count=1 -timeout=8m ./internal/fileauth ./internal/localpassword ./internal/httpapi -run '0295$'
+        run: go test -race -count=1 -timeout=8m ./internal/fileauth ./internal/localpassword ./internal/httpapi -run '(0295|0426)$'
+      - name: Live FileAuth provider and HTTP federation integration
+        run: go test -race -count=1 -timeout=8m ./internal/fileauth ./internal/fileauthlive ./internal/httpapi -run '0426$'
       - name: PostgreSQL atomic import, UUID, collision and CAS integration
         run: go test -count=1 -timeout=8m ./internal/repository -run '^TestFileAuthImportPostgres0295$' -v
       - name: Compile CLI and Backend
-        run: go build ./cmd/local-auth-0295 ./cmd/launcher-api
+        run: go build ./cmd/local-auth-0295 ./cmd/neverlauncher-api
       - name: Core regression tests
         run: go test -count=1 -timeout=8m ./internal/federation ./internal/repository ./internal/httpapi

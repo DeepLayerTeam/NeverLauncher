@@ -105,6 +105,8 @@ type Config struct {
 	AuthRoutingFile                              string
 	AuthSQLProvidersJSON                         string
 	AuthSQLProvidersFile                         string
+	AuthFileProvidersJSON                        string
+	AuthFileProvidersFile                        string
 	AuthHTTPProvidersJSON                        string
 	AuthHTTPProvidersFile                        string
 	AuthOIDCProvidersJSON                        string
@@ -305,6 +307,8 @@ func Load() Config {
 		AuthRoutingFile:                              env("NEVERLAUNCHER_AUTH_ROUTING_FILE", ""),
 		AuthSQLProvidersJSON:                         env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_JSON", ""),
 		AuthSQLProvidersFile:                         env("NEVERLAUNCHER_AUTH_SQL_PROVIDERS_FILE", ""),
+		AuthFileProvidersJSON:                        env("NEVERLAUNCHER_AUTH_FILE_PROVIDERS_JSON", ""),
+		AuthFileProvidersFile:                        env("NEVERLAUNCHER_AUTH_FILE_PROVIDERS_FILE", ""),
 		AuthHTTPProvidersJSON:                        env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_JSON", ""),
 		AuthHTTPProvidersFile:                        env("NEVERLAUNCHER_AUTH_HTTP_PROVIDERS_FILE", ""),
 		AuthOIDCProvidersJSON:                        env("NEVERLAUNCHER_AUTH_OIDC_PROVIDERS_JSON", ""),

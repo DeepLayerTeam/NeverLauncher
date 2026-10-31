@@ -113,7 +113,10 @@ func Parse(r io.Reader, format string) ([]Account, error) {
 
 func SupportedFormat(format string) bool {
 	switch format {
-	case "sha256-hex", "sha256-base64url", "md5-hex", "sha1-hex", "sha512-hex", "double-sha256-hex", "double-sha256-binary-hex", "phpass", "bcrypt", "argon2id":
+	case "sha256-hex", "sha256-base64url", "md5-hex", "sha1-hex", "sha512-hex",
+		"double-md5-hex", "double-md5-binary-hex", "double-sha1-hex", "double-sha1-binary-hex",
+		"double-sha256-hex", "double-sha256-binary-hex", "double-sha512-hex", "double-sha512-binary-hex",
+		"phpass", "bcrypt", "argon2id":
 		return true
 	default:
 		return false
@@ -137,18 +140,13 @@ func EncodeCredential(format, hash string) (string, error) {
 		}
 		hash = hex.EncodeToString(raw)
 		format = "sha256-hex"
-	case "md5-hex", "sha1-hex", "sha256-hex", "sha512-hex", "double-sha256-hex", "double-sha256-binary-hex":
-		length := 32
-		if format == "sha1-hex" {
-			length = 40
-		}
-		if format == "sha256-hex" || strings.HasPrefix(format, "double-sha256") {
-			length = 64
-		}
-		if format == "sha512-hex" {
-			length = 128
-		}
-		if len(hash) != length {
+	case "md5-hex", "sha1-hex", "sha256-hex", "sha512-hex",
+		"double-md5-hex", "double-md5-binary-hex", "double-sha1-hex", "double-sha1-binary-hex",
+		"double-sha256-hex", "double-sha256-binary-hex", "double-sha512-hex", "double-sha512-binary-hex":
+		algorithm := strings.TrimSuffix(strings.TrimPrefix(format, "double-"), "-binary-hex")
+		algorithm = strings.TrimSuffix(algorithm, "-hex")
+		length := map[string]int{"md5": 32, "sha1": 40, "sha256": 64, "sha512": 128}[algorithm]
+		if length == 0 || len(hash) != length {
 			return "", errors.New("digest length doesn't match selected algorithm")
 		}
 		raw, err := hex.DecodeString(hash)

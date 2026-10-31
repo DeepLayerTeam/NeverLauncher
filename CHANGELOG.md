@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.42.6 — Live FileAuthSystem and AdditionalHash compatibility
+
+- Added an operational opt-in, read-only FileAuthSystem identity provider to the existing authenticated federation (password login, user lookup and Minecraft profile); it validates the real Database.json on startup and per lookup, updates on atomic file replacement, and fails closed on missing/corrupt/symlinked data. The provider never imports Gravit roles or sessions and uses the source UUID as its stable federated subject.
+- Added exact historical doubleDigest variants for MD5, SHA-1, SHA-256 and SHA-512, hashing either the lower-case hex string or the raw digest bytes, including strict verifier import validation and vectors. SQL AdditionalHash PHPass/digest verification and atomic local rehash remain in place.
+- Wired live FileAuth providers into runtime environment configuration, federation registration, production examples, deployment images, integration tests and documentation. No automatic source password writing or cross-provider fallback is introduced.
+- Local verification boundary: FileAuth parser and live read-only connector tests pass with Go race detection under an isolated compatibility module file; complete Backend and federated integration tests require Go 1.27.3, cached external dependencies and a CI environment. Full production certification, multi-platform packages and the existing ServerBridge gates remain open.
+
 ## 0.42.5 — Actual Admin, Desktop and CLI extension operations
 
 - Admin Registry view now queries the running signed extension registry and installs an exact selected version in a validated global/project scope. The Manager executes the existing privileged Backend install, enable, disable, update (pinned version or channel), rollback, uninstall, Host start/stop/restart, emergency disable/clear and quarantine release operations. MFA and publisher-trust checks remain server-side; the UI does not bypass them.
