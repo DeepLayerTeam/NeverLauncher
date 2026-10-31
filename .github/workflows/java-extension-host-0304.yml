@@ -60,7 +60,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: services/api/go.mod
       - name: Build Java executable test package
@@ -87,7 +87,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: cli/go.mod
       - name: Build a launchable signed .nlext and verify Ed25519
