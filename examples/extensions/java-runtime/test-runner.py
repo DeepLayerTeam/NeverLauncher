@@ -14,7 +14,7 @@ import urllib.request
 ROOT=Path(__file__).resolve().parent
 STAGE=ROOT/'build'/'package'
 class Handler(http.server.BaseHTTPRequestHandler):
-    state={}; callback=None; subscribed=False; hello=0
+    state={}; callback=None; subscribed=False; hello=0; removed=0
     lock=threading.Lock()
     def do_POST(self):
         if self.headers.get('Authorization')!='Bearer real-host-token':
@@ -26,7 +26,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             assert payload['pid']>0 and payload['instanceId']=='real-instance'
             Handler.hello+=1
             if payload.get('callbackUrl'):Handler.callback=payload['callbackUrl']
-            result={'protocolVersion':'1.0','extensionApiVersion':'1.0','instanceId':'real-instance','heartbeatTimeoutSeconds':3,'capabilities':['runtime.config.get','runtime.config.put','runtime.storage.get','runtime.storage.put']}
+            result={'protocolVersion':'1.0','extensionApiVersion':'1.0','instanceId':'real-instance','heartbeatTimeoutSeconds':3,'eventProtocolVersion':'1.0','events':['release.published'],'capabilities':['runtime.config.get','runtime.config.put','runtime.storage.get','runtime.storage.put']}
         elif self.path=='/v1/heartbeat': result={'ok':True}
         elif self.path.startswith('/v1/capabilities/runtime.'):
             kind,verb=self.path.rsplit('/',1)[-1].removeprefix('runtime.').split('.')
@@ -45,6 +45,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_response(status);self.send_header('Content-Type','application/json');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data)
     def do_DELETE(self):
         assert self.headers['Authorization']=='Bearer real-host-token'
+        Handler.removed+=1
         self.send_response(204);self.end_headers()
     def log_message(self,*args):pass
 
@@ -58,6 +59,7 @@ if __name__=='__main__':
     host=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
     threading.Thread(target=host.serve_forever,daemon=True).start()
     p=subprocess.Popen(['backend/bin/java-runtime'],cwd=STAGE,env=env(host,'backend'),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    restored=None
     try:
         deadline=time.monotonic()+10
         while time.monotonic()<deadline and not Handler.subscribed and p.poll() is None:time.sleep(.05)
@@ -71,8 +73,34 @@ if __name__=='__main__':
         data=json.loads(cli.stdout.strip())
         assert data['settings']=={'enabled':True} and data['lastRelease']=={'version':'42.1.0'},data
         assert Handler.hello==2, 'both JVM processes must authenticate with Go-compatible host protocol'
-        print('PASS: real Java backend event callback -> broker storage -> separate CLI Java process -> typed command')
+        # Terminating a healthy backend must not delete its durable subscription.
+        p.send_signal(signal.SIGTERM)
+        p.communicate(timeout=5)
+        assert Handler.removed==0, 'JVM shutdown deleted a durable EventBus subscription'
+        Handler.subscribed=False
+        Handler.callback=None
+        restored=subprocess.Popen(['backend/bin/java-runtime'],cwd=STAGE,env=env(host,'backend'),stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        deadline=time.monotonic()+10
+        while time.monotonic()<deadline and not Handler.subscribed and restored.poll() is None:time.sleep(.05)
+        assert restored.poll() is None and Handler.subscribed and Handler.callback, 'backend failed to re-register durable subscription'
+        # Broker state is owned by Go, not by either Java JVM: state is still readable
+        # after process replacement, and a new event updates it again.
+        with Handler.lock:assert Handler.state.get(('storage','last-release'))=={'version':'42.1.0'}
+        msg['event']['id']='e2';msg['event']['idempotencyKey']='e2';msg['event']['payload']['version']='42.3.0'
+        req=urllib.request.Request(Handler.callback+'/v1/events',data=json.dumps(msg).encode(),headers={'Authorization':'Bearer real-callback-token','Content-Type':'application/json'})
+        assert urllib.request.urlopen(req,timeout=3).status==200
+        with Handler.lock:assert Handler.state.get(('storage','last-release'))=={'version':'42.3.0'}
+        second_cli=subprocess.run(['cli/bin/java-runtime','status'],cwd=STAGE,env=env(host,'cli'),capture_output=True,text=True,timeout=12)
+        assert second_cli.returncode==0, f'CLI after backend restart failed: {second_cli.stderr}'
+        assert json.loads(second_cli.stdout.strip())['lastRelease']=={'version':'42.3.0'}
+        assert Handler.hello==4, 'each fresh JVM must authenticate with the host'
+        assert Handler.removed==0, 'normal lifecycle removed a persistent subscription'
+        print('PASS: real Java event callback, durable broker documents, CLI RPC, backend restart and re-subscribe')
     finally:
+        if restored is not None:
+            if restored.poll() is None:restored.send_signal(signal.SIGTERM)
+            try:restored.communicate(timeout=5)
+            except subprocess.TimeoutExpired:restored.kill();restored.communicate()
         if p.poll() is None:p.send_signal(signal.SIGTERM)
         try:p.communicate(timeout=5)
         except subprocess.TimeoutExpired:p.kill();p.communicate()

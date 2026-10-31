@@ -13,6 +13,10 @@ import java.util.function.Supplier;
 /** Loopback-only, authenticated and bounded callback/RPC server, running inside the JVM. */
 public final class RuntimeCallbackServer implements AutoCloseable {
     private static final int MAX_BODY=65536;
+    // EventBus persists 1 MiB of canonical JSON payload. Its delivery envelope
+    // adds metadata and JSON escapes, so callbacks need a separate bounded cap.
+    // Command and health RPC requests remain restricted to 64 KiB.
+    private static final int MAX_EVENT_BODY=2*1024*1024;
     private final HttpServer server;
     private final String token;
     private final RuntimeServices services;
@@ -42,9 +46,10 @@ public final class RuntimeCallbackServer implements AutoCloseable {
             byte[] expected=("Bearer "+token).getBytes(StandardCharsets.UTF_8);
             if(header==null||!MessageDigest.isEqual(expected,header.getBytes(StandardCharsets.UTF_8))){respond(exchange,401,Map.of("error","not authorized"));return;}
             if(!exchange.getRequestMethod().equals("POST")||!exchange.getRequestURI().getPath().equals("/v1/"+kind)){respond(exchange,405,Map.of("error","not allowed"));return;}
-            byte[] body=exchange.getRequestBody().readNBytes(MAX_BODY+1);
-            if(body.length>MAX_BODY){respond(exchange,413,Map.of("error","callback exceeds 64 KiB"));return;}
-            Map<String,Object> data=Json.object(Json.parse(new String(body,StandardCharsets.UTF_8)));
+            int bodyLimit=(kind.equals("events")||kind.equals("hooks"))?MAX_EVENT_BODY:MAX_BODY;
+            byte[] body=exchange.getRequestBody().readNBytes(bodyLimit+1);
+            if(body.length>bodyLimit){respond(exchange,413,Map.of("error","callback exceeds transport limit"));return;}
+            Map<String,Object> data=Json.object(Json.parse(new String(body,StandardCharsets.UTF_8),bodyLimit));
             long millis=1800;
             if(kind.equals("rpc")){
                 Object raw=data.get("deadlineMs");
@@ -64,7 +69,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
         }catch(Exception e){try{respond(exchange,400,Map.of("error","invalid callback"));}catch(IOException ignored){}}finally{exchange.close();}
     }
     private Object dispatch(String kind,Map<String,Object> data)throws Exception{
-        if(kind.equals("commands"))return Map.of("result",services.commands().invoke(Json.string(data,"command",true),data.get("payload")));
+        if(kind.equals("commands"))return nullableResult("result",services.commands().invoke(Json.string(data,"command",true),data.get("payload")));
         if(kind.equals("events")||kind.equals("hooks")){
             services.events().deliver(data,kind.equals("hooks"));
             return kind.equals("hooks")?Map.of("ok",true):Map.of("accepted",true);
@@ -78,7 +83,7 @@ public final class RuntimeCallbackServer implements AutoCloseable {
                 String state=lifecycleState.get();
                 result=Map.of("state",state,"responsive",true);
             }
-            case "command.invoke" -> result=Map.of("value",services.commands().invoke(Json.string(params,"command",true),params.get("payload")));
+            case "command.invoke" -> result=nullableResult("value",services.commands().invoke(Json.string(params,"command",true),params.get("payload")));
             case "event.deliver","hook.deliver" -> {
                 Map<String,Object> envelope=Json.object(params.get("envelope"));
                 services.events().deliver(envelope,method.equals("hook.deliver"));
@@ -87,6 +92,10 @@ public final class RuntimeCallbackServer implements AutoCloseable {
             default -> throw new IllegalArgumentException("unknown RPC method");
         }
         return Map.of("protocolVersion","1.0","requestId",id,"ok",true,"result",result);
+    }
+    // JSON null is a valid command result, unlike Map.of() values.
+    private static Map<String,Object> nullableResult(String key,Object value){
+        Map<String,Object> out=new LinkedHashMap<>();out.put(key,value);return out;
     }
     private static void respond(HttpExchange exchange,int status,Object object)throws IOException {
         byte[] bytes=Json.encode(object).getBytes(StandardCharsets.UTF_8);

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.42.3 — Durable Extension EventBus, hooks, RPC and runtime storage
+
+- Fixed **lost durable subscriptions on normal JVM shutdown**: `RuntimeEvents.close()` now closes local handlers without deleting the backend subscription. Added explicit `RuntimeEvents.unsubscribe(type, mode)` for intentional permanent removal; a restarted Java extension upserts/rebinds the existing subscription and consumes its pending events.
+- Fixed **async delivery leases expiring before the callback starts**: the Go EventBus leases one delivery immediately before dispatch instead of pre-leasing a full batch. It reserves 10% of the lease for acknowledgement/retry; existing bounded retries and dead-letter delivery are preserved.
+- Fixed **real event payloads over 64 KiB being rejected by Java** even though the durable EventBus accepts 1 MiB payloads. Authenticated event/hook callbacks now accept bounded 2 MiB envelopes; command and Java RPC transports preserve the smaller independent 64 KiB bound.
+- Fixed JSON `null` results in authenticated Java command and RPC execution and rejected concatenated event JSON values before durable canonicalization/hashing. Added best-effort filesystem directory sync after persistent document deletion, matching the existing atomic-update behavior.
+- Expanded Java HTTP tests with large event callbacks, oversized input rejection, fail-closed synchronous hooks, real commands and RPC, explicit unsubscribe, persistent subscription reopening and invalid callback credentials. Fixed the executable Java Runtime example's host capability/event negotiation and verified a live JVM shutdown/restart with a second CLI JVM accessing the same broker documents.
+- Added Go regression tests for queue replay after Bus restart, on-demand lease acquisition, invalid durable event JSON and HTTP document persistence/deletion across restarted Supervisors. Wired the tests into the existing Java Runtime CI job and synchronized all canonical version metadata to 0.42.3.
+- **Verification boundary:** Java SDK Core 42 checks, Java runtime 45 checks, SDK compatibility 26 checks, Gravit adapter 10 checks, real Java Host and two-process Java runtime E2E passed locally. Go 1.27.3 cannot be downloaded in this environment (Go 1.23.2 installed), so Go `-race` tests are included for CI but **not claimed passed locally**. Actual PostgreSQL multi-node integration, final six-platform release artifacts and mandatory ServerBridge 14-target Minecraft/JVM/Proxy live acceptance remain unverified; this patch is not independently production-certified.
+
 ## 0.42.2 — Real Java Extension Host process recovery
 
 - Fixed the live Go Supervisor's launch path: Java discovery failures, rejected executables, pipe/setup errors and failed process starts now retire the failed host token, close its completion signal and retain an actionable `failed` status. A repaired Java runtime can be launched again without restarting Backend.

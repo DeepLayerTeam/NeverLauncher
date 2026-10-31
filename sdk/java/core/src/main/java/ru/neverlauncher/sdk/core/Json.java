@@ -5,8 +5,12 @@ import java.util.*;
 /** Bounded, dependency-free JSON reader for the Extensions control plane. */
 public final class Json {
     private Json() {}
-    public static Object parse(String input) {
-        if (input == null || input.length() > 1_048_576) throw new IllegalArgumentException("JSON is absent or exceeds 1 MiB");
+    public static Object parse(String input) { return parse(input, 1_048_576); }
+    // Only the authenticated event/hook transport needs the larger bound. RPC,
+    // host responses and extension manifest parsing retain the original 1 MiB cap.
+    static Object parse(String input, int maxChars) {
+        if (maxChars < 1 || maxChars > 2_097_152) throw new IllegalArgumentException("invalid JSON parser limit");
+        if (input == null || input.length() > maxChars) throw new IllegalArgumentException("JSON input exceeds transport limit");
         Reader p = new Reader(input);
         Object result = p.value(0);
         p.white();

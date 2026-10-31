@@ -22,6 +22,7 @@ public final class RuntimeApiTests {
     static void test()throws Exception {
         Map<String,Object> values=Collections.synchronizedMap(new HashMap<>());
         AtomicInteger subscribed=new AtomicInteger();
+        AtomicInteger unsubscribed=new AtomicInteger();
         HttpServer fake=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
         fake.createContext("/v1/",x->{
             try {
@@ -29,7 +30,7 @@ public final class RuntimeApiTests {
                 String path=x.getRequestURI().getPath();
                 // Use a single read of the request body for all paths.
                 // Input is reparsed below by dedicated route handler for clarity.
-                if(path.equals("/v1/hello")){respond(x,200,Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId","run-1","heartbeatTimeoutSeconds",6,"capabilities",List.of("runtime.config.get","runtime.config.put","runtime.config.delete","runtime.storage.get","runtime.storage.put","runtime.storage.delete","secret.get"),"eventProtocolVersion","1.0","events",List.of("release.published")));return;}
+                if(path.equals("/v1/hello")){respond(x,200,Map.of("protocolVersion","1.0","extensionApiVersion","1.0","instanceId","run-1","heartbeatTimeoutSeconds",6,"capabilities",List.of("runtime.config.get","runtime.config.put","runtime.config.delete","runtime.storage.get","runtime.storage.put","runtime.storage.delete","secret.get"),"eventProtocolVersion","1.0","events",List.of("release.published","project.saved","release.before-publish")));return;}
                 if(path.equals("/v1/heartbeat")){respond(x,200,Map.of("ok",true));return;}
                 respond(x,404,Map.of("error","not found"));
             }catch(Exception ex){respond(x,500,Map.of("error",ex.toString()));}
@@ -49,7 +50,7 @@ public final class RuntimeApiTests {
         });
         fake.createContext("/v1/events/subscriptions",x->{
             check("Bearer host-token".equals(x.getRequestHeaders().getFirst("Authorization")),"subscribe authorized");
-            if(x.getRequestMethod().equals("DELETE")){x.sendResponseHeaders(204,-1);x.close();return;}
+            if(x.getRequestMethod().equals("DELETE")){unsubscribed.incrementAndGet();x.sendResponseHeaders(204,-1);x.close();return;}
             subscribed.incrementAndGet();respond(x,201,Map.of("id",4));
         });
         fake.start();
@@ -60,7 +61,7 @@ public final class RuntimeApiTests {
             fails(()->configSchema.validate(Map.of("enabled",true,"rate",11)));
             fails(()->JsonSchema.parse("{\"$ref\":\"somewhere\"}"));
             try(var host=HostSession.fromEnvironment(env,ExtensionManifest.parse(manifest));
-                var services=new RuntimeServices(host,Set.of("status"));
+                var services=new RuntimeServices(host,Set.of("status","empty"));
                 var callbacks=new RuntimeCallbackServer("callback-token",services)) {
                 host.connect(callbacks.url());
                 check(host.capabilities().contains("secret.get"),"host capabilities negotiated");
@@ -81,6 +82,7 @@ public final class RuntimeApiTests {
                 services.events().subscribe("release.published","async",payloadSchema,raw->new Release(Json.string(Json.object(raw),"version",true)),event->{check(event.payload().version().equals("1.0.0"),"typed payload");delivered.incrementAndGet();});
                 check(subscribed.get()==1,"server subscription");
                 services.commands().register("status",JsonSchema.parse("{\"type\":\"object\",\"properties\":{\"verbose\":{\"type\":\"boolean\"},\"args\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}}"),raw->Json.object(raw),args->Map.of("ok",true));
+                services.commands().register("empty",null,x->x,args->null);
                 fails(()->services.commands().register("danger",null,x->x,x->Map.of()));
                 check(services.commands().invoke("status",Map.of("verbose",true)).equals(Map.of("ok",true)),"typed local command");
                 HttpClient client=HttpClient.newHttpClient();
@@ -90,6 +92,52 @@ public final class RuntimeApiTests {
                 String malformed=event.replace("\"1.0.0\"","18");
                 check(callback(client,callbacks.url()+"/v1/events",malformed,"callback-token")==422,"schema mismatch rejected");
                 check(callback(client,callbacks.url()+"/v1/commands",Json.encode(Map.of("command","status","payload",Map.of("verbose",true))),"callback-token")==200,"command callback dispatched");
+                check(callback(client,callbacks.url()+"/v1/commands",Json.encode(Map.of("command","empty","payload",Map.of())),"callback-token")==200,
+                    "JSON null command results succeed");
+                check(callback(client,callbacks.url()+"/v1/rpc",Json.encode(Map.of("protocolVersion","1.0","requestId","abc-123","method","command.invoke","deadlineMs",1500L,
+                    "params",Map.of("command","empty","payload",Map.of()))),"callback-token")==200,
+                    "null command results succeed through versioned JVM RPC");
+                // A real event envelope can exceed 64 KiB even when its payload is
+                // well inside the server's permitted 1 MiB durable event size.
+                AtomicInteger largeDelivered=new AtomicInteger();
+                services.events().subscribe("project.saved","async",null,Json::object,incoming->{
+                    check(((String)incoming.payload().get("data")).length()==150000,"large event payload intact");
+                    largeDelivered.incrementAndGet();
+                });
+                String largeEvent=Json.encode(Map.of("protocolVersion","1.0",
+                    "subscription",Map.of("eventType","project.saved","mode","async"),
+                    "event",Map.of("type","project.saved","id","ev-large","idempotencyKey","large-1",
+                        "payload",Map.of("data","x".repeat(150000)))));
+                check(largeEvent.length()>65536,"large event exceeds RPC limit");
+                check(callback(client,callbacks.url()+"/v1/events",largeEvent,"callback-token")==200 && largeDelivered.get()==1,
+                    "durable-size event delivered through real HTTP callback");
+                // A noncooperative callback must not be able to bypass request bounds.
+                check(callback(client,callbacks.url()+"/v1/events"," ".repeat(2*1024*1024+1),"callback-token")==413,
+                    "oversized event rejected");
+                check(callback(client,callbacks.url()+"/v1/rpc"," ".repeat(65537),"callback-token")==413,
+                    "RPC keeps original independent 64 KiB limit");
+                services.events().subscribe("release.before-publish","sync",null,Json::object,incoming->{
+                    throw new IllegalArgumentException("operator rejected publish");
+                });
+                String hook=Json.encode(Map.of("protocolVersion","1.0",
+                    "subscription",Map.of("eventType","release.before-publish","mode","sync"),
+                    "event",Map.of("type","release.before-publish","id","ev-hook","payload",Map.of("version","2"))));
+                check(callback(client,callbacks.url()+"/v1/hooks",hook,"callback-token")==422,
+                    "rejected synchronous hook fails closed");
+                check(callback(client,callbacks.url()+"/v1/commands",Json.encode(Map.of("command","status","payload",Map.of("verbose",true))),"wrong")==401,
+                    "commands cannot be invoked without authenticated callback token");
+                services.events().unsubscribe("project.saved","async");
+                check(unsubscribed.get()==1,"explicit unsubscription removes backend durable subscription");
+                services.close();
+                check(unsubscribed.get()==1,"closing extension does not delete pending durable subscriptions");
+                try(var restored=new RuntimeServices(host,Set.of("status","empty"));
+                    var restoredCallback=new RuntimeCallbackServer("callback-token",restored)){
+                    AtomicInteger recovered=new AtomicInteger();
+                    restored.events().subscribe("release.published","async",payloadSchema,raw->new Release(Json.string(Json.object(raw),"version",true)),incoming->{recovered.incrementAndGet();});
+                    check(callback(client,restoredCallback.url()+"/v1/events",event,"callback-token")==200&&recovered.get()==1,
+                        "new JVM runtime can resume durable subscription after handler shutdown");
+                }
+                check(unsubscribed.get()==1,"recovered runtime shutdown preserves durable subscription");
             }
         }finally{fake.stop(0);}
     }

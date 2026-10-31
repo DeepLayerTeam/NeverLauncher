@@ -132,11 +132,18 @@ func runtimeWrite0303(ctx context.Context, dir, path string, body json.RawMessag
 		return err
 	}
 	// Best-effort directory sync for crash consistency on filesystems that support it.
+	syncRuntimeDirectory0303(dir)
+	return nil
+}
+
+// Directory syncing makes both rename and unlink durable on filesystems that
+// support it. Platforms without directory fsync retain the prior best-effort
+// behavior rather than making every document mutation fail.
+func syncRuntimeDirectory0303(dir string) {
 	if d, err := os.Open(dir); err == nil {
 		_ = d.Sync()
 		_ = d.Close()
 	}
-	return nil
 }
 
 func runtimeRead0303(dir, path string) (json.RawMessage, bool, error) {
@@ -204,6 +211,7 @@ func (s *Supervisor) executeRuntime0303(ctx context.Context, st *processState, c
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return capabilityResult0205{status: 500, err: err}
 		}
+		syncRuntimeDirectory0303(dir)
 		return capabilityResult0205{status: 200, value: map[string]any{"deleted": true}}
 	}
 	body, found, err := runtimeRead0303(dir, path)

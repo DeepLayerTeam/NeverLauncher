@@ -123,3 +123,9 @@ Run `sh sdk/java/core/build.sh test` for real loopback HTTP compatibility
 regressions, including the original 0.42.0 hello envelope. Full integration
 against a production Go host still requires Go 1.27.3 and the existing release
 matrix; a JVM HTTP fixture alone is not release certification.
+
+## 0.42.3: durable subscriptions and event envelope sizing
+
+Java `runtime().events().close()` now closes only local callback handlers. Backend subscriptions remain durable, so an update or JVM restart does not erase the pending EventBus backlog. To intentionally delete a subscription, invoke `runtime().events().unsubscribe(eventType, mode)` while the host session is active. The EventBus is at-least-once and callers must deduplicate non-idempotent side effects.
+
+The authenticated callback server accepts event/hook envelopes up to 2 MiB to carry the existing 1 MiB EventBus payload limit; authenticated command/RPC requests retain their separate 64 KiB bound. Java `null` is a valid JSON command result. Full documentation and tests: `docs/extensions/eventbus-rpc-persistence-0423.md`.

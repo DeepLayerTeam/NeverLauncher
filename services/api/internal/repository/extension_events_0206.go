@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"time"
@@ -70,6 +71,10 @@ func normalizeEvent0206(in model.ExtensionEvent) (model.ExtensionEvent, error) {
 	dec.UseNumber()
 	if err := dec.Decode(&payload); err != nil {
 		return model.ExtensionEvent{}, fmt.Errorf("invalid extension event payload: %w", err)
+	}
+	var trailing any
+	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return model.ExtensionEvent{}, errors.New("extension event payload must contain exactly one JSON value")
 	}
 	canonical, err := json.Marshal(payload)
 	if err != nil {

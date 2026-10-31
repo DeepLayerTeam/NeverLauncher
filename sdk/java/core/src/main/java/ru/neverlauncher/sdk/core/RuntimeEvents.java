@@ -12,9 +12,13 @@ public final class RuntimeEvents implements AutoCloseable {
     private record Binding<T>(JsonSchema schema,Decoder<T> decoder,Listener<T> listener){}
     private final HostSession host;
     private final Map<String,Binding<?>> handlers=new ConcurrentHashMap<>();
-    private final List<Long> subscriptions=Collections.synchronizedList(new ArrayList<>());
+    // These IDs belong to the durable backend EventBus, not to the JVM process.
+    // Removing them on normal shutdown loses events published during downtime.
+    private final Map<String,Long> subscriptions=new HashMap<>();
+    private boolean closed;
     RuntimeEvents(HostSession host){this.host=host;}
-    public <T> long subscribe(String eventType,String mode,JsonSchema schema,Decoder<T> decoder,Listener<T> listener)throws IOException,InterruptedException {
+    public synchronized <T> long subscribe(String eventType,String mode,JsonSchema schema,Decoder<T> decoder,Listener<T> listener)throws IOException,InterruptedException {
+        if(closed)throw new IllegalStateException("runtime events closed");
         if(!eventType.matches("[a-z][a-z0-9.-]{1,127}")||!Set.of("async","sync").contains(mode))throw new IllegalArgumentException("invalid event subscription");
         Objects.requireNonNull(decoder);Objects.requireNonNull(listener);
         host.requireEvent(eventType);
@@ -23,7 +27,7 @@ public final class RuntimeEvents implements AutoCloseable {
         try{
             Map<String,Object> response=host.subscribe(eventType,mode);
             Object id=response.get("id");if(!(id instanceof Number number)||number.longValue()<1)throw new IOException("host returned invalid subscription id");
-            subscriptions.add(number.longValue());return number.longValue();
+            subscriptions.put(key,number.longValue());return number.longValue();
         }catch(IOException|InterruptedException|RuntimeException e){handlers.remove(key);throw e;}
     }
     @SuppressWarnings("unchecked")
@@ -40,5 +44,19 @@ public final class RuntimeEvents implements AutoCloseable {
         if(binding.schema()!=null)binding.schema().validate(raw.payload());
         binding.listener().onEvent(new Envelope<>(raw.id(),raw.type(),raw.projectId(),raw.idempotencyKey(),binding.decoder().decode(raw.payload())));
     }
-    @Override public void close(){synchronized(subscriptions){for(long id:subscriptions)try{host.unsubscribe(id);}catch(Exception ignored){/* host process cleanup removes subscriptions */}subscriptions.clear();}handlers.clear();}
+    /**
+     * Permanently remove a subscription from the durable event queue. Use this
+     * only when the extension explicitly stops consuming an event type.
+     * Shutdown, upgrade and temporary outages must use close() instead.
+     */
+    public synchronized void unsubscribe(String eventType,String mode)throws IOException,InterruptedException {
+        String key=eventType+":"+mode;
+        Long id=subscriptions.get(key);
+        if(id==null)throw new IllegalArgumentException("subscription is not registered: "+key);
+        host.unsubscribe(id);
+        subscriptions.remove(key);
+        handlers.remove(key);
+    }
+    /** Shut down local handlers; retain backend subscriptions and their backlog. */
+    @Override public synchronized void close(){closed=true;handlers.clear();subscriptions.clear();}
 }

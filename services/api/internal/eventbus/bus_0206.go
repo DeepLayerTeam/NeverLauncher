@@ -278,19 +278,37 @@ func (b *Bus) worker(ctx context.Context) {
 		}
 	}
 }
+
+// Claim one delivery at a time. Pre-leasing a complete batch allows the last
+// item to expire while earlier callbacks are still running: another API node
+// can then execute the same callback concurrently. A fresh lease for each
+// item makes the lease deadline correspond to its actual dispatch window.
 func (b *Bus) processBatch(ctx context.Context) {
 	d := b.dispatcherValue()
 	if d == nil {
 		return
 	}
-	items, err := b.store.LeaseExtensionEventDeliveries(ctx, b.cfg.BatchSize, time.Now().UTC().Add(b.cfg.LeaseDuration))
-	if err != nil {
-		log.Printf("Extensions event lease failed: %v", err)
-		return
-	}
-	for _, env := range items {
-		deliveryCtx, cancel := context.WithTimeout(ctx, b.cfg.LeaseDuration)
-		err := d.DeliverExtensionEvent(deliveryCtx, env.Subscription, env.Event)
+	for i := 0; i < b.cfg.BatchSize; i++ {
+		if err := ctx.Err(); err != nil {
+			return
+		}
+		items, err := b.store.LeaseExtensionEventDeliveries(ctx, 1, time.Now().UTC().Add(b.cfg.LeaseDuration))
+		if err != nil {
+			log.Printf("Extensions event lease failed: %v", err)
+			return
+		}
+		if len(items) == 0 {
+			return
+		}
+		env := items[0]
+		// Leave time for ACK/retry after the callback deadline. This also
+		// bounds remote calls when several workers share one SQL repository.
+		budget := b.cfg.LeaseDuration * 9 / 10
+		if budget <= 0 {
+			budget = b.cfg.LeaseDuration
+		}
+		deliveryCtx, cancel := context.WithTimeout(ctx, budget)
+		err = d.DeliverExtensionEvent(deliveryCtx, env.Subscription, env.Event)
 		cancel()
 		now := time.Now().UTC()
 		if err == nil {
@@ -311,6 +329,7 @@ func (b *Bus) processBatch(ctx context.Context) {
 		}
 	}
 }
+
 func (b *Bus) retryDelay(attempt int) time.Duration {
 	if attempt < 1 {
 		attempt = 1
