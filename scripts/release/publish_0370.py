@@ -166,7 +166,7 @@ def verify_security_archive(
     with tempfile.TemporaryDirectory(prefix="nl-security-publish-") as folder:
         extracted = Path(folder)
         with ZipFile(archive_path, "r") as archive:
-            expected_names = set(security_evidence_files())
+            expected_names = set(security_evidence_files(approval["version"]))
             members = archive.infolist()
             require(
                 len(members) == len(expected_names)

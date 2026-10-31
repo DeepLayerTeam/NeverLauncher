@@ -13,6 +13,7 @@ mod official_identity_0262;
 mod official_browser_0263;
 mod official_exchange_0265;
 mod official_verification_0266;
+mod game_guard_watchdog_0438;
 
 use runtime::{
     self, CleanUnusedResult, DownloadResult, FileCheckResult, GuardProcessPolicyReport, JavaInfoResult,
@@ -1578,7 +1579,10 @@ async fn launch_minecraft_inner_0392(
         }
         Some(credentials)
     } else { minecraft_credentials };
-    if let Some(credentials) = minecraft_credentials {
+    // Bind the game lifetime to the exact authenticated Guard present at launch.
+    // The supervisor will not accept a restarted Guard as an ongoing session.
+    let guard_identity = game_guard_watchdog_0438::baseline_guard_0438(&guard).await?;
+    let launched = if let Some(credentials) = minecraft_credentials {
         if let Some(p) = preferences {
             supervisor.start_authenticated_with_preferences(&manifest, &PathBuf::from(root), java_path, credentials, p, &pinned_public_key).await
         } else { supervisor.start_authenticated(&manifest, &PathBuf::from(root), java_path, credentials, &pinned_public_key).await }
@@ -1587,7 +1591,11 @@ async fn launch_minecraft_inner_0392(
             Some(p) if p.offline => supervisor.start_with_preferences(&manifest, &PathBuf::from(root), java_path, username, p, &pinned_public_key).await,
             _ => Err("online launch requires authenticated credentials; offline must be explicitly authorized".into()),
         }
-    }
+    }?;
+    game_guard_watchdog_0438::start_game_watchdog_0438(
+        guard.inner().clone(), supervisor.inner().clone(), launched.clone(), guard_identity,
+    );
+    Ok(launched)
 }
 
 #[tauri::command]

@@ -1,0 +1,67 @@
+name: NeverGuard live-game enforcement 0.43.8
+on:
+  push:
+    paths:
+      - 'runtime/runtime/**'
+      - 'apps/desktop/src-tauri/**'
+      - 'scripts/ga/security_capabilities_0431.py'
+      - 'scripts/ga/package_security_0431.py'
+      - 'scripts/release/publish_0370.py'
+      - '.github/workflows/guard-game-lifetime-0438.yml'
+  pull_request:
+    paths:
+      - 'runtime/runtime/**'
+      - 'apps/desktop/src-tauri/**'
+      - 'scripts/ga/security_capabilities_0431.py'
+      - 'scripts/ga/package_security_0431.py'
+      - 'scripts/release/publish_0370.py'
+      - '.github/workflows/guard-game-lifetime-0438.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-guard-game:
+    name: '${{ matrix.target }} - Rust native process supervision'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x64, runner: ubuntu-24.04 }
+          - { target: linux-arm64, runner: ubuntu-24.04-arm }
+          - { target: windows-x64, runner: windows-2022 }
+          - { target: windows-arm64, runner: windows-11-arm }
+          - { target: macos-x64, runner: macos-15-intel }
+          - { target: macos-arm64, runner: macos-15 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Linux Tauri build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+      - name: Check production process termination code
+        run: cargo check --manifest-path runtime/runtime/Cargo.toml --lib
+      - name: Run real process kill test (Linux)
+        if: runner.os == 'Linux'
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib game_guard_lifetime_0438_tests -- --nocapture
+      - name: Build and test native Desktop game watchdog
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml game_guard_watchdog_0438 -- --nocapture
+      - name: Compile both Guard and Desktop runtime
+        run: cargo check --manifest-path runtime/runtime/Cargo.toml --bin guard
+  security-release-gate:
+    name: Deny missing live gameplay evidence
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Existing security gates and new 0.43.8 denial scenarios
+        run: python3 -m unittest discover -s scripts/ga -p 'test_security_capabilities_0431.py' -v

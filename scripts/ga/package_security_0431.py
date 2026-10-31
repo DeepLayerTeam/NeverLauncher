@@ -18,11 +18,11 @@ from security_capabilities_0431 import checks, required, verify_all
 from verified_targets import approval_data, TARGETS
 
 
-def evidence_files() -> tuple[str, ...]:
+def evidence_files(version: str = "0.43.1") -> tuple[str, ...]:
     return tuple(
         name
         for target in TARGETS
-        for check in checks("0.43.1")
+        for check in checks(version)
         for name in (
             f"targets/{target}/{check}.json",
             f"targets/{target}/security-0431/{check}.jsonl",
@@ -39,7 +39,7 @@ def package(evidence: Path, approval: dict, destination: Path, *, now=None) -> N
     temporary.unlink(missing_ok=True)
     try:
         with ZipFile(temporary, "w", compression=ZIP_DEFLATED, compresslevel=9) as archive:
-            for relative in evidence_files():
+            for relative in evidence_files(approval["version"]):
                 path = evidence / relative
                 if path.is_symlink() or not path.is_file():
                     raise ValueError("missing security evidence for archive: " + relative)

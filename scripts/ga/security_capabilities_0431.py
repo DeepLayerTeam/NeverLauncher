@@ -31,7 +31,21 @@ SCENARIOS = {
     "securityAccountRecovery": ("newDeviceRecoveryAllowed", "oldRecoveryKeyDenied"),
     "securityNativeSandbox": ("authorizedExtensionBrokerAllowed", "unauthorizedExtensionAccessDenied"),
 }
-CLIENT = frozenset(SCENARIOS) - {"securityNativeSandbox"}
+# 0.43.8 adds live-game continuity; an initial Guard join ticket alone
+# cannot certify that a running game is terminated after Guard loss.
+GAMEPLAY_SCENARIOS_0438 = {
+    "securityGuardLifetime": (
+        "healthyGuardAllowsOngoingGameplay", "lostGuardStopsOngoingGameplay"
+    ),
+}
+CLIENT = (frozenset(SCENARIOS) | frozenset(GAMEPLAY_SCENARIOS_0438)) - {"securityNativeSandbox"}
+
+
+def scenarios_for_version(version: str) -> dict[str, tuple[str, str]]:
+    number, prerelease = parsed(version)
+    if prerelease is None and number >= (0, 43, 8):
+        return {**SCENARIOS, **GAMEPLAY_SCENARIOS_0438}
+    return SCENARIOS
 SCHEMA = "launcher.security.capability.0431.v1"
 LOG_SCHEMA = "launcher.security.observation.0431.v1"
 SHA = re.compile(r"[a-f0-9]{64}\Z")
@@ -46,7 +60,7 @@ def required(version: str) -> bool:
 
 
 def checks(version: str) -> tuple[str, ...]:
-    return tuple(SCENARIOS) if required(version) else ()
+    return tuple(scenarios_for_version(version)) if required(version) else ()
 
 
 def blocked(message: str) -> None:
@@ -117,7 +131,8 @@ def verify_trace(
     run_id: str | None = None,
     run_attempt: int | str | None = None,
 ) -> None:
-    if check not in SCENARIOS:
+    scenarios = scenarios_for_version(version)
+    if check not in scenarios:
         blocked("unknown security capability: " + check)
     rid, attempt = ci_identity(run_id, run_attempt)
     try:
@@ -157,7 +172,7 @@ def verify_trace(
     # Independent operator approval must be issued AFTER observed execution.
     if not observation_time <= issued_at <= current_time <= expires_at or current_time - observation_time > timedelta(hours=24):
         blocked(target + ": stale, future or out-of-approval observation: " + check)
-    positive, negative = SCENARIOS[check]
+    positive, negative = scenarios[check]
     expected_scenarios = {positive: "allowed", negative: "denied"}
     if trace["scenarios"] != expected_scenarios:
         blocked(target + ": positive and negative scenario results required: " + check)
@@ -233,12 +248,13 @@ def verify_all(evidence: Path, approval: dict, *, now=None, run_id=None, run_att
     if any(not isinstance(row, dict) for row in targets) or {r.get("target") for r in targets} != expected_targets:
         blocked("wrong, duplicate or incomplete platform evidence")
     import hashlib
+    mandatory = scenarios_for_version(approval["version"])
     for row in targets:
         target = row["target"]
         hashes = row.get("checks")
-        if not isinstance(hashes, dict) or any(check not in hashes for check in SCENARIOS):
+        if not isinstance(hashes, dict) or any(check not in hashes for check in mandatory):
             blocked(target + ": missing mandatory security capability evidence")
-        for check in SCENARIOS:
+        for check in mandatory:
             info = hashes[check]
             if not isinstance(info, dict) or set(info) != {"sha256"} or not isinstance(info["sha256"], str) or not SHA.fullmatch(info["sha256"]):
                 blocked(target + ": signed security evidence hash missing: " + check)

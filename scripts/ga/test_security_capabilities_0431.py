@@ -140,6 +140,13 @@ class SecurityGATests(unittest.TestCase):
             self.assertEqual(row["securityCapabilitiesVerified"], list(SCENARIOS))
             self.assertEqual(row["checksPassed"], 21)
 
+    def test_0438_cannot_reuse_old_join_only_guard_certification(self):
+        # The old six-platform signed receipt is not live-game evidence.
+        self.approval["version"] = "0.43.8"
+        self.sign()
+        with self.assertRaisesRegex(ValueError, "missing mandatory security capability evidence"):
+            verify_all(self.evidence, self.approval, now=NOW)
+
     def test_signed_preflight_refuses_incomplete_security(self):
         self.approval["targets"][0]["checks"].pop("securityNeverGuard")
         self.sign()
@@ -265,6 +272,24 @@ class SecurityGATests(unittest.TestCase):
         p.write_text(p.read_text() + " ")
         with self.assertRaisesRegex(ValueError, "signed security capability report changed"):
             self.check()
+
+
+# Version-aware NeverGuard lifetime gate regression: historical 0.43.1 evidence
+# remains readable, but cannot certify running-game behavior for 0.43.8.
+class SecurityGameLifetime0438Tests(unittest.TestCase):
+    def test_0438_requires_new_live_game_capability(self):
+        from security_capabilities_0431 import checks
+        self.assertNotIn("securityGuardLifetime", checks("0.43.7"))
+        self.assertIn("securityGuardLifetime", checks("0.43.8"))
+        self.assertIn("securityGuardLifetime", checks("0.44.0"))
+        self.assertEqual(checks("0.43.1"), tuple(SCENARIOS))
+
+    def test_0438_archive_must_contain_both_game_observations(self):
+        old = set(evidence_files("0.43.7"))
+        new = set(evidence_files("0.43.8"))
+        for target in ("windows-x64", "windows-arm64", "linux-x64", "linux-arm64", "darwin-x64", "darwin-arm64"):
+            self.assertIn(f"targets/{target}/securityGuardLifetime.json", new - old)
+            self.assertIn(f"targets/{target}/security-0431/securityGuardLifetime.jsonl", new - old)
 
 
 if __name__ == "__main__":

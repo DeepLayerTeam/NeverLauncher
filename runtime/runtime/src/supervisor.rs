@@ -41,6 +41,7 @@ struct ManagedProcess {
     status: ProcessStatus,
     child: Arc<Mutex<Option<Child>>>,
     client_release_lease: Option<Arc<std::fs::File>>,
+    guard_violation: Option<String>,
     #[cfg(windows)]
     runtime_policy: Option<crate::RuntimeProcessPolicyGuard>,
     #[cfg(windows)]
@@ -228,6 +229,7 @@ impl ProcessSupervisor {
             status: status.clone(),
             child: child.clone(),
             client_release_lease: Some(client_release_lease),
+            guard_violation: None,
             #[cfg(windows)]
             runtime_policy: Some(runtime_policy),
             #[cfg(windows)]
@@ -264,13 +266,19 @@ impl ProcessSupervisor {
                     let _ = crate::macos_policy::terminate_runtime_process_group(process_group);
                 }
                 let finished_at = now_unix().unwrap_or_default().to_string();
-                let (exit_code, success, message) = match exit {
+                let (exit_code, mut success, mut message) = match exit {
                     Ok(status) => (status.code(), status.success(), if status.success() { "Runtime завершился успешно".to_string() } else { "Runtime завершился с ошибкой".to_string() }),
                     Err(err) => (None, false, format!("Не удалось получить статус runtime: {err}")),
                 };
                 {
                     let mut map = processes.lock().await;
                     if let Some(process) = map.get_mut(&id) {
+                        // A child that exits with code zero after a forced Guard
+                        // termination is still a security denial, not success.
+                        if let Some(reason) = process.guard_violation.as_ref() {
+                            success = false;
+                            message = format!("NeverGuard trust revoked during gameplay: {reason}");
+                        }
                         process.status.state = "exited".to_string();
                         process.status.finished_at = Some(finished_at.clone());
                         process.status.exit_code = exit_code;
@@ -312,6 +320,48 @@ impl ProcessSupervisor {
         items
     }
 
+    /// Stop an active game when its original Guard loses integrity/trust.
+    /// Persist the denial before signalling the child so the exit observer
+    /// cannot accidentally record a clean/successful game exit.
+    pub async fn stop_for_guard_violation_0438(
+        &self, id: &str, reason: &str,
+    ) -> Result<ProcessStatus, String> {
+        let reason = reason.chars().take(300).collect::<String>();
+        let child = {
+            let mut processes = self.processes.lock().await;
+            let managed = processes.get_mut(id).ok_or_else(|| format!("runtime process {id} не найден"))?;
+            if managed.status.state != "running" {
+                return Ok(process_status_snapshot(managed));
+            }
+            managed.guard_violation = Some(reason.clone());
+            managed.status.state = "trust-blocked".to_string();
+            managed.status.success = Some(false);
+            managed.status.message = format!("NeverGuard trust revoked during gameplay: {reason}");
+            managed.child.clone()
+        };
+        let mut process = child.lock().await;
+        if let Some(process) = process.as_mut() {
+            #[cfg(target_os = "linux")]
+            {
+                let pid = process.id().ok_or("runtime PID missing")?;
+                if crate::linux_policy::terminate_runtime_process_group(pid).is_err() {
+                    process.start_kill().map_err(|err| format!("runtime termination failed: {err}"))?;
+                }
+            }
+            #[cfg(target_os = "macos")]
+            {
+                let pid = process.id().ok_or("runtime PID missing")?;
+                if crate::macos_policy::terminate_runtime_process_group(pid).is_err() {
+                    process.start_kill().map_err(|err| format!("runtime termination failed: {err}"))?;
+                }
+            }
+            #[cfg(all(not(target_os = "linux"), not(target_os = "macos")))]
+            process.start_kill().map_err(|err| format!("runtime termination failed: {err}"))?;
+        }
+        drop(process);
+        self.status(id).await
+    }
+
     pub async fn stop(&self, id: &str) -> Result<ProcessStatus, String> {
         let child = {
             let map = self.processes.lock().await;
@@ -338,5 +388,45 @@ impl ProcessSupervisor {
         process.status.state = "stopping".to_string();
         process.status.message = "Отправлен сигнал остановки runtime".to_string();
         Ok(process.status.clone())
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod game_guard_lifetime_0438_tests {
+    use super::*;
+    use tokio::time::timeout;
+
+    #[tokio::test]
+    async fn guard_loss_terminates_real_child_and_marks_failure_0438() {
+        let supervisor = ProcessSupervisor::new();
+        let mut command = tokio::process::Command::new("sleep");
+        command.arg("30");
+        crate::linux_policy::prepare_runtime_command(&mut command);
+        let child = command.spawn().expect("spawn real process with a private group");
+        let pid = child.id().expect("child PID");
+        let id = format!("guard-0438-{pid}");
+        let status = ProcessStatus {
+            id: id.clone(), pid: Some(pid), state: "running".into(),
+            started_at: "1".into(), finished_at: None,
+            exit_code: None, success: None, log_path: String::new(),
+            message: "test game".into(), windows_process_policy: None,
+            linux_process_policy: None, macos_process_policy: None, windows_sensor: None,
+        };
+        let child = Arc::new(Mutex::new(Some(child)));
+        supervisor.processes.lock().await.insert(id.clone(), ManagedProcess {
+            status,
+            child: child.clone(),
+            client_release_lease: None,
+            guard_violation: None,
+        });
+        let result = supervisor.stop_for_guard_violation_0438(&id, "authenticated Guard lost")
+            .await.expect("guard loss must terminate game");
+        assert_eq!(result.state, "trust-blocked");
+        assert_eq!(result.success, Some(false));
+        assert!(result.message.contains("authenticated Guard lost"));
+        let mut locked = child.lock().await;
+        let exit = timeout(Duration::from_secs(3), locked.as_mut().unwrap().wait())
+            .await.expect("child exit timeout").expect("child wait failed");
+        assert!(!exit.success(), "guard loss must kill game");
     }
 }
