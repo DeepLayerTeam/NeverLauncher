@@ -1394,12 +1394,14 @@ jobs:
           go test -race -count=1 -timeout=25m ./internal/sqlitepg ./cmd/launcher-sqlite
           go vet ./internal/sqlitepg ./cmd/launcher-sqlite
           go build -trimpath -o "$RUNNER_TEMP/launcher-sqlite-0377" ./cmd/launcher-sqlite
-      - name: Verify minimal offline SQLite plus project files backup and restore (0.37.6)
+      - name: Verify minimal offline and authenticated portable backup/restore (0.45.2)
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/install/minimal_backup.py scripts/install/minimal-install.py
+          python3 -m pip install --disable-pip-version-check -r scripts/install/requirements-portable-0452.txt
+          python3 -m py_compile scripts/install/minimal_backup.py scripts/install/minimal_portable.py scripts/install/minimal-install.py
           python3 -m unittest discover -s scripts/install -p 'test_minimal_backup.py' -v
+          python3 -m unittest discover -s scripts/install -p 'test_minimal_portable_0452.py' -v
 
       - name: Validate executable native installer (0.37.5)
         shell: bash
@@ -1429,9 +1431,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 -m pip install --disable-pip-version-check -r scripts/install/requirements-portable-0452.txt
           python3 -m unittest discover -s scripts/acceptance -p 'test_minimal_live_e2e_0378.py' -v
           python3 -m unittest discover -s scripts/acceptance -p 'test_final_bundle_e2e_0380.py' -v
           python3 -m unittest discover -s scripts/install -p 'test_minimal_backup.py' -v
+          python3 -m unittest discover -s scripts/install -p 'test_minimal_portable_0452.py' -v
           python3 -m unittest discover -s scripts/install -p 'test_minimal_install.py' -v
       - name: Build real Backend and verify local filesystem
         shell: bash

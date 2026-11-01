@@ -567,6 +567,67 @@ def run_acceptance(
         step(report, "restored_auth_project_and_one_time_token", verify_restored)
         step(report, "restored_api_shutdown", rest.stop)
 
+        # 0.45.2: the portable, authenticated snapshot must boot the *actual*
+        # Go backend on a second independent installation root, keeping durable
+        # identity and the consumed bootstrap token. No simulated HTTP servers.
+        portable_path = work / "offhost-backup.nmb"
+        portable_secret = work / "transfer-passphrase"
+        fd = os.open(portable_secret, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(secrets.token_bytes(48))
+        alternate = work / "offhost-recovered"
+        portable_api = RealAPI(binary, alternate / "config/backend.env", port, work, expected_version)
+        try:
+            def offhost_export_and_restore():
+                command(sys.executable, INSTALLER, "export-portable", "--bundle", bundle,
+                        "--output", portable_path, "--passphrase-file", portable_secret)
+                require(portable_path.read_bytes().startswith(b"NEVER-MINIMAL-PORTABLE-1\n"),
+                        "missing authenticated transfer envelope")
+                command(sys.executable, INSTALLER, "verify-portable", "--input", portable_path,
+                        "--passphrase-file", portable_secret)
+                command(sys.executable, INSTALLER, "restore-portable", "--input", portable_path,
+                        "--target-root", alternate, "--passphrase-file", portable_secret)
+                require((alternate / "storage/e2e/blobs/survives.dat").is_file(),
+                        "off-host blob not recovered")
+                require(hashlib.sha256((alternate / "storage/e2e/blobs/survives.dat").read_bytes()).hexdigest()
+                        == expected_blob_hash, "off-host blob digest differs")
+                require(str(alternate / "db/http.sqlite") in (alternate / "config/backend.env").read_text(),
+                        "off-host paths were not relocated")
+                command(sys.executable, INSTALLER, "check", "--env-file", alternate / "config/backend.env",
+                        "--binary", binary)
+            step(report, "authenticated_offhost_transfer_and_deployment_check", offhost_export_and_restore)
+            step(report, "offhost_recovered_backend_start", portable_api.start)
+            def prove_offhost_identity():
+                verify_project(port, project)
+                login = expect(port, "POST", "/api/v1/auth/login", 200,
+                               {"email": email, "password": password})
+                require(login.get("data", {}).get("tokens", {}).get("accessToken"),
+                        "off-host password verifier not recovered")
+                expect(port, "POST", "/api/v1/install/bootstrap-admin", 403,
+                       {"email": email, "password": password},
+                       {"X-Launcher-Bootstrap-Token": token})
+            step(report, "offhost_recovered_owner_project_bootstrap", prove_offhost_identity)
+            step(report, "offhost_recovered_backend_shutdown", portable_api.stop)
+            def tamper_transfer():
+                tampered = work / "offhost-tampered.nmb"
+                shutil.copyfile(portable_path, tampered)
+                with tampered.open("r+b") as stream:
+                    stream.seek(60)
+                    first = stream.read(1)
+                    require(bool(first), "portable test archive unexpectedly short")
+                    stream.seek(60)
+                    stream.write(bytes([first[0] ^ 1]))
+                denied = work / "tampered-restore-refused"
+                proc = subprocess.run([sys.executable, str(INSTALLER), "restore-portable",
+                                       "--input", str(tampered), "--target-root", str(denied),
+                                       "--passphrase-file", str(portable_secret)],
+                                      capture_output=True, timeout=90)
+                require(proc.returncode != 0 and not denied.exists(),
+                        "tampered portable snapshot was published")
+            step(report, "authenticated_transfer_tampering_refused", tamper_transfer)
+        finally:
+            portable_api.cleanup()
+
         def corrupt_repository():
             corrupt_root = work / "corrupt-repository"
             command(

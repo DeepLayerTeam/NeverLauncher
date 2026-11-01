@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.45.2 — Minimal authenticated off-host backup and recovery
+
+- Add **working** `minimal-install.py backup-portable`, `export-portable`, `verify-portable`, and `restore-portable` commands. Reuse the existing *offline, writer-fenced* SQLite backup of HTTP/coordinator databases, file storage, extension data, factory state and private `backend.env` secrets. Do not change or bypass the minimal mode's stable-release gates.
+- Stream snapshots into an AES-256-GCM authenticated transfer file using a random per-backup salt/nonce, memory-hard scrypt, and a high-entropy passphrase **read from a private file** (not argv/env). The independent passphrase travels separately from the ciphertext. Never overwrite an existing backup output; reject invalid or tampered ciphertext before extracting, and never publish a partial destination.
+- Verify all archive members, prohibit traversal, symlink/hardlink/device entries and duplicate tar members, then invoke the existing manifest SHA-256 and SQLite integrity checks before atomically restoring to a new root. Preserve auth/signing/extension secrets; rebase supported absolute paths and maintain the one-time administrator bootstrap state.
+- Extend required CI and the **real Linux Go API** minimal-live acceptance with portable export, independent path restore, `diagnose deployment`, restored login/project/bootstrap-token denial, and corrupted ciphertext refusal. Separate test suite covers wrong passphrase, tampering, CLI and source snapshot reuse.
+- Publish a cross-host operator procedure describing separate key custody, stop-the-world consistency, external binary/TLS/service prerequisites, retained username/identity and the limitations of host migration. `cryptography==46.0.4` is an explicit required tool dependency.
+- **Verification boundary:** Python round-trip/negative tests executed locally against actual SQLite databases. A real Linux API executable with the required Go 1.27.3 toolchain, cross-machine network transfer and two separate physical hosts were not available here. The required real-process CI job must pass before the feature can be called independently accepted on a clean second host.
+
 ## 0.45.1 — Real production first-run: TLS, backend readiness, one-time admin
 
 - Convert the existing production Compose entrypoint from HTTP-only to CA-trusted HTTPS on 443 with an HTTP redirect on 80. Container-local health probe remains accessible without exporting application traffic in plaintext; do not trust incoming spoofable forwarded headers.

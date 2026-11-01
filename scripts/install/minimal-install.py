@@ -217,7 +217,34 @@ def main(argv=None):
     r = sub.add_parser("restore", help="restore to a new, empty installation root")
     r.add_argument("--bundle", type=Path, required=True)
     r.add_argument("--target-root", type=Path, required=True)
+    # Portable, authenticated off-host snapshots are handled by the dedicated
+    # streaming AES-GCM implementation; secrets are never passed in argv.
+    for name in ("backup-portable", "export-portable", "verify-portable", "restore-portable"):
+        portable = sub.add_parser(name, help="encrypted off-host backup transfer")
+        portable.add_argument("--passphrase-file", type=Path, required=True)
+        if name == "backup-portable":
+            portable.add_argument("--root", type=Path, required=True)
+            portable.add_argument("--output", type=Path, required=True)
+        elif name == "export-portable":
+            portable.add_argument("--bundle", type=Path, required=True)
+            portable.add_argument("--output", type=Path, required=True)
+        else:
+            portable.add_argument("--input", type=Path, required=True)
+            if name == "restore-portable":
+                portable.add_argument("--target-root", type=Path, required=True)
     args = parser.parse_args(argv)
+    if args.command.endswith("-portable"):
+        command = [sys.executable, str(Path(__file__).with_name("minimal_portable.py")),
+                   args.command, "--passphrase-file", str(args.passphrase_file)]
+        if args.command == "backup-portable":
+            command += ["--root", str(args.root), "--output", str(args.output)]
+        elif args.command == "export-portable":
+            command += ["--bundle", str(args.bundle), "--output", str(args.output)]
+        else:
+            command += ["--input", str(args.input)]
+            if args.command == "restore-portable":
+                command += ["--target-root", str(args.target_root)]
+        return subprocess.run(command, check=False).returncode
     if args.command in ("backup", "backup-verify", "restore"):
         operation = "verify" if args.command == "backup-verify" else args.command
         command = [

@@ -1,0 +1,2 @@
+# Authenticated streaming AES-256-GCM + memory-hard scrypt. Python 3.12+ on Linux.
+cryptography==46.0.4
