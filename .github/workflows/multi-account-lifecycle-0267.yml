@@ -26,7 +26,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04, windows-2022, macos-14]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Native Linux dependencies
         if: runner.os == 'Linux'
         run: |

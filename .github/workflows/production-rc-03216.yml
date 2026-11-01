@@ -66,7 +66,7 @@ jobs:
       LAUNCHER_RC_S3_ACCESS_KEY: launcher-rc-user
       LAUNCHER_RC_S3_SECRET_KEY: launcher-rc-temporary-secret
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/setup-go@v6

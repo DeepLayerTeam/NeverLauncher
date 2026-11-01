@@ -29,7 +29,7 @@ jobs:
     env:
       LAUNCHER_DATABASE_DSN: postgres://never:integration-only@localhost:5432/never?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version-file: cli/go.mod

@@ -21,7 +21,7 @@ jobs:
   deployment:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Python deployment tests
         run: |
           python3 -m py_compile scripts/install/production-deploy.py

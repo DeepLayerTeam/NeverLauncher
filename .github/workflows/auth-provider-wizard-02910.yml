@@ -29,7 +29,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U never -d never" --health-interval 5s --health-timeout 5s --health-retries 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod

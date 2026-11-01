@@ -35,7 +35,7 @@ jobs:
     env:
       LAUNCHER_TEST_POSTGRES_DSN: postgres://ga_test:ga_test_ci_only@127.0.0.1:5432/ga_test?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/setup-go@v6
@@ -60,7 +60,7 @@ jobs:
     timeout-minutes: 15
     environment: runtime-validation-ga
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Check protected Backend evaluator and exact source revision

@@ -31,7 +31,7 @@ jobs:
     name: ${{ matrix.target }} native game client components
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/setup-go@v5

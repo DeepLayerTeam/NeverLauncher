@@ -42,7 +42,7 @@ jobs:
     env:
       LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher_recovery:integration-only@127.0.0.1:5432/launcher_recovery?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/setup-go@v5

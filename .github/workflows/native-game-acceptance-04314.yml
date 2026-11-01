@@ -49,7 +49,7 @@ jobs:
           MATRIX_RESULT: ${{ needs.live-native-game.result }}
         run: |
           test "$MATRIX_RESULT" = success || { echo 'BLOCKED: incomplete native game matrix'; exit 1; }
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: actions/download-artifact@v4

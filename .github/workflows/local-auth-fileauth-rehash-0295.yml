@@ -47,7 +47,7 @@ jobs:
     env:
       LAUNCHER_TEST_POSTGRES_DSN: postgres://launcher:integration-only@localhost:5432/launcher_auth0295?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
