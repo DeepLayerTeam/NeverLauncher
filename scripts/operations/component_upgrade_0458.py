@@ -75,10 +75,11 @@ def read_version(env_file):
     return data, data.get('LAUNCHER_IMAGE_TAG', '')
 
 
-def assert_same_config(before, after):
+def assert_same_config(before, after, *, source_version=SOURCE, target_version=TARGET):
     old, version = read_version(before)
     new, target = read_version(after)
-    must(version == SOURCE and target == TARGET, 'only 0.45.7 -> 0.45.8 is supported')
+    must(version == source_version and target == target_version and version != target,
+         'source/target versions do not match pinned upgrade intent')
     must(new.get('LAUNCHER_DATABASE_AUTO_MIGRATE') == 'false', 'automatic DDL is forbidden during component upgrade')
     # Do not let the cutover simultaneously rotate credentials, change storage,
     # DNS, keys or signing policy; those require separate audited operations.
@@ -135,10 +136,11 @@ def restore_service_set(project, env, original, *, expected):
         check_nginx(project, env)
 
 
-def standard(project, confirm, source, target, snapshot, *, production=False, approved=False):
+def standard(project, confirm, source, target, snapshot, *, production=False, approved=False,
+             source_version=SOURCE, target_version=TARGET):
     must(not dr.COMPOSE_PROFILES, 'component Standard updater refuses Network-HA overlays')
     dr.authorize_project(project, confirm, production=production, approved=approved)
-    assert_same_config(source, target)
+    assert_same_config(source, target, source_version=source_version, target_version=target_version)
     must(snapshot.is_absolute() and not snapshot.exists() and snapshot.parent.is_dir()
          and not snapshot.parent.is_symlink(), 'snapshot must be an unused path on protected storage')
     must(snapshot.parent.stat().st_mode & 0o077 == 0, 'snapshot parent must be private (0700)')
@@ -150,24 +152,24 @@ def standard(project, confirm, source, target, snapshot, *, production=False, ap
         for svc in ('api', 'admin', 'nginx'):
             must(states.get(svc, 'exited') not in ('paused', 'restarting'), 'unhealthy source service: ' + svc)
         original = [svc for svc in ('api', 'admin', 'nginx') if states.get(svc) == 'running']
-        dr.check_restored_backend(project, source, version=SOURCE, storage='local')
+        dr.check_restored_backend(project, source, version=source_version, storage='local')
         # Build and identify actual replacement images BEFORE taking the live application down.
         dr.compose(project, target, 'build', 'api', 'admin', timeout=2400)
-        target_images = {svc: image_id('launcher-' + svc + ':' + TARGET) for svc in ('api', 'admin')}
-        source_images = {svc: image_id('launcher-' + svc + ':' + SOURCE) for svc in ('api', 'admin')}
+        target_images = {svc: image_id('launcher-' + svc + ':' + target_version) for svc in ('api', 'admin')}
+        source_images = {svc: image_id('launcher-' + svc + ':' + source_version) for svc in ('api', 'admin')}
         must(all(source_images[s] != target_images[s] for s in source_images), 'replacement image equals old image')
         # On failure snapshot() resumes originally running services itself.
         dr.snapshot(project, source, snapshot, confirm, production=production,
-                    approved=approved, resume_after=False, source_version=SOURCE)
+                    approved=approved, resume_after=False, source_version=source_version)
         try:
             receipt = dr.verify_snapshot(snapshot)
             # Detect an external write even if that session disconnected quickly.
             must(dr.assert_quiescent(project, source) == receipt['postgresWalLsn'],
                  'PostgreSQL WAL advanced since component backup')
-            must(all(image_id('launcher-' + svc + ':' + TARGET) == target_images[svc]
+            must(all(image_id('launcher-' + svc + ':' + target_version) == target_images[svc]
                      for svc in target_images), 'target image changed after build')
-            restore_service_set(project, target, original, expected=TARGET)
-            return {'status': 'upgraded', 'from': SOURCE, 'to': TARGET,
+            restore_service_set(project, target, original, expected=target_version)
+            return {'status': 'upgraded', 'from': source_version, 'to': target_version,
                     'components': ['api', 'admin'], 'backup': str(snapshot),
                     'images': target_images, 'backendVerified': True}
         except Exception as problem:
@@ -180,9 +182,9 @@ def standard(project, confirm, source, target, snapshot, *, production=False, ap
             try:
                 # Component cutover does not migrate the schema. Do not silently
                 # restore an older database and discard acknowledged post-snapshot writes.
-                must(all(image_id('launcher-' + svc + ':' + SOURCE) == source_images[svc]
+                must(all(image_id('launcher-' + svc + ':' + source_version) == source_images[svc]
                          for svc in source_images), 'source image digest changed; rollback unsafe')
-                restore_service_set(project, source, original, expected=SOURCE)
+                restore_service_set(project, source, original, expected=source_version)
             except Exception as recovery:
                 raise ComponentError('component cutover failed AND old API could not be verified; keep Nginx stopped') from recovery
             raise ComponentError('component cutover failed; prior application images restored and verified') from problem
@@ -221,14 +223,15 @@ def restore_ha_roles(project, env, *, expected):
 
 
 def network_ha(project, confirm, source, target, snapshot, world_backups,
-               s3_bucket, s3_endpoint, *, production=False, approved=False):
+               s3_bucket, s3_endpoint, *, production=False, approved=False,
+               source_version=SOURCE, target_version=TARGET):
     """Cold component-only cutover; never restores old Redis leases or rewinds PG.
 
     World writers must already be stopped; DR validates their cold backups.
     This does NOT upgrade PostgreSQL schemas and is not a rolling upgrade.
     """
     dr.authorize_project(project, confirm, production=production, approved=approved)
-    assert_same_config(source, target)
+    assert_same_config(source, target, source_version=source_version, target_version=target_version)
     must(world_backups and s3_bucket, 'HA upgrade requires confirmed stopped worlds and S3 snapshot')
     must(snapshot.is_absolute() and not snapshot.exists() and snapshot.parent.is_dir()
          and not snapshot.parent.is_symlink() and not (snapshot.parent.stat().st_mode & 0o077),
@@ -238,24 +241,24 @@ def network_ha(project, confirm, source, target, snapshot, world_backups,
         must(all(states.get(s) == 'running' for s in ('postgres', 'redis', 'api', 'api-b', 'worker-a', 'worker-b', 'admin', 'nginx')),
              'all Network-HA roles must be healthy/running before cutover')
         for svc in ('api', 'api-b'):
-            dr.check_restored_backend(project, source, version=SOURCE, storage='s3', service=svc)
+            dr.check_restored_backend(project, source, version=source_version, storage='s3', service=svc)
         for svc in ('worker-a', 'worker-b'):
             dr.check_restored_worker_0455(project, source, svc)
         dr.compose(project, target, 'build', 'api', 'admin', timeout=2400)
-        new_images = {s: image_id('launcher-' + s + ':' + TARGET) for s in ('api', 'admin')}
-        old_images = {s: image_id('launcher-' + s + ':' + SOURCE) for s in ('api', 'admin')}
+        new_images = {s: image_id('launcher-' + s + ':' + target_version) for s in ('api', 'admin')}
+        old_images = {s: image_id('launcher-' + s + ':' + source_version) for s in ('api', 'admin')}
         must(all(new_images[s] != old_images[s] for s in new_images), 'new HA images equal previous images')
         dr.snapshot(project, source, snapshot, confirm, s3_bucket=s3_bucket, s3_endpoint=s3_endpoint,
                     production=production, approved=approved, world_backups=world_backups,
-                    resume_after=False, source_version=SOURCE)
+                    resume_after=False, source_version=source_version)
         try:
             receipt = dr.verify_snapshot(snapshot)
             must(dr.assert_quiescent(project, source) == receipt['postgresWalLsn'],
                  'PostgreSQL WAL advanced since HA component backup')
-            must(all(image_id('launcher-' + s + ':' + TARGET) == new_images[s] for s in new_images),
+            must(all(image_id('launcher-' + s + ':' + target_version) == new_images[s] for s in new_images),
                  'HA target images changed after backup')
-            restore_ha_roles(project, target, expected=TARGET)
-            return {'status': 'upgraded', 'mode': 'network-ha', 'from': SOURCE, 'to': TARGET,
+            restore_ha_roles(project, target, expected=target_version)
+            return {'status': 'upgraded', 'mode': 'network-ha', 'from': source_version, 'to': target_version,
                     'components': ['api', 'api-b', 'worker-a', 'worker-b', 'admin'],
                     'snapshot': str(snapshot), 'images': new_images, 'runtimeVerified': True}
         except Exception as cause:
@@ -265,9 +268,9 @@ def network_ha(project, confirm, source, target, snapshot, world_backups,
                 except Exception:
                     pass
             try:
-                must(all(image_id('launcher-' + s + ':' + SOURCE) == old_images[s] for s in old_images),
+                must(all(image_id('launcher-' + s + ':' + source_version) == old_images[s] for s in old_images),
                      'previous HA image was replaced')
-                restore_ha_roles(project, source, expected=SOURCE)
+                restore_ha_roles(project, source, expected=source_version)
             except Exception as failure:
                 raise ComponentError('HA cutover and prior-version recovery both failed; Nginx must stay disabled') from failure
             raise ComponentError('HA component cutover failed; original binaries restored and checked') from cause
@@ -465,6 +468,8 @@ def main(argv=None):
     for key in ('project', 'confirm', 'source-env', 'target-env', 'backup'):
         standard_cmd.add_argument('--' + key, required=True,
                                   type=Path if key.endswith('env') or key == 'backup' else str)
+    standard_cmd.add_argument('--from-version', default=SOURCE)
+    standard_cmd.add_argument('--to-version', default=TARGET)
     standard_cmd.add_argument('--production-source', action='store_true')
     standard_cmd.add_argument('--maintenance-approved', action='store_true')
     ha = sub.add_parser('network-ha', help='cold upgrade of both APIs, both workers and Admin with world/S3 checkpoint')
@@ -472,6 +477,8 @@ def main(argv=None):
         ha.add_argument('--' + key, required=True, type=Path if key.endswith('env') or key == 'backup' else str)
     ha.add_argument('--s3-endpoint')
     ha.add_argument('--world-backup', action='append', required=True, metavar='NAME=BACKUP_ID_DIRECTORY')
+    ha.add_argument('--from-version', default=SOURCE)
+    ha.add_argument('--to-version', default=TARGET)
     ha.add_argument('--production-source', action='store_true')
     ha.add_argument('--maintenance-approved', action='store_true')
     native = sub.add_parser('linux-host', help='atomically upgrade real root-owned CLI/ServerBridge executable')
@@ -503,12 +510,14 @@ def main(argv=None):
         if args.action == 'standard':
             result = standard(args.project, args.confirm, args.source_env.absolute(),
                               args.target_env.absolute(), args.backup.absolute(),
-                              production=args.production_source, approved=args.maintenance_approved)
+                              production=args.production_source, approved=args.maintenance_approved,
+                              source_version=args.from_version, target_version=args.to_version)
         elif args.action == 'network-ha':
             result = network_ha(args.project, args.confirm, args.source_env.absolute(),
                                 args.target_env.absolute(), args.backup.absolute(),
                                 dr.parse_world_args(args.world_backup), args.s3_bucket, args.s3_endpoint,
-                                production=args.production_source, approved=args.maintenance_approved)
+                                production=args.production_source, approved=args.maintenance_approved,
+                                source_version=args.from_version, target_version=args.to_version)
         elif args.action == 'linux-host':
             result = host_binary(args.component, args.source.absolute(), args.install.absolute(), args.sha256,
                                  service=args.service, ready_url=args.ready_url)

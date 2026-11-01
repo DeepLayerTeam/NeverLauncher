@@ -20,7 +20,7 @@ python3 scripts/install/minimal-install.py verify-portable \
 sha256sum /srv/backups/minimal-04513.nmb
 ```
 
-На **другом** хосте с прежним доверенным API 0.45.13 и отдельной доставкой ключа:
+На **другом** хосте с прежним доверенным API 0.45.14 и отдельной доставкой ключа:
 
 ```sh
 python3 scripts/install/minimal-install.py restore-portable \

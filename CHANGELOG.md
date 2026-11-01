@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.45.14 — Independent Acceptance: installed, upgraded, recovered, failed over (2026-11-01)
+
+- Add `scripts/operations/independent_accept_04514.py`, a real Linux operator CLI that invokes existing production installer/first-admin, Standard component cutover, verified PostgreSQL/volume restore on a distinct host, and isolated Network-HA Docker chaos. Each stage verifies actual child results, checks public HTTPS/backend state and old-owner authenticated project readback where applicable and creates an exclusive private 0600 receipt only after success.
+- Parameterize the existing Standard/Network-HA component updater with explicitly pinned source/target release versions without weakening image digest, snapshot/WAL or rollback checks; retain defaults for historical 0.45.7→0.45.8 use.
+- Bind fresh-host restore to the source upgrade's snapshot manifest checksum and a different Linux machine fingerprint; reject same source/restore host, unsafe env and receipt permissions, missing maintenance approval and non-isolated chaos projects. Add consistency verification across independent operational receipts without claiming JSON receipts are externally signed attestations.
+- Provide a second-operator execution runbook, negative/positive tests and documentation CI checks.
+- **Verification boundary:** local tests verify orchestration, unsafe-input rejection and report integrity; they do not execute Docker, a real cross-host restore, independent human verification or Minecraft on this runner. Live GA acceptance remains BLOCKED until executed on actual hosts.
+
+
 ## 0.45.13 — Operator Documentation and live operator acceptance (2026-11-01)
 
 - Publish connected operator runbooks in `/docs/operator/` for Minimal, Standard, Network-HA, first administrator, off-host SQLite and cold PostgreSQL/S3/world restores, database/component upgrades, TLS, signed deliveries, OpenAPI SDK, incidents and second-operator acceptance. Replace outdated production instructions with the actual installer/DR entrypoints.

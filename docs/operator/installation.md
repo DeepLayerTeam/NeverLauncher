@@ -29,7 +29,7 @@ python3 scripts/install/minimal-install.py run \
 ```sh
 python3 scripts/operations/operator_accept_04513.py live \
   --mode minimal --minimal-root /var/lib/launcher-minimal \
-  --url https://launcher.example.org --version 0.45.13 \
+  --url https://launcher.example.org --version 0.45.14 \
   --report /var/tmp/launcher-minimal-acceptance.json
 ```
 
@@ -42,7 +42,7 @@ python3 scripts/operations/operator_accept_04513.py live \
 ```sh
 sudo install -m 0600 deploy/production/env.production.example deploy/production/.env
 # Заполните реальные секреты, публичный URL, TLS пути, POSTGRES_PASSWORD;
-# LAUNCHER_IMAGE_TAG=0.45.13, LAUNCHER_DEPLOYMENT_MODE=standard.
+# LAUNCHER_IMAGE_TAG=0.45.14, LAUNCHER_DEPLOYMENT_MODE=standard.
 sudo python3 scripts/install/production-deploy.py compose check \
   --mode standard --env deploy/production/.env
 sudo python3 scripts/install/production-deploy.py compose up \
@@ -63,7 +63,7 @@ sudo python3 scripts/install/production-deploy.py compose first-admin \
 ```sh
 python3 scripts/operations/operator_accept_04513.py live \
   --mode standard --project launcher --env-file deploy/production/.env \
-  --url https://launcher.example.org --version 0.45.13 \
+  --url https://launcher.example.org --version 0.45.14 \
   --report /var/tmp/launcher-standard-acceptance.json
 ```
 
@@ -73,7 +73,7 @@ python3 scripts/operations/operator_accept_04513.py live \
 
 ```sh
 cd deploy/production
-# .env: LAUNCHER_DEPLOYMENT_MODE=network-ha, LAUNCHER_IMAGE_TAG=0.45.13,
+# .env: LAUNCHER_DEPLOYMENT_MODE=network-ha, LAUNCHER_IMAGE_TAG=0.45.14,
 # действительные PostgreSQL/Redis/S3 credentials и TLS; chmod 0600 .env.
 docker compose --env-file .env --profile network-ha \
   -f docker-compose.yml -f docker-compose.network-ha.yml \
@@ -93,7 +93,7 @@ cd ../..
 ```sh
 python3 scripts/operations/operator_accept_04513.py live \
   --mode network-ha --project launcher --env-file deploy/production/.env \
-  --url https://launcher.example.org --version 0.45.13 \
+  --url https://launcher.example.org --version 0.45.14 \
   --report /var/tmp/launcher-network-ha-acceptance.json
 ```
 

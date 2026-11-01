@@ -12,6 +12,9 @@ on:
       - 'scripts/contracts/**'
       - 'scripts/operations/operator_accept_04513.py'
       - 'scripts/operations/test_operator_accept_04513.py'
+      - 'scripts/operations/independent_accept_04514.py'
+      - 'scripts/operations/test_independent_accept_04514.py'
+      - 'scripts/operations/component_upgrade_0458.py'
       - '.github/workflows/docs.yml'
   pull_request:
     paths:
@@ -23,6 +26,9 @@ on:
       - 'scripts/contracts/**'
       - 'scripts/operations/operator_accept_04513.py'
       - 'scripts/operations/test_operator_accept_04513.py'
+      - 'scripts/operations/independent_accept_04514.py'
+      - 'scripts/operations/test_independent_accept_04514.py'
+      - 'scripts/operations/component_upgrade_0458.py'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -53,3 +59,10 @@ jobs:
           python3 scripts/operations/db_upgrade_0457.py --help
           python3 scripts/operations/component_upgrade_0458.py --help
           python3 scripts/operations/observability_0459.py --help
+      - name: Independent operator real-command orchestration regressions (no fake Docker pass)
+        run: |
+          PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_independent_accept_04514.py -v
+          python3 scripts/operations/independent_accept_04514.py --help
+          python3 scripts/operations/independent_accept_04514.py upgrade-standard --help
+          python3 scripts/operations/independent_accept_04514.py restore-standard --help
+          python3 scripts/operations/independent_accept_04514.py failover-network-ha --help
