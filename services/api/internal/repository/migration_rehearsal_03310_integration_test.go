@@ -67,6 +67,9 @@ func TestMigrationRehearsal03310(t *testing.T) {
 	snap := gr.Snapshot{WorldSHA256: h, Loader: "forge", OptionalPresetSHA256: h, Players: []gr.Player{p}}
 	signature, _ := gr.SnapshotDigest(snap)
 	report := gr.Report{Format: gr.Format, RunID: runID, StageID: "stage_abcdefgh12345678", SourceInventorySHA256: h, SourceSnapshotSHA256: signature, TargetSnapshotSHA256: signature, Source: snap, Target: snap}
+	start0447 := time.Now().UTC().Add(-10 * time.Second)
+	report.LiveSession = &gr.LiveSession{ClientSHA256: h, PlayerName: "Steve", PlayerUUID: p.UUID, BeforeSHA256: h, JoinedSHA256: h, StartedAt: start0447.Format(time.RFC3339Nano), JoinedAt: start0447.Add(3 * time.Second).Format(time.RFC3339Nano)}
+
 	for _, name := range gr.RequiredProbes {
 		report.Probes = append(report.Probes, gr.Probe{Name: name, Passed: true, RunID: runID, StageID: report.StageID, UUID: p.UUID, EvidenceSHA256: h})
 	}

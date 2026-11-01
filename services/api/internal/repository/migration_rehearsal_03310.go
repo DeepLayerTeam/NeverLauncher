@@ -26,8 +26,12 @@ func (r *SQLRepository) GetMigrationRehearsal03310(ctx context.Context, runID st
 	if e != nil {
 		return report, e
 	}
-	e = json.Unmarshal(raw, &report)
-	return report, e
+	if e = json.Unmarshal(raw, &report); e != nil {
+		return gr.Report{}, e
+	}
+	// Never show a persisted pre-0.44.7 synthetic receipt as ready.
+	// Stage/activate performs the same authoritative re-evaluation.
+	return gr.Evaluate(report)
 }
 
 // SaveMigrationRehearsal03310 binds external staging evidence to durable MIG03,

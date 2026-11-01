@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.44.7 — Real Minecraft launch and join rehearsal
+
+- MIG10 now launches the **real foreground client executable on an isolated staging host** and observes an actual newly connected Minecraft Java Edition player with name/UUID through authenticated loopback RCON `list uuids`. It checks absence before launch, sustained presence after join, and continued activity after all other probes and the final target snapshot. Remote RCON, stale sessions, early client exit, unexpected UUID and timeouts fail closed.
+- The CLI submits a native live-session witness with the client executable SHA-256, pre-join/post-join RCON response digests, UUID and UTC timestamps; no RCON password, command args, access tokens, or game stdout/stderr are included. Backend recomputes readiness and **rejects old probe-only reports**, cross-checking the live UUID against the migrated player set and login/join probe UUID.
+- Retain all existing MIG03–MIG08 PostgreSQL prerequisite and idempotency checks. Successful rehearsal does not authorize production cutover (MIG11). Add protocol-level RCON mock tests with a real local process, including negative cases for premature exit, already-online players, unreachable remote RCON and disconnect during probes; update PostgreSQL fixtures and operator instructions.
+- **Verification limit:** tests simulate an RCON protocol peer and a foreground process; no Minecraft game binaries, official test identity, full PostgreSQL backend compilation or real player join were available locally. A trusted staging operator can falsify input/probe scripts; this is not remote process attestation. Real gaming tests are required before a live project cutover.
+
 ## 0.44.6 — Gravit modules and ServerBridge migration
 
 - Inspect actual `modules-config` JSON members of the source-pinned ZIP. Missing matching module JARs, ambiguous or malformed JSON, and unsupported config formats block the migration report; recognizable configuration with matching JAR is still a **manual source-port** and is never loaded as a compatible binary. Configuration values, including passwords and tokens, are not persisted in the migration report.

@@ -220,6 +220,7 @@ type BridgeStatus0446 = {
   cutoverAllowed: boolean;
 };
 type Rehearsal03310 = {
+  liveSession?: { clientSha256: string; playerName: string; playerUuid: string; startedAt: string; joinedAt: string };
   format: string;
   runId: string;
   stageId: string;
@@ -2082,6 +2083,7 @@ export function MigrationCenter0331({
             Проверки исполняются CLI на отдельном изолированном стенде. Backend
             сверяет результаты с MIG03–MIG08 и UUID из сохранённой карты.
             Административный сервер не запускает JAR или команды из браузера.
+            Для репетиции 0.44.7 нужен работающий изолированный Java-сервер с локальным RCON, настоящий клиентский процесс и live-session.json со staging-учётной записью. Успешные probe-скрипты без реального входа и online UUID больше не дают допуск. Инструкция: docs/migration/gravit-live-rehearsal-0447.md.
           </p>
           <p>
             <code>
@@ -2102,6 +2104,11 @@ export function MigrationCenter0331({
                 {rehearsal03310.ready ? "пройдена" : "заблокирована"} · cutover:
                 запрещён.
               </p>
+              {rehearsal03310.liveSession ? (
+                <p>Игровой сеанс: {rehearsal03310.liveSession.playerName} / <code>{rehearsal03310.liveSession.playerUuid}</code> · вход: {rehearsal03310.liveSession.joinedAt} · клиент SHA-256: <code>{rehearsal03310.liveSession.clientSha256}</code></p>
+              ) : (
+                <p className="error">Нет нативного подтверждения живого игрового сеанса. Старые probe-only отчёты не считаются готовыми.</p>
+              )}
               {rehearsal03310.blockers.map((x, i) => (
                 <p key={i} className="error">
                   {x}

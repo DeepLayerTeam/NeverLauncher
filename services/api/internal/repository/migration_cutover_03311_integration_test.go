@@ -99,6 +99,9 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	snap := gr.Snapshot{WorldSHA256: hash, Loader: "forge", OptionalPresetSHA256: hash, Players: []gr.Player{{SourceID: "fileauth:42", UUID: player, InventorySHA256: hash, PermissionsSHA256: hash, SkinSHA256: hash, Economy: "100", Admin: true}}}
 	snapHash, _ := gr.SnapshotDigest(snap)
 	rep := gr.Report{Format: gr.Format, RunID: runID, StageID: "stage_abcdefgh12345678", SourceInventorySHA256: hash, SourceSnapshotSHA256: snapHash, TargetSnapshotSHA256: snapHash, Source: snap, Target: snap}
+	start0447 := time.Now().UTC().Add(-10 * time.Second)
+	rep.LiveSession = &gr.LiveSession{ClientSHA256: hash, PlayerName: "Steve", PlayerUUID: player, BeforeSHA256: hash, JoinedSHA256: hash, StartedAt: start0447.Format(time.RFC3339Nano), JoinedAt: start0447.Add(3 * time.Second).Format(time.RFC3339Nano)}
+
 	for _, name := range gr.RequiredProbes {
 		rep.Probes = append(rep.Probes, gr.Probe{Name: name, Passed: true, RunID: runID, StageID: rep.StageID, UUID: player, EvidenceSHA256: hash})
 	}

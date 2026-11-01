@@ -46,18 +46,19 @@ type rehearsalProbe03310 struct {
 	Detail         string `json:"detail,omitempty"`
 }
 type rehearsalReport03310 struct {
-	Format                string                 `json:"format"`
-	RunID                 string                 `json:"runId"`
-	StageID               string                 `json:"stageId"`
-	SourceInventorySHA256 string                 `json:"sourceInventorySha256"`
-	SourceSnapshotSHA256  string                 `json:"sourceSnapshotSha256"`
-	TargetSnapshotSHA256  string                 `json:"targetSnapshotSha256"`
-	Source                rehearsalSnapshot03310 `json:"source"`
-	Target                rehearsalSnapshot03310 `json:"target"`
-	Probes                []rehearsalProbe03310  `json:"probes"`
-	Blockers              []string               `json:"blockers"`
-	Ready                 bool                   `json:"ready"`
-	CutoverAllowed        bool                   `json:"cutoverAllowed"`
+	Format                string                    `json:"format"`
+	RunID                 string                    `json:"runId"`
+	StageID               string                    `json:"stageId"`
+	SourceInventorySHA256 string                    `json:"sourceInventorySha256"`
+	SourceSnapshotSHA256  string                    `json:"sourceSnapshotSha256"`
+	TargetSnapshotSHA256  string                    `json:"targetSnapshotSha256"`
+	Source                rehearsalSnapshot03310    `json:"source"`
+	Target                rehearsalSnapshot03310    `json:"target"`
+	Probes                []rehearsalProbe03310     `json:"probes"`
+	LiveSession           *rehearsalLiveWitness0447 `json:"liveSession,omitempty"`
+	Blockers              []string                  `json:"blockers"`
+	Ready                 bool                      `json:"ready"`
+	CutoverAllowed        bool                      `json:"cutoverAllowed"`
 }
 
 var rehearsalRequired03310 = []string{"launch", "login", "join", "skins", "loader", "optional", "admin"}
@@ -221,6 +222,12 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 	if e != nil {
 		return report, e
 	}
+	live, verifyLive, cleanup, e := rehearsalLaunchLive0447(ctx, real, report.Source)
+	if e != nil {
+		return report, fmt.Errorf("real Minecraft launch/join rehearsal: %w", e)
+	}
+	defer cleanup()
+	report.LiveSession = &live
 	report.Probes = []rehearsalProbe03310{}
 	for _, check := range rehearsalRequired03310 {
 		probe, err := rehearsalProbeExec03310(ctx, real, run, stage.StageID, check)
@@ -229,6 +236,9 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 		} // No report submitted after failed execution.
 		report.Probes = append(report.Probes, probe)
 	}
+	if e = verifyLive(); e != nil {
+		return report, e
+	}
 	// Read the final target snapshot AFTER probes so tests that modify the
 	// isolated world cannot pass by supplying a stale pre-launch snapshot.
 	b, e := rehearsalRead03310(real, "target-snapshot.json", 4<<20)
@@ -236,6 +246,9 @@ func migrationRehearsalRun03310(ctx context.Context, root, run, inventory string
 		return report, e
 	}
 	if e = json.Unmarshal(b, &report.Target); e != nil {
+		return report, e
+	}
+	if e = verifyLive(); e != nil {
 		return report, e
 	}
 	report.TargetSnapshotSHA256, e = rehearsalDigest03310(report.Target)

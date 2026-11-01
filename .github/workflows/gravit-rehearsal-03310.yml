@@ -7,6 +7,8 @@ on:
       - 'services/api/internal/httpapi/migration_rehearsal*'
       - 'services/api/internal/dbmigrate/sql/0097*'
       - 'cli/cmd/launcher/migration_rehearsal*'
+      - 'cli/cmd/launcher/migration_live*'
+      - 'docs/migration/gravit-live-rehearsal-0447.md'
       - 'schemas/openapi*'
       - '.github/workflows/gravit-rehearsal-03310.yml'
   pull_request:

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 const Format = "never/gravit-rehearsal/v1"
@@ -48,18 +49,29 @@ type Probe struct {
 	EvidenceSHA256 string `json:"evidenceSha256"`
 	Detail         string `json:"detail,omitempty"`
 }
+type LiveSession struct {
+	ClientSHA256 string `json:"clientSha256"`
+	PlayerName   string `json:"playerName"`
+	PlayerUUID   string `json:"playerUuid"`
+	BeforeSHA256 string `json:"beforeSha256"`
+	JoinedSHA256 string `json:"joinedSha256"`
+	StartedAt    string `json:"startedAt"`
+	JoinedAt     string `json:"joinedAt"`
+}
+
 type Report struct {
-	Format                string   `json:"format"`
-	RunID                 string   `json:"runId"`
-	StageID               string   `json:"stageId"`
-	SourceInventorySHA256 string   `json:"sourceInventorySha256"`
-	SourceSnapshotSHA256  string   `json:"sourceSnapshotSha256"`
-	TargetSnapshotSHA256  string   `json:"targetSnapshotSha256"`
-	Source                Snapshot `json:"source"`
-	Target                Snapshot `json:"target"`
-	Probes                []Probe  `json:"probes"`
-	Blockers              []string `json:"blockers"`
-	Ready                 bool     `json:"ready"`
+	Format                string       `json:"format"`
+	RunID                 string       `json:"runId"`
+	StageID               string       `json:"stageId"`
+	SourceInventorySHA256 string       `json:"sourceInventorySha256"`
+	SourceSnapshotSHA256  string       `json:"sourceSnapshotSha256"`
+	TargetSnapshotSHA256  string       `json:"targetSnapshotSha256"`
+	Source                Snapshot     `json:"source"`
+	Target                Snapshot     `json:"target"`
+	Probes                []Probe      `json:"probes"`
+	LiveSession           *LiveSession `json:"liveSession,omitempty"`
+	Blockers              []string     `json:"blockers"`
+	Ready                 bool         `json:"ready"`
 	// Cutover remains unauthorized until MIG11; a rehearsal is not a cutover.
 	CutoverAllowed bool `json:"cutoverAllowed"`
 }
@@ -175,6 +187,48 @@ func Evaluate(v Report) (Report, error) {
 	for _, name := range RequiredProbes {
 		if !results[name] {
 			add("required probe missing: " + name)
+		}
+	}
+	// A script returning `passed:true` is not a live Minecraft acceptance
+	// result. Require the native CLI observation of a foreground client process
+	// and a new player session visible on the isolated server via RCON.
+	// The backend validates its internal consistency, not remote attestation:
+	// it still trusts the staging operator and his RCON server.
+	if v.LiveSession == nil {
+		add("native Minecraft launch and live join evidence missing")
+	} else {
+		live := v.LiveSession
+		if !digest.MatchString(live.ClientSHA256) || !digest.MatchString(live.BeforeSHA256) || !digest.MatchString(live.JoinedSHA256) ||
+			!validUUID.MatchString(live.PlayerUUID) || len(live.PlayerName) < 3 || len(live.PlayerName) > 16 ||
+			strings.Trim(live.PlayerName, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") != "" {
+			return Report{}, errors.New("malformed live Minecraft witness")
+		}
+		matched := false
+		for _, p := range v.Target.Players {
+			if p.UUID == live.PlayerUUID {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			add("live join UUID not in migrated player identities")
+		}
+		for _, name := range []string{"login", "join"} {
+			found := false
+			for _, p := range v.Probes {
+				if p.Name == name && p.Passed && p.UUID == live.PlayerUUID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				add("live join identity not verified by probe: " + name)
+			}
+		}
+		start, e1 := time.Parse(time.RFC3339Nano, live.StartedAt)
+		join, e2 := time.Parse(time.RFC3339Nano, live.JoinedAt)
+		if e1 != nil || e2 != nil || !join.After(start) || join.Sub(start) > 10*time.Minute || join.Sub(start) < 2*time.Second {
+			return Report{}, errors.New("invalid live join timeline")
 		}
 	}
 	sort.Strings(blocks)
