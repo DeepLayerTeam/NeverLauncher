@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.45.6 — Chaos & Disaster Recovery (2026-11-01)
+
+- Add an **executable**, isolated Network-HA fault-injection runner using actual Docker service stops (PostgreSQL, Redis, S3 MinIO), redundant API failover through HTTPS Nginx and live worker network disconnection/reconnection. Refuse non-`nl-dr-*` Compose projects, mismatching credentials and unrelated S3 ports. Require externally trusted TLS and real backend readiness.
+- Commit an actual PostgreSQL checksum canary and upload/download a real S3 object before injecting faults. Re-check acknowledged bytes after recovery; measure monotonic time to failure detection and complete recovery for each fault. Emit a successful JSON report only after ALL faults and readback checks pass. Observed canary RPO is intentionally not a general data-loss guarantee.
+- Add a dedicated lab-only MinIO Compose override with loopback ports and a Compose `!override` rule to REMOVE inherited public production ingress port bindings; require Docker Compose 2.24.4+ for safe isolation.
+- Add fresh-host disaster restore acceptance around the existing real Network-HA DR runner: verify snapshot release/UTC timestamps, restore PostgreSQL/S3/worlds, fence ServerBridge and discarded Redis leases, check backend/workers, optionally reread an acknowledged PostgreSQL canary and halt app processes if post-restore checks fail. Measure actual incident-to-recovery RTO and report the **snapshot-age RPO upper bound** separately from unmeasured actual data loss.
+- Add operator runbook, fail-closed Python regressions and workflow checks. Keep earlier protection/release gates intact; no new public routes, contracts or substitute mock backend.
+- **Verification limit:** the local Python tests are not equivalent to a running Docker Compose cluster, MinIO outage, PostgreSQL restore or cross-host recovery. Those must be executed and documented by an independent operator before certification.
+
+
 ## 0.45.5 — Multi-node HA (2026-11-01)
 
 - Added independent `api`, `worker`, and one-shot `migrate` roles for the same real Backend API binary; invalid role or co-located Network-HA workers fail closed.

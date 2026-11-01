@@ -998,7 +998,7 @@ def check_restored_backend(project: str, env_file: Path, *, version: str | None,
         except (DrillError, ValueError, UnicodeError, OSError):
             pass
         time.sleep(1)
-    raise DrillError(f"restored {service} container did not become ready with required version/storage")
+    raise DrillError(f"restored {service.upper()} container did not become ready with required version/storage")
 
 
 def has_split_ha_roles_0455(version: str | None) -> bool:
