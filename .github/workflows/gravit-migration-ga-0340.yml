@@ -1,4 +1,4 @@
-name: Migration Center 0.34.0 GA execution gate
+name: Migration Center 0.44.9 integration acceptance
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ on:
       - 'apps/desktop/**'
       - '.github/workflows/gravit-migration-ga-0340.yml'
   push:
-    tags: ['v0.34.0', '0.34.0']
+    tags: ['v0.44.9', '0.44.9']
   workflow_dispatch:
 
 permissions:
@@ -53,13 +53,13 @@ jobs:
         working-directory: services/api
         run: |
           go test -race -count=1 ./internal/gravitplan ./internal/gravitidentity ./internal/dbmigrate ./internal/migrationworkflow ./internal/gravitdetector ./internal/gravitinventory ./internal/gravitcredentials ./internal/gravitcontent ./internal/gravitmodules ./internal/gravitrehearsal ./internal/gravitcutover ./internal/gravitrollback ./internal/gravitreport
-          go test -count=1 ./internal/repository -run 'TestMigration.*(033|Postgres|0442)'
+          go test -race -count=1 ./internal/repository -run '^TestMigration.*(Postgres|033|0442|0448)' 
           go test -run '^$' ./internal/httpapi
       - name: CLI build and tests
         working-directory: cli
         run: |
           go build ./cmd/launcher
-          go test -count=1 ./cmd/launcher -run 'TestMigration.*033'
+          go test -race -count=1 ./cmd/launcher -run 'TestMigration.*(033|0447|0448)' 
       - name: Schema, OpenAPI and version
         run: |
           python3 scripts/contracts/validate-openapi.py
@@ -132,7 +132,10 @@ jobs:
     timeout-minutes: 180
     env:
       LAUNCHER_MIGRATION_GA_TOKEN: ${{ secrets.MIGRATION_GA_ADMIN_TOKEN }}
-      MIGRATION_GA_PLAN_B64: ${{ secrets.MIGRATION_GA_PLAN_B64 }}
+      MIGRATION_GA_FILEAUTH_PLAN_B64: ${{ secrets.MIGRATION_GA_FILEAUTH_PLAN_B64 }}
+      MIGRATION_GA_SQL_PLAN_B64: ${{ secrets.MIGRATION_GA_SQL_PLAN_B64 }}
+      MIGRATION_GA_NETWORK_PLAN_B64: ${{ secrets.MIGRATION_GA_NETWORK_PLAN_B64 }}
+      MIGRATION_GA_EVIDENCE_ROOT: ${{ vars.MIGRATION_GA_EVIDENCE_ROOT }}
       MIGRATION_GA_SIGNING_KEY_B64: ${{ secrets.MIGRATION_GA_SIGNING_KEY_B64 }}
       MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64: ${{ secrets.MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64 }}
     steps:
@@ -140,35 +143,66 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-      - name: Require actual test environment, private key and scope
+      - name: Require three isolated reference projects and private evidence storage
         shell: bash
         run: |
           set -euo pipefail
           test -n "$LAUNCHER_MIGRATION_GA_TOKEN"
-          test -n "$MIGRATION_GA_PLAN_B64"
+          test -n "$MIGRATION_GA_FILEAUTH_PLAN_B64"
+          test -n "$MIGRATION_GA_SQL_PLAN_B64"
+          test -n "$MIGRATION_GA_NETWORK_PLAN_B64"
           test -n "$MIGRATION_GA_SIGNING_KEY_B64"
           test -n "$MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64"
+          test "${MIGRATION_GA_EVIDENCE_ROOT#/}" != "$MIGRATION_GA_EVIDENCE_ROOT"
+          test -d "$MIGRATION_GA_EVIDENCE_ROOT"
+          test "$(stat -c '%a' "$MIGRATION_GA_EVIDENCE_ROOT")" = 700
           umask 077
           mkdir -p "$RUNNER_TEMP/migration-ga"
-          printf '%s' "$MIGRATION_GA_PLAN_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/plan.json"
+          printf '%s' "$MIGRATION_GA_FILEAUTH_PLAN_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/fileauth-single.plan.json"
+          printf '%s' "$MIGRATION_GA_SQL_PLAN_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/sql-modded.plan.json"
+          printf '%s' "$MIGRATION_GA_NETWORK_PLAN_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/proxy-network.plan.json"
           printf '%s' "$MIGRATION_GA_SIGNING_KEY_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/signer.pem"
           printf '%s' "$MIGRATION_GA_TRUSTED_PUBLIC_KEY_B64" | base64 --decode > "$RUNNER_TEMP/migration-ga/trusted.pem"
-          # Plan's signingKey points to the independent secret installed above;
-          # sourceArchive and all real test programs must exist on this runner.
-      - name: Execute all live MIG01–MIG13 acceptance cases and sign receipts
+          # Evidence is retained on the protected self-hosted runner, not
+          # published with a potentially public CI artifact.
+          base="$(mktemp -d "$MIGRATION_GA_EVIDENCE_ROOT/run-XXXXXXXX")"
+          printf '%s\n' "$base" > "$RUNNER_TEMP/migration-ga/evidence-location"
+      - name: Execute mandatory positive and negative E2E checks for all three classes
         shell: bash
         run: |
           set -euo pipefail
-          go -C tools/migration-ga run . certify --plan "$RUNNER_TEMP/migration-ga/plan.json" --output "$RUNNER_TEMP/migration-ga/certificate.json"
-          go -C tools/migration-ga run . verify --certificate "$RUNNER_TEMP/migration-ga/certificate.json" --public-key "$RUNNER_TEMP/migration-ga/trusted.pem"
-      - name: Preserve signed proof for independent release approval
+          base="$(cat "$RUNNER_TEMP/migration-ga/evidence-location")"
+          for kind in fileauth-single sql-modded proxy-network; do
+            go -C tools/migration-ga run . certify \
+              --plan "$RUNNER_TEMP/migration-ga/$kind.plan.json" \
+              --output "$base/$kind-certificate.json" \
+              --evidence-dir "$base/$kind-evidence"
+            go -C tools/migration-ga run . verify \
+              --certificate "$base/$kind-certificate.json" \
+              --public-key "$RUNNER_TEMP/migration-ga/trusted.pem" \
+              --evidence-dir "$base/$kind-evidence"
+          done
+          go -C tools/migration-ga run . verify-cohort \
+            --public-key "$RUNNER_TEMP/migration-ga/trusted.pem" \
+            --fileauth-single "$base/fileauth-single-certificate.json" \
+            --fileauth-single-evidence "$base/fileauth-single-evidence" \
+            --sql-modded "$base/sql-modded-certificate.json" \
+            --sql-modded-evidence "$base/sql-modded-evidence" \
+            --proxy-network "$base/proxy-network-certificate.json" \
+            --proxy-network-evidence "$base/proxy-network-evidence"
+          cp "$base"/*-certificate.json "$RUNNER_TEMP/migration-ga/"
+      - name: Publish only signed certificate summaries (raw evidence remains private)
         uses: actions/upload-artifact@v4
         with:
-          name: migration-ga-0340-signed-evidence
-          path: ${{ runner.temp }}/migration-ga/certificate.json
+          name: migration-ga-0449-three-references
+          path: ${{ runner.temp }}/migration-ga/*-certificate.json
           retention-days: 90
           if-no-files-found: error
       - name: Remove temporary signing material
         if: always()
         shell: bash
-        run: rm -f "$RUNNER_TEMP/migration-ga/signer.pem" "$RUNNER_TEMP/migration-ga/plan.json"
+        run: |
+          rm -f "$RUNNER_TEMP/migration-ga/signer.pem" "$RUNNER_TEMP/migration-ga/"*.plan.json
+          rm -f "$RUNNER_TEMP/migration-ga/evidence-location"
+          # The private evidence archive is not deleted automatically: independent
+          # reviewers need its complete receipts and raw check outputs.

@@ -32,17 +32,59 @@ import (
 	"time"
 )
 
-const version = "0.34.0"
-const format = "launcher.gravit-ga-execution.v1"
+const version = "0.44.9"
+const format = "launcher.gravit-ga-execution.v2"
 const maxDocument = 32 << 20
+
+var referenceClasses = []string{"fileauth-single", "sql-modded", "proxy-network"}
+
+func referenceClassValid(s string) bool {
+	for _, value := range referenceClasses {
+		if s == value {
+			return true
+		}
+	}
+	return false
+}
 
 var gravit57 = regexp.MustCompile(`^5\.7\.[0-9]+$`)
 
-var required = []string{
-	"fileauth-login", "sql-login", "official-login", "forge-launch-join", "neoforge-launch-join",
-	"optional-presets", "skins", "uuid-world-plugin-data", "admin-permissions", "serverwrapper",
-	"desktop-cache-install", "staged-cutover-canary", "operational-rollback-drill",
+// These checks are executable operator probes, not claims of universal loader
+// support. A reference project only exercises the features it actually uses;
+// combined coverage includes FileAuth, SQL, official auth, two loaders,
+// optional files, textures, source-port modules and safe cutover/return.
+var commonChecks = []string{
+	"uuid-world-plugin-data", "admin-permissions", "desktop-cache-install",
+	"staged-cutover-canary", "operational-rollback-drill",
+	"negative-cutover", "negative-rollback",
 }
+var classChecks = map[string][]string{
+	"fileauth-single": {"fileauth-login", "skins", "negative-auth"},
+	"sql-modded":      {"sql-login", "forge-launch-join", "neoforge-launch-join", "optional-presets", "skins", "negative-auth", "negative-optional"},
+	"proxy-network":   {"official-login", "serverwrapper", "module-source-port", "negative-unknown-module", "negative-auth"},
+}
+
+func requiredForClass(class string) []string {
+	if !referenceClassValid(class) {
+		return nil
+	}
+	out := append([]string(nil), commonChecks...)
+	return append(out, classChecks[class]...)
+}
+
+var required = func() []string { // union, used only to bound check names
+	seen := map[string]bool{}
+	var out []string
+	for _, class := range referenceClasses {
+		for _, name := range requiredForClass(class) {
+			if !seen[name] {
+				seen[name] = true
+				out = append(out, name)
+			}
+		}
+	}
+	return out
+}()
 
 type Item struct {
 	Kind   string `json:"kind"`
@@ -99,11 +141,13 @@ type Review struct {
 	Status            string `json:"status"`
 }
 type Check struct {
-	Name           string   `json:"name"`
-	Command        []string `json:"command"`
-	TimeoutSeconds int      `json:"timeoutSeconds"`
+	Name             string   `json:"name"`
+	ExecutableSHA256 string   `json:"executableSha256"`
+	Command          []string `json:"command"`
+	TimeoutSeconds   int      `json:"timeoutSeconds"`
 }
 type Plan struct {
+	ReferenceClass         string  `json:"referenceClass"`
 	Backend                string  `json:"backend"`
 	RunID                  string  `json:"runId"`
 	ProjectID              string  `json:"projectId"`
@@ -133,12 +177,14 @@ type Probe struct {
 	TargetPluginSHA256  string   `json:"targetPluginSha256,omitempty"`
 }
 type SealedProbe struct {
-	Name           string `json:"name"`
-	SHA256         string `json:"sha256"`
-	EvidenceSHA256 string `json:"evidenceSha256"`
-	DurationMS     int64  `json:"durationMs"`
+	Name             string `json:"name"`
+	ExecutableSHA256 string `json:"executableSha256"`
+	SHA256           string `json:"sha256"`
+	EvidenceSHA256   string `json:"evidenceSha256"`
+	DurationMS       int64  `json:"durationMs"`
 }
 type Bundle struct {
+	ReferenceClass         string        `json:"referenceClass"`
 	Format                 string        `json:"format"`
 	Version                string        `json:"version"`
 	RunID                  string        `json:"runId"`
@@ -420,7 +466,7 @@ func validatePlan(p Plan) error {
 	if len(parts) == 3 {
 		patch, _ = strconv.Atoi(parts[2])
 	}
-	if len(p.RunID) < 8 || len(p.RunID) > 128 || p.ProjectID == "" || !commitHash(p.CommitSHA) || !gravit57.MatchString(p.SourceVersion) || patch < 0 || patch > 12 || !digest(p.TrustedGravitJarSHA256) || !digest(p.TargetReleaseSHA256) || p.SigningKey == "" || p.SourceArchive == "" {
+	if !referenceClassValid(p.ReferenceClass) || len(p.RunID) < 8 || len(p.RunID) > 128 || p.ProjectID == "" || !commitHash(p.CommitSHA) || !gravit57.MatchString(p.SourceVersion) || patch < 0 || patch > 12 || !digest(p.TrustedGravitJarSHA256) || !digest(p.TargetReleaseSHA256) || p.SigningKey == "" || p.SourceArchive == "" {
 		return errors.New("missing/invalid run, project, source, signing key or commit SHA-256")
 	}
 	if !filepath.IsAbs(p.SourceArchive) || !filepath.IsAbs(p.SigningKey) {
@@ -429,17 +475,17 @@ func validatePlan(p Plan) error {
 	if githubSHA := os.Getenv("GITHUB_SHA"); githubSHA != "" && githubSHA != p.CommitSHA {
 		return errors.New("plan commit differs from checked-out CI commit")
 	}
-	if len(p.Checks) != len(required) {
-		return fmt.Errorf("exactly %d independently executed GA checks are required", len(required))
+	if len(p.Checks) != len(requiredForClass(p.ReferenceClass)) {
+		return fmt.Errorf("exactly %d independently executed GA checks are required for %s", len(requiredForClass(p.ReferenceClass)), p.ReferenceClass)
 	}
 	seen := map[string]bool{}
 	for _, c := range p.Checks {
-		if seen[c.Name] || len(c.Command) == 0 || c.Command[0] == "" || c.TimeoutSeconds < 1 || c.TimeoutSeconds > 900 {
+		if seen[c.Name] || len(c.Command) == 0 || !filepath.IsAbs(c.Command[0]) || !digest(c.ExecutableSHA256) || c.TimeoutSeconds < 1 || c.TimeoutSeconds > 900 {
 			return errors.New("duplicate/invalid check command")
 		}
 		seen[c.Name] = true
 	}
-	for _, n := range required {
+	for _, n := range requiredForClass(p.ReferenceClass) {
 		if !seen[n] {
 			return fmt.Errorf("missing mandatory check: %s", n)
 		}
@@ -461,8 +507,11 @@ func (b *boundedOutput) Write(p []byte) (int, error) {
 	return b.data.Write(p)
 }
 
-func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string) (SealedProbe, error) {
-	result := SealedProbe{Name: c.Name}
+func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, evidenceDir string) (SealedProbe, error) {
+	result := SealedProbe{Name: c.Name, ExecutableSHA256: c.ExecutableSHA256}
+	if err := verifyExecutable(c); err != nil {
+		return result, fmt.Errorf("%s check executable: %w", c.Name, err)
+	}
 	cctx, cancel := context.WithTimeout(ctx, time.Duration(c.TimeoutSeconds)*time.Second)
 	defer cancel()
 	exe := exec.CommandContext(cctx, c.Command[0], c.Command[1:]...)
@@ -478,9 +527,15 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string) (S
 	exe.Env = env
 	stdout := &boundedOutput{limit: 4 << 20}
 	exe.Stdout = stdout
+	// Check stderr can contain credentials; never allow it into CI logs.
+	exe.Stderr = io.Discard
 	started := time.Now()
 	e := exe.Run()
 	out := stdout.data.Bytes()
+	// A replaced test executable cannot contribute to a signed GA result.
+	if err := verifyExecutable(c); err != nil {
+		return result, fmt.Errorf("%s check executable changed: %w", c.Name, err)
+	}
 	result.DurationMS = time.Since(started).Milliseconds()
 	if cctx.Err() != nil {
 		return result, fmt.Errorf("%s: %w", c.Name, cctx.Err())
@@ -521,7 +576,13 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string) (S
 			return result, errors.New("world or plugin data does not match")
 		}
 	}
-	raw, _ := json.Marshal(probe)
+	raw, e := json.Marshal(probe)
+	if e != nil {
+		return result, e
+	}
+	if e = preserveEvidence(evidenceDir, c.Name, probe.EvidenceFile, actual, raw); e != nil {
+		return result, fmt.Errorf("%s: preserving independent evidence: %w", c.Name, e)
+	}
 	result.SHA256 = hash(raw)
 	result.EvidenceSHA256 = actual
 	return result, nil
@@ -559,11 +620,11 @@ func seal(b Bundle, key ed25519.PrivateKey) (Bundle, error) {
 	if e != nil {
 		return b, e
 	}
-	b.Signature = base64.StdEncoding.EncodeToString(ed25519.Sign(key, append([]byte("Launcher-Migration-GA-0.34.0\x00"), raw...)))
+	b.Signature = base64.StdEncoding.EncodeToString(ed25519.Sign(key, append([]byte("Launcher-Migration-GA-0.44.9\x00"), raw...)))
 	return b, nil
 }
 func verifyBundle(b Bundle, public ed25519.PublicKey) error {
-	if b.Format != format || b.Version != version || !commitHash(b.CommitSHA) || !gravit57.MatchString(b.SourceVersion) || !digest(b.TrustedGravitJarSHA256) || !digest(b.TargetReleaseSHA256) || !digest(b.ReportSHA256) || !digest(b.SourceSHA256) || b.RunID == "" || b.ProjectID == "" || b.ReviewedBy == "" || !digest(b.ReviewEvidenceSHA256) || len(b.Checks) != len(required) {
+	if b.Format != format || b.Version != version || !referenceClassValid(b.ReferenceClass) || !commitHash(b.CommitSHA) || !gravit57.MatchString(b.SourceVersion) || !digest(b.TrustedGravitJarSHA256) || !digest(b.TargetReleaseSHA256) || !digest(b.ReportSHA256) || !digest(b.SourceSHA256) || b.RunID == "" || b.ProjectID == "" || b.ReviewedBy == "" || !digest(b.ReviewEvidenceSHA256) || len(b.Checks) != len(requiredForClass(b.ReferenceClass)) {
 		return errors.New("incomplete GA certificate")
 	}
 	key, e := base64.StdEncoding.DecodeString(b.PublicKey)
@@ -578,17 +639,17 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	if e != nil {
 		return e
 	}
-	if !ed25519.Verify(public, append([]byte("Launcher-Migration-GA-0.34.0\x00"), raw...), signature) {
+	if !ed25519.Verify(public, append([]byte("Launcher-Migration-GA-0.44.9\x00"), raw...), signature) {
 		return errors.New("invalid GA signature")
 	}
 	seen := map[string]bool{}
 	for _, c := range b.Checks {
-		if seen[c.Name] || !digest(c.SHA256) || !digest(c.EvidenceSHA256) {
+		if seen[c.Name] || !digest(c.SHA256) || !digest(c.EvidenceSHA256) || !digest(c.ExecutableSHA256) {
 			return errors.New("invalid/duplicate GA check")
 		}
 		seen[c.Name] = true
 	}
-	for _, n := range required {
+	for _, n := range requiredForClass(b.ReferenceClass) {
 		if !seen[n] {
 			return fmt.Errorf("missing %s", n)
 		}
@@ -639,9 +700,12 @@ func writePrivate(path string, data []byte) error {
 	return d.Sync()
 }
 
-func certify(ctx context.Context, p Plan, token string, output string) error {
+func certify(ctx context.Context, p Plan, token string, output, evidenceDir string) error {
 	if err := validatePlan(p); err != nil {
 		return err
+	}
+	if evidenceDir == "" || !filepath.IsAbs(evidenceDir) || evidenceDir == filepath.Dir(output) {
+		return errors.New("a separate absolute evidence directory is required")
 	}
 	if strings.TrimSpace(token) == "" {
 		return errors.New("missing LAUNCHER_MIGRATION_GA_TOKEN")
@@ -701,9 +765,14 @@ func certify(ctx context.Context, p Plan, token string, output string) error {
 		uuids = append(uuids, id.UUID)
 	}
 	sort.Strings(uuids)
-	b := Bundle{Format: format, Version: version, RunID: p.RunID, ProjectID: p.ProjectID, CommitSHA: p.CommitSHA, SourceVersion: p.SourceVersion, TrustedGravitJarSHA256: p.TrustedGravitJarSHA256, TargetReleaseSHA256: p.TargetReleaseSHA256, ReportSHA256: r.ReportSHA256, SourceSHA256: source, ReviewedBy: review.ReviewedBy, ReviewEvidenceSHA256: review.EvidenceSHA256, Checks: []SealedProbe{}}
+	b := Bundle{Format: format, Version: version, ReferenceClass: p.ReferenceClass, RunID: p.RunID, ProjectID: p.ProjectID, CommitSHA: p.CommitSHA, SourceVersion: p.SourceVersion, TrustedGravitJarSHA256: p.TrustedGravitJarSHA256, TargetReleaseSHA256: p.TargetReleaseSHA256, ReportSHA256: r.ReportSHA256, SourceSHA256: source, ReviewedBy: review.ReviewedBy, ReviewEvidenceSHA256: review.EvidenceSHA256, Checks: []SealedProbe{}}
+	// Create the evidence directory only after the authoritative report and
+	// immutable operator review have been checked. No prior directory is reused.
+	if e = os.Mkdir(evidenceDir, 0700); e != nil {
+		return fmt.Errorf("new evidence directory: %w", e)
+	}
 	for _, c := range p.Checks {
-		check, e := runProbe(ctx, c, p, r, uuids)
+		check, e := runProbe(ctx, c, p, r, uuids, evidenceDir)
 		if e != nil {
 			return e
 		}
@@ -729,6 +798,13 @@ func certify(ctx context.Context, p Plan, token string, output string) error {
 	}
 	if after.ReportSHA256 != r.ReportSHA256 {
 		return errors.New("migration state changed during GA E2E; rerun")
+	}
+	var afterReview Review
+	if e = getJSON(ctx, client, endpoint+"/review", token, &afterReview); e != nil {
+		return e
+	}
+	if afterReview.Status != review.Status || afterReview.ReviewedBy != review.ReviewedBy || afterReview.ReviewedAt != review.ReviewedAt || afterReview.EvidenceReference != review.EvidenceReference || afterReview.EvidenceSHA256 != review.EvidenceSHA256 || afterReview.Report.ReportSHA256 != r.ReportSHA256 {
+		return errors.New("migration operator review changed during GA E2E; rerun")
 	}
 	// Access independent audit signing material only after all untrusted
 	// probe commands have exited and the authoritative state was reread.
@@ -758,12 +834,13 @@ func main() {
 }
 func runMain(args []string) error {
 	if len(args) == 0 {
-		return errors.New("use certify --plan PLAN --output FILE or verify --certificate FILE --public-key PUB.pem")
+		return errors.New("use certify --plan PLAN --output FILE --evidence-dir DIR; verify --certificate FILE --public-key KEY --evidence-dir DIR; or verify-cohort")
 	}
 	cmd := args[0]
 	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
 	switch cmd {
 	case "certify":
+		evidenceDir := fs.String("evidence-dir", "", "new private directory for complete check evidence")
 		p := fs.String("plan", "", "operator check plan JSON")
 		out := fs.String("output", "", "signed certificate (created with 0600)")
 		if e := fs.Parse(args[1:]); e != nil {
@@ -777,8 +854,9 @@ func runMain(args []string) error {
 		if e = decodeStrict(data, &plan); e != nil {
 			return e
 		}
-		return certify(context.Background(), plan, os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *out)
+		return certify(context.Background(), plan, os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *out, *evidenceDir)
 	case "verify":
+		evidenceDir := fs.String("evidence-dir", "", "preserved evidence directory (required)")
 		file := fs.String("certificate", "", "signed evidence bundle")
 		pub := fs.String("public-key", "", "trusted Ed25519 PUBLIC KEY PEM")
 		if e := fs.Parse(args[1:]); e != nil {
@@ -811,8 +889,27 @@ func runMain(args []string) error {
 		if e = verifyBundle(b, key); e != nil {
 			return e
 		}
-		fmt.Println("GA execution evidence signature and matrix verified:", b.RunID)
+		if e = verifyEvidence(b, *evidenceDir); e != nil {
+			return e
+		}
+		fmt.Println("GA evidence signature, matrix and stored artifacts verified:", b.RunID)
 		return nil
+	case "verify-cohort":
+		key := fs.String("public-key", "", "trusted Ed25519 public key")
+		single := fs.String("fileauth-single", "", "fileauth certificate")
+		singleDir := fs.String("fileauth-single-evidence", "", "fileauth evidence directory")
+		modded := fs.String("sql-modded", "", "SQL/modded certificate")
+		moddedDir := fs.String("sql-modded-evidence", "", "SQL/modded evidence directory")
+		network := fs.String("proxy-network", "", "network certificate")
+		networkDir := fs.String("proxy-network-evidence", "", "network evidence directory")
+		if e := fs.Parse(args[1:]); e != nil {
+			return e
+		}
+		return verifyCohort(*key, map[string]CohortInput{
+			"fileauth-single": {Certificate: *single, EvidenceDir: *singleDir},
+			"sql-modded":      {Certificate: *modded, EvidenceDir: *moddedDir},
+			"proxy-network":   {Certificate: *network, EvidenceDir: *networkDir},
+		})
 	default:
 		return fmt.Errorf("unknown subcommand %q", cmd)
 	}

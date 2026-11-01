@@ -57,12 +57,12 @@ func TestReportIntegrityAndCutover(t *testing.T) {
 	}
 }
 func TestCheckPlanRequiresFullMatrix(t *testing.T) {
-	p := Plan{Backend: "https://trusted.example", RunID: "abcdef0123456789", ProjectID: "p", SourceArchive: "/s.zip", CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: trustedJarHash(t), TargetReleaseSHA256: testHash, SigningKey: "/key"}
+	p := Plan{ReferenceClass: "fileauth-single", Backend: "https://trusted.example", RunID: "abcdef0123456789", ProjectID: "p", SourceArchive: "/s.zip", CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: trustedJarHash(t), TargetReleaseSHA256: testHash, SigningKey: "/key"}
 	if validatePlan(p) == nil {
 		t.Fatal("accepted absent E2E checks")
 	}
-	for _, n := range required {
-		p.Checks = append(p.Checks, Check{Name: n, Command: []string{"true"}, TimeoutSeconds: 10})
+	for _, n := range requiredForClass(p.ReferenceClass) {
+		p.Checks = append(p.Checks, Check{Name: n, ExecutableSHA256: testHash, Command: []string{"/bin/true"}, TimeoutSeconds: 10})
 	}
 	if e := validatePlan(p); e != nil {
 		t.Fatal(e)
@@ -172,9 +172,13 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	p := Plan{Backend: server.URL, RunID: r.RunID, ProjectID: r.ProjectID, SourceArchive: sourceFile, CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: trustedJarHash(t), TargetReleaseSHA256: testHash, SigningKey: keyFile}
-	for _, name := range required {
-		p.Checks = append(p.Checks, Check{Name: name, Command: []string{os.Args[0], "-test.run=TestGAProbeHelper"}, TimeoutSeconds: 10})
+	p := Plan{ReferenceClass: "fileauth-single", Backend: server.URL, RunID: r.RunID, ProjectID: r.ProjectID, SourceArchive: sourceFile, CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: trustedJarHash(t), TargetReleaseSHA256: testHash, SigningKey: keyFile}
+	exeSHA, err := shaFile(os.Args[0], 128<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range requiredForClass(p.ReferenceClass) {
+		p.Checks = append(p.Checks, Check{Name: name, ExecutableSHA256: exeSHA, Command: []string{os.Args[0], "-test.run=TestGAProbeHelper"}, TimeoutSeconds: 10})
 	}
 	t.Setenv("LAUNCHER_MIGRATION_GA_TOKEN", "high-privilege-secret")
 	t.Setenv("MIGRATION_GA_SIGNING_KEY_B64", "high-privilege-key")
@@ -188,7 +192,8 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 		p.Checks[i].Command = append(p.Checks[i].Command, "--", p.Checks[i].Name)
 	}
 	output := filepath.Join(dir, "certificate.json")
-	if e = certify(context.Background(), p, "secret", output); e != nil {
+	evidenceDir := filepath.Join(dir, "evidence")
+	if e = certify(context.Background(), p, "secret", output, evidenceDir); e != nil {
 		t.Fatal(e)
 	}
 	data, e := os.ReadFile(output)
@@ -199,12 +204,24 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 	if e = decodeStrict(data, &b); e != nil {
 		t.Fatal(e)
 	}
-	if len(b.Checks) != len(required) {
+	if len(b.Checks) != len(requiredForClass(p.ReferenceClass)) {
 		t.Fatal("missing GA checks")
 	}
 	if e = verifyBundle(b, priv.Public().(ed25519.PublicKey)); e != nil {
 		t.Fatal(e)
 	}
+	if e = verifyEvidence(b, evidenceDir); e != nil {
+		t.Fatal(e)
+	}
+	// Signature alone is insufficient: the evidence is required for GA sign-off.
+	evidencePath := filepath.Join(evidenceDir, requiredForClass(p.ReferenceClass)[0]+".evidence")
+	if e = os.WriteFile(evidencePath, []byte("tampered"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	if verifyEvidence(b, evidenceDir) == nil {
+		t.Fatal("tampered evidence accepted")
+	}
+
 	b.SourceSHA256 = testHash
 	if verifyBundle(b, priv.Public().(ed25519.PublicKey)) == nil {
 		t.Fatal("tampered certificate accepted")

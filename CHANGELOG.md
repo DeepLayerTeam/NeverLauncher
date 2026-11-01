@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.44.9 — Gravit migration integration acceptance
+
+- Make Migration GA a concrete three-project, source-pinned **executable** acceptance process. Require FileAuth, SQL + Forge/NeoForge, and proxy/network references with exactly 10, 14 and 12 actual positive/negative checks respectively; each class has its own migration run and source ZIP. `verify-cohort` rejects reused runs/projects/sources, missing classes and mixed code commits.
+- Require a SHA-256-pinned, absolute, regular executable for every check; hash it before and after invocation and reject changed binaries. Bound stdout, runtime and raw evidence; keep backend credentials and signing secrets out of probe environment and stderr out of CI logs.
+- Durably preserve the canonical output receipt and full independent evidence for every check in a private, no-overwrite directory. `verify` now independently rehashes stored files, refuses missing/extra/tampered/symlinked data and checks run/report/UUID/world/target binding. Bump signed GA receipt to v2 with version-specific Ed25519 domain separation, so older summary-only certificates are not accepted.
+- Recheck both authoritative MIG13 report and immutable RC operator review after all checks, before signing. Require explicit negative auth/optional/module/cutover/rollback cases where applicable, and preserve separate protected CI artifacts for each reference class.
+- Updated protected CI to run real reference checks only on a designated self-hosted staging worker. Private raw evidence is retained off GitHub artifact storage; only signed summaries are uploaded. **No real Gravit or Minecraft E2E, PostgreSQL integration, Admin/Desktop/Backend production build, or end-to-end migration was performed in this local environment.** Unit/race/vet verifier results do not confer Migration GA status.
+
 ## 0.44.8 — Operational migration cutover and rollback
 
 - Add real source-host `fence-source` and `verify-source-fence` CLI actions. The first runs `systemctl mask --runtime --now` and verifies the named systemd service is inactive/masked; the second requires a fresh post-stop source export, hashes the typed MIG10 snapshot, rechecks the unit and durably writes an exclusive receipt. Failed checks leave the source fenced.
