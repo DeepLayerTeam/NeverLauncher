@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.45.0 — Migration GA evidence hardening and operational verification
+
+- Add a production-capable `tools/migration-ga audit-state` operation: stream and hash *actual* source/target `world/` and `plugins/` directory trees, compare complete player UUID rosters, reject symlinks/invalid entries, detect files modified while being read, and explicitly record excluded transient `session.lock` files. Exit nonzero for any mismatch; never modify a game world.
+- Pin two separate, externally quiesced source/target snapshot directories in each operator GA plan. During certification the GA runner **independently rereads the snapshots**, compares their exact digests and player population with MIG13 and the stored probe evidence, and refuses a certificate on discrepancy. Signed receipts alone can no longer substitute for native file inspection.
+- Version the GA evidence/signature format to `launcher.gravit-ga-execution.v3` with a new domain separator so 0.44.9 receipts are not accepted as 0.45.0 results.
+- Implement `verify-cohort-live`: verify all signed private evidence **then** recheck the source ZIP/JAR and each of the three current backend reports, signed release activation and operator reviews, so a changed route, revised report or revoked review blocks GA promotion even with a historically valid certificate.
+- Implement `manual-actions` to generate an actual per-project worklist from the authoritative migration report, listing pending manual items, writer fencing, backup, reconciliation, external network operations and the limitations of rollback. It is an operator worklist, **not** proof that a human completed the items.
+- Update protected three-reference CI workflow to require fresh live cohort verification and retain per-project manual-work documents privately. Add native file audit and live-backend tamper regression tests.
+- **Release boundary:** No real Gravit/Minecraft projects, database-backed three-reference CI or native Desktop platforms were exercised in this environment. 0.45.0 source and tools are prepared, but *Migration GA is not independently certified* until the protected E2E workflow, manual evidence review and live rollback drills pass.
+
+
 ## 0.44.9 — Gravit migration integration acceptance
 
 - Make Migration GA a concrete three-project, source-pinned **executable** acceptance process. Require FileAuth, SQL + Forge/NeoForge, and proxy/network references with exactly 10, 14 and 12 actual positive/negative checks respectively; each class has its own migration run and source ZIP. `verify-cohort` rejects reused runs/projects/sources, missing classes and mixed code commits.

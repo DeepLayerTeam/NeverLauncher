@@ -22,6 +22,9 @@ func makeReference0449(t *testing.T, base, class, run, project, source string, p
 	bundle := Bundle{Format: format, Version: version, ReferenceClass: class, RunID: run, ProjectID: project, CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: testHash, TargetReleaseSHA256: testHash, ReportSHA256: testHash, SourceSHA256: source, ReviewedBy: "operator", ReviewEvidenceSHA256: testHash, CompletedAt: time.Now().UTC().Format(time.RFC3339Nano)}
 	for _, name := range requiredForClass(class) {
 		raw := []byte("actual independent output for " + name)
+		if name == "uuid-world-plugin-data" {
+			raw, _ = json.Marshal(testStateAudit0450())
+		}
 		probe := Probe{RunID: run, Name: name, ReportSHA256: testHash, SourceSHA256: source, SourceVersion: "5.7.4", TargetReleaseSHA256: testHash, Passed: true, EvidenceFile: filepath.Join(dir, name+".evidence"), EvidenceSHA256: hash(raw)}
 		if name == "uuid-world-plugin-data" {
 			probe.SourceUUIDs = []string{testUUID}
@@ -142,7 +145,7 @@ func TestEvidenceNoSymlink0449(t *testing.T) {
 }
 
 func TestMandatoryNegativeChecks0449(t *testing.T) {
-	p := Plan{ReferenceClass: "sql-modded", Backend: "https://trusted.example", RunID: "migration-run-1", ProjectID: "project-1", SourceArchive: "/source.zip", CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: testHash, TargetReleaseSHA256: testHash, SigningKey: "/key"}
+	p := Plan{ReferenceClass: "sql-modded", Backend: "https://trusted.example", RunID: "migration-run-1", ProjectID: "project-1", SourceArchive: "/source.zip", CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: testHash, TargetReleaseSHA256: testHash, SigningKey: "/key", SnapshotSourceDir: "/source", SnapshotTargetDir: "/target"}
 	for _, check := range requiredForClass(p.ReferenceClass) {
 		p.Checks = append(p.Checks, Check{Name: check, ExecutableSHA256: testHash, Command: []string{"/usr/bin/probe"}, TimeoutSeconds: 10})
 	}

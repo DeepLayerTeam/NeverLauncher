@@ -1,4 +1,4 @@
-name: Migration Center 0.44.9 integration acceptance
+name: Migration Center 0.45.0 Migration GA acceptance
 
 on:
   pull_request:
@@ -15,7 +15,7 @@ on:
       - 'apps/desktop/**'
       - '.github/workflows/gravit-migration-ga-0340.yml'
   push:
-    tags: ['v0.44.9', '0.44.9']
+    tags: ['v0.45.0', '0.45.0']
   workflow_dispatch:
 
 permissions:
@@ -173,6 +173,9 @@ jobs:
           set -euo pipefail
           base="$(cat "$RUNNER_TEMP/migration-ga/evidence-location")"
           for kind in fileauth-single sql-modded proxy-network; do
+            go -C tools/migration-ga run . manual-actions \
+              --plan "$RUNNER_TEMP/migration-ga/$kind.plan.json" \
+              --output "$base/$kind-manual-actions.md"
             go -C tools/migration-ga run . certify \
               --plan "$RUNNER_TEMP/migration-ga/$kind.plan.json" \
               --output "$base/$kind-certificate.json" \
@@ -182,8 +185,11 @@ jobs:
               --public-key "$RUNNER_TEMP/migration-ga/trusted.pem" \
               --evidence-dir "$base/$kind-evidence"
           done
-          go -C tools/migration-ga run . verify-cohort \
+          go -C tools/migration-ga run . verify-cohort-live \
             --public-key "$RUNNER_TEMP/migration-ga/trusted.pem" \
+            --fileauth-single-plan "$RUNNER_TEMP/migration-ga/fileauth-single.plan.json" \
+            --sql-modded-plan "$RUNNER_TEMP/migration-ga/sql-modded.plan.json" \
+            --proxy-network-plan "$RUNNER_TEMP/migration-ga/proxy-network.plan.json" \
             --fileauth-single "$base/fileauth-single-certificate.json" \
             --fileauth-single-evidence "$base/fileauth-single-evidence" \
             --sql-modded "$base/sql-modded-certificate.json" \
@@ -194,7 +200,7 @@ jobs:
       - name: Publish only signed certificate summaries (raw evidence remains private)
         uses: actions/upload-artifact@v4
         with:
-          name: migration-ga-0449-three-references
+          name: migration-ga-0450-three-references
           path: ${{ runner.temp }}/migration-ga/*-certificate.json
           retention-days: 90
           if-no-files-found: error

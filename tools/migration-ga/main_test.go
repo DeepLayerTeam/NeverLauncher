@@ -57,7 +57,7 @@ func TestReportIntegrityAndCutover(t *testing.T) {
 	}
 }
 func TestCheckPlanRequiresFullMatrix(t *testing.T) {
-	p := Plan{ReferenceClass: "fileauth-single", Backend: "https://trusted.example", RunID: "abcdef0123456789", ProjectID: "p", SourceArchive: "/s.zip", CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: trustedJarHash(t), TargetReleaseSHA256: testHash, SigningKey: "/key"}
+	p := Plan{ReferenceClass: "fileauth-single", Backend: "https://trusted.example", RunID: "abcdef0123456789", ProjectID: "p", SourceArchive: "/s.zip", CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: trustedJarHash(t), TargetReleaseSHA256: testHash, SigningKey: "/key", SnapshotSourceDir: "/source", SnapshotTargetDir: "/target"}
 	if validatePlan(p) == nil {
 		t.Fatal("accepted absent E2E checks")
 	}
@@ -90,10 +90,10 @@ func TestGAProbeHelper(t *testing.T) {
 	if p.Name == "uuid-world-plugin-data" {
 		p.SourceUUIDs = []string{testUUID}
 		p.TargetUUIDs = []string{testUUID}
-		p.SourceWorldSHA256 = testHash
-		p.TargetWorldSHA256 = testHash
-		p.SourcePluginSHA256 = testHash
-		p.TargetPluginSHA256 = testHash
+		p.SourceWorldSHA256 = os.Getenv("GA_WORLD_HASH")
+		p.TargetWorldSHA256 = os.Getenv("GA_WORLD_HASH")
+		p.SourcePluginSHA256 = os.Getenv("GA_PLUGIN_HASH")
+		p.TargetPluginSHA256 = os.Getenv("GA_PLUGIN_HASH")
 	}
 	b, _ := json.Marshal(p)
 	fmt.Println(string(b))
@@ -165,14 +165,26 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 		t.Fatal(e)
 	}
 	evidenceFile := filepath.Join(dir, "real-check-evidence")
-	if e = os.WriteFile(evidenceFile, []byte("isolated-check-output"), 0600); e != nil {
+	sourceRoot, targetRoot := filepath.Join(dir, "source-snapshot"), filepath.Join(dir, "target-snapshot")
+	for _, root := range []string{sourceRoot, targetRoot} {
+		if err := os.Mkdir(root, 0700); err != nil {
+			t.Fatal(err)
+		}
+		stateFixture0450(t, root)
+	}
+	nativeAudit, err := auditState(sourceRoot, targetRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	auditData, _ := json.Marshal(nativeAudit)
+	if e = os.WriteFile(evidenceFile, auditData, 0600); e != nil {
 		t.Fatal(e)
 	}
 	evidenceHash, e := shaFile(evidenceFile, 1024)
 	if e != nil {
 		t.Fatal(e)
 	}
-	p := Plan{ReferenceClass: "fileauth-single", Backend: server.URL, RunID: r.RunID, ProjectID: r.ProjectID, SourceArchive: sourceFile, CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: trustedJarHash(t), TargetReleaseSHA256: testHash, SigningKey: keyFile}
+	p := Plan{ReferenceClass: "fileauth-single", Backend: server.URL, RunID: r.RunID, ProjectID: r.ProjectID, SourceArchive: sourceFile, CommitSHA: testHash, SourceVersion: "5.7.4", TrustedGravitJarSHA256: trustedJarHash(t), TargetReleaseSHA256: testHash, SigningKey: keyFile, SnapshotSourceDir: sourceRoot, SnapshotTargetDir: targetRoot}
 	exeSHA, err := shaFile(os.Args[0], 128<<20)
 	if err != nil {
 		t.Fatal(err)
@@ -182,7 +194,7 @@ func TestCertifyExecutesChecksAndSigns(t *testing.T) {
 	}
 	t.Setenv("LAUNCHER_MIGRATION_GA_TOKEN", "high-privilege-secret")
 	t.Setenv("MIGRATION_GA_SIGNING_KEY_B64", "high-privilege-key")
-	for _, env := range []string{"GA_PROBE_HELPER=1", "GA_RUN=" + r.RunID, "GA_REPORT=" + r.ReportSHA256, "GA_SOURCE=" + r.SourceSHA256, "GA_EVIDENCE_HASH=" + evidenceHash, "GA_PROBE_EVIDENCE=" + evidenceFile} {
+	for _, env := range []string{"GA_PROBE_HELPER=1", "GA_RUN=" + r.RunID, "GA_REPORT=" + r.ReportSHA256, "GA_SOURCE=" + r.SourceSHA256, "GA_EVIDENCE_HASH=" + evidenceHash, "GA_PROBE_EVIDENCE=" + evidenceFile, "GA_WORLD_HASH=" + nativeAudit.SourceWorldSHA256, "GA_PLUGIN_HASH=" + nativeAudit.SourcePluginSHA256} {
 		kv := strings.SplitN(env, "=", 2)
 		t.Setenv(kv[0], kv[1])
 	}

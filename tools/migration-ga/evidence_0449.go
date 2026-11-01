@@ -171,6 +171,10 @@ func verifyEvidence(b Bundle, dir string) error {
 			return fmt.Errorf("%s evidence SHA-256 mismatch", check.Name)
 		}
 		if check.Name == "uuid-world-plugin-data" {
+			auditRaw, readErr := os.ReadFile(evidence)
+			if readErr != nil || len(auditRaw) > maxDocument || validateStateAuditEvidence(auditRaw, probe) != nil {
+				return errors.New("retained state audit does not match signed receipt")
+			}
 			if len(probe.SourceUUIDs) == 0 || len(probe.SourceUUIDs) != len(probe.TargetUUIDs) || !digest(probe.SourceWorldSHA256) || probe.SourceWorldSHA256 != probe.TargetWorldSHA256 || !digest(probe.SourcePluginSHA256) || probe.SourcePluginSHA256 != probe.TargetPluginSHA256 {
 				return errors.New("incomplete world/identity cross-check")
 			}

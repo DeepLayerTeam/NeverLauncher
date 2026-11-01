@@ -32,8 +32,8 @@ import (
 	"time"
 )
 
-const version = "0.44.9"
-const format = "launcher.gravit-ga-execution.v2"
+const version = "0.45.0"
+const format = "launcher.gravit-ga-execution.v3"
 const maxDocument = 32 << 20
 
 var referenceClasses = []string{"fileauth-single", "sql-modded", "proxy-network"}
@@ -152,6 +152,8 @@ type Plan struct {
 	RunID                  string  `json:"runId"`
 	ProjectID              string  `json:"projectId"`
 	SourceArchive          string  `json:"sourceArchive"`
+	SnapshotSourceDir      string  `json:"snapshotSourceDir"`
+	SnapshotTargetDir      string  `json:"snapshotTargetDir"`
 	CommitSHA              string  `json:"commitSha"`
 	SourceVersion          string  `json:"sourceVersion"`
 	TrustedGravitJarSHA256 string  `json:"trustedGravitJarSha256"`
@@ -469,7 +471,7 @@ func validatePlan(p Plan) error {
 	if !referenceClassValid(p.ReferenceClass) || len(p.RunID) < 8 || len(p.RunID) > 128 || p.ProjectID == "" || !commitHash(p.CommitSHA) || !gravit57.MatchString(p.SourceVersion) || patch < 0 || patch > 12 || !digest(p.TrustedGravitJarSHA256) || !digest(p.TargetReleaseSHA256) || p.SigningKey == "" || p.SourceArchive == "" {
 		return errors.New("missing/invalid run, project, source, signing key or commit SHA-256")
 	}
-	if !filepath.IsAbs(p.SourceArchive) || !filepath.IsAbs(p.SigningKey) {
+	if !filepath.IsAbs(p.SourceArchive) || !filepath.IsAbs(p.SigningKey) || !filepath.IsAbs(p.SnapshotSourceDir) || !filepath.IsAbs(p.SnapshotTargetDir) || filepath.Clean(p.SnapshotSourceDir) == filepath.Clean(p.SnapshotTargetDir) {
 		return errors.New("source archive and signer key paths must be absolute")
 	}
 	if githubSHA := os.Getenv("GITHUB_SHA"); githubSHA != "" && githubSHA != p.CommitSHA {
@@ -562,6 +564,19 @@ func runProbe(ctx context.Context, c Check, p Plan, r Report, uuids []string, ev
 		return result, fmt.Errorf("%s: evidence file checksum invalid: %v", c.Name, e)
 	}
 	if c.Name == "uuid-world-plugin-data" {
+		native, nativeErr := auditState(p.SnapshotSourceDir, p.SnapshotTargetDir)
+		if nativeErr != nil || !native.Matched || native.SourceWorldSHA256 != probe.SourceWorldSHA256 || native.SourcePluginSHA256 != probe.SourcePluginSHA256 || len(native.SourceUUIDs) != len(uuids) {
+			return result, errors.New("independent native source/target snapshot comparison failed")
+		}
+		for i, id := range uuids {
+			if id != native.SourceUUIDs[i] {
+				return result, errors.New("native snapshot UUIDs disagree with migrated identities")
+			}
+		}
+		auditRaw, readErr := os.ReadFile(probe.EvidenceFile)
+		if readErr != nil || len(auditRaw) > maxDocument || validateStateAuditEvidence(auditRaw, probe) != nil {
+			return result, errors.New("native state audit evidence missing, inconsistent or unreadable")
+		}
 		if len(probe.SourceUUIDs) != len(uuids) || len(probe.TargetUUIDs) != len(uuids) {
 			return result, errors.New("UUID check lacks complete player population")
 		}
@@ -620,7 +635,7 @@ func seal(b Bundle, key ed25519.PrivateKey) (Bundle, error) {
 	if e != nil {
 		return b, e
 	}
-	b.Signature = base64.StdEncoding.EncodeToString(ed25519.Sign(key, append([]byte("Launcher-Migration-GA-0.44.9\x00"), raw...)))
+	b.Signature = base64.StdEncoding.EncodeToString(ed25519.Sign(key, append([]byte("Launcher-Migration-GA-0.45.0\x00"), raw...)))
 	return b, nil
 }
 func verifyBundle(b Bundle, public ed25519.PublicKey) error {
@@ -639,7 +654,7 @@ func verifyBundle(b Bundle, public ed25519.PublicKey) error {
 	if e != nil {
 		return e
 	}
-	if !ed25519.Verify(public, append([]byte("Launcher-Migration-GA-0.44.9\x00"), raw...), signature) {
+	if !ed25519.Verify(public, append([]byte("Launcher-Migration-GA-0.45.0\x00"), raw...), signature) {
 		return errors.New("invalid GA signature")
 	}
 	seen := map[string]bool{}
@@ -778,6 +793,9 @@ func certify(ctx context.Context, p Plan, token string, output, evidenceDir stri
 		}
 		b.Checks = append(b.Checks, check)
 	}
+	if err := ensureSnapshotStillMatches(p, evidenceDir); err != nil {
+		return fmt.Errorf("snapshots changed during GA execution: %w", err)
+	}
 	// A check must not change its own Gravit source bytes after the initial
 	// source verification while still receiving a signed certificate.
 	again, e := shaFile(p.SourceArchive, 512<<20)
@@ -839,6 +857,29 @@ func runMain(args []string) error {
 	cmd := args[0]
 	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
 	switch cmd {
+	case "manual-actions":
+		planFile := fs.String("plan", "", "migration operator plan")
+		out := fs.String("output", "", "new operator worklist Markdown file")
+		if e := fs.Parse(args[1:]); e != nil {
+			return e
+		}
+		raw, e := os.ReadFile(*planFile)
+		if e != nil {
+			return e
+		}
+		var p Plan
+		if e = decodeStrict(raw, &p); e != nil {
+			return e
+		}
+		return exportManualWorklist(context.Background(), p, os.Getenv("LAUNCHER_MIGRATION_GA_TOKEN"), *out)
+	case "audit-state":
+		source := fs.String("source", "", "absolute source snapshot directory")
+		target := fs.String("target", "", "absolute target snapshot directory")
+		out := fs.String("output", "", "new private JSON audit evidence file")
+		if e := fs.Parse(args[1:]); e != nil {
+			return e
+		}
+		return executeStateAudit(*source, *target, *out)
 	case "certify":
 		evidenceDir := fs.String("evidence-dir", "", "new private directory for complete check evidence")
 		p := fs.String("plan", "", "operator check plan JSON")
@@ -894,7 +935,7 @@ func runMain(args []string) error {
 		}
 		fmt.Println("GA evidence signature, matrix and stored artifacts verified:", b.RunID)
 		return nil
-	case "verify-cohort":
+	case "verify-cohort", "verify-cohort-live":
 		key := fs.String("public-key", "", "trusted Ed25519 public key")
 		single := fs.String("fileauth-single", "", "fileauth certificate")
 		singleDir := fs.String("fileauth-single-evidence", "", "fileauth evidence directory")
@@ -902,14 +943,21 @@ func runMain(args []string) error {
 		moddedDir := fs.String("sql-modded-evidence", "", "SQL/modded evidence directory")
 		network := fs.String("proxy-network", "", "network certificate")
 		networkDir := fs.String("proxy-network-evidence", "", "network evidence directory")
+		singlePlan := fs.String("fileauth-single-plan", "", "fileauth live source plan")
+		moddedPlan := fs.String("sql-modded-plan", "", "SQL/modded live source plan")
+		networkPlan := fs.String("proxy-network-plan", "", "network live source plan")
 		if e := fs.Parse(args[1:]); e != nil {
 			return e
 		}
-		return verifyCohort(*key, map[string]CohortInput{
+		cohort := map[string]CohortInput{
 			"fileauth-single": {Certificate: *single, EvidenceDir: *singleDir},
 			"sql-modded":      {Certificate: *modded, EvidenceDir: *moddedDir},
 			"proxy-network":   {Certificate: *network, EvidenceDir: *networkDir},
-		})
+		}
+		if cmd == "verify-cohort-live" {
+			return verifyCohortLiveCommand(context.Background(), *key, cohort, loadCohortPlanPaths(*singlePlan, *moddedPlan, *networkPlan))
+		}
+		return verifyCohort(*key, cohort)
 	default:
 		return fmt.Errorf("unknown subcommand %q", cmd)
 	}
