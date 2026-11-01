@@ -28,7 +28,7 @@ func TestEvaluateAppliedSealedCatalog(t *testing.T) {
 	if !st.Compatible || len(st.Pending) != 0 || len(st.Unknown) != 0 || len(st.Unverified) != 0 || st.Applied != st.Total {
 		t.Fatalf("unexpected status: %+v", st)
 	}
-	if st.Current != "0113_permanent_game_credentials_0434" {
+	if st.Current != "0114_gravit_migration_plan_0442" {
 		t.Fatalf("unexpected current migration %q", st.Current)
 	}
 }

@@ -45,6 +45,7 @@ func (s Server) Handler() http.Handler {
 	s.registerMigrationRoutes0331(mux)
 	s.registerMigrationCompatibilityRoutes0332(mux)
 	s.registerMigrationInventoryRoutes0333(mux)
+	s.registerMigrationPlanRoutes0442(mux)
 	s.registerMigrationIdentityRoutes0334(mux)
 	s.registerMigrationAuthRoutes0335(mux)
 	s.registerMigrationSecurityRoutes0336(mux)

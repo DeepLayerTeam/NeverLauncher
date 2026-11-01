@@ -142,6 +142,32 @@ type ContentPlan0337 = {
     fields: { field: string; status: string; reason: string }[];
   };
 };
+type MigrationPlan0442 = {
+  format: string;
+  runId: string;
+  projectId: string;
+  sourceSha256: string;
+  inventorySha256: string;
+  targetSha256: string;
+  planSha256: string;
+  targetUnchanged?: boolean;
+  status: "manual" | "blocked";
+  destination: {
+    profilePath: string;
+    profileId: string;
+    profileName: string;
+    loader: string;
+    channel: string;
+    version: string;
+  };
+  counts: Record<string, number>;
+  transferBytes: number;
+  blockers: string[];
+  checklist: { action: string; detail: string; required: boolean }[];
+  items: { source: string; target?: string; kind: string; status: string; bytes: number; reason?: string }[];
+  content: ContentPlan0337;
+  identities: { sourceAccounts: number; duplicateOrConflicting: number; state: string; reason?: string };
+};
 type ContentState0337 = {
   plan: ContentPlan0337;
   workspaceId: string;
@@ -331,6 +357,7 @@ export function MigrationCenter0331({
   const [contentVersion, setContentVersion] = useState("migrated-1");
   const [contentChannel, setContentChannel] = useState("stable");
   const [contentConfirm, setContentConfirm] = useState("");
+  const [migrationPlan0442, setMigrationPlan0442] = useState<MigrationPlan0442 | null>(null);
   const [contentPreview, setContentPreview] = useState<ContentPlan0337 | null>(
     null,
   );
@@ -409,6 +436,13 @@ export function MigrationCenter0331({
         ),
       ]);
       setRun(current);
+      try {
+        setMigrationPlan0442(await requestJSON<MigrationPlan0442>(backendUrl, `${base}/${encodeURIComponent(selectedId)}/dry-run`, token));
+      } catch (e) {
+        if (e instanceof Error && "status" in e && (e as { status?: number }).status === 404)
+          setMigrationPlan0442(null);
+        else throw e;
+      }
       setEvents(journal);
       setReport03313(null);
       setReview03313(null);
@@ -535,6 +569,7 @@ export function MigrationCenter0331({
     setIdentities(null);
     setCredentials(null);
     setCredentialPreview(null);
+    setMigrationPlan0442(null);
     setCutovers03311([]);
     setConfirmRun("");
     setError("");
@@ -1001,9 +1036,48 @@ export function MigrationCenter0331({
       setBusy(false);
     }
   }
+  async function migrationDryRun0442() {
+    if (!runId || !source || !inventory || !compatibility || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await requestJSON<MigrationPlan0442>(
+        backendUrl,
+        `${base}/${encodeURIComponent(runId)}/dry-run`,
+        token,
+        { method: "POST", headers: {
+          "Content-Type": "application/zip",
+          "X-Gravit-Profile-Path": contentProfilePath,
+          "X-Profile-ID": contentProfileId,
+          "X-Profile-Name": contentProfileName,
+          "X-Loader": contentLoader,
+          "X-Channel": contentChannel,
+          "X-Version": contentVersion,
+        }, body: source },
+      );
+      setMigrationPlan0442(result);
+      setContentPreview(result.content);
+      await refresh(runId);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  const planMatches0442 = Boolean(
+    migrationPlan0442 && inventory &&
+    migrationPlan0442.sourceSha256 === inventory.sourceSha256 &&
+    migrationPlan0442.destination.profilePath === contentProfilePath &&
+    migrationPlan0442.destination.profileId === contentProfileId &&
+    migrationPlan0442.destination.profileName === contentProfileName &&
+    migrationPlan0442.destination.loader === contentLoader &&
+    migrationPlan0442.destination.channel === contentChannel &&
+    migrationPlan0442.destination.version === contentVersion &&
+    migrationPlan0442.targetUnchanged !== false
+  );
   async function migrationContent0337(commit: boolean) {
     if (!runId || !source || !inventory || busy) return;
-    if (commit && (!contentPreview?.ready || contentConfirm !== runId)) {
+    if (commit && (!contentPreview?.ready || contentConfirm !== runId || !planMatches0442 || migrationPlan0442?.status === "blocked")) {
       setError("Для переноса необходимо подтвердить текущий план и ID запуска");
       return;
     }
@@ -1018,7 +1092,7 @@ export function MigrationCenter0331({
         "X-Loader": contentLoader,
         "X-Channel": contentChannel,
         "X-Version": contentVersion,
-        ...(commit ? { "X-Migration-Content-Confirm": runId } : {}),
+        ...(commit ? { "X-Migration-Content-Confirm": runId, "X-Migration-Plan-SHA256": migrationPlan0442!.planSha256 } : {}),
       };
       const result = await requestJSON<ContentPlan0337 | ContentState0337>(
         backendUrl,
@@ -1303,6 +1377,7 @@ export function MigrationCenter0331({
               onChange={(e) => {
                 setSource(e.target.files?.[0] ?? null);
                 setCredentialPreview(null);
+                setMigrationPlan0442(null);
                 setConfirmRun("");
               }}
             />
@@ -1667,6 +1742,12 @@ export function MigrationCenter0331({
           </label>
           <div className="buttonRow">
             <button
+              disabled={busy || !source || !inventory || !compatibility || run.status !== "prepared"}
+              onClick={() => void migrationDryRun0442()}
+            >
+              Выполнить полный dry-run и зафиксировать план
+            </button>
+            <button
               disabled={
                 busy || !source || !inventory || run.status !== "prepared"
               }
@@ -1681,6 +1762,28 @@ export function MigrationCenter0331({
               Проверить сохранённое состояние
             </button>
           </div>
+          {migrationPlan0442 && (
+            <div>
+              <p>Общий план: <strong>{migrationPlan0442.status}</strong>;
+                совпадение с текущими полями: {planMatches0442 ? "да" : "нет, требуется новый dry-run"}.
+                Исходная цель: {migrationPlan0442.targetUnchanged === false ? "изменилась — повторить dry-run" : "актуальна"}.
+                Учётных записей: {migrationPlan0442.identities.sourceAccounts};
+                проблем сопоставления UUID: {migrationPlan0442.identities.duplicateOrConflicting}.
+                Копирование: {migrationPlan0442.transferBytes} байт;
+                автоматических: {migrationPlan0442.counts.automatic || 0};
+                преобразований: {migrationPlan0442.counts.transformed || 0};
+                ручных: {migrationPlan0442.counts.manual || 0};
+                блокирующих: {migrationPlan0442.blockers.length}.
+              </p>
+              <p>SHA-256 плана: <code>{migrationPlan0442.planSha256}</code></p>
+              {migrationPlan0442.blockers.map((x, i) => <p key={i} className="error">{x}</p>)}
+              <details>
+                <summary>Работы оператора и полный список операций</summary>
+                <ul>{migrationPlan0442.checklist.map((x) => <li key={x.action}>{x.detail}</li>)}</ul>
+                <pre>{JSON.stringify(migrationPlan0442.items, null, 2)}</pre>
+              </details>
+            </div>
+          )}
           {contentPreview && (
             <>
               <p>
@@ -1714,7 +1817,7 @@ export function MigrationCenter0331({
                     />
                   </label>
                   <button
-                    disabled={busy || contentConfirm !== runId}
+                    disabled={busy || contentConfirm !== runId || !planMatches0442 || migrationPlan0442?.status === "blocked"}
                     onClick={() => void migrationContent0337(true)}
                   >
                     Перенести реальные файлы в зашифрованный Build Workspace

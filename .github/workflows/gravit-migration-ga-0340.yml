@@ -5,6 +5,8 @@ on:
     paths:
       - 'tools/migration-ga/**'
       - 'services/api/internal/gravitreport/**'
+      - 'services/api/internal/gravitplan/**'
+      - 'services/api/internal/dbmigrate/sql/0114*'
       - 'services/api/internal/repository/migration_*'
       - 'services/api/internal/httpapi/migration_*'
       - 'services/api/internal/dbmigrate/sql/00[89]*'
@@ -50,8 +52,8 @@ jobs:
       - name: MIG01–MIG13 Go tests, including PostgreSQL
         working-directory: services/api
         run: |
-          go test -race -count=1 ./internal/migrationworkflow ./internal/gravitdetector ./internal/gravitinventory ./internal/gravitcredentials ./internal/gravitcontent ./internal/gravitmodules ./internal/gravitrehearsal ./internal/gravitcutover ./internal/gravitrollback ./internal/gravitreport
-          go test -count=1 ./internal/repository -run 'TestMigration.*(033|Postgres)'
+          go test -race -count=1 ./internal/gravitplan ./internal/gravitidentity ./internal/dbmigrate ./internal/migrationworkflow ./internal/gravitdetector ./internal/gravitinventory ./internal/gravitcredentials ./internal/gravitcontent ./internal/gravitmodules ./internal/gravitrehearsal ./internal/gravitcutover ./internal/gravitrollback ./internal/gravitreport
+          go test -count=1 ./internal/repository -run 'TestMigration.*(033|Postgres|0442)'
           go test -run '^$' ./internal/httpapi
       - name: CLI build and tests
         working-directory: cli

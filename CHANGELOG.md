@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.44.2 — Gravit dry-run with source and target pinned migration plan
+
+- Implemented a real, one-selected-profile dry-run that reuses ZIP inventory, compatibility, FileAuth/SQL identity extraction, static module inspection and the production content/optional converter. Produces per-file statuses, actual transfer sizes, source UUID conflicts, replacement warnings, concrete blockers and an operator checklist; never executes foreign JARs or writes a playable release during preview.
+- Persist sanitized deterministic `planSha256` tied to verified source/archive manifest, selected destination, converted content, module findings and the current Never project fingerprint. Repeated identical scans do not increment migration revision; changed source, run or target prevents stale reuse.
+- Require a non-blocked, unchanged plan for content import. The repository validates the exact saved plan in the serializable profile/workspace transaction; repeated identical imports may resume verified staged files after a lost response. No legacy source keys are transferred.
+- Migration Center exposes the full plan, blockers, file actions, identity counts, plan digest and target-staleness indicator. Added SQL migration, OpenAPI route definitions, test coverage and CI linkage.
+- **Verification boundary:** Local `go test -race`/`go vet` on seven dependency-light packages pass; PostgreSQL integration, full Go 1.27.3 Backend build, Admin production bundle and actual Minecraft launches were not performed locally. This is not certification for a real production cutover. Full multi-profile import, password cutover, texture replay and actual game E2E remain later roadmap stages.
+
 ## 0.44.1 — Gravit source inventory and compatibility hardening
 
 - Compatibility uploads now spool sources privately with a 512 MiB cap and the same two-slot admission limit as source inventory. Both operations use a single bounded ZIP entry validator: encrypted/special entries, unsafe or colliding paths, CRC mismatches and compression bombs are rejected before compatibility analysis, without buffering whole modpacks in API memory.

@@ -3,7 +3,7 @@
   "info": {
     "title": "Launcher API",
     "version": "1.0.0",
-    "description": "Канонический production API Launcher 0.44.1. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
+    "description": "Канонический production API Launcher 0.44.2. Исторические маршруты /api/v2–/api/v5 удалены и намеренно не входят в контракт."
   },
   "servers": [
     {
@@ -20178,6 +20178,16 @@
               "type": "string",
               "minLength": 1
             }
+          },
+          {
+            "name": "X-Migration-Plan-SHA256",
+            "in": "header",
+            "required": true,
+            "description": "Digest of a non-blocked, unmodified 0.44.2 dry-run plan",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
           }
         ],
         "responses": {
@@ -20226,7 +20236,7 @@
             }
           }
         },
-        "description": "Explicit run ID confirmation required; signing and publication remain separate high-assurance operations."
+        "description": "Requires a stored, non-blocked dry-run plan matching the original source archive and current target state. Repeated import with identical content can resume existing workspace."
       }
     },
     "/api/v1/admin/migration-runs/{runId}/content/preview": {
@@ -21745,6 +21755,196 @@
           },
           "503": {
             "description": "PostgreSQL unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/migration-runs/{runId}/dry-run": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified read-only migration preview persisted only in the migration metadata; never cutover permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitMigrationPlan0442"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Run, inventory or compatibility not found"
+          },
+          "409": {
+            "description": "Source/inventory/target changed, missing precondition, or conflicted run"
+          },
+          "413": {
+            "description": "Source ZIP exceeds 512 MiB"
+          },
+          "415": {
+            "description": "application/zip required"
+          },
+          "422": {
+            "description": "Source rejected by active parsers"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        },
+        "operationId": "migration0442_get_pinned_dry_run",
+        "summary": "Read pinned migration plan with live target fingerprint check",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verified read-only migration preview persisted only in the migration metadata; never cutover permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GravitMigrationPlan0442"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "Permission denied"
+          },
+          "404": {
+            "description": "Run, inventory or compatibility not found"
+          },
+          "409": {
+            "description": "Source/inventory/target changed, missing precondition, or conflicted run"
+          },
+          "413": {
+            "description": "Source ZIP exceeds 512 MiB"
+          },
+          "415": {
+            "description": "application/zip required"
+          },
+          "422": {
+            "description": "Source rejected by active parsers"
+          },
+          "503": {
+            "description": "PostgreSQL unavailable"
+          }
+        },
+        "operationId": "migration0442_create_pinned_dry_run",
+        "summary": "Run actual inventory, compatibility, identity, module and profile converters without mutating target project",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "X-Gravit-Profile-Path",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Profile-ID",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Profile-Name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Loader",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Channel",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary",
+                "maxLength": 536870912
+              }
+            }
           }
         }
       }
@@ -26066,6 +26266,173 @@
                 }
               }
             }
+          }
+        }
+      },
+      "GravitMigrationPlan0442": {
+        "type": "object",
+        "required": [
+          "format",
+          "runId",
+          "sourceSha256",
+          "inventorySha256",
+          "targetSha256",
+          "destination",
+          "planSha256",
+          "status",
+          "items",
+          "checklist",
+          "blockers",
+          "transferBytes"
+        ],
+        "properties": {
+          "format": {
+            "type": "string",
+            "const": "launcher.gravit-migration-plan.v1"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "sourceSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "inventorySha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "targetSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "planSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "blocked"
+            ]
+          },
+          "targetUnchanged": {
+            "type": "boolean",
+            "description": "Live target fingerprint equals the stored snapshot; not included in plan digest"
+          },
+          "destination": {
+            "type": "object",
+            "properties": {
+              "profilePath": {
+                "type": "string"
+              },
+              "profileId": {
+                "type": "string"
+              },
+              "profileName": {
+                "type": "string"
+              },
+              "loader": {
+                "type": "string"
+              },
+              "channel": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "sha256": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "bytes": {
+                  "type": "integer",
+                  "format": "int64"
+                }
+              }
+            }
+          },
+          "checklist": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "required": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "transferBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "identities": {
+            "type": "object",
+            "properties": {
+              "sourceAccounts": {
+                "type": "integer"
+              },
+              "duplicateOrConflicting": {
+                "type": "integer"
+              },
+              "state": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          },
+          "content": {
+            "type": "object",
+            "description": "Real preview from gravitic content converter"
+          },
+          "modules": {
+            "type": "object",
+            "description": "Real source-pinned module inspection"
           }
         }
       }

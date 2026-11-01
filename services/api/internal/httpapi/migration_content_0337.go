@@ -10,13 +10,14 @@ import (
 
 	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcontent"
 	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
+	gp "gitflic.ru/skif4er/launcher/services/api/internal/gravitplan"
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 type migrationContentStore0337 interface {
-	EnsureMigrationContent0337(context.Context, string, string, string, string, gc.Plan) (repository.BuildWorkspace, error)
+	EnsureMigrationContent0337(context.Context, string, string, string, string, gc.Plan, ...string) (repository.BuildWorkspace, error)
 	GetMigrationContent0337(context.Context, string, string) (gc.Plan, repository.BuildWorkspace, error)
 }
 
@@ -165,6 +166,10 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 		writeJSON(w, 200, map[string]any{"data": plan})
 		return
 	}
+	if err := s.migrationCheckContentPlan0442(r.Context(), run.ID, r.Header.Get("X-Migration-Plan-SHA256"), gp.Destination{ProfilePath: profilePath, ProfileID: profileID, ProfileName: name, Loader: loader, Channel: channel, Version: version}, plan); err != nil {
+		migrationHTTPError0331(w, mw.ErrConflict)
+		return
+	}
 	if !plan.Ready {
 		writeJSON(w, 422, map[string]any{"data": plan, "error": map[string]any{"message": "resolve content blockers before import", "code": "content-blocked"}})
 		return
@@ -178,7 +183,7 @@ func (s Server) migrationContentApply0337(w http.ResponseWriter, r *http.Request
 		return
 	}
 	defer unlock()
-	ws, e := store.EnsureMigrationContent0337(r.Context(), run.ID, claims.Sub, channel, version, plan)
+	ws, e := store.EnsureMigrationContent0337(r.Context(), run.ID, claims.Sub, channel, version, plan, r.Header.Get("X-Migration-Plan-SHA256"))
 	if e != nil {
 		migrationHTTPError0331(w, e)
 		return

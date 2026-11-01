@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcontent"
+	gp "gitflic.ru/skif4er/launcher/services/api/internal/gravitplan"
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 	"gitflic.ru/skif4er/launcher/services/api/internal/model"
 )
@@ -17,7 +19,7 @@ import (
 // EnsureMigrationContent0337 makes the profile/workspace reservation durable
 // before object staging. A network interruption returns to precisely the same
 // profile/workspace; it never silently adopts an unrelated existing profile.
-func (r *SQLRepository) EnsureMigrationContent0337(ctx context.Context, runID, owner, channel, version string, plan gc.Plan) (BuildWorkspace, error) {
+func (r *SQLRepository) EnsureMigrationContent0337(ctx context.Context, runID, owner, channel, version string, plan gc.Plan, expectedPlanSHA ...string) (BuildWorkspace, error) {
 	if e := r.check(); e != nil {
 		return BuildWorkspace{}, e
 	}
@@ -55,6 +57,38 @@ func (r *SQLRepository) EnsureMigrationContent0337(ctx context.Context, runID, o
 	}
 	if kind != "gravit" || status != "prepared" || step != "source_assessment" || project != profile.ProjectID {
 		return BuildWorkspace{}, mw.ErrBusy
+	}
+	// A migration triggered through the 0.44.2 API supplies a pinned dry-run
+	// digest. Validate it in the SAME serializable transaction as the profile
+	// creation so a concurrent replacement cannot change its contents.
+	if len(expectedPlanSHA) != 0 {
+		if len(expectedPlanSHA) != 1 || len(expectedPlanSHA[0]) != 64 {
+			return BuildWorkspace{}, mw.ErrConflict
+		}
+		var savedSHA string
+		var rawPlan []byte
+		if e = tx.QueryRowContext(ctx, `SELECT plan_sha256,plan FROM migration_plan_0442 WHERE run_id=$1 FOR UPDATE`, runID).Scan(&savedSHA, &rawPlan); e != nil {
+			if errors.Is(e, sql.ErrNoRows) {
+				return BuildWorkspace{}, mw.ErrConflict
+			}
+			return BuildWorkspace{}, e
+		}
+		var pinned gp.Plan
+		if e = json.Unmarshal(rawPlan, &pinned); e != nil {
+			return BuildWorkspace{}, e
+		}
+		if e = gp.Verify(pinned); e != nil {
+			return BuildWorkspace{}, mw.ErrConflict
+		}
+		a, ae := json.Marshal(pinned.Content)
+		b, be := json.Marshal(plan)
+		if ae != nil || be != nil || !bytes.Equal(a, b) || pinned.Status == "blocked" ||
+			pinned.PlanSHA256 != savedSHA || savedSHA != expectedPlanSHA[0] ||
+			pinned.Destination.Channel != channel || pinned.Destination.Version != version ||
+			pinned.Destination.ProfilePath != plan.ProfilePath || pinned.Destination.ProfileID != profile.ID ||
+			pinned.Content.Profile.Profile.Name != profile.Name || pinned.Content.Profile.Profile.Loader != profile.Loader {
+			return BuildWorkspace{}, mw.ErrConflict
+		}
 	}
 	var invSource, invManifest string
 	e = tx.QueryRowContext(ctx, `SELECT source_sha256,manifest_sha256 FROM migration_source_inventory_0333 WHERE run_id=$1`, runID).Scan(&invSource, &invManifest)
