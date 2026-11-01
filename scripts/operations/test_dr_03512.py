@@ -132,7 +132,7 @@ class DR03512Tests(unittest.TestCase):
                 patch.object(dr, "compose") as compose,
                 self.assertRaisesRegex(dr.DrillError, "already has state"),
             ):
-                dr.restore_fresh("nl-dr-fresh", env, root, "nl-dr-fresh")
+                dr.restore_fresh("nl-dr-fresh", env, root, "nl-dr-fresh", ready_url="http://127.0.0.1:18080/ready")
             compose.assert_not_called()
 
     def test_readiness_must_be_status_ready(self):

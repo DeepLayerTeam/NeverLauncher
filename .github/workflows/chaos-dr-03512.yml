@@ -1,15 +1,17 @@
-name: Launcher 0.35.12 DR Security and Recovery Regression
+name: Launcher 0.45.3 Standard Backup/Restore and DR Security Regression
 on:
   workflow_dispatch:
   push:
     paths:
       - 'scripts/operations/**'
+      - 'docs/releases/0.45.3-standard-backup-restore.md'
       - 'services/api/internal/httpapi/operations_backup.go'
       - 'services/api/internal/httpapi/operations_backup_test.go'
       - '.github/workflows/chaos-dr-03512.yml'
   pull_request:
     paths:
       - 'scripts/operations/**'
+      - 'docs/releases/0.45.3-standard-backup-restore.md'
       - 'services/api/internal/httpapi/operations_backup.go'
       - 'services/api/internal/httpapi/operations_backup_test.go'
       - '.github/workflows/chaos-dr-03512.yml'
@@ -24,7 +26,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Execute negative security and archive-integrity tests
-        run: python -m unittest discover -s scripts/operations -p 'test_dr_03512.py' -v
+        run: |
+          python -m unittest discover -s scripts/operations -p 'test_dr_03512.py' -v
+          python -m unittest discover -s scripts/operations -p 'test_standard_backup_0453.py' -v
       - name: Verify runner CLI and source syntax
         run: |
           python -m py_compile scripts/operations/dr_03512.py

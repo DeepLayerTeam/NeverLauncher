@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Launcher 0.35.12: real Docker Compose backup, fresh-site DR and chaos checks.
+"""Docker Compose Standard/Network-HA full-state cold backup, restore and DR checks.
 
-Requires Docker Compose V2, a configured production Compose env file and Alpine.
-Chaos injections are isolated-only; maintenance backups and fresh-site production
-restores require two explicit approvals. It does not back up signing keys, credential stores or other secrets: restore them from a
-separate approved secret manager, using the same keys as the source deployment.
+Standard backup freezes all application writers, verifies PostgreSQL has no other
+client sessions, dumps PostgreSQL and captures storage, factory, backups and the
+SQLite coordinator as one maintenance-window snapshot. Restores only to an empty
+project and verifies volume readback and database restore. External secrets/TLS
+files are NOT exported: recover them from an approved separate secret manager.
 """
 
 from __future__ import annotations
@@ -12,9 +13,11 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import hashlib
+import sqlite3
 import json
 import os
 from pathlib import Path, PurePosixPath
+from urllib.parse import quote, urlsplit
 import re
 import shutil
 import subprocess
@@ -102,6 +105,107 @@ def compose(
         stdout=stdout,
         timeout=timeout,
     )
+
+
+def compose_states(project: str, env_file: Path) -> dict[str, str]:
+    """Read actual Docker Compose container states; do not guess from exit codes."""
+    result = compose(project, env_file, "ps", "--all", "--format", "json", timeout=45)
+    raw = result.stdout.decode("utf-8", errors="strict").strip()
+    if not raw:
+        return {}
+    try:
+        decoded = json.loads(raw) if raw.startswith("[") else [json.loads(line) for line in raw.splitlines()]
+    except (ValueError, UnicodeError) as exc:
+        raise DrillError("cannot parse Docker Compose service states") from exc
+    if isinstance(decoded, dict):
+        decoded = [decoded]
+    if not isinstance(decoded, list):
+        raise DrillError("invalid Docker Compose service states")
+    states = {}
+    for item in decoded:
+        if not isinstance(item, dict) or not isinstance(item.get("Service"), str):
+            raise DrillError("invalid Docker Compose service entry")
+        name, state = item["Service"], str(item.get("State", "")).lower()
+        if name in states or not state:
+            raise DrillError("duplicate/unknown Compose state")
+        states[name] = state
+    return states
+
+
+def assert_quiescent(project: str, env_file: Path) -> str:
+    states = compose_states(project, env_file)
+    if states.get("postgres") != "running":
+        raise DrillError("PostgreSQL must be running to create a logical snapshot")
+    for name in ("api", "admin", "nginx", "redis"):
+        if name == "redis" and "network-ha" not in COMPOSE_PROFILES:
+            continue
+        if states.get(name) in ("running", "restarting", "paused"):
+            raise DrillError(f"writes not fenced: service {name} is active")
+    # Standard PostgreSQL is private to this Compose project. Fail if an
+    # unexpected client stays connected; external writers must also be fenced
+    # at the deployment boundary for the ENTIRE maintenance window.
+    query = (
+        "SELECT (SELECT count(*) FROM pg_stat_activity "
+        "WHERE datname=current_database() "
+        "AND backend_type='client backend' AND pid<>pg_backend_pid()) "
+        "|| '|' || pg_current_wal_insert_lsn()::text"
+    )
+    command = (
+        'exec psql -X -A -t -v ON_ERROR_STOP=1 '
+        '-U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "' + query + '"'
+    )
+    result = compose(project, env_file, "exec", "-T", "postgres", "sh", "-ec", command, timeout=60)
+    observation = result.stdout.decode("ascii", errors="replace").strip()
+    match = re.fullmatch(r"(\d+)\|([0-9A-F]+/[0-9A-F]+)", observation)
+    if not match:
+        raise DrillError("invalid PostgreSQL session/WAL observation")
+    if int(match.group(1)) != 0:
+        raise DrillError("PostgreSQL has additional active client sessions; backup blocked")
+    return match.group(2)
+
+
+def verify_coordinator(archive_path: Path) -> None:
+    """Validate WAL-aware recovered SQLite coordinator, not merely tar checksums."""
+    if "network-ha" in COMPOSE_PROFILES:
+        return
+    safe_tar(archive_path)
+    parts = {"state.db", "state.db-wal", "state.db-shm"}
+    with tempfile.TemporaryDirectory(prefix="launcher-coordinate-verify-") as tmp:
+        base = Path(tmp)
+        seen = set()
+        with tarfile.open(archive_path, "r:gz") as archive:
+            for entry in archive:
+                relative = PurePosixPath(entry.name)
+                if not entry.isfile() or len(relative.parts) != 1 or relative.name not in parts:
+                    continue
+                if relative.name in seen:
+                    raise DrillError("duplicate SQLite coordinator file")
+                seen.add(relative.name)
+                input_stream = archive.extractfile(entry)
+                if input_stream is None:
+                    raise DrillError("unreadable SQLite coordinator")
+                with input_stream, (base / relative.name).open("xb") as out:
+                    shutil.copyfileobj(input_stream, out, length=CHUNK)
+        if "state.db" not in seen:
+            raise DrillError("Standard snapshot is missing the SQLite coordinator database")
+        try:
+            connection = sqlite3.connect(
+                "file:" + quote(str(base / "state.db")) + "?mode=ro", uri=True, timeout=10
+            )
+            try:
+                if connection.execute("PRAGMA integrity_check").fetchone() != ("ok",):
+                    raise DrillError("SQLite coordinator integrity check failed")
+                if connection.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                    raise DrillError("SQLite coordinator FK check failed")
+                version = connection.execute(
+                    "SELECT value FROM coord_meta WHERE key='version'"
+                ).fetchone()
+                if version != (1,):
+                    raise DrillError("SQLite coordinator has incompatible schema")
+            finally:
+                connection.close()
+        except sqlite3.DatabaseError as exc:
+            raise DrillError("invalid SQLite coordinator database") from exc
 
 
 def volume_name(project: str, logical: str) -> str:
@@ -411,21 +515,29 @@ def snapshot(
     authorize_project(project, confirm, production=production, approved=approved)
     if dest.exists():
         raise DrillError("snapshot destination already exists; will not overwrite")
-    if not env_file.is_file():
-        raise DrillError("Compose environment file missing")
+    if not env_file.is_file() or env_file.is_symlink():
+        raise DrillError("Compose environment file missing or symlinked")
     started = time.monotonic()
     dest.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=".dr-stage-", dir=dest.parent))
     stopped = []
     try:
-        # Freeze writes before the logical dump and cold volume backup.
+        # Preserve initially stopped services; a backup must not silently start
+        # a service that its operator deliberately left disabled.
+        states = compose_states(project, env_file)
+        if states.get("postgres") != "running":
+            raise DrillError("PostgreSQL is not running")
         for svc in (
             ("nginx", "admin", "api", "redis")
             if "network-ha" in COMPOSE_PROFILES
             else ("nginx", "admin", "api")
         ):
-            compose(project, env_file, "stop", "-t", "30", svc)
-            stopped.append(svc)
+            if states.get(svc) == "running":
+                compose(project, env_file, "stop", "-t", "30", svc)
+                stopped.append(svc)
+            elif states.get(svc) in ("paused", "restarting"):
+                raise DrillError(f"cannot freeze unhealthy service: {svc}")
+        pg_lsn_before = assert_quiescent(project, env_file)
         compose_pg_dump(project, env_file, stage / "database.dump")
         pg_validate(stage / "database.dump")
         for item in required_volumes():
@@ -433,6 +545,8 @@ def snapshot(
             if not docker_volume_exists(name):
                 raise DrillError(f"missing volume: {item}")
             docker_tar_backup(name, stage / (item + ".tar.gz"))
+            if item == "launcher_coordinator":
+                verify_coordinator(stage / (item + ".tar.gz"))
         s3_files = {}
         if s3_bucket:
             s3_root = stage / "s3-objects"
@@ -445,13 +559,18 @@ def snapshot(
                 for p in s3_root.rglob("*")
                 if p.is_file()
             }
+        # Recheck after copying blobs to detect any foreign PostgreSQL clients
+        # observed during the maintenance window, rather than only before dump.
+        pg_lsn_after = assert_quiescent(project, env_file)
+        if pg_lsn_before != pg_lsn_after:
+            raise DrillError("PostgreSQL WAL advanced during cold snapshot; retry after fencing ALL writers")
         files = {
             p.name: {"sha256": sha256_file(p), "size": p.stat().st_size}
             for p in stage.iterdir()
             if p.is_file()
         }
         result = {
-            "schema": 1,
+            "schema": 2,
             "version": (ROOT / "VERSION").read_text().strip(),
             "sourceProject": project,
             "createdUtc": datetime.now(timezone.utc).isoformat(),
@@ -465,9 +584,15 @@ def snapshot(
             else "not-used",
             "files": files,
             "credentialPolicy": "signing keys, passwords, TLS and KMS material must be restored separately",
-            "consistentWrites": "API stopped; external database writers must be fenced",
+            "consistentWrites": "Compose writers stopped; PostgreSQL WAL unchanged and no extra client sessions across snapshot",
+            "postgresWalLsn": pg_lsn_before,
+            "serviceStateAtBackup": {key: states.get(key, "absent") for key in ("api", "admin", "nginx")},
+            "coordinatorIntegrity": "sqlite integrity_check + coord_meta schema version" if "network-ha" not in COMPOSE_PROFILES else "not-used",
         }
         (stage / "manifest.json").write_text(json.dumps(result, indent=2) + "\n")
+        verify_snapshot(stage)
+        if dest.exists() or dest.is_symlink():
+            raise DrillError("snapshot destination appeared during backup")
         stage.rename(dest)
         result["durationSeconds"] = round(time.monotonic() - started, 3)
         return result
@@ -482,8 +607,13 @@ def snapshot(
 
 
 def verify_snapshot(folder: Path) -> dict:
-    data = json.loads((folder / "manifest.json").read_text())
-    if data.get("schema") != 1 or data.get("storage") not in (
+    if not folder.is_dir() or folder.is_symlink():
+        raise DrillError("snapshot must be a real directory")
+    manifest_file = folder / "manifest.json"
+    if manifest_file.is_symlink() or not manifest_file.is_file() or manifest_file.stat().st_size > 16 * 1024 * 1024:
+        raise DrillError("unsafe or oversized snapshot manifest")
+    data = json.loads(manifest_file.read_text())
+    if data.get("schema") not in (1, 2) or data.get("storage") not in (
         "local-volume",
         "s3-objects",
     ):
@@ -517,7 +647,55 @@ def verify_snapshot(folder: Path) -> dict:
             raise DrillError("snapshot SHA-256 verification failed")
         if filename.endswith(".tar.gz"):
             safe_tar(path)
+    if data.get("schema") == 2 and data["storage"] == "local-volume":
+        verify_coordinator(folder / "launcher_coordinator.tar.gz")
     return data
+
+
+def validate_ready_url(url: str) -> None:
+    parsed = urlsplit(url)
+    if (parsed.path != "/ready" or parsed.query or parsed.fragment
+            or parsed.username or parsed.password or not parsed.hostname
+            or parsed.scheme not in ("https", "http")):
+        raise DrillError("readiness URL must be an HTTPS /ready or loopback HTTP /ready")
+    if parsed.scheme == "http" and parsed.hostname not in ("localhost", "127.0.0.1", "::1"):
+        raise DrillError("insecure non-loopback readiness endpoint refused")
+
+
+def target_release(env_file: Path) -> str | None:
+    """Get release used for restore without shell-expanding an untrusted env file."""
+    result = None
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        if key.strip() == "LAUNCHER_IMAGE_TAG":
+            if result is not None:
+                raise DrillError("duplicate LAUNCHER_IMAGE_TAG")
+            result = value.strip().strip("\"").strip("'")
+    return result
+
+
+def check_restored_backend(project: str, env_file: Path, *, version: str | None, storage: str, timeout: int = 120) -> dict:
+    """Read the actual RESTORED API container, not a possibly stale public DNS route."""
+    started = time.monotonic()
+    while time.monotonic() - started < timeout:
+        try:
+            result = compose(
+                project, env_file, "exec", "-T", "api", "wget", "-qO-",
+                "http://127.0.0.1:8080/ready", timeout=10,
+            )
+            payload = json.loads(result.stdout)
+            if (isinstance(payload, dict) and payload.get("status") == "ready"
+                    and payload.get("repository") == "postgres"
+                    and payload.get("storage") == storage
+                    and (version is None or payload.get("version") == version)):
+                return payload
+        except (DrillError, ValueError, UnicodeError, OSError):
+            pass
+        time.sleep(1)
+    raise DrillError("restored API container did not become ready with required version/storage")
 
 
 def restore_fresh(
@@ -533,10 +711,15 @@ def restore_fresh(
 ) -> dict:
     authorize_project(project, confirm, production=production, approved=approved)
     manifest = verify_snapshot(folder)
-    if project == manifest["sourceProject"]:
-        raise DrillError("restore must target a different DR project")
-    if not env_file.is_file():
-        raise DrillError("Compose environment file missing")
+    # The same project NAME is normal on a replacement host. Never infer that
+    # same-name means same existing volumes; only verified empty targets qualify.
+    if not env_file.is_file() or env_file.is_symlink():
+        raise DrillError("Compose environment file missing or symlinked")
+    if not ready_url:
+        raise DrillError("restore-fresh requires an actual application readiness endpoint")
+    validate_ready_url(ready_url)
+    if manifest.get("schema") == 2 and target_release(env_file) != manifest.get("version"):
+        raise DrillError("target image version differs from backup; restore exact version first")
     if manifest["volumes"] != list(required_volumes()):
         raise DrillError("restore mode does not match snapshot volume topology")
     if manifest["storage"] == "s3-objects":
@@ -549,6 +732,11 @@ def restore_fresh(
             raise DrillError(
                 "target already has state: fresh project required; refusing to overwrite"
             )
+    # Verify PostgreSQL dump before mutation; refuse pre-existing target containers
+    # even if their volumes were manually renamed or removed.
+    pg_validate(folder / "database.dump")
+    if compose_states(project, env_file):
+        raise DrillError("target already has Compose containers; use a fresh host/project")
     started = time.monotonic()
     # A failed restore does not boot the API with partial data.
     compose(project, env_file, "create")
@@ -600,27 +788,49 @@ def restore_fresh(
         "credentials": "provided externally via target environment",
         "applicationVerified": False,
     }
-    if ready_url:
-        await_readiness(ready_url, expected=True, limit=120)
-        outcome["applicationVerified"] = True
+    try:
+        check_restored_backend(
+            project, env_file,
+            version=manifest.get("version") if manifest.get("schema") == 2 else None,
+            storage="local" if manifest["storage"] == "local-volume" else "s3",
+        )
+        await_readiness(
+            ready_url, expected=True, limit=120,
+            expected_version=manifest.get("version") if manifest.get("schema") == 2 else None,
+            expected_storage="local" if manifest["storage"] == "local-volume" else "s3",
+        )
+    except Exception:
+        # Do not leave an unverified installation reachable from the outside.
+        # The partial target is left for forensic recovery, never auto-reused.
+        for svc in ("nginx", "admin", "api"):
+            try:
+                compose(project, env_file, "stop", "-t", "10", svc)
+            except Exception:
+                pass
+        raise
+    outcome["applicationVerified"] = True
     return outcome
 
 
-def ready(url: str) -> bool:
+def ready(url: str, *, expected_version: str | None = None, expected_storage: str | None = None) -> bool:
+    validate_ready_url(url)
     try:
         with urlopen(url, timeout=4) as response:
             if response.status != 200:
                 return False
             value = json.load(response)
-            return value.get("status") == "ready"
+            return (isinstance(value, dict) and value.get("status") == "ready"
+                    and (expected_version is None or value.get("version") == expected_version)
+                    and (expected_storage is None or value.get("storage") == expected_storage)
+                    and (expected_storage is None or value.get("repository") == "postgres"))
     except (HTTPError, URLError, TimeoutError, ValueError, OSError):
         return False
 
 
-def await_readiness(url: str, expected: bool, limit=90) -> float:
+def await_readiness(url: str, expected: bool, limit=90, **checks) -> float:
     start = time.monotonic()
     while time.monotonic() - start <= limit:
-        if ready(url) == expected:
+        if ready(url, **checks) == expected:
             return round(time.monotonic() - start, 3)
         time.sleep(1)
     raise DrillError(f"/ready did not reach expected state after {limit}s")
@@ -710,8 +920,12 @@ def main() -> int:
     try:
         if args.network_ha and args.action == "backup" and not args.s3_source_bucket:
             raise DrillError("network-ha backup requires --s3-source-bucket")
+        if args.action == "restore-fresh" and not args.ready_url:
+            raise DrillError("restore-fresh requires --ready-url to verify the actual backend")
         if args.action == "verify":
-            report = {"status": "verified", "manifest": verify_snapshot(args.snapshot)}
+            verified = verify_snapshot(args.snapshot)
+            pg_validate(args.snapshot / "database.dump")
+            report = {"status": "verified", "postgresArchiveChecked": True, "manifest": verified}
         else:
             if not args.project or not args.env_file:
                 raise DrillError("project and env-file required")
