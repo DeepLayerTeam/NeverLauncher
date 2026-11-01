@@ -119,3 +119,56 @@ func migrationModuleEnroll0338(endpoint, token, run, out, wrapper, id, name, kin
 	fmt.Println(string(answer))
 	return nil
 }
+
+// Check the real signed ServerBridge runtime state for a migrated wrapper.
+// A durable enrollment receipt alone never establishes game readiness.
+func migrationBridgeStatus0446(endpoint, token, wrapper, out string) error {
+	if wrapper == "" {
+		return errors.New("--wrapper required")
+	}
+	if err := migrationModuleEndpoint0338(endpoint); err != nil {
+		return err
+	}
+	req, err := http.NewRequest("GET", endpoint+"?wrapperPath="+url.QueryEscape(wrapper), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(token))
+	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("ServerBridge status HTTP %d: %s", resp.StatusCode, raw)
+	}
+	var payload struct {
+		Data struct {
+			State    string `json:"state"`
+			Reason   string `json:"reason"`
+			ServerID string `json:"serverId"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if payload.Data.ServerID == "" || payload.Data.State == "" {
+		return errors.New("missing ServerBridge live state")
+	}
+	if out != "" {
+		if err = writePrivateIdentityReport0334(out, payload); err != nil {
+			return err
+		}
+	} else {
+		fmt.Println(string(raw))
+	}
+	if payload.Data.State != "online" {
+		return fmt.Errorf("ServerBridge not online: %s (%s)", payload.Data.State, payload.Data.Reason)
+	}
+	return nil
+}

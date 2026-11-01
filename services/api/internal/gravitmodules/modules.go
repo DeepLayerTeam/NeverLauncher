@@ -286,7 +286,14 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 		indexed[f.Path] = f
 	}
 	sources := map[string]bool{}
+	moduleArtifacts := map[string]bool{}
 	for _, f := range z.File {
+		if moduleJar(f.Name) && !legacyWrapperJar(f.Name) {
+			// The presence of a JAR is only evidence of a matching artifact.
+			// Never load it and never infer functional compatibility by name.
+			moduleArtifacts[strings.ToLower(strings.TrimSuffix(path.Base(f.Name), path.Ext(f.Name)))] = true
+		}
+
 		if strings.HasSuffix(strings.ToLower(f.Name), ".java") {
 			sources[strings.ToLower(f.Name)] = true
 		}
@@ -297,7 +304,8 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 			continue
 		}
 		p := f.Name
-		if !moduleJar(p) && !wrapperFile(p) {
+		isConfig := indexed[p].Kind == "module_config"
+		if !moduleJar(p) && !wrapperFile(p) && !isConfig {
 			continue
 		}
 		entry, ok := indexed[p]
@@ -305,7 +313,7 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 			return Report{}, fmt.Errorf("entry missing from MIG03: %s", p)
 		}
 		limit := maxJar
-		if wrapperFile(p) && !moduleJar(p) {
+		if (wrapperFile(p) && !moduleJar(p)) || isConfig {
 			limit = maxWrapper
 		}
 		if f.UncompressedSize64 > uint64(limit) {
@@ -319,6 +327,37 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 		sha := digest(b)
 		if sha != entry.SHA256 {
 			return Report{}, fmt.Errorf("source changed since inventory: %s", p)
+		}
+		if isConfig && !moduleJar(p) {
+			// Module configuration is executable behavior input, including auth
+			// and launch hooks. Silently skipping orphaned configs produced false
+			// clean migration reports. Verify JSON and correlate its artifact;
+			// never retain raw configuration or secrets in the report.
+			base := strings.ToLower(p)
+			i := strings.Index(base, "modules-config/")
+			moduleName := ""
+			if i >= 0 {
+				tail := p[i+len("modules-config/"):]
+				if j := strings.IndexByte(tail, '/'); j >= 0 {
+					moduleName = tail[:j]
+				}
+			}
+			m := Module{Path: p, SHA256: sha, Name: moduleName, Implementation: "source_port", Status: "blocked"}
+			if !strings.HasSuffix(strings.ToLower(p), ".json") {
+				m.Reason = "unsupported module configuration format; source port required"
+			} else if !validModuleConfig0446(b) {
+				m.Reason = "invalid or ambiguous module configuration JSON"
+			} else if moduleName == "" || !moduleArtifacts[strings.ToLower(moduleName)] {
+				m.Reason = "module configuration has no matching JAR in archive; resolve missing dependency or explicitly port"
+			} else {
+				m.Status = "manual"
+				m.Reason = "configuration verified; independently port settings and test new module behavior; legacy secrets are not adopted"
+			}
+			result.Modules = append(result.Modules, m)
+			if m.Status == "blocked" {
+				result.Blockers = append(result.Blockers, p+": "+m.Reason)
+			}
+			continue
 		}
 		if moduleJar(p) {
 			m := Module{Path: p, SHA256: sha, Name: path.Base(p), Implementation: "blocker", Status: "blocked"}
@@ -368,4 +407,43 @@ func Analyze(ctx context.Context, file *os.File, size int64, inventory inv.Inven
 	}
 	result.Ready = len(result.Blockers) == 0
 	return result, nil
+}
+
+// Module configs are secrets-bearing input, not generic JSON documents.
+// Check for duplicate object keys instead of silently accepting the last one.
+func validModuleConfig0446(raw []byte) bool {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	var obj map[string]json.RawMessage
+	if err := decoder.Decode(&obj); err != nil || obj == nil {
+		return false
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		return false
+	}
+	// Top-level keys must be unique even under Unicode case-folding. Never
+	// persist values, which may contain provider passwords and tokens.
+	seen := map[string]bool{}
+	decoder = json.NewDecoder(bytes.NewReader(raw))
+	start, err := decoder.Token()
+	if err != nil || start != json.Delim('{') {
+		return false
+	}
+	for decoder.More() {
+		key, err := decoder.Token()
+		if err != nil {
+			return false
+		}
+		k, ok := key.(string)
+		if !ok || seen[strings.ToLower(k)] {
+			return false
+		}
+		seen[strings.ToLower(k)] = true
+		var v json.RawMessage
+		if err = decoder.Decode(&v); err != nil {
+			return false
+		}
+	}
+	_, err = decoder.Token()
+	return err == nil
 }

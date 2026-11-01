@@ -4,15 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
 	"time"
 
+	gc "gitflic.ru/skif4er/launcher/services/api/internal/gravitcontent"
 	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
 	gm "gitflic.ru/skif4er/launcher/services/api/internal/gravitmodules"
+	gp "gitflic.ru/skif4er/launcher/services/api/internal/gravitplan"
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
+	"gitflic.ru/skif4er/launcher/services/api/internal/repository"
 )
 
 type migrationModulesStore0338 interface {
@@ -25,6 +29,7 @@ type migrationModulesStore0338 interface {
 func (s Server) registerMigrationModulesRoutes0338(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/admin/migration-runs/{runId}/modules", s.requirePermission("settings:manage", s.migrationModulesGet0338))
 	mux.Handle("POST /api/v1/admin/migration-runs/{runId}/modules/analyze", s.requirePermission("settings:manage", s.migrationModulesAnalyze0338))
+	mux.Handle("GET /api/v1/admin/migration-runs/{runId}/modules/serverbridge-status", s.requirePermission("settings:manage", s.migrationModulesBridgeStatus0446))
 	mux.Handle("POST /api/v1/admin/migration-runs/{runId}/modules/enroll-serverbridge", s.requireFreshSession117("mfa", 5*time.Minute, s.migrationModulesEnroll0338))
 }
 func (s Server) migrationModulesStore0338(w http.ResponseWriter) (migrationModulesStore0338, bool) {
@@ -177,7 +182,7 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var req moduleEnrollmentRequest0338
-	if err = json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192)).Decode(&req); err != nil {
+	if err = decodeMigrationEnrollment0446(http.MaxBytesReader(w, r.Body, 8192), &req); err != nil {
 		writeError(w, 400, "invalid enrollment JSON")
 		return
 	}
@@ -190,6 +195,17 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 	}
 	if !found || !migrationSafeServerID0338.MatchString(req.ID) || !migrationSafeServerID0338.MatchString(req.ProfileID) || req.Kind == "" || req.PublicKey == "" || len(req.Name) > 128 {
 		writeError(w, 422, "invalid wrapper or ServerBridge enrollment request")
+		return
+	}
+	// Enrollment must target the profile that the operator actually previewed
+	// and imported. A project permission alone does not authorize binding a
+	// new game node to an arbitrary profile in that project.
+	if err = s.migrationBridgeTarget0446(r.Context(), run.ID, run.ProjectID, req.ProfileID, report); err != nil {
+		migrationHTTPError0331(w, mw.ErrConflict)
+		return
+	}
+	if !validBridgeServerKindV2(strings.ToLower(strings.TrimSpace(req.Kind))) {
+		writeError(w, 422, "unsupported ServerBridge kind")
 		return
 	}
 	_, key, fingerprint, err := validateBridgeNodeIdentity0142("ed25519", req.PublicKey)
@@ -232,8 +248,178 @@ func (s Server) migrationModulesEnroll0338(w http.ResponseWriter, r *http.Reques
 			return
 		}
 	}
-	_ = s.flushPersistenceState950("migration-serverbridge-enroll")
+	if err = s.flushPersistenceState950("migration-serverbridge-enroll"); err != nil {
+		writeError(w, 503, "ServerBridge enrollment persistence not confirmed; retry the same enrollment")
+		return
+	}
 	s.audit(r, s.adminActor(r), "migration:serverbridge-new-identity", run.ProjectID)
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, map[string]any{"data": map[string]any{"serverId": node.ID, "projectId": run.ProjectID, "profileId": req.ProfileID, "keyFingerprint": fingerprint, "status": "registered-new-trust", "requiresFreshHeartbeat": true}})
+}
+
+// migrationBridgeTarget0446 binds a new node to the exact pinned migration
+// plan AND an already persisted imported client profile. No node is created
+// from a mere preview or from an unrelated profile of the same project.
+func (s Server) migrationBridgeTarget0446(ctx context.Context, runID, projectID, profileID string, modules gm.Report) error {
+	plans, ok := s.Repo.(interface {
+		GetMigrationPlan0442(context.Context, string) (gp.Plan, error)
+	})
+	if !ok {
+		return mw.ErrConflict
+	}
+	contents, ok := s.Repo.(interface {
+		GetMigrationContent0337(context.Context, string, string) (gc.Plan, repository.BuildWorkspace, error)
+	})
+	if !ok {
+		return mw.ErrConflict
+	}
+	p, err := plans.GetMigrationPlan0442(ctx, runID)
+	if err != nil {
+		return err
+	}
+	if p.Status == "blocked" || p.ProjectID != projectID || p.Destination.ProfileID != profileID ||
+		p.SourceSHA256 != modules.SourceSHA256 || p.InventorySHA256 != modules.InventorySHA256 ||
+		!modulesMatch0446(p.Modules, modules) {
+		return mw.ErrConflict
+	}
+	content, workspace, err := contents.GetMigrationContent0337(ctx, runID, p.Destination.ProfilePath)
+	if err != nil {
+		return err
+	}
+	if content.SourceSHA256 != p.SourceSHA256 || content.InventorySHA256 != p.InventorySHA256 ||
+		workspace.ProjectID != projectID || workspace.ProfileID != profileID ||
+		content.Profile.Profile.ID != profileID || content.Profile.Profile.ProjectID != projectID {
+		return mw.ErrConflict
+	}
+	return nil
+}
+
+func modulesMatch0446(a, b gm.Report) bool {
+	x, e := json.Marshal(a)
+	if e != nil {
+		return false
+	}
+	y, e := json.Marshal(b)
+	return e == nil && string(x) == string(y)
+}
+
+// An enrollment reservation is NOT proof of a live ServerBridge connection.
+// Read the actual ServerBridge node state after its signed runtime heartbeat;
+// never return ready solely because a database row or public key exists.
+func migrationBridgeLive0446(node bridgeServerRecord, project, profile, fingerprint string, now time.Time) (string, string) {
+	if node.ProjectID != project || node.ProfileID != profile || node.KeyAlgorithm != "ed25519" || node.KeyFingerprint != fingerprint || node.IdentityEpoch < 1 {
+		return "blocked", "identity_or_ownership_mismatch"
+	}
+	if node.Status != "active" {
+		return "blocked", "node_not_active"
+	}
+	if node.RuntimeID == "" || node.RuntimeEpoch < 1 || node.RuntimeIdentityDigest == "" {
+		return "awaiting_runtime", "signed_runtime_not_observed"
+	}
+	if node.LastHeartbeatAt.IsZero() || node.RuntimeLastSeenAt.IsZero() ||
+		node.LastHeartbeatAt.Before(now.Add(-90*time.Second)) || node.LastHeartbeatAt.After(now.Add(30*time.Second)) ||
+		node.RuntimeLastSeenAt.Before(now.Add(-90*time.Second)) || node.RuntimeLastSeenAt.After(now.Add(30*time.Second)) ||
+		node.LastHeartbeatAt.Before(node.IdentityRotatedAt) {
+		return "awaiting_runtime", "signed_runtime_heartbeat_stale"
+	}
+	return "online", "signed_runtime_heartbeat_fresh"
+}
+
+func (s Server) migrationModulesBridgeStatus0446(w http.ResponseWriter, r *http.Request) {
+	store, ok := s.migrationModulesStore0338(w)
+	if !ok {
+		return
+	}
+	runs, ok := s.migrationStore0331(w)
+	if !ok {
+		return
+	}
+	run, err := runs.GetMigration0331(r.Context(), r.PathValue("runId"))
+	if err != nil {
+		migrationHTTPError0331(w, err)
+		return
+	}
+	claims, err := s.adminClaims(r)
+	if err != nil {
+		writeError(w, 401, "authentication required")
+		return
+	}
+	if !s.authorizeProjectAction(w, r, claims, "project:read", run.ProjectID, "project", run.ProjectID) {
+		return
+	}
+	path := r.URL.Query().Get("wrapperPath")
+	if len(path) == 0 || len(path) > 2048 {
+		writeError(w, 422, "wrapperPath required")
+		return
+	}
+	report, err := store.GetMigrationModules0338(r.Context(), run.ID)
+	if err != nil {
+		migrationHTTPError0331(w, err)
+		return
+	}
+	valid := false
+	for _, wrapper := range report.Wrappers {
+		if wrapper.Path == path && wrapper.Status == "manual" {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		writeError(w, 422, "wrapper not in pinned migration assessment")
+		return
+	}
+	serverID, fingerprint, err := store.GetMigrationWrapperEnrollment0338(r.Context(), run.ID, path)
+	if err != nil {
+		migrationHTTPError0331(w, err)
+		return
+	}
+	plans, ok := s.Repo.(interface {
+		GetMigrationPlan0442(context.Context, string) (gp.Plan, error)
+	})
+	if !ok {
+		writeError(w, 503, "durable migration plan required")
+		return
+	}
+	plan, err := plans.GetMigrationPlan0442(r.Context(), run.ID)
+	if err != nil {
+		migrationHTTPError0331(w, err)
+		return
+	}
+	if err = s.migrationBridgeTarget0446(r.Context(), run.ID, run.ProjectID, plan.Destination.ProfileID, report); err != nil {
+		migrationHTTPError0331(w, mw.ErrConflict)
+		return
+	}
+	state, reason := "blocked", "node_lookup_failed"
+	if node, e := s.State.ServerBridge.getNode0142(serverID); e == nil {
+		state, reason = migrationBridgeLive0446(node, run.ProjectID, plan.Destination.ProfileID, fingerprint, time.Now().UTC())
+	} else if errors.Is(e, repository.ErrNotFound) || errors.Is(e, os.ErrNotExist) {
+		state, reason = "awaiting_registration", "node_not_registered"
+	} else {
+		writeError(w, 503, "ServerBridge lookup unavailable")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, map[string]any{"data": map[string]any{
+		"serverId": serverID, "wrapperPath": path, "projectId": run.ProjectID,
+		"profileId": plan.Destination.ProfileID, "state": state, "reason": reason,
+		"cutoverAllowed": false,
+	}})
+}
+
+// Guard against a second JSON document after the request body. An enrollment
+// must be a single, unambiguous object rather than an ignored extra payload.
+func decodeMigrationEnrollment0446(r io.Reader, req *moduleEnrollmentRequest0338) error {
+	dec := json.NewDecoder(r)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(req); err != nil {
+		return err
+	}
+	if req.WrapperPath == "" || req.ID == "" || req.ProfileID == "" || req.PublicKey == "" || req.Kind == "" {
+		return errors.New("missing enrollment fields")
+	}
+	var other any
+	if err := dec.Decode(&other); err != io.EOF {
+		return errors.New("trailing enrollment JSON")
+	}
+	return nil
 }

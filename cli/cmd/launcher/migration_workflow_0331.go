@@ -61,16 +61,19 @@ func handleMigrationWorkflow0331(args []string) error {
 			return errors.New("list requires --project")
 		}
 		path = base + "?projectId=" + url.QueryEscape(project)
-	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities", "credentials", "preview-credentials", "import-credentials", "security", "preview-security", "activate-security", "content", "preview-content", "import-content", "apply-optionals", "modules", "analyze-modules", "enroll-serverbridge":
+	case "status", "events", "execute", "pause", "resume", "assess", "compatibility", "inventory", "export", "identities", "map-identities", "verify-identities", "credentials", "preview-credentials", "import-credentials", "security", "preview-security", "activate-security", "content", "preview-content", "import-content", "apply-optionals", "modules", "analyze-modules", "enroll-serverbridge", "serverbridge-status":
 		id := strings.TrimSpace(flagValue(args, "--run", ""))
 		if id == "" {
 			return fmt.Errorf("%s requires --run", command)
 		}
 		path = base + "/" + url.PathEscape(id)
-		if command == "modules" || command == "analyze-modules" || command == "enroll-serverbridge" {
+		if command == "modules" || command == "analyze-modules" || command == "enroll-serverbridge" || command == "serverbridge-status" {
 			path += "/modules"
 			if command == "analyze-modules" {
 				return migrationModuleAnalyze0338(path+"/analyze", token, flagValue(args, "--source", ""), out)
+			}
+			if command == "serverbridge-status" {
+				return migrationBridgeStatus0446(path+"/serverbridge-status", token, flagValue(args, "--wrapper", ""), out)
 			}
 			if command == "enroll-serverbridge" {
 				return migrationModuleEnroll0338(path+"/enroll-serverbridge", token, id, out, flagValue(args, "--wrapper", ""), flagValue(args, "--server-id", ""), flagValue(args, "--name", ""), flagValue(args, "--kind", ""), flagValue(args, "--profile-id", ""), flagValue(args, "--public-key", ""), flagValue(args, "--fresh-keys-confirmed", "") == "true")

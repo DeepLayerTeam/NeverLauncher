@@ -31,6 +31,13 @@ func TestMigrationModules0338(t *testing.T) {
 			if string(b) != "ZIPDATA" {
 				t.Error("source not streamed")
 			}
+		case "/status":
+			if r.Method != "GET" || r.URL.Query().Get("wrapperPath") != "server/.env" {
+				t.Error("bad status request")
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"data":{"state":"online","serverId":"node1","reason":"signed_runtime_heartbeat_fresh"}}`))
+			return
 		case "/enroll":
 			if r.Header.Get("X-Migration-Modules-Confirm") != "run1" || r.Header.Get("X-Migration-Fresh-Keys-Confirmed") != "true" {
 				t.Error("missing confirmation")
@@ -50,5 +57,11 @@ func TestMigrationModules0338(t *testing.T) {
 	}
 	if err := migrationModuleEnroll0338(srv.URL+"/enroll", "secret", "run1", filepath.Join(t.TempDir(), "enroll.json"), "modules/wrapper.json", "node1", "Name", "paper", "profile1", "publickey", true); err != nil {
 		t.Fatal(err)
+	}
+	if err := migrationBridgeStatus0446(srv.URL+"/status", "secret", "server/.env", filepath.Join(t.TempDir(), "status.json")); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrationBridgeStatus0446(srv.URL+"/status", "secret", "", ""); err == nil {
+		t.Fatal("empty wrapper accepted")
 	}
 }

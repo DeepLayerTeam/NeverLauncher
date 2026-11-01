@@ -143,3 +143,49 @@ func TestLegacyServerWrapperJAR0338(t *testing.T) {
 		t.Fatalf("legacy wrapper misclassified %+v", result)
 	}
 }
+
+func TestModuleConfigsRequireArtifactAndDoNotLeak0446(t *testing.T) {
+	jar := zipFixture0338(t, map[string][]byte{"META-INF/MANIFEST.MF": []byte("Manifest-Version: 1.0\n")})
+	source := zipFixture0338(t, map[string][]byte{
+		"modules/Present.jar":                jar,
+		"modules-config/Present/config.json": []byte(`{"token":"HIDDEN_BRIDGE_SECRET","enabled":true}`),
+		"modules-config/Orphan/config.json":  []byte(`{"webhook":"HIDDEN_ORPHAN_SECRET"}`),
+		"modules-config/Invalid/config.json": []byte(`{"mode":1,"MODE":2}`),
+	})
+	f, inventory := inspectFixture0338(t, source)
+	report, err := Analyze(context.Background(), f, int64(len(source)), inventory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Ready || len(report.Blockers) != 3 || len(report.Modules) != 4 {
+		t.Fatalf("orphan config not blocked: %+v", report)
+	}
+	var readyConfig bool
+	for _, m := range report.Modules {
+		if m.Path == "modules-config/Present/config.json" {
+			readyConfig = m.Status == "manual" && m.Implementation == "source_port"
+		}
+	}
+	if !readyConfig {
+		t.Fatalf("matching config not classified for manual port: %+v", report.Modules)
+	}
+	encoded, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, secret := range []string{"HIDDEN_BRIDGE_SECRET", "HIDDEN_ORPHAN_SECRET"} {
+		if bytes.Contains(encoded, []byte(secret)) {
+			t.Fatalf("module secret leaked in report")
+		}
+	}
+}
+func TestModuleConfigAmbiguity0446(t *testing.T) {
+	for _, raw := range []string{`{"a":1,"a":2}`, `{"a":1,"A":2}`, `{"a":1} {"b":2}`, `[]`, `{`} {
+		if validModuleConfig0446([]byte(raw)) {
+			t.Fatalf("accepted ambiguous module JSON: %q", raw)
+		}
+	}
+	if !validModuleConfig0446([]byte(`{"a":{"x":1},"b":true}`)) {
+		t.Fatal("valid config rejected")
+	}
+}

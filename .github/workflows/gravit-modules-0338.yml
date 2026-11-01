@@ -5,6 +5,7 @@ on:
       - 'services/api/internal/gravitmodules/**'
       - 'services/api/internal/repository/migration_modules_0338*'
       - 'services/api/internal/httpapi/migration_modules_0338*'
+      - 'services/api/internal/httpapi/migration_modules_0446*'
       - 'services/api/internal/dbmigrate/sql/0096*'
       - 'cli/cmd/launcher/migration_modules_0338*'
       - 'apps/admin/src/admin/MigrationCenter0331.tsx'
@@ -43,7 +44,7 @@ jobs:
         run: |
           go test -race -count=1 ./internal/gravitmodules
           go test -count=1 -timeout 5m ./internal/repository -run 'TestMigrationModuleReportImmutable0338'
-          go test -count=1 ./internal/httpapi -run '^TestNonExistent$'
+          go test -count=1 ./internal/httpapi -run 'TestMigrationBridgeLive0446|TestMigrationEnrollmentJSONStrict0446'
       - name: CLI migration tests
         working-directory: cli
         run: go test -count=1 ./cmd/launcher -run 'TestMigrationModules0338|TestMigrationWorkflow0331'

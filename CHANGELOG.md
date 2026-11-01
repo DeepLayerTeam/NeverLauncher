@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.44.6 — Gravit modules and ServerBridge migration
+
+- Inspect actual `modules-config` JSON members of the source-pinned ZIP. Missing matching module JARs, ambiguous or malformed JSON, and unsupported config formats block the migration report; recognizable configuration with matching JAR is still a **manual source-port** and is never loaded as a compatible binary. Configuration values, including passwords and tokens, are not persisted in the migration report.
+- ServerWrapper enrollment now verifies the exact durable dry-run plan, its pinned module assessment, the selected Never project/profile, **and the already imported profile/workspace** before registering a newly generated Ed25519 ServerBridge node. An unrelated profile, changed plan or absent content cannot be attached. Legacy keys and Gravit JARs are not imported.
+- Add real-time signed-runtime connectivity check through Migration Center and CLI `nl migrate gravit serverbridge-status --run <id> --wrapper <source-path>`. The backend re-reads ServerBridge state and rejects mismatched identity, disabled nodes, absent runtime identity or stale/future heartbeats. Registration alone is never `online`, and even `online` does not certify login/join or authorize cutover.
+- Enforce strict single-object enrollment JSON and report persistence failures instead of silently ignoring them; same-key retries remain supported by the existing enrollment intent. Add negative regression tests for module config secrets, malformed JSON, stale runtime, changed key/profile and CLI status.
+- Verification boundary: local dependency-light module scanner and CLI tests pass with `-race`; full backend compilation and PostgreSQL + real game join require the pinned Go 1.27.3 toolchain and an integration environment. No production migration cutover is claimed.
+
 ## 0.44.5 — Gravit textures and optional-model migration
 
 - Fix the live Gravit client-content selector for `OptionalFile.actions[type=file]`: identity destination values (`mods/a.jar` → `mods/a.jar`) are now staged, SHA-256 verified and correctly owned as optional. `updateOptional:null` is accepted as an empty collection; foreign renames, missing signed files and unsupported group/preset/permission semantics remain hard blockers rather than being silently downgraded.

@@ -210,6 +210,15 @@ type Modules0338 = {
     reason: string;
   }[];
 };
+type BridgeStatus0446 = {
+  serverId: string;
+  wrapperPath: string;
+  projectId: string;
+  profileId: string;
+  state: "online" | "awaiting_runtime" | "awaiting_registration" | "blocked";
+  reason: string;
+  cutoverAllowed: boolean;
+};
 type Rehearsal03310 = {
   format: string;
   runId: string;
@@ -367,6 +376,7 @@ export function MigrationCenter0331({
     null,
   );
   const [modules0338, setModules0338] = useState<Modules0338 | null>(null);
+  const [bridgeStatus0446, setBridgeStatus0446] = useState<BridgeStatus0446 | null>(null);
   const [rehearsal03310, setRehearsal03310] = useState<Rehearsal03310 | null>(
     null,
   );
@@ -1234,6 +1244,24 @@ export function MigrationCenter0331({
       setBusy(false);
     }
   }
+  async function checkBridge0446() {
+    if (!runId || !wrapperPath0338 || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const status = await requestJSON<BridgeStatus0446>(
+        backendUrl,
+        `${base}/${encodeURIComponent(runId)}/modules/serverbridge-status?wrapperPath=${encodeURIComponent(wrapperPath0338)}`,
+        token,
+      );
+      setBridgeStatus0446(status);
+    } catch (e) {
+      setBridgeStatus0446(null);
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function enrollBridge0338() {
     if (
       !runId ||
@@ -1261,7 +1289,7 @@ export function MigrationCenter0331({
             id: bridgeNode0338,
             name: bridgeName0338,
             kind: bridgeKind0338,
-            profileId: bridgeProfile0338,
+            profileId: migrationPlan0442?.destination.profileId ?? bridgeProfile0338,
             publicKey: bridgePublicKey0338,
           }),
         },
@@ -1269,6 +1297,7 @@ export function MigrationCenter0331({
       setBridgeConfirm0338("");
       setBridgePublicKey0338("");
       setBridgeFreshKeys0338(false);
+      setBridgeStatus0446(null);
       await refresh(runId);
     } catch (e) {
       setError(String(e));
@@ -1935,7 +1964,10 @@ export function MigrationCenter0331({
                     <span>Файл ServerWrapper из отчёта</span>
                     <select
                       value={wrapperPath0338}
-                      onChange={(e) => setWrapperPath0338(e.target.value)}
+                      onChange={(e) => {
+                        setWrapperPath0338(e.target.value);
+                        setBridgeStatus0446(null);
+                      }}
                     >
                       <option value="">Выберите</option>
                       {modules0338.wrappers.map((x) => (
@@ -1983,7 +2015,8 @@ export function MigrationCenter0331({
                   <label className="field">
                     <span>Новый профиль Never</span>
                     <input
-                      value={bridgeProfile0338}
+                      value={migrationPlan0442?.destination.profileId ?? bridgeProfile0338}
+                      readOnly={Boolean(migrationPlan0442?.destination.profileId)}
                       onChange={(e) => setBridgeProfile0338(e.target.value)}
                     />
                   </label>
@@ -2017,7 +2050,7 @@ export function MigrationCenter0331({
                       busy ||
                       !wrapperPath0338 ||
                       !bridgeNode0338 ||
-                      !bridgeProfile0338 ||
+                      !(migrationPlan0442?.destination.profileId ?? bridgeProfile0338) ||
                       !bridgePublicKey0338 ||
                       bridgeConfirm0338 !== runId ||
                       !bridgeFreshKeys0338
@@ -2026,6 +2059,16 @@ export function MigrationCenter0331({
                   >
                     Зарегистрировать новый ServerBridge node
                   </button>
+                  <p>После установки ServerBridge на игровой сервер проверьте реальный подписанный heartbeat. Регистрация ключа не означает готовность к переключению.</p>
+                  <button disabled={busy || !wrapperPath0338} onClick={() => void checkBridge0446()}>
+                    Проверить подключение ServerBridge
+                  </button>
+                  {bridgeStatus0446 && (
+                    <p role="status">
+                      Узел {bridgeStatus0446.serverId}: {bridgeStatus0446.state} ({bridgeStatus0446.reason}).
+                      Даже при online требуется игровая репетиция login/join перед cutover.
+                    </p>
+                  )}
                 </>
               )}
             </>
