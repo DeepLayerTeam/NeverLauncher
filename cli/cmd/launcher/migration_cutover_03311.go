@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -64,7 +66,29 @@ func handleMigrationCutover03311(args []string) error {
 		if flagValue(args, "--source-fenced", "") != "true" {
 			return errors.New("activate requires explicit --source-fenced true after stopping the external Gravit writer")
 		}
-		body = map[string]any{"profileId": profile, "channel": channel, "expectedRevision": rev, "sourceFenceReference": flagValue(args, "--fence-reference", ""), "sourceFenceEvidenceSha256": flagValue(args, "--fence-sha256", ""), "currentSourceSnapshotSha256": flagValue(args, "--source-snapshot-sha256", "")}
+		// Read the actual on-source verification receipt. Passing a free-form
+		// 64-character hash no longer passes the CLI preflight.
+		receiptPath := flagValue(args, "--fence-receipt", "")
+		var receipt sourceFenceEvidence0448
+		if receiptPath == "" {
+			return errors.New("activate requires --fence-receipt from verify-source-fence")
+		}
+		if e = readFenceFile0448(receiptPath, 8<<10, &receipt); e != nil {
+			return e
+		}
+		if receipt.Format != "never/gravit-source-stop/v1" || receipt.RunID != run || receipt.ProfileID != profile || receipt.Channel != channel ||
+			receipt.UnitState != "inactive" || (receipt.UnitFileState != "masked" && receipt.UnitFileState != "masked-runtime") ||
+			time.Since(receipt.CheckedAt) > 10*time.Minute || time.Until(receipt.CheckedAt) > time.Minute || !fenceDigest0448.MatchString(receipt.SnapshotSHA256) {
+			return errors.New("source fence receipt scope, status or freshness invalid")
+		}
+		canonical, hashErr := json.Marshal(receipt)
+		if hashErr != nil {
+			return hashErr
+		}
+		hash := sha256.Sum256(canonical)
+		body = map[string]any{"profileId": profile, "channel": channel, "expectedRevision": rev,
+			"sourceFenceReference": receiptPath, "sourceFenceEvidenceSha256": hex.EncodeToString(hash[:]),
+			"currentSourceSnapshotSha256": receipt.SnapshotSHA256, "sourceFenceReceipt": receipt}
 		endpoint += "/activate"
 		fenced = true
 	case "cutover-cancel":

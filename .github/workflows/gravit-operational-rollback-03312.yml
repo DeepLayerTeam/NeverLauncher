@@ -8,6 +8,8 @@ on:
       - 'services/api/internal/httpapi/migration_rollback_03312.go'
       - 'services/api/internal/dbmigrate/sql/0099*'
       - 'cli/cmd/launcher/migration_rollback*'
+      - 'cli/cmd/launcher/migration_fence*'
+      - 'docs/migration/gravit-cutover-rollback-0448.md'
       - 'apps/admin/src/admin/MigrationCenter0331.tsx'
       - 'schemas/openapi*'
       - '.github/workflows/gravit-operational-rollback-03312.yml'
@@ -47,7 +49,7 @@ jobs:
           go test -race -count=1 ./internal/repository -run '^TestMigrationCutoverPostgres03311$'
       - name: CLI tests and compilation
         working-directory: cli
-        run: go test -race -count=1 ./cmd/launcher -run 'TestRollbackCLIRequiresWriterFences03312|TestMigrationCutover03311'
+        run: go test -race -count=1 ./cmd/launcher -run 'TestRollbackCLIRequiresWriterFences03312|TestMigrationCutover03311|TestFence|TestRollbackBoundSnapshot0448'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

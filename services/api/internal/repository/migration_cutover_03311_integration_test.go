@@ -140,7 +140,10 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	if _, e = r.db.ExecContext(ctx, `UPDATE channel_heads SET revision=9 WHERE project_id=$1 AND profile_id=$2 AND channel=$3`, project, profile, channel); e == nil {
 		t.Fatal("concurrent publisher escaped staged DB trigger")
 	}
-	activation := co.Activate{ProfileID: profile, Channel: channel, ExpectedRevision: route.Revision, SourceFenceReference: "ops/fence-ticket-42", SourceFenceEvidenceSHA256: hash, CurrentSourceSnapshotSHA256: hash}
+	proof := &co.SourceFenceReceipt0448{Format: "never/gravit-source-stop/v1", RunID: runID, ProfileID: profile, Channel: channel, StageID: rep.StageID, Unit: "gravit.service", StoppedAt: time.Now().UTC().Add(-time.Minute), CheckedAt: time.Now().UTC(), UnitState: "inactive", UnitFileState: "masked-runtime", SnapshotSHA256: snapHash, SnapshotFileSHA256: hash}
+	proofBytes, _ := json.Marshal(proof)
+	proofHash := sha256.Sum256(proofBytes)
+	activation := co.Activate{ProfileID: profile, Channel: channel, ExpectedRevision: route.Revision, SourceFenceReference: "ops/fence-ticket-42", SourceFenceEvidenceSHA256: hex.EncodeToString(proofHash[:]), CurrentSourceSnapshotSHA256: hash, SourceFenceReceipt: proof}
 	if _, e = r.ActivateMigrationCutover03311(ctx, runID, activation, pub); !errors.Is(e, mw.ErrConflict) {
 		t.Fatalf("wrong source snapshot accepted: %v", e)
 	}
@@ -190,6 +193,24 @@ func TestMigrationCutoverPostgres03311(t *testing.T) {
 	}
 	commit.SourceWriterFenced = true
 	commit.NeverWriterFenced = true
+	wrongEvidence := commit
+	wrongEvidence.CurrentEvidenceSHA256 = strings.Repeat("f", 64)
+	if _, e = r.CommitMigrationRollback03312(ctx, runID, wrongEvidence, pub); !errors.Is(e, mw.ErrConflict) {
+		t.Fatalf("different export evidence accepted: %v", e)
+	}
+	// A fresh plan must replace a previous approval and invalidate its hash.
+	renewed := planInput
+	renewed.EvidenceReference = "runbooks/fresh-export-0002"
+	renewed.EvidenceSHA256 = strings.Repeat("d", 64)
+	newPlan, replanErr := r.PlanMigrationRollback03312(ctx, runID, renewed)
+	if replanErr != nil || !newPlan.Ready || newPlan.PlanSHA256 == plan.PlanSHA256 {
+		t.Fatalf("replan failed: %+v %v", newPlan, replanErr)
+	}
+	if _, e = r.CommitMigrationRollback03312(ctx, runID, commit, pub); !errors.Is(e, mw.ErrConflict) {
+		t.Fatalf("stale rollback approval accepted: %v", e)
+	}
+	commit.PlanSHA256 = newPlan.PlanSHA256
+	commit.CurrentEvidenceSHA256 = renewed.EvidenceSHA256
 	changed := commit
 	changed.Current.Players = append([]gr.Player(nil), commit.Current.Players...)
 	changed.Current.Players[0].Economy = "999"

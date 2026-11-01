@@ -261,6 +261,9 @@ func (r *SQLRepository) ActivateMigrationCutover03311(ctx context.Context, runID
 	if v.State != "staged" || v.Revision != a.ExpectedRevision {
 		return co.Route{}, mw.ErrConflict
 	}
+	if e = co.VerifySourceFence0448(a, v, time.Now()); e != nil {
+		return co.Route{}, mw.ErrConflict
+	}
 	if e = checkCutoverReadiness03311(ctx, tx, runID, v.StageID, a.CurrentSourceSnapshotSHA256); e != nil {
 		return co.Route{}, e
 	}

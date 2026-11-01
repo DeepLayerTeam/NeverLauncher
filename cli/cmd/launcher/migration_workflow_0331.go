@@ -23,6 +23,9 @@ func handleMigrationWorkflow0331(args []string) error {
 	if command == "report" || command == "report-review" || command == "report-review-status" {
 		return handleMigrationReport03313(args)
 	}
+	if command == "fence-source" || command == "verify-source-fence" {
+		return handleMigrationFence0448(args)
+	}
 	if command == "rehearse" {
 		return handleMigrationRehearsal03310(args[1:])
 	}

@@ -7,6 +7,8 @@ on:
       - 'services/api/internal/httpapi/migration_cutover*'
       - 'services/api/internal/dbmigrate/sql/0098*'
       - 'cli/cmd/launcher/migration_cutover*'
+      - 'cli/cmd/launcher/migration_fence*'
+      - 'docs/migration/gravit-cutover-rollback-0448.md'
       - 'apps/admin/src/admin/MigrationCenter0331.tsx'
       - 'schemas/openapi*'
       - '.github/workflows/gravit-cutover-03311.yml'
@@ -46,7 +48,7 @@ jobs:
           go test -run '^$' ./internal/httpapi
       - name: CLI compilation and tests
         working-directory: cli
-        run: go test -count=1 ./cmd/launcher -run 'TestMigrationCutover03311|TestMigrationWorkflow0331'
+        run: go test -count=1 ./cmd/launcher -run 'TestMigrationCutover03311|TestMigrationWorkflow0331|TestFence|TestRollbackBoundSnapshot0448'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

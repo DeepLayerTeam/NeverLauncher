@@ -4,6 +4,7 @@ import (
 	gr "gitflic.ru/skif4er/launcher/services/api/internal/gravitrehearsal"
 	"strings"
 	"testing"
+	"time"
 )
 
 func fixture() (PlanInput, gr.Report) {
@@ -12,6 +13,8 @@ func fixture() (PlanInput, gr.Report) {
 	s := gr.Snapshot{WorldSHA256: h, Loader: "forge", OptionalPresetSHA256: h, Players: []gr.Player{{SourceID: "fileauth:1", UUID: uuid, InventorySHA256: h, PermissionsSHA256: h, Economy: "100", SkinSHA256: h}}}
 	digest, _ := gr.SnapshotDigest(s)
 	r := gr.Report{Format: gr.Format, RunID: "12345678-run", StageID: "1234567890123456", SourceInventorySHA256: h, SourceSnapshotSHA256: digest, TargetSnapshotSHA256: digest, Source: s, Target: s}
+	start := time.Now().UTC().Add(-10 * time.Second)
+	r.LiveSession = &gr.LiveSession{ClientSHA256: h, PlayerName: "Steve", PlayerUUID: uuid, BeforeSHA256: h, JoinedSHA256: h, StartedAt: start.Format(time.RFC3339Nano), JoinedAt: start.Add(3 * time.Second).Format(time.RFC3339Nano)}
 	for _, name := range gr.RequiredProbes {
 		p := gr.Probe{Name: name, Passed: true, RunID: r.RunID, StageID: r.StageID, EvidenceSHA256: h}
 		if name == "login" || name == "join" {

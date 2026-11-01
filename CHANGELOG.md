@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.44.8 — Operational migration cutover and rollback
+
+- Add real source-host `fence-source` and `verify-source-fence` CLI actions. The first runs `systemctl mask --runtime --now` and verifies the named systemd service is inactive/masked; the second requires a fresh post-stop source export, hashes the typed MIG10 snapshot, rechecks the unit and durably writes an exclusive receipt. Failed checks leave the source fenced.
+- Cutover activation now requires the complete source fence receipt, which must match the staged run/profile/channel/rehearsal stage, source snapshot SHA-256, reference hash, and ten-minute freshness. Admin and CLI send the bound receipt. Receipt validation and all existing PostgreSQL publication fencing, signed-release and rehearsal checks remain fail closed. This is operator evidence, not a remote system attestation or guarantee against independent writers/proxies.
+- Repair MIG12 rollback replanning: an old *uncommitted* approval no longer permanently traps the active route after the plan expires. A fresh plan updates the durable record inside the serializable transaction, invalidates old approval SHA-256, and cannot replace an already completed rollback. Commit now binds the current export evidence SHA-256 to the stored plan exactly.
+- CLI hashes the exact JSON snapshot bytes it submits rather than accepting arbitrary rollback evidence hashes; existing explicit hashes must match. Refresh historical rollback test fixtures with the native live-session evidence required since 0.44.7. Add regression tests, CI routing and operational runbook.
+- Verification limits: source-fence systemd tests use a simulated runner; PostgreSQL route integration, live Gravit/source-host service control, independent world backup/restore, proxy switch and real Minecraft gameplay were not executed locally. Full backend requires pinned Go 1.27.3; isolated dependency-light backend packages and CLI are tested with locally available Go.
+
+
 ## 0.44.7 — Real Minecraft launch and join rehearsal
 
 - MIG10 now launches the **real foreground client executable on an isolated staging host** and observes an actual newly connected Minecraft Java Edition player with name/UUID through authenticated loopback RCON `list uuids`. It checks absence before launch, sustained presence after join, and continued activity after all other probes and the final target snapshot. Remote RCON, stale sessions, early client exit, unexpected UUID and timeouts fail closed.

@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -53,52 +56,26 @@ func handleMigrationRollback03312(args []string) error {
 		if file == "" {
 			return errors.New("rollback requires --snapshot JSON from independently fenced live deployment")
 		}
-		f, e := os.Open(file)
+		snapshot, snapshotHash, e := rollbackReadSnapshot0448(file)
 		if e != nil {
 			return e
-		}
-		defer f.Close()
-		st, e := f.Stat()
-		if e != nil || !st.Mode().IsRegular() || st.Size() > 8<<20 {
-			return errors.New("rollback snapshot must be a regular JSON file up to 8 MiB")
-		}
-		var snapshot any
-		d := json.NewDecoder(io.LimitReader(f, 8<<20))
-		d.DisallowUnknownFields()
-		if e = d.Decode(&snapshot); e != nil {
-			return e
-		}
-		var extra any
-		if d.Decode(&extra) != io.EOF {
-			return errors.New("snapshot has trailing data or is too large")
 		}
 		body["current"] = snapshot
 		sourceFile := flagValue(args, "--reconciled-source-snapshot", "")
 		if sourceFile != "" {
-			source, err := os.Open(sourceFile)
+			data, _, err := rollbackReadSnapshot0448(sourceFile)
 			if err != nil {
 				return err
-			}
-			defer source.Close()
-			meta, err := source.Stat()
-			if err != nil || !meta.Mode().IsRegular() || meta.Size() > 8<<20 {
-				return errors.New("reconciled source must be regular JSON <= 8 MiB")
-			}
-			var data any
-			decoder := json.NewDecoder(io.LimitReader(source, 8<<20))
-			if err = decoder.Decode(&data); err != nil {
-				return err
-			}
-			var remain any
-			if decoder.Decode(&remain) != io.EOF {
-				return errors.New("reconciled source has trailing data")
 			}
 			body["reconciledSource"] = data
 			body["reconciliationEvidenceSha256"] = flagValue(args, "--reconciliation-evidence-sha256", "")
 		}
 		if cmd == "rollback-plan" {
-			body["evidenceReference"] = flagValue(args, "--evidence-reference", "")
-			body["evidenceSha256"] = flagValue(args, "--evidence-sha256", "")
+			body["evidenceReference"] = flagValue(args, "--evidence-reference", file)
+			if expected := flagValue(args, "--evidence-sha256", ""); expected != "" && expected != snapshotHash {
+				return errors.New("snapshot file SHA-256 differs from rollback evidence SHA-256")
+			}
+			body["evidenceSha256"] = snapshotHash
 			path += "/plan"
 		} else {
 			if flagValue(args, "--source-writer-fenced", "") != "true" {
@@ -107,7 +84,10 @@ func handleMigrationRollback03312(args []string) error {
 			body["planSha256"] = flagValue(args, "--plan-sha256", "")
 			body["sourceWriterFenced"] = true
 			body["neverWriterFenced"] = true
-			body["currentEvidenceSha256"] = flagValue(args, "--current-evidence-sha256", "")
+			if expected := flagValue(args, "--current-evidence-sha256", ""); expected != "" && expected != snapshotHash {
+				return errors.New("fresh snapshot SHA-256 differs from rollback evidence")
+			}
+			body["currentEvidenceSha256"] = snapshotHash
 			path += "/commit"
 		}
 	default:
@@ -128,4 +108,41 @@ func handleMigrationRollback03312(args []string) error {
 		req.Header.Set("X-Migration-Source-Fenced", "true")
 	}
 	return rollbackSend03312(req, flagValue(args, "--output", ""))
+}
+
+// rollbackReadSnapshot0448 hashes the EXACT bytes sent to the server, avoiding
+// the TOCTOU introduced by hashing a separately re-read operator file. Never
+// use an arbitrary --evidence-sha256 to authorize a new rollback plan.
+func rollbackReadSnapshot0448(path string) (any, string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, "", err
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		return nil, "", err
+	}
+	if !st.Mode().IsRegular() || st.Size() == 0 || st.Size() > 8<<20 {
+		return nil, "", errors.New("rollback snapshot must be a regular JSON file up to 8 MiB")
+	}
+	raw, err := io.ReadAll(io.LimitReader(f, (8<<20)+1))
+	if err != nil {
+		return nil, "", err
+	}
+	if len(raw) > 8<<20 {
+		return nil, "", errors.New("rollback snapshot exceeds 8 MiB")
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.DisallowUnknownFields()
+	var snapshot any
+	if err = d.Decode(&snapshot); err != nil {
+		return nil, "", err
+	}
+	var extra any
+	if d.Decode(&extra) != io.EOF {
+		return nil, "", errors.New("snapshot has trailing data")
+	}
+	sum := sha256.Sum256(raw)
+	return snapshot, hex.EncodeToString(sum[:]), nil
 }

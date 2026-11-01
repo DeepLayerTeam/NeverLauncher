@@ -108,23 +108,31 @@ func (r *SQLRepository) PlanMigrationRollback03312(ctx context.Context, run stri
 	}
 	var stored rb.Result
 	var raw []byte
-	err := tx.QueryRowContext(ctx, `SELECT result FROM migration_rollbacks_03312 WHERE run_id=$1 AND profile_id=$2 AND channel=$3 FOR UPDATE`, run, input.ProfileID, input.Channel).Scan(&raw)
+	var existingState string
+	err := tx.QueryRowContext(ctx, `SELECT result,state FROM migration_rollbacks_03312 WHERE run_id=$1 AND profile_id=$2 AND channel=$3 FOR UPDATE`, run, input.ProfileID, input.Channel).Scan(&raw, &existingState)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return rb.Result{}, err
+	}
+	// A plan is a short-lived compare-and-swap approval. It must be possible to
+	// replace an expired plan with a newly exported snapshot: the original MIG12
+	// implementation made rollback permanently impossible after ten minutes.
+	// Replanning does NOT move the channel head and invalidates the old digest.
 	if err == nil {
-		if json.Unmarshal(raw, &stored) != nil || stored.PlanSHA256 != result.PlanSHA256 {
+		if existingState != "planned" || json.Unmarshal(raw, &stored) != nil || stored.RouteRevision != v.Revision {
 			return rb.Result{}, mw.ErrConflict
 		}
-		if e = tx.Commit(); e != nil {
-			return rb.Result{}, e
-		}
-		return stored, nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return rb.Result{}, err
 	}
 	result.State = "planned"
 	raw, _ = json.Marshal(result)
-	_, e = tx.ExecContext(ctx, `INSERT INTO migration_rollbacks_03312(run_id,project_id,profile_id,channel,plan_sha256,baseline_snapshot_sha256,current_snapshot_sha256,evidence_sha256,evidence_reference,route_revision,result)
+	if err == nil {
+		_, e = tx.ExecContext(ctx, `UPDATE migration_rollbacks_03312
+ SET plan_sha256=$4,baseline_snapshot_sha256=$5,current_snapshot_sha256=$6,
+ evidence_sha256=$7,evidence_reference=$8,route_revision=$9,result=$10::jsonb,planned_at=now()
+ WHERE run_id=$1 AND profile_id=$2 AND channel=$3 AND state='planned'`, run, input.ProfileID, input.Channel, result.PlanSHA256, result.BaselineSnapshotSHA256, result.CurrentSnapshotSHA256, result.EvidenceSHA256, result.EvidenceReference, result.RouteRevision, string(raw))
+	} else {
+		_, e = tx.ExecContext(ctx, `INSERT INTO migration_rollbacks_03312(run_id,project_id,profile_id,channel,plan_sha256,baseline_snapshot_sha256,current_snapshot_sha256,evidence_sha256,evidence_reference,route_revision,result)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb)`, run, project, input.ProfileID, input.Channel, result.PlanSHA256, result.BaselineSnapshotSHA256, result.CurrentSnapshotSHA256, result.EvidenceSHA256, result.EvidenceReference, result.RouteRevision, string(raw))
+	}
 	if e != nil {
 		return rb.Result{}, e
 	}
@@ -176,7 +184,7 @@ func (r *SQLRepository) CommitMigrationRollback03312(ctx context.Context, run st
 		return result, nil
 	}
 	freshDigest, e := gr.SnapshotDigest(input.Current)
-	if e != nil || freshDigest != result.CurrentSnapshotSHA256 || !rb.ValidSHA256(input.CurrentEvidenceSHA256) {
+	if e != nil || freshDigest != result.CurrentSnapshotSHA256 || input.CurrentEvidenceSHA256 != result.EvidenceSHA256 {
 		return rb.Result{}, mw.ErrConflict
 	}
 	// Reconciliation receipts are only usable while BOTH sides still match.

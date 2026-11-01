@@ -403,6 +403,7 @@ export function MigrationCenter0331({
   const [cutoverFenceRef03311, setCutoverFenceRef03311] = useState("");
   const [cutoverFenceSha03311, setCutoverFenceSha03311] = useState("");
   const [cutoverSnapshot03311, setCutoverSnapshot03311] = useState("");
+  const [cutoverReceipt0448, setCutoverReceipt0448] = useState("");
   const [cutoverSourceStopped03311, setCutoverSourceStopped03311] =
     useState(false);
   const [wrapperPath0338, setWrapperPath0338] = useState("");
@@ -683,11 +684,19 @@ export function MigrationCenter0331({
       body = { ...body, expectedRevision: route.revision };
       if (action === "activate") {
         if (!cutoverSourceStopped03311) return;
+        let receipt: unknown;
+        try {
+          receipt = JSON.parse(cutoverReceipt0448);
+        } catch {
+          setError("Нужен JSON оригинальной source fence receipt, полученной после остановки службы");
+          return;
+        }
         body = {
           ...body,
           sourceFenceReference: cutoverFenceRef03311,
           sourceFenceEvidenceSha256: cutoverFenceSha03311,
           currentSourceSnapshotSha256: cutoverSnapshot03311,
+          sourceFenceReceipt: receipt,
         };
       }
     } else return;
@@ -2188,6 +2197,10 @@ export function MigrationCenter0331({
             сервера.
           </p>
           <label className="field">
+            <span>JSON source fence receipt, полученной командой verify-source-fence после остановки Gravit</span>
+            <textarea rows={5} value={cutoverReceipt0448} onChange={(e) => setCutoverReceipt0448(e.target.value)} />
+          </label>
+          <label className="field">
             <span>Ссылка на доказательство source fence</span>
             <input
               value={cutoverFenceRef03311}
@@ -2236,6 +2249,7 @@ export function MigrationCenter0331({
                       busy ||
                       cutoverConfirm03311 !== runId ||
                       !cutoverSourceStopped03311 ||
+                      !cutoverReceipt0448.trim() ||
                       !cutoverFenceRef03311 ||
                       !/^[a-f0-9]{64}$/.test(cutoverFenceSha03311) ||
                       !/^[a-f0-9]{64}$/.test(cutoverSnapshot03311)
