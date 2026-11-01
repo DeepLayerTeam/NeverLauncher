@@ -1,0 +1,4 @@
+{
+  "compilerOptions": {"target":"ES2022","module":"NodeNext","moduleResolution":"NodeNext","declaration":true,"strict":true,"lib":["ES2022","DOM","DOM.Iterable"],"outDir":"dist","rootDir":".","skipLibCheck":true},
+  "include":["client.ts","operations.generated.ts"]
+}

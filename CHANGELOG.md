@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.45.12 — API/SDK Freeze Candidate (2026-11-01)
+
+- Implement real public REST API SDKs for Go, TypeScript/Node and Java 17, with actual HTTP dispatch for all 452 canonical OpenAPI operation IDs, path/query encoding, Bearer authorization, idempotency keys and structured errors. Binary/multipart operations use raw-body transports rather than masquerading as JSON.
+- Expose `X-Launcher-API-Contract: 1.0.0` on backend responses (including errors); clients actively negotiate against 0.45.12 and recognize legacy 0.45.11 `/ready` behavior for N−1/N compatibility. Separate API contract version from product version and Extensions SDK protocol.
+- Compare the real published OpenAPI 0.45.11 snapshot with current v1 to block removal/renaming of operations, changed required parameters, request/response contracts and schema incompatibilities. Integrate generated registry drift checks and Go/TS/Java HTTP integration tests into CI.
+- **Verification boundary:** local HTTP SDK integration tests and OpenAPI checks pass. No live simultaneous 0.45.11/0.45.12 backend E2E with actual PostgreSQL, HA and game clients was conducted. Strict typed response models for all operations are not claimed.
+
+
 ## 0.45.11 — Signed Distribution: exact final packages, SPDX and SLSA binding (2026-11-01)
 
 - Bind six **actual final platform-signed installer ZIP/TAR.GZ files** into SPDX 2.3 packages with SHA-256 hashes. Preserve existing dependency package graph. Refuse packaging if any target package is missing, empty or a symlink.

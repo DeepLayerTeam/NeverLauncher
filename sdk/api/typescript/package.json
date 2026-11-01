@@ -1,0 +1,22 @@
+{
+  "name": "@neverlauncher/api-sdk",
+  "version": "0.45.12",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test test/client.test.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3"
+  }
+}
