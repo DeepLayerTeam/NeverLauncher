@@ -43,7 +43,7 @@ jobs:
         working-directory: services/api
         run: |
           go test -race -count=1 -timeout 5m ./internal/gravitcredentials ./internal/gravitidentity ./internal/gravitinventory ./internal/fileauth ./internal/localpassword
-          go test -race -count=1 -timeout 5m ./internal/repository -run 'TestMigrationAuthAtomicIdempotent0335|TestMigrationIdentityTransactional0334|TestMigrationDurability0331'
+          go test -race -count=1 -timeout 5m ./internal/repository -run 'TestMigrationAuthAtomicIdempotent0335|TestMigrationIdentityTransactional0334|TestMigrationDurability0331|TestMigratedSQLUserIDDoesNotCollideAcrossSources0444'
           go test -count=1 -timeout 5m ./internal/httpapi -run 'TestImportedFileAuthLocalLoginAndAtomicRehash0295|TestMigrationTargetSteps0331'
       - name: CLI builds and tests
         working-directory: cli

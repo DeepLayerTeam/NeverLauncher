@@ -36,7 +36,7 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	if _, e := repo.db.ExecContext(ctx, `INSERT INTO projects(id,name) VALUES($1,$1)`, project); e != nil {
 		t.Fatal(e)
 	}
-	var userID string
+	var userID, secondUserID string
 	defer func() {
 		c := context.Background()
 		idQuery := `SELECT id FROM migration_runs_0331 WHERE project_id=$1`
@@ -46,6 +46,9 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 		_, _ = repo.db.ExecContext(c, `DELETE FROM migration_runs_0331 WHERE project_id=$1`, project)
 		if userID != "" {
 			_, _ = repo.db.ExecContext(c, `DELETE FROM users WHERE id=$1`, userID)
+		}
+		if secondUserID != "" {
+			_, _ = repo.db.ExecContext(c, `DELETE FROM users WHERE id=$1`, secondUserID)
 		}
 		_, _ = repo.db.ExecContext(c, `DELETE FROM projects WHERE id=$1`, project)
 	}()
@@ -143,4 +146,42 @@ func TestMigrationAuthAtomicIdempotent0335(t *testing.T) {
 	if e = repo.db.QueryRowContext(ctx, `SELECT password_hash FROM users WHERE id=$1`, userID).Scan(&hash); e != nil || hash != "$argon2id$verified-upgrade" {
 		t.Fatalf("source password overwrote Never: %v %q", e, hash)
 	}
+	// 0.44.4: two independent Gravit SQL sources may both use id=1.
+	// Importing the second UUID must create its own Never account, not
+	// collide with the first source's database-local primary key.
+	run3, e := repo.CreateMigration0331(ctx, project, "gravit", "auth-third-run-0444-key")
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, step := range []string{"target_check", "target_inventory"} {
+		lease, e := repo.ClaimMigration0331(ctx, run3.ID, "worker-3", 10*time.Second)
+		if e != nil {
+			t.Fatal(e)
+		}
+		if _, e = repo.CheckpointMigration0331(ctx, lease, step, []byte(`{"ok":true}`)); e != nil {
+			t.Fatal(e)
+		}
+	}
+	if _, e = repo.SaveMigrationInventory0333(ctx, run3.ID, source); e != nil {
+		t.Fatal(e)
+	}
+	other := gi.Account{Provider: "sql", SourceID: account.SourceID, Username: "Auth336", UUID: "22222222-2222-4333-8444-555555555555", SourcePath: "sql-export/users.csv"}
+	otherMapping, e := repo.SaveMigrationIdentities0334(ctx, run3.ID, source.SourceSHA256, source.ManifestSHA256, []gi.Account{other})
+	if e != nil || otherMapping.Summary["pending_import"] != 1 {
+		t.Fatalf("second SQL identity: %+v %v", otherMapping, e)
+	}
+	otherCredential := gc.Credential{Account: other, PasswordHash: encoded, Algorithm: "sha256-hex", State: "importable"}
+	otherResult, e := repo.ImportMigrationCredentials0335(ctx, run3.ID, source.SourceSHA256, "", []gc.Credential{otherCredential}, false)
+	if e != nil || otherResult.Imported != 1 {
+		t.Fatalf("second SQL import: %+v %v", otherResult, e)
+	}
+	secondUserID = migratedUserID0335(other)
+	if secondUserID == userID {
+		t.Fatal("different UUID imported into first SQL user")
+	}
+	var otherUUID string
+	if e = repo.db.QueryRowContext(ctx, `SELECT uuid FROM minecraft_profiles WHERE user_id=$1`, secondUserID).Scan(&otherUUID); e != nil || otherUUID != other.UUID {
+		t.Fatalf("second UUID lost: %s %v", otherUUID, e)
+	}
+
 }

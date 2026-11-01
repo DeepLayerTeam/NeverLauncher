@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.44.4 — Gravit identity and authentication migration hardening
+
+- Import SQL users under UUID-derived Never account IDs rather than their database-local row IDs, preventing collisions when two Gravit databases contain the same numeric ID. Keep read-only verification of historical 0.44.3 SQL IDs when replaying an already committed import, rejecting conflicting UUID/name/status/role ownership.
+- Recheck the **exact approved MIG04 mapping state and user ID in the serializable credential-import transaction**. A blocked/matched/pending source cannot silently become importable after somebody deletes or changes the target identity; the operator must re-run mapping verification.
+- Remove the unrelated 2 MiB configuration parser from FileAuthSystem Database.json inventory. The ZIP is still fully hashed, decompressed and CRC checked; MIG04/MIG05 independently decode FileAuth source account data with the 64 MiB and 200k-account migration limits. The live-fileauth quick importer retains its original smaller safety limits.
+- Import verified FileAuth credentials with strict source UUID/username checks and explicit password format selection; files larger than the legacy 16 MiB/20k-account quick-import bounds work. An unknown format or absent verifier becomes a **per-account manual reset** (no password/empty account created) and blocks authentication cutover. Known malformed hashes fail closed. Reject case-insensitive duplicate FileAuth JSON identity field aliases.
+- Admin Migration Center now displays accounts requiring an operator decision and distinguishes unknown FileAuth formats from SQL-only migration. Old sessions, permissions, source keys and device trust remain untrusted and are not imported.
+- Added 125k-account real ZIP regression test, SHA/identity pinning, unknown/missing/invalid password cases, SQL-ID collision regression and CI verification linkage. Actual PostgreSQL transactions, production Go 1.27.3 backend build, live auth and Minecraft joins still require external CI and a game environment; local unit tests alone do not certify a production cutover.
+
 ## 0.44.3 — Gravit client profile and managed-file migration
 
 - Content importer now resolves the actual `dir` field of a Gravit ClientProfile, instead of assuming the client tree is named after its `profiles/*.json` file. A missing/unsafe explicit directory blocks staging rather than silently copying another profile’s files.

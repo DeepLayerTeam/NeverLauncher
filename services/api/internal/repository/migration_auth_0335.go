@@ -20,6 +20,15 @@ func migratedUserID0335(a gi.Account) string {
 	if a.Provider == "fileauth" {
 		return "gravit-fileauth-" + strings.ReplaceAll(a.UUID, "-", "")
 	}
+	// SQL source IDs are local to an upstream database, often starting at 1.
+	// Different projects must not claim the same Never user by source ID.
+	// Minecraft UUID is the cross-server identity we are preserving.
+	return "gravit-sql-" + strings.ReplaceAll(a.UUID, "-", "")
+}
+
+// Used ONLY to verify 0.44.3 receipts: older imports keyed SQL users solely
+// by upstream row ID. New imports must never use this collision-prone scheme.
+func legacyMigratedSQLUserID0335(a gi.Account) string {
 	sum := sha256.Sum256([]byte("sql\x00" + a.SourceID))
 	return "gravit-sql-" + hex.EncodeToString(sum[:16])
 }
@@ -97,7 +106,13 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 			}
 			a := gi.Account{Provider: row.Provider, SourceID: row.SourceID, Username: row.Username, UUID: row.UUID}
 			var uuid, name, role, status, email string
-			e = tx.QueryRowContext(ctx, `SELECT m.uuid,m.name,u.role_id,u.status,u.email FROM users u JOIN minecraft_profiles m ON m.user_id=u.id WHERE u.id=$1`, migratedUserID0335(a)).Scan(&uuid, &name, &role, &status, &email)
+			userID := migratedUserID0335(a)
+			e = tx.QueryRowContext(ctx, `SELECT m.uuid,m.name,u.role_id,u.status,u.email FROM users u JOIN minecraft_profiles m ON m.user_id=u.id WHERE u.id=$1`, userID).Scan(&uuid, &name, &role, &status, &email)
+			if errors.Is(e, sql.ErrNoRows) && a.Provider == "sql" {
+				// Historical, verified receipts may still refer to a 0.44.3
+				// source-ID-based user. Validate ownership before allowing replay.
+				e = tx.QueryRowContext(ctx, `SELECT m.uuid,m.name,u.role_id,u.status,u.email FROM users u JOIN minecraft_profiles m ON m.user_id=u.id WHERE u.id=$1`, legacyMigratedSQLUserID0335(a)).Scan(&uuid, &name, &role, &status, &email)
+			}
 			if e != nil || uuid != a.UUID || name != a.Username || role != "player" || status != "active" || email != strings.ToLower(a.Username)+"@fileauth.invalid" {
 				return gc.Result{}, mw.ErrConflict
 			}
@@ -160,15 +175,15 @@ func (r *SQLRepository) ImportMigrationCredentials0335(ctx context.Context, id, 
 	for i, a := range mapped {
 		k := a.Provider + "\x00" + a.SourceID + "\x00" + a.SourcePath
 		c, ok := byKey[k]
-		if !ok || c.Username != a.Username || c.UUID != a.UUID || c.State == "" {
+		if !ok || c.Username != a.Username || c.UUID != a.UUID || (c.State != "importable" && c.State != "manual_reset") || (c.State == "manual_reset" && c.PasswordHash != "") {
 			return gc.Result{}, mw.ErrConflict
 		}
 		m := resolved[i]
-		if m.Status == "matched" && (approved[i].status != "matched" || approved[i].user != m.TargetUserID) {
-			return gc.Result{}, fmt.Errorf("new UUID owner since mapping for %s: %w", a.SourceID, mw.ErrConflict)
-		}
-		if approved[i].status == "matched" && (m.Status != "matched" || approved[i].user != m.TargetUserID) {
-			return gc.Result{}, mw.ErrConflict
+		// An identity previously blocked or matched cannot silently turn
+		// into an import candidate because another operator deleted/changed
+		// its conflicting target. A new MIG04 verification is required.
+		if approved[i].status != m.Status || approved[i].user != m.TargetUserID {
+			return gc.Result{}, fmt.Errorf("UUID ownership changed since approved mapping for %s: %w", a.SourceID, mw.ErrConflict)
 		}
 		if m.Status == "blocked" {
 			return gc.Result{}, fmt.Errorf("blocked UUID mapping for %s: %w", a.SourceID, mw.ErrConflict)

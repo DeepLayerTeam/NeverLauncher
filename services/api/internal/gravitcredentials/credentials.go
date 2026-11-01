@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"encoding/csv"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -98,19 +99,16 @@ func Extract(ctx context.Context, source io.ReaderAt, size int64, inventory inv.
 			return nil, errors.New("credential file overflow")
 		}
 		if isFile {
-			if !fileauth.SupportedFormat(fileauthFormat) {
-				return nil, errors.New("explicit --fileauth-format is required for supported FileAuth password verifiers; unsupported formats require manual transition")
-			}
-			// The historical importer performs additional hash validation. Identity
-			// extraction above already rejects duplicate JSON keys and UUID mismatch.
-			accounts, e := fileauth.Parse(bytes.NewReader(data), fileauthFormat)
+			// Use the exact UUID/username set already verified by gravitidentity.
+			// The legacy FileAuth parser caps at 16 MiB/20k users, while the
+			// inventoried source supports 64 MiB/200k. Parsing a second time with
+			// weaker limits would reject valid migration snapshots. Unknown hash
+			// algorithms are explicitly marked for reset, never guessed.
+			accounts, e := parseFileAuthCredentials(data, f.Name, fileauthFormat, expected)
 			if e != nil {
 				return nil, fmt.Errorf("FileAuth %s: %w", f.Name, e)
 			}
-			for _, a := range accounts {
-				c := Credential{Account: gi.Account{Provider: "fileauth", SourceID: a.UUID, Username: a.Username, UUID: a.UUID, SourcePath: f.Name}, PasswordHash: a.PasswordHash, Algorithm: fileauthFormat, State: "importable"}
-				out = append(out, c)
-			}
+			out = append(out, accounts...)
 		} else {
 			rows, e := parseSQL(data, f.Name)
 			if e != nil {
@@ -130,6 +128,75 @@ func Extract(ctx context.Context, source io.ReaderAt, size int64, inventory inv.
 			return nil, fmt.Errorf("credential identity differs from approved map: %s/%s", c.Provider, c.SourceID)
 		}
 		seen[key] = true
+	}
+	return out, nil
+}
+
+// parseFileAuthCredentials only extracts password verifiers for identities that
+// the independently verified MIG04 map contains. It does not accept roles,
+// sessions, emails or arbitrary claims from Gravit. Unknown hash formats never
+// become login-capable credentials.
+func parseFileAuthCredentials(data []byte, path, format string, expected map[string]gi.Account) ([]Credential, error) {
+	if format != "" && !fileauth.SupportedFormat(format) {
+		return nil, errors.New("unsupported FileAuth password format")
+	}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	start, err := dec.Token()
+	if err != nil || start != json.Delim('{') {
+		return nil, errors.New("FileAuth Database.json must be a UUID-keyed object")
+	}
+	out := []Credential{}
+	seen := make(map[string]bool)
+	for dec.More() {
+		key, err := dec.Token()
+		if err != nil {
+			return nil, err
+		}
+		rawUUID, ok := key.(string)
+		if !ok {
+			return nil, errors.New("non-string FileAuth identity key")
+		}
+		uuid, err := gi.UUID(rawUUID)
+		if err != nil || seen[uuid] {
+			return nil, errors.New("invalid or duplicate FileAuth UUID")
+		}
+		seen[uuid] = true
+		account, ok := expected["fileauth\x00"+path+"\x00"+uuid]
+		if !ok {
+			return nil, errors.New("FileAuth UUID not found in verified identity map")
+		}
+		// MIG04 rejects duplicate keys in each user object. Re-use that
+		// checked source, decoding only the verifier field here.
+		var user struct {
+			Password string `json:"password"`
+		}
+		if err = dec.Decode(&user); err != nil {
+			return nil, err
+		}
+		c := Credential{Account: account, State: "manual_reset", Reason: "FileAuth verifier format is not selected; account requires a verified reset"}
+		if format != "" {
+			if user.Password == "" {
+				c.Reason = "FileAuth password verifier is missing; account requires a verified reset"
+			} else {
+				c.PasswordHash, err = fileauth.EncodeCredential(format, user.Password)
+				if err != nil {
+					return nil, fmt.Errorf("invalid %s verifier for source UUID %s: %w", format, uuid, err)
+				}
+				c.Algorithm = format
+				c.State, c.Reason = "importable", ""
+			}
+		}
+		out = append(out, c)
+		if len(out) > gi.MaxAccounts {
+			return nil, errors.New("too many FileAuth accounts")
+		}
+	}
+	if end, err := dec.Token(); err != nil || end != json.Delim('}') {
+		return nil, errors.New("invalid FileAuth JSON terminator")
+	}
+	var extra any
+	if err := dec.Decode(&extra); err != io.EOF {
+		return nil, errors.New("trailing FileAuth JSON data")
 	}
 	return out, nil
 }

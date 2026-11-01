@@ -86,10 +86,14 @@ func entryKind(n string) (string, bool) {
 		return "server_wrapper", strings.HasSuffix(l, ".json") || strings.HasSuffix(l, ".env")
 	case strings.HasPrefix(l, "profiles/") && strings.HasSuffix(l, ".json") || strings.Contains(l, "/profiles/") && strings.HasSuffix(l, ".json"):
 		return "client_profile", true
-	case (base == "database.json" && strings.Contains(l, "fileauthsystem/")) ||
+	case (base == "database.json" && (strings.Contains(l, "fileauthsystem/") || strings.Contains(l, "fileauth/"))) ||
 		strings.Contains(l, "sql-export/") && strings.HasSuffix(l, ".csv") ||
 		strings.HasSuffix(l, ".sql") && (strings.Contains(l, "/auth/") || strings.Contains(l, "/database/")):
-		return "authentication", strings.HasSuffix(l, ".json")
+		// Account dumps contain secrets and potentially hundreds of thousands
+		// of records. Hash and CRC-check them without loading them into the
+		// 2 MiB configuration parser. MIG04/MIG05 perform strict identity and
+		// credential decoding only after the source has been pinned by SHA-256.
+		return "authentication", false
 	case strings.HasPrefix(l, "modules-config/") || strings.Contains(l, "/modules-config/"):
 		return "module_config", strings.HasSuffix(l, ".json")
 	case strings.HasPrefix(l, "modules/") || strings.Contains(l, "/modules/"):

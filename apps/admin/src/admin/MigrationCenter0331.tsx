@@ -1513,13 +1513,15 @@ export function MigrationCenter0331({
             Импортируются только новые local-аккаунты с проверенными исходными
             UUID и поддерживаемыми хешами. SQL: sql-export/users.csv с
             id,username,uuid,password_format,password_hash. Существующие
-            аккаунты Never не перезаписываются. Неподдерживаемые SQL-хеши
-            требуют индивидуального сброса.
+            аккаунты Never не перезаписываются. Отсутствующий или неизвестный
+            формат пароля FileAuth, а также неподдерживаемые SQL-хеши требуют
+            индивидуальной подтверждённой смены пароля. Такие пользователи не
+            создаются с пустым паролем и блокируют готовность к переключению.
           </p>
           <label className="field">
             <span>
-              Формат хеша FileAuthSystem (обязательно при FileAuth, определяется
-              оператором из конфигурации)
+              Формат хеша FileAuthSystem (выберите по исходной конфигурации;
+              неизвестный формат означает ручную смену пароля)
             </span>
             <select
               value={passwordFormat}
@@ -1542,7 +1544,7 @@ export function MigrationCenter0331({
                 "argon2id",
               ].map((x) => (
                 <option key={x} value={x}>
-                  {x || "Нет FileAuth / только SQL"}
+                  {x || "Неизвестен / только SQL (FileAuth — ручной сброс)"}
                 </option>
               ))}
             </select>
@@ -1568,6 +1570,21 @@ export function MigrationCenter0331({
                 существующих без изменений {credentialPreview.existingUnchanged}
                 , индивидуальный сброс {credentialPreview.manualReset}.
               </p>
+              {credentialPreview.rows.some((row) => row.state !== "imported") && (
+                <details>
+                  <summary>Учётные записи, требующие отдельного решения (первые 50)</summary>
+                  <ul>
+                    {credentialPreview.rows
+                      .filter((row) => row.state !== "imported")
+                      .slice(0, 50)
+                      .map((row) => (
+                        <li key={`${row.provider}:${row.sourceId}:${row.uuid}`}>
+                          {row.username} ({row.uuid}): {row.reason || row.state}
+                        </li>
+                      ))}
+                  </ul>
+                </details>
+              )}
               <label className="field">
                 <span>Для подтверждения введите ID запуска</span>
                 <input

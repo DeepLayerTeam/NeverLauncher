@@ -126,10 +126,14 @@ func uniqueUserFields(raw []byte) error {
 		if !ok {
 			return errors.New("invalid FileAuth user key")
 		}
-		if seen[key] {
+		// encoding/json matches struct fields case-insensitively. Reject
+		// aliases such as username/USERNAME instead of silently trusting
+		// the last value and changing the identity being imported.
+		folded := strings.ToLower(key)
+		if seen[folded] {
 			return fmt.Errorf("duplicate FileAuth user field %q", key)
 		}
-		seen[key] = true
+		seen[folded] = true
 		var value json.RawMessage
 		if err = dec.Decode(&value); err != nil {
 			return err
