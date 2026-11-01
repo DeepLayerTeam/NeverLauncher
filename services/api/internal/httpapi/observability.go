@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"runtime"
 	"time"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/dbmigrate"
@@ -110,6 +111,8 @@ func (s Server) ready(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ready", "version": s.Version, "storage": s.Storage.Driver(), "repository": s.Config.RepositoryDriver, "checks": checks})
 }
 
+var metricsStart0459 = time.Now()
+
 func (s Server) metrics(w http.ResponseWriter, r *http.Request) {
 	if !s.Config.MetricsEnabled {
 		writeError(w, http.StatusNotFound, "метрики отключены")
@@ -122,6 +125,11 @@ func (s Server) metrics(w http.ResponseWriter, r *http.Request) {
 	if s.Capacity != nil {
 		s.Capacity.Prometheus(w)
 	}
+	var memory runtime.MemStats
+	runtime.ReadMemStats(&memory)
+	_, _ = fmt.Fprintf(w, "# HELP launcher_process_uptime_seconds Seconds since backend process started\n# TYPE launcher_process_uptime_seconds gauge\nlauncher_process_uptime_seconds %.3f\n", time.Since(metricsStart0459).Seconds())
+	_, _ = fmt.Fprintf(w, "# HELP launcher_process_goroutines Goroutines in backend\n# TYPE launcher_process_goroutines gauge\nlauncher_process_goroutines %d\n", runtime.NumGoroutine())
+	_, _ = fmt.Fprintf(w, "# HELP launcher_process_heap_alloc_bytes Allocated Go heap bytes\n# TYPE launcher_process_heap_alloc_bytes gauge\nlauncher_process_heap_alloc_bytes %d\n", memory.HeapAlloc)
 
 	if s.State != nil && s.State.ServerBridge != nil && s.State.ServerBridge.backendV2() != nil {
 		if ha, err := s.State.ServerBridge.haStatus0149(); err == nil {

@@ -46,6 +46,7 @@ func TestWorkerProbe0455(t *testing.T) {
 	}
 	check("/ready", http.StatusServiceUnavailable)
 	check("/health", http.StatusOK)
+	check("/metrics", http.StatusOK)
 	check("/api/v1/status", http.StatusNotFound)
 	last.Store(time.Now().Add(-30 * time.Second).UnixNano())
 	check("/ready", http.StatusServiceUnavailable)

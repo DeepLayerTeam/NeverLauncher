@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -58,6 +59,15 @@ func workerProbeHandler0455(last *atomic.Int64, backend http.Handler) http.Handl
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("alive\n"))
 	})
+	mux.HandleFunc("GET /metrics", func(w http.ResponseWriter, r *http.Request) {
+		// Loopback-only worker telemetry for authorized local incident tooling.
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		if workerReady0455(last, time.Now()) {
+			_, _ = fmt.Fprint(w, "# HELP launcher_worker_poll_fresh Last durable PostgreSQL poll was recent\n# TYPE launcher_worker_poll_fresh gauge\nlauncher_worker_poll_fresh 1\n")
+		} else {
+			_, _ = fmt.Fprint(w, "# TYPE launcher_worker_poll_fresh gauge\nlauncher_worker_poll_fresh 0\n")
+		}
+	})
 	mux.HandleFunc("GET /ready", func(w http.ResponseWriter, r *http.Request) {
 		if !workerReady0455(last, time.Now()) {
 			http.Error(w, "worker has no recent successful PostgreSQL poll", http.StatusServiceUnavailable)
@@ -85,6 +95,7 @@ func runWorkerProbe0455(addr string, last *atomic.Int64, backend http.Handler) e
 	if err != nil {
 		return err
 	}
+	slog.Info("worker_local_probe_started", "port", port)
 	server := &http.Server{Handler: workerProbeHandler0455(last, backend), ReadHeaderTimeout: 5 * time.Second}
 	done := make(chan error, 1)
 	go func() { done <- server.Serve(listener) }()

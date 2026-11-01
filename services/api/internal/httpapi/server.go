@@ -268,17 +268,7 @@ func newCorrelation02111() string {
 }
 
 func logRequests(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		correlation := newCorrelation02111()
-		if correlation != "" {
-			w.Header().Set("X-Correlation-ID", correlation)
-			r = r.WithContext(context.WithValue(r.Context(), correlationKey02111{}, correlation))
-		}
-		if !strings.HasPrefix(r.URL.Path, "/health") && !strings.HasPrefix(r.URL.Path, "/ready") && !strings.HasPrefix(r.URL.Path, "/metrics") {
-			log.Printf("%s %s", r.Method, r.URL.Path)
-		}
-		next.ServeHTTP(w, r)
-	})
+	return logRequests0459(next)
 }
 
 func withCORS(next http.Handler, allowedOrigins []string) http.Handler {

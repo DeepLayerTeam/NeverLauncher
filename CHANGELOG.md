@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.45.9 — Observability (2026-11-01)
+
+- Replace legacy bare HTTP access lines with JSON records containing a backend-generated correlation ID, status, timing and bounded route group; omit raw URLs, query strings, IPs and request bodies. Add structured Nginx proxy logs and live process memory/goroutine/uptime Prometheus gauges. Add loopback-only worker poll freshness metric without opening public worker API routes.
+- Introduce a private, deployable Prometheus + blackbox-exporter + Alertmanager Compose overlay. Scrape Standard and Network-HA API replicas, actively probe `/ready` for live dependency outages, evaluate real alerting rules, and deliver alerts via a separately protected HTTPS webhook configuration. No public monitoring ports.
+- Add executable operator-only alert receiver configuration and incident ZIP collector based on running Docker services, selected structured logs and real process metrics. Redact by allowlist, write atomically with SHA-256 and 0600 permissions; no raw Docker logs, environment, secrets or unauthenticated incident endpoint.
+- Add Go HTTP middleware tests, Python incident/secret negative tests, CI checks and an operator runbook. Independent live Docker alert delivery, full ServiceBridge JVM runtime and cross-host HA acceptance remain outstanding; code readiness is not certification.
+
+
 ## 0.45.8 — Component Upgrade (2026-11-01)
 
 - Add executable Standard API/Admin component cutover: prebuild and pin exact image IDs, freeze writers, create and validate PostgreSQL plus blob/coordinator cold snapshot, verify unchanged WAL after backup, switch API/Admin before exposing Nginx, and revert to original image IDs and verified API version if cutover fails. No automatic schema migrations or silent data rewind.
