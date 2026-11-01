@@ -54,7 +54,7 @@ jobs:
         run: |
           go test -race -count=1 -timeout=8m ./internal/repository ./internal/federation ./internal/httpapi ./internal/sqlconnector -run '02910|TestProviderRouting|TestAuthenticatePassword'
           go vet ./internal/repository ./internal/federation ./internal/httpapi ./internal/sqlconnector
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm

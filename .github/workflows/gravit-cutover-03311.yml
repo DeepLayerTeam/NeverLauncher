@@ -49,7 +49,7 @@ jobs:
       - name: CLI compilation and tests
         working-directory: cli
         run: go test -count=1 ./cmd/launcher -run 'TestMigrationCutover03311|TestMigrationWorkflow0331|TestFence|TestRollbackBoundSnapshot0448'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
