@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.45.10 — Branding GA implementation (2026-11-01)
+
+- Fix broken native Go package paths in the actual multi-platform installer builder and Prestarter builder, and test the extracted **real** Linux .deb installer using its embedded pinned Ed25519 verifier. A signed but invalid brand PNG is rejected by the Go validator.
+- Materialize signed brand artwork into the Linux .deb desktop icon, macOS .app native icns and Windows PE icon resource **before** platform signing. Installed Linux/Windows user shortcuts now reference locally derived signed artwork rather than a generic launcher icon.
+- Implement an actual `neverinstaller update` on the existing installer transaction path: hold the installer lock, require a verified existing release, preserve project/profile/channel/game trust root, verify the new signed bundle and only advance the active pointer after successful Prestarter execution and shortcut creation. Add `verify-installed` to check retained signed active releases. Failed updates keep the previous active record.
+- Verify final Windows executable embedded bundle, macOS app bundle, and extracted Linux package using the real compiled installer. Add a signed Linux .deb test and actual installer transaction tests, cross-build CI coverage, and an operator runbook.
+- **Verification boundary:** local Linux .deb + Go tests pass; Windows/macOS signing and native GUI install/update require independent runners, customer keys and real Desktop assets. Not certified as GA across six targets by this local run.
+
+
 ## 0.45.9 — Observability (2026-11-01)
 
 - Replace legacy bare HTTP access lines with JSON records containing a backend-generated correlation ID, status, timing and bounded route group; omit raw URLs, query strings, IPs and request bodies. Add structured Nginx proxy logs and live process memory/goroutine/uptime Prometheus gauges. Add loopback-only worker poll freshness metric without opening public worker API routes.

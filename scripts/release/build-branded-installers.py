@@ -221,7 +221,64 @@ def collect_bundle(args, stage):
             file_matches(stage / "objects" / art["sha256"], art)
         file_matches(stage / "objects" / cfg["manifest"]["sha256"], cfg["manifest"])
         file_matches(stage / "managed-jre" / "manifest.json", cfg["javaManifest"])
+    # The same production Go verifier used by Prestarter must approve the
+    # signed config before we package it. The Python envelope verification is
+    # necessary but not a replacement for validation of the runtime contract.
+    if not shutil.which("go"):
+        raise RuntimeError("Go toolchain required for trusted bootstrap verification")
+    validator = ["go", "run", "./cmd/verify-branding", "--config", str(stage / "bootstrap.signed.json"), "--root-key-file", str(args.root_key_file.resolve())]
+    if args.trust_policy:
+        validator.extend(["--trust-policy", str((stage / "trust-policy.signed.json").resolve())])
+    checked(*validator, cwd=ROOT / "prestarter")
     return key, cfg
+
+
+def apply_windows_brand_icon(executable, branding):
+    """Write the signed project's PNG as a native PE RT_GROUP_ICON.
+
+    Performed before Authenticode signing, using Windows kernel APIs directly;
+    modifying a signed PE after signing would invalidate Authenticode.
+    """
+    asset = branding.get("iconPng")
+    if not asset:
+        return
+    if sys.platform != "win32":
+        raise RuntimeError("Windows icon resources must be written on a Windows release runner")
+    import ctypes
+    from ctypes import wintypes
+
+    png = base64.b64decode(asset, validate=True)
+    if len(png) < 24 or png[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("signed brand icon must be PNG")
+    width, height = struct.unpack_from(">II", png, 16)
+    if not (1 <= width <= 256 and 1 <= height <= 256):
+        raise ValueError("Windows native icon must be at most 256x256 PNG")
+    group = struct.pack("<HHHBBBBHHIH", 0, 1, 1, width % 256, height % 256, 0, 0, 1, 32, len(png), 1)
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    begin = kernel.BeginUpdateResourceW
+    begin.argtypes = (wintypes.LPCWSTR, wintypes.BOOL)
+    begin.restype = wintypes.HANDLE
+    update = kernel.UpdateResourceW
+    update.argtypes = (wintypes.HANDLE, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.WORD, wintypes.LPVOID, wintypes.DWORD)
+    update.restype = wintypes.BOOL
+    end = kernel.EndUpdateResourceW
+    end.argtypes = (wintypes.HANDLE, wintypes.BOOL)
+    end.restype = wintypes.BOOL
+    h = begin(str(executable), False)
+    if not h:
+        raise OSError(ctypes.get_last_error(), "BeginUpdateResourceW failed")
+    committed = False
+    try:
+        for kind, resource in ((3, png), (14, group)):
+            data = ctypes.create_string_buffer(resource)
+            if not update(h, ctypes.cast(ctypes.c_void_p(kind), wintypes.LPCWSTR), ctypes.cast(ctypes.c_void_p(1), wintypes.LPCWSTR), 0, data, len(resource)):
+                raise OSError(ctypes.get_last_error(), "UpdateResourceW failed")
+        if not end(h, False):
+            raise OSError(ctypes.get_last_error(), "EndUpdateResourceW failed")
+        committed = True
+    finally:
+        if not committed:
+            end(h, True)
 
 
 def package_windows(args, stage, key, out, version):
@@ -256,11 +313,12 @@ def package_windows(args, stage, key, out, version):
             f"-s -w -X main.embeddedRootPublicKey={key} -X main.version={version}",
             "-o",
             result,
-            "./cmd/neverinstaller",
+            "./cmd/installer",
             cwd=module,
             env=env,
         )
     check_binary_arch(result, args.platform, args.arch)
+    apply_windows_brand_icon(result, verify_config(stage / "bootstrap.signed.json", key).get("branding") or {})
     if not args.unsigned_test:
         thumb = os.environ.get("LAUNCHER_WINDOWS_CERT_THUMBPRINT", "")
         if not thumb or not shutil.which("signtool"):
@@ -281,6 +339,10 @@ def package_windows(args, stage, key, out, version):
             result,
         )
         checked("signtool", "verify", "/pa", "/v", result)
+    # On the native runner, re-open the *final signed executable*: its
+    # embedded bundle must still pass the pinned Prestarter verifier.
+    if sys.platform == "win32":
+        checked(result, "verify")
     return result
 
 
@@ -302,7 +364,7 @@ def package_linux(args, stage, key, out, version):
             f"-s -w -X main.embeddedRootPublicKey={key} -X main.version={version}",
             "-o",
             exe,
-            "./cmd/neverinstaller",
+            "./cmd/installer",
             cwd=ROOT / "prestarter",
             env=env,
         )
@@ -315,12 +377,21 @@ def package_linux(args, stage, key, out, version):
         launcher.chmod(0o755)
         desktop = pkg / "usr" / "share" / "applications" / "launcher.desktop"
         desktop.parent.mkdir(parents=True)
-        name = "Launcher"
-        if cfg := verify_config(stage / "bootstrap.signed.json", key):
-            name = cfg.get("branding", {}).get("displayName", name)
-        safe = name.replace("\r", " ").replace("\n", " ")
+        cfg = verify_config(stage / "bootstrap.signed.json", key)
+        branding = cfg.get("branding") or {}
+        name = branding.get("displayName", "Launcher")
+        # Desktop Entry has its own escaping rules. A signed display name is
+        # data, not arbitrary .desktop syntax.
+        safe = name.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r")
+        icon_entry = ""
+        if branding.get("iconPng"):
+            icon = pkg / "usr" / "share" / "pixmaps" / f"launcher-{args.project}.png"
+            icon.parent.mkdir(parents=True, exist_ok=True)
+            icon.write_bytes(base64.b64decode(branding["iconPng"], validate=True))
+            icon_entry = f"Icon=launcher-{args.project}\n"
         desktop.write_text(
-            f"[Desktop Entry]\nType=Application\nName={safe}\nExec=/usr/bin/launcher\nTerminal=false\nCategories=Game;\n"
+            f"[Desktop Entry]\nType=Application\nName={safe}\nExec=/usr/bin/launcher\n{icon_entry}Terminal=false\nCategories=Game;\n",
+            encoding="utf-8",
         )
         ctrl = pkg / "DEBIAN"
         ctrl.mkdir()
@@ -331,6 +402,16 @@ def package_linux(args, stage, key, out, version):
         result = out / f"launcher-{version}-{args.project}-linux-{ARCH[args.arch]}.deb"
         checked("dpkg-deb", "--build", "--root-owner-group", pkg, result)
         checked("dpkg-deb", "--info", result)
+        # Verify the exact built .deb's embedded installer and bundled trust
+        # bytes, not only the staging directory that preceded packaging.
+        with tempfile.TemporaryDirectory() as checkdir:
+            checked("dpkg-deb", "--extract", result, checkdir)
+            unpacked = pathlib.Path(checkdir) / "usr" / "lib" / "launcher" / "bundle"
+            checked(unpacked / "neverinstaller", "verify", "--bundle", unpacked)
+            file_matches(unpacked / "neverprestarter", next(
+                t["prestarter"] for t in verify_config(unpacked / "bootstrap.signed.json", key)["installerTargets"]
+                if t["os"] == args.platform and t["arch"] == args.arch
+            ))
     if not args.unsigned_test:
         gpg = os.environ.get("LAUNCHER_GPG_SIGNING_KEY", "")
         if not gpg or not shutil.which("gpg"):
@@ -370,7 +451,7 @@ def package_macos(args, stage, key, out, version):
             f"-s -w -X main.embeddedRootPublicKey={key} -X main.version={version}",
             "-o",
             binary,
-            "./cmd/neverinstaller",
+            "./cmd/installer",
             cwd=ROOT / "prestarter",
             env=env,
         )
@@ -388,6 +469,21 @@ def package_macos(args, stage, key, out, version):
             "CFBundleVersion": version,
             "LSMinimumSystemVersion": "12.0",
         }
+        branding = verify_config(stage / "bootstrap.signed.json", key).get("branding") or {}
+        if branding.get("iconPng"):
+            # iconutil emits the actual Finder/Dock icon; there is no fallback
+            # to an unsigned icon downloaded after installation.
+            if not shutil.which("sips") or not shutil.which("iconutil"):
+                raise RuntimeError("macOS icon creation requires sips and iconutil")
+            source = pathlib.Path(tmp) / "brand-icon.png"
+            source.write_bytes(base64.b64decode(branding["iconPng"], validate=True))
+            iconset = pathlib.Path(tmp) / "Brand.iconset"
+            iconset.mkdir()
+            for size in (16, 32, 128, 256, 512):
+                checked("sips", "-s", "format", "png", "-z", str(size), str(size), source, "--out", iconset / f"icon_{size}x{size}.png")
+                checked("sips", "-s", "format", "png", "-z", str(size*2), str(size*2), source, "--out", iconset / f"icon_{size}x{size}@2x.png")
+            checked("iconutil", "-c", "icns", iconset, "-o", app / "Contents" / "Resources" / "Brand.icns")
+            info["CFBundleIconFile"] = "Brand.icns"
         (app / "Contents" / "Info.plist").write_bytes(plistlib.dumps(info))
         result = out / f"launcher-{version}-{args.project}-macos-{ARCH[args.arch]}.pkg"
         signid = os.environ.get("LAUNCHER_MACOS_CODESIGN_ID", "")
@@ -435,6 +531,9 @@ def package_macos(args, stage, key, out, version):
         checked(*cmd)
         if not args.unsigned_test:
             checked("pkgutil", "--check-signature", result)
+        # Invoke the real signed-bootstrap verification in the newly built
+        # application before accepting the .pkg as a deliverable.
+        checked(binary, "verify", "--bundle", resources)
     return result
 
 

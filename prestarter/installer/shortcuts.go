@@ -41,13 +41,21 @@ func (i *installation) createShortcut(r record, cfg prestarter.Config) error {
 	if cfg.Branding != nil {
 		name = cfg.Branding.DisplayName
 	}
+	iconPath, err := materializeBrandIcon(base, cfg.Branding)
+	if err != nil {
+		return fmt.Errorf("signed brand icon: %w", err)
+	}
 	var contents string
 	if runtime.GOOS == "windows" {
-		return writeWindowsShortcut(path, filepath.Join(base, binaryName()), filepath.Join(base, "bootstrap.signed.json"), i.root)
+		return writeWindowsShortcut(path, filepath.Join(base, binaryName()), filepath.Join(base, "bootstrap.signed.json"), i.root, iconPath)
 	} else {
 		// Double-quotes, newlines and backslashes cannot be injected by the signed display name.
 		name = strings.NewReplacer("\n", " ", "\r", " ", "\\", " ", "\"", " ").Replace(name)
-		contents = fmt.Sprintf("[Desktop Entry]\nType=Application\nName=%s\nExec=\"%s\" --config \"%s\" --root \"%s\"\nTerminal=false\nCategories=Game;\n", name, filepath.Join(base, binaryName()), filepath.Join(base, "bootstrap.signed.json"), i.root)
+		iconLine := ""
+		if iconPath != "" {
+			iconLine = "Icon=" + iconPath + "\n"
+		}
+		contents = fmt.Sprintf("[Desktop Entry]\nType=Application\nName=%s\nExec=\"%s\" --config \"%s\" --root \"%s\"\n%sTerminal=false\nCategories=Game;\n", name, filepath.Join(base, binaryName()), filepath.Join(base, "bootstrap.signed.json"), i.root, iconLine)
 	}
 	return atomicWrite(path, []byte(contents))
 }

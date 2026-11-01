@@ -61,7 +61,7 @@ func main() {
 	f.BoolVar(&opts.Offline, "offline", false, "install using verified offline source only")
 	f.BoolVar(&opts.NoStart, "no-start", false, "provision without Desktop start")
 	f.Parse(os.Args[2:])
-	if (action == "install" || action == "verify") && opts.Bundle == defaultBundle && runtime.GOOS == "windows" {
+	if (action == "install" || action == "update" || action == "verify") && opts.Bundle == defaultBundle && runtime.GOOS == "windows" {
 		unpacked, embeddedOffline, loadErr := unpackEmbedded()
 		if loadErr != nil {
 			fmt.Fprintln(os.Stderr, loadErr)
@@ -83,6 +83,10 @@ func main() {
 	switch action {
 	case "install":
 		e = installer.Install(ctx, opts)
+	case "update":
+		e = installer.Update(ctx, opts)
+	case "verify-installed":
+		e = installer.VerifyInstalled(opts)
 	case "verify":
 		_, _, e = installer.VerifyBundle(opts.Bundle, opts.TrustedKey, opts.Offline)
 	case "repair":

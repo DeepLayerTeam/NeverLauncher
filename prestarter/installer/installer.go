@@ -442,6 +442,10 @@ func (i *installation) provision(ctx context.Context, r record, noStart bool) er
 	return nil
 }
 func Install(ctx context.Context, opts Options) error {
+	return install(ctx, opts, false)
+}
+
+func install(ctx context.Context, opts Options, updateOnly bool) error {
 	i, e := newInstall(opts)
 	if e != nil {
 		return e
@@ -458,7 +462,24 @@ func Install(ctx context.Context, opts Options) error {
 	if e != nil {
 		return e
 	}
-	prev, _ := i.current()
+	prev, prevErr := i.current()
+	if updateOnly {
+		if prevErr != nil {
+			return fmt.Errorf("update requires verified existing installation: %w", prevErr)
+		}
+		previousPath := filepath.Join(i.base, "releases", prev.Release)
+		previousRaw, readErr := regular(filepath.Join(previousPath, "bootstrap.signed.json"), 1024*1024)
+		if readErr != nil {
+			return readErr
+		}
+		previousCfg, _, verifyErr := verifyBundleConfig02312(previousPath, previousRaw, opts.TrustedKey)
+		if verifyErr != nil {
+			return verifyErr
+		}
+		if previousCfg.ProjectID != cfg.ProjectID || previousCfg.ProfileID != cfg.ProfileID || previousCfg.Channel != cfg.Channel || previousCfg.ProfilePublicKey != cfg.ProfilePublicKey {
+			return errors.New("signed update changes project, profile, channel or pinned game trust")
+		}
+	}
 	rec, e := i.store(opts.Bundle, cfg, id, opts.Offline)
 	if e != nil {
 		return e
@@ -477,15 +498,58 @@ func Install(ctx context.Context, opts Options) error {
 	if e = i.provision(ctx, rec, opts.NoStart); e != nil {
 		return e
 	}
+	// A desktop shortcut is part of a usable installation. Do not commit the
+	// new trusted active slot if the OS shortcut/icon could not be created.
+	// The previous signed release remains authoritative on any failure.
+	restoreShortcut := func() {
+		if prev == nil {
+			return
+		}
+		oldPath := filepath.Join(i.base, "releases", prev.Release)
+		oldRaw, err := regular(filepath.Join(oldPath, "bootstrap.signed.json"), 1024*1024)
+		if err != nil {
+			return
+		}
+		oldCfg, _, err := verifyBundleConfig02312(oldPath, oldRaw, opts.TrustedKey)
+		if err == nil {
+			_ = i.createShortcut(*prev, oldCfg)
+		}
+	}
+	if e = i.createShortcut(rec, cfg); e != nil {
+		restoreShortcut()
+		return e
+	}
 	data, e := json.Marshal(rec)
 	if e != nil {
+		restoreShortcut()
 		return e
 	}
 	if e = atomicWrite(filepath.Join(i.base, "active-"+strconv.FormatUint(rec.Generation%2, 10)+".json"), data); e != nil {
+		restoreShortcut()
 		return e
 	}
-	return i.createShortcut(rec, cfg)
+	return nil
 }
+
+// Update requires an existing verified installation and keeps its identity
+// pinned. The new bundle must be authorized by the same embedded trust root;
+// an unrelated project, profile or channel cannot silently take over the app.
+// Install commits a new active slot only after Prestarter has completed.
+func Update(ctx context.Context, opts Options) error {
+	return install(ctx, opts, true)
+}
+
+// VerifyInstalled checks both redundant active pointers and the retained
+// signed release bytes. It never trusts an unverified marker or install log.
+func VerifyInstalled(opts Options) error {
+	i, err := newInstall(opts)
+	if err != nil {
+		return err
+	}
+	_, err = i.current()
+	return err
+}
+
 func Repair(ctx context.Context, opts Options) error {
 	i, e := newInstall(opts)
 	if e != nil {
