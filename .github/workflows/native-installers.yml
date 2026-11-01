@@ -82,7 +82,7 @@ jobs:
           test "$(go env GOARCH)" = '${{ matrix.arch }}' || { echo 'wrong production architecture'; exit 1; }
           (cd prestarter && go test -count=1 ./...)
       - name: Fetch approved signed bootstrap inputs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: launcher-bootstrap-${{ matrix.platform }}-${{ matrix.arch }}
           run-id: ${{ inputs.source_run_id }}
