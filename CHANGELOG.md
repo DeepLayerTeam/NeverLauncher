@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.45.13 — Operator Documentation and live operator acceptance (2026-11-01)
+
+- Publish connected operator runbooks in `/docs/operator/` for Minimal, Standard, Network-HA, first administrator, off-host SQLite and cold PostgreSQL/S3/world restores, database/component upgrades, TLS, signed deliveries, OpenAPI SDK, incidents and second-operator acceptance. Replace outdated production instructions with the actual installer/DR entrypoints.
+- Provide the **executable read-only** `scripts/operations/operator_accept_04513.py`: on live Linux deployments checks both Minimal SQLite databases with integrity/FK validation or actual Docker Compose service states and four HA API/worker internal readiness endpoints, then checks the public certificate-validated HTTPS `/ready`, expected version, repository and storage mode. Refuses incomplete states and creates private 0600 evidence only on complete success. The `docs-check` command rejects broken links and missing operational scripts without modifying a deployment.
+- Exercise real SQLite files, Compose and HTTP failure handling, exact live readiness, and private atomic receipt behavior in local Python tests; run documentation validation and real script `--help` invocations in the existing docs CI workflow.
+- **Verification boundary:** documentation link/path checks and local tests are not independent clean-host, multi-host or live Minecraft acceptance. Runtime operator probes need a deployed cluster and operator credentials; no such live results are manufactured by this release.
+
+
 ## 0.45.12 — API/SDK Freeze Candidate (2026-11-01)
 
 - Implement real public REST API SDKs for Go, TypeScript/Node and Java 17, with actual HTTP dispatch for all 452 canonical OpenAPI operation IDs, path/query encoding, Bearer authorization, idempotency keys and structured errors. Binary/multipart operations use raw-body transports rather than masquerading as JSON.

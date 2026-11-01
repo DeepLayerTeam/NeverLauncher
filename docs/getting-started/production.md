@@ -1,48 +1,11 @@
-# Развёртывание production
+# Production deployment: действующий операторский путь
 
-> Не публикуйте API или панель в Интернет с тестовыми секретами. Следующие команды — последовательность подготовки, не гарантия успешного старта без настройки всех обязательных политик и подписей.
+Текущая версия продукта определяется файлом `VERSION`. Установка требует реальной конфигурации, подтверждённых Guard/Bridge-политик, доверенного TLS и независимого хранилища ключей. Наличие скрипта или конфигурационного файла **не** является доказательством готовой установки.
 
-## Требования
+Основной исполняемый runbook: [установка Minimal/Standard/Network-HA](../operator/installation.md). В нём приведены **реальные** вызовы `scripts/install/minimal-install.py` и `scripts/install/production-deploy.py`, первичное создание администратора через backend и отдельный read-only операторский probe `scripts/operations/operator_accept_04513.py`.
 
-- Linux/Docker Engine/Compose; PostgreSQL и Redis предусмотрены в `deploy/production/docker-compose.yml`.
-- Публичное доменное имя и **TLS-терминация** на reverse proxy/ingress. Не передавайте bearer-токены через HTTP.
-- Защищённое хранение секретов, план резервного копирования и обновления сертификатов.
-- Подписанные release-артефакты, manifest signing private key, допустимые хеши Guard и ServerBridge.
+Операции после установки: [резервирование](../operator/backup-recovery.md), [обновления/откат](../operator/upgrades.md), [HA/инциденты](../operator/ha-incidents.md), [политика подписей](../operator/security-delivery.md) и [ведомость второго оператора](../operator/operator-checklist.md).
 
-## Подготовка
+**Не следует использовать** только `scripts/install/production-setup.sh` как установщик: это предварительный отчёт. Проверенный рабочий запуск Standard использует `production-deploy.py compose check/up` и затем `compose first-admin`. Для Network-HA выполняется отдельная одноразовая миграция БД и запуск двух API/двух workers после проверки внешнего S3. Никогда не сохраняйте вывод `docker compose config` с секретами в общедоступный CI artifact.
 
-```bash
-cp deploy/production/env.production.example deploy/production/.env
-# Отредактируйте .env: пароли, URL, ключи, allowlists, origins, версии image tag.
-bash scripts/install/production-setup.sh --env deploy/production/.env
-```
-
-Первый скрипт формирует подготовительный JSON-отчёт, **не выполняет всю установку**. Не публикуйте этот отчёт без редактирования: он содержит конфигурационные сведения. Перед запуском проверьте, что пустые обязательные параметры заполнены, а `change-me-*` нигде не осталось.
-
-```bash
-cd deploy/production
-docker compose --env-file .env config   # проверить подстановку значений; вывод может содержать секреты
-docker compose --env-file .env up -d --build
-docker compose --env-file .env ps
-```
-
-Не сохраняйте вывод `docker compose config` в публичных логах. Контейнеры применяют миграции и политики согласно `deploy/production/docker-compose.yml` и конфигурации API. Для отказоустойчивости проверьте unique replica IDs и распределённые координаторы, а также ручной план миграций.
-
-## Первый администратор и проект
-
-Конкретные операции описаны в `schemas/openapi.yaml` (раздел `install`) и в CLI `nl install ...`. Устанавливайте администратора и первый проект после выполнения readiness/preflight; не используйте адреса/пароли из демонстрационных примеров в реальной системе.
-
-## Проверка до публикации
-
-```bash
-python3 scripts/version/manage.py check
-python3 scripts/contracts/validate-openapi.py
-# Полная сертификация (требуются toolchains и в некоторых режимах credentials/evidence):
-LAUNCHER_PREFLIGHT_STRICT=1 bash scripts/release/preflight.sh
-```
-
-`/ready` и `/health` проверяйте на запущенном API, если эти маршруты доступны для вашей конфигурации. Для публичного релиза требуется evidence **точного commit SHA** — см. [сертификацию](../security/release-certification.md).
-
-## Резервное копирование и обновления
-
-Создайте подтверждённый backup PostgreSQL и содержимого storage до обновления, проверьте восстановление вне production, затем переходите к [процедуре миграции](../migration/upgrade.md). Закрывайте публичный доступ к данным и хранилищу через reverse proxy, auth и firewall.
+Статус `docs-check` означает только проверку файлов; `live` подтверждает настоящее состояние процессов и `/ready`, а не успешный backup/restore, игровую авторизацию или переживание отказа физического хоста. Реальную приёмку следует записывать с SHA-256 и подтверждениями второго оператора.

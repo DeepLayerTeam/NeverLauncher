@@ -10,6 +10,8 @@ on:
       - 'ARCHITECTURE.md'
       - 'COMPATIBILITY.md'
       - 'scripts/contracts/**'
+      - 'scripts/operations/operator_accept_04513.py'
+      - 'scripts/operations/test_operator_accept_04513.py'
       - '.github/workflows/docs.yml'
   pull_request:
     paths:
@@ -19,6 +21,8 @@ on:
       - 'ARCHITECTURE.md'
       - 'COMPATIBILITY.md'
       - 'scripts/contracts/**'
+      - 'scripts/operations/operator_accept_04513.py'
+      - 'scripts/operations/test_operator_accept_04513.py'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -36,3 +40,16 @@ jobs:
           python-version: '3.x'
       - run: python3 scripts/contracts/validate-openapi.py
       - run: python3 scripts/version/manage.py check
+
+      - name: Check real operator document links and executable paths
+        run: python3 scripts/operations/operator_accept_04513.py docs-check
+      - name: Exercise read-only operator acceptance and failure cases
+        run: python3 -m unittest scripts/operations/test_operator_accept_04513.py -v
+      - name: Verify actual operational entrypoints are callable
+        run: |
+          python3 scripts/install/production-deploy.py compose --help
+          python3 scripts/install/minimal-install.py --help
+          python3 scripts/operations/dr_03512.py --help
+          python3 scripts/operations/db_upgrade_0457.py --help
+          python3 scripts/operations/component_upgrade_0458.py --help
+          python3 scripts/operations/observability_0459.py --help

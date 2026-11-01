@@ -216,7 +216,9 @@ class DeploymentTests(unittest.TestCase):
         self.assertIn("profiles: [network-ha]", standard)
         self.assertIn("launcher_coordinator:", standard)
         self.assertIn('LAUNCHER_SERVERBRIDGE_HA_REQUIRED: "false"', standard)
-        self.assertIn('LAUNCHER_SERVERBRIDGE_HA_REQUIRED: "true"', ha)
+        # Compose overlay uses YAML single-quoted booleans; test semantic
+        # opt-in without depending on the quotation style.
+        self.assertRegex(ha, r"LAUNCHER_SERVERBRIDGE_HA_REQUIRED:\s*['\"]true['\"]")
         self.assertIn("LAUNCHER_STORAGE_DRIVER: s3", ha)
 
     def test_native_signed_release_install_uninstall_and_rollback(self):
