@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -129,6 +130,10 @@ func main() {
 		}
 	}
 	cfg := config.Load()
+	role, roleErr := parseProcessRole0455(os.Getenv("LAUNCHER_PROCESS_ROLE"), cfg.DeploymentMode)
+	if roleErr != nil {
+		log.Fatal(roleErr)
+	}
 	var diagnostics *sentrydiag.Reporter
 	if sentrydiag.EnabledFromEnvironment() {
 		if os.Getenv("LAUNCHER_SENTRY_BACKEND_DSN") == "" {
@@ -145,6 +150,9 @@ func main() {
 
 	if err := config.ValidateProduction(cfg); err != nil {
 		log.Fatal(err)
+	}
+	if role.name == "migrate" && !cfg.DatabaseAutoMigrate {
+		log.Fatal("migration role requires LAUNCHER_DATABASE_AUTO_MIGRATE=true")
 	}
 	if err := httpapi.ValidatePersistenceConfig950(cfg); err != nil {
 		log.Fatal(err)
@@ -196,6 +204,12 @@ func main() {
 				log.Fatalf("database schema incompatible/pending: current=%s pending=%v", status.Current, status.Pending)
 			}
 		}
+	}
+
+	if role.name == "migrate" {
+		// One-shot schema migration; no listener, extensions or worker leases.
+		log.Printf("database migration completed for %s; exiting without starting services", plan.Mode)
+		return
 	}
 
 	// Physically purge expired voluntary HWID risk observations and appeals.
@@ -375,7 +389,7 @@ func main() {
 		log.Printf("Extensions Host protocol=%s isolation=%s", host.ProtocolURL(), host.ResourceIsolation())
 	}
 
-	if events != nil {
+	if events != nil && role.workers {
 		events.Start(context.Background())
 		defer events.Close()
 		log.Printf("Extensions Event Bus protocol=%s", eventbus.ProtocolVersion)
@@ -397,12 +411,25 @@ func main() {
 		EventBus:          events,
 	}
 
-	durableCancel, durableErr := server.StartDurableControlPlane0213(context.Background())
-	if durableErr != nil {
-		log.Fatalf("durable control-plane initialization failed: %v", durableErr)
+	var workerLastSuccess atomic.Int64
+	if role.workers {
+		// Independent worker processes use the same fenced PostgreSQL leases as
+		// the previously embedded workers. No in-memory job fallback is allowed.
+		durableCancel, durableErr := server.StartDurableControlPlaneWithReadiness0455(context.Background(), &workerLastSuccess)
+		if durableErr != nil {
+			log.Fatalf("durable control-plane initialization failed: %v", durableErr)
+		}
+		defer durableCancel()
+		log.Printf("Durable control-plane worker active: publish, rollback and outbox (role=%s)", role.name)
 	}
-	defer durableCancel()
-	log.Printf("Durable control-plane active: publish jobs, fenced package leases and outbox recovery enabled")
+	if !role.api {
+		// Worker probes are bound to loopback only: no public admin/auth routes.
+		// A successful database tick is mandatory for readiness.
+		if err := runWorkerProbe0455(cfg.HTTPAddr, &workerLastSuccess, server.Handler()); err != nil {
+			log.Fatalf("worker probe failed: %v", err)
+		}
+		return
+	}
 
 	if noExtensions {
 		log.Printf("Extensions Safe Mode active: --no-extensions; extension host/event execution is disabled")

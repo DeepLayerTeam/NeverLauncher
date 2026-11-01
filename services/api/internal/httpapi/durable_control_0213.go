@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gitflic.ru/skif4er/launcher/services/api/internal/authorization"
@@ -44,18 +45,30 @@ func (s Server) durableControlPlane0213() (repository.DurableControlPlane, error
 // и транзакционную доставку outbox. Его можно включать на всех репликах API: PostgreSQL
 // SKIP LOCKED и аренды допускают одного активного исполнителя для каждого элемента.
 func (s Server) StartDurableControlPlane0213(parent context.Context) (context.CancelFunc, error) {
+	return s.StartDurableControlPlaneWithReadiness0455(parent, nil)
+}
+
+// StartDurableControlPlaneWithReadiness0455 tracks successful durable polls, not
+// just a running goroutine. The cancellation function waits for in-flight work.
+func (s Server) StartDurableControlPlaneWithReadiness0455(parent context.Context, last *atomic.Int64) (context.CancelFunc, error) {
 	cp, err := s.durableControlPlane0213()
 	if err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(parent)
-	worker := randomWorkerID0213("api")
+	worker := randomWorkerID0213("worker")
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		ticker := time.NewTicker(500 * time.Millisecond)
 		defer ticker.Stop()
 		for {
-			if err := s.runDurableTick0213(ctx, cp, worker); err != nil && !errors.Is(err, context.Canceled) {
-				log.Printf("durable control-plane tick failed: %v", err)
+			if err := s.runDurableTick0213(ctx, cp, worker); err != nil {
+				if !errors.Is(err, context.Canceled) {
+					log.Printf("durable control-plane tick failed: %v", err)
+				}
+			} else if last != nil {
+				last.Store(time.Now().UnixNano())
 			}
 			select {
 			case <-ctx.Done():
@@ -64,7 +77,14 @@ func (s Server) StartDurableControlPlane0213(parent context.Context) (context.Ca
 			}
 		}
 	}()
-	return cancel, nil
+	return func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(20 * time.Second):
+			log.Printf("durable worker shutdown timed out; leases expire by PostgreSQL TTL")
+		}
+	}, nil
 }
 
 func (s Server) runDurableTick0213(ctx context.Context, cp repository.DurableControlPlane, worker string) error {

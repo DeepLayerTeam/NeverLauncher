@@ -142,9 +142,8 @@ def assert_quiescent(project: str, env_file: Path) -> str:
     states = compose_states(project, env_file)
     if states.get("postgres") != "running":
         raise DrillError("PostgreSQL must be running to create a logical snapshot")
-    for name in ("api", "admin", "nginx", "redis"):
-        if name == "redis" and "network-ha" not in COMPOSE_PROFILES:
-            continue
+    for name in (("api", "api-b", "worker-a", "worker-b", "admin", "nginx", "redis")
+                 if "network-ha" in COMPOSE_PROFILES else ("api", "admin", "nginx")):
         if states.get(name) in ("running", "restarting", "paused"):
             raise DrillError(f"writes not fenced: service {name} is active")
     # Standard PostgreSQL is private to this Compose project. Fail if an
@@ -806,7 +805,7 @@ def snapshot(
         if states.get("postgres") != "running":
             raise DrillError("PostgreSQL is not running")
         for svc in (
-            ("nginx", "admin", "api", "redis")
+            ("nginx", "admin", "api", "api-b", "worker-a", "worker-b", "redis")
             if "network-ha" in COMPOSE_PROFILES
             else ("nginx", "admin", "api")
         ):
@@ -883,7 +882,9 @@ def snapshot(
             "credentialPolicy": "signing keys, passwords, TLS and KMS material must be restored separately",
             "consistentWrites": "Compose writers stopped; PostgreSQL WAL unchanged and no extra client sessions across snapshot",
             "postgresWalLsn": pg_lsn_before,
-            "serviceStateAtBackup": {key: states.get(key, "absent") for key in ("api", "admin", "nginx")},
+            "serviceStateAtBackup": {key: states.get(key, "absent") for key in (
+                ("api", "api-b", "worker-a", "worker-b", "admin", "nginx")
+                if "network-ha" in COMPOSE_PROFILES else ("api", "admin", "nginx"))},
             "coordinatorIntegrity": "sqlite integrity_check + coord_meta schema version" if "network-ha" not in COMPOSE_PROFILES else "not-used",
         }
         (stage / "manifest.json").write_text(json.dumps(result, indent=2) + "\n")
@@ -979,13 +980,13 @@ def target_release(env_file: Path) -> str | None:
     return result
 
 
-def check_restored_backend(project: str, env_file: Path, *, version: str | None, storage: str, timeout: int = 120) -> dict:
+def check_restored_backend(project: str, env_file: Path, *, version: str | None, storage: str, timeout: int = 120, service: str = "api") -> dict:
     """Read the actual RESTORED API container, not a possibly stale public DNS route."""
     started = time.monotonic()
     while time.monotonic() - started < timeout:
         try:
             result = compose(
-                project, env_file, "exec", "-T", "api", "wget", "-qO-",
+                project, env_file, "exec", "-T", service, "wget", "-qO-",
                 "http://127.0.0.1:8080/ready", timeout=10,
             )
             payload = json.loads(result.stdout)
@@ -997,7 +998,32 @@ def check_restored_backend(project: str, env_file: Path, *, version: str | None,
         except (DrillError, ValueError, UnicodeError, OSError):
             pass
         time.sleep(1)
-    raise DrillError("restored API container did not become ready with required version/storage")
+    raise DrillError(f"restored {service} container did not become ready with required version/storage")
+
+
+def has_split_ha_roles_0455(version: str | None) -> bool:
+    if not isinstance(version, str):
+        return False
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:$|[-+])", version)
+    return bool(match and tuple(map(int, match.groups())) >= (0, 45, 5))
+
+
+def check_restored_worker_0455(project: str, env_file: Path, service: str, timeout: int = 120) -> None:
+    if service not in ("worker-a", "worker-b"):
+        raise DrillError("invalid HA worker service")
+    started = time.monotonic()
+    while time.monotonic() - started < timeout:
+        try:
+            result = compose(project, env_file, "exec", "-T", service, "wget", "-qO-",
+                             "http://127.0.0.1:8080/ready", timeout=10)
+            payload = json.loads(result.stdout)
+            if (isinstance(payload, dict) and payload.get("status") == "ready"
+                    and payload.get("repository") == "postgres" and payload.get("storage") == "s3"):
+                return
+        except (DrillError, ValueError, UnicodeError, OSError):
+            pass
+        time.sleep(1)
+    raise DrillError(f"restored worker {service} is not ready")
 
 
 def restore_fresh(
@@ -1027,7 +1053,7 @@ def restore_fresh(
     if not ready_url:
         raise DrillError("restore-fresh requires an actual application readiness endpoint")
     validate_ready_url(ready_url)
-    if manifest.get("schema") == 2 and target_release(env_file) != manifest.get("version"):
+    if manifest.get("schema") in (2, 3) and target_release(env_file) != manifest.get("version"):
         raise DrillError("target image version differs from backup; restore exact version first")
     if manifest["volumes"] != list(required_volumes()):
         raise DrillError("restore mode does not match snapshot volume topology")
@@ -1092,7 +1118,7 @@ def restore_fresh(
             target_s3_bucket, folder / "s3-objects", s3_endpoint, manifest["s3Files"]
         )
     for svc in (
-        ("redis", "api", "admin", "nginx")
+        ("redis", "api", "api-b", "worker-a", "worker-b", "admin", "nginx")
         if "network-ha" in COMPOSE_PROFILES
         else ("api", "admin", "nginx")
     ):
@@ -1115,6 +1141,10 @@ def restore_fresh(
             version=manifest.get("version") if manifest.get("schema") == 2 else None,
             storage="local" if manifest["storage"] == "local-volume" else "s3",
         )
+        if "network-ha" in COMPOSE_PROFILES and has_split_ha_roles_0455(target_release(env_file)):
+            check_restored_backend(project, env_file, version=manifest.get("version"), storage="s3", service="api-b")
+            check_restored_worker_0455(project, env_file, "worker-a")
+            check_restored_worker_0455(project, env_file, "worker-b")
         await_readiness(
             ready_url, expected=True, limit=120,
             expected_version=manifest.get("version") if manifest.get("schema") == 2 else None,
@@ -1123,7 +1153,8 @@ def restore_fresh(
     except Exception:
         # Do not leave an unverified installation reachable from the outside.
         # The partial target is left for forensic recovery, never auto-reused.
-        for svc in ("nginx", "admin", "api"):
+        for svc in (("nginx", "admin", "api", "api-b", "worker-a", "worker-b")
+                    if "network-ha" in COMPOSE_PROFILES else ("nginx", "admin", "api")):
             try:
                 compose(project, env_file, "stop", "-t", "10", svc)
             except Exception:

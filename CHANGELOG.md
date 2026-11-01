@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.45.5 — Multi-node HA (2026-11-01)
+
+- Added independent `api`, `worker`, and one-shot `migrate` roles for the same real Backend API binary; invalid role or co-located Network-HA workers fail closed.
+- Added four-process Network-HA production Compose overlay: two HTTP APIs, two independent PostgreSQL-fenced durable workers, distinct node identities and process-local working volumes.
+- Added TLS Nginx load balancing between APIs, dynamic Docker DNS and conservative retry policy. Worker health is backed by successful SQL polling, without public worker endpoints.
+- Updated cold Network-HA backup/restore to stop/fence both APIs and both workers, restart/check each restored role, and fail closed on partial recovery.
+- Added tests for process roles, worker-only probe safety, cold recovery guards, resolved Compose isolation and Nginx production config, plus operator runbook.
+- Does not claim physical-host failover, live cross-host acceptance or end-to-end production qualification without actual execution.
+
 ## 0.45.4 — Network-HA recovery: world state, ServerBridge fencing, fresh Redis
 
 - Extend the real cold Docker Compose DR runner with schema-3 Network-HA snapshots. **Do not copy/restore Redis AOF:** Network-HA restore requires an empty fresh Redis volume and refuses prior Redis-bearing network snapshots.
