@@ -738,8 +738,30 @@ jobs:
             --preflight --evidence ga-protected-approval \
             --trusted-key "$RUNNER_TEMP/nl-ga-operator.pub" \
             --version "$(cat VERSION)" --commit "$GITHUB_SHA"
+      - name: Import independently signed Operations GA evidence 0.46.0
+        shell: bash
+        env:
+          OPS_JSON_B64: ${{ secrets.NL_OPERATIONS_GA_JSON_B64 }}
+          OPS_SIG_B64: ${{ secrets.NL_OPERATIONS_GA_SIG_B64 }}
+          OPS_TRUSTED_PEM: ${{ vars.NL_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_PEM }}
+        run: |
+          set -euo pipefail
+          if [[ "$(cat VERSION)" != '0.46.0' ]]; then exit 0; fi
+          test -n "$OPS_JSON_B64" && test -n "$OPS_SIG_B64" && test -n "$OPS_TRUSTED_PEM" || {
+            echo '0.46.0 GA BLOCKED: second-operator signed evidence not supplied to protected production environment' >&2; exit 2;
+          }
+          umask 077
+          mkdir -p "$RUNNER_TEMP/nl-ops-ga"
+          printf '%s' "$OPS_JSON_B64" | base64 --decode > "$RUNNER_TEMP/nl-ops-ga/OPERATIONS_GA_0460.json"
+          printf '%s' "$OPS_SIG_B64" | base64 --decode > "$RUNNER_TEMP/nl-ops-ga/OPERATIONS_GA_0460.sig"
+          printf '%s\n' "$OPS_TRUSTED_PEM" > "$RUNNER_TEMP/nl-ops-ga.pub"
+          test -s "$RUNNER_TEMP/nl-ops-ga/OPERATIONS_GA_0460.json"
+          test -s "$RUNNER_TEMP/nl-ops-ga/OPERATIONS_GA_0460.sig"
+          test -s "$RUNNER_TEMP/nl-ops-ga.pub"
       - name: Build and cryptographically verify complete release bundle
         env:
+          LAUNCHER_OPERATIONS_GA_EVIDENCE_DIR: ${{ runner.temp }}/nl-ops-ga
+          LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ops-ga.pub
           LAUNCHER_EXTENSION_ACCEPTANCE_EVIDENCE_DIR: ${{ github.workspace }}/extension-acceptance
           LAUNCHER_EXTENSION_PUBLISHER_PRIVATE_KEY_FILE: ${{ runner.temp }}/nl-extension-publisher-private.pem
           LAUNCHER_EXTENSION_PUBLISHER_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-extension-publisher-public.pem
@@ -1091,8 +1113,19 @@ jobs:
           printf '%s\n' "$TRUSTED_GA_PUBLIC_KEY" > "$RUNNER_TEMP/ga-operator.pub"
           printf '%s\n' "$RELEASE_ROOT_PUBLIC_KEY" > "$RUNNER_TEMP/release-root.pub"
           printf '%s\n' "$RELEASE_TRUST_POLICY" > "$RUNNER_TEMP/trust-policy.json"
+      - name: Pin independent Operations GA public key for publication
+        shell: bash
+        env:
+          OPS_TRUSTED_PEM: ${{ vars.NL_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_PEM }}
+        run: |
+          set -euo pipefail
+          if [[ "$(cat VERSION)" != '0.46.0' ]]; then exit 0; fi
+          test -n "$OPS_TRUSTED_PEM" || { echo '0.46.0 GA BLOCKED: public operations verification key missing' >&2; exit 2; }
+          umask 077
+          printf '%s\n' "$OPS_TRUSTED_PEM" > "$RUNNER_TEMP/nl-ops-ga.pub"
       - name: Re-verify signatures, exact bytes, all GA targets and same-run CI before publication
         env:
+          LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE: ${{ runner.temp }}/nl-ops-ga.pub
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |

@@ -57,6 +57,9 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 	if err := verifyDistributionSupplyChain04511(dir, bundleVersion); err != nil {
 		return fmt.Errorf("refusing to sign inconsistent distribution: %w", err)
 	}
+	if err := verifyOperationsGA0460(dir, bundleVersion, privateKey.Public().(ed25519.PublicKey)); err != nil {
+		return fmt.Errorf("refusing to sign unapproved operational GA: %w", err)
+	}
 	if singleNodeGARequired0330(bundleVersion) {
 		raw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
 		if err != nil {

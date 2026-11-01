@@ -269,6 +269,9 @@ func handleRelease(args []string) error {
 		if err := verifyDistributionSupplyChain04511(args[1], ver); err != nil {
 			return err
 		}
+		if err := verifyOperationsGA0460(args[1], ver, nil); err != nil {
+			return err
+		}
 		fmt.Println("Six final signed-platform installer hashes match SPDX, SLSA, independent GA receipt and release BOM. OS signature trust is checked by native GA checks.")
 		return nil
 	case "sign":
@@ -717,6 +720,10 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 		requiredFiles = append(requiredFiles, singleNodeGAFiles0330...)
 		checks = append(checks, "independent-ed25519-single-node-ga-exact-commit")
 	}
+	if operationsGARequired0460(ver) {
+		requiredFiles = append(requiredFiles, operationsGAFile0460, operationsGASig0460)
+		checks = append(checks, "independent-ed25519-operations-exact-six-packages-and-contract")
+	}
 	if gaTargetsRequired0361(ver) {
 		requiredFiles = append(requiredFiles, "GA_VERIFIED_TARGETS.json", "GA_TARGET_APPROVAL.json", "GA_TARGET_APPROVAL.sig")
 		checks = append(checks, "independent-ed25519-exact-byte-six-target-ga")
@@ -900,6 +907,9 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	}
 	if err := writeJSONFile(filepath.Join(out, "RELEASE_MANIFEST.json"), manifest); err != nil {
 		return err
+	}
+	if err := verifyOperationsGA0460(out, ver, nil); err != nil {
+		return fmt.Errorf("operations GA build gate: %w", err)
 	}
 
 	checksums, err := releaseChecksums(out)
@@ -1249,6 +1259,13 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	if err := verifyDistributionSupplyChain04511(dir, manifest.Version); err != nil {
 		return fmt.Errorf("signed distribution supply chain: %w", err)
 	}
+	releasePub, err := loadEd25519PublicKey(publicKeyPath)
+	if operationsGARequired0460(manifest.Version) && err != nil {
+		return fmt.Errorf("cannot verify independent operations key against release key: %w", err)
+	}
+	if err := verifyOperationsGA0460(dir, manifest.Version, releasePub); err != nil {
+		return fmt.Errorf("independent operations GA: %w", err)
+	}
 	if releaseVerificationV2Required0158(manifest.Version) {
 		ctx, err := verifyReleaseSignatureV20158(dir, publicKeyPath, trustStatePath, trustPolicyPath)
 		if err != nil {
@@ -1310,6 +1327,9 @@ func releaseArtifacts(ver string) []string {
 	}
 	if singleNodeGARequired0330(ver) {
 		artifacts = append(artifacts, singleNodeGAFiles0330...)
+	}
+	if operationsGARequired0460(ver) {
+		artifacts = append(artifacts, operationsGAFile0460, operationsGASig0460)
 	}
 	if gaTargetsRequired0361(ver) {
 		artifacts = append(artifacts, "GA_VERIFIED_TARGETS.json", "GA_TARGET_APPROVAL.json", "GA_TARGET_APPROVAL.sig")

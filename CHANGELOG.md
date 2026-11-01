@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.46.0 — Operations & Delivery GA release gates (2026-11-01)
+
+- Add a real independent second-operator Ed25519 operations attestation over four actual install/upgrade/restore/failover receipts, six final platform installer SHA-256 digests, exact source commit and OpenAPI v1 digest. Acceptance requires authenticated readback of the original owner/project, different source/restore machines, and observed preservation of acknowledged canaries; receipts expire after 14 days.
+- Enforce the external operator trust anchor and exact-byte operations approval inside release build, direct release sign, distribution-verify and consumer release verify. Include the signed approval and detached signature as required files in RELEASE_MANIFEST/SHA256SUMS. Operator and release signing keys must differ; attempts to sign missing/tampered/expired evidence fail closed.
+- Preserve previous signed distribution, independent six-target GA, production release and compatible OpenAPI checks; independently enforce signed operations approval in the GitHub publication tool (even when invoked with an older CLI) and in the protected production workflow; add executable Go/Python negative tests and an independent operator runbook.
+- **Verification boundary:** local release-gate and contract tests pass, but real multi-host second-operator execution, OS-signed six-platform binaries, native Minecraft execution and published artifact round-trip were NOT performed in this environment. The final GA status therefore remains BLOCKED pending external certification; this source version does not manufacture that evidence.
+
+
 ## 0.45.14 — Independent Acceptance: installed, upgraded, recovered, failed over (2026-11-01)
 
 - Add `scripts/operations/independent_accept_04514.py`, a real Linux operator CLI that invokes existing production installer/first-admin, Standard component cutover, verified PostgreSQL/volume restore on a distinct host, and isolated Network-HA Docker chaos. Each stage verifies actual child results, checks public HTTPS/backend state and old-owner authenticated project readback where applicable and creates an exclusive private 0600 receipt only after success.

@@ -345,6 +345,18 @@ def validate(
         "release manifest version/commit mismatch",
     )
     files = file_set(bundle)
+    if parsed(version)[0] >= (0, 46, 0):
+        # Publication cannot be authorized by a stale pre-0.46 CLI. Verify
+        # independent operational acceptance against trusted keys in this
+        # publisher process, BEFORE any GitHub write or draft creation.
+        operator_key = os.environ.get('LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE', '')
+        require(bool(operator_key), '0.46.0 GA BLOCKED: independent operator public key missing')
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'operations'))
+        from operations_ga_0460 import verify_public
+        try:
+            verify_public(bundle, Path(operator_key), release_key)
+        except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:
+            raise Blocked('0.46.0 GA BLOCKED: independent operations evidence validation failed') from exc
     verify_ci(json_object(ci), version, commit, run_id, attempt)
     approval = verify_ga(bundle, ga_key, version, commit, run_id, attempt)
     dry = json_object(dryrun)

@@ -1,0 +1,51 @@
+name: Operations and Delivery GA 0.46.0 gates
+on:
+  push:
+    paths:
+      - 'VERSION'
+      - 'cli/cmd/launcher/release_operations_ga_0460*'
+      - 'cli/cmd/launcher/release_commands.go'
+      - 'cli/cmd/launcher/release_signing.go'
+      - 'scripts/operations/operations_ga_0460.py'
+      - 'scripts/operations/test_operations_ga_0460.py'
+      - 'scripts/operations/independent_accept_04514.py'
+      - 'scripts/release/build-release.sh'
+      - 'scripts/contracts/**'
+      - 'schemas/openapi.yaml'
+      - '.github/workflows/operations-delivery-0460.yml'
+  pull_request:
+    paths:
+      - 'VERSION'
+      - 'cli/cmd/launcher/release_operations_ga_0460*'
+      - 'cli/cmd/launcher/release_commands.go'
+      - 'cli/cmd/launcher/release_signing.go'
+      - 'scripts/operations/operations_ga_0460.py'
+      - 'scripts/operations/test_operations_ga_0460.py'
+      - 'scripts/operations/independent_accept_04514.py'
+      - 'scripts/release/build-release.sh'
+      - 'scripts/contracts/**'
+      - 'schemas/openapi.yaml'
+      - '.github/workflows/operations-delivery-0460.yml'
+  workflow_dispatch:
+jobs:
+  operations-and-release-gates:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - uses: actions/setup-go@v5
+        with: { go-version-file: 'cli/go.mod' }
+      - run: python3 -m pip install --disable-pip-version-check 'cryptography>=42,<47' 'PyYAML>=6,<7'
+      - run: python3 -m unittest discover -s scripts/operations -p 'test_operations_ga_0460.py'
+      - run: python3 -m unittest discover -s scripts/operations -p 'test_independent_accept_04514.py'
+      - run: cd cli && go test -race ./cmd/launcher -run 'TestOperationsGA0460|TestDistribution'
+      - run: python3 scripts/contracts/validate-openapi.py && python3 scripts/contracts/compatibility_04512.py
+      - run: python3 scripts/sdk/generate-http-operations.py --check
+      - run: python3 scripts/version/manage.py check
+      - run: bash -n scripts/release/build-release.sh
+      # No fake signing key or canned "PASS" receipts are used in CI.
+      # A *real* release remains blocked until an external independent
+      # operator signs actual production evidence and six OS-native jobs pass.

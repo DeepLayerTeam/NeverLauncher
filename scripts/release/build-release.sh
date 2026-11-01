@@ -891,6 +891,24 @@ fi
 if [[ -n "${SOURCE_COMMIT}" ]]; then
   release_build_args+=(--source-commit "${SOURCE_COMMIT}")
 fi
+# 0.46.0+ independent live operations acceptance must be signed with an
+# operator key outside the release-signing trust domain and cover the final
+# six installer bytes. The Go build/sign/verify paths independently enforce
+# this requirement (direct CLI calls cannot bypass the shell workflow).
+if [[ "$(printf '%s\n' '0.46.0' "${VERSION}" | sort -V | head -n1)" == '0.46.0' ]]; then
+  OPS_EVIDENCE="${LAUNCHER_OPERATIONS_GA_EVIDENCE_DIR:-}"
+  OPS_TRUST="${LAUNCHER_OPERATIONS_GA_TRUSTED_PUBLIC_KEY_FILE:-}"
+  [[ -n "${OPS_EVIDENCE}" && -d "${OPS_EVIDENCE}" && -n "${OPS_TRUST}" && -f "${OPS_TRUST}" ]] || {
+    echo "0.46.0 GA BLOCKED: independently signed live operational acceptance and external operator trust anchor required" >&2
+    exit 2
+  }
+  for name in OPERATIONS_GA_0460.json OPERATIONS_GA_0460.sig; do
+    [[ -s "${OPS_EVIDENCE}/${name}" && ! -L "${OPS_EVIDENCE}/${name}" ]] || {
+      echo "0.46.0 GA BLOCKED: missing/unsafe operations evidence ${name}" >&2; exit 2;
+    }
+    cp -- "${OPS_EVIDENCE}/${name}" "${OUT_DIR}/${name}"
+  done
+fi
 "${RELEASE_CLI}" "${release_build_args[@]}"
 if [[ "${PUBLIC_DELIVERY_REQUIRED}" == "1" ]]; then
   require_file "${OUT_DIR}/PUBLIC_PRODUCTION_DELIVERY_MATRIX.json"
