@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.44.1 — Gravit source inventory and compatibility hardening
+
+- Compatibility uploads now spool sources privately with a 512 MiB cap and the same two-slot admission limit as source inventory. Both operations use a single bounded ZIP entry validator: encrypted/special entries, unsafe or colliding paths, CRC mismatches and compression bombs are rejected before compatibility analysis, without buffering whole modpacks in API memory.
+- Source inventory now rehashes the complete original ZIP against the supplied SHA-256 rather than accepting an unverified digest. Compatibility includes source size, verified file-list digest, sanitized category counts and LaunchServer.jar SHA-256. A source change invalidates the previous report; signed upstream provenance is **not inferred** from a manifest version.
+- Inspect server JAR manifests from a private bounded temporary spool (maximum 256 MiB uncompressed), and distinguish binary provenance, absent external assets/auth exports and ambiguous multiple server JARs. The 5.7.13 version string is recognized as a scan candidate, **not certified** as migration-compatible without an approved source artifact and real migration test.
+- Inventory recognizes FileAuthSystem/Database.json, SQL CSV exports, module configs, capes and large ServerWrapper binaries without incorrectly parsing JARs as JSON. Admin compatibility upload and source inventory use the same size limit and show file categories and binary hashes.
+- Added regression tests for >64 MiB ZIPs, input SHA tamper, corrupted member CRC, context cancellation, FileAuth/module/Wrapper classification and reproducible scan. Previous historical security and native gameplay release gates remain mandatory for 0.44.1+; no migration or six-platform game launch is claimed from these tests.
+
+
 ## 0.44.0 — enforce final six-platform gameplay and signed support boundaries
 
 - Fixed a production runtime acceptance regression: the native worker previously required positive+negative Minecraft observations **only for 0.43.14 exactly**. For 0.44.0 and later the same actual-launch, server-join and adversarial file/manifest tamper observations are now mandatory. No headless/emulated ARM64 pass is accepted.

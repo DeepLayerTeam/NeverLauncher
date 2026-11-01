@@ -23,6 +23,11 @@ type Finding0332 = {
 type Compatibility0332 = {
   sourceSha256: string;
   sourceEntries: number;
+  sourceBytes?: number;
+  sourceTotalBytes?: number;
+  filesSha256?: string;
+  serverJarSha256?: string;
+  categories?: Record<string, number>;
   claimedVersion?: string;
   detectedVersion?: string;
   versionStatus: string;
@@ -800,8 +805,8 @@ export function MigrationCenter0331({
   async function assess(event: React.FormEvent) {
     event.preventDefault();
     if (!runId || !source || busy) return;
-    if (source.size < 1 || source.size > 64 * 1024 * 1024) {
-      setError("ZIP must be 1..64 MiB");
+    if (source.size < 1 || source.size > 512 * 1024 * 1024) {
+      setError("ZIP must be 1..512 MiB");
       return;
     }
     setBusy(true);
@@ -1290,7 +1295,7 @@ export function MigrationCenter0331({
             разрешает cutover.
           </p>
           <label className="field">
-            <span>ZIP проекта Gravit (максимум 64 MiB)</span>
+            <span>ZIP проекта Gravit (максимум 512 MiB)</span>
             <input
               type="file"
               required
@@ -2305,6 +2310,15 @@ export function MigrationCenter0331({
           <p>
             SHA-256 архива: <code>{compatibility.sourceSha256}</code>
           </p>
+          {compatibility.filesSha256 && (
+            <p>SHA-256 инвентаря файлов: <code>{compatibility.filesSha256}</code></p>
+          )}
+          {compatibility.serverJarSha256 && (
+            <p>SHA-256 LaunchServer.jar: <code>{compatibility.serverJarSha256}</code> (требует внешнего подтверждения происхождения)</p>
+          )}
+          {compatibility.categories && (
+            <p>Разделы: {Object.entries(compatibility.categories).map(([name, count]) => `${name}: ${count}`).join("; ")}. Наличие файла не означает успешный перенос.</p>
+          )}
           <ul>
             {compatibility.findings.map((finding, i) => (
               <li key={i}>

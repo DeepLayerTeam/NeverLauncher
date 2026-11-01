@@ -5,6 +5,7 @@ package gravitdetector
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -14,16 +15,17 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
 )
 
-const MaxArchiveBytes = 64 << 20
-const maxEntries = 5000
-const maxExpandedBytes = 128 << 20
-const maxConfigBytes = 2 << 20
-const maxJarBytes = 32 << 20
+const MaxArchiveBytes = inv.MaxSourceBytes
+const maxConfigBytes = uint64(inv.MaxConfigBytes)
+const maxJarBytes = 256 << 20
 
 var versionPattern = regexp.MustCompile(`(?:^|[^0-9])(?:v)?(5\.[0-9]{1,2}\.[0-9]{1,3})(?:[^0-9]|$)`)
 
@@ -42,18 +44,23 @@ type Component struct {
 	SHA256 string `json:"sha256,omitempty"`
 }
 type Report struct {
-	Format          string         `json:"format"`
-	SourceSHA256    string         `json:"sourceSha256"`
-	SourceEntries   int            `json:"sourceEntries"`
-	ClaimedVersion  string         `json:"claimedVersion,omitempty"`
-	DetectedVersion string         `json:"detectedVersion,omitempty"`
-	VersionEvidence string         `json:"versionEvidence"` // signed upstream provenance is outside the scope
-	VersionStatus   string         `json:"versionStatus"`   // recognized | unverified | unsupported | conflict
-	Status          string         `json:"status"`          // manual | blocked, never production compatible by inference
-	CutoverAllowed  bool           `json:"cutoverAllowed"`
-	Components      []Component    `json:"components"`
-	Findings        []Finding      `json:"findings"`
-	Summary         map[string]int `json:"summary"`
+	Format           string         `json:"format"`
+	SourceSHA256     string         `json:"sourceSha256"`
+	SourceBytes      int64          `json:"sourceBytes"`
+	FilesSHA256      string         `json:"filesSha256"`
+	Categories       map[string]int `json:"categories"`
+	SourceTotalBytes int64          `json:"sourceTotalBytes"`
+	ServerJarSHA256  string         `json:"serverJarSha256,omitempty"`
+	SourceEntries    int            `json:"sourceEntries"`
+	ClaimedVersion   string         `json:"claimedVersion,omitempty"`
+	DetectedVersion  string         `json:"detectedVersion,omitempty"`
+	VersionEvidence  string         `json:"versionEvidence"` // signed upstream provenance is outside the scope
+	VersionStatus    string         `json:"versionStatus"`   // recognized | unverified | unsupported | conflict
+	Status           string         `json:"status"`          // manual | blocked, never production compatible by inference
+	CutoverAllowed   bool           `json:"cutoverAllowed"`
+	Components       []Component    `json:"components"`
+	Findings         []Finding      `json:"findings"`
+	Summary          map[string]int `json:"summary"`
 }
 
 func (r *Report) finding(code, severity, kind, file, message string) {
@@ -66,61 +73,47 @@ func recognizedVersion(v string) bool {
 	}
 	p := strings.Split(m[1], ".")
 	patch, e := strconv.Atoi(p[2])
-	return e == nil && p[0] == "5" && p[1] == "7" && patch <= 12
+	return e == nil && p[0] == "5" && p[1] == "7" && patch <= 13
 }
 
-// Assess validates the entire bounded archive before parsing any configuration.
-// The report contains classifications and digests, never source JSON or secrets.
+// Assess is retained for in-process callers with an already buffered archive.
+// Production HTTP uploads use AssessReader to avoid buffering large modpacks.
 func Assess(source []byte, claimedVersion string) (Report, error) {
-	if len(source) == 0 || len(source) > MaxArchiveBytes {
-		return Report{}, errors.New("source ZIP must be 1..64 MiB")
-	}
+	hash := sha256.Sum256(source)
+	return AssessReader(context.Background(), bytes.NewReader(source), int64(len(source)), hex.EncodeToString(hash[:]), claimedVersion)
+}
+
+// AssessReader analyzes the same ZIP format and limits as the full source
+// inventory. It verifies the caller's SHA-256, all member CRCs and paths before
+// interpreting configurations, and never executes the supplied JARs.
+func AssessReader(ctx context.Context, src io.ReaderAt, size int64, digest, claimedVersion string) (Report, error) {
 	if len(claimedVersion) > 40 || strings.ContainsAny(claimedVersion, "\n\r\t") {
 		return Report{}, errors.New("invalid claimed Gravit version")
 	}
-	h := sha256.Sum256(source)
-	r := Report{Format: "launcher.gravit-compatibility.v1", SourceSHA256: hex.EncodeToString(h[:]), ClaimedVersion: strings.TrimSpace(claimedVersion), VersionEvidence: "absent", VersionStatus: "unverified", Status: "manual", Components: []Component{}, Findings: []Finding{}, Summary: map[string]int{}}
-	z, err := zip.NewReader(bytes.NewReader(source), int64(len(source)))
+	snapshot, err := inv.ValidateSource(ctx, src, size, digest)
 	if err != nil {
-		return Report{}, fmt.Errorf("invalid Gravit ZIP: %w", err)
+		return Report{}, fmt.Errorf("invalid Gravit source ZIP: %w", err)
 	}
-	if len(z.File) == 0 || len(z.File) > maxEntries {
-		return Report{}, errors.New("ZIP entry count outside safe limit")
+	fileList, err := json.Marshal(snapshot.Files)
+	if err != nil {
+		return Report{}, err
 	}
-	seen := map[string]bool{}
+	fileDigest := sha256.Sum256(fileList)
+	r := Report{Format: "launcher.gravit-compatibility.v1", SourceSHA256: snapshot.SourceSHA256, SourceBytes: snapshot.SourceBytes, SourceTotalBytes: snapshot.TotalBytes, FilesSHA256: hex.EncodeToString(fileDigest[:]), Categories: snapshot.Categories, ClaimedVersion: strings.TrimSpace(claimedVersion), VersionEvidence: "absent", VersionStatus: "unverified", Status: "manual", Components: []Component{}, Findings: []Finding{}, Summary: map[string]int{}}
+	z, err := zip.NewReader(src, size)
+	if err != nil {
+		return Report{}, err
+	}
 	files := make([]*zip.File, 0, len(z.File))
-	var expanded uint64
 	for _, f := range z.File {
-		n := strings.ReplaceAll(f.Name, "\\", "/")
-		clean := path.Clean(n)
-		if n == "" || strings.HasPrefix(n, "/") || clean == ".." || strings.HasPrefix(clean, "../") || strings.ContainsRune(n, '\x00') || strings.Contains(n, ":") || clean != strings.TrimSuffix(n, "/") || f.Mode()&os.ModeSymlink != 0 {
-			return Report{}, fmt.Errorf("unsafe ZIP member path or type: %q", f.Name)
+		if !f.FileInfo().IsDir() {
+			files = append(files, f)
 		}
-		normalized := strings.ToLower(clean)
-		if seen[normalized] {
-			return Report{}, fmt.Errorf("duplicate ZIP member: %q", f.Name)
-		}
-		seen[normalized] = true
-		if f.FileInfo().IsDir() {
-			continue
-		}
-		if f.Flags&1 != 0 {
-			return Report{}, errors.New("encrypted ZIP entries are not supported")
-		}
-		if f.Method != zip.Deflate && f.Method != zip.Store {
-			return Report{}, errors.New("unsupported ZIP compression")
-		}
-		expanded += f.UncompressedSize64
-		if expanded > maxExpandedBytes {
-			return Report{}, errors.New("ZIP expanded data exceeds 128 MiB")
-		}
-		if f.UncompressedSize64 > 0 && f.CompressedSize64 == 0 {
-			return Report{}, errors.New("ZIP compression size invalid")
-		}
-		if f.UncompressedSize64 > f.CompressedSize64*400+4096 {
-			return Report{}, errors.New("ZIP compression expansion ratio exceeds limit")
-		}
-		files = append(files, f)
+	}
+	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
+	fileHashes := make(map[string]string, len(snapshot.Files))
+	for _, f := range snapshot.Files {
+		fileHashes[f.Path] = f.SHA256
 	}
 	r.SourceEntries = len(files)
 	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
@@ -130,6 +123,7 @@ func Assess(source []byte, claimedVersion string) (Report, error) {
 	profileCount := 0
 	foundRuntime := false
 	var manifestVersions []string
+	serverJars := 0
 	for _, f := range files {
 		n := strings.ReplaceAll(f.Name, "\\", "/")
 		lower := strings.ToLower(n)
@@ -202,17 +196,19 @@ func Assess(source []byte, claimedVersion string) (Report, error) {
 			r.Components = append(r.Components, Component{Kind: "server_wrapper", Path: n, Status: "manual", Type: "json"})
 			r.inspectWrapper(n, obj)
 		case base == "launchserver.jar":
+			serverJars++
+			r.ServerJarSHA256 = fileHashes[n]
 			if f.UncompressedSize64 > maxJarBytes {
-				r.finding("SERVER_JAR_TOO_LARGE", "blocked", "version", n, "server JAR exceeds manifest inspection limit")
+				r.finding("SERVER_JAR_TOO_LARGE", "blocked", "version", n, "server JAR exceeds 256 MiB bounded manifest inspection limit")
 				continue
 			}
-			buf, e := readBounded(f, maxJarBytes)
+			version, ok, e := jarManifestVersionFile(ctx, f)
 			if e != nil {
-				r.addInvalid("version", n, e)
+				r.finding("SERVER_JAR_INVALID", "blocked", "version", n, "server JAR could not be verified or inspected")
 				continue
 			}
-			if v, ok := jarManifestVersion(buf); ok {
-				manifestVersions = append(manifestVersions, v)
+			if ok {
+				manifestVersions = append(manifestVersions, version)
 			} else {
 				r.finding("SERVER_VERSION_UNREADABLE", "manual", "version", n, "cannot establish Gravit release from server JAR manifest")
 			}
@@ -224,6 +220,9 @@ func Assess(source []byte, claimedVersion string) (Report, error) {
 			r.Components = append(r.Components, Component{Kind: "module_config", Path: n, Status: "manual", Type: "json"})
 			r.finding("MODULE_CONFIG_REVIEW", "manual", "module_config", n, "module-specific settings require manual compatibility review")
 		}
+	}
+	if serverJars > 1 {
+		r.finding("MULTIPLE_SERVER_JARS", "blocked", "version", "", "multiple LaunchServer.jar entries make binary provenance ambiguous")
 	}
 	if launchConfigs > 1 {
 		r.finding("MULTIPLE_LAUNCHSERVERS", "blocked", "launchserver", "", "multiple LaunchServer.json configs make source identity ambiguous")
@@ -240,6 +239,21 @@ func Assess(source []byte, claimedVersion string) (Report, error) {
 	if !foundRuntime {
 		r.finding("RUNTIME_MISSING", "manual", "runtime", "", "no LaunchServerRuntime.json found; inspect runtime settings separately")
 	}
+	// Content and identity are independently required for a real migration.
+	// Absence is not inferred as success: external auth and remote vanilla
+	// assets may be legitimate, but need explicit operator resolution.
+	if snapshot.Categories["client"] == 0 {
+		r.finding("CLIENT_FILES_NOT_IN_SOURCE", "manual", "client", "", "no clients/updates files in archive; external client content must be accounted for")
+	}
+	if snapshot.Categories["asset"] == 0 || snapshot.Categories["library"] == 0 {
+		r.finding("SHARED_CONTENT_NOT_IN_SOURCE", "manual", "content", "", "assets or libraries absent; verify external mirrors and dependencies")
+	}
+	if snapshot.Categories["authentication"] == 0 {
+		r.finding("AUTH_EXPORT_NOT_IN_SOURCE", "manual", "auth", "", "account database may be external; export and UUID mapping are required separately")
+	}
+	if snapshot.Categories["texture"] == 0 {
+		r.finding("TEXTURE_FILES_NOT_IN_SOURCE", "manual", "texture", "", "texture data absent; verify external TextureProvider or intentionally empty source")
+	}
 	if len(manifestVersions) > 0 {
 		v := manifestVersions[0]
 		consistent := true
@@ -250,6 +264,7 @@ func Assess(source []byte, claimedVersion string) (Report, error) {
 		}
 		r.DetectedVersion = v
 		r.VersionEvidence = "jar-manifest"
+		r.finding("BINARY_PROVENANCE_NOT_ATTESTED", "manual", "version", "", "JAR manifest is not a signed upstream provenance certificate; compare serverJarSha256 to an approved release artifact")
 		if !consistent || (r.ClaimedVersion != "" && strings.TrimPrefix(r.ClaimedVersion, "v") != v) {
 			r.VersionStatus = "conflict"
 			r.finding("VERSION_CONFLICT", "blocked", "version", "", "conflicting source and declared Gravit versions")
@@ -257,14 +272,14 @@ func Assess(source []byte, claimedVersion string) (Report, error) {
 			r.VersionStatus = "recognized"
 		} else {
 			r.VersionStatus = "unsupported"
-			r.finding("VERSION_UNSUPPORTED", "blocked", "version", "", "detected server version is outside recognized 5.7.0..5.7.12 range")
+			r.finding("VERSION_UNSUPPORTED", "blocked", "version", "", "detected server version is outside recognized 5.7.0..5.7.13 range")
 		}
 	} else if r.ClaimedVersion != "" {
 		r.VersionEvidence = "operator-claim"
 		r.finding("VERSION_NOT_VERIFIED", "manual", "version", "", "operator-supplied version is not proof of source binary identity")
 		if !recognizedVersion(strings.TrimPrefix(r.ClaimedVersion, "v")) {
 			r.VersionStatus = "unsupported"
-			r.finding("VERSION_UNSUPPORTED", "blocked", "version", "", "claimed version is outside recognized 5.7.0..5.7.12 range")
+			r.finding("VERSION_UNSUPPORTED", "blocked", "version", "", "claimed version is outside recognized 5.7.0..5.7.13 range")
 		}
 	} else {
 		r.finding("VERSION_NOT_VERIFIED", "manual", "version", "", "no verifiable server version; supply LaunchServer.jar from the same installation")
@@ -421,7 +436,7 @@ func (r *Report) inspectProfile(p string, obj map[string]json.RawMessage) {
 	}
 	for _, k := range []string{"classPath", "jvmArgs", "clientArgs", "update", "updateVerify", "updateExclusions"} {
 		if v, exists := obj[k]; exists {
-			if len(v) > maxConfigBytes {
+			if uint64(len(v)) > maxConfigBytes {
 				r.finding("PROFILE_FIELD_TOO_LARGE", "blocked", "client_profile", p, k+" exceeds inspection limit")
 			}
 		}
@@ -451,46 +466,99 @@ func (r *Report) inspectWrapper(p string, obj map[string]json.RawMessage) {
 	}
 	r.finding("WRAPPER_REENROLL", "manual", "server_wrapper", p, "ServerWrapper credentials and trust anchors must be replaced by Never ServerBridge")
 }
-func jarManifestVersion(source []byte) (string, bool) {
-	z, e := zip.NewReader(bytes.NewReader(source), int64(len(source)))
-	if e != nil || len(z.File) > 20000 {
-		return "", false
+
+// jarManifestVersionFile spools a bounded inner JAR to private disk. The
+// source ZIP may contain a 100+ MiB server JAR, and buffering it in the HTTP
+// worker would amplify memory usage across concurrent uploads.
+func jarManifestVersionFile(ctx context.Context, entry *zip.File) (string, bool, error) {
+	if entry.UncompressedSize64 > maxJarBytes {
+		return "", false, errors.New("JAR too large")
+	}
+	tmp, err := os.CreateTemp("", "gravit-jar-manifest-*.tmp")
+	if err != nil {
+		return "", false, err
+	}
+	defer tmp.Close()
+	defer os.Remove(tmp.Name())
+	if err := tmp.Chmod(0600); err != nil {
+		return "", false, err
+	}
+	if runtime.GOOS != "windows" {
+		if err := os.Remove(tmp.Name()); err != nil && !os.IsNotExist(err) {
+			return "", false, err
+		}
+	}
+	reader, err := entry.Open()
+	if err != nil {
+		return "", false, err
+	}
+	defer reader.Close()
+	written, err := io.Copy(tmp, &contextReader{ctx: ctx, r: io.LimitReader(reader, maxJarBytes+1)})
+	if err != nil {
+		return "", false, err
+	}
+	if written != int64(entry.UncompressedSize64) {
+		return "", false, errors.New("JAR size mismatch")
+	}
+	z, err := zip.NewReader(tmp, written)
+	if err != nil {
+		return "", false, err
+	}
+	if len(z.File) > 20000 {
+		return "", false, errors.New("JAR entry count exceeds limit")
 	}
 	for _, f := range z.File {
 		if strings.EqualFold(f.Name, "META-INF/MANIFEST.MF") {
-			b, e := readBounded(f, 64<<10)
-			if e != nil {
-				return "", false
+			if f.UncompressedSize64 > 64<<10 {
+				return "", false, errors.New("oversized JAR manifest")
 			}
-			t := strings.ReplaceAll(string(b), "\r\n", "\n")
-			lines := strings.Split(t, "\n")
-			var product, version string
-			for _, line := range lines {
-				if i := strings.IndexByte(line, ':'); i > 0 {
-					key := strings.ToLower(strings.TrimSpace(line[:i]))
-					v := strings.TrimSpace(line[i+1:])
-					switch key {
-					case "implementation-title", "bundle-name", "implementation-vendor":
-						product += " " + strings.ToLower(v)
-					case "implementation-version", "bundle-version":
-						if version == "" {
-							version = v
-						}
-					}
-				}
+			data, err := readBounded(f, 64<<10)
+			if err != nil {
+				return "", false, err
 			}
-			// Do not confuse an arbitrary JAR's implementation version with Gravit.
-			if !strings.Contains(product, "gravit") && !strings.Contains(product, "launchserver") {
-				return "", false
-			}
-			m := versionPattern.FindStringSubmatch(version)
-			if len(m) != 2 {
-				return "", false
-			}
-			return m[1], true
+			return parseJarManifest(data)
 		}
 	}
-	return "", false
+	return "", false, nil
+}
+
+type contextReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (r *contextReader) Read(b []byte) (int, error) {
+	if err := r.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return r.r.Read(b)
+}
+func parseJarManifest(data []byte) (string, bool, error) {
+	t := strings.ReplaceAll(string(data), "\r\n", "\n")
+	lines := strings.Split(t, "\n")
+	var product, version string
+	for _, line := range lines {
+		if i := strings.IndexByte(line, ':'); i > 0 {
+			key := strings.ToLower(strings.TrimSpace(line[:i]))
+			value := strings.TrimSpace(line[i+1:])
+			switch key {
+			case "implementation-title", "bundle-name", "implementation-vendor":
+				product += " " + strings.ToLower(value)
+			case "implementation-version", "bundle-version":
+				if version == "" {
+					version = value
+				}
+			}
+		}
+	}
+	if !strings.Contains(product, "gravit") && !strings.Contains(product, "launchserver") {
+		return "", false, nil
+	}
+	m := versionPattern.FindStringSubmatch(version)
+	if len(m) != 2 {
+		return "", false, nil
+	}
+	return m[1], true, nil
 }
 
 // inspectOptional recognizes known actions but does not assume that the referenced

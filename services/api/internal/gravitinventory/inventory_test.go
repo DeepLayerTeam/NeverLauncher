@@ -173,3 +173,37 @@ func TestInventorySpoolPrivate0333(t *testing.T) {
 		t.Fatalf("cancel ignored: %v", e)
 	}
 }
+
+func TestSourceDigestAndWrapperBinary0441(t *testing.T) {
+	source := fixture0333(t, map[string]string{
+		"project/LaunchServer.json":                           `{"auth":{"x":{"core":{"type":"sql"}}}}`,
+		"project/modules-config/FileAuthSystem/Database.json": `{"uuid":{"username":"foo"}}`,
+		"project/sql-export/users.csv":                        "id,username,uuid\n1,foo,uuid\n",
+		"project/modules-config/CustomModule/config.json":     `{"secret":"NO_REPORT_LEAK"}`,
+		"project/serverwrapper/ServerWrapper.jar":             "binary not JSON",
+		"project/capes/player.png":                            "png bytes",
+	})
+	hash := sha256.Sum256(source)
+	actual := hex.EncodeToString(hash[:])
+	v, err := Inspect(context.Background(), bytes.NewReader(source), int64(len(source)), actual)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.Categories["authentication"] != 2 || v.Categories["module_config"] != 1 || v.Categories["server_wrapper"] != 1 || v.Categories["texture"] != 1 {
+		t.Fatalf("categories: %+v", v.Categories)
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(b, []byte("NO_REPORT_LEAK")) {
+		t.Fatal("module secret leaked")
+	}
+	if _, err := Inspect(context.Background(), bytes.NewReader(source), int64(len(source)), strings.Repeat("a", 64)); err == nil {
+		t.Fatal("inventory accepted caller-forged source SHA")
+	}
+	inspected, err := ValidateSource(context.Background(), bytes.NewReader(source), int64(len(source)), actual)
+	if err != nil || len(inspected.Files) != len(v.Files) {
+		t.Fatalf("compatibility ZIP validation mismatch: %v", err)
+	}
+}

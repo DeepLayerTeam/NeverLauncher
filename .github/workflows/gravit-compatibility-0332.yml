@@ -41,7 +41,7 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - name: Gravit detector tests and SQL repository integration
         working-directory: services/api
-        run: go test -race -count=1 -timeout 5m ./internal/gravitdetector ./internal/repository ./internal/httpapi -run 'Test.*0332|TestMigration.*0331'
+        run: go test -race -count=1 -timeout 5m ./internal/gravitdetector ./internal/repository ./internal/httpapi -run 'Test.*0332|Test.*0441|TestMigration.*0331'
       - name: CLI compatibility upload and baseline tests
         working-directory: cli
         run: go test -race -count=1 ./cmd/launcher -run 'TestGravitCompatibilityCLI0332|TestMigrationWorkflowCLI0331'

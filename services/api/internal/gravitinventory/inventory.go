@@ -82,18 +82,26 @@ func entryKind(n string) (string, bool) {
 	case base == "launchserverruntime.json" || base == "launchserverruntimeconfig.json" || strings.HasPrefix(l, "runtime/") || strings.Contains(l, "/runtime/"):
 		return "runtime", strings.HasSuffix(l, ".json")
 	case base == "serverwrapper.json" || base == "serverwrapperconfig.json" || strings.Contains(l, "serverwrapper/"):
-		return "server_wrapper", true
+		// ServerWrapper packages also contain JARs/large binaries; parse only configs.
+		return "server_wrapper", strings.HasSuffix(l, ".json") || strings.HasSuffix(l, ".env")
 	case strings.HasPrefix(l, "profiles/") && strings.HasSuffix(l, ".json") || strings.Contains(l, "/profiles/") && strings.HasSuffix(l, ".json"):
 		return "client_profile", true
+	case (base == "database.json" && strings.Contains(l, "fileauthsystem/")) ||
+		strings.Contains(l, "sql-export/") && strings.HasSuffix(l, ".csv") ||
+		strings.HasSuffix(l, ".sql") && (strings.Contains(l, "/auth/") || strings.Contains(l, "/database/")):
+		return "authentication", strings.HasSuffix(l, ".json")
+	case strings.HasPrefix(l, "modules-config/") || strings.Contains(l, "/modules-config/"):
+		return "module_config", strings.HasSuffix(l, ".json")
 	case strings.HasPrefix(l, "modules/") || strings.Contains(l, "/modules/"):
 		return "module", strings.HasSuffix(l, ".env") || strings.HasSuffix(l, ".json")
+
 	case strings.HasPrefix(l, "libraries/") || strings.Contains(l, "/libraries/") || strings.HasPrefix(l, "lib/") || strings.Contains(l, "/lib/"):
 		return "library", false
 	case strings.HasPrefix(l, "assets/") || strings.Contains(l, "/assets/"):
 		return "asset", false
 	case strings.HasPrefix(l, "clients/") || strings.Contains(l, "/clients/") || strings.HasPrefix(l, "updates/") || strings.Contains(l, "/updates/"):
 		return "client", false
-	case strings.HasPrefix(l, "skins/") || strings.Contains(l, "/skins/") || strings.HasPrefix(l, "cloaks/") || strings.Contains(l, "/cloaks/") || strings.HasPrefix(l, "capes/"):
+	case strings.HasPrefix(l, "skins/") || strings.Contains(l, "/skins/") || strings.HasPrefix(l, "cloaks/") || strings.Contains(l, "/cloaks/") || strings.HasPrefix(l, "capes/") || strings.Contains(l, "/capes/"):
 		return "texture", false
 	case strings.HasSuffix(l, ".pem") || strings.HasSuffix(l, ".key") || strings.HasSuffix(l, ".p12") || strings.HasSuffix(l, ".pfx") || strings.Contains(l, "/keys/"):
 		return "key", true
@@ -106,7 +114,7 @@ func entryKind(n string) (string, bool) {
 func sensitive(n, kind string) bool {
 	l := strings.ToLower(n)
 	base := path.Base(l)
-	return kind == "key" || kind == "launchserver" || kind == "server_wrapper" || kind == "authentication" || base == ".env" || strings.HasSuffix(l, ".env") || strings.Contains(l, "password") || strings.Contains(l, "secret") || strings.Contains(l, "private")
+	return kind == "key" || kind == "launchserver" || kind == "server_wrapper" || kind == "authentication" || kind == "module_config" || base == ".env" || strings.HasSuffix(l, ".env") || strings.Contains(l, "password") || strings.Contains(l, "secret") || strings.Contains(l, "private")
 }
 func validName(n string, isDir bool) error {
 	if n == "" || strings.HasPrefix(n, "/") || strings.ContainsAny(n, "\\:\x00\r\n\t") || strings.HasPrefix(strings.ToLower(n), ".migration/") || strings.EqualFold(n, ".migration") {
@@ -337,11 +345,38 @@ func gather(v *Inventory, kind string, config []byte) error {
 	return nil
 }
 
-// Inspect performs a complete streaming read, including CRC validation and
-// SHA-256 of every member; no ZIP filename is interpreted as a host file path.
+// ValidateSource checks the exact source bytes, member CRCs, decompression
+// limits, file types and case-insensitive paths without interpreting Gravit
+// configuration. Compatibility analysis must be able to report malformed JSON
+// as findings rather than aborting the entire source scan.
+func ValidateSource(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest string) (Inventory, error) {
+	return scan(ctx, src, archiveSize, sourceDigest, false)
+}
+
+// Inspect checks the complete source ZIP, then interprets bounded JSON
+// configurations to count providers, optional actions and server references.
 func Inspect(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest string) (Inventory, error) {
+	return scan(ctx, src, archiveSize, sourceDigest, true)
+}
+
+func scan(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDigest string, parseConfigs bool) (Inventory, error) {
 	if archiveSize < 1 || archiveSize > MaxSourceBytes || len(sourceDigest) != 64 {
 		return Inventory{}, errors.New("source archive size/digest invalid")
+	}
+	// Do not trust a caller-supplied digest. A staged source can change between
+	// requests or be passed by an untrusted worker; pin the exact archive bytes.
+	for _, c := range sourceDigest {
+		if !strings.ContainsRune("0123456789abcdef", c) {
+			return Inventory{}, errors.New("invalid source SHA-256")
+		}
+	}
+	sourceHash := sha256.New()
+	n, e := copyLimited(ctx, sourceHash, io.NewSectionReader(src, 0, archiveSize), archiveSize)
+	if e != nil || n != archiveSize {
+		return Inventory{}, errors.New("unable to hash complete source ZIP")
+	}
+	if hex.EncodeToString(sourceHash.Sum(nil)) != sourceDigest {
+		return Inventory{}, errors.New("source ZIP SHA-256 differs from supplied digest")
 	}
 	z, e := zip.NewReader(src, archiveSize)
 	if e != nil {
@@ -357,7 +392,7 @@ func Inspect(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDige
 		h := sha256.New()
 		var target io.Writer = h
 		var capture bytes.Buffer
-		if parse {
+		if parse && parseConfigs {
 			if f.UncompressedSize64 > uint64(MaxConfigBytes) {
 				return Inventory{}, fmt.Errorf("configuration %q exceeds 2 MiB", f.Name)
 			}
@@ -368,7 +403,7 @@ func Inspect(ctx context.Context, src io.ReaderAt, archiveSize int64, sourceDige
 			return Inventory{}, fmt.Errorf("ZIP member %q: %w", f.Name, e)
 		}
 		item := File{Path: f.Name, Kind: kind, Size: n, SHA256: hex.EncodeToString(h.Sum(nil)), Sensitive: sensitive(f.Name, kind)}
-		if parse && strings.HasSuffix(strings.ToLower(f.Name), ".json") {
+		if parseConfigs && parse && strings.HasSuffix(strings.ToLower(f.Name), ".json") {
 			if e := gather(&v, kind, capture.Bytes()); e != nil {
 				return Inventory{}, fmt.Errorf("invalid %s at %q: %w", kind, f.Name, e)
 			}

@@ -3,11 +3,12 @@ package httpapi
 import (
 	"context"
 	"errors"
-	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	gd "gitflic.ru/skif4er/launcher/services/api/internal/gravitdetector"
+	inv "gitflic.ru/skif4er/launcher/services/api/internal/gravitinventory"
 	mw "gitflic.ru/skif4er/launcher/services/api/internal/migrationworkflow"
 )
 
@@ -65,16 +66,26 @@ func (s Server) migrationCompatibilityAssess0332(w http.ResponseWriter, r *http.
 		writeError(w, 415, "upload a ZIP as application/zip")
 		return
 	}
+	// The same two-slot bounded staging and ZIP validation as inventory.
+	// Do not buffer an entire 512 MiB modpack into the API process.
+	select {
+	case gravitinventorySlots0333 <- struct{}{}:
+		defer func() { <-gravitinventorySlots0333 }()
+	default:
+		writeError(w, 429, "source inspection capacity is busy; retry after another upload finishes")
+		return
+	}
 	if r.ContentLength > gd.MaxArchiveBytes {
-		writeError(w, 413, "Gravit source ZIP exceeds 64 MiB")
+		writeError(w, 413, "Gravit source ZIP exceeds 512 MiB")
 		return
 	}
-	bytes, err := io.ReadAll(http.MaxBytesReader(w, r.Body, gd.MaxArchiveBytes))
+	src, size, digest, err := inv.Spool(r.Context(), http.MaxBytesReader(w, r.Body, gd.MaxArchiveBytes))
 	if err != nil {
-		writeError(w, 413, "unable to read bounded Gravit ZIP")
+		writeError(w, 413, "unable to stage bounded Gravit ZIP: "+err.Error())
 		return
 	}
-	report, err := gd.Assess(bytes, r.Header.Get("X-Gravit-Version"))
+	defer func() { src.Close(); _ = os.Remove(src.Name()) }()
+	report, err := gd.AssessReader(r.Context(), src, size, digest, r.Header.Get("X-Gravit-Version"))
 	if err != nil {
 		writeError(w, 422, "invalid Gravit source archive: "+err.Error())
 		return
