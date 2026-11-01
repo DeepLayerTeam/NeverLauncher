@@ -1,0 +1,48 @@
+name: NeverLauncher 0.45.7 Database Upgrade
+on:
+  push:
+    paths:
+      - 'scripts/operations/db_upgrade_0457.py'
+      - 'scripts/operations/dr_03512.py'
+      - 'scripts/operations/test_db_upgrade_0457.py'
+      - 'docs/releases/0.45.7-database-upgrade.md'
+      - '.github/workflows/database-upgrade-0457.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sqlite-and-dr-regression:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Actual SQLite restore and negative failure-path tests
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_db_upgrade_0457.py -v
+          python3 -m unittest scripts/install/test_minimal_backup.py -v
+          PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_standard_backup_0453.py -v
+          PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_dr_03512.py -v
+          python3 -m py_compile scripts/operations/db_upgrade_0457.py scripts/operations/dr_03512.py
+          python3 scripts/operations/db_upgrade_0457.py --help
+          python3 scripts/version/manage.py check
+  actual-backend-migrations:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - name: Compile real migration role and execute schema migration tests
+        working-directory: services/api
+        run: |
+          set -euo pipefail
+          go test -race -count=1 ./internal/dbmigrate ./internal/sqlitecore ./internal/sqlitedurable ./cmd/launcher-api
+          go build -trimpath -o "$RUNNER_TEMP/launcher-api" ./cmd/launcher-api
+      - name: Verify source version consistency
+        run: python3 scripts/version/manage.py check

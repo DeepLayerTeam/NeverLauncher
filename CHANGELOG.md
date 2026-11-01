@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.45.7 — Database Upgrade (2026-11-01)
+
+- Implement a real offline database-upgrade controller for Minimal SQLite and Standard Compose PostgreSQL. The controller fences application writers, creates and verifies a complete pre-DDL backup, launches the new Go backend `migrate` role, checks schema and production readiness, and verifies rollback to the old version when migration fails.
+- Minimal: reuse the existing full-tree, two-database `minimal_backup` machinery, verify SQLite integrity and foreign keys, run a dedicated systemd migration unit without exposing secrets in command arguments, switch the managed API service to the new executable via a persistent drop-in, and restore the previous tree and ExecStart on failure.
+- Standard: build the actual new API/Admin images before maintenance, hold API writers stopped after a checked `pg_dump -Fc` and volume snapshot, invoke the backend migration role twice to check idempotence, and verify the new `/ready` version with automatic migrations permanently disabled in target Compose environment. On failure, drop the partly migrated PostgreSQL database, restore from the verified logical dump, replace and verify the state volumes, and bring up the source version only after checking readiness.
+- Add executable negative regressions, a real SQLite schema-change/restore test, CI with Go backend migration tests, and an operator runbook. A Network-HA schema cutover without external world/S3 coordination is explicitly refused rather than falsely certified.
+- **Verification boundary:** SQLite database bytes, intentional schema changes and restoration of a previous snapshot were tested locally; Docker is absent and local Go is below 1.27.3, so full PostgreSQL/Go service migration and independent clean-host recovery have **not** been executed in this environment. CI/live maintenance drills are required before production acceptance.
+
 ## 0.45.6 — Chaos & Disaster Recovery (2026-11-01)
 
 - Add an **executable**, isolated Network-HA fault-injection runner using actual Docker service stops (PostgreSQL, Redis, S3 MinIO), redundant API failover through HTTPS Nginx and live worker network disconnection/reconnection. Refuse non-`nl-dr-*` Compose projects, mismatching credentials and unrelated S3 ports. Require externally trusted TLS and real backend readiness.

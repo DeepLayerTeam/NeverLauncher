@@ -786,6 +786,9 @@ def snapshot(
     production: bool = False,
     approved: bool = False,
     world_backups: dict[str, Path] | None = None,
+    *,
+    resume_after: bool = True,
+    source_version: str | None = None,
 ) -> dict:
     authorize_project(project, confirm, production=production, approved=approved)
     if "network-ha" in COMPOSE_PROFILES and not world_backups:
@@ -798,6 +801,7 @@ def snapshot(
     dest.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=".dr-stage-", dir=dest.parent))
     stopped = []
+    published = False
     try:
         # Preserve initially stopped services; a backup must not silently start
         # a service that its operator deliberately left disabled.
@@ -867,7 +871,7 @@ def snapshot(
             "mode": "network-ha" if "network-ha" in COMPOSE_PROFILES else "standard",
             "worlds": worlds,
             "ephemeralRedis": "network-ha" in COMPOSE_PROFILES,
-            "version": (ROOT / "VERSION").read_text().strip(),
+            "version": source_version or (ROOT / "VERSION").read_text().strip(),
             "sourceProject": project,
             "createdUtc": datetime.now(timezone.utc).isoformat(),
             "repository": "postgres-logical",
@@ -893,12 +897,16 @@ def snapshot(
             raise DrillError("snapshot destination appeared during backup")
         stage.rename(dest)
         result["durationSeconds"] = round(time.monotonic() - started, 3)
+        published = True
         return result
     finally:
-        # Never leave isolated services down after a failed backup.
+        # A database upgrade can explicitly hold all writers stopped across
+        # backup, migration and schema verification. On snapshot failure always
+        # resume the original services; a successful upgrade owns their restart.
         try:
-            for svc in reversed(stopped):
-                compose(project, env_file, "up", "-d", svc)
+            if resume_after or not published:
+                for svc in reversed(stopped):
+                    compose(project, env_file, "up", "-d", svc)
         finally:
             if stage.exists():
                 shutil.rmtree(stage)
