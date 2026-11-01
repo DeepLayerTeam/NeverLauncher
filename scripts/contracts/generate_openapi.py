@@ -15,13 +15,7 @@ route_re = re.compile(
 files = (
     [ROUTES / "handler.go"]
     + sorted(p for p in ROUTES.glob("routes_*.go") if "legacy" not in p.name)
-    + [
-        ROUTES / "migration_0331.go",
-        ROUTES / "migration_compat_0332.go",
-        ROUTES / "migration_inventory_0333.go",
-        ROUTES / "migration_identity_0334.go",
-        ROUTES / "migration_auth_0335.go",
-    ]
+    + sorted(p for p in ROUTES.glob("migration_*.go") if not p.name.endswith("_test.go"))
 )
 routes = []
 for file in files:

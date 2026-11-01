@@ -20,10 +20,10 @@ const testClient0442 = `{"title":"Demo","info":"Server","version":"1.20.4","main
 
 func preview0442(t *testing.T) (Plan, inv.Inventory, gd.Report, gm.Report, gc.Plan, Destination) {
 	t.Helper()
-	files := map[string]string{"profiles/demo.json": testClient0442, "updates/demo/minecraft.jar": "test game file", "assets/indexes/index.json": "{}", "profiles/another.json": testClient0442, "skins/user.png": "skin bytes", "keys/private.key": "SECRET_KEY_NOT_TO_TRANSFER", "sql-export/users.csv": "id,username,uuid\n7,Demo,11111111-2222-4333-8444-555555555555\n"}
+	files := map[string]string{"profiles/demo.json": testClient0442, "updates/demo/minecraft.jar": "test game file", "updates/demo/saves/world/level.dat": "player world", "assets/indexes/index.json": "{}", "profiles/another.json": testClient0442, "skins/user.png": "skin bytes", "keys/private.key": "SECRET_KEY_NOT_TO_TRANSFER", "sql-export/users.csv": "id,username,uuid\n7,Demo,11111111-2222-4333-8444-555555555555\n"}
 	var buf bytes.Buffer
 	z := zip.NewWriter(&buf)
-	for _, name := range []string{"profiles/demo.json", "profiles/another.json", "updates/demo/minecraft.jar", "assets/indexes/index.json", "skins/user.png", "keys/private.key", "sql-export/users.csv"} {
+	for _, name := range []string{"profiles/demo.json", "profiles/another.json", "updates/demo/minecraft.jar", "updates/demo/saves/world/level.dat", "assets/indexes/index.json", "skins/user.png", "keys/private.key", "sql-export/users.csv"} {
 		w, e := z.Create(name)
 		if e != nil {
 			t.Fatal(e)
@@ -81,7 +81,7 @@ func TestPlanDeterminismAndNoSecret0442(t *testing.T) {
 	if p.PlanSHA256 != again.PlanSHA256 {
 		t.Fatalf("nondeterministic plan: %s != %s", p.PlanSHA256, again.PlanSHA256)
 	}
-	if p.TransferBytes == 0 || p.Counts["manual"] == 0 || p.Counts["excluded"] != 1 {
+	if p.TransferBytes == 0 || p.Counts["manual"] == 0 || p.Counts["excluded"] != 2 {
 		t.Fatalf("missing real transfer/manual/key exclusion: %+v", p.Counts)
 	}
 	if p.Status == "blocked" && len(p.Blockers) == 0 {
@@ -125,5 +125,30 @@ func TestMissingIdentityAndChangedDestination0442(t *testing.T) {
 	other, e := Build("run", "project", p.TargetSHA256, modified, vi, compat, mods, cp, false, IdentityPreview{SourceAccounts: 1, State: "review_required"})
 	if e != nil || other.PlanSHA256 == p.PlanSHA256 {
 		t.Fatalf("changed destination accepted old digest: %v", e)
+	}
+}
+
+// A client-owned file in a verified ZIP is explicitly excluded from the
+// approved plan; it must not accidentally become a future automatic copy.
+func TestPlanExcludesPlayerFiles0443(t *testing.T) {
+	p, _, _, _, content, _ := preview0442(t)
+	if len(content.SkippedFiles) != 1 {
+		t.Fatalf("missing source exclusion: %+v", content.SkippedFiles)
+	}
+	seen := false
+	for _, item := range p.Items {
+		if item.Source != "updates/demo/saves/world/level.dat" {
+			continue
+		}
+		seen = true
+		if item.Status != "excluded" || item.Target != "" || item.Reason == "" {
+			t.Fatalf("unsafe operation on player-owned file: %+v", item)
+		}
+	}
+	if !seen {
+		t.Fatal("player file absent from operator plan")
+	}
+	if err := Verify(p); err != nil {
+		t.Fatal(err)
 	}
 }

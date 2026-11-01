@@ -31,7 +31,16 @@ type File struct {
 	Ownership  string `json:"ownership"`
 }
 
+// SkippedFile is an audit record for a client-tree member deliberately not
+// staged. A protected/user-owned path is never copied to Never's managed tree.
+type SkippedFile struct {
+	SourcePath string `json:"sourcePath"`
+	Reason     string `json:"reason"`
+}
+
 type Plan struct {
+	SourceDirectory string                              `json:"sourceDirectory"`
+	SkippedFiles    []SkippedFile                       `json:"skippedFiles"`
 	Format          string                              `json:"format"`
 	SourceSHA256    string                              `json:"sourceSha256"`
 	InventorySHA256 string                              `json:"inventorySha256"`
@@ -45,8 +54,130 @@ type Plan struct {
 }
 
 func safeTarget(p string) bool {
+	for _, r := range p {
+		if r < 32 || r == 127 {
+			return false
+		}
+	}
 	return p != "" && len(p) < 1024 && !strings.HasPrefix(p, "/") && !strings.ContainsAny(p, "\\:\x00\r\n\t") && path.Clean(p) == p && p != ".." && !strings.HasPrefix(p, "../") && !strings.HasPrefix(strings.ToLower(p), ".")
 }
+
+// safeSourceDirectory accepts a Gravit-relative client installation directory,
+// not an arbitrary path in the source ZIP. The inventory is already authenticated
+// and rejects traversal, but relative input must also be checked independently.
+func safeSourceDirectory(s string) bool {
+	if !safeTarget(s) || len(s) > 512 {
+		return false
+	}
+	for _, part := range strings.Split(s, "/") {
+		if part == "" || part == "." || part == ".." {
+			return false
+		}
+	}
+	return true
+}
+
+// Gravit's update/exclusion rules are literal file paths or subtree names,
+// not unrestricted regexes or globs. Reuse the pattern produced by the model
+// converter, which has already validated every path and collision.
+func matchesFileRule(file string, patterns []string) bool {
+	for _, rule := range patterns {
+		if strings.HasSuffix(rule, "/**") {
+			prefix := strings.TrimSuffix(rule, "**")
+			if strings.HasPrefix(file, prefix) {
+				return true
+			}
+		} else if file == rule {
+			return true
+		}
+	}
+	return false
+}
+func hiddenClientFile(file string) bool {
+	for _, segment := range strings.Split(file, "/") {
+		if strings.HasPrefix(segment, ".") {
+			return true
+		}
+	}
+	return false
+}
+func protectedClientFile(file string) bool {
+	// Paths containing players' worlds, settings, screenshots and resource packs
+	// must never be deployed as if they were launcher-managed, even when the
+	// upstream update list is misconfigured.
+	first := strings.ToLower(strings.SplitN(file, "/", 2)[0])
+	switch first {
+	case "saves", "screenshots", "resourcepacks", "shaderpacks", "logs", "crash-reports":
+		return true
+	}
+	switch strings.ToLower(file) {
+	case "options.txt", "servers.dat", "usercache.json", "usernamecache.json":
+		return true
+	}
+	return false
+}
+
+// The optional catalog converter validates semantics, but it needs the source
+// file candidates before it can resolve ownership. Only exact file action keys
+// (never redirects, JVM commands or script arguments) grant candidacy.
+func optionalFilePaths(raw json.RawMessage) map[string]bool {
+	paths := map[string]bool{}
+	if len(raw) == 0 {
+		return paths
+	}
+	var items []map[string]json.RawMessage
+	if json.Unmarshal(raw, &items) != nil {
+		return paths
+	}
+	for _, item := range items {
+		var actions []map[string]json.RawMessage
+		if json.Unmarshal(item["actions"], &actions) != nil {
+			continue
+		}
+		for _, action := range actions {
+			var kind string
+			if json.Unmarshal(action["type"], &kind) != nil || !strings.EqualFold(kind, "file") {
+				continue
+			}
+			var entries map[string]string
+			if json.Unmarshal(action["files"], &entries) != nil {
+				continue
+			}
+			for source, target := range entries {
+				if target == "" && safeTarget(source) {
+					paths[source] = true
+				}
+			}
+		}
+	}
+	return paths
+}
+
+func sourcePaths(obj map[string]json.RawMessage, key string) ([]string, error) {
+	b, ok := obj[key]
+	if !ok {
+		return nil, nil
+	}
+	var paths []string
+	if e := json.Unmarshal(b, &paths); e != nil || paths == nil {
+		return nil, fmt.Errorf("invalid %s paths", key)
+	}
+	if len(paths) > 4096 {
+		return nil, fmt.Errorf("%s path limit exceeded", key)
+	}
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		if !safeTarget(p) {
+			return nil, fmt.Errorf("unsafe %s path: %q", key, p)
+		}
+		if !strings.HasSuffix(strings.ToLower(p), ".jar") && !strings.Contains(path.Base(p), ".") {
+			p += "/**"
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
+
 func sourceFile(z *zip.Reader, name string, limit int64) ([]byte, error) {
 	for _, f := range z.File {
 		if f.Name != name {
@@ -80,7 +211,7 @@ func sourceFile(z *zip.Reader, name string, limit int64) ([]byte, error) {
 // other profiles, launchserver, auth, wrappers, keys and custom modules are
 // never copied into a client workspace.
 func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Inventory, profilePath, projectID, profileID, name, loader string) (Plan, error) {
-	out := Plan{Format: "launcher.gravit-content.v1", SourceSHA256: saved.SourceSHA256, InventorySHA256: saved.ManifestSHA256, ProfilePath: profilePath, Files: []File{}, Blockers: []string{}}
+	out := Plan{Format: "launcher.gravit-content.v1", SourceSHA256: saved.SourceSHA256, InventorySHA256: saved.ManifestSHA256, ProfilePath: profilePath, Files: []File{}, SkippedFiles: []SkippedFile{}, Blockers: []string{}}
 	actual, e := inv.Inspect(ctx, src, size, saved.SourceSHA256)
 	if e != nil {
 		return out, e
@@ -148,10 +279,44 @@ func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Invento
 	if stem == "" || stem == "." {
 		return out, errors.New("invalid profile basename")
 	}
-	// Select exactly one source installation, and shared libraries/assets.
-	prefixes := []string{"updates/" + stem + "/", "clients/" + stem + "/"}
-	used := map[string]bool{}
+	// The Gravit profile's `dir` is the client tree identity. It is not
+	// necessarily equal to the JSON filename (renames are commonplace). Never
+	// fall back to the basename when an explicit dir was provided: that could
+	// import another profile's files without an operator noticing.
+	sourceDirectory := stem
+	if dirRaw, exists := obj["dir"]; exists {
+		if e = json.Unmarshal(dirRaw, &sourceDirectory); e != nil || !safeSourceDirectory(sourceDirectory) {
+			return out, errors.New("invalid Gravit client dir")
+		}
+	}
+	if !safeSourceDirectory(sourceDirectory) {
+		return out, errors.New("invalid Gravit client directory")
+	}
+	out.SourceDirectory = sourceDirectory
+	prefixes := []string{"updates/" + sourceDirectory + "/", "clients/" + sourceDirectory + "/"}
+	used := map[string]string{}
+	clientFiles := 0
 	optionalCandidates := []model.ManifestFile{}
+	// `update` identifies Gravit-managed members; everything else in the
+	// client tree is potentially player-owned data. A source JAR listed on the
+	// classpath is also required, even when omitted from `update`.
+	updateRules, e := sourcePaths(obj, "update")
+	if e != nil {
+		out.Blockers = append(out.Blockers, e.Error())
+		// A blocked source must not gain a more permissive interpretation.
+		updateRules = []string{".migration/no-match"}
+	}
+	optionalFiles := optionalFilePaths(optionRaw)
+	classpath := make(map[string]bool, len(converted.Settings.Runtime.Launch.ClasspathEntries))
+	for _, cp := range converted.Settings.Runtime.Launch.ClasspathEntries {
+		classpath[cp] = true
+	}
+	ownerExcluded := make([]string, 0)
+	for _, rule := range converted.Settings.FileRules {
+		if rule.Action == "exclude" {
+			ownerExcluded = append(ownerExcluded, rule.Pattern)
+		}
+	}
 	for _, f := range saved.Files {
 		if ctx.Err() != nil {
 			return out, ctx.Err()
@@ -173,22 +338,46 @@ func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Invento
 			out.Blockers = append(out.Blockers, "unsafe/oversized client member: "+f.Path)
 			continue
 		}
-		fold := strings.ToLower(target)
-		if used[fold] {
-			out.Blockers = append(out.Blockers, "destination collision: "+target)
+		clientTree := strings.HasPrefix(f.Path, prefixes[0]) || strings.HasPrefix(f.Path, prefixes[1])
+		if clientTree && (matchesFileRule(target, ownerExcluded) || protectedClientFile(target) || hiddenClientFile(target)) {
+			out.SkippedFiles = append(out.SkippedFiles, SkippedFile{f.Path, "player-owned or protected client path"})
+			if classpath[target] {
+				out.Blockers = append(out.Blockers, "classpath references protected user data: "+target)
+			}
 			continue
 		}
-		used[fold] = true
+		if clientTree && !matchesFileRule(target, updateRules) && !classpath[target] && !optionalFiles[target] {
+			out.SkippedFiles = append(out.SkippedFiles, SkippedFile{f.Path, "not listed in Gravit update or classpath"})
+			continue
+		}
+		fold := strings.ToLower(target)
+		if prior, duplicate := used[fold]; duplicate {
+			out.Blockers = append(out.Blockers, "destination collision between "+prior+" and "+f.Path)
+			continue
+		}
+		used[fold] = f.Path
 		if strings.HasSuffix(f.Path, "/") || len(f.SHA256) != 64 {
 			out.Blockers = append(out.Blockers, "invalid member: "+f.Path)
 			continue
 		}
 		out.Files = append(out.Files, File{SourcePath: f.Path, TargetPath: target, Size: f.Size, SHA256: f.SHA256, Ownership: "required"})
-		optionalCandidates = append(optionalCandidates, model.ManifestFile{Path: target, SHA256: f.SHA256, Size: f.Size, Ownership: "optional", Required: false})
+		if clientTree {
+			clientFiles++
+		}
+		if optionalFiles[target] {
+			if classpath[target] {
+				out.Blockers = append(out.Blockers, "optional file is required by base classpath: "+target)
+			}
+			optionalCandidates = append(optionalCandidates, model.ManifestFile{Path: target, SHA256: f.SHA256, Size: f.Size, Ownership: "optional", Required: false})
+		}
 	}
 	sort.Slice(out.Files, func(i, j int) bool { return out.Files[i].TargetPath < out.Files[j].TargetPath })
-	if len(out.Files) == 0 || len(out.Files) > MaxImportFiles {
-		out.Blockers = append(out.Blockers, "no supported client files or file limit exceeded")
+	sort.Slice(out.SkippedFiles, func(i, j int) bool { return out.SkippedFiles[i].SourcePath < out.SkippedFiles[j].SourcePath })
+	if clientFiles == 0 {
+		out.Blockers = append(out.Blockers, "no managed files for selected Gravit client directory: "+sourceDirectory)
+	}
+	if len(out.Files) > MaxImportFiles {
+		out.Blockers = append(out.Blockers, "client file limit exceeded")
 	}
 	if len(optionRaw) > 0 && !bytes.Equal(bytes.TrimSpace(optionRaw), []byte("[]")) {
 		migrated, e := model.ConvertGravitOptionalView02411(raw, model.NewComponentCatalog0241(nil, 1), optionalCandidates)

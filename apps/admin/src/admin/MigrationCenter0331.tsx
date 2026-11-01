@@ -122,6 +122,8 @@ type ContentPlan0337 = {
   sourceSha256: string;
   inventorySha256: string;
   profilePath: string;
+  sourceDirectory?: string;
+  skippedFiles?: { sourcePath: string; reason: string }[];
   filesSha256: string;
   ready: boolean;
   blockers: string[];
@@ -1671,8 +1673,11 @@ export function MigrationCenter0331({
           <h3>Content &amp; Profile Migration · MIG07</h3>
           <p>
             Проверяемый перенос одного Gravit ClientProfile и содержимого
-            updates/&lt;profile&gt;, clients/&lt;profile&gt;, libraries/,
-            assets/ в зашифрованный Never Build Workspace. Сервер не выполняет
+            updates/&lt;dir&gt;, clients/&lt;dir&gt;, libraries/,
+            assets/ в зашифрованный Never Build Workspace. Импортёр использует
+            поле <code>dir</code> Gravit ClientProfile, если оно задано;
+            пользовательские файлы не копируются. Каждый запуск миграции
+            закрепляет один профиль и собственный dry-run. Сервер не выполняет
             исходные JAR и не копирует авторизацию, ключи или модули. Новый
             релиз подписывается только после отдельной проверки.
           </p>
@@ -1680,11 +1685,19 @@ export function MigrationCenter0331({
             <span>Путь профиля в ZIP</span>
             <input
               value={contentProfilePath}
+              list="gravit-profile-paths-0443"
               onChange={(e) => {
                 setContentProfilePath(e.target.value);
                 setContentPreview(null);
+                setContentState(null);
               }}
             />
+            <datalist id="gravit-profile-paths-0443">
+              {(inventory?.files ?? []).filter((f) => f.kind === "client_profile").map((f) =>
+                <option key={f.path} value={f.path} />
+              )}
+            </datalist>
+            {inventory && <span className="muted">Профилей в проверенном ZIP: {inventory.files.filter((f) => f.kind === "client_profile").length}. Выберите точный путь из списка; для другого профиля создайте отдельный запуск миграции.</span>}
           </label>
           <label className="field">
             <span>ID нового профиля Never</span>
@@ -1789,7 +1802,8 @@ export function MigrationCenter0331({
               <p>
                 Профиль:{" "}
                 {contentPreview.ready ? "может быть перенесён" : "заблокирован"}
-                , файлов: {contentPreview.files.length}, optional:{" "}
+                , каталог исходного клиента: <code>{contentPreview.sourceDirectory || "не определён"}</code>;
+                файлов: {contentPreview.files.length}; пропущено (не копируется): {contentPreview.skippedFiles?.length ?? 0}, optional:{" "}
                 {contentPreview.optional?.ready
                   ? "преобразованы"
                   : contentPreview.optional
@@ -1802,6 +1816,12 @@ export function MigrationCenter0331({
                   {x}
                 </p>
               ))}
+              {Boolean(contentPreview.skippedFiles?.length) && <details>
+                <summary>Файлы, оставленные на стороне Gravit / игрока ({contentPreview.skippedFiles?.length ?? 0})</summary>
+                <ul>{contentPreview.skippedFiles?.map((f) =>
+                  <li key={f.sourcePath}><code>{f.sourcePath}</code> — {f.reason}</li>
+                )}</ul>
+              </details>}
               <details>
                 <summary>План, поля и SHA-256</summary>
                 <pre>{JSON.stringify(contentPreview, null, 2)}</pre>

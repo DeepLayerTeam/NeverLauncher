@@ -114,6 +114,10 @@ func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c
 	for _, f := range content.Files {
 		transferred[f.SourcePath] = f
 	}
+	skipped := map[string]string{}
+	for _, f := range content.SkippedFiles {
+		skipped[f.SourcePath] = f.Reason
+	}
 	for _, f := range v.Files {
 		row := Item{Kind: f.Kind, Source: f.Path, Bytes: f.Size, SHA256: f.SHA256, Status: "manual"}
 		switch f.Kind {
@@ -126,7 +130,10 @@ func Build(runID, projectID, targetSHA string, d Destination, v inv.Inventory, c
 				row.Reason = "profile not selected: configure and preview each profile before cutover"
 			}
 		case "asset", "client", "library":
-			if t, ok := transferred[f.Path]; ok {
+			if reason, ok := skipped[f.Path]; ok {
+				row.Status = "excluded"
+				row.Reason = reason
+			} else if t, ok := transferred[f.Path]; ok {
 				row.Status = "automatic"
 				row.Target = t.TargetPath
 				row.Reason = "file SHA-256 pinned to source inventory"

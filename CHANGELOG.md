@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.44.3 — Gravit client profile and managed-file migration
+
+- Content importer now resolves the actual `dir` field of a Gravit ClientProfile, instead of assuming the client tree is named after its `profiles/*.json` file. A missing/unsafe explicit directory blocks staging rather than silently copying another profile’s files.
+- Stage only client members managed by the source `update` rules, required by the verified classpath, or referenced by supported `updateOptional` file actions; a present but empty `update` list does not authorize wholesale import. Hash-pinned shared libraries/assets retain existing handling.
+- Protect player-owned worlds, settings, screenshots, resource packs, hidden client files and Gravit `updateExclusions`. Skipped files are not staged; their exact source paths and reasons are available in the durable dry-run and Migration Center. Missing managed classpath members and collisions remain hard blockers.
+- Fix the optional-file candidate selection: pass only files declared by optional file actions to the production optional converter, preserving optional ownership instead of incorrectly treating every required file as an unowned optional component.
+- Migration Center now offers source-profile paths from the verified inventory, shows resolved client directory, staged counts and skipped files. Each migration run continues to pin one selected source profile; migrate other profiles in separate runs with their own dry-run and reconciliation.
+- Include all migration HTTP routes in generated OpenAPI, using the same route glob as the contract validator. Added regression cases for renamed source directories, protected file exclusion, empty source update rules, optional file actions, source integrity and skip accounting.
+- **Verification boundary:** Source analyzer and plan packages passed Go race tests/vet with a temporary Go 1.23.2 test-only module directive; committed module still requires Go 1.27.3. Local full HTTP/PG integration, Admin production build, actual Gravit project and Minecraft game launch are **not verified**. No production cutover approval follows from unit tests.
+
 ## 0.44.2 — Gravit dry-run with source and target pinned migration plan
 
 - Implemented a real, one-selected-profile dry-run that reuses ZIP inventory, compatibility, FileAuth/SQL identity extraction, static module inspection and the production content/optional converter. Produces per-file statuses, actual transfer sizes, source UUID conflicts, replacement warnings, concrete blockers and an operator checklist; never executes foreign JARs or writes a playable release during preview.
