@@ -1,0 +1,49 @@
+name: NeverLauncher 0.45.8 Component Upgrade
+on:
+  push:
+    paths:
+      - 'scripts/operations/component_upgrade_0458.py'
+      - 'scripts/operations/test_component_upgrade_0458.py'
+      - 'scripts/operations/dr_03512.py'
+      - 'docs/releases/0.45.8-component-upgrade.md'
+      - '.github/workflows/component-upgrade-0458.yml'
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  component-control-regressions:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Real host byte-swap and production orchestration negative tests
+        run: |
+          set -euo pipefail
+          PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_component_upgrade_0458.py -v
+          PYTHONPATH=scripts/operations python3 -m unittest scripts/operations/test_db_upgrade_0457.py -v
+          python3 -m py_compile scripts/operations/component_upgrade_0458.py scripts/operations/dr_03512.py
+          python3 scripts/version/manage.py check
+      - name: Validate full Standard and Network-HA Compose graphs
+        run: |
+          set -euo pipefail
+          docker compose -f deploy/production/docker-compose.yml --env-file deploy/production/env.production.example config --quiet
+          docker compose -f deploy/production/docker-compose.yml -f deploy/production/docker-compose.network-ha.yml --profile network-ha --env-file deploy/production/env.production.example config --quiet
+  production-client-updater:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - name: Build actual NeverLauncher CLI and exercise native transactional updater
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          go build -trimpath -ldflags="-X main.version=$(cat ../VERSION)" -o "$RUNNER_TEMP/launcher" ./cmd/launcher
+          "$RUNNER_TEMP/launcher" version | grep -F "$(cat ../VERSION)"
+          go test -count=1 ./cmd/launcher -run 'Test(TransactionalUpdater|ComponentUpdate|ComponentTree|ComponentDelegatedTrust|SignedComponentSet|ExtensionUpdatesCLI)' 

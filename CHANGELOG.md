@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.45.8 — Component Upgrade (2026-11-01)
+
+- Add executable Standard API/Admin component cutover: prebuild and pin exact image IDs, freeze writers, create and validate PostgreSQL plus blob/coordinator cold snapshot, verify unchanged WAL after backup, switch API/Admin before exposing Nginx, and revert to original image IDs and verified API version if cutover fails. No automatic schema migrations or silent data rewind.
+- Implement separate Network-HA cold component cutover for both APIs and independent workers with a verified PostgreSQL/S3/stopped-world snapshot, restored Redis availability, per-instance readiness and rollback of application images. Reject uncoordinated distributed writers; this is not rolling zero-downtime upgrade.
+- Implement Linux atomic root-owned executable replacement with strict SHA-256 pinning, fsync, persistent previous binary, an explicit pinned old-binary rollback command, systemd restart and recovery; check actual minimal API `/ready` version and service state, and preserve the prior executable on failure. Expose operational CLI and ServerBridge host updates without inventing a new transport.
+- Correct the API Docker factory-CLI stage to embed the actual release version instead of `dev`, so host/operator version checks and embedded CLI updates refer to the same 0.45.8 release.
+- Use the already implemented signed native `launcher update components` for Desktop/Runtime/Guard (must commit version 0.45.8); use the existing server-side extension update resolver and transaction manager with MFA and rollback. No development-mode signature bypass.
+- Add real filesystem replacement and negative/rollback tests, pinned updater and extension transaction tests, maintenance runbook and CI. Tooling changes do not replace release certification of final signed files.
+- **Verification boundary:** local host-byte and simulated service-orchestration tests can run here. Docker, full Go 1.27.3 and cross-platform client hardware are not available; a live two-API/worker cluster, real production Bridge JVM and six signed Desktop targets have **not** been independently certified in this environment.
+
 ## 0.45.7 — Database Upgrade (2026-11-01)
 
 - Implement a real offline database-upgrade controller for Minimal SQLite and Standard Compose PostgreSQL. The controller fences application writers, creates and verifies a complete pre-DDL backup, launches the new Go backend `migrate` role, checks schema and production readiness, and verifies rollback to the old version when migration fails.

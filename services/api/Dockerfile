@@ -1,7 +1,8 @@
 FROM golang:1.27.3-alpine AS factory-cli
+ARG LAUNCHER_VERSION=dev
 WORKDIR /factory-src
 COPY cli/ ./
-RUN CGO_ENABLED=0 go build -trimpath -o /out/launcher ./cmd/launcher
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-X main.version=${LAUNCHER_VERSION}" -o /out/launcher ./cmd/launcher
 
 FROM golang:1.27.3-alpine AS build
 WORKDIR /src
