@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.45.4 — Network-HA recovery: world state, ServerBridge fencing, fresh Redis
+
+- Extend the real cold Docker Compose DR runner with schema-3 Network-HA snapshots. **Do not copy/restore Redis AOF:** Network-HA restore requires an empty fresh Redis volume and refuses prior Redis-bearing network snapshots.
+- Capture independently confirmed stopped Go world-backup/v1 payloads (one or more world roots), copy and verify every payload SHA-256, restore into fresh host paths using fsynced temporary files/atomic rename; never auto-start game JVMs. Network-HA requires explicit world backups and exact destination mapping.
+- Restore PostgreSQL transactionally, then **before starting API** run a real PostgreSQL transaction that fences stale ServerBridge command leases, expires pending commands, invalidates join/player/handoff/transfer state, marks old active nodes credential-rotation-required, advances runtime epochs, and fences in-flight durable jobs, outbox, extension deliveries and migration leases. Verify zero unsafe active rows; a failure blocks API startup.
+- Verify S3 objects by two independent byte-level downloads during backup, restore only into a distinct empty S3 bucket and verify all bytes again after upload. Refuse existing Docker state and wrong image version; preserve safe failures for operator inspection. Include operator runbook and negative tests with an integration test consuming output of the actual Go `nl` world-backup command.
+- **Verification limit:** Python filesystem/CLI integration tests and existing local regression tests pass. No live two-host Docker/PostgreSQL/Redis/S3 deployment, game server recovery or multi-node fencing test was executed locally. This release is not independently certified for production Network-HA failover.
+
+
 ## 0.45.3 — Standard PostgreSQL, blobs and coordinator consistent cold backup/restore
 
 - Harden the existing **real Docker Compose** disaster-recovery runner for Standard. Stop only services that were running and preserve previously disabled services; refuse snapshot unless PostgreSQL remains available and the API, Admin and Nginx are quiescent. Assert no extra PostgreSQL client sessions before and after physical blob/coordinator copy, and reject a backup if PostgreSQL WAL advances during that maintenance window (including short-lived external writers). These are deliberate fail-closed conditions, not a claim of HA or zero-downtime backup.

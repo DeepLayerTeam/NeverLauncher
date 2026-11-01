@@ -1,10 +1,11 @@
-name: Launcher 0.45.3 Standard Backup/Restore and DR Security Regression
+name: Launcher 0.45.4 Standard and Network-HA Recovery Regression
 on:
   workflow_dispatch:
   push:
     paths:
       - 'scripts/operations/**'
       - 'docs/releases/0.45.3-standard-backup-restore.md'
+      - 'docs/releases/0.45.4-network-ha-recovery.md'
       - 'services/api/internal/httpapi/operations_backup.go'
       - 'services/api/internal/httpapi/operations_backup_test.go'
       - '.github/workflows/chaos-dr-03512.yml'
@@ -12,6 +13,7 @@ on:
     paths:
       - 'scripts/operations/**'
       - 'docs/releases/0.45.3-standard-backup-restore.md'
+      - 'docs/releases/0.45.4-network-ha-recovery.md'
       - 'services/api/internal/httpapi/operations_backup.go'
       - 'services/api/internal/httpapi/operations_backup_test.go'
       - '.github/workflows/chaos-dr-03512.yml'
@@ -29,10 +31,29 @@ jobs:
         run: |
           python -m unittest discover -s scripts/operations -p 'test_dr_03512.py' -v
           python -m unittest discover -s scripts/operations -p 'test_standard_backup_0453.py' -v
+          python -m unittest discover -s scripts/operations -p 'test_network_ha_recovery_0454.py' -v
       - name: Verify runner CLI and source syntax
         run: |
           python -m py_compile scripts/operations/dr_03512.py
           python scripts/operations/dr_03512.py --help
+  world-backup-native:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build actual CLI and execute world snapshot/restore with SHA-256 verification
+        run: |
+          cd cli
+          go build -o "$RUNNER_TEMP/nl" ./cmd/launcher
+          go test -count=1 ./cmd/launcher -run '^TestWorldBackup'
+          cd ..
+          NL_WORLD_CLI="$RUNNER_TEMP/nl" python -m unittest discover -s scripts/operations -p 'test_network_ha_recovery_0454.py' -v
   api-storage-restore:
     runs-on: ubuntu-24.04
     steps:
