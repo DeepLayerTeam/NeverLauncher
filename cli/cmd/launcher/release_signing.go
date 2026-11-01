@@ -54,6 +54,9 @@ func signReleaseBundle(dir, privateKeyPath string) error {
 	if err := verifyReleaseBOMBinding03214(dir, bundleVersion); err != nil {
 		return fmt.Errorf("refusing to sign unbound release BOM: %w", err)
 	}
+	if err := verifyDistributionSupplyChain04511(dir, bundleVersion); err != nil {
+		return fmt.Errorf("refusing to sign inconsistent distribution: %w", err)
+	}
 	if singleNodeGARequired0330(bundleVersion) {
 		raw, err := os.ReadFile(filepath.Join(dir, "RELEASE_MANIFEST.json"))
 		if err != nil {

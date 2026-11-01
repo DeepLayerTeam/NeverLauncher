@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.45.11 — Signed Distribution: exact final packages, SPDX and SLSA binding (2026-11-01)
+
+- Bind six **actual final platform-signed installer ZIP/TAR.GZ files** into SPDX 2.3 packages with SHA-256 hashes. Preserve existing dependency package graph. Refuse packaging if any target package is missing, empty or a symlink.
+- Implement an executable fail-closed release supply-chain verifier that cross-checks six final package hashes, source commit, SPDX relationships and checksums, SLSA in-toto subjects, RELEASE_MANIFEST and independently verified GA target receipts. Enforce in both direct `launcher release sign` and `launcher release verify`, as well as production build pipeline before signing; keep the existing Ed25519, independent GA and exact-byte rehearsal gates.
+- On native Windows and macOS signing workflows verify signatures from **extracted final installer archives** using Authenticode certificate-chain, Developer ID, Gatekeeper and stapled notarization checks. Add regression tests (including tampered package/SBOM/provenance/GA) and operator runbook.
+- **Verification boundary:** locally verified Go checks and fixture tamper rejection. Live native vendor signing, six physical platform execution reports and a final hosted release are not produced by this local implementation and must pass independently.
+
+
 ## 0.45.10 — Branding GA implementation (2026-11-01)
 
 - Fix broken native Go package paths in the actual multi-platform installer builder and Prestarter builder, and test the extracted **real** Linux .deb installer using its embedded pinned Ed25519 verifier. A signed but invalid brand PNG is rejected by the Go validator.

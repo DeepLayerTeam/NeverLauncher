@@ -923,6 +923,14 @@ if [[ "${VERSION}" == "0.25.0" ]]; then
   log "Authenticated all six real-platform signed Optional Components GA attestations"
 fi
 
+# 0.45.11+: verify actual signed installer bytes against the SPDX package
+# checksums, SLSA subjects, release BOM and independently verified GA receipt
+# BEFORE minting the externally trusted release signature.
+if [[ "$(printf '%s\n' '0.45.11' "${VERSION}" | sort -V | head -n1)" == '0.45.11' ]]; then
+  log "Fail-closed signed distribution: six exact packages + SPDX/SLSA/GA"
+  "${RELEASE_CLI}" release distribution-verify "${OUT_DIR}"
+fi
+
 log "Ed25519 release signing"
 "${RELEASE_CLI}" release sign "${OUT_DIR}" --private-key "${PRIVATE_KEY}"
 

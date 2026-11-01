@@ -4,6 +4,7 @@ on:
     paths:
       - 'VERSION'
       - 'cli/cmd/launcher/release_bom_03214*'
+      - 'cli/cmd/launcher/release_distribution_04511*'
       - 'cli/cmd/launcher/release_commands.go'
       - 'cli/cmd/launcher/release_signing.go'
       - 'scripts/release/build-release.sh'
@@ -19,6 +20,7 @@ on:
     paths:
       - 'VERSION'
       - 'cli/cmd/launcher/release_bom_03214*'
+      - 'cli/cmd/launcher/release_distribution_04511*'
       - 'cli/cmd/launcher/release_commands.go'
       - 'cli/cmd/launcher/release_signing.go'
       - 'scripts/release/build-release.sh'
@@ -49,5 +51,8 @@ jobs:
         run: |
           go test -race ./cmd/launcher -run '^TestReleaseBOM03214' -count=1 -v
           go vet ./cmd/launcher
+      - name: Signed distribution package binding and negative tests
+        working-directory: cli
+        run: go test -race ./cmd/launcher -run '^TestReleaseDistribution04511' -count=1 -v
       - name: Validate bash entrypoint
         run: bash -n scripts/release/build-release.sh

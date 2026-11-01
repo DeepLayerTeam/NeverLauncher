@@ -249,6 +249,28 @@ func handleRelease(args []string) error {
 		}
 		fmt.Println("Windows Protection GA certification пройдена: fail-closed user-mode boundary + RC/adversarial/signed x64/ARM64 binding")
 		return nil
+	case "distribution-verify":
+		if len(args) < 2 {
+			return errors.New("release distribution-verify requires release bundle directory")
+		}
+		ver, err := releaseBundleVersion(args[1])
+		if err != nil {
+			return err
+		}
+		if !distributionRequired04511(ver) {
+			return fmt.Errorf("signed distribution verification requires 0.45.11+: %s", ver)
+		}
+		if err := verifyReleaseBOM03214(args[1], ver); err != nil {
+			return err
+		}
+		if err := verifyReleaseBOMBinding03214(args[1], ver); err != nil {
+			return err
+		}
+		if err := verifyDistributionSupplyChain04511(args[1], ver); err != nil {
+			return err
+		}
+		fmt.Println("Six final signed-platform installer hashes match SPDX, SLSA, independent GA receipt and release BOM. OS signature trust is checked by native GA checks.")
+		return nil
 	case "sign":
 		if len(args) < 2 {
 			return errors.New("release sign требует путь к каталогу релиза")
@@ -582,6 +604,9 @@ func buildReleaseBundle(ver, out, sourceRoot, compatibilityMatrixPath, compatibi
 	sbom, err := dependencySBOM(sourceRoot, ver)
 	if err != nil {
 		return fmt.Errorf("dependency SBOM: %w", err)
+	}
+	if err := bindDistributionSBOM04511(sbom, out, ver); err != nil {
+		return fmt.Errorf("exact signed installer SPDX: %w", err)
 	}
 	if err := writeJSONFile(filepath.Join(out, "SBOM.spdx.json"), sbom); err != nil {
 		return err
@@ -1220,6 +1245,9 @@ func verifyReleaseBundleWithTrustUnlocked(dir, publicKeyPath, trustStatePath, tr
 	}
 	if err := verifyReleaseBOMBinding03214(dir, manifest.Version); err != nil {
 		return fmt.Errorf("release BOM signature boundary: %w", err)
+	}
+	if err := verifyDistributionSupplyChain04511(dir, manifest.Version); err != nil {
+		return fmt.Errorf("signed distribution supply chain: %w", err)
 	}
 	if releaseVerificationV2Required0158(manifest.Version) {
 		ctx, err := verifyReleaseSignatureV20158(dir, publicKeyPath, trustStatePath, trustPolicyPath)

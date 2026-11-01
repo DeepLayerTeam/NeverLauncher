@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -20,10 +21,48 @@ func bomFixtures03214(t *testing.T) (source, dir string) {
 	if err := os.WriteFile(filepath.Join(source, "VERSION"), []byte("0.32.14\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	for _, rel := range bomSources03214() {
+	for component, rel := range bomSources03214() {
 		input, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
 		if err != nil {
 			t.Fatal(err)
+		}
+		// Exercise the historical BOM format with a self-contained 0.32.14
+		// fixture, even when the checked-out production project has advanced.
+		// Never modify the actual repository source or relax BOM verification.
+		expected := bomComponentVersion03214(component, "0.32.14")
+		if strings.HasSuffix(rel, "Cargo.toml") {
+			re := regexp.MustCompile(`(?m)^(version\s*=\s*)"[^"]+"`)
+			input = re.ReplaceAll(input, []byte(`${1}"`+expected+`"`))
+		} else if strings.HasSuffix(rel, ".json") && !strings.HasSuffix(rel, "targets.json") && !strings.HasSuffix(rel, "hybrid-targets.json") {
+			var doc map[string]any
+			if err := json.Unmarshal(input, &doc); err != nil {
+				t.Fatal(err)
+			}
+			doc["version"] = expected
+			if packages, ok := doc["packages"].(map[string]any); ok {
+				if root, ok := packages[""].(map[string]any); ok {
+					root["version"] = expected
+				}
+			}
+			var err error
+			input, err = json.Marshal(doc)
+			if err != nil {
+				t.Fatal(err)
+			}
+		} else if strings.HasSuffix(rel, "targets.json") || strings.HasSuffix(rel, "hybrid-targets.json") {
+			var doc map[string]any
+			if err := json.Unmarshal(input, &doc); err != nil {
+				t.Fatal(err)
+			}
+			doc["productVersion"] = expected
+			var err error
+			input, err = json.Marshal(doc)
+			if err != nil {
+				t.Fatal(err)
+			}
+		} else if rel == "schemas/openapi.yaml" {
+			re := regexp.MustCompile(`Launcher [0-9]+\.[0-9]+\.[0-9]+\.`)
+			input = re.ReplaceAll(input, []byte("Launcher "+expected+"."))
 		}
 		target := filepath.Join(source, filepath.FromSlash(rel))
 		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
@@ -179,11 +218,19 @@ func TestReleaseBOM03214SourcePin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	updated := strings.Replace(string(raw), `"version": "0.32.14"`, `"version": "0.32.13"`, 1)
-	if updated == string(raw) {
-		t.Fatal("fixture did not contain version")
+	var lock map[string]any
+	if err := json.Unmarshal(raw, &lock); err != nil {
+		t.Fatal(err)
 	}
-	if err := os.WriteFile(p, []byte(updated), 0600); err != nil {
+	if lock["version"] != "0.32.14" {
+		t.Fatal("unexpected fixture version")
+	}
+	lock["version"] = "0.32.13"
+	updated, err := json.Marshal(lock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, updated, 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := writeReleaseBOM03214(dir, source, "0.32.14"); err == nil {

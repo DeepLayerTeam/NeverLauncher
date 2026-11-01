@@ -118,6 +118,23 @@ jobs:
           python3 scripts/release/secret-scan.py "${DIR}/launcher-desktop-${VERSION}-macos-x64.zip"
           python3 scripts/release/secret-scan.py "${DIR}/launcher-desktop-${VERSION}-macos-arm64.zip"
 
+      - name: Verify final packaged app Developer ID, Gatekeeper and notarization
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          for ARCH in x64 arm64; do
+            ZIP="dist/release-${VERSION}/launcher-desktop-${VERSION}-macos-${ARCH}.zip"
+            test -s "$ZIP" || { echo "missing final $ARCH package" >&2; exit 2; }
+            EXTRACT="$(mktemp -d)"
+            unzip -q "$ZIP" -d "$EXTRACT"
+            APP="$EXTRACT/Launcher.app"
+            test -d "$APP" || { echo "missing app in final ZIP" >&2; exit 2; }
+            codesign --verify --deep --strict --verbose=2 "$APP"
+            spctl --assess --type execute --verbose=2 "$APP"
+            xcrun stapler validate "$APP"
+            rm -rf "$EXTRACT"
+          done
       - name: Remove imported signing material
         if: always()
         shell: bash

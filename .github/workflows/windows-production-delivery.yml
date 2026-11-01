@@ -70,6 +70,29 @@ jobs:
           }
           & "$env:RUNNER_TEMP\nl.exe" delivery manifest --bundle $Dir --version $Version
           & "$env:RUNNER_TEMP\nl.exe" delivery verify-windows --bundle $Dir --version $Version --production
+      - name: Verify actual OS Authenticode signatures on packaged Windows executables
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $Version = (Get-Content VERSION -Raw).Trim()
+          $Dir = "dist/release-$Version"
+          foreach ($Arch in @('x64','arm64')) {
+            $Zip = Join-Path $Dir "launcher-desktop-$Version-windows-$Arch.zip"
+            if (-not (Test-Path -PathType Leaf $Zip)) { throw "missing final $Arch package" }
+            $Extract = Join-Path $env:RUNNER_TEMP "nl-verified-$Arch"
+            if (Test-Path $Extract) { Remove-Item $Extract -Recurse -Force }
+            Expand-Archive -LiteralPath $Zip -DestinationPath $Extract -Force
+            $Executable = @(Get-ChildItem -LiteralPath $Extract -Recurse -File | Where-Object { $_.Extension -in @('.exe', '.dll') })
+            if (@($Executable | Where-Object Name -eq 'launcher-desktop.exe').Count -ne 1) { throw "missing final signed Desktop PE inside $Zip" }
+            if ($Executable.Count -lt 4) { throw "missing signed installer components inside $Zip" }
+            foreach ($Exe in $Executable) {
+              $Signature = Get-AuthenticodeSignature -LiteralPath $Exe.FullName
+              if ($Signature.Status -ne 'Valid' -or -not $Signature.SignerCertificate) {
+                throw "invalid Authenticode chain for $($Exe.FullName): $($Signature.Status)"
+              }
+              Write-Host "Verified final signed package executable: $($Exe.Name) $Arch"
+            }
+          }
       - name: Remove signing credential file
         if: always()
         shell: pwsh

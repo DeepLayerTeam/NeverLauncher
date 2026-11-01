@@ -14,15 +14,22 @@ import (
 	"time"
 )
 
+type sbomChecksum04511 struct {
+	Algorithm     string `json:"algorithm"`
+	ChecksumValue string `json:"checksumValue"`
+}
+
 type sbomPackage struct {
-	SPDXID           string              `json:"SPDXID"`
-	Name             string              `json:"name"`
-	VersionInfo      string              `json:"versionInfo"`
-	DownloadLocation string              `json:"downloadLocation"`
-	FilesAnalyzed    bool                `json:"filesAnalyzed"`
-	LicenseConcluded string              `json:"licenseConcluded,omitempty"`
-	LicenseDeclared  string              `json:"licenseDeclared,omitempty"`
-	ExternalRefs     []map[string]string `json:"externalRefs,omitempty"`
+	PrimaryPackagePurpose string              `json:"primaryPackagePurpose,omitempty"`
+	Checksums             []sbomChecksum04511 `json:"checksums,omitempty"`
+	SPDXID                string              `json:"SPDXID"`
+	Name                  string              `json:"name"`
+	VersionInfo           string              `json:"versionInfo"`
+	DownloadLocation      string              `json:"downloadLocation"`
+	FilesAnalyzed         bool                `json:"filesAnalyzed"`
+	LicenseConcluded      string              `json:"licenseConcluded,omitempty"`
+	LicenseDeclared       string              `json:"licenseDeclared,omitempty"`
+	ExternalRefs          []map[string]string `json:"externalRefs,omitempty"`
 }
 
 type sbomRelationship struct {
