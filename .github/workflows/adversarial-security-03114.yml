@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
@@ -54,7 +54,7 @@ jobs:
     runs-on: windows-2025
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: services/api/go.mod
       - name: Windows sandbox and Host Protocol compilation
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: services/api/go.mod
       - name: macOS compile is NOT OS confinement certification
@@ -81,7 +81,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: services/api/go.mod
       - name: Real namespaces, cgroup and descendant isolation (SKIP is failure)
@@ -99,7 +99,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: services/api/go.mod
       - name: Real AppContainer, ACL, Job and child process tests (SKIP is failure)

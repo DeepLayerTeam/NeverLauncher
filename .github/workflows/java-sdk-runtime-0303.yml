@@ -58,7 +58,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: cli/go.mod
       - name: Build and test real Java backend and CLI subprocesses
@@ -79,7 +79,7 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: services/api/go.mod
       - name: Real Go host HTTP broker, persistence, permission revocation and security tests
