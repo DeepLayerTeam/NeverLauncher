@@ -60,6 +60,8 @@ type Report struct {
 	StartedAt  time.Time      `json:"startedAt"`
 	FinishedAt time.Time      `json:"finishedAt"`
 	Counts     map[string]int `json:"counts"`
+	PlanSHA256 string         `json:"planSha256"`
+	FatalError string         `json:"fatalError,omitempty"`
 	Rows       []Record       `json:"rows"`
 }
 
@@ -102,7 +104,11 @@ func LoadMappings(data []byte) (map[string]string, error) {
 	if err := json.Unmarshal(data, &rows); err != nil {
 		return nil, err
 	}
+	if rows == nil || len(rows) > 100000 {
+		return nil, errors.New("expected non-null mapping array with at most 100000 entries")
+	}
 	result := make(map[string]string, len(rows))
+	reverse := make(map[string]string, len(rows))
 	for _, p := range rows {
 		from, err := CanonicalUUID(p.SourceUUID)
 		if err != nil {
@@ -115,7 +121,11 @@ func LoadMappings(data []byte) (map[string]string, error) {
 		if old, ok := result[from]; ok && old != to {
 			return nil, fmt.Errorf("ambiguous mapping for %s", from)
 		}
+		if prior, exists := reverse[to]; exists && prior != from {
+			return nil, fmt.Errorf("distinct source UUIDs %s and %s map to the same target UUID", prior, from)
+		}
 		result[from] = to
+		reverse[to] = from
 	}
 	return result, nil
 }
@@ -128,8 +138,8 @@ func LoadJSON(data []byte) ([]SourceRow, error) {
 	if err := json.Unmarshal(data, &rows); err != nil {
 		return nil, fmt.Errorf("expected TextureProvider textures JSON array: %w", err)
 	}
-	if len(rows) > 100000 {
-		return nil, errors.New("too many TextureProvider records")
+	if rows == nil || len(rows) > 100000 {
+		return nil, errors.New("expected non-null TextureProvider array with at most 100000 records")
 	}
 	return rows, nil
 }
@@ -204,6 +214,39 @@ func VerifySourceHash(hash string, b []byte) error {
 	return nil
 }
 
+// PlanSHA256 binds a reviewed dry-run to the exact rows, identity mapping and
+// import options. It is a source/configuration digest, not a claim that
+// TextureProvider PNGs were verified: Run(dry-run=true) does that separately.
+// The input file_url is intentionally excluded because remote URLs are never
+// fetched. Canonical JSON encoding sorts mapping keys deterministically.
+func (r *Runner) PlanSHA256(rows []SourceRow) (string, error) {
+	type safeRow struct {
+		ID        string          `json:"id"`
+		UserUUID  string          `json:"userUuid"`
+		Kind      string          `json:"kind"`
+		Hash      string          `json:"hash"`
+		Metadata  json.RawMessage `json:"metadata"`
+		ObjectKey string          `json:"objectKey"`
+	}
+	safe := make([]safeRow, 0, len(rows))
+	for _, row := range rows {
+		safe = append(safe, safeRow{row.ID, row.UserUUID, row.TextureType, row.FileHash, row.Metadata, row.ObjectKey})
+	}
+	b, err := json.Marshal(struct {
+		Domain         string            `json:"domain"`
+		SourceID       string            `json:"sourceId"`
+		ObjectTemplate string            `json:"objectTemplate"`
+		Replace        bool              `json:"replace"`
+		Mapping        map[string]string `json:"mapping"`
+		Rows           []safeRow         `json:"rows"`
+	}{"never.gravit.texture-plan.0445", r.SourceID, r.ObjectTemplate, r.Replace, r.Mapping, safe})
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:]), nil
+}
+
 func (r *Runner) Run(ctx context.Context, rows []SourceRow) (Report, error) {
 	out := Report{Format: "launcher.gravit-texture-import.v1", SourceID: r.SourceID, DryRun: r.DryRun, StartedAt: time.Now().UTC(), Counts: map[string]int{}, Rows: make([]Record, 0, len(rows))}
 	if !sourceIDFormat.MatchString(r.SourceID) || r.Database == nil || r.Source == nil || r.Destination == nil {
@@ -212,10 +255,24 @@ func (r *Runner) Run(ctx context.Context, rows []SourceRow) (Report, error) {
 	if len(rows) > 100000 {
 		return out, errors.New("too many texture rows")
 	}
+	fingerprint, err := r.PlanSHA256(rows)
+	if err != nil {
+		return out, err
+	}
+	out.PlanSHA256 = fingerprint
+	// This must precede all database/storage writes. Different legacy identities
+	// may not silently claim the same Never profile through explicit or implicit
+	// mappings. Nor may two source records race to become the same selection.
+	if err := validateIdentityTargets(rows, r.Mapping); err != nil {
+		out.FatalError = err.Error()
+		out.FinishedAt = time.Now().UTC()
+		return out, err
+	}
 	// Duplicate rows would otherwise accidentally update the same assignment.
 	seen := map[string]bool{}
 	for _, row := range rows {
 		if err := ctx.Err(); err != nil {
+			out.FatalError = err.Error()
 			out.FinishedAt = time.Now().UTC()
 			return out, err
 		}
@@ -225,6 +282,63 @@ func (r *Runner) Run(ctx context.Context, rows []SourceRow) (Report, error) {
 	}
 	out.FinishedAt = time.Now().UTC()
 	return out, nil
+}
+
+// validateIdentityTargets enforces a one-to-one source/target identity relation
+// for this batch, and at most one skin and cape per target. The upstream schema
+// can contain historic duplicate rows; arbitrarily picking the last one would
+// overwrite another player's selection, particularly with --replace enabled.
+func validateIdentityTargets(rows []SourceRow, mapping map[string]string) error {
+	reverse := make(map[string]string)
+	selections := make(map[string]string)
+	rowIDs := make(map[string]struct{}, len(rows))
+	for source, target := range mapping {
+		from, err := CanonicalUUID(source)
+		if err != nil || from != source {
+			return errors.New("mapping contains a noncanonical source UUID")
+		}
+		to, err := CanonicalUUID(target)
+		if err != nil || to != target {
+			return errors.New("mapping contains a noncanonical target UUID")
+		}
+		if prev, ok := reverse[to]; ok && prev != from {
+			return fmt.Errorf("ambiguous target UUID %s from %s and %s", to, prev, from)
+		}
+		reverse[to] = from
+	}
+	seenSource := make(map[string]string)
+	for _, row := range rows {
+		if _, ok := rowIDs[row.ID]; ok {
+			return fmt.Errorf("duplicate TextureProvider row ID %q; no textures were imported", row.ID)
+		}
+		rowIDs[row.ID] = struct{}{}
+		from, err := CanonicalUUID(row.UserUUID)
+		if err != nil {
+			continue // per-row unmatched; no target can be assigned
+		}
+		to := from
+		if mapped, ok := mapping[from]; ok {
+			to = mapped
+		}
+		if prev, ok := reverse[to]; ok && prev != from {
+			return fmt.Errorf("source UUID %s and %s target the same Never UUID %s", prev, from, to)
+		}
+		reverse[to] = from
+		if prev, ok := seenSource[to]; ok && prev != from {
+			return fmt.Errorf("source UUID %s and %s target the same Never UUID %s", prev, from, to)
+		}
+		seenSource[to] = from
+		kind := strings.ToLower(row.TextureType)
+		if kind != "skin" && kind != "cape" {
+			continue // per-row quarantined
+		}
+		key := to + "/" + kind
+		if old, ok := selections[key]; ok && old != row.ID {
+			return fmt.Errorf("multiple %s records (%s and %s) for target UUID %s; select one explicitly before import", kind, old, row.ID, to)
+		}
+		selections[key] = row.ID
+	}
+	return nil
 }
 
 func (r *Runner) importOne(ctx context.Context, row SourceRow, seen map[string]bool) Record {

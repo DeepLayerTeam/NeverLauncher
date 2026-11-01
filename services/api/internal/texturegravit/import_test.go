@@ -167,3 +167,97 @@ func TestExportRows02510(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+// A migration batch must reject identity conflicts before any write, even
+// when two sources can separately resolve to the same local UUID.
+func TestGravitTextureMappingCollisionPreventsWrites0445(t *testing.T) {
+	a := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	b := "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	c := "cccccccc-cccc-cccc-cccc-cccccccccccc"
+	if _, err := LoadMappings([]byte(`[{"source_uuid":"` + a + `","target_uuid":"` + c + `"},{"source_uuid":"` + b + `","target_uuid":"` + c + `"}]`)); err == nil {
+		t.Fatal("two source players mapped to one target UUID")
+	}
+	if _, err := LoadMappings([]byte(`null`)); err == nil {
+		t.Fatal("null identity map accepted")
+	}
+	r, rows, db := createFixture02510(t)
+	r.Mapping = map[string]string{a: b}
+	rows = append(rows, SourceRow{ID: "other-player", UserUUID: b, TextureType: "cape", FileHash: rows[0].FileHash})
+	if _, err := r.Run(context.Background(), rows); err == nil {
+		t.Fatal("implicit identity collision accepted")
+	}
+	if db.stage != 0 || db.upload != 0 {
+		t.Fatal("collision detected only after modifying player textures")
+	}
+}
+
+func TestGravitTextureSelectionCollisionPreventsWrites0445(t *testing.T) {
+	r, rows, db := createFixture02510(t)
+	duplicate := rows[0]
+	duplicate.ID = "other-row"
+	if _, err := r.Run(context.Background(), append(rows, duplicate)); err == nil {
+		t.Fatal("two skins targeting same profile were silently overwritten")
+	}
+	if db.stage != 0 || db.upload != 0 {
+		t.Fatal("texture selection collision performed side effects")
+	}
+	r, rows, db = createFixture02510(t)
+	if _, err := r.Run(context.Background(), append(rows, rows[0])); err == nil {
+		t.Fatal("duplicate legacy row ID accepted")
+	}
+	if db.stage != 0 || db.upload != 0 {
+		t.Fatal("duplicate row ID performed side effects")
+	}
+}
+
+func TestGravitTextureDistinctSkinCapeAllowed0445(t *testing.T) {
+	r, rows, _ := createFixture02510(t)
+	cape := rows[0]
+	cape.ID = "cape-row"
+	cape.TextureType = "CAPE"
+	if err := validateIdentityTargets(append(rows, cape), nil); err != nil {
+		t.Fatalf("valid skin/cape pair refused: %v", err)
+	}
+	if _, err := LoadJSON([]byte(`null`)); err == nil {
+		t.Fatal("null TextureProvider export accepted")
+	}
+}
+
+func TestGravitTextureApprovedPlanFingerprint0445(t *testing.T) {
+	r, rows, db := createFixture02510(t)
+	r.DryRun = true
+	preview, err := r.Run(context.Background(), rows)
+	if err != nil || preview.Counts["validated-dry-run"] != 1 || len(preview.PlanSHA256) != 64 {
+		t.Fatalf("missing usable dry-run: %v %+v", err, preview)
+	}
+	if db.stage != 0 || db.upload != 0 {
+		t.Fatal("dry-run mutated storage or identity")
+	}
+	again, err := r.Run(context.Background(), rows)
+	if err != nil || preview.PlanSHA256 != again.PlanSHA256 {
+		t.Fatal("identical source plans got different fingerprints")
+	}
+	modified := append([]SourceRow(nil), rows...)
+	modified[0].ObjectKey = "other/texture.png"
+	fingerprint, err := r.PlanSHA256(modified)
+	if err != nil || fingerprint == preview.PlanSHA256 {
+		t.Fatal("changed source object key reused approved plan")
+	}
+	modified = append([]SourceRow(nil), rows...)
+	modified[0].FileURL = "http://invalid.invalid/not-used.png"
+	fingerprint, err = r.PlanSHA256(modified)
+	if err != nil || fingerprint != preview.PlanSHA256 {
+		t.Fatal("ignored untrusted upstream URL changed plan")
+	}
+	r.Replace = true
+	fingerprint, err = r.PlanSHA256(rows)
+	if err != nil || fingerprint == preview.PlanSHA256 {
+		t.Fatal("elevated replacement option reused approved plan")
+	}
+	r.Replace = false
+	r.SourceID = "different-project"
+	fingerprint, err = r.PlanSHA256(rows)
+	if err != nil || fingerprint == preview.PlanSHA256 {
+		t.Fatal("different source ID reused approved plan")
+	}
+}

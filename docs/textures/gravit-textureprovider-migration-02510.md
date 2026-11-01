@@ -35,7 +35,21 @@ go run ./cmd/gravit-textures-import-02510 \
   --dry-run --report ./gravit-dry-run.json
 ```
 
-The dry run validates *real file bytes*, verifies source digest, decodes/normalizes PNG and checks target identities. It neither writes the destination blob nor updates target assignments. When satisfied, rerun without `--dry-run` using another report path. Existing Launcher selections are **never overwritten by default**; add `--replace` only after explicit approval (with CAS checking; concurrent updates are rejected). Record and review all `quarantined`, `unmatched`, `skipped-existing` and `blocked` items.
+The dry run validates *real file bytes*, verifies source digest, decodes/normalizes PNG and checks target identities. It neither writes the destination blob nor updates target assignments. The 0.44.5 report contains `planSha256`, binding the exact TextureProvider rows, SHA digests, UUID mapping, source ID, object-key configuration and `--replace` choice to that dry-run. It intentionally excludes the untrusted `file_url`, which is never used for fetching.
+
+**Since 0.44.5, live import requires explicit approval of the current dry-run fingerprint**; it will perform another complete read-only PNG/identity preflight before writing any texture. Review the entire report (including every `unmatched`, `blocked`, `skipped-existing`, `quarantined` entry) and then run:
+
+```bash
+# Example: supply the approved SHA-256 after independently reviewing the report.
+go run ./cmd/gravit-textures-import-02510 \
+  --source-id gravit-prod-01 --source-dsn "$GRAVIT_SOURCE_DSN" \
+  --source-root /srv/gravit/storage --source-template '%kind%/%hash%.png' \
+  --mapping ./minecraft-identity-mapping.json \
+  --approved-plan-sha256 "$(jq -r .planSha256 ./gravit-dry-run.json)" \
+  --report ./gravit-live-report.json
+```
+
+Use exactly the same source, mapping, template and replacement option for both calls. If any source PNG or target identity became unusable, the new preflight blocks **all writes** for that run; no source hash or mapping mismatch is accepted as a partial success. Per-record CAS/storage errors after preflight can still result in a partial live import; re-run with the **same** `source-id`, following a fresh reviewed dry-run. Always retain the original exports and a tested backup until game rendering is verified. Existing Launcher selections are **never overwritten by default**; add `--replace` only after explicit approval (with CAS checking; concurrent updates are rejected). Record and review all `quarantined`, `unmatched`, `skipped-existing` and `blocked` items.
 
 For offline JSON, use `--source-json /path/to/export.json` instead of `--source-dsn`. Export the actual `textures` rows as JSON from the source database; do not export secrets. For S3 source, set `GRAVIT_S3_ENDPOINT`, `GRAVIT_S3_BUCKET`, `GRAVIT_S3_REGION`, `GRAVIT_S3_ACCESS_KEY`, `GRAVIT_S3_SECRET_KEY`, optionally `GRAVIT_S3_PATH_STYLE`, and pass `--source-s3` rather than `--source-root`. This reads S3 **directly with authenticated SigV4**, from the configured bucket; `file_url` from legacy records is never fetched. All relative object keys are validated, and keys do not control S3 host or credentials.
 
@@ -45,7 +59,9 @@ For offline JSON, use `--source-json /path/to/export.json` instead of `--source-
 
 Each row is checked independently. SHA-1/SHA-256 verification is against source bytes **before** PNG normalization; resulting content-addressed SHA-256 is stored through the existing normalizer, prewrite staging, local/S3 immutable writer, owner quotas, cape policies and revision-controlled assignment. `source=imported` and `event=gravit-import` are recorded in the existing tables. A `texture_gravit_import_receipts` row (source ID + legacy ID) is committed **atomically** with its selection to prevent a second import from overwriting a subsequently changed skin. Re-running the same source ID reports `already-imported`; choosing a new ID is a new migration and should not be used to bypass provenance.
 
-Rows with missing objects, invalid/oversized PNG, unknown digest format, wrong source digest, unsupported model or type, unmatched target UUID, disabled cape permissions or exceeded quotas are not selected. The report is atomically written with mode 0600, recording per-row reasons; any `blocked`, `unmatched`, or `quarantined` outcomes result in nonzero exit status while valid rows remain committed. Inspect report before repeating. An interrupted import can be repeated with the same source ID. Orphaned staging data and immutable objects are handled by the existing 0.25.3 garbage collector after its safety window.
+Preflight refuses ambiguous many-to-one UUID mappings (including an unmapped player sharing a mapped target), repeated row IDs and multiple active skin/cape records targeting the same local player. These conflicts must be resolved in the reviewed source export before any assignment is changed. A `null` mapping/export is not a valid array. The import cannot infer which historical texture should win.
+
+Rows with missing objects, invalid/oversized PNG, unknown digest format, wrong source digest, unsupported model or type, unmatched target UUID, disabled cape permissions or exceeded quotas are not selected. The report is atomically written with mode 0600, recording per-row reasons; any `blocked`, `unmatched`, `quarantined`, or `skipped-existing` outcomes result in nonzero exit status while valid rows remain committed. Inspect report before repeating. An interrupted import can be repeated with the same source ID. Orphaned staging data and immutable objects are handled by the existing 0.25.3 garbage collector after its safety window.
 
 ## Verification checklist
 

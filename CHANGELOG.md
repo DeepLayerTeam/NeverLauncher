@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.44.5 — Gravit textures and optional-model migration
+
+- Fix the live Gravit client-content selector for `OptionalFile.actions[type=file]`: identity destination values (`mods/a.jar` → `mods/a.jar`) are now staged, SHA-256 verified and correctly owned as optional. `updateOptional:null` is accepted as an empty collection; foreign renames, missing signed files and unsupported group/preset/permission semantics remain hard blockers rather than being silently downgraded.
+- Prevent wrong-account texture writes by rejecting non-injective explicit/implicit Minecraft UUID mappings, duplicate TextureProvider row IDs and multiple skin or cape selections for the same target **before** any storage/database write. Require manual selection of conflicting upstream history; validated skin + cape pairs remain usable.
+- TextureProvider CLI now emits deterministic `planSha256` in the real dry-run report and requires `--approved-plan-sha256` for live import. A complete second, read-only source PNG/identity preflight must pass before any live changes; changed mapping/source/options or incomplete rows block the entire run. Idempotent source IDs and receipt-based replay remain supported; concurrent changes during the live stage can still cause a partial import requiring reconciliation.
+- Treat `skipped-existing` as incomplete in CLI exit code; reject `null` mapping and TextureProvider source arrays. Update operator instructions and align the texture importer CI with the pinned Go toolchain in `services/api/go.mod`.
+- Add regression tests for identity/selection collisions, signed optional ownership, nullable optional lists, rejected renames and plan fingerprint integrity. Full PostgreSQL/S3 integration, the complete Go 1.27.3 build and real Minecraft skin/cape rendering are still required for production certification and were not executed in this local environment.
+
+
 ## 0.44.4 — Gravit identity and authentication migration hardening
 
 - Import SQL users under UUID-derived Never account IDs rather than their database-local row IDs, preventing collisions when two Gravit databases contain the same numeric ID. Keep read-only verification of historical 0.44.3 SQL IDs when replaying an already committed import, rejecting conflicting UUID/name/status/role ownership.

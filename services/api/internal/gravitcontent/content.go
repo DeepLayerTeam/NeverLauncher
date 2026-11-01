@@ -144,7 +144,7 @@ func optionalFilePaths(raw json.RawMessage) map[string]bool {
 				continue
 			}
 			for source, target := range entries {
-				if target == "" && safeTarget(source) {
+				if (target == "" || target == source) && safeTarget(source) {
 					paths[source] = true
 				}
 			}
@@ -250,7 +250,7 @@ func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Invento
 		return out, errors.New("profile must be a JSON object")
 	}
 	optionRaw := obj["updateOptional"]
-	if len(optionRaw) > 0 {
+	if len(optionRaw) > 0 && !bytes.Equal(bytes.TrimSpace(optionRaw), []byte("null")) {
 		var vals []json.RawMessage
 		if e = json.Unmarshal(optionRaw, &vals); e != nil || vals == nil {
 			return out, errors.New("invalid optional array")
@@ -258,6 +258,10 @@ func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Invento
 		if len(vals) > 0 {
 			obj["updateOptional"] = json.RawMessage(`[]`)
 		}
+	} else if bytes.Equal(bytes.TrimSpace(optionRaw), []byte("null")) {
+		// Gravit can serialize an absent optional list as null, whereas the
+		// legacy profile converter accepts only arrays. Treat null as empty.
+		obj["updateOptional"] = json.RawMessage(`[]`)
 	}
 	clean, e := json.Marshal(obj)
 	if e != nil {
@@ -379,7 +383,7 @@ func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Invento
 	if len(out.Files) > MaxImportFiles {
 		out.Blockers = append(out.Blockers, "client file limit exceeded")
 	}
-	if len(optionRaw) > 0 && !bytes.Equal(bytes.TrimSpace(optionRaw), []byte("[]")) {
+	if len(optionRaw) > 0 && !bytes.Equal(bytes.TrimSpace(optionRaw), []byte("[]")) && !bytes.Equal(bytes.TrimSpace(optionRaw), []byte("null")) {
 		migrated, e := model.ConvertGravitOptionalView02411(raw, model.NewComponentCatalog0241(nil, 1), optionalCandidates)
 		if e != nil {
 			return out, e

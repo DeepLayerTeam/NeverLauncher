@@ -251,3 +251,53 @@ func TestContentEmptyUpdateDoesNotStageUnmanaged0443(t *testing.T) {
 		t.Fatalf("unexpectedly transferred unlisted member: %+v", p)
 	}
 }
+
+// 0.44.5: Gravit's file action accepts both an empty destination and an
+// identity destination. Both must import the same authenticated optional bytes.
+func TestContentOptionalIdentityDestination0445(t *testing.T) {
+	profile := strings.Replace(profileFixture, `"limited":false`, `"limited":false,"updateOptional":[{"name":"NEI","mark":true,"actions":[{"type":"file","files":{"mods/nei.jar":"mods/nei.jar"}}]}]`, 1)
+	raw, saved := testZip(t, map[string]string{
+		"profiles/demo.json":         profile,
+		"updates/demo/minecraft.jar": "minecraft",
+		"updates/demo/mods/nei.jar":  "optional-content",
+	})
+	p, err := Prepare(context.Background(), bytes.NewReader(raw), int64(len(raw)), saved, "profiles/demo.json", "project", "demo", "", "vanilla")
+	if err != nil || !p.Ready || p.Optional == nil || !p.Optional.Ready {
+		t.Fatalf("identity destination missing from optional conversion: %v %+v", err, p.Blockers)
+	}
+	if len(p.Files) != 2 || len(p.Optional.Catalog.Components) != 1 {
+		t.Fatalf("wrong file set or optional catalog: %+v", p)
+	}
+	for _, f := range p.Files {
+		if f.TargetPath == "mods/nei.jar" {
+			if f.Ownership != "optional" {
+				t.Fatalf("optional file became required: %+v", f)
+			}
+			b, err := ReadVerifiedFile(context.Background(), bytes.NewReader(raw), int64(len(raw)), f)
+			if err != nil || string(b) != "optional-content" {
+				t.Fatalf("optional content was not verified: %v", err)
+			}
+			return
+		}
+	}
+	t.Fatal("optional jar not staged")
+}
+
+func TestContentNullableOptionalCollection0445(t *testing.T) {
+	profile := strings.Replace(profileFixture, `"limited":false`, `"limited":false,"updateOptional":null`, 1)
+	raw, saved := testZip(t, map[string]string{"profiles/demo.json": profile, "updates/demo/minecraft.jar": "jar"})
+	p, err := Prepare(context.Background(), bytes.NewReader(raw), int64(len(raw)), saved, "profiles/demo.json", "project", "demo", "", "vanilla")
+	if err != nil || !p.Ready || p.Optional != nil {
+		t.Fatalf("nullable optional collection broke import: %v %+v", err, p)
+	}
+}
+
+// Reject relocation rather than staging a file under the wrong signed name.
+func TestContentOptionalRelocationRequiresManualResolution0445(t *testing.T) {
+	profile := strings.Replace(profileFixture, `"limited":false`, `"limited":false,"updateOptional":[{"name":"bad","actions":[{"type":"file","files":{"mods/nei.jar":"mods/renamed.jar"}}]}]`, 1)
+	raw, saved := testZip(t, map[string]string{"profiles/demo.json": profile, "updates/demo/minecraft.jar": "jar", "updates/demo/mods/nei.jar": "mod"})
+	p, err := Prepare(context.Background(), bytes.NewReader(raw), int64(len(raw)), saved, "profiles/demo.json", "project", "demo", "", "vanilla")
+	if err != nil || p.Ready || p.Optional == nil || p.Optional.Ready {
+		t.Fatalf("unsafe optional relocation accepted: %v %+v", err, p)
+	}
+}

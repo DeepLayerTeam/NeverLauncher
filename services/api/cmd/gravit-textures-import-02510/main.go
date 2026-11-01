@@ -49,6 +49,30 @@ func makeStorage(driver, path, endpoint, bucket, region, key, secret, pathStyle 
 		return nil, errors.New("unsupported storage driver")
 	}
 }
+func isApprovedTexturePlan0445(d string) bool {
+	if len(d) != 64 {
+		return false
+	}
+	for _, c := range d {
+		if c < '0' || c > '9' && c < 'a' || c > 'f' {
+			return false
+		}
+	}
+	return true
+}
+
+func texturePreviewClean0445(report texturegravit.Report) bool {
+	if len(report.Rows) == 0 {
+		return false
+	}
+	for status, count := range report.Counts {
+		if count > 0 && status != "validated-dry-run" && status != "already-imported" {
+			return false
+		}
+	}
+	return true
+}
+
 func run() error {
 	sourceID := flag.String("source-id", "", "stable ID of legacy installation (required)")
 	sourceJSON := flag.String("source-json", "", "offline JSON export of TextureProvider textures table")
@@ -60,6 +84,7 @@ func run() error {
 	reportFile := flag.String("report", "", "required JSON report output path")
 	replace := flag.Bool("replace", false, "explicitly replace an existing Launcher texture assignment")
 	dryRun := flag.Bool("dry-run", false, "validate source PNGs and identities without persisting")
+	approved := flag.String("approved-plan-sha256", "", "required for live import: planSha256 from a reviewed dry-run report")
 	flag.Parse()
 	if *reportFile == "" || *sourceID == "" {
 		return errors.New("--report and --source-id are required")
@@ -145,8 +170,26 @@ func run() error {
 	} else {
 		source = texturegravit.LocalSource{Root: *sourceRoot}
 	}
-	runner := texturegravit.Runner{Database: repo, Source: source, Destination: dst, SourceID: *sourceID, ObjectTemplate: *sourceTemplate, Mapping: mapping, Replace: *replace, DryRun: *dryRun}
+	runner := texturegravit.Runner{Database: repo, Source: source, Destination: dst, SourceID: *sourceID, ObjectTemplate: *sourceTemplate, Mapping: mapping, Replace: *replace, DryRun: true}
+	// Always run a fresh read-only byte/UUID check before any live writes.
+	// This guarantees that all source images and target identities are usable
+	// before the first selection is changed. A changed plan requires reapproval.
 	report, runErr := runner.Run(ctx, sourceRows)
+	if runErr == nil && !*dryRun {
+		if !isApprovedTexturePlan0445(*approved) || report.PlanSHA256 != *approved {
+			runErr = errors.New("live import requires --approved-plan-sha256 matching the current validated dry-run report")
+		} else if !texturePreviewClean0445(report) {
+			runErr = errors.New("source preflight is incomplete; resolve failed/unmatched/ambiguous textures before live import")
+		} else {
+			runner.DryRun = false
+			report, runErr = runner.Run(ctx, sourceRows)
+		}
+	}
+	// Retain the preflight reason in the 0600 report even when the operator
+	// supplied a stale approval or the source changed before live import.
+	if runErr != nil && report.FatalError == "" {
+		report.FatalError = runErr.Error()
+	}
 	// Write the report even if context cancellation aborted the import.
 	encoded, e := json.MarshalIndent(report, "", "  ")
 	if e != nil {
@@ -184,8 +227,8 @@ func run() error {
 	if runErr != nil {
 		return runErr
 	}
-	if report.Counts["blocked"] > 0 || report.Counts["unmatched"] > 0 || report.Counts["quarantined"] > 0 {
-		return errors.New("migration incomplete: report contains blocked/unmatched/quarantined rows")
+	if report.Counts["blocked"] > 0 || report.Counts["unmatched"] > 0 || report.Counts["quarantined"] > 0 || report.Counts["skipped-existing"] > 0 {
+		return errors.New("migration incomplete: report contains blocked/unmatched/quarantined/skipped-existing rows")
 	}
 	return nil
 }

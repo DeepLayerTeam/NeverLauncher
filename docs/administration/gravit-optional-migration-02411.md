@@ -36,7 +36,7 @@ Backend preview → atomic draft save → Ed25519 signing workflow.
 | `mark`, `visible`, `limited:false` | Default selection and visibility |
 | `category` | Category with stable name-derived ID |
 | `dependenciesFile[].name`, `conflictFile[].name` | Exact-name lookup → stable component ID |
-| `actions: [{type:'file',files:{'mods/a.jar':''}}]` | Owned signed `File` action, only for actual staged optional paths |
+| `actions: [{type:'file',files:{'mods/a.jar':''}}]` or the identity map `{'mods/a.jar':'mods/a.jar'}` | Owned signed `File` action, only for actual staged optional paths |
 | `actions: [{type:'classpath',args:['mods/a.jar']}]` | Signed `ClassPath` action, only if owned and `useAltClasspath:false` |
 | `actions: [{type:'jvmArgs'|'clientArgs',args:[]}]` | Only Never allowlisted signed arguments |
 | `triggersList` required, non-inverted `os` | OS condition (`MUSTDIE`→`windows`, `MACOSX`→`macos`) |
@@ -92,3 +92,7 @@ HTTP integration: `cd services/api && go test ./internal/httpapi -run TestGravit
 The last command requires the repository's external Go dependencies; full
 end-to-end release signing, Desktop download and Minecraft launch must also
 pass in production CI before declaring the full release certified.
+
+## 0.44.5 source-content import alignment
+
+The Migration Center content importer now recognizes both supported Gravit `file` action path forms: an empty destination and a destination exactly equal to its source. The previous converter already accepted both, but the source ZIP file selector only staged the empty-destination form. Each selected file is now SHA-256 verified and assigned `optional` ownership rather than silently becoming mandatory. `updateOptional: null` is handled as an empty collection and does not block a valid baseline profile. Unsupported source-to-target relocations **still block** the migration; no unmanaged or unverified path is added to the workspace. The normal draft catalog validation, CAS and signing pipeline is unchanged.
