@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.45.1 — Real production first-run: TLS, backend readiness, one-time admin
+
+- Convert the existing production Compose entrypoint from HTTP-only to CA-trusted HTTPS on 443 with an HTTP redirect on 80. Container-local health probe remains accessible without exporting application traffic in plaintext; do not trust incoming spoofable forwarded headers.
+- Reject first-run hosts with unsupported Linux architectures, inaccessible Docker daemon, insufficient RAM/storage, or occupied public ports.
+- Bind externally managed host TLS chain/private-key into the Nginx container; fail before deployment on invalid/short-lived/untrusted certificates, wrong hostname, key mismatch, loose key permissions or symlinked credential paths.
+- Build actual API/Admin images and wait for Docker healthchecks. Confirm the **live** public HTTPS `/ready` response and exact configured backend version before recording a completed deployment.
+- Implement `compose first-admin` as a live, one-time operation with private password-file input: verify the bootstrap state, invoke the existing atomic backend creation, independently read durable installation state, and prove password login. Reject repeated or ambiguous bootstrap attempts.
+- Add a step-by-step clean-Linux Standard runbook and negative regression tests. Keep existing signed-release policies, production auth, Postgres migrations and fail-closed checks enabled.
+- **Verification boundary:** local tests and Nginx syntax validation were run, but no live Docker host, trusted DNS certificate, registered client or production Postgres/first-admin E2E were accessible in this environment. The real clean-host acceptance is required before calling 0.45.1 operationally certified.
+
 ## 0.45.0 — Migration GA evidence hardening and operational verification
 
 - Add a production-capable `tools/migration-ga audit-state` operation: stream and hash *actual* source/target `world/` and `plugins/` directory trees, compare complete player UUID rosters, reject symlinks/invalid entries, detect files modified while being read, and explicitly record excluded transient `session.lock` files. Exit nonzero for any mismatch; never modify a game world.

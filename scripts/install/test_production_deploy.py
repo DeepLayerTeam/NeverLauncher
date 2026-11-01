@@ -44,7 +44,10 @@ def settings(mode="standard"):
         POSTGRES_PASSWORD="c" * 40,
         REDIS_PASSWORD="d" * 40,
         LAUNCHER_REPOSITORY_DRIVER="postgres",
-        LAUNCHER_IMAGE_TAG="0.32.13",
+        LAUNCHER_IMAGE_TAG="0.45.1",
+        LAUNCHER_BOOTSTRAP_TOKEN="x" * 64,
+        LAUNCHER_TLS_CERT_PATH="/etc/launcher/tls/fullchain.pem",
+        LAUNCHER_TLS_KEY_PATH="/etc/launcher/tls/privkey.pem",
         LAUNCHER_DEPLOYMENT_MODE=mode,
         LAUNCHER_SERVERBRIDGE_HA_REQUIRED="false",
     )
@@ -112,7 +115,7 @@ class DeploymentTests(unittest.TestCase):
                 confirm=extra.get("confirm", ""),
                 backup_confirmed=extra.get("backup", False),
             )
-            with patch.object(deploy, "execute", fake_exec):
+            with patch.object(deploy, "execute", fake_exec), patch.object(deploy, "tls_paths"), patch.object(deploy, "verify_public_ready"), patch.object(deploy, "host_preflight"):
                 deploy.compose_run(args("up"))
                 self.assertTrue(any("--wait" in x for x in calls))
                 self.assertEqual(
@@ -148,9 +151,7 @@ class DeploymentTests(unittest.TestCase):
                 backup_confirmed=kw.get("backup", False),
             )
             calls = []
-            with patch.object(
-                deploy, "execute", side_effect=lambda x, **y: calls.append(x)
-            ):
+            with patch.object(deploy, "execute", side_effect=lambda x, **y: calls.append(x)), patch.object(deploy, "tls_paths"), patch.object(deploy, "verify_public_ready"), patch.object(deploy, "host_preflight"):
                 deploy.compose_run(args())
                 config["LAUNCHER_IMAGE_TAG"] = "0.32.14"
                 env_path.write_text("".join(f"{k}={v}\n" for k, v in config.items()))

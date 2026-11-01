@@ -8,6 +8,8 @@ No production SQLite-only backend or automatic live SQLite->PostgreSQL cutover.
 
 import argparse
 import contextlib
+import email.utils
+import hashlib
 import fcntl
 import json
 import os
@@ -15,6 +17,8 @@ from pathlib import Path
 import pwd
 import re
 import shutil
+import socket
+import ssl
 import stat
 import subprocess
 import sys
@@ -131,7 +135,7 @@ def read_env(path):
     return values
 
 
-def preflight(values, mode, *, docker):
+def preflight(values, mode, *, docker, tls_required=True):
     needed = [
         "LAUNCHER_PUBLIC_URL",
         "LAUNCHER_AUTH_TOKEN_SECRET",
@@ -144,6 +148,8 @@ def preflight(values, mode, *, docker):
     ]
     if docker:
         needed += ["POSTGRES_PASSWORD", "LAUNCHER_IMAGE_TAG"]
+        if tls_required:
+            needed += ["LAUNCHER_TLS_CERT_PATH", "LAUNCHER_TLS_KEY_PATH"]
         if mode == "network-ha":
             needed += [
                 "REDIS_PASSWORD",
@@ -177,6 +183,8 @@ def preflight(values, mode, *, docker):
         or any(c.isspace() for c in public)
     ):
         fail("production PUBLIC_URL must be an HTTPS origin")
+    if docker and url.port not in (None, 443):
+        fail("direct production Compose requires public HTTPS on port 443")
     if values["LAUNCHER_WEBAUTHN_ORIGINS"] != public or public not in values[
         "LAUNCHER_CORS_ALLOWED_ORIGINS"
     ].split(","):
@@ -224,6 +232,176 @@ def preflight(values, mode, *, docker):
         fail("native HA provisioning is not supported by this local-service installer")
 
 
+
+
+def host_preflight(*, fresh):
+    """Validate the actual Linux host and Docker daemon before manipulating data."""
+    if sys.platform != "linux" or os.uname().machine.lower() not in (
+        "x86_64", "amd64", "aarch64", "arm64"
+    ):
+        fail("production Compose requires Linux x64 or ARM64")
+    if os.geteuid() != 0:
+        fail("production Compose preflight must run as root to read TLS keys")
+    if not shutil.which("docker"):
+        fail("Docker Engine and Compose v2 are required")
+    result = execute(["docker", "info", "--format", "{{.DockerRootDir}}"], capture=True)
+    docker_root = (result.stdout or "").strip()
+    if not docker_root or not Path(docker_root).is_absolute() or not Path(docker_root).is_dir():
+        fail("cannot determine an accessible Docker data directory")
+    execute(["docker", "compose", "version"], capture=True)
+    meminfo = Path("/proc/meminfo").read_text()
+    match = re.search(r"^MemTotal:\s+(\d+) kB$", meminfo, re.M)
+    if not match or int(match.group(1)) < 2 * 1024 * 1024:
+        fail("production host requires at least 2 GiB RAM")
+    if shutil.disk_usage(docker_root).free < 8 * 1024 ** 3:
+        fail("Docker filesystem needs at least 8 GiB free for first-run builds")
+    if fresh:
+        for port in (80, 443):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                try:
+                    sock.bind(("0.0.0.0", port))
+                except OSError:
+                    fail(f"port {port} is already occupied; clean-host preflight failed")
+
+
+def tls_paths(values):
+    """Verify actual trust-chain, hostname, expiry and private-key match before Compose."""
+    cert = Path(values["LAUNCHER_TLS_CERT_PATH"])
+    key = Path(values["LAUNCHER_TLS_KEY_PATH"])
+    if not cert.is_absolute() or not key.is_absolute() or cert == key:
+        fail("TLS certificate and key must have different absolute host paths")
+    if cert.is_symlink() or key.is_symlink():
+        fail("TLS files must not be symlinks (copy the ACME files with install)")
+    for path, private in ((cert, False), (key, True)):
+        safe_file(path, private=private)
+        if path.stat().st_size > 1024 * 1024 or path.stat().st_size == 0:
+            fail("TLS file is empty or too large")
+    if key.stat().st_uid != 0:
+        fail("TLS private key must be root-owned")
+    hostname = urllib.parse.urlsplit(values["LAUNCHER_PUBLIC_URL"]).hostname
+
+    def openssl(*argv):
+        try:
+            proc = subprocess.run(["openssl", *map(str, argv)], capture_output=True,
+                                  check=False, timeout=15)
+        except (OSError, subprocess.TimeoutExpired):
+            fail("openssl is required and must complete certificate validation")
+        if proc.returncode:
+            fail("TLS certificate is invalid, untrusted, expired, mismatched or has the wrong hostname")
+        return proc.stdout
+
+    openssl("x509", "-in", cert, "-noout", "-checkhost", hostname)
+    openssl("x509", "-in", cert, "-noout", "-checkend", "604800")
+    openssl("verify", "-CApath", "/etc/ssl/certs", "-untrusted", cert, cert)
+    leaf_public = openssl("x509", "-in", cert, "-pubkey", "-noout")
+    key_public = openssl("pkey", "-in", key, "-pubout")
+    if hashlib.sha256(leaf_public).digest() != hashlib.sha256(key_public).digest():
+        fail("TLS private key does not match the certificate")
+
+
+def public_json(url, *, payload=None, headers=None, expected_status=None):
+    """No proxies, redirects, insecure TLS, implicit retries or credential output."""
+    if urllib.parse.urlsplit(url).scheme != "https":
+        fail("refusing public operation without HTTPS")
+
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *unused):
+            return None
+
+    opener = urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
+        urllib.request.HTTPSHandler(context=ssl.create_default_context()),
+        NoRedirect(),
+    )
+    body = json.dumps(payload).encode("utf-8") if payload is not None else None
+    request = urllib.request.Request(
+        url, data=body,
+        headers={"Accept": "application/json", **({"Content-Type": "application/json"} if body else {}), **(headers or {})},
+        method="POST" if body is not None else "GET",
+    )
+    try:
+        with opener.open(request, timeout=12) as response:
+            if response.status != (expected_status if expected_status is not None else (201 if body is not None else 200)):
+                fail(f"public endpoint rejected operation (HTTP {response.status})")
+            content = response.read(1024 * 1024 + 1)
+            if len(content) > 1024 * 1024:
+                fail("unexpectedly large public API response")
+            return json.loads(content)
+    except urllib.error.HTTPError as exc:
+        # Never print response bodies: they can contain reflected secrets.
+        fail(f"public API returned HTTP {exc.code}; inspect server audit securely")
+    except (urllib.error.URLError, TimeoutError, ssl.SSLError) as exc:
+        fail(f"public HTTPS unavailable or untrusted ({type(exc).__name__})")
+    except (UnicodeError, json.JSONDecodeError):
+        fail("public API returned invalid JSON")
+
+
+def verify_public_ready(values, expected_version=None):
+    public = values["LAUNCHER_PUBLIC_URL"].rstrip("/")
+    status = public_json(public + "/ready")
+    if status.get("status") != "ready":
+        fail("public HTTPS /ready is not ready")
+    if expected_version is not None and status.get("version") != expected_version:
+        fail("live API version does not match selected release image")
+    return status
+
+
+def bootstrap_first_admin(args):
+    """Actually create, authenticate and verify the one-time admin on running API."""
+    env = Path(args.env).resolve(strict=True)
+    safe_file(env, private=True)
+    safe_directory(env.parent)
+    values = read_env(env)
+    preflight(values, "standard", docker=True)
+    tls_paths(values)
+    if not values.get("LAUNCHER_BOOTSTRAP_TOKEN") or len(values["LAUNCHER_BOOTSTRAP_TOKEN"]) < 32:
+        fail("first admin requires a strong LAUNCHER_BOOTSTRAP_TOKEN in private env")
+    address = email.utils.parseaddr(args.email)
+    if address[1] != args.email or "@" not in args.email or len(args.email) > 254 or any(c.isspace() for c in args.email):
+        fail("invalid administrator email")
+    password_file = Path(args.password_file)
+    info = safe_file(password_file, private=True)
+    if info.st_uid != os.geteuid() or info.st_size > 4096 or info.st_size < 12:
+        fail("admin password file must be owned by invoking user and have 12-4096 bytes")
+    password = password_file.read_text(encoding="utf-8").rstrip("\r\n")
+    if len(password) < 12 or any(c in password for c in "\r\n\x00"):
+        fail("administrator password must be at least 12 characters, single-line")
+    public = values["LAUNCHER_PUBLIC_URL"].rstrip("/")
+    with exclusive_lock(env.parent / ".launcher-compose.lock"):
+        state_file = env.parent / ".launcher-compose-state.json"
+        safe_file(state_file, private=True)
+        state = json.loads(state_file.read_text())
+        if state != {"mode": "standard", "version": values["LAUNCHER_IMAGE_TAG"]}:
+            fail("first-admin requires matching locally installed Standard Compose state")
+        verify_public_ready(values, values["LAUNCHER_IMAGE_TAG"])
+        before = public_json(public + "/api/v1/install/readiness").get("data", {})
+        if before.get("bootstrapTokenConsumed") or any(
+            c.get("id") == "admin-user" and c.get("status") == "ready"
+            for c in before.get("checks", [])
+        ):
+            fail("bootstrap already consumed or administrator exists; not retrying")
+        response = public_json(
+            public + "/api/v1/install/bootstrap-admin",
+            payload={"email": args.email, "displayName": args.display_name,
+                     "password": password, "actor": "production-deploy 0.45.1"},
+            headers={"X-Launcher-Bootstrap-Token": values["LAUNCHER_BOOTSTRAP_TOKEN"]},
+        )
+        if response.get("data", {}).get("status") != "admin-created" or response.get("data", {}).get("email") != args.email:
+            fail("API did not confirm creation of the requested administrator")
+        after = public_json(public + "/api/v1/install/readiness").get("data", {})
+        if not after.get("bootstrapTokenConsumed") or not any(
+            c.get("id") == "admin-user" and c.get("status") == "ready"
+            for c in after.get("checks", [])
+        ):
+            fail("administrator creation is not durable in installation status")
+        # A real authenticated login proves the password and local auth backend work.
+        login = public_json(public + "/api/v1/admin/login", payload={"email": args.email, "password": password}, expected_status=200)
+        if not login.get("token") or login.get("user", {}).get("email") != args.email:
+            fail("administrator was created but a real password login did not succeed")
+        print("First administrator created, bootstrap token consumed, login verified over trusted HTTPS")
+        print("Remove the password file securely; log in to Admin and create the first project")
+
+
 @contextlib.contextmanager
 def exclusive_lock(path):
     path = Path(path)
@@ -263,15 +441,19 @@ def compose_run(args):
     safe_directory(env.parent)
     values = read_env(env)
     mode = args.mode
-    preflight(values, mode, docker=True)
+    preflight(values, mode, docker=True, tls_required=args.action in ("check", "up"))
     state_file = env.parent / ".launcher-compose-state.json"
     with exclusive_lock(env.parent / ".launcher-compose.lock"):
+        if args.action in ("check", "up"):
+            tls_paths(values)
         state = {}
         if state_file.exists():
             safe_file(state_file, private=True)
             state = json.loads(state_file.read_text())
         if state and state.get("mode") != mode:
             fail("deployment mode changed; uninstall old mode first (volumes retained)")
+        if args.action in ("check", "up"):
+            host_preflight(fresh=not bool(state))
         if (
             args.action == "up"
             and state
@@ -281,6 +463,8 @@ def compose_run(args):
             fail(
                 "upgrade requires --backup-confirmed after verified database and blob backups"
             )
+        if args.action == "up" and not state and len(values.get("LAUNCHER_BOOTSTRAP_TOKEN", "")) < 32:
+            fail("fresh production deployment requires a strong one-time LAUNCHER_BOOTSTRAP_TOKEN")
         base = compose_args(env, mode)
         if args.action == "check":
             execute(base + ["config", "--quiet"])
@@ -289,17 +473,16 @@ def compose_run(args):
             execute(base + ["config", "--quiet"])
             execute(
                 base
-                + ["up", "-d", "--wait", "--wait-timeout", "120", "--remove-orphans"]
+                + ["up", "--build", "-d", "--wait", "--wait-timeout", "120", "--remove-orphans"]
             )
+            verify_public_ready(values, values["LAUNCHER_IMAGE_TAG"])
             atomic_text(
                 state_file,
                 json.dumps({"mode": mode, "version": values["LAUNCHER_IMAGE_TAG"]})
                 + "\n",
                 0o600,
             )
-            print(
-                "Compose services started; inspect docker compose ps and /ready before accepting traffic"
-            )
+            print("Compose started: real backend ready through trusted public HTTPS; first administrator still needs bootstrap")
         elif args.action == "status":
             execute(base + ["ps"])
         elif args.action in ("down", "uninstall"):
@@ -649,7 +832,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="provider", required=True)
     cp = sub.add_parser("compose")
-    cp.add_argument("action", choices=["check", "up", "status", "down", "uninstall"])
+    cp.add_argument("action", choices=["check", "up", "status", "down", "uninstall", "first-admin"])
     cp.add_argument("--env", default=str(COMPOSE.parent / ".env"))
     cp.add_argument("--mode", required=True, choices=["standard", "network-ha"])
     cp.add_argument(
@@ -659,6 +842,9 @@ def main(argv=None):
     )
     cp.add_argument("--purge-data", action="store_true")
     cp.add_argument("--confirm", default="")
+    cp.add_argument("--email", help="first administrator email")
+    cp.add_argument("--display-name", default="Administrator")
+    cp.add_argument("--password-file", help="private mode-0600 file holding initial admin password")
     np = sub.add_parser("native")
     np.add_argument("action", choices=["install", "uninstall"])
     np.add_argument("--installer", default="/usr/local/bin/launcher-install")
@@ -673,7 +859,12 @@ def main(argv=None):
     if args.provider == "compose":
         if args.purge_data and args.action != "uninstall":
             fail("--purge-data allowed only with uninstall")
-        compose_run(args)
+        if args.action == "first-admin":
+            if args.mode != "standard" or not args.email or not args.password_file:
+                fail("compose first-admin requires --mode standard, --email and --password-file")
+            bootstrap_first_admin(args)
+        else:
+            compose_run(args)
     elif args.action == "install":
         if not args.bundle or not args.trusted_key:
             fail("native install requires --bundle and independent --trusted-key")
