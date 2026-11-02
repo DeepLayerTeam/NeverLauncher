@@ -26,6 +26,7 @@ type migrationPlanStore0442 interface {
 
 func (s Server) registerMigrationPlanRoutes0442(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/admin/migration-runs/{runId}/dry-run", s.requirePermission("settings:manage", s.migrationDryRun0442))
+	mux.Handle("POST /api/v1/admin/migration-runs/{runId}/dry-run-all", s.requirePermission("settings:manage", s.migrationBatch0492))
 	mux.Handle("GET /api/v1/admin/migration-runs/{runId}/dry-run", s.requirePermission("settings:manage", s.migrationPlanGet0442))
 }
 func (s Server) migrationTargetSnapshot0442(projectID string) (string, map[string]bool, error) {

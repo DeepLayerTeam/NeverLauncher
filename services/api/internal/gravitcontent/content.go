@@ -219,6 +219,21 @@ func Prepare(ctx context.Context, src io.ReaderAt, size int64, saved inv.Invento
 	if actual.SourceBytes != saved.SourceBytes || actual.ManifestSHA256 != saved.ManifestSHA256 {
 		return out, errors.New("source differs from committed inventory")
 	}
+	return PreparePinned(ctx, src, size, saved, profilePath, projectID, profileID, name, loader)
+}
+
+// PreparePinned converts one profile after the caller has fully verified the
+// immutable source bytes with gravitinventory.Inspect and compared the manifest
+// to the committed run. It is for the multi-profile dry-run operating on an
+// unlinked, private, closed-for-writing spool only. Actual imports use Prepare.
+func PreparePinned(ctx context.Context, src io.ReaderAt, size int64, saved inv.Inventory, profilePath, projectID, profileID, name, loader string) (Plan, error) {
+	out := Plan{Format: "launcher.gravit-content.v1", SourceSHA256: saved.SourceSHA256, InventorySHA256: saved.ManifestSHA256, ProfilePath: profilePath, Files: []File{}, SkippedFiles: []SkippedFile{}, Blockers: []string{}}
+	if size != saved.SourceBytes || saved.ManifestSHA256 == "" {
+		return out, errors.New("unverified source snapshot")
+	}
+	if _, e := saved.Manifest(); e != nil {
+		return out, e
+	}
 	z, e := zip.NewReader(src, size)
 	if e != nil {
 		return out, e

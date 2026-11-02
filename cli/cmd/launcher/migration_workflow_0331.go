@@ -38,6 +38,22 @@ func handleMigrationWorkflow0331(args []string) error {
 	if command == "generate-keys" {
 		return generateNeverMigrationKeys0336(flagValue(args, "--output", ""))
 	}
+	if command == "dry-run-all" || command == "verify-dry-run-all" {
+		backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
+		token := backendToken(args)
+		run := strings.TrimSpace(flagValue(args, "--run", ""))
+		if backend == "" || token == "" || run == "" {
+			return errors.New("dry-run-all requires --backend, --token and --run")
+		}
+		prior := ""
+		if command == "verify-dry-run-all" {
+			prior = flagValue(args, "--report", "")
+			if prior == "" {
+				return errors.New("verify-dry-run-all requires --report")
+			}
+		}
+		return migrationBatchCLI0492(backend+"/api/v1/admin/migration-runs/"+url.PathEscape(run)+"/dry-run-all", token, flagValue(args, "--source", ""), flagValue(args, "--mapping", ""), prior, flagValue(args, "--output", ""))
+	}
 	backend := strings.TrimRight(flagValue(args, "--backend", ""), "/")
 	token := backendToken(args)
 	if backend == "" || token == "" {
