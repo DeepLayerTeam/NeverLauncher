@@ -830,6 +830,9 @@ func handleRuntimeFactory0271(args []string) error {
 		if mode == "adapter-inspect" || mode == "adapter-verify" {
 			return handleRuntimeFactoryAdapters02711(args)
 		}
+		if mode == "guard-policy-install" || mode == "guard-policy-verify" {
+			return handleGuardCompat0502(args)
+		}
 		if mode == "trusted-install" || mode == "trusted-verify" || mode == "trusted-inspect" || mode == "trusted-remove" {
 			return handleTrustedJVM0306(args)
 		}

@@ -500,6 +500,33 @@ func runLegacyClient0278(ctx context.Context, root, javaExecutable, username, uu
 		return err
 	}
 	defer trustedCleanup()
+	// Guard compatibility is an enforcement step, not just a published allowlist.
+	// All ordinary JVM agents (including compat agents) and trusted plugins must
+	// match the independently signed policy before the process can be spawned.
+	var guardedAgents, guardedPlugins []string
+	for _, arg := range append(append([]string{}, compatJVM...), trustedJVM...) {
+		if strings.HasPrefix(strings.ToLower(arg), "-javaagent:") {
+			path := strings.TrimPrefix(arg, "-javaagent:")
+			if index := strings.IndexByte(path, '='); index >= 0 {
+				path = path[:index]
+			}
+			guardedAgents = append(guardedAgents, path)
+		}
+	}
+	if active, release, e := trustedLoad0306(root, strings.TrimSpace(os.Getenv(trustedPublicKeyEnv0306))); e != nil {
+		return e
+	} else if active != nil {
+		for _, plugin := range active.Plugins {
+			path, e := trustedPath0306(root, release+"/plugins/"+plugin.Name)
+			if e != nil {
+				return e
+			}
+			guardedPlugins = append(guardedPlugins, path)
+		}
+	}
+	if err := guardCompatValidateLaunch0502(root, p.ReproducibilitySHA256, p.MinecraftVersion, p.Loader, guardedAgents, guardedPlugins); err != nil {
+		return fmt.Errorf("Guard compatibility refused Java launch: %w", err)
+	}
 	args = append(args, trustedJVM...)
 	args = append(args, "-cp", strings.Join(classpath, string(os.PathListSeparator)), trustedMain)
 	args = append(args, gameArgs...)

@@ -22,6 +22,7 @@ pub use download_scheduler::{DownloadLimits, DownloadProgress, ProgressSink, DOW
 pub mod managed_java;
 pub mod guard_ipc;
 pub mod guard_inventory_0501;
+pub mod guard_compatibility_0502;
 mod integrity;
 pub mod supervisor;
 pub mod windows_policy;
@@ -855,6 +856,7 @@ pub async fn certify_vanilla_compatibility(
         return Err("Vanilla certification требует max-runtime-seconds >= 5".to_string());
     }
     fs::create_dir_all(root).await.map_err(|err| format!("не удалось открыть client root: {err}"))?;
+    guard_compatibility_0502::refuse_unscoped_launch(root)?;
     let version = safe_component(version)?;
     let natives_base = root.join("natives");
     let natives_dir = platform_natives_directory(&natives_base).await;
@@ -1128,6 +1130,7 @@ pub async fn launch_with_timeout_matching_authenticated(
     log_file.flush().map_err(|e| e.to_string())?;
     let stdout_file = log_file.try_clone().map_err(|e| format!("не удалось клонировать runtime log handle: {e}"))?;
     managed_java::revalidate_managed_java_before_spawn(&plan.java_executable).await?;
+    guard_compatibility_0502::enforce_launch(root, &manifest.project_id, &manifest.minecraft.version, &manifest.minecraft.loader, &plan.jvm_args)?;
     let mut command = Command::new(&plan.java_executable);
     command.current_dir(Path::new(&plan.working_directory));
     command.args(&plan.jvm_args);

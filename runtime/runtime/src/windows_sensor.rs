@@ -156,7 +156,18 @@ mod imp {
 
     fn validate_startup_instrumentation_boundary(command: &Command) -> Result<(), String> {
         for arg in command.as_std().get_args() {
-            if let Some(label) = forbidden_instrumentation_token(&arg.to_string_lossy()) {
+            let argument = arg.to_string_lossy();
+            if let Some(label) = forbidden_instrumentation_token(&argument) {
+                // Do not disable the instrumentation boundary to support a
+                // trusted Java plugin. Verify the exact pinned JAR and live
+                // signed Guard epoch before permitting this one startup flag.
+                if label == "-javaagent" {
+                    let root = command.as_std().get_current_dir()
+                        .ok_or("Guard compatibility Java agent requires an explicit game root")?;
+                    if crate::guard_compatibility_0502::authorize_agent(root, &argument)? {
+                        continue;
+                    }
+                }
                 return Err(format!(
                     "Guard Debug & Instrumentation Guard rejected startup instrumentation option {label}"
                 ));

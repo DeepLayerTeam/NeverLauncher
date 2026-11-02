@@ -17,7 +17,7 @@ public final class LoggingHook implements MinecraftHook {
     @Override public void beforeMinecraftMain(String main, String[] args, ClassLoader loader) { write("before:"+main+":"+args.length); }
     @Override public byte[] transformMinecraftClass(String name, ClassLoader loader, byte[] original) {
         write("transform:"+name);
-        return null;
+        return Boolean.getBoolean("launcher.trusted.test.transform") ? original.clone() : null;
     }
     @Override public void afterMinecraftMain(String main, Throwable error) { write("after:"+(error==null?"ok":"failed")); }
 }

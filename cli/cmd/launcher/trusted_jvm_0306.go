@@ -362,6 +362,16 @@ func trustedPrepare0306(root, originalMain string) ([]string, string, func(), er
 	}
 	var config strings.Builder
 	fmt.Fprintf(&config, "main=%s\n", base64.StdEncoding.EncodeToString([]byte(originalMain)))
+	// Compile the signed per-plugin class transformation allowlist into the
+	// private premain configuration. The Java agent enforces it at transform time.
+	if guard, err := guardCompatLoad0502(root, strings.TrimSpace(os.Getenv(guardCompatKeyEnv0502))); err != nil {
+		return nil, "", nil, err
+	} else if guard != nil {
+		fmt.Fprintf(&config, "guard.policy.active=true\ntransform.count=%d\n", len(guard.Policy.Transformations))
+		for i, transform := range guard.Policy.Transformations {
+			fmt.Fprintf(&config, "transform.%d.owner=%s\ntransform.%d.class=%s\n", i, transform.OwnerSHA256, i, base64.StdEncoding.EncodeToString([]byte(transform.ID)))
+		}
+	}
 	fmt.Fprintf(&config, "count=%d\n", len(rec.Plugins))
 	for i, p := range rec.Plugins {
 		file, err := trustedPath0306(root, release+"/plugins/"+p.Name)

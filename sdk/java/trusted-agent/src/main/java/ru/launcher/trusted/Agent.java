@@ -11,6 +11,10 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.Properties;
 import java.util.ServiceLoader;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -23,6 +27,9 @@ public final class Agent {
     private static volatile String originalMain;
     private static volatile URLClassLoader pluginLoader;
     private static volatile boolean ready;
+    private static volatile boolean guardPolicyActive;
+    private static final Map<String, Set<String>> ALLOWED_TRANSFORMS = new HashMap<String, Set<String>>();
+    private static final Map<String, String> PLUGIN_DIGESTS = new HashMap<String, String>();
     private Agent() { }
 
     public static void premain(String argument, Instrumentation instrumentation) throws Exception {
@@ -35,16 +42,33 @@ public final class Agent {
         if (!originalMain.matches("[A-Za-z_$][\\w$]*(\\.[A-Za-z_$][\\w$]*)+")) throw new IllegalArgumentException("invalid Minecraft main");
         int count = Integer.parseInt(config.getProperty("count", "-1"));
         if (count < 0 || count > 32) throw new IllegalArgumentException("invalid plugin count");
+        guardPolicyActive = "true".equals(config.getProperty("guard.policy.active"));
+        if (guardPolicyActive) {
+            int transforms = Integer.parseInt(config.getProperty("transform.count", "-1"));
+            if (transforms < 0 || transforms > 4096) throw new SecurityException("Guard transform count invalid");
+            for (int i = 0; i < transforms; i++) {
+                String sha = config.getProperty("transform." + i + ".owner");
+                String clazz = new String(Base64.getDecoder().decode(config.getProperty("transform." + i + ".class")), java.nio.charset.StandardCharsets.UTF_8);
+                if (sha == null || !sha.matches("[0-9a-f]{64}") || !clazz.matches("[A-Za-z_$][\\w$]*(\\.[A-Za-z_$][\\w$]*)+"))
+                    throw new SecurityException("Guard invalid transform binding");
+                Set<String> classes = ALLOWED_TRANSFORMS.get(sha);
+                if (classes == null) { classes = new HashSet<String>(); ALLOWED_TRANSFORMS.put(sha, classes); }
+                if (!classes.add(clazz)) throw new SecurityException("Guard duplicate transform binding");
+            }
+        }
         List<URL> urls = new ArrayList<URL>();
         for (int i = 0; i < count; i++) {
             String path = new String(Base64.getDecoder().decode(config.getProperty("plugin."+i)), java.nio.charset.StandardCharsets.UTF_8);
             String sha = config.getProperty("plugin."+i+".sha256");
             if (sha == null || !sha.matches("[0-9a-f]{64}") || !sha.equals(digest(path)))
                 throw new SecurityException("trusted JVM plugin digest mismatch: " + i);
-            urls.add(new java.io.File(path).toURI().toURL());
+            URL url = new java.io.File(path).toURI().toURL();
+            urls.add(url);
+            PLUGIN_DIGESTS.put(url.toExternalForm(), sha);
         }
         pluginLoader = new URLClassLoader(urls.toArray(new URL[0]), Agent.class.getClassLoader());
         for (MinecraftHook hook : ServiceLoader.load(MinecraftHook.class, pluginLoader)) {
+            if (guardPolicyActive) pluginDigest(hook); // reject hooks outside pinned jars before callbacks
             HOOKS.add(hook);
         }
         instrumentation.addTransformer(new ClassFileTransformer() {
@@ -59,6 +83,14 @@ public final class Agent {
                     for (MinecraftHook hook : HOOKS) {
                         byte[] result = hook.transformMinecraftClass(binary,loader,current);
                         if (result != null) {
+                            if (guardPolicyActive) {
+                                String owner = pluginDigest(hook);
+                                Set<String> allowed = ALLOWED_TRANSFORMS.get(owner);
+                                if (allowed == null || !allowed.contains(binary)) {
+                                    System.err.println("[Launcher Guard] unauthorized class transformation: " + binary);
+                                    Runtime.getRuntime().halt(79); // JVM may swallow transformer exceptions
+                                }
+                            }
                             if (result.length == 0 || result.length > 64*1024*1024) throw new IllegalStateException("invalid class transform result");
                             current = result;
                             modified = true;
@@ -74,6 +106,14 @@ public final class Agent {
         }, false);
         for (MinecraftHook hook : HOOKS) hook.onAgentReady(instrumentation);
         ready = true;
+    }
+    private static String pluginDigest(MinecraftHook hook) {
+        try {
+            URL jar = hook.getClass().getProtectionDomain().getCodeSource().getLocation();
+            String digest = PLUGIN_DIGESTS.get(jar.toExternalForm());
+            if (digest == null) throw new SecurityException("Guard hook source is not a pinned plugin JAR");
+            return digest;
+        } catch (NullPointerException e) { throw new SecurityException("Guard hook has no trusted source", e); }
     }
     private static boolean isMinecraftClass(String n) {
         return n.startsWith("net/minecraft/") || n.startsWith("com/mojang/") ||

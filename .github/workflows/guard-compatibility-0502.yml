@@ -1,0 +1,58 @@
+name: Guard 0.50.2 signed compatibility policy
+on:
+  push:
+    paths:
+      - 'cli/cmd/launcher/guard_compat_policy_0502*'
+      - 'cli/cmd/launcher/trusted_jvm_0306.go'
+      - 'cli/cmd/launcher/legacy_client_adapters_0278.go'
+      - 'cli/cmd/guard-policy-sign/**'
+      - 'sdk/java/trusted-agent/**'
+      - 'runtime/runtime/**'
+      - '.github/workflows/guard-compatibility-0502.yml'
+  pull_request:
+    paths:
+      - 'cli/cmd/launcher/guard_compat_policy_0502*'
+      - 'cli/cmd/launcher/trusted_jvm_0306.go'
+      - 'cli/cmd/launcher/legacy_client_adapters_0278.go'
+      - 'cli/cmd/guard-policy-sign/**'
+      - 'sdk/java/trusted-agent/**'
+      - 'runtime/runtime/**'
+      - '.github/workflows/guard-compatibility-0502.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-policy:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-24.04, target: linux-x64 }
+          - { runner: ubuntu-24.04-arm, target: linux-arm64 }
+          - { runner: windows-2022, target: windows-x64 }
+          - { runner: windows-11-arm, target: windows-arm64 }
+          - { runner: macos-15-intel, target: macos-x64 }
+          - { runner: macos-15, target: macos-arm64 }
+    name: '${{ matrix.target }} signed runtime checks'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Live policy/agent integration regressions
+        working-directory: cli
+        run: go test ./cmd/launcher -run '^(TestGuardCompatibility0502|TestTrustedJVM0306)' -count=1
+      - name: Offline sign/key generation tests
+        working-directory: cli
+        run: go test ./cmd/guard-policy-sign -count=1
+      - name: Native Rust policy unit tests and compile
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_compatibility_0502
