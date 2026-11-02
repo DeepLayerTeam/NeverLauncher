@@ -1,0 +1,101 @@
+name: Guard 0.50.1 native inventory (diagnostics, not game certification)
+on:
+  push:
+    paths:
+      - 'runtime/runtime/**'
+      - 'scripts/guard_ci/inventory_0501.py'
+      - 'scripts/guard_ci/test_inventory_0501.py'
+      - '.github/workflows/guard-inventory-0501.yml'
+      - 'VERSION'
+  pull_request:
+    paths:
+      - 'runtime/runtime/**'
+      - 'scripts/guard_ci/inventory_0501.py'
+      - 'scripts/guard_ci/test_inventory_0501.py'
+      - '.github/workflows/guard-inventory-0501.yml'
+      - 'VERSION'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-inventory:
+    name: '${{ matrix.target }} / real Guard IPC diagnostic'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x64, runner: ubuntu-24.04 }
+          - { target: linux-arm64, runner: ubuntu-24.04-arm }
+          - { target: windows-x64, runner: windows-2022 }
+          - { target: windows-arm64, runner: windows-11-arm }
+          - { target: macos-x64, runner: macos-15-intel }
+          - { target: macos-arm64, runner: macos-15 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Compile real Guard and Runtime (no test doubles)
+        run: cargo build --manifest-path runtime/runtime/Cargo.toml --bins
+      - name: Execute Rust local inventory tests
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --lib guard_inventory_0501
+      - name: Test real Linux Guard child and authenticated IPC
+        if: runner.os == 'Linux'
+        run: cargo test --manifest-path runtime/runtime/Cargo.toml --test guard_inventory_0501 -- --nocapture
+      - name: Verify fail-closed matrix processing
+        run: python scripts/guard_ci/test_inventory_0501.py
+      - name: Exercise authenticated Guard IPC and export observed result
+        shell: bash
+        run: |
+          suffix=''
+          if [[ "$RUNNER_OS" == 'Windows' ]]; then suffix='.exe'; fi
+          python scripts/guard_ci/inventory_0501.py local \
+            --runtime "runtime/runtime/target/debug/runtime${suffix}" \
+            --guard "runtime/runtime/target/debug/guard${suffix}" \
+            --output "guard-inventory-${{ matrix.target }}.json"
+      - name: Upload actual local diagnostic (BLOCKED is not a pass)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guard-inventory-${{ matrix.target }}
+          path: guard-inventory-${{ matrix.target }}.json
+          if-no-files-found: warn
+  combine-observations:
+    runs-on: ubuntu-24.04
+    needs: native-inventory
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: guard-inventory-*
+          path: guard-inventory-native
+          merge-multiple: true
+        continue-on-error: true
+      - name: Combine real OS/CPU reports (missing is BLOCKED)
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess, sys
+          reports = sorted(Path('guard-inventory-native').glob('guard-inventory-*.json'))
+          sys.exit(subprocess.call([sys.executable, 'scripts/guard_ci/inventory_0501.py', 'matrix', '--output', 'guard-inventory-matrix-0501.json', *map(str, reports)]))
+          PY
+      - name: Publish explicitly non-certified matrix
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guard-inventory-matrix-0501
+          path: guard-inventory-matrix-0501.json
+          if-no-files-found: warn

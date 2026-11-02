@@ -41,10 +41,11 @@ async fn run() -> Result<serde_json::Value, String> {
         "compatibility" => command_compatibility(rest).await,
         "certify-vanilla" => command_certify_vanilla(rest).await,
         "java" => command_java(rest).await,
+        "guard-inventory" => command_guard_inventory_0501(rest).await,
         "help" | "--help" | "-h" => Ok(json!({
             "status": "ready",
             "version": env!("CARGO_PKG_VERSION"),
-            "commands": ["verify", "sync", "sync-local", "adopt-staged", "rollback-release", "recover-release", "launch", "plan", "compatibility", "certify-vanilla", "java ensure"]
+            "commands": ["verify", "sync", "sync-local", "adopt-staged", "rollback-release", "recover-release", "launch", "plan", "compatibility", "certify-vanilla", "java ensure", "guard-inventory"]
         })),
         other => Err(format!("неизвестная команда: {other}")),
     }
@@ -288,4 +289,29 @@ fn required_flag(args: &[String], name: &str) -> Result<String, String> {
 
 fn optional_flag(args: &[String], name: &str) -> Option<String> {
     args.windows(2).find(|pair| pair[0] == name).map(|pair| pair[1].clone())
+}
+
+
+/// Run native Guard handshake, policy, evidence and challenge probes, without
+/// claiming that a Minecraft game or an in-process sensor was exercised.
+async fn command_guard_inventory_0501(args: &[String]) -> Result<serde_json::Value, String> {
+    const FLAGS: [&str; 4] = ["--guard-executable", "--java", "--game-root", "--minecraft-version"];
+    let mut used = std::collections::HashSet::new();
+    let mut index = 0;
+    while index < args.len() {
+        let arg = &args[index];
+        if !FLAGS.contains(&arg.as_str()) || !used.insert(arg.as_str()) {
+            return Err(format!("guard-inventory unknown or repeated flag: {arg}"));
+        }
+        let value = args.get(index+1).ok_or_else(|| format!("{arg} requires a value"))?;
+        if value.is_empty() || value.starts_with("--") { return Err(format!("{arg} requires a nonempty value")); }
+        index += 2;
+    }
+    let report = runtime::guard_inventory_0501::collect_guard_inventory_0501(
+        optional_flag(args, "--guard-executable").map(PathBuf::from),
+        optional_flag(args, "--java").map(PathBuf::from),
+        optional_flag(args, "--game-root").map(PathBuf::from),
+        optional_flag(args, "--minecraft-version"),
+    ).await;
+    serde_json::to_value(report).map_err(|err| err.to_string())
 }

@@ -1,3 +1,12 @@
+## 0.50.1 — Guard Inventory & Baseline (native diagnostics; independent GA BLOCKED)
+
+- Add executable `runtime guard-inventory`: perform a real authenticated Guard child-process startup through the existing platform IPC, query enforced process policy, verify Guard/launcher integrity evidence and test a fresh attestation challenge. Never treat an absent Guard, missing verified release manifest or failed call as a successful capability; always shut down the probed Guard process.
+- Detect installed Java major by executing `java -XshowSettings:properties -version` under an 8-second bound with inherited Java injection environment removed. Inspect bounded Minecraft version metadata for Vanilla/Fabric/Quilt/Forge/NeoForge, without interpreting a metadata file as a successful game launch.
+- Report actual host OS/CPU, Java and installed loader; mark Windows in-process/JVM/continuous sensors BLOCKED without a real pre-main/game run and UNSUPPORTED on Linux/macOS. Authorized agent+Guard and real server join explicitly remain BLOCKED.
+- Add `scripts/guard_ci/inventory_0501.py` to run native probes in a private Linux IPC directory and combine six OS/CPU observations without fabricating absent targets or transforming self-reports into game certification. Reject forged game PASS, missing or duplicate checks, invalid status and fabricated non-Windows sensor support.
+- Add native six-target CI diagnostics, Rust parsing/loader regression checks and Python report/merge adversarial tests.
+- **GA BLOCKED:** the uploaded archive does not include signed final packages, independent native six-target receipts, real Minecraft/modded-game join or live Windows in-process sensor results. Rust native builds and six-platform jobs must run on their supported hosts; code and local report validations alone do not certify them.
+
 ## 0.50.0 — Gravit Migration & Module Parity release admission (source code; GA BLOCKED without independent live evidence)
 
 - Add executable, fail-closed 0.50.0 acceptance gate that independently verifies three real Gravit source archives against 0.49.10 pre/post signed-update Minecraft witnesses and signed 36-check migration GA certificates, then rechecks live PostgreSQL-backed Backend state. Execute and retain evidence for 19 distinct, hash-pinned real module behavior probe processes; recheck the live cohort after execution to detect intervening rollback or revocation.

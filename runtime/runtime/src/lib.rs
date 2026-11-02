@@ -21,6 +21,7 @@ mod trust_policy;
 pub use download_scheduler::{DownloadLimits, DownloadProgress, ProgressSink, DOWNLOAD_PROGRESS_EVENT};
 pub mod managed_java;
 pub mod guard_ipc;
+pub mod guard_inventory_0501;
 mod integrity;
 pub mod supervisor;
 pub mod windows_policy;
